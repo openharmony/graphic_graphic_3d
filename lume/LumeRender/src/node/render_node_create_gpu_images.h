@@ -1,0 +1,71 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
+
+#ifndef RENDER_RENDER__NODE__RENDER_NODE_CREATE_GPU_IMAGES_H
+#define RENDER_RENDER__NODE__RENDER_NODE_CREATE_GPU_IMAGES_H
+
+#include <base/containers/string.h>
+#include <base/containers/vector.h>
+#include <base/util/uid.h>
+#include <render/device/gpu_resource_desc.h>
+#include <render/namespace.h>
+#include <render/nodecontext/intf_render_node.h>
+#include <render/render_data_structures.h>
+#include <render/resource_handle.h>
+
+RENDER_BEGIN_NAMESPACE()
+class IRenderCommandList;
+class IRenderNodeContextManager;
+struct RenderNodeGraphInputs;
+
+class RenderNodeCreateGpuImages final : public IRenderNode {
+public:
+    RenderNodeCreateGpuImages() = default;
+    ~RenderNodeCreateGpuImages() override = default;
+
+    void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
+    void PreExecuteFrame() override;
+    void ExecuteFrame(IRenderCommandList& cmdList) override;
+
+    // for plugin / factory interface
+    static constexpr BASE_NS::Uid UID { "9942031e-c80c-4d38-ae08-65555592b4df" };
+    static constexpr char const* TYPE_NAME = "RenderNodeCreateGpuImages";
+    static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
+    static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
+    static IRenderNode* Create();
+    static void Destroy(IRenderNode* instance);
+
+    struct DependencyList {
+        bool format { false };
+        bool size { false };
+        bool mipCount { false };
+        bool layerCount { false };
+        bool sampleCount { false };
+        float sizeScale { 1.0f };
+    };
+
+private:
+    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+
+    void ParseRenderNodeInputs();
+
+    struct JsonInputs {
+        BASE_NS::vector<RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> gpuImageDescs;
+    };
+    JsonInputs jsonInputs_;
+
+    struct Names {
+        BASE_NS::string globalName;
+        BASE_NS::string shareName;
+    };
+    BASE_NS::vector<Names> names_;
+    BASE_NS::vector<GpuImageDesc> descs_;
+    BASE_NS::vector<RenderHandleReference> resourceHandles_;
+
+    BASE_NS::vector<RenderHandle> dependencyHandles_;
+    BASE_NS::vector<DependencyList> dependencyList_;
+};
+RENDER_END_NAMESPACE()
+
+#endif // CORE__RENDER__NODE__RENDER_NODE_CREATE_GPU_IMAGES_H

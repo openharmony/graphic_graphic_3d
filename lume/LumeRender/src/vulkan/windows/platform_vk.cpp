@@ -1,0 +1,40 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
+#include "platform_vk.h"
+
+#include <vulkan/vulkan.h>
+
+#include "util/log.h"
+
+RENDER_BEGIN_NAMESPACE()
+using BASE_NS::string_view;
+using BASE_NS::vector;
+
+bool CanDevicePresent(VkInstance instance, VkPhysicalDevice device, uint32_t queuefamily)
+{
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR vkGetPhysicalDeviceWin32PresentationSupportKHR =
+        (PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR) reinterpret_cast<void*>(
+            vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceWin32PresentationSupportKHR"));
+    if (!vkGetPhysicalDeviceWin32PresentationSupportKHR) {
+        PLUGIN_LOG_E("Missing VK_KHR_win32_surface extension");
+        return false;
+    }
+
+    return vkGetPhysicalDeviceWin32PresentationSupportKHR(device, queuefamily) == VK_TRUE;
+#else
+#warning "Undefined WSI platform!"
+    return false;
+#endif
+}
+
+const char* GetPlatformSurfaceName()
+{
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+#else
+#error Missing platform surface type.
+#endif
+}
+RENDER_END_NAMESPACE()
