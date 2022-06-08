@@ -1,0 +1,344 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "",
+    "nodes": [
+        {
+            "typeName": "RenderNodeDefaultCameraController",
+            "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialRenderSlot",
+            "nodeName": "CORE3D_RN_CAM_DM_SO_DF",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "PostProcess",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_DF_OPAQUE",
+            "renderSlotSortType": "by_material",
+            "renderSlotCullType": "view_frustum_cull",
+            "nodeFlags": 0,
+            "nodeMaterialDiscardFlags": 8192,
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "clearDepth": [ 1.0, 0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "base_color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "material",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 5,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1, 2, 3, 4 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialDeferredShading",
+            "nodeName": "CORE3D_RN_CAM_DM_DS_DF",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "PostProcess",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "nodeFlags": 0,
+            "shader": "3dshaders://shader/core3d_dm_fullscreen_deferred_shading.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "base_color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "material",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    }
+                ],
+                "subpassIndex": 1,
+                "subpassCount": 5,
+                "subpass": {
+                    "colorAttachmentIndices": [ 1 ],
+                    "inputAttachmentIndices": [ 0, 2, 3, 4 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialRenderSlot",
+            "nodeName": "CORE3D_RN_CAM_DM_SO_COMPLEX_DF",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "PostProcess",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+            "renderSlotSortType": "by_material",
+            "renderSlotCullType": "view_frustum_cull",
+            "nodeFlags": 0,
+            "nodeMaterialDiscardFlags": 4096,
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "clearDepth": [ 1.0, 0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "base_color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "material",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    }
+                ],
+                "subpassIndex": 2,
+                "subpassCount": 5,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1, 2, 3, 4 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultEnv",
+            "nodeName": "CORE3D_RN_CAM_DM_E_DF",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "PostProcess",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "nodeFlags": 0,
+            "renderPass": {
+                "attachments": [
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "base_color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "material",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    }
+                ],
+                "subpassIndex": 3,
+                "subpassCount": 5,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialRenderSlot",
+            "nodeName": "CORE3D_RN_CAM_DM_ST_DF",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "PostProcess",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT",
+            "renderSlotSortType": "back_to_front",
+            "renderSlotCullType": "view_frustum_cull",
+            "nodeFlags": 0,
+            "renderPass": {
+                "attachments": [
+                    {
+                        "storeOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "storeOp": "store",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "storeOp": "store",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "storeOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "base_color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    },
+                    {
+                        "storeOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "material",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                    }
+                ],
+                "subpassIndex": 4,
+                "subpassCount": 5,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ]
+                }
+            }
+        },
+        {
+            "typeName": "CORE_RN_COMBINED_POST_PROCESS",
+            "nodeName": "CORE3D_RN_CAM_COMBINEDPP_HDRP",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "PostProcess",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "resources": {
+                "customInputImages": [
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
+                        "usageName": "color"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
+                        "usageName": "depth"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
+                        "usageName": "velocity"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "history",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
+                        "usageName": "history"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "history_next",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
+                        "usageName": "history_next"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "resourceLocation": "from_render_graph_output",
+                        "resourceIndex": 0
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,48 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "systemgraph"
+    },
+    "systems": [
+        {
+            "typeName": "AnimationSystem",
+            "properties": {
+            }
+        },
+        {
+            "typeName": "LocalMatrixSystem",
+            "properties": {
+            }
+        },
+        {
+            "typeName": "NodeSystem",
+            "properties": {
+            }
+        },
+        {
+            "typeName": "RenderPreprocessorSystem",
+            "properties": {
+                "dataStoreMaterial": "RenderDataStoreDefaultMaterial",
+                "dataStoreCamera": "RenderDataStoreDefaultCamera",
+                "dataStoreLight": "RenderDataStoreDefaultLight",
+                "dataStoreScene": "RenderDataStoreDefaultScene",
+                "dataStoreMorph": "RenderDataStoreMorph"
+            }
+        },
+        {
+            "typeName": "MorphingSystem",
+            "properties": {
+            }
+        },
+        {
+            "typeName": "SkinningSystem",
+            "properties": {
+            }
+        },
+        {
+            "typeName": "RenderSystem",
+            "properties": {
+            }
+        }
+    ]
+}

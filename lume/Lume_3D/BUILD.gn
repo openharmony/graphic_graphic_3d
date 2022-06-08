@@ -1,0 +1,268 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_2d/graphic_config.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+declare_args() {
+  CORE3D_EMBEDDED_ASSETS_ENABLED=true
+  CORE3D_ROFS = "rofs3D"
+}
+
+config("lume_3d_api") {
+  include_dirs = [
+    "api",
+  ]
+}
+
+config("lume_3d_config") {
+  include_dirs = [
+    "3rdparty/",
+    "src/",
+    "assets/",
+  ]
+
+  defines = [
+    "__OHOS_PLATFORM__",
+    "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE3D_SHARED_LIBRARY=1",
+    "CORE3D_VALIDATION_ENABLED=0",
+    "CORE3D_TESTS_ENABLED=0",
+    "CORE3D_DEV_ENABLED=${CORE_DEV_ENABLED}",
+    "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }"
+  ]
+
+  if (LUME_OHOS_BUILD) {
+    defines += [
+      "__OHOS_PLATFORM__",
+    ]
+  }
+
+  if (CORE3D_EMBEDDED_ASSETS_ENABLED) {
+    defines += [
+      "CORE3D_EMBEDDED_ASSETS_ENABLED=1",
+    ]
+  }
+}
+
+ohos_source_set("lume_3d_src") {
+  public_configs = [
+    ":lume_3d_config",
+    ":lume_3d_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default"
+  ]
+
+  sources = [
+    "version.cpp",
+    "src/graphics_context.h",
+    "src/graphics_context.cpp",
+
+    "src/ecs/components/animation_component_manager.cpp",
+    "src/ecs/components/animation_input_component_manager.cpp",
+    "src/ecs/components/animation_output_component_manager.cpp",
+    "src/ecs/components/animation_state_component_manager.cpp",
+    "src/ecs/components/animation_state_component.h",
+    "src/ecs/components/animation_track_component_manager.cpp",
+    "src/ecs/components/render_handle_component_manager.cpp",
+    "src/ecs/components/environment_component_manager.cpp",
+    "src/ecs/components/fog_component_manager.cpp",
+    "src/ecs/components/initial_transform_component.h",
+    "src/ecs/components/initial_transform_component_manager.cpp",
+    "src/ecs/components/camera_component_manager.cpp",
+    "src/ecs/components/joint_matrices_component_manager.cpp",
+    "src/ecs/components/layer_flag_bits_metadata.h",
+    "src/ecs/components/layer_component_manager.cpp",
+    "src/ecs/components/light_component_manager.cpp",
+    "src/ecs/components/local_matrix_component_manager.cpp",
+    "src/ecs/components/material_extension_component_manager.cpp",
+    "src/ecs/components/material_component_manager.cpp",
+    "src/ecs/components/mesh_component_manager.cpp",
+    "src/ecs/components/name_component_manager.cpp",
+    "src/ecs/components/node_component_manager.cpp",
+    "src/ecs/components/physical_camera_component_manager.cpp",
+    "src/ecs/components/planar_reflection_component_manager.cpp",
+    "src/ecs/components/post_process_component_manager.cpp",
+    "src/ecs/components/previous_joint_matrices_component_manager.cpp",
+    "src/ecs/components/previous_world_matrix_component_manager.cpp",
+    "src/ecs/components/render_mesh_batch_component_manager.cpp",
+    "src/ecs/components/render_mesh_component_manager.cpp",
+    "src/ecs/components/render_configuration_component_manager.cpp",
+    "src/ecs/components/skin_component_manager.cpp",
+    "src/ecs/components/skin_joints_component_manager.cpp",
+    "src/ecs/components/skin_ibm_component_manager.cpp",
+    "src/ecs/components/world_matrix_component_manager.cpp",
+    "src/ecs/components/transform_component_manager.cpp",
+    "src/ecs/components/uri_component_manager.cpp",
+    "src/ecs/components/morph_component_manager.cpp",
+    "src/ecs/components/rsdz_model_id_component_manager.cpp",
+    "src/ecs/systems/animation_playback.h",
+    "src/ecs/systems/animation_playback.cpp",
+    "src/ecs/systems/animation_system.h",
+    "src/ecs/systems/animation_system.cpp",
+    "src/ecs/systems/local_matrix_system.h",
+    "src/ecs/systems/local_matrix_system.cpp",
+    "src/ecs/systems/node_system.h",
+    "src/ecs/systems/node_system.cpp",
+    "src/ecs/systems/render_preprocessor_system.cpp",
+    "src/ecs/systems/render_system.h",
+    "src/ecs/systems/render_system.cpp",
+    "src/ecs/systems/skinning_system.h",
+    "src/ecs/systems/skinning_system.cpp",
+    "src/ecs/systems/morphing_system.h",
+    "src/ecs/systems/morphing_system.cpp",
+    
+    "src/gltf/data.h",
+    "src/gltf/gltf2.h",
+    "src/gltf/gltf2.cpp",
+    "src/gltf/gltf2_data_structures.h",
+    "src/gltf/gltf2_exporter.h",
+    "src/gltf/gltf2_exporter.cpp",
+    "src/gltf/gltf2_importer.h",
+    "src/gltf/gltf2_importer.cpp",
+    "src/gltf/gltf2_loader.h",
+    "src/gltf/gltf2_loader.cpp",
+    "src/gltf/gltf2_util.h",
+    "src/gltf/gltf2_util.cpp",
+    
+    "src/loader/json_util.h",
+    
+    "src/plugin/static_plugin.cpp",
+    #"src/plugin/static_registry.cpp",
+    
+    "src/property/property_handle.h",
+    "src/property/property_handle.cpp",
+    
+    "src/render/render_node_scene_util.h",
+    "src/render/render_node_scene_util.cpp",
+    
+    "src/render/node/render_node_create_default_camera_gpu_images.h",
+    "src/render/node/render_node_create_default_camera_gpu_images.cpp",
+    "src/render/node/render_node_default_cameras.h",
+    "src/render/node/render_node_default_cameras.cpp",
+    "src/render/node/render_node_default_camera_controller.h",
+    "src/render/node/render_node_default_camera_controller.cpp",
+    "src/render/node/render_node_default_env.h",
+    "src/render/node/render_node_default_env.cpp",
+    "src/render/node/render_node_default_lights.h",
+    "src/render/node/render_node_default_lights.cpp",
+    "src/render/node/render_node_default_material_objects.h",
+    "src/render/node/render_node_default_material_objects.cpp",
+    "src/render/node/render_node_default_material_render_slot.h",
+    "src/render/node/render_node_default_material_render_slot.cpp",
+    "src/render/node/render_node_default_material_deferred_shading.h",
+    "src/render/node/render_node_default_material_deferred_shading.cpp",
+    "src/render/node/render_node_default_shadow_render_slot.h",
+    "src/render/node/render_node_default_shadow_render_slot.cpp",
+    "src/render/node/render_node_default_shadows_blur.h",
+    "src/render/node/render_node_default_shadows_blur.cpp",
+    "src/render/node/render_node_morph.h",
+    "src/render/node/render_node_morph.cpp",
+    
+    "src/render/datastore/render_data_store_default_camera.h",
+    "src/render/datastore/render_data_store_default_camera.cpp",
+    "src/render/datastore/render_data_store_default_light.h",
+    "src/render/datastore/render_data_store_default_light.cpp",
+    "src/render/datastore/render_data_store_default_material.h",
+    "src/render/datastore/render_data_store_default_material.cpp",
+    "src/render/datastore/render_data_store_default_scene.h",
+    "src/render/datastore/render_data_store_default_scene.cpp",
+    "src/render/datastore/render_data_store_morph.h",
+    "src/render/datastore/render_data_store_morph.cpp",
+    
+    "src/util/component_util_functions.h",
+    "src/util/linear_allocator.h",
+    "src/util/mesh_builder.h",
+    "src/util/mesh_builder.cpp",
+    "src/util/mesh_util.h",
+    "src/util/mesh_util.cpp",
+    "src/util/picking.h",
+    "src/util/picking.cpp",
+    "src/util/render_util.h",
+    "src/util/render_util.cpp",
+    "src/util/scene_util.h",
+    "src/util/scene_util.cpp",
+    "src/util/string_util.h",
+    "src/util/uri_lookup.cpp",
+    "src/util/uri_lookup.h",
+  ]
+
+  deps = [
+    "//utils/native/base:utils",
+  ]
+}
+
+lume_compile_shader("lume_3d_compile_shader")
+{
+  script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
+  outputs = [ "$target_gen_dir" ]
+  tool_path = rebase_path("${LUME_CORE_PATH}/tools/", root_build_dir)
+  dest_gen_path = "$target_gen_dir/assets"
+  asset_path = rebase_path("./assets/3d", root_build_dir)
+  shader_path = "${dest_gen_path}/shaders"
+  include_path = rebase_path("api", root_build_dir)
+  render_include_path = rebase_path("${LUME_RENDER_PATH}/api", root_build_dir)
+}
+
+lume_rofs("lume_3d_rofs")
+{
+  output_obj= ""
+  if (target_cpu == "arm") {
+    output_obj = "${CORE3D_ROFS}_32.o"
+  } 
+
+  if (target_cpu == "arm64") {
+    output_obj = "${CORE3D_ROFS}_64.o"
+  }
+
+  outputs = "${target_gen_dir}/assets/${output_obj}"
+
+  tool_path = rebase_path("${LUME_CORE_PATH}/tools/", root_build_dir)
+  root = "/"
+  bin_name = "BINARY_DATA_FOR_3D"
+  size_name = "SIZE_OF_DATA_FOR_3D"
+  base_name = CORE3D_ROFS 
+  script = "${LUME_CORE_PATH}/tools/CompilerAsset.sh"
+  copy_path = "$target_gen_dir/assets"
+  compileShader_deps = [":lume_3d_compile_shader"]
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
+}
+
+source_set("lume_3d_rofs_obj") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${CORE3D_ROFS}_32.o"
+  } 
+
+  if (target_cpu == "arm64") {
+    output_obj = "${CORE3D_ROFS}_64.o"
+  } 
+
+  sources = [
+    "${target_gen_dir}/assets/${output_obj}"
+  ]
+  deps = [
+    ":lume_3d_rofs"
+  ]
+}
+
+ohos_static_library("libAGP3D") {
+  public_deps = [
+    ":lume_3d_src",
+  ]
+
+  if (CORE3D_EMBEDDED_ASSETS_ENABLED) {
+    deps = [
+      ":lume_3d_rofs_obj"
+    ]
+  }
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

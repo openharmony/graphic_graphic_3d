@@ -1,0 +1,86 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
+
+#ifndef API_3D_RENDER_IRENDER_DATA_STORE_MORPH_H
+#define API_3D_RENDER_IRENDER_DATA_STORE_MORPH_H
+
+#include <cstdint>
+
+#include <3d/namespace.h>
+#include <3d/render/render_data_defines_3d.h>
+#include <base/containers/array_view.h>
+#include <render/datastore/intf_render_data_store.h>
+#include <render/render_data_structures.h>
+#include <render/resource_handle.h>
+
+CORE3D_BEGIN_NAMESPACE()
+/** @ingroup group_render_irenderdatastoremorph */
+/**
+RenderDataMorph.
+*/
+struct RenderDataMorph {
+    /** Max vertex buffer count */
+    static constexpr uint32_t MAX_VERTEX_BUFFER_COUNT { 3 };
+    /** Max morph target count */
+    static constexpr uint32_t MAX_MORPH_TARGET_COUNT { 64 };
+
+    /** Submesh */
+    struct Submesh {
+        /** Vertex count */
+        uint32_t vertexCount;
+
+        /** {0 = position, 1 = normal, 2 = tangent} */
+        RenderVertexBuffer vertexBuffers[MAX_VERTEX_BUFFER_COUNT];
+
+        /** Vertex buffer count */
+        uint32_t vertexBufferCount { 0 };
+
+        /** Buffer contains base position/normal/tangent and all morph target deltas (position/normal/tangent) */
+        RenderVertexBuffer morphTargetBuffer;
+
+        /** Number of morph targets */
+        uint32_t morphTargetCount { 0 };
+
+        /** Count of continuous non-zero weights */
+        uint32_t activeTargetCount { 0 };
+
+        /** Target ID */
+        uint16_t morphTargetId[MAX_MORPH_TARGET_COUNT];
+
+        /** Weight value for target (0 - activeTargetCount values must be non-zero) */
+        float morphTargetWeight[MAX_MORPH_TARGET_COUNT];
+    };
+};
+
+/** @ingroup group_render_irenderdatastoremorph */
+/**
+RenderDataStoreMorph interface.
+Not internally syncronized.
+*/
+class IRenderDataStoreMorph : public RENDER_NS::IRenderDataStore {
+public:
+    static constexpr BASE_NS::Uid UID { "230e8df1-9465-4894-af8f-f47f38413000" };
+
+    /** Reserve size */
+    struct ReserveSize {
+        /** Submesh count */
+        uint32_t submeshCount { 0 };
+    };
+
+    ~IRenderDataStoreMorph() override = default;
+
+    /** Add submeshes safely. */
+    virtual void AddSubmesh(const RenderDataMorph::Submesh& submesh) = 0;
+
+    /** Get submeshes
+     * @return Return array view of morph submeshes
+     */
+    virtual BASE_NS::array_view<const RenderDataMorph::Submesh> GetSubmeshes() const = 0;
+
+protected:
+    IRenderDataStoreMorph() = default;
+};
+CORE3D_END_NAMESPACE()
+
+#endif // API_3D_RENDER_IRENDER_DATA_STORE_MORPH_H
