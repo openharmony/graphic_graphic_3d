@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <Type Name="Core::json::value_t&lt;*&gt;::pair">
+        <DisplayString>{key} : {value}</DisplayString>
+    </Type>
+    <Type Name="Core::json::value_t&lt;*&gt;">
+        <DisplayString Condition="type == Core::json::type::uninitialized">empty</DisplayString>
+        <DisplayString Condition="type == Core::json::type::object">object {object_}</DisplayString>
+        <DisplayString Condition="type == Core::json::type::array">array {array_}</DisplayString>
+        <DisplayString Condition="type == Core::json::type::string">string {string_}</DisplayString>
+        <DisplayString Condition="type == Core::json::type::floating_point">number {float_}</DisplayString>
+        <DisplayString Condition="type == Core::json::type::signed_int">number {signed_}</DisplayString>
+        <DisplayString Condition="type == Core::json::type::unsigned_int">number {unsigned_}</DisplayString>
+        <DisplayString Condition="type == Core::json::type::boolean">boolean {boolean_}</DisplayString>
+        <DisplayString Condition="type == Core::json::type::null">null</DisplayString>
+        <Expand>
+            <ArrayItems Condition="type == json::type::object">
+                <Size>object_.size_</Size>
+                <ValuePointer>
+                    (const json::value_t&lt;$T1&gt;::pair*) object_.data_
+                </ValuePointer>
+            </ArrayItems>
+            <ArrayItems Condition="type == json::type::array">
+                <Size>array_.size_</Size>
+                <ValuePointer>(const json::value_t&lt;$T1&gt;*) array_.data_</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+</AutoVisualizer>

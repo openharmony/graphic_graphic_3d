@@ -1,0 +1,35 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_2d/graphic_config.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("lume_engine_dll") {
+  defines = [
+    "CORE_PUBLIC=",
+  ]
+}
+
+ohos_source_set("lume_engine_dynamic_src") {
+  sources = [
+    "src/exports.cpp"
+  ]
+
+  configs = [
+    "${LUME_CORE_PATH}:lume_default",
+    ":lume_engine_dll",
+  ]
+}
+
+#ohos_shared_library("libAGPDLL") {
+#ohos_shared_library(${LIB_ENGINE_CORE}) {
+ohos_shared_library(LIB_ENGINE_CORE) {
+  deps = [
+    ":lume_engine_dynamic_src",
+    "${LUME_CORE_PATH}:libAGPEngine",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
