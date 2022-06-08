@@ -1,0 +1,104 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+
+declare_args() {
+  #BUILDTYPE="Release"
+  #BUILDTYPE="MinSizeRel"
+  #BUILDTYPE="RelWithDebInfo"
+  BUILDTYPE="Release"
+
+  LUME_PATH="foundation/graphic/graphic_3d/lume/"
+
+  BASE_DIR_NAME="LumeBase"
+  CORE_DIR_NAME="LumeEngine"
+  RENDER_DIR_NAME="LumeRender"
+  CORE3D_DIR_NAME="Lume_3D"
+
+  LUME_OHOS_BUILD=true
+  CORE_DEV_ENABLED=1
+
+  LIB_ENGINE_CORE="libAGPDLL"
+  LIB_RENDER="libPluginAGPRender"
+  LIB_CORE3D="libPluginAGP3D"
+}
+
+declare_args() {
+  LUME_ROOT="//${LUME_PATH}"
+}
+
+declare_args() {
+
+  LUME_BASE_PATH="${LUME_ROOT}/${BASE_DIR_NAME}/"
+  LUME_CORE_PATH="${LUME_ROOT}/${CORE_DIR_NAME}/"
+  LUME_RENDER_PATH="${LUME_ROOT}/${RENDER_DIR_NAME}/"
+  LUME_CORE3D_PATH="${LUME_ROOT}/${CORE3D_DIR_NAME}/"
+
+  LUME_CORE_DLL_PATH="${LUME_ROOT}/${CORE_DIR_NAME}/DLL/"
+  LUME_CORE3D_DLL_PATH="${LUME_ROOT}/${CORE3D_DIR_NAME}/DLL/"
+}
+
+declare_args() {
+  CORE_STATIC_PLUGIN_HEADER = "\"${LUME_PATH}/${CORE_DIR_NAME}/src/static_plugin_decl.h\""
+}
+
+template("lume_rofs") {
+  name = target_name
+  action(name) {
+    outputs = [invoker.outputs]
+    script = invoker.script
+    cpu_type = ""
+    output_obj = ""
+    if (target_cpu == "arm") {
+      cpu_type = "armeabi-v7a"
+      output_obj = "${invoker.base_name}_32.o"
+    }
+
+    if (target_cpu == "arm64") {
+      cpu_type = "arm64-v8a"
+      output_obj = "${invoker.base_name}_64.o"
+    }
+
+    args = [
+      invoker.tool_path,
+      "-${cpu_type}",
+      rebase_path(invoker.copy_path, root_build_dir),
+      invoker.root,
+      invoker.bin_name,
+      invoker.size_name,
+      invoker.base_name,
+      rebase_path(invoker.copy_path, root_build_dir),
+      output_obj,
+      invoker.file_extension
+    ]
+
+    deps = []
+    if (defined(invoker.compileShader_deps)) {
+      deps += invoker.compileShader_deps
+    }
+  }
+}
+
+template("lume_compile_shader") {
+  name = target_name
+  action(name) {
+    script = invoker.script
+    outputs = invoker.outputs
+    args = [
+      rebase_path(invoker.dest_gen_path, root_build_dir),
+      invoker.asset_path,
+      invoker.tool_path,
+      rebase_path(invoker.shader_path, root_build_dir),
+      invoker.include_path,
+    ]
+
+    if (defined(invoker.render_include_path)) {
+      args += [
+        invoker.render_include_path
+      ]
+    }
+    print("lume compile shader template")
+    print(invoker.dest_gen_path)
+    print(rebase_path(invoker.dest_gen_path, root_build_dir))
+    print(invoker.shader_path)
+    print(rebase_path(invoker.shader_path, root_build_dir))
+  }
+}
