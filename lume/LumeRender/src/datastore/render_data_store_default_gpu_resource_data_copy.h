@@ -1,0 +1,71 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
+
+#ifndef RENDER_DATA_STORE_RENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H
+#define RENDER_DATA_STORE_RENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H
+
+#include <cstdint>
+#include <mutex>
+
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/vector.h>
+#include <base/util/uid.h>
+#include <render/datastore/intf_render_data_store_default_gpu_resource_data_copy.h>
+#include <render/namespace.h>
+
+RENDER_BEGIN_NAMESPACE()
+class IRenderContext;
+class IDevice;
+class GpuResourceManager;
+/**
+RenderDataStoreDefaultGpuResourceDataCopy implementation.
+*/
+class RenderDataStoreDefaultGpuResourceDataCopy final : public IRenderDataStoreDefaultGpuResourceDataCopy {
+public:
+    RenderDataStoreDefaultGpuResourceDataCopy(IRenderContext& renderContext, const BASE_NS::string_view name);
+    ~RenderDataStoreDefaultGpuResourceDataCopy() override = default;
+
+    void PreRender() override {};
+    void PreRenderBackend() override {};
+    // Do copy operation in end frame.
+    void PostRender() override;
+    void Clear() override;
+
+    void AddCopyOperation(const GpuResourceDataCopy& copyOp) override;
+
+    // for plugin / factory interface
+    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultGpuResourceDataCopy";
+
+    static IRenderDataStore* Create(IRenderContext& renderContext, char const* name);
+    static void Destroy(IRenderDataStore* instance);
+
+    BASE_NS::string_view GetTypeName() const override
+    {
+        return TYPE_NAME;
+    }
+
+    BASE_NS::string_view GetName() const override
+    {
+        return name_;
+    }
+
+    const BASE_NS::Uid& GetUid() const override
+    {
+        return UID;
+    }
+
+private:
+    IDevice& device_;
+    GpuResourceManager& gpuResourceMgr_;
+    const BASE_NS::string name_;
+
+    mutable std::mutex mutex_;
+
+    bool waitForIdle_ { false };
+    BASE_NS::vector<GpuResourceDataCopy> copyData_;
+};
+RENDER_END_NAMESPACE()
+
+#endif // RENDER_DATA_STORE_RENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H

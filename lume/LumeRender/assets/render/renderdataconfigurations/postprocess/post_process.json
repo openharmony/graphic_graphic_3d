@@ -1,0 +1,32 @@
+{
+    "version": 1.0,
+    "name": "PostProcessCore",
+    "postProcessConfiguration": {
+        "enableFlags": "bloom | vignette | color_fringe | tonemap",
+        "bloomConfiguration": {
+            "thresholdHard": 1.0,
+            "thresholdSoft": 2.0,
+            "amountCoefficient": 0.1,
+            "dirtMaskCoefficient": 0.0
+        },
+        "vignetteConfiguration": {
+            "coefficient": 0.5,
+            "power": 0.4
+        },
+        "colorFringeConfiguration": {
+            "distanceCoefficient": 2.0,
+            "coefficient": 1.0
+        },
+        "grainConfiguration": {
+            "pixelSize": 1.0,
+            "coefficient": 0.2
+        },
+        "tonemapConfiguration": {
+            "tonemapType": "aces",
+            "exposure": 0.7
+        },
+        "colorConversionConfiguration": {
+            "conversionFunctionType": "linear"
+        }
+    }
+}

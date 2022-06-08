@@ -1,0 +1,457 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_2d/graphic_config.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+declare_args() {
+  RENDER_BUILD_GLES=true
+  RENDER_BUILD_VULKAN=false
+  RENDER_EMBEDDED_ASSETS_ENABLED=true
+  RENDER_ROFS = "rofsRndr"
+}
+
+config("lume_render_api") {
+  include_dirs = [
+    "api",
+  ]
+  
+  defines = []
+
+  if (BUILDTYPE == "Release") {
+    defines += [
+      "PLUGIN_LOG_NO_DEBUG=1",
+    ] 
+  }
+
+  if (BUILDTYPE == "MinSizeRel") {
+    defines += [
+      "PLUGIN_LOG_NO_DEBUG=1"
+    ] 
+  }
+
+  if (BUILDTYPE == "RelWithDebInfo") {
+    defines += [
+      "PLUGIN_LOG_NO_DEBUG=1"
+    ] 
+  }
+
+  if (LUME_OHOS_BUILD) {
+    defines += [
+      "__OHOS_PLATFORM__",
+    ]
+  }
+}
+
+config("lume_render_config") {
+  include_dirs = [
+    "3rdparty/",
+    "src/",
+  ]
+
+  defines = [
+    "RENDER_PUBLIC=__attribute__((visibility(\"default\")))",
+    "RENDER_DEV_ENABLED=0",
+    "RENDER_PERF_ENABLED=0",
+    "RENDER_TESTS_ENABLED=0",
+    "RENDER_LOG_TO_CONSOLE=1",
+    "RENDER_LOG_TO_FILE",
+    "RENDER_LOG_TO_DEBUG_OUTPUT=0",
+    "RENDER_VULKAN_VALIDATION_ENABLED=0",
+    "RENDER_DEBUG_GPU_RESOURCE_IDS=0",
+    "RENDER_DEBUG_MARKERS_ENABLED=0",
+    "RENDER_DEBUG_COMMAND_MARKERS_ENABLED=0",
+    "RENDER_GL_FLIP_Y_SWAPCHAIN=0",
+    "RENDER_GL_DEBUG=0",
+    "RENDER_GPU_TIMESTAMP_QUERIES_ENABLED=0",
+    "RENDER_VULKAN_RT_ENABLED=0",
+    "RENDER_BUILDTYPE=${BUILDTYPE}",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER}"
+  ]
+
+  if (RENDER_EMBEDDED_ASSETS_ENABLED) {
+    defines += [
+      "RENDER_EMBEDDED_ASSETS_ENABLED=1"
+    ]
+  }
+
+  if (RENDER_BUILD_GLES) {
+    defines += [
+      "RENDER_HAS_GLES_BACKEND=1"
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    defines += [
+      "RENDER_HAS_VULKAN_BACKEND=1",
+      "VMA_STATS_STRING_ENABLED=0",
+      "VMA_STATIC_VULKAN_FUNCTIONS=0"
+    ]
+
+    if (LUME_OHOS_BUILD) {
+      defines += [
+        "RENDER_VULKAN_VALIDATION_ENABLE_WARNINGS=0",
+      ]
+    }
+  }
+  defines += [
+    "RENDER_PUBLIC=__attribute__((visibility(\"default\")))"
+  ]
+
+  ldflags = [
+    "-Wl,--undefined=AGPRender_StaticPlugin"
+  ]
+}
+
+ohos_source_set("lume_render_src") {
+  public_configs = [ 
+    ":lume_render_config",
+    ":lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_default"
+  ]
+
+  sources = [
+    "version.cpp",
+    "src/default_engine_constants.h",
+    "src/render_context.h",
+    "src/render_context.cpp",
+    "src/render_graph.h",
+    "src/render_graph.cpp",
+    "src/renderer.h",
+    "src/renderer.cpp",
+    "src/render_backend.h",
+    "src/resource_handle_impl.h",
+    "src/resource_handle_impl.cpp",
+    
+    "src/device/device.h",
+    "src/device/device.cpp",
+    "src/device/pipeline_state_object.h",
+    "src/device/swapchain.h",
+    "src/device/gpu_resource_handle_util.h",
+    "src/device/gpu_resource_handle_util.cpp",
+    
+    "src/device/gpu_acceleration_structure.h",
+    "src/device/gpu_buffer.h",
+    "src/device/gpu_image.h",
+    "src/device/gpu_program.h",
+    "src/device/gpu_program_util.h",
+    "src/device/gpu_program_util.cpp",
+    "src/device/gpu_resource_desc_flag_validation.h",
+    "src/device/gpu_resource_util.h",
+    "src/device/gpu_resource_util.cpp",
+    "src/device/gpu_sampler.h",
+    "src/device/shader_module.h",
+    "src/device/gpu_resource_manager.h",
+    "src/device/gpu_resource_manager.cpp",
+    "src/device/gpu_resource_manager_base.h",
+    "src/device/gpu_resource_manager_base.inl",
+    "src/device/shader_manager.h",
+    "src/device/shader_manager.cpp",
+    "src/device/shader_pipeline_binder.h",
+    "src/device/shader_pipeline_binder.cpp",
+    "src/device/render_frame_sync.h",
+    
+    "src/loader/json_util.h",
+    "src/loader/json_format_serialization.h",
+    "src/loader/pipeline_layout_loader.h",
+    "src/loader/pipeline_layout_loader.cpp",
+    "src/loader/render_node_graph_loader.h",
+    "src/loader/render_node_graph_loader.cpp",
+    "src/loader/render_data_loader.h",
+    "src/loader/render_data_loader.cpp",
+    "src/loader/render_data_configuration_loader.h",
+    "src/loader/render_data_configuration_loader.cpp",
+    "src/loader/shader_data_loader.h",
+    "src/loader/shader_data_loader.cpp",
+    "src/loader/shader_loader.h",
+    "src/loader/shader_loader.cpp",
+    "src/loader/shader_state_loader.h",
+    "src/loader/shader_state_loader.cpp",
+    "src/loader/shader_state_loader_util.h",
+    "src/loader/shader_state_loader_util.cpp",
+    "src/loader/vertex_input_declaration_loader.h",
+    "src/loader/vertex_input_declaration_loader.cpp",
+    
+    "src/perf/cpu_perf_scope.h",
+    "src/perf/cpu_timer.h",
+    "src/perf/cpu_timer.cpp",
+    "src/perf/gpu_query.h",
+    "src/perf/gpu_query_manager.h",
+    "src/perf/gpu_query_manager.cpp",
+    
+    "src/plugin/static_plugin.cpp",
+    #"src/plugin/static_registry.cpp",
+    
+    "src/nodecontext/node_context_pso_manager.h",
+    "src/nodecontext/node_context_pso_manager.cpp",
+    "src/nodecontext/node_context_pool_manager.h",
+    "src/nodecontext/node_context_descriptor_set_manager.h",
+    "src/nodecontext/node_context_descriptor_set_manager.cpp",
+    "src/nodecontext/render_command_list.h",
+    "src/nodecontext/render_command_list.cpp",
+    "src/nodecontext/render_barrier_list.h",
+    "src/nodecontext/render_barrier_list.cpp",
+    "src/nodecontext/render_node_util.h",
+    "src/nodecontext/render_node_util.cpp",
+    "src/nodecontext/render_node_context_manager.h",
+    "src/nodecontext/render_node_context_manager.cpp",
+    "src/nodecontext/pipeline_descriptor_set_binder.h",
+    "src/nodecontext/pipeline_descriptor_set_binder.cpp",
+    "src/nodecontext/render_node_graph_node_store.h",
+    "src/nodecontext/render_node_graph_manager.h",
+    "src/nodecontext/render_node_graph_manager.cpp",
+    "src/nodecontext/render_node_graph_share_manager.h",
+    "src/nodecontext/render_node_graph_share_manager.cpp",
+    "src/nodecontext/render_node_manager.h",
+    "src/nodecontext/render_node_manager.cpp",
+    "src/nodecontext/render_node_parser_util.h",
+    "src/nodecontext/render_node_parser_util.cpp",
+    
+    "src/datastore/render_data_store_manager.h",
+    "src/datastore/render_data_store_manager.cpp",
+    "src/datastore/render_data_store_default_acceleration_structure_staging.h",
+    "src/datastore/render_data_store_default_acceleration_structure_staging.cpp",
+    "src/datastore/render_data_store_default_staging.h",
+    "src/datastore/render_data_store_default_staging.cpp",
+    "src/datastore/render_data_store_default_gpu_resource_data_copy.h",
+    "src/datastore/render_data_store_default_gpu_resource_data_copy.cpp",
+    "src/datastore/render_data_store_fullscreen_shader.h",
+    "src/datastore/render_data_store_fullscreen_shader.cpp",
+    "src/datastore/render_data_store_pod.h",
+    "src/datastore/render_data_store_pod.cpp",
+    
+    "src/node/core_render_node_factory.h",
+    "src/node/core_render_node_factory.cpp",
+    "src/node/render_bloom.h",
+    "src/node/render_bloom.cpp",
+    "src/node/render_blur.h",
+    "src/node/render_blur.cpp",
+    "src/node/render_node_bloom.h",
+    "src/node/render_node_bloom.cpp",
+    "src/node/render_node_combined_post_process.h",
+    "src/node/render_node_combined_post_process.cpp",
+    "src/node/render_node_compute_generic.h",
+    "src/node/render_node_compute_generic.cpp",
+    "src/node/render_node_create_gpu_images.h",
+    "src/node/render_node_create_gpu_images.cpp",
+    "src/node/render_node_default_acceleration_structure_staging.h",
+    "src/node/render_node_default_acceleration_structure_staging.cpp",
+    "src/node/render_node_fullscreen_generic.h",
+    "src/node/render_node_fullscreen_generic.cpp",
+    "src/node/render_node_staging.h",
+    "src/node/render_node_staging.cpp",
+    "src/node/render_node_back_buffer.h",
+    "src/node/render_node_back_buffer.cpp",
+    "src/node/render_node_back_buffer_gpu_buffer.h",
+    "src/node/render_node_back_buffer_gpu_buffer.cpp",
+    
+    "src/util/frustum_util.h",
+    "src/util/frustum_util.cpp",
+    "src/util/linear_allocator.h",
+    "src/util/log.h",
+    "src/util/render_util.h",
+    "src/util/render_util.cpp",
+    "src/util/string_util.h",
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    sources += [
+      "src/gles/device_gles.h",
+      "src/gles/device_gles.cpp",
+      "src/gles/gl_functions.h",
+      "src/gles/egl_state.h",
+      "src/gles/egl_state.cpp",
+      "src/gles/wgl_state.h",
+      "src/gles/wgl_state.cpp",
+      "src/gles/surface_information.h",
+      "src/gles/swapchain_gles.h",
+      "src/gles/swapchain_gles.cpp",
+      "src/gles/pipeline_state_object_gles.h",
+      "src/gles/pipeline_state_object_gles.cpp",
+      "src/gles/gpu_buffer_gles.h",
+      "src/gles/gpu_buffer_gles.cpp",
+      "src/gles/gpu_image_gles.h",
+      "src/gles/gpu_image_gles.cpp",
+      "src/gles/gpu_program_gles.h",
+      "src/gles/gpu_program_gles.cpp",
+      "src/gles/gpu_sampler_gles.h",
+      "src/gles/gpu_sampler_gles.cpp",
+      "src/gles/gpu_query_gles.h",
+      "src/gles/gpu_query_gles.cpp",
+      "src/gles/gpu_resource_util_gles.h",
+      "src/gles/gpu_resource_util_gles.cpp",
+      "src/gles/spirv_cross_helpers_gles.cpp",
+      "src/gles/spirv_cross_helpers_gles.h",
+      "src/gles/spirv_cross_helper_structs_gles.h",
+      "src/gles/shader_module_gles.h",
+      "src/gles/shader_module_gles.cpp",
+      "src/gles/node_context_pool_manager_gles.h",
+      "src/gles/node_context_pool_manager_gles.cpp",
+      "src/gles/node_context_descriptor_set_manager_gles.h",
+      "src/gles/node_context_descriptor_set_manager_gles.cpp",
+      "src/gles/render_backend_gles.h",
+      "src/gles/render_backend_gles.cpp",
+      "src/gles/render_frame_sync_gles.h",
+      "src/gles/render_frame_sync_gles.cpp",
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    sources += [
+      "src/vulkan/device_vk.h",
+      "src/vulkan/device_vk.cpp",
+      "src/vulkan/swapchain_vk.h",
+      "src/vulkan/swapchain_vk.cpp",
+      "src/vulkan/gpu_memory_allocator_vk.h",
+      "src/vulkan/gpu_memory_allocator_vk.cpp",
+      "src/vulkan/pipeline_state_object_vk.h",
+      "src/vulkan/pipeline_state_object_vk.cpp",
+    
+      "src/vulkan/validate_vk.h",
+      "src/vulkan/create_functions_vk.h",
+      "src/vulkan/create_functions_vk.cpp",
+      "src/vulkan/pipeline_create_functions_vk.h",
+      "src/vulkan/pipeline_create_functions_vk.cpp",
+    
+      "src/vulkan/gpu_acceleration_structure_vk.h",
+      "src/vulkan/gpu_acceleration_structure_vk.cpp",
+      "src/vulkan/gpu_buffer_vk.h",
+      "src/vulkan/gpu_buffer_vk.cpp",
+      "src/vulkan/gpu_image_vk.h",
+      "src/vulkan/gpu_image_vk.cpp",
+      "src/vulkan/gpu_program_vk.h",
+      "src/vulkan/gpu_program_vk.cpp",
+      "src/vulkan/gpu_sampler_vk.h",
+      "src/vulkan/gpu_sampler_vk.cpp",
+      "src/vulkan/gpu_resource_util_vk.h",
+      "src/vulkan/gpu_resource_util_vk.cpp",
+      "src/vulkan/platform_hardware_buffer_util_vk.h",
+      "src/vulkan/platform_hardware_buffer_util_vk.cpp",
+      "src/vulkan/shader_module_vk.h",
+      "src/vulkan/shader_module_vk.cpp",
+    
+      "src/vulkan/node_context_pool_manager_vk.h",
+      "src/vulkan/node_context_pool_manager_vk.cpp",
+      "src/vulkan/node_context_descriptor_set_manager_vk.h",
+      "src/vulkan/node_context_descriptor_set_manager_vk.cpp",
+      "src/vulkan/render_backend_vk.h",
+      "src/vulkan/render_backend_vk.cpp",
+      "src/vulkan/render_frame_sync_vk.h",
+      "src/vulkan/render_frame_sync_vk.cpp",
+    
+      "src/vulkan/gpu_query_vk.h",
+      "src/vulkan/gpu_query_vk.cpp",
+    ]
+
+    if (LUME_OHOS_BUILD) {
+      # platform source
+      sources += [
+      ]
+    }
+  }
+
+  deps = [
+    "//utils/native/base:utils",
+    "//foundation/graphic/graphic_2d:libgl",
+  ]
+}
+
+lume_compile_shader("lume_render_compile_shader")
+{
+  script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
+  outputs = [ "$target_gen_dir" ]
+  tool_path = rebase_path("${LUME_CORE_PATH}/tools/", root_build_dir)
+  dest_gen_path = "$target_gen_dir/assets"
+  asset_path = rebase_path("./assets/render", root_build_dir)
+  shader_path = "${dest_gen_path}/shaders"
+  include_path = rebase_path("api", root_build_dir)
+}
+
+lume_rofs("lume_render_rofs")
+{
+  output_obj= ""
+  if (target_cpu == "arm") {
+    output_obj = "${RENDER_ROFS}_32.o"
+  } 
+
+  if (target_cpu == "arm64") {
+    output_obj = "${RENDER_ROFS}_64.o"
+  }
+
+  outputs = "${target_gen_dir}/assets/${output_obj}"
+
+  tool_path = rebase_path("${LUME_CORE_PATH}/tools/", root_build_dir)
+  root = "/"
+  bin_name = "BINARYDATAFORRENDER"
+  size_name = "SIZEOFDATAFORRENDER"
+  base_name = RENDER_ROFS 
+  script = "${LUME_CORE_PATH}/tools/CompilerAsset.sh"
+  copy_path = "$target_gen_dir/assets"
+  compileShader_deps = [":lume_render_compile_shader"]
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
+}
+
+source_set("lume_render_rofs_obj") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${RENDER_ROFS}_32.o"
+  } 
+
+  if (target_cpu == "arm64") {
+    output_obj = "${RENDER_ROFS}_64.o"
+  } 
+
+  sources = [
+    "${target_gen_dir}/assets/${output_obj}"
+  ]
+  deps = [
+    ":lume_render_rofs"
+  ]
+}
+
+ohos_static_library("libAGPRender") {
+  public_deps = [
+    ":lume_render_src",
+  ]
+
+  if (RENDER_EMBEDDED_ASSETS_ENABLED) {
+    deps = [
+      ":lume_render_rofs_obj"
+    ]
+  }
+}
+
+config("lume_render_plugin_config") {
+  defines = [
+    "CORE_PLUGIN=1"
+  ]
+}
+
+ohos_source_set("lume_render_src_plugin") {
+  sources = [
+    "src/plugin/dynamic_plugin.cpp",
+    "src/plugin/dynamic_registry.cpp",
+    "src/util/json.cpp",
+  ]
+
+  configs = [
+    ":lume_render_plugin_config",
+    ":lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_default"
+  ]
+}
+
+ohos_shared_library(LIB_RENDER) {
+  public_deps = [
+    ":lume_render_src_plugin",
+    ":libAGPRender",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

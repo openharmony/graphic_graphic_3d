@@ -1,0 +1,62 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "Template",
+    "nodes": [
+        {
+            "typeName": "CORE_RN_COMBINED_POST_PROCESS",
+            "nodeName": "CORE_RN_COMBINED_POST_PROCESS",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "PostProcess",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "resources": {
+                "customInputImages": [
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "NODE_NAME",
+                        "usageName": "color"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "NODE_NAME",
+                        "usageName": "depth"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "NODE_NAME",
+                        "usageName": "velocity"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "history",
+                        "nodeName": "NODE_NAME",
+                        "usageName": "history"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "history_next",
+                        "nodeName": "NODE_NAME",
+                        "usageName": "history_next"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "resourceLocation": "from_render_graph_output",
+                        "resourceIndex": 0
+                    }
+                ]
+            }
+        }
+    ]
+}
