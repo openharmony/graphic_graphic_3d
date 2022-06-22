@@ -659,7 +659,6 @@ public:
     {
         BASE_ASSERT(pos >= cbegin());
         BASE_ASSERT(pos <= cend());
-        // todo: validate.
         if (pos == cend()) {
             return end();
         }

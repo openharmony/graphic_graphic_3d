@@ -76,7 +76,6 @@ void main(void)
     if ((uPc.flags.x & POST_PROCESS_SPECIALIZATION_VIGNETTE_BIT) == POST_PROCESS_SPECIALIZATION_VIGNETTE_BIT) {
         const vec2 uvVal = inUv.xy * (vec2(1.0) - inUv.yx);
         const vec4 vignetteFactor = uPc.vignette;
-        // TODO: coefficient 40 baked into factor .x ?
         CORE_RELAXEDP float vignette = uvVal.x * uvVal.y * vignetteFactor.x * 40.0;
         vignette = clamp(pow(vignette, vignetteFactor.y), 0.0, 1.0);
         outColor.rgb *= vignette;

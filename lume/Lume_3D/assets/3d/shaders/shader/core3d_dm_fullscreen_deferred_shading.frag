@@ -245,7 +245,6 @@ vec4 pbrBasic(float depthBufferSample, FullGBufferData fd)
 
     vec3 color = brdfData.diffuseColor;
     if ((fd.materialFlags & CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) == CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) {
-        // TODO: overwrites, indirect does not override
         color = CalculateLighting(shadingData);
     }
 

@@ -1,0 +1,36 @@
+{
+    "name": "@ohos/graphic_3d",
+    "description": "graphic_3d",
+    "version": "3.1",
+    "license": "Apache License 2.0",
+    "publishAs": "code-segment",
+    "segment": {
+      "destPath": "foundation/graphic/graphic_3d"
+    },
+    "dirs": {},
+    "scripts": {},
+    "component": {
+      "name": "graphic_3d",
+      "subsystem": "graphic",
+      "syscap": [],
+      "features": [],
+      "adapted_system_type": [ "standard" ],
+      "rom": "8000KB",
+      "ram": "8000KB",
+
+      "build": {
+        "sub_component": [
+          "//foundation/graphic/graphic_3d/lume/LumeEngine:libAGPEngine",
+          "//foundation/graphic/graphic_3d/lume/LumeEngine/DLL:libAGPDLL",
+          "//foundation/graphic/graphic_3d/lume/LumeRender:libPluginAGPRender",
+          "//foundation/graphic/graphic_3d/lume/Lume_3D/DLL:libPluginAGP3D",
+          "//foundation/graphic/graphic_3d/lume/Lume_3D:libAGP3D",
+          "//foundation/graphic/graphic_3d/3d_widget_adapter:libwidgetAdapter"
+        ],
+        "inner_kits": [],
+        "test": [
+        ]
+      }
+    }
+}
+

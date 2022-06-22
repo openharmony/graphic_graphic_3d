@@ -1,0 +1,233 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+
+import("//build/ohos.gni")
+import("//foundation/arkui/ace_engine/ace_config.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+declare_args() {
+    MULTI_ECS_UPDATE_AT_ONCE="0"
+}
+
+config("lume3d_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+  ]
+
+  if (current_os == "ohos" ) {
+    include_dirs += [
+      "${LUME_CORE_PATH}/api/platform/ohos",
+    ]
+  }
+
+  configs = [
+  ]
+
+  cflags = [
+    "-Wall",
+    "-fexceptions",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+
+    "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "-DCORE_BUILD_2D = 0",
+    "-DCORE_BUILD_VULKAN=0",
+    "-DCORE_BUILD_GL=0",
+    "-DCORE_BUILD_GLES=1",
+    "-DCORE_DEV_ENABLED=0",
+    "-DCORE_TESTS_ENABLED=0",
+    "-DCORE_GL_DEBUG=0",
+    "-DCORE_VALIDATION_ENABLED = 0",
+    "-DCORE_VULKAN_VALIDATION_ENABLED = 0",
+    "-DCORE_EMBEDDED_ASSETS_ENABLED = 2",
+    "-DCORE_ENABLE_GPU_QUERIES=0",
+    "-DCORE_DEBUG_GPU_RESOURCE_IDS = 0",
+    "-DCORE_DEBUG_COMMAND_MARKERS_ENABLED = 0",
+    "-DCORE_DEBUG_MARKERS_ENABLED = 0",
+    "-DRENDER_HAS_GL_BACKEND=0",
+    "-DRENDER_HAS_GLES_BACKEND = 1",
+    "-DRENDER_HAS_VULKAN_BACKEND = 0",
+    "-DVK_USE_PLATFORM_ANDROID_KHR = 1",
+    "-DCORE_LOG_NO_DEBUG=0",
+    "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
+    "-DCORE_LOG_TO_CONSOLE",
+    "-DCORE_LOG_DISABLED=0",
+    "-DCORE_DYNAMIC=1",
+  ]
+
+}
+
+config("widget_adapter_config") {
+    defines = [
+      "MULTI_ECS_UPDATE_AT_ONCE=${MULTI_ECS_UPDATE_AT_ONCE}",
+    ]
+
+    defines += [
+      "NEW_IMP=1"
+    ]
+
+    if (current_os == "ohos" ) {
+        defines += [
+          "__OHOS_PLATFORM__"
+        ]
+    }
+
+    include_dirs = [
+        "include",
+    ]
+
+    if (current_os == "ohos" ) {
+        include_dirs += [
+            "include/ohos",
+        ]
+    }
+
+    cflags_cc = [
+        "-fvisibility=default",
+    ]
+
+    if (MULTI_ECS_UPDATE_AT_ONCE == "1") {
+        cflags_cc += [
+          "-Wno-user-defined-warnings"
+        ]
+    }
+}
+
+ohos_source_set("widget_adapter_source") {
+    sources = [
+        "src/scene_viewer_adapter.cpp",
+        "src/graphics_manager_common.cpp",
+        "core/src/lume/lume_common.cpp",
+        "core/src/engine_factory.cpp",
+        "src/offscreen_context.cpp",
+        "src/graphics_task.cpp",
+    ]
+
+    include_dirs = [
+        "${ace_root}",
+        "${ace_root}/frameworks",
+        "core/include",
+        "core/include/lume",
+        "//foundation/graphic/graphic_2d/rosen/modules/"
+    ]
+
+    defines = [
+      "CORE_HAS_GLES_BACKEND=1"
+    ]
+
+    configs = [
+      ":widget_adapter_config",
+      ":lume3d_config",
+    ]
+
+    public_configs = [
+      ":widget_adapter_config",
+    ]
+
+    deps = [
+      "$ace_flutter_engine_root/skia:ace_skia_ohos",
+    ]
+
+    public_deps = [
+        "//third_party/EGL:libEGL",
+        "//third_party/openGLES:libGLES",
+    ]
+
+    if (current_os == "ohos" ) {
+      sources += [
+        "core/src/lume/ohos/lume.cpp",
+        "src/ohos/graphics_manager.cpp",
+        "src/ohos/texture_layer.cpp",
+      ]
+
+      include_dirs += [
+        "core/include/ohos",
+        "core/include/lume/ohos",
+      ]
+
+      deps += [
+        "//foundation/graphic/graphic_2d:libgl",
+        "//base/hiviewdfx/hilog/interfaces/native/innerkits:libhilog",
+        "//utils/native/base:utils"
+      ]
+
+      defines += [
+        "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z",
+      ]
+
+      if (target_cpu == "arm") {
+        defines += [
+          "PLATFORM_CORE_ROOT_PATH=/system/lib/",
+          "PLATFORM_APP_ROOT_PATH=/system/lib/",
+          "PLATFORM_APP_PLUGIN_PATH=/system/lib/",
+        ]
+      }
+
+      if (target_cpu == "arm64") {
+        defines += [
+          "PLATFORM_CORE_ROOT_PATH=/system/lib64/",
+          "PLATFORM_APP_ROOT_PATH=/system/lib64/",
+          "PLATFORM_APP_PLUGIN_PATH=/system/lib64/",
+        ]
+      }
+    }
+
+    if (current_os == "android" ) {
+      sources += [
+        "core/src/lume/android/lume.cpp",
+        "src/android/graphics_manager.cpp",
+        "src/android/skia_texture.cpp",
+        "src/android/texture_layer.cpp",
+      ]
+
+
+      include_dirs += [
+        "core/include/android",
+        "core/include/lume/android",
+      ]
+
+      aosp_deps = [
+        "shared_library:libEGL",
+        "shared_library:libGLESv2",
+        "shared_library:libandroid",
+      ]
+
+      deps += [
+        "$ace_flutter_engine_root:third_party_flutter_engine_android",
+      ]
+      defines += [
+        "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}",
+      ]
+    }
+}
+
+ohos_shared_library("libwidgetAdapter") {
+    deps = [
+      ":widget_adapter_source",
+    ]
+
+    if (current_os == "android" ) {
+        deps += [
+          "//utils/native/base:utilsecurec",
+        ]
+    }
+
+    if (current_os == "ohos" ) {
+        deps += [
+          "//utils/native/base:utils",
+        ]
+    }
+
+    public_configs = [":widget_adapter_config"]
+    part_name = "graphic_3d"
+    subsystem_name = "graphic"
+}
