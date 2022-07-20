@@ -2,12 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
-#include "engine_factory.h"
 #include "graphics_manager_common.h"
-#include "i_engine.h"
-#include "platform_data.h"
 
 #include "3d_widget_adapter_log.h"
+#include "base/log/ace_trace.h"
+#include "engine_factory.h"
+#include "i_engine.h"
+#include "platform_data.h"
 
 namespace OHOS::Render3D {
 GraphicsManagerCommon::~GraphicsManagerCommon()
@@ -28,6 +29,7 @@ void GraphicsManagerCommon::Register(int32_t key)
 
 bool GraphicsManagerCommon::LoadEngineLib()
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::LoadEngineLib");
     if (engine_ == nullptr) {
         return false;
     }
@@ -46,6 +48,7 @@ bool GraphicsManagerCommon::LoadEngineLib()
 
 bool GraphicsManagerCommon::InitEngine(EGLContext eglContext, PlatformData data)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::InitEngine");
     if (engine_ == nullptr) {
         return false;
     }
@@ -64,6 +67,7 @@ bool GraphicsManagerCommon::InitEngine(EGLContext eglContext, PlatformData data)
 
 void GraphicsManagerCommon::DeInitEngine()
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::DeInitEngine");
     if (engineInited_ && engine_ != nullptr) {
         engine_->DeInitEngine();
         engineInited_ = false;
@@ -72,6 +76,7 @@ void GraphicsManagerCommon::DeInitEngine()
 
 void GraphicsManagerCommon::UnLoadEngineLib()
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::UnLoadEngineLib");
     if (engineLoaded_ && engine_ != nullptr) {
         engine_->UnLoadEngineLib();
         engineLoaded_ = false;
@@ -80,6 +85,9 @@ void GraphicsManagerCommon::UnLoadEngineLib()
 
 std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineType type, EGLContext eglContext)
 {
+    WIDGET_LOGD("%s", __func__);
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
+
     if (engine_ == nullptr) {
         engine_ = EngineFactory::CreateEngine(type);
         WIDGET_LOGD("create proto engine");
@@ -121,6 +129,8 @@ TextureInfo GraphicsManagerCommon::CreateRenderTexture(int32_t key, uint32_t wid
 void GraphicsManagerCommon::UnRegister(int32_t key)
 {
     WIDGET_LOGD("view unregiser %d total %zu", key, viewTextureMap_.size());
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::UnRegister");
+
     auto it = viewTextureMap_.find(key);
     if (it == viewTextureMap_.end()) {
         WIDGET_LOGE("view unregiser has not regester");
@@ -149,12 +159,14 @@ bool GraphicsManagerCommon::HasMultiEcs()
 #if MULTI_ECS_UPDATE_AT_ONCE
 void GraphicsManagerCommon::DrawFrame(void* ecs)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::DrawFrame");
     ecss_.push_back(ecs);
     WIDGET_LOGD("ACE-3D DrawFrame ecss size %zu", ecss_.size());
 }
 
 void GraphicsManagerCommon::PerformDraw()
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::PerformDraw");
     if (engine_ == nullptr) {
         WIDGET_LOGE("ACE-3D PerformDraw but engine is null");
         return;
@@ -167,6 +179,7 @@ void GraphicsManagerCommon::PerformDraw()
 
 void GraphicsManagerCommon::AttachContext(const OHOS::Ace::WeakPtr<OHOS::Ace::PipelineContext> context)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::AttachContext");
     static bool once = false;
     if (once) {
         return;

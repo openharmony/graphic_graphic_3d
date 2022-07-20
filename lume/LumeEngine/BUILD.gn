@@ -125,6 +125,7 @@ config("lume_engine_config") {
     "${LUME_CORE_PATH}/src/",
     "${LUME_CORE_PATH}/asserts/",
     "//utils/native/base/include",
+    "${STB_IMAGE_PATH}",
   ]
 
   defines = [

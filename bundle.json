@@ -24,8 +24,7 @@
           "//foundation/graphic/graphic_3d/lume/LumeEngine/DLL:libAGPDLL",
           "//foundation/graphic/graphic_3d/lume/LumeRender:libPluginAGPRender",
           "//foundation/graphic/graphic_3d/lume/Lume_3D/DLL:libPluginAGP3D",
-          "//foundation/graphic/graphic_3d/lume/Lume_3D:libAGP3D",
-          "//foundation/graphic/graphic_3d/3d_widget_adapter:libwidgetAdapter"
+          "//foundation/graphic/graphic_3d/lume/Lume_3D:libAGP3D"
         ],
         "inner_kits": [],
         "test": [

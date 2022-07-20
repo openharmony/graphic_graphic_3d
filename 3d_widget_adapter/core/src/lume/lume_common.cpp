@@ -3,67 +3,68 @@
  */
 
 #include "lume_common.h"
-#include "graphics_manager.h"
-#include "3d_widget_adapter_log.h"
 
-#include <base/containers/array_view.h>
+#include <dlfcn.h>
+#include <string_view>
 
-#include <core/ecs/intf_system_graph_loader.h>
-#include <core/implementation_uids.h>
-#include <core/namespace.h>
-#include <core/io/intf_file_manager.h>
-#include <core/os/intf_platform.h>
-#include <core/property/intf_property_handle.h>
-#include <core/plugin/intf_plugin_register.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl31.h>
+#include <GLES2/gl2ext.h>
 
 #include <3d/ecs/components/environment_component.h>
-#include <3d/ecs/components/render_handle_component.h>
 #include <3d/ecs/components/light_component.h>
 #include <3d/ecs/components/local_matrix_component.h>
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/name_component.h>
 #include <3d/ecs/components/node_component.h>
+#include <3d/ecs/components/render_handle_component.h>
 #include <3d/ecs/components/render_mesh_component.h>
 #include <3d/ecs/components/transform_component.h>
 #include <3d/ecs/components/world_matrix_component.h>
-#include <3d/ecs/systems/intf_render_system.h>
 #include <3d/ecs/systems/intf_morphing_system.h>
 #include <3d/ecs/systems/intf_node_system.h>
-#include <3d/ecs/systems/intf_render_system.h>
 #include <3d/ecs/systems/intf_render_preprocessor_system.h>
+#include <3d/ecs/systems/intf_render_system.h>
 #include <3d/implementation_uids.h>
 #include <3d/util/intf_mesh_util.h>
 #include <3d/util/intf_picking.h>
 #include <3d/util/intf_scene_util.h>
 
-#include <render/implementation_uids.h>
+#include <base/containers/array_view.h>
+
+#include <core/ecs/intf_system_graph_loader.h>
+#include <core/implementation_uids.h>
+#include <core/io/intf_file_manager.h>
+#include <core/namespace.h>
+#include <core/os/intf_platform.h>
+#include <core/plugin/intf_plugin_register.h>
+#include <core/property/intf_property_handle.h>
+
+
 #include <render/datastore/intf_render_data_store_default_gpu_resource_data_copy.h>
 #include <render/datastore/intf_render_data_store_default_staging.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
-#include <render/device/pipeline_state_desc.h>
 #include <render/device/intf_gpu_resource_manager.h>
+#include <render/device/pipeline_state_desc.h>
 #if CORE_HAS_GLES_BACKEND || CORE_HAS_GL_BACKEND
 #include <render/gles/intf_device_gles.h>
 #endif
+#include <render/implementation_uids.h>
+#include <render/intf_renderer.h>
+#include <render/nodecontext/intf_render_node_graph_manager.h>
 #if CORE_HAS_VULKAN_BACKEND
 #include <render/vulkan/intf_device_vk.h>
 #endif
-#include <render/nodecontext/intf_render_node_graph_manager.h>
-#include <render/intf_renderer.h>
 
-#include <string_view>
-#include <dlfcn.h>
-
-#include <GLES3/gl31.h>
-#include <GLES2/gl2ext.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
+#include "3d_widget_adapter_log.h"
+#include "base/log/ace_trace.h"
+#include "graphics_manager.h"
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
 
 CORE_BEGIN_NAMESPACE()
-#if NEW_IMP
 /** Get plugin register */
 IPluginRegister& (*GetPluginRegister)() = nullptr;
 
@@ -76,7 +77,6 @@ bool (*IsDebugBuild)() = nullptr;
 
 /** Get version */
 BASE_NS::string_view (*GetVersion)() = nullptr;
-#endif
 CORE_END_NAMESPACE()
 #endif // CORE_DYNAMIC
 
@@ -94,12 +94,11 @@ void LumeCommon::UnLoadEngineLib()
     }
     dlclose(libHandle_);
     libHandle_ = nullptr;
-    #if NEW_IMP
+
     CORE_NS::GetPluginRegister = nullptr;
     CORE_NS::CreatePluginRegistry = nullptr;
     CORE_NS::IsDebugBuild = nullptr;
     CORE_NS::GetVersion = nullptr;
-    #endif
 }
 
 template<typename T>
@@ -132,7 +131,6 @@ bool LumeCommon::LoadEngineLib()
     #undef LIB_NAME
 
     #define LOAD_FUNC(fn, name) LoadFunc<decltype(fn)>(fn, name, libHandle_)
-    #if NEW_IMP
     if (!(LOAD_FUNC(CORE_NS::CreatePluginRegistry,
         "_ZN4Core20CreatePluginRegistryERKNS_18PlatformCreateInfoE")
         && LOAD_FUNC(CORE_NS::GetPluginRegister, "_ZN4Core17GetPluginRegisterEv")
@@ -140,7 +138,6 @@ bool LumeCommon::LoadEngineLib()
         && LOAD_FUNC(CORE_NS::GetVersion, "_ZN4Core13GetVersionRevEv"))) {
         return false;
     }
-    #endif
     #undef LOAD_FUNC
 
     return true;
@@ -163,9 +160,7 @@ bool LumeCommon::InitEngine(EGLContext gfxContext, const PlatformData& data)
 
 CORE_NS::IEngine::Ptr LumeCommon::CreateCoreEngine(const Core::PlatformCreateInfo &info)
 {
-    #if NEW_IMP
     CORE_NS::CreatePluginRegistry(info);
-    #endif
     auto factory = CORE_NS::GetInstance<Core::IEngineFactory>(Core::UID_ENGINE_FACTORY);
 
     const Core::EngineCreateInfo engineCreateInfo { info,
@@ -193,9 +188,8 @@ RENDER_NS::IRenderContext::Ptr LumeCommon::CreateRenderContext(EGLContext gfxCon
 {
     // Create render context
     constexpr BASE_NS::Uid uidRender[] = { RENDER_NS::UID_RENDER_PLUGIN };
-    #if NEW_IMP
     CORE_NS::GetPluginRegister().LoadPlugins(uidRender);
-    #endif
+
     renderContext_ = CORE_NS::CreateInstance<RENDER_NS::IRenderContext>(
         *engine_->GetInterface<Core::IClassFactory>(),
         RENDER_NS::UID_RENDER_CONTEXT);
@@ -257,9 +251,7 @@ CORE3D_NS::IGraphicsContext::Ptr LumeCommon::CreateGfx3DContext()
 {
     // Create an engine bound graphics context instance.
     constexpr BASE_NS::Uid uid3D[] = { CORE3D_NS::UID_3D_PLUGIN };
-    #if NEW_IMP
     CORE_NS::GetPluginRegister().LoadPlugins(uid3D);
-    #endif
 
     graphicsContext_ = CORE_NS::CreateInstance<CORE3D_NS::IGraphicsContext>(
         *renderContext_->GetInterface<Core::IClassFactory>(),
@@ -319,10 +311,12 @@ void LumeCommon::AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>&
 {
     shapes_.clear();
     shapes_ = shapes;
+    LoadCustGeometry(shapes_);
 }
 
 void LumeCommon::UnLoadModel()
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("LumeCommon::UnloadModel");
     WIDGET_LOGD("ACE-3D LumeCommon::UnloadModel");
 
     if (engine_ == nullptr || importedResources_.empty()) {
@@ -352,12 +346,12 @@ void LumeCommon::UnLoadModel()
 
 bool LumeCommon::IsAnimating()
 {
-    WIDGET_LOGD("ACE-3D LumeCommon::IsAnimating() animProgress_: %d ", animProgress_);
     return animProgress_;
 }
 
 void LumeCommon::LoadAndImport(const GltfImportInfo& info, const CORE_NS::Entity& sceneEntity)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("LumeCommon::LoadAndImport");
     WIDGET_LOGD("ACE-3D LumeCommon::LoadAndImport() ");
     auto& ecs = *ecs_;
     auto gltf = graphicsContext_->GetGltf().LoadGLTF(info.fileName_);
@@ -458,9 +452,10 @@ void LumeCommon::LoadAndImport(const GltfImportInfo& info, const CORE_NS::Entity
 
 void LumeCommon::DrawFrame()
 {
-    WIDGET_LOGD("--> ACE-3D LumeCommon::DrawFrame()");
+    OHOS::Ace::ACE_SCOPED_TRACE("LumeCommon::DrawFrame");
     // Update app scene.
     const Core::EngineTime et = engine_->GetEngineTime();
+
     Tick(et.totalTimeUs, et.deltaTimeUs);
 
     auto* ecs = ecs_.get();
@@ -473,7 +468,7 @@ void LumeCommon::DrawFrame()
 
 void LumeCommon::Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime)
 {
-    WIDGET_LOGD("ACE-3D LumeCommon::Tick()");
+    OHOS::Ace::ACE_SCOPED_TRACE("LumeCommon::Tick");
     // Apply orbit camera transform. using the scene default camera.
     if (transformManager_ && sceneManager_ &&
         CORE_NS::EntityUtil::IsValid(cameraEntity_)) {
@@ -498,6 +493,8 @@ void LumeCommon::Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime)
 
 void LumeCommon::OnTouchEvent(const SceneViewerTouchEvent& event)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("LumeCommon::OnTouchEvent");
+
     auto viewWidth = textureInfo_.width_;
     auto viewHeight = textureInfo_.height_;
 
@@ -582,6 +579,8 @@ BASE_NS::Math::Quat OrbitCameraHelper::GetCameraRotation()
 
 void OrbitCameraHelper::Update(uint64_t /* delta */)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("OrbitCameraHelper::Update");
+
     // Simple stupid pinch zoom (dolly) gesture.
     if (touchPointerCount_ == 2) {
         WIDGET_LOGD("ACE-3D OrbitCameraHelper::Update()");
@@ -737,6 +736,8 @@ void OrbitCameraHelper::OnMove(const PointerEvent& event)
 
 void OrbitCameraHelper::HandlePointerEvent(const PointerEvent& event)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("OrbitCameraHelper::Handle PointerEvent");
+
     const bool isMouse = (event.pointerId_ == -1);
     switch (event.eventType_) {
         case PointerEventType::PRESSED:
@@ -759,6 +760,8 @@ void OrbitCameraHelper::HandlePointerEvent(const PointerEvent& event)
 #if MULTI_ECS_UPDATE_AT_ONCE
 void LumeCommon::DeferDraw()
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("LumeCommon::DeferDraw");
+
     const Core::EngineTime et = engine_->GetEngineTime();
     // Update app scene.
     Tick(et.totalTimeUs, et.deltaTimeUs);
@@ -790,19 +793,13 @@ void LumeCommon::CreateEcs(uint32_t key)
     if (ecs_ != nullptr) {
         return;
     }
-
+    key_ = key;
     ecs_ = engine_->CreateEcs();
     auto& ecs = *ecs_;
     auto graphFactory = CORE_NS::GetInstance<CORE_NS::ISystemGraphLoaderFactory>(
         CORE_NS::UID_SYSTEM_GRAPH_LOADER);
     auto systemGraphLoader = graphFactory->Create(engine_->GetFileManager());
     systemGraphLoader->Load("rofs3D://systemGraph.json", ecs);
-
-    transformManager_ = CORE_NS::GetManager<CORE3D_NS::ITransformComponentManager>(ecs);
-    cameraManager_ = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(ecs);
-    sceneManager_ = CORE_NS::GetManager<CORE3D_NS::IRenderConfigurationComponentManager>(ecs);
-    lightManager_ = CORE_NS::GetManager<CORE3D_NS::ILightComponentManager>(ecs);
-    postprocessManager_ = CORE_NS::GetManager<CORE3D_NS::IPostProcessComponentManager>(ecs);
 
     BASE_NS::string prefix = "LumeCommon" + BASE_NS::string{std::to_string(key).c_str()};
     auto& renderStoreManager = GetRenderContext()->GetRenderDataStoreManager();
@@ -825,6 +822,12 @@ void LumeCommon::CreateEcs(uint32_t key)
         renderPreprocessorSystem->GetProperties()) = props;
 
     ecs.Initialize();
+
+    transformManager_ = CORE_NS::GetManager<CORE3D_NS::ITransformComponentManager>(ecs);
+    cameraManager_ = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(ecs);
+    sceneManager_ = CORE_NS::GetManager<CORE3D_NS::IRenderConfigurationComponentManager>(ecs);
+    lightManager_ = CORE_NS::GetManager<CORE3D_NS::ILightComponentManager>(ecs);
+    postprocessManager_ = CORE_NS::GetManager<CORE3D_NS::IPostProcessComponentManager>(ecs);
 }
 
 void LumeCommon::CreateScene()
@@ -862,7 +865,8 @@ void LumeCommon::CreateCamera()
     orbitCamera_.SetOrbitFromEye(cameraPosition_, cameraRotation_, distance);
 
     if (auto cameraWriteHandle = cameraManager_->Write(cameraEntity_); cameraWriteHandle) {
-        cameraWriteHandle->sceneFlags |= CORE3D_NS::CameraComponent::MAIN_CAMERA_BIT;
+        cameraWriteHandle->sceneFlags |= CORE3D_NS::CameraComponent::MAIN_CAMERA_BIT |
+            CORE3D_NS::CameraComponent::ACTIVE_RENDER_BIT;
     }
 }
 
@@ -899,8 +903,19 @@ void LumeCommon::LoadBackgroundModel(std::string modelPath, SceneViewerBackgroun
     std::copy(defaultIrradianceCoefficients, defaultIrradianceCoefficients + countOfSh,
         envComponent.irradianceCoefficients);
 
-    if (type == SceneViewerBackgroundType::TRANSPARENT || modelPath.empty()) {
+    auto cameraHandle = cameraManager_->Write(cameraEntity_);
+
+    if (!cameraHandle) {
         return;
+    }
+
+    cameraHandle->pipelineFlags |= CORE3D_NS::CameraComponent::MSAA_BIT |
+        CORE3D_NS::CameraComponent::ALLOW_COLOR_PRE_PASS_BIT;
+
+    cameraHandle->renderingPipeline = CORE3D_NS::CameraComponent::RenderingPipeline::FORWARD;
+
+    if (type == SceneViewerBackgroundType::TRANSPARENT) {
+        cameraHandle->pipelineFlags |= CORE3D_NS::CameraComponent::CLEAR_COLOR_BIT;
     }
 
     GltfImportInfo file { modelPath.c_str(), GltfImportInfo::AnimateImportedScene,
@@ -908,11 +923,6 @@ void LumeCommon::LoadBackgroundModel(std::string modelPath, SceneViewerBackgroun
         CORE3D_NS::CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL };
 
     LoadAndImport(file, sceneEntity_);
-
-    auto cameraHandle = cameraManager_->Write(cameraEntity_);
-    if (type == SceneViewerBackgroundType::TRANSPARENT) {
-        cameraHandle->pipelineFlags |= CORE3D_NS::CameraComponent::CLEAR_COLOR_BIT;
-    }
 
     const auto environments = static_cast<CORE_NS::IComponentManager::ComponentId>(envManager->GetComponentCount());
 
@@ -955,10 +965,14 @@ void LumeCommon::SetUpPostprocess()
     }
 
     CORE3D_NS::PostProcessComponent& postProcess = *postProcessHandle;
-    postProcess.enableFlags = RENDER_NS::PostProcessConfiguration::ENABLE_BLOOM_BIT;
-    postProcess.bloomConfiguration.thresholdHard = 20.0f;
-    postProcess.bloomConfiguration.thresholdSoft = 20.0f;
+    postProcess.enableFlags = RENDER_NS::PostProcessConfiguration::ENABLE_BLOOM_BIT
+        | RENDER_NS::PostProcessConfiguration::ENABLE_TONEMAP_BIT
+        | RENDER_NS::PostProcessConfiguration::ENABLE_COLOR_FRINGE_BIT;
+    postProcess.bloomConfiguration.thresholdHard = 0.9f;
+    postProcess.bloomConfiguration.thresholdSoft = 2.0f;
     postProcess.bloomConfiguration.amountCoefficient = 2.0f;
+    postProcess.colorFringeConfiguration.coefficient = 1.5f;
+    postProcess.colorFringeConfiguration.distanceCoefficient = 2.5f;
 }
 
 void LumeCommon::UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations)
@@ -1074,11 +1088,6 @@ void CreateGeometry(CORE_NS::Entity& sceneEntity_, CORE_NS::Entity& entityMesh,
 
 void LumeCommon::LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &shapes)
 {
-    shapes_ = shapes;
-    if (shapes_.empty()) {
-        return;
-    }
-
     CORE3D_NS::MaterialComponent desc;
     desc.textures[CORE3D_NS::MaterialComponent::TextureIndex::MATERIAL]
         .factor.z = 0.0f;
@@ -1104,7 +1113,7 @@ void LumeCommon::LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &sh
         switch (entity->GetType()) {
             case 0:
             {
-                WIDGET_LOGD("ACE-3D LumeCommon::InitializeScene() GenerateCube()");
+                WIDGET_LOGW("ACE-3D LumeCommon::InitializeScene() GenerateCube()");
                 auto svCube = OHOS::Ace::AceType::DynamicCast<SVCube>(entity);
                 auto mesh = meshUtil.GenerateCubeMesh(*ecs_, entity->GetName().c_str(), materialEntity,
                 svCube->GetWidth(), svCube->GetHeight(), svCube->GetDepth());
@@ -1113,7 +1122,7 @@ void LumeCommon::LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &sh
             }
             case 1:
             {
-                WIDGET_LOGD("ACE-3D LumeCommon::InitializeScene() GenerateSphere()");
+                WIDGET_LOGW("ACE-3D LumeCommon::InitializeScene() GenerateSphere()");
                 auto svSphere = OHOS::Ace::AceType::DynamicCast<SVSphere>(entity);
                 auto mesh = meshUtil.GenerateSphereMesh(*ecs_, entity->GetName().c_str(),
                     materialEntity, svSphere->GetRadius(), svSphere->GetRings(), svSphere->GetSectors());
@@ -1122,7 +1131,7 @@ void LumeCommon::LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &sh
             }
             case 2:
             {
-                WIDGET_LOGD("ACE-3D LumeCommon::InitializeScene() GenerateCone()");
+                WIDGET_LOGW("ACE-3D LumeCommon::InitializeScene() GenerateCone()");
                 auto svCone = OHOS::Ace::AceType::DynamicCast<SVCone>(entity);
                 auto mesh = meshUtil.GenerateConeMesh(*ecs_, entity->GetName().c_str(),
                     materialEntity, svCone->GetRadius(), svCone->GetLength(), svCone->GetSectors());
@@ -1133,7 +1142,6 @@ void LumeCommon::LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &sh
             break;
         }
     }
-    shapes_.clear(); // release resources
 }
 
 void LumeCommon::SetUpCustomRenderTarget(const TextureInfo &info)
@@ -1157,6 +1165,7 @@ void LumeCommon::SetUpCustomRenderTarget(const TextureInfo &info)
     cameraComponent->customColorTargets.clear();
     cameraComponent->customColorTargets.emplace_back(std::move(imageEntity));
     cameraComponent->customDepthTarget = std::move(depthEntity);
+    cameraComponent->postProcess = postprocessEntity_;
 }
 
 void LumeCommon::CreateLight()

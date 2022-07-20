@@ -22,7 +22,7 @@ vec4 FxaaPixelShader(
     float fxaaConsoleEdgeThresholdMin,
     vec4 fxaaConsole360ConstDir
 ) {
-    return vec4();
+    return vec4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 #endif // SHADERS__COMMON__FXAA_REFERENCE_H
 

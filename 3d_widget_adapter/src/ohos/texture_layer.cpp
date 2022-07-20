@@ -3,10 +3,11 @@
  */
 
 #include "texture_layer.h"
-#include "3d_widget_adapter_log.h"
 
-#include "include/gpu/GrContext.h"
+#include "3d_widget_adapter_log.h"
+#include "base/log/ace_trace.h"
 #include "include/gpu/GrBackendSurface.h"
+#include "include/gpu/GrContext.h"
 #include "include/gpu/gl/GrGLInterface.h"
 
 namespace OHOS {
@@ -35,15 +36,17 @@ SkRect TextureLayer::onGetBounds()
 
 void TextureLayer::onDraw(SkCanvas* canvas)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("TextureLayer::onDraw");
     std::lock_guard<std::mutex> lk(ftrMut_);
     if (image_.ftr_.valid()) {
         image_.ftr_.get();
-        DrawTexture(canvas);
     }
+    DrawTexture(canvas);
 }
 
 void TextureLayer::DrawTexture(SkCanvas* canvas)
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("TextureLayer::DrawTexture");
     if (image_.textureInfo_.textureId_ <= 0) {
         WIDGET_LOGE("%s invalid texture %d", __func__, __LINE__);
         return;
@@ -56,6 +59,7 @@ void TextureLayer::DrawTexture(SkCanvas* canvas)
 
         image_.skImage_ = SkImage::MakeFromTexture(canvas->getGrContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
             kRGBA_8888_SkColorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
+        WIDGET_LOGW("%s Create SkImage %d", __func__, __LINE__);
     }
 
     canvas->drawImage(image_.skImage_, offsetX_, offsetY_);

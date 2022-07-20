@@ -53,19 +53,16 @@ GraphicsTask& GraphicsTask::GetInstance()
 
 void GraphicsTask::PushSyncMessage(const std::function<Task>& task)
 {
-    WIDGET_LOGD("GraphicsTask::PushSyncMessage start");
     std::shared_future<void> ftr;
     {
         std::lock_guard<std::mutex> lk(messageQueueMut_);
         ftr = messageQueue_.emplace(std::move(task)).GetFuture();
         messageQueueCnd_.notify_one();
     }
-    WIDGET_LOGD("GraphicsTask::PushSyncMessage wait");
+
     if (ftr.valid()) {
         ftr.get();
     }
-    
-    WIDGET_LOGD("GraphicsTask::PushSyncMessage end");
 }
 
 std::shared_future<void> GraphicsTask::PushAsyncMessage(const std::function<Task>& task)
@@ -93,7 +90,7 @@ GraphicsTask::~GraphicsTask()
             messageQueue_.pop();
         }
     }
-    
+
     if (loop_.joinable()) {
         loop_.join();
     }
@@ -119,10 +116,8 @@ void GraphicsTask::Stop()
 
 void GraphicsTask::EngineThread()
 {
-    WIDGET_LOGD("GraphicsTask::EngineThread loop start");
-
+    WIDGET_LOGD("GraphicsTask::EngineThread execute start");
     do {
-        WIDGET_LOGD("GraphicsTask::EngineThread wait for one message");
         std::unique_lock<std::mutex> lk(messageQueueMut_);
         messageQueueCnd_.wait(lk, [this] { return !messageQueue_.empty(); });
 
@@ -131,7 +126,6 @@ void GraphicsTask::EngineThread()
         lk.unlock();
 
         msg.Execute();
-        WIDGET_LOGD("GraphicsTask::EngineThread execute one message");
     } while (!exit_);
 
     WIDGET_LOGD("GraphicsTask::EngineThread execute exit");

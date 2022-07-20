@@ -2,10 +2,11 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
+#include "scene_viewer_adapter.h"
+
+#include "3d_widget_adapter_log.h"
 #include "base/log/ace_trace.h"
 #include "graphics_manager.h"
-#include "scene_viewer_adapter.h"
-#include "3d_widget_adapter_log.h"
 
 namespace OHOS::Render3D {
 SceneViewerAdapter::SceneViewerAdapter(uint32_t key) : key_(key)
@@ -21,7 +22,8 @@ SceneViewerAdapter::~SceneViewerAdapter()
 void SceneViewerAdapter::SetUpSceneViewer(const TextureInfo &info, std::string src,
     std::string backgroundSrc, SceneViewerBackgroundType bgType)
 {
-    WIDGET_LOGD("%s %d 5", __func__, __LINE__);
+    WIDGET_LOGD("%s %d", __func__, __LINE__);
+    OHOS::Ace::ACE_SCOPED_TRACE("SceneViewerAdapter::SetUpSceneViewer");
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
     }
@@ -34,13 +36,12 @@ void SceneViewerAdapter::SetUpSceneViewer(const TextureInfo &info, std::string s
 
     engine_->SetUpCustomRenderTarget(info);
     engine_->SetUpCameraViewPort(info.width_, info.height_);
-
+    engine_->UpdateGLTFAnimations({});
     engine_->DrawFrame();
 }
 
 void SceneViewerAdapter::SetUpCameraTransform(float position[], float rotationAngle, float rotationAxis[])
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -50,7 +51,6 @@ void SceneViewerAdapter::SetUpCameraTransform(float position[], float rotationAn
 
 void SceneViewerAdapter::SetUpCameraViewProjection(float zNear, float zFar, float fovDegrees)
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -61,7 +61,6 @@ void SceneViewerAdapter::SetUpCameraViewProjection(float zNear, float zFar, floa
 void SceneViewerAdapter::SetLightProperties(int lightType, float color[], float intensity,
     bool shadow, float position[], float rotationAngle, float rotationAxis[])
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -72,7 +71,6 @@ void SceneViewerAdapter::SetLightProperties(int lightType, float color[], float 
 
 void SceneViewerAdapter::CreateLight()
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -82,7 +80,6 @@ void SceneViewerAdapter::CreateLight()
 
 void SceneViewerAdapter::SetUpCustomRenderTarget(const TextureInfo &info)
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -92,7 +89,6 @@ void SceneViewerAdapter::SetUpCustomRenderTarget(const TextureInfo &info)
 
 void SceneViewerAdapter::UnLoadModel()
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s %d", __func__, __LINE__);
         return;
@@ -103,7 +99,6 @@ void SceneViewerAdapter::UnLoadModel()
 
 void SceneViewerAdapter::OnTouchEvent(const SceneViewerTouchEvent& event)
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -113,7 +108,6 @@ void SceneViewerAdapter::OnTouchEvent(const SceneViewerTouchEvent& event)
 
 bool SceneViewerAdapter::IsAnimating()
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return false;
@@ -123,7 +117,7 @@ bool SceneViewerAdapter::IsAnimating()
 
 void SceneViewerAdapter::DrawFrame()
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
+    OHOS::Ace::ACE_SCOPED_TRACE("SceneViewerAdapter::DrawFrame");
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -142,7 +136,7 @@ void SceneViewerAdapter::DrawFrame()
 
 void SceneViewerAdapter::Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime)
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
+    OHOS::Ace::ACE_SCOPED_TRACE("SceneViewerAdapter::Tick");
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -152,7 +146,6 @@ void SceneViewerAdapter::Tick(const uint64_t aTotalTime, const uint64_t aDeltaTi
 
 void SceneViewerAdapter::AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes)
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -163,7 +156,6 @@ void SceneViewerAdapter::AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeo
 void SceneViewerAdapter::UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>&
     animations)
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     if (engine_ == nullptr) {
         WIDGET_LOGE("%s engine not init yet %d", __func__, __LINE__);
         return;
@@ -173,12 +165,12 @@ void SceneViewerAdapter::UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPt
 
 void SceneViewerAdapter::SetEngine(std::unique_ptr<IEngine> engine)
 {
-    WIDGET_LOGD("%s %d", __func__, __LINE__);
     engine_ = std::move(engine);
 }
 
 void SceneViewerAdapter::DeInitEngine()
 {
+    OHOS::Ace::ACE_SCOPED_TRACE("SceneViewerAdapter::DeInitEngine");
     WIDGET_LOGD("%s %d", __func__, __LINE__);
     engine_->DeInitEngine();
     engine_.reset();

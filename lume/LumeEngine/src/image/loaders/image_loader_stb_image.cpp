@@ -40,7 +40,7 @@
 #define STBI_NEON
 #endif
 
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
 #include <base/math/mathf.h>
 #include <core/io/intf_file_manager.h>

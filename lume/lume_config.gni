@@ -40,6 +40,10 @@ declare_args() {
   CORE_STATIC_PLUGIN_HEADER = "\"${LUME_PATH}/${CORE_DIR_NAME}/src/static_plugin_decl.h\""
 }
 
+declare_args() {
+  STB_IMAGE_PATH = "//third_party/minimp3/player/"
+}
+
 template("lume_rofs") {
   name = target_name
   action(name) {
@@ -95,10 +99,5 @@ template("lume_compile_shader") {
         invoker.render_include_path
       ]
     }
-    print("lume compile shader template")
-    print(invoker.dest_gen_path)
-    print(rebase_path(invoker.dest_gen_path, root_build_dir))
-    print(invoker.shader_path)
-    print(rebase_path(invoker.shader_path, root_build_dir))
   }
 }

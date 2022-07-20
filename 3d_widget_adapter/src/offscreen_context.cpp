@@ -7,7 +7,6 @@
 #include <EGL/eglext.h>
 #include <GLES/gl.h>
 #include <3d_widget_adapter_log.h>
-#include <string>
 
 namespace OHOS::Render3D {
 OffScreenContext::AutoRestore::AutoRestore()
@@ -123,15 +122,9 @@ GLuint OffScreenContext::CreateRenderTarget(EGLContext platformContext, uint32_t
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    std::string p;
-    for (int i = 0; i < width * height; i++) {
-        p.push_back(255); // red
-        p.push_back(0);
-        p.push_back(0);
-        p.push_back(255); // alpha
-    }
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-        GL_UNSIGNED_BYTE, p.c_str());
+        GL_UNSIGNED_BYTE, 0);
 
     return texId;
 }

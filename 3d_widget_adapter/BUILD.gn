@@ -71,10 +71,6 @@ config("widget_adapter_config") {
       "MULTI_ECS_UPDATE_AT_ONCE=${MULTI_ECS_UPDATE_AT_ONCE}",
     ]
 
-    defines += [
-      "NEW_IMP=1"
-    ]
-
     if (current_os == "ohos" ) {
         defines += [
           "__OHOS_PLATFORM__"
