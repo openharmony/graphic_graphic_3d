@@ -164,7 +164,7 @@ void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
             for (uint32_t i = 0; i < t.arrayElements; i++) {
                 string tmp = t.name;
                 char buf[16];
-                if (sprintf_s(buf, sizeof(buf), "[%d]", i) < 0) {
+                if (sprintf_s(buf, sizeof(buf), "[%u]", i) < 0) {
                     PLUGIN_LOG_E("ProcessUniformBlocks: sprintf_s failed");
                 }
                 tmp += buf;

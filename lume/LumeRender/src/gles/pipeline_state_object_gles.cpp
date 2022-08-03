@@ -119,7 +119,7 @@ GpuShaderProgramGLES* GraphicsPipelineStateObjectGLES::GetOESProgram(const vecto
     BASE_NS::string key;
     char tmp[16];
     for (auto& bind : oes_binds) {
-        if (sprintf_s(tmp, sizeof(tmp), "%d_%d_", bind.set, bind.bind) < 0) {
+        if (sprintf_s(tmp, sizeof(tmp), "%hhu_%hhu_", bind.set, bind.bind) < 0) {
             PLUGIN_LOG_E("GetOESProgram: sprintf_s failed");
         }
         key += tmp;

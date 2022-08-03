@@ -52,17 +52,14 @@ ILibrary::Ptr ILibrary::Load(const string_view filePath)
 {
     #define TO_STRING(name) #name
     #define LIB_NAME(name) TO_STRING(name)
-    CORE_LOG_E("check load filePath %s %s, %s %s E", filePath.data(), LIB_NAME(LIB_ENGINE_CORE),
-        LIB_NAME(LIB_RENDER), LIB_NAME(LIB_CORE3D));
 
     if (filePath.find(LIB_NAME(LIB_ENGINE_CORE)) == string_view::npos &&
         filePath.find(LIB_NAME(LIB_RENDER)) == string_view::npos &&
         filePath.find(LIB_NAME(LIB_CORE3D)) == string_view::npos) {
-        CORE_LOG_E("failed to find the lib %s", filePath.data());
         return ILibrary::Ptr {};
     }
 
-    CORE_LOG_E("do load filePath %s X", filePath.data());
+    CORE_LOG_E("load filePath %s", filePath.data());
     return ILibrary::Ptr { new LibraryOHOS(filePath) };
 }
 
