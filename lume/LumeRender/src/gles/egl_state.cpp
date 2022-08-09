@@ -442,7 +442,6 @@ void EGLState::CreateContext(const BackendExtraGLES* backendConfig)
     if (backendConfig) {
         sharedContext = backendConfig->sharedContext;
     }
-    PLUGIN_LOG_I("Creating new context in DeviceGLES, using shared context: %p", sharedContext);
     plat_.context = eglCreateContext(plat_.display, plat_.config, sharedContext, context_attributes.data());
     CheckEGLError(__FILE__, __LINE__);
 
