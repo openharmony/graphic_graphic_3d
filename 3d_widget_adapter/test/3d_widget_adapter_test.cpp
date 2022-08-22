@@ -121,6 +121,12 @@ bool EngineTest::IsAnimating()
 }
 
 namespace {
+/**
+ * @tc.name: SetUpSceneViewer1
+ * @tc.desc: Verify SceneViewer setup
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, SetUpSceneViewer1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
@@ -135,6 +141,12 @@ HWTEST_F(WidgetAdapter3DTest, SetUpSceneViewer1, testing::ext::TestSize.Level1)
     adapter.SetUpSceneViewer(texture, gltf, background, type);
 }
 
+/**
+ * @tc.name: SetUpCameraViewProjection1
+ * @tc.desc: Verify SceneViewer setup projection
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, SetUpCameraViewProjection1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
@@ -144,12 +156,24 @@ HWTEST_F(WidgetAdapter3DTest, SetUpCameraViewProjection1, testing::ext::TestSize
     adapter.SetUpCameraViewProjection(near, far, degree);
 }
 
+/**
+ * @tc.name: CreateLight1
+ * @tc.desc: Verify SceneViewer Create light
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, CreateLight1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     adapter.CreateLight();
 }
 
+/**
+ * @tc.name: SetUpCustomRenderTarget1
+ * @tc.desc: Verify SceneViewer Create RenderTarget
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, SetUpCustomRenderTarget1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
@@ -157,12 +181,24 @@ HWTEST_F(WidgetAdapter3DTest, SetUpCustomRenderTarget1, testing::ext::TestSize.L
     adapter.SetUpCustomRenderTarget(texture);
 }
 
+/**
+ * @tc.name: UnLoadModel1
+ * @tc.desc: Verify SceneViewer unload model
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, UnLoadModel1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     adapter.UnLoadModel();
 }
 
+/**
+ * @tc.name: OnTouchEvent1
+ * @tc.desc: Verify SceneViewer handle touch event
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, OnTouchEvent1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
@@ -171,12 +207,24 @@ HWTEST_F(WidgetAdapter3DTest, OnTouchEvent1, testing::ext::TestSize.Level1)
     adapter.OnTouchEvent(event);
 }
 
+/**
+ * @tc.name: DrawFrame1
+ * @tc.desc: Verify SceneViewer render frame
+ * @tc.type: FUNC
+ * @tc.require: SR000GUI0P
+ */
 HWTEST_F(WidgetAdapter3DTest, DrawFrame1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     adapter.DrawFrame();
 }
 
+/**
+ * @tc.name: DrawFrame1
+ * @tc.desc: Verify SceneViewer tick frame
+ * @tc.type: FUNC
+ * @tc.require: SR000GUI0P
+ */
 HWTEST_F(WidgetAdapter3DTest, Tick1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
@@ -185,25 +233,48 @@ HWTEST_F(WidgetAdapter3DTest, Tick1, testing::ext::TestSize.Level1)
     adapter.Tick(total, delta);
 }
 
+/**
+ * @tc.name: AddGeometries1
+ * @tc.desc: Verify SceneViewer add geometries
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, AddGeometries1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     adapter.AddGeometries({});
 }
 
+/**
+ * @tc.name: UpdateGLTFAnimations1
+ * @tc.desc: Verify update gltf animation
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, UpdateGLTFAnimations1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     adapter.UpdateGLTFAnimations( {} );
 }
 
-
+/**
+ * @tc.name: SetEngine1
+ * @tc.desc: Verify set null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, SetEngine1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     adapter.SetEngine(nullptr);
 }
 
+/**
+ * @tc.name: SetEngine2
+ * @tc.desc: Verify set valid engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, SetEngine2, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
@@ -211,6 +282,12 @@ HWTEST_F(WidgetAdapter3DTest, SetEngine2, testing::ext::TestSize.Level1)
     adapter.SetEngine(std::move(engine));
 }
 
+/**
+ * @tc.name: IsAnimating1
+ * @tc.desc: Verify get animation state
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, IsAnimating1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
@@ -218,6 +295,12 @@ HWTEST_F(WidgetAdapter3DTest, IsAnimating1, testing::ext::TestSize.Level1)
     ASSERT_EQ(animating, false);
 }
 
+/**
+ * @tc.name: IsAnimating2
+ * @tc.desc: Verify get animation state
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, IsAnimating2, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
