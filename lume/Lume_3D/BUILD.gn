@@ -193,8 +193,8 @@ ohos_source_set("lume_3d_src") {
     "src/util/uri_lookup.h",
   ]
 
-  deps = [
-    "//utils/native/base:utils",
+  external_deps = [
+    "c_utils:utils",
   ]
 }
 

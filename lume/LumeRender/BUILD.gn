@@ -354,8 +354,11 @@ ohos_source_set("lume_render_src") {
   }
 
   deps = [
-    "//utils/native/base:utils",
     "//foundation/graphic/graphic_2d:libgl",
+  ]
+
+  external_deps = [
+    "c_utils:utils"
   ]
 }
 

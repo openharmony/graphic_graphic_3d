@@ -12,7 +12,7 @@ declare_args() {
 config("lume_base_api") {
   include_dirs = [
     "${LUME_BASE_PATH}/api",
-    "//utils/native/base/include",
+    "//commonlibrary/c_utils/base/include",
   ]
 
   defines = [
@@ -119,7 +119,7 @@ config("lume_engine_config") {
     "${LUME_CORE_PATH}/3rdparty/",
     "${LUME_CORE_PATH}/src/",
     "${LUME_CORE_PATH}/asserts/",
-    "//utils/native/base/include",
+    "//commonlibrary/c_utils/base/include",
     "${STB_IMAGE_PATH}",
   ]
 
@@ -246,12 +246,12 @@ ohos_source_set("lume_engine_src") {
     ":lume_base_api",
   ]
 
-  public_deps = [
-    "//utils/native/base:utils",
+  external_deps = [
+    "c_utils:utils",
   ]
 
   if (LUME_OHOS_BUILD) {
-    external_deps = [ "hiviewdfx_hilog_native:libhilog" ]
+    external_deps += [ "hiviewdfx_hilog_native:libhilog" ]
   }
 }
 

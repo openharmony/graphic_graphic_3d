@@ -22,7 +22,7 @@ ohos_unittest("3d_render_service_test") {
   include_dirs = [
     "//third_party/googletest/googletest/include",
     "//foundation/graphic/graphic_3d/render_service/core/include",
-    "//utils/native/base/include",
+    "//commonlibrary/c_utils/base/include",
   ]
 
   deps = [

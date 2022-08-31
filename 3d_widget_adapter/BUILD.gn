@@ -153,7 +153,10 @@ ohos_source_set("widget_adapter_source") {
       deps += [
         "//foundation/graphic/graphic_2d:libgl",
         "//base/hiviewdfx/hilog/interfaces/native/innerkits:libhilog",
-        "//utils/native/base:utils"
+      ]
+
+      external_deps = [
+        "c_utils:utils"
       ]
 
       defines += [
@@ -211,15 +214,9 @@ ohos_shared_library("libwidgetAdapter") {
       ":widget_adapter_source",
     ]
 
-    if (current_os == "android" ) {
-        deps += [
-          "//utils/native/base:utilsecurec",
-        ]
-    }
-
     if (current_os == "ohos" ) {
-        deps += [
-          "//utils/native/base:utils",
+        external_deps = [
+          "c_utils:utils"
         ]
     }
 
