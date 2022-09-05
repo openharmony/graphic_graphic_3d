@@ -23,17 +23,17 @@ config("lume_base_api") {
   if (BUILDTYPE == "Release") {
     defines += [
       "BASE_LOG_NO_DEBUG=1",
-    ] 
+    ]
   }
   if (BUILDTYPE == "MinSizeRel") {
     defines += [
       "BASE_LOG_NO_DEBUG=1"
-    ] 
+    ]
   }
   if (BUILDTYPE == "RelWithDebInfo") {
     defines += [
         "BASE_LOG_NO_DEBUG=1"
-    ] 
+    ]
   }
 }
 
@@ -46,7 +46,7 @@ config("lume_engine_api") {
     include_dirs += [
       "${LUME_CORE_PATH}/api/platform/ohos/",
     ]
-  } 
+  }
 
   defines = [
     "CORE_BUILD_BASE=1",
@@ -58,17 +58,17 @@ config("lume_engine_api") {
   if (BUILDTYPE == "Release") {
     defines += [
       "CORE_LOG_NO_DEBUG=1",
-    ] 
+    ]
   }
   if (BUILDTYPE == "MinSizeRel") {
     defines += [
       "CORE_LOG_NO_DEBUG=1"
-    ] 
+    ]
   }
   if (BUILDTYPE == "RelWithDebInfo") {
     defines += [
       "CORE_LOG_NO_DEBUG=1"
-    ] 
+    ]
   }
 }
 
@@ -135,7 +135,8 @@ config("lume_engine_config") {
     "CORE_TESTS_ENABLED=0",
     "CORE_DYNAMIC=0",
     "CORE_BUILDTYPE=${BUILDTYPE}",
-    "CORE_PUBLIC=__attribute__((visibility(\"default\")))"
+    "CORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "USE_STB_IMAGE=$USE_STB_IMAGE"
   ]
 
   if (CORE_EMBEDDED_ASSETS_ENABLED) {
@@ -164,10 +165,9 @@ ohos_source_set("lume_engine_src") {
     "src/image/loaders/image_loader_ktx.h",
     "src/image/loaders/image_loader_ktx.cpp",
     "src/image/loaders/image_loader_stb_image.h",
-    "src/image/loaders/image_loader_stb_image.cpp",
     "src/image/image_loader_manager.h",
     "src/image/image_loader_manager.cpp",
-    
+
     "src/io/path_tools.h",
     "src/io/path_tools.cpp",
     "src/io/file_manager.h",
@@ -239,6 +239,12 @@ ohos_source_set("lume_engine_src") {
     ]
   }
 
+  if (USE_STB_IMAGE) {
+    sources += [
+      "src/image/loaders/image_loader_stb_image.cpp",
+    ]
+  }
+
   configs = [
     ":lume_engine_config",
     ":lume_default",
@@ -260,7 +266,7 @@ lume_rofs("lume_engine_rofs")
   output_obj= ""
   if (target_cpu == "arm") {
     output_obj = "${CORE_ROFS}_32.o"
-  } 
+  }
 
   if (target_cpu == "arm64") {
     output_obj = "${CORE_ROFS}_64.o"
@@ -272,7 +278,7 @@ lume_rofs("lume_engine_rofs")
   root = "/"
   bin_name = "BINARYDATAFORCORE"
   size_name = "SIZEOFDATAFORCORE"
-  base_name = CORE_ROFS 
+  base_name = CORE_ROFS
   script = "./tools/CompilerAsset.sh"
   copy_path = "$target_gen_dir/assets"
   file_extension = ""
@@ -282,11 +288,11 @@ source_set("lume_engine_rofs_obj") {
   output_obj = ""
   if (target_cpu == "arm") {
     output_obj = "${CORE_ROFS}_32.o"
-  } 
+  }
 
   if (target_cpu == "arm64") {
     output_obj = "${CORE_ROFS}_64.o"
-  } 
+  }
 
   sources = [
     "${target_gen_dir}/assets/${output_obj}"

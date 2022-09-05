@@ -8,7 +8,16 @@
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
+#ifdef USE_STB_IMAGE
+#if USE_STB_IMAGE
 IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderStbImage();
+#else
+static inline IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderStbImage()
+{
+    return {};
+}
+#endif
+#endif
 CORE_END_NAMESPACE()
 
 #endif //  CORE_IMAGE_LOADERS_IMAGE_LOADER_STB_IMAGE_H
