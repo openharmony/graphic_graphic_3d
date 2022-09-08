@@ -1464,8 +1464,8 @@ void RenderSystem::CalculateSceneBounds(const SceneBoundingVolumeHelper& sceneBo
             if ((Math::abs(radDifference) > granularity) || (posDifference > granularity)) {
                 // Calculate how many steps we need to change and in to which direction.
                 const int32_t radAmount =
-                    (int32_t)ceil((boundingSphereRadius - sceneBoundingSphereRadius_) / granularity);
-                const int32_t posAmount = (int32_t)ceil(posDifference / granularity);
+                    static_cast<int>(ceil((boundingSphereRadius - sceneBoundingSphereRadius_) / granularity));
+                const int32_t posAmount = static_cast<int>(ceil(posDifference / granularity));
                 if ((radAmount != 0) || (posAmount != 0)) {
                     // Update size and position of the bounds.
                     sceneBoundingSpherePosition_ = boundingSpherePosition;

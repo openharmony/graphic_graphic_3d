@@ -18,7 +18,7 @@ CORE_BEGIN_NAMESPACE()
 class EngineFactory final : public IEngineFactory, public IClassInfo {
 public:
     EngineFactory() = default;
-    virtual ~EngineFactory() override = default;
+    ~EngineFactory() override = default;
 
     // IInterface
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;

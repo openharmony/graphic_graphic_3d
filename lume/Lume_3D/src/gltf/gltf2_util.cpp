@@ -660,17 +660,14 @@ string_view GetAnimationInterpolation(AnimationInterpolation interpolation)
     switch (interpolation) {
         case AnimationInterpolation::STEP:
             return "STEP";
-            break;
         default:
             [[fallthrough]];
         case AnimationInterpolation::INVALID:
             [[fallthrough]];
         case AnimationInterpolation::LINEAR:
             return "LINEAR";
-            break;
         case AnimationInterpolation::SPLINE:
             return "CUBICSPLINE";
-            break;
     }
 }
 
@@ -682,19 +679,14 @@ string_view GetAnimationPath(AnimationPath path)
         case AnimationPath::INVALID:
             CORE_LOG_W("invalid animation path %d", path);
             return "translation";
-            break;
         case AnimationPath::TRANSLATION:
             return "translation";
-            break;
         case AnimationPath::ROTATION:
             return "rotation";
-            break;
         case AnimationPath::SCALE:
             return "scale";
-            break;
         case AnimationPath::WEIGHTS:
             return "weights";
-            break;
     }
 }
 
