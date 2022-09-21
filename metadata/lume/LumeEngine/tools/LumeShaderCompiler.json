@@ -2,12 +2,12 @@
   "version": "2.0.0",
   "data": {
     "productVersion": {
-      "P7dcec87376e6c93a1cc840337373be909a608e943529fb4a899996066a0fdc1b": {
+      "Pedbd5d7ac4bd9e8e8b504ad09352c662dc781dd02fd3b2c05d8b69fc6da2e145": {
         "productionName": "HarmonyOS 3.1",
         "releaseVersion": "",
         "serviceId": "9e6f22f1708040368c20ab0ba8ffeb1d",
         "serviceName": "APP",
-        "serviceVersion": "HwAgpEngine.1.0.0.0.20220825172607",
+        "serviceVersion": "HwAgpEngine.1.0.0.1.20220921104159",
         "versionUrl": "",
         "cmcDeltaId": "",
         "cmcCategory": "ComponentVersion"
@@ -441,32 +441,75 @@
       }
     },
     "sourceCode": {
-      "S4cb168dd6b07cda4ba125bb1cd2663477554d215b9221d2e87cdfba1ab82ca98": {
+      "S7a92cf16831039ca39a22078cdada0ad0e03730d0fe3d43079ad77415f15bcdf": {
         "repoUrl": "ssh://git@codehub-dg-y.huawei.com:2222/h00382658/LumeBinaryCompile.git",
         "branch": "master",
-        "commitId": "230856f230b753286301659dc7d8c7b8679a2d46",
+        "commitId": "687403440f40fe15c6574ab0740b3d0b79b29966",
         "tag": "",
         "type": "gerrit",
         "path": "LumeBinaryCompile"
       }
     },
-    "artifactDependency": {},
     "buildJob": {
-      "B1a538ed6d9c94d09a4d0fa6b305c5ffa": {
-        "buildJobId": "1a538ed6-d9c9-4d09-a4d0-fa6b305c5ffa",
+      "B2e1815fca6f7d55cfb28343688ad0d239b30a66121c84b82f67b2fb8cbd20301": {
+        "buildJobId": "2e1815fca6f7d55cfb28343688ad0d239b30a66121c84b82f67b2fb8cbd20301",
         "buildJobName": "",
-        "buildJobUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=1a538ed6-d9c9-4d09-a4d0-fa6b305c5ffa",
+        "buildJobUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=7c626163-48ef-44ae-80bd-c325340e832e",
         "buildStatus": "SUCCESS"
       }
     },
-    "artifactRepo": {}
+    "artifactRepo": {},
+    "artifactDependency": {}
   },
+  "moduleInfo": [
+    {
+      "buildJobId": "2e1815fca6f7d55cfb28343688ad0d239b30a66121c84b82f67b2fb8cbd20301",
+      "id": "ed8f3b21ffa50e0707544e138348f317adbcc44db3c44a955c8d7b76e34e46e6",
+      "repoType": "GENERIC_CMC",
+      "toolType": "ART_GET",
+      "cmcDeltaId": "",
+      "groupId": "EMUI",
+      "artifactId": "APP",
+      "version": "HwAgpEngine.1.0.0.1.20220921104159",
+      "fileList": [
+        {
+          "fileUrl": "lfghelix03-ap:1666;HW-APK/IRD/HwAgpEngine/HarmonyOS-Master-ALL-Global-Full-None-FullyFeature;IRD_HwAgpEngine_HarmonyOS-Master-ALL-Global-Full-None-FullyFeature_1.0.0.1_20220921_01"
+        }
+      ],
+      "productVersion": {
+        "$path": "$.data.productVersion.Pedbd5d7ac4bd9e8e8b504ad09352c662dc781dd02fd3b2c05d8b69fc6da2e145"
+      },
+      "dependencyInfo": {
+        "dependenciesId": [],
+        "dependencies": []
+      }
+    }
+  ],
+  "envInfo": [
+    {
+      "buildJobId": "2e1815fca6f7d55cfb28343688ad0d239b30a66121c84b82f67b2fb8cbd20301",
+      "$path": "$.data.env.Ea7b17841914a450cb2fac74a03542f0b"
+    }
+  ],
+  "sourceCodeInfo": [
+    {
+      "buildJobId": "2e1815fca6f7d55cfb28343688ad0d239b30a66121c84b82f67b2fb8cbd20301",
+      "repoList": [
+        {
+          "$path": "$.data.sourceCode.S7a92cf16831039ca39a22078cdada0ad0e03730d0fe3d43079ad77415f15bcdf",
+          "label": [
+            "BUILD"
+          ]
+        }
+      ]
+    }
+  ],
   "buildProjectInfo": {
     "projectId": "9e6f22f1708040368c20ab0ba8ffeb1d",
-    "buildId": "1a538ed6-d9c9-4d09-a4d0-fa6b305c5ffa",
+    "buildId": "2e1815fca6f7d55cfb28343688ad0d239b30a66121c84b82f67b2fb8cbd20301",
     "buildName": "HwAgpEngine",
     "buildSystem": "CDE",
-    "buildUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=1a538ed6-d9c9-4d09-a4d0-fa6b305c5ffa",
+    "buildUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=7c626163-48ef-44ae-80bd-c325340e832e",
     "buildStatus": "SUCCESS",
     "buildLockFileId": "",
     "buildLockFileName": "",
@@ -489,48 +532,5 @@
     "productionId": "",
     "productionName": ""
   },
-  "envInfo": [
-    {
-      "buildJobId": "1a538ed6-d9c9-4d09-a4d0-fa6b305c5ffa",
-      "$path": "$.data.env.Ea7b17841914a450cb2fac74a03542f0b"
-    }
-  ],
-  "sourceCodeInfo": [
-    {
-      "buildJobId": "1a538ed6-d9c9-4d09-a4d0-fa6b305c5ffa",
-      "repoList": [
-        {
-          "$path": "$.data.sourceCode.S4cb168dd6b07cda4ba125bb1cd2663477554d215b9221d2e87cdfba1ab82ca98",
-          "label": [
-            "BUILD"
-          ]
-        }
-      ]
-    }
-  ],
-  "moduleInfo": [
-    {
-      "buildJobId": "1a538ed6-d9c9-4d09-a4d0-fa6b305c5ffa",
-      "id": "bdcb04c9c9a079e63ab5a20f82c7ed8e4c0c21338715d3ebd5a6cad62e98ccf7",
-      "repoType": "GENERIC_CMC",
-      "toolType": "ART_GET",
-      "cmcDeltaId": "",
-      "groupId": "EMUI",
-      "artifactId": "APP",
-      "version": "HwAgpEngine.1.0.0.0.20220825172607",
-      "fileList": [
-        {
-          "fileUrl": "lfghelix03-ap:1666;HW-APK/IRD/HwAgpEngine/HarmonyOS-Master-ALL-Global-Full-None-FullyFeature;IRD_HwAgpEngine_HarmonyOS-Master-ALL-Global-Full-None-FullyFeature_1.0.0.0_20220825_03"
-        }
-      ],
-      "productVersion": {
-        "$path": "$.data.productVersion.P7dcec87376e6c93a1cc840337373be909a608e943529fb4a899996066a0fdc1b"
-      },
-      "dependencyInfo": {
-        "dependenciesId": [],
-        "dependencies": []
-      }
-    }
-  ],
   "artifactsRepoUrl": []
 }
