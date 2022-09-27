@@ -434,7 +434,6 @@ void LumeCommon::LoadAndImport(const GltfImportInfo& info, const CORE_NS::Entity
             const auto scale = 2.f / BASE_NS::Math::max(dim.x, BASE_NS::Math::max(dim.y, dim.z));
             // Calculate the where the center of AABB bottom is after scaling.
             BASE_NS::Math::Vec3 offset;
-            offset.x = (aabb.minAABB.x + aabb.maxAABB.x) * 0.5f;
             offset.y = aabb.minAABB.y;
             offset.x = (aabb.minAABB.z + aabb.maxAABB.z) * 0.5f;
             offset *= scale;

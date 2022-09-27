@@ -505,7 +505,6 @@ RenderPass RenderNodeDefaultShadowRenderSlot::CreateRenderPass(const ShadowBuffe
     // NOTE: the depth buffer needs to be samplable (optimmally with VSM it could be discarded)
     const bool isPcf = (buffers.shadowTypes.shadowType == IRenderDataStoreDefaultLight::ShadowType::PCF);
     RenderPass renderPass;
-    renderPass.renderPassDesc.attachmentCount = 1;
     renderPass.renderPassDesc.renderArea = { 0, 0, buffers.width, buffers.height };
     renderPass.renderPassDesc.subpassCount = 1;
     renderPass.subpassStartIndex = 0;

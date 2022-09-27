@@ -1170,7 +1170,6 @@ typename MaterialComponentManager::ComponentHandle& MaterialComponentManager::Co
         metaData_ = exchange(other.metaData_, nullptr);
         generation_ = exchange(other.generation_, 0);
         rLocked_ = exchange(other.rLocked_, 0);
-        rLocked_ = exchange(other.rLocked_, 0);
         wLocked_ = exchange(other.wLocked_, false);
         data_ = exchange(other.data_, {});
     }

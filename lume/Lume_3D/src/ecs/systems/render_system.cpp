@@ -1119,7 +1119,6 @@ RenderConfigurationComponent RenderSystem::GetRenderConfigurationComponent()
         const Entity id = renderConfigMgr_->GetEntity(i);
         if (nodeMgr_->Get(id).effectivelyEnabled) {
             return renderConfigMgr_->Get(i);
-            break;
         }
     }
     return {};
@@ -1780,7 +1779,6 @@ void RenderSystem::ProcessPostProcesses()
                 // just copy values (no support for fog control)
                 PostProcessConfiguration ppConfig;
                 ppConfig.enableFlags = pp.enableFlags;
-                ppConfig.tonemapConfiguration = pp.tonemapConfiguration;
                 ppConfig.bloomConfiguration = pp.bloomConfiguration;
                 ppConfig.vignetteConfiguration = pp.vignetteConfiguration;
                 ppConfig.colorFringeConfiguration = pp.colorFringeConfiguration;
