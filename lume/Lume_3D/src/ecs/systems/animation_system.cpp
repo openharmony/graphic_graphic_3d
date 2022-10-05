@@ -8,6 +8,7 @@
 #include <PropertyTools/property_data.h>
 #include <algorithm>
 #include <cinttypes>
+#include <cfloat>
 
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/animation_input_component.h>

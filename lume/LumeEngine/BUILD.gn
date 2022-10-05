@@ -101,6 +101,10 @@ config("lume_default") {
     "-Wl,--exclude-libs,ALL",
   ]
 
+  if (use_musl) {
+    ldflags -= [ "-Wl,--no-threads" ]
+  }
+
   if (LUME_OHOS_BUILD) {
     defines = [
       "__OHOS_PLATFORM__",
