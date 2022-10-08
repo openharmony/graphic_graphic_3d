@@ -5,7 +5,6 @@
 #ifndef OHOS_RENDER_3D_PLATFORM_DATA_H
 #define OHOS_RENDER_3D_PLATFORM_DATA_H
 
-#include <jni.h>
 #include <string>
 
 namespace OHOS::Render3D {
