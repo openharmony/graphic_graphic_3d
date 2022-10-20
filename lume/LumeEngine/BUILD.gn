@@ -12,7 +12,7 @@ declare_args() {
 config("lume_base_api") {
   include_dirs = [
     "${LUME_BASE_PATH}/api",
-    "//commonlibrary/c_utils/base/include",
+    "//third_party/bounds_checking_function/include",
   ]
 
   defines = [
