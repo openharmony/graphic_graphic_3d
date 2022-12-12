@@ -247,8 +247,9 @@ void StdDirectory::FormatPath(string& path, bool isDirectory)
 
     // Ensure there is last separator in place.
     if (path.length() > 0 && isDirectory) {
-        if (path[length - 1] != '/')
+        if (path[length - 1] != '/') {
             path += '/';
+        }
     }
 }
 

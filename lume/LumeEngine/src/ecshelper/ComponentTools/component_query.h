@@ -16,7 +16,7 @@ CORE_BEGIN_NAMESPACE()
 class ComponentQuery : private IEcs::EntityListener, private IEcs::ComponentListener {
 public:
     ComponentQuery() = default;
-    ~ComponentQuery();
+    ~ComponentQuery() override;
 
     /** Operations for the component query that are being applied in to of the base component set. */
     struct Operation {

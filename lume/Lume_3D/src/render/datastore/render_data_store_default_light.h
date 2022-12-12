@@ -23,7 +23,7 @@ RenderDataStoreDefaultLight implementation.
 */
 class RenderDataStoreDefaultLight final : public IRenderDataStoreDefaultLight {
 public:
-    RenderDataStoreDefaultLight(const BASE_NS::string_view name);
+    explicit RenderDataStoreDefaultLight(const BASE_NS::string_view name);
     ~RenderDataStoreDefaultLight() override = default;
 
     void PreRender() override {};

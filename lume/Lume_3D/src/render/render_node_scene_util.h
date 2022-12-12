@@ -51,7 +51,7 @@ public:
 class RenderNodeSceneUtilImpl : public IRenderNodeSceneUtil {
 public:
     RenderNodeSceneUtilImpl() = default;
-    ~RenderNodeSceneUtilImpl() = default;
+    ~RenderNodeSceneUtilImpl() override = default;
 
     SceneRenderDataStores GetSceneRenderDataStores(const RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
         BASE_NS::string_view sceneDataStoreName) override;

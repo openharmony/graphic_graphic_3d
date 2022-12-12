@@ -24,7 +24,7 @@ RenderDataStoreMorph implementation.
 */
 class RenderDataStoreMorph final : public IRenderDataStoreMorph {
 public:
-    RenderDataStoreMorph(const BASE_NS::string_view name);
+    explicit RenderDataStoreMorph(const BASE_NS::string_view name);
     ~RenderDataStoreMorph() override = default;
 
     void Init(const IRenderDataStoreMorph::ReserveSize& reserveSize);

@@ -107,7 +107,6 @@ uint32_t SpecializationByteSize(ShaderSpecialization::Constant::Type type)
             [[fallthrough]];
         case Render::ShaderSpecialization::Constant::Type::FLOAT:
             return 4;
-            break;
         default:
             break;
     }

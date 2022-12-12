@@ -21,7 +21,7 @@ class PropertyApiImpl : public IPropertyApi, protected IPropertyHandle {
 public:
     PropertyApiImpl();
     PropertyApiImpl(BlockType* data, BASE_NS::array_view<const Property> props);
-    ~PropertyApiImpl() = default;
+    ~PropertyApiImpl() override = default;
 
     IPropertyHandle* GetData();
     const IPropertyHandle* GetData() const;

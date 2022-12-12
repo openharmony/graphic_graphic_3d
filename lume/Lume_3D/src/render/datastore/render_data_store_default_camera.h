@@ -26,7 +26,7 @@ RenderDataStoreDefaultCamera implementation.
 */
 class RenderDataStoreDefaultCamera final : public IRenderDataStoreDefaultCamera {
 public:
-    RenderDataStoreDefaultCamera(const BASE_NS::string_view name);
+    explicit RenderDataStoreDefaultCamera(const BASE_NS::string_view name);
     ~RenderDataStoreDefaultCamera() override = default;
 
     void PreRender() override {};

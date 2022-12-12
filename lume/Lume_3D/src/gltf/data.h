@@ -78,7 +78,7 @@ struct Assets {
 // Implementation of outside-world GLTF data interface.
 class Data : public Assets, public IGLTFData {
 public:
-    Data(CORE_NS::IFileManager& fileManager);
+    explicit Data(CORE_NS::IFileManager& fileManager);
     bool LoadBuffers() override;
     void ReleaseBuffers() override;
 

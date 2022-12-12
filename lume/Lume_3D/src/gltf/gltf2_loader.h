@@ -22,7 +22,7 @@ class Data;
 /** Describes result of the parsing operation. */
 struct LoadResult {
     LoadResult() = default;
-    LoadResult(BASE_NS::string&& error) : success(false), error(error) {}
+    explicit LoadResult(BASE_NS::string&& error) : success(false), error(error) {}
 
     /** Indicates, whether the loading operation is successful. */
     bool success { true };

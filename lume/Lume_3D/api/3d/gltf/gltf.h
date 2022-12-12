@@ -91,7 +91,7 @@ protected:
 /** Describes result of the loading operation. */
 struct GLTFLoadResult {
     GLTFLoadResult() = default;
-    GLTFLoadResult(BASE_NS::string&& error) : success(false), error(error) {}
+    explicit GLTFLoadResult(BASE_NS::string&& error) : success(false), error(error) {}
 
     /** Indicates, whether the loading operation is successful. */
     bool success { true };

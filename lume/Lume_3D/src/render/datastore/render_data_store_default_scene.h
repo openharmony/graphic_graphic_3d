@@ -24,7 +24,7 @@ RenderDataStoreDefaultScene implementation.
 */
 class RenderDataStoreDefaultScene final : public IRenderDataStoreDefaultScene {
 public:
-    RenderDataStoreDefaultScene(const BASE_NS::string_view name);
+    explicit RenderDataStoreDefaultScene(const BASE_NS::string_view name);
     ~RenderDataStoreDefaultScene() override = default;
 
     void PreRender() override {};
