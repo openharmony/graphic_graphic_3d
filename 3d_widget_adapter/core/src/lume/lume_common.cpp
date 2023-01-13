@@ -524,6 +524,11 @@ void LumeCommon::OnTouchEvent(const SceneViewerTouchEvent& event)
         case OHOS::Ace::TouchType::CANCEL:
             pointerEvent.eventType_ = PointerEventType::CANCELLED;
             break;
+        case OHOS::Ace::TouchType::PULL_DOWN:
+        case OHOS::Ace::TouchType::PULL_UP:
+        case OHOS::Ace::TouchType::PULL_MOVE:
+        case OHOS::Ace::TouchType::PULL_IN_WINDOW:
+        case OHOS::Ace::TouchType::PULL_OUT_WINDOW:
         case OHOS::Ace::TouchType::UNKNOWN:
             break;
     }
