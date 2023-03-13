@@ -23,31 +23,31 @@ class SceneViewerAdapter {
 public:
     explicit SceneViewerAdapter(uint32_t key);
     virtual ~SceneViewerAdapter();
-    void SetEngine(std::unique_ptr<IEngine> engine);
+    bool SetEngine(std::unique_ptr<IEngine> engine);
     void DeInitEngine();
     SceneViewerAdapter(const SceneViewerAdapter&) = delete;
     SceneViewerAdapter& operator=(const SceneViewerAdapter&) = delete;
 
-    void SetUpSceneViewer(const TextureInfo &info, std::string src,
+    bool SetUpSceneViewer(const TextureInfo &info, std::string src,
         std::string backgroundSrc, SceneViewerBackgroundType bgType);
 
-    void SetUpCameraTransform(float position[], float rotationAngle, float rotationAxis[]);
-    void SetUpCameraViewProjection(float zNear, float zFar, float fovDegrees);
+    bool SetUpCameraTransform(float position[], float rotationAngle, float rotationAxis[]);
+    bool SetUpCameraViewProjection(float zNear, float zFar, float fovDegrees);
 
-    void SetLightProperties(int lightType, float color[], float intensity,
+    bool SetLightProperties(int lightType, float color[], float intensity,
         bool shadow, float position[], float rotationAngle, float rotationAxis[]);
 
-    void CreateLight();
-    void SetUpCustomRenderTarget(const TextureInfo &info);
-    void UnLoadModel();
+    bool CreateLight();
+    bool SetUpCustomRenderTarget(const TextureInfo &info);
+    bool UnLoadModel();
 
-    void OnTouchEvent(const SceneViewerTouchEvent& event);
+    bool OnTouchEvent(const SceneViewerTouchEvent& event);
     bool IsAnimating();
 
-    void DrawFrame();
-    void Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime);
-    void AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes);
-    void UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations);
+    bool DrawFrame();
+    bool Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime);
+    bool AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes);
+    bool UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations);
 
 private:
     std::unique_ptr<IEngine> engine_ = nullptr;

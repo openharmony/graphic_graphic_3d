@@ -132,13 +132,15 @@ HWTEST_F(WidgetAdapter3DTest, SetUpSceneViewer1, testing::ext::TestSize.Level1)
     SceneViewerAdapter adapter(0U);
 
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.SetEngine(std::move(engine));
+    ASSERT_EQ(ret, true);
 
     TextureInfo texture {};
     std::string gltf {};
     std::string background {};
     SceneViewerBackgroundType type = SceneViewerBackgroundType::CUBE_MAP;
-    adapter.SetUpSceneViewer(texture, gltf, background, type);
+    ret = adapter.SetUpSceneViewer(texture, gltf, background, type);
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -153,7 +155,12 @@ HWTEST_F(WidgetAdapter3DTest, SetUpCameraViewProjection1, testing::ext::TestSize
     float near = 0.0f;
     float far = 0.0f;
     float degree = 0.0f;
-    adapter.SetUpCameraViewProjection(near, far, degree);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
+
+    bool ret = adapter.SetUpCameraViewProjection(near, far, degree);
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -165,7 +172,10 @@ HWTEST_F(WidgetAdapter3DTest, SetUpCameraViewProjection1, testing::ext::TestSize
 HWTEST_F(WidgetAdapter3DTest, CreateLight1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
-    adapter.CreateLight();
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.CreateLight();
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -177,8 +187,12 @@ HWTEST_F(WidgetAdapter3DTest, CreateLight1, testing::ext::TestSize.Level1)
 HWTEST_F(WidgetAdapter3DTest, SetUpCustomRenderTarget1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
     TextureInfo texture;
-    adapter.SetUpCustomRenderTarget(texture);
+    bool ret = adapter.SetUpCustomRenderTarget(texture);
+
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -190,7 +204,12 @@ HWTEST_F(WidgetAdapter3DTest, SetUpCustomRenderTarget1, testing::ext::TestSize.L
 HWTEST_F(WidgetAdapter3DTest, UnLoadModel1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
-    adapter.UnLoadModel();
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.UnLoadModel();
+
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -203,8 +222,12 @@ HWTEST_F(WidgetAdapter3DTest, OnTouchEvent1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     int32_t pointerId = 0;
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
     SceneViewerTouchEvent event(pointerId);
-    adapter.OnTouchEvent(event);
+    bool ret = adapter.OnTouchEvent(event);
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -216,7 +239,11 @@ HWTEST_F(WidgetAdapter3DTest, OnTouchEvent1, testing::ext::TestSize.Level1)
 HWTEST_F(WidgetAdapter3DTest, DrawFrame1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
-    adapter.DrawFrame();
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.DrawFrame();
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -230,7 +257,11 @@ HWTEST_F(WidgetAdapter3DTest, Tick1, testing::ext::TestSize.Level1)
     SceneViewerAdapter adapter(0U);
     uint64_t total = 1U;
     uint64_t delta = 1U;
-    adapter.Tick(total, delta);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.Tick(total, delta);
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -242,7 +273,11 @@ HWTEST_F(WidgetAdapter3DTest, Tick1, testing::ext::TestSize.Level1)
 HWTEST_F(WidgetAdapter3DTest, AddGeometries1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
-    adapter.AddGeometries({});
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.AddGeometries({});
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -254,7 +289,11 @@ HWTEST_F(WidgetAdapter3DTest, AddGeometries1, testing::ext::TestSize.Level1)
 HWTEST_F(WidgetAdapter3DTest, UpdateGLTFAnimations1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
-    adapter.UpdateGLTFAnimations( {} );
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.UpdateGLTFAnimations( {} );
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -266,7 +305,9 @@ HWTEST_F(WidgetAdapter3DTest, UpdateGLTFAnimations1, testing::ext::TestSize.Leve
 HWTEST_F(WidgetAdapter3DTest, SetEngine1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
-    adapter.SetEngine(nullptr);
+
+    bool ret = adapter.SetEngine(nullptr);
+    ASSERT_EQ(ret, false);
 }
 
 /**
@@ -279,7 +320,8 @@ HWTEST_F(WidgetAdapter3DTest, SetEngine2, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.SetEngine(std::move(engine));
+    ASSERT_EQ(ret, true);
 }
 
 /**
@@ -305,7 +347,8 @@ HWTEST_F(WidgetAdapter3DTest, IsAnimating2, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
+    bool ret = adapter.SetEngine(std::move(engine));
+    ASSERT_EQ(ret, true);
 
     auto animating = adapter.IsAnimating();
     ASSERT_EQ(animating, true);

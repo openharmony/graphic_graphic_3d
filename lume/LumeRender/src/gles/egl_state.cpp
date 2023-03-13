@@ -245,7 +245,6 @@ void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
         ATTRIBUTE(EGL_VG_COLORSPACE),
         ATTRIBUTE(EGL_WIDTH), // Returns the width of the surface in pixels.
     };
-    PLUGIN_LOG_V("EGLSurface[%p]", surf);
     for (size_t attr = 0; attr < sizeof(attribs) / sizeof(Attribute); attr++) {
         EGLint value;
         if (EGL_TRUE == eglQuerySurface(dpy, surf, attribs[attr].attribute, &value)) {

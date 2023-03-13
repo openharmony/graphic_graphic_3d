@@ -78,8 +78,8 @@ EGLContext OffScreenContext::CreateOffScreenContext(EGLContext eglContext)
 
     auto error = eglGetError();
     if (error != EGL_SUCCESS) {
-        WIDGET_LOGE("create context %p fail %d",
-            localThreadContext_, error);
+        WIDGET_LOGE("create context %d fail %d",
+            localThreadContext_ != EGL_NO_CONTEXT, error);
         return EGL_NO_CONTEXT;
     }
 
