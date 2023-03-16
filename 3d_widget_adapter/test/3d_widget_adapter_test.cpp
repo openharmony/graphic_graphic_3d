@@ -292,7 +292,7 @@ HWTEST_F(WidgetAdapter3DTest, UpdateGLTFAnimations1, testing::ext::TestSize.Leve
 
     auto engine = std::make_unique<EngineTest>();
     adapter.SetEngine(std::move(engine));
-    bool ret = adapter.UpdateGLTFAnimations( {} );
+    bool ret = adapter.UpdateGLTFAnimations({});
     ASSERT_EQ(ret, true);
 }
 
