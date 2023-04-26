@@ -56,6 +56,7 @@ public:
 
     void AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes) override;
     void UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations) override;
+    void AddTextureMemoryBarrrier() override;
 
 #if MULTI_ECS_UPDATE_AT_ONCE
     void DeferDraw() override {};

@@ -6,6 +6,8 @@ import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 declare_args() {
     MULTI_ECS_UPDATE_AT_ONCE="0"
+    UNIFY_RENDER="1"
+    DBG_DRAW_PIXEL="0"
 }
 
 config("lume3d_config") {
@@ -69,6 +71,10 @@ config("lume3d_config") {
 config("widget_adapter_config") {
     defines = [
       "MULTI_ECS_UPDATE_AT_ONCE=${MULTI_ECS_UPDATE_AT_ONCE}",
+      "EGL_EGLEXT_PROTOTYPES",
+      "GL_GLEXT_PROTOTYPES",
+      "UNIFY_RENDER=${UNIFY_RENDER}",
+      "DBG_DRAW_PIXEL=${DBG_DRAW_PIXEL}"
     ]
 
     if (current_os == "ohos" ) {
@@ -102,10 +108,10 @@ ohos_source_set("widget_adapter_source") {
     sources = [
         "src/scene_viewer_adapter.cpp",
         "src/graphics_manager_common.cpp",
-        "core/src/lume/lume_common.cpp",
-        "core/src/engine_factory.cpp",
-        "src/offscreen_context.cpp",
+        "src/offscreen_context_helper.cpp",
         "src/graphics_task.cpp",
+        "core/src/engine_factory.cpp",
+        "core/src/lume/lume_common.cpp",
     ]
 
     include_dirs = [
@@ -153,6 +159,8 @@ ohos_source_set("widget_adapter_source") {
       deps += [
         "//foundation/graphic/graphic_2d:libgl",
         "//base/hiviewdfx/hilog/interfaces/native/innerkits:libhilog",
+        "//foundation/graphic/graphic_2d/frameworks/surface:surface",
+        "//foundation/graphic/graphic_2d/rosen/modules/render_service_base:librender_service_base",
       ]
 
       external_deps = [

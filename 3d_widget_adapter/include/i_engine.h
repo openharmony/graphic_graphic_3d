@@ -5,21 +5,21 @@
 #ifndef OHOS_RENDER_3D_I_ENGINE_H
 #define OHOS_RENDER_3D_I_ENGINE_H
 
-#define ACE_SCENE_VIEW_DEBUG
-#include "data_type/constants.h"
-#include "data_type/geometry/cube.h"
-#include "data_type/geometry/sphere.h"
-#include "data_type/geometry/cone.h"
-#include "data_type/gltf_animation.h"
-#include "data_type/scene_viewer_touch_event.h"
-
-#include "platform_data.h"
-#include "texture_info.h"
 #include <cstdint>
 #include <string>
 
 #include <EGL/egl.h>
 #include <GLES/gl.h>
+
+#include "data_type/constants.h"
+#include "data_type/geometry/cube.h"
+#include "data_type/geometry/cone.h"
+#include "data_type/geometry/sphere.h"
+#include "data_type/gltf_animation.h"
+#include "data_type/scene_viewer_touch_event.h"
+
+#include "platform_data.h"
+#include "texture_info.h"
 
 namespace OHOS::Render3D {
 class IEngine {
@@ -57,6 +57,7 @@ public:
 
     virtual void AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes) = 0;
     virtual void UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations) = 0;
+    virtual void AddTextureMemoryBarrrier() = 0;
 
 #if MULTI_ECS_UPDATE_AT_ONCE
     virtual void DeferDraw() = 0 ;

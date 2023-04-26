@@ -18,11 +18,11 @@ GraphicsManagerCommon::~GraphicsManagerCommon()
 
 void GraphicsManagerCommon::Register(int32_t key)
 {
-    if (viewTextureMap_.find(key) != viewTextureMap_.end()) {
+    if (viewTextures_.find(key) != viewTextures_.end()) {
         return;
     }
 
-    viewTextureMap_[key] = 0;
+    viewTextures_.insert(key);
 
     return;
 }
@@ -106,42 +106,31 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
     client->Clone(engine_.get());
     return client;
 }
-
-TextureInfo GraphicsManagerCommon::CreateRenderTexture(int32_t key, uint32_t width, uint32_t height,
-    EGLContext eglContext)
+EGLContext GraphicsManagerCommon::CreateOffScreenContext(EGLContext eglContext)
 {
-    auto it = viewTextureMap_.find(key);
-    if (it == viewTextureMap_.end()) {
-        WIDGET_LOGE("%s register yourself before require texture", __func__);
-        return {};
-    }
+    AutoRestore scope;
+    return offScreenContextHelper_.CreateOffScreenContext(eglContext);
+}
 
-    if (eglContext == EGL_NO_CONTEXT) {
-        WIDGET_LOGE("%s view with no context", __func__);
-        return {};
-    }
-
-    it->second = offScreenContextHelper_.CreateRenderTarget(eglContext, width, height);
-
-    return TextureInfo { width, height, it->second };
+void GraphicsManagerCommon::BindOffScreenContext()
+{
+    offScreenContextHelper_.BindOffScreenContext();
 }
 
 void GraphicsManagerCommon::UnRegister(int32_t key)
 {
-    WIDGET_LOGD("view unregiser %d total %zu", key, viewTextureMap_.size());
+    WIDGET_LOGD("view unregiser %d total %zu", key, viewTextures_.size());
     OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::UnRegister");
 
-    auto it = viewTextureMap_.find(key);
-    if (it == viewTextureMap_.end()) {
+    auto it = viewTextures_.find(key);
+    if (it == viewTextures_.end()) {
         WIDGET_LOGE("view unregiser has not regester");
         return;
     }
 
-    offScreenContextHelper_.DestroyRenderTarget(it->second);
+    viewTextures_.erase(it);
 
-    viewTextureMap_.erase(it);
-
-    if (viewTextureMap_.empty()) {
+    if (viewTextures_.empty()) {
         // Destroy proto engine
         WIDGET_LOGE("view reset proto engine");
         DeInitEngine();
@@ -153,14 +142,20 @@ void GraphicsManagerCommon::UnRegister(int32_t key)
 
 bool GraphicsManagerCommon::HasMultiEcs()
 {
-    return viewTextureMap_.size() > 1;
+    return viewTextures_.size() > 1;
 }
 
 #if MULTI_ECS_UPDATE_AT_ONCE
-void GraphicsManagerCommon::DrawFrame(void* ecs)
+void GraphicsManagerCommon::UnloadEcs(void* ecs)
+{
+    WIDGET_LOGD("ACE-3D GraphicsService::UnloadEcs()");
+    ecss_.erase(ecs);
+}
+
+void GraphicsManagerCommon::DrawFrame(void* ecs, void* handles)
 {
     OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::DrawFrame");
-    ecss_.push_back(ecs);
+    ecss_[ecs] = handles;
     WIDGET_LOGD("ACE-3D DrawFrame ecss size %zu", ecss_.size());
 }
 
@@ -174,10 +169,11 @@ void GraphicsManagerCommon::PerformDraw()
 
     WIDGET_LOGD("ACE-3D PerformDraw");
     engine_->DrawMultiEcs(ecss_);
+    engine_->AddTextureMemoryBarrrier();
     ecss_.clear();
 }
 
-void GraphicsManagerCommon::AttachContext(const OHOS::Ace::WeakPtr<OHOS::Ace::PipelineContext> context)
+void GraphicsManagerCommon::AttachContext(const OHOS::Ace::WeakPtr<OHOS::Ace::PipelineBase>& context)
 {
     OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::AttachContext");
     static bool once = false;

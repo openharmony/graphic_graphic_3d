@@ -38,7 +38,7 @@ bool SceneViewerAdapter::SetUpSceneViewer(const TextureInfo &info, std::string s
     engine_->SetUpCustomRenderTarget(info);
     engine_->SetUpCameraViewPort(info.width_, info.height_);
     engine_->UpdateGLTFAnimations({});
-    engine_->DrawFrame();
+
     return true;
 }
 
@@ -133,11 +133,6 @@ bool SceneViewerAdapter::DrawFrame()
         return ret;
     }
     #if MULTI_ECS_UPDATE_AT_ONCE
-    if (firstFrame_) {
-        firstFrame_ = false;
-        engine_->DrawFrame();
-        return ret;
-    }
     engine_->DeferDraw();
     #else
     engine_->DrawFrame();

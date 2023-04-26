@@ -462,6 +462,7 @@ void LumeCommon::DrawFrame()
     if (needsRender) {
         auto render_node_graph = GetGraphicsContext()->GetRenderNodeGraphs(*ecs);
         GetRenderContext()->GetRenderer().RenderFrame(render_node_graph);
+        AddTextureMemoryBarrrier();
     }
 }
 
@@ -1340,5 +1341,26 @@ void LumeCommon::SetUpCameraViewPort(uint32_t width, uint32_t height)
     originalYfov_ = cameraComponent->yFov;
     graphicsContext_->GetSceneUtil().UpdateCameraViewport(*ecs_, cameraEntity_,
         { width, height }, autoAspect_, originalYfov_, orthoScale_);
+}
+
+void LumeCommon::AddTextureMemoryBarrrier()
+{
+    OHOS::Ace::ACE_SCOPED_TRACE("sync texture");
+    AutoRestore scope;
+    auto lumeContext = static_cast<const RENDER_NS::DevicePlatformDataGLES&>(
+        GetRenderContext()->GetDevice().GetPlatformData()).context;
+
+    auto disp = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    auto res = eglMakeCurrent(disp, EGL_NO_SURFACE, EGL_NO_SURFACE, lumeContext);
+
+    if (!res) {
+        WIDGET_LOGE("Make lume context error %d", eglGetError());
+        return;
+    }
+
+    glMemoryBarrierByRegion(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    auto sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    glWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
+    glDeleteSync(sync);
 }
 } // namespace OHOS::Render3D

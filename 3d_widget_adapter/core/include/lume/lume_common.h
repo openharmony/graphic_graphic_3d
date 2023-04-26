@@ -109,6 +109,7 @@ public:
     void LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &shapes) override;
     void AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes) override;
     void UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations) override;
+    void AddTextureMemoryBarrrier() override;
     void SetUpCustomRenderTarget(const TextureInfo &info) override;
     void CreateLight() override;
     void SetLightProperties(int lightType, float color[], float intensity,
@@ -147,7 +148,7 @@ protected:
     RENDER_NS::IRenderContext::Ptr CreateRenderContext(EGLContext gfxContext);
     RENDER_NS::IDevice* GetDevice();
     RENDER_NS::IRenderContext::Ptr GetRenderContext();
-    
+
     CORE3D_NS::IGraphicsContext::Ptr CreateGfx3DContext();
     CORE3D_NS::IGraphicsContext::Ptr GetGraphicsContext();
 

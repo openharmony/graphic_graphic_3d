@@ -51,9 +51,6 @@ public:
 
 private:
     std::unique_ptr<IEngine> engine_ = nullptr;
-#if MULTI_ECS_UPDATE_AT_ONCE
-    bool firstFrame_ = true;
-#endif
     uint32_t key_;
 };
 } // namespace OHOS::Render3D

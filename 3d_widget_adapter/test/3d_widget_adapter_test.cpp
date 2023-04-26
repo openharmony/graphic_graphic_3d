@@ -120,6 +120,10 @@ bool EngineTest::IsAnimating()
     return true;
 }
 
+void EngineTest::AddTextureMemoryBarrrier()
+{
+}
+
 namespace {
 /**
  * @tc.name: SetUpSceneViewer1
