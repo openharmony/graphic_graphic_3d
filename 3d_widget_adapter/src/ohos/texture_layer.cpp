@@ -6,7 +6,11 @@
 
 #include <base/log/ace_trace.h>
 #include <include/gpu/GrBackendSurface.h>
+#ifndef NEW_SKIA
 #include <include/gpu/GrContext.h>
+#else
+#include <include/gpu/GrDirectContext.h>
+#endif
 #include <include/gpu/gl/GrGLInterface.h>
 #include <native_buffer.h>
 #include <render_service_base/include/pipeline/rs_recording_canvas.h>
@@ -286,9 +290,13 @@ void TextureLayer::DrawTexture(SkCanvas* canvas)
         GrGLTextureInfo textureInfo = { GL_TEXTURE_2D, image_.textureInfo_.textureId_, GL_RGBA8_OES };
         GrBackendTexture backendTexture(image_.textureInfo_.width_, image_.textureInfo_.height_,
             GrMipMapped::kNo, textureInfo);
-
+#ifdef NEW_SKIA
+        image_.skImage_ = SkImage::MakeFromTexture(canvas->recordingContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
+            kRGBA_8888_SkColorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
+#else
         image_.skImage_ = SkImage::MakeFromTexture(canvas->getGrContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
             kRGBA_8888_SkColorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
+#endif
         WIDGET_LOGW("%s Create SkImage %d", __func__, __LINE__);
     }
 

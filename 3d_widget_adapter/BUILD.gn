@@ -135,9 +135,15 @@ ohos_source_set("widget_adapter_source") {
       ":widget_adapter_config",
     ]
 
-    deps = [
-      "$ace_flutter_engine_root/skia:ace_skia_ohos",
-    ]
+    if (defined(use_new_skia) && use_new_skia) {
+      deps = [
+        "//third_party/skia:skia_ohos",
+      ]
+    } else {
+      deps = [
+        "$ace_flutter_engine_root/skia:ace_skia_ohos",
+      ]
+    }
 
     public_deps = [
         "//third_party/EGL:libEGL",
