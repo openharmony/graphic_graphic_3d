@@ -11,7 +11,7 @@
 
 #include "nodecontext/render_command_list.h"
 #include "render_backend.h"
-#if (RENDER_PERF_ENABLED == 1)
+#if defined(RENDER_PERF_ENABLED) && (RENDER_PERF_ENABLED == 1)
 #include "device/gpu_buffer.h"
 #include "perf/cpu_timer.h"
 #include "perf/gpu_query_manager.h"
@@ -149,7 +149,7 @@ private:
     };
     PresentationInfo presentationInfo_;
 
-#if (RENDER_PERF_ENABLED == 1)
+#if defined(RENDER_PERF_ENABLED) && (RENDER_PERF_ENABLED == 1)
     struct PerfCounters {
         uint32_t drawCount;
         uint32_t drawIndirectCount;
@@ -208,7 +208,7 @@ private:
     void SetupCache(const PipelineLayout& pipelineLayout);
     struct BindState {
         bool dirty { false };
-#if RENDER_HAS_GLES_BACKEND
+#if defined(RENDER_HAS_GLES_BACKEND) && (RENDER_HAS_GLES_BACKEND == 1)
         BASE_NS::vector<OES_Bind> oesBinds;
 #endif
         BASE_NS::vector<Gles::Bind> resources;
@@ -291,7 +291,7 @@ private:
 
     void BufferToImageCopy(const struct RenderCommandCopyBufferImage& renderCmd);
     void ImageToBufferCopy(const struct RenderCommandCopyBufferImage& renderCmd);
-#if RENDER_HAS_GLES_BACKEND
+#if defined(RENDER_HAS_GLES_BACKEND) && (RENDER_HAS_GLES_BACKEND == 1)
     BASE_NS::vector<OES_Bind> oesBinds_;
 #endif
 };

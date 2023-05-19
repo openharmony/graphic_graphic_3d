@@ -70,7 +70,7 @@ public:
     VmaPool GetBufferPool(const GpuBufferDesc& desc) const;
     VmaPool GetImagePool(const GpuImageDesc& desc) const;
 
-#if (RENDER_PERF_ENABLED == 1)
+#if defined(RENDER_PERF_ENABLED) && (RENDER_PERF_ENABLED == 1)
     BASE_NS::string GetBufferPoolDebugName(const GpuBufferDesc& desc) const;
     BASE_NS::string GetImagePoolDebugName(const GpuImageDesc& desc) const;
 #endif
@@ -86,7 +86,7 @@ private:
     BASE_NS::unordered_map<uint64_t, uint32_t> hashToGpuBufferPoolIndex_;
     BASE_NS::unordered_map<uint64_t, uint32_t> hashToGpuImagePoolIndex_;
 
-#if (RENDER_PERF_ENABLED == 1)
+#if defined(RENDER_PERF_ENABLED) && (RENDER_PERF_ENABLED == 1)
     BASE_NS::vector<BASE_NS::string> customGpuBufferPoolNames_;
     BASE_NS::vector<BASE_NS::string> customGpuImagePoolNames_;
 

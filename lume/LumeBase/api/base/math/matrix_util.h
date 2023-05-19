@@ -686,7 +686,7 @@ static inline bool Decompose(
     }
 
     int i, j, k = 0;
-    float root = row[0].x + row[1].y + row[2].z;
+    float root;
     const float trace = row[0].x + row[1].y + row[2].z;
     if (trace > 0.0f) {
         root = sqrt(trace + 1.0f);

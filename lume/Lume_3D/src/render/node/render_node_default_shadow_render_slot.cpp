@@ -423,7 +423,7 @@ RenderHandle RenderNodeDefaultShadowRenderSlot::CreateNewPso(const ShaderStateDa
     RenderHandle currPlHandle = allShaderData_.defaultPlHandle;
     RenderHandle currVidHandle = allShaderData_.defaultVidHandle;
     RenderHandle currStateHandle = ssd.defaultShaderState;
-    bool customSetInUse = false;
+
     if (RenderHandleUtil::IsValid(ssd.shader)) {
         const RenderHandle slotShader = shaderMgr.GetShaderHandle(ssd.shader, currentScene_.renderSlotId);
         if (RenderHandleUtil::IsValid(slotShader)) {
@@ -434,7 +434,6 @@ RenderHandle RenderNodeDefaultShadowRenderSlot::CreateNewPso(const ShaderStateDa
 
         currPlHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(currShaderHandle);
         const PipelineLayout& plRef = shaderMgr.GetPipelineLayout(currPlHandle);
-        customSetInUse = (plRef.descriptorSetLayouts[2u].set == 2u);
     }
     if (RenderHandleUtil::IsValid(ssd.gfxState)) {
         const RenderHandle slotState = shaderMgr.GetGraphicsStateHandle(ssd.gfxState, currentScene_.renderSlotId);

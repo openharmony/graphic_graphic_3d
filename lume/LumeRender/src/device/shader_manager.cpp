@@ -1921,7 +1921,6 @@ Math::UVec3 ShaderReflectionData::GetLocalSize() const
         sizes.y = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8) | (*(ptr + 2)) << 16 | (*(ptr + 3)) << 24);
         ptr += 4;
         sizes.z = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8) | (*(ptr + 2)) << 16 | (*(ptr + 3)) << 24);
-        ptr += 4;
     }
     return sizes;
 }
