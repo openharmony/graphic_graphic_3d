@@ -2,26 +2,26 @@
   "version": "2.0.0",
   "data": {
     "productVersion": {
-      "P921f1879759c305644b9f076182f2e9ff0843b2ee85132573cc9978226df2432": {
+      "P832f85a8ca6e576ac2ea8f7be374e437e97d314c136c1c368fbb68b31bac6b8b": {
         "productionName": "HarmonyOS 3.1",
         "releaseVersion": "",
         "serviceId": "9e6f22f1708040368c20ab0ba8ffeb1d",
         "serviceName": "APP",
-        "serviceVersion": "HwAgpEngine.1.0.0.0.20230525174853",
+        "serviceVersion": "HwAgpEngine.1.0.0.1.20230529105708",
         "versionUrl": "",
         "cmcDeltaId": "",
         "cmcCategory": "ComponentVersion"
       }
     },
     "env": {
-      "Ecb4bfa5f9daa27e6fc74aa6013a40648e69e4d260471e3c96fbeed6151b7d4ce": {
-        "imageId": "cb4bfa5f9daa27e6fc74aa6013a40648e69e4d260471e3c96fbeed6151b7d4ce",
-        "imageName": "harmonyos4.0:ubuntuserverubuntu22.04lts_20230330110045",
+      "E91032039bb711031ae9ca14f922773d53556424951f35d999a6ee463818b3667": {
+        "imageId": "91032039bb711031ae9ca14f922773d53556424951f35d999a6ee463818b3667",
+        "imageName": "harmonyos4.0:ubuntuserverubuntu22.04lts_20230511172930",
         "type": "Docker",
         "arch": "",
-        "playbook": "https://codehub-dg-y.huawei.com/buildmc/g6239b2fb75b441c9845ca96729a04d3b/cbg_1680075934694_docker.git",
+        "playbook": "https://codehub-dg-y.huawei.com/buildmc/g6239b2fb75b441c9845ca96729a04d3b/cbg_1683529635335_docker.git",
         "branch": "master",
-        "commitId": "7cf0a49d48017aed9b1abdcf3f551c752ce4c83d",
+        "commitId": "f8973ec539521215591507f187cf59e74cf75490",
         "tools": [
           {
             "id": "0591AAGS",
@@ -42,18 +42,6 @@
             "name": "PyYAML"
           },
           {
-            "id": "0599A6JD",
-            "type": "otherTool",
-            "version": "1.1.28",
-            "name": "pysmb"
-          },
-          {
-            "id": "0591A8SG",
-            "type": "buildTool",
-            "version": "1.26.5",
-            "name": "urllib3"
-          },
-          {
             "id": "0591AD9G",
             "type": "buildTool",
             "version": "11.0.18",
@@ -72,9 +60,9 @@
             "name": "chardet"
           },
           {
-            "id": "0591AD25",
+            "id": "0591AGJL",
             "type": "buildTool",
-            "version": "3.9.0",
+            "version": "3.8.8",
             "name": "Apache Maven"
           },
           {
@@ -96,22 +84,10 @@
             "name": "xmltodict"
           },
           {
-            "id": "0599A5WJ",
-            "type": "otherTool",
-            "version": "4.3.1",
-            "name": "Smbclient"
-          },
-          {
             "id": "0599A5WF",
             "type": "otherTool",
             "version": "1.0.0",
             "name": "p4"
-          },
-          {
-            "id": "0599ABPQ",
-            "type": "otherTool",
-            "version": "1.0.2n",
-            "name": "llibssl1.0"
           },
           {
             "id": "0591ABGV",
@@ -162,18 +138,6 @@
             "name": "openEuler:gperf"
           },
           {
-            "id": "0599A5WH",
-            "type": "otherTool",
-            "version": "1.0.0",
-            "name": "perltools"
-          },
-          {
-            "id": "0599A94I",
-            "type": "otherTool",
-            "version": "1.0.1.kirin",
-            "name": "hdt"
-          },
-          {
             "id": "0591AD88",
             "type": "buildTool",
             "version": "r25b",
@@ -210,10 +174,16 @@
             "name": "Node.js"
           },
           {
-            "id": "0599ABR9",
+            "id": "0599A5WJ",
             "type": "otherTool",
-            "version": "1.1.1-1ubuntu2.1",
-            "name": "libssl1.1"
+            "version": "4.3.1",
+            "name": "Smbclient"
+          },
+          {
+            "id": "0599ABPQ",
+            "type": "otherTool",
+            "version": "1.0.2n",
+            "name": "llibssl1.0"
           },
           {
             "id": "",
@@ -400,6 +370,24 @@
             "type": "systemTool",
             "version": "3.0.2-1",
             "name": "git-lfs"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2:4.15.5~dfsg-0ubuntu5.1",
+            "name": "samba"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:2.6.1-1ubuntu1",
+            "name": "nfs-common"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "5.16-0ubuntu3",
+            "name": "strace"
           },
           {
             "id": "",
@@ -778,6 +766,12 @@
             "type": "systemTool",
             "version": "1:1.0.9-1build5",
             "name": "libxau-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.6-2.1ubuntu3",
+            "name": "jq"
           }
         ]
       }
@@ -793,10 +787,10 @@
       }
     },
     "buildJob": {
-      "B6fc3faee009d57eb4cf5b56d72cd8ae1ec0e47314e13e1379186385fc3be9b77": {
-        "buildJobId": "6fc3faee009d57eb4cf5b56d72cd8ae1ec0e47314e13e1379186385fc3be9b77",
+      "B1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b": {
+        "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
         "buildJobName": "",
-        "buildJobUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=314e52fb-f2b9-4718-a564-f4080a62a903",
+        "buildJobUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=14fa8ee4-ebf4-4ead-8cdc-38122c7562a2",
         "buildStatus": "SUCCESS"
       }
     },
@@ -805,21 +799,21 @@
   },
   "moduleInfo": [
     {
-      "buildJobId": "6fc3faee009d57eb4cf5b56d72cd8ae1ec0e47314e13e1379186385fc3be9b77",
-      "id": "f5aa862cc3dce6d458615cf5428462462dbda61be1c2ebd004fad73ee31eb6fd",
+      "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
+      "id": "182a4d45d27d821f279081d50a3587090245faa44911b261202b3f0a486d7646",
       "repoType": "GENERIC_CMC",
       "toolType": "ART_GET",
       "cmcDeltaId": "",
       "groupId": "HarmonyOS 3.1",
       "artifactId": "APP",
-      "version": "HwAgpEngine.1.0.0.0.20230525174853",
+      "version": "HwAgpEngine.1.0.0.1.20230529105708",
       "fileList": [
         {
-          "fileUrl": "lfghelix03-ap:1666;HW-APK/IRD/HwAgpEngine/HarmonyOS-Master-ALL-Global-Full-None-FullyFeature;IRD_HwAgpEngine_HarmonyOS-Master-ALL-Global-Full-None-FullyFeature_1.0.0.0_20230525_03"
+          "fileUrl": "lfghelix03-ap:1666;HW-APK/IRD/HwAgpEngine/HarmonyOS-Master-ALL-Global-Full-None-FullyFeature;IRD_HwAgpEngine_HarmonyOS-Master-ALL-Global-Full-None-FullyFeature_1.0.0.1_20230529_01"
         }
       ],
       "productVersion": {
-        "$path": "$.data.productVersion.P921f1879759c305644b9f076182f2e9ff0843b2ee85132573cc9978226df2432"
+        "$path": "$.data.productVersion.P832f85a8ca6e576ac2ea8f7be374e437e97d314c136c1c368fbb68b31bac6b8b"
       },
       "dependencyInfo": {
         "dependenciesId": [],
@@ -829,13 +823,13 @@
   ],
   "envInfo": [
     {
-      "buildJobId": "6fc3faee009d57eb4cf5b56d72cd8ae1ec0e47314e13e1379186385fc3be9b77",
-      "$path": "$.data.env.Ecb4bfa5f9daa27e6fc74aa6013a40648e69e4d260471e3c96fbeed6151b7d4ce"
+      "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
+      "$path": "$.data.env.E91032039bb711031ae9ca14f922773d53556424951f35d999a6ee463818b3667"
     }
   ],
   "sourceCodeInfo": [
     {
-      "buildJobId": "6fc3faee009d57eb4cf5b56d72cd8ae1ec0e47314e13e1379186385fc3be9b77",
+      "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
       "repoList": [
         {
           "$path": "$.data.sourceCode.S1ab9c89baaaf90abf9c7adc9596d5da16391072067d7b7b45d466109afe3c8b4",
@@ -848,7 +842,7 @@
   ],
   "dependenciesCode": [
     {
-      "buildJobId": "6fc3faee009d57eb4cf5b56d72cd8ae1ec0e47314e13e1379186385fc3be9b77",
+      "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
       "dependencyIds": [
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       ],
@@ -870,10 +864,10 @@
   ],
   "buildProjectInfo": {
     "projectId": "9e6f22f1708040368c20ab0ba8ffeb1d",
-    "buildId": "6fc3faee009d57eb4cf5b56d72cd8ae1ec0e47314e13e1379186385fc3be9b77",
+    "buildId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
     "buildName": "HwAgpEngine",
     "buildSystem": "CDE",
-    "buildUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=314e52fb-f2b9-4718-a564-f4080a62a903",
+    "buildUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=14fa8ee4-ebf4-4ead-8cdc-38122c7562a2",
     "buildStatus": "SUCCESS",
     "buildLockFileId": "",
     "buildLockFileName": "",
@@ -887,7 +881,7 @@
       "buildJobId": "",
       "manifestRoot": "false"
     },
-    "buildTrigger": "z30042987",
+    "buildTrigger": "h00382658",
     "serviceId": "9e6f22f1708040368c20ab0ba8ffeb1d",
     "serviceName": "APP",
     "productionLineIdType": "PBI",
