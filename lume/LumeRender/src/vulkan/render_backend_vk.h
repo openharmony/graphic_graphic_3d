@@ -227,7 +227,7 @@ private:
 
 #if (RENDER_PERF_ENABLED == 1)
 
-    void StartFrameTimers(RenderCommandFrameData& aRenderCommandFrameData);
+    void StartFrameTimers(RenderCommandFrameData& renderCommandFrameData);
     void EndFrameTimers();
 
     void WritePerfTimeStamp(const LowLevelCommandBufferVk& cmdBuf, const BASE_NS::string_view name,

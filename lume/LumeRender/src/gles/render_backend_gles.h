@@ -176,7 +176,7 @@ private:
     };
     BASE_NS::unordered_map<BASE_NS::string, PerfDataSet> timers_;
 
-    void StartFrameTimers(RenderCommandFrameData& aRenderCommandFrameData);
+    void StartFrameTimers(const RenderCommandFrameData& renderCommandFrameData);
     void EndFrameTimers();
     void CopyPerfTimeStamp(BASE_NS::string_view aName, PerfDataSet& perfDataSet);
 

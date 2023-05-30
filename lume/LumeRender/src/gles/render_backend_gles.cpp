@@ -2474,7 +2474,7 @@ void RenderBackendGLES::BindResources()
 }
 
 #if (RENDER_PERF_ENABLED == 1)
-void RenderBackendGLES::StartFrameTimers(RenderCommandFrameData& renderCommandFrameData)
+void RenderBackendGLES::StartFrameTimers(const RenderCommandFrameData& renderCommandFrameData)
 {
     for (const auto& renderCommandContext : renderCommandFrameData.renderCommandContexts) {
         const string_view& debugName = renderCommandContext.debugName;

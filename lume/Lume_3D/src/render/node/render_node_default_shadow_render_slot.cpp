@@ -433,7 +433,6 @@ RenderHandle RenderNodeDefaultShadowRenderSlot::CreateNewPso(const ShaderStateDa
         currVidHandle = RenderHandleUtil::IsValid(customVidHandle) ? customVidHandle : currVidHandle;
 
         currPlHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(currShaderHandle);
-        const PipelineLayout& plRef = shaderMgr.GetPipelineLayout(currPlHandle);
     }
     if (RenderHandleUtil::IsValid(ssd.gfxState)) {
         const RenderHandle slotState = shaderMgr.GetGraphicsStateHandle(ssd.gfxState, currentScene_.renderSlotId);
