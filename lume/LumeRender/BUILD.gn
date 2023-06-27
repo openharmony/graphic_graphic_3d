@@ -352,14 +352,14 @@ ohos_source_set("lume_render_src") {
       ]
     }
   }
-
   deps = [
     "//foundation/graphic/graphic_2d:libgl",
   ]
-
   external_deps = [
     "c_utils:utils"
   ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 lume_compile_shader("lume_render_compile_shader")
@@ -425,6 +425,8 @@ ohos_static_library("libAGPRender") {
       ":lume_render_rofs_obj"
     ]
   }
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 config("lume_render_plugin_config") {

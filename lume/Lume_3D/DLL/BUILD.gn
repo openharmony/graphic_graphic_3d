@@ -29,6 +29,8 @@ ohos_source_set("lume_3d_plugin_src") {
   external_deps = [
     "c_utils:utils",
   ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 ohos_shared_library(LIB_CORE3D) {

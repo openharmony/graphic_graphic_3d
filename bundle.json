@@ -17,7 +17,12 @@
       "adapted_system_type": [ "standard" ],
       "rom": "8000KB",
       "ram": "8000KB",
-
+      "deps": {
+        "components": [
+          "c_utils",
+          "hiviewdfx_hilog_native"
+         ]
+      },
       "build": {
         "sub_component": [
           "//foundation/graphic/graphic_3d/lume/LumeEngine:libAGPEngine",
