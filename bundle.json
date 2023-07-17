@@ -20,7 +20,7 @@
       "deps": {
         "components": [
           "c_utils",
-          "hiviewdfx_hilog_native"
+          "hilog"
          ]
       },
       "build": {
