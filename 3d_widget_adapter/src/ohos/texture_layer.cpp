@@ -52,8 +52,8 @@ void TextureLayer::AllocEglImage(uint32_t width, uint32_t height)
     OH_NativeBuffer_Config config {
         .width = width,
         .height = height,
-        .format = PIXEL_FMT_RGBA_8888,
-        .usage = HBM_USE_MEM_DMA
+        .format = GRAPHIC_PIXEL_FMT_RGBA_8888,
+        .usage = BUFFER_USAGE_MEM_DMA
     };
 
     nativeBuffer_ = OH_NativeBuffer_Alloc(&config);
