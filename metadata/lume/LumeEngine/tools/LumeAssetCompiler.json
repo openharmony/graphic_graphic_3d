@@ -2,12 +2,12 @@
   "version": "2.0.0",
   "data": {
     "productVersion": {
-      "P832f85a8ca6e576ac2ea8f7be374e437e97d314c136c1c368fbb68b31bac6b8b": {
+      "Pb194208a7c94b75169aeab25cf5efc61d3ab5d06d300c420baf1d103c82c6ee6": {
         "productionName": "HarmonyOS 3.1",
         "releaseVersion": "",
         "serviceId": "9e6f22f1708040368c20ab0ba8ffeb1d",
         "serviceName": "APP",
-        "serviceVersion": "HwAgpEngine.1.0.0.1.20230529105708",
+        "serviceVersion": "HwAgpEngine.1.0.0.4.20230811172412",
         "versionUrl": "",
         "cmcDeltaId": "",
         "cmcCategory": "ComponentVersion"
@@ -787,10 +787,10 @@
       }
     },
     "buildJob": {
-      "B1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b": {
-        "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
+      "Ba66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb": {
+        "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
         "buildJobName": "",
-        "buildJobUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=14fa8ee4-ebf4-4ead-8cdc-38122c7562a2",
+        "buildJobUrl": "https://cde.cbg.huawei.com/projectSpace/business/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?iframeUrl=buildrelease%2Fpipeline%2Fdetails&pipelineId=9e6f22f1708040368c20ab0ba8ffeb1d&jobId=2d9e0da9-a261-422d-af9e-18eda14d671f",
         "buildStatus": "SUCCESS"
       }
     },
@@ -799,21 +799,21 @@
   },
   "moduleInfo": [
     {
-      "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
-      "id": "182a4d45d27d821f279081d50a3587090245faa44911b261202b3f0a486d7646",
+      "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
+      "id": "fc9695b4d0299c00f8e1773321b2df0ff72061f6ae4fa4ef927612ffedb2c143",
       "repoType": "GENERIC_CMC",
       "toolType": "ART_GET",
       "cmcDeltaId": "",
       "groupId": "HarmonyOS 3.1",
       "artifactId": "APP",
-      "version": "HwAgpEngine.1.0.0.1.20230529105708",
+      "version": "HwAgpEngine.1.0.0.4.20230811172412",
       "fileList": [
         {
-          "fileUrl": "lfghelix03-ap:1666;HW-APK/IRD/HwAgpEngine/HarmonyOS-Master-ALL-Global-Full-None-FullyFeature;IRD_HwAgpEngine_HarmonyOS-Master-ALL-Global-Full-None-FullyFeature_1.0.0.1_20230529_01"
+          "fileUrl": "lfghelix03-ap:1666;HW-APK/IRD/HwAgpEngine/HarmonyOS-Master-ALL-Global-Full-None-FullyFeature;IRD_HwAgpEngine_HarmonyOS-Master-ALL-Global-Full-None-FullyFeature_1.0.0.4_20230811_02"
         }
       ],
       "productVersion": {
-        "$path": "$.data.productVersion.P832f85a8ca6e576ac2ea8f7be374e437e97d314c136c1c368fbb68b31bac6b8b"
+        "$path": "$.data.productVersion.Pb194208a7c94b75169aeab25cf5efc61d3ab5d06d300c420baf1d103c82c6ee6"
       },
       "dependencyInfo": {
         "dependenciesId": [],
@@ -823,13 +823,13 @@
   ],
   "envInfo": [
     {
-      "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
+      "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
       "$path": "$.data.env.E91032039bb711031ae9ca14f922773d53556424951f35d999a6ee463818b3667"
     }
   ],
   "sourceCodeInfo": [
     {
-      "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
+      "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
       "repoList": [
         {
           "$path": "$.data.sourceCode.S1ab9c89baaaf90abf9c7adc9596d5da16391072067d7b7b45d466109afe3c8b4",
@@ -842,7 +842,7 @@
   ],
   "dependenciesCode": [
     {
-      "buildJobId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
+      "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
       "dependencyIds": [
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       ],
@@ -864,10 +864,10 @@
   ],
   "buildProjectInfo": {
     "projectId": "9e6f22f1708040368c20ab0ba8ffeb1d",
-    "buildId": "1fe225c41183f1e961ca840e641f0b4277a2842947dbc17a5cefa3487754ff9b",
+    "buildId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
     "buildName": "HwAgpEngine",
     "buildSystem": "CDE",
-    "buildUrl": "https://cde.huawei.com/project/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?jobId=14fa8ee4-ebf4-4ead-8cdc-38122c7562a2",
+    "buildUrl": "https://cde.cbg.huawei.com/projectSpace/business/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?iframeUrl=buildrelease%2Fpipeline%2Fdetails&pipelineId=9e6f22f1708040368c20ab0ba8ffeb1d&jobId=2d9e0da9-a261-422d-af9e-18eda14d671f",
     "buildStatus": "SUCCESS",
     "buildLockFileId": "",
     "buildLockFileName": "",
