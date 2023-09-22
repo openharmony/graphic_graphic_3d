@@ -80,15 +80,15 @@ public:
                 logPriority = LOG_LEVEL_MIN;
                 break;
         }
-
+        unsigned int domain = 0xD003B00;
         if (!filename.empty()) {
             std::stringstream outputStream;
             auto const filenameView = GetFilename({ filename.data(), filename.size() });
             outputStream << '(' << filenameView << ':' << linenumber << "): ";
             outputStream << std::string_view(message.data(), message.size());
-            HiLogPrint(LOG_CORE, logPriority, LOG_DOMAIN, logTag_.data(), "%{public}s", outputStream.str().c_str());
+            HiLogPrint(LOG_CORE, logPriority, domain, logTag_.data(), "%{public}s", outputStream.str().c_str());
         } else {
-            HiLogPrint(LOG_CORE, logPriority, LOG_DOMAIN, logTag_.data(), "%{public}s", message.data());
+            HiLogPrint(LOG_CORE, logPriority, domain, logTag_.data(), "%{public}s", message.data());
         }
     }
 

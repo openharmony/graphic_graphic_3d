@@ -5,10 +5,10 @@
 #include "graphics_manager_common.h"
 
 #include "3d_widget_adapter_log.h"
-#include "base/log/ace_trace.h"
 #include "engine_factory.h"
 #include "i_engine.h"
 #include "platform_data.h"
+#include "widget_trace.h"
 
 namespace OHOS::Render3D {
 GraphicsManagerCommon::~GraphicsManagerCommon()
@@ -16,20 +16,20 @@ GraphicsManagerCommon::~GraphicsManagerCommon()
     // should never be called
 }
 
-void GraphicsManagerCommon::Register(int32_t key)
+void GraphicsManagerCommon::Register(int32_t key, RenderBackend backend)
 {
     if (viewTextures_.find(key) != viewTextures_.end()) {
         return;
     }
 
     viewTextures_.insert(key);
-
+    backends_[key] = backend;
     return;
 }
 
 bool GraphicsManagerCommon::LoadEngineLib()
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::LoadEngineLib");
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::LoadEngineLib");
     if (engine_ == nullptr) {
         return false;
     }
@@ -48,7 +48,7 @@ bool GraphicsManagerCommon::LoadEngineLib()
 
 bool GraphicsManagerCommon::InitEngine(EGLContext eglContext, PlatformData data)
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::InitEngine");
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::InitEngine");
     if (engine_ == nullptr) {
         return false;
     }
@@ -67,28 +67,39 @@ bool GraphicsManagerCommon::InitEngine(EGLContext eglContext, PlatformData data)
 
 void GraphicsManagerCommon::DeInitEngine()
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::DeInitEngine");
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::DeInitEngine");
     if (engineInited_ && engine_ != nullptr) {
         engine_->DeInitEngine();
         engineInited_ = false;
     }
 }
 
-void GraphicsManagerCommon::UnLoadEngineLib()
+void GraphicsManagerCommon::UnloadEngineLib()
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::UnLoadEngineLib");
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::UnLoadEngineLib");
     if (engineLoaded_ && engine_ != nullptr) {
-        engine_->UnLoadEngineLib();
+        engine_->UnloadEngineLib();
         engineLoaded_ = false;
     }
 }
 
-std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineType type, EGLContext eglContext)
+std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineType type, int32_t key)
 {
-    WIDGET_LOGD("%s", __func__);
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
+    auto backend = backends_.find(key);
+    if (backend == backends_.end() || backend->second == RenderBackend::UNDEFINE) {
+        WIDGET_LOGE("Get engine before register");
+        return nullptr;
+    }
 
+    if (backend->second != RenderBackend::GLES) {
+        WIDGET_LOGE("not support backend yet");
+        return nullptr;
+    }
+
+    // gles context
     if (engine_ == nullptr) {
+        auto context = offScreenContextHelper_.CreateOffScreenContext(EGL_NO_CONTEXT);
         engine_ = EngineFactory::CreateEngine(type);
         WIDGET_LOGD("create proto engine");
         if (!LoadEngineLib()) {
@@ -96,7 +107,7 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
             return nullptr;
         }
 
-        if (!InitEngine(eglContext, GetPlatformData())) {
+        if (!InitEngine(context, GetPlatformData())) {
             WIDGET_LOGE("init engine fail");
             return nullptr;
         }
@@ -106,7 +117,8 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
     client->Clone(engine_.get());
     return client;
 }
-EGLContext GraphicsManagerCommon::CreateOffScreenContext(EGLContext eglContext)
+
+EGLContext GraphicsManagerCommon::GetOrCreateOffScreenContext(EGLContext eglContext)
 {
     AutoRestore scope;
     return offScreenContextHelper_.CreateOffScreenContext(eglContext);
@@ -119,8 +131,8 @@ void GraphicsManagerCommon::BindOffScreenContext()
 
 void GraphicsManagerCommon::UnRegister(int32_t key)
 {
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::UnRegister");
     WIDGET_LOGD("view unregiser %d total %zu", key, viewTextures_.size());
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::UnRegister");
 
     auto it = viewTextures_.find(key);
     if (it == viewTextures_.end()) {
@@ -129,15 +141,30 @@ void GraphicsManagerCommon::UnRegister(int32_t key)
     }
 
     viewTextures_.erase(it);
+    auto backend = backends_.find(key);
+    if (backend != backends_.end()) {
+        backends_.erase(backend);
+    }
 
     if (viewTextures_.empty()) {
         // Destroy proto engine
         WIDGET_LOGE("view reset proto engine");
         DeInitEngine();
-        UnLoadEngineLib();
+        UnloadEngineLib();
         engine_.reset();
         offScreenContextHelper_.DestroyOffScreenContext();
     }
+    // need graphics task exit!!!
+}
+
+RenderBackend GraphicsManagerCommon::GetRenderBackendType(int32_t key)
+{
+    RenderBackend backend = RenderBackend::UNDEFINE;
+    auto it = backends_.find(key);
+    if (it != backends_.end()) {
+        backend = it->second;
+    }
+    return backend;
 }
 
 bool GraphicsManagerCommon::HasMultiEcs()
@@ -154,14 +181,14 @@ void GraphicsManagerCommon::UnloadEcs(void* ecs)
 
 void GraphicsManagerCommon::DrawFrame(void* ecs, void* handles)
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::DrawFrame");
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::DrawFrame");
     ecss_[ecs] = handles;
     WIDGET_LOGD("ACE-3D DrawFrame ecss size %zu", ecss_.size());
 }
 
 void GraphicsManagerCommon::PerformDraw()
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::PerformDraw");
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::PerformDraw");
     if (engine_ == nullptr) {
         WIDGET_LOGE("ACE-3D PerformDraw but engine is null");
         return;
@@ -175,7 +202,7 @@ void GraphicsManagerCommon::PerformDraw()
 
 void GraphicsManagerCommon::AttachContext(const OHOS::Ace::WeakPtr<OHOS::Ace::PipelineBase>& context)
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("GraphicsManagerCommon::AttachContext");
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::AttachContext");
     static bool once = false;
     if (once) {
         return;

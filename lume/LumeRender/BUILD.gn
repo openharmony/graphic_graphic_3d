@@ -20,19 +20,19 @@ config("lume_render_api") {
 
   if (BUILDTYPE == "Release") {
     defines += [
-      "PLUGIN_LOG_NO_DEBUG=1",
+      "PLUGIN_LOG_NO_DEBUG=0",
     ] 
   }
 
   if (BUILDTYPE == "MinSizeRel") {
     defines += [
-      "PLUGIN_LOG_NO_DEBUG=1"
+      "PLUGIN_LOG_NO_DEBUG=0"
     ] 
   }
 
   if (BUILDTYPE == "RelWithDebInfo") {
     defines += [
-      "PLUGIN_LOG_NO_DEBUG=1"
+      "PLUGIN_LOG_NO_DEBUG=0"
     ] 
   }
 

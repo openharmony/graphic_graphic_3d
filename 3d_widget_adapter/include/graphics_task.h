@@ -12,7 +12,7 @@
 #include <thread>
 
 namespace OHOS::Render3D {
-class GraphicsTask {
+class __attribute__((visibility("default"))) GraphicsTask {
 public:
     using Task = void();
     class Message {

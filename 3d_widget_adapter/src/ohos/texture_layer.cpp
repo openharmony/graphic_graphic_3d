@@ -4,7 +4,6 @@
 
 #include "texture_layer.h"
 
-#include <base/log/ace_trace.h>
 #include <include/gpu/GrBackendSurface.h>
 #ifndef NEW_SKIA
 #include <include/gpu/GrContext.h>
@@ -14,15 +13,32 @@
 #include <include/gpu/gl/GrGLInterface.h>
 #include <native_buffer.h>
 #include <render_service_base/include/pipeline/rs_recording_canvas.h>
+#include <render_service_base/include/property/rs_properties_def.h>
+#include <render_service_client/core/pipeline/rs_node_map.h>
+#include <render_service_client/core/transaction/rs_interfaces.h>
+#include <render_service_client/core/ui/rs_canvas_node.h>
+#include <render_service_client/core/ui/rs_root_node.h>
+#include <render_service_client/core/ui/rs_surface_node.h>
 #include <surface_buffer.h>
+#include <surface_utils.h>
 #include <window.h>
 
 #include "3d_widget_adapter_log.h"
 #include "graphics_manager.h"
 #include "offscreen_context_helper.h"
+#include "widget_trace.h"
 
 namespace OHOS {
 namespace Render3D {
+
+TextureLayer::TextureLayer(int32_t key) : key_(key)
+{
+    auto& gfxManager = GraphicsManager::GetInstance();
+    backend_ = gfxManager.GetRenderBackendType(key);
+    if (backend_ == RenderBackend::GLES) {
+        gfxManager.GetOrCreateOffScreenContext(EGL_NO_CONTEXT);
+    }
+}
 
 void TextureLayer::UpdateRenderFinishFuture(std::shared_future<void> &ftr)
 {
@@ -30,15 +46,13 @@ void TextureLayer::UpdateRenderFinishFuture(std::shared_future<void> &ftr)
     image_.ftr_ = ftr;
 }
 
-void TextureLayer::SetOffset(int32_t x, int32_t y)
+void TextureLayer::SetParent(std::shared_ptr<Rosen::RSNode>& parent)
 {
-    offsetX_ = x;
-    offsetY_ = y;
-}
-
-void TextureLayer::SetTextureInfo(const TextureInfo &info)
-{
-    image_.textureInfo_ = info;
+    if (!rsNode_)  {
+        WIDGET_LOGE("rs node not ready");
+        return;
+    }
+    parent->AddChild(rsNode_, 0); // second paramenter is added child at the index of parent's children;
 }
 
 void TextureLayer::AllocGLTexture(uint32_t width, uint32_t height)
@@ -91,34 +105,101 @@ void TextureLayer::AllocEglImage(uint32_t width, uint32_t height)
     glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, static_cast<GLeglImageOES>(eglImage_));
 }
 
-TextureInfo TextureLayer::CreateRenderTarget(uint32_t width, uint32_t height)
+void* TextureLayer::CreateNativeWindow(uint32_t width, uint32_t height)
 {
-    AutoRestore scope;
+    struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model") +
+        std::to_string(key_)};
+    rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false);
+    if (!rsNode_) {
+        WIDGET_LOGE("Create rs node fail");
+        return nullptr;
+    }
 
-    GraphicsManager::GetInstance().BindOffScreenContext();
-    GLuint texId = 0U;
-    glGenTextures(1, &texId);
-    TextureInfo textureInfo { width, height, texId };
+    auto surfaceNode = OHOS::Rosen::RSBaseNode::ReinterpretCast<OHOS::Rosen::RSSurfaceNode>(rsNode_);
+    producerSurface_ = surfaceNode->GetSurface();
+    if (!producerSurface_) {
+        WIDGET_LOGE("Get producer surface fail");
+        return nullptr;
+    }
+    auto ret = SurfaceUtils::GetInstance()->Add(producerSurface_->GetUniqueId(), producerSurface_);
+    if (ret != SurfaceError::SURFACE_ERROR_OK) {
+        WIDGET_LOGE("add surface error");
+        return nullptr;
+    }
 
-    glBindTexture(GL_TEXTURE_2D, texId);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    producerSurface_->SetQueueSize(5); // check if buffer queue size is 5
+    producerSurface_->SetUserData("SURFACE_STRIDE_ALIGNMENT", "8");
+    producerSurface_->SetUserData("SURFACE_FORMAT", std::to_string(GRAPHIC_PIXEL_FMT_RGBA_8888));
+    producerSurface_->SetUserData("SURFACE_WIDTH", std::to_string(width));
+    producerSurface_->SetUserData("SURFACE_HEIGHT", std::to_string(height));
+    auto window = CreateNativeWindowFromSurface(&producerSurface_);
 
-    AllocGLTexture(width, height);
+    return reinterpret_cast<void *>(window);
+}
+
+void TextureLayer::ConfigWindow(float offsetX, float offsetY, float width, float height, float scale,
+    bool recreateWindow)
+{
+    if (surface_ == SurfaceType::SURFACE_WINDOW || surface_ == SurfaceType::SURFACE_TEXTURE) {
+        if (!image_.textureInfo_.nativeWindow_) {
+            image_.textureInfo_.nativeWindow_ = reinterpret_cast<void *>(CreateNativeWindow(
+                static_cast<uint32_t>(width), static_cast<uint32_t>(height)));
+        }
+
+        if (recreateWindow) {
+            NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
+                SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale), static_cast<uint32_t>(height * scale));
+        }
+
+        rsNode_->SetBounds(offsetX, offsetY, width, height);
+    }
+}
+
+void TextureLayer::ConfigTexture(float width, float height)
+{
+    if ((surface_ == SurfaceType::SURFACE_BUFFER) && !image_.textureInfo_.textureId_) {
+        AutoRestore scope;
+
+        GraphicsManager::GetInstance().BindOffScreenContext();
+        glGenTextures(1, &image_.textureInfo_.textureId_);
+
+        glBindTexture(GL_TEXTURE_2D, image_.textureInfo_.textureId_);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        AllocGLTexture(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
 #if defined(UNIFY_RENDER) && (UNIFY_RENDER == 1)
-    AllocEglImage(width, height);
+        AllocEglImage(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 #endif
-
-    return textureInfo;
+    }
 }
 
-TextureLayer::~TextureLayer()
+TextureInfo TextureLayer::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
+    bool recreateWindow, SurfaceType surfaceType)
 {
     DestroyRenderTarget();
+    surface_ = surfaceType;
+    offsetX_ = offsetX;
+    offsetY_ = offsetY;
+    if (image_.textureInfo_.width_ != static_cast<uint32_t>(width) ||
+        image_.textureInfo_.height_ != static_cast<uint32_t>(height)) {
+        needsRecreateSkImage_ = true;
+    }
+    image_.textureInfo_.width_ = static_cast<uint32_t>(width);
+    image_.textureInfo_.height_ = static_cast<uint32_t>(height);
+
+    ConfigWindow(offsetX, offsetY, width, height, scale, recreateWindow);
+    ConfigTexture(width, height);
+
+    WIDGET_LOGD("TextureLayer OnWindowChange offsetX %f, offsetY %f, width %d, height %d, float scale %f,"
+        "recreateWindow %d window empty %d", offsetX, offsetY, image_.textureInfo_.width_, image_.textureInfo_.height_,
+        scale, recreateWindow, image_.textureInfo_.nativeWindow_ == nullptr);
+    return image_.textureInfo_;
 }
+
 
 void TextureLayer::FreeNativeBuffer()
 {
@@ -136,6 +217,25 @@ void TextureLayer::FreeNativeWindowBuffer()
     }
     DestroyNativeWindowBuffer(nativeWindowBuffer_);
     nativeWindowBuffer_ = nullptr;
+}
+
+void TextureLayer::DestroyProducerSurface()
+{
+    if (!producerSurface_) {
+        return;
+    }
+    auto surfaceUtils = SurfaceUtils::GetInstance();
+    surfaceUtils->Remove(producerSurface_->GetUniqueId());
+}
+
+void TextureLayer::DestroyNativeWindow()
+{
+    WIDGET_LOGD("TextureLayer::DestroyNativeWindow");
+    if (!image_.textureInfo_.nativeWindow_) {
+        return;
+    }
+    DestoryNativeWindow(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_));
+    image_.textureInfo_.nativeWindow_ = nullptr;
 }
 
 void TextureLayer::DestroyRenderTarget()
@@ -169,15 +269,21 @@ void TextureLayer::DestroyRenderTarget()
         data_ = nullptr;
     }
 #endif
+    DestroyProducerSurface();
+    DestroyNativeWindow();
 }
 
-SkRect TextureLayer::onGetBounds()
+TextureLayer::~TextureLayer()
 {
-    return SkRect::MakeWH(image_.textureInfo_.width_, image_.textureInfo_.height_);
+    DestroyRenderTarget();
 }
 
 void TextureLayer::OnDraw(SkCanvas* canvas)
 {
+    if (surface_ == SurfaceType::SURFACE_WINDOW || surface_ == SurfaceType::SURFACE_TEXTURE) {
+        return;
+    }
+
     if (canvas == nullptr) {
         WIDGET_LOGE("TextureLayer::OnDraw canvas invalid")
         return;
@@ -192,7 +298,7 @@ void TextureLayer::OnDraw(SkCanvas* canvas)
 
 void TextureLayer::onDraw(SkCanvas* canvas)
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("TextureLayer::onDraw");
+    WIDGET_SCOPED_TRACE("TextureLayer::onDraw");
     if (canvas == nullptr) {
         WIDGET_LOGE("TextureLayer::OnDraw canvas invalid")
         return;
@@ -206,6 +312,50 @@ void TextureLayer::onDraw(SkCanvas* canvas)
     #else
         DrawTexture(canvas);
     #endif
+}
+
+#if defined(UNIFY_RENDER) && (UNIFY_RENDER == 1)
+void TextureLayer::DrawTextureUnifyRender(SkCanvas* canvas)
+{
+#if defined(DBG_DRAW_PIXEL) && (DBG_DRAW_PIXEL == 1)
+    // DEBUG copy texture to bitmap, no need ipc surfacebuffer
+    ReadPixel();
+    canvas->drawImage(MakePixelImage(), offsetX_, offsetY_);
+    return;
+#endif
+    Rosen::RSSurfaceBufferInfo info {
+        surfaceBuffer_, offsetX_, offsetY_, image_.textureInfo_.width_, image_.textureInfo_.height_
+    };
+
+    auto recordingCanvas = static_cast<Rosen::RSRecordingCanvas*>(canvas);
+    recordingCanvas->DrawSurfaceBuffer(info);
+}
+#endif
+
+void TextureLayer::DrawTexture(SkCanvas* canvas)
+{
+    WIDGET_SCOPED_TRACE("TextureLayer::DrawTexture");
+    if (image_.textureInfo_.textureId_ == 0U) {
+        WIDGET_LOGE("%s invalid texture %d", __func__, __LINE__);
+        return;
+    }
+
+    if (image_.skImage_ == nullptr || needsRecreateSkImage_) {
+        needsRecreateSkImage_ = false;
+        GrGLTextureInfo textureInfo = { GL_TEXTURE_2D, image_.textureInfo_.textureId_, GL_RGBA8_OES };
+        GrBackendTexture backendTexture(image_.textureInfo_.width_, image_.textureInfo_.height_,
+            GrMipMapped::kNo, textureInfo);
+#ifdef NEW_SKIA
+        image_.skImage_ = SkImage::MakeFromTexture(canvas->recordingContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
+            kRGBA_8888_SkColorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
+#else
+        image_.skImage_ = SkImage::MakeFromTexture(canvas->getGrContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
+            kRGBA_8888_SkColorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
+#endif
+        WIDGET_LOGW("%s Create SkImage %d", __func__, __LINE__);
+    }
+
+    canvas->drawImage(image_.skImage_, offsetX_, offsetY_);
 }
 
 #if defined(DBG_DRAW_PIXEL) && (DBG_DRAW_PIXEL == 1)
@@ -261,56 +411,15 @@ void TextureLayer::CreateReadFbo()
 }
 #endif
 
-#if defined(UNIFY_RENDER) && (UNIFY_RENDER == 1)
-void TextureLayer::DrawTextureUnifyRender(SkCanvas* canvas)
+SkRect TextureLayer::onGetBounds()
 {
-#if defined(DBG_DRAW_PIXEL) && (DBG_DRAW_PIXEL == 1)
-    // DEBUG copy texture to bitmap, no need ipc surfacebuffer
-    ReadPixel();
-    canvas->drawImage(MakePixelImage(), offsetX_, offsetY_);
-    return;
-#endif
-    Rosen::RSSurfaceBufferInfo info {
-        surfaceBuffer_, offsetX_, offsetY_, width_, height_
-    };
-    auto recordingCanvas = static_cast<Rosen::RSRecordingCanvas*>(canvas);
-    recordingCanvas->DrawSurfaceBuffer(info);
+    return SkRect::MakeWH(image_.textureInfo_.width_, image_.textureInfo_.height_);
 }
-#endif
 
-void TextureLayer::DrawTexture(SkCanvas* canvas)
+TextureInfo TextureLayer::GetTextureInfo()
 {
-    OHOS::Ace::ACE_SCOPED_TRACE("TextureLayer::DrawTexture");
-    if (image_.textureInfo_.textureId_ <= 0) {
-        WIDGET_LOGE("%s invalid texture %d", __func__, __LINE__);
-        return;
-    }
-
-    if (image_.skImage_ == nullptr
-        || image_.textureInfo_.width_ != width_
-        || image_.textureInfo_.height_ != height_) {
-        image_.textureInfo_.width_ = width_;
-        image_.textureInfo_.height_ = height_;
-        GrGLTextureInfo textureInfo = { GL_TEXTURE_2D, image_.textureInfo_.textureId_, GL_RGBA8_OES };
-        GrBackendTexture backendTexture(image_.textureInfo_.width_, image_.textureInfo_.height_,
-            GrMipMapped::kNo, textureInfo);
-#ifdef NEW_SKIA
-        image_.skImage_ = SkImage::MakeFromTexture(canvas->recordingContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
-            kRGBA_8888_SkColorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
-#else
-        image_.skImage_ = SkImage::MakeFromTexture(canvas->getGrContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
-            kRGBA_8888_SkColorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
-#endif
-        WIDGET_LOGW("%s Create SkImage %d", __func__, __LINE__);
-    }
-
-    canvas->drawImage(image_.skImage_, offsetX_, offsetY_);
+    return image_.textureInfo_;
 }
 
-void TextureLayer::SetWH(uint32_t w, uint32_t h)
-{
-    width_ = w;
-    height_ = h;
-}
-}
-}
+} // Render3D
+} // OHOS

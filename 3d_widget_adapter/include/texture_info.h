@@ -13,6 +13,7 @@ struct TextureInfo {
     uint32_t width_ = 0U;
     uint32_t height_ = 0U;
     GLuint textureId_ = 0U;
+    void* nativeWindow_ = nullptr;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_TEXTURE_INFO_H

@@ -7,17 +7,23 @@
 
 #include <cstdint>
 #include <string>
+#include <memory>
 
 #include <EGL/egl.h>
 #include <GLES/gl.h>
 
+#include "custom/custom_render_descriptor.h"
+#include "custom/shader_input_buffer.h"
 #include "data_type/constants.h"
 #include "data_type/geometry/cube.h"
 #include "data_type/geometry/cone.h"
 #include "data_type/geometry/sphere.h"
 #include "data_type/gltf_animation.h"
-#include "data_type/scene_viewer_touch_event.h"
-
+#include "data_type/light.h"
+#include "data_type/position.h"
+#include "data_type/pointer_event.h"
+#include "data_type/quaternion.h"
+#include "data_type/vec3.h"
 #include "platform_data.h"
 #include "texture_info.h"
 
@@ -29,39 +35,38 @@ public:
     virtual bool LoadEngineLib() = 0;
     virtual bool InitEngine(EGLContext eglContext, const PlatformData& data) = 0;
     virtual void DeInitEngine() = 0;
-    virtual void UnLoadEngineLib() = 0;
+    virtual void UnloadEngineLib() = 0;
 
-    virtual void CreateEcs(uint32_t key) = 0;
-    virtual void CreateScene() = 0;
-    virtual void CreateCamera() = 0;
-    virtual void SetUpPostprocess() = 0;
-    virtual void LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &shapes) = 0;
+    virtual void InitializeScene(uint32_t key) = 0;
+    virtual void SetupCameraViewPort(uint32_t width, uint32_t height) = 0;
+    virtual void SetupCameraTransform(const OHOS::Render3D::Position& position, const OHOS::Render3D::Vec3& lookAt,
+        const OHOS::Render3D::Vec3& up, const OHOS::Render3D::Quaternion& rotation) = 0;
+    virtual void SetupCameraViewProjection(float zNear, float zFar, float fovDegrees) = 0;
 
-    virtual void SetUpCustomRenderTarget(const TextureInfo &info) = 0;
-    virtual void SetUpCameraViewPort(uint32_t width, uint32_t height) = 0;
-    virtual void SetUpCameraTransform(float position[], float rotationAngle, float rotationAxis[]) = 0;
-    virtual void SetUpCameraViewProjection(float zNear, float zFar, float fovDegrees) = 0;
+    virtual void LoadSceneModel(const std::string& modelPath) = 0;
+    virtual void LoadEnvModel(const std::string& modelPath, BackgroundType type) = 0;
+    virtual void UnloadSceneModel() = 0;
+    virtual void UnloadEnvModel() = 0;
 
-    virtual void CreateLight() = 0;
-    virtual void SetLightProperties(int lightType, float color[], float intensity, bool shadow, float position[],
-        float rotationAngle, float rotationAxis[]) = 0;
+    virtual void OnTouchEvent(const PointerEvent& event) = 0;
+    virtual void OnWindowChange(const TextureInfo& textureInfo) = 0;
 
-    virtual void LoadSceneModel(std::string modelPath) = 0;
-    virtual void LoadBackgroundModel(std::string modelPath, SceneViewerBackgroundType type) = 0;
-    virtual void UnLoadModel() = 0;
-
-    virtual void OnTouchEvent(const SceneViewerTouchEvent& event) = 0;
-    virtual bool IsAnimating() = 0;
     virtual void DrawFrame() = 0;
-    virtual void Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime) = 0;
 
-    virtual void AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes) = 0;
-    virtual void UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations) = 0;
-    virtual void AddTextureMemoryBarrrier() = 0;
+    virtual void UpdateGeometries(const std::vector<std::shared_ptr<Geometry>>& shapes) = 0;
+    virtual void UpdateGLTFAnimations(const std::vector<std::shared_ptr<GLTFAnimation>>& animations) = 0;
+    virtual void UpdateLights(const std::vector<std::shared_ptr<OHOS::Render3D::Light>>& lights) = 0;
+    virtual void UpdateCustomRender(const std::shared_ptr<CustomRenderDescriptor>& customRender) = 0;
+    virtual void UpdateShaderPath(const std::string& shaderPath) = 0;
+    virtual void UpdateImageTexturePaths(const std::vector<std::string>& imageTextures) = 0;
+    virtual void UpdateShaderInputBuffer(
+        const std::shared_ptr<OHOS::Render3D::ShaderInputBuffer>& shaderInputBuffer) = 0;
+
+    virtual bool NeedsRepaint() = 0;
 
 #if MULTI_ECS_UPDATE_AT_ONCE
     virtual void DeferDraw() = 0 ;
-    virtual void DrawMultiEcs(const std::vector<void *> &ecss) = 0;
+    virtual void DrawMultiEcs(const std::unordered_map<void*, void*>& ecss) = 0;
 #endif
 };
 } // namespace OHOS::Render3D

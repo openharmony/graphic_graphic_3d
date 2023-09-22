@@ -19,18 +19,28 @@
 namespace OHOS::Render3D {
 struct TextureInfo;
 struct PlatformData;
-class GraphicsManagerCommon {
+
+enum class RenderBackend {
+    UNDEFINE,
+    GLES,
+    GL,
+    VULKAN,
+    METAL,
+};
+
+class __attribute__((visibility("default"))) GraphicsManagerCommon {
 public:
     explicit GraphicsManagerCommon(const GraphicsManagerCommon&) = delete;
     GraphicsManagerCommon& operator=(const GraphicsManagerCommon&) = delete;
 
-    void Register(int32_t key);
+    void Register(int32_t key, RenderBackend backend = RenderBackend::GLES);
     void UnRegister(int32_t key);
-    std::unique_ptr<IEngine> GetEngine(EngineFactory::EngineType type, EGLContext eglContext);
-    EGLContext CreateOffScreenContext(EGLContext eglContext);
+    std::unique_ptr<IEngine> GetEngine(EngineFactory::EngineType type, int32_t key);
+    EGLContext GetOrCreateOffScreenContext(EGLContext eglContext);
     void BindOffScreenContext();
     virtual PlatformData GetPlatformData() const = 0;
     bool HasMultiEcs();
+    RenderBackend GetRenderBackendType(int32_t key);
 #if MULTI_ECS_UPDATE_AT_ONCE
     void AttachContext(const OHOS::Ace::WeakPtr<OHOS::Ace::PipelineContext> context);
     void DrawFrame(void* ecs, void* handles);
@@ -43,7 +53,7 @@ protected:
     bool LoadEngineLib();
     bool InitEngine(EGLContext eglContext, PlatformData data);
     void DeInitEngine();
-    void UnLoadEngineLib();
+    void UnloadEngineLib();
 #if MULTI_ECS_UPDATE_AT_ONCE
     void PerformDraw();
 #endif
@@ -54,6 +64,7 @@ private:
     std::unique_ptr<IEngine> engine_ = nullptr;
     bool engineLoaded_ = false;
     bool engineInited_ = false;
+    std::unordered_map<int32_t, RenderBackend> backends_;
 #if MULTI_ECS_UPDATE_AT_ONCE
     std::unordered_map<void*, void*> ecss_;
 #endif

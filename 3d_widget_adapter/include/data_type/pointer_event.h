@@ -4,7 +4,9 @@
 
 #ifndef OHOS_RENDER_3D_POINTER_EVENT_H
 #define OHOS_RENDER_3D_POINTER_EVENT_H
+
 namespace OHOS::Render3D {
+
 enum class PointerEventType {
     PRESSED,
     RELEASED,
@@ -14,7 +16,7 @@ enum class PointerEventType {
 };
 
 struct PointerEvent {
-    PointerEventType eventType_;
+    PointerEventType eventType_ { PointerEventType::RELEASED };
     int pointerId_ {};
     int buttonIndex_ {};
     float x_ {};
@@ -23,4 +25,4 @@ struct PointerEvent {
     float deltaY_ {};
 };
 } // namespace OHOS::Render3D
-#endif // OHOS_RENDER_3D_POINTER_EVENT_H
+#endif // OHOS_RENDER_3D_SCENE_VIEWER_TOUCH_EVENT_H

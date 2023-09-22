@@ -1742,7 +1742,9 @@ void GpuResourceManager::DebugPrintValidCounts()
 
 void GpuResourceManager::WaitForIdleAndDestroyGpuResources()
 {
+#ifndef NDEBUG
     PLUGIN_LOG_D("WFIADGR thread id: %" PRIu64, (uint64_t)std::hash<std::thread::id> {}(std::this_thread::get_id()));
+#endif
     device_.Activate();
     device_.WaitForIdle();
 

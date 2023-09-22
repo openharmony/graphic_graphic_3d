@@ -6,7 +6,6 @@
 #define OHOS_RENDER_3D_VEC3_H
 
 #include <string>
-#include "base/memory/ace_type.h"
 #include "data_type/constants.h"
 
 namespace OHOS::Render3D {
@@ -20,6 +19,7 @@ public:
     void SetX(float x) { x_ = x; }
     void SetY(float y) { y_ = y; }
     void SetZ(float z) { z_ = z; }
+
 private:
     union {
         struct {

@@ -5,10 +5,8 @@
 #ifndef OHOS_RENDER_3D_LUME_COMMON_H
 #define OHOS_RENDER_3D_LUME_COMMON_H
 
-#include "i_engine.h"
-#include "pointer_event.h"
-#include "3d_widget_adapter_log.h"
 #include <3d/ecs/components/camera_component.h>
+#include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/light_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 #include <3d/ecs/components/post_process_component.h>
@@ -33,6 +31,9 @@
 #include <render/intf_plugin.h>
 #include <render/intf_render_context.h>
 #include <render/device/intf_device.h>
+
+#include "custom/lume_custom_render.h"
+#include "i_engine.h"
 
 namespace OHOS::Render3D {
 struct GltfImportInfo {
@@ -94,50 +95,69 @@ public:
     LumeCommon() = default;
     ~LumeCommon() override;
     void Clone(IEngine* proto) override;
-
-    void UnLoadEngineLib() override;
+    void UnloadEngineLib() override;
     bool LoadEngineLib() override;
     bool InitEngine(EGLContext eglContext, const PlatformData& data) override;
     void DeInitEngine() override;
 
-    void CreateEcs(uint32_t key) override;
-    void CreateScene() override;
-    void CreateCamera() override;
-    void LoadBackgroundModel(std::string modelPath, SceneViewerBackgroundType type) override;
-    void LoadSceneModel(std::string modelPath) override;
-    void SetUpPostprocess() override;
-    void LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &shapes) override;
-    void AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes) override;
-    void UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations) override;
-    void AddTextureMemoryBarrrier() override;
-    void SetUpCustomRenderTarget(const TextureInfo &info) override;
-    void CreateLight() override;
-    void SetLightProperties(int lightType, float color[], float intensity,
-        bool shadow, float position[], float rotationAngle, float rotationAxis[]) override;
+    void InitializeScene(uint32_t key) override;
 
-    void SetUpCameraViewPort(uint32_t width, uint32_t height) override;
-    void SetUpCameraTransform(float position[], float rotationAngle, float rotationAxis[]) override;
-    void SetUpCameraViewProjection(float zNear, float zFar, float fovDegrees) override;
+    void LoadEnvModel(const std::string& modelPath, BackgroundType type) override;
+    void LoadSceneModel(const std::string& modelPath) override;
 
-    void ProcessGLTFAnimations();
-    int FindGLTFAnimationIndex(const std::string& name);
-    void UpdateSingleGLTFAnimation(int index, const OHOS::Ace::RefPtr<GLTFAnimation>& gltfAnimation);
-    void LoadAndImport(const GltfImportInfo& info, const CORE_NS::Entity& scene_entity);
-    void UnLoadModel() override;
+    void UpdateGeometries(const std::vector<std::shared_ptr<Geometry>>& shapes) override;
+    void UpdateGLTFAnimations(const std::vector<std::shared_ptr<GLTFAnimation>>& animations) override;
+    void UpdateLights(const std::vector<std::shared_ptr<OHOS::Render3D::Light>>& lights) override;
+
+    void UpdateCustomRender(const std::shared_ptr<CustomRenderDescriptor>& customRender) override;
+    void UpdateShaderPath(const std::string& shaderPath) override;
+    void UpdateImageTexturePaths(const std::vector<std::string>& imageTextures) override;
+    void UpdateShaderInputBuffer(const std::shared_ptr<OHOS::Render3D::ShaderInputBuffer>& shaderInputBuffer) override;
+
+    void SetupCameraViewPort(uint32_t width, uint32_t height) override;
+    void SetupCameraTransform(const OHOS::Render3D::Position& position, const OHOS::Render3D::Vec3& lookAt,
+        const OHOS::Render3D::Vec3& up, const OHOS::Render3D::Quaternion& rotation) override;
+    void SetupCameraViewProjection(float zNear, float zFar, float fovDegrees) override;
+
+    void UnloadSceneModel() override;
+    void UnloadEnvModel() override;
     void DrawFrame() override;
 
-    void OnTouchEvent(const SceneViewerTouchEvent& event) override;
-    bool IsAnimating() override;
-    void Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime)override;
+    void OnTouchEvent(const PointerEvent& event) override;
+    void OnWindowChange(const TextureInfo& textureInfo) override;
 
 #if MULTI_ECS_UPDATE_AT_ONCE
     void DeferDraw() override;
-    void DrawMultiEcs(const std::vector<void *> &ecss) override;
+    void DrawMultiEcs(const std::unordered_map<void*, void*>& ecss) override;
 #endif
+    bool NeedsRepaint() override;
 
 protected:
     virtual CORE_NS::PlatformCreateInfo ToEnginePlatformData(const PlatformData& data) const = 0;
     virtual void RegisterAssertPath() = 0;
+    void LoadSystemGraph();
+    void CreateEcs(uint32_t key);
+    void CreateScene();
+    void DestroyScene();
+    void CreateEnvScene(CORE3D_NS::EnvironmentComponent::Background type);
+    void DestroyEnvScene();
+    void DestroySceneNodeAndRes(CORE_NS::Entity& importedEntity, BASE_NS::vector<CORE3D_NS::GLTFResourceData>& res);
+    void CreateCamera();
+    void LoadCustGeometry(const std::vector<std::shared_ptr<Geometry>>& shapes);
+    void SetupPostprocess();
+    void AddTextureMemoryBarrrier();
+    void SetupCustomRenderTarget(const TextureInfo &info);
+    void CreateLight();
+    void ProcessGLTFAnimations();
+    int FindGLTFAnimationIndex(const std::string& name);
+    void UpdateSingleGLTFAnimation(int index, const std::shared_ptr<GLTFAnimation>& gltfAnimation);
+    void LoadAndImport(const GltfImportInfo& info, CORE_NS::Entity& importedEntity,
+        BASE_NS::vector<CORE3D_NS::GLTFResourceData>& res);
+
+    bool CreateSwapchain(void* nativeWindow);
+    bool DestroySwapchain();
+    void DestroyResource();
+    void Tick(const uint64_t deltaTime);
 
     CORE_NS::IEngine::Ptr CreateCoreEngine(const Core::PlatformCreateInfo &info);
     CORE_NS::IEngine::Ptr GetCoreEngine();
@@ -152,16 +172,25 @@ protected:
     CORE3D_NS::IGraphicsContext::Ptr CreateGfx3DContext();
     CORE3D_NS::IGraphicsContext::Ptr GetGraphicsContext();
 
+    bool IsValidQuaternion(const OHOS::Render3D::Quaternion& quat);
+    void CollectRenderHandles();
+    void GetLightPositionAndRotation(const std::shared_ptr<OHOS::Render3D::Light>& light,
+        BASE_NS::Math::Vec3& position, BASE_NS::Math::Quat& rotation);
+
     CORE_NS::IEngine::Ptr engine_;
     CORE_NS::IEcs::Ptr ecs_;
     CORE_NS::Entity cameraEntity_;
     CORE_NS::Entity sceneEntity_;
     CORE_NS::Entity postprocessEntity_;
-    CORE_NS::Entity lightEntity_;
-    CORE_NS::Entity importedSceneEntity_;
+    std::vector<CORE_NS::Entity> lightEntities_;
 
-    BASE_NS::vector<CORE3D_NS::IAnimationPlayback *> animations_;
-    BASE_NS::vector<CORE3D_NS::GLTFResourceData> importedResources_;
+    CORE_NS::Entity importedSceneEntity_;
+    BASE_NS::vector<CORE3D_NS::GLTFResourceData> importedSceneResources_;
+
+    CORE_NS::Entity importedEnvEntity_;
+    BASE_NS::vector<CORE3D_NS::GLTFResourceData> importedEnvResources_;
+
+    BASE_NS::vector<CORE3D_NS::IAnimationPlayback*> animations_;
     BASE_NS::Math::Vec3 cameraPosition_{ 0.0f, 0.0f, 4.0f };
     BASE_NS::Math::Quat cameraRotation_{ 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -178,8 +207,13 @@ protected:
     RENDER_NS::IDevice *device_ = nullptr;
 
     OrbitCameraHelper orbitCamera_;
-    std::vector<OHOS::Ace::RefPtr<GLTFAnimation>> gltfAnimations_;
-    std::vector<OHOS::Ace::RefPtr<SVGeometry>> shapes_;
+    std::vector<std::shared_ptr<GLTFAnimation>> gltfAnimations_;
+    std::vector<std::shared_ptr<Geometry>> shapes_;
+    std::unordered_map<std::string, std::shared_ptr<Geometry>> shapesMap_;
+
+    // Shader
+    std::shared_ptr<LumeCustomRender> customRender_;
+    BASE_NS::vector<RENDER_NS::RenderHandleReference> renderHandles_;
 
     bool autoAspect_ = true;
     float originalYfov_ = BASE_NS::Math::DEG2RAD * 60.0f;
@@ -188,13 +222,16 @@ protected:
     void *libHandle_ = nullptr;
     uint32_t key_;
     float zNear_ = 0.5f;
-    float zFar_ = 50.0f;
+    float zFar_ = 200.0f;
     float fovDegrees_ = 60.0f;
     bool animProgress_ = false;
     bool cameraUpdated_ = true;
+    bool needsRedraw_ = false;
+    bool needsFrameCallback_ = false;
+    void* nativeWindow_ = nullptr;
 
+    EGLSurface eglSurface_ = EGL_NO_SURFACE;
     TextureInfo textureInfo_;
-    LightInfo lightInfo_;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_LUME_COMMON_H

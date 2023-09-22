@@ -6,13 +6,10 @@
 #define OHOS_RENDER_3D_GLTF_ANIMATION_H
 
 #include <string>
-#include "base/memory/ace_type.h"
 #include "data_type/constants.h"
 
 namespace OHOS::Render3D {
-class GLTFAnimation : public virtual OHOS::Ace::AceType {
-    DECLARE_ACE_TYPE(GLTFAnimation, OHOS::Ace::AceType)
-
+class GLTFAnimation {
 public:
     GLTFAnimation(const std::string& name, AnimationState state, int repeatCount = -1,
         float speed = 1.0, float duration = -1, bool reverse = false)

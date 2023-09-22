@@ -53,10 +53,13 @@ public:
     bool IsAnimating() override;
     void DrawFrame() override {};
     void Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime) override;
+    bool HandlesNotReady() override;
 
-    void AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes) override;
+    void UpdateGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes) override;
     void UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations) override;
     void AddTextureMemoryBarrrier() override;
+    void AddLights(const std::vector<OHOS::Ace::RefPtr<SVLight>>& lights) override;
+    void AddCustomRenders(const std::vector<OHOS::Ace::RefPtr<SVCustomRenderDescriptor>>& customRenders) override;
 
 #if MULTI_ECS_UPDATE_AT_ONCE
     void DeferDraw() override {};

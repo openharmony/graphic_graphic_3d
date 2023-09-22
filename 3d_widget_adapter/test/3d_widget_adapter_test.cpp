@@ -45,11 +45,13 @@ void EngineTest::SetUpCameraViewPort(uint32_t width, uint32_t height)
     (void)(height);
 }
 
-void EngineTest::SetUpCameraTransform(float position[], float rotationAngle, float rotationAxis[])
+void EngineTest::SetUpCameraTransform(const OHOS::Render3D::Position& position, const OHOS::Ace::Vec3& lookAtVec,
+    const OHOS::Ace::Vec3& upVec, const OHOS::Ace::Quaternion& rotation)
 {
     (void)(position);
-    (void)(rotationAngle);
-    (void)(rotationAxis);
+    (void)(lookAtVec);
+    (void)(upVec);
+    (void)(rotation);
 }
 
 void EngineTest::SetUpCameraViewProjection(float zNear, float zFar, float fovDegrees)
@@ -93,7 +95,7 @@ void EngineTest::Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime)
     (void)(aTotalTime);
 }
 
-void EngineTest::AddGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes)
+void EngineTest::UpdateGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes)
 {
     (void)(shapes);
 }
@@ -122,6 +124,21 @@ bool EngineTest::IsAnimating()
 
 void EngineTest::AddTextureMemoryBarrrier()
 {
+}
+
+bool EngineTest::HandlesNotRead()
+{
+    return true;
+}
+
+void EngineTest::AddLights(const std::vector<OHOS::Ace::RefPtr<SVLight>>& lights)
+{
+    (void)(lights);
+}
+
+void EngineTest::AddCustomRenders(const std::vector<OHOS::Ace::RefPtr<SVCustomRenderDescriptor>>& customRenders)
+{
+    (void)(customRenders);
 }
 
 namespace {
@@ -274,13 +291,13 @@ HWTEST_F(WidgetAdapter3DTest, Tick1, testing::ext::TestSize.Level1)
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
-HWTEST_F(WidgetAdapter3DTest, AddGeometries1, testing::ext::TestSize.Level1)
+HWTEST_F(WidgetAdapter3DTest, UpdateGeometries1, testing::ext::TestSize.Level1)
 {
     SceneViewerAdapter adapter(0U);
 
     auto engine = std::make_unique<EngineTest>();
     adapter.SetEngine(std::move(engine));
-    bool ret = adapter.AddGeometries({});
+    bool ret = adapter.UpdateGeometries({});
     ASSERT_EQ(ret, true);
 }
 

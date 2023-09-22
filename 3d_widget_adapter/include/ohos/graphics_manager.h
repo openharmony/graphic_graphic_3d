@@ -10,7 +10,7 @@
 #include <EGL/egl.h>
 
 namespace OHOS::Render3D {
-class GraphicsManager : public GraphicsManagerCommon {
+class __attribute__((visibility("default"))) GraphicsManager : public GraphicsManagerCommon {
 public:
     static GraphicsManager& GetInstance();
     PlatformData GetPlatformData() const override;

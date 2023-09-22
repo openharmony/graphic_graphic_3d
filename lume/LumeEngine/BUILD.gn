@@ -22,17 +22,17 @@ config("lume_base_api") {
 
   if (BUILDTYPE == "Release") {
     defines += [
-      "BASE_LOG_NO_DEBUG=1",
+      "BASE_LOG_NO_DEBUG=0",
     ]
   }
   if (BUILDTYPE == "MinSizeRel") {
     defines += [
-      "BASE_LOG_NO_DEBUG=1"
+      "BASE_LOG_NO_DEBUG=0"
     ]
   }
   if (BUILDTYPE == "RelWithDebInfo") {
     defines += [
-        "BASE_LOG_NO_DEBUG=1"
+        "BASE_LOG_NO_DEBUG=0"
     ]
   }
 }
@@ -57,17 +57,17 @@ config("lume_engine_api") {
 
   if (BUILDTYPE == "Release") {
     defines += [
-      "CORE_LOG_NO_DEBUG=1",
+      "CORE_LOG_NO_DEBUG=0",
     ]
   }
   if (BUILDTYPE == "MinSizeRel") {
     defines += [
-      "CORE_LOG_NO_DEBUG=1"
+      "CORE_LOG_NO_DEBUG=0"
     ]
   }
   if (BUILDTYPE == "RelWithDebInfo") {
     defines += [
-      "CORE_LOG_NO_DEBUG=1"
+      "CORE_LOG_NO_DEBUG=0"
     ]
   }
 }

@@ -56,7 +56,7 @@ string_view Logger::GetLogLevelName(LogLevel logLevel, bool shortName)
 
 Logger::Logger(bool defaultOutputs)
 #ifdef NDEBUG
-    : logLevel_(LogLevel::LOG_ERROR)
+    : logLevel_(LogLevel::LOG_INFO)
 #endif
 {
     if (defaultOutputs) {
