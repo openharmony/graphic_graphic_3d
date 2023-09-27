@@ -116,6 +116,14 @@ void* TextureLayer::CreateNativeWindow(uint32_t width, uint32_t height)
     }
 
     auto surfaceNode = OHOS::Rosen::RSBaseNode::ReinterpretCast<OHOS::Rosen::RSSurfaceNode>(rsNode_);
+    surfaceNode->SetFrameGravity(Rosen::Gravity::RESIZE);
+    if (surface_ == SurfaceType::SURFACE_WINDOW) {
+        surfaceNode->SetHardwareEnabled(true);
+    }
+    if (surface_ == SurfaceType::SURFACE_TEXTURE) {
+        surfaceNode->SetHardwareEnabled(false);
+    }
+
     producerSurface_ = surfaceNode->GetSurface();
     if (!producerSurface_) {
         WIDGET_LOGE("Get producer surface fail");
@@ -140,15 +148,18 @@ void* TextureLayer::CreateNativeWindow(uint32_t width, uint32_t height)
 void TextureLayer::ConfigWindow(float offsetX, float offsetY, float width, float height, float scale,
     bool recreateWindow)
 {
+    float widthScale = image_.textureInfo_.widthScale_;
+    float heightScale = image_.textureInfo_.heightScale_;
     if (surface_ == SurfaceType::SURFACE_WINDOW || surface_ == SurfaceType::SURFACE_TEXTURE) {
         if (!image_.textureInfo_.nativeWindow_) {
             image_.textureInfo_.nativeWindow_ = reinterpret_cast<void *>(CreateNativeWindow(
-                static_cast<uint32_t>(width), static_cast<uint32_t>(height)));
+                static_cast<uint32_t>(width * widthScale), static_cast<uint32_t>(height * heightScale)));
         }
 
         if (recreateWindow) {
             NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
-                SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale), static_cast<uint32_t>(height * scale));
+                SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale * widthScale),
+                static_cast<uint32_t>(height * scale * heightScale));
         }
 
         rsNode_->SetBounds(offsetX, offsetY, width, height);
@@ -200,6 +211,33 @@ TextureInfo TextureLayer::OnWindowChange(float offsetX, float offsetY, float wid
     return image_.textureInfo_;
 }
 
+TextureInfo TextureLayer::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
+{
+    DestroyRenderTarget();
+    surface_ = windowChangeInfo.surfaceType;
+    offsetX_ = (int)windowChangeInfo.offsetX;
+    offsetY_ = (int)windowChangeInfo.offsetY;
+    if (image_.textureInfo_.width_ != static_cast<uint32_t>(windowChangeInfo.width) ||
+        image_.textureInfo_.height_ != static_cast<uint32_t>(windowChangeInfo.height)) {
+        needsRecreateSkImage_ = true;
+    }
+    image_.textureInfo_.width_ = static_cast<uint32_t>(windowChangeInfo.width);
+    image_.textureInfo_.height_ = static_cast<uint32_t>(windowChangeInfo.height);
+
+    image_.textureInfo_.widthScale_ = static_cast<float>(windowChangeInfo.widthScale);
+    image_.textureInfo_.heightScale_ = static_cast<float>(windowChangeInfo.heightScale);
+
+    ConfigWindow(windowChangeInfo.offsetX, windowChangeInfo.offsetY, windowChangeInfo.width,
+        windowChangeInfo.height, windowChangeInfo.scale, windowChangeInfo.recreateWindow);
+    ConfigTexture(windowChangeInfo.width, windowChangeInfo.height);
+
+    WIDGET_LOGD("TextureLayer OnWindowChange-1 offsetX %d, offsetY %d, width %d, height %d, scale %f,widthScale %f,"
+        "heightScale %f, recreateWindow %d window empty %d", offsetX_, offsetY_, image_.textureInfo_.width_,
+        image_.textureInfo_.height_, windowChangeInfo.scale, image_.textureInfo_.widthScale_,
+        image_.textureInfo_.heightScale_, windowChangeInfo.recreateWindow,
+        image_.textureInfo_.nativeWindow_ == nullptr);
+    return image_.textureInfo_;
+}
 
 void TextureLayer::FreeNativeBuffer()
 {

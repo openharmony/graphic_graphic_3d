@@ -151,7 +151,7 @@ protected:
     void ProcessGLTFAnimations();
     int FindGLTFAnimationIndex(const std::string& name);
     void UpdateSingleGLTFAnimation(int index, const std::shared_ptr<GLTFAnimation>& gltfAnimation);
-    void LoadAndImport(const GltfImportInfo& info, CORE_NS::Entity& importedEntity,
+    bool LoadAndImport(const GltfImportInfo& info, CORE_NS::Entity& importedEntity,
         BASE_NS::vector<CORE3D_NS::GLTFResourceData>& res);
 
     bool CreateSwapchain(void* nativeWindow);

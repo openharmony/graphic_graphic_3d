@@ -20,6 +20,11 @@ struct PlatformData {
     /** Application plugin path */
     BASE_NS::string appPluginPath = "./";
 
+    /**Hap Info*/
+    BASE_NS::string hapPath = "./";
+    BASE_NS::string bundleName = "./";
+    BASE_NS::string moduleName = "./";
+
 };
 
 /** Interface for platform-specific functions. */

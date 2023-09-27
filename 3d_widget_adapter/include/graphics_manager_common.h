@@ -36,9 +36,11 @@ public:
     void Register(int32_t key, RenderBackend backend = RenderBackend::GLES);
     void UnRegister(int32_t key);
     std::unique_ptr<IEngine> GetEngine(EngineFactory::EngineType type, int32_t key);
+    std::unique_ptr<IEngine> GetEngine(EngineFactory::EngineType type, int32_t key, const HapInfo& hapInfo);
     EGLContext GetOrCreateOffScreenContext(EGLContext eglContext);
     void BindOffScreenContext();
     virtual PlatformData GetPlatformData() const = 0;
+    virtual PlatformData GetPlatformData(const HapInfo& hapInfo) const = 0;
     bool HasMultiEcs();
     RenderBackend GetRenderBackendType(int32_t key);
 #if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)

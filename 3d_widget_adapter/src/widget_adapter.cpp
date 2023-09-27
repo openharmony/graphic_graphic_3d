@@ -184,7 +184,6 @@ bool WidgetAdapter::UnloadEnvModel()
 bool WidgetAdapter::NeedsRepaint()
 {
     CHECK_NULL_PTR(engine_);
-    engine_->NeedsRepaint();
-    return true;
+    return engine_->NeedsRepaint();
 }
 } // namespace OHOS::Render3D

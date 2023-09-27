@@ -23,7 +23,8 @@
           "hilog",
           "graphic_2d",
           "hitrace",
-          "init"
+          "init",
+          "resource_management"
         ],
         "third_party": [
           "skia",

@@ -20,9 +20,15 @@ Lume::~Lume()
 
 CORE_NS::PlatformCreateInfo Lume::ToEnginePlatformData(const PlatformData& data) const
 {
-    return { data.coreRootPath_.c_str(), data.appRootPath_.c_str(), data.appPluginPath_.c_str() };
+    return {
+        data.coreRootPath_.c_str(),
+        data.appRootPath_.c_str(),
+        data.appPluginPath_.c_str(),
+        data.hapInfo_.hapPath_.c_str(),
+        data.hapInfo_.bundleName_.c_str(),
+        data.hapInfo_.moduleName_.c_str()
+    };
 }
-
 void Lume::RegisterAssertPath()
 {}
 } // namespace OHOS::Render3D

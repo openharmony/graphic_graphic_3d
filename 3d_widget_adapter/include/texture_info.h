@@ -14,6 +14,9 @@ struct TextureInfo {
     uint32_t height_ = 0U;
     GLuint textureId_ = 0U;
     void* nativeWindow_ = nullptr;
+    float widthScale_ = 1.0f;
+    float heightScale_ = 1.0f;
+    float customRatio_ = 0.1f;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_TEXTURE_INFO_H

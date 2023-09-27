@@ -13,6 +13,7 @@ namespace OHOS::Render3D {
 class __attribute__((visibility("default"))) GraphicsManager : public GraphicsManagerCommon {
 public:
     static GraphicsManager& GetInstance();
+    PlatformData GetPlatformData(const HapInfo& hapInfo) const override;
     PlatformData GetPlatformData() const override;
 private:
     GraphicsManager(const GraphicsManager&) = delete;

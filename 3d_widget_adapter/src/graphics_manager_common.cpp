@@ -83,6 +83,42 @@ void GraphicsManagerCommon::UnloadEngineLib()
     }
 }
 
+std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineType type, int32_t key,
+    const HapInfo& hapInfo)
+{
+    WIDGET_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
+    auto backend = backends_.find(key);
+    if (backend == backends_.end() || backend->second == RenderBackend::UNDEFINE) {
+        WIDGET_LOGE("Get engine before register");
+        return nullptr;
+    }
+
+    if (backend->second != RenderBackend::GLES) {
+        WIDGET_LOGE("not support backend yet");
+        return nullptr;
+    }
+
+    // gles context
+    if (engine_ == nullptr) {
+        auto context = offScreenContextHelper_.CreateOffScreenContext(EGL_NO_CONTEXT);
+        engine_ = EngineFactory::CreateEngine(type);
+        WIDGET_LOGD("create proto engine");
+        if (!LoadEngineLib()) {
+            WIDGET_LOGE("load engine lib fail");
+            return nullptr;
+        }
+
+        if (!InitEngine(context, GetPlatformData(hapInfo))) {
+            WIDGET_LOGE("init engine fail");
+            return nullptr;
+        }
+    }
+
+    auto client = EngineFactory::CreateEngine(type);
+    client->Clone(engine_.get());
+    return client;
+}
+
 std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineType type, int32_t key)
 {
     WIDGET_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
@@ -117,7 +153,6 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
     client->Clone(engine_.get());
     return client;
 }
-
 EGLContext GraphicsManagerCommon::GetOrCreateOffScreenContext(EGLContext eglContext)
 {
     AutoRestore scope;

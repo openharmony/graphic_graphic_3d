@@ -174,7 +174,7 @@ CORE_NS::IEngine::Ptr LumeCommon::CreateCoreEngine(const Core::PlatformCreateInf
     engine_ = factory->Create(engineCreateInfo);
 
     if (engine_ == nullptr) {
-        WIDGET_LOGE("lume Create Engine fail");
+        WIDGET_LOGE("3D engine create fail");
         return nullptr;
     }
 
@@ -189,9 +189,10 @@ void LumeCommon::OnWindowChange(const TextureInfo& textureInfo)
     textureInfo_ = textureInfo;
     SetupCustomRenderTarget(textureInfo);
     SetupCameraViewPort(textureInfo.width_, textureInfo.height_);
-
+    float widthScale = textureInfo.widthScale_;
+    float heightScale = textureInfo.heightScale_;
     if (customRender_) { // this moment customRender may not ready
-        customRender_->OnSizeChange(textureInfo.width_, textureInfo.height_);
+        customRender_->OnSizeChange(textureInfo.width_ * widthScale, textureInfo.height_ * heightScale);
     }
 }
 
@@ -431,20 +432,20 @@ void LumeCommon::DestroyResource()
     renderHandles_.clear();
 }
 
-void LumeCommon::LoadAndImport(const GltfImportInfo& info, CORE_NS::Entity& importedEntity,
+bool LumeCommon::LoadAndImport(const GltfImportInfo& info, CORE_NS::Entity& importedEntity,
     BASE_NS::vector<CORE3D_NS::GLTFResourceData>& res)
 {
     WIDGET_SCOPED_TRACE_ARGS("LoadAndImport %s", info.fileName_);
-
     auto& ecs = *ecs_;
     auto gltf = graphicsContext_->GetGltf().LoadGLTF(info.fileName_);
     if (!gltf.success) {
         WIDGET_LOGE("LoadAndImport() Loaded '%s' with errors:\n%s",
             info.fileName_, gltf.error.c_str());
+        return false;
     }
     if (!gltf.data) {
         WIDGET_LOGE("LoadAndImport gltf data is null. Error: %s ", gltf.error.c_str());
-        return;
+        return false;
     }
 
     auto importer = graphicsContext_->GetGltf().CreateGLTF2Importer(ecs);
@@ -455,7 +456,7 @@ void LumeCommon::LoadAndImport(const GltfImportInfo& info, CORE_NS::Entity& impo
     if (!gltfImportResult.success) {
         WIDGET_LOGE("LoadAndImport() Importing of '%s' failed: %s",
             info.fileName_, gltfImportResult.error.c_str());
-        return;
+        return false;
     }
 
     res.push_back(gltfImportResult.data);
@@ -507,6 +508,7 @@ void LumeCommon::LoadAndImport(const GltfImportInfo& info, CORE_NS::Entity& impo
             }
         }
     }
+    return true;
 }
 
 void LumeCommon::DrawFrame()
@@ -978,7 +980,10 @@ void LumeCommon::LoadEnvModel(const std::string& modelPath, BackgroundType type)
         CORE3D_NS::CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
         CORE3D_NS::CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL };
 
-    LoadAndImport(file, importedEnvEntity_, importedEnvResources_);
+    auto loadResult = LoadAndImport(file, importedEnvEntity_, importedEnvResources_);
+    if (!loadResult) {
+        WIDGET_LOGE("3D model load fail");
+    }
 
     CORE3D_NS::EnvironmentComponent::Background engineBackgourndType;
     switch (type) {
@@ -1004,10 +1009,12 @@ void LumeCommon::LoadSceneModel(const std::string& modelPath)
     componentImportFlags &= ~CORE3D_NS::CORE_GLTF_IMPORT_COMPONENT_ENVIRONMENT;
     UnloadSceneModel();
     CreateScene();
-
     GltfImportInfo file { modelPath.c_str(), GltfImportInfo::AnimateImportedScene, resourceImportFlags,
         componentImportFlags};
-    LoadAndImport(file, importedSceneEntity_, importedSceneResources_);
+    auto loadResult = LoadAndImport(file, importedSceneEntity_, importedSceneResources_);
+    if (!loadResult) {
+        WIDGET_LOGE("3D environment model load fail");
+    }
 }
 
 void LumeCommon::SetupPostprocess()
@@ -1055,6 +1062,7 @@ void LumeCommon::ProcessGLTFAnimations()
         std::string name = gltfAnimation->GetName();
         if (name == "") {
             UpdateSingleGLTFAnimation(0, gltfAnimation);
+            WIDGET_LOGE("3D GLTFAnimations name empty");
             continue;
         }
 

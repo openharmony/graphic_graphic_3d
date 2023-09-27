@@ -41,6 +41,18 @@ struct TextureImage {
     sk_sp<SkImage> skImage_;
 };
 
+struct WindowChangeInfo {
+    float offsetX = 0.0;
+    float offsetY = 0.0;
+    float width = 0.0;
+    float height = 0.0;
+    float scale = 1.0;
+    float widthScale = 1.0;
+    float heightScale = 1.0;
+    bool recreateWindow = true;
+    SurfaceType surfaceType = SurfaceType::SURFACE_TEXTURE;
+};
+
 class __attribute__((visibility("default"))) TextureLayer : public SkDrawable {
 public:
     explicit TextureLayer(int32_t key);
@@ -55,6 +67,7 @@ public:
     void SetParent(std::shared_ptr<Rosen::RSNode>& parent);
     TextureInfo OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
         bool recreateWindow, SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW);
+    TextureInfo OnWindowChange(const WindowChangeInfo& windowChangeInfo);
 
 private:
     void DrawTexture(SkCanvas* canvas);

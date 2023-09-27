@@ -110,11 +110,6 @@ void LumeCustomRender::UpdateShaderSpecialization(const std::vector<uint32_t>& v
 
 void LumeCustomRender::DestroyDataStorePod()
 {
-    auto dataStore = static_cast<RENDER_NS::IRenderDataStorePod*>(
-        renderContext_->GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_POD));
-    if (dataStore) {
-        dataStore->DestroyPod(SPECIALIZATION_TYPE_NAME, SPECIALIZATION_CONFIG_NAME);
-    }
 }
 
 void  LumeCustomRender::LoadImages(const std::vector<std::string>& imageUris)
@@ -140,7 +135,7 @@ void LumeCustomRender::LoadImage(const std::string& imageUri)
 
     auto result = imageManager.LoadImage(imageUri.c_str(), 0);
     if (!result.success) {
-        WIDGET_LOGE("load image %s error", imageUri.c_str());
+        WIDGET_LOGE("3D image update fail %s error", imageUri.c_str());
         return;
     }
 
@@ -221,7 +216,7 @@ void LumeCustomRender::LoadRenderNodeGraph(const std::string& rngUri,
 
     auto const result = loader->Load(graphUri);
     if (!result.error.empty()) {
-        WIDGET_LOGE("CreateRenderNodeGraph() Loading render node graph failed: %s, uri %s", result.error.c_str(),
+        WIDGET_LOGE("3D render node graph load fail: %s, uri %s", result.error.c_str(),
             rngUri.c_str());
         return;
     }
@@ -239,12 +234,12 @@ void LumeCustomRender::UnloadRenderNodeGraph()
 bool LumeCustomRender::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInputBuffer>& shaderInputBuffer)
 {
     if (!shaderInputBuffer || !shaderInputBuffer->IsValid()) {
-        WIDGET_LOGE("UpdateShaderInputBuffer: invalid shaderInputBuffer");
+        WIDGET_LOGE("3D shader input buffer update fail: invalid shaderInputBuffer");
         return false;
     }
 
     if (renderContext_ == nullptr) {
-        WIDGET_LOGE("Call UpdateBuffer before Initiliaze error");
+        WIDGET_LOGE("3D shader input buffer update fail: Call UpdateBuffer before Initiliaze error");
         return false;
     }
 
@@ -258,7 +253,7 @@ bool LumeCustomRender::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInput
 
     const float* buffer = shaderInputBuffer->Map(fSize);
     if (!buffer) {
-        WIDGET_LOGE("UpdateShaderInputBuffer: map shaderInputBuffer error!");
+        WIDGET_LOGE("3D shader input buffer update fail: map shaderInputBuffer error!");
         return false;
     }
 

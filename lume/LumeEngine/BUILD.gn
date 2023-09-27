@@ -237,6 +237,11 @@ ohos_source_set("lume_engine_src") {
     "src/util/linear_allocator.h",
     "src/util/string_util.h",
 
+    "src/io/ohos_file.h",
+    "src/io/ohos_file.cpp",
+    "src/io/ohos_filesystem.h",
+    "src/io/ohos_filesystem.cpp",
+
   ]
 
   # platform source
@@ -270,6 +275,7 @@ ohos_source_set("lume_engine_src") {
 
   external_deps = [
     "c_utils:utils",
+    "resource_management:global_resmgr",
   ]
 
   deps = [
