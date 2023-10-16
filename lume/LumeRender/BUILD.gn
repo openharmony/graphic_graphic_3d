@@ -352,11 +352,9 @@ ohos_source_set("lume_render_src") {
       ]
     }
   }
-  deps = [
-    "//foundation/graphic/graphic_2d:libgl",
-  ]
   external_deps = [
-    "c_utils:utils"
+    "c_utils:utils",
+    "graphic_2d:libgl",
   ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
