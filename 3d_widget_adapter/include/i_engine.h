@@ -64,7 +64,7 @@ public:
 
     virtual bool NeedsRepaint() = 0;
 
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
     virtual void DeferDraw() = 0 ;
     virtual void DrawMultiEcs(const std::unordered_map<void*, void*>& ecss) = 0;
 #endif

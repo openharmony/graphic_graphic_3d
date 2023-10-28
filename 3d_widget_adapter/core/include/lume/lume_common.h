@@ -126,7 +126,7 @@ public:
     void OnTouchEvent(const PointerEvent& event) override;
     void OnWindowChange(const TextureInfo& textureInfo) override;
 
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
     void DeferDraw() override;
     void DrawMultiEcs(const std::unordered_map<void*, void*>& ecss) override;
 #endif

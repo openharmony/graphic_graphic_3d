@@ -61,7 +61,7 @@ public:
     void AddLights(const std::vector<OHOS::Ace::RefPtr<SVLight>>& lights) override;
     void AddCustomRenders(const std::vector<OHOS::Ace::RefPtr<SVCustomRenderDescriptor>>& customRenders) override;
 
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
     void DeferDraw() override {};
     void DrawMultiEcs(const std::vector<void *> &ecss) override {};
 #endif

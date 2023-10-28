@@ -39,7 +39,7 @@ void RenderFrameSyncGLES::WaitForFrameFence()
 {
     if (frameFences_[bufferingIndex_].aFence) {
         GLsync fence = (GLsync)(frameFences_[bufferingIndex_].aFence);
-        const GLenum result = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, UINT64_MAX);
+        glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, UINT64_MAX);
         glDeleteSync(fence);
         frameFences_[bufferingIndex_].aFence = nullptr;
     } else {

@@ -172,7 +172,7 @@ bool GraphicsManagerCommon::HasMultiEcs()
     return viewTextures_.size() > 1;
 }
 
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
 void GraphicsManagerCommon::UnloadEcs(void* ecs)
 {
     WIDGET_LOGD("ACE-3D GraphicsService::UnloadEcs()");

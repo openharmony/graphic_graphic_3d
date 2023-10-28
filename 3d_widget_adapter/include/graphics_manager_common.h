@@ -10,7 +10,7 @@
 #include <EGL/egl.h>
 
 #include "engine_factory.h"
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
 #include "frameworks/core/pipeline/pipeline_context.h"
 #endif
 #include "i_engine.h"
@@ -41,7 +41,7 @@ public:
     virtual PlatformData GetPlatformData() const = 0;
     bool HasMultiEcs();
     RenderBackend GetRenderBackendType(int32_t key);
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
     void AttachContext(const OHOS::Ace::WeakPtr<OHOS::Ace::PipelineContext> context);
     void DrawFrame(void* ecs, void* handles);
     void UnloadEcs(void* ecs);
@@ -54,7 +54,7 @@ protected:
     bool InitEngine(EGLContext eglContext, PlatformData data);
     void DeInitEngine();
     void UnloadEngineLib();
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
     void PerformDraw();
 #endif
 
@@ -65,7 +65,7 @@ private:
     bool engineLoaded_ = false;
     bool engineInited_ = false;
     std::unordered_map<int32_t, RenderBackend> backends_;
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
     std::unordered_map<void*, void*> ecss_;
 #endif
 };

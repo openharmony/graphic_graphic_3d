@@ -341,7 +341,9 @@ void LumeCommon::UpdateCustomRender(const std::shared_ptr<CustomRenderDescriptor
         customRender_->Initialize({ GetCoreEngine(), GetGraphicsContext(), GetRenderContext(), ecs_,
             textureInfo_.width_, textureInfo_.height_ });
         customRender_->LoadRenderNodeGraph(customRenderDescriptor->GetUri(), gpuResourceImgHandle_);
-        needsFrameCallback_ |= needsFrameCallback;
+        if (needsFrameCallback) {
+            needsFrameCallback_ = needsFrameCallback;
+        }
     }
 }
 
@@ -420,7 +422,7 @@ void LumeCommon::DestroyResource()
 
     // run garbage collection
     ecs.ProcessEvents();
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
     if (ecs_) {
         OHOS::Render3D::GraphicsManager::GetInstance().UnloadEcs(reinterpret_cast<void *>(ecs_.get()));
         // gltf src update case crashes when MULTI_ECS_UPDATE_AT_ONCE is ON.
@@ -761,7 +763,6 @@ void OrbitCameraHelper::OnMove(const PointerEvent& event)
 
 void OrbitCameraHelper::HandlePointerEvent(const PointerEvent& event)
 {
-    const bool isMouse = (event.pointerId_ == -1);
     switch (event.eventType_) {
         case PointerEventType::PRESSED:
             OnPress(event);
@@ -780,7 +781,7 @@ void OrbitCameraHelper::HandlePointerEvent(const PointerEvent& event)
     }
 }
 
-#if MULTI_ECS_UPDATE_AT_ONCE
+#if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
 void LumeCommon::DeferDraw()
 {
     WIDGET_SCOPED_TRACE("LumeCommon::DeferDraw");
@@ -862,7 +863,6 @@ void LumeCommon::CreateEcs(uint32_t key)
     }
     key_ = key;
     ecs_ = engine_->CreateEcs();
-    auto& ecs = *ecs_;
 }
 
 void LumeCommon::LoadSystemGraph()
@@ -1069,7 +1069,7 @@ void LumeCommon::ProcessGLTFAnimations()
 int LumeCommon::FindGLTFAnimationIndex(const std::string& name)
 {
     const char* animNameChr = name.c_str();
-    int index = 0;
+    uint32_t index = 0;
     for (auto animation : animations_) {
         BASE_NS::string_view getName = animation->GetName();
         int r = getName.compare(animNameChr);
@@ -1230,7 +1230,6 @@ void LumeCommon::LoadCustGeometry(const std::vector<std::shared_ptr<Geometry>>& 
     materialManager->Set(materialEntity, desc);
 
     CORE3D_NS::IMeshUtil& meshUtil = graphicsContext_->GetMeshUtil();
-    auto scene = nodeSystem->GetNode(sceneEntity_);
 
     for (auto& shape : shapes) {
         auto find = std::find_if(shapes_.begin(), shapes_.end(), [&shape](const std::shared_ptr<Geometry>& sOld) {
@@ -1238,7 +1237,7 @@ void LumeCommon::LoadCustGeometry(const std::vector<std::shared_ptr<Geometry>>& 
         });
         if (find != shapes_.end()) {
             // shape already exists on scene, update
-            std::shared_ptr<OHOS::Render3D::Geometry>& oldShape = *find;
+            const std::shared_ptr<OHOS::Render3D::Geometry>& oldShape = *find;
 
             bool updateEntity = !(shape->Equals(*oldShape));
             bool updatePosition = !(shape->PositionEquals(*oldShape));
@@ -1516,7 +1515,7 @@ void LumeCommon::SetupCameraTransform(const OHOS::Render3D::Position& position, 
         BASE_NS::Math::Vec3 translation;
         BASE_NS::Math::Vec3 skew;
         BASE_NS::Math::Vec4 perspective;
-        bool decomposeRes = BASE_NS::Math::Decompose(invMat, scale, orientation, translation, skew, perspective);
+        BASE_NS::Math::Decompose(invMat, scale, orientation, translation, skew, perspective);
         cameraPosition_ = translation;
         cameraRotation_ = orientation;
     }
@@ -1625,7 +1624,7 @@ void LumeCommon::GetLightPositionAndRotation(const std::shared_ptr<Light>& light
         BASE_NS::Math::Vec3 translation;
         BASE_NS::Math::Vec3 skew;
         BASE_NS::Math::Vec4 perspective;
-        bool decomposeRes = BASE_NS::Math::Decompose(invMat, scale, orientation, translation, skew, perspective);
+        BASE_NS::Math::Decompose(invMat, scale, orientation, translation, skew, perspective);
         position = translation;
         rotation = orientation;
     }

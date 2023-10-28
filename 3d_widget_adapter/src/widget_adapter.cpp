@@ -75,11 +75,11 @@ bool WidgetAdapter::DrawFrame()
 {
     WIDGET_SCOPED_TRACE("WidgetAdpater::DrawFrame");
     CHECK_NULL_PTR(engine_);
-    #if MULTI_ECS_UPDATE_AT_ONCE
+#if MULTI_ECS_UPDATE_AT_ONCE
     engine_->DeferDraw();
-    #else
+#else
     engine_->DrawFrame();
-    #endif
+#endif
     return true;
 }
 
