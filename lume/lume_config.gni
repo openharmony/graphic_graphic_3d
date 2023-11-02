@@ -41,6 +41,7 @@ declare_args() {
 }
 
 declare_args() {
+  USE_LIB_PNG_JPEG = true
   USE_STB_IMAGE = false
   STB_IMAGE_PATH = "//third_party/minimp3/player/"
 }

@@ -24,6 +24,8 @@
 #include "image/image_loader_manager.h"
 #include "image/loaders/image_loader_ktx.h"
 #include "image/loaders/image_loader_stb_image.h"
+#include "image/loaders/image_loader_libpng.h"
+#include "image/loaders/image_loader_libjpeg.h"
 #include "io/dev/file_monitor.h"
 #include "os/intf_library.h"
 #include "os/platform.h"
@@ -140,6 +142,8 @@ void Engine::Init()
 
     // Pre-register some basic image formats.
     imageManager_->RegisterImageLoader(CreateImageLoaderStbImage());
+    imageManager_->RegisterImageLoader(CreateImageLoaderLibPNGImage());
+    imageManager_->RegisterImageLoader(CreateImageLoaderLibJPEGImage());
     imageManager_->RegisterImageLoader(CreateImageLoaderKtx());
 
     LoadPlugins();

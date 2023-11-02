@@ -26,7 +26,10 @@
           "init"
         ],
         "third_party": [
-          "skia"
+          "skia",
+          "libpng",
+          "libjpeg-turbo",
+          "zlib"
         ]
       },
       "build": {

@@ -140,7 +140,8 @@ config("lume_engine_config") {
     "CORE_DYNAMIC=0",
     "CORE_BUILDTYPE=${BUILDTYPE}",
     "CORE_PUBLIC=__attribute__((visibility(\"default\")))",
-    "USE_STB_IMAGE=$USE_STB_IMAGE"
+    "USE_STB_IMAGE=$USE_STB_IMAGE",
+    "USE_LIB_PNG_JPEG=$USE_LIB_PNG_JPEG"
   ]
 
   if (CORE_EMBEDDED_ASSETS_ENABLED) {
@@ -169,6 +170,10 @@ ohos_source_set("lume_engine_src") {
     "src/image/loaders/image_loader_ktx.h",
     "src/image/loaders/image_loader_ktx.cpp",
     "src/image/loaders/image_loader_stb_image.h",
+    "src/image/loaders/image_loader_common.h",
+    "src/image/loaders/image_loader_common.cpp",
+    "src/image/loaders/image_loader_libjpeg.h",
+    "src/image/loaders/image_loader_libpng.h",
     "src/image/image_loader_manager.h",
     "src/image/image_loader_manager.cpp",
 
@@ -249,6 +254,13 @@ ohos_source_set("lume_engine_src") {
     ]
   }
 
+  if (USE_LIB_PNG_JPEG) {
+    sources += [
+      "src/image/loaders/image_loader_libpng.cpp",
+      "src/image/loaders/image_loader_libjpeg.cpp",
+    ]
+  }
+
   configs = [
     ":lume_engine_config",
     ":lume_default",
@@ -258,6 +270,12 @@ ohos_source_set("lume_engine_src") {
 
   external_deps = [
     "c_utils:utils",
+  ]
+
+  deps = [
+    "//third_party/libpng:libpng",
+    "//third_party/libjpeg-turbo:turbojpeg_static",
+    "//third_party/zlib:shared_libz",
   ]
 
   if (LUME_OHOS_BUILD) {
