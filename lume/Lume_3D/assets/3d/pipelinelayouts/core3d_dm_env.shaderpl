@@ -1,0 +1,25 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "pipelinelayout"
+    },
+    "descriptorSetLayouts": [
+        {
+            "set" : 0,
+            "bindings": [
+                { "binding" : 0, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 1, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 2, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 3, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 4, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" }
+            ]
+        },
+        {
+            "set" : 1,
+            "bindings": [
+                { "binding" : 0, "descriptorType" : "combined_image_sampler", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" },
+                { "binding" : 1, "descriptorType" : "combined_image_sampler", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" }
+            ]
+        }
+    ]
+}

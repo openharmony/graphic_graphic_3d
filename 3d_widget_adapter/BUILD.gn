@@ -1,0 +1,241 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+declare_args() {
+    MULTI_ECS_UPDATE_AT_ONCE="0"
+    UNIFY_RENDER="1"
+    DBG_DRAW_PIXEL="0"
+    WIDGET_TRACE_ENABLE="1"
+}
+
+config("lume3d_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+  ]
+
+  if (current_os == "ohos" ) {
+    include_dirs += [
+      "${LUME_CORE_PATH}/api/platform/ohos",
+    ]
+  }
+
+  configs = [
+  ]
+
+  cflags = [
+    "-Wall",
+    "-fexceptions",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+
+    "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "-DCORE_BUILD_2D = 0",
+    "-DCORE_BUILD_VULKAN=0",
+    "-DCORE_BUILD_GL=0",
+    "-DCORE_BUILD_GLES=1",
+    "-DCORE_DEV_ENABLED=0",
+    "-DCORE_TESTS_ENABLED=0",
+    "-DCORE_GL_DEBUG=0",
+    "-DCORE_VALIDATION_ENABLED = 0",
+    "-DCORE_VULKAN_VALIDATION_ENABLED = 0",
+    "-DCORE_EMBEDDED_ASSETS_ENABLED = 2",
+    "-DCORE_ENABLE_GPU_QUERIES=0",
+    "-DCORE_DEBUG_GPU_RESOURCE_IDS = 0",
+    "-DCORE_DEBUG_COMMAND_MARKERS_ENABLED = 0",
+    "-DCORE_DEBUG_MARKERS_ENABLED = 0",
+    "-DRENDER_HAS_GL_BACKEND=0",
+    "-DRENDER_HAS_GLES_BACKEND = 1",
+    "-DRENDER_HAS_VULKAN_BACKEND = 0",
+    "-DVK_USE_PLATFORM_ANDROID_KHR = 1",
+    "-DCORE_LOG_NO_DEBUG=0",
+    "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
+    "-DCORE_LOG_TO_CONSOLE",
+    "-DCORE_LOG_DISABLED=0",
+    "-DCORE_DYNAMIC=1",
+  ]
+
+}
+
+config("widget_adapter_config") {
+    defines = [
+      "MULTI_ECS_UPDATE_AT_ONCE=${MULTI_ECS_UPDATE_AT_ONCE}",
+      "EGL_EGLEXT_PROTOTYPES",
+      "GL_GLEXT_PROTOTYPES",
+      "UNIFY_RENDER=${UNIFY_RENDER}",
+      "WIDGET_TRACE_ENABLE=${WIDGET_TRACE_ENABLE}",
+      "DBG_DRAW_PIXEL=${DBG_DRAW_PIXEL}"
+    ]
+
+    if (current_os == "ohos" ) {
+        defines += [
+          "__OHOS_PLATFORM__"
+        ]
+    }
+
+    include_dirs = [
+        "include",
+    ]
+
+    if (current_os == "ohos" ) {
+        include_dirs += [
+            "include/ohos",
+        ]
+    }
+
+    if (MULTI_ECS_UPDATE_AT_ONCE == "1") {
+        cflags_cc += [
+          "-Wno-user-defined-warnings"
+        ]
+    }
+}
+
+ohos_source_set("widget_adapter_source") {
+    sources = [
+        "src/widget_adapter.cpp",
+        "src/graphics_manager_common.cpp",
+        "src/offscreen_context_helper.cpp",
+        "src/graphics_task.cpp",
+        "core/src/lume/lume_common.cpp",
+        "core/src/engine_factory.cpp",
+        "core/src/lume/custom/lume_custom_render.cpp",
+        "core/src/lume/custom/shader_input_buffer.cpp",
+    ]
+
+    include_dirs = [
+        "core/include",
+        "core/include/lume",
+        "//foundation/graphic/graphic_2d/rosen/modules/"
+    ]
+
+    defines = [
+      "CORE_HAS_GLES_BACKEND=1"
+    ]
+
+    configs = [
+      ":widget_adapter_config",
+      ":lume3d_config",
+    ]
+
+    public_configs = [
+      ":widget_adapter_config",
+    ]
+
+    if (defined(use_new_skia) && use_new_skia) {
+      deps = [
+        "//third_party/skia:skia_ohos",
+      ]
+    } else {
+      deps = [
+        "$ace_flutter_engine_root/skia:ace_skia_ohos",
+      ]
+    }
+
+    if (current_os == "ohos" ) {
+      sources += [
+        "core/src/lume/ohos/lume.cpp",
+        "src/ohos/graphics_manager.cpp",
+        "src/ohos/texture_layer.cpp",
+      ]
+
+      include_dirs += [
+        "core/include/ohos",
+        "core/include/lume/ohos",
+      ]
+
+      external_deps = [
+        "graphic_2d:libgl",
+        "c_utils:utils",
+        "graphic_2d:librender_service_client",
+        "graphic_2d:surface",
+        "hilog:libhilog",
+        "hitrace:hitrace_meter",
+      ]
+
+      defines += [
+        "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z",
+      ]
+
+      if (target_cpu == "arm") {
+        defines += [
+          "PLATFORM_CORE_ROOT_PATH=/system/lib/",
+          "PLATFORM_APP_ROOT_PATH=/system/lib/",
+          "PLATFORM_APP_PLUGIN_PATH=/system/lib/",
+        ]
+      }
+
+      if (target_cpu == "arm64") {
+        defines += [
+          "PLATFORM_CORE_ROOT_PATH=/system/lib64/",
+          "PLATFORM_APP_ROOT_PATH=/system/lib64/",
+          "PLATFORM_APP_PLUGIN_PATH=/system/lib64/",
+        ]
+      }
+    }
+
+    if (current_os == "android" ) {
+      sources += [
+        "core/src/lume/android/lume.cpp",
+        "src/android/graphics_manager.cpp",
+        "src/android/skia_texture.cpp",
+        "src/android/texture_layer.cpp",
+      ]
+
+
+      include_dirs += [
+        "core/include/android",
+        "core/include/lume/android",
+      ]
+
+      aosp_deps = [
+        "shared_library:libEGL",
+        "shared_library:libGLESv2",
+        "shared_library:libandroid",
+      ]
+
+      deps += [
+        "$ace_flutter_engine_root:third_party_flutter_engine_android",
+      ]
+      defines += [
+        "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}",
+      ]
+    }
+
+    part_name = "graphic_3d"
+    subsystem_name = "graphic"
+}
+
+group("3dWidgetAdapterInterface") {
+    public_configs = [ ":widget_adapter_config" ] 
+}
+
+ohos_shared_library("lib3dWidgetAdapter") {
+    deps = [
+      ":widget_adapter_source",
+    ]
+    public_configs = [":widget_adapter_config"]
+    part_name = "graphic_3d"
+    subsystem_name = "graphic"
+}
