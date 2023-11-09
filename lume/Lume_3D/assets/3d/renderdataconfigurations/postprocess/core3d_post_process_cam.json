@@ -1,0 +1,47 @@
+{
+    "version": 1.0,
+    "name": "CORE3D_POST_PROCESS_CAM",
+    "postProcessConfiguration": {
+        "enableFlags": "bloom | vignette | color_fringe | tonemap",
+        "bloomConfiguration": {
+            "bloomType": "normal",
+            "bloomQualityType": "normal",
+            "thresholdHard": 1.0,
+            "thresholdSoft": 2.0,
+            "amountCoefficient": 0.085,
+            "dirtMaskCoefficient": 0.0
+        },
+        "vignetteConfiguration": {
+            "coefficient": 0.5,
+            "power": 0.4
+        },
+        "colorFringeConfiguration": {
+            "distanceCoefficient": 2.0,
+            "coefficient": 1.0
+        },
+        "grainConfiguration": {
+            "pixelSize": 1.0,
+            "coefficient": 0.2
+        },
+        "tonemapConfiguration": {
+            "tonemapType": "aces",
+            "exposure": 0.7
+        },
+        "ditherConfiguration": {
+            "ditherType": "interleaved_noise"
+        },
+        "colorConversionConfiguration": {
+            "conversionFunctionType": "linear"
+        },
+        "blurConfiguration": {
+            "blurType": "normal",
+            "blurQualityType": "normal",
+            "filterSize": 1.0,
+            "maxMipLevel": 8
+        },
+        "antialiasingConfiguration": {
+            "sharpness": "sharp",
+            "quality": "medium"
+        }
+    }
+}

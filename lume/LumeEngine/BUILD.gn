@@ -1,0 +1,376 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_2d/graphic_config.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+declare_args() {
+  CORE_ROFS = "rofs"
+  CORE_EMBEDDED_ASSETS_ENABLED=true
+}
+
+config("lume_base_api") {
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "//third_party/bounds_checking_function/include",
+  ]
+
+  defines = [
+    "BASE_TESTS_ENABLED=0",
+    "BASE_WARNINGS_AS_ERRORS=0"
+  ]
+
+  if (BUILDTYPE == "Release") {
+    defines += [
+      "BASE_LOG_NO_DEBUG=0",
+    ]
+  }
+  if (BUILDTYPE == "MinSizeRel") {
+    defines += [
+      "BASE_LOG_NO_DEBUG=0"
+    ]
+  }
+  if (BUILDTYPE == "RelWithDebInfo") {
+    defines += [
+        "BASE_LOG_NO_DEBUG=0"
+    ]
+  }
+}
+
+config("lume_engine_api") {
+  include_dirs = [
+    "${LUME_CORE_PATH}/api",
+  ]
+
+  if (LUME_OHOS_BUILD) {
+    include_dirs += [
+      "${LUME_CORE_PATH}/api/platform/ohos/",
+    ]
+  }
+
+  defines = [
+    "CORE_BUILD_BASE=1",
+    "CORE_HIDE_SYMBOLS=1",
+    "CORE_PERF_ENABLED=0",
+    "CORE_USE_COMPILER_GENERATED_STATIC=1",
+  ]
+
+  if (BUILDTYPE == "Release") {
+    defines += [
+      "CORE_LOG_NO_DEBUG=0",
+    ]
+  }
+  if (BUILDTYPE == "MinSizeRel") {
+    defines += [
+      "CORE_LOG_NO_DEBUG=0"
+    ]
+  }
+  if (BUILDTYPE == "RelWithDebInfo") {
+    defines += [
+      "CORE_LOG_NO_DEBUG=0"
+    ]
+  }
+}
+
+config("lume_default") {
+  cflags = [
+    "-Wno-unused-function",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-logical-op-parentheses",
+    "-fno-rtti",
+    "-fvisibility=hidden",
+    "-ffunction-sections",
+    "-fdata-sections",
+  ]
+
+  cflags_cc = [
+    "-std=c++17",
+    "-Wno-thread-safety-attributes",
+  ]
+
+  ldflags = [
+    "-fuse-ld=lld",
+    "-flto=thin",
+    "-Wl,--no-threads",
+    "-Wl,--build-id=sha1",
+    "-Wl,--gc-sections",
+    "-Wl,--exclude-libs,ALL",
+  ]
+
+  if (use_musl) {
+    ldflags -= [ "-Wl,--no-threads" ]
+  }
+
+  if (LUME_OHOS_BUILD) {
+    defines = [
+      "__OHOS_PLATFORM__",
+    ]
+  }
+
+  defines += [
+    "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}",
+    "LIB_RENDER=${LIB_RENDER}",
+    "LIB_CORE3D=${LIB_CORE3D}"
+  ]
+}
+
+config("lume_engine_config") {
+  include_dirs = [
+    "${LUME_CORE_PATH}/3rdparty/",
+    "${LUME_CORE_PATH}/src/",
+    "${LUME_CORE_PATH}/asserts/",
+    "//commonlibrary/c_utils/base/include",
+    "${STB_IMAGE_PATH}",
+  ]
+
+  defines = [
+    "CORE_TESTS_ENABLED=0",
+    "CORE_HIDE_SYMBOLS=1",
+    "CORE_WARNINGS_AS_ERRORS=0",
+    "CORE_DEV_ENABLED=${CORE_DEV_ENABLED}",
+    "CORE_LOG_TO_CONSOLE=1",
+    "CORE_LOG_TO_DEBUG_OUTPUT=1",
+    "CORE_LOG_TO_FILE=0",
+    "CORE_VALIDATION_ENABLED=0",
+    "CORE_TESTS_ENABLED=0",
+    "CORE_DYNAMIC=0",
+    "CORE_BUILDTYPE=${BUILDTYPE}",
+    "CORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "USE_STB_IMAGE=$USE_STB_IMAGE"
+  ]
+
+  if (CORE_EMBEDDED_ASSETS_ENABLED) {
+    defines += [
+      "CORE_EMBEDDED_ASSETS_ENABLED=1"
+    ]
+  }
+}
+
+ohos_source_set("lume_engine_src") {
+  sources = [
+    "src/version.cpp",
+    "src/engine.h",
+    "src/engine.cpp",
+    "src/engine_factory.h",
+    "src/engine_factory.cpp",
+    "src/plugin_registry.h",
+    "src/plugin_registry.cpp",
+    "src/static_plugin_decl.h",
+
+    "src/ecs/entity_manager.h",
+    "src/ecs/entity_manager.cpp",
+    "src/ecs/ecs.cpp",
+
+    "src/image/loaders/gl_util.h",
+    "src/image/loaders/image_loader_ktx.h",
+    "src/image/loaders/image_loader_ktx.cpp",
+    "src/image/loaders/image_loader_stb_image.h",
+    "src/image/image_loader_manager.h",
+    "src/image/image_loader_manager.cpp",
+
+    "src/io/path_tools.h",
+    "src/io/path_tools.cpp",
+    "src/io/file_manager.h",
+    "src/io/file_manager.cpp",
+    "src/io/proxy_filesystem.h",
+    "src/io/proxy_filesystem.cpp",
+    "src/io/proxy_directory.h",
+    "src/io/proxy_directory.cpp",
+    "src/io/std_file.h",
+    "src/io/std_file.cpp",
+    "src/io/std_filesystem.h",
+    "src/io/std_filesystem.cpp",
+    "src/io/std_directory.h",
+    "src/io/std_directory.cpp",
+    "src/io/memory_file.h",
+    "src/io/memory_file.cpp",
+    "src/io/memory_filesystem.h",
+    "src/io/memory_filesystem.cpp",
+    "src/io/rofs_filesystem.h",
+    "src/io/rofs_filesystem.cpp",
+    "src/io/dev/file_monitor.h",
+    "src/io/dev/file_monitor.cpp",
+    "src/io/filesystem_api.cpp",
+
+    "src/log/logger.h",
+    "src/log/logger.cpp",
+    "src/log/logger_output.h",
+    "src/log/logger_output.cpp",
+
+    "src/loader/json_util.h",
+    "src/loader/system_graph_loader.h",
+    "src/loader/system_graph_loader.cpp",
+
+    "src/os/platform.h",
+
+    "src/perf/performance_data_manager.h",
+    "src/perf/performance_data_manager.cpp",
+
+    "src/threading/dispatcher_impl.h",
+    "src/threading/dispatcher_impl.cpp",
+    "src/threading/dispatcher_task_queue.h",
+    "src/threading/dispatcher_task_queue.cpp",
+    "src/threading/parallel_task_queue.h",
+    "src/threading/parallel_task_queue.cpp",
+    "src/threading/parallel_impl.h",
+    "src/threading/parallel_impl.cpp",
+    "src/threading/sequential_task_queue.h",
+    "src/threading/sequential_task_queue.cpp",
+    "src/threading/sequential_impl.h",
+    "src/threading/sequential_impl.cpp",
+    "src/threading/task_queue.h",
+    "src/threading/task_queue.cpp",
+    "src/threading/task_queue_factory.h",
+    "src/threading/task_queue_factory.cpp",
+
+    "src/util/frustum_util.h",
+    "src/util/frustum_util.cpp",
+    "src/util/linear_allocator.h",
+    "src/util/string_util.h",
+
+    "src/io/ohos_file.h",
+    "src/io/ohos_file.cpp",
+    "src/io/ohos_filesystem.h",
+    "src/io/ohos_filesystem.cpp",
+
+  ]
+
+  # platform source
+  if (LUME_OHOS_BUILD) {
+    sources += [
+      "src/os/ohos/library_ohos.cpp",
+      "src/os/ohos/platform_ohos.cpp",
+      "src/os/ohos/logger_output.cpp",
+    ]
+  }
+
+  if (USE_STB_IMAGE) {
+    sources += [
+      "src/image/loaders/image_loader_stb_image.cpp",
+    ]
+  }
+
+  configs = [
+    ":lume_engine_config",
+    ":lume_default",
+    ":lume_engine_api",
+    ":lume_base_api",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "resource_management:global_resmgr",
+  ]
+
+  if (LUME_OHOS_BUILD) {
+    external_deps += [ "hilog:libhilog" ]
+  }
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+lume_rofs("lume_engine_rofs")
+{
+  output_obj= ""
+  if (target_cpu == "arm") {
+    output_obj = "${CORE_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${CORE_ROFS}_64.o"
+  }
+
+  outputs = "${target_gen_dir}/assets/${output_obj}"
+
+  tool_path = rebase_path("./tools/", root_build_dir)
+  root = "/"
+  bin_name = "BINARYDATAFORCORE"
+  size_name = "SIZEOFDATAFORCORE"
+  base_name = CORE_ROFS
+  script = "./tools/CompilerAsset.sh"
+  copy_path = "$target_gen_dir/assets"
+  file_extension = ""
+}
+
+source_set("lume_engine_rofs_obj") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${CORE_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${CORE_ROFS}_64.o"
+  }
+
+  sources = [
+    "${target_gen_dir}/assets/${output_obj}"
+  ]
+  deps = [
+    ":lume_engine_rofs"
+  ]
+}
+
+ohos_static_library("libAGPEngine") {
+  deps = [
+    ":lume_engine_src",
+  ]
+
+  if (CORE_EMBEDDED_ASSETS_ENABLED) {
+    deps += [
+      ":lume_engine_rofs_obj"
+    ]
+  }
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+
+}
+
+config("lume_component_help_config") {
+  include_dirs = [
+    "src/ecshelper",
+  ]
+
+  cflags = [
+    "-Wno-unused-function",
+  ]
+}
+
+ohos_source_set("lume_component_help_src") {
+  public_configs = [
+    ":lume_component_help_config",
+    ":lume_base_api",
+    ":lume_engine_api",
+  ]
+
+  sources = [
+    "src/ecshelper/ComponentTools/base_manager.inl",
+    "src/ecshelper/ComponentTools/base_manager.h",
+
+    "src/ecshelper/ComponentTools/component_query.h",
+    "src/ecshelper/ComponentTools/component_query.cpp",
+
+    "src/ecshelper/PropertyTools/property_api_impl.inl",
+    "src/ecshelper/PropertyTools/property_api_impl.h",
+    "src/ecshelper/PropertyTools/property_data.cpp",
+    "src/ecshelper/PropertyTools/property_data.h",
+    "src/ecshelper/PropertyTools/property_macros.h",
+    "src/ecshelper/PropertyTools/property_value.h",
+    "src/ecshelper/PropertyTools/core_metadata.inl",
+  ]
+}

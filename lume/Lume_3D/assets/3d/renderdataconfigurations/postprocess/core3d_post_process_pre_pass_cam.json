@@ -1,0 +1,13 @@
+{
+    "version": 1.0,
+    "name": "CORE3D_POST_PROCESS_PRE_PASS_CAM",
+    "postProcessConfiguration": {
+        "enableFlags": "blur",
+        "blurConfiguration": {
+            "blurType": "normal",
+            "blurQualityType": "normal",
+            "filterSize": 1.0,
+            "maxMipLevel": 8
+        }
+    }
+}
