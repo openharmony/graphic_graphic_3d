@@ -52,7 +52,7 @@ declare_args() {
 }
 
 declare_args() {
-  USE_STB_IMAGE = true 
+  USE_STB_IMAGE = false 
   STB_IMAGE_PATH = "//foundation/graphic/graphic_3d/lume/"
 }
 
