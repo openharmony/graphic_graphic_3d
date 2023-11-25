@@ -188,9 +188,9 @@ void LumeCommon::OnWindowChange(const TextureInfo& textureInfo)
 {
     textureInfo_ = textureInfo;
     SetupCustomRenderTarget(textureInfo);
-    SetupCameraViewPort(textureInfo.width_, textureInfo.height_);
     float widthScale = textureInfo.widthScale_;
     float heightScale = textureInfo.heightScale_;
+    SetupCameraViewPort(textureInfo.width_ * widthScale, textureInfo.height_ * heightScale);
     if (customRender_) { // this moment customRender may not ready
         customRender_->OnSizeChange(textureInfo.width_ * widthScale, textureInfo.height_ * heightScale);
     }
