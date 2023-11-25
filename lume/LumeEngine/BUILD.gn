@@ -96,7 +96,6 @@ config("lume_default") {
     "-fuse-ld=lld",
     "-flto=thin",
     "-Wl,--no-threads",
-    "-Wl,--build-id=sha1",
     "-Wl,--gc-sections",
     "-Wl,--exclude-libs,ALL",
   ]
