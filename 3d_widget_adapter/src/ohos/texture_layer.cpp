@@ -48,11 +48,20 @@ void TextureLayer::UpdateRenderFinishFuture(std::shared_future<void> &ftr)
 
 void TextureLayer::SetParent(std::shared_ptr<Rosen::RSNode>& parent)
 {
-    if (!rsNode_)  {
-        WIDGET_LOGE("rs node not ready");
-        return;
+    parent_ = parent;
+    // delete previous rs node reference
+    RemoveChild();
+
+    if (parent_ && rsNode_) {
+        parent_->AddChild(rsNode_, 0); // second paramenter is added child at the index of parent's children;
     }
-    parent->AddChild(rsNode_, 0); // second paramenter is added child at the index of parent's children;
+}
+
+void TextureLayer::RemoveChild()
+{
+    if (parent_ && rsNode_) {
+        parent_->RemoveChild(rsNode_);
+    }
 }
 
 void TextureLayer::AllocGLTexture(uint32_t width, uint32_t height)
@@ -135,7 +144,7 @@ void* TextureLayer::CreateNativeWindow(uint32_t width, uint32_t height)
         return nullptr;
     }
 
-    producerSurface_->SetQueueSize(5); // check if buffer queue size is 5
+    producerSurface_->SetQueueSize(3); // 3 seems ok
     producerSurface_->SetUserData("SURFACE_STRIDE_ALIGNMENT", "8");
     producerSurface_->SetUserData("SURFACE_FORMAT", std::to_string(GRAPHIC_PIXEL_FMT_RGBA_8888));
     producerSurface_->SetUserData("SURFACE_WIDTH", std::to_string(width));
@@ -270,6 +279,7 @@ void TextureLayer::DestroyNativeWindow()
 {
     WIDGET_LOGD("TextureLayer::DestroyNativeWindow");
     if (!image_.textureInfo_.nativeWindow_) {
+        WIDGET_LOGW("TextureLayer::DestroyNativeWindow invalid window");
         return;
     }
     DestoryNativeWindow(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_));
@@ -278,6 +288,7 @@ void TextureLayer::DestroyNativeWindow()
 
 void TextureLayer::DestroyRenderTarget()
 {
+    // surface buffer release
     if (eglImage_ != EGL_NO_IMAGE_KHR) {
         auto disp = eglGetDisplay(EGL_DEFAULT_DISPLAY);
         eglDestroyImageKHR(disp, eglImage_);
@@ -292,7 +303,6 @@ void TextureLayer::DestroyRenderTarget()
         GraphicsManager::GetInstance().BindOffScreenContext();
         glDeleteTextures(1, &image_.textureInfo_.textureId_);
     }
-    image_.textureInfo_ = {};
 
 #if defined(DBG_DRAW_PIXEL) && (DBG_DRAW_PIXEL == 1)
     if (fbo_ != 0U) {
@@ -307,13 +317,19 @@ void TextureLayer::DestroyRenderTarget()
         data_ = nullptr;
     }
 #endif
-    DestroyProducerSurface();
+
+    // window release
     DestroyNativeWindow();
+    DestroyProducerSurface();
+    RemoveChild();
+    rsNode_ = nullptr;
+    parent_ = nullptr;
+    image_.textureInfo_ = {};
 }
 
 TextureLayer::~TextureLayer()
 {
-    DestroyRenderTarget();
+    // explicit release resource before destructor
 }
 
 void TextureLayer::OnDraw(SkCanvas* canvas)

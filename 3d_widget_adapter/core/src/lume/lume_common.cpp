@@ -83,7 +83,7 @@ CORE_END_NAMESPACE()
 namespace OHOS::Render3D {
 LumeCommon::~LumeCommon()
 {
-    DeInitEngine();
+    // explicit release resource before destructor
 }
 
 void LumeCommon::UnloadEngineLib()
@@ -312,11 +312,13 @@ RENDER_NS::IDevice* LumeCommon::GetDevice()
 
 void LumeCommon::DeInitEngine()
 {
+    DestroySwapchain();
     DestroyResource();
     graphicsContext_ = nullptr;
     renderContext_ = nullptr;
     engine_ = nullptr;
     ecs_ = nullptr;
+    device_ = nullptr;
 }
 
 void LumeCommon::UpdateGeometries(const std::vector<std::shared_ptr<Geometry>>& shapes)
@@ -1271,13 +1273,22 @@ void LumeCommon::LoadCustGeometry(const std::vector<std::shared_ptr<Geometry>>& 
 
 bool LumeCommon::DestroySwapchain()
 {
+    WIDGET_LOGD("LumeCommon::DestroySwapchin");
     EGLBoolean ret = EGL_TRUE;
-    const auto& data = static_cast<const RENDER_NS::DevicePlatformDataGLES&>(device_->GetPlatformData());
-    if (eglSurface_ != EGL_NO_SURFACE) {
-        device_->DestroySwapchain();
-        ret = eglDestroySurface(data.display, eglSurface_);
-        WIDGET_LOGE("destroy surface %s", ret == true ? "success" : "fail");
+    if (eglSurface_ == EGL_NO_SURFACE) {
+        return true;
     }
+
+    if (!device_) {
+        WIDGET_LOGE("no device but has eglSurface");
+        return false;
+    }
+
+    const auto& data = static_cast<const RENDER_NS::DevicePlatformDataGLES&>(device_->GetPlatformData());
+    device_->DestroySwapchain();
+    ret = eglDestroySurface(data.display, eglSurface_);
+    eglSurface_ = EGL_NO_SURFACE;
+
     return static_cast<bool>(ret);
 }
 
