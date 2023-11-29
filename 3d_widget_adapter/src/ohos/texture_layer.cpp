@@ -160,17 +160,16 @@ void TextureLayer::ConfigWindow(float offsetX, float offsetY, float width, float
     float widthScale = image_.textureInfo_.widthScale_;
     float heightScale = image_.textureInfo_.heightScale_;
     if (surface_ == SurfaceType::SURFACE_WINDOW || surface_ == SurfaceType::SURFACE_TEXTURE) {
+        image_.textureInfo_.recreateWindow_ = recreateWindow;
+
         if (!image_.textureInfo_.nativeWindow_) {
             image_.textureInfo_.nativeWindow_ = reinterpret_cast<void *>(CreateNativeWindow(
                 static_cast<uint32_t>(width * widthScale), static_cast<uint32_t>(height * heightScale)));
         }
-
-        if (recreateWindow) {
-            NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
-                SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale * widthScale),
-                static_cast<uint32_t>(height * scale * heightScale));
-        }
-
+        // need check recreate window flag
+        NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
+            SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale * widthScale),
+            static_cast<uint32_t>(height * scale * heightScale));
         rsNode_->SetBounds(offsetX, offsetY, width, height);
     }
 }

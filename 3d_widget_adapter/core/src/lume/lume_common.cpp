@@ -1365,6 +1365,7 @@ void LumeCommon::SetupCustomRenderTarget(const TextureInfo &info)
     }
 
     if (info.textureId_ == 0U && info.nativeWindow_) {
+        // need check recreate window
         CreateSwapchain(info.nativeWindow_);
         return;
     }

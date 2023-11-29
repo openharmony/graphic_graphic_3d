@@ -17,6 +17,7 @@ struct TextureInfo {
     float widthScale_ = 1.0f;
     float heightScale_ = 1.0f;
     float customRatio_ = 0.1f;
+    bool recreateWindow_ = true;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_TEXTURE_INFO_H
