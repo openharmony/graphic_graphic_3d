@@ -63,9 +63,9 @@ public:
         uint32_t imageHeight, uint32_t componentCount, uint32_t loadFlags, bool is16bpc);
 
     struct Info {
-        int width;
-        int height;
-        int componentCount;
+        uint32_t width;
+        uint32_t height;
+        uint32_t componentCount;
         bool is16bpc;
     };
 
@@ -81,18 +81,18 @@ protected:
 template <typename T>
 class RowPointers {
 public:
-    T **row_pointers = nullptr;
+    T **rowPointers = nullptr;
     int allocHeight = 0;
     bool allocSucc = false;
 
-    RowPointers(int width, int height, int channels, int channelSize)
+    RowPointers(uint32_t width, uint32_t height, uint32_t channels, uint32_t channelSize)
     {
         if (height <= 0 || height > static_cast<size_t>(std::numeric_limits<int>::max())) {
             allocSucc = false;
             return;
         }
-        row_pointers = (T **)malloc(height * sizeof(T *));
-        allocHeight = height;
+        rowPointers = (T **)malloc(height * sizeof(T *));
+        allocHeight = static_cast<int>(height);
 
         size_t rowbytes = width * channels * channelSize;
         if (rowbytes <= 0 || rowbytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
@@ -100,23 +100,23 @@ public:
             return;
         }
         for (int i = 0; i < allocHeight; i++) {
-            row_pointers[i] = nullptr; /* security precaution */
+            rowPointers[i] = nullptr; /* security precaution */
         }
         for (int i = 0; i < allocHeight; i++) {
-            row_pointers[i] = (T *)malloc(rowbytes);
+            rowPointers[i] = (T *)malloc(rowbytes);
         }
         allocSucc = true;
     }
 
     ~RowPointers()
     {
-        if (row_pointers) {
+        if (rowPointers) {
             for (int i = 0; i < allocHeight; i++) {
-                if (row_pointers[i]) {
-                    free(row_pointers[i]);
+                if (rowPointers[i]) {
+                    free(rowPointers[i]);
                 }
             }
-            free(row_pointers);
+            free(rowPointers);
         }
     }
 };
@@ -136,7 +136,11 @@ public:
             CORE_LOG_E("ArrayLoader out of range.");
             return;
         }
-        memcpy_s(dest, length, static_cast<const T *>(buf.data()) + curr, length);
+        int ret = memcpy_s(dest, length, static_cast<const T *>(buf.data()) + curr, length);
+        if (ret != 0) {
+            CORE_LOG_E("memcpy_s in ArrayLoader error.");
+            return;
+        }
         curr += length;
     }
 
@@ -147,33 +151,33 @@ private:
 };
 
 template <typename T>
-void VerticalFlipRowPointers(T **row_pointers, uint32_t height, uint32_t width, uint32_t channels)
+void VerticalFlipRowPointers(T **rowPointers, uint32_t height, uint32_t width, uint32_t channels)
 {
-    int halfWidth = width / 2;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < halfWidth; x++) {
-            for (int k = 0; k < channels; k++) {
-                int idx = x * channels + k;
-                int ridx = (width - x - 1) * channels + k;
-                T temp_pixel = row_pointers[y][idx];
-                row_pointers[y][idx] = row_pointers[y][ridx];
-                row_pointers[y][ridx] = temp_pixel;
+    uint32_t halfWidth = width / 2;
+    for (uint32_t y = 0; y < height; y++) {
+        for (uint32_t x = 0; x < halfWidth; x++) {
+            for (uint32_t k = 0; k < channels; k++) {
+                uint32_t idx = x * channels + k;
+                uint32_t ridx = (width - x - 1) * channels + k;
+                T tempPixel = rowPointers[y][idx];
+                rowPointers[y][idx] = rowPointers[y][ridx];
+                rowPointers[y][ridx] = tempPixel;
             }
         }
     }
 }
 
 template <typename T>
-void VerticalFlipRow(T *row_pointer, uint32_t width, uint32_t channels)
+void VerticalFlipRow(T *rowPointer, uint32_t width, uint32_t channels)
 {
-    int halfWidth = width / 2;
-    for (int x = 0; x < halfWidth; x++) {
-        for (int k = 0; k < channels; k++) {
-            int idx = x * channels + k;
-            int ridx = (width - x - 1) * channels + k;
-            T temp_pixel = row_pointer[idx];
-            row_pointer[idx] = row_pointer[ridx];
-            row_pointer[ridx] = temp_pixel;
+    uint32_t halfWidth = width / 2;
+    for (uint32_t x = 0; x < halfWidth; x++) {
+        for (uint32_t k = 0; k < channels; k++) {
+            uint32_t idx = x * channels + k;
+            uint32_t ridx = (width - x - 1) * channels + k;
+            T tempPixel = rowPointer[idx];
+            rowPointer[idx] = rowPointer[ridx];
+            rowPointer[ridx] = tempPixel;
         }
     }
 }

@@ -37,10 +37,12 @@ using BASE_NS::string;
 using BASE_NS::string_view;
 using BASE_NS::CloneData;
 
+namespace {
 const std::regex MEDIA_RES_ID_REGEX(R"(^\w+/([0-9]+)\.\w+$)", std::regex::icase);
 const std::regex MEDIA_HAP_RES_PATH_REGEX(R"(^(.*)$)");
 const std::regex MEDIA_HAP_RES_ID_REGEX(R"(^.*/([0-9]+)\.\w+$)", std::regex::icase);
 const std::regex MEDIA_RES_NAME_REGEX(R"(^.*/(\w+)\.\w+$)", std::regex::icase);
+}
 
 constexpr uint32_t OHOS_RESOURCE_MATCH_SIZE = 2;
 
@@ -125,10 +127,10 @@ BASE_NS::vector<IDirectory::Entry> OhosFileDirectory::GetEntries() const
     CORE_ASSERT_MSG(dir_, "Dir not open");
     BASE_NS::vector<IDirectory::Entry> result;
     if (dir_) {
-        for (int i = 0; i <  dir_->fileList_.size(); i++) {
+        for (int i = 0; i < static_cast<int>(dir_->fileList_.size()); i++) {
             auto path = dir_->path_ + "/" + BASE_NS::string(dir_->fileList_[i].c_str());
             auto entry = GetEntry(path);
-            entry.timestamp = i;
+            entry.timestamp = static_cast<uint32_t>(i);
             entry.name = dir_->fileList_[i].c_str();
             result.emplace_back(entry);
         }

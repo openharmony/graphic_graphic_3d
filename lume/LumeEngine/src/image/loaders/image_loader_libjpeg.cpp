@@ -26,7 +26,7 @@ constexpr size_t IMG_SIZE_LIMIT_2GB = static_cast<size_t>(std::numeric_limits<in
 
 struct MyErrorMgr {
     struct jpeg_error_mgr pub;
-    jmp_buf setjmp_buffer;
+    jmp_buf setjmpBuffer;
 };
 
 void MyErrorExit(j_common_ptr cinfo)
@@ -41,18 +41,18 @@ void MyErrorExit(j_common_ptr cinfo)
         return;
     }
     (*cinfo->err->output_message)(cinfo);
-    longjmp(myerr->setjmp_buffer, 1);
+    longjmp(myerr->setjmpBuffer, 1);
 }
 
 #ifdef LIBJPEG_SUPPORT_12_BIT
-void HandleLittleEndian(J12SAMPARRAY row_pointers_12, int len)
+void HandleLittleEndian(J12SAMPARRAY rowPointers12, int len)
 {
     int littleEndian = 1;
     char *ptr = reinterpret_cast<char *>(&littleEndian);
     if (*ptr == 1) {
         /* Swap MSB and LSB in each sample */
         for (int col = 0; col < len; col++) {
-            row_pointers_12[0][col] = ((row_pointers_12[0][col] & 0xFF) << 8) | ((row_pointers_12[0][col] >> 8) & 0xFF);
+            rowPointers12[0][col] = ((rowPointers12[0][col] & 0xFF) << 8) | ((rowPointers12[0][col] >> 8) & 0xFF);
         }
     }
 }
@@ -74,7 +74,7 @@ void HandleJPEGColorType(jpeg_decompress_struct &cinfo, uint32_t loadFlags, LibB
 
     info.width = cinfo.output_width;
     info.height = cinfo.output_height;
-    info.componentCount = cinfo.output_components;
+    info.componentCount = static_cast<uint32_t>(cinfo.output_components);
     info.is16bpc = cinfo.data_precision > 8;
 }
 
@@ -89,28 +89,29 @@ public:
 
         HandleJPEGColorType(cinfo, loadFlags, info);
 
-        size_t imgSize = cinfo.output_width * cinfo.output_height * cinfo.output_components;
+        size_t imgSize = cinfo.output_width * cinfo.output_height * static_cast<uint32_t>(cinfo.output_components);
         if (imgSize < 1 || imgSize >= IMG_SIZE_LIMIT_2GB) {
             CORE_LOG_E("imgSize more than limit!");
             return imageBytes;
         }
 
-        int row_stride = cinfo.output_width * cinfo.output_components;
+        int row_stride = static_cast<int>(cinfo.output_width) * cinfo.output_components;
         int pos = 0;
         bool needVerticalFlip = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) != 0;
         if (info.is16bpc) {
 #ifdef LIBJPEG_SUPPORT_12_BIT
-            J12SAMPARRAY row_pointers_12 =
-                (J12SAMPARRAY)(*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
+            J12SAMPARRAY rowPointers12 = (J12SAMPARRAY)(*cinfo.mem->alloc_sarray)(
+                (j_common_ptr)&cinfo, JPOOL_IMAGE, static_cast<uint32_t>(row_stride), 1);
             uint16_t *buff = (uint16_t *)malloc(imgSize * sizeof(uint16_t));
             while (cinfo.output_scanline < cinfo.output_height) {
-                jpeg12_read_scanlines(&cinfo, row_pointers_12, 1);
-                HandleLittleEndian(row_pointers_12, row_stride);
+                jpeg12_read_scanlines(&cinfo, rowPointers12, 1);
+                HandleLittleEndian(rowPointers12, row_stride);
                 if (needVerticalFlip) {
-                    VerticalFlipRow(row_pointers_12[0], cinfo.output_width, cinfo.output_components);
+                    VerticalFlipRow(
+                        rowPointers12[0], cinfo.output_width, static_cast<uint32_t>(cinfo.output_components));
                 }
                 for (int k = 0; k < row_stride; k++) {
-                    buff[pos++] = row_pointers_12[0][k];
+                    buff[pos++] = rowPointers12[0][k];
                 }
             }
 #else
@@ -119,15 +120,17 @@ public:
 #endif
             imageBytes = {buff, FreeLibBaseImageBytes};
         } else {
-            JSAMPARRAY row_pointers_8 = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
+            JSAMPARRAY rowPointers8 =
+                (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, static_cast<uint32_t>(row_stride), 1);
             uint8_t *buff = (uint8_t *)malloc(imgSize * sizeof(uint8_t));
             while (cinfo.output_scanline < cinfo.output_height) {
-                jpeg_read_scanlines(&cinfo, row_pointers_8, 1);
+                jpeg_read_scanlines(&cinfo, rowPointers8, 1);
                 if (needVerticalFlip) {
-                    VerticalFlipRow(row_pointers_8[0], cinfo.output_width, cinfo.output_components);
+                    VerticalFlipRow(
+                        rowPointers8[0], cinfo.output_width, static_cast<uint32_t>(cinfo.output_components));
                 }
                 for (int k = 0; k < row_stride; k++) {
-                    buff[pos++] = row_pointers_8[0][k];
+                    buff[pos++] = rowPointers8[0][k];
                 }
             }
             imageBytes = {buff, FreeLibBaseImageBytes};
@@ -148,7 +151,7 @@ public:
 
         cinfo.err = jpeg_std_error(&jerr.pub);
         jerr.pub.error_exit = MyErrorExit;
-        if (setjmp(jerr.setjmp_buffer)) {
+        if (setjmp(jerr.setjmpBuffer)) {
             jpeg_destroy_decompress(&cinfo);
             return ImageLoaderManager::ResultFailure("jpeg_jmpbuf to fail");
         }
@@ -161,7 +164,7 @@ public:
         jpeg_read_header(&cinfo, TRUE);
         info.width = cinfo.image_width;
         info.height = cinfo.image_height;
-        info.componentCount = cinfo.num_components;
+        info.componentCount = static_cast<uint32_t>(cinfo.num_components);
         info.is16bpc = cinfo.data_precision > 8;
 
         // Not supporting hdr images via libjpeg.
@@ -182,12 +185,8 @@ public:
         jpeg_destroy_decompress(&cinfo);
 
         // Success. Populate the image info and image data object.
-        return CreateImage(CORE_NS::move(imageBytes),
-            static_cast<uint32_t>(info.width),
-            static_cast<uint32_t>(info.height),
-            static_cast<uint32_t>(info.componentCount),
-            loadFlags,
-            info.is16bpc);
+        return CreateImage(
+            CORE_NS::move(imageBytes), info.width, info.height, info.componentCount, loadFlags, info.is16bpc);
     }
 
 protected:

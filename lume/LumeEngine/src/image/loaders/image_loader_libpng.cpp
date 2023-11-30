@@ -108,18 +108,18 @@ public:
         png_bytep buff = static_cast<png_bytep>(malloc(imgSize * sizeof(uint8_t)));
         imageBytes = {buff, FreeLibBaseImageBytes};
 
-        png_read_image(png_ptr, rp.row_pointers);
+        png_read_image(png_ptr, rp.rowPointers);
         png_read_end(png_ptr, info_ptr);
         // Flip vertically if requested.
         if (imageBytes && (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) != 0) {
-            VerticalFlipRowPointers(rp.row_pointers, info.height, info.width, info.componentCount);
+            VerticalFlipRowPointers(rp.rowPointers, info.height, info.width, info.componentCount);
         }
 
-        int pos = 0;
-        for (int y = 0; y < info.height; ++y) {
-            for (int x = 0; x < info.componentCount * info.width; x += info.componentCount) {
-                for (int k = 0; k < info.componentCount; k++) {
-                    buff[pos++] = rp.row_pointers[y][x + k];
+        uint32_t pos = 0;
+        for (uint32_t y = 0; y < info.height; ++y) {
+            for (uint32_t x = 0; x < info.componentCount * info.width; x += info.componentCount) {
+                for (uint32_t k = 0; k < info.componentCount; k++) {
+                    buff[pos++] = rp.rowPointers[y][x + k];
                 }
             }
         }
@@ -180,12 +180,8 @@ public:
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
         // Success. Populate the image info and image data object.
-        return CreateImage(CORE_NS::move(imageBytes),
-            static_cast<uint32_t>(info.width),
-            static_cast<uint32_t>(info.height),
-            static_cast<uint32_t>(info.componentCount),
-            loadFlags,
-            info.is16bpc);
+        return CreateImage(
+            CORE_NS::move(imageBytes), info.width, info.height, info.componentCount, loadFlags, info.is16bpc);
     }
 
 protected:

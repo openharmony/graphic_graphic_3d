@@ -102,6 +102,7 @@
           }
         ],
         "test": [
+          "//foundation/graphic/graphic_3d/3d_widget_adapter/test:unittest"
         ]
       }
     }
