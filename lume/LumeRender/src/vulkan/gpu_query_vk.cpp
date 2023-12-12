@@ -15,7 +15,7 @@
 
 #include "gpu_query_vk.h"
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <render/namespace.h>
 
@@ -55,9 +55,11 @@ GpuQueryVk::~GpuQueryVk()
 {
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
     for (auto& ref : plats_) {
-        vkDestroyQueryPool(device, // device
-            ref.queryPool,         // queryPool
-            nullptr);              // pAllocator
+        if (ref.queryPool) {
+            vkDestroyQueryPool(device, // device
+                ref.queryPool,         // queryPool
+                nullptr);              // pAllocator
+        }
     }
 }
 

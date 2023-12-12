@@ -50,7 +50,8 @@ layout(set = 1, binding = 0) uniform sampler2D uImgSampler;
 layout(set = 1, binding = 1) uniform samplerCube uImgCubeSampler;
 
 layout(constant_id = 0) const uint CORE_DEFAULT_ENV_TYPE = 0;
-layout(constant_id = 1) const uint CORE_POST_PROCESS_FLAGS = 0;
+layout(constant_id = 3) const uint CORE_POST_PROCESS_FLAGS = 0;
+layout(constant_id = 4) const uint CORE_CAMERA_FLAGS = 0;
 
 #else
 

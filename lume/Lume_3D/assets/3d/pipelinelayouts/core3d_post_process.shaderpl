@@ -1,0 +1,27 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "pipelinelayout"
+    },
+    "pushConstant": { "size" : 32, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+    "descriptorSetLayouts": [
+        {
+            "set" : 0,
+            "bindings": [
+                { "binding" : 0, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 1, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 2, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 3, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 4, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 5, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 6, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 7, "descriptorType" : "uniform_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 8, "descriptorType" : "storage_buffer", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 9, "descriptorType" : "combined_image_sampler", "descriptorCount" : 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 10, "descriptorType" : "combined_image_sampler", "descriptorCount" : 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 11, "descriptorType" : "combined_image_sampler", "descriptorCount" : 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 12, "descriptorType" : "combined_image_sampler", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" }
+            ]
+        }
+    ]
+}

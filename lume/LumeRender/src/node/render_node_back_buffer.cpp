@@ -42,6 +42,8 @@
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
+constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+
 PostProcessTonemapStruct FillPushConstant(
     const GpuImageDesc& dstImageDesc, const RenderPostProcessConfiguration& currentRenderPostProcessConfiguration_)
 {
@@ -141,11 +143,10 @@ void RenderNodeBackBuffer::CheckForPsoSpecilization(const PostProcessConfigurati
         renderNodeContextMgr_->GetRenderNodeUtil().GetRenderPostProcessConfiguration(postProcessConfiguration);
     if (!RenderHandleUtil::IsValid(psoHandle_)) {
         auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-        const DynamicStateFlags dynamicStateFlags =
-            DynamicStateFlagBits::CORE_DYNAMIC_STATE_VIEWPORT | DynamicStateFlagBits::CORE_DYNAMIC_STATE_SCISSOR;
         const RenderHandle graphicsState =
             renderNodeContextMgr_->GetShaderManager().GetGraphicsStateHandleByShaderHandle(shader_);
-        psoHandle_ = psoMgr.GetGraphicsPsoHandle(shader_, graphicsState, pipelineLayout_, {}, {}, dynamicStateFlags);
+        psoHandle_ = psoMgr.GetGraphicsPsoHandle(
+            shader_, graphicsState, pipelineLayout_, {}, {}, { DYNAMIC_STATES, BASE_NS::countof(DYNAMIC_STATES) });
     }
 
     // store new values

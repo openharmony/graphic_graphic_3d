@@ -11,10 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 set -e
-
-COMPILER_PATH=$1
+WORKING_DIR=$(cd "$(dirname "$0")"; pwd)
+PROJECT_ROOT=${WORKING_DIR%/LumeEngine*}
+echo ${PROJECT_ROOT}
+#TOOL_PATH=$3
+COMPILER_PATH=$PROJECT_ROOT/LumeBinaryCompile/lumeassetcompiler/build/outpus/x86_64
+#COMPILER_PATH=$1
 CPU_TYPE=$2
 ASSETS_PATH=$3
 ROOT_PATH=$4

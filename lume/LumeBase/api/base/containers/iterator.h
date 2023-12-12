@@ -54,7 +54,7 @@ public:
     constexpr const_iterator(const base_iterator& other) noexcept : it_ { other.ptr() } {}
     constexpr const_iterator& operator++() noexcept
     {
-        it_++;
+        ++it_;
         return *this;
     }
     constexpr const_iterator operator++(int) noexcept
@@ -110,7 +110,7 @@ public:
     }
     constexpr difference_type operator-(const const_iterator& other) const noexcept
     {
-        return it_ - other.it_;
+        return static_cast<difference_type>(it_ - other.it_);
     }
     constexpr bool operator<(const const_iterator& other) const noexcept
     {
@@ -153,7 +153,7 @@ public:
     constexpr explicit iterator(const pointer ptr) noexcept : it_ { ptr } {}
     constexpr iterator& operator++() noexcept
     {
-        it_++;
+        ++it_;
         return *this;
     }
     constexpr iterator operator++(int) noexcept
@@ -218,7 +218,7 @@ public:
     }
     constexpr difference_type operator-(const iterator& other) const noexcept
     {
-        return it_ - other.it_;
+        return static_cast<difference_type>(it_ - other.it_);
     }
 
     constexpr bool operator<(const iterator& other) const noexcept
@@ -264,15 +264,16 @@ public:
     constexpr reverse_iterator() = default;
     ~reverse_iterator() = default;
     constexpr explicit reverse_iterator(iterator_type it) noexcept : it_(it) {}
-    constexpr reverse_iterator(const reverse_iterator<iterator>& other) noexcept : it_(other.base()) {}
+    constexpr reverse_iterator(const reverse_iterator& other) noexcept : it_(other.base()) {}
     template<class U>
     constexpr reverse_iterator& operator=(const reverse_iterator<U>& other)
     {
         it_ = other.base();
+        return *this;
     }
     constexpr reverse_iterator& operator++()
     {
-        it_--;
+        --it_;
         return *this;
     }
     constexpr reverse_iterator operator++(int)
@@ -283,7 +284,7 @@ public:
     }
     constexpr reverse_iterator& operator--()
     {
-        it_++;
+        ++it_;
         return *this;
     }
     constexpr reverse_iterator operator--(int)
@@ -366,22 +367,24 @@ public:
     using iterator_category = typename Iter::iterator_category;
     using value_type = typename Iter::value_type;
     using difference_type = typename Iter::difference_type;
-    using pointer = typename Iter::pointer;
+    using pointer = Iter;
     using reference = value_type&&;
 
     /** constructs a new iterator adaptor */
     constexpr move_iterator() = default;
 
-    constexpr explicit move_iterator(iterator_type x) : current_(x) {};
+    constexpr explicit move_iterator(iterator_type x) : current_(x) {}
 
     template<class U>
-    constexpr move_iterator(const move_iterator<U>& other) : current_(other.current) {};
+    constexpr move_iterator(const move_iterator<U>& other) : current_(other.current)
+    {}
 
     /** assigns another iterator */
     template<class U>
     constexpr move_iterator& operator=(const move_iterator<U>& other)
     {
         current_ = other.current;
+        return *this;
     }
 
     /** accesses the underlying iterator */
@@ -398,7 +401,7 @@ public:
 
     constexpr pointer operator->() const
     {
-        return *current_;
+        return current_;
     }
 
     /** accesses an element by index */
@@ -434,12 +437,12 @@ public:
 
     constexpr move_iterator operator+(difference_type n) const
     {
-        return { current_ + n };
+        return move_iterator(current_ + n);
     }
 
     constexpr move_iterator operator-(difference_type n) const
     {
-        return { current_ + n };
+        return move_iterator(current_ - n);
     }
 
     constexpr move_iterator& operator+=(difference_type n)
@@ -497,7 +500,7 @@ constexpr bool operator>=(const move_iterator<Iterator1>& lhs, const move_iterat
 template<class Iter>
 constexpr move_iterator<Iter> operator+(typename move_iterator<Iter>::difference_type n, const move_iterator<Iter>& it)
 {
-    return { it.base() + n };
+    return move_iterator(it.base() + n);
 }
 
 template<class Iterator1, class Iterator2>

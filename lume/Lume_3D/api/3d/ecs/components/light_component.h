@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(LIGHT_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define LIGHT_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_LIGHT_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_LIGHT_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/ecs/components/layer_defines.h>
@@ -22,14 +22,13 @@
 #include <base/math/vector.h>
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif
 
 BEGIN_COMPONENT(ILightComponentManager, LightComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    enum class Type : uint8_t { INVALID = 0, DIRECTIONAL = 1, POINT = 2, SPOT = 3 };
+    enum class Type : uint8_t { DIRECTIONAL = 0, POINT = 1, SPOT = 2 };
 #endif
 
     /** Type of the light.
@@ -50,7 +49,7 @@ BEGIN_COMPONENT(ILightComponentManager, LightComponent)
 
     /** Near plane distance from the light source.
      */
-    DEFINE_PROPERTY(float, nearPlane, "Near Plane", 0, VALUE(0.5f))
+    DEFINE_PROPERTY(float, nearPlane, "Shadow Near Plane", 0, VALUE(0.5f))
 
     /** Spotlight inner angle.
      */

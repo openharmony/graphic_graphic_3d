@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -20,11 +21,17 @@
 
 // includes
 #include "render/shaders/common/render_compatibility_common.h"
+#include "render/shaders/common/render_post_process_structs_common.h"
 
 // sets
 
 layout(set = 0, binding = 0) uniform sampler uSampler;
 layout(set = 0, binding = 1) uniform texture2D uTex;
+
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
 
 // in / out
 
@@ -34,5 +41,5 @@ layout (location = 0) out vec4 outColor;
 
 void main(void)
 {
-    outColor = texture(sampler2D(uTex, uSampler), inUv.xy);
+    outColor = textureLod(sampler2D(uTex, uSampler), inUv.xy, 0);
 }

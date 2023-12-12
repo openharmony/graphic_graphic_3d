@@ -49,6 +49,11 @@ public:
     static IRenderNode* Create();
     static void Destroy(IRenderNode* instance);
 
+    struct DefaultImages {
+        RENDER_NS::RenderHandle cubeHandle;
+        RENDER_NS::RenderHandle texHandle;
+    };
+
 private:
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
@@ -62,8 +67,12 @@ private:
         const RenderCamera::Environment::BackgroundType bgType,
         const RENDER_NS::RenderPostProcessConfiguration& renderPostProcessConfiguration);
     void CreateDescriptorSets();
-    void GetCameraUniformBuffers();
+    // unique scene name
+    void GetSceneUniformBuffers(const BASE_NS::string_view us);
     void UpdatePostProcessConfiguration();
+    BASE_NS::array_view<const RENDER_NS::DynamicStateEnum> GetDynamicStates() const;
+    void ResetRenderSlotData(const bool enableMultiview);
+    void EvaluateFogBits();
 
     static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
     struct JsonInputs {
@@ -74,29 +83,19 @@ private:
         uint32_t nodeFlags { 0u };
 
         RENDER_NS::RenderNodeGraphInputs::InputRenderPass renderPass;
+        bool hasChangeableRenderPassHandles { false };
     };
     JsonInputs jsonInputs_;
     RENDER_NS::RenderNodeHandles::InputRenderPass inputRenderPass_;
 
+    SceneBufferHandles sceneBuffers_;
+    SceneCameraBufferHandles cameraBuffers_;
     SceneRenderDataStores stores_;
 
-    struct BufferHandles {
-        RENDER_NS::RenderHandle camera;
-        RENDER_NS::RenderHandle environment;
-        RENDER_NS::RenderHandle fog;
-        RENDER_NS::RenderHandle generalData;
-        RENDER_NS::RenderHandle postProcess;
-
-        RENDER_NS::RenderHandle defaultBuffer;
-    };
-    BufferHandles bufferHandles_;
-
-    struct CreatedHandles {
-        RENDER_NS::RenderHandleReference sampler;
-    };
-    CreatedHandles createdHandles_;
+    RENDER_NS::RenderHandle cubemapSampler;
 
     RenderCamera::Environment::BackgroundType currentBgType_ { RenderCamera::Environment::BG_TYPE_NONE };
+    RenderCamera::ShaderFlags currentCameraShaderFlags_ { 0U };
 
     struct DescriptorSets {
         RENDER_NS::IDescriptorSetBinder::Ptr set0;
@@ -107,15 +106,24 @@ private:
     RENDER_NS::PipelineLayout defaultPipelineLayout_;
     RENDER_NS::RenderHandle shaderHandle_;
     RENDER_NS::RenderHandle psoHandle_;
+    bool enableMultiView_ { false };
+    bool customSet2_ { false };
 
     struct CurrentScene {
         RenderCamera camera;
         RENDER_NS::ViewportDesc viewportDesc;
         RENDER_NS::ScissorDesc scissorDesc;
+
+        RenderCamera::ShaderFlags cameraShaderFlags { 0u }; // evaluated based on camera and scene flags
     };
     CurrentScene currentScene_;
+    DefaultImages defaultImages_;
 
     RENDER_NS::RenderPass renderPass_;
+    // the base default render node graph from RNG setup
+    RENDER_NS::RenderPass rngRenderPass_;
+    bool fsrEnabled_ { false };
+
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
 };
 CORE3D_END_NAMESPACE()

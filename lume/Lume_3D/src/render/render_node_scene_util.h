@@ -57,12 +57,21 @@ public:
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraId,
         const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo,
         BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices);
+
+    static SceneBufferHandles GetSceneBufferHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName);
+    static SceneCameraBufferHandles GetSceneCameraBufferHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+        const BASE_NS::string_view cameraName);
+    static SceneCameraImageHandles GetSceneCameraImageHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+        const BASE_NS::string_view cameraName, const RenderCamera& camera);
 };
 
 class RenderNodeSceneUtilImpl : public IRenderNodeSceneUtil {
 public:
     RenderNodeSceneUtilImpl() = default;
-    ~RenderNodeSceneUtilImpl() override = default;
+    ~RenderNodeSceneUtilImpl() = default;
 
     SceneRenderDataStores GetSceneRenderDataStores(const RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
         BASE_NS::string_view sceneDataStoreName) override;
@@ -74,6 +83,14 @@ public:
     void GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial, uint32_t cameraId,
         const RenderSlotInfo& renderSlotInfo, BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices) override;
+
+    SceneBufferHandles GetSceneBufferHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName) override;
+    SceneCameraBufferHandles GetSceneCameraBufferHandles(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
+        const BASE_NS::string_view sceneName, const BASE_NS::string_view cameraName) override;
+    SceneCameraImageHandles GetSceneCameraImageHandles(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
+        const BASE_NS::string_view sceneName, const BASE_NS::string_view cameraName,
+        const RenderCamera& camera) override;
 
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
     IInterface* GetInterface(const BASE_NS::Uid& uid) override;

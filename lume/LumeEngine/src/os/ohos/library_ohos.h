@@ -13,9 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE_OS_LINUX_LIBRARY_LINUX_H
-#define CORE_OS_LINUX_LIBRARY_LINUX_H
-
+#ifndef CORE_OS_OHOS_LIBRARY_OHOS_H
+#define CORE_OS_OHOS_LIBRARY_OHOS_H
 
 #include <core/namespace.h>
 
@@ -37,4 +36,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_OS_LINUX_LIBRARY_LINUX_H
+#endif // CORE_OS_OHOS_LIBRARY_OHOS_H

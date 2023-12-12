@@ -60,6 +60,7 @@ private:
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     void ParseRenderNodeInputs();
+    Size2D GetClampedShadingRateTexelSize(const Size2D& shadingRateTexelSize);
 
     struct JsonInputs {
         BASE_NS::vector<RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> gpuImageDescs;
@@ -76,6 +77,7 @@ private:
 
     BASE_NS::vector<RenderHandle> dependencyHandles_;
     BASE_NS::vector<DependencyList> dependencyList_;
+    BASE_NS::vector<Size2D> shadingRateTexelSizes_;
 };
 RENDER_END_NAMESPACE()
 

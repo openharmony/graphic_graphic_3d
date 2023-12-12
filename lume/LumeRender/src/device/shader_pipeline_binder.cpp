@@ -49,8 +49,7 @@ ShaderPipelineBinder::ShaderPipelineBinder(const RenderHandleReference& shader, 
     for (uint32_t idx = 0; idx < pipelineLayout.descriptorSetCount; ++idx) {
         const uint32_t set = pipelineLayout.descriptorSetLayouts[idx].set;
         if (set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
-            descriptorSetResources_.emplace_back();
-            auto& resSet = descriptorSetResources_.back();
+            auto& resSet = descriptorSetResources_.emplace_back();
             resSet.bindings.resize(pipelineLayout.descriptorSetLayouts[idx].bindings.size());
             uint32_t bufferCount = 0;
             uint32_t imageCount = 0;
@@ -100,7 +99,7 @@ bool ShaderPipelineBinder::GetBindingValidity() const
 {
     bool valid = true;
     auto checkValidity = [](const auto& vec, bool& valid) {
-        for (const auto ref : vec) {
+        for (const auto& ref : vec) {
             if (!ref.handle) {
                 valid = false;
             }

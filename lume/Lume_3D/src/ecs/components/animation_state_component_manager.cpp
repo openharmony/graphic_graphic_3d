@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
+#include "3d/ecs/components/animation_state_component.h"
 #include "ComponentTools/base_manager.h"
 #include "ComponentTools/base_manager.inl"
-#include "ecs/components/animation_state_component.h"
 
 #define IMPLEMENT_MANAGER
 #include "PropertyTools/property_macros.h"
@@ -33,6 +33,10 @@ DECL_ENUM(AnimationComponent::PlaybackState, STOP, "Stop")
 DECL_ENUM(AnimationComponent::PlaybackState, PLAY, "Play")
 DECL_ENUM(AnimationComponent::PlaybackState, PAUSE, "Pause")
 END_ENUM(AnimationPlaybackStateMetaData, AnimationComponent::PlaybackState)
+
+BEGIN_ENUM(AnimationStateFlagBitsMetaData, AnimationStateComponent::FlagBits)
+DECL_ENUM(AnimationStateComponent::FlagBits, MANUAL_PROGRESS, "Update Playback Time Manually.")
+END_ENUM(AnimationStateFlagBitsMetaData, AnimationStateComponent::FlagBits)
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -47,7 +51,7 @@ using CORE_NS::Property;
 class AnimationStateComponentManager final
     : public BaseManager<AnimationStateComponent, IAnimationStateComponentManager> {
     BEGIN_PROPERTY(AnimationStateComponent, ComponentMetadata)
-#include "ecs/components/animation_state_component.h"
+#include "3d/ecs/components/animation_state_component.h"
     END_PROPERTY();
     const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
@@ -87,4 +91,4 @@ void IAnimationStateComponentManagerDestroy(IComponentManager* instance)
 {
     delete static_cast<AnimationStateComponentManager*>(instance);
 }
-CORE_END_NAMESPACE()
+CORE3D_END_NAMESPACE()

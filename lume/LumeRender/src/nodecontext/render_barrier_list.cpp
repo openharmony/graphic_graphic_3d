@@ -42,7 +42,7 @@ void* AllocateBarrierListMemory(RenderBarrierList::LinearAllocatorStruct& alloca
 
         const size_t alignment = allocator.allocators[allocator.currentIndex]->GetAlignment();
 
-        allocator.allocators.emplace_back(make_unique<LinearAllocator>(byteSize, alignment));
+        allocator.allocators.push_back(make_unique<LinearAllocator>(byteSize, alignment));
         allocator.currentIndex = (uint32_t)(allocator.allocators.size() - 1);
 
         rc = allocator.allocators[allocator.currentIndex]->Allocate(byteSize);
@@ -62,7 +62,7 @@ RenderBarrierList::RenderBarrierList(const uint32_t reserveBarrierCountHint)
 {
     const size_t memAllocationByteSize = sizeof(CommandBarrier) * reserveBarrierCountHint;
     if (memAllocationByteSize > 0) {
-        linearAllocator_.allocators.emplace_back(make_unique<LinearAllocator>(memAllocationByteSize, MEMORY_ALIGNMENT));
+        linearAllocator_.allocators.push_back(make_unique<LinearAllocator>(memAllocationByteSize, MEMORY_ALIGNMENT));
     }
 }
 
@@ -92,7 +92,7 @@ void RenderBarrierList::BeginFrame()
             linearAllocator_.allocators.clear();
 
             // create new single allocation for combined previous size and some extra bytes
-            linearAllocator_.allocators.emplace_back(make_unique<LinearAllocator>(fullByteSize, alignment));
+            linearAllocator_.allocators.push_back(make_unique<LinearAllocator>(fullByteSize, alignment));
         }
     }
 }
@@ -114,7 +114,7 @@ void RenderBarrierList::AddBarriersToBarrierPoint(
                 iter != barrierPointIndextoIndex_.cend()) {
                 barrierIndex = iter->second;
             } else { // first barrier to this barrier point index
-                barrierPointBarriers_.emplace_back(BarrierPointBarriers {});
+                barrierPointBarriers_.push_back(BarrierPointBarriers {});
                 barrierIndex = barrierPointBarriers_.size() - 1;
                 barrierPointIndextoIndex_[barrierPointIndex] = barrierIndex;
             }

@@ -23,17 +23,11 @@
 #include "PropertyTools/property_macros.h"
 
 CORE_BEGIN_NAMESPACE()
-using RENDER_NS::TonemapConfiguration;
-using RENDER_NS::BloomConfiguration;
-using RENDER_NS::DitherConfiguration;
-using RENDER_NS::BlurConfiguration;
-using RENDER_NS::ColorConversionConfiguration;
-using RENDER_NS::FxaaConfiguration;
-using RENDER_NS::VignetteConfiguration;
-using RENDER_NS::ColorFringeConfiguration;
-using RENDER_NS::TaaConfiguration;
-
+using namespace RENDER_NS;
 using CORE3D_NS::PostProcessComponent;
+
+DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandle);
+DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandleReference);
 
 BEGIN_ENUM(PostProcessFlagBitsMetaData, PostProcessComponent::FlagBits)
 DECL_ENUM(PostProcessComponent::FlagBits, TONEMAP_BIT, "Tonemap")
@@ -43,8 +37,10 @@ DECL_ENUM(PostProcessComponent::FlagBits, COLOR_FRINGE_BIT, "Color Fringe")
 DECL_ENUM(PostProcessComponent::FlagBits, DITHER_BIT, "Dither")
 DECL_ENUM(PostProcessComponent::FlagBits, BLUR_BIT, "Blur")
 DECL_ENUM(PostProcessComponent::FlagBits, COLOR_CONVERSION_BIT, "Color Conversion")
-DECL_ENUM(PostProcessComponent::FlagBits, FXAA_BIT, "FXAA Anti-aliasing")
-DECL_ENUM(PostProcessComponent::FlagBits, TAA_BIT, "TAA Anti-aliasing")
+DECL_ENUM(PostProcessComponent::FlagBits, FXAA_BIT, "Fast Approximate Anti-Aliasing")
+DECL_ENUM(PostProcessComponent::FlagBits, TAA_BIT, "Temporat Anti-Aliasing")
+DECL_ENUM(PostProcessComponent::FlagBits, DOF_BIT, "Depth of Field")
+DECL_ENUM(PostProcessComponent::FlagBits, MOTION_BLUR_BIT, "Motion Blur")
 END_ENUM(PostProcessFlagBitsMetaData, PostProcessComponent::FlagBits)
 
 /** Extend propertysystem with the enums */
@@ -57,6 +53,10 @@ DECLARE_PROPERTY_TYPE(BlurConfiguration::BlurType);
 DECLARE_PROPERTY_TYPE(ColorConversionConfiguration::ConversionFunctionType);
 DECLARE_PROPERTY_TYPE(FxaaConfiguration::Sharpness);
 DECLARE_PROPERTY_TYPE(FxaaConfiguration::Quality);
+DECLARE_PROPERTY_TYPE(TaaConfiguration::Sharpness);
+DECLARE_PROPERTY_TYPE(TaaConfiguration::Quality);
+DECLARE_PROPERTY_TYPE(MotionBlurConfiguration::Sharpness);
+DECLARE_PROPERTY_TYPE(MotionBlurConfiguration::Quality);
 
 /** Extend propertysystem with the types */
 DECLARE_PROPERTY_TYPE(TonemapConfiguration);
@@ -68,6 +68,8 @@ DECLARE_PROPERTY_TYPE(BlurConfiguration);
 DECLARE_PROPERTY_TYPE(ColorConversionConfiguration);
 DECLARE_PROPERTY_TYPE(FxaaConfiguration);
 DECLARE_PROPERTY_TYPE(TaaConfiguration);
+DECLARE_PROPERTY_TYPE(DofConfiguration);
+DECLARE_PROPERTY_TYPE(MotionBlurConfiguration);
 
 // Declare their metadata
 BEGIN_ENUM(TonemapConfigurationTonemapTypeMetaData, TonemapConfiguration::TonemapType)
@@ -126,6 +128,18 @@ DECL_ENUM(FxaaConfiguration::Quality, MEDIUM, "medium")
 DECL_ENUM(FxaaConfiguration::Quality, HIGH, "high")
 END_ENUM(FxaaConfigurationQualityMetaData, FxaaConfiguration::Quality)
 
+BEGIN_ENUM(TaaConfigurationSharpnessMetaData, TaaConfiguration::Sharpness)
+DECL_ENUM(TaaConfiguration::Sharpness, SOFT, "soft")
+DECL_ENUM(TaaConfiguration::Sharpness, MEDIUM, "medium")
+DECL_ENUM(TaaConfiguration::Sharpness, SHARP, "sharp")
+END_ENUM(TaaConfigurationSharpnessMetaData, TaaConfiguration::Sharpness)
+
+BEGIN_ENUM(TaaConfigurationQualityMetaData, TaaConfiguration::Quality)
+DECL_ENUM(TaaConfiguration::Quality, LOW, "low")
+DECL_ENUM(TaaConfiguration::Quality, MEDIUM, "medium")
+DECL_ENUM(TaaConfiguration::Quality, HIGH, "high")
+END_ENUM(TaaConfigurationQualityMetaData, TaaConfiguration::Quality)
+
 BEGIN_METADATA(TonemapConfigurationMetaData, TonemapConfiguration)
 DECL_PROPERTY2(TonemapConfiguration, tonemapType, "", 0)
 DECL_PROPERTY2(TonemapConfiguration, exposure, "", 0)
@@ -172,6 +186,41 @@ BEGIN_METADATA(FxaaConfigurationMetaData, FxaaConfiguration)
 DECL_PROPERTY2(FxaaConfiguration, sharpness, "", 0)
 DECL_PROPERTY2(FxaaConfiguration, quality, "", 0)
 END_METADATA(FxaaConfigurationMetaData, FxaaConfiguration)
+
+BEGIN_METADATA(TaaConfigurationMetaData, TaaConfiguration)
+DECL_PROPERTY2(TaaConfiguration, sharpness, "", 0)
+DECL_PROPERTY2(TaaConfiguration, quality, "", 0)
+END_METADATA(TaaConfigurationMetaData, TaaConfiguration)
+
+BEGIN_METADATA(DofConfigurationMetaData, DofConfiguration)
+DECL_PROPERTY2(DofConfiguration, focusPoint, "", 0)
+DECL_PROPERTY2(DofConfiguration, focusRange, "", 0)
+DECL_PROPERTY2(DofConfiguration, nearTransitionRange, "", 0)
+DECL_PROPERTY2(DofConfiguration, farTransitionRange, "", 0)
+DECL_PROPERTY2(DofConfiguration, nearBlur, "", 0)
+DECL_PROPERTY2(DofConfiguration, farBlur, "", 0)
+DECL_PROPERTY2(DofConfiguration, nearPlane, "", 0)
+DECL_PROPERTY2(DofConfiguration, farPlane, "", 0)
+END_METADATA(DofConfigurationMetaData, DofConfiguration)
+
+BEGIN_ENUM(MotionBlurConfigurationSharpnessMetaData, MotionBlurConfiguration::Sharpness)
+DECL_ENUM(MotionBlurConfiguration::Sharpness, SOFT, "soft")
+DECL_ENUM(MotionBlurConfiguration::Sharpness, MEDIUM, "medium")
+DECL_ENUM(MotionBlurConfiguration::Sharpness, SHARP, "sharp")
+END_ENUM(MotionBlurConfigurationSharpnessMetaData, MotionBlurConfiguration::Sharpness)
+
+BEGIN_ENUM(MotionBlurConfigurationQualityMetaData, MotionBlurConfiguration::Quality)
+DECL_ENUM(MotionBlurConfiguration::Quality, LOW, "low")
+DECL_ENUM(MotionBlurConfiguration::Quality, MEDIUM, "medium")
+DECL_ENUM(MotionBlurConfiguration::Quality, HIGH, "high")
+END_ENUM(MotionBlurConfigurationQualityMetaData, MotionBlurConfiguration::Quality)
+
+BEGIN_METADATA(MotionBlurConfigurationMetaData, MotionBlurConfiguration)
+DECL_PROPERTY2(MotionBlurConfiguration, alpha, "", 0)
+DECL_PROPERTY2(MotionBlurConfiguration, velocityCoefficient, "", 0)
+DECL_PROPERTY2(MotionBlurConfiguration, sharpness, "", 0)
+DECL_PROPERTY2(MotionBlurConfiguration, quality, "", 0)
+END_METADATA(MotionBlurConfigurationMetaData, MotionBlurConfiguration)
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()

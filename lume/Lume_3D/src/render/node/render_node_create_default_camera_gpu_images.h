@@ -49,22 +49,19 @@ private:
 
     void ParseRenderNodeInputs();
 
+    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
     struct JsonInputs {
         BASE_NS::vector<RENDER_NS::RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> gpuImageDescs;
+
+        BASE_NS::string customCameraName;
+        uint64_t customCameraId { INVALID_CAM_ID };
     };
     JsonInputs jsonInputs_;
 
     SceneRenderDataStores stores_;
 
-    struct Names {
-        BASE_NS::string globalName;
-        BASE_NS::string shareName;
-    };
-    BASE_NS::vector<Names> imageNames_;
-    BASE_NS::vector<RENDER_NS::GpuImageDesc> descs_;
+    BASE_NS::vector<RENDER_NS::RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> descs_;
     BASE_NS::vector<RENDER_NS::RenderHandleReference> resourceHandles_;
-
-    BASE_NS::string customCameraName_;
 };
 CORE3D_END_NAMESPACE()
 

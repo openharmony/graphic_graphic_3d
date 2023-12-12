@@ -17,18 +17,15 @@
 #define CORE_OS_PLATFORM_H
 
 #include <base/containers/unique_ptr.h>
-#include <core/os/intf_platform.h>
-#include <core/os/platform_create_info.h>
 #include <core/namespace.h>
+#include <core/os/intf_platform.h>
 
 CORE_BEGIN_NAMESPACE()
-
-class Platform
-{
+struct PlatformCreateInfo;
+class Platform {
 public:
     static CORE_NS::IPlatform::Ptr Create(CORE_NS::PlatformCreateInfo const& createInfo);
 };
-
 CORE_END_NAMESPACE()
 
 #endif // CORE_OS_PLATFORM_H

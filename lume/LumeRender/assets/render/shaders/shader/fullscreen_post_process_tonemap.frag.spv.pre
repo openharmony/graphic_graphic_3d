@@ -1,0 +1,1255 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+
+
+layout(constant_id = 0)const uint CORE_POST_PROCESS_FLAGS = 0;
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_color_conversion_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+precision highp float;
+precision highp int;
+
+
+
+
+
+layout(constant_id = 256)const uint CORE_BACKEND_TYPE = 0;
+
+
+
+
+layout(constant_id = 257)const float CORE_FLIP_NDC = 1.0;
+
+
+
+
+
+
+
+
+
+
+vec2 GetFragCoordUv(vec2 fragCoord, vec2 inverseTexelSize)
+{
+    vec2 uv = fragCoord * inverseTexelSize;
+    if(CORE_FLIP_NDC < 0.0){
+        uv = vec2(uv . x, 1.0 - uv . y);
+    }
+    return uv;
+}
+
+
+
+
+
+
+
+#line 24 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_color_conversion_common.h"
+
+
+
+
+float CalcLuma(const vec3 color)
+{
+
+    return 0.299 * color . r + 0.587 * color . g + 0.114 * color . b;
+}
+
+
+
+
+float CalcLumaFxaa(const vec3 color)
+{
+
+    return color . g *(0.587 / 0.299)+ color . r;
+}
+
+
+
+
+float LumaWeight(const float luma)
+{
+    return(1.0 /(1.0 + luma));
+}
+
+
+
+
+vec3 TonemapLuma(const vec3 color, const float luma, const float range)
+{
+    return color /(1.0 + luma / range);
+}
+
+
+
+
+vec3 TonemapLumaInv(const vec3 color, const float luma, const float range)
+{
+    return color /(1.0 - luma / range);
+}
+
+
+
+
+
+vec3 SrgbToLinear(const vec3 srgb)
+{
+    const float mlow = 1.0f / 12.92f;
+    const float mhigh = 1.0f / 1.055f;
+
+    const vec3 high = pow((srgb + 0.055f)* mhigh, vec3(2.4f));
+    const vec3 low = srgb * mlow;
+    const bvec3 cutoff = lessThan(srgb, vec3(0.04045f));
+    return mix(high, low, cutoff);
+}
+
+
+
+
+
+vec3 LinearToSrgb(const vec3 linear)
+{
+    const float mlow = 12.92f;
+    const float mhigh = 1.055f;
+
+    const vec3 high = pow(linear, vec3(0.416f))* mhigh - 0.055f;
+    const vec3 low = linear * mlow;
+    const bvec3 cutoff = lessThan(linear, vec3(0.0031308f));
+    return mix(high, low, cutoff);
+}
+
+
+
+
+
+vec3 rgbToYCoCg(const vec3 rgb)
+{
+    const float y = dot(rgb, vec3(0.25, 0.5, 0.25));
+    const float co = dot(rgb, vec3(0.5, 0.0, - 0.5));
+    const float cg = dot(rgb, vec3(- 0.25, 0.5, - 0.25));
+    return vec3(y, co, cg);
+}
+
+
+
+
+
+vec3 yCoCgToRgb(const vec3 ycocg)
+{
+    const float y = ycocg . r;
+    const float co = ycocg . g;
+    const float cg = ycocg . b;
+    return vec3(y + co - cg, y + cg, y - co - cg);
+}
+
+
+#line 27 "shader/fullscreen_post_process_tonemap.frag"
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct GlobalPostProcessStruct {
+
+    uvec4 flags;
+
+    vec4 renderTimings;
+
+
+    vec4 factors[14];
+
+
+    vec4 userFactors[16];
+};
+
+
+
+
+struct LocalPostProcessStruct {
+
+    vec4 factors[16];
+};
+
+struct LocalPostProcessPushConstantStruct {
+
+    vec4 viewportSizeInvSize;
+
+    vec4 factor;
+};
+
+struct PostProcessTonemapStruct {
+    vec4 texSizeInvTexSize;
+
+    uvec4 flags;
+
+    vec4 tonemap;
+    vec4 vignette;
+    vec4 colorFringe;
+    vec4 dither;
+
+    vec4 bloomParameters;
+};
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+float getVignetteCoeff(const vec2 uv, mediump const float coeff, mediump const float power)
+{
+    vec2 uvVal = uv . xy *(vec2(1.0)- uv . yx);
+    float vignette = uvVal . x * uvVal . y * coeff;
+    vignette = pow(vignette, power);
+    return clamp(vignette, 0.0, 1.0);
+}
+
+
+
+
+float getChromaCoeff(const vec2 uv, mediump const float chromaCoefficient)
+{
+
+    vec2 distUv =(uv - 0.5)* 2.0;
+    return dot(distUv, distUv)* chromaCoefficient;
+}
+
+
+
+
+float RandomDither(vec2 st)
+{
+    return fract(sin(dot(st . xy, vec2(12.9898, 78.233)))* 43758.5453);
+}
+
+
+
+
+#line 29 "shader/fullscreen_post_process_tonemap.frag"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_color_conversion_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 30 "shader/fullscreen_post_process_tonemap.frag"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_tonemap_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_tonemap_common.h"
+
+
+
+
+
+vec3 TonemapAces(vec3 x)
+{
+    const float a = 2.51f;
+    const float b = 0.03f;
+    const float c = 2.43f;
+    const float d = 0.59f;
+    const float e = 0.14f;
+    return(x *(a * x + b))/(x *(c * x + d)+ e);
+}
+
+
+
+
+
+vec3 TonemapAcesFilmRec2020(vec3 x)
+{
+    float a = 15.8f;
+    float b = 2.12f;
+    float c = 1.2f;
+    float d = 5.92f;
+    float e = 1.9f;
+    return(x *(a * x + b))/(x *(c * x + d)+ e);
+}
+
+
+
+
+
+float TonemapFilmic(float x)
+{
+    const float a = 0.15f;
+    const float b = 0.50f;
+    const float c = 0.10f;
+    const float d = 0.20f;
+    const float e = 0.02f;
+    const float f = 0.30f;
+    return((x *(a * x + c * b)+ d * e)/(x *(a * x + b)+ d * f))- e / f;
+}
+vec3 TonemapFilmic(vec3 x)
+{
+    const float a = 0.15f;
+    const float b = 0.50f;
+    const float c = 0.10f;
+    const float d = 0.20f;
+    const float e = 0.02f;
+    const float f = 0.30f;
+    const float w = 11.2f;
+    const vec3 curr =((x *(a * x + c * b)+ d * e)/(x *(a * x + b)+ d * f))- e / f;
+    const float whiteScale = 1.0 / TonemapFilmic(w);
+    return curr * vec3(whiteScale);
+}
+
+
+#line 31 "shader/fullscreen_post_process_tonemap.frag"
+
+
+
+layout(set = 0, binding = 0)uniform texture2D uTex;
+layout(set = 0, binding = 1)uniform sampler uSampler;
+
+layout(push_constant, std430)uniform uPushConstant
+{
+    PostProcessTonemapStruct uPc;
+};
+
+
+
+layout(location = 0)in vec2 inUv;
+
+layout(location = 0)out vec4 outColor;
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_blocks.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_color_conversion_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_blocks.h"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 21 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_blocks.h"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_tonemap_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 22 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_blocks.h"
+
+
+
+
+
+
+void PostProcessTonemapBlock(in uint postProcessFlags, in vec4 tonemapFactor, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+    if((postProcessFlags &(1 << 0))==(1 << 0)){
+        const float exposure = tonemapFactor . x;
+        const vec3 x = outCol * exposure;
+        const uint tonemapType = uint(tonemapFactor . w);
+        if(tonemapType == 0){
+            outCol = TonemapAces(x);
+        } else if(tonemapType == 1){
+            outCol = TonemapAcesFilmRec2020(x);
+        } else if(tonemapType == 2){
+            const float exposureEstimate = 6.0f;
+            outCol = TonemapFilmic(x * exposureEstimate);
+        }
+    }
+}
+
+
+
+
+void PostProcessVignetteBlock(
+    in uint postProcessFlags, in vec4 vignetteFactor, in vec2 uv, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+    if((postProcessFlags &(1 << 1))==(1 << 1)){
+        const vec2 uvVal = uv . xy *(vec2(1.0)- uv . yx);
+                    mediump float vignette = uvVal . x * uvVal . y * vignetteFactor . x * 40.0;
+        vignette = clamp(pow(vignette, vignetteFactor . y), 0.0, 1.0);
+        outCol . rgb *= vignette;
+    }
+}
+
+
+
+
+void PostProcessColorFringeBlock(in uint postProcessFlags, in vec4 chromaFactor, in vec2 uv, in vec2 uvSize,
+    in sampler2D imgSampler, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+    if((postProcessFlags &(1 << 4))==
+                                                   (1 << 4)){
+
+        const vec2 distUv =(uv - 0.5)* 2.0;
+        const mediump float chroma = dot(distUv, distUv)* chromaFactor . y * chromaFactor . x;
+
+        const vec2 uvDistToImageCenter = chroma * uvSize;
+        const mediump float chromaRed =
+            textureLod(imgSampler, uv - vec2(uvDistToImageCenter . x, uvDistToImageCenter . y), 0). x;
+        const mediump float chromaBlue =
+            textureLod(imgSampler, uv + vec2(uvDistToImageCenter . x, uvDistToImageCenter . y), 0). z;
+
+        outCol . r = chromaRed;
+        outCol . b = chromaBlue;
+    }
+}
+
+
+
+
+void PostProcessDitherBlock(in uint postProcessFlags, in vec4 ditherFactor, in vec2 uv, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+    if((postProcessFlags &(1 << 2))==(1 << 2)){
+        const vec2 random01Range = vec2(uv . x * ditherFactor . y, uv . y * ditherFactor . z);
+        outCol += fract(sin(dot(random01Range . xy, vec2(12.9898, 78.233)))* 43758.5453)* ditherFactor . x;
+    }
+}
+
+
+
+
+void PostProcessColorConversionBlock(
+    in uint postProcessFlags, in vec4 colorConversionFactor, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+    if((postProcessFlags &(1 << 3))==
+                                                       (1 << 3)){
+        const uint conversionType = uint(colorConversionFactor . w);
+        if(conversionType == 1){
+            outCol . rgb = LinearToSrgb(outCol . rgb);
+        }
+    }
+}
+
+
+
+
+void PostProcessBloomCombineBlock(in uint postProcessFlags, in vec4 bloomFactor, in vec2 uv, in sampler2D imgSampler,
+    in sampler2D dirtImgSampler, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+    if((postProcessFlags &(1 << 9))==(1 << 9)){
+
+        const vec3 bloomColor = textureLod(imgSampler, uv, 0). rgb * bloomFactor . z;
+        const vec3 dirtColor = textureLod(dirtImgSampler, uv, 0). rgb * bloomFactor . w;
+        const vec3 bloomCombine = outCol + bloomColor + dirtColor * max(bloomColor . x, max(bloomColor . y, bloomColor . z));
+        outCol . rgb = min(bloomCombine, 64512.0);
+    }
+}
+
+
+#line 50 "shader/fullscreen_post_process_tonemap.frag"
+
+
+
+
+void main(void)
+{
+    outColor = textureLod(sampler2D(uTex, uSampler), inUv, 0);
+
+    if((uPc . flags . x &(1 << 4))==
+                                                   (1 << 4)){
+        const vec2 uvSize = uPc . texSizeInvTexSize . zw;
+
+        const vec4 fringeFactor = uPc . colorFringe;
+        const vec2 distUv =(inUv - 0.5)* 2.0;
+        const mediump float chroma = dot(distUv, distUv)* fringeFactor . y * fringeFactor . x;
+
+        const vec2 uvDistToImageCenter = chroma * uvSize;
+        const mediump float chromaRed =
+            textureLod(sampler2D(uTex, uSampler), inUv - vec2(uvDistToImageCenter . x, uvDistToImageCenter . y), 0). x;
+        const mediump float chromaBlue =
+            textureLod(sampler2D(uTex, uSampler), inUv + vec2(uvDistToImageCenter . x, uvDistToImageCenter . y), 0). z;
+
+        outColor . r = chromaRed;
+        outColor . b = chromaBlue;
+    }
+
+    if((uPc . flags . x &(1 << 0))==(1 << 0)){
+        const vec4 tonemapFactor = uPc . tonemap;
+        const float exposure = tonemapFactor . x;
+        const vec3 x = outColor . rgb * exposure;
+        const uint tonemapType = uint(tonemapFactor . w);
+        if(tonemapType == 0){
+            outColor . rgb = TonemapAces(x);
+        } else if(tonemapType == 1){
+            outColor . rgb = TonemapAcesFilmRec2020(x);
+        } else if(tonemapType == 2){
+            const float exposureEstimate = 6.0f;
+            outColor . rgb = TonemapFilmic(x * exposureEstimate);
+        }
+    }
+
+    if((uPc . flags . x &(1 << 1))==(1 << 1)){
+        const vec2 uvVal = inUv . xy *(vec2(1.0)- inUv . yx);
+        const vec4 vignetteFactor = uPc . vignette;
+
+                    mediump float vignette = uvVal . x * uvVal . y * vignetteFactor . x * 40.0;
+        vignette = clamp(pow(vignette, vignetteFactor . y), 0.0, 1.0);
+        outColor . rgb *= vignette;
+    }
+
+    if((uPc . flags . x &(1 << 3))==
+                                                       (1 << 3)){
+        const uint conversionType = 1;
+        if(conversionType == 1){
+            outColor . rgb = LinearToSrgb(outColor . rgb);
+        }
+    }
+}

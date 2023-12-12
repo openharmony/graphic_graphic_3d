@@ -16,6 +16,7 @@
 #if RENDER_HAS_GL_BACKEND
 #include "gles/wgl_state.h"
 
+#include <base/containers/fixed_string.h>
 #include <render/namespace.h>
 
 #include "util/log.h"
@@ -29,8 +30,7 @@
 #include "gles/surface_information.h"
 #include "gles/swapchain_gles.h"
 
-using BASE_NS::string_view;
-using BASE_NS::vector;
+using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace WGLHelpers {
@@ -52,6 +52,22 @@ namespace {
 #define declareWGL(a, b) a b = nullptr;
 WGLFUNCS;
 #undef declareWGL
+
+constexpr int WGL_ATTRIBS[] = {
+#if defined(CORE_CREATE_GLES_CONTEXT_WITH_WGL) && (CORE_CREATE_GLES_CONTEXT_WITH_WGL == 1)
+    WGL_CONTEXT_MAJOR_VERSION_ARB, 3, WGL_CONTEXT_MINOR_VERSION_ARB, 2,
+#if RENDER_GL_DEBUG
+    WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
+#endif
+    WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_ES2_PROFILE_BIT_EXT, 0
+#else
+    WGL_CONTEXT_MAJOR_VERSION_ARB, 4, WGL_CONTEXT_MINOR_VERSION_ARB, 5,
+#if RENDER_GL_DEBUG
+    WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
+#endif
+    WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB, 0
+#endif
+};
 
 static bool FilterError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
     const string_view message, const void* userParam) noexcept
@@ -78,11 +94,32 @@ static bool FilterError(GLenum source, GLenum type, GLuint id, GLenum severity, 
                 hint is GL_DYNAMIC_DRAW) will use SYSTEM HEAP memory as the source for buffer object operations. *OR*
                 message:     Buffer detailed info: Buffer object X (bound to GL_COPY_WRITE_BUFFER_BINDING_EXT, usage
                 hint is GL_DYNAMIC_DRAW) has been mapped WRITE_ONLY in SYSTEM HEAP memory (fast).
-         */
+                */
                 return true;
             }
         }
         if (type == GL_DEBUG_TYPE_PERFORMANCE) {
+            if ((id == 131154) && (severity == GL_DEBUG_SEVERITY_MEDIUM)) {
+                /*
+                source: GL_DEBUG_SOURCE_API
+                type: GL_DEBUG_TYPE_PERFORMANCE
+                id: 131154
+                severity: GL_DEBUG_SEVERITY_MEDIUM
+                message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+                */
+                return true;
+            }
+            if ((id == 131186) && (severity == GL_DEBUG_SEVERITY_MEDIUM)) {
+                /* Ignore this warning that Nvidia sends.
+                source: GL_DEBUG_SOURCE_API
+                type: GL_DEBUG_TYPE_PERFORMANCE
+                id: 131186
+                severity: GL_DEBUG_SEVERITY_MEDIUM
+                message: Buffer performance warning: Buffer object X (bound to GL_ELEMENT_ARRAY_BUFFER_ARB, usage hint
+                is GL_DYNAMIC_DRAW) is being copied/moved from VIDEO memory to HOST memory.
+                */
+                return true;
+            }
             if ((id == 131202) && (severity == GL_DEBUG_SEVERITY_MEDIUM)) {
                 /* Ignore this warning that Nvidia sends.
                 source: GL_DEBUG_SOURCE_API
@@ -91,7 +128,7 @@ static bool FilterError(GLenum source, GLenum type, GLuint id, GLenum severity, 
                 severity: GL_DEBUG_SEVERITY_MEDIUM
                 message: Texture state performance warning: emulating compressed format not supported in hardware with
                 decompressed images
-         */
+                */
                 return true;
             }
         }
@@ -121,10 +158,10 @@ static void DoDummy()
     SetPixelFormat(dummyhDC, ChoosePixelFormat(dummyhDC, &pfd), &pfd);
     const HGLRC dummy = wglCreateContext(dummyhDC);
     wglMakeCurrent(dummyhDC, dummy);
-#define declareWGL(a, b)                                                                  \
-    if (b == nullptr) {                                                                   \
-        *(reinterpret_cast<void**>(&b)) = reinterpret_cast<void*>(wglGetProcAddress(#b)); \
-    };
+#define declareWGL(a, b)                                                                    \
+    if ((b) == nullptr) {                                                                   \
+        *(reinterpret_cast<void**>(&(b))) = reinterpret_cast<void*>(wglGetProcAddress(#b)); \
+    }
     WGLFUNCS
 #undef declareWGL
     wglMakeCurrent(dummyhDC, nullptr);
@@ -138,7 +175,7 @@ static void DoDummy()
 void ParseExtensions(const string_view extensions, vector<string_view>& extensionList)
 {
     size_t start = 0;
-    for (auto end = extensions.find(' '); end != BASE_NS::string::npos; end = extensions.find(' ', start)) {
+    for (auto end = extensions.find(' '); end != string::npos; end = extensions.find(' ', start)) {
         extensionList.emplace_back(extensions.data() + start, end - start);
         start = end + 1;
     }
@@ -146,7 +183,131 @@ void ParseExtensions(const string_view extensions, vector<string_view>& extensio
         extensionList.emplace_back(extensions.data() + start);
     }
 }
+
+void FillProperties(DevicePropertiesGL& properties)
+{
+    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &properties.max3DTextureSize);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &properties.maxTextureSize);
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &properties.maxArrayTextureLayers);
+    glGetFloatv(GL_MAX_TEXTURE_LOD_BIAS, &properties.maxTextureLodBias);
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &properties.maxTextureMaxAnisotropy);
+    glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &properties.maxCubeMapTextureSize);
+    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &properties.maxRenderbufferSize);
+    glGetFloati_v(GL_MAX_VIEWPORT_DIMS, 0, properties.maxViewportDims);
+    glGetFloati_v(GL_MAX_VIEWPORT_DIMS, 1, properties.maxViewportDims + 1);
+    glGetIntegerv(GL_MAX_VIEWPORTS, &properties.maxViewports);
+    glGetIntegerv(GL_VIEWPORT_SUBPIXEL_BITS, &properties.viewportSubpixelBits);
+    glGetIntegerv(GL_VIEWPORT_BOUNDS_RANGE, &properties.viewportBoundsRange);
+
+    glGetIntegerv(GL_MAJOR_VERSION, &properties.majorVersion);
+    glGetIntegerv(GL_MINOR_VERSION, &properties.minorVersion);
+    glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &properties.numProgramBinaryFormats);
+    glGetIntegerv(GL_NUM_SHADER_BINARY_FORMATS, &properties.numShaderBinaryFormats);
+
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &properties.maxVertexAttribs);
+    glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &properties.maxVertexUniformComponents);
+    glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &properties.maxVertexUniformVectors);
+    glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &properties.maxVertexUniformBlocks);
+    glGetIntegerv(GL_MAX_VERTEX_IMAGE_UNIFORMS, &properties.maxVertexImageUniforms);
+    glGetIntegerv(GL_MAX_VERTEX_OUTPUT_COMPONENTS, &properties.maxVertexOutputComponents);
+    glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &properties.maxVertexTextureImageUnits);
+    glGetIntegerv(GL_MAX_VERTEX_ATOMIC_COUNTER_BUFFERS, &properties.maxVertexAtomicCounterBuffers);
+    glGetIntegerv(GL_MAX_VERTEX_ATOMIC_COUNTERS, &properties.maxVertexAtomicCounters);
+    glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &properties.maxVertexShaderStorageBlocks);
+    glGetIntegerv(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &properties.maxCombinedVertexUniformComponents);
+
+    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS, &properties.maxFragmentUniformComponents);
+    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_VECTORS, &properties.maxFragmentUniformVectors);
+    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &properties.maxFragmentUniformBlocks);
+    glGetIntegerv(GL_MAX_FRAGMENT_IMAGE_UNIFORMS, &properties.maxFragmentImageUniforms);
+    glGetIntegerv(GL_MAX_FRAGMENT_INPUT_COMPONENTS, &properties.maxFragmentInputComponents);
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &properties.maxFragmentImageUnits);
+    glGetIntegerv(GL_MIN_PROGRAM_TEXTURE_GATHER_OFFSET, &properties.minProgramTextureGatherOffset);
+    glGetIntegerv(GL_MAX_PROGRAM_TEXTURE_GATHER_OFFSET, &properties.maxProgramTextureGatherOffset);
+    glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS, &properties.maxFragmentAtomicCounterBuffers);
+    glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTERS, &properties.maxFragmentAtomicCounters);
+    glGetIntegerv(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &properties.maxFragmentShaderStorageBlocks);
+    glGetIntegerv(GL_MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS, &properties.maxCombinedFragmentUniformComponents);
+
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, properties.maxComputeWorkGroupCount);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, properties.maxComputeWorkGroupCount + 1);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, properties.maxComputeWorkGroupCount + 2);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, properties.maxComputeWorkGroupSize);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, properties.maxComputeWorkGroupSize + 1);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, properties.maxComputeWorkGroupSize + 2);
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &properties.maxComputeWorkGroupInvocations);
+    glGetIntegerv(GL_MAX_COMPUTE_UNIFORM_BLOCKS, &properties.maxComputeUniformBlocks);
+    glGetIntegerv(GL_MAX_COMPUTE_IMAGE_UNIFORMS, &properties.maxComputeImageUniforms);
+    glGetIntegerv(GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS, &properties.maxComputeTextureImageUnits);
+    glGetIntegerv(GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, &properties.maxComputeAtomicCounterBuffers);
+    glGetIntegerv(GL_MAX_COMPUTE_ATOMIC_COUNTERS, &properties.maxComputeAtomicCounters);
+    glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &properties.maxComputeSharedMemorySize);
+    glGetIntegerv(GL_MAX_COMPUTE_UNIFORM_COMPONENTS, &properties.maxComputeUniformComponents);
+    glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &properties.maxComputeShaderStorageBlocks);
+    glGetIntegerv(GL_MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS, &properties.maxCombinedComputeUniformComponents);
+
+    glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &properties.maxTextureBufferSize);
+    glGetIntegerv(GL_MIN_PROGRAM_TEXEL_OFFSET, &properties.minProgramTexelOffset);
+    glGetIntegerv(GL_MAX_PROGRAM_TEXEL_OFFSET, &properties.maxProgramTexelOffset);
+    glGetIntegerv(GL_MIN_PROGRAM_TEXTURE_GATHER_OFFSET, &properties.minProgramTextureGatherOffset);
+    glGetIntegerv(GL_MAX_PROGRAM_TEXTURE_GATHER_OFFSET, &properties.maxProgramTextureGatherOffset);
+    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &properties.maxUniformBufferBindings);
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &properties.maxUniformBlockSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &properties.uniformBufferOffsetAlignment);
+    glGetIntegerv(GL_MAX_COMBINED_UNIFORM_BLOCKS, &properties.maxCombinedUniformBlocks);
+    glGetIntegerv(GL_MAX_UNIFORM_LOCATIONS, &properties.maxUniformLocations);
+    glGetIntegerv(GL_MAX_VARYING_COMPONENTS, &properties.maxVaryingComponents);
+    glGetIntegerv(GL_MAX_VARYING_FLOATS, &properties.maxVaryingFloats);
+    glGetIntegerv(GL_MAX_VARYING_VECTORS, &properties.maxVaryingVectors);
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &properties.maxCombinedTextureImageUnits);
+    glGetIntegerv(GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS, &properties.maxAtomicCounterBufferBindings);
+    glGetIntegerv(GL_MAX_ATOMIC_COUNTER_BUFFER_SIZE, &properties.maxAtomicCounterBufferSize);
+    glGetIntegerv(GL_MAX_COMBINED_ATOMIC_COUNTERS, &properties.maxCombinedAtomicCounters);
+    glGetIntegerv(GL_MAX_COMBINED_ATOMIC_COUNTER_BUFFERS, &properties.maxCombinedAtomicCounterBuffers);
+    glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &properties.maxShaderStorageBufferBindings);
+    glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &properties.maxShaderStorageBlockSize);
+    glGetIntegerv(GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS, &properties.maxCombinedShaderStorageBlocks);
+    glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &properties.shaderStorageBufferOffsetAlignment);
+    glGetIntegerv(GL_MAX_IMAGE_UNITS, &properties.maxImageUnits);
+    glGetIntegerv(GL_MAX_COMBINED_SHADER_OUTPUT_RESOURCES, &properties.maxCombinedShaderOutputResources);
+    glGetIntegerv(GL_MAX_COMBINED_IMAGE_UNIFORMS, &properties.maxCombinedImageUniforms);
+
+    glGetIntegerv(GL_MIN_MAP_BUFFER_ALIGNMENT, &properties.minMapBufferAlignment);
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIB_RELATIVE_OFFSET, &properties.maxVertexAttribRelativeOffset);
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIB_BINDINGS, &properties.maxVertexAttribBindings);
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &properties.maxVertexAttribStride);
+    glGetIntegerv(GL_MAX_ELEMENTS_INDICES, &properties.maxElementsIndices);
+    glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &properties.maxElementsVertices);
+    glGetInteger64v(GL_MAX_ELEMENT_INDEX, &properties.maxElementIndex);
+    glGetIntegerv(GL_MAX_CLIP_DISTANCES, &properties.maxClipDistances);
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &properties.maxColorAttachments);
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, &properties.maxFramebufferWidth);
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_HEIGHT, &properties.maxFramebufferHeight);
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_LAYERS, &properties.maxFramebufferLayers);
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_SAMPLES, &properties.maxFramebufferSamples);
+    glGetIntegerv(GL_MAX_SAMPLE_MASK_WORDS, &properties.maxSampleMaskWords);
+    glGetIntegerv(GL_MAX_SAMPLES, &properties.maxSamples);
+    glGetIntegerv(GL_MAX_COLOR_TEXTURE_SAMPLES, &properties.maxColorTextureSamples);
+    glGetIntegerv(GL_MAX_DEPTH_TEXTURE_SAMPLES, &properties.maxDepthTextureSamples);
+    glGetIntegerv(GL_MAX_INTEGER_SAMPLES, &properties.maxIntegerSamples);
+    glGetInteger64v(GL_MAX_SERVER_WAIT_TIMEOUT, &properties.maxServerWaitTimeout);
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &properties.maxDrawBuffers);
+    glGetIntegerv(GL_MAX_DUAL_SOURCE_DRAW_BUFFERS, &properties.maxDualSourceDrawBuffers);
+    glGetIntegerv(GL_MAX_LABEL_LENGTH, &properties.maxLabelLength);
+}
 } // namespace
+
+uintptr_t WGLState::CreateSurface(uintptr_t window, uintptr_t instance) const noexcept
+{
+    return reinterpret_cast<uintptr_t>(GetDC(reinterpret_cast<HWND>(window)));
+}
+
+void WGLState::DestroySurface(uintptr_t surface) const noexcept
+{
+    auto deviceContext = reinterpret_cast<HDC>(surface);
+    HWND window = WindowFromDC(deviceContext);
+    ReleaseDC(window, deviceContext);
+}
 
 bool WGLState::GetInformation(HDC surface, int32_t configId, GlesImplementation::SurfaceInfo& res) const
 {
@@ -197,6 +358,7 @@ bool WGLState::GetInformation(HDC surface, int32_t configId, GlesImplementation:
     }
     return false;
 }
+
 bool WGLState::GetSurfaceInformation(HDC surface, GlesImplementation::SurfaceInfo& res) const
 {
     RECT rcCli;
@@ -204,8 +366,22 @@ bool WGLState::GetSurfaceInformation(HDC surface, GlesImplementation::SurfaceInf
     // then you might have:
     res.width = static_cast<uint32_t>(rcCli.right - rcCli.left);
     res.height = static_cast<uint32_t>(rcCli.bottom - rcCli.top);
-    const int32_t configId = GetPixelFormat(surface);
+    int32_t configId = GetPixelFormat(surface);
+    if (!configId) {
+        configId = GetPixelFormat(plat_.display);
+        if (configId) {
+            PIXELFORMATDESCRIPTOR pfd = { 0 };
+            DescribePixelFormat(plat_.display, configId, sizeof(pfd), &pfd);
+            SetPixelFormat(surface, configId, &pfd);
+        }
+    }
     return GetInformation(surface, configId, res);
+}
+
+void WGLState::SwapBuffers(const SwapchainGLES& swapChain)
+{
+    auto& plat = swapChain.GetPlatformData();
+    ::SwapBuffers(reinterpret_cast<HDC>(plat.surface));
 }
 
 bool WGLState::HasExtension(const string_view extension) const
@@ -227,10 +403,12 @@ int WGLState::ChoosePixelFormat(HDC dc, const vector<int>& attributes)
     wglChoosePixelFormatARB(dc, attributes.data(), nullptr, 64, pixelFormats, &numFormats);
     return pixelFormats[0];
 }
+
 bool WGLState::IsValid()
 {
     return plat_.context != nullptr;
 }
+
 void WGLState::CreateContext(DeviceCreateInfo const& createInfo)
 {
     glModule_ = LoadLibrary("opengl32.dll");
@@ -240,14 +418,27 @@ void WGLState::CreateContext(DeviceCreateInfo const& createInfo)
     }
     WGLFUNCS
 #undef declareWGL
+    auto backendConfig = static_cast<const BackendExtraGL*>(createInfo.backendConfiguration);
 
-    auto other = wglGetCurrentContext();
+    HGLRC sharedContext = nullptr;
+    if (backendConfig) {
+        plat_.mhWnd = backendConfig->window;
+        sharedContext = backendConfig->sharedContext;
+    }
+    if (!sharedContext) {
+        sharedContext = wglGetCurrentContext();
+    }
+
     DoDummy();
-    plat_.mhWnd = GetActiveWindow();
+
+    if (!plat_.mhWnd) {
+        plat_.mhWnd = GetActiveWindow();
+    }
     plat_.display = GetDC(plat_.mhWnd);
     if (wglGetExtensionsStringARB) {
         extensions_ = wglGetExtensionsStringARB(plat_.display);
     }
+
     PLUGIN_LOG_V("WGL_EXTENSIONS: %s", extensions_.c_str());
 
     ParseExtensions(extensions_, extensionList_);
@@ -280,7 +471,6 @@ void WGLState::CreateContext(DeviceCreateInfo const& createInfo)
     if (hasColorSpace_) {
         addAttribute(WGL_COLORSPACE_EXT, WGL_COLORSPACE_SRGB_EXT); // prefer srgb..
     }
-    auto backendConfig = static_cast<const BackendExtraGL*>(createInfo.backendConfiguration);
     if (backendConfig) {
         if (backendConfig->MSAASamples > 1) {
             addAttribute(WGL_SAMPLE_BUFFERS_ARB, 1);
@@ -295,50 +485,20 @@ void WGLState::CreateContext(DeviceCreateInfo const& createInfo)
     PIXELFORMATDESCRIPTOR pfd = { 0 };
     DescribePixelFormat(plat_.display, pixelFormat, sizeof(pfd), &pfd);
     SetPixelFormat(plat_.display, pixelFormat, &pfd);
-#if defined(CORE_CREATE_GLES_CONTEXT_WITH_WGL) && (CORE_CREATE_GLES_CONTEXT_WITH_WGL == 1)
-    int attribs[] = {
-        WGL_CONTEXT_MAJOR_VERSION_ARB,
-        3,
-        WGL_CONTEXT_MINOR_VERSION_ARB,
-        2,
-#if RENDER_GL_DEBUG
-        WGL_CONTEXT_FLAGS_ARB,
-        WGL_CONTEXT_DEBUG_BIT_ARB,
-#endif
-        WGL_CONTEXT_PROFILE_MASK_ARB,
-        WGL_CONTEXT_ES2_PROFILE_BIT_EXT,
-        0
-    };
-#else
-    constexpr int attribs[] = {
-        WGL_CONTEXT_MAJOR_VERSION_ARB,
-        4,
-        WGL_CONTEXT_MINOR_VERSION_ARB,
-        5,
-#if RENDER_GL_DEBUG
-        WGL_CONTEXT_FLAGS_ARB,
-        WGL_CONTEXT_DEBUG_BIT_ARB,
-#endif
-        WGL_CONTEXT_PROFILE_MASK_ARB,
-        WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-        0
-    };
-#endif
-    plat_.context = wglCreateContextAttribsARB(plat_.display, other, attribs);
-    dummyContext_.display = plat_.display;
-    dummyContext_.context = plat_.context;
+
+    plat_.context = wglCreateContextAttribsARB(plat_.display, sharedContext, WGL_ATTRIBS);
 
     SaveContext();
     SetContext(nullptr); // activate the context with the dummy PBuffer.
-} // namespace WGLHelpers
+}
 
 void WGLState::DestroyContext()
 {
     wglMakeCurrent(nullptr, nullptr);
-    if (plat_.context != nullptr) {
+    if (plat_.context) {
         wglDeleteContext(plat_.context);
     }
-    if ((plat_.mhWnd != nullptr) && (plat_.display != nullptr)) {
+    if (plat_.mhWnd && plat_.display) {
         ReleaseDC(plat_.mhWnd, plat_.display);
     }
     FreeLibrary(glModule_);
@@ -357,6 +517,13 @@ void WGLState::GlInitialize()
 
 #include "gles/gl_functions.h"
 #undef declare
+
+    plat_.deviceName = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    plat_.driverVersion = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    ClearToValue(&plat_.deviceProperties, sizeof(plat_.deviceProperties), 0x00, sizeof(plat_.deviceProperties));
+    FillProperties(plat_.deviceProperties);
+
+    SetSwapInterval(1); // default to vsync enabled.
 
     glEnable(GL_FRAMEBUFFER_SRGB);
 }
@@ -381,17 +548,27 @@ void WGLState::SaveContext()
     oldContext_.display = wglGetCurrentDC();
 }
 
-void WGLState::SetContext(SwapchainGLES* swapChain)
+void WGLState::SetContext(const SwapchainGLES* swapChain)
 {
     if (swapChain == nullptr) {
-        wglMakeCurrent(dummyContext_.display, dummyContext_.context);
+        wglMakeCurrent(plat_.display, plat_.context);
     } else {
-        ContextState newContext;
         const auto& plat = swapChain->GetPlatformData();
-        newContext.display = plat_.display;
-        newContext.context = plat_.context;
-
-        wglMakeCurrent(newContext.display, newContext.context);
+        if (plat.surface == 0) {
+            const uint64_t swapLoc = reinterpret_cast<uint64_t>(swapChain);
+#if (RENDER_VALIDATION_ENABLED == 1)
+            PLUGIN_LOG_ONCE_E(
+                "gl_invalid_surface" + to_string(swapLoc), "Invalid swapchain surface for MakeCurrent using default");
+#endif
+            wglMakeCurrent(plat_.display, plat_.context);
+        } else {
+            auto display = reinterpret_cast<HDC>(plat.surface);
+            auto context = plat_.context;
+            if (plat_.context == 0) {
+                PLUGIN_LOG_E("Invalid context for MakeCurrent");
+            }
+            wglMakeCurrent(display, context);
+        }
 
         if (vSync_ != plat.vsync) {
             vSync_ = plat.vsync;

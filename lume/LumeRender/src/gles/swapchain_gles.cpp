@@ -115,7 +115,7 @@ Format RgbToFormat(uint32_t r, uint32_t g, uint32_t b, uint32_t a, bool srgb)
             return format[i].format;
         }
     }
-    PLUGIN_ASSERT_MSG(false, "Unsupported swapchain color channels!");
+    PLUGIN_LOG_E("Unsupported swapchain color channels");
     return BASE_FORMAT_MAX_ENUM;
 }
 
@@ -140,29 +140,35 @@ GLenum FormatToGlFormat(Format colorFormat)
             }
         }
     }
-    PLUGIN_ASSERT_MSG(false, "Unsupported swapchain format!");
+    PLUGIN_LOG_E("Unsupported swapchain format");
     return GL_NONE;
 }
 #endif
-GlesImplementation::SurfaceInfo ExtractInfo(DeviceGLES& device, const SwapchainCreateInfo& swapchainCreateInfo) noexcept
+GlesImplementation::SurfaceInfo ExtractInfo(DeviceGLES& device, const uint64_t surfaceHandle) noexcept
 {
     GlesImplementation::SurfaceInfo info;
     const auto& EGLState = device.GetEglState();
 #if RENDER_HAS_GLES_BACKEND
     if (device.GetBackendType() == DeviceBackendType::OPENGLES) {
         const auto& devicePlatformData = (const DevicePlatformDataGLES&)device.GetPlatformData();
-        EGLSurface surface = (EGLSurface)swapchainCreateInfo.surfaceHandle;
+        EGLSurface surface = (EGLSurface)surfaceHandle;
         if (!EGLState.GetSurfaceInformation(devicePlatformData, surface, info)) {
-            PLUGIN_ASSERT_MSG(false, "Could not query surface information");
+            PLUGIN_LOG_E("Could not query surface information");
+        }
+        if (!surface) {
+            PLUGIN_LOG_E("Surface is null");
         }
     }
 #endif
 #if RENDER_HAS_GL_BACKEND
     if (device.GetBackendType() == DeviceBackendType::OPENGL) {
 #if _WIN32
-        HDC surface = (HDC)swapchainCreateInfo.surfaceHandle;
+        HDC surface = (HDC)surfaceHandle;
         if (!EGLState.GetSurfaceInformation(surface, info)) {
-            PLUGIN_ASSERT_MSG(false, "Could not query surface information");
+            PLUGIN_LOG_E("Could not query surface information");
+        }
+        if (!surface) {
+            PLUGIN_LOG_E("Surface is null");
         }
 #else
 #error Core::DeviceBackendType::OPENGL not implemented for this platform yet.
@@ -254,8 +260,7 @@ void GenerateFBO(DeviceGLES& device, SwapchainPlatformDataGL& plat, bool msaa)
         GLenum status;
         status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (status != GL_FRAMEBUFFER_COMPLETE) {
-            // failed!
-            PLUGIN_ASSERT_MSG(false, "Framebuffer incomplete! %x", status);
+            PLUGIN_LOG_E("Framebuffer incomplete (status: %x)", status);
         }
     }
     device.BindFrameBuffer(0);
@@ -264,21 +269,28 @@ void GenerateFBO(DeviceGLES& device, SwapchainPlatformDataGL& plat, bool msaa)
 } // namespace
 
 SwapchainGLES::SwapchainGLES(Device& device, const SwapchainCreateInfo& swapchainCreateInfo)
-    : device_((DeviceGLES&)device)
+    : device_((DeviceGLES&)device), flags_(swapchainCreateInfo.swapchainFlags)
 {
-    flags_ = swapchainCreateInfo.swapchainFlags;
+    // check for surface creation automatically
+    if ((swapchainCreateInfo.surfaceHandle == 0) && swapchainCreateInfo.window.window) {
+        plat_.surface =
+            device_.GetEglState().CreateSurface(swapchainCreateInfo.window.window, swapchainCreateInfo.window.instance);
+        ownsSurface_ = true;
+    } else {
+        plat_.surface = (uintptr_t)swapchainCreateInfo.surfaceHandle;
+    }
+
     // Fetch information about the backbuffer.
     // Create pseudo handles (or actual handles, depending if direct backbuffer rendering is enabled or not)
-    GlesImplementation::SurfaceInfo info = ExtractInfo(device_, swapchainCreateInfo);
+    GlesImplementation::SurfaceInfo info = ExtractInfo(device_, plat_.surface);
     const Format colorFormat = RgbToFormat(info.red_size, info.green_size, info.blue_size, info.alpha_size, info.srgb);
     PLUGIN_LOG_I("Input surface for swapchain is [%x] %dx%d R:%d G:%d B:%d A:%d D:%d S:%d samples:%d srgb:%s",
         info.configId, info.width, info.height, info.red_size, info.green_size, info.blue_size, info.alpha_size,
         info.depth_size, info.stencil_size, info.samples, info.srgb ? "true" : "false");
     info.width = Math::max(info.width, 1u);
     info.height = Math::max(info.height, 1u);
-    plat_.surface = (uintptr_t)swapchainCreateInfo.surfaceHandle;
     plat_.swapchainImageIndex = 0;
-    plat_.vsync = swapchainCreateInfo.vsync;
+    plat_.vsync = (flags_ & SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT);
     plat_.swapchainImages.width = info.width;
     plat_.swapchainImages.height = info.height;
 #if RENDER_GL_FLIP_Y_SWAPCHAIN
@@ -317,6 +329,9 @@ SwapchainGLES::~SwapchainGLES()
     }
     device_.Deactivate();
 #endif
+    if (ownsSurface_) {
+        device_.GetEglState().DestroySurface(plat_.surface);
+    }
 }
 
 const SwapchainPlatformDataGL& SwapchainGLES::GetPlatformData() const
@@ -339,9 +354,15 @@ uint32_t SwapchainGLES::GetFlags() const
     return flags_;
 }
 
-uint32_t SwapchainGLES::GetNextImage()
+uint32_t SwapchainGLES::GetNextImage() const
 {
-    plat_.swapchainImageIndex = (plat_.swapchainImageIndex + 1) % plat_.swapchainImages.images.size();
+    PLUGIN_ASSERT(plat_.swapchainImages.images.size() <= 1U);
+    // NOTE: does not flip images
     return plat_.swapchainImageIndex;
+}
+
+uint64_t SwapchainGLES::GetSurfaceHandle() const
+{
+    return (uint64_t)(plat_.surface);
 }
 RENDER_END_NAMESPACE()

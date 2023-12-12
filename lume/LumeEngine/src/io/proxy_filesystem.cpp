@@ -18,6 +18,15 @@
 #include <algorithm>
 #include <cstring>
 
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
+#include <core/io/intf_file.h>
 #include <core/namespace.h>
 
 #include "file_manager.h"
@@ -36,42 +45,39 @@ ProxyFilesystem::ProxyFilesystem(FileManager& fileManager, const string_view des
     AppendSearchPath(destination);
 }
 
-void ProxyFilesystem::AppendSearchPath(const string_view destination)
+void ProxyFilesystem::AppendSearchPath(string_view path)
 {
-    auto dst = destination;
-    if (dst.back() == '/') {
-        dst = dst.substr(0, dst.size() - 1);
+    if (path.back() == '/') {
+        path.remove_suffix(1);
     }
-    destinations_.emplace_back(dst);
+    destinations_.emplace_back(path);
 }
 
-void ProxyFilesystem::PrependSearchPath(const string_view uri)
+void ProxyFilesystem::PrependSearchPath(string_view path)
 {
-    auto dst = uri;
-    if (dst.back() == '/') {
-        dst = dst.substr(0, dst.size() - 1);
+    if (path.back() == '/') {
+        path.remove_suffix(1);
     }
-    destinations_.emplace(destinations_.begin(), dst);
+    destinations_.emplace(destinations_.begin(), path);
 }
 
-void ProxyFilesystem::RemoveSearchPath(const string_view destination)
+void ProxyFilesystem::RemoveSearchPath(string_view destination)
 {
-    auto dst = destination;
-    if (dst.back() == '/') {
-        dst = dst.substr(0, dst.size() - 1);
+    if (destination.back() == '/') {
+        destination.remove_suffix(1);
     }
-    const auto it = std::find(destinations_.begin(), destinations_.end(), dst);
-    if (it != destinations_.end()) {
+    const auto it = std::find(destinations_.cbegin(), destinations_.cend(), destination);
+    if (it != destinations_.cend()) {
         destinations_.erase(it);
     }
 }
 
-IDirectory::Entry ProxyFilesystem::GetEntry(const string_view pathIn)
+IDirectory::Entry ProxyFilesystem::GetEntry(const string_view path)
 {
-    auto path = NormalizePath(pathIn);
-    if (!path.empty()) {
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
-            auto file = fileManager_.GetEntry(destination + path);
+            auto file = fileManager_.GetEntry(destination + normalizedPath);
             if (file.type != IDirectory::Entry::UNKNOWN) {
                 return file;
             }
@@ -79,12 +85,12 @@ IDirectory::Entry ProxyFilesystem::GetEntry(const string_view pathIn)
     }
     return {};
 }
-IFile::Ptr ProxyFilesystem::OpenFile(const string_view pathIn)
+IFile::Ptr ProxyFilesystem::OpenFile(const string_view path)
 {
-    auto path = NormalizePath(pathIn);
-    if (!path.empty()) {
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
-            auto file = fileManager_.OpenFile(destination + path);
+            auto file = fileManager_.OpenFile(destination + normalizedPath);
             if (file) {
                 return file;
             }
@@ -94,12 +100,12 @@ IFile::Ptr ProxyFilesystem::OpenFile(const string_view pathIn)
     return IFile::Ptr();
 }
 
-IFile::Ptr ProxyFilesystem::CreateFile(const string_view pathIn)
+IFile::Ptr ProxyFilesystem::CreateFile(const string_view path)
 {
-    auto path = NormalizePath(pathIn);
-    if (!path.empty()) {
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
-            auto file = fileManager_.CreateFile(destination + path);
+            auto file = fileManager_.CreateFile(destination + normalizedPath);
             if (file) {
                 return file;
             }
@@ -109,12 +115,12 @@ IFile::Ptr ProxyFilesystem::CreateFile(const string_view pathIn)
     return IFile::Ptr();
 }
 
-bool ProxyFilesystem::DeleteFile(const string_view pathIn)
+bool ProxyFilesystem::DeleteFile(const string_view path)
 {
-    auto path = NormalizePath(pathIn);
-    if (!path.empty()) {
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
-            if (fileManager_.DeleteFile(destination + path)) {
+            if (fileManager_.DeleteFile(destination + normalizedPath)) {
                 return true;
             }
         }
@@ -123,16 +129,16 @@ bool ProxyFilesystem::DeleteFile(const string_view pathIn)
     return false;
 }
 
-IDirectory::Ptr ProxyFilesystem::OpenDirectory(const string_view pathIn)
+IDirectory::Ptr ProxyFilesystem::OpenDirectory(const string_view path)
 {
     IDirectory::Ptr proxyDirectory;
     vector<IDirectory::Ptr> directories;
-    auto path = NormalizePath(pathIn);
-    if (!path.empty()) {
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
-            auto directory = fileManager_.OpenDirectory(destination + path);
+            auto directory = fileManager_.OpenDirectory(destination + normalizedPath);
             if (directory) {
-                directories.emplace_back(move(directory));
+                directories.push_back(move(directory));
             }
         }
     }
@@ -144,12 +150,12 @@ IDirectory::Ptr ProxyFilesystem::OpenDirectory(const string_view pathIn)
     return proxyDirectory;
 }
 
-IDirectory::Ptr ProxyFilesystem::CreateDirectory(const string_view pathIn)
+IDirectory::Ptr ProxyFilesystem::CreateDirectory(const string_view path)
 {
-    auto path = NormalizePath(pathIn);
-    if (!path.empty()) {
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
-            auto directory = fileManager_.CreateDirectory(destination + path);
+            auto directory = fileManager_.CreateDirectory(destination + normalizedPath);
             if (directory) {
                 return directory;
             }
@@ -159,12 +165,12 @@ IDirectory::Ptr ProxyFilesystem::CreateDirectory(const string_view pathIn)
     return IDirectory::Ptr();
 }
 
-bool ProxyFilesystem::DeleteDirectory(const string_view pathIn)
+bool ProxyFilesystem::DeleteDirectory(const string_view path)
 {
-    auto path = NormalizePath(pathIn);
-    if (!path.empty()) {
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
-            if (fileManager_.DeleteDirectory(destination + path)) {
+            if (fileManager_.DeleteDirectory(destination + normalizedPath)) {
                 return true;
             }
         }
@@ -173,13 +179,13 @@ bool ProxyFilesystem::DeleteDirectory(const string_view pathIn)
     return false;
 }
 
-bool ProxyFilesystem::Rename(const string_view pathFrom, const string_view pathTo)
+bool ProxyFilesystem::Rename(const string_view fromPath, const string_view toPath)
 {
-    auto fromPath = NormalizePath(pathFrom);
-    auto toPath = NormalizePath(pathTo);
-    if (!pathFrom.empty() && !pathTo.empty()) {
+    if (!fromPath.empty() && !toPath.empty()) {
+        auto pathFrom = NormalizePath(fromPath);
+        auto pathTo = NormalizePath(toPath);
         for (auto&& destination : destinations_) {
-            if (fileManager_.Rename(destination + fromPath, destination + toPath)) {
+            if (fileManager_.Rename(destination + pathFrom, destination + pathTo)) {
                 return true;
             }
         }
@@ -197,7 +203,7 @@ vector<string> ProxyFilesystem::GetUriPaths(const string_view uri) const
         for (auto&& destination : destinations_) {
             auto directory = fileManager_.OpenDirectory(destination + path);
             if (directory) {
-                paths.emplace_back(destination + path);
+                paths.push_back(destination + path);
             }
         }
     }

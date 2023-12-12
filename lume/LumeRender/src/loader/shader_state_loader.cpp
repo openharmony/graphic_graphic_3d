@@ -38,10 +38,7 @@ ShaderStateLoaderUtil::ShaderStateResult LoadImpl(const string_view jsonString)
         ShaderStateLoaderUtil::ShaderStateResult ssr = ShaderStateLoaderUtil::LoadStates(json);
         return ssr;
     } else {
-        ShaderStateLoaderUtil::ShaderStateResult ssr;
-        ssr.res.success = true;
-        ssr.res.error = "Invalid json file.";
-        return ssr;
+        return ShaderStateLoaderUtil::ShaderStateResult { ShaderStateLoader::LoadResult { "Invalid json file." }, {} };
     }
 }
 } // namespace

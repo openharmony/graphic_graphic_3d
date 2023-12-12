@@ -36,7 +36,7 @@ class IRenderNodeParserUtil;
 /** @ingroup group_render_irendernodecontextmanager */
 /**
  * Provides access to render node managers and resources.
- * In addition provides access to IRenderNodeContextInterfaces.
+ * In addition provides access to IRenderNodeInterface.
  */
 class IRenderNodeContextManager : public IRenderNodeInterface {
 public:

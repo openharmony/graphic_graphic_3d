@@ -43,9 +43,13 @@
 #define POST_PROCESS_INDEX_BLOOM 9
 #define POST_PROCESS_INDEX_FXAA 10
 #define POST_PROCESS_INDEX_TAA 11
+#define POST_PROCESS_INDEX_DOF 12
+#define POST_PROCESS_INDEX_MOTION_BLUR 13
 
-// should be aligned to 256 (i.e. 14 x vec4 + 2 x vec4)
+// should be aligned to 512 (i.e. 14 x vec4 + 2 x vec4 + 16 x vec4)
 #define POST_PROCESS_GLOBAL_VEC4_FACTOR_COUNT 14
+#define POST_PROCESS_GLOBAL_USER_VEC4_FACTOR_COUNT 16
+// aligned to 256
 #define POST_PROCESS_LOCAL_VEC4_FACTOR_COUNT 16
 
 #define CORE_POST_PROCESS_TONEMAP_ACES 0
@@ -56,14 +60,16 @@
 
 #else
 
+// note global post process UBO struct alignment for 512
+constexpr uint32_t POST_PROCESS_GLOBAL_VEC4_FACTOR_COUNT { 14u };
+constexpr uint32_t POST_PROCESS_GLOBAL_USER_VEC4_FACTOR_COUNT { 16u };
 // note UBO struct alignment for 256
-constexpr uint32_t POST_PROCESS_GLOBAL_VEC4_FACTOR_COUNT { 14 };
-constexpr uint32_t POST_PROCESS_LOCAL_VEC4_FACTOR_COUNT { 16 };
+constexpr uint32_t POST_PROCESS_LOCAL_VEC4_FACTOR_COUNT { 16u };
 
 #endif
 
 // the same data throughout the pipeline
-// should be aligned to 256 (i.e. 16 x vec4)
+// should be aligned to 512 (i.e. 32 x vec4)
 // needs to match api/core/render/RenderDataStoreRenderPods.h
 struct GlobalPostProcessStruct {
     // enable flags
@@ -73,6 +79,9 @@ struct GlobalPostProcessStruct {
 
     // all factors from defines
     vec4 factors[POST_PROCESS_GLOBAL_VEC4_FACTOR_COUNT];
+
+    // all user factors that are automatically mapped
+    vec4 userFactors[POST_PROCESS_GLOBAL_USER_VEC4_FACTOR_COUNT];
 };
 
 // local data for a specific post process

@@ -50,7 +50,8 @@ public:
                 (descType == DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC));
     }
 
-    void ResetAndReserve(const DescriptorCounts& aDescriptorCounts) override;
+    void ResetAndReserve(const DescriptorCounts& descriptorCounts) override;
+    void ResetAndReserve(const BASE_NS::array_view<DescriptorCounts> descriptorCounts) override;
 
     virtual RenderHandle CreateDescriptorSet(
         const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) override = 0;
@@ -88,7 +89,7 @@ public:
     bool HasPlatformBufferBindings(const RenderHandle handle) const;
 
     // update descriptor sets for cpu data (adds correct gpu queue as well)
-    void UpdateCpuDescriptorSet(const RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources,
+    bool UpdateCpuDescriptorSet(const RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources,
         const GpuQueue& gpuQueue);
     // call from backend before actual graphics api updateDescriptorset()
     // advances the gpu handle to the next available descriptor set (ring buffer)
@@ -100,6 +101,7 @@ public:
         bool isDirty { false };
         bool hasDynamicBarrierResources { false };
         bool hasPlatformConversionBindings { false }; // e.g. hwbuffers with ycbcr / OES
+        bool hasImmutableSamplers { false };
 
         BASE_NS::vector<DescriptorSetLayoutBindingResource> bindings;
 
@@ -134,7 +136,7 @@ protected:
     // indicates if there are some sets updated on CPU which have platfrom conversion bindings
     bool hasPlatformConversionBindings_ { false };
 
-    void UpdateCpuDescriptorSetImpl(const uint32_t index, const DescriptorSetLayoutBindingResources& bindingResources,
+    bool UpdateCpuDescriptorSetImpl(const uint32_t index, const DescriptorSetLayoutBindingResources& bindingResources,
         const GpuQueue& gpuQueue, BASE_NS::vector<CpuDescriptorSet>& cpuDescriptorSets);
     DescriptorSetLayoutBindingResources GetCpuDescriptorSetDataImpl(
         const uint32_t index, const BASE_NS::vector<CpuDescriptorSet>& cpuDescriptorSet) const;

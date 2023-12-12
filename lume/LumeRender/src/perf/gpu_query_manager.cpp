@@ -32,7 +32,7 @@ EngineResourceHandle GpuQueryManager::Create(const string_view name, unique_ptr<
 {
     PLUGIN_ASSERT(nameToHandle_.count(name) == 0 && "not an unique gpu query name");
 
-    resources_.emplace_back(move(gpuQuery));
+    resources_.push_back(move(gpuQuery));
     const uint32_t index = (uint32_t)resources_.size() - 1;
 
     const EngineResourceHandle handle =

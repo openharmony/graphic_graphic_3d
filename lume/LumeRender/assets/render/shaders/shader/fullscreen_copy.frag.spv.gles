@@ -1,0 +1,14 @@
+#version 320 es
+precision highp float;
+precision highp int;
+
+uniform highp sampler2D s0_b1_s0_b0;
+
+layout(location = 0) out vec4 outColor;
+layout(location = 0) in vec2 inUv;
+
+void main()
+{
+    outColor = textureLod(s0_b1_s0_b0, inUv, 0.0);
+}
+

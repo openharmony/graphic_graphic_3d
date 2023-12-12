@@ -81,11 +81,11 @@ protected:
     struct PluginData {
         ILibrary::Ptr library;
         PluginToken token;
-        uint32_t refcnt;
+        int32_t refcnt;
     };
 
-    void RegisterPlugin(ILibrary::Ptr, const IPlugin& pd);
-    void UnregisterPlugin(const IPlugin& pd, PluginToken token);
+    void RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, bool asDependency);
+    static void UnregisterPlugin(const IPlugin& plugin, PluginToken token);
 
     BASE_NS::vector<PluginData> pluginDatas_;
     BASE_NS::vector<const IPlugin*> plugins_;

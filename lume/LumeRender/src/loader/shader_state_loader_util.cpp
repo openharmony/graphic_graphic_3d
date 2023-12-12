@@ -135,6 +135,15 @@ CORE_JSON_SERIALIZE_ENUM(ColorComponentFlagBits,
         { CORE_COLOR_COMPONENT_A_BIT, "a_bit" },
     })
 
+CORE_JSON_SERIALIZE_ENUM(GraphicsStateFlagBits,
+    {
+        { CORE_GRAPHICS_STATE_FLAG_BITS_MAX_ENUM, nullptr },
+        { CORE_GRAPHICS_STATE_INPUT_ASSEMBLY_BIT, "input_assembly_bit" },
+        { CORE_GRAPHICS_STATE_RASTERIZATION_STATE_BIT, "rasterization_state_bit" },
+        { CORE_GRAPHICS_STATE_DEPTH_STENCIL_STATE_BIT, "depth_stencil_state_bit" },
+        { CORE_GRAPHICS_STATE_COLOR_BLEND_STATE_BIT, "color_blend_state_bit" },
+    })
+
 CORE_JSON_SERIALIZE_ENUM(LogicOp,
     {
         { CORE_LOGIC_OP_MAX_ENUM, nullptr },
@@ -260,6 +269,11 @@ void FromJson(const json::value& jsonData, JsonContext<GraphicsState::ColorBlend
 }
 
 namespace ShaderStateLoaderUtil {
+void ParseStateFlags(const CORE_NS::json::value& jsonData, GraphicsStateFlags& stateFlags, ShaderStateResult& ssr)
+{
+    SafeGetJsonBitfield<GraphicsStateFlagBits>(jsonData, "stateFlags", ssr.res.error, stateFlags);
+}
+
 void ParseSingleState(const json::value& jsonData, ShaderStateResult& ssr)
 {
     GraphicsState graphicsState;
@@ -309,7 +323,7 @@ void ParseSingleState(const json::value& jsonData, ShaderStateResult& ssr)
 
     ssr.res.success = ssr.res.error.empty();
     if (ssr.res.success) {
-        ssr.states.states.emplace_back(move(graphicsState));
+        ssr.states.states.push_back(move(graphicsState));
     }
 }
 
@@ -331,10 +345,13 @@ ShaderStateResult LoadStates(const json::value& jsonData)
                     if (ssr.res.error.empty()) {
                         SafeGetJsonValue(state, "baseShaderState", ssr.res.error, variant.baseShaderState);
                         SafeGetJsonValue(state, "baseVariantName", ssr.res.error, variant.baseVariantName);
+                        SafeGetJsonValue(state, "slot", ssr.res.error, variant.renderSlot);
                         SafeGetJsonValue(state, "renderSlot", ssr.res.error, variant.renderSlot);
                         SafeGetJsonValue(
                             state, "renderSlotDefaultShaderState", ssr.res.error, variant.renderSlotDefaultState);
-                        ssr.states.variantData.emplace_back(move(variant));
+                        SafeGetJsonBitfield<GraphicsStateFlagBits>(
+                            state, "stateFlags", ssr.res.error, variant.stateFlags);
+                        ssr.states.variantData.push_back(move(variant));
                     }
                 }
             }

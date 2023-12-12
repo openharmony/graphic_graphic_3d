@@ -13,16 +13,16 @@
  * limitations under the License.
  */
 
-#if !defined(MATERIAL_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define MATERIAL_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_MATERIAL_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_MATERIAL_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
 #include <base/containers/vector.h>
+#include <base/math/vector.h>
 #include <core/ecs/component_struct_macros.h>
+#include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
-#include <render/resource_handle.h>
 
 CORE3D_BEGIN_NAMESPACE()
 /** \addtogroup group_material_materialdesc
@@ -31,6 +31,7 @@ CORE3D_BEGIN_NAMESPACE()
 #endif
 
 /** Material properties.
+ * With full customization one can use custom resources property
  */
 BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
 #if !defined(IMPLEMENT_MANAGER)
@@ -75,6 +76,11 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
     enum ExtraRenderingFlagBits : uint32_t {
         /** Is an additional flag which can be used to discard some materials from rendering from render node graph */
         DISCARD_BIT = (1 << 0),
+        /** Is an additional flag which disables default render system push to render data stores and rendering */
+        DISABLE_BIT = (1 << 1),
+        /** Allow rendering mutiple instances of the same mesh using GPU instancing. materialShader must support
+           instancing. */
+        ALLOW_GPU_INSTANCING_BIT = (1 << 2),
     };
     /** Container for extra material rendering flag bits */
     using ExtraRenderingFlags = uint32_t;
@@ -162,7 +168,9 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
 
     /** Default material component shader */
     struct Shader {
-        /** Shader to be used. (If invalid, a default is chosen by the default material renderer) */
+        /** Shader to be used. (If invalid, a default is chosen by the default material renderer)
+         * NOTE: the material medata and custom properties are updated when the shader is updated.
+         */
         CORE_NS::EntityReference shader;
         /** Shader graphics state to be used. (If invalid, a default is chosen by the default material renderer) */
         CORE_NS::EntityReference graphicsState;
@@ -171,8 +179,9 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
     /** Material type which can be one of the following Type::METALLIC_ROUGHNESS, Type::SPECULAR_GLOSSINESS */
     DEFINE_PROPERTY(Type, type, "Material Type", 0, VALUE(Type::METALLIC_ROUGHNESS))
 
-    /** Alpha cut off value, set the cutting value for alpha (0.0 - 1.0). Below 1.0 starts to affect. */
-    DEFINE_PROPERTY(float, alphaCutoff, "", 0, VALUE(1.0f))
+    /** Alpha cut off value, set the cutting value for alpha (0.0 - 1.0). Below 1.0 starts to affect.
+     */
+    DEFINE_PROPERTY(float, alphaCutoff, "Alpha Cutoff", 0, VALUE(1.0f))
 
     /** Material lighting flags that define the lighting related settings for this material */
     DEFINE_BITFIELD_PROPERTY(LightingFlags, materialLightingFlags, "Material Lighting Flags",
@@ -189,15 +198,17 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      * Therefore, do not set slots and their graphics states if no special handling is needed.
      * Use OPAQUE_FW core3d_dm_fw.shader as an example reference.
      * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
+     * NOTE: when material shader is updated the possible material metadata and custom properties are updated
+     * NOTE: one needs to reload the shader file(s) with shader manager to get dynamic updated custom property data
      */
-    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0,)
+    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0, )
 
     /** Depth shader. Prefer using automatic selection (or editor selection) if no custom shaders.
      * Needs to match default material layouts and specializations (api/3d/shaders/common).
      * If no default slot given to shader default material shader slots are used automatically.
      * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
      */
-    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0,)
+    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0, )
 
     /** Extra material rendering flags define special rendering hints */
     DEFINE_BITFIELD_PROPERTY(ExtraRenderingFlags, extraRenderingFlags, "ExtraRenderingFlags",
@@ -208,6 +219,8 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      *
      * BASE_COLOR: RGBA, base color, if an image is specified, this value is multiplied with the texel values.
      * NOTE: the pre-multiplication is done always, i.e. use only for base color with custom materials
+     * NOTE: the built-in default material shaders write out alpha values from 0.0 - 1.0
+     *       opaque flag is enabled to shader is graphics state's blending mode is not active -> alpha 1.0
      *
      * NORMAL: R, normal scale, scalar multiplier applied to each normal vector of the texture. (Ignored if image is not
      * specified, this value is linear).
@@ -244,7 +257,7 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
         ARRAY_VALUE(                                              //
             TextureInfo { {}, {}, { 1.f, 1.f, 1.f, 1.f }, {} },   // base color opaque white
             TextureInfo { {}, {}, { 1.f, 0.f, 0.f, 0.f }, {} },   // normal scale 1
-            TextureInfo { {}, {}, { 0.f, 1.f, 1.f, 0.04f }, {} }, // material (empty, metallic, rough, reflectance)
+            TextureInfo { {}, {}, { 0.f, 1.f, 1.f, 0.04f }, {} }, // material (empty, roughness, metallic, reflectance)
             TextureInfo { {}, {}, { 0.f, 0.f, 0.f, 1.f }, {} },   // emissive 0
             TextureInfo { {}, {}, { 1.f, 0.f, 0.f, 0.f }, {} },   // ambient occlusion 1
             TextureInfo { {}, {}, { 0.f, 0.f, 0.f, 0.f }, {} },   // clearcoat intensity 0
@@ -256,15 +269,22 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
             ))
 
     /** Texture coordinates from set 0 or 1. */
-    DEFINE_PROPERTY(uint32_t, useTexcoordSetBit, "", 0, VALUE(0u)) // if uses set 1 (1 << enum TextureIndex)
+    DEFINE_PROPERTY(uint32_t, useTexcoordSetBit, "Active Texture Coordinate", 0,
+        VALUE(0u)) // if uses set 1 (1 << enum TextureIndex)
 
     /** Custom forced render slot id. One can force rendering with e.g. opaque or translucent render slots */
     DEFINE_PROPERTY(uint32_t, customRenderSlotId, "Custom Render Slot ID", ~0, VALUE(~0u))
 
+    /** Custom material extension resources. Deprecates and prevents MaterialExtensionComponent usage.
+     * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
+     */
+    DEFINE_PROPERTY(
+        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
+
     /** Per material additional user property data which is passed to shader UBO.
      * Max size is 256 bytes.
      */
-    DEFINE_PROPERTY(CORE_NS::IPropertyHandle*, customProperties, "Custom Properties", 0,)
+    DEFINE_PROPERTY(CORE_NS::IPropertyHandle*, customProperties, "Custom Properties", 0, VALUE(nullptr))
 
 END_COMPONENT(IMaterialComponentManager, MaterialComponent, "56430c14-cb12-4320-80d3-2bef4f86a041")
 #if !defined(IMPLEMENT_MANAGER)

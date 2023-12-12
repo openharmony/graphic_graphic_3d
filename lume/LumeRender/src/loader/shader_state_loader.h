@@ -35,6 +35,7 @@ struct ShaderStateLoaderVariantData {
     BASE_NS::string baseShaderState;
     BASE_NS::string baseVariantName;
 
+    GraphicsStateFlags stateFlags { 0U };
     bool renderSlotDefaultState { false };
 };
 

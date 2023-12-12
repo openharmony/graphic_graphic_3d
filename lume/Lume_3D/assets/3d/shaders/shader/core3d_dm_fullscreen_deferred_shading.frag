@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,25 +12,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
 // includes
 
+#include "3d/shaders/common/3d_dm_indirect_lighting_common.h"
+#include "3d/shaders/common/3d_dm_structures_common.h"
+#include "3d/shaders/common/3d_dm_target_packing_common.h"
 #include "render/shaders/common/render_color_conversion_common.h"
 #include "render/shaders/common/render_post_process_common.h"
 #include "render/shaders/common/render_tonemap_common.h"
-
-#include "3d/shaders/common/3d_dm_structures_common.h"
-#include "3d/shaders/common/3d_dm_indirect_lighting_common.h"
-#include "3d/shaders/common/3d_dm_target_packing_common.h"
 
 // sets and specializations
 
 #define ENABLE_INPUT_ATTACHMENTS 1
 #include "3d/shaders/common/3d_dm_deferred_shading_frag_layout_common.h"
 #include "3d/shaders/common/3d_dm_lighting_common.h"
+#include "3d/shaders/common/3d_dm_inplace_fog_common.h"
 
 // in / out
 
@@ -62,7 +63,7 @@ FullGBufferData GetUnpackMaterialValues(const vec2 uv)
 #if (ENABLE_INPUT_ATTACHMENTS == 1)
     GetUnpackMaterialWithFlags(subpassLoad(uGBufferMaterial), fd.material, fd.materialType, fd.materialFlags);
 #else
-    GetUnpackMaterialWithFlags(texture(uGBufferMaterial, uv), fd.material, fd.materialType, fd.materialFlags);
+    GetUnpackMaterialWithFlags(textureLod(uGBufferMaterial, uv, 0), fd.material, fd.materialType, fd.materialFlags);
 #endif
     return fd;
 }
@@ -76,10 +77,10 @@ void GetSampledGBuffer(const vec2 uv, inout FullGBufferData fd)
     GetUnpackVelocityAndNormal(subpassLoad(uGBufferVelocityNormal).xyzw, vel, fd.normal);
     fd.normal = normalize(fd.normal);
 #else
-    GetUnpackBaseColorWithAo(texture(uGBufferBaseColor, uv), fd.baseColor.rgb, fd.ao);
+    GetUnpackBaseColorWithAo(textureLod(uGBufferBaseColor, uv, 0), fd.baseColor.rgb, fd.ao);
 
     vec2 vel;
-    GetUnpackVelocityAndNormal(texture(uGBufferVelocityNormal, uv), vel, fd.normal);
+    GetUnpackVelocityAndNormal(textureLod(uGBufferVelocityNormal, uv, 0), vel, fd.normal);
     fd.normal = normalize(fd.normal);
 #endif
 }
@@ -92,7 +93,7 @@ void GetSimpleSampledGBuffer(const vec2 uv, inout FullGBufferData fd)
     fd.normal = normalize(fd.normal);
 #else
     vec2 vel;
-    GetUnpackVelocityAndNormal(texture(uGBufferVelocityNormal, uv), vel, fd.normal);
+    GetUnpackVelocityAndNormal(textureLod(uGBufferVelocityNormal, uv, 0), vel, fd.normal);
     fd.normal = normalize(fd.normal);
 #endif
 }
@@ -102,15 +103,25 @@ float GetSampledDepthBuffer(const vec2 uv)
 #if (ENABLE_INPUT_ATTACHMENTS == 1)
     return GetUnpackDepthBuffer(subpassLoad(uGBufferDepthBuffer).x);
 #else
-    return GetUnpackDepthBuffer(texture(uGBufferDepthBuffer, uv).x);
+    return GetUnpackDepthBuffer(textureLod(uGBufferDepthBuffer, uv, 0).x);
 #endif
+}
+
+vec4 GetSampledBaseColor(const vec2 uv)
+{
+    vec4 color = vec4(0.0);
+#if (ENABLE_INPUT_ATTACHMENTS == 1)
+    GetUnpackBaseColorWithAo(subpassLoad(uGBufferBaseColor), color.rgb, color.a);
+#else
+    GetUnpackBaseColorWithAo(textureLod(uGBufferBaseColor, uv, 0), color.rgb, color.a);
+#endif
+    return color;
 }
 
 // end gbuffer
 
 vec3 GetWorldPos(const uint cameraIdx, const float depthSample, const vec2 uv)
 {
-    mat4 proj = uCameras[cameraIdx].proj;
     mat4 projInv = uCameras[cameraIdx].projInv;
 
     vec4 sceneProj = vec4(uv.xy * 2.0 - 1.0, depthSample, 1.0);
@@ -127,7 +138,7 @@ vec3 GetIrradianceSample(const vec3 worldNormal)
 {
     const vec3 worldNormalEnv = mat3(uEnvironmentData.envRotation) * worldNormal;
     return unpackIblIrradianceSH(worldNormalEnv, uEnvironmentData.shIndirectCoefficients) *
-        uEnvironmentData.indirectDiffuseColorFactor.rgb;
+           uEnvironmentData.indirectDiffuseColorFactor.rgb;
 }
 
 vec3 GetRadianceSample(const vec3 worldReflect, const float roughness)
@@ -135,7 +146,7 @@ vec3 GetRadianceSample(const vec3 worldReflect, const float roughness)
     const CORE_RELAXEDP float cubeLod = GetLodForRadianceSample(roughness);
     const vec3 worldReflectEnv = mat3(uEnvironmentData.envRotation) * worldReflect;
     return unpackIblRadiance(textureLod(uSampRadiance, worldReflectEnv, cubeLod)) *
-        uEnvironmentData.indirectSpecularColorFactor.rgb;
+           uEnvironmentData.indirectSpecularColorFactor.rgb;
 }
 
 vec3 GetTransmissionRadianceSample(const vec2 fragUv, const vec3 worldReflect, const float roughness)
@@ -154,7 +165,16 @@ vec3 GetTransmissionRadianceSample(const vec2 fragUv, const vec3 worldReflect, c
 ///////////////////////////////////////////////////////////////////////////////
 // "main" functions
 
-vec4 unlitShadowAlpha(float depthBufferSample, FullGBufferData fd)
+vec4 UnlitBasic()
+{
+    const vec4 color = GetSampledBaseColor(inUv);
+
+    // NOTE: fog missing
+
+    return vec4(color.rgb, 1.0);
+}
+
+vec4 UnlitShadowAlpha(float depthBufferSample, FullGBufferData fd)
 {
     GetSimpleSampledGBuffer(inUv, fd);
 
@@ -164,6 +184,7 @@ vec4 unlitShadowAlpha(float depthBufferSample, FullGBufferData fd)
 
     const uint directionalLightCount = uLightData.directionalLightCount;
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
+    const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
     CORE_RELAXEDP float fullShadowCoeff = 1.0;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
@@ -173,14 +194,16 @@ vec4 unlitShadowAlpha(float depthBufferSample, FullGBufferData fd)
         CORE_RELAXEDP float shadowCoeff = 1.0;
         const bool shadowReceiver = true;
         if (shadowReceiver) {
-            const uvec2 lightFlags = uLightData.lights[currLightIdx].flags.xy;
+            const uvec4 lightFlags = uLightData.lights[currLightIdx].flags;
             if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                 const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(worldPos.xyz, 1.0);
                 const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
-                    shadowCoeff = CalcVsmShadow(uSampColorShadow, shadowCoord, NoL, shadowFactors);
+                    shadowCoeff = CalcVsmShadow(
+                        uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                 } else {
-                    shadowCoeff = CalcPcfShadow(uSampDepthShadow, shadowCoord, NoL, shadowFactors);
+                    shadowCoeff = CalcPcfShadow(
+                        uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                 }
             }
         }
@@ -201,15 +224,17 @@ vec4 unlitShadowAlpha(float depthBufferSample, FullGBufferData fd)
             CORE_RELAXEDP float shadowCoeff = 1.0;
             const bool shadowReceiver = true;
             if (shadowReceiver) {
-                const uvec2 lightFlags = uLightData.lights[currLightIdx].flags.xy;
+                const uvec4 lightFlags = uLightData.lights[currLightIdx].flags;
                 if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                     const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(worldPos.xyz, 1.0);
                     const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
                     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) ==
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
-                        shadowCoeff = CalcVsmShadow(uSampColorShadow, shadowCoord, NoL, shadowFactors);
+                        shadowCoeff = CalcVsmShadow(
+                            uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                     } else {
-                        shadowCoeff = CalcPcfShadow(uSampDepthShadow, shadowCoord, NoL, shadowFactors);
+                        shadowCoeff = CalcPcfShadow(
+                            uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                     }
                 }
             }
@@ -229,15 +254,19 @@ vec4 unlitShadowAlpha(float depthBufferSample, FullGBufferData fd)
         }
     }
     CORE_RELAXEDP vec3 color = fd.baseColor.rgb * clamp(1.0 - fullShadowCoeff, 0.0, 1.0);
+
+    // fog handling
+    InplaceFogBlock(CORE_CAMERA_FLAGS, worldPos, camWorldPos.xyz, vec4(color, 1.0), color);
+
     return vec4(color.xyz, 1.0);
 }
 
-vec4 pbrBasic(float depthBufferSample, FullGBufferData fd)
+vec4 PbrBasic(float depthBufferSample, FullGBufferData fd)
 {
     GetSampledGBuffer(inUv, fd);
 
     // should always be metallic roughness
-    InputBrdfData brdfData = CalcBRDFMetallicRoughness(fd.baseColor, fd.normal, fd.material);
+    InputBrdfData brdfData = CalcBRDFMetallicRoughness(fd.baseColor, fd.material);
 
     const uint cameraIdx = GetUnpackCameraIndex(uGeneralData);
     const vec3 worldPos = GetWorldPos(cameraIdx, depthBufferSample, inUv.xy);
@@ -254,12 +283,11 @@ vec4 pbrBasic(float depthBufferSample, FullGBufferData fd)
     shadingData.f0 = brdfData.f0;
     shadingData.alpha2 = brdfData.alpha2;
     shadingData.diffuseColor = brdfData.diffuseColor;
-    shadingData.materialFlags = fd.materialFlags;
     CORE_RELAXEDP const float roughness = brdfData.roughness;
 
-    vec3 color = brdfData.diffuseColor;
+    vec3 color = vec3(0.0); // brdfData.diffuseColor
     if ((fd.materialFlags & CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) == CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) {
-        color = CalculateLighting(shadingData);
+        color = CalculateLighting(shadingData, fd.materialFlags);
     }
 
     if ((fd.materialFlags & CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) == CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) {
@@ -281,7 +309,10 @@ vec4 pbrBasic(float depthBufferSample, FullGBufferData fd)
         color += (irradiance + radiance);
     }
 
-    color.rgb = min(color.rgb, CORE_HDR_FLOAT_CLAMP_MAX_VALUE); // not expecting negative lights
+    // fog handling
+    InplaceFogBlock(CORE_CAMERA_FLAGS, worldPos.xyz, camWorldPos.xyz, vec4(color, 1.0), color);
+
+    color.rgb = clamp(color.rgb, 0.0, CORE_HDR_FLOAT_CLAMP_MAX_VALUE); // zero to hdr max
     return vec4(color.rgb, 1.0);
 }
 
@@ -293,10 +324,12 @@ void main(void)
     const float depthBufferSample = GetSampledDepthBuffer(inUv);
     if (depthBufferSample < 1.0) {
         FullGBufferData fd = GetUnpackMaterialValues(inUv);
-        if (fd.materialType == CORE_MATERIAL_UNLIT_SHADOW_ALPHA) {
-            outColor = unlitShadowAlpha(depthBufferSample, fd);
+        if (fd.materialType == CORE_MATERIAL_UNLIT) {
+            outColor = UnlitBasic();
+        } else if (fd.materialType == CORE_MATERIAL_UNLIT_SHADOW_ALPHA) {
+            outColor = UnlitShadowAlpha(depthBufferSample, fd);
         } else {
-            outColor = pbrBasic(depthBufferSample, fd);
+            outColor = PbrBasic(depthBufferSample, fd);
         }
     } else {
         outColor = vec4(0.0);

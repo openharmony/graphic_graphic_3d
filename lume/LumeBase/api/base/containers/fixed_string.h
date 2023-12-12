@@ -16,8 +16,10 @@
 #ifndef API_BASE_CONTAINERS_BASIC_FIXED_STRING_H
 #define API_BASE_CONTAINERS_BASIC_FIXED_STRING_H
 
+#include <cstddef>
+#include <cstdint>
+
 #include <base/containers/allocator.h>
-#include <base/containers/iterator.h>
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
 #include <base/namespace.h>
@@ -67,6 +69,11 @@ public:
     constexpr basic_fixed_string(const CharT* const a) noexcept
     {
         initialize({ a, constexpr_strlen(a) });
+    }
+
+    constexpr basic_fixed_string(CharT a) noexcept
+    {
+        initialize({ &a, 1 });
     }
 
     constexpr basic_fixed_string(const basic_string_view<CharT>& a) noexcept
@@ -173,6 +180,12 @@ public:
         return *this;
     }
 
+    constexpr basic_fixed_string& operator+=(CharT a)
+    {
+        append_impl({ &a, 1 });
+        return *this;
+    }
+
     constexpr CharT const* data() const
     {
         return data_;
@@ -193,9 +206,9 @@ public:
         return string_view(data_, len_);
     }
 
-    constexpr void copy(CharT* const dst, size_type todo, size_type pos = 0) const
+    constexpr size_type copy(CharT* const dst, size_type todo, size_type pos = 0) const
     {
-        string_view(*this).copy(dst, todo, pos);
+        return string_view(*this).copy(dst, todo, pos);
     }
 
     /** find substring in the view */
@@ -259,6 +272,12 @@ public:
         return *this;
     }
 
+    constexpr basic_fixed_string& append(CharT a)
+    {
+        append_impl({ &a, 1 });
+        return *this;
+    }
+
     basic_fixed_string& replace(size_t first, size_t last, const basic_string_view<CharT>& str)
     {
         const auto replace = last - first;
@@ -266,7 +285,7 @@ public:
         const auto newSize = len_ + add - replace;
         if (add < replace) {
             CloneData(data() + first, replace, str.data(), add);
-            CloneData(data() + first + add, len_ - first - add, data() + last, len_ - last);
+            MoveData(data() + first + add, len_ - first - add, data() + last, len_ - last);
         } else if (add > replace) {
             const auto start = newSize < maxSize ? newSize : maxSize;
             for (auto i = start; i > last; --i) {
@@ -411,11 +430,11 @@ template<typename Number, typename = enable_if_t<is_integral_v<Number>>>
 constexpr fixed_string<21u> to_string(Number num)
 {
     fixed_string<21u> str;
-    uint64_t n = num;
+    uint64_t n = static_cast<uint64_t>(num);
     // negate negative values
     if constexpr (is_signed<Number>::value) {
         if (num < 0) {
-            n = -num;
+            n = static_cast<uint64_t>(-num);
         }
     }
 
@@ -423,9 +442,9 @@ constexpr fixed_string<21u> to_string(Number num)
     const auto end = str.data() + str.capacity();
     auto p = end - 1;
     do {
-        *p-- = '0' + (n % 10);
-        n /= 10;
-    } while (n != 0);
+        *p-- = '0' + static_cast<char>(n % 10U);
+        n /= 10U;
+    } while (n != 0U);
 
     // add sign if needed
     if constexpr (is_signed<Number>::value) {
@@ -435,7 +454,7 @@ constexpr fixed_string<21u> to_string(Number num)
     }
 
     ++p;
-    str.append(string_view(p, end - p));
+    str.append(string_view(p, static_cast<size_t>(end - p)));
     return str;
 }
 
@@ -443,11 +462,11 @@ template<typename Number, typename = enable_if_t<is_integral_v<Number>>>
 constexpr fixed_string<21u> to_hex(Number num)
 {
     fixed_string<21u> str;
-    uint64_t n = num;
+    uint64_t n = static_cast<uint64_t>(num);
     // negate negative values
     if constexpr (is_signed<Number>::value) {
         if (num < 0) {
-            n = -num;
+            n = static_cast<uint64_t>(-num);
         }
     }
 
@@ -456,9 +475,9 @@ constexpr fixed_string<21u> to_hex(Number num)
     auto p = end - 1;
     const char* hex = "0123456789ABCDEF";
     do {
-        *p-- = hex[(n % 16)];
-        n /= 16;
-    } while (n != 0);
+        *p-- = hex[(n % 16U)];
+        n /= 16U;
+    } while (n != 0U);
 
     // add sign if needed
     if constexpr (is_signed<Number>::value) {
@@ -468,7 +487,7 @@ constexpr fixed_string<21u> to_hex(Number num)
     }
 
     ++p;
-    str.append(string_view(p, end - p));
+    str.append(string_view(p, static_cast<string_view::size_type>(end - p)));
     return str;
 }
 

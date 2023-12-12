@@ -42,7 +42,7 @@ public:
     const ShaderModulePlatformData& GetPlatformData() const override;
 
     const PipelineLayout& GetPipelineLayout() const override;
-    ShaderSpecilizationConstantView GetSpecilization() const override;
+    ShaderSpecializationConstantView GetSpecilization() const override;
 
     VertexInputDeclarationView GetVertexInputDeclaration() const override;
     ShaderThreadGroup GetThreadGroupSize() const override;
@@ -58,7 +58,7 @@ private:
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;
 
     PipelineLayout pipelineLayout_;
-    ShaderSpecilizationConstantView sscv_;
+    ShaderSpecializationConstantView sscv_;
     VertexInputDeclarationView vidv_;
     ShaderThreadGroup stg_;
 };

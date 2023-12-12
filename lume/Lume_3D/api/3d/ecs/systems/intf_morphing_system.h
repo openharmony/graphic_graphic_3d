@@ -38,7 +38,7 @@ public:
     /** Properties */
     struct Properties {
         /** Data store manager */
-        RENDER_NS::IRenderDataStoreManager* dataStoreManager { nullptr };
+        [[deprecated]] RENDER_NS::IRenderDataStoreManager* dataStoreManager { nullptr };
         /** Data store name */
         BASE_NS::string dataStoreName;
     };

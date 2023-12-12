@@ -15,9 +15,11 @@
 
 #include "threading/parallel_impl.h"
 
+#include <base/containers/array_view.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
+using BASE_NS::array_view;
 using BASE_NS::vector;
 
 ParallelImpl::~ParallelImpl() = default;
@@ -32,6 +34,12 @@ void ParallelImpl::Submit(uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& tas
 void ParallelImpl::SubmitAfter(uint64_t afterIdentifier, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
 {
     queue_.SubmitAfter(afterIdentifier, taskIdentifier, move(task));
+}
+
+void ParallelImpl::SubmitAfter(
+    array_view<const uint64_t> afterIdentifiers, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
+{
+    queue_.SubmitAfter(afterIdentifiers, taskIdentifier, move(task));
 }
 
 void ParallelImpl::Execute()

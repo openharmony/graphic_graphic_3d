@@ -56,7 +56,6 @@ public:
         const RenderNodeGraphInputs& renderNodeGraphInputs;
         const BASE_NS::string_view& name;
         const BASE_NS::string_view& nodeJson;
-        RenderNodeGpuResourceManager& gpuResourceMgr;
         NodeContextDescriptorSetManager& descriptorSetMgr;
         NodeContextPsoManager& psoMgr;
         RenderCommandList& cmdList;
@@ -111,7 +110,6 @@ private:
     const BASE_NS::string nodeName_;
     const BASE_NS::string nodeJson_;
 
-    RenderNodeGpuResourceManager& renderNodeGpuResourceMgr_;
     RenderNodeGraphShareDataManager& renderNodeGraphShareDataMgr_;
     NodeContextDescriptorSetManager& descriptorSetMgr_;
     NodeContextPsoManager& psoMgr_;
@@ -123,6 +121,7 @@ private:
     };
     BASE_NS::vector<ContextInterface> contextInterfaces_;
 
+    BASE_NS::unique_ptr<RenderNodeGpuResourceManager> renderNodeGpuResourceMgr_;
     BASE_NS::unique_ptr<RenderNodeShaderManager> renderNodeShaderMgr_;
     BASE_NS::unique_ptr<RenderNodeRenderDataStoreManager> renderNodeRenderDataStoreMgr_;
     BASE_NS::unique_ptr<RenderNodeUtil> renderNodeUtil_;

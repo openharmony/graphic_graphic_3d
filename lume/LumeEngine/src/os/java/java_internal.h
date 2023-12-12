@@ -21,9 +21,11 @@
 #include <jni.h>
 
 namespace java_internal {
+
 JavaVM* GetJavaVM();
 void SetJavaVM(JavaVM* jvm);
 JNIEnv* GetJavaEnv();
+
 } // namespace java_internal
 
 #endif

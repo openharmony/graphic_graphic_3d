@@ -13,5 +13,33 @@
                 }
             ]
         }
-    }
+    },
+    "materialMetadata": [
+        {
+            "name": "RenderDataStorePostProcess",
+            "globalFactor": [
+                {
+                    "name": "configuration",
+                    "displayName": "Configuration",
+                    "type": "vec4",
+                    "value": [2.0, 1.0, 0.0, 0.1]
+                }
+            ]
+        },
+        {
+            "name": "RenderDataStorePostProcess",
+            "customProperties": [
+                {
+                    "data": [
+                        {
+                            "name": "configuration",
+                            "displayName": "Configuration (sharpness, quality, empty, alpha)",
+                            "type": "vec4",
+                            "value": [2.0, 1.0, 0.0, 0.1]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
 }

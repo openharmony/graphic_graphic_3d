@@ -22,16 +22,18 @@
 #include <base/containers/vector.h>
 #include <render/namespace.h>
 
-#include "device/device.h"
-#include "device/gpu_resource_handle_util.h"
-
 RENDER_BEGIN_NAMESPACE()
+class Device;
+
 /* GpuResourceManagerBase.
  * Not internally synchronized. */
 class GpuResourceManagerBase {
 public:
     GpuResourceManagerBase() = default;
     virtual ~GpuResourceManagerBase() = default;
+
+    virtual void HandlePendingDeallocations() = 0;
+    virtual void HandlePendingDeallocationsImmediate() = 0;
 
 protected:
     friend class GpuResourceManager;
@@ -54,6 +56,11 @@ public:
 protected:
     friend class GpuResourceManager;
 
+    // handle pending deallocations (waits safe frames to deallocate).
+    void HandlePendingDeallocations() override;
+    // handle pending deallocations immediately.
+    void HandlePendingDeallocationsImmediate() override;
+
     // resize the resource vector
     void Resize(const size_t maxSize) override;
     // deferred gpu resource destruction.
@@ -62,11 +69,9 @@ protected:
     void DestroyImmediate(const uint32_t index) override;
 
     // create new, send old to pending deallocations if replacing
-    void Create(const uint32_t index, const CreateInfoType& info, BASE_NS::unique_ptr<ResourceType> optionalResource);
-    // handle pending deallocations (waits safe frames to deallocate).
-    void HandlePendingDeallocations();
-    // handle pending deallocations immediately.
-    void HandlePendingDeallocationsImmediate();
+    template<typename AdditionalInfoType>
+    void Create(const uint32_t index, const CreateInfoType& desc, BASE_NS::unique_ptr<ResourceType> optionalResource,
+        const bool useAdditionalDesc, const AdditionalInfoType& additonalDesc);
 
     Device& device_;
 

@@ -36,6 +36,7 @@ public:
     NodeContextPoolManager& operator=(const NodeContextPoolManager&) = delete;
 
     virtual void BeginFrame() = 0;
+    virtual void BeginBackendFrame() = 0;
 
 #if ((RENDER_VALIDATION_ENABLED == 1) || (RENDER_VULKAN_VALIDATION_ENABLED == 1))
     virtual void SetValidationDebugName(const BASE_NS::string_view debugName) = 0;

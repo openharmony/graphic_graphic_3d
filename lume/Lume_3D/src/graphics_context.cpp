@@ -15,6 +15,8 @@
 
 #include "graphics_context.h"
 
+#include <algorithm>
+
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
 #include <base/util/uid.h>
@@ -45,6 +47,8 @@
 #include <3d/ecs/components/uri_component.h>
 #include <3d/ecs/systems/intf_render_system.h>
 #include <3d/implementation_uids.h>
+#include <3d/intf_plugin.h>
+#include <3d/loaders/intf_scene_loader.h>
 #include <3d/render/default_material_constants.h>
 #include <3d/render/intf_render_node_scene_util.h>
 #include <3d/util/intf_mesh_util.h>
@@ -87,62 +91,100 @@ static constexpr IShaderManager::ShaderFilePathDesc SHADER_FILE_PATHS {
     "3dvertexinputdeclarations://",
 };
 
+static constexpr string_view POST_PROCESS_PATH { "3drenderdataconfigurations://postprocess/" };
+static constexpr string_view POST_PROCESS_DATA_STORE_NAME { "RenderDataStorePod" };
+static constexpr string_view POST_PROCESS_NAME { "PostProcess" };
+
+void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& defaultGpuResources)
+{
+    IGpuResourceManager& gpuResourceMgr = device.GetGpuResourceManager();
+
+    // default material gpu images
+    GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+        Format::BASE_FORMAT_R8G8B8A8_SRGB, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+        ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_DST_BIT,
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 0, 2, 2, 1, 1, 1,
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
+    constexpr uint32_t sizeOfUint32 = sizeof(uint32_t);
+
+    desc.format = Format::BASE_FORMAT_R8G8B8A8_UNORM;
+    {
+        constexpr const uint32_t normalData[4u] = { 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f };
+        const auto normalDataView =
+            array_view(reinterpret_cast<const uint8_t*>(normalData), sizeOfUint32 * countof(normalData));
+        defaultGpuResources.push_back(gpuResourceMgr.Create(
+            DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_NORMAL, desc, normalDataView));
+    }
+
+    desc.format = Format::BASE_FORMAT_R8_UNORM;
+    {
+        constexpr const uint8_t byteData[4u] = { 0xff, 0xff, 0xff, 0xff };
+        const auto byteDataView =
+            array_view(reinterpret_cast<const uint8_t*>(byteData), sizeof(uint8_t) * countof(byteData));
+        defaultGpuResources.push_back(
+            gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_AO, desc, byteDataView));
+    }
+
+    // env cubemaps
+    desc.imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE;
+    desc.format = Format::BASE_FORMAT_R8G8B8A8_SRGB;
+    desc.createFlags = ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    desc.layerCount = 6u;
+    {
+        // Env color is currently in rgbd format (alpha channel is used as a divider for the rgb values).
+        const vector<uint32_t> cubeData(4u * 6u, 0xFFFFffff);
+        const array_view<const uint8_t> cubeDataView(
+            reinterpret_cast<const uint8_t*>(cubeData.data()), cubeData.size() * sizeOfUint32);
+        defaultGpuResources.push_back(gpuResourceMgr.Create(
+            DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP, desc, cubeDataView));
+
+        // Skybox is currently in rgbd format (alpha channel is used as a divider for the rgb values).
+        defaultGpuResources.push_back(gpuResourceMgr.Create(
+            DefaultMaterialGpuResourceConstants::CORE_DEFAULT_SKYBOX_CUBEMAP, desc, cubeDataView));
+    }
+}
+
+void CreateDefaultSamplers(IDevice& device, vector<RenderHandleReference>& defaultGpuResources)
+{
+    IGpuResourceManager& gpuResourceMgr = device.GetGpuResourceManager();
+    {
+        GpuSamplerDesc sampler {
+            Filter::CORE_FILTER_LINEAR,                                  // magFilter
+            Filter::CORE_FILTER_LINEAR,                                  // minFilter
+            Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+        };
+        constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
+        sampler.minLod = 0.0f;
+        sampler.maxLod = CUBE_MAP_LOD_COEFF;
+        defaultGpuResources.push_back(
+            gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP_SAMPLER, sampler));
+    }
+    {
+        GpuSamplerDesc sampler {
+            Filter::CORE_FILTER_LINEAR,                                  // magFilter
+            Filter::CORE_FILTER_LINEAR,                                  // minFilter
+            Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+        };
+        defaultGpuResources.push_back(
+            gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_VSM_SHADOW_SAMPLER, sampler));
+
+        sampler.compareOp = CompareOp::CORE_COMPARE_OP_GREATER;
+        sampler.enableCompareOp = true;
+        defaultGpuResources.push_back(
+            gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_PCF_SHADOW_SAMPLER, sampler));
+    }
+}
+
 void CreateDefaultResources(IDevice& device, vector<RenderHandleReference>& defaultGpuResources)
 {
-    // default material gpu images
-    {
-        GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-            Format::BASE_FORMAT_R8G8B8A8_SRGB, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_DST_BIT,
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 0, 2, 2, 1, 1, 1,
-            SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
-
-        IGpuResourceManager& gpuResourceMgr = device.GetGpuResourceManager();
-        constexpr uint32_t sizeOfUint32 = sizeof(uint32_t);
-        constexpr const uint32_t rgbData[4u] = { 0xFFFFffff, 0xFFFFffff, 0xFFFFffff, 0xFFFFffff };
-        const auto rgbDataView = array_view(reinterpret_cast<const uint8_t*>(rgbData), sizeOfUint32 * countof(rgbData));
-        defaultGpuResources.emplace_back(
-            gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_BASE_COLOR,
-                reinterpret_cast<GpuImageDesc&>(desc), rgbDataView));
-
-        desc.format = Format::BASE_FORMAT_R8G8B8A8_UNORM;
-        {
-            constexpr const uint32_t normalData[4u] = { 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f };
-            const auto normalDataView =
-                array_view(reinterpret_cast<const uint8_t*>(normalData), sizeOfUint32 * countof(normalData));
-            defaultGpuResources.emplace_back(gpuResourceMgr.Create(
-                DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_NORMAL, desc, normalDataView));
-        }
-        defaultGpuResources.emplace_back(gpuResourceMgr.Create(
-            DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_MATERIAL, desc, rgbDataView));
-
-        desc.format = Format::BASE_FORMAT_R8_UNORM;
-        {
-            constexpr const uint8_t byteData[4u] = { 0xff, 0xff, 0xff, 0xff };
-            const auto byteDataView =
-                array_view(reinterpret_cast<const uint8_t*>(byteData), sizeof(uint8_t) * countof(byteData));
-            defaultGpuResources.emplace_back(gpuResourceMgr.Create(
-                DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_AO, desc, byteDataView));
-        }
-
-        // env cubemaps
-        desc.imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE;
-        desc.format = Format::BASE_FORMAT_R8G8B8A8_SRGB;
-        desc.createFlags = ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-        desc.layerCount = 6u;
-        {
-            // Env color is currently in rgbd format (alpha channel is used as a divider for the rgb values).
-            const vector<uint32_t> cubeData(4u * 6u, 0xFFFFffff);
-            const array_view<const uint8_t> cubeDataView(
-                reinterpret_cast<const uint8_t*>(cubeData.data()), cubeData.size() * sizeOfUint32);
-            defaultGpuResources.emplace_back(gpuResourceMgr.Create(
-                DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP, desc, cubeDataView));
-
-            // Skybox is currently in rgbd format (alpha channel is used as a divider for the rgb values).
-            defaultGpuResources.emplace_back(gpuResourceMgr.Create(
-                DefaultMaterialGpuResourceConstants::CORE_DEFAULT_SKYBOX_CUBEMAP, desc, cubeDataView));
-        }
-    }
+    CreateDefaultImages(device, defaultGpuResources);
+    CreateDefaultSamplers(device, defaultGpuResources);
 }
 } // namespace
 
@@ -161,14 +203,23 @@ struct Agp3DPluginState {
     IRenderContext& renderContext;
     unique_ptr<GraphicsContext> context;
 
-    Picking picker;
+    vector<RenderHandleReference> defaultGpuResources;
+    vector<string> defaultPostProcesses;
+
+    Picking picker_;
     RenderNodeSceneUtilImpl renderNodeSceneUtil;
     InterfaceTypeInfo interfaces[4] = {
         InterfaceTypeInfo {
             this,
             UID_MESH_BUILDER,
             CORE_NS::GetName<IMeshBuilder>().data(),
-            [](IClassFactory&, PluginToken token) -> IInterface* { return new MeshBuilder; },
+            [](IClassFactory&, PluginToken token) -> IInterface* {
+                if (token) {
+                    Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
+                    return new MeshBuilder(state->renderContext);
+                }
+                return nullptr;
+            },
             nullptr,
         },
         InterfaceTypeInfo {
@@ -179,7 +230,7 @@ struct Agp3DPluginState {
             [](IClassRegister& registry, PluginToken token) -> IInterface* {
                 if (token) {
                     Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
-                    return &state->picker;
+                    return &state->picker_;
                 }
                 return nullptr;
             },
@@ -207,21 +258,21 @@ struct Agp3DPluginState {
                     if (!state->context) {
                         state->context = make_unique<GraphicsContext>(*state, state->renderContext);
                     }
-                    return state->context.get();
+                    return state->context->GetInterface(IInterface::UID);
                 }
                 return nullptr;
             },
             [](IClassRegister& registry, PluginToken token) -> IInterface* {
                 if (token) {
                     Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
-                    return state->context.get();
+                    return state->context->GetInterface(IInterface::UID);
                 }
                 return nullptr;
             },
         },
     };
 
-    void Destroy(IRenderContext& engine)
+    void Destroy()
     {
         context.reset();
     }
@@ -231,7 +282,19 @@ GraphicsContext::GraphicsContext(struct Agp3DPluginState& factory, IRenderContex
     : factory_(factory), context_(context)
 {}
 
-GraphicsContext ::~GraphicsContext() {}
+GraphicsContext ::~GraphicsContext()
+{
+    GetPluginRegister().RemoveListener(*this);
+
+    for (auto& info : plugins_) {
+        if (info.second && info.second->destroyPlugin) {
+            info.second->destroyPlugin(info.first);
+        }
+    }
+    if (sceneUtil_ && gltf2_) {
+        sceneUtil_->UnregisterSceneLoader(IInterface::Ptr { gltf2_->GetInterface(ISceneLoader::UID) });
+    }
+}
 
 void GraphicsContext::Init()
 {
@@ -242,31 +305,19 @@ void GraphicsContext::Init()
 
     meshUtil_ = make_unique<MeshUtil>(engine);
     gltf2_ = make_unique<Gltf2>(*this);
-    CreateDefaultResources(context_.GetDevice(), defaultGpuResources_);
-
-    auto* renderDataConfigurationLoader = GetInstance<IRenderDataConfigurationLoader>(
-        *context_.GetInterface<IClassRegister>(), UID_RENDER_DATA_CONFIGURATION_LOADER);
-    auto* dataStore = context_.GetRenderDataStoreManager().GetRenderDataStore("RenderDataStorePod");
-    if (renderDataConfigurationLoader && dataStore) {
-        auto& fileMgr = engine.GetFileManager();
-        constexpr string_view ppPath = "3drenderdataconfigurations://postprocess/";
-        if (auto dir = fileMgr.OpenDirectory(ppPath); dir) {
-            for (const auto& entry : dir->GetEntries()) {
-                if (entry.type == IDirectory::Entry::Type::FILE) {
-                    const auto loadedPP =
-                        renderDataConfigurationLoader->LoadPostProcess(engine.GetFileManager(), ppPath + entry.name);
-                    if (loadedPP.loadResult.success) {
-                        auto pod = static_cast<IRenderDataStorePod*>(dataStore);
-                        pod->CreatePod("PostProcess", loadedPP.name, arrayviewU8(loadedPP.postProcessConfiguration));
-                    }
-                }
-            }
-        }
-    }
     sceneUtil_ = make_unique<SceneUtil>(*this);
     renderUtil_ = make_unique<RenderUtil>(*this);
-
+    sceneUtil_->RegisterSceneLoader(IInterface::Ptr { gltf2_->GetInterface(ISceneLoader::UID) });
     initialized_ = true;
+
+    GetPluginRegister().AddListener(*this);
+
+    for (auto info : CORE_NS::GetPluginRegister().GetTypeInfos(I3DPlugin::UID)) {
+        if (auto plugin = static_cast<const I3DPlugin*>(info); plugin && plugin->createPlugin) {
+            auto token = plugin->createPlugin(*this);
+            plugins_.push_back({ token, plugin });
+        }
+    }
 }
 
 IRenderContext& GraphicsContext::GetRenderContext() const
@@ -307,7 +358,13 @@ IRenderUtil& GraphicsContext::GetRenderUtil() const
 const IInterface* GraphicsContext::GetInterface(const Uid& uid) const
 {
     if (uid == IGraphicsContext::UID) {
-        return this;
+        return static_cast<const IGraphicsContext*>(this);
+    } else if (uid == IInterface::UID) {
+        return static_cast<const IInterface*>(static_cast<const IGraphicsContext*>(this));
+    } else if (uid == IClassRegister::UID) {
+        return static_cast<const IClassRegister*>(this);
+    } else if (uid == IClassFactory::UID) {
+        return static_cast<const IClassFactory*>(this);
     }
     return nullptr;
 }
@@ -315,7 +372,13 @@ const IInterface* GraphicsContext::GetInterface(const Uid& uid) const
 IInterface* GraphicsContext::GetInterface(const Uid& uid)
 {
     if (uid == IGraphicsContext::UID) {
-        return this;
+        return static_cast<IGraphicsContext*>(this);
+    } else if (uid == IInterface::UID) {
+        return static_cast<IInterface*>(static_cast<IGraphicsContext*>(this));
+    } else if (uid == IClassRegister::UID) {
+        return static_cast<IClassRegister*>(this);
+    } else if (uid == IClassFactory::UID) {
+        return static_cast<IClassFactory*>(this);
     }
     return nullptr;
 }
@@ -328,7 +391,97 @@ void GraphicsContext::Ref()
 void GraphicsContext::Unref()
 {
     if (--refcnt_ == 0) {
-        factory_.Destroy(context_);
+        factory_.Destroy();
+    }
+}
+
+void GraphicsContext::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
+{
+    // keep interfaceTypeInfos_ sorted according to UIDs
+    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+        [](Uid value, const InterfaceTypeInfo* element) { return value < element->uid; });
+    interfaceTypeInfos_.insert(pos, &interfaceInfo);
+}
+
+void GraphicsContext::UnregisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
+{
+    if (!interfaceTypeInfos_.empty()) {
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+            [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
+        if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == interfaceInfo.uid) {
+            interfaceTypeInfos_.erase(pos);
+        }
+    }
+}
+
+array_view<const InterfaceTypeInfo* const> GraphicsContext::GetInterfaceMetadata() const
+{
+    return interfaceTypeInfos_;
+}
+
+const InterfaceTypeInfo& GraphicsContext::GetInterfaceMetadata(const Uid& uid) const
+{
+    static InterfaceTypeInfo invalidType {};
+
+    if (!interfaceTypeInfos_.empty()) {
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), uid,
+            [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
+        if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == uid) {
+            return *(*pos);
+        }
+    }
+    return invalidType;
+}
+
+IInterface* GraphicsContext::GetInstance(const BASE_NS::Uid& uid) const
+{
+    const auto& data = GetInterfaceMetadata(uid);
+    if (data.getInterface) {
+        return data.getInterface(const_cast<GraphicsContext&>(*this), data.token);
+    }
+    return nullptr;
+}
+
+IInterface::Ptr GraphicsContext::CreateInstance(const BASE_NS::Uid& uid)
+{
+    const auto& data = GetInterfaceMetadata(uid);
+    if (data.createInterface) {
+        return IInterface::Ptr { data.createInterface(*this, data.token) };
+    }
+    return IInterface::Ptr {};
+}
+
+void GraphicsContext::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typeInfos)
+{
+    if (type == EventType::ADDED) {
+        for (const auto* info : typeInfos) {
+            if (info && info->typeUid == I3DPlugin::UID && static_cast<const I3DPlugin*>(info)->createPlugin) {
+                auto plugin = static_cast<const I3DPlugin*>(info);
+                if (std::none_of(plugins_.begin(), plugins_.end(),
+                        [plugin](const pair<PluginToken, const I3DPlugin*>& pluginData) {
+                            return pluginData.second == plugin;
+                        })) {
+                    auto token = plugin->createPlugin(*this);
+                    plugins_.push_back({ token, plugin });
+                }
+            }
+        }
+    } else if (type == EventType::REMOVED) {
+        for (const auto* info : typeInfos) {
+            if (info && info->typeUid == I3DPlugin::UID) {
+                auto plugin = static_cast<const I3DPlugin*>(info);
+                if (auto pos = std::find_if(plugins_.begin(), plugins_.end(),
+                        [plugin](const pair<PluginToken, const I3DPlugin*>& pluginData) {
+                            return pluginData.second == plugin;
+                        });
+                    pos != plugins_.end()) {
+                    if (plugin->destroyPlugin) {
+                        plugin->destroyPlugin(pos->first);
+                    }
+                    plugins_.erase(pos);
+                }
+            }
+        }
     }
 }
 
@@ -338,27 +491,46 @@ void UnregisterTypes(IPluginRegister& pluginRegistry);
 namespace {
 PluginToken CreatePlugin3D(IRenderContext& context)
 {
-    Agp3DPluginState* token = new Agp3DPluginState { context, {}, {}, {} };
+    Agp3DPluginState* token = new Agp3DPluginState { context, {}, {}, {}, {}, {} };
     auto& registry = *context.GetInterface<IClassRegister>();
     for (const auto& info : token->interfaces) {
         registry.RegisterInterfaceType(info);
     }
-
-    RegisterTypes(GetPluginRegister());
 
     IFileManager& fileManager = context.GetEngine().GetFileManager();
 #if (CORE3D_EMBEDDED_ASSETS_ENABLED == 1)
     // Create engine:// protocol that points to embedded asset files.
     fileManager.RegisterFilesystem("rofs3D", fileManager.CreateROFilesystem(BINARY_DATA_FOR_3D, SIZE_OF_DATA_FOR_3D));
 #endif
-#if (CORE3D_EMBEDDED_ASSETS_ENABLED == 0) || (CORE3D_DEV_ENABLED == 1)
-    const string assets = context.GetEngine().GetRootPath() + "../Lume3D/assets/3d/";
-    fileManager.RegisterPath("engine", assets, true);
-#endif
     for (uint32_t idx = 0; idx < countof(RENDER_DATA_PATHS); ++idx) {
         fileManager.RegisterPath(RENDER_DATA_PATHS[idx].protocol, RENDER_DATA_PATHS[idx].uri, false);
     }
     context.GetDevice().GetShaderManager().LoadShaderFiles(SHADER_FILE_PATHS);
+
+    CreateDefaultResources(context.GetDevice(), token->defaultGpuResources);
+    {
+        auto* renderDataConfigurationLoader = CORE_NS::GetInstance<IRenderDataConfigurationLoader>(
+            *context.GetInterface<IClassRegister>(), UID_RENDER_DATA_CONFIGURATION_LOADER);
+        auto* dataStore = context.GetRenderDataStoreManager().GetRenderDataStore(POST_PROCESS_DATA_STORE_NAME);
+        if (renderDataConfigurationLoader && dataStore) {
+            auto& fileMgr = context.GetEngine().GetFileManager();
+            constexpr string_view ppPath = POST_PROCESS_PATH;
+            if (auto dir = fileMgr.OpenDirectory(ppPath); dir) {
+                for (const auto& entry : dir->GetEntries()) {
+                    if (entry.type == IDirectory::Entry::Type::FILE) {
+                        const auto loadedPP =
+                            renderDataConfigurationLoader->LoadPostProcess(fileMgr, ppPath + entry.name);
+                        if (loadedPP.loadResult.success) {
+                            token->defaultPostProcesses.push_back(loadedPP.name);
+                            auto pod = static_cast<IRenderDataStorePod*>(dataStore);
+                            pod->CreatePod(
+                                POST_PROCESS_NAME, loadedPP.name, arrayviewU8(loadedPP.postProcessConfiguration));
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     return token;
 }
@@ -368,19 +540,27 @@ void DestroyPlugin3D(PluginToken token)
     Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
     IFileManager& fileManager = state->renderContext.GetEngine().GetFileManager();
 
+    state->defaultGpuResources.clear();
+    {
+        auto* renderDataConfigurationLoader = CORE_NS::GetInstance<IRenderDataConfigurationLoader>(
+            *state->renderContext.GetInterface<IClassRegister>(), UID_RENDER_DATA_CONFIGURATION_LOADER);
+        auto* dataStore =
+            state->renderContext.GetRenderDataStoreManager().GetRenderDataStore(POST_PROCESS_DATA_STORE_NAME);
+        if (renderDataConfigurationLoader && dataStore) {
+            auto pod = static_cast<IRenderDataStorePod*>(dataStore);
+            for (const auto& ref : state->defaultPostProcesses) {
+                pod->DestroyPod(POST_PROCESS_NAME, ref);
+            }
+        }
+        state->defaultPostProcesses.clear();
+    }
     state->renderContext.GetDevice().GetShaderManager().UnloadShaderFiles(SHADER_FILE_PATHS);
 #if (CORE3D_EMBEDDED_ASSETS_ENABLED == 1)
     fileManager.UnregisterFilesystem("rofs3D");
 #endif
-#if (CORE3D_EMBEDDED_ASSETS_ENABLED == 0) || (CORE3D_DEV_ENABLED == 1)
-    const string assets = state->renderContext.GetEngine().GetRootPath() + "../Lume3D/assets/3d/";
-    fileManager.UnregisterPath("engine", assets);
-#endif
     for (uint32_t idx = 0; idx < countof(RENDER_DATA_PATHS); ++idx) {
         fileManager.UnregisterPath(RENDER_DATA_PATHS[idx].protocol, RENDER_DATA_PATHS[idx].uri);
     }
-
-    UnregisterTypes(GetPluginRegister());
 
     auto& registry = *state->renderContext.GetInterface<IClassRegister>();
     for (const auto& info : state->interfaces) {
@@ -407,12 +587,17 @@ PluginToken RegisterInterfaces3D(IPluginRegister& pluginRegistry)
     pluginRegistry.RegisterTypeInfo(RENDER_PLUGIN);
     pluginRegistry.RegisterTypeInfo(ECS_PLUGIN);
 
+    RegisterTypes(GetPluginRegister());
+
     return &pluginRegistry;
 }
 
 void UnregisterInterfaces3D(PluginToken token)
 {
     IPluginRegister* pluginRegistry = static_cast<IPluginRegister*>(token);
+
+    UnregisterTypes(GetPluginRegister());
+
     pluginRegistry->UnregisterTypeInfo(ECS_PLUGIN);
     pluginRegistry->UnregisterTypeInfo(RENDER_PLUGIN);
 }

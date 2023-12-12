@@ -15,7 +15,6 @@
 
 #include "library_linux.h"
 
-
 #include <dlfcn.h>
 
 #include <base/containers/string.h>
@@ -32,7 +31,7 @@ LibraryLinux::LibraryLinux(const string_view filename)
     libraryHandle_ = dlopen(tmp.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (!libraryHandle_) {
         const char* errorMessage = dlerror();
-        if (errorMessage != NULL) {
+        if (errorMessage != nullptr) {
             CORE_LOG_E("Loading dynamic library '%s' failed: %s", filename.data(), errorMessage);
         }
     }
@@ -70,4 +69,3 @@ string_view ILibrary::GetFileExtension()
     return ".so";
 }
 CORE_END_NAMESPACE()
-

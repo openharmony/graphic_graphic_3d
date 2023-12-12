@@ -40,7 +40,7 @@ public:
     virtual const ShaderModulePlatformData& GetPlatformData() const = 0;
 
     virtual const PipelineLayout& GetPipelineLayout() const = 0;
-    virtual ShaderSpecilizationConstantView GetSpecilization() const = 0;
+    virtual ShaderSpecializationConstantView GetSpecilization() const = 0;
 
     /* The following are not found from every shader, data might be zeros */
 

@@ -1,0 +1,112 @@
+#version 320 es
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+struct MorphObjectPushConstantStruct
+{
+    uint morphSet;
+    uint vertexCount;
+    uint morphTargetCount;
+    uint activeTargets;
+};
+
+struct MorphInputData
+{
+    vec4 pos;
+    uvec4 nortan;
+};
+
+struct MorphTargetInfoStruct
+{
+    uvec4 target;
+    vec4 weight;
+};
+
+layout(binding = 11, std430) restrict readonly buffer s1_b1
+{
+    MorphInputData data[];
+} _s1_b1;
+
+layout(binding = 11, std430) restrict readonly buffer s0_b0
+{
+    MorphTargetInfoStruct uObjects[];
+} _s0_b0;
+
+layout(binding = 11, std430) restrict readonly buffer s1_b0
+{
+    uint indexData[];
+} _s1_b0;
+
+layout(binding = 11, std430) restrict writeonly buffer s2_b0
+{
+    float posOut[];
+} _s2_b0;
+
+layout(binding = 11, std430) restrict writeonly buffer s2_b1
+{
+    uint norOut[];
+} _s2_b1;
+
+layout(binding = 11, std430) restrict writeonly buffer s2_b2
+{
+    uint tanOut[];
+} _s2_b2;
+
+struct uPushConstant
+{
+    MorphObjectPushConstantStruct uObjectPushConstant;
+};
+
+uniform uPushConstant CORE_PC_0;
+
+void main()
+{
+    if (gl_GlobalInvocationID.x < CORE_PC_0.uObjectPushConstant.vertexCount)
+    {
+        uint _80 = gl_GlobalInvocationID.x * 3u;
+        vec2 _269 = unpackHalf2x16(_s1_b1.data[gl_GlobalInvocationID.x].nortan.x);
+        vec2 _274 = unpackHalf2x16(_s1_b1.data[gl_GlobalInvocationID.x].nortan.y);
+        vec2 _284 = unpackHalf2x16(_s1_b1.data[gl_GlobalInvocationID.x].nortan.z);
+        vec2 _289 = unpackHalf2x16(_s1_b1.data[gl_GlobalInvocationID.x].nortan.w);
+        vec3 _338;
+        vec3 _339;
+        vec3 _340;
+        _340 = vec4(_284.x, _284.y, _289.x, _289.y).xyz;
+        _339 = vec4(_269.x, _269.y, _274.x, _274.y).xyz;
+        _338 = _s1_b1.data[gl_GlobalInvocationID.x].pos.xyz;
+        vec3 _344;
+        vec3 _345;
+        vec3 _346;
+        for (int _337 = 0; uint(_337) < CORE_PC_0.uObjectPushConstant.activeTargets; _340 = _346, _339 = _345, _338 = _344, _337++)
+        {
+            uint _138 = CORE_PC_0.uObjectPushConstant.morphSet + uint(_337 / 4);
+            int _140 = _337 % 4;
+            uint _154 = gl_GlobalInvocationID.x + (_s0_b0.uObjects[_138].target[_140] * CORE_PC_0.uObjectPushConstant.vertexCount);
+            if (_s1_b0.indexData[_154] != 4294967295u)
+            {
+                vec2 _298 = unpackHalf2x16(_s1_b1.data[_s1_b0.indexData[_154]].nortan.x);
+                vec2 _303 = unpackHalf2x16(_s1_b1.data[_s1_b0.indexData[_154]].nortan.y);
+                vec2 _313 = unpackHalf2x16(_s1_b1.data[_s1_b0.indexData[_154]].nortan.z);
+                vec2 _318 = unpackHalf2x16(_s1_b1.data[_s1_b0.indexData[_154]].nortan.w);
+                _346 = _340 + (vec4(_313.x, _313.y, _318.x, _318.y).xyz * _s0_b0.uObjects[_138].weight[_140]);
+                _345 = _339 + (vec4(_298.x, _298.y, _303.x, _303.y).xyz * _s0_b0.uObjects[_138].weight[_140]);
+                _344 = _338 + (_s1_b1.data[_s1_b0.indexData[_154]].pos.xyz * _s0_b0.uObjects[_138].weight[_140]);
+            }
+            else
+            {
+                _346 = _340;
+                _345 = _339;
+                _344 = _338;
+            }
+        }
+        _s2_b0.posOut[_80] = _338.x;
+        _s2_b0.posOut[_80 + 1u] = _338.y;
+        _s2_b0.posOut[_80 + 2u] = _338.z;
+        uint _227 = gl_GlobalInvocationID.x * 2u;
+        _s2_b1.norOut[_227] = packSnorm2x16(_339.xy);
+        uint _234 = _227 + 1u;
+        _s2_b1.norOut[_234] = packSnorm2x16(vec2(_339.z, 0.0));
+        _s2_b2.tanOut[_227] = packSnorm2x16(_340.xy);
+        _s2_b2.tanOut[_234] = packSnorm2x16(vec2(_340.z, _289.y));
+    }
+}
+

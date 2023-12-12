@@ -14,14 +14,20 @@
  */
 
 #include "platform_windows.h"
-#include "os/platform.h"
 
-#include <core/namespace.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/namespace.h>
 #include <core/io/intf_file_manager.h>
+#include <core/log.h>
+#include <core/namespace.h>
+#include <core/os/intf_platform.h>
+#include <core/os/platform_create_info.h>
+#include <core/plugin/intf_plugin_register.h>
 
 #include "io/path_tools.h"
+#include "os/platform.h"
 #include "util/string_util.h"
-
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string;
@@ -31,7 +37,10 @@ PlatformWindows::PlatformWindows(PlatformCreateInfo const& createInfo)
 {
     // Convert the input paths to absolute.
     auto cwd = GetCurrentDirectory();
-    string_view curDrive, curPath, curFilename, curExt;
+    string_view curDrive;
+    string_view curPath;
+    string_view curFilename;
+    string_view curExt;
     SplitPath(cwd, curDrive, curPath, curFilename, curExt);
 
     auto fixPath = [&](string_view pathRaw) -> string {
@@ -47,7 +56,10 @@ PlatformWindows::PlatformWindows(PlatformCreateInfo const& createInfo)
             pathIn = tmp;
         }
 
-        string_view drive, path, filename, ext;
+        string_view drive;
+        string_view path;
+        string_view filename;
+        string_view ext;
         SplitPath(pathIn, drive, path, filename, ext);
         string res = "/";
         if (drive.empty()) {
@@ -87,25 +99,6 @@ const PlatformData& PlatformWindows::GetPlatformData() const
     return plat_;
 }
 
-string PlatformWindows::RegisterDefaultPaths(IFileManager& fileManager)
-{
-    // register path to system plugins (this does not actually do anything anymore, pluginregistry has it's one
-    // filemanager instance etc..) Root path is the location where system plugins , non-rofs assets etc could be held.
-    const string coreDirectory = "file://" + plat_.coreRootPath;
-
-    // Create plugins:// protocol that points to plugin files under coredirectory.
-    fileManager.RegisterPath("plugins", coreDirectory + "plugins/", false);
-
-#if (CORE_EMBEDDED_ASSETS_ENABLED == 0) || (CORE_DEV_ENABLED == 1)
-    const string assetRoot = coreDirectory + "assets/";
-
-    // Create engine:// protocol that points to core asset files on the filesystem.
-    CORE_LOG_I("Registered core asset path: '%score/'", assetRoot.c_str());
-    fileManager.RegisterPath("engine", assetRoot + "core/", false);
-#endif
-    return coreDirectory;
-}
-
 void PlatformWindows::RegisterPluginLocations(IPluginRegister& registry)
 {
     constexpr string_view fileproto("file://");
@@ -119,6 +112,4 @@ CORE_NS::IPlatform::Ptr Platform::Create(PlatformCreateInfo const& createInfo)
 {
     return CORE_NS::IPlatform::Ptr(new PlatformWindows(createInfo));
 }
-
 CORE_END_NAMESPACE()
-

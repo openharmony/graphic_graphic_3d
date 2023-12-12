@@ -16,7 +16,10 @@
 #ifndef API_BASE_MATH_MATRIX_H
 #define API_BASE_MATH_MATRIX_H
 
-#include <base/containers/array_view.h>
+#include <cstddef>
+
+#include <base/containers/type_traits.h>
+#include <base/math/vector.h>
 #include <base/math/vector_util.h>
 #include <base/namespace.h>
 

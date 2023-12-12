@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(PREVIOUS_WORLD_MATRIX_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define PREVIOUS_WORLD_MATRIX_COMPONENT
+#if !defined(__PREVIOUS_WORLD_MATRIX_COMPONENT__) || defined(IMPLEMENT_MANAGER)
+#define __PREVIOUS_WORLD_MATRIX_COMPONENT__
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>

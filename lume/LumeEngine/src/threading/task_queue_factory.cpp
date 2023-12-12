@@ -17,17 +17,20 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstddef>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <thread>
 
 #include <base/containers/array_view.h>
+#include <base/containers/iterator.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
+#include <base/util/uid.h>
 #include <core/log.h>
+#include <core/threading/intf_thread_pool.h>
 
-#include "os/platform.h"
 #include "threading/dispatcher_impl.h"
 #include "threading/parallel_impl.h"
 #include "threading/sequential_impl.h"
@@ -92,24 +95,36 @@ public:
             cv_.wait(lock, [this]() { return done_; });
         }
 
+        bool IsDone() const
+        {
+            auto lock = std::lock_guard(mutex_);
+            return done_;
+        }
+
     private:
-        std::mutex mutex_;
+        mutable std::mutex mutex_;
         std::condition_variable cv_;
         bool done_ { false };
     };
 
     explicit TaskResult(std::shared_ptr<State>&& future) : future_(BASE_NS::move(future)) {}
-    ~TaskResult() = default;
 
-    void Wait() override
+    void Wait() final
     {
         if (future_) {
             future_->Wait();
         }
     }
+    bool IsDone() const final
+    {
+        if (future_) {
+            return future_->IsDone();
+        }
+        return true;
+    }
 
 protected:
-    void Destroy() override
+    void Destroy() final
     {
         delete this;
     }
@@ -133,6 +148,11 @@ public:
             context.thread = std::thread(&ThreadPool::ThreadProc, this, std::ref(context));
         }
     }
+
+    ThreadPool(const ThreadPool&) = delete;
+    ThreadPool(ThreadPool&&) = delete;
+    ThreadPool& operator=(const ThreadPool&) = delete;
+    ThreadPool& operator=(ThreadPool&&) = delete;
 
     IResult::Ptr Push(ITask::Ptr function) override
     {
@@ -199,17 +219,12 @@ public:
     }
 
 protected:
-    virtual ~ThreadPool()
+    ~ThreadPool() final
     {
         Stop(true);
     }
 
 private:
-    ThreadPool(const ThreadPool&) = delete;
-    ThreadPool(ThreadPool&&) = delete;
-    ThreadPool& operator=(const ThreadPool&) = delete;
-    ThreadPool& operator=(ThreadPool&&) = delete;
-
     // Helper which holds a pointer to a queued task function and the result state.
     struct Task {
         ITask::Ptr function_;
@@ -231,7 +246,7 @@ private:
         Task(const Task&) = delete;
         Task& operator=(const Task&) = delete;
 
-        void operator()()
+        void operator()() const
         {
             (*function_)();
             if (state_) {
@@ -322,7 +337,7 @@ private:
 
     void ThreadProc(ThreadContext& context)
     {
-#ifdef PLATFORM_HAS_HAVA
+#ifdef PLATFORM_HAS_JAVA
         // RAII class for handling thread setup/release.
         JavaThreadContext javaContext;
 #endif

@@ -43,18 +43,18 @@ void CopyGpuBufferVk(GpuBuffer& buffer, ByteArray& byteArray)
 }
 
 void DebugObjectNameVk(
-    const Device& device, const VkObjectType objectType, const uint64_t castedHandle, const string_view name)
+    const IDevice& device, const VkObjectType objectType, const uint64_t castedHandle, const string_view name)
 {
     const auto& devicePlat = static_cast<const DevicePlatformDataVk&>(device.GetPlatformData());
     const auto& funcPtrs = (static_cast<const DeviceVk&>(device)).GetDebugFunctionUtilities();
-    if (funcPtrs.vkSetDebugUtilsObjectNameEXT) {
+    if (castedHandle && funcPtrs.vkSetDebugUtilsObjectNameEXT) {
         const VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
             objectType, castedHandle, name.data() };
         funcPtrs.vkSetDebugUtilsObjectNameEXT(devicePlat.device, &info);
     }
 }
 
-void DebugBufferNameVk(const Device& device, const GpuBuffer& buffer, const string_view name)
+void DebugBufferNameVk(const IDevice& device, const GpuBuffer& buffer, const string_view name)
 {
     const auto& devicePlat = static_cast<const DevicePlatformDataVk&>(device.GetPlatformData());
     const auto& funcPtrs = (static_cast<const DeviceVk&>(device)).GetDebugFunctionUtilities();
@@ -68,7 +68,7 @@ void DebugBufferNameVk(const Device& device, const GpuBuffer& buffer, const stri
     }
 }
 
-void DebugImageNameVk(const Device& device, const GpuImage& image, const string_view name)
+void DebugImageNameVk(const IDevice& device, const GpuImage& image, const string_view name)
 {
     const auto& devicePlat = static_cast<const DevicePlatformDataVk&>(device.GetPlatformData());
     const auto& funcPtrs = (static_cast<const DeviceVk&>(device)).GetDebugFunctionUtilities();
@@ -92,7 +92,7 @@ void DebugImageNameVk(const Device& device, const GpuImage& image, const string_
     }
 }
 
-void DebugSamplerNameVk(const Device& device, const GpuSampler& sampler, const string_view name)
+void DebugSamplerNameVk(const IDevice& device, const GpuSampler& sampler, const string_view name)
 {
     const auto& devicePlat = static_cast<const DevicePlatformDataVk&>(device.GetPlatformData());
     const auto& funcPtrs = (static_cast<const DeviceVk&>(device)).GetDebugFunctionUtilities();

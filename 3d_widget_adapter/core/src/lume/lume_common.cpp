@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -94,7 +94,7 @@ CORE_END_NAMESPACE()
 namespace OHOS::Render3D {
 LumeCommon::~LumeCommon()
 {
-    DeInitEngine();
+    // explicit release resource before destructor
 }
 
 void LumeCommon::UnloadEngineLib()
@@ -199,9 +199,9 @@ void LumeCommon::OnWindowChange(const TextureInfo& textureInfo)
 {
     textureInfo_ = textureInfo;
     SetupCustomRenderTarget(textureInfo);
-    SetupCameraViewPort(textureInfo.width_, textureInfo.height_);
     float widthScale = textureInfo.widthScale_;
     float heightScale = textureInfo.heightScale_;
+    SetupCameraViewPort(textureInfo.width_ * widthScale, textureInfo.height_ * heightScale);
     if (customRender_) { // this moment customRender may not ready
         customRender_->OnSizeChange(textureInfo.width_ * widthScale, textureInfo.height_ * heightScale);
     }
@@ -323,11 +323,13 @@ RENDER_NS::IDevice* LumeCommon::GetDevice()
 
 void LumeCommon::DeInitEngine()
 {
+    DestroySwapchain();
     DestroyResource();
     graphicsContext_ = nullptr;
     renderContext_ = nullptr;
     engine_ = nullptr;
     ecs_ = nullptr;
+    device_ = nullptr;
 }
 
 void LumeCommon::UpdateGeometries(const std::vector<std::shared_ptr<Geometry>>& shapes)
@@ -1282,14 +1284,31 @@ void LumeCommon::LoadCustGeometry(const std::vector<std::shared_ptr<Geometry>>& 
 
 bool LumeCommon::DestroySwapchain()
 {
+    WIDGET_LOGD("LumeCommon::DestroySwapchin");
+#ifdef CREATE_SURFACE
     EGLBoolean ret = EGL_TRUE;
-    const auto& data = static_cast<const RENDER_NS::DevicePlatformDataGLES&>(device_->GetPlatformData());
-    if (eglSurface_ != EGL_NO_SURFACE) {
-        device_->DestroySwapchain();
-        ret = eglDestroySurface(data.display, eglSurface_);
-        WIDGET_LOGE("destroy surface %s", ret == true ? "success" : "fail");
+    if (!device_) {
+        WIDGET_LOGE("no device but has eglSurface");
+        return false;
     }
-    return static_cast<bool>(ret);
+
+    if (eglSurface_ == EGL_NO_SURFACE) {
+        return true;
+    }
+
+    if (swapchainHandle_ && device_) {
+        device_->DestroySwapchain(swapchainHandle_);
+    }
+
+    const auto& data = static_cast<const RENDER_NS::DevicePlatformDataGLES&>(device_->GetPlatformData());
+    // device_->DestroySwapchain();
+    ret = eglDestroySurface(data.display, eglSurface_);
+    eglSurface_ = EGL_NO_SURFACE;
+#endif
+    // need check destroy swapchain
+    swapchainHandle_ = {};
+    // return static_cast<bool>(ret);
+    return true;
 }
 
 void LumeCommon::InitializeScene(uint32_t key)
@@ -1303,6 +1322,7 @@ bool LumeCommon::CreateSwapchain(void* nativeWindow)
 {
     WIDGET_SCOPED_TRACE("LumeCommon::CreateSwapchain");
     WIDGET_LOGD("LumeCommon::CreateSwapchain");
+#ifdef CREATE_SURFACE
     if (nativeWindow == nullptr) {
         return false;
     }
@@ -1347,13 +1367,27 @@ bool LumeCommon::CreateSwapchain(void* nativeWindow)
             WIDGET_LOGE("fail to create linear egl surface for reason %d", error);
         }
     }
+    RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
+        reinterpret_cast<uint64_t>(eglSurface_),
+        RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
+            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT,
+    };
+#endif
 
     RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
-        reinterpret_cast<uint64_t>(eglSurface_), true, true,
-            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
-            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT
+        // reinterpret_cast<uint64_t>(eglSurface_),
+        0U,
+        RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
+            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT,
+        RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        {
+            reinterpret_cast<uintptr_t>(nativeWindow),
+            reinterpret_cast<uintptr_t>(static_cast<const RENDER_NS::DevicePlatformDataGLES&>(
+                device_->GetPlatformData()).display)
+        }
     };
-    device_->CreateSwapchain(swapchainCreateInfo);
+    // device_->CreateSwapchain(swapchainCreateInfo);
+    swapchainHandle_ = device_->CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
     return eglSurface_ != EGL_NO_SURFACE;
 }
 
@@ -1364,24 +1398,26 @@ void LumeCommon::SetupCustomRenderTarget(const TextureInfo &info)
         return;
     }
 
-    if (info.textureId_ == 0U && info.nativeWindow_) {
-        CreateSwapchain(info.nativeWindow_);
-        return;
-    }
+
 
     auto& ecs = *ecs_;
     auto cameraComponent = cameraManager_->Write(cameraEntity_);
     auto* rhcManager = CORE_NS::GetManager<CORE3D_NS::IRenderHandleComponentManager>(ecs);
-
-    auto imageEntity = CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(),
-        *rhcManager, SetupGpuImageTarget());
-    auto depthEntity = CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(),
-        *rhcManager, SetupGpuDepthTarget());
-
     cameraComponent->customColorTargets.clear();
-    cameraComponent->customColorTargets.emplace_back(std::move(imageEntity));
-    cameraComponent->customDepthTarget = std::move(depthEntity);
+    CORE_NS::EntityReference imageEntity;
+
+    if (info.textureId_ == 0U && info.nativeWindow_) {
+        // need check recreate window
+        CreateSwapchain(info.nativeWindow_);
+        imageEntity = GetOrCreateEntityReference(ecs.GetEntityManager(), *rhcManager, swapchainHandle_);
+    } else {
+        auto imageEntity = CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(),
+            *rhcManager, SetupGpuImageTarget());
+        auto depthEntity = CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(),
+            *rhcManager, SetupGpuDepthTarget());
+    }
     cameraComponent->postProcess = postprocessEntity_;
+    cameraComponent->customColorTargets.emplace_back(std::move(imageEntity));
 }
 
 void LumeCommon::UpdateLights(const std::vector<std::shared_ptr<OHOS::Render3D::Light>>& lights)

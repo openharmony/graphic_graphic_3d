@@ -17,7 +17,6 @@
 
 #include <render/namespace.h>
 
-#include "device/device.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
@@ -50,7 +49,11 @@ RenderHandle NodeContextDescriptorSetManagerGLES::CreateDescriptorSet(
 {
     RenderHandle clientHandle;
     auto& cpuDescriptorSets = cpuDescriptorSets_[DESCRIPTOR_SET_INDEX_TYPE_STATIC];
-    PLUGIN_ASSERT_MSG(cpuDescriptorSets.size() < maxSets_, "no more descriptor sets available");
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (cpuDescriptorSets.size() >= maxSets_) {
+        PLUGIN_LOG_E("RENDER_VALIDATION: No more descriptor sets available");
+    }
+#endif
     if (cpuDescriptorSets.size() < maxSets_) {
         uint32_t dynamicOffsetCount = 0;
         CpuDescriptorSet newSet;
@@ -86,7 +89,7 @@ RenderHandle NodeContextDescriptorSetManagerGLES::CreateDescriptorSet(
         newSet.samplers.resize(samplerCount);
 
         const uint32_t arrayIndex = (uint32_t)cpuDescriptorSets.size();
-        cpuDescriptorSets.emplace_back(std::move(newSet));
+        cpuDescriptorSets.push_back(move(newSet));
         auto& currCpuDescriptorSet = cpuDescriptorSets[arrayIndex];
         currCpuDescriptorSet.dynamicOffsetDescriptors.resize(dynamicOffsetCount);
 
@@ -136,7 +139,7 @@ RenderHandle NodeContextDescriptorSetManagerGLES::CreateOneFrameDescriptorSet(
     newSet.samplers.resize(samplerCount);
 
     const uint32_t arrayIndex = static_cast<uint32_t>(cpuDescriptorSets.size());
-    cpuDescriptorSets.emplace_back(std::move(newSet));
+    cpuDescriptorSets.push_back(move(newSet));
 
     auto& currCpuDescriptorSet = cpuDescriptorSets[arrayIndex];
     currCpuDescriptorSet.dynamicOffsetDescriptors.resize(dynamicOffsetCount);

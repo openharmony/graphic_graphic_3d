@@ -101,13 +101,13 @@ public:
 
     /** Bind sampler
      * @param binding Binding index
-     * @param resource Binding resource
+     * @param handle Binding resource handle
      */
     virtual void BindSampler(const uint32_t binding, const RenderHandle handle) = 0;
 
     /** Bind sampler
      * @param binding Binding index
-     * @param handle Binding resource handle
+     * @param resource Binding resource
      */
     virtual void BindSampler(const uint32_t binding, const BindableSampler& resource) = 0;
 
@@ -116,6 +116,35 @@ public:
      * @param handles Binding resource handles
      */
     virtual void BindSamplers(const uint32_t binding, const BASE_NS::array_view<const BindableSampler> resources) = 0;
+
+    /** Bind buffer with additional descriptor flags. Automatically checks needed flag from pipeline layout which was
+     * used for descriptor set binder creation.
+     * @param binding Binding index
+     * @param resource Binding resource
+     * @param flags Additional decriptor flags
+     */
+    virtual void BindBuffer(
+        const uint32_t binding, const BindableBuffer& resource, const AdditionalDescriptorFlags flags) = 0;
+
+    /** Bind image with additional descriptor flags.
+     * @param binding Binding index
+     * @param resource Binding resources
+     * @param flags Additional decriptor flags
+     */
+    virtual void BindImage(
+        const uint32_t binding, const BindableImage& resource, const AdditionalDescriptorFlags flags) = 0;
+
+    /** Bind sampler with additional descriptor flags
+     * @param binding Binding index
+     * @param resource Binding resource
+     * @param flags Additional decriptor flags
+     */
+    virtual void BindSampler(
+        const uint32_t binding, const BindableSampler& resource, const AdditionalDescriptorFlags flags) = 0;
+
+    /** Print validity. Checks through all bindings that they have valid handles.
+     */
+    virtual void PrintDescriptorSetLayoutBindingValidation() const = 0;
 
     struct Deleter {
         constexpr Deleter() noexcept = default;
@@ -235,6 +264,38 @@ public:
      */
     virtual void BindSamplers(
         const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const BindableSampler> resources) = 0;
+
+    /** Bind buffer with additional descriptor set flags
+     * @param set Set index
+     * @param binding Binding index
+     * @param resource Binding resource
+     * @param flags Additional descriptor set flags
+     */
+    virtual void BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource,
+        const AdditionalDescriptorFlags flags) = 0;
+
+    /** Bind image with additional descriptor set flags. (Sampled Image or Storage Image)
+     * (e.g. input attachment and color attachment)
+     * @param set Set index
+     * @param binding Binding index
+     * @param resource Binding resource
+     * @param flags Additional descriptor set flags
+     */
+    virtual void BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource,
+        const AdditionalDescriptorFlags flags) = 0;
+
+    /** Bind sampler with additional descriptor set flags
+     * @param set Set index
+     * @param binding Binding index
+     * @param resource Binding resource
+     * @param flags Additional descriptor set flags
+     */
+    virtual void BindSampler(const uint32_t set, const uint32_t binding, const BindableSampler& resource,
+        const AdditionalDescriptorFlags flags) = 0;
+
+    /** Print validity. Checks through all set bindings that they have valid handles and prints errors.
+     */
+    virtual void PrintPipelineDescriptorSetLayoutBindingValidation() const = 0;
 
     struct Deleter {
         constexpr Deleter() noexcept = default;

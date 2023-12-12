@@ -34,7 +34,7 @@
 #define PLUGIN_DATA(NAME) __attribute__((used)) constexpr const CORE_NS::IPlugin NAME##_pluginData
 #if __aarch64__
 #define SECTION(NAME) #NAME",\"wa\"\n .align 3\n"
-#elif __x86_64__
+#elif __x86_64__ 
 #define SECTION(NAME) #NAME",\"wa\"\n .align 8\n"
 #elif __arm__
 #define SECTION(NAME) #NAME",\"wa\"\n .align 2\n"
@@ -57,11 +57,11 @@
     extern const CORE_NS::IPlugin* const NAME##_StaticPlugin;                                                         \
     __attribute__((visibility("hidden"), used)) CORE_NS::IPlugin const* const NAME##_DATA_ref = NAME##_StaticPlugin;  \
     extern CORE_NS::IPlugin const* const static_plugin_list;                                                          \
-    extern __attribute__((visibility("hidden"), used, weak)) CORE_NS::IPlugin const* const static_plugin_list_ref =   \
+    extern __attribute__((visibility("hidden"), used, weak)) CORE_NS::IPlugin const* const static_plugin_list_ref =    \
         static_plugin_list;                                                                                           \
     extern CORE_NS::IPlugin const* const static_plugin_list_end;                                                      \
-    extern __attribute__((visibility("hidden"), used, weak))                                                          \
-        CORE_NS::IPlugin const* const static_plugin_list_end_ref = static_plugin_list_end;
+    extern __attribute__((visibility("hidden"), used, weak)) CORE_NS::IPlugin const* const static_plugin_list_end_ref =\
+        static_plugin_list_end;
 #endif
 #else
 
@@ -74,7 +74,7 @@ void RegisterStaticPlugin(const CORE_NS::IPlugin& plugin);
 #define PLUGIN_DATA(NAME) static constexpr const CORE_NS::IPlugin NAME##_pluginData
 
 #if _MSC_VER
-    // Use static class "constructor" to call a function during initialization.
+    // Use static class "constructor" to call a function during initialization. 
     // ("safer", should work with ANY compiler, but with dynamic runtime init/memory cost)
 #define DEFINE_STATIC_PLUGIN(NAME)                                                   \
     static struct magic {                                                            \

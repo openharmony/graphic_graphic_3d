@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Base::array_view&lt;*&gt;">
+    <DisplayString>{{size={size_}}}</DisplayString>
+    <Expand>
+      <Item Name="[size]">size_</Item>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>begin_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::vector&lt;*&gt;">
+    <DisplayString>{{size={size_}}}</DisplayString>
+    <Expand>
+      <Item Name="[size]">size_</Item>
+      <Item Name="[allocator]">allocator_</Item>
+      <Item Name="[capacity]">capacity_</Item>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>($T1*)data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::basic_string&lt;*&gt;">
+    <DisplayString Condition="!data_.longString.isShort &amp;&amp; (data_.longString.size == 0)">empty</DisplayString>
+    <DisplayString Condition="!data_.longString.isShort &amp;&amp; (data_.longString.size &gt; 0)">{($T1*)(data_.longString.begin),s}</DisplayString>
+    <DisplayString Condition="data_.longString.isShort &amp;&amp; ((shortCapacity - data_.shortString.size) == 0)">empty</DisplayString>
+    <DisplayString Condition="data_.longString.isShort &amp;&amp; ((shortCapacity - data_.shortString.size) &gt; 0)">{data_.shortString.begin + 1,s}</DisplayString>
+    <StringView Condition="!data_.longString.isShort &amp;&amp; (data_.longString.size &gt; 0)">($T1*)(data_.longString.begin),s</StringView>
+    <StringView Condition="data_.longString.isShort &amp;&amp; ((shortCapacity - data_.shortString.size) &gt; 0)">data_.shortString.begin + 1,s</StringView>
+    <Expand>
+      <CustomListItems>
+        <If Condition="data_.longString.isShort">
+          <Item Name="[capacity]">shortCapacity</Item>
+          <Item Name="[size]">shortCapacity - data_.shortString.size</Item>
+          <Item Name="[ptr]">($T1*)(data_.shortString.begin + 1)</Item>
+        </If>
+        <If Condition="!data_.longString.isShort">
+          <Item Name="[capacity]">data_.longString.capacity</Item>
+          <Item Name="[size]">data_.longString.size</Item>
+          <Item Name="[ptr]">($T1*)data_.longString.begin</Item>
+        </If>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  <Type Name="Base::basic_string_view&lt;*&gt;">
+    <DisplayString Condition="size_==0">empty</DisplayString>
+    <DisplayString Condition="size_>0">{begin_,[size_]}</DisplayString>
+    <StringView Condition="size_>0">begin_,[size_]</StringView>
+    <Expand>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>($T1*)begin_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Base::basic_fixed_string&lt;*&gt;">
+    <DisplayString Condition="len_==0">empty</DisplayString>
+    <DisplayString Condition="len_>0">{data_,[len_]}</DisplayString>
+    <StringView Condition="len_>0">data_,[len_]</StringView>
+    <Expand>
+      <ArrayItems>
+        <Size>len_</Size>
+        <ValuePointer>($T1*)data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::pair&lt;*&gt;">
+    <DisplayString>{first}, {second}</DisplayString>
+    <Expand>
+      <Item Name="first">first</Item>
+      <Item Name="second">second</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::unordered_map_base&lt;*&gt;">
+    <DisplayString Condition="size_==0">empty</DisplayString>
+    <DisplayString Condition="size_>0">{{size={size_}}}</DisplayString>
+    <Expand>
+      <CustomListItems MaxItemsPerView="5000" ExcludeView="Test">
+        <Variable Name="index" InitialValue="0" />
+        <Variable Name="buckets" InitialValue="buckets_.size_" />
+        <Variable Name="pBucket" InitialValue="buckets_.data_" />
+        <Variable Name="node" InitialValue="*buckets_.data_" />
+
+        <Loop>
+          <If Condition="index >= buckets">
+            <Break/>
+          </If>
+          <If Condition="pBucket[index] != nullptr">
+            <Exec>node = *(pBucket + index)</Exec>
+            <Item Name="[{node->data.first}]">node->data.second</Item>
+            <Exec>node = node->next</Exec>
+            <Loop>
+              <If Condition="node != nullptr">
+                <Item Name="[{node->data.first}]">node->data.second</Item>
+                <Exec>node = node->next</Exec>
+              </If>
+              <Else>
+                <Break/>
+              </Else>
+            </Loop>
+          </If>
+          <Exec>index+=1</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::unique_ptr&lt;*&gt;">
+    <DisplayString Condition="ptr_ == nullptr">null</DisplayString>
+    <DisplayString>unique_ptr {*ptr_}</DisplayString>
+    <Expand>
+      <ExpandedItem>ptr_</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::Uid">
+      <DisplayString>"{(uint32_t)(data[0]&gt;&gt;32U),nvoXb}-{(uint16_t)(data[0]&gt;&gt;16),nvoXb}-{(uint16_t)(data[0]),nvoXb}-{(uint16_t)(data[1]&gt;&gt;48U),nvoXb}-{(uint16_t)(data[1]&gt;&gt;32U),nvoXb}-{(uint16_t)((data[1]&lt;&lt;16U)&gt;&gt;48U),nvoXb}{(uint32_t)(data[1]),nvoXb}"</DisplayString>
+  </Type>
+
+</AutoVisualizer>

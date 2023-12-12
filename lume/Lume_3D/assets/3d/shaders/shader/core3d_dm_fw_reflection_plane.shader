@@ -1,5 +1,10 @@
 {
-    "compatibility_info" : { "version" : "22.00", "type" : "shader" },
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "shader"
+    },
+    "category": "3D/Material",
+    "displayName": "Reflection Plane",
     "vert": "3dshaders://shader/core3d_dm_fw.vert.spv",
     "frag": "3dshaders://shader/core3d_dm_fw_reflection_plane.frag.spv",
     "vertexInputDeclaration": "3dvertexinputdeclarations://core3d_dm_fw.shadervid",
@@ -49,7 +54,10 @@
                         "displayName": "Material Map"
                     },
                     {},
-                    {},
+                    {
+                        "name": "ambientOcclusion",
+                        "displayName": "Ambient Occlusion"
+                    },
                     {},
                     {
                         "name": "reflection",

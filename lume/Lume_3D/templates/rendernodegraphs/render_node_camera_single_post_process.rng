@@ -1,0 +1,81 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "Template",
+    "nodes": [
+        {
+            "typeName": "RenderNodeCameraSinglePostProcess",
+            "nodeName": "RenderNodeCameraSinglePostProcess",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "postProcess": "custom_ssr",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "storeOp": "store",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "output",
+                        "nodeName": "CUSTOM_RN_CAM_CTRL"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpass": {
+                    "colorAttachmentIndices": [ 0 ]
+                }
+            },
+            "shader": "appshaders://shader/custom_fullscreen_ssr.shader",
+            "resources": {
+                "images": [
+                    {
+                        "set": 1,
+                        "binding": 0,
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CUSTOM_RN_CAM_CTRL"
+                    },
+                    {
+                        "set": 1,
+                        "binding": 1,
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CUSTOM_RN_CAM_CTRL"
+                    },
+                    {
+                        "set": 1,
+                        "binding": 2,
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "CUSTOM_RN_CAM_CTRL"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 1,
+                        "binding": 0,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    },
+                    {
+                        "set": 1,
+                        "binding": 1,
+                        "name": "CORE_DEFAULT_SAMPLER_NEAREST_CLAMP"
+                    },
+                    {
+                        "set": 1,
+                        "binding": 2,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ]
+            }
+        }
+    ]
+}

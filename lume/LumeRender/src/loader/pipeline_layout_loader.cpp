@@ -115,11 +115,11 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, const string_
         // reassure
         pl.descriptorSetCount = Math::min(pl.descriptorSetCount, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
     } else {
-        result.success = false;
         result.error += "invalid descriptor set layout count";
     }
 
-    if (!result.success || !result.error.empty()) {
+    result.success = result.error.empty();
+    if (!result.success) {
         PLUGIN_LOG_E("error loading pipeline layout from json: %s", result.error.c_str());
     }
 
@@ -138,22 +138,15 @@ const PipelineLayout& PipelineLayoutLoader::GetPipelineLayout() const
 
 PipelineLayoutLoader::LoadResult PipelineLayoutLoader::Load(const string_view jsonString)
 {
-    PipelineLayoutLoader::LoadResult result;
-    json::value jsonData = json::parse(jsonString.data());
-    if (jsonData) {
-        result = RENDER_NS::Load(jsonData, uri_, pipelineLayout_);
-    } else {
-        result.success = false;
-        result.error = "Invalid json file.";
+    if (json::value jsonData = json::parse(jsonString.data()); jsonData) {
+        return RENDER_NS::Load(jsonData, uri_, pipelineLayout_);
     }
-
-    return result;
+    return LoadResult("Invalid json file.");
 }
 
 PipelineLayoutLoader::LoadResult PipelineLayoutLoader::Load(IFileManager& fileManager, const string_view uri)
 {
     uri_ = uri;
-    LoadResult result;
 
     IFile::Ptr file = fileManager.OpenFile(uri);
     if (!file) {

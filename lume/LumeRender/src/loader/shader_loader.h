@@ -55,9 +55,9 @@ public:
     /** Destructor. */
     ~ShaderLoader() = default;
 
-    /** Looks for json files under default shader data paths, parses them, and loads the listed shaders. */
+    /** Looks for json files with given paths, parses them, and loads the listed shaders. */
     void Load(const ShaderManager::ShaderFilePathDesc& desc);
-    /** Looks for json files under default shader data paths, parses them, and loads the listed data. */
+    /** Looks for json files with given path, parses them, and loads the listed data. */
     void LoadFile(BASE_NS::string_view uri, const bool forceReload);
 
     /** Reloads the given list of shader spv files.
@@ -79,9 +79,9 @@ private:
         ShaderModuleCreateInfo info;
     };
     ShaderFile LoadShaderFile(BASE_NS::string_view shader, ShaderStageFlags stageBits);
-    RenderHandleReference CreateComputeShader(const ShaderDataLoader& shaderStateLoader, const bool forceReload);
-    RenderHandleReference CreateGraphicsShader(const ShaderDataLoader& shaderStateLoader, const bool forceReload);
-    RenderHandleReference CreateShader(const ShaderDataLoader& shaderStateLoader, const bool forceReload);
+    RenderHandleReference CreateComputeShader(const ShaderDataLoader& dataLoader, const bool forceReload);
+    RenderHandleReference CreateGraphicsShader(const ShaderDataLoader& dataLoader, const bool forceReload);
+    RenderHandleReference CreateShader(const ShaderDataLoader& dataLoader, const bool forceReload);
 
     void LoadShaderStates(BASE_NS::string_view currentPath, const CORE_NS::IDirectory& directory);
     void CreateShaderStates(BASE_NS::string_view uri,

@@ -48,7 +48,7 @@ private:
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     void ParseRenderNodeInputs();
-    RenderHandle GetPsoHandle(IRenderNodeContextManager& renderNodeContextMgr);
+    RenderHandle GetPsoHandle();
 
     // Json resources which might need re-fetching
     struct JsonInputs {
@@ -65,9 +65,15 @@ private:
 
     RenderNodeHandles::InputRenderPass inputRenderPass_;
     RenderNodeHandles::InputResources inputResources_;
-    RenderHandle shader_;
-    PipelineLayout pipelineLayout_;
-    RenderHandle psoHandle_;
+    struct PipelineData {
+        RenderHandle shader;
+        RenderHandle graphicsState;
+        RenderHandle pso;
+        RenderHandle pipelineLayout;
+
+        PipelineLayout pipelineLayoutData;
+    };
+    PipelineData pipelineData_;
 
     // data store push constant
     bool useDataStorePushConstant_ { false };

@@ -130,7 +130,7 @@ const PipelineLayout& ShaderModuleVk::GetPipelineLayout() const
     return pipelineLayout_;
 }
 
-ShaderSpecilizationConstantView ShaderModuleVk::GetSpecilization() const
+ShaderSpecializationConstantView ShaderModuleVk::GetSpecilization() const
 {
     return sscv_;
 }

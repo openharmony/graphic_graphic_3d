@@ -10,7 +10,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import("//build/ohos.gni")
 import("//foundation/graphic/graphic_2d/graphic_config.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
@@ -107,7 +106,6 @@ config("lume_default") {
     "-fuse-ld=lld",
     "-flto=thin",
     "-Wl,--no-threads",
-    "-Wl,--build-id=sha1",
     "-Wl,--gc-sections",
     "-Wl,--exclude-libs,ALL",
   ]
@@ -151,7 +149,8 @@ config("lume_engine_config") {
     "CORE_DYNAMIC=0",
     "CORE_BUILDTYPE=${BUILDTYPE}",
     "CORE_PUBLIC=__attribute__((visibility(\"default\")))",
-    "USE_STB_IMAGE=$USE_STB_IMAGE"
+    "USE_STB_IMAGE=$USE_STB_IMAGE",
+    "USE_LIB_PNG_JPEG=$USE_LIB_PNG_JPEG"
   ]
 
   if (CORE_EMBEDDED_ASSETS_ENABLED) {
@@ -180,6 +179,8 @@ ohos_source_set("lume_engine_src") {
     "src/image/loaders/image_loader_ktx.h",
     "src/image/loaders/image_loader_ktx.cpp",
     "src/image/loaders/image_loader_stb_image.h",
+    "src/image/loaders/image_loader_libjpeg.h",
+    "src/image/loaders/image_loader_libpng.h",
     "src/image/image_loader_manager.h",
     "src/image/image_loader_manager.cpp",
 
@@ -243,11 +244,11 @@ ohos_source_set("lume_engine_src") {
     "src/util/linear_allocator.h",
     "src/util/string_util.h",
 
-    "src/io/ohos_file.h",
-    "src/io/ohos_file.cpp",
-    "src/io/ohos_filesystem.h",
-    "src/io/ohos_filesystem.cpp",
-
+    "src/os/ohos/ohos_file.h",
+    "src/os/ohos/ohos_file.cpp",
+    "src/os/ohos/ohos_filesystem.h",
+    "src/os/ohos/ohos_filesystem.cpp",
+    "src/image/loaders/image_loader_common.cpp",
   ]
 
   # platform source
@@ -265,6 +266,13 @@ ohos_source_set("lume_engine_src") {
     ]
   }
 
+  if (USE_LIB_PNG_JPEG) {
+    sources += [
+      "src/image/loaders/image_loader_libpng.cpp",
+      "src/image/loaders/image_loader_libjpeg.cpp",
+    ]
+  }
+
   configs = [
     ":lume_engine_config",
     ":lume_default",
@@ -275,6 +283,12 @@ ohos_source_set("lume_engine_src") {
   external_deps = [
     "c_utils:utils",
     "resource_management:global_resmgr",
+  ]
+
+  deps = [
+    "//third_party/libpng:libpng",
+    "//third_party/libjpeg-turbo:turbojpeg_static",
+    "//third_party/zlib:shared_libz",
   ]
 
   if (LUME_OHOS_BUILD) {
@@ -305,6 +319,7 @@ lume_rofs("lume_engine_rofs")
   script = "./tools/CompilerAsset.sh"
   copy_path = "$target_gen_dir/assets"
   file_extension = ""
+  compileShader_deps=["${LUME_BINARY_PATH}:lume_binary_shader_compile"]
 }
 
 source_set("lume_engine_rofs_obj") {
@@ -343,7 +358,7 @@ ohos_static_library("libAGPEngine") {
 
 config("lume_component_help_config") {
   include_dirs = [
-    "src/ecshelper",
+    "ecshelper",
   ]
 
   cflags = [
@@ -359,18 +374,18 @@ ohos_source_set("lume_component_help_src") {
   ]
 
   sources = [
-    "src/ecshelper/ComponentTools/base_manager.inl",
-    "src/ecshelper/ComponentTools/base_manager.h",
+    "ecshelper/ComponentTools/base_manager.inl",
+    "ecshelper/ComponentTools/base_manager.h",
 
-    "src/ecshelper/ComponentTools/component_query.h",
-    "src/ecshelper/ComponentTools/component_query.cpp",
+    "ecshelper/ComponentTools/component_query.h",
+    "ecshelper/ComponentTools/component_query.cpp",
 
-    "src/ecshelper/PropertyTools/property_api_impl.inl",
-    "src/ecshelper/PropertyTools/property_api_impl.h",
-    "src/ecshelper/PropertyTools/property_data.cpp",
-    "src/ecshelper/PropertyTools/property_data.h",
-    "src/ecshelper/PropertyTools/property_macros.h",
-    "src/ecshelper/PropertyTools/property_value.h",
-    "src/ecshelper/PropertyTools/core_metadata.inl",
+    "ecshelper/PropertyTools/property_api_impl.inl",
+    "ecshelper/PropertyTools/property_api_impl.h",
+    "ecshelper/PropertyTools/property_data.cpp",
+    "ecshelper/PropertyTools/property_data.h",
+    "ecshelper/PropertyTools/property_macros.h",
+    "ecshelper/PropertyTools/property_value.h",
+    "ecshelper/PropertyTools/core_metadata.inl",
   ]
 }

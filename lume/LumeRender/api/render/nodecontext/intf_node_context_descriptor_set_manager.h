@@ -55,6 +55,12 @@ public:
      * To reiterate: All old descriptor set handles become invalid when this is called. */
     virtual void ResetAndReserve(const DescriptorCounts& descriptorCounts) = 0;
 
+    /** Reset non-dynamic (not one frame) descriptor sets and reserve descriptors.
+     * Reset only when a new pool is needed. (Currently allocated descriptors are not enough)
+     * Needs to reserve all the descriptors which are used in a single frame.
+     * To reiterate: All old descriptor set handles become invalid when this is called. */
+    virtual void ResetAndReserve(const BASE_NS::array_view<DescriptorCounts> descriptorCounts) = 0;
+
     /** Creates a new descriptor set and gives its handle. */
     virtual RenderHandle CreateDescriptorSet(
         const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) = 0;

@@ -1,0 +1,1022 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#version 450 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_color_conversion_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+precision highp float;
+precision highp int;
+
+
+
+
+
+layout(constant_id = 256)const uint CORE_BACKEND_TYPE = 0;
+
+
+
+
+layout(constant_id = 257)const float CORE_FLIP_NDC = 1.0;
+
+
+
+
+
+
+
+
+
+
+vec2 GetFragCoordUv(vec2 fragCoord, vec2 inverseTexelSize)
+{
+    vec2 uv = fragCoord * inverseTexelSize;
+    if(CORE_FLIP_NDC < 0.0){
+        uv = vec2(uv . x, 1.0 - uv . y);
+    }
+    return uv;
+}
+
+
+
+
+
+
+
+#line 24 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_color_conversion_common.h"
+
+
+
+
+float CalcLuma(const vec3 color)
+{
+
+    return 0.299 * color . r + 0.587 * color . g + 0.114 * color . b;
+}
+
+
+
+
+float CalcLumaFxaa(const vec3 color)
+{
+
+    return color . g *(0.587 / 0.299)+ color . r;
+}
+
+
+
+
+float LumaWeight(const float luma)
+{
+    return(1.0 /(1.0 + luma));
+}
+
+
+
+
+vec3 TonemapLuma(const vec3 color, const float luma, const float range)
+{
+    return color /(1.0 + luma / range);
+}
+
+
+
+
+vec3 TonemapLumaInv(const vec3 color, const float luma, const float range)
+{
+    return color /(1.0 - luma / range);
+}
+
+
+
+
+
+vec3 SrgbToLinear(const vec3 srgb)
+{
+    const float mlow = 1.0f / 12.92f;
+    const float mhigh = 1.0f / 1.055f;
+
+    const vec3 high = pow((srgb + 0.055f)* mhigh, vec3(2.4f));
+    const vec3 low = srgb * mlow;
+    const bvec3 cutoff = lessThan(srgb, vec3(0.04045f));
+    return mix(high, low, cutoff);
+}
+
+
+
+
+
+vec3 LinearToSrgb(const vec3 linear)
+{
+    const float mlow = 12.92f;
+    const float mhigh = 1.055f;
+
+    const vec3 high = pow(linear, vec3(0.416f))* mhigh - 0.055f;
+    const vec3 low = linear * mlow;
+    const bvec3 cutoff = lessThan(linear, vec3(0.0031308f));
+    return mix(high, low, cutoff);
+}
+
+
+
+
+
+vec3 rgbToYCoCg(const vec3 rgb)
+{
+    const float y = dot(rgb, vec3(0.25, 0.5, 0.25));
+    const float co = dot(rgb, vec3(0.5, 0.0, - 0.5));
+    const float cg = dot(rgb, vec3(- 0.25, 0.5, - 0.25));
+    return vec3(y, co, cg);
+}
+
+
+
+
+
+vec3 yCoCgToRgb(const vec3 ycocg)
+{
+    const float y = ycocg . r;
+    const float co = ycocg . g;
+    const float cg = ycocg . b;
+    return vec3(y + co - cg, y + cg, y - co - cg);
+}
+
+
+#line 23 "shader/fullscreen_motion_blur.frag"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct GlobalPostProcessStruct {
+
+    uvec4 flags;
+
+    vec4 renderTimings;
+
+
+    vec4 factors[14];
+
+
+    vec4 userFactors[16];
+};
+
+
+
+
+struct LocalPostProcessStruct {
+
+    vec4 factors[16];
+};
+
+struct LocalPostProcessPushConstantStruct {
+
+    vec4 viewportSizeInvSize;
+
+    vec4 factor;
+};
+
+struct PostProcessTonemapStruct {
+    vec4 texSizeInvTexSize;
+
+    uvec4 flags;
+
+    vec4 tonemap;
+    vec4 vignette;
+    vec4 colorFringe;
+    vec4 dither;
+
+    vec4 bloomParameters;
+};
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+float getVignetteCoeff(const vec2 uv, mediump const float coeff, mediump const float power)
+{
+    vec2 uvVal = uv . xy *(vec2(1.0)- uv . yx);
+    float vignette = uvVal . x * uvVal . y * coeff;
+    vignette = pow(vignette, power);
+    return clamp(vignette, 0.0, 1.0);
+}
+
+
+
+
+float getChromaCoeff(const vec2 uv, mediump const float chromaCoefficient)
+{
+
+    vec2 distUv =(uv - 0.5)* 2.0;
+    return dot(distUv, distUv)* chromaCoefficient;
+}
+
+
+
+
+float RandomDither(vec2 st)
+{
+    return fract(sin(dot(st . xy, vec2(12.9898, 78.233)))* 43758.5453);
+}
+
+
+
+
+#line 24 "shader/fullscreen_motion_blur.frag"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_tonemap_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_tonemap_common.h"
+
+
+
+
+
+vec3 TonemapAces(vec3 x)
+{
+    const float a = 2.51f;
+    const float b = 0.03f;
+    const float c = 2.43f;
+    const float d = 0.59f;
+    const float e = 0.14f;
+    return(x *(a * x + b))/(x *(c * x + d)+ e);
+}
+
+
+
+
+
+vec3 TonemapAcesFilmRec2020(vec3 x)
+{
+    float a = 15.8f;
+    float b = 2.12f;
+    float c = 1.2f;
+    float d = 5.92f;
+    float e = 1.9f;
+    return(x *(a * x + b))/(x *(c * x + d)+ e);
+}
+
+
+
+
+
+float TonemapFilmic(float x)
+{
+    const float a = 0.15f;
+    const float b = 0.50f;
+    const float c = 0.10f;
+    const float d = 0.20f;
+    const float e = 0.02f;
+    const float f = 0.30f;
+    return((x *(a * x + c * b)+ d * e)/(x *(a * x + b)+ d * f))- e / f;
+}
+vec3 TonemapFilmic(vec3 x)
+{
+    const float a = 0.15f;
+    const float b = 0.50f;
+    const float c = 0.10f;
+    const float d = 0.20f;
+    const float e = 0.02f;
+    const float f = 0.30f;
+    const float w = 11.2f;
+    const vec3 curr =((x *(a * x + c * b)+ d * e)/(x *(a * x + b)+ d * f))- e / f;
+    const float whiteScale = 1.0 / TonemapFilmic(w);
+    return curr * vec3(whiteScale);
+}
+
+
+#line 25 "shader/fullscreen_motion_blur.frag"
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 21 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+
+
+
+
+layout(set = 0, binding = 0, std140)uniform uGlobalStructData
+{
+    GlobalPostProcessStruct uGlobalData;
+};
+layout(set = 0, binding = 1, std140)uniform uLocalStructData
+{
+    LocalPostProcessStruct uLocalData;
+};
+
+layout(push_constant, std430)uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(constant_id = 0)const uint CORE_POST_PROCESS_FLAGS = 0;
+
+
+
+
+
+
+#line 29 "shader/fullscreen_motion_blur.frag"
+
+layout(set = 1, binding = 0)uniform sampler2D uInput;
+layout(set = 1, binding = 1)uniform sampler2D uDepth;
+layout(set = 1, binding = 2)uniform sampler2D uVelocity;
+layout(set = 1, binding = 3)uniform sampler2D uTileVelocity;
+
+
+
+layout(location = 0)in vec2 inUv;
+
+layout(location = 0)out vec4 outColor;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+vec2 GetUnpackVelocity(const vec2 uv, const vec2 invSize)
+{
+    return textureLod(uVelocity, uv, 0). xy * invSize;
+}
+
+vec2 GetUnpackTileVelocity(const vec2 uv, const vec2 invSize)
+{
+    return textureLod(uTileVelocity, uv, 0). xy * invSize;
+}
+
+vec4 GetFactor()
+{
+    return uLocalData . factors[0U];
+}
+
+bool IsVelocityZero(const vec2 velocity)
+{
+    return((abs(velocity . x)< 0.0001)||(abs(velocity . y)< 0.0001));
+}
+
+float CompareCone(const float localVelLength, const float velLength)
+{
+    return clamp(1.0 - localVelLength / velLength, 0.0, 1.0);
+}
+
+float CompareCylinder(const float localVelLength, const float velLength)
+{
+    return 1.0 - smoothstep(0.95 * velLength, 1.05 * velLength, localVelLength);
+}
+
+float SoftDepthCompare(const float za, const float zb)
+{
+    const float softExtent = 0.01;
+    return clamp(1.0 -(za - zb)/ softExtent, 0.0, 1.0);
+}
+
+
+float SampleWeight(const float baseDepth, const float sampleDepth, const float baseTileVelLength, const vec2 baseVel,
+    const vec2 sampleVel)
+{
+    const float f = SoftDepthCompare(baseDepth, sampleDepth);
+    const float b = SoftDepthCompare(sampleDepth, baseDepth);
+
+    const float xVelLength = length(baseVel);
+    const float yVelLength = length(sampleVel);
+    const float xyVelLength = length(baseVel - sampleVel);
+    const float yxVelLength = length(sampleVel - baseVel);
+
+    return(f * CompareCone(yxVelLength, baseTileVelLength))+(b * CompareCone(xyVelLength, baseTileVelLength))+
+           (CompareCylinder(yxVelLength, baseTileVelLength)* CompareCylinder(yxVelLength, baseTileVelLength)* 2.0);
+
+
+}
+
+
+
+
+void main(void)
+{
+    const vec4 factor = GetFactor();
+    const uint sharpness = uint(factor . x + 0.5);
+    float fSampleCount = 11.0;
+    if(sharpness == 0){
+        fSampleCount = 7.0;
+    } else if(sharpness == 1){
+        fSampleCount = 11.0;
+    } else if(sharpness == 2){
+        fSampleCount = 15.0;
+    }
+    const uint quality = uint(factor . y + 0.5);
+
+    const vec2 baseUv = inUv . xy;
+    vec2 velUv = baseUv;
+    const vec2 texIdx = baseUv * uPc . viewportSizeInvSize . xy;
+    const vec2 roundVal = round(texIdx);
+    const vec2 fracVal = fract(texIdx / 8.0);
+    const float dThreshold = 1.0 / 8.0;
+    const float uThreshold = 1.0 - dThreshold;
+
+
+    const float velocityCoefficient = factor . w;
+    vec2 baseTileVelocity = GetUnpackTileVelocity(velUv . xy, uPc . viewportSizeInvSize . zw)* velocityCoefficient;
+
+
+
+
+
+
+    const vec2 baseVelocity = GetUnpackVelocity(velUv . xy, uPc . viewportSizeInvSize . zw)* velocityCoefficient;
+
+    const vec3 baseColor = texture(uInput, baseUv). xyz;
+    if(! IsVelocityZero(baseTileVelocity)){
+        vec3 color = vec3(0.0);
+        float weightSum = fSampleCount;
+        if(quality == 0){
+
+
+            for(uint idx = 0;idx < uint(fSampleCount);++ idx){
+                const vec2 offset = baseVelocity *(float(idx)/ fSampleCount - 0.5);
+                color += textureLod(uInput, baseUv + offset, 0). xyz;
+            }
+        } else if(quality == 1){
+            const float baseTileVelLength = length(baseTileVelocity);
+            weightSum = 0.0;
+
+
+            const float baseDepth = textureLod(uDepth, baseUv, 0). x;
+            for(uint idx = 0;idx < uint(fSampleCount);++ idx){
+                const vec2 offset = baseTileVelocity *(float(idx)/ fSampleCount - 0.5);
+                const vec2 uv = baseUv + offset;
+                const float depth = textureLod(uDepth, uv, 0). x;
+
+
+                const float weight = 1.0;
+
+                color += textureLod(uInput, uv, 0). xyz * weight;
+                weightSum += weight;
+            }
+        } else if(quality == 2){
+            const float baseTileVelLength = length(baseTileVelocity);
+            weightSum = 0.0;
+
+
+            const float baseDepth = textureLod(uDepth, baseUv, 0). x;
+            for(uint idx = 0;idx < uint(fSampleCount);++ idx){
+                const vec2 offset = baseTileVelocity *(float(idx)/ fSampleCount - 0.5);
+                const vec2 uv = baseUv + offset;
+                const float sampleDepth = textureLod(uDepth, uv, 0). x;
+                const vec2 sampleVel = GetUnpackVelocity(uv, uPc . viewportSizeInvSize . zw)* velocityCoefficient;
+
+                const float weight = SampleWeight(baseDepth, sampleDepth, baseTileVelLength, baseVelocity, sampleVel);
+
+                color += textureLod(uInput, uv, 0). xyz * weight;
+                weightSum += weight;
+            }
+        }
+        weightSum = max(0.001, weightSum);
+        color = color / weightSum;
+        outColor = vec4(mix(baseColor, color, factor . z), 1.0);
+    } else {
+        outColor = vec4(baseColor, 1.0);
+    }
+}

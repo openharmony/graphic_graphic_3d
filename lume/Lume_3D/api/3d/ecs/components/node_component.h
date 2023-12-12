@@ -13,15 +13,15 @@
  * limitations under the License.
  */
 
-#if !defined(HIERARCHY_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define HIERARCHY_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_HIERARCHY_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_HIERARCHY_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
 #include <core/ecs/component_struct_macros.h>
+#include <core/ecs/entity.h>
 #include <core/ecs/intf_component_manager.h>
 #include <core/namespace.h>
-#include <core/property/property_types.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif

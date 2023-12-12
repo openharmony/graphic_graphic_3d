@@ -25,7 +25,7 @@
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
-class Swapchain;
+class SwapchainGLES;
 struct DeviceCreateInfo;
 struct DevicePlatformData;
 
@@ -34,9 +34,6 @@ struct SurfaceInfo;
 } // namespace GlesImplementation
 
 namespace EGLHelpers {
-void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf);
-void DumpEGLConfig(EGLDisplay dpy, const EGLConfig& config);
-
 class EGLState {
 public:
     EGLState() = default;
@@ -50,7 +47,7 @@ public:
     const DevicePlatformData& GetPlatformData() const;
 
     void SaveContext();
-    void SetContext(Swapchain* swapChain);
+    void SetContext(const SwapchainGLES* swapchain);
     void RestoreContext();
     void* ErrorFilter() const;
 
@@ -58,8 +55,11 @@ public:
     uint32_t MinorVersion() const;
 
     bool HasExtension(BASE_NS::string_view) const;
+    uintptr_t CreateSurface(uintptr_t window, uintptr_t instance) const noexcept;
+    void DestroySurface(uintptr_t surface) const noexcept;
     bool GetSurfaceInformation(
         const DevicePlatformDataGLES& plat, EGLSurface surface, GlesImplementation::SurfaceInfo& res) const;
+    void SwapBuffers(const SwapchainGLES& swapchain);
 
 protected:
     bool VerifyVersion();
@@ -83,7 +83,7 @@ protected:
 
     EGLSurface dummySurface_ = EGL_NO_SURFACE;
     ContextState dummyContext_;
-    bool vSync_ = false;
+    bool vSync_ = true;
     bool oldIsSet_ = false;
 
     void GetContext(ContextState& oldState);

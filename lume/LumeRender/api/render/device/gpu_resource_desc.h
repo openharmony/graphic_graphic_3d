@@ -84,6 +84,8 @@ enum ImageUsageFlagBits {
     CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
     /** Input attachment bit */
     CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT = 0x00000080,
+    /** Fragment shading rate attachment bit */
+    CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT = 0x00000100,
 };
 /** Container for image usage flag bits */
 using ImageUsageFlags = uint32_t;
@@ -381,16 +383,16 @@ struct GpuImageDesc {
     EngineImageCreationFlags engineCreationFlags { 0 };
 
     /** Width */
-    uint32_t width { 0 };
+    uint32_t width { 1u };
     /** Height */
-    uint32_t height { 0 };
+    uint32_t height { 1u };
     /** Depth */
-    uint32_t depth { 0 };
+    uint32_t depth { 1u };
 
     /** Mip count */
-    uint32_t mipCount { 1 };
+    uint32_t mipCount { 1u };
     /** Layer count */
-    uint32_t layerCount { 1 };
+    uint32_t layerCount { 1u };
 
     /** Sample count flags */
     SampleCountFlags sampleCountFlags { SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT };

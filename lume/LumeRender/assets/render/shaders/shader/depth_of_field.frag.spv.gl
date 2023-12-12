@@ -1,0 +1,33 @@
+#version 450
+
+struct LocalPostProcessStruct
+{
+    vec4 factors[16];
+};
+
+layout(std140) uniform s0_b1
+{
+    LocalPostProcessStruct uLocalData;
+} _s0_b1;
+
+uniform sampler2D s1_b2;
+uniform sampler2D s1_b0;
+uniform sampler2D s1_b1;
+
+layout(location = 0) out vec4 outColor;
+layout(location = 0) in vec2 inUv;
+
+vec4 _263;
+
+void main()
+{
+    vec4 _202 = textureLod(s1_b2, inUv, 0.0);
+    vec4 _213 = textureLod(s1_b1, inUv, _s0_b1.uLocalData.factors[1].x);
+    float _215 = _202.w;
+    float _229 = _213.w;
+    vec3 _239 = (_213.xyz * _229) + (((textureLod(s1_b2, inUv, _s0_b1.uLocalData.factors[1].y).xyz * _215) + (textureLod(s1_b0, inUv, 0.0).xyz * (1.0 - _215))).xyz * (1.0 - _229));
+    vec4 _262 = vec4(_239.x, _239.y, _239.z, _263.w);
+    _262.w = 1.0;
+    outColor = _262;
+}
+

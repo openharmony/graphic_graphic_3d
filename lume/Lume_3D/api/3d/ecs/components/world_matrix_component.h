@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(WORLD_MATRIX_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define WORLD_MATRIX_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_WORLD_MATRIX_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_WORLD_MATRIX_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>

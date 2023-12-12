@@ -19,14 +19,13 @@
 #include <cstdarg>
 #include <ctime>
 #include <fstream>
+#include <hilog/log.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string_view>
-
-#include <hilog/log.h>
-
 #include <unistd.h>
+
 #include <core/namespace.h>
 
 #include "log/logger.h"
@@ -108,6 +107,7 @@ protected:
     {
         delete this;
     }
+
 private:
     static constexpr std::string_view logTag_ = "ohos_lume";
 };
@@ -121,5 +121,4 @@ ILogger::IOutput::Ptr CreateLoggerDebugOutput()
 {
     return {};
 }
-
 CORE_END_NAMESPACE()

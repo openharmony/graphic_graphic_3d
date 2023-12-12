@@ -55,19 +55,16 @@ struct QueueProperties {
     bool canPresent { false };
 };
 
-struct Window {
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    uintptr_t hinstance;
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    uintptr_t connection;
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    uintptr_t display;
-#endif
-    uintptr_t window;
-};
-
 class CreateFunctionsVk {
 public:
+    struct Window {
+        // Win: hinstance
+        // Linux: connection
+        // Mac: display
+        uintptr_t instance;
+        uintptr_t window;
+    };
+
     static InstanceWrapper CreateInstance(const VersionInfo& engineInfo, const VersionInfo& appInfo);
     static void DestroyInstance(VkInstance instance);
 

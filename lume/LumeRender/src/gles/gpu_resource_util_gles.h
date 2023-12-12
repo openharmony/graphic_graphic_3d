@@ -26,12 +26,12 @@ RENDER_BEGIN_NAMESPACE()
 class GpuBuffer;
 class GpuImage;
 class GpuSampler;
-class Device;
+class IDevice;
 namespace GpuResourceUtil {
 void CopyGpuBufferGLES(GpuBuffer& buffer, BASE_NS::ByteArray& byteArray);
-void DebugBufferNameGLES(const Device& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
-void DebugImageNameGLES(const Device& device, const GpuImage& image, const BASE_NS::string_view name);
-void DebugSamplerNameGLES(const Device& device, const GpuSampler& sampler, const BASE_NS::string_view name);
+void DebugBufferNameGLES(const IDevice& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
+void DebugImageNameGLES(const IDevice& device, const GpuImage& image, const BASE_NS::string_view name);
+void DebugSamplerNameGLES(const IDevice& device, const GpuSampler& sampler, const BASE_NS::string_view name);
 } // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()
 

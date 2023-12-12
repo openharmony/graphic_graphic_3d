@@ -26,7 +26,6 @@
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
-#include "device/device.h"
 #include "device/gpu_resource_handle_util.h"
 #include "device/gpu_resource_manager.h"
 #include "device/gpu_resource_util.h"
@@ -41,18 +40,17 @@ RenderDataStoreDefaultGpuResourceDataCopy::RenderDataStoreDefaultGpuResourceData
       name_(name)
 {}
 
-void RenderDataStoreDefaultGpuResourceDataCopy::PostRender()
+void RenderDataStoreDefaultGpuResourceDataCopy::PostRenderBackend()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (!copyData_.empty() && waitForIdle_) {
-        PLUGIN_LOG_W("CORE_PERFORMANCE_WARNING: wait for idle called for device");
-        ((Device&)device_).WaitForIdle();
+        PLUGIN_LOG_W("RENDER_PERFORMANCE_WARNING: wait for idle called for device");
+        device_.WaitForIdle();
     }
     for (const auto& ref : copyData_) {
         if (ref.gpuHandle && ref.byteArray) {
-            GpuResourceUtil::CopyGpuResource(
-                (Device&)device_, gpuResourceMgr_, ref.gpuHandle.GetHandle(), *ref.byteArray);
+            GpuResourceUtil::CopyGpuResource(device_, gpuResourceMgr_, ref.gpuHandle.GetHandle(), *ref.byteArray);
         }
     }
 
@@ -76,7 +74,7 @@ void RenderDataStoreDefaultGpuResourceDataCopy::AddCopyOperation(const GpuResour
         if (copyOp.copyType == CopyType::WAIT_FOR_IDLE) {
             waitForIdle_ = true;
         }
-        copyData_.emplace_back(copyOp);
+        copyData_.push_back(copyOp);
     } else {
         PLUGIN_LOG_E("Copy operation only supported for GPU buffers");
     }

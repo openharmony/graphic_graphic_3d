@@ -20,7 +20,6 @@
 
 #include <base/containers/generic_iterator.h>
 #include <base/containers/refcnt_ptr.h>
-#include <base/containers/string.h>
 #include <core/property/property.h>
 #include <render/namespace.h>
 
@@ -235,21 +234,6 @@ int32_t RenderHandleReference::GetRefCount() const noexcept
         return 0u;
     }
 }
-
-/** Render handle description */
-struct RenderHandleDesc {
-    /** Type */
-    RenderHandleType type { RenderHandleType::UNDEFINED };
-    /** Additional ID */
-    uint64_t id { 0 };
-    /** Reference count for this handle as seen from the client side */
-    int32_t refCount { 0 };
-    /** Name and/or path of the resource */
-    BASE_NS::string name;
-    /** Additional name of the resource */
-    BASE_NS::string additionalName;
-};
-
 RENDER_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()

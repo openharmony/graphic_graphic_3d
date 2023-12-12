@@ -64,15 +64,15 @@ public:
     RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const RenderHandle graphicsState,
         const RenderHandle pipelineLayout, const RenderHandle vertexInputDeclaration,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) override;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
     RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const RenderHandle graphicsState,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) override;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
     RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const GraphicsState& graphicsState,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) override;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
 
     const ComputePipelineStateObject* GetComputePso(
         const RenderHandle handle, const LowLevelPipelineLayoutData* pipelineLayoutData);
@@ -96,8 +96,8 @@ private:
     // graphics state handle should be invalid if custom graphics state is given
     RenderHandle GetGraphicsPsoHandleImpl(const RenderHandle shaderHandle, const RenderHandle graphicsStateHandle,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
-        const ShaderSpecializationConstantDataView& shaderSpecialization, const DynamicStateFlags dynamicStateFlags,
-        const GraphicsState* graphicsState);
+        const ShaderSpecializationConstantDataView& shaderSpecialization,
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const GraphicsState* graphicsState);
 
     struct ComputePipelineStateCreationData {
         RenderHandle shaderHandle;
@@ -120,11 +120,11 @@ private:
         RenderHandle shaderHandle;
         RenderHandle graphicsStateHandle;
         PipelineLayout pipelineLayout;
-        DynamicStateFlags dynamicStateFlags { DynamicStateFlagBits::CORE_DYNAMIC_STATE_UNDEFINED };
 
         VertexInputDeclarationDataWrapper vertexInputDeclaration;
         ShaderSpecializationConstantDataWrapper shaderSpecialization;
         BASE_NS::unique_ptr<GraphicsState> customGraphicsState;
+        BASE_NS::vector<DynamicStateEnum> dynamicStates;
     };
     struct GraphicsPipelineStateCache {
         BASE_NS::vector<GraphicsPipelineStateCreationData> psoCreationData;

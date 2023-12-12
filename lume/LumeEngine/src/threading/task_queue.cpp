@@ -15,20 +15,16 @@
 
 #include "threading/task_queue.h"
 
-#include <condition_variable>
-#include <mutex>
-#include <queue>
-#include <thread>
+#include <atomic>
 
-#include <base/containers/vector.h>
+#include <base/containers/refcnt_ptr.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
 #include <core/log.h>
 #include <core/namespace.h>
-
-#include "os/platform.h"
+#include <core/threading/intf_thread_pool.h>
 
 CORE_BEGIN_NAMESPACE()
-using BASE_NS::array_view;
-using BASE_NS::make_unique;
 using BASE_NS::move;
 using BASE_NS::unique_ptr;
 
@@ -77,8 +73,6 @@ void TaskQueue::Wait()
 }
 
 // -- TaskQueue entry.
-TaskQueue::Entry::Entry() {}
-
 TaskQueue::Entry::Entry(uint64_t identifier, IThreadPool::ITask::Ptr task) : task(move(task)), identifier(identifier) {}
 
 bool TaskQueue::Entry::operator==(uint64_t rhsIdentifier) const

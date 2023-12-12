@@ -41,7 +41,7 @@ void CopyGpuBufferGLES(GpuBuffer& buffer, ByteArray& byteArray)
     }
 }
 
-void DebugBufferNameGLES(const Device& device, const GpuBuffer& buffer, const string_view name)
+void DebugBufferNameGLES(const IDevice& device, const GpuBuffer& buffer, const string_view name)
 {
     const GpuBufferPlatformDataGL& cplat = (static_cast<const GpuBufferGLES&>(buffer)).GetPlatformData();
     GpuBufferPlatformDataGL& plat = const_cast<GpuBufferPlatformDataGL&>(cplat);
@@ -50,7 +50,7 @@ void DebugBufferNameGLES(const Device& device, const GpuBuffer& buffer, const st
     }
 }
 
-void DebugImageNameGLES(const Device& device, const GpuImage& image, const string_view name)
+void DebugImageNameGLES(const IDevice& device, const GpuImage& image, const string_view name)
 {
     const GpuImagePlatformDataGL& plat = (static_cast<const GpuImageGLES&>(image)).GetPlatformData();
     if (plat.image) {
@@ -58,7 +58,7 @@ void DebugImageNameGLES(const Device& device, const GpuImage& image, const strin
     }
 }
 
-void DebugSamplerNameGLES(const Device& device, const GpuSampler& sampler, const string_view name)
+void DebugSamplerNameGLES(const IDevice& device, const GpuSampler& sampler, const string_view name)
 {
     const GpuSamplerPlatformDataGL& plat = (static_cast<const GpuSamplerGLES&>(sampler)).GetPlatformData();
     if (plat.sampler) {

@@ -17,17 +17,31 @@
 
 #include <algorithm>
 
-// MINGW has filesystem but it's buggy: https://sourceforge.net/p/mingw-w64/bugs/737/
-// Not using it for now.
-#ifdef _MSC_VER
+#ifdef __has_include
+#if __has_include(<filesystem>)
 #include <filesystem>
-#define HAS_FILESYSTEM
-#else
+// #define HAS_FILESYSTEM
+#include <chrono>
+#include <system_error>
+#endif
+#endif
+#if !defined(HAS_FILESYSTEM)
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
 
+#include <cstddef>
+#include <cstdint>
+
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
 #include <core/log.h>
 #include <core/namespace.h>
 
@@ -37,11 +51,11 @@ using BASE_NS::string;
 using BASE_NS::string_view;
 using BASE_NS::vector;
 
-#ifdef HAS_FILESYSTEM
+#if defined(HAS_FILESYSTEM)
 
 // Hiding the directory implementation from the header.
 struct DirImpl {
-    DirImpl(const string_view path) : path_(path) {}
+    explicit DirImpl(string_view path) : path_(path) {}
     string path_;
 };
 
@@ -55,15 +69,21 @@ IDirectory::Entry::Type GetEntryType(const std::filesystem::directory_entry& ent
 {
     if (entry.is_directory()) {
         return IDirectory::Entry::DIRECTORY;
-    } else if (entry.is_regular_file()) {
+    }
+    if (entry.is_regular_file()) {
         return IDirectory::Entry::FILE;
     }
 
     return IDirectory::Entry::UNKNOWN;
 }
+
+std::filesystem::path U8Path(string_view str)
+{
+    return std::filesystem::u8path(str.begin().ptr(), str.end().ptr());
+}
 } // namespace
 
-StdDirectory::StdDirectory() = default;
+StdDirectory::StdDirectory(BASE_NS::unique_ptr<DirImpl> dir) : dir_(BASE_NS::move(dir)) {}
 
 StdDirectory::~StdDirectory()
 {
@@ -77,15 +97,23 @@ void StdDirectory::Close()
     }
 }
 
-bool StdDirectory::Open(const string_view path)
+IDirectory::Ptr StdDirectory::Create(BASE_NS::string_view path)
 {
-    CORE_ASSERT_MSG((dir_ == nullptr), "Dir already opened.");
     std::error_code ec;
-    if (std::filesystem::is_directory({ path.begin().ptr(), path.end().ptr() }, ec)) {
-        dir_ = make_unique<DirImpl>(path);
-        return true;
+    if (std::filesystem::create_directory(U8Path(path), ec)) {
+        // Directory creation successful.
+        return IDirectory::Ptr { BASE_NS::make_unique<StdDirectory>(make_unique<DirImpl>(path)).release() };
     }
-    return false;
+    return {};
+}
+
+IDirectory::Ptr StdDirectory::Open(const string_view path)
+{
+    std::error_code ec;
+    if (std::filesystem::is_directory(U8Path(path), ec)) {
+        return IDirectory::Ptr { BASE_NS::make_unique<StdDirectory>(make_unique<DirImpl>(path)).release() };
+    }
+    return {};
 }
 
 vector<IDirectory::Entry> StdDirectory::GetEntries() const
@@ -94,11 +122,10 @@ vector<IDirectory::Entry> StdDirectory::GetEntries() const
     vector<IDirectory::Entry> result;
     if (dir_) {
         std::error_code ec;
-        for (auto& iter :
-            std::filesystem::directory_iterator({ dir_->path_.begin().ptr(), dir_->path_.end().ptr() }, ec)) {
+        for (auto& iter : std::filesystem::directory_iterator(U8Path(dir_->path_), ec)) {
             const auto filename = iter.path().filename().u8string();
             auto str = string(filename.c_str(), filename.length());
-            result.emplace_back(IDirectory::Entry { GetEntryType(iter), move(str), GetTimeStamp(iter) });
+            result.push_back(IDirectory::Entry { GetEntryType(iter), move(str), GetTimeStamp(iter) });
         }
     }
 
@@ -121,7 +148,7 @@ IDirectory::Entry CreateEntry(const string_view path, const dirent& entry)
     struct stat statBuf {};
     const auto statResult = (stat(fullPath.c_str(), &statBuf) == 0);
 
-    IDirectory::Entry::Type type;
+    IDirectory::Entry::Type type = IDirectory::Entry::UNKNOWN;
 #ifdef _DIRENT_HAVE_D_TYPE
     switch (entry.d_type) {
         case DT_DIR:
@@ -135,7 +162,6 @@ IDirectory::Entry CreateEntry(const string_view path, const dirent& entry)
             break;
     }
 #else
-    type = IDirectory::Entry::UNKNOWN;
     if (statResult) {
         if (S_ISDIR(statBuf.st_mode)) {
             type = IDirectory::Entry::DIRECTORY;
@@ -148,14 +174,14 @@ IDirectory::Entry CreateEntry(const string_view path, const dirent& entry)
     // Get the timestamp for the directory entry.
     uint64_t timestamp = 0;
     if (statResult) {
-        timestamp = statBuf.st_mtime;
+        timestamp = static_cast<uint64_t>(statBuf.st_mtime);
     }
 
     return IDirectory::Entry { type, entry.d_name, timestamp };
 }
 } // namespace
 
-StdDirectory::StdDirectory() : dir_() {}
+StdDirectory::StdDirectory(BASE_NS::unique_ptr<DirImpl> dir) : dir_(BASE_NS::move(dir)) {}
 
 StdDirectory::~StdDirectory()
 {
@@ -170,15 +196,23 @@ void StdDirectory::Close()
     }
 }
 
-bool StdDirectory::Open(const string_view path)
+IDirectory::Ptr StdDirectory::Create(BASE_NS::string_view path)
 {
-    CORE_ASSERT_MSG((dir_ == nullptr), "Dir already opened.");
+    int result = mkdir(string(path).c_str(), S_IRWXU | S_IRWXO);
+    if (result == 0) {
+        // Directory creation successful.
+        return Open(path);
+    }
+    return {};
+}
+
+IDirectory::Ptr StdDirectory::Open(const string_view path)
+{
     DIR* dir = opendir(string(path).c_str());
     if (dir) {
-        dir_ = make_unique<DirImpl>(path, dir);
-        return true;
+        return IDirectory::Ptr { make_unique<StdDirectory>(make_unique<DirImpl>(path, dir)).release() };
     }
-    return false;
+    return {};
 }
 
 vector<IDirectory::Entry> StdDirectory::GetEntries() const
@@ -190,12 +224,12 @@ vector<IDirectory::Entry> StdDirectory::GetEntries() const
         rewinddir(dir_->dir_);
 
         // Iterate all entries and write to result.
-        struct dirent* directoryEntry;
+        struct dirent* directoryEntry = nullptr;
         while ((directoryEntry = readdir(dir_->dir_)) != nullptr) {
             if (!strcmp(directoryEntry->d_name, ".") || !strcmp(directoryEntry->d_name, "..")) {
                 continue;
             }
-            result.emplace_back(CreateEntry(dir_->path_, *directoryEntry));
+            result.push_back(CreateEntry(dir_->path_, *directoryEntry));
         }
     }
 
@@ -215,7 +249,7 @@ string StdDirectory::ResolveAbsolutePath(const string_view pathIn, bool isDirect
 
 #ifdef HAS_FILESYSTEM
     std::error_code ec;
-    std::filesystem::path fsPath = std::filesystem::canonical({ path.begin().ptr(), path.end().ptr() }, ec);
+    std::filesystem::path fsPath = std::filesystem::canonical(U8Path(path), ec);
     if (ec.value() == 0) {
         const auto pathStr = fsPath.string();
         absolutePath.assign(pathStr.data(), pathStr.size());
@@ -272,10 +306,9 @@ string StdDirectory::GetDirName(const string_view fullPath)
     const size_t separatorPos = path.find_last_of('/');
     if (separatorPos == string::npos) {
         return ".";
-    } else {
-        path.resize(separatorPos);
-        return path;
     }
+    path.resize(separatorPos);
+    return path;
 }
 
 string StdDirectory::GetBaseName(const string_view fullPath)
@@ -286,9 +319,8 @@ string StdDirectory::GetBaseName(const string_view fullPath)
     const size_t separatorPos = path.find_last_of('/');
     if (separatorPos == string::npos) {
         return path;
-    } else {
-        path.erase(0, separatorPos + 1);
-        return path;
     }
+    path.erase(0, separatorPos + 1);
+    return path;
 }
 CORE_END_NAMESPACE()

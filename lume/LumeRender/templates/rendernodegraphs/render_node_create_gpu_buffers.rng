@@ -1,0 +1,26 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "Template",
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuBuffers",
+            "nodeName": "RenderNodeCreateGpuBuffers",
+            "gpuBufferDescs": [
+                {
+                    "name": "BufferTarget",
+                    "usageFlags": "transfer_src | transfer_dst | uniform | storage | index | vertex | indirect",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "byteSize": 1024
+                },
+                {
+                    "name": "BufferTargetDependency",
+                    "dependencyBufferName": "MyOwnBuffer"
+                }
+            ]
+        }
+    ]
+}

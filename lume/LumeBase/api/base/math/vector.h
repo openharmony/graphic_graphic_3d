@@ -16,6 +16,7 @@
 #ifndef API_BASE_MATH_VECTOR_H
 #define API_BASE_MATH_VECTOR_H
 
+#include <cstddef>
 #include <cstdint>
 
 #include <base/math/mathf.h>
@@ -28,7 +29,6 @@ namespace Math {
 class Vec2;
 class Vec3;
 class Vec4;
-class Mat4X4;
 
 /** @ingroup group_math_vector */
 /** Vector2 presentation */

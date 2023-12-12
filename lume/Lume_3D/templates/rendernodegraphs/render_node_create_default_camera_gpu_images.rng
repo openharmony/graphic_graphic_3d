@@ -23,7 +23,8 @@
                     "width": 2,
                     "height": 2,
                     "depth": 1,
-                    "sampleCountFlags": "4bit"
+                    "sampleCountFlags": "4bit",
+                    "dependencySizeScale": 1.0
                 },
                 {
                     "name": "DepthBuffer",
@@ -37,7 +38,8 @@
                     "width": 2,
                     "height": 2,
                     "depth": 1,
-                    "sampleCountFlags": "4bit"
+                    "sampleCountFlags": "4bit",
+                    "dependencySizeScale": 1.0
                 }
             ]
         }

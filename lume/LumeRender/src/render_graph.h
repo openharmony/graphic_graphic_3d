@@ -54,7 +54,7 @@ public:
      * backbufferHandle Backbuffer handle for automatic backbuffer/swapchain dependency.
      * renderNodeGraphNodeStore All render node graph render nodes.
      */
-    void ProcessRenderNodeGraph(const RenderHandle backBufferHandle,
+    void ProcessRenderNodeGraph(const bool checkBackbufferDependancy,
         const BASE_NS::array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores);
 
     struct RenderGraphBufferState {
@@ -63,11 +63,17 @@ public:
         RenderCommandWithType prevRc;
         uint32_t prevRenderNodeIndex { ~0u };
     };
+    static constexpr uint32_t MAX_MIP_STATE_COUNT { 16u };
+    struct RenderGraphAdditionalImageState {
+        BASE_NS::unique_ptr<ImageLayout[]> layouts;
+        // NOTE: layers not handled yet
+    };
     struct RenderGraphImageState {
         GpuResourceState state;
         BindableImage resource;
         RenderCommandWithType prevRc;
         uint32_t prevRenderNodeIndex { ~0u };
+        RenderGraphAdditionalImageState additionalState;
     };
     struct MultiRenderPassStore {
         BASE_NS::vector<RenderCommandBeginRenderPass*> renderPasses;
@@ -87,25 +93,32 @@ public:
         ImageLayout optionalAcquireImageLayout { CORE_IMAGE_LAYOUT_UNDEFINED };
     };
 
-    struct BackbufferState {
-        // state after render node graph processing
-        GpuResourceState state;
-        // layout after render node graph processing
-        ImageLayout layout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+    struct SwapchainStates {
+        struct SwapchainState {
+            RenderHandle handle;
+            // state after render node graph processing
+            GpuResourceState state;
+            // layout after render node graph processing
+            ImageLayout layout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+        };
+        BASE_NS::vector<SwapchainState> swapchains;
     };
 
     /** Get backbuffer resource state after render node graph for further processing.
      * There might different configurations, or state where backbuffer has not been touched, but we want to present.
      */
-    BackbufferState GetBackbufferResourceState() const;
+    SwapchainStates GetSwapchainResourceStates() const;
 
 private:
     struct StateCache {
         MultiRenderPassStore multiRenderPassStore;
-        RenderHandle backbufferHandle;
+
+        uint32_t nodeCounter { 0u };
+
         bool checkForBackbufferDependency { false };
-        uint32_t firstBackBufferUseNodeIdx { ~0u };
-    } stateCache_;
+        bool usesSwapchainImage { false };
+    };
+    StateCache stateCache_;
 
     struct BeginRenderPassParameters {
         RenderCommandBeginRenderPass& rc;
@@ -116,9 +129,9 @@ private:
         const BASE_NS::array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores, StateCache& stateCache);
     void ProcessRenderNodeCommands(BASE_NS::array_view<const RenderCommandWithType>& cmdListRef,
         const uint32_t& nodeIdx, RenderNodeContextData& ref, StateCache& stateCache);
-    void StoreFinalBufferState(const StateCache& stateCache);
+    void StoreFinalBufferState();
     // handles backbuffer layouts as well
-    void StoreFinalImageState(StateCache& stateCache);
+    void StoreFinalImageState();
 
     void RenderCommand(const uint32_t renderNodeIndex, const uint32_t commandListCommandIndex,
         RenderNodeContextData& nodeData, RenderCommandBeginRenderPass& rc, StateCache& stateCache);
@@ -145,6 +158,7 @@ private:
         BASE_NS::unordered_map<RenderHandle, uint32_t>& handledCustomBarriers;
         const uint32_t customBarrierCount;
         const uint32_t vertexInputBarrierCount;
+        const uint32_t indirectBufferBarrierCount;
         const uint32_t renderNodeIndex;
         const GpuQueue gpuQueue;
         const RenderCommandWithType rcWithType;
@@ -159,14 +173,18 @@ private:
         const BASE_NS::array_view<const CommandBarrier>& customBarrierListRef);
     void HandleVertexInputBufferBarriers(ParameterCache& params, const uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const VertexBuffer>& vertexInputBufferBarrierListRef);
+    void HandleRenderpassIndirectBufferBarriers(ParameterCache& params, const uint32_t barrierIndexBegin,
+        const BASE_NS::array_view<const VertexBuffer>& indirectBufferBarrierListRef);
 
+    void HandleClearImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
+        const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
     void HandleBlitImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
         const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
-
     void HandleCopyBuffer(ParameterCache& params, const uint32_t& commandListCommandIndex,
         const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
-
     void HandleCopyBufferImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
+        const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
+    void HandleDispatchIndirect(ParameterCache& params, const uint32_t& commandListCommandIndex,
         const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
 
     void HandleDescriptorSets(ParameterCache& params,
@@ -201,7 +219,7 @@ private:
     GpuResourceManager& gpuResourceMgr_;
 
     // stored every time at the end of the frame
-    BackbufferState gpuImageBackbufferState_;
+    SwapchainStates swapchainStates_;
 
     // helper to access current render node transfers
     BASE_NS::vector<GpuQueueTransferState> currNodeGpuResourceTransfers_;

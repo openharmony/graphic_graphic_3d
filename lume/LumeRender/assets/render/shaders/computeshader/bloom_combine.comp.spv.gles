@@ -1,0 +1,30 @@
+#version 320 es
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct LocalPostProcessPushConstantStruct
+{
+    vec4 viewportSizeInvSize;
+    vec4 factor;
+};
+
+struct uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+uniform uPostProcessPushConstant CORE_PC_0;
+
+layout(binding = 11, rgba16f) uniform writeonly highp image2D s1_b0;
+uniform highp sampler2D s1_b1_s1_b3;
+uniform highp sampler2D s1_b2_s1_b3;
+
+void main()
+{
+    vec2 _125 = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
+    vec2 _136 = _125 * CORE_PC_0.uPc.viewportSizeInvSize.zw;
+    vec2 _206 = CORE_PC_0.uPc.viewportSizeInvSize.zw * 2.0;
+    float _230 = _206.x;
+    float _232 = _206.y;
+    imageStore(s1_b0, ivec2(gl_GlobalInvocationID.xy), vec4(min(textureLod(s1_b1_s1_b3, _136, 0.0).xyz + (((textureLod(s1_b2_s1_b3, fma(_125, CORE_PC_0.uPc.viewportSizeInvSize.zw, _206), 0.0).xyz * 0.125) + ((textureLod(s1_b2_s1_b3, fma(_125, CORE_PC_0.uPc.viewportSizeInvSize.zw, vec2(-_230, _232)), 0.0).xyz * 0.125) + ((textureLod(s1_b2_s1_b3, fma(_125, CORE_PC_0.uPc.viewportSizeInvSize.zw, vec2(_230, -_232)), 0.0).xyz * 0.125) + ((textureLod(s1_b2_s1_b3, fma(_125, CORE_PC_0.uPc.viewportSizeInvSize.zw, -_206), 0.0).xyz * 0.125) + (textureLod(s1_b2_s1_b3, _136, 0.0).xyz * 0.5))))) * CORE_PC_0.uPc.factor.z), vec3(64512.0)), 1.0));
+}
+

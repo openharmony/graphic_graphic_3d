@@ -1,0 +1,23 @@
+{
+    "template": "core_fullscreen_template.h",
+    "pipelineLayout" : "core_fullscreen_pipeline.json",
+    "variables" : {
+        "inputs": [
+            { "type": "vec2", "name": "inUv" }
+        ],
+        "outputs": [
+            { "type": "vec4", "name": "outColor" }
+        ]
+    },
+
+    "templateBlocks": [
+        {
+            "name": "IMAGE",
+            "source": "snippets/core_image_blocks.json"
+        },
+        {
+            "name": "LERP",
+            "source": "snippets/core_lerp_blocks.json"
+        }
+    ]
+}

@@ -45,6 +45,7 @@ struct GpuImagePlatformDataGL final : public GpuImagePlatformData {
     BASE_NS::Math::UVec4 swizzle;
     uint32_t renderBuffer; // For render targets... (can not be sampled or used in compute)
     uintptr_t eglImage;    // For creating image from EGLImage
+    uintptr_t hwBuffer;    // For creating image from AHardwareBuffer
     uint32_t mipLevel { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
 };
 

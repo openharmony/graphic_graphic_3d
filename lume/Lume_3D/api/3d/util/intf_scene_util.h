@@ -17,6 +17,7 @@
 #define API_3D_UTIL_SCENE_UTIL_H
 
 #include <3d/ecs/components/material_component.h>
+#include <3d/loaders/intf_scene_loader.h>
 #include <3d/namespace.h>
 #include <base/containers/string_view.h>
 #include <base/math/quaternion.h>
@@ -72,6 +73,18 @@ public:
      */
     virtual void UpdateCameraViewport(CORE_NS::IEcs& ecs, CORE_NS::Entity entity,
         const BASE_NS::Math::UVec2& renderResolution, bool autoAspect, float fovY, float orthoScale) const = 0;
+
+    /** Update the transformation of the given entity such that it is located at 'eye', rotated towards 'target', and
+     * its up vector is 'up'. The up vector will only match 'up' if the direction from 'eye' to 'target' is
+     * perpendicular to 'up'.
+     * @param ecs Entity component system to contain the camera instance.
+     * @param entity Entity to modify.
+     * @param eye Final world space position of the entity.
+     * @param target World space position where the entity's z-axis will point to.
+     * @param up Desired up vector of the entity.
+     */
+    virtual void CameraLookAt(CORE_NS::IEcs& ecs, CORE_NS::Entity entity, const BASE_NS::Math::Vec3& eye,
+        const BASE_NS::Math::Vec3& target, const BASE_NS::Math::Vec3& up) = 0;
 
     /** Create a light. Creates a new ecs light based on inputs.
      * For shadow lights a ecs camera is created and sane default values are calculated.
@@ -131,6 +144,32 @@ public:
      */
     virtual void GetDefaultMaterialShaderData(CORE_NS::IEcs& ecs, const ISceneUtil::MaterialShaderInfo& info,
         const BASE_NS::string_view renderSlot, MaterialComponent::Shader& shader) const = 0;
+
+    /** Share the sourceEntity's skin with the targetEntity.
+     * @param ecs Entity component system instance.
+     * @param targetEntity Entity whos skin will be modified to use the source joints.
+     * @param sourceEntity Entity whos joints will be applied to target.
+     */
+    virtual void ShareSkin(CORE_NS::IEcs& ecs, CORE_NS::Entity targetEntity, CORE_NS::Entity sourceEntity) const = 0;
+
+    /** Register a new scene loader. Plugins implementing support for new scene file formats should register an instance
+     * so that it can be discovered with GetSceneLoader.
+     * @param loader Pointer to a new scene loader instance.
+     */
+    virtual void RegisterSceneLoader(const ISceneLoader::Ptr& loader) = 0;
+
+    /** Unregister a previously registered scene loader. Loaders must be unregistered e.g. when the plugin offering the
+     * instance is unloaded.
+     * @param loader Pointer to a previously registered scene loader instance.
+     */
+    virtual void UnregisterSceneLoader(const ISceneLoader::Ptr& loader) = 0;
+
+    /** Get a scene loader which can handle the given file. Selection is done based on file extensions. Actual loading
+     * might still fail with the returned loader.
+     * @param uri File URI.
+     * @return Pointer to a scene loader or null if none of the registered loaders are able to handle the file.
+     */
+    virtual ISceneLoader::Ptr GetSceneLoader(BASE_NS::string_view uri) const = 0;
 
 protected:
     ISceneUtil() = default;

@@ -83,7 +83,7 @@ layout(set = 1, binding = 4, std140) uniform uMaterialUserStructData
     DefaultMaterialUserMaterialStruct uMaterialUserData;
 };
 
-// set 2 is for material data (base color separated for e.g. gles automatic oes support)
+// set 2 is for material data (base color separated for e.g. automatic hardware buffer static sampler support)
 layout(set = 2, binding = 0) uniform CORE_RELAXEDP sampler2D uSampTextureBase;
 layout(set = 2, binding = 1) uniform CORE_RELAXEDP sampler2D uSampTextures[CORE_MATERIAL_SAMPTEX_COUNT];
 
@@ -91,6 +91,7 @@ layout(constant_id = 0) const uint CORE_MATERIAL_TYPE = 0;
 layout(constant_id = 1) const uint CORE_MATERIAL_FLAGS = 0;
 layout(constant_id = 2) const uint CORE_LIGHTING_FLAGS = 0;
 layout(constant_id = 3) const uint CORE_POST_PROCESS_FLAGS = 0;
+layout(constant_id = 4) const uint CORE_CAMERA_FLAGS = 0;
 
 #else
 
