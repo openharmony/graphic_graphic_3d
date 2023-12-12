@@ -18,6 +18,7 @@
 
 #include <cstdint>
 
+#include <3d/ecs/components/mesh_component.h>
 #include <3d/namespace.h>
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
@@ -25,6 +26,7 @@
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
 #include <core/ecs/entity_reference.h>
+#include <render/device/pipeline_state_desc.h>
 #include <render/resource_handle.h>
 
 CORE_BEGIN_NAMESPACE()
@@ -102,7 +104,7 @@ protected:
 /** Describes result of the loading operation. */
 struct GLTFLoadResult {
     GLTFLoadResult() = default;
-    explicit GLTFLoadResult(BASE_NS::string&& error) : success(false), error(error) {}
+    GLTFLoadResult(BASE_NS::string&& error) : success(false), error(error) {}
 
     /** Indicates, whether the loading operation is successful. */
     bool success { true };
@@ -159,8 +161,10 @@ enum GltfResourceImportFlagBits {
     CORE_GLTF_IMPORT_RESOURCE_ANIMATION = 0x00000040,
     /** Skip resources that are not referenced and do not import them. */
     CORE_GLTF_IMPORT_RESOURCE_SKIP_UNUSED = 0x00000080,
+    /** Keep mesh data for CPU access. Allowing CPU access increases memory usage. */
+    CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS = 0x00000100,
     /** All flags bits */
-    CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL = 0x7FFFFFFF
+    CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL = 0x7FFFFEFF
 };
 
 /** Container for flags for resource import. */
@@ -199,6 +203,22 @@ struct GLTFImportResult {
 
     /** Imported data. */
     GLTFResourceData data;
+};
+
+struct GltfMeshData {
+    struct SubMesh {
+        uint32_t indices;
+        uint32_t vertices;
+        BASE_NS::array_view<const uint8_t> indexBuffer;
+        BASE_NS::array_view<const uint8_t> attributeBuffers[MeshComponent::Submesh::BUFFER_COUNT];
+    };
+    struct Mesh {
+        BASE_NS::vector<SubMesh> subMeshes;
+    };
+    /** Vertex input declaration used for formatting the data. */
+    RENDER_NS::VertexInputDeclarationData vertexInputDeclaration;
+    /** Data of each imported mesh. They are in the same order as in GLTFResourceData::meshes. */
+    BASE_NS::vector<Mesh> meshes;
 };
 
 /** GLTF2 importer interface */
@@ -240,6 +260,10 @@ public:
      * importer holds references until a new import is started or the imported is destroyed. Therefore a copy of
      * GLTFImportResult::GLTFResourceData (or selected EntityReferences) should be stored. */
     virtual const GLTFImportResult& GetResult() const = 0;
+
+    /** Returns CPU accessible mesh data. Data is available when CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS was included
+     * in import flags. Unless copied, the data is valid until a new import is started or the imported is destroyed. */
+    virtual const GltfMeshData& GetMeshData() const = 0;
 
     struct Deleter {
         constexpr Deleter() noexcept = default;

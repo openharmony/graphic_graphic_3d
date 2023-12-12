@@ -21,6 +21,7 @@
 #include "gles/device_gles.h"
 #include "gles/gl_functions.h"
 #include "perf/gpu_query.h"
+#include "util/log.h"
 
 RENDER_BEGIN_NAMESPACE()
 GpuQueryGLES::GpuQueryGLES(Device& device, const GpuQueryDesc& desc) : desc_(desc)

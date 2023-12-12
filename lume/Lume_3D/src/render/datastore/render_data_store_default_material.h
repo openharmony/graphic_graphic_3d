@@ -54,11 +54,17 @@ public:
         BASE_NS::vector<BASE_NS::unique_ptr<LinearAllocator>> allocators;
     };
 
+    void CommitFrameData() override {};
     void PreRender() override {};
-    void PreRenderBackend() override {};
     // Reset and start indexing from the beginning. i.e. frame boundary reset.
     void PostRender() override;
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override;
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     uint32_t AddMeshData(const RenderMeshData& meshData) override;
     uint32_t AddMaterialData(const uint64_t id,
@@ -70,14 +76,25 @@ public:
         const RenderDataDefaultMaterial::MaterialHandles& materialHandles,
         const RenderDataDefaultMaterial::MaterialData& materialData,
         const BASE_NS::array_view<const uint8_t> customData) override;
+
+    uint32_t AllocateMaterials(uint64_t id, uint32_t instanceCount) override;
+    void AddInstanceMaterialData(uint32_t materialIndex, uint32_t materialInstanceIndex, uint32_t materialInstanceCount,
+        const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+        const RenderDataDefaultMaterial::MaterialHandles& materialHandles,
+        const RenderDataDefaultMaterial::MaterialData& materialData,
+        const BASE_NS::array_view<const uint8_t> customPropertyData) override;
+    void AddInstanceMaterialData(uint32_t materialIndex, uint32_t materialInstanceIndex, uint32_t materialInstanceCount,
+        const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+        const BASE_NS::array_view<const uint8_t> customPropertyData) override;
+
     uint32_t GetMaterialIndex(const uint64_t id) const override;
     uint32_t GetMaterialCustomResourceIndex(const uint64_t id) const override;
+    RenderDataDefaultMaterial::MaterialIndices GetMaterialIndices(const uint64_t id) const override;
+    RenderDataDefaultMaterial::MaterialIndices GetMaterialIndices(uint64_t id, uint32_t instanceCount) const override;
     uint32_t AddSkinJointMatrices(const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> skinJointMatrices,
         const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> prevSkinJointMatrices) override;
     uint32_t AddMaterialCustomResources(
         uint64_t id, const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> bindings) override;
-    uint32_t AddMaterialCustomResources(
-        const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> bindings) override;
 
     void AddSubmesh(const RenderSubmesh& submesh) override;
     void AddSubmesh(const RenderSubmesh& submesh,
@@ -146,9 +163,7 @@ private:
     BASE_NS::vector<RenderDataDefaultMaterial::MaterialHandles> materialHandles_;
     BASE_NS::vector<RenderDataDefaultMaterial::MaterialData> materialData_;
     // material id is normally Entity.id, index to material vectors
-    BASE_NS::unordered_map<uint64_t, uint32_t> materialIdToIndex_;
-    // material id is normally Entity.id, index to material custom resource vector
-    BASE_NS::unordered_map<uint64_t, uint32_t> materialIdToCustomResourceIndex_;
+    BASE_NS::unordered_map<uint64_t, RenderDataDefaultMaterial::MaterialIndices> materialIdToIndices_;
     // material custom property data offset
     struct MaterialCustomPropertyOffset {
         uint32_t offset { 0u };

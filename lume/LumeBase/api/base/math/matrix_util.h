@@ -16,8 +16,10 @@
 #ifndef API_BASE_MATH_MATRIX_UTIL_H
 #define API_BASE_MATH_MATRIX_UTIL_H
 
+#include <base/math/mathf.h>
 #include <base/math/matrix.h>
 #include <base/math/quaternion.h>
+#include <base/math/vector.h>
 #include <base/math/vector_util.h>
 #include <base/namespace.h>
 #include <base/util/log.h>
@@ -269,6 +271,24 @@ static inline constexpr Mat4X4 Translate(const Mat4X4& mat, const Vec3& vec)
     result.w = mat.x * vec.x + mat.y * vec.y + mat.z * vec.z + mat.w;
     return result;
 }
+/** Skew angle in X and Y in radian */
+static inline Mat4X4 SkewXY(const Mat4X4& mat, const Vec2& vec)
+{
+    Mat4X4 result(mat);
+    result.x += mat.y * tanf(vec.y);
+    result.y += mat.x * tanf(vec.x);
+    return result;
+}
+/** Rotate on Z axis by angle in radian */
+static inline Mat4X4 RotateZCWRadians(const Mat4X4& mat, float rot)
+{
+    Mat4X4 result(mat);
+    float co = cosf(rot);
+    float si = sinf(rot);
+    result.x = mat.x * co + mat.y * si;
+    result.y = mat.y * co - mat.x * si;
+    return result;
+}
 
 /** Creates translation, rotation and scaling matrix from translation vector, rotation quaternion and scale vector */
 static inline constexpr Mat4X4 Trs(
@@ -296,7 +316,15 @@ static inline constexpr Vec2 MultiplyPoint2X4(const Mat4X4& mat4X4, const Vec2& 
 
     return result;
 }
+/** Transforms direction by this matrix without perspective divide */
+static inline constexpr Vec2 MultiplyVector2X4(const Mat4X4& mat4X4, const Vec2& point)
+{
+    Vec2 result;
+    result.x = mat4X4.x.x * point.x + mat4X4.y.x * point.y;
+    result.y = mat4X4.x.y * point.x + mat4X4.y.y * point.y;
 
+    return result;
+}
 /** Transforms position by this matrix without perspective divide */
 static inline constexpr Vec2 MultiplyPoint2X3(const Mat3X3& mat3X3, const Vec2& point)
 {
@@ -438,8 +466,6 @@ inline constexpr Vec3 operator*(const Mat3X3& m, const Vec3& v)
  * normalized device coordinates of 0 and +1 */
 static inline Mat4X4 PerspectiveLhZo(float fovy, float aspect, float zNear, float zFar)
 {
-    BASE_ASSERT(abs(aspect) > EPSILON);
-
     float const tanHalfFovy = tan(fovy / 2.0f);
 
     Mat4X4 result(0.f);
@@ -480,8 +506,6 @@ static inline Mat4X4 PerspectiveRhZo(float fovy, float aspect, float zNear, floa
  * normalized device coordinates of -1 and +1 */
 static inline Mat4X4 PerspectiveLhNo(float fovy, float aspect, float zNear, float zFar)
 {
-    BASE_ASSERT(abs(aspect) > EPSILON);
-
     float const tanHalfFovy = tan(fovy / 2.0f);
 
     Mat4X4 result(0.f);
@@ -621,14 +645,14 @@ static inline bool Decompose(
             return false;
         }
 
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 4; ++j) {
+        for (size_t i = 0; i < 4U; ++i) {
+            for (size_t j = 0; j < 4U; ++j) {
                 localMatrix[i][j] /= localMatrix.w.w;
             }
         }
     }
 
-    if (abs(localMatrix.x.w >= EPSILON) || abs(localMatrix.y.w >= EPSILON) || abs(localMatrix.z.w >= EPSILON)) {
+    if (abs(localMatrix.x.w) >= EPSILON || abs(localMatrix.y.w) >= EPSILON || abs(localMatrix.z.w) >= EPSILON) {
         Vec4 rightHandSide;
         rightHandSide.x = localMatrix.x.w;
         rightHandSide.y = localMatrix.y.w;
@@ -636,7 +660,7 @@ static inline bool Decompose(
         rightHandSide.w = localMatrix.w.w;
 
         Mat4X4 perspectiveMatrix(localMatrix);
-        for (int i = 0; i < 3; i++) {
+        for (size_t i = 0U; i < 3U; i++) {
             perspectiveMatrix[i].w = 0.0f;
         }
         perspectiveMatrix.w.w = 1.0f;
@@ -661,8 +685,8 @@ static inline bool Decompose(
     localMatrix.w = Vec4(0.0f, 0.0f, 0.0f, localMatrix.w.w);
 
     Vec3 row[3];
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
+    for (size_t i = 0U; i < 3U; ++i) {
+        for (size_t j = 0U; j < 3U; ++j) {
             row[i][j] = localMatrix[i][j];
         }
     }
@@ -690,13 +714,13 @@ static inline bool Decompose(
 
     const Vec3 pDum3 = Cross(row[1], row[2]);
     if (Dot(row[0], pDum3) < 0) {
-        for (int i = 0; i < 3; i++) {
+        for (size_t i = 0U; i < 3U; i++) {
             scale[i] *= -1.0f;
             row[i] *= -1.0f;
         }
     }
 
-    int i, j, k = 0;
+    unsigned i, j, k = 0U;
     float root;
     const float trace = row[0].x + row[1].y + row[2].z;
     if (trace > 0.0f) {
@@ -707,13 +731,13 @@ static inline bool Decompose(
         orientation.y = root * (row[2].x - row[0].z);
         orientation.z = root * (row[0].y - row[1].x);
     } else { // End if > 0
-        constexpr const int next[3] = { 1, 2, 0 };
-        i = 0;
+        constexpr const unsigned next[3] = { 1U, 2U, 0U };
+        i = 0U;
         if (row[1].y > row[0].x) {
-            i = 1;
+            i = 1U;
         }
         if (row[2].z > row[i][i]) {
-            i = 2;
+            i = 2U;
         }
         j = next[i];
         k = next[j];
@@ -729,7 +753,6 @@ static inline bool Decompose(
 
     return true;
 }
-
 /** Check if matrix has any rotation/shear components */
 static inline bool HasRotation(Mat3X3 const& m)
 {

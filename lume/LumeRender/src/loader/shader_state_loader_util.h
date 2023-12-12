@@ -31,6 +31,7 @@ struct ShaderStateResult {
     ShaderStateLoader::GraphicsStates states;
 };
 void ParseSingleState(const CORE_NS::json::value& jsonData, ShaderStateResult& ssr);
+void ParseStateFlags(const CORE_NS::json::value& jsonData, GraphicsStateFlags& stateFlags, ShaderStateResult& ssr);
 ShaderStateResult LoadStates(const CORE_NS::json::value& jsonData);
 }; // namespace ShaderStateLoaderUtil
 RENDER_END_NAMESPACE()

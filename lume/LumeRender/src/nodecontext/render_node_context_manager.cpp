@@ -40,11 +40,12 @@ RenderNodeContextManager::RenderNodeContextManager(const CreateInfo& createInfo)
     : renderContext_(createInfo.renderContext), renderNodeGraphData_(createInfo.renderNodeGraphData),
       renderNodeGraphInputs_(createInfo.renderNodeGraphInputs),
       fullName_(renderNodeGraphData_.renderNodeGraphName + createInfo.name), nodeName_(createInfo.name),
-      nodeJson_(createInfo.nodeJson), renderNodeGpuResourceMgr_(createInfo.gpuResourceMgr),
-      renderNodeGraphShareDataMgr_(createInfo.renderNodeGraphShareDataMgr),
+      nodeJson_(createInfo.nodeJson), renderNodeGraphShareDataMgr_(createInfo.renderNodeGraphShareDataMgr),
       descriptorSetMgr_(createInfo.descriptorSetMgr), psoMgr_(createInfo.psoMgr), renderCommandList_(createInfo.cmdList)
 {
     IDevice& dev = createInfo.renderContext.GetDevice();
+    renderNodeGpuResourceMgr_ = make_unique<RenderNodeGpuResourceManager>(
+        static_cast<GpuResourceManager&>(renderContext_.GetDevice().GetGpuResourceManager()));
     renderNodeShaderMgr_ = make_unique<RenderNodeShaderManager>((ShaderManager&)dev.GetShaderManager());
     renderNodeRenderDataStoreMgr_ = make_unique<RenderNodeRenderDataStoreManager>(
         (RenderDataStoreManager&)renderContext_.GetRenderDataStoreManager());
@@ -64,7 +65,7 @@ RenderNodeContextManager::~RenderNodeContextManager() = default;
 void RenderNodeContextManager::BeginFrame(const uint32_t renderNodeIdx, const PerFrameTimings& frameTimings)
 {
     if (renderNodeIdx_ == ~0u) {
-        renderNodeGraphShareMgr_->Init(renderNodeIdx, nodeName_);
+        renderNodeGraphShareMgr_->Init(renderNodeIdx, nodeName_, fullName_);
     }
     renderNodeIdx_ = renderNodeIdx;
     renderNodeGraphShareMgr_->BeginFrame(renderNodeIdx);
@@ -94,7 +95,7 @@ const IRenderNodeShaderManager& RenderNodeContextManager::GetShaderManager() con
 
 IRenderNodeGpuResourceManager& RenderNodeContextManager::GetGpuResourceManager()
 {
-    return renderNodeGpuResourceMgr_;
+    return *renderNodeGpuResourceMgr_;
 }
 
 INodeContextDescriptorSetManager& RenderNodeContextManager::GetDescriptorSetManager()

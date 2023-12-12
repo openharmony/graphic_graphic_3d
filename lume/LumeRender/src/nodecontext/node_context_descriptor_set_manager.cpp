@@ -72,16 +72,20 @@ void ReduceAndValidateDescriptorCounts(const DescriptorType descriptorType, cons
 }
 #endif
 
-void CopyAndProcessBuffers(const DescriptorSetLayoutBindingResources& src, const GpuQueue& gpuQueue,
+bool CopyAndProcessBuffers(const DescriptorSetLayoutBindingResources& src, const GpuQueue& gpuQueue,
     NodeContextDescriptorSetManager::CpuDescriptorSet& dst)
 {
     const uint32_t maxCount = static_cast<uint32_t>(Math::min(src.buffers.size(), dst.buffers.size()));
     dst.buffers.clear();
     dst.buffers.insert(dst.buffers.end(), src.buffers.begin(), src.buffers.begin() + maxCount);
     uint32_t dynamicOffsetIndex = 0;
+    bool valid = true;
     for (uint32_t idx = 0; idx < maxCount; ++idx) {
         auto& dstRef = dst.buffers[idx];
         dstRef.state.gpuQueue = gpuQueue;
+        if (!RenderHandleUtil::IsGpuBuffer(dstRef.resource.handle)) {
+            valid = false;
+        }
         if (RenderHandleUtil::IsDynamicResource(dstRef.resource.handle)) {
             dst.hasDynamicBarrierResources = true;
         }
@@ -90,22 +94,32 @@ void CopyAndProcessBuffers(const DescriptorSetLayoutBindingResources& src, const
             dst.dynamicOffsetDescriptors[dynamicOffsetIndex++] = dstRef.resource.handle;
         }
     }
+    return valid;
 }
 
-void CopyAndProcessImages(const DescriptorSetLayoutBindingResources& src, const GpuQueue& gpuQueue,
+bool CopyAndProcessImages(const DescriptorSetLayoutBindingResources& src, const GpuQueue& gpuQueue,
     NodeContextDescriptorSetManager::CpuDescriptorSet& dst)
 {
     const uint32_t maxCount = static_cast<uint32_t>(Math::min(src.images.size(), dst.images.size()));
     dst.images.clear();
     dst.images.insert(dst.images.end(), src.images.begin(), src.images.begin() + maxCount);
+    bool valid = true;
     for (uint32_t idx = 0; idx < maxCount; ++idx) {
         auto& dstRef = dst.images[idx];
         dstRef.state.gpuQueue = gpuQueue;
+        if (!RenderHandleUtil::IsGpuImage(dstRef.resource.handle)) {
+            valid = false;
+        }
         if (RenderHandleUtil::IsDynamicResource(dstRef.resource.handle)) {
             dst.hasDynamicBarrierResources = true;
         }
+        if (dstRef.additionalFlags & CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT) {
+            dst.hasImmutableSamplers = true;
+        }
         if (RenderHandleUtil::IsPlatformConversionResource(dstRef.resource.handle)) {
-            dst.hasPlatformConversionBindings = true;
+            if (dstRef.binding.descriptorType == DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                dst.hasPlatformConversionBindings = true;
+            }
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (dstRef.binding.descriptorType != DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
                 PLUGIN_LOG_ONCE_W("core_validation_plat_conv_desc_set",
@@ -119,6 +133,26 @@ void CopyAndProcessImages(const DescriptorSetLayoutBindingResources& src, const 
 #endif
         }
     }
+    return valid;
+}
+
+bool CopyAndProcessSamplers(
+    const DescriptorSetLayoutBindingResources& src, NodeContextDescriptorSetManager::CpuDescriptorSet& dst)
+{
+    const uint32_t maxCount = static_cast<uint32_t>(Math::min(src.samplers.size(), dst.samplers.size()));
+    dst.samplers.clear();
+    dst.samplers.insert(dst.samplers.end(), src.samplers.begin(), src.samplers.begin() + maxCount);
+    bool valid = true;
+    for (uint32_t idx = 0; idx < maxCount; ++idx) {
+        auto& dstRef = dst.samplers[idx];
+        if (!RenderHandleUtil::IsGpuSampler(dstRef.resource.handle)) {
+            valid = false;
+        }
+        if (dstRef.additionalFlags & CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT) {
+            dst.hasImmutableSamplers = true;
+        }
+    }
+    return valid;
 }
 } // namespace
 
@@ -149,6 +183,19 @@ void NodeContextDescriptorSetManager::ResetAndReserve(const DescriptorCounts& de
     }
 }
 
+void NodeContextDescriptorSetManager::ResetAndReserve(const BASE_NS::array_view<DescriptorCounts> descriptorCounts)
+{
+    DescriptorCounts dc;
+    dc.counts.reserve(descriptorCounts.size());
+    for (size_t idx = 0; idx < descriptorCounts.size(); idx++) {
+        const auto& ref = descriptorCounts[idx].counts;
+        if (!ref.empty()) {
+            dc.counts.insert(dc.counts.end(), ref.begin(), ref.end());
+        }
+    }
+    ResetAndReserve(dc);
+}
+
 void NodeContextDescriptorSetManager::BeginFrame()
 {
     cpuDescriptorSets_[DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME].clear();
@@ -167,7 +214,7 @@ vector<RenderHandle> NodeContextDescriptorSetManager::CreateDescriptorSets(
                 bindingRef.descriptorType, bindingRef.descriptorCount, descriptorCountValidation_);
         }
 #endif
-        handles.emplace_back(CreateDescriptorSet(ref.binding));
+        handles.push_back(CreateDescriptorSet(ref.binding));
     }
     return handles;
 }
@@ -199,7 +246,7 @@ vector<RenderHandle> NodeContextDescriptorSetManager::CreateOneFrameDescriptorSe
     vector<RenderHandle> handles;
     handles.reserve(descriptorSetsLayoutBindings.size());
     for (const auto& ref : descriptorSetsLayoutBindings) {
-        handles.emplace_back(CreateOneFrameDescriptorSet(ref.binding));
+        handles.push_back(CreateOneFrameDescriptorSet(ref.binding));
     }
     return handles;
 }
@@ -309,7 +356,7 @@ bool NodeContextDescriptorSetManager::HasPlatformBufferBindings(const RenderHand
     return HasPlatformBufferBindingsImpl(arrayIndex, cpuDescSets);
 }
 
-void NodeContextDescriptorSetManager::UpdateCpuDescriptorSet(
+bool NodeContextDescriptorSetManager::UpdateCpuDescriptorSet(
     const RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources, const GpuQueue& gpuQueue)
 {
     const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
@@ -317,13 +364,14 @@ void NodeContextDescriptorSetManager::UpdateCpuDescriptorSet(
     const uint32_t descSetIdx = (oneFrameDescBit == ONE_FRAME_DESC_SET_BIT) ? DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME
                                                                             : DESCRIPTOR_SET_INDEX_TYPE_STATIC;
     auto& cpuDescSets = cpuDescriptorSets_[descSetIdx];
-    UpdateCpuDescriptorSetImpl(arrayIndex, bindingResources, gpuQueue, cpuDescSets);
+    return UpdateCpuDescriptorSetImpl(arrayIndex, bindingResources, gpuQueue, cpuDescSets);
 }
 
-void NodeContextDescriptorSetManager::UpdateCpuDescriptorSetImpl(const uint32_t index,
+bool NodeContextDescriptorSetManager::UpdateCpuDescriptorSetImpl(const uint32_t index,
     const DescriptorSetLayoutBindingResources& bindingResources, const GpuQueue& gpuQueue,
     vector<CpuDescriptorSet>& cpuDescriptorSets)
 {
+    bool valid = true;
     if (index < (uint32_t)cpuDescriptorSets.size()) {
         auto& refCpuSet = cpuDescriptorSets[index];
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -338,15 +386,14 @@ void NodeContextDescriptorSetManager::UpdateCpuDescriptorSetImpl(const uint32_t 
         refCpuSet.isDirty = true;
         refCpuSet.hasDynamicBarrierResources = false;
         refCpuSet.hasPlatformConversionBindings = false;
+        refCpuSet.hasImmutableSamplers = false;
 
         // NOTE: GPU queue patching could be moved to render graph
         // copy from src to dst and check flags
-        CopyAndProcessBuffers(bindingResources, gpuQueue, refCpuSet);
-        CopyAndProcessImages(bindingResources, gpuQueue, refCpuSet);
-        // samplers don't have state and dynamic resources
-        refCpuSet.samplers.clear();
-        std::copy(bindingResources.samplers.cbegin().ptr(), bindingResources.samplers.cend().ptr(),
-            std::back_inserter(refCpuSet.samplers));
+        valid = valid && CopyAndProcessBuffers(bindingResources, gpuQueue, refCpuSet);
+        valid = valid && CopyAndProcessImages(bindingResources, gpuQueue, refCpuSet);
+        // samplers don't have state and dynamic resources, but we check for immutable samplers
+        valid = valid && CopyAndProcessSamplers(bindingResources, refCpuSet);
 
         for (size_t idx = 0; idx < bindingResources.bindings.size(); ++idx) {
             const DescriptorSetLayoutBindingResource& refBinding = bindingResources.bindings[idx];
@@ -361,6 +408,7 @@ void NodeContextDescriptorSetManager::UpdateCpuDescriptorSetImpl(const uint32_t 
         PLUGIN_LOG_E("RENDER_VALIDATION: invalid handle to UpdateCpuDescriptorSet");
 #endif
     }
+    return valid;
 }
 
 DescriptorSetLayoutBindingResources NodeContextDescriptorSetManager::GetCpuDescriptorSetDataImpl(

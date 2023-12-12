@@ -22,23 +22,20 @@
 #include "PropertyTools/property_macros.h"
 
 CORE_BEGIN_NAMESPACE()
+using namespace CORE3D_NS;
+
 // Extend propertysystem with the enums
-DECLARE_PROPERTY_TYPE(CORE3D_NS::RenderMeshBatchComponent::BatchType);
+DECLARE_PROPERTY_TYPE(RenderMeshBatchComponent::BatchType);
 
 // Declare their metadata
-BEGIN_ENUM(BatchTypeMetaData, CORE3D_NS::RenderMeshBatchComponent::BatchType)
-DECL_ENUM(CORE3D_NS::RenderMeshBatchComponent::BatchType, GPU_INSTANCING, "GPU Instancing")
-END_ENUM(BatchTypeMetaData, CORE3D_NS::RenderMeshBatchComponent::BatchType)
+BEGIN_ENUM(BatchTypeMetaData, RenderMeshBatchComponent::BatchType)
+DECL_ENUM(RenderMeshBatchComponent::BatchType, GPU_INSTANCING, "GPU Instancing")
+END_ENUM(BatchTypeMetaData, RenderMeshBatchComponent::BatchType)
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
-using BASE_NS::array_view;
-using BASE_NS::countof;
-
-using CORE_NS::BaseManager;
-using CORE_NS::IComponentManager;
-using CORE_NS::IEcs;
-using CORE_NS::Property;
+using namespace BASE_NS;
+using namespace CORE_NS;
 
 class RenderMeshBatchComponentManager final
     : public BaseManager<RenderMeshBatchComponent, IRenderMeshBatchComponentManager> {
@@ -48,7 +45,7 @@ class RenderMeshBatchComponentManager final
     const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
-    explicit RenderMeshBatchComponentManager(IEcs& ecs)
+    RenderMeshBatchComponentManager(IEcs& ecs)
         : BaseManager<RenderMeshBatchComponent, IRenderMeshBatchComponentManager>(
               ecs, CORE_NS::GetName<RenderMeshBatchComponent>())
     {}

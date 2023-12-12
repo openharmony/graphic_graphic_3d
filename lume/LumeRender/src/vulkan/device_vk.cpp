@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstdint>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <base/containers/vector.h>
 #include <base/math/mathf.h>
@@ -34,13 +34,13 @@
 #include "platform_vk.h"
 #include "util/log.h"
 #include "vulkan/create_functions_vk.h"
-#include "vulkan/gpu_acceleration_structure_vk.h"
 #include "vulkan/gpu_buffer_vk.h"
 #include "vulkan/gpu_image_vk.h"
 #include "vulkan/gpu_memory_allocator_vk.h"
 #include "vulkan/gpu_program_vk.h"
 #include "vulkan/gpu_query_vk.h"
 #include "vulkan/gpu_sampler_vk.h"
+#include "vulkan/gpu_semaphore_vk.h"
 #include "vulkan/node_context_descriptor_set_manager_vk.h"
 #include "vulkan/node_context_pool_manager_vk.h"
 #include "vulkan/pipeline_state_object_vk.h"
@@ -68,19 +68,99 @@ static constexpr string_view DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION {
     VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME
 };
 static constexpr string_view DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN { VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME };
+static constexpr string_view DEVICE_EXTENSION_MULTIVIEW { VK_KHR_MULTIVIEW_EXTENSION_NAME };
 
-void GetYcbcrExtFunctions(const VkInstance instance, DeviceVk::ExtFunctions& extFunctions)
+struct ChainWrapper {
+    void** ppNextFeatures { nullptr };
+    void** ppNextProperties { nullptr };
+};
+
+struct PhysicalDeviceYcbcrStructsVk {
+    VkPhysicalDeviceSamplerYcbcrConversionFeatures ycbcrConversionFeatures {};
+};
+
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+struct PhysicalDeviceFragmentShadingRateStructsVk {
+    VkPhysicalDeviceFragmentShadingRateFeaturesKHR physicalDeviceFragmentShadingRateFeatures;
+    VkPhysicalDeviceFragmentShadingRatePropertiesKHR physicalDeviceFragmentShadingRateProperties;
+};
+#endif
+
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+struct PhysicalDeviceRayTracingStructsVk {
+    VkPhysicalDeviceBufferDeviceAddressFeatures physicalDeviceBufferDeviceAddressFeatures;
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR physicalDeviceRayTracingPipelineFeatures;
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR physicalDeviceAccelerationStructureFeatures;
+    VkPhysicalDeviceRayQueryFeaturesKHR physicalDeviceRayQueryFeatures;
+};
+#endif
+
+struct PhysicalDeviceMultiviewStructsVk {
+    VkPhysicalDeviceMultiviewFeaturesKHR physicalDeviceMultiviewFeatures;
+    VkPhysicalDeviceMultiviewPropertiesKHR physicalDeviceMultiviewProperties;
+};
+
+struct ChainObjects {
+    unique_ptr<PhysicalDeviceYcbcrStructsVk> ycbcr;
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    unique_ptr<PhysicalDeviceRayTracingStructsVk> rt;
+#endif
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+    unique_ptr<PhysicalDeviceFragmentShadingRateStructsVk> fsr;
+#endif
+    unique_ptr<PhysicalDeviceMultiviewStructsVk> mv;
+};
+
+// fragment shading rate
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+// VK_KHR_fragment_shading_rate, requires VK_KHR_create_renderpass2, requires VK_KHR_get_physical_device_properties2
+static constexpr string_view DEVICE_EXTENSION_FRAGMENT_SHADING_RATE { VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME };
+
+void GetPhysicalDeviceFragmentShadingRateStructs(ChainObjects& co, ChainWrapper& cw)
 {
-    extFunctions.vkCreateSamplerYcbcrConversion =
-        (PFN_vkCreateSamplerYcbcrConversion)vkGetInstanceProcAddr(instance, "vkCreateSamplerYcbcrConversion");
-    if (!extFunctions.vkCreateSamplerYcbcrConversion) {
-        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkCreateSamplerYcbcrConversion");
-    }
-    extFunctions.vkDestroySamplerYcbcrConversion =
-        (PFN_vkDestroySamplerYcbcrConversion)vkGetInstanceProcAddr(instance, "vkDestroySamplerYcbcrConversion");
-    if (!extFunctions.vkDestroySamplerYcbcrConversion) {
-        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkDestroySamplerYcbcrConversion");
-    }
+    co.fsr = make_unique<PhysicalDeviceFragmentShadingRateStructsVk>();
+    auto& fsr = co.fsr;
+    fsr->physicalDeviceFragmentShadingRateFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR, // sType
+        nullptr,                                                              // pNext
+        VK_FALSE,                                                             // pipelineFragmentShadingRate
+        VK_FALSE,                                                             // primitiveFragmentShadingRate
+        VK_TRUE,                                                              // attachmentFragmentShadingRate
+    };
+    *cw.ppNextFeatures = &fsr->physicalDeviceFragmentShadingRateFeatures;
+    cw.ppNextFeatures = &fsr->physicalDeviceFragmentShadingRateFeatures.pNext;
+
+    fsr->physicalDeviceFragmentShadingRateProperties = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR, // sType
+        nullptr,                                                                // pNext
+    };
+    *cw.ppNextProperties = &fsr->physicalDeviceFragmentShadingRateProperties;
+    cw.ppNextProperties = &fsr->physicalDeviceFragmentShadingRateProperties.pNext;
+}
+#endif
+
+void GetPhysicalDeviceMultiviewFeaturesStructs(ChainObjects& co, ChainWrapper& cw)
+{
+    co.mv = make_unique<PhysicalDeviceMultiviewStructsVk>();
+    auto& mv = co.mv;
+    mv->physicalDeviceMultiviewFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR, // sType
+        nullptr,                                                  // pNext
+        true,                                                     // multiview
+        false,                                                    // multiviewGeometryShader
+        false,                                                    // multiviewTessellationShader
+    };
+    *cw.ppNextFeatures = &mv->physicalDeviceMultiviewFeatures;
+    cw.ppNextFeatures = &mv->physicalDeviceMultiviewFeatures.pNext;
+
+    mv->physicalDeviceMultiviewProperties = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR, // sType
+        nullptr,                                                    // pNext
+        0,                                                          // maxMultiviewViewCount
+        0,                                                          // maxMultiviewInstanceIndex
+    };
+    *cw.ppNextProperties = &mv->physicalDeviceMultiviewProperties;
+    cw.ppNextProperties = &mv->physicalDeviceMultiviewProperties.pNext;
 }
 
 // ray-tracing
@@ -90,7 +170,74 @@ static constexpr string_view DEVICE_EXTENSION_RAY_QUERY { "VK_KHR_ray_query" };
 static constexpr string_view DEVICE_EXTENSION_DEFERRED_HOST_OPERATIONS { "VK_KHR_deferred_host_operations" };
 static constexpr string_view DEVICE_EXTENSION_RAY_TRACING_PIPELINE { "VK_KHR_ray_tracing_pipeline" };
 static constexpr string_view DEVICE_EXTENSION_PIPELINE_LIBRARY { "VK_KHR_pipeline_library" };
+
+void GetPhysicalDeviceRayTracingStructs(ChainObjects& co, ChainWrapper& cw)
+{
+    co.rt = make_unique<PhysicalDeviceRayTracingStructsVk>();
+    auto& rt = co.rt;
+    rt->physicalDeviceBufferDeviceAddressFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, // sType
+        nullptr,                                                          // pNext
+        true,                                                             // bufferDeviceAddress;
+        false,                                                            // bufferDeviceAddressCaptureReplay
+        false,                                                            // bufferDeviceAddressMultiDevice
+    };
+    rt->physicalDeviceRayTracingPipelineFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, // sType
+        &rt->physicalDeviceBufferDeviceAddressFeatures,                      // pNext
+        true,                                                                // rayTracingPipeline;
+        false, // rayTracingPipelineShaderGroupHandleCaptureReplay;
+        false, // rayTracingPipelineShaderGroupHandleCaptureReplayMixed;
+        false, // rayTracingPipelineTraceRaysIndirect;
+        false, // rayTraversalPrimitiveCulling;
+    };
+    rt->physicalDeviceAccelerationStructureFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, // sType
+        &rt->physicalDeviceRayTracingPipelineFeatures,                         // pNext
+        true,                                                                  // accelerationStructure;
+        false,                                                                 // accelerationStructureCaptureReplay
+        false,                                                                 // accelerationStructureIndirectBuild
+        false,                                                                 // accelerationStructureHostCommands
+        false, // descriptorBindingAccelerationStructureUpdateAfterBind
+    };
+    rt->physicalDeviceRayQueryFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR, // sType
+        &rt->physicalDeviceAccelerationStructureFeatures,         // pNext
+        true,                                                     // rayQuery
+    };
+
+    *cw.ppNextFeatures = &rt->physicalDeviceRayQueryFeatures;
+    cw.ppNextFeatures = &rt->physicalDeviceBufferDeviceAddressFeatures.pNext;
+}
 #endif
+
+void GetPhysicalDeviceYcbcrStructs(ChainObjects& co, ChainWrapper& cw)
+{
+    co.ycbcr = make_unique<PhysicalDeviceYcbcrStructsVk>();
+    auto& ycbcr = co.ycbcr;
+    ycbcr->ycbcrConversionFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES, // sType
+        nullptr,                                                             // pNext
+        true,                                                                // samplerYcbcrConversion
+    };
+
+    *cw.ppNextFeatures = &ycbcr->ycbcrConversionFeatures;
+    cw.ppNextFeatures = &ycbcr->ycbcrConversionFeatures.pNext;
+}
+
+void GetYcbcrExtFunctions(const VkInstance instance, DeviceVk::ExtFunctions& extFunctions)
+{
+    extFunctions.vkCreateSamplerYcbcrConversion =
+        (PFN_vkCreateSamplerYcbcrConversion)(void*)vkGetInstanceProcAddr(instance, "vkCreateSamplerYcbcrConversion");
+    if (!extFunctions.vkCreateSamplerYcbcrConversion) {
+        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkCreateSamplerYcbcrConversion");
+    }
+    extFunctions.vkDestroySamplerYcbcrConversion =
+        (PFN_vkDestroySamplerYcbcrConversion)vkGetInstanceProcAddr(instance, "vkDestroySamplerYcbcrConversion");
+    if (!extFunctions.vkDestroySamplerYcbcrConversion) {
+        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkDestroySamplerYcbcrConversion");
+    }
+}
 
 constexpr uint32_t MIN_ALLOCATION_BLOCK_SIZE { 4u * 1024u * 1024u };
 constexpr uint32_t MAX_ALLOCATION_BLOCK_SIZE { 1024u * 1024u * 1024u };
@@ -171,9 +318,6 @@ VkBool32 VKAPI_PTR DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT
                    VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
             PLUGIN_LOG_V("%s: %s", pCallbackData->pMessageIdName, pCallbackData->pMessage);
         }
-        PLUGIN_ASSERT_MSG(
-            ((VkDebugUtilsMessageSeverityFlagsEXT)messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) == 0,
-            "VALIDATION ERROR");
     }
 
     // The application should always return VK_FALSE.
@@ -192,8 +336,7 @@ VkBool32 VKAPI_PTR DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugRepor
     } else if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
         PLUGIN_LOG_D("%s", pMessage);
     }
-    PLUGIN_ASSERT_MSG((flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == 0, "VALIDATION ERROR");
-    return VK_TRUE;
+    return VK_FALSE;
 }
 
 void EmplaceDeviceQueue(
@@ -227,12 +370,15 @@ void CheckValidDepthFormats(const DevicePlatformDataVk& devicePlat, DevicePlatfo
     }
 }
 
-vector<string_view> GetPreferredDeviceExtensions(const BackendExtraVk* backendExtra)
+vector<string_view> GetPreferredDeviceExtensions(const BackendExtraVk* backendExtra, DevicePlatformDataVk& plat)
 {
     vector<string_view> extensions { DEVICE_EXTENSION_SWAPCHAIN };
     extensions.push_back(DEVICE_EXTENSION_CREATE_RENDERPASS2);
     extensions.push_back(DEVICE_EXTENSION_DEPTH_STENCIL_RESOLVE);
     GetPlatformDeviceExtensions(extensions);
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+    extensions.push_back(DEVICE_EXTENSION_FRAGMENT_SHADING_RATE);
+#endif
 #if (RENDER_VULKAN_RT_ENABLED == 1)
     extensions.push_back(DEVICE_EXTENSION_ACCELERATION_STRUCTURE);
     extensions.push_back(DEVICE_EXTENSION_RAY_TRACING_PIPELINE);
@@ -240,6 +386,9 @@ vector<string_view> GetPreferredDeviceExtensions(const BackendExtraVk* backendEx
     extensions.push_back(DEVICE_EXTENSION_PIPELINE_LIBRARY);
     extensions.push_back(DEVICE_EXTENSION_DEFERRED_HOST_OPERATIONS);
 #endif
+    if (plat.deviceApiMinor >= 1) { // enable only for 1.1+
+        extensions.push_back(DEVICE_EXTENSION_MULTIVIEW);
+    }
     if (backendExtra) {
         for (const auto str : backendExtra->extensions.extensionNames) {
             extensions.push_back(str);
@@ -260,8 +409,33 @@ DeviceVk::CommonDeviceExtensions GetEnabledCommonDeviceExtensions(
     extensions.getMemoryRequirements2 = enabledDeviceExtensions.contains(DEVICE_EXTENSION_GET_MEMORY_REQUIREMENTS2);
     extensions.queueFamilyForeign = enabledDeviceExtensions.contains(DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN);
     extensions.samplerYcbcrConversion = enabledDeviceExtensions.contains(DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION);
+    extensions.multiView = enabledDeviceExtensions.contains(DEVICE_EXTENSION_MULTIVIEW);
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+    extensions.fragmentShadingRate = enabledDeviceExtensions.contains(DEVICE_EXTENSION_FRAGMENT_SHADING_RATE);
+#endif
 
     return extensions;
+}
+
+CommonDeviceProperties GetCommonDevicePropertiesFunc(const ChainObjects& co)
+{
+    CommonDeviceProperties cdp;
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+    if (co.fsr) {
+        const auto& fsrVk = co.fsr->physicalDeviceFragmentShadingRateProperties;
+        cdp.fragmentShadingRateProperties.minFragmentShadingRateAttachmentTexelSize = {
+            fsrVk.minFragmentShadingRateAttachmentTexelSize.width,
+            fsrVk.minFragmentShadingRateAttachmentTexelSize.height
+        };
+        cdp.fragmentShadingRateProperties.maxFragmentShadingRateAttachmentTexelSize = {
+            fsrVk.maxFragmentShadingRateAttachmentTexelSize.width,
+            fsrVk.maxFragmentShadingRateAttachmentTexelSize.height
+        };
+        cdp.fragmentShadingRateProperties.maxFragmentSize = { fsrVk.maxFragmentSize.width,
+            fsrVk.maxFragmentSize.height };
+    }
+#endif
+    return cdp;
 }
 
 void PreparePhysicalDeviceFeaturesForEnabling(const BackendExtraVk* backendExtra, DevicePlatformDataVk& plat)
@@ -344,7 +518,8 @@ DeviceVk::DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createI
 
     // client didn't give the vulkan intance so create own
     if (ownInstanceAndDevice_) {
-        CreateInstanceAndPhysicalDevice();
+        CreateInstance();
+        CreatePhysicalDevice();
     }
     const auto availableQueues = CreateFunctionsVk::GetAvailableQueues(plat_.physicalDevice, queueProperties);
     if (ownInstanceAndDevice_) {
@@ -393,11 +568,13 @@ DeviceVk::~DeviceVk()
 {
     WaitForIdle();
 
+    // must release handles before taking down gpu resource manager.
+    swapchains_.clear();
+
     gpuResourceMgr_.reset();
     shaderMgr_.reset();
 
     platformGpuMemoryAllocator_.reset();
-    swapchain_.reset();
 
     if (plat_.pipelineCache) {
         CreateFunctionsVk::DestroyPipelineCache(plat_.device, plat_.pipelineCache);
@@ -411,13 +588,16 @@ DeviceVk::~DeviceVk()
     }
 }
 
-void DeviceVk::CreateInstanceAndPhysicalDevice()
+void DeviceVk::CreateInstance()
 {
-    const VersionInfo engineInfo { "core_prototype", 0, 1, 0 };
-    const VersionInfo appInfo { "core_prototype_app", 0, 1, 0 };
+    const VersionInfo engineInfo { "core_renderer", 0, 1, 0 };
+    const VersionInfo appInfo { "core_renderer_app", 0, 1, 0 };
 
     const auto instanceWrapper = CreateFunctionsVk::CreateInstance(engineInfo, appInfo);
     plat_.instance = instanceWrapper.instance;
+    // update with physical device creation
+    plat_.deviceApiMajor = instanceWrapper.apiMajor;
+    plat_.deviceApiMinor = instanceWrapper.apiMinor;
     if (instanceWrapper.debugUtilsSupported) {
         debugFunctionUtilities_.debugMessenger =
             CreateFunctionsVk::CreateDebugMessenger(plat_.instance, DebugMessengerCallback);
@@ -426,13 +606,26 @@ void DeviceVk::CreateInstanceAndPhysicalDevice()
         debugFunctionUtilities_.debugCallback =
             CreateFunctionsVk::CreateDebugCallback(plat_.instance, DebugReportCallback);
     }
+
+    extFunctions_.vkAcquireNextImageKHR =
+        (PFN_vkAcquireNextImageKHR)(void*)vkGetInstanceProcAddr(plat_.instance, "vkAcquireNextImageKHR");
+    if ((plat_.deviceApiMajor >= 1) && (plat_.deviceApiMinor >= 1)) {
+        extFunctions_.vkGetPhysicalDeviceFeatures2 =
+            (PFN_vkGetPhysicalDeviceFeatures2)vkGetInstanceProcAddr(plat_.instance, "vkGetPhysicalDeviceFeatures2");
+        extFunctions_.vkGetPhysicalDeviceProperties2 =
+            (PFN_vkGetPhysicalDeviceProperties2)vkGetInstanceProcAddr(plat_.instance, "vkGetPhysicalDeviceProperties2");
+    }
+}
+
+void DeviceVk::CreatePhysicalDevice()
+{
     auto physicalDeviceWrapper = CreateFunctionsVk::CreatePhysicalDevice(plat_.instance, DEFAULT_QUEUE);
     const uint32_t physicalDeviceApiMajor =
         VK_VERSION_MAJOR(physicalDeviceWrapper.physicalDeviceProperties.physicalDeviceProperties.apiVersion);
     const uint32_t physicalDeviceApiMinor =
         VK_VERSION_MINOR(physicalDeviceWrapper.physicalDeviceProperties.physicalDeviceProperties.apiVersion);
-    plat_.deviceApiMajor = std::min(instanceWrapper.apiMajor, physicalDeviceApiMajor);
-    plat_.deviceApiMinor = std::min(instanceWrapper.apiMinor, physicalDeviceApiMinor);
+    plat_.deviceApiMajor = Math::min(plat_.deviceApiMajor, physicalDeviceApiMajor);
+    plat_.deviceApiMinor = Math::min(plat_.deviceApiMinor, physicalDeviceApiMinor);
     PLUGIN_LOG_D("device api version %u.%u", plat_.deviceApiMajor, plat_.deviceApiMinor);
 
     plat_.physicalDevice = physicalDeviceWrapper.physicalDevice;
@@ -454,70 +647,50 @@ void DeviceVk::CreateInstanceAndPhysicalDevice()
 
 void DeviceVk::CreateDevice(const BackendExtraVk* backendExtra, const vector<LowLevelQueueInfo>& availableQueues)
 {
-    vector<string_view> preferredExtensions = GetPreferredDeviceExtensions(backendExtra);
+    vector<string_view> preferredExtensions = GetPreferredDeviceExtensions(backendExtra, plat_);
     PreparePhysicalDeviceFeaturesForEnabling(backendExtra, plat_);
 
+    ChainWrapper chainWrapper;
+    ChainObjects chainObjects;
+
     VkPhysicalDeviceFeatures2* physicalDeviceFeatures2Ptr = nullptr;
-    VkPhysicalDeviceSamplerYcbcrConversionFeatures ycbcrConversionFeatures {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES, // sType
-        nullptr,                                                             // pNext
-        true,                                                                // samplerYcbcrConversion
-    };
     VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 {
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, // sType
-        &ycbcrConversionFeatures,                     // pNext
+        nullptr,                                      // pNext
         {},                                           // features
     };
-    void* pNextForBackendExtra = ycbcrConversionFeatures.pNext;
-#if (RENDER_VULKAN_RT_ENABLED == 1)
-    VkPhysicalDeviceBufferDeviceAddressFeatures pdBufferDeviceAddressFeatures {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, // sType
-        nullptr,                                                          // pNext
-        true,                                                             // bufferDeviceAddress;
-        false,                                                            // bufferDeviceAddressCaptureReplay
-        false,                                                            // bufferDeviceAddressMultiDevice
-    };
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR pdRayTracingPipelineFeatures {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, // sType
-        &pdBufferDeviceAddressFeatures,                                      // pNext
-        true,                                                                // rayTracingPipeline;
-        false, // rayTracingPipelineShaderGroupHandleCaptureReplay;
-        false, // rayTracingPipelineShaderGroupHandleCaptureReplayMixed;
-        false, // rayTracingPipelineTraceRaysIndirect;
-        false, // rayTraversalPrimitiveCulling;
-    };
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR pdAccelerationStructureFeatures {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, // sType
-        &pdRayTracingPipelineFeatures,                                         // pNext
-        true,                                                                  // accelerationStructure;
-        false,                                                                 // accelerationStructureCaptureReplay
-        false,                                                                 // accelerationStructureIndirectBuild
-        false,                                                                 // accelerationStructureHostCommands
-        false, // descriptorBindingAccelerationStructureUpdateAfterBind
-    };
-    VkPhysicalDeviceRayQueryFeaturesKHR pdRayQueryFeatures {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR, // sType
-        &pdAccelerationStructureFeatures,                         // pNext
-        true,                                                     // rayQuery
-    };
+    chainWrapper.ppNextFeatures = &physicalDeviceFeatures2.pNext;
 
-    // ray tracing to pNext first
-    ycbcrConversionFeatures.pNext = &pdRayQueryFeatures;
-    // backend extra will be put to pNext of ray tracing extensions
-    pNextForBackendExtra = pdBufferDeviceAddressFeatures.pNext;
+    VkPhysicalDeviceProperties2 physicalDeviceProperties2 {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, // sType
+        nullptr,                                        // pNext
+        {},                                             // properties
+    };
+    chainWrapper.ppNextProperties = &physicalDeviceProperties2.pNext;
+
+    GetPhysicalDeviceYcbcrStructs(chainObjects, chainWrapper);
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    GetPhysicalDeviceRayTracingStructs(chainObjects, chainWrapper);
 #endif
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+    GetPhysicalDeviceFragmentShadingRateStructs(chainObjects, chainWrapper);
+#endif
+    if (plat_.deviceApiMinor >= 1) { // enable only for 1.1 + for now
+        GetPhysicalDeviceMultiviewFeaturesStructs(chainObjects, chainWrapper);
+    }
     if ((plat_.deviceApiMajor >= 1) && (plat_.deviceApiMinor >= 1)) {
         // pipe user extension physical device features
         if (backendExtra) {
             if (backendExtra->extensions.physicalDeviceFeaturesToEnable) {
-                pNextForBackendExtra = backendExtra->extensions.physicalDeviceFeaturesToEnable->pNext;
+                *chainWrapper.ppNextFeatures = backendExtra->extensions.physicalDeviceFeaturesToEnable->pNext;
             }
         }
-        // NOTE: on some platforms Vulkan library has only the entrypoints for 1.0. To avoid variation just fetch the
-        // function always.
-        PFN_vkGetPhysicalDeviceFeatures2 vkGetPhysicalDeviceFeatures2 =
-            (PFN_vkGetPhysicalDeviceFeatures2)vkGetInstanceProcAddr(plat_.instance, "vkGetPhysicalDeviceFeatures2");
-        vkGetPhysicalDeviceFeatures2(plat_.physicalDevice, &physicalDeviceFeatures2);
+        if (extFunctions_.vkGetPhysicalDeviceFeatures2) {
+            extFunctions_.vkGetPhysicalDeviceFeatures2(plat_.physicalDevice, &physicalDeviceFeatures2);
+        }
+        if (extFunctions_.vkGetPhysicalDeviceProperties2) {
+            extFunctions_.vkGetPhysicalDeviceProperties2(plat_.physicalDevice, &physicalDeviceProperties2);
+        }
 
         // vkGetPhysicalDeviceFeatures has already filled this and PreparePhysicalDeviceFeaturesForEnabling
         // disabled/ enabled some features.
@@ -533,6 +706,7 @@ void DeviceVk::CreateDevice(const BackendExtraVk* backendExtra, const vector<Low
     }
     commonDeviceExtensions_ = GetEnabledCommonDeviceExtensions(extensions_);
     platformDeviceExtensions_ = GetEnabledPlatformDeviceExtensions(extensions_);
+    commonDeviceProperties_ = GetCommonDevicePropertiesFunc(chainObjects);
 }
 
 vector<QueueProperties> DeviceVk::CheckExternalConfig(const BackendExtraVk* backendConfiguration)
@@ -622,7 +796,7 @@ FormatProperties DeviceVk::GetFormatProperties(const Format format) const
         const uint32_t currIdx = formatIdx - DeviceFormatSupportConstants::ADDITIONAL_FORMAT_START_NUMBER;
         PLUGIN_UNUSED(currIdx);
         PLUGIN_ASSERT(currIdx < formatSupportSize);
-        return formatProperties_[formatIdx];
+        return formatProperties_[currIdx];
     }
     return {};
 }
@@ -736,18 +910,12 @@ AccelerationStructureBuildSizes DeviceVk::GetAccelerationStructureBuildSizes(
 #endif
 }
 
-void DeviceVk::CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo)
+unique_ptr<Swapchain> DeviceVk::CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo)
 {
-    WaitForIdle();
-    swapchain_.reset();
-    swapchain_ = make_unique<SwapchainVk>(*this, swapchainCreateInfo);
+    return make_unique<SwapchainVk>(*this, swapchainCreateInfo);
 }
 
-void DeviceVk::DestroyDeviceSwapchain()
-{
-    WaitForIdle();
-    swapchain_.reset();
-}
+void DeviceVk::DestroyDeviceSwapchain() {}
 
 PlatformGpuMemoryAllocator* DeviceVk::GetPlatformGpuMemoryAllocator()
 {
@@ -929,6 +1097,11 @@ unique_ptr<GpuBuffer> DeviceVk::CreateGpuBuffer(const GpuBufferDesc& desc)
     return make_unique<GpuBufferVk>(*this, desc);
 }
 
+unique_ptr<GpuBuffer> DeviceVk::CreateGpuBuffer(const GpuAccelerationStructureDesc& descAccel)
+{
+    return make_unique<GpuBufferVk>(*this, descAccel);
+}
+
 unique_ptr<GpuImage> DeviceVk::CreateGpuImage(const GpuImageDesc& desc)
 {
     return make_unique<GpuImageVk>(*this, desc);
@@ -973,11 +1146,6 @@ unique_ptr<GpuImage> DeviceVk::CreateGpuImageView(
 unique_ptr<GpuSampler> DeviceVk::CreateGpuSampler(const GpuSamplerDesc& desc)
 {
     return make_unique<GpuSamplerVk>(*this, desc);
-}
-
-unique_ptr<GpuAccelerationStructure> DeviceVk::CreateGpuAccelerationStructure(const GpuAccelerationStructureDesc& desc)
-{
-    return make_unique<GpuAccelerationStructureVk>(*this, desc);
 }
 
 unique_ptr<RenderFrameSync> DeviceVk::CreateRenderFrameSync()
@@ -1025,15 +1193,15 @@ unique_ptr<NodeContextPoolManager> DeviceVk::CreateNodeContextPoolManager(
 unique_ptr<GraphicsPipelineStateObject> DeviceVk::CreateGraphicsPipelineStateObject(const GpuShaderProgram& gpuProgram,
     const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
     const VertexInputDeclarationView& vertexInputDeclaration,
-    const ShaderSpecializationConstantDataView& specializationConstants, const DynamicStateFlags dynamicStateFlags,
-    const RenderPassDesc& renderPassDesc, const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs,
-    const uint32_t subpassIndex, const LowLevelRenderPassData* renderPassData,
-    const LowLevelPipelineLayoutData* pipelineLayoutData)
+    const ShaderSpecializationConstantDataView& specializationConstants,
+    const array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+    const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
+    const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData)
 {
     PLUGIN_ASSERT(renderPassData);
     PLUGIN_ASSERT(pipelineLayoutData);
     return make_unique<GraphicsPipelineStateObjectVk>(*this, gpuProgram, graphicsState, pipelineLayout,
-        vertexInputDeclaration, specializationConstants, dynamicStateFlags, renderPassDesc, renderPassSubpassDescs,
+        vertexInputDeclaration, specializationConstants, dynamicStates, renderPassDesc, renderPassSubpassDescs,
         subpassIndex, *renderPassData, *pipelineLayoutData);
 }
 
@@ -1046,6 +1214,16 @@ unique_ptr<ComputePipelineStateObject> DeviceVk::CreateComputePipelineStateObjec
         *this, gpuProgram, pipelineLayout, specializationConstants, *pipelineLayoutData);
 }
 
+unique_ptr<GpuSemaphore> DeviceVk::CreateGpuSemaphore()
+{
+    return make_unique<GpuSemaphoreVk>(*this);
+}
+
+unique_ptr<GpuSemaphore> DeviceVk::CreateGpuSemaphoreView(const uint64_t handle)
+{
+    return make_unique<GpuSemaphoreVk>(*this, handle);
+}
+
 const DebugFunctionUtilitiesVk& DeviceVk::GetDebugFunctionUtilities() const
 {
     return debugFunctionUtilities_;
@@ -1055,7 +1233,7 @@ void DeviceVk::CreateDebugFunctions()
 {
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     debugFunctionUtilities_.vkSetDebugUtilsObjectNameEXT =
-        (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(plat_.device, "vkSetDebugUtilsObjectNameEXT");
+        (PFN_vkSetDebugUtilsObjectNameEXT)(void*)vkGetDeviceProcAddr(plat_.device, "vkSetDebugUtilsObjectNameEXT");
 #endif
 #if (RENDER_DEBUG_MARKERS_ENABLED == 1) || (RENDER_DEBUG_COMMAND_MARKERS_ENABLED == 1)
     debugFunctionUtilities_.vkCmdBeginDebugUtilsLabelEXT =
@@ -1079,13 +1257,12 @@ void DeviceVk::CreateExtFunctions()
 {
     if (commonDeviceExtensions_.renderPass2) {
         extFunctions_.vkCreateRenderPass2KHR =
-            (PFN_vkCreateRenderPass2KHR)vkGetInstanceProcAddr(plat_.instance, "vkCreateRenderPass2KHR");
+            (PFN_vkCreateRenderPass2KHR)(void*)vkGetInstanceProcAddr(plat_.instance, "vkCreateRenderPass2KHR");
         if (!extFunctions_.vkCreateRenderPass2KHR) {
             commonDeviceExtensions_.renderPass2 = false;
             PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkCreateRenderPass2KHR");
         }
     }
-
     if (commonDeviceExtensions_.getMemoryRequirements2) {
         extFunctions_.vkGetImageMemoryRequirements2 = (PFN_vkGetImageMemoryRequirements2)vkGetInstanceProcAddr(
             plat_.instance, "vkGetImageMemoryRequirements2KHR");
@@ -1093,13 +1270,15 @@ void DeviceVk::CreateExtFunctions()
             PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkGetImageMemoryRequirements2");
         }
     }
-
     if (commonDeviceExtensions_.samplerYcbcrConversion) {
         GetYcbcrExtFunctions(plat_.instance, extFunctions_);
     }
-
-    extFunctions_.vkAcquireNextImageKHR =
-        (PFN_vkAcquireNextImageKHR)vkGetInstanceProcAddr(plat_.instance, "vkAcquireNextImageKHR");
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+    if (commonDeviceExtensions_.fragmentShadingRate) {
+        extFunctions_.vkCmdSetFragmentShadingRateKHR =
+            (PFN_vkCmdSetFragmentShadingRateKHR)vkGetInstanceProcAddr(plat_.instance, "vkCmdSetFragmentShadingRateKHR");
+    }
+#endif
 
 #if (RENDER_VULKAN_RT_ENABLED == 1)
     extFunctions_.vkGetAccelerationStructureBuildSizesKHR =

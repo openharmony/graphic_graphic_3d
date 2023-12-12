@@ -15,7 +15,8 @@
 
 #include "image/loaders/image_loader_stb_image.h"
 
-#include <functional>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
 
 //
@@ -30,6 +31,9 @@
 //        STBI_ONLY_PNM   (.ppm and .pgm)
 #define STBI_ONLY_JPEG
 #define STBI_ONLY_PNG
+
+// Without this a few gif functions are still included.
+#define STBI_NO_GIF
 
 // Currently we always load from memory so disabling support for loading directly from a file.
 #define STBI_NO_STDIO
@@ -53,8 +57,17 @@
 
 #include <stb/stb_image.h>
 
+#include <base/containers/array_view.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
 #include <base/math/mathf.h>
-#include <core/io/intf_file_manager.h>
+#include <base/namespace.h>
+#include <base/util/formats.h>
+#include <core/image/intf_image_container.h>
+#include <core/image/intf_image_loader_manager.h>
+#include <core/io/intf_file.h>
 #include <core/log.h>
 #include <core/namespace.h>
 
@@ -81,16 +94,16 @@ void FreeStbImageBytes(void* imageBytes)
     stbi_image_free(imageBytes);
 }
 
-uint8_t SRGBPremultiplyLookup[256u * 256u] = { 0 };
+uint8_t g_sRgbPremultiplyLookup[256u * 256u] = { 0 };
 
 void InitializeSRGBTable()
 {
     // Generate lookup table to premultiply sRGB encoded image in linear space and reencoding it to sRGB
     // Formulas from https://en.wikipedia.org/wiki/SRGB
     for (uint32_t a = 0; a < 256u; a++) {
-        const float alpha = a / 255.f;
+        const float alpha = static_cast<float>(a) / 255.f;
         for (uint32_t sRGB = 0; sRGB < 256u; sRGB++) {
-            float color = sRGB / 255.f;
+            float color = static_cast<float>(sRGB) / 255.f;
             if (color <= 0.04045f) {
                 color *= (1.f / 12.92f);
             } else {
@@ -102,7 +115,7 @@ void InitializeSRGBTable()
             } else {
                 premultiplied = 1.055f * pow(premultiplied, 1.f / 2.4f) - 0.055f;
             }
-            SRGBPremultiplyLookup[a * 256u + sRGB] = static_cast<uint8_t>(round(premultiplied * 255.f));
+            g_sRgbPremultiplyLookup[a * 256u + sRGB] = static_cast<uint8_t>(round(premultiplied * 255.f));
         }
     }
 }
@@ -130,12 +143,12 @@ bool PremultiplyAlpha(
                 img++; // Skip over the alpha value.
             }
         } else {
-            if (SRGBPremultiplyLookup[256u * 256u - 1] == 0) {
+            if (g_sRgbPremultiplyLookup[256u * 256u - 1] == 0) {
                 InitializeSRGBTable();
             }
             uint8_t* img = imageBytes;
             for (uint32_t i = 0; i < pixelCount; i++) {
-                uint8_t* p = &SRGBPremultiplyLookup[img[channelCount - 1] * 256u];
+                uint8_t* p = &g_sRgbPremultiplyLookup[img[channelCount - 1] * 256u];
                 for (uint32_t j = 0; j < channelCount - 1; j++) {
                     *img = p[*img];
                     img++;
@@ -161,15 +174,12 @@ bool PremultiplyAlpha(
     return true;
 }
 
-using StbImageDeleter = std::function<void(void*)>;
-using StbImagePtr = unique_ptr<void, StbImageDeleter>;
+using StbImagePtr = unique_ptr<void, decltype(&FreeStbImageBytes)>;
 } // namespace
 
 class StbImage final : public IImageContainer {
 public:
     StbImage() : IImageContainer(), imageDesc_(), imageBuffer_() {}
-
-    ~StbImage() override = default;
 
     using Ptr = BASE_NS::unique_ptr<StbImage, Deleter>;
 
@@ -287,7 +297,7 @@ public:
         image->imageDesc_ =
             ResolveImageDesc(format, imageWidth, imageHeight, bitsPerPixel, generateMips, isPremultiplied);
         image->imageBytes_ = BASE_NS::move(imageBytes);
-        image->imageBytesLength_ = static_cast<size_t>(imageWidth * imageHeight * componentCount * bytesPerComponent);
+        image->imageBytesLength_ = imageWidth * imageHeight * componentCount * bytesPerComponent;
 
         image->imageBuffer_ = SubImageDesc {
             0,           // uint32_t bufferOffset
@@ -350,12 +360,13 @@ public:
 
         // Load the image info without decoding the image data
         // (Just to check what the image format is so we can convert if necessary).
-        Info info;
+        Info info {};
 
         const int result = stbi_info_from_memory(imageFileBytes.data(), static_cast<int>(imageFileBytes.size()),
             &info.width, &info.height, &info.componentCount);
 
-        info.is16bpc = stbi_is_16_bit_from_memory(imageFileBytes.data(), static_cast<int>(imageFileBytes.size()));
+        info.is16bpc =
+            (stbi_is_16_bit_from_memory(imageFileBytes.data(), static_cast<int>(imageFileBytes.size())) != 0);
 
         // Not supporting hdr images via stb_image.
 #if !defined(NDEBUG)
@@ -376,13 +387,12 @@ public:
             }
         }
 
-        if (!result || (result && !imageBytes)) {
+        if (!result || (((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) && !imageBytes)) {
             if (CORE_ENABLE_STB_NON_THREADSAFE_ERROR_MSG) {
                 const string errorString = string_view("Loading image failed: ") + string_view(stbi_failure_reason());
                 return ImageLoaderManager::ResultFailure(errorString);
-            } else {
-                return ImageLoaderManager::ResultFailure("Loading image failed");
             }
+            return ImageLoaderManager::ResultFailure("Loading image failed");
         }
 
         // Success. Populate the image info and image data object.
@@ -445,19 +455,21 @@ public:
         }
 
         // Check for PNG
-        if (imageFileBytes[0] == 137 && imageFileBytes[1] == 80 && imageFileBytes[2] == 78 && imageFileBytes[3] == 71 &&
-            imageFileBytes[4] == 13 && imageFileBytes[5] == 10 && imageFileBytes[6] == 26 && imageFileBytes[7] == 10) {
+        if ((imageFileBytes.size() >= 8) && imageFileBytes[0] == 137 && imageFileBytes[1] == 80 &&
+            imageFileBytes[2] == 78 && imageFileBytes[3] == 71 && imageFileBytes[4] == 13 && imageFileBytes[5] == 10 &&
+            imageFileBytes[6] == 26 && imageFileBytes[7] == 10) {
             return true;
         }
 
         // Check for JPEG / JFIF / Exif / ICC_PROFILE tag
-        if (imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 && imageFileBytes[2] == 0xff &&
+        if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
+            imageFileBytes[2] == 0xff &&
             ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
-                imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
+                 imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
                 (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
-                imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
+                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
                 (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
-                imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
+                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
             return true;
         }
 
@@ -465,19 +477,18 @@ public:
     }
 
     // No animation support
-    ImageLoaderManager::LoadAnimatedResult LoadAnimatedImage(IFile& file, uint32_t loadFlags) override
+    ImageLoaderManager::LoadAnimatedResult LoadAnimatedImage(IFile& /* file */, uint32_t /* loadFlags */) override
     {
         return ImageLoaderManager::ResultFailureAnimated("Animation not supported.");
     }
 
     ImageLoaderManager::LoadAnimatedResult LoadAnimatedImage(
-        array_view<const uint8_t> imageFileBytes, uint32_t loadFlags) override
+        array_view<const uint8_t> /* imageFileBytes */, uint32_t /* loadFlags */) override
     {
         return ImageLoaderManager::ResultFailureAnimated("Animation not supported.");
     }
 
 protected:
-    ~ImageLoaderStbImage() = default;
     void Destroy() override
     {
         delete this;

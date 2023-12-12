@@ -1,0 +1,30 @@
+#version 450
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct LocalPostProcessPushConstantStruct
+{
+    vec4 viewportSizeInvSize;
+    vec4 factor;
+};
+
+struct uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+uniform uPostProcessPushConstant CORE_PC_0;
+
+layout(binding = 11, rgba16f) uniform readonly image2D s1_b0;
+layout(binding = 11, rgba16f) uniform writeonly image2D s1_b0_1;
+uniform sampler2D s1_b1_s1_b2;
+
+void main()
+{
+    vec2 _109 = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
+    vec2 _184 = CORE_PC_0.uPc.viewportSizeInvSize.zw * 2.0;
+    float _208 = _184.x;
+    float _210 = _184.y;
+    ivec2 _136 = ivec2(gl_GlobalInvocationID.xy);
+    imageStore(s1_b0_1, _136, vec4(min(((textureLod(s1_b1_s1_b2, fma(_109, CORE_PC_0.uPc.viewportSizeInvSize.zw, _184), 0.0).xyz * 0.125) + ((textureLod(s1_b1_s1_b2, fma(_109, CORE_PC_0.uPc.viewportSizeInvSize.zw, vec2(-_208, _210)), 0.0).xyz * 0.125) + ((textureLod(s1_b1_s1_b2, fma(_109, CORE_PC_0.uPc.viewportSizeInvSize.zw, vec2(_208, -_210)), 0.0).xyz * 0.125) + ((textureLod(s1_b1_s1_b2, fma(_109, CORE_PC_0.uPc.viewportSizeInvSize.zw, -_184), 0.0).xyz * 0.125) + (textureLod(s1_b1_s1_b2, _109 * CORE_PC_0.uPc.viewportSizeInvSize.zw, 0.0).xyz * 0.5))))) + imageLoad(s1_b0, _136).xyz, vec3(64512.0)), 1.0));
+}
+

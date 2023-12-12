@@ -65,6 +65,8 @@ typedef intptr_t EGLAttrib;
 #include "util/log.h"
 #define declare(a, b) a b = nullptr;
 #include "gles/gl_functions.h"
+#define declare(a, b) a b = nullptr;
+#include "gles/egl_functions.h"
 #include "gles/surface_information.h"
 #include "gles/swapchain_gles.h"
 
@@ -83,8 +85,23 @@ using BASE_NS::vector;
 
 namespace EGLHelpers {
 namespace {
-bool FilterError(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const void*) noexcept
+static bool FilterError(
+    GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const string_view, const void*) noexcept
 {
+    if (source == GL_DEBUG_SOURCE_OTHER) {
+        if (type == GL_DEBUG_TYPE_PERFORMANCE) {
+            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) {
+                /*  Ignore the following warning that Adreno drivers seem to spam.
+                source: GL_DEBUG_SOURCE_OTHER
+                type: GL_DEBUG_TYPE_PERFORMANCE
+                id: 2147483647
+                severity: GL_DEBUG_SEVERITY_HIGH
+                message: FreeAllocationOnTimestamp - WaitForTimestamp
+                */
+                return true;
+            }
+        }
+    }
     return false;
 }
 
@@ -130,9 +147,7 @@ const char* EglErrorStr(EGLint aError)
     }
 
     static char error[64];
-    if (sprintf_s(error, sizeof(error), "Unknown error %x", aError) < 0) {
-        PLUGIN_LOG_E("EglErrorStr: sprintf_s failed");
-    }
+    sprintf_s(error, sizeof(error), "Unknown error %x", aError);
     return error;
 }
 
@@ -208,7 +223,6 @@ bool stringToUInt(string_view string, EGLint& value)
     }
     return true;
 }
-} // namespace
 
 void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
 {
@@ -256,6 +270,7 @@ void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
         ATTRIBUTE(EGL_VG_COLORSPACE),
         ATTRIBUTE(EGL_WIDTH), // Returns the width of the surface in pixels.
     };
+    PLUGIN_LOG_V("EGLSurface[%p]", surf);
     for (size_t attr = 0; attr < sizeof(attribs) / sizeof(Attribute); attr++) {
         EGLint value;
         if (EGL_TRUE == eglQuerySurface(dpy, surf, attribs[attr].attribute, &value)) {
@@ -337,6 +352,126 @@ void ParseExtensions(const string& extensions, vector<string_view>& extensionLis
         extensionList.emplace_back(extensions.data() + start);
     }
 }
+
+void FillProperties(DevicePropertiesGLES& properties)
+{
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &properties.maxCombinedTextureImageUnits);
+    glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &properties.maxCubeMapTextureSize);
+    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_VECTORS, &properties.maxFragmentUniformVectors);
+    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &properties.maxRenderbufferSize);
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &properties.maxTextureImageUnits);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &properties.maxTextureSize);
+    glGetIntegerv(GL_MAX_VARYING_VECTORS, &properties.maxVaryingVectors);
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &properties.maxVertexAttribs);
+    glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &properties.maxVertexTextureImageUnits);
+    glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &properties.maxVertexUniformVectors);
+    glGetFloatv(GL_MAX_VIEWPORT_DIMS, properties.maxViewportDims);
+    glGetIntegerv(GL_NUM_COMPRESSED_TEXTURE_FORMATS, &properties.numCompressedTextureFormats);
+    glGetIntegerv(GL_NUM_SHADER_BINARY_FORMATS, &properties.numShaderBinaryFormats);
+    glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &properties.numProgramBinaryFormats);
+
+    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &properties.max3DTextureSize);
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &properties.maxArrayTextureLayers);
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &properties.maxColorAttachments);
+    glGetInteger64v(GL_MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS, &properties.maxCombinedFragmentUniformComponents);
+    glGetIntegerv(GL_MAX_COMBINED_UNIFORM_BLOCKS, &properties.maxCombinedUniformBlocks);
+    glGetInteger64v(GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS, &properties.maxCombinedVertexUniformComponents);
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &properties.maxDrawBuffers);
+    glGetInteger64v(GL_MAX_ELEMENT_INDEX, &properties.maxElementIndex);
+    glGetIntegerv(GL_MAX_ELEMENTS_INDICES, &properties.maxElementsIndices);
+    glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &properties.maxElementsVertices);
+    glGetIntegerv(GL_MAX_FRAGMENT_INPUT_COMPONENTS, &properties.maxFragmentInputComponents);
+    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &properties.maxFragmentUniformBlocks);
+    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS, &properties.maxFragmentUniformComponents);
+    glGetIntegerv(GL_MIN_PROGRAM_TEXEL_OFFSET, &properties.minProgramTexelOffset);
+    glGetIntegerv(GL_MAX_PROGRAM_TEXEL_OFFSET, &properties.maxProgramTexelOffset);
+    glGetIntegerv(GL_MAX_SAMPLES, &properties.maxSamples);
+    glGetInteger64v(GL_MAX_SERVER_WAIT_TIMEOUT, &properties.maxServerWaitTimeout);
+    glGetFloatv(GL_MAX_TEXTURE_LOD_BIAS, &properties.maxTextureLodBias);
+    glGetIntegerv(
+        GL_MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS, &properties.maxTransformFeedbackInterleavedComponents);
+    glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS, &properties.maxTransformFeedbackSeparateAttribs);
+    glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS, &properties.maxTransformFeedbackSeparateComponents);
+    glGetInteger64v(GL_MAX_UNIFORM_BLOCK_SIZE, &properties.maxUniformBlockSize);
+    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &properties.maxUniformBufferBindings);
+    glGetIntegerv(GL_MAX_VARYING_COMPONENTS, &properties.maxVaryingComponents);
+    glGetIntegerv(GL_MAX_VERTEX_OUTPUT_COMPONENTS, &properties.maxVertexOutputComponents);
+    glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &properties.maxVertexUniformBlocks);
+    glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &properties.maxVertexUniformComponents);
+
+    glGetIntegerv(GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS, &properties.maxAtomicCounterBufferBindings);
+    glGetIntegerv(GL_MAX_ATOMIC_COUNTER_BUFFER_SIZE, &properties.maxAtomicCounterBufferSize);
+    glGetIntegerv(GL_MAX_COLOR_TEXTURE_SAMPLES, &properties.maxColorTextureSamples);
+    glGetIntegerv(GL_MAX_COMBINED_ATOMIC_COUNTERS, &properties.maxCombinedAtomicCounters);
+    glGetIntegerv(GL_MAX_COMBINED_ATOMIC_COUNTER_BUFFERS, &properties.maxCombinedAtomicCounterBuffers);
+    glGetIntegerv(GL_MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS, &properties.maxCombinedComputeUniformComponents);
+    glGetIntegerv(GL_MAX_COMBINED_IMAGE_UNIFORMS, &properties.maxCombinedImageUniforms);
+    glGetIntegerv(GL_MAX_COMBINED_SHADER_OUTPUT_RESOURCES, &properties.maxCombinedShaderOutputResources);
+    glGetIntegerv(GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS, &properties.maxCombinedShaderStorageBlocks);
+    glGetIntegerv(GL_MAX_COMPUTE_ATOMIC_COUNTERS, &properties.maxComputeAtomicCounters);
+    glGetIntegerv(GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, &properties.maxComputeAtomicCounterBuffers);
+    glGetIntegerv(GL_MAX_COMPUTE_IMAGE_UNIFORMS, &properties.maxComputeImageUniforms);
+    glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &properties.maxComputeShaderStorageBlocks);
+    glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &properties.maxComputeSharedMemorySize);
+    glGetIntegerv(GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS, &properties.maxComputeTextureImageUnits);
+    glGetIntegerv(GL_MAX_COMPUTE_UNIFORM_BLOCKS, &properties.maxComputeUniformBlocks);
+    glGetIntegerv(GL_MAX_COMPUTE_UNIFORM_COMPONENTS, &properties.maxComputeUniformComponents);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, properties.maxComputeWorkGroupCount);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, properties.maxComputeWorkGroupCount + 1);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, properties.maxComputeWorkGroupCount + 2);
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &properties.maxComputeWorkGroupInvocations);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, properties.maxComputeWorkGroupSize);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, properties.maxComputeWorkGroupSize + 1);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, properties.maxComputeWorkGroupSize + 2);
+    glGetIntegerv(GL_MAX_DEPTH_TEXTURE_SAMPLES, &properties.maxDepthTextureSamples);
+    glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTERS, &properties.maxFragmentAtomicCounters);
+    glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS, &properties.maxFragmentAtomicCounterBuffers);
+    glGetIntegerv(GL_MAX_FRAGMENT_IMAGE_UNIFORMS, &properties.maxFragmentImageUniforms);
+    glGetIntegerv(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &properties.maxFragmentShaderStorageBlocks);
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_HEIGHT, &properties.maxFramebufferHeight);
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_SAMPLES, &properties.maxFramebufferSamples);
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, &properties.maxFramebufferWidth);
+    glGetIntegerv(GL_MAX_IMAGE_UNITS, &properties.maxImageUnits);
+    glGetIntegerv(GL_MAX_INTEGER_SAMPLES, &properties.maxIntegerSamples);
+    glGetIntegerv(GL_MIN_PROGRAM_TEXTURE_GATHER_OFFSET, &properties.minProgramTextureGatherOffset);
+    glGetIntegerv(GL_MAX_PROGRAM_TEXTURE_GATHER_OFFSET, &properties.maxProgramTextureGatherOffset);
+    glGetIntegerv(GL_MAX_SAMPLE_MASK_WORDS, &properties.maxSampleMaskWords);
+    glGetInteger64v(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &properties.maxShaderStorageBlockSize);
+    glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &properties.maxShaderStorageBufferBindings);
+    glGetIntegerv(GL_MAX_UNIFORM_LOCATIONS, &properties.maxUniformLocations);
+    glGetIntegerv(GL_MAX_VERTEX_ATOMIC_COUNTERS, &properties.maxVertexAtomicCounters);
+    glGetIntegerv(GL_MAX_VERTEX_ATOMIC_COUNTER_BUFFERS, &properties.maxVertexAtomicCounterBuffers);
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIB_BINDINGS, &properties.maxVertexAttribBindings);
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIB_RELATIVE_OFFSET, &properties.maxVertexAttribRelativeOffset);
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &properties.maxVertexAttribStride);
+    glGetIntegerv(GL_MAX_VERTEX_IMAGE_UNIFORMS, &properties.maxVertexImageUniforms);
+    glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &properties.maxVertexShaderStorageBlocks);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &properties.uniformBufferOffsetAlignment);
+    glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &properties.shaderStorageBufferOffsetAlignment);
+
+    glGetIntegerv(GL_MIN_SAMPLE_SHADING_VALUE, &properties.minSampleShadingValue);
+    glGetIntegerv(GL_MAX_DEBUG_GROUP_STACK_DEPTH, &properties.maxDebugGroupStackDepth);
+    glGetIntegerv(GL_MAX_DEBUG_LOGGED_MESSAGES, &properties.maxDebugLoggedMessages);
+    glGetIntegerv(GL_MAX_DEBUG_MESSAGE_LENGTH, &properties.maxDebugMessageLength);
+    glGetFloatv(GL_MIN_FRAGMENT_INTERPOLATION_OFFSET, &properties.minFragmentInterpolationOffset);
+    glGetFloatv(GL_MAX_FRAGMENT_INTERPOLATION_OFFSET, &properties.maxFragmentInterpolationOffset);
+    glGetIntegerv(GL_MAX_FRAMEBUFFER_LAYERS, &properties.maxFramebufferLayers);
+    glGetIntegerv(GL_MAX_LABEL_LENGTH, &properties.maxLabelLength);
+    glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &properties.maxTextureBufferSize);
+}
+
+bool IsSrgbSurfaceSupported(const DevicePlatformDataGLES& plat)
+{
+    // Check if EGL supports sRGB color space (either EGL is > 1.5 or EGL_KHR_gl_colorspace extension is supported).
+    if (plat.majorVersion > 1u || (plat.majorVersion == 1u && plat.minorVersion >= 5u)) {
+        // EGL 1.5 or newer -> no need to check the extension.
+        return true;
+    }
+    // Check if the sRGB color space extension is supported.
+    return plat.hasColorSpaceExt;
+}
+
+} // namespace
 
 #undef ATTRIBUTE
 void EGLState::HandleExtensions()
@@ -452,6 +587,7 @@ void EGLState::CreateContext(const BackendExtraGLES* backendConfig)
     if (backendConfig) {
         sharedContext = backendConfig->sharedContext;
     }
+    PLUGIN_LOG_I("Creating new context in DeviceGLES, using shared context: %p", sharedContext);
     plat_.context = eglCreateContext(plat_.display, plat_.config, sharedContext, context_attributes.data());
     CheckEGLError(__FILE__, __LINE__);
 
@@ -478,7 +614,7 @@ bool EGLState::IsVersionGreaterOrEqual(uint32_t major, uint32_t minor) const
 
 bool EGLState::VerifyVersion()
 {
-    // Verify that we have atleast 3.2 context.
+    // Verify that we have at least 3.2 context.
     EGLint glMajor = 0;
     EGLint glMinor = 0;
     SaveContext();
@@ -486,7 +622,7 @@ bool EGLState::VerifyVersion()
     string_view string((char*)glGetString(GL_VERSION));
     // the format according to spec pdf is "OpenGL ES N.M vendor-specific information"
     bool fail = false;
-    if (string.substr(0, 10) == "OpenGL ES ") {
+    if (string.starts_with("OpenGL ES ")) {
         // Must be OpenGL ES FULL. Trust this information. (even if it might mismatch with the eglQueryContext results)
         string_view version = string.substr(10);
         version = version.substr(0, version.find_first_of(' '));
@@ -527,18 +663,16 @@ bool EGLState::VerifyVersion()
     }
     return !fail;
 }
+
 bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
 {
     auto backendConfig = static_cast<const BackendExtraGLES*>(createInfo.backendConfiguration);
     EGLint major, minor;
 
-    plat_.display = eglGetDisplay(backendConfig->display);
-
-    EGLContext appContext = EGL_NO_CONTEXT;
-    if (backendConfig) {
-        appContext = backendConfig->applicationContext;
-    }
-    if (appContext == EGL_NO_CONTEXT && backendConfig->sharedContext == EGL_NO_CONTEXT) {
+    plat_.display = eglGetDisplay(backendConfig ? backendConfig->display : EGL_DEFAULT_DISPLAY);
+    const EGLContext appContext = backendConfig ? backendConfig->applicationContext : EGL_NO_CONTEXT;
+    const EGLContext sharedContext = backendConfig ? backendConfig->sharedContext : EGL_NO_CONTEXT;
+    if (appContext == EGL_NO_CONTEXT && sharedContext == EGL_NO_CONTEXT) {
         if (!eglInitialize(plat_.display, &major, &minor)) {
             PLUGIN_LOG_E("EGL initialization failed");
             CHECK_EGL_ERROR();
@@ -658,10 +792,30 @@ void EGLState::GlInitialize()
     if (b == nullptr) {                                                                   \
         PLUGIN_LOG_E("Missing %s\n", #b);                                                 \
     }
-
 #include "gles/gl_functions.h"
 
-    vSync_ = true;
+#define declare(a, b)                                                                     \
+    if (b == nullptr) {                                                                   \
+        *(reinterpret_cast<void**>(&b)) = reinterpret_cast<void*>(eglGetProcAddress(#b)); \
+    }                                                                                     \
+    if (b == nullptr) {                                                                   \
+        PLUGIN_LOG_E("Missing %s\n", #b);                                                 \
+    }
+#include "gles/egl_functions.h"
+    if (!HasExtension("EGL_ANDROID_get_native_client_buffer")) {
+        eglGetNativeClientBufferANDROID = nullptr;
+    }
+    if (!HasExtension("EGL_KHR_image_base")) {
+        eglCreateImageKHR = nullptr;
+        eglDestroyImageKHR = nullptr;
+    }
+
+    plat_.deviceName = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    plat_.driverVersion = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    BASE_NS::ClearToValue(
+        &plat_.deviceProperties, sizeof(plat_.deviceProperties), 0x00, sizeof(plat_.deviceProperties));
+    FillProperties(plat_.deviceProperties);
+
     SetSwapInterval(1); // default to vsync enabled.
 }
 
@@ -677,14 +831,13 @@ void EGLState::SaveContext()
     GetContext(oldContext_);
 }
 
-void EGLState::SetContext(Swapchain* swapChain)
+void EGLState::SetContext(const SwapchainGLES* swapchain)
 {
-    if (swapChain == nullptr) {
+    if (swapchain == nullptr) {
         SetContext(dummyContext_, true);
     } else {
-        SwapchainGLES* swap = static_cast<SwapchainGLES*>(swapChain);
         ContextState newContext;
-        const auto& plat = (const SwapchainPlatformDataGL&)swap->GetPlatformData();
+        const auto& plat = swapchain->GetPlatformData();
         newContext.display = plat_.display;
         newContext.context = plat_.context;
         newContext.drawSurface = (EGLSurface)plat.surface;
@@ -723,14 +876,17 @@ void EGLState::GetContext(ContextState& state)
     }
 }
 
-void EGLState::SetContext(const ContextState& state, bool aForce)
+void EGLState::SetContext(const ContextState& state, bool force)
 {
     PLUGIN_ASSERT(oldIsSet_);
     if (state.display != EGL_NO_DISPLAY) {
-        if ((aForce) || (oldContext_.display != state.display) || (oldContext_.drawSurface != state.drawSurface) ||
+        if ((force) || (oldContext_.display != state.display) || (oldContext_.drawSurface != state.drawSurface) ||
             (oldContext_.readSurface != state.readSurface) || (oldContext_.context != state.context)) {
             if (eglMakeCurrent(state.display, state.drawSurface, state.readSurface, state.context) == EGL_FALSE) {
                 CHECK_EGL_ERROR2();
+                if (eglMakeCurrent(state.display, dummySurface_, dummySurface_, state.context) == EGL_FALSE) {
+                    CHECK_EGL_ERROR2();
+                }
             }
         }
     } else {
@@ -795,6 +951,37 @@ void* EGLState::ErrorFilter() const
     return reinterpret_cast<void*>(FilterError);
 }
 
+uintptr_t EGLState::CreateSurface(uintptr_t window, uintptr_t instance) const noexcept
+{
+    // Check if sRGB colorspace is supported by EGL.
+    const bool isSrgbSurfaceSupported = IsSrgbSurfaceSupported(plat_);
+
+    EGLint attribsSrgb[] = { EGL_NONE, EGL_NONE, EGL_NONE };
+    if (isSrgbSurfaceSupported) {
+        if (IsVersionGreaterOrEqual(1, 5)) {
+            attribsSrgb[0] = EGL_GL_COLORSPACE;
+            attribsSrgb[1] = EGL_GL_COLORSPACE_SRGB;
+        } else if (hasColorSpaceExt_) {
+            attribsSrgb[0] = EGL_GL_COLORSPACE_KHR;
+            attribsSrgb[1] = EGL_GL_COLORSPACE_SRGB_KHR;
+        }
+    }
+    EGLSurface eglSurface = eglCreateWindowSurface(plat_.display, plat_.config,
+        reinterpret_cast<EGLNativeWindowType>(window), isSrgbSurfaceSupported ? attribsSrgb : nullptr);
+    if (eglSurface == EGL_NO_SURFACE) {
+        EGLint error = eglGetError();
+        PLUGIN_LOG_E("eglCreateWindowSurface failed (with null attributes): %d", error);
+    }
+    return reinterpret_cast<uintptr_t>(eglSurface);
+}
+
+void EGLState::DestroySurface(uintptr_t surface) const noexcept
+{
+    if (reinterpret_cast<EGLSurface>(surface) != EGL_NO_SURFACE) {
+        eglDestroySurface(plat_.display, reinterpret_cast<EGLSurface>(surface));
+    }
+}
+
 bool EGLState::GetSurfaceInformation(
     const DevicePlatformDataGLES& plat, EGLSurface surface, GlesImplementation::SurfaceInfo& res) const
 {
@@ -802,7 +989,7 @@ bool EGLState::GetSurfaceInformation(
 
 #ifndef NDEBUG
     PLUGIN_LOG_V("EGLState::GetSurfaceInformation: input surface information:");
-    EGLHelpers::DumpEGLSurface(display, surface);
+    DumpEGLSurface(display, surface);
 #endif
     EGLint configId;
     // Get configId from surface
@@ -820,7 +1007,7 @@ bool EGLState::GetSurfaceInformation(
     }
 
     PLUGIN_LOG_V("EGLState::GetSurfaceInformation: input surface configuration:");
-    EGLHelpers::DumpEGLConfig(display, config);
+    DumpEGLConfig(display, config);
 
 #ifndef NDEBUG
     if (!hasConfiglessExt_) {
@@ -891,6 +1078,13 @@ bool EGLState::GetSurfaceInformation(
     }
 
     return true;
+}
+
+void EGLState::SwapBuffers(const SwapchainGLES& swapchain)
+{
+    SetContext(&swapchain);
+    const auto& platSwapchain = static_cast<const SwapchainPlatformDataGL&>(swapchain.GetPlatformData());
+    eglSwapBuffers(plat_.display, (EGLSurface)platSwapchain.surface);
 }
 } // namespace EGLHelpers
 RENDER_END_NAMESPACE()

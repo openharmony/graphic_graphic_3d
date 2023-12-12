@@ -38,10 +38,16 @@ public:
     explicit RenderDataStorePod(const BASE_NS::string_view name);
     ~RenderDataStorePod() override = default;
 
+    void CommitFrameData() override {};
     void PreRender() override {};
-    void PreRenderBackend() override {};
     void PostRender() override {};
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override {};
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     void CreatePod(const BASE_NS::string_view typeName, const BASE_NS::string_view name,
         const BASE_NS::array_view<const uint8_t> data) override;
@@ -82,7 +88,6 @@ private:
     struct OffsetToData {
         uint32_t index { 0 };
         uint32_t byteSize { 0 };
-        uint32_t typeNameVectorIndex { 0 };
     };
     BASE_NS::unordered_map<BASE_NS::string, OffsetToData> nameToDataOffset_;
 

@@ -46,7 +46,7 @@ public:
 
     /** Create a new pod store with a unique name and initial data.
      * If pod store with a same name already created. It is updated with new data.
-     * @param typeName A typename for POD data. (e.g. "PostProcess").
+     * @param typeName A typename for POD data. (e.g. "PostProcess"). This is not the RenderDataStore::TYPE_NAME
      * @param name A unique name of the POD.
      * @param data Data to be stored.
      */
@@ -54,7 +54,7 @@ public:
         const BASE_NS::array_view<const uint8_t> data) = 0;
 
     /** Destroy a specific pod store.
-     * @param typeName A typename for POD data. (e.g. "PostProcess").
+     * @param typeName A typename for POD data. (e.g. "PostProcess"). This is not the RenderDataStore::TYPE_NAME
      * @param name A unique name of the POD.
      */
     virtual void DestroyPod(const BASE_NS::string_view typeName, const BASE_NS::string_view name) = 0;

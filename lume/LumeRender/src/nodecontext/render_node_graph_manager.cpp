@@ -60,11 +60,10 @@ void ValidateBackendFlags(
 }
 } // namespace
 
-RenderNodeGraphManager::RenderNodeGraphManager(Device& device, CORE_NS::IFileManager& fileMgr) : device_(device)
-{
-    renderNodeMgr_ = make_unique<RenderNodeManager>();
-    renderNodeGraphLoader_ = make_unique<RenderNodeGraphLoader>(fileMgr);
-}
+RenderNodeGraphManager::RenderNodeGraphManager(Device& device, CORE_NS::IFileManager& fileMgr)
+    : device_(device), renderNodeMgr_(make_unique<RenderNodeManager>()),
+      renderNodeGraphLoader_(make_unique<RenderNodeGraphLoader>(fileMgr))
+{}
 
 RenderNodeGraphManager::~RenderNodeGraphManager()
 {
@@ -140,7 +139,7 @@ RenderHandleReference RenderNodeGraphManager::Create(const RenderNodeGraphUsageT
     };
     if (newHandle) {
         nodeGraphData_.emplace_back(); // deferred
-        nodeGraphHandles_.emplace_back(move(rhr));
+        nodeGraphHandles_.push_back(move(rhr));
         nodeGraphShareData_.emplace_back();
     } else {
         nodeGraphData_[indexPart] = {}; // deferred
@@ -259,7 +258,8 @@ void RenderNodeGraphManager::PendingCreate(const PendingRenderNodeGraph& renderN
     nodeStore->renderNodeGraphDataStoreName = renderNodeGraph.renderNodeGraphDataStoreName;
     nodeStore->renderNodeGraphUri = renderNodeGraph.renderNodeGraphUri;
     // many of the resources are not yet available as handles
-    nodeStore->renderNodeGraphShareDataMgr = make_unique<RenderNodeGraphShareDataManager>();
+    nodeStore->renderNodeGraphShareDataMgr =
+        make_unique<RenderNodeGraphShareDataManager>(renderNodeGraph.renderNodeGraphDesc.outputResources);
 
     const size_t reserveSize = renderNodeGraph.renderNodeGraphDesc.nodes.size();
     nodeStore->renderNodeData.reserve(reserveSize);
@@ -322,7 +322,7 @@ void RenderNodeGraphManager::PendingDestroy(const RenderHandle handle)
 #endif
                 // destroy all expect RenderNodeContextData which has command buffers and such
                 // add to destruction queue
-                pendingRenderNodeGraphDestructions_.emplace_back(PendingRenderNodeGraphDestruction {
+                pendingRenderNodeGraphDestructions_.push_back(PendingRenderNodeGraphDestruction {
                     device_.GetFrameCount(), move(nodeGraphData_[index]->renderNodeContextData) });
                 nodeGraphData_[index] = nullptr;
                 nodeGraphHandles_[index] = {};
@@ -331,7 +331,7 @@ void RenderNodeGraphManager::PendingDestroy(const RenderHandle handle)
                 // NOTE: this does not erase the RenderNodeGraphNodeStore element from the nodeGraphData_
                 // i.e. the data is invalidated in nodeGraphData_
 
-                availableHandleIds_.emplace_back(handle.id);
+                availableHandleIds_.push_back(handle.id);
             }
         }
     } else {
@@ -430,8 +430,9 @@ void RenderNodeGraphManager::PendingAllocRenderNode(
                                                      : nullptr;
                         rncd.initialized = false;
                         ValidateBackendFlags(desc.typeName, device_.GetBackendType(), tiFlags.backendFlags);
-                        nsRef.renderNodeContextData.insert(nsRef.renderNodeContextData.cbegin() + pos, move(rncd));
-                        nsRef.renderNodeData.insert(nsRef.renderNodeData.cbegin() + pos,
+                        nsRef.renderNodeContextData.insert(
+                            nsRef.renderNodeContextData.cbegin() + static_cast<ptrdiff_t>(pos), move(rncd));
+                        nsRef.renderNodeData.insert(nsRef.renderNodeData.cbegin() + static_cast<ptrdiff_t>(pos),
                             { move(node), desc.typeName, combinedNodeName, desc.nodeName,
                                 make_unique<RenderNodeGraphInputs>(desc.description), desc.nodeJson });
                         // new node needs initialization and info on top-level (render node graph)
@@ -439,12 +440,12 @@ void RenderNodeGraphManager::PendingAllocRenderNode(
                     } else {
                         PLUGIN_LOG_W("RNT: %s, named: %s, insert pos NF", desc.typeName.c_str(), desc.nodeName.c_str());
                     }
+                } else {
+                    PLUGIN_LOG_W("RN type: %s, named: %s, not found", desc.typeName.c_str(), desc.nodeName.c_str());
                 }
             } else {
-                PLUGIN_LOG_W("RN type: %s, named: %s, not found", desc.typeName.c_str(), desc.nodeName.c_str());
+                PLUGIN_LOG_E("RN (name:%s) cannot be add to non-dynamic render node graph", desc.nodeName.c_str());
             }
-        } else {
-            PLUGIN_LOG_E("RN (name:%s) cannot be add to non-dynamic render node graph", desc.nodeName.c_str());
         }
     }
 }
@@ -461,10 +462,10 @@ void RenderNodeGraphManager::UpdateRenderNodeGraphResources()
             dstData.inputCount = srcData.inputCount;
             dstData.outputCount = srcData.outputCount;
             for (uint32_t idx = 0; idx < dstData.inputCount; ++idx) {
-                dstData.inputs[idx] = srcData.inputs[idx].GetHandle();
+                dstData.inputs[idx] = { "", srcData.inputs[idx].GetHandle() };
             }
             for (uint32_t idx = 0; idx < dstData.outputCount; ++idx) {
-                dstData.outputs[idx] = srcData.outputs[idx].GetHandle();
+                dstData.outputs[idx] = { "", srcData.outputs[idx].GetHandle() };
             }
         }
     }
@@ -563,6 +564,7 @@ RenderNodeGraphDescInfo RenderNodeGraphManager::GetInfo(const RenderHandleRefere
                     }
                     return rngdi;
                 }
+
             } else {
                 PLUGIN_LOG_E("invalid generation index (%u != %u) with render node graph handle (%" PRIu64 ")",
                     generationIdx, storedGenerationIdx, rawHandle.id);
@@ -650,12 +652,13 @@ RenderNodeGraphResourceInfo RenderNodeGraphManager::GetRenderNodeGraphResources(
                 if (nodeGraphData_[index]) {
                     const auto& clientData = nodeGraphShareData_[index];
                     for (uint32_t idx = 0; idx < clientData.inputCount; ++idx) {
-                        info.inputResources.emplace_back(clientData.inputs[idx]);
+                        info.inputResources.push_back(clientData.inputs[idx]);
                     }
                     for (uint32_t idx = 0; idx < clientData.outputCount; ++idx) {
-                        info.outputResources.emplace_back(clientData.outputs[idx]);
+                        info.outputResources.push_back(clientData.outputs[idx]);
                     }
                 }
+
             } else {
                 PLUGIN_LOG_E("invalid generation index (%u != %u) with render node graph handle (%" PRIu64 ")",
                     generationIdx, storedGenerationIdx, rawHandle.id);

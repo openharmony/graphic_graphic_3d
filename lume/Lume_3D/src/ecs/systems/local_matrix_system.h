@@ -66,7 +66,7 @@ private:
     CORE_NS::ComponentQuery componentQuery_;
 };
 
-inline constexpr const BASE_NS::string_view GetName(const LocalMatrixSystem*)
+inline constexpr BASE_NS::string_view GetName(const LocalMatrixSystem*)
 {
     return "LocalMatrixSystem";
 }

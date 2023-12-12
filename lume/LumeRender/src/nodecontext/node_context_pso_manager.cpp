@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include <base/containers/vector.h>
+#include <base/util/hash.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
 
@@ -33,7 +34,7 @@
 template<>
 uint64_t BASE_NS::hash(const RENDER_NS::ShaderSpecializationConstantDataView& specialization)
 {
-    uint64_t seed = BASE_NS::CompileTime::FNV_OFFSET_BASIS;
+    uint64_t seed = BASE_NS::FNV_OFFSET_BASIS;
     if ((!specialization.data.empty()) && (!specialization.constants.empty())) {
         const size_t minSize = BASE_NS::Math::min(specialization.constants.size(), specialization.data.size());
         for (size_t idx = 0; idx < minSize; ++idx) {
@@ -43,7 +44,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::ShaderSpecializationConstantDataView& sp
             if ((currConstant.offset + constantSize) <= specialization.data.size_bytes()) {
                 uint8_t const* data = (uint8_t const*)specialization.data.data() + currConstant.offset;
                 size_t const bytes = sizeof(v) < constantSize ? sizeof(v) : constantSize;
-                seed = BASE_NS::FNV1aHash(data, bytes, seed);
+                HashCombine(seed, array_view(data, bytes));
             }
 #if (RENDER_VALIDATION_ENABLED == 1)
             else {
@@ -66,11 +67,14 @@ uint64_t HashComputeShader(
 }
 
 uint64_t HashGraphicsShader(const RenderHandle shaderHandle, const RenderHandle graphicsStateHandle,
-    const DynamicStateFlags dynamicStateFlags, const ShaderSpecializationConstantDataView& shaderSpecialization,
-    const uint64_t customGraphicsStateHash)
+    const array_view<const DynamicStateEnum> dynamicStates,
+    const ShaderSpecializationConstantDataView& shaderSpecialization, const uint64_t customGraphicsStateHash)
 {
-    return Hash(
-        shaderHandle.id, graphicsStateHandle.id, dynamicStateFlags, shaderSpecialization, customGraphicsStateHash);
+    uint64_t hash = 0;
+    for (const auto& ref : dynamicStates) {
+        HashCombine(hash, static_cast<uint64_t>(ref));
+    }
+    return Hash(hash, shaderHandle.id, graphicsStateHandle.id, shaderSpecialization, customGraphicsStateHash);
 }
 
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -101,6 +105,12 @@ NodeContextPsoManager::NodeContextPsoManager(Device& device, ShaderManager& shad
 RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shaderHandle,
     const PipelineLayout& pipelineLayout, const ShaderSpecializationConstantDataView& shaderSpecialization)
 {
+    if (RenderHandleUtil::GetHandleType(shaderHandle) != RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_E("RENDER_VALIDATION: invalid shader handle given to compute pso creation");
+#endif
+        return {}; // early out
+    }
     // if not matching pso -> deferred creation in render backend
     RenderHandle psoHandle;
 
@@ -159,8 +169,8 @@ RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shade
 RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle shader,
     const RenderHandle graphicsState, const PipelineLayout& pipelineLayout,
     const VertexInputDeclarationView& vertexInputDeclarationView,
-    const ShaderSpecializationConstantDataView& shaderSpecialization, const DynamicStateFlags dynamicStateFlags,
-    const GraphicsState* customGraphicsState)
+    const ShaderSpecializationConstantDataView& shaderSpecialization,
+    const array_view<const DynamicStateEnum> dynamicStates, const GraphicsState* customGraphicsState)
 {
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (RenderHandleUtil::GetHandleType(shader) != RenderHandleType::SHADER_STATE_OBJECT) {
@@ -168,9 +178,12 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
     }
     if (RenderHandleUtil::IsValid(graphicsState) &&
         RenderHandleUtil::GetHandleType(graphicsState) != RenderHandleType::GRAPHICS_STATE) {
-        PLUGIN_LOG_E("RENDER_VALIDATION: invalid graphics state hadnle given to graphics pso creation");
+        PLUGIN_LOG_E("RENDER_VALIDATION: invalid graphics state handle given to graphics pso creation");
     }
 #endif
+    if (RenderHandleUtil::GetHandleType(shader) != RenderHandleType::SHADER_STATE_OBJECT) {
+        return {}; // early out
+    }
     // if not matching pso -> deferred creation in render backend
     RenderHandle psoHandle;
 
@@ -179,7 +192,7 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
     if ((!RenderHandleUtil::IsValid(graphicsState)) && customGraphicsState) {
         cGfxHash = shaderMgr_.HashGraphicsState(*customGraphicsState);
     }
-    const uint64_t hash = HashGraphicsShader(shader, graphicsState, dynamicStateFlags, shaderSpecialization, cGfxHash);
+    const uint64_t hash = HashGraphicsShader(shader, graphicsState, dynamicStates, shaderSpecialization, cGfxHash);
     const auto iter = cache.hashToHandle.find(hash);
     const bool needsNewPso = (iter == cache.hashToHandle.cend());
     if (needsNewPso) {
@@ -212,8 +225,15 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
         // custom graphics state or null
         unique_ptr<GraphicsState> customGraphicsStatePtr =
             customGraphicsState ? make_unique<GraphicsState>(*customGraphicsState) : nullptr;
-        cache.psoCreationData.push_back({ shader, graphicsState, pipelineLayout, dynamicStateFlags, move(vidw),
-            move(ssw), move(customGraphicsStatePtr) });
+        GraphicsPipelineStateCreationData psoCreationData;
+        psoCreationData.shaderHandle = shader;
+        psoCreationData.graphicsStateHandle = graphicsState;
+        psoCreationData.pipelineLayout = pipelineLayout;
+        psoCreationData.vertexInputDeclaration = move(vidw);
+        psoCreationData.shaderSpecialization = move(ssw);
+        psoCreationData.customGraphicsState = move(customGraphicsStatePtr);
+        psoCreationData.dynamicStates = { dynamicStates.cbegin(), dynamicStates.cend() };
+        cache.psoCreationData.push_back(move(psoCreationData));
     } else {
         psoHandle = iter->second;
     }
@@ -224,7 +244,7 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
 RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const RenderHandle shaderHandle,
     const RenderHandle graphicsState, const RenderHandle pipelineLayoutHandle,
     const RenderHandle vertexInputDeclarationHandle, const ShaderSpecializationConstantDataView& shaderSpecialization,
-    const DynamicStateFlags dynamicStateFlags)
+    const array_view<const DynamicStateEnum> dynamicStates)
 {
     RenderHandle psoHandle;
     const PipelineLayout& pl = shaderMgr_.GetPipelineLayout(pipelineLayoutHandle);
@@ -234,24 +254,26 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const RenderHandle shad
             ? graphicsState
             : shaderMgr_.GetGraphicsStateHandleByShaderHandle(shaderHandle).GetHandle();
     psoHandle = GetGraphicsPsoHandleImpl(
-        shaderHandle, gfxStateHandle, pl, vidView, shaderSpecialization, dynamicStateFlags, nullptr);
+        shaderHandle, gfxStateHandle, pl, vidView, shaderSpecialization, dynamicStates, nullptr);
     return psoHandle;
 }
 
 RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const RenderHandle shader, const RenderHandle graphicsState,
     const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
-    const ShaderSpecializationConstantDataView& shaderSpecialization, const DynamicStateFlags dynamicStateFlags)
+    const ShaderSpecializationConstantDataView& shaderSpecialization,
+    const array_view<const DynamicStateEnum> dynamicStates)
 {
     return GetGraphicsPsoHandleImpl(shader, graphicsState, pipelineLayout, vertexInputDeclarationView,
-        shaderSpecialization, dynamicStateFlags, nullptr);
+        shaderSpecialization, dynamicStates, nullptr);
 }
 
 RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const RenderHandle shader, const GraphicsState& graphicsState,
     const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
-    const ShaderSpecializationConstantDataView& shaderSpecialization, const DynamicStateFlags dynamicStateFlags)
+    const ShaderSpecializationConstantDataView& shaderSpecialization,
+    const array_view<const DynamicStateEnum> dynamicStates)
 {
     return GetGraphicsPsoHandleImpl(shader, RenderHandle {}, pipelineLayout, vertexInputDeclarationView,
-        shaderSpecialization, dynamicStateFlags, &graphicsState);
+        shaderSpecialization, dynamicStates, &graphicsState);
 }
 
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -341,9 +363,6 @@ const GraphicsPipelineStateObject* NodeContextPsoManager::GetGraphicsPso(const R
                     renderPassSubpassDescs[subpassIndex].colorAttachmentCount);
             }
 #endif
-            const DynamicStateFlags combinedDynamicStateFlags =
-                (graphicsState.dynamicStateFlags | psoDataRef.dynamicStateFlags);
-
             const auto& vertexInput = psoDataRef.vertexInputDeclaration;
             const VertexInputDeclarationView vidv { vertexInput.bindingDescriptions,
                 vertexInput.attributeDescriptions };
@@ -353,7 +372,7 @@ const GraphicsPipelineStateObject* NodeContextPsoManager::GetGraphicsPso(const R
 
             auto& newPsoRef = cache.pipelineStateObjects[hash];
             newPsoRef = device_.CreateGraphicsPipelineStateObject(*gsp, graphicsState, psoDataRef.pipelineLayout, vidv,
-                sscdv, combinedDynamicStateFlags, renderPassDesc, renderPassSubpassDescs, subpassIndex, renderPassData,
+                sscdv, psoDataRef.dynamicStates, renderPassDesc, renderPassSubpassDescs, subpassIndex, renderPassData,
                 pipelineLayoutData);
             return newPsoRef.get();
         }

@@ -35,8 +35,8 @@ public:
     /** Rendering related data stores to feed data to renderer.
      */
     struct Properties {
-        /** Data store manager */
-        RENDER_NS::IRenderDataStoreManager* dataStoreManager { nullptr };
+        // NOTE: These all should be DEPRECATED
+
         /** Data store for scene */
         BASE_NS::string dataStoreScene;
         /** Data store for camera */
@@ -47,6 +47,9 @@ public:
         BASE_NS::string dataStoreMaterial;
         /** Data store for morphing (passed to rendering) */
         BASE_NS::string dataStoreMorph;
+
+        /** Data store prefix for other data stores in e.g. different plugins */
+        BASE_NS::string dataStorePrefix;
     };
 
     /** Get render node graphs for this ECS render system.

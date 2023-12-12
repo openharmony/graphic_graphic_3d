@@ -49,6 +49,7 @@ public:
     struct ShaderVariant {
         bool renderSlotDefaultShader { false };
         BASE_NS::string variantName;
+        BASE_NS::string displayName;
 
         BASE_NS::string vertexShader;
         BASE_NS::string fragmentShader;
@@ -60,7 +61,10 @@ public:
 
         BASE_NS::string renderSlot;
         BASE_NS::vector<BASE_NS::string> customGraphicsStateSlotNames;
+        BASE_NS::string shaderFileStr;
         BASE_NS::string materialMetadata;
+
+        GraphicsStateFlags stateFlags { 0U };
     };
 
     /** Uri of the loaded file.
@@ -72,6 +76,11 @@ public:
      * @return Base shader path.
      */
     BASE_NS::string_view GetBaseShader() const;
+
+    /** Base category for all shader variants.
+     * @return Base category for shaders.
+     */
+    BASE_NS::string_view GetBaseCategory() const;
 
     /** Get all shader variants.
      * @return Array view of shader variants.
@@ -90,6 +99,7 @@ private:
 
     BASE_NS::string uri_;
     BASE_NS::string baseShader_;
+    BASE_NS::string baseCategory_;
 
     BASE_NS::vector<ShaderVariant> shaderVariants_;
 };

@@ -47,8 +47,22 @@ public:
     static IRenderNode* Create();
     static void Destroy(IRenderNode* instance);
 
+    struct ImageDescs {
+        RENDER_NS::GpuImageDesc depth;
+
+        RENDER_NS::GpuImageDesc output;
+
+        RENDER_NS::GpuImageDesc color;
+        RENDER_NS::GpuImageDesc velocityNormal;
+        RENDER_NS::GpuImageDesc history;
+        RENDER_NS::GpuImageDesc baseColor;
+        RENDER_NS::GpuImageDesc material;
+
+        RENDER_NS::GpuImageDesc cubemap;
+    };
+
     struct CreatedTargets {
-        RENDER_NS::RenderHandleReference color;
+        RENDER_NS::RenderHandleReference outputColor;
         RENDER_NS::RenderHandleReference depth;
 
         // NOTE: depending on the post processes and the output target one could re-use colorTarget as resolve
@@ -65,17 +79,15 @@ public:
 
         RENDER_NS::RenderHandleReference baseColor;
         RENDER_NS::RenderHandleReference material;
+
+        RENDER_NS::RenderHandleReference cubemap;
+
+        ImageDescs imageDescs;
     };
 
     struct CameraResourceSetup {
         BASE_NS::Math::UVec2 outResolution { 0u, 0u };
         BASE_NS::Math::UVec2 renResolution { 0u, 0u };
-
-        BASE_NS::Format colorFormat { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
-        BASE_NS::Format depthFormat { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
-
-        BASE_NS::Format hdrColorFormat { BASE_NS::Format::BASE_FORMAT_R16G16B16A16_SFLOAT };
-        BASE_NS::Format hdrDepthFormat { BASE_NS::Format::BASE_FORMAT_D32_SFLOAT };
 
         RenderCamera::Flags camFlags { 0u };
         RenderCamera::RenderPipelineType pipelineType { RenderCamera::RenderPipelineType::FORWARD };
@@ -86,6 +98,10 @@ public:
         uint32_t historyFlipFrame { 0 };
 
         RENDER_NS::DeviceBackendType backendType { RENDER_NS::DeviceBackendType::VULKAN };
+
+        ImageDescs inputImageDescs;
+
+        bool isMultiview { false };
     };
 
 private:
@@ -103,6 +119,9 @@ private:
         RENDER_NS::RenderHandleReference environment;
         RENDER_NS::RenderHandleReference postProcess;
         RENDER_NS::RenderHandleReference fog;
+
+        RENDER_NS::RenderHandleReference light;
+        RENDER_NS::RenderHandleReference lightCluster;
     };
     struct CurrentScene {
         RenderCamera camera;
@@ -119,6 +138,7 @@ private:
         BASE_NS::string postProcessConfigurationName;
     };
 
+    void SetDefaultGpuImageDescs();
     void ParseRenderNodeInputs();
     void CreateResources();
     void CreateResourceBaseTargets();
@@ -132,6 +152,7 @@ private:
     void UpdateEnvironmentUniformBuffer();
     void UpdateFogUniformBuffer();
     void UpdatePostProcessUniformBuffer();
+    void UpdateLightBuffer();
     void UpdatePostProcessConfiguration();
 
     SceneRenderDataStores stores_;
@@ -139,6 +160,7 @@ private:
     UboHandles uboHandles_;
     CurrentScene currentScene_;
     CreatedTargets createdTargets_;
+    RENDER_NS::RenderHandle defaultCubemap_;
 
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
 };

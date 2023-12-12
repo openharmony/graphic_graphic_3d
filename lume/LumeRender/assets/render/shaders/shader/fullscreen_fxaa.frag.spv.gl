@@ -1,0 +1,129 @@
+#version 450
+
+struct LocalPostProcessPushConstantStruct
+{
+    vec4 viewportSizeInvSize;
+    vec4 factor;
+};
+
+struct uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+uniform uPostProcessPushConstant CORE_PC_0;
+
+uniform sampler2D s1_b0_s1_b1;
+
+layout(location = 0) in vec2 inUv;
+layout(location = 0) out vec4 outColor;
+
+float _743;
+
+void main()
+{
+    uint _332 = uint(CORE_PC_0.uPc.factor.x + 0.5);
+    float _730;
+    do
+    {
+        if (_332 == 0u)
+        {
+            _730 = 2.0;
+            break;
+        }
+        else
+        {
+            if (_332 == 1u)
+            {
+                _730 = 4.0;
+                break;
+            }
+            else
+            {
+                _730 = 8.0;
+                break;
+            }
+        }
+    } while(false);
+    uint _340 = uint(CORE_PC_0.uPc.factor.y + 0.5);
+    vec2 _731;
+    do
+    {
+        if (_340 == 0u)
+        {
+            _731 = vec2(0.333000004291534423828125, 0.083300001919269561767578125);
+            break;
+        }
+        else
+        {
+            if (_340 == 1u)
+            {
+                _731 = vec2(0.125, 0.031199999153614044189453125);
+                break;
+            }
+            else
+            {
+                _731 = vec2(0.063000001013278961181640625, 0.0625);
+                break;
+            }
+        }
+    } while(false);
+    vec2 _356 = CORE_PC_0.uPc.viewportSizeInvSize.zw * 0.5;
+    vec4 _366 = vec4(inUv - _356, inUv + _356);
+    vec4 _377 = vec4(_743, _743, CORE_PC_0.uPc.viewportSizeInvSize.zw);
+    vec4 _737;
+    do
+    {
+        vec4 _519 = textureLod(s1_b0_s1_b1, _366.xy, 0.0);
+        float _702 = _519.y;
+        vec4 _526 = textureLod(s1_b0_s1_b1, _366.xw, 0.0);
+        float _706 = _526.y;
+        vec4 _533 = textureLod(s1_b0_s1_b1, _366.zy, 0.0);
+        float _710 = _533.y;
+        vec4 _540 = textureLod(s1_b0_s1_b1, _366.zw, 0.0);
+        float _714 = _540.y;
+        vec4 _546 = textureLod(s1_b0_s1_b1, inUv, 0.0);
+        float _548 = _546.y;
+        float _563 = max(max(_710, _714), max(_702, _706));
+        float _566 = min(min(_710, _714), min(_702, _706));
+        float _583 = (_706 - _710) + 0.001953125;
+        float _586 = max(_563, _548) - min(_566, _548);
+        float _589 = _714 - _702;
+        if (_586 < max(_731.y, _563 * _731.x))
+        {
+            _737 = _546;
+            break;
+        }
+        vec2 _605 = normalize(vec2(_583 + _589, _583 - _589));
+        vec2 _612 = _377.zw;
+        vec2 _641 = _605 * min(_586 / ((max(abs(_605.x), abs(_605.y)) * _730) * 0.014999999664723873138427734375), 3.0);
+        vec2 _648 = (_377 * 2.0).zw;
+        vec4 _664 = textureLod(s1_b0_s1_b1, fma(-_605, _612, inUv), 0.0) + textureLod(s1_b0_s1_b1, fma(_605, _612, inUv), 0.0);
+        vec4 _671 = ((textureLod(s1_b0_s1_b1, fma(-_641, _648, inUv), 0.0) + textureLod(s1_b0_s1_b1, fma(_641, _648, inUv), 0.0)) * 0.25) + (_664 * 0.25);
+        float _673 = _671.y;
+        bool _675 = _673 < _566;
+        bool _683;
+        if (!_675)
+        {
+            _683 = _673 > _563;
+        }
+        else
+        {
+            _683 = _675;
+        }
+        vec4 _736;
+        if (_683)
+        {
+            vec3 _688 = _664.xyz * 0.5;
+            _736 = vec4(_688.x, _688.y, _688.z, _671.w);
+        }
+        else
+        {
+            _736 = _671;
+        }
+        _737 = mix(_736, _546, vec4(0.25));
+        break;
+    } while(false);
+    outColor = _737;
+}
+

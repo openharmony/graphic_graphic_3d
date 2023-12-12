@@ -28,23 +28,45 @@ RENDER_BEGIN_NAMESPACE()
 /**
  * Share input / output and other resources with current render node graph.
  * Resources might change during the run and new RenderNodes might come in between.
+ * Render node graph can access the previous render node graph outputs.
  *
- * Methods with PreExecuteFrame -prefix are only valid to be called in RenderNode::PreExecuteFrame().
- * Methods with ExecuteFrame -prefix are only valid to be called in RenderNode::ExecuteFrame().
+ * All the registering needs to be happen in RenderNode::PreExecuteFrame().
+ * Not internally synchronized for data modifications.
  */
 class IRenderNodeGraphShareManager : public IRenderNodeInterface {
 public:
     static constexpr auto UID = BASE_NS::Uid("1c573502-0e25-481b-bf20-b1d1f09af37f");
+
+    /** Use simple resource names like: color, depth, velocity, alpha... */
+    static constexpr uint32_t MAX_NAME_LENGTH { 32u };
+    using RenderNodeGraphShareName = BASE_NS::fixed_string<MAX_NAME_LENGTH>;
+    /** Named resources struct */
+    struct NamedResource {
+        /** Name of the resource (simple unique within these few resources) */
+        RenderNodeGraphShareName name;
+        /** Resource handle */
+        RenderHandle handle;
+    };
 
     /** Get render node graph input resource handles.
      * Set globally through render node graph manager or in render node graph description.
      */
     virtual BASE_NS::array_view<const RenderHandle> GetRenderNodeGraphInputs() const = 0;
 
+    /** Get named render node graph input resource handles. Empty names if not set.
+     * Set globally through render node graph manager or in render node graph description.
+     */
+    virtual BASE_NS::array_view<const NamedResource> GetNamedRenderNodeGraphInputs() const = 0;
+
     /** Get render node graph output resource handles.
      * Set globally through render node graph manager or in render node graph description.
      */
     virtual BASE_NS::array_view<const RenderHandle> GetRenderNodeGraphOutputs() const = 0;
+
+    /** Get named render node graph output resource handles. Empty names if not set.
+     * Set globally through render node graph manager or in render node graph description.
+     */
+    virtual BASE_NS::array_view<const NamedResource> GetNamedRenderNodeGraphOutputs() const = 0;
 
     /** Get render node graph input resource handle with index.
      * Set globally through render node graph manager or in render node graph description.
@@ -56,12 +78,27 @@ public:
      */
     virtual RenderHandle GetRenderNodeGraphOutput(const uint32_t index) const = 0;
 
-    /** Register render node graph output resource handles. (I.e. the output of this render node graph)
-     * Often these should be set from the outside, but a controller render node can handle this as well.
-     * Should be called every frame in PreExecuteFrame() (and initially in InitNode()).
-     * @param outputHandles Output handles to be registered.
+    /** Get outputs from previous render node graph.
+     * @return Array view of resource handles.
      */
-    virtual void RegisterRenderNodeGraphOutputs(const BASE_NS::array_view<const RenderHandle> outputs) = 0;
+    virtual BASE_NS::array_view<const RenderHandle> GetPrevRenderNodeGraphOutputs() const = 0;
+
+    /** Get named outputs from previous render node graph.
+     * @return Array view of named resources.
+     */
+    virtual BASE_NS::array_view<const NamedResource> GetNamedPrevRenderNodeGraphOutputs() const = 0;
+
+    /** Get resource render handle with index from previous render node graph.
+     * @param index Index of the registered resource.
+     * @return Resource handle, invalid if not found.
+     */
+    virtual RenderHandle GetPrevRenderNodeGraphOutput(const uint32_t index) const = 0;
+
+    /** Get resource render handle with name from previous render node graph.
+     * @param resourceName Simple name of the registered resource.
+     * @return Resource handle, invalid if not found.
+     */
+    virtual RenderHandle GetNamedPrevRenderNodeGraphOutput(const BASE_NS::string_view resourceName) const = 0;
 
     /** Register render node output resource handles. (I.e. the output of this render node)
      * Should be called every frame in PreExecuteFrame() (and initially in InitNode()).
@@ -92,6 +129,21 @@ public:
      * @param index Index of the output.
      */
     virtual RenderHandle GetRegisteredPrevRenderNodeOutput(const uint32_t index) const = 0;
+
+    /** Register global render node output one-by-one. One should only register specific outputs globally.
+     * Should be called every frame in PreExecuteFrame() (and initially in InitNode()).
+     * @param name Named output handle to be registered.
+     * @param handle Output handle to be registered.
+     */
+    virtual void RegisterGlobalRenderNodeOutput(const BASE_NS::string_view name, const RenderHandle& handle) = 0;
+
+    /** Get globally registered render node outputs. The render node name is the unique / full render node name.
+     * Should be called every frame in PreExecuteFrame() (and initially in InitNode()).
+     * @param nodeName Global (and unique) render node name.
+     * @return Globally registered render node outputs.
+     */
+    virtual BASE_NS::array_view<const NamedResource> GetRegisteredGlobalRenderNodeOutputs(
+        const BASE_NS::string_view nodeName) const = 0;
 
 protected:
     IRenderNodeGraphShareManager() = default;

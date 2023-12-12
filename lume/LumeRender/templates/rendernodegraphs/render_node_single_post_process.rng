@@ -1,0 +1,82 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "Template",
+    "nodes": [
+        {
+            "typeName": "CORE_RN_SINGLE_POST_PROCESS",
+            "nodeName": "RenderPostProcessMob",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePostProcess",
+                "typeName": "RenderDataStorePostProcess",
+                "configurationName": "CustomPostProcessSample"
+            },
+            "postProcess": "custom_mob",
+            "defaultOutputImage": "output",
+            "defaultOutputImage variants": "input | output | white | black",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "storeOp": "store",
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "output"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpass": {
+                    "colorAttachmentIndices": [ 0 ]
+                }
+            },
+            "shader": "appshaders://shader/custom_fullscreen_post_process_mob.shader",
+            "resources": {
+                "images": [
+                    {
+                        "set": 1,
+                        "binding": 0,
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "color"
+                    },
+                    {
+                        "set": 1,
+                        "binding": 1,
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "velocity_normal"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 1,
+                        "binding": 0,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    },
+                    {
+                        "set": 1,
+                        "binding": 1,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ],
+                "customInputImages": [
+                    {
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "color",
+                        "usageName": "input"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "output",
+                        "usageName": "output"
+                    }
+                ]
+            }
+        }
+    ]
+}

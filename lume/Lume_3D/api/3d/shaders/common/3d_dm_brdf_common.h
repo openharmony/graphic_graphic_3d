@@ -24,6 +24,7 @@ Some mobile optimizations from https://google.github.io/filament/Filament.html
 #define CORE_BRDF_PI 3.14159265359
 // Avoid divisions by 0 on devices that do not support denormals (from Filament documentation)
 #define CORE_BRDF_MIN_ROUGHNESS 0.089
+#define CORE_BRDF_EPSILON 0.0001
 
 #define CORE_HDR_FLOAT_CLAMP_MAX_VALUE 64512.0
 
@@ -93,7 +94,7 @@ vec3 fSchlick(vec3 f0, float VoH)
 float fSchlickSingle(float f0, float VoH)
 {
     const float p = pow(1.0 - VoH, 5.0);
-    return f0 + (1.0 - f0) * p;
+    return p + f0 * (1.0 - p);
 }
 
 // f0.xyz = f0, f0.w = f90
@@ -110,6 +111,16 @@ float dGGX(float alpha2, float NoH)
     return alpha2 / (CORE_BRDF_PI * (f * f));
 }
 
+// Normal distribution function for anisotropic based on Burley 2012 (Physically-Based Shading at Disney)
+float dGGXAnisotropic(float at, float ab, float NoH, float ToH, float BoH, float anisotropy)
+{
+    float a2 = at * ab;
+    vec3 d = vec3(ab * ToH, at * BoH, a2 * NoH);
+    float d2 = dot(d, d);
+    float w2 = a2 / d2;
+    return a2 * w2 * w2 * (1.0 / CORE_BRDF_PI);
+}
+
 // Geometric shadowing with combined BRDF denominator
 float vGGXWithCombinedDenominator(float alpha2, float NoV, float NoL)
 {
@@ -123,6 +134,15 @@ float vGGXWithCombinedDenominator(float alpha2, float NoV, float NoL)
 float vKelemen(float LoH)
 {
     return min(0.25 / (LoH * LoH), CORE_HDR_FLOAT_CLAMP_MAX_VALUE);
+}
+
+float vGGXAnisotropic(
+    float at, float ab, float NoL, float NoV, float ToL, float ToV, float BoL, float BoV, float anisotropy)
+{
+    float gv = NoL * length(vec3(at * ToV, ab * BoV, NoV));
+    float gl = NoV * length(vec3(at * ToL, ab * BoL, NoL));
+    float v = 0.5 / (gv + gl);
+    return clamp(v, 0.0, 1.0);
 }
 
 vec3 microfacedSpecularBrdf(vec3 f0, float alpha2, float NoL, float NoV, float NoH, float VoH)
@@ -143,6 +163,18 @@ float microfacedSpecularBrdfClearcoat(
     float F = fSchlickSingle(f0, VoH) * clearcoat;
     fcc = F;
     return F * D * G;
+}
+
+vec3 microfacedSpecularBrdfAnisotropic(vec3 f0, float alpha, float NoL, float NoV, float NoH, float VoH, float ToL,
+    float ToV, float ToH, float BoL, float BoV, float BoH, float anisotropy)
+{
+    const float at = max(alpha * (1.0 + anisotropy), CORE_BRDF_EPSILON);
+    const float ab = max(alpha * (1.0 - anisotropy), CORE_BRDF_EPSILON);
+
+    float D = dGGXAnisotropic(at, ab, NoH, ToH, BoH, anisotropy);
+    float V = vGGXAnisotropic(at, ab, NoL, NoV, BoV, ToV, ToL, BoL, anisotropy);
+    vec3 F = fSchlick(f0, VoH);
+    return F * (V * D);
 }
 
 float diffuseCoeff()

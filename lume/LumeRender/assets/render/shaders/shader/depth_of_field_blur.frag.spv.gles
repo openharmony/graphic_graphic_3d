@@ -1,0 +1,68 @@
+#version 320 es
+precision highp float;
+precision highp int;
+
+struct LocalPostProcessStruct
+{
+    vec4 factors[16];
+};
+
+layout(std140) uniform s0_b1
+{
+    LocalPostProcessStruct uLocalData;
+} _s0_b1;
+
+uniform highp sampler2D s1_b1;
+uniform highp sampler2D s1_b0;
+
+layout(location = 0) in vec2 inUv;
+layout(location = 0) out vec4 outNearColor;
+layout(location = 1) out vec4 outFarColor;
+
+void main()
+{
+    vec4 _39 = texture(s1_b1, inUv, 0.0);
+    float _181 = (_s0_b1.uLocalData.factors[1].w * _s0_b1.uLocalData.factors[1].z) / fma(_s0_b1.uLocalData.factors[1].z - _s0_b1.uLocalData.factors[1].w, _39.x, _s0_b1.uLocalData.factors[1].w);
+    vec4 _97 = textureLod(s1_b0, inUv, 0.0);
+    float _182;
+    if (_181 < _s0_b1.uLocalData.factors[0].x)
+    {
+        _182 = -1.0;
+    }
+    else
+    {
+        float _183;
+        if (_181 < _s0_b1.uLocalData.factors[0].y)
+        {
+            _183 = (_181 - _s0_b1.uLocalData.factors[0].y) / (_s0_b1.uLocalData.factors[0].y - _s0_b1.uLocalData.factors[0].x);
+        }
+        else
+        {
+            float _184;
+            if (_181 < _s0_b1.uLocalData.factors[0].z)
+            {
+                _184 = 0.0;
+            }
+            else
+            {
+                float _185;
+                if (_181 < _s0_b1.uLocalData.factors[0].w)
+                {
+                    _185 = (_181 - _s0_b1.uLocalData.factors[0].z) / (_s0_b1.uLocalData.factors[0].w - _s0_b1.uLocalData.factors[0].z);
+                }
+                else
+                {
+                    _185 = 1.0;
+                }
+                _184 = _185;
+            }
+            _183 = _184;
+        }
+        _182 = _183;
+    }
+    outNearColor.w = (-1.0) * _182;
+    outNearColor = vec4(_97.x, _97.y, _97.z, outNearColor.w);
+    outFarColor.w = _182;
+    outFarColor = vec4(_97.x, _97.y, _97.z, outFarColor.w);
+}
+

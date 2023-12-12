@@ -35,6 +35,25 @@
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
+namespace {
+struct DispatchResources {
+    RenderHandle buffer {};
+    RenderHandle image {};
+};
+
+DispatchResources GetDispatchResources(const RenderNodeHandles::InputResources& ir)
+{
+    DispatchResources dr;
+    if (!ir.customInputBuffers.empty()) {
+        dr.buffer = ir.customInputBuffers[0].handle;
+    }
+    if (!ir.customInputImages.empty()) {
+        dr.image = ir.customInputImages[0].handle;
+    }
+    return dr;
+}
+} // namespace
+
 void RenderNodeComputeGeneric::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
@@ -44,37 +63,18 @@ void RenderNodeComputeGeneric::InitNode(IRenderNodeContextManager& renderNodeCon
 
     auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     const auto& renderNodeUtil = renderNodeContextMgr.GetRenderNodeUtil();
-    if (!shaderMgr.IsValid(shader_)) {
-        PLUGIN_LOG_E("RenderNodeComputeGeneric needs a valid shader handle");
+    if (RenderHandleUtil::GetHandleType(shader_) != RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) {
+        PLUGIN_LOG_E("RenderNodeComputeGeneric needs a valid compute shader handle");
     }
-
     pipelineLayout_ = renderNodeContextMgr.GetRenderNodeUtil().CreatePipelineLayout(shader_);
-    threadGroupSize_ = renderNodeContextMgr.GetShaderManager().GetReflectionThreadGroupSize(shader_);
+    threadGroupSize_ = shaderMgr.GetReflectionThreadGroupSize(shader_);
 
-    const auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
-    RenderHandle targetHandle;
-    for (const auto& imageRef : inputResources_.images) {
-        if (imageRef.set <= pipelineLayout_.descriptorSetCount) {
-            const auto& setRef = pipelineLayout_.descriptorSetLayouts[imageRef.set];
-            if (imageRef.binding < setRef.bindings.size()) {
-                const DescriptorType dt = setRef.bindings[imageRef.binding].descriptorType;
-                if (dt == DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-                    const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(imageRef.handle);
-                    targetSize_.x = desc.width;
-                    targetSize_.y = desc.height;
-                    targetSize_.z = desc.depth;
-                    break;
-                }
-            }
-        }
-    }
-    if (!RenderHandleUtil::IsValid(targetHandle)) {
-        PLUGIN_LOG_W("RenderNodeComputeGeneric: cannot automatically determ target size");
+    if (dispatchResources_.customInputBuffers.empty() && dispatchResources_.customInputImages.empty()) {
+        PLUGIN_LOG_W("RenderNodeComputeGeneric: dispatchResources (GPU buffer or GPU image) needed");
     }
 
     if (useDataStoreShaderSpecialization_) {
-        const ShaderSpecilizationConstantView sscv =
-            renderNodeContextMgr.GetShaderManager().GetReflectionSpecialization(shader_);
+        const ShaderSpecializationConstantView sscv = shaderMgr.GetReflectionSpecialization(shader_);
         shaderSpecializationData_.constants.resize(sscv.constants.size());
         shaderSpecializationData_.data.resize(sscv.constants.size());
         for (size_t idx = 0; idx < shaderSpecializationData_.constants.size(); ++idx) {
@@ -105,10 +105,25 @@ void RenderNodeComputeGeneric::PreExecuteFrame()
 
 void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
 {
+    if (!RenderHandleUtil::IsValid(shader_)) {
+        return; // invalid shader
+    }
+
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     if (jsonInputs_.hasChangeableResourceHandles) {
         inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
         renderNodeUtil.BindResourcesToBinder(inputResources_, *pipelineDescriptorSetBinder_);
+    }
+    if (jsonInputs_.hasChangeableDispatchHandles) {
+        dispatchResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.dispatchResources);
+    }
+    const DispatchResources dr = GetDispatchResources(dispatchResources_);
+    if ((!RenderHandleUtil::IsValid(dr.buffer)) && (!RenderHandleUtil::IsValid(dr.image))) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "_no_dr",
+            "RENDER_VALIDATION: RN: %s, no valid dispatch resource", renderNodeContextMgr_->GetName().data());
+#endif
+        return; // no way to evaluate dispatch size
     }
     {
         const auto setIndices = pipelineDescriptorSetBinder_->GetSetIndices();
@@ -119,8 +134,9 @@ void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (!pipelineDescriptorSetBinder_->GetPipelineDescriptorSetLayoutBindingValidity()) {
-            PLUGIN_LOG_E(
-                "RenderNodeComputeGeneric: bindings missing (RN: %s)", renderNodeContextMgr_->GetName().data());
+            PLUGIN_LOG_ONCE_E(renderNodeContextMgr_->GetName() + "_bindings_missing",
+                "RENDER_VALIDATION: RenderNodeComputeGeneric: bindings missing (RN: %s)",
+                renderNodeContextMgr_->GetName().data());
         }
 #endif
     }
@@ -147,9 +163,16 @@ void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
         }
     }
 
-    cmdList.Dispatch((targetSize_.x + threadGroupSize_.x - 1u) / threadGroupSize_.x,
-        (targetSize_.y + threadGroupSize_.y - 1u) / threadGroupSize_.y,
-        (targetSize_.z + threadGroupSize_.z - 1u) / threadGroupSize_.z);
+    if (RenderHandleUtil::IsValid(dr.buffer)) {
+        cmdList.DispatchIndirect(dr.buffer, 0);
+    } else if (RenderHandleUtil::IsValid(dr.image)) {
+        const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+        const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(dr.image);
+        const Math::UVec3 targetSize = { desc.width, desc.height, desc.depth };
+        cmdList.Dispatch((targetSize.x + threadGroupSize_.x - 1u) / threadGroupSize_.x,
+            (targetSize.y + threadGroupSize_.y - 1u) / threadGroupSize_.y,
+            (targetSize.z + threadGroupSize_.z - 1u) / threadGroupSize_.z);
+    }
 }
 
 RenderHandle RenderNodeComputeGeneric::GetPsoHandle(IRenderNodeContextManager& renderNodeContextMgr)
@@ -186,14 +209,16 @@ RenderHandle RenderNodeComputeGeneric::GetPsoHandle(IRenderNodeContextManager& r
                         shader_, pipelineLayout_, specialization);
                 }
             } else {
+#if (RENDER_VALIDATION_ENABLED == 1)
                 const string logName = "RenderNodeComputeGeneric_ShaderSpecialization" +
                                        string(jsonInputs_.renderDataStoreSpecialization.configurationName);
                 PLUGIN_LOG_ONCE_E(logName.c_str(),
-                    "RenderNodeComputeGeneric shader specilization render data store size mismatch, name: %s, "
-                    "size:%u, podsize%u",
+                    "RENDER_VALIDATION: RenderNodeComputeGeneric shader specilization render data store size mismatch, "
+                    "name: %s, size:%u, podsize%u",
                     jsonInputs_.renderDataStoreSpecialization.configurationName.c_str(),
                     static_cast<uint32_t>(sizeof(ShaderSpecializationRenderPod)),
                     static_cast<uint32_t>(dataView.size_bytes()));
+#endif
             }
         }
     }
@@ -205,6 +230,7 @@ void RenderNodeComputeGeneric::ParseRenderNodeInputs()
     const IRenderNodeParserUtil& parserUtil = renderNodeContextMgr_->GetRenderNodeParserUtil();
     const auto jsonVal = renderNodeContextMgr_->GetNodeJson();
     jsonInputs_.resources = parserUtil.GetInputResources(jsonVal, "resources");
+    jsonInputs_.dispatchResources = parserUtil.GetInputResources(jsonVal, "dispatchResources");
     jsonInputs_.renderDataStore = parserUtil.GetRenderDataStore(jsonVal, "renderDataStore");
     jsonInputs_.renderDataStoreSpecialization =
         parserUtil.GetRenderDataStore(jsonVal, "renderDataStoreShaderSpecialization");
@@ -215,7 +241,9 @@ void RenderNodeComputeGeneric::ParseRenderNodeInputs()
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
+    dispatchResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.dispatchResources);
     jsonInputs_.hasChangeableResourceHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.resources);
+    jsonInputs_.hasChangeableDispatchHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.dispatchResources);
 }
 
 // for plugin / factory interface

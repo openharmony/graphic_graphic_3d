@@ -13,11 +13,26 @@
  * limitations under the License.
  */
 
+#include <cstddef>
+#include <cstdint>
+
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
 #include <core/implementation_uids.h>
+#include <core/io/intf_directory.h>
 #include <core/io/intf_file_manager.h>
 #include <core/io/intf_file_monitor.h>
+#include <core/io/intf_file_system.h>
 #include <core/io/intf_filesystem_api.h>
+#include <core/namespace.h>
 #include <core/plugin/intf_class_factory.h>
+#include <core/plugin/intf_interface.h>
+#include <core/plugin/intf_plugin.h>
 
 #include "dev/file_monitor.h"
 #include "io/file_manager.h"
@@ -51,8 +66,8 @@ public:
     {
         Initialize(manager);
     }
-    ~FileMonitorImpl();
-    FileMonitor* fileMonitor_ { nullptr };
+
+    BASE_NS::unique_ptr<FileMonitor> fileMonitor_;
     uint32_t refCount_ { 0 };
 };
 
@@ -60,11 +75,7 @@ class FilesystemApi final : public IFileSystemApi {
 public:
     string basePath_;
     IFilesystem::Ptr rootFs_;
-    FilesystemApi()
-    {
-        basePath_ = GetCurrentDirectory();
-        rootFs_ = CreateStdFileSystem();
-    }
+    FilesystemApi() : basePath_(GetCurrentDirectory()), rootFs_(CreateStdFileSystem()) {}
 
     const IInterface* GetInterface(const Uid& uid) const override
     {
@@ -102,11 +113,14 @@ public:
     {
         return IInterface::Ptr(new FileMonitorImpl(manager));
     }
-    string ResolvePath(string_view inPathRaw)
+    string ResolvePath(string_view inPathRaw) const
     {
 #if _WIN32
-        string_view cur_drive, cur_path, cur_filename, cur_ext;
-        SplitPath(basePath_, cur_drive, cur_path, cur_filename, cur_ext);
+        string_view curDrive;
+        string_view curPath;
+        string_view curFilename;
+        string_view curExt;
+        SplitPath(basePath_, curDrive, curPath, curFilename, curExt);
 
         if (inPathRaw.empty()) {
             return {};
@@ -120,31 +134,33 @@ public:
             pathIn = tmp;
         }
 
-        string_view drive, path, filename, ext;
+        string_view drive;
+        string_view path;
+        string_view filename;
+        string_view ext;
         SplitPath(pathIn, drive, path, filename, ext);
         string res = "/";
         if (drive.empty()) {
             // relative to current drive then
-            res += cur_drive;
+            res += curDrive;
         } else {
             res += drive;
         }
         res += ":";
-        string normalized_path;
+        string normalizedPath;
         if (path.empty()) {
             return "";
-        } else {
-            if (path[0] != '/') {
-                // relative path.
-                normalized_path = NormalizePath(cur_path + path);
-            } else {
-                normalized_path = NormalizePath(path);
-            }
         }
-        if (normalized_path.empty()) {
+        if (path[0] != '/') {
+            // relative path.
+            normalizedPath = NormalizePath(curPath + path);
+        } else {
+            normalizedPath = NormalizePath(path);
+        }
+        if (normalizedPath.empty()) {
             return "";
         }
-        return res + normalized_path;
+        return res + normalizedPath;
 #else
         if (IsRelative(inPathRaw)) {
             return NormalizePath(basePath_ + inPathRaw);
@@ -160,7 +176,8 @@ public:
 
     IFilesystem::Ptr CreateStdFileSystem(string_view rootPathIn) override
     {
-        string_view protocol, path;
+        string_view protocol;
+        string_view path;
         if (ParseUri(rootPathIn, protocol, path)) {
             if (protocol != "file") {
                 return {};
@@ -215,14 +232,9 @@ void FileMonitorImpl::Unref()
     }
 }
 
-FileMonitorImpl::~FileMonitorImpl()
-{
-    delete fileMonitor_;
-}
-
 void FileMonitorImpl::Initialize(IFileManager& manager)
 {
-    fileMonitor_ = new FileMonitor(manager);
+    fileMonitor_ = BASE_NS::make_unique<FileMonitor>(manager);
 }
 
 bool FileMonitorImpl::AddPath(const string_view path)
@@ -251,13 +263,13 @@ void FileMonitorImpl::ScanModifications(vector<string>& added, vector<string>& r
     }
 }
 
-IInterface* CreateFileMonitor(IClassFactory& registry, PluginToken token)
+IInterface* CreateFileMonitor(IClassFactory& /* registry */, PluginToken /* token */)
 {
     return new FileMonitorImpl();
 }
-IInterface* GetFileApiFactory(IClassRegister& registry, PluginToken token)
+IInterface* GetFileApiFactory(IClassRegister& /* registry */, PluginToken /* token */)
 {
     static FilesystemApi fact;
     return &fact;
 }
-CORE_END_NAMESPACE();
+CORE_END_NAMESPACE()

@@ -21,6 +21,7 @@
 #include <3d/ecs/components/mesh_component.h>
 #include <3d/render/default_material_constants.h>
 #include <base/containers/fixed_string.h>
+#include <base/containers/string.h>
 #include <base/math/matrix.h>
 #include <base/math/quaternion.h>
 #include <base/math/vector.h>
@@ -59,6 +60,9 @@ static constexpr uint32_t MAX_ENV_CUSTOM_RESOURCE_COUNT { 4u };
  * Should match api/shaders/common/3d_dm_structures_common.h DefaultMaterialSingleMeshStruct userData
  */
 static constexpr uint32_t MESH_CUSTOM_DATA_VEC4_COUNT { 2u };
+
+/** Max multi-view layer camera count. Max layers is 4 -> additional cameras 3 */
+static constexpr uint32_t MAX_MULTI_VIEW_LAYER_CAMERA_COUNT { 3u };
 
 /** Invalid index with default material indices */
 static constexpr uint32_t INVALID_INDEX { ~0u };
@@ -170,10 +174,18 @@ enum RenderMaterialFlagBits : uint32_t {
     RENDER_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT = (1 << 10),
     /** Defines whether this material will receive indirect light from SH and cubemaps */
     RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT = (1 << 11),
-    /** Defines if this material is "basic" in default material pipeline */
+    /** Defines if this material is "basic" in default material pipeline
+     * NOTE: used in render node graph to discard materials
+     */
     RENDER_MATERIAL_BASIC_BIT = (1 << 12),
-    /** Defines if this material is "complex" in default material pipeline */
+    /** Defines if this material is "complex" in default material pipeline
+     * NOTE: used in render node graph to discard materials
+     */
     RENDER_MATERIAL_COMPLEX_BIT = (1 << 13),
+    /** Defines whether this material uses GPU instancing and needs dynamic UBO indices.
+     * Spesializes the shader, and therefore needs to be setup
+     */
+    RENDER_MATERIAL_GPU_INSTANCING_BIT = (1 << 14),
 };
 /** Container for material flag bits */
 using RenderMaterialFlags = uint32_t;
@@ -309,10 +321,8 @@ struct RenderLight {
     BASE_NS::Math::Vec4 spotLightParams { 0.0f, 0.0f, 0.0f, 0.0f };
     /* Point and spot params. */
     float range { 0.0f };
-    // .x = shadow factor, .y = depth bias, .z = normal bias
+    // .x = shadow factor, .y = depth bias, .z = normal bias, .w = empty (filled later with step size)
     BASE_NS::Math::Vec4 shadowFactors { 1.0f, 0.005f, 0.02f, 0.0f };
-    /* Shadow strength. 0-1 */
-    float shadowStrength { 1.0f };
 
     /** Object ID */
     uint32_t objectId { ~0u };
@@ -327,18 +337,10 @@ struct RenderLight {
 
 /** Render camera */
 struct RenderCamera {
-    /** Target type */
-    enum class CameraTargetType : uint8_t {
-        /** Default targets */
-        TARGET_TYPE_DEFAULT_TARGETS = 0,
-        /** Custom targets */
-        TARGET_TYPE_CUSTOM_TARGETS = 1,
-    };
-
     enum CameraFlagBits : uint32_t {
-        /** Clear depth */
+        /** Clear depth. Overrides camera RNG loadOp with clear. */
         CAMERA_FLAG_CLEAR_DEPTH_BIT = (1 << 0),
-        /** Clear color */
+        /** Clear color. Overrides camera RNG loadOp with clear. */
         CAMERA_FLAG_CLEAR_COLOR_BIT = (1 << 1),
         /** Shadow camera */
         CAMERA_FLAG_SHADOW_BIT = (1 << 2),
@@ -362,8 +364,22 @@ struct RenderCamera {
         CAMERA_FLAG_INVERSE_WINDING_BIT = (1 << 11),
         /** Samplable depth target */
         CAMERA_FLAG_OUTPUT_DEPTH_BIT = (1 << 12),
+        /** Custom targets */
+        CAMERA_FLAG_CUSTOM_TARGETS_BIT = (1 << 13),
+        /** Multi-view camera */
+        CAMERA_FLAG_MULTI_VIEW_ONLY_BIT = (1 << 14),
+        /** Dynamic cubemap */
+        CAMERA_FLAG_DYNAMIC_CUBEMAP_BIT = (1 << 15),
+        /** Allow reflection */
+        CAMERA_FLAG_ALLOW_REFLECTION_BIT = (1 << 16),
     };
     using Flags = uint32_t;
+
+    enum ShaderFlagBits : uint32_t {
+        /** Fog enabled in the shader. Changed based on render slots and rendering types. */
+        CAMERA_SHADER_FOG_BIT = (1 << 0),
+    };
+    using ShaderFlags = uint32_t;
 
     enum class RenderPipelineType : uint32_t {
         /** Forward */
@@ -436,8 +452,8 @@ struct RenderCamera {
         BASE_NS::Math::Vec4 indirectSpecularFactor { 1.0f, 1.0f, 1.0f, 1.0f };
         /** Env map color factor (.rgb = tint, .a = intensity) */
         BASE_NS::Math::Vec4 envMapFactor { 1.0f, 1.0f, 1.0f, 1.0f };
-        /** Additional factor */
-        BASE_NS::Math::Vec4 additionalFactor { 0.0f, 0.0f, 0.0f, 0.0f };
+        /** Additional blend factor */
+        BASE_NS::Math::Vec4 blendFactor { 0.0f, 0.0f, 0.0f, 0.0f };
 
         /** Environment rotation */
         BASE_NS::Math::Quat rotation { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -484,6 +500,9 @@ struct RenderCamera {
     /** Layer mask (camera render mask). All enabled by default */
     uint64_t layerMask { RenderSceneDataConstants::INVALID_ID };
 
+    /** Main camera to this camera id. (e.g. reflection camera has info of the main camera) */
+    uint64_t mainCameraId { RenderSceneDataConstants::INVALID_ID };
+
     /** Matrices (Contains view, projection, view of previous frame and projection of previous frame) */
     Matrices matrices;
 
@@ -499,21 +518,18 @@ struct RenderCamera {
     /** Z far value */
     float zFar { 0.0f };
 
-    /** Target type */
-    CameraTargetType targetType { CameraTargetType::TARGET_TYPE_DEFAULT_TARGETS };
-
     /** Custom depth target */
     RENDER_NS::RenderHandleReference depthTarget {};
     /** Custom color targets */
     RENDER_NS::RenderHandleReference colorTargets[RenderSceneDataConstants::MAX_CAMERA_COLOR_TARGET_COUNT];
 
-    /** Custom pre-pass color target. Can be used e.g. for refraction. */
-    RENDER_NS::RenderHandleReference prePassColorTarget;
     /** Custom pre-pass color target. Can be tried to fetch with a name if handle is not given. */
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> prePassColorTargetName;
 
     /** Flags for camera */
     Flags flags { 0u };
+    /** Shader flags for camera */
+    ShaderFlags shaderFlags { 0u };
 
     /** Flags for camera render pipeline */
     RenderPipelineType renderPipelineType { RenderPipelineType::FORWARD };
@@ -526,17 +542,20 @@ struct RenderCamera {
     /** Camera cull type */
     CameraCullType cullType { CameraCullType::CAMERA_CULL_VIEW_FRUSTUM };
 
-    /** Environment setup for camera */
+    /** Default environment setup for camera */
     Environment environment;
 
     /** Fog setup for camera */
     Fog fog;
 
-    /** Custom render node graph from camera component */
+    /** Custom render node graph from camera component (WILL BE DEPRECATED) */
     RENDER_NS::RenderHandleReference customRenderNodeGraph;
 
     /** Custom render node graph file from camera component */
     BASE_NS::string customRenderNodeGraphFile;
+
+    /** Custom render node graph file from post process configuration component */
+    BASE_NS::string customPostProcessRenderNodeGraphFile;
 
     /** Target customization */
     struct TargetUsage {
@@ -556,6 +575,24 @@ struct RenderCamera {
 
     /** Camera post process name. Can be empty */
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> postProcessName;
+
+    /** Multi-view extra camera count. */
+    uint32_t multiViewCameraCount { 0U };
+    /** 64bit camera id of multi-view layer cameras. */
+    uint64_t multiViewCameraIds[RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT] {
+        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID
+    };
+    uint64_t multiViewParentCameraId { RenderSceneDataConstants::INVALID_ID };
+
+    /** Environment count. */
+    uint32_t environmentCount { 0U };
+    /** 64bit environment id of environments. */
+    uint64_t environmentIds[DefaultMaterialCameraConstants::MAX_ENVIRONMENT_COUNT] {
+        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID,
+        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID,
+        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID,
+        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID
+    };
 };
 
 /** Render scene */
@@ -575,6 +612,8 @@ struct RenderScene {
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameMaterial;
     /** Morphing data store name */
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameMorph;
+    /** Data store name prefix */
+    BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNamePrefix;
 
     /** World scene center */
     BASE_NS::Math::Vec3 worldSceneCenter { 0.0f, 0.0f, 0.0f };
@@ -593,11 +632,10 @@ struct RenderScene {
     /** Render scene frame index */
     uint32_t frameIndex { 0u };
 
-    /** Custom render node graph from scene component */
-    RENDER_NS::RenderHandleReference customRenderNodeGraph;
-
     /** Custom render node graph file from scene component */
     BASE_NS::string customRenderNodeGraphFile;
+    /** Custom post scene render node graph file from scene component */
+    BASE_NS::string customPostSceneRenderNodeGraphFile;
 };
 
 struct SlotSubmeshIndex {
@@ -614,6 +652,8 @@ enum RenderSceneFlagBits : uint32_t {
     RENDER_SCENE_DIRECT_POST_PROCESS_BIT = (1 << 0),
     RENDER_SCENE_FLIP_WINDING_BIT = (1 << 1),
     RENDER_SCENE_DISCARD_MATERIAL_BIT = (1 << 2),
+    RENDER_SCENE_ENABLE_FOG_BIT = (1 << 3),
+    RENDER_SCENE_DISABLE_FOG_BIT = (1 << 4),
 };
 using RenderSceneFlags = uint32_t;
 /** @} */

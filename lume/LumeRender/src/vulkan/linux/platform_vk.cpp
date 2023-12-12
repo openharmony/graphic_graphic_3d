@@ -22,7 +22,7 @@ using BASE_NS::vector;
 
 bool CanDevicePresent(VkInstance instance, VkPhysicalDevice device, uint32_t queuefamily)
 {
-#ifdef defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR vkGetPhysicalDeviceXcbPresentationSupportKHR =
         (PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR)vkGetInstanceProcAddr(
             instance, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
@@ -42,12 +42,6 @@ bool CanDevicePresent(VkInstance instance, VkPhysicalDevice device, uint32_t que
     }
 
     return false;
-#elif defined(VK_USE_PLATFORM_MACOS_MVK)
-    // NSView is always presentable
-    return true;
-#elif defined(VK_USE_PLATFORM_METAL_EXT)
-    // Metal layers are always presentable
-    return true;
 #else
 #warning "Undefined WSI platform!"
     return false;
@@ -60,10 +54,6 @@ const char* GetPlatformSurfaceName()
     return VK_KHR_XCB_SURFACE_EXTENSION_NAME;
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     return VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
-#elif defined(VK_USE_PLATFORM_MACOS_MVK)
-    return VK_MVK_MACOS_SURFACE_EXTENSION_NAME;
-#elif defined(VK_USE_PLATFORM_METAL_EXT)
-    return VK_EXT_METAL_SURFACE_EXTENSION_NAME;
 #else
 #error Missing platform surface type.
 #endif

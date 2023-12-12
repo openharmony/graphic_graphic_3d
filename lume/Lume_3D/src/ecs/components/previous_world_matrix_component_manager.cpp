@@ -36,7 +36,7 @@ class PreviousWorldMatrixComponentManager final
     const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
-    explicit PreviousWorldMatrixComponentManager(IEcs& ecs)
+    PreviousWorldMatrixComponentManager(IEcs& ecs)
         : BaseManager<PreviousWorldMatrixComponent, IPreviousWorldMatrixComponentManager>(
               ecs, CORE_NS::GetName<PreviousWorldMatrixComponent>())
     {}

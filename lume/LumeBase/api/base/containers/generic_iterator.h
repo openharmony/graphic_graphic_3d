@@ -16,6 +16,7 @@
 #ifndef API_BASE_CONTAINERS_GENERIC_ITERATOR_H
 #define API_BASE_CONTAINERS_GENERIC_ITERATOR_H
 
+#include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
 #include <base/namespace.h>
 
@@ -66,8 +67,8 @@ public:
         }
     }
 
-    IIterator(IIterator&& it) : it_(move(it.it_)) {}
-    IIterator(typename Type::Ptr&& it) : it_(move(it)) {}
+    IIterator(IIterator&& it) noexcept : it_(move(it.it_)) {}
+    IIterator(typename Type::Ptr&& it) noexcept : it_(move(it)) {}
 
     auto& operator=(const IIterator& it)
     {
@@ -78,7 +79,7 @@ public:
         }
         return *this;
     }
-    auto& operator=(IIterator&& it)
+    auto& operator=(IIterator&& it) noexcept
     {
         it_ = move(it.it_);
         return *this;

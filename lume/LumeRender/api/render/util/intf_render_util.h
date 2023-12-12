@@ -18,11 +18,13 @@
 
 #include <cstdint>
 
+#include <base/containers/string.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
 RENDER_BEGIN_NAMESPACE()
 /** @ingroup group_util_irenderutil */
+class IRenderFrameUtil;
 
 /**
  * Render timings
@@ -36,15 +38,31 @@ struct RenderTimings {
 
         /** Time stamp at the beginning of backend command list processing */
         int64_t beginBackend { 0 };
-        /** Time stamp at the beginning of backend presentation start */
-        int64_t beginBackendPresent { 0 };
         /** Time stamp at the end of backend command list processing and submits */
         int64_t endBackend { 0 };
+        /** Time stamp at the beginning of backend presentation start */
+        int64_t beginBackendPresent { 0 };
+        /** Time stamp at the end of backend presentation */
+        int64_t endBackendPresent { 0 };
     };
     /** Current results after RenderFrame() has returned */
     Times frame;
     /** Previous frame results after RenderFrame() has returned */
     Times prevFrame;
+};
+
+/** Render handle description */
+struct RenderHandleDesc {
+    /** Type */
+    RenderHandleType type { RenderHandleType::UNDEFINED };
+    /** Additional ID */
+    uint64_t id { 0 };
+    /** Reference count for this handle as seen from the client side */
+    int32_t refCount { 0 };
+    /** Name and/or path of the resource */
+    BASE_NS::string name;
+    /** Additional name of the resource */
+    BASE_NS::string additionalName;
 };
 
 /** Interface for rendering utilities.
@@ -67,6 +85,11 @@ public:
      * @return RenderTimings Results from the last RenderFrame() call.
      */
     virtual RenderTimings GetRenderTimings() const = 0;
+
+    /** Get render frame util with frame related utilities.
+     * @return Reference to render frame util interface.
+     */
+    virtual IRenderFrameUtil& GetRenderFrameUtil() const = 0;
 
 protected:
     IRenderUtil() = default;

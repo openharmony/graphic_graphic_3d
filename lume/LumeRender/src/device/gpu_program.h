@@ -30,7 +30,7 @@ struct ComputeShaderReflection {
     /** Pipeline layout */
     PipelineLayout pipelineLayout;
     /** Shader specialization constant view */
-    ShaderSpecilizationConstantView shaderSpecializationConstantView;
+    ShaderSpecializationConstantView shaderSpecializationConstantView;
 
     /** Thread group size X */
     uint32_t threadGroupSizeX { 0 };
@@ -45,7 +45,7 @@ struct ShaderReflection {
     /** Pipeline layout */
     PipelineLayout pipelineLayout;
     /** Shader specialization constant view */
-    ShaderSpecilizationConstantView shaderSpecializationConstantView;
+    ShaderSpecializationConstantView shaderSpecializationConstantView;
     /** Vertex input declaration view */
     VertexInputDeclarationView vertexInputDeclarationView;
 };

@@ -15,6 +15,15 @@
 
 #include "memory_filesystem.h"
 
+#include <memory>
+
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
+#include <core/io/intf_file.h>
 #include <core/namespace.h>
 
 #include "memory_file.h"
@@ -58,22 +67,22 @@ bool MemoryFilesystem::DeleteFile(const string_view path)
     return memoryFiles_.erase(path) != memoryFiles_.end();
 }
 
-IDirectory::Ptr MemoryFilesystem::OpenDirectory(const string_view path)
+IDirectory::Ptr MemoryFilesystem::OpenDirectory(const string_view /* path */)
 {
     return IDirectory::Ptr();
 }
 
-IDirectory::Ptr MemoryFilesystem::CreateDirectory(const string_view path)
+IDirectory::Ptr MemoryFilesystem::CreateDirectory(const string_view /* path */)
 {
     return IDirectory::Ptr();
 }
 
-bool MemoryFilesystem::DeleteDirectory(const string_view path)
+bool MemoryFilesystem::DeleteDirectory(const string_view /* path */)
 {
     return false;
 }
 
-bool MemoryFilesystem::Rename(const string_view fromPath, const string_view toPath)
+bool MemoryFilesystem::Rename(const string_view /* fromPath */, const string_view /* toPath */)
 {
     return false;
 }

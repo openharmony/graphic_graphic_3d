@@ -19,15 +19,66 @@
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
 #include <base/containers/vector.h>
+#include <base/math/quaternion.h>
+#include <base/math/vector.h>
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
+#include <core/property/property.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif
 BEGIN_COMPONENT(IInitialTransformComponentManager, InitialTransformComponent)
-    DEFINE_PROPERTY(uint32_t, references, "Reference count", 0, VALUE(0))
-    DEFINE_PROPERTY(BASE_NS::vector<uint8_t>, initialData, "Initial data", 0,)
+#if !defined(IMPLEMENT_MANAGER)
+    union Data {
+        float floatValue;
+
+        BASE_NS::Math::Vec2 vec2Value;
+        BASE_NS::Math::Vec3 vec3Value;
+        BASE_NS::Math::Vec4 vec4Value;
+
+        BASE_NS::Math::Quat quatValue;
+
+        BASE_NS::vector<float> floatVectorValue;
+#if _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4583) // 'floatVectorValue': destructor is not implicitly called
+#endif
+        ~Data() {};
+#if _MSC_VER
+#pragma warning(pop)
+#endif
+    };
+
+    ~InitialTransformComponent();
+
+    InitialTransformComponent();
+
+    explicit InitialTransformComponent(float value);
+    explicit InitialTransformComponent(BASE_NS::Math::Vec2 value);
+    explicit InitialTransformComponent(BASE_NS::Math::Vec3 value);
+    explicit InitialTransformComponent(BASE_NS::Math::Vec4 value);
+    explicit InitialTransformComponent(BASE_NS::Math::Quat value);
+    explicit InitialTransformComponent(BASE_NS::array_view<const float> value);
+
+    InitialTransformComponent(const InitialTransformComponent& other) noexcept;
+    InitialTransformComponent(InitialTransformComponent && other) noexcept;
+
+    InitialTransformComponent& operator=(const InitialTransformComponent& other) noexcept;
+    InitialTransformComponent& operator=(InitialTransformComponent&& other) noexcept;
+
+    InitialTransformComponent& operator=(float value) noexcept;
+    InitialTransformComponent& operator=(BASE_NS::Math::Vec2 value) noexcept;
+    InitialTransformComponent& operator=(BASE_NS::Math::Vec3 value) noexcept;
+    InitialTransformComponent& operator=(BASE_NS::Math::Vec4 value) noexcept;
+    InitialTransformComponent& operator=(BASE_NS::Math::Quat value) noexcept;
+    InitialTransformComponent& operator=(BASE_NS::array_view<const float> value) noexcept;
+#endif
+    DEFINE_PROPERTY(uint64_t, type, "Type Of Data",
+        CORE_NS::PropertyFlags::IS_HIDDEN | CORE_NS::PropertyFlags::NO_SERIALIZE | CORE_NS::PropertyFlags::IS_READONLY,
+        VALUE(0))
+    DEFINE_PROPERTY(Data, initialData, "Initial Data",
+        CORE_NS::PropertyFlags::IS_HIDDEN | CORE_NS::PropertyFlags::NO_SERIALIZE |
+            CORE_NS::PropertyFlags::IS_READONLY, )
 END_COMPONENT(IInitialTransformComponentManager, InitialTransformComponent, "3949c596-435b-4210-8a90-c8976c7168a4")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()

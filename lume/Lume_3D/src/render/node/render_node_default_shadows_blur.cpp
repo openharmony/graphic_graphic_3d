@@ -41,8 +41,9 @@ CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 namespace {
+constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
 constexpr uint32_t MAX_LOOP_COUNT { 2u };
-}
+} // namespace
 
 void RenderNodeDefaultShadowsBlur::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -78,31 +79,27 @@ void RenderNodeDefaultShadowsBlur::PreExecuteFrame()
     if (dataStoreLight) {
         shadowTypes_ = dataStoreLight->GetShadowTypes();
         if (shadowTypes_.shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM) {
-            auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-            const auto checkForTempImageReCreation = [this, &gpuResourceMgr](const RenderHandle colorBufferHandle,
-                                                         TemporaryImage& tempImage) {
-                GpuImageDesc shadowImageDesc = gpuResourceMgr.GetImageDescriptor(colorBufferHandle);
-                if ((shadowImageDesc.width != tempImage.width) || (shadowImageDesc.height != tempImage.height) ||
-                    (shadowImageDesc.format != tempImage.format) ||
-                    (shadowImageDesc.sampleCountFlags != tempImage.sampleCountFlags)) {
+            const IRenderDataStoreDefaultLight::LightCounts lightCounts = dataStoreLight->GetLightCounts();
+            if ((lightCounts.dirShadow > 0) || (lightCounts.spotShadow > 0)) {
+                auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+                GpuImageDesc shadowImageDesc = gpuResourceMgr.GetImageDescriptor(shadowColorBufferHandle_);
+                if ((shadowImageDesc.width != temporaryImage_.width) ||
+                    (shadowImageDesc.height != temporaryImage_.height) ||
+                    (shadowImageDesc.format != temporaryImage_.format) ||
+                    (shadowImageDesc.sampleCountFlags != temporaryImage_.sampleCountFlags)) {
                     shadowImageDesc.imageViewType = CORE_IMAGE_VIEW_TYPE_2D;
                     shadowImageDesc.layerCount = 1u;
 #if (CORE3D_VALIDATION_ENABLED == 1)
                     const string name = renderNodeContextMgr_->GetName() + "_ShadowTemporaryImage";
-                    tempImage.imageHandle = gpuResourceMgr.Create(name, shadowImageDesc);
+                    temporaryImage_.imageHandle = gpuResourceMgr.Create(name, shadowImageDesc);
 #else
-                    tempImage.imageHandle = gpuResourceMgr.Create(tempImage.imageHandle, shadowImageDesc);
+                    temporaryImage_.imageHandle = gpuResourceMgr.Create(temporaryImage_.imageHandle, shadowImageDesc);
 #endif
-                    tempImage.width = shadowImageDesc.width;
-                    tempImage.height = shadowImageDesc.height;
-                    tempImage.format = shadowImageDesc.format;
-                    tempImage.sampleCountFlags = shadowImageDesc.sampleCountFlags;
+                    temporaryImage_.width = shadowImageDesc.width;
+                    temporaryImage_.height = shadowImageDesc.height;
+                    temporaryImage_.format = shadowImageDesc.format;
+                    temporaryImage_.sampleCountFlags = shadowImageDesc.sampleCountFlags;
                 }
-            };
-
-            const IRenderDataStoreDefaultLight::LightCounts lightCounts = dataStoreLight->GetLightCounts();
-            if ((lightCounts.dirShadow > 0) || (lightCounts.spotShadow > 0)) {
-                checkForTempImageReCreation(shadowColorBufferHandle_, temporaryImage_);
             }
         }
     }
@@ -156,21 +153,16 @@ void RenderNodeDefaultShadowsBlur::ProcessSingleShadow(IRenderCommandList& cmdLi
             const RenderHandle graphicsStateHandle =
                 shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.shaderHandle);
             const auto& reflPipelineLayout = shaderMgr.GetReflectionPipelineLayout(shaderData_.shaderHandle);
-            const ShaderSpecilizationConstantView sscv =
+            const ShaderSpecializationConstantView sscv =
                 shaderMgr.GetReflectionSpecialization(shaderData_.shaderHandle);
             const VertexInputDeclarationView vidv =
                 shaderMgr.GetReflectionVertexInputDeclaration(shaderData_.shaderHandle);
-            CORE_ASSERT(sscv.constants.size() == 1u);
-            const uint32_t specializationFlags = CORE_BLUR_TYPE_RG;
-            const ShaderSpecializationConstantDataView specDataView {
-                { sscv.constants.data(), sscv.constants.size() },
-                { &specializationFlags, 1u },
-            };
-            constexpr DynamicStateFlags dynamicStateFlags =
-                DynamicStateFlagBits::CORE_DYNAMIC_STATE_VIEWPORT | DynamicStateFlagBits::CORE_DYNAMIC_STATE_SCISSOR;
+            const uint32_t specializationFlags[] = { CORE_BLUR_TYPE_RG };
+            CORE_ASSERT(sscv.constants.size() == countof(specializationFlags));
+            const ShaderSpecializationConstantDataView specDataView { sscv.constants, specializationFlags };
             auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
             shaderData_.psoHandle = psoMgr.GetGraphicsPsoHandle(shaderData_.shaderHandle, graphicsStateHandle,
-                reflPipelineLayout, vidv, specDataView, dynamicStateFlags);
+                reflPipelineLayout, vidv, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
         }
 
         const float fWidth = static_cast<float>(tempImage.width);

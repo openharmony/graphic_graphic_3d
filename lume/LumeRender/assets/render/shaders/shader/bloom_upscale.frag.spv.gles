@@ -1,0 +1,31 @@
+#version 320 es
+precision highp float;
+precision highp int;
+
+struct LocalPostProcessPushConstantStruct
+{
+    vec4 viewportSizeInvSize;
+    vec4 factor;
+};
+
+struct uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+uniform uPostProcessPushConstant CORE_PC_0;
+
+uniform highp sampler2D s1_b1;
+uniform highp sampler2D s1_b0_s1_b2;
+
+layout(location = 0) in vec2 inUv;
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+    vec2 _166 = CORE_PC_0.uPc.viewportSizeInvSize.zw * 2.0;
+    float _190 = _166.x;
+    float _192 = _166.y;
+    outColor = vec4(min(((textureLod(s1_b0_s1_b2, inUv + _166, 0.0).xyz * 0.125) + ((textureLod(s1_b0_s1_b2, inUv + vec2(-_190, _192), 0.0).xyz * 0.125) + ((textureLod(s1_b0_s1_b2, inUv + vec2(_190, -_192), 0.0).xyz * 0.125) + ((textureLod(s1_b0_s1_b2, inUv - _166, 0.0).xyz * 0.125) + (textureLod(s1_b0_s1_b2, inUv, 0.0).xyz * 0.5))))) + texelFetch(s1_b1, ivec2(gl_FragCoord.xy), 0).xyz, vec3(64512.0)), 1.0);
+}
+

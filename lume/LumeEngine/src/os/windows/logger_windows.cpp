@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-#include "log/logger_output.h"
-
 #include <chrono>
 #include <cstdarg>
 #include <ctime>
@@ -24,11 +22,20 @@
 #include <sstream>
 #include <string_view>
 
+#include <core/log.h>
+
+#include "log/logger_output.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#pragma warning(push)
+// C5039	'function': pointer or reference to potentially throwing function passed to extern C function under -EHc.
+// Undefined behavior may occur if this function throws an exception.
+#pragma warning(disable : 5039)
 #include <windows.h>
+#pragma warning(pop)
+
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 constexpr auto ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004;
 #endif
@@ -79,7 +86,7 @@ public:
             // (Unless the filename is very long)
             constexpr int fileLinkFieldSize = 30;
 
-            auto const filenameView = LoggerUtils::GetFilename({ filename.data(), filename.size() });
+            auto const filenameView = LoggerUtils::GetFilename(filename);
             // Break long messages to multiple lines. 0..9 on one line. 10..99 on two lines. 100..999 on three and above
             // that four.
             const int lineNumberLength = (linenumber < 10 ? 1 : (linenumber < 100 ? 2 : (linenumber < 1000 ? 3 : 4)));
@@ -88,7 +95,8 @@ public:
             if (fileLinkPadding > 0) {
                 outputStream << std::setw(fileLinkPadding) << "";
             }
-            outputStream << " (" << filenameView << ':' << linenumber << ')';
+            outputStream << " (" << std::string_view(filenameView.data(), filenameView.size()) << ':' << linenumber
+                         << ')';
         }
         outputStream << ": ";
 
@@ -155,7 +163,7 @@ private:
         "\x1B[0m",
     };
 
-    static const string_view GetColorString(ColorCode colorCode)
+    static string_view GetColorString(ColorCode colorCode)
     {
         const int code = static_cast<int>(colorCode);
         CORE_ASSERT(code >= 0 && code < static_cast<int>(ColorCode::COLOR_CODE_COUNT));
@@ -164,7 +172,7 @@ private:
 
     void SetColor(std::ostream& outputStream, ColorCode colorCode)
     {
-        if (colorCode < ColorCode::BLACK || colorCode >= ColorCode::COLOR_CODE_COUNT) {
+        if (colorCode < ColorCode::BLACK || ColorCode::COLOR_CODE_COUNT <= colorCode) {
             return;
         }
 

@@ -37,6 +37,10 @@ class Mat4X4;
 } // namespace Math
 BASE_END_NAMESPACE()
 
+CORE_BEGIN_NAMESPACE()
+class IFrustumUtil;
+CORE_END_NAMESPACE()
+
 RENDER_BEGIN_NAMESPACE()
 class IShaderManager;
 class IRenderContext;
@@ -64,6 +68,7 @@ class ISkinJointsComponentManager;
 class IPlanarReflectionComponentManager;
 class IPreviousJointMatricesComponentManager;
 class IPostProcessComponentManager;
+class IPostProcessConfigurationComponentManager;
 class IUriComponentManager;
 class IRenderDataStoreDefaultCamera;
 class IRenderDataStoreDefaultLight;
@@ -118,26 +123,40 @@ public:
     };
     using BatchDataVector = BASE_NS::vector<BatchData>;
 
-private:
-    struct SceneBoundingVolumeHelper {
-        BASE_NS::Math::Vec3 sumOfSubmeshPoints { 0.0f, 0.0f, 0.0f };
-        uint32_t submeshCount { 0 };
-
-        BASE_NS::Math::Vec3 minAABB { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::max() };
-        BASE_NS::Math::Vec3 maxAABB { -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(),
-            -std::numeric_limits<float>::max() };
+    struct DefaultMaterialShaderData {
+        struct SingleShaderData {
+            CORE_NS::EntityReference shader;
+            CORE_NS::EntityReference gfxState;
+            CORE_NS::EntityReference gfxStateDoubleSided;
+        };
+        SingleShaderData opaque;
+        SingleShaderData blend;
+        SingleShaderData depth;
     };
+    struct CameraRenderNodeGraphs {
+        // camera
+        RENDER_NS::RenderHandleReference rngHandle;
+        // camera post process
+        RENDER_NS::RenderHandleReference ppRngHandle;
+    };
+    struct CameraRngsOutput {
+        CameraRenderNodeGraphs rngs;
+        // multi-view post processes
+        RENDER_NS::RenderHandleReference
+            multiviewPpHandles[RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT] { {}, {}, {} };
+    };
+
+private:
     struct MeshProcessData {
         const uint64_t layerMask { 0 };
         const uint32_t batchInstanceCount { 0 };
+        const bool duplicateMaterialInstances { false };
         const CORE_NS::Entity& renderMeshEntity;
         const CORE_NS::Entity& meshEntity;
         const MeshComponent& meshComponent;
         const RenderMeshComponent& renderMeshComponent;
         const BASE_NS::Math::Mat4X4& world;
         const BASE_NS::Math::Mat4X4& prevWorld;
-        SceneBoundingVolumeHelper& sceneBoundingVolume;
     };
     struct LightProcessData {
         const uint64_t layerMask { 0 };
@@ -156,19 +175,23 @@ private:
     // returns the instance's valid scene component
     RenderConfigurationComponent GetRenderConfigurationComponent();
     CORE_NS::Entity ProcessScene(const RenderConfigurationComponent& sc);
-    void ProcessSubmesh(const MeshProcessData& mpd, const MeshComponent::Submesh& submesh, const uint32_t meshIndex,
+    uint32_t ProcessSubmesh(const MeshProcessData& mpd, const MeshComponent::Submesh& submesh, const uint32_t meshIndex,
         const uint32_t subMeshIdx, const uint32_t skinJointIndex, const MinAndMax& mam, const bool isNegative);
-    void ProcessMesh(const MeshProcessData& mpd, const MinAndMax& batchMam, const SkinProcessData& spd);
-    void ProcessRenderables(SceneBoundingVolumeHelper& sceneBoundingVolumeHelper);
-    void ProcessBatchRenderables(SceneBoundingVolumeHelper& sceneBoundingVolumeHelper);
-    void CalculateSceneBounds(const SceneBoundingVolumeHelper& sceneBoundingVolumeHelper);
-    void ProcessCameras(const RenderConfigurationComponent& sceneCompnent, const CORE_NS::Entity& mainCameraEntity,
+    void ProcessMesh(const MeshProcessData& mpd, const MinAndMax& batchMam, const SkinProcessData& spd,
+        BASE_NS::vector<uint32_t>* submeshMaterials);
+    void ProcessRenderMeshBatch(const CORE_NS::Entity renderMeshBatch, const CORE_NS::ComponentQuery::ResultRow* row);
+    void ProcessRenderMeshBatch(BASE_NS::array_view<const CORE_NS::Entity> renderMeshComponents);
+    void ProcessSingleRenderMesh(CORE_NS::Entity renderMeshComponent);
+    void ProcessRenderables();
+    void ProcessBatchRenderables();
+    void ProcessEnvironments(const RenderConfigurationComponent& sceneComponent);
+    void ProcessCameras(const RenderConfigurationComponent& sceneComponent, const CORE_NS::Entity& mainCameraEntity,
         RenderScene& renderScene);
     void ProcessLight(const LightProcessData& lightProcessData);
     void ProcessLights(RenderScene& renderScene);
     void ProcessShadowCamera(const LightProcessData lightProcessData, RenderLight& light);
-    bool ProcessReflection(const CORE_NS::ComponentQuery::ResultRow& row, const RenderCamera& camera);
-    bool ProcessReflections(CORE_NS::Entity cameraEntity, const RenderScene& renderScene);
+    void ProcessReflection(const CORE_NS::ComponentQuery::ResultRow& row, const RenderCamera& camera);
+    void ProcessReflections(const RenderScene& renderScene);
     void ProcessPostProcesses();
     void FetchFullScene();
     void EvaluateMaterialModifications(const MaterialComponent& matComp);
@@ -184,13 +207,13 @@ private:
 
     void ProcessRenderNodeGraphs(const RenderConfigurationComponent& renderConfig, const RenderScene& renderScene);
     void DestroyRenderDataStores();
-    RENDER_NS::RenderHandleReference GetCameraRenderNodeGraph(
-        const RenderScene& renderScene, const RenderCamera& renderCamera);
+    CameraRngsOutput GetCameraRenderNodeGraphs(const RenderScene& renderScene, const RenderCamera& renderCamera);
     RENDER_NS::RenderHandleReference GetSceneRenderNodeGraph(const RenderScene& renderScene);
 
     struct CameraData;
     CameraData UpdateAndGetPreviousFrameCameraData(
         const CORE_NS::Entity& entity, const BASE_NS::Math::Mat4X4& view, const BASE_NS::Math::Mat4X4& proj);
+    BASE_NS::vector<RenderCamera> GetMultiviewCameras(const RenderCamera& renderCamera);
 
     bool active_ = true;
     CORE_NS::IEcs& ecs_;
@@ -203,6 +226,7 @@ private:
     IRenderDataStoreDefaultScene* dsScene_ = nullptr;
     RENDER_NS::IShaderManager* shaderMgr_ = nullptr;
     RENDER_NS::IGpuResourceManager* gpuResourceMgr_ = nullptr;
+    CORE_NS::IFrustumUtil* frustumUtil_ = nullptr;
 
     INodeComponentManager* nodeMgr_ = nullptr;
     IRenderMeshBatchComponentManager* renderMeshBatchMgr_ = nullptr;
@@ -227,6 +251,17 @@ private:
     IPreviousJointMatricesComponentManager* prevJointMatricesMgr_ = nullptr;
 
     IPostProcessComponentManager* postProcessMgr_ = nullptr;
+    IPostProcessConfigurationComponentManager* postProcessConfigMgr_ = nullptr;
+
+    uint32_t renderConfigurationGeneration_ = 0;
+    uint32_t cameraGeneration_ = 0;
+    uint32_t lightGeneration_ = 0;
+    uint32_t planarReflectionGeneration_ = 0;
+    uint32_t materialExtensionGeneration_ = 0;
+    uint32_t environmentGeneration_ = 0;
+    uint32_t fogGeneration_ = 0;
+    uint32_t postprocessGeneration_ = 0;
+    uint32_t postprocessConfigurationGeneration_ = 0;
 
     IPicking* picking_ = nullptr;
 
@@ -254,12 +289,23 @@ private:
     // these do not add overhead if the property bits are not set (only clear per frame)
     struct RenderProcessing {
         struct AdditionalCameraContainer {
-            RENDER_NS::RenderHandleReference handle;
+            CameraRenderNodeGraphs rngs;
             RenderCamera::Flags flags { 0 };
             RenderCamera::RenderPipelineType renderPipelineType { RenderCamera::RenderPipelineType::FORWARD };
             uint64_t lastFrameIndex { 0 };   // frame when used
             bool enableAutoDestroy { true }; // some might not be allowed to be destroyed (e.g. color pre-pass)
             BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> postProcessName;
+            BASE_NS::string customRngFile;
+            BASE_NS::string customPostProcessRngFile;
+            uint32_t multiViewCameraCount { 0U };
+        };
+        struct SceneRngContainer {
+            BASE_NS::string customRngFile;
+            BASE_NS::string customPostSceneRngFile;
+
+            RENDER_NS::RenderHandleReference rng;
+            RENDER_NS::RenderHandleReference customRng;
+            RENDER_NS::RenderHandleReference customPostRng;
         };
 
         // all render node graphs (scene rng is always the first and this needs to be in order)
@@ -267,7 +313,7 @@ private:
         // camera component id with generation hash
         BASE_NS::unordered_map<uint64_t, AdditionalCameraContainer> camIdToRng;
 
-        RENDER_NS::RenderHandleReference sceneRng;
+        SceneRngContainer sceneRngs;
         uint64_t sceneMainCamId { 0 };
 
         // reset every frame (flags for rendering hints)
@@ -275,6 +321,10 @@ private:
 
         // store created pods
         BASE_NS::vector<BASE_NS::string> postProcessPods;
+        // store created post process data stores
+        BASE_NS::vector<BASE_NS::string> postProcessConfigs;
+
+        bool frameProcessed { false };
     };
     RenderProcessing renderProcessing_;
 
@@ -287,6 +337,10 @@ private:
     BASE_NS::unordered_map<CORE_NS::Entity, CameraData> cameraData_;
 
     BASE_NS::unordered_map<CORE_NS::Entity, BatchDataVector> batches_;
+    BASE_NS::vector<uint32_t> materialIndices_;
+
+    // store default shader data for default materials in this ECS
+    DefaultMaterialShaderData dmShaderData_;
 };
 CORE3D_END_NAMESPACE()
 

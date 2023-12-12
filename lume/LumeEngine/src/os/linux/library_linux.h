@@ -16,7 +16,6 @@
 #ifndef CORE_OS_LINUX_LIBRARY_LINUX_H
 #define CORE_OS_LINUX_LIBRARY_LINUX_H
 
-
 #include <core/namespace.h>
 
 #include "os/intf_library.h"

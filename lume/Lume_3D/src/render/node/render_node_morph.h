@@ -58,7 +58,9 @@ private:
     SceneRenderDataStores stores_;
 
     uint32_t maxObjectCount_ { 0 };
-    RENDER_NS::RenderHandleReference objectUniformBufferHandle_;
+    uint32_t maxStructCount_ { 0 };
+    uint32_t bufferSize_ { 0 };
+    RENDER_NS::RenderHandleReference morphTargetBufferHandle_;
 
     RENDER_NS::RenderHandle psoHandle_;
 

@@ -16,6 +16,7 @@
 #ifndef RENDER_BACKEND_H
 #define RENDER_BACKEND_H
 
+#include <base/containers/vector.h>
 #include <core/namespace.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/pipeline_state_desc.h>
@@ -28,12 +29,16 @@ struct RenderCommandContext;
 struct RenderCommandFrameData;
 
 struct RenderBackendBackBufferConfiguration {
-    // state after render node graph processing
-    GpuResourceState backBufferState;
-    // layout after render node graph processing
-    ImageLayout layout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
-    // configuration for the back buffer
-    NodeGraphBackBufferConfiguration config;
+    struct SwapchainData {
+        RenderHandle handle;
+        // state after render node graph processing
+        GpuResourceState backBufferState;
+        // layout after render node graph processing
+        ImageLayout layout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+        // configuration for the back buffer
+        NodeGraphBackBufferConfiguration config;
+    };
+    BASE_NS::vector<SwapchainData> swapchainData;
 };
 
 class RenderBackend {

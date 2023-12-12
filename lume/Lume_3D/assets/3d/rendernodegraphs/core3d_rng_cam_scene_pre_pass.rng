@@ -4,14 +4,44 @@
         "type": "rendernodegraph"
     },
     "renderNodeGraphName": "",
+    "renderNodeGraphOutputResources": [
+        {
+            "name": "output",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        }
+    ],
     "nodes": [
         {
             "typeName": "RenderNodeDefaultCameraController",
-            "nodeName": "CORE3D_RN_CAM_CTRL_CAMPP"
+            "nodeName": "CORE3D_RN_CAM_CTRL_CAMPP",
+            "gpuImageDescs": [
+                {
+                    "name": "output",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "mipCount": 6,
+                    "usageFlags": "color_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "depth",
+                    "format": "d16_unorm",
+                    "usageFlags": "depth_stencil_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers | reset_state_on_frame_borders"
+                },
+                {
+                    "name": "color",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "mipCount": 6,
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                }
+            ]
         },
         {
             "typeName": "RenderNodeDefaultMaterialRenderSlot",
-            "nodeName": "CORE3D_RN_CAM_DM_SO_CAMPP",
+            "nodeName": "CORE3D_RN_CAM_CTRL",
             "queue": {
                 "type": "graphics",
                 "index": 0
@@ -78,7 +108,7 @@
             "nodeName": "CORE3D_RN_CAM_COMBINEDPP_CAMPP",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_PRE_PASS_CAM"
             },
             "queue": {
@@ -95,8 +125,9 @@
                 ],
                 "customOutputImages": [
                     {
-                        "resourceLocation": "from_render_graph_output",
-                        "resourceIndex": 0
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "output",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_CAMPP"
                     }
                 ]
             }

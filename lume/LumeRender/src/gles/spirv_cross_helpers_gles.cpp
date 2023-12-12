@@ -131,6 +131,10 @@ string Specialize(ShaderStageFlags mask, const string_view shaderTemplate,
     if (shaderTemplate.empty()) {
         return {};
     }
+    if (data.data.empty()) {
+        // missing specialization constant values
+        return string(shaderTemplate);
+    }
     bool ok = false;
     for (const auto& spc : data.constants) {
         if (spc.shaderStage & mask) {

@@ -32,12 +32,14 @@ struct default_delete {
 
     void operator()(T* ptr) const
     {
+        static_assert(sizeof(T), "can't delete an incomplete type");
         delete ptr;
     }
 
     template<class U>
     void operator()(U* ptr) const
     {
+        static_assert(sizeof(U), "can't delete an incomplete type");
         delete ptr;
     }
 };
@@ -52,12 +54,14 @@ struct default_delete<T[]> {
 
     void operator()(T* ptr) const
     {
+        static_assert(sizeof(T), "can't delete an incomplete type");
         delete[] ptr;
     }
 
     template<class U>
     void operator()(U* ptr) const
     {
+        static_assert(sizeof(U), "can't delete an incomplete type");
         delete[] ptr;
     }
 };

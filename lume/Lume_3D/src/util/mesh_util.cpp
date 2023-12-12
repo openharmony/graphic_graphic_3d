@@ -137,8 +137,8 @@ void GenerateCubeGeometry(float width, float height, float depth, Geometry<uint1
             CUBE_UV[CUBE_UV_INDICES[(vertexIndex + 2u) % 6u]].x, CUBE_UV[CUBE_UV_INDICES[(vertexIndex + 2u) % 6u]].y);
     }
 
-    for (auto i = 0u; i < countof(CUBE_INDICES); ++i) {
-        indices.emplace_back(i);
+    for (uint16_t i = 0u; i < countof(CUBE_INDICES); ++i) {
+        indices.push_back(i);
     }
 }
 
@@ -157,34 +157,36 @@ void GenerateSphereGeometry(float radius, uint32_t rings, uint32_t sectors, Geom
     uvs.reserve(maxVertexCount);
     indices.reserve(maxIndexCount);
 
-    const float r = 1.0f / (rings - 1);
-    const float s = 1.0f / (sectors - 1);
+    const float r = 1.0f / static_cast<float>(rings - 1);
+    const float s = 1.0f / static_cast<float>(sectors - 1);
 
     constexpr float pi = Math::PI;
     constexpr float halfPi = Math::PI * 0.5f;
 
     for (uint32_t ring = 0; ring < rings; ++ring) {
+        const auto ringF = static_cast<float>(ring);
         for (uint32_t sector = 0; sector < sectors; ++sector) {
-            const float y = Math::sin(-halfPi + pi * ring * r);
-            const float x = Math::cos(TWO_PI * sector * s) * Math::sin(pi * ring * r);
-            const float z = Math::sin(TWO_PI * sector * s) * Math::sin(pi * ring * r);
+            const auto sectorF = static_cast<float>(sector);
+            const float y = Math::sin(-halfPi + pi * ringF * r);
+            const float x = Math::cos(TWO_PI * sectorF * s) * Math::sin(pi * ringF * r);
+            const float z = Math::sin(TWO_PI * sectorF * s) * Math::sin(pi * ringF * r);
 
             vertices.emplace_back(x * radius, y * radius, z * radius);
             normals.emplace_back(x, y, z);
-            uvs.emplace_back(sector * s, ring * r);
+            uvs.emplace_back(sectorF * s, ringF * r);
 
             if (ring < rings - 1) {
                 const uint32_t curRow = ring * sectors;
                 const uint32_t nextRow = (ring + 1) * sectors;
                 const uint32_t nextS = (sector + 1) % sectors;
 
-                indices.emplace_back(curRow + sector);
-                indices.emplace_back(nextRow + sector);
-                indices.emplace_back(nextRow + nextS);
+                indices.push_back(curRow + sector);
+                indices.push_back(nextRow + sector);
+                indices.push_back(nextRow + nextS);
 
-                indices.emplace_back(curRow + sector);
-                indices.emplace_back(nextRow + nextS);
-                indices.emplace_back(curRow + nextS);
+                indices.push_back(curRow + sector);
+                indices.push_back(nextRow + nextS);
+                indices.push_back(curRow + nextS);
             }
         }
     }
@@ -237,7 +239,7 @@ void GenerateConeGeometry(float radius, float length, uint32_t sectors, Geometry
     vector<Math::Vec2>& uvs = geometry.uvs;
     vector<uint32_t>& indices = geometry.indices;
 
-    const float s = (sectors > 0) ? (1.0f / sectors) : 1.0f;
+    const float s = (sectors > 0U) ? (1.0f / static_cast<float>(sectors)) : 1.0f;
 
     const size_t maxVertexCount = (2 * static_cast<size_t>(sectors)) + 2u;
     const size_t maxIndexCount = static_cast<size_t>(sectors) * 6u;
@@ -257,8 +259,9 @@ void GenerateConeGeometry(float radius, float length, uint32_t sectors, Geometry
     // Bottom ring vertices and side triangles, with given radius
     const uint32_t startVertex = 1U;
     for (uint32_t idx = 0; idx < sectors; ++idx) {
-        const float x = Math::cos(idx * s * TWO_PI);
-        const float y = Math::sin(idx * s * TWO_PI);
+        const auto idxF = static_cast<float>(idx);
+        const float x = Math::cos(idxF * s * TWO_PI);
+        const float y = Math::sin(idxF * s * TWO_PI);
         unitCoords.emplace_back(x, y);
 
         vertices.emplace_back(x * radius, y * radius, length);
@@ -288,7 +291,7 @@ vector<Math::Vec3> GenerateTorusSlices(float minorRadius, uint32_t minorSectors,
     vector<Math::Vec3> tubeSlice;
     tubeSlice.reserve(minorSectors);
     for (uint32_t tube = 0; tube < minorSectors; tube++) {
-        const float minorRadians = tube * minorStep;
+        const float minorRadians = static_cast<float>(tube) * minorStep;
         const float x = 0.0f;
         const float y = Math::cos(minorRadians) * minorRadius;
         const float z = Math::sin(minorRadians) * minorRadius;
@@ -305,8 +308,8 @@ void GenerateTorusGeometry(
     vector<Math::Vec2>& uvs = geometry.uvs;
     vector<uint32_t>& indices = geometry.indices;
 
-    const float majorStep = TWO_PI / majorSectors;
-    const float minorStep = TWO_PI / minorSectors;
+    const float majorStep = TWO_PI / static_cast<float>(majorSectors);
+    const float minorStep = TWO_PI / static_cast<float>(minorSectors);
 
     const size_t maxVertexCount = static_cast<size_t>(majorSectors) * static_cast<size_t>(minorSectors);
     const size_t maxIndexCount = maxVertexCount * 6u;
@@ -320,7 +323,7 @@ void GenerateTorusGeometry(
 
     uint32_t currentVertexIndex = 0;
     for (uint32_t ring = 0; ring < majorSectors; ring++) {
-        const float majorRadians = ring * majorStep;
+        const float majorRadians = static_cast<float>(ring) * majorStep;
         const auto rotation = Math::AngleAxis(majorRadians, { 0.0f, 1.0f, 0.0f });
         const auto translation = Math::Vec3(0.0f, 0.0f, 1.0f) * majorRadius;
 
@@ -329,11 +332,11 @@ void GenerateTorusGeometry(
 
             const auto tubeCenter = rotation * translation;
 
-            vertices.emplace_back(rotation * ringVertex + tubeCenter);
+            vertices.push_back(rotation * ringVertex + tubeCenter);
 
-            normals.emplace_back(Math::Normalize(rotation * ringVertex));
+            normals.push_back(Math::Normalize(rotation * ringVertex));
 
-            const float minorRadians = vertexIndex * minorStep;
+            const float minorRadians = static_cast<float>(vertexIndex) * minorStep;
             const float tx = 1.0f - Math::abs(majorRadians / TWO_PI * 2.0f - 1.0f);
             const float ty = 1.0f - Math::abs(minorRadians / TWO_PI * 2.0f - 1.0f);
             uvs.emplace_back(tx, ty);
@@ -343,13 +346,13 @@ void GenerateTorusGeometry(
             const uint32_t i2 = (i0 + minorSectors) % maxVertexCount;
             const uint32_t i3 = (i2 + 1) % maxVertexCount;
 
-            indices.emplace_back(i0);
-            indices.emplace_back(i1);
-            indices.emplace_back(i2);
+            indices.push_back(i0);
+            indices.push_back(i1);
+            indices.push_back(i2);
 
-            indices.emplace_back(i1);
-            indices.emplace_back(i3);
-            indices.emplace_back(i2);
+            indices.push_back(i1);
+            indices.push_back(i3);
+            indices.push_back(i2);
 
             currentVertexIndex++;
         }
@@ -363,61 +366,55 @@ void CalculateTangentImpl(const array_view<const IndexType>& indices, const arra
     array_view<Math::Vec4>& outTangents)
 {
     // http://www.terathon.com/code/tangent.html
-    vector<Math::Vec3> tan1, tan2;
-    tan1.resize(positions.size(), { 0, 0, 0 });
-    tan2.resize(positions.size(), { 0, 0, 0 });
+    vector<Math::Vec3> tan(positions.size(), { 0, 0, 0 });
+    vector<Math::Vec3> bitan(positions.size(), { 0, 0, 0 });
 
     for (size_t i = 0; i < indices.size(); i += 3u) {
         const IndexType aa = indices[i + 0u];
         const IndexType bb = indices[i + 1u];
         const IndexType cc = indices[i + 2u];
 
-        const Math::Vec3& v1 = positions[aa];
-        const Math::Vec3& v2 = positions[bb];
-        const Math::Vec3& v3 = positions[cc];
+        const Math::Vec2& uv1 = uvs[aa];
+        const Math::Vec2& uv2 = uvs[bb];
+        const Math::Vec2& uv3 = uvs[cc];
 
-        const Math::Vec2 uv1 = uvs[aa];
-        const Math::Vec2 uv2 = uvs[bb];
-        const Math::Vec2 uv3 = uvs[cc];
+        const auto st1 = uv2 - uv1;
+        const auto st2 = uv3 - uv1;
 
-        const float x1 = v2.x - v1.x;
-        const float x2 = v3.x - v1.x;
-        const float y1 = v2.y - v1.y;
-        const float y2 = v3.y - v1.y;
-        const float z1 = v2.z - v1.z;
-        const float z2 = v3.z - v1.z;
-
-        const float s1 = uv2.x - uv1.x;
-        const float s2 = uv3.x - uv1.x;
-        const float t1 = uv2.y - uv1.y;
-        const float t2 = uv3.y - uv1.y;
-
-        auto d = (s1 * t2 - s2 * t1);
+        auto d = Math::Cross(st1, st2);
         if (Math::abs(d) < Math::EPSILON) {
             d = Math::EPSILON;
         }
         const float r = 1.0f / d;
-        const Math::Vec3 sdir { (t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r };
-        const Math::Vec3 tdir { (s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r };
 
-        tan1[aa] += sdir;
-        tan1[bb] += sdir;
-        tan1[cc] += sdir;
+        const Math::Vec3& v1 = positions[aa];
+        const Math::Vec3& v2 = positions[bb];
+        const Math::Vec3& v3 = positions[cc];
 
-        tan2[aa] += tdir;
-        tan2[bb] += tdir;
-        tan2[cc] += tdir;
+        const auto e1 = v2 - v1;
+        const auto e2 = v3 - v1;
+
+        const Math::Vec3 sdir { (e1 * st2.y - e2 * st1.y) * r };
+        tan[aa] += sdir;
+        tan[bb] += sdir;
+        tan[cc] += sdir;
+
+        const Math::Vec3 tdir { (e2 * st1.x - e1 * st2.x) * r };
+
+        bitan[aa] += tdir;
+        bitan[bb] += tdir;
+        bitan[cc] += tdir;
     }
 
     for (size_t i = 0; i < positions.size(); i++) {
         const Math::Vec3& n = normals[i];
-        const Math::Vec3& t = tan1[i];
+        const Math::Vec3& t = tan[i];
 
         // Gram-Schmidt orthogonalize
         const Math::Vec3 tmp = Math::Normalize(t - n * Math::Dot(n, t));
 
         // Calculate handedness
-        const float w = (Math::Dot(Math::Cross(n, t), tan2[i]) < 0.0F) ? 1.0F : -1.0F;
+        const float w = (Math::Dot(Math::Cross(n, t), bitan[i]) < 0.0F) ? 1.0F : -1.0F;
 
         outTangents[i] = Math::Vec4(tmp.x, tmp.y, tmp.z, w);
     }
@@ -444,17 +441,39 @@ void MeshUtil::CalculateTangents(const array_view<const uint8_t>& indices,
     CalculateTangentImpl<uint8_t>(indices, positions, normals, uvs, outTangents);
 }
 
+template<typename T>
+constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexcept
+{
+    Format format = BASE_FORMAT_UNDEFINED;
+    if constexpr (is_same_v<T, Math::Vec2>) {
+        format = BASE_FORMAT_R32G32_SFLOAT;
+    } else if constexpr (is_same_v<T, Math::Vec3>) {
+        format = BASE_FORMAT_R32G32B32_SFLOAT;
+    } else if constexpr (is_same_v<T, Math::Vec4>) {
+        format = BASE_FORMAT_R32G32B32A32_SFLOAT;
+    } else if constexpr (is_same_v<T, uint16_t>) {
+        format = BASE_FORMAT_R16_UINT;
+    } else if constexpr (is_same_v<T, uint32_t>) {
+        format = BASE_FORMAT_R32_UINT;
+    }
+    return IMeshBuilder::DataBuffer { format, sizeof(T),
+        { reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T) } };
+}
+
+template<typename T, size_t N>
+constexpr inline IMeshBuilder::DataBuffer FillData(const T (&c)[N]) noexcept
+{
+    return FillData(array_view(c, N));
+}
+
+template<typename T>
+constexpr inline IMeshBuilder::DataBuffer FillData(const vector<T>& c) noexcept
+{
+    return FillData(array_view<const T> { c });
+}
+
 Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Entity material, float width, float depth)
 {
-    IMeshBuilder::Submesh submesh;
-    submesh.material = material;
-    submesh.vertexCount = 6u;
-    submesh.indexCount = 6u;
-    submesh.indexType = CORE_INDEX_TYPE_UINT16;
-    submesh.tangents = true;
-
-    auto builder = InitializeBuilder(submesh);
-
     const float extentX = width * 0.5f;
     const float extentZ = depth * 0.5f;
 
@@ -467,21 +486,36 @@ Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Enti
         Math::Vec3(extentX, 0.0f, extentZ),
         Math::Vec3(extentX, 0.0f, -extentZ),
     };
+    vector<Math::Vec4> tangents(countof(pos));
+    {
+        constexpr auto indicesView = array_view(PLANE_IND);
+        const auto positionsView = array_view(pos);
+        constexpr auto normalsView = array_view(PLANE_NORM);
+        constexpr auto uvsView = array_view(PLANE_UV);
 
-    constexpr auto indicesView = array_view(PLANE_IND);
-    const auto positionsView = array_view(pos);
-    constexpr auto normalsView = array_view(PLANE_NORM);
-    constexpr auto uvsView = array_view(PLANE_UV);
+        CalculateTangents(indicesView, positionsView, normalsView, uvsView, tangents);
+    }
 
-    vector<Math::Vec4> tangents(positionsView.size());
-    CalculateTangents(indicesView, positionsView, normalsView, uvsView, tangents);
+    IMeshBuilder::Submesh submesh;
+    submesh.material = material;
+    submesh.vertexCount = 6u;
+    submesh.indexCount = 6u;
+    submesh.indexType = CORE_INDEX_TYPE_UINT16;
+    submesh.tangents = true;
 
-    builder->SetVertexData(0, positionsView, normalsView, uvsView, array_view<const Math::Vec2>(), tangents,
-        array_view<const Math::Vec4>());
+    auto builder = InitializeBuilder(submesh);
 
-    builder->CalculateAABB(0, positionsView);
-    builder->SetIndexData(
-        0, array_view(reinterpret_cast<const uint8_t*>(indicesView.data()), indicesView.size_bytes()));
+    auto positionData = FillData(pos);
+    auto normalData = FillData(PLANE_NORM);
+    auto uvData = FillData(PLANE_UV);
+    auto tangentData = FillData(tangents);
+    IMeshBuilder::DataBuffer dummy {};
+    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
+
+    builder->CalculateAABB(0, positionData);
+
+    auto indices = FillData(PLANE_IND);
+    builder->SetIndexData(0, indices);
 
     return CreateMesh(ecs, *builder, name);
 }
@@ -495,6 +529,9 @@ Entity MeshUtil::GenerateSphereMesh(
     vector<uint32_t> indices;
     GenerateSphereGeometry(radius, rings, sectors, { vertices, normals, uvs, indices });
 
+    vector<Math::Vec4> tangents(vertices.size());
+    CalculateTangents(indices, vertices, normals, uvs, tangents);
+
     IMeshBuilder::Submesh submesh;
     submesh.material = material;
     submesh.vertexCount = static_cast<uint32_t>(vertices.size());
@@ -504,26 +541,17 @@ Entity MeshUtil::GenerateSphereMesh(
 
     auto builder = InitializeBuilder(submesh);
 
-    vector<Math::Vec4> tangents(vertices.size());
-    CalculateTangents(indices, vertices, normals, uvs, tangents);
+    auto positionData = FillData(vertices);
+    auto normalData = FillData(normals);
+    auto uvData = FillData(uvs);
+    auto tangentData = FillData(tangents);
+    IMeshBuilder::DataBuffer dummy {};
+    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
 
-    builder->SetVertexData(
-        0, vertices, normals, uvs, array_view<const Math::Vec2>(), tangents, array_view<const Math::Vec4>());
+    builder->CalculateAABB(0, positionData);
 
-    builder->CalculateAABB(0, vertices);
-    if (submesh.indexType == CORE_INDEX_TYPE_UINT16) {
-        vector<uint16_t> indices16(indices.size());
-        std::transform(indices.begin(), indices.end(), indices16.begin(),
-            [](const uint32_t& v) { return static_cast<uint16_t>(v); });
-
-        auto indicesView16 = array_view<const uint16_t>(indices16);
-        builder->SetIndexData(
-            0, array_view(reinterpret_cast<const uint8_t*>(indicesView16.data()), indicesView16.size_bytes()));
-    } else {
-        auto indicesView = array_view<const uint32_t>(indices);
-        builder->SetIndexData(
-            0, array_view(reinterpret_cast<const uint8_t*>(indicesView.data()), indicesView.size_bytes()));
-    }
+    auto indexData = FillData(indices);
+    builder->SetIndexData(0, indexData);
 
     return CreateMesh(ecs, *builder, name);
 }
@@ -544,28 +572,22 @@ Entity MeshUtil::GenerateConeMesh(
     submesh.indexType = submesh.vertexCount <= UINT16_MAX ? CORE_INDEX_TYPE_UINT16 : CORE_INDEX_TYPE_UINT32;
     submesh.tangents = true;
 
-    auto builder = InitializeBuilder(submesh);
-
     vector<Math::Vec4> tangents(vertices.size());
     CalculateTangents(indices, vertices, normals, uvs, tangents);
 
-    builder->SetVertexData(
-        0, vertices, normals, uvs, array_view<const Math::Vec2>(), tangents, array_view<const Math::Vec4>());
+    auto builder = InitializeBuilder(submesh);
 
-    builder->CalculateAABB(0, vertices);
-    if (submesh.indexType == CORE_INDEX_TYPE_UINT16) {
-        vector<uint16_t> indices16(indices.size());
-        std::transform(indices.begin(), indices.end(), indices16.begin(),
-            [](const uint32_t& v) { return static_cast<uint16_t>(v); });
+    auto positionData = FillData(vertices);
+    auto normalData = FillData(normals);
+    auto uvData = FillData(uvs);
+    auto tangentData = FillData(tangents);
+    IMeshBuilder::DataBuffer dummy {};
+    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
 
-        auto indicesView16 = array_view<const uint16_t>(indices16);
-        builder->SetIndexData(
-            0, array_view(reinterpret_cast<const uint8_t*>(indicesView16.data()), indicesView16.size_bytes()));
-    } else {
-        auto indicesView = array_view<const uint32_t>(indices);
-        builder->SetIndexData(
-            0, array_view(reinterpret_cast<const uint8_t*>(indicesView.data()), indicesView.size_bytes()));
-    }
+    builder->CalculateAABB(0, positionData);
+
+    auto indexData = FillData(indices);
+    builder->SetIndexData(0, indexData);
 
     return CreateMesh(ecs, *builder, name);
 }
@@ -579,6 +601,9 @@ Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Enti
     vector<uint32_t> indices;
     GenerateTorusGeometry(majorRadius, minorRadius, majorSectors, minorSectors, { vertices, normals, uvs, indices });
 
+    vector<Math::Vec4> tangents(vertices.size());
+    CalculateTangents(indices, vertices, normals, uvs, tangents);
+
     IMeshBuilder::Submesh submesh;
     submesh.material = material;
     submesh.vertexCount = static_cast<uint32_t>(vertices.size());
@@ -588,26 +613,17 @@ Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Enti
 
     auto builder = InitializeBuilder(submesh);
 
-    vector<Math::Vec4> tangents(vertices.size());
-    CalculateTangents(indices, vertices, normals, uvs, tangents);
+    auto positionData = FillData(vertices);
+    auto normalData = FillData(normals);
+    auto uvData = FillData(uvs);
+    auto tangentData = FillData(tangents);
+    IMeshBuilder::DataBuffer dummy {};
+    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
 
-    builder->SetVertexData(
-        0, vertices, normals, uvs, array_view<const Math::Vec2>(), tangents, array_view<const Math::Vec4>());
+    builder->CalculateAABB(0, positionData);
 
-    builder->CalculateAABB(0, vertices);
-    if (submesh.indexType == CORE_INDEX_TYPE_UINT16) {
-        vector<uint16_t> indices16(indices.size());
-        std::transform(indices.begin(), indices.end(), indices16.begin(),
-            [](const uint32_t& v) { return static_cast<uint16_t>(v); });
-
-        auto indicesView16 = array_view<const uint16_t>(indices16);
-        builder->SetIndexData(
-            0, array_view(reinterpret_cast<const uint8_t*>(indicesView16.data()), indicesView16.size_bytes()));
-    } else {
-        auto indicesView = array_view<const uint32_t>(indices);
-        builder->SetIndexData(
-            0, array_view(reinterpret_cast<const uint8_t*>(indicesView.data()), indicesView.size_bytes()));
-    }
+    auto indexData = FillData(indices);
+    builder->SetIndexData(0, indexData);
 
     return CreateMesh(ecs, *builder, name);
 }
@@ -615,6 +631,15 @@ Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Enti
 Entity MeshUtil::GenerateCubeMesh(
     const IEcs& ecs, const string_view name, Entity material, float width, float height, float depth)
 {
+    vector<Math::Vec3> positions;
+    vector<Math::Vec3> normals;
+    vector<Math::Vec2> uvs;
+    vector<uint16_t> indices;
+    GenerateCubeGeometry(width, height, depth, { positions, normals, uvs, indices });
+
+    vector<Math::Vec4> tangents(positions.size());
+    CalculateTangents(indices, positions, normals, uvs, tangents);
+
     IMeshBuilder::Submesh submesh;
     submesh.material = material;
     submesh.vertexCount = static_cast<uint32_t>(countof(CUBE_INDICES));
@@ -624,24 +649,17 @@ Entity MeshUtil::GenerateCubeMesh(
 
     auto builder = InitializeBuilder(submesh);
 
-    vector<Math::Vec3> positions;
-    vector<Math::Vec3> normals;
-    vector<Math::Vec2> uvs;
-    vector<uint16_t> indices;
-    GenerateCubeGeometry(width, height, depth, { positions, normals, uvs, indices });
+    auto positionData = FillData(positions);
+    auto normalData = FillData(normals);
+    auto uvData = FillData(uvs);
+    auto tangentData = FillData(tangents);
+    IMeshBuilder::DataBuffer dummy {};
+    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
 
-    const auto indicesView = array_view<const uint16_t>(indices);
-    const auto positionsView = array_view<const Math::Vec3>(positions);
+    builder->CalculateAABB(0, positionData);
 
-    vector<Math::Vec4> tangents(positions.size());
-    CalculateTangents(indices, positions, normals, uvs, tangents);
-
-    builder->SetVertexData(
-        0, positions, normals, uvs, array_view<const Math::Vec2>(), tangents, array_view<const Math::Vec4>());
-
-    builder->CalculateAABB(0, positionsView);
-    builder->SetIndexData(
-        0, array_view(reinterpret_cast<const uint8_t*>(indicesView.data()), indicesView.size_bytes()));
+    auto indexData = FillData(indices);
+    builder->SetIndexData(0, indexData);
 
     return CreateMesh(ecs, *builder, name);
 }

@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(TRANSFORM_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define TRANSFORM_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_TRANSFORM_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_TRANSFORM_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>

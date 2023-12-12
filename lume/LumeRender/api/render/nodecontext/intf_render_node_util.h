@@ -16,8 +16,9 @@
 #ifndef API_RENDER_RENDER_NODE_UTIL_H
 #define API_RENDER_RENDER_NODE_UTIL_H
 
-#include <base/containers/string_view.h>
+#include <base/containers/array_view.h>
 #include <base/containers/unique_ptr.h>
+#include <render/datastore/intf_render_data_store_post_process.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
@@ -67,6 +68,13 @@ public:
      */
     virtual DescriptorCounts GetDescriptorCounts(const PipelineLayout& pipelineLayout) const = 0;
 
+    /** Get descriptor counts from desriptor set layout bindings.
+     * @param bindings Bindings.
+     * @return Descriptor counts struct used to pass for reserving render node specific descriptor sets.
+     */
+    virtual DescriptorCounts GetDescriptorCounts(
+        const BASE_NS::array_view<DescriptorSetLayoutBinding> bindings) const = 0;
+
     /** Create pipeline descriptor set binder.
      * @param renderNodeContextMgr Access to render node resource managers.
      * @param pipelineLayout Pipeline layout.
@@ -100,6 +108,13 @@ public:
      */
     virtual RenderPostProcessConfiguration GetRenderPostProcessConfiguration(
         const PostProcessConfiguration& postProcessConfiguration) const = 0;
+
+    /** Create post process configuration for shader usage.
+     * @param postProcessConfiguration Post process configuration.
+     * @return A RenderPostProcessConfiguration.
+     */
+    virtual RenderPostProcessConfiguration GetRenderPostProcessConfiguration(
+        const IRenderDataStorePostProcess::GlobalFactors& globalFactors) const = 0;
 
     /** Has resources in render pass that might change every frame.
      * For example broadcasted resources from different render nodes might change every frame.

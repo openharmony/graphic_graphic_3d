@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <base/containers/vector.h>
 #include <render/intf_render_context.h>
@@ -63,7 +63,7 @@ inline void LogPhysicalDeviceProperties(const VkPhysicalDeviceProperties& physic
     PLUGIN_LOG_D("vendor id: %x", physicalDeviceProperties.vendorID);
     PLUGIN_LOG_D("device id: %x", physicalDeviceProperties.deviceID);
     PLUGIN_LOG_D("device name: %s", physicalDeviceProperties.deviceName);
-    PLUGIN_LOG_D("device type: %u", physicalDeviceProperties.deviceType);
+    PLUGIN_LOG_D("device type: %d", physicalDeviceProperties.deviceType);
     PLUGIN_LOG_D("timestampPeriod: %f", physicalDeviceProperties.limits.timestampPeriod);
 }
 
@@ -209,6 +209,9 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
 #endif
 
     vector<const char*> extensions = { VK_KHR_SURFACE_EXTENSION_NAME, GetPlatformSurfaceName() };
+#ifdef __APPLE__
+    extensions.push_back("VK_KHR_portability_enumeration");
+#endif
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     if (debugExtension) {
         extensions.push_back(debugExtension);
@@ -244,17 +247,18 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
         "VK_LAYER_KHRONOS_validation",
 #endif
     };
-    if (!std::all_of(layers.begin(), layers.end(), [&instanceLayers](auto const requiredLayer) {
-            const bool supported =
-                std::any_of(instanceLayers.begin(), instanceLayers.end(), [&requiredLayer](const auto& supportedLayer) {
-                    return (std::strcmp(supportedLayer.layerName, requiredLayer) == 0);
-                });
-            if (!supported) {
-                PLUGIN_LOG_E("some layers are not supported! Layer name: %s", requiredLayer);
-            }
-            return supported;
-        })) {
-    }
+    layers.erase(std::remove_if(layers.begin(), layers.end(),
+                     [&instanceLayers](const char* requiredLayer) {
+                         const bool supported = std::any_of(instanceLayers.begin(), instanceLayers.end(),
+                             [&requiredLayer](const VkLayerProperties& supportedLayer) {
+                                 return (std::strcmp(supportedLayer.layerName, requiredLayer) == 0);
+                             });
+                         if (!supported) {
+                             PLUGIN_LOG_E("some layers are not supported! Layer name: %s", requiredLayer);
+                         }
+                         return !supported;
+                     }),
+        layers.cend());
 
     const uint32_t apiVersion = GetInstanceApiVersion();
     wrapper.apiMajor = VK_VERSION_MAJOR(apiVersion);
@@ -276,12 +280,16 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
     const VkInstanceCreateInfo instanceCreateInfo {
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // sType
         nullptr,                                // pNext
-        0,                                      // flags
-        &applicationInfo,                       // pApplicationInfo
-        (uint32_t)layers.size(),                // enabledLayerCount
-        layers.data(),                          // ppEnabledLayerNames
-        (uint32_t)extensions.size(),            // enabledExtensionCount
-        extensions.data(),                      // ppEnabledExtensionNames
+#ifdef __APPLE__
+        VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR, // flags
+#else
+        0, // flags
+#endif
+        &applicationInfo,            // pApplicationInfo
+        (uint32_t)layers.size(),     // enabledLayerCount
+        layers.data(),               // ppEnabledLayerNames
+        (uint32_t)extensions.size(), // enabledExtensionCount
+        extensions.data(),           // ppEnabledExtensionNames
     };
 
     VALIDATE_VK_RESULT(vkCreateInstance(&instanceCreateInfo, // pCreateInfo
@@ -405,12 +413,15 @@ PhysicalDeviceWrapper CreateFunctionsVk::CreatePhysicalDevice(
     uint32_t physicalDeviceCount = 0;
     VALIDATE_VK_RESULT(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr));
 
-    VkPhysicalDevice physicalDevice { VK_NULL_HANDLE };
-
     uint32_t usedPhysicalDeviceCount { 1 }; // only one device, the first
-    const VkResult result = vkEnumeratePhysicalDevices(instance, &usedPhysicalDeviceCount, &physicalDevice);
+    // some drivers write out physicalDeviceCount instead of usedPhysicalDeviceCount VkPhysicalDevices so we need enough
+    // space
+    vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount, VK_NULL_HANDLE);
+    const VkResult result = vkEnumeratePhysicalDevices(instance, &usedPhysicalDeviceCount, physicalDevices.data());
     PLUGIN_UNUSED(result);
     PLUGIN_ASSERT_MSG((result == VK_SUCCESS || result == VK_INCOMPLETE), "vulkan device enumeration failed");
+
+    const VkPhysicalDevice physicalDevice = physicalDevices[0];
 
     VkPhysicalDeviceProperties physicalDeviceProperties;
     vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
@@ -556,10 +567,9 @@ void CreateFunctionsVk::DestroySurface(VkInstance instance, VkSurfaceKHR surface
 
 void CreateFunctionsVk::DestroySwapchain(VkDevice device, VkSwapchainKHR swapchain)
 {
-    PLUGIN_ASSERT_MSG(device, "null device in DestroySwapchain()");
-    PLUGIN_ASSERT_MSG(swapchain, "null swapchain in DestroySwapchain()");
-
-    vkDestroySwapchainKHR(device, swapchain, nullptr);
+    if (device && swapchain) {
+        vkDestroySwapchainKHR(device, swapchain, nullptr);
+    }
 }
 
 VkPipelineCache CreateFunctionsVk::CreatePipelineCache(VkDevice device, array_view<const uint8_t> initialData)

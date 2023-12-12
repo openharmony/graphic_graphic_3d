@@ -37,7 +37,7 @@ class LayerComponentManager final : public BaseManager<LayerComponent, ILayerCom
     const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
-    explicit LayerComponentManager(IEcs& ecs)
+    LayerComponentManager(IEcs& ecs)
         : BaseManager<LayerComponent, ILayerComponentManager>(ecs, CORE_NS::GetName<LayerComponent>())
     {}
     ~LayerComponentManager() = default;

@@ -19,6 +19,9 @@
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
+#include <core/io/intf_file.h>
 #include <core/io/intf_file_system.h>
 #include <core/namespace.h>
 
@@ -41,7 +44,7 @@ public:
 
     void RemoveSearchPath(BASE_NS::string_view destination);
 
-    IDirectory::Entry GetEntry(BASE_NS::string_view uri) override;
+    IDirectory::Entry GetEntry(BASE_NS::string_view path) override;
     IFile::Ptr OpenFile(BASE_NS::string_view path) override;
     IFile::Ptr CreateFile(BASE_NS::string_view path) override;
     bool DeleteFile(BASE_NS::string_view path) override;
@@ -54,8 +57,8 @@ public:
 
     BASE_NS::vector<BASE_NS::string> GetUriPaths(BASE_NS::string_view uri) const override;
 
-    void AppendSearchPath(BASE_NS::string_view uri);
-    void PrependSearchPath(BASE_NS::string_view uri);
+    void AppendSearchPath(BASE_NS::string_view path);
+    void PrependSearchPath(BASE_NS::string_view path);
 
 protected:
     void Destroy() override

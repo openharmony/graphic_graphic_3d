@@ -33,9 +33,22 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-void CreateAttachmentDescriptions(const array_view<const RenderPassDesc::AttachmentDesc>& attachments,
-    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment>& compatibilityAttachmentDescs,
-    const array_view<const ImageLayout>& initialImageLayouts, const array_view<const ImageLayout>& finalImageLayouts,
+inline constexpr Size2D LocalClamp(const Size2D val, const Size2D minVal, const Size2D maxVal)
+{
+    return Size2D { Math::max(minVal.width, Math::min(val.width, maxVal.width)),
+        Math::max(minVal.height, Math::min(val.height, maxVal.height)) };
+}
+
+inline Size2D ClampShadingRateAttachmentTexelSize(const DeviceVk& deviceVk, const Size2D val)
+{
+    const FragmentShadingRateProperties& fsrp = deviceVk.GetCommonDeviceProperties().fragmentShadingRateProperties;
+    return LocalClamp(
+        val, fsrp.minFragmentShadingRateAttachmentTexelSize, fsrp.maxFragmentShadingRateAttachmentTexelSize);
+}
+
+void CreateAttachmentDescriptions(const array_view<const RenderPassDesc::AttachmentDesc> attachments,
+    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment> compatibilityAttachmentDescs,
+    const array_view<const ImageLayout> initialImageLayouts, const array_view<const ImageLayout> finalImageLayouts,
     array_view<VkAttachmentDescription> newAttachments)
 {
     PLUGIN_ASSERT(attachments.size() == compatibilityAttachmentDescs.size());
@@ -67,9 +80,9 @@ void CreateAttachmentDescriptions(const array_view<const RenderPassDesc::Attachm
     }
 }
 
-void CreateAttachmentDescriptions2(const array_view<const RenderPassDesc::AttachmentDesc>& attachments,
-    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment>& compatibilityAttachmentDescs,
-    const array_view<const ImageLayout>& initialImageLayouts, const array_view<const ImageLayout>& finalImageLayouts,
+void CreateAttachmentDescriptions2(const array_view<const RenderPassDesc::AttachmentDesc> attachments,
+    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment> compatibilityAttachmentDescs,
+    const array_view<const ImageLayout> initialImageLayouts, const array_view<const ImageLayout> finalImageLayouts,
     array_view<VkAttachmentDescription2KHR> newAttachments)
 {
     PLUGIN_ASSERT(attachments.size() == compatibilityAttachmentDescs.size());
@@ -84,7 +97,11 @@ void CreateAttachmentDescriptions2(const array_view<const RenderPassDesc::Attach
         const auto& compatibilityAttachmentRef = compatibilityAttachmentDescs[idx];
         const ImageLayout initialLayout = *itInitialImageLayouts++;
         const ImageLayout finalLayout = *itFinalImageLayouts++;
-        PLUGIN_ASSERT(compatibilityAttachmentRef.format != VkFormat::VK_FORMAT_UNDEFINED);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if (compatibilityAttachmentRef.format == VkFormat::VK_FORMAT_UNDEFINED) {
+            PLUGIN_LOG_E("RENDER_VALIDATION: VK_FORMAT_UNDEFINED with PSO attachment descriptions");
+        }
+#endif
 
         constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags { 0 };
         *itNewAttachments++ = {
@@ -103,8 +120,8 @@ void CreateAttachmentDescriptions2(const array_view<const RenderPassDesc::Attach
     }
 }
 
-void CreateAttachmentDescriptionsCompatibility(const array_view<const RenderPassDesc::AttachmentDesc>& attachments,
-    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment>& compatibilityAttachmentDescs,
+void CreateAttachmentDescriptionsCompatibility(const array_view<const RenderPassDesc::AttachmentDesc> attachments,
+    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment> compatibilityAttachmentDescs,
     array_view<VkAttachmentDescription> newAttachments)
 {
     PLUGIN_ASSERT(attachments.size() == compatibilityAttachmentDescs.size());
@@ -129,8 +146,8 @@ void CreateAttachmentDescriptionsCompatibility(const array_view<const RenderPass
     }
 }
 
-void CreateAttachmentDescriptionsCompatibility2(const array_view<const RenderPassDesc::AttachmentDesc>& attachments,
-    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment>& compatibilityAttachmentDescs,
+void CreateAttachmentDescriptionsCompatibility2(const array_view<const RenderPassDesc::AttachmentDesc> attachments,
+    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment> compatibilityAttachmentDescs,
     array_view<VkAttachmentDescription2KHR> newAttachments)
 {
     PLUGIN_ASSERT(attachments.size() == compatibilityAttachmentDescs.size());
@@ -138,8 +155,11 @@ void CreateAttachmentDescriptionsCompatibility2(const array_view<const RenderPas
     auto itNewAttachments = newAttachments.begin();
     for (size_t idx = 0; idx < attachments.size(); ++idx) {
         const auto& compatibilityAttachmentRef = compatibilityAttachmentDescs[idx];
-        PLUGIN_ASSERT(compatibilityAttachmentRef.format != VkFormat::VK_FORMAT_UNDEFINED);
-
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if (compatibilityAttachmentRef.format == VkFormat::VK_FORMAT_UNDEFINED) {
+            PLUGIN_LOG_E("RENDER_VALIDATION: VK_FORMAT_UNDEFINED with PSO attachment descriptions");
+        }
+#endif
         constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags { 0 };
         *itNewAttachments++ = {
             VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2_KHR,        // sType
@@ -163,6 +183,11 @@ void CreateAttachmentReferences(const uint32_t* attachmentIndices,
     VkAttachmentReference* newAttachments)
 {
     PLUGIN_ASSERT(newAttachments);
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (createCompatibility) {
+        PLUGIN_ASSERT(layouts == nullptr);
+    }
+#endif
     VkImageLayout imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_GENERAL;
     for (uint32_t idx = 0; idx < attachmentCount; ++idx) {
         const uint32_t attachmentIndex = attachmentIndices[idx];
@@ -177,23 +202,24 @@ void CreateAttachmentReferences(const uint32_t* attachmentIndices,
 }
 
 void CreateAttachmentReferences2(const uint32_t* attachmentIndices,
-    const ImageLayout* layouts, // can be null if compatibility
+    const ImageLayout* layouts, // null if compatibility
+    const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment> compatibilityAttachmentDescs,
     const uint32_t attachmentCount, const uint32_t attachmentStartIndex, const bool createCompatibility,
     VkAttachmentReference2KHR* newAttachments)
 {
     PLUGIN_ASSERT(newAttachments);
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (createCompatibility) {
+        PLUGIN_ASSERT(layouts == nullptr);
+    }
+#endif
     VkImageLayout imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_GENERAL;
     VkImageAspectFlags imageAspectFlags = 0;
     for (uint32_t idx = 0; idx < attachmentCount; ++idx) {
         const uint32_t attachmentIndex = attachmentIndices[idx];
+        imageAspectFlags = compatibilityAttachmentDescs[attachmentIndex].aspectFlags;
         if (!createCompatibility) {
-            const VkImageLayout imgLayout = (VkImageLayout)layouts[attachmentIndex];
-            imageLayout = imgLayout;
-            imageAspectFlags = ((imgLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) ||
-                                   (imgLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL))
-                                   ? (VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT |
-                                         VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT)
-                                   : VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+            imageLayout = (VkImageLayout)layouts[attachmentIndex];
         }
         newAttachments[attachmentStartIndex + idx] = {
             VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2_KHR, // sType
@@ -206,10 +232,10 @@ void CreateAttachmentReferences2(const uint32_t* attachmentIndices,
 }
 
 VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPassDesc& renderPassDesc,
-    const LowLevelRenderPassDataVk& lowLevelRenderPassData, const array_view<const RenderPassSubpassDesc>& subpassDescs,
-    const RenderPassAttachmentResourceStates* subpassResourceStates, // null when using compatibility
-    const RenderPassAttachmentResourceStates* inputResourceStates,   // null when using compatibility
-    const RenderPassImageLayouts* imageLayouts,                      // null when using compatibility
+    const LowLevelRenderPassDataVk& lowLevelRenderPassData, const array_view<const RenderPassSubpassDesc> subpassDescs,
+    const RenderPassAttachmentResourceStates* subpassResourceStates,
+    const RenderPassAttachmentResourceStates* inputResourceStates,
+    const RenderPassImageLayouts* imageLayouts, // null when using compatibility
     const uint32_t maxAttachmentReferenceCountPerSubpass, const bool createRenderPassCompatibility,
     RenderPassCreatorVk::RenderPassStorage1& rps1)
 {
@@ -241,10 +267,14 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
     auto& subpassDescriptions = rps1.subpassDescriptions;
     auto& subpassDependencies = rps1.subpassDependencies;
     auto& attachmentReferences = rps1.attachmentReferences;
+    auto& multiViewMasks = rps1.multiViewMasks;
     subpassDescriptions.resize(subpassCount);
     subpassDependencies.resize(subpassCount);
     attachmentReferences.resize(subpassCount * maxAttachmentReferenceCountPerSubpass);
+    multiViewMasks.clear();
+    multiViewMasks.resize(subpassCount);
 
+    bool hasMultiView = false;
     uint32_t srcSubpass = VK_SUBPASS_EXTERNAL;
     const RenderPassAttachmentResourceStates* srcResourceStates = inputResourceStates;
     for (uint32_t subpassIdx = 0; subpassIdx < subpassCount; ++subpassIdx) {
@@ -254,7 +284,8 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
         uint32_t referenceIndex = startReferenceIndex;
 
         VkAttachmentReference* inputAttachments = nullptr;
-        const ImageLayout* layouts = subpassResourceStates ? subpassResourceStates[subpassIdx].layouts : nullptr;
+        const ImageLayout* layouts =
+            (createRenderPassCompatibility) ? nullptr : subpassResourceStates[subpassIdx].layouts;
         if (subpassDesc.inputAttachmentCount > 0) {
             inputAttachments = &attachmentReferences[referenceIndex];
             CreateAttachmentReferences(subpassDesc.inputAttachmentIndices, layouts, subpassDesc.inputAttachmentCount,
@@ -288,6 +319,11 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
             referenceIndex += subpassDesc.depthAttachmentCount;
         }
 
+        multiViewMasks[subpassIdx] = subpassDesc.viewMask;
+        if (subpassDesc.viewMask > 0u) {
+            hasMultiView = true;
+        }
+
         constexpr VkSubpassDescriptionFlags subpassDescriptionFlags { 0 };
         subpassDescriptions[subpassIdx] = {
             subpassDescriptionFlags,                              // flags
@@ -303,19 +339,17 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
         };
 
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        // for compatibility mode we just need to pass the validation layer with bottom stage
-        VkPipelineStageFlags dstStageMask =
-            createRenderPassCompatibility ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : (VkFlags)0;
+        VkPipelineStageFlags dstStageMask = 0;
         VkAccessFlags srcAccessMask = 0;
         VkAccessFlags dstAccessMask = 0;
-        if (!createRenderPassCompatibility) {
+        {
             PLUGIN_ASSERT(srcResourceStates);
             const RenderPassAttachmentResourceStates& dstResourceStates = subpassResourceStates[subpassIdx];
             for (uint32_t attachmentIdx = 0; attachmentIdx < attachmentCount; ++attachmentIdx) {
-                srcStageMask |= srcResourceStates->states[attachmentIdx].pipelineStageFlags;
+                srcStageMask |= (VkPipelineStageFlagBits)srcResourceStates->states[attachmentIdx].pipelineStageFlags;
                 srcAccessMask |= srcResourceStates->states[attachmentIdx].accessFlags;
 
-                dstStageMask |= dstResourceStates.states[attachmentIdx].pipelineStageFlags;
+                dstStageMask |= (VkPipelineStageFlagBits)dstResourceStates.states[attachmentIdx].pipelineStageFlags;
                 dstAccessMask |= dstResourceStates.states[attachmentIdx].accessFlags;
             }
 
@@ -337,10 +371,27 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
         srcSubpass = dstSubpass;
     }
 
+    VkRenderPassMultiviewCreateInfo* pMultiviewCreateInfo = nullptr;
+    VkRenderPassMultiviewCreateInfo multiViewCreateInfo;
+    if (hasMultiView && deviceVk.GetCommonDeviceExtensions().multiView) {
+        PLUGIN_ASSERT(renderPassDesc.subpassCount == static_cast<uint32_t>(multiViewMasks.size()));
+        multiViewCreateInfo = {
+            VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO, // sType
+            nullptr,                                             // pNext
+            renderPassDesc.subpassCount,                         // subpassCount
+            multiViewMasks.data(),                               // pViewMasks
+            0u,                                                  // dependencyCount
+            nullptr,                                             // pViewOffsets
+            0u,                                                  // correlationMaskCount
+            nullptr,                                             // pCorrelationMasks
+        };
+        pMultiviewCreateInfo = &multiViewCreateInfo;
+    }
+
     constexpr VkRenderPassCreateFlags renderPassCreateFlags { 0 };
     const VkRenderPassCreateInfo renderPassCreateInfo {
         VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, // sType
-        nullptr,                                   // pNext
+        pMultiviewCreateInfo,                      // pNext
         renderPassCreateFlags,                     // flags
         attachmentCount,                           // attachmentCount
         attachmentDescriptions,                    // pAttachments
@@ -360,10 +411,10 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
 }
 
 VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPassDesc& renderPassDesc,
-    const LowLevelRenderPassDataVk& lowLevelRenderPassData, const array_view<const RenderPassSubpassDesc>& subpassDescs,
-    const RenderPassAttachmentResourceStates* subpassResourceStates, // null when using compatibility
-    const RenderPassAttachmentResourceStates* inputResourceStates,   // null when using compatibility
-    const RenderPassImageLayouts* imageLayouts,                      // null when using compatibility
+    const LowLevelRenderPassDataVk& lowLevelRenderPassData, const array_view<const RenderPassSubpassDesc> subpassDescs,
+    const RenderPassAttachmentResourceStates* subpassResourceStates,
+    const RenderPassAttachmentResourceStates* inputResourceStates,
+    const RenderPassImageLayouts* imageLayouts, // null when using compatibility
     const uint32_t maxAttachmentReferenceCountPerSubpass, const bool createRenderPassCompatibility,
     RenderPassCreatorVk::RenderPassStorage2& rps2)
 {
@@ -372,11 +423,11 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
     PLUGIN_ASSERT(attachmentCount <= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
 
     VkAttachmentDescription2KHR attachmentDescriptions[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
+    const auto compatibilityAttachments =
+        array_view(lowLevelRenderPassData.renderPassCompatibilityDesc.attachments, renderPassDesc.attachmentCount);
     {
         // add all attachments to attachmentDescriptions array
         const auto attachments = array_view(renderPassDesc.attachments, renderPassDesc.attachmentCount);
-        const auto compatibilityAttachments =
-            array_view(lowLevelRenderPassData.renderPassCompatibilityDesc.attachments, renderPassDesc.attachmentCount);
         const auto descriptions = array_view(attachmentDescriptions, countof(attachmentDescriptions));
         if (createRenderPassCompatibility) {
             CreateAttachmentDescriptionsCompatibility2(attachments, compatibilityAttachments, descriptions);
@@ -399,10 +450,15 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
     subpassDescriptions.resize(subpassCount);
     subpassDependencies.resize(subpassCount);
     subpassDescriptionsDepthStencilResolve.resize(subpassCount);
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+    auto& fragmentShadingRateAttachmentInfos = rps2.fragmentShadingRateAttachmentInfos;
+    fragmentShadingRateAttachmentInfos.resize(subpassCount);
+#endif
     attachmentReferences.resize(subpassCount * maxAttachmentReferenceCountPerSubpass);
 
     uint32_t srcSubpass = VK_SUBPASS_EXTERNAL;
     const RenderPassAttachmentResourceStates* srcResourceStates = inputResourceStates;
+    const bool supportsMultiView = deviceVk.GetCommonDeviceExtensions().multiView;
     for (uint32_t subpassIdx = 0; subpassIdx < subpassCount; ++subpassIdx) {
         const RenderPassSubpassDesc& subpassDesc = subpassDescs[subpassIdx];
 
@@ -410,68 +466,109 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
         uint32_t referenceIndex = startReferenceIndex;
 
         VkAttachmentReference2KHR* inputAttachments = nullptr;
-        const ImageLayout* layouts = subpassResourceStates ? subpassResourceStates[subpassIdx].layouts : nullptr;
+        const ImageLayout* layouts =
+            (createRenderPassCompatibility) ? nullptr : subpassResourceStates[subpassIdx].layouts;
         if (subpassDesc.inputAttachmentCount > 0) {
             inputAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(subpassDesc.inputAttachmentIndices, layouts, subpassDesc.inputAttachmentCount,
-                referenceIndex, createRenderPassCompatibility, attachmentReferences.data());
+            CreateAttachmentReferences2(subpassDesc.inputAttachmentIndices, layouts, compatibilityAttachments,
+                subpassDesc.inputAttachmentCount, referenceIndex, createRenderPassCompatibility,
+                attachmentReferences.data());
             referenceIndex += subpassDesc.inputAttachmentCount;
         }
 
         VkAttachmentReference2KHR* colorAttachments = nullptr;
         if (subpassDesc.colorAttachmentCount > 0) {
             colorAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(subpassDesc.colorAttachmentIndices, layouts, subpassDesc.colorAttachmentCount,
-                referenceIndex, createRenderPassCompatibility, attachmentReferences.data());
+            CreateAttachmentReferences2(subpassDesc.colorAttachmentIndices, layouts, compatibilityAttachments,
+                subpassDesc.colorAttachmentCount, referenceIndex, createRenderPassCompatibility,
+                attachmentReferences.data());
             referenceIndex += subpassDesc.colorAttachmentCount;
         }
 
         VkAttachmentReference2KHR* resolveAttachments = nullptr;
         if (subpassDesc.resolveAttachmentCount > 0) {
             resolveAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(subpassDesc.resolveAttachmentIndices, layouts,
+            CreateAttachmentReferences2(subpassDesc.resolveAttachmentIndices, layouts, compatibilityAttachments,
                 subpassDesc.resolveAttachmentCount, referenceIndex, createRenderPassCompatibility,
                 attachmentReferences.data());
             referenceIndex += subpassDesc.resolveAttachmentCount;
         }
 
+        // for extensions
+        void* pFirstExt = nullptr;
+        const void** ppNext = nullptr;
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+        if (subpassDesc.fragmentShadingRateAttachmentCount > 0) {
+            VkAttachmentReference2KHR* fragmentShadingRateAttachments = &attachmentReferences[referenceIndex];
+            CreateAttachmentReferences2(&subpassDesc.fragmentShadingRateAttachmentIndex, layouts,
+                compatibilityAttachments, subpassDesc.fragmentShadingRateAttachmentCount, referenceIndex,
+                createRenderPassCompatibility, attachmentReferences.data());
+            referenceIndex += subpassDesc.fragmentShadingRateAttachmentCount;
+
+            VkFragmentShadingRateAttachmentInfoKHR& fragmentShadingRateAttachmentInfo =
+                fragmentShadingRateAttachmentInfos[subpassIdx];
+            fragmentShadingRateAttachmentInfo.sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
+            fragmentShadingRateAttachmentInfo.pNext = nullptr;
+            const Size2D srats = ClampShadingRateAttachmentTexelSize(deviceVk, subpassDesc.shadingRateTexelSize);
+            fragmentShadingRateAttachmentInfo.shadingRateAttachmentTexelSize = { srats.width, srats.height };
+            fragmentShadingRateAttachmentInfo.pFragmentShadingRateAttachment = fragmentShadingRateAttachments;
+            if (!pFirstExt) {
+                pFirstExt = &fragmentShadingRateAttachmentInfo;
+                ppNext = &(fragmentShadingRateAttachmentInfo.pNext);
+            } else {
+                *ppNext = &fragmentShadingRateAttachmentInfo;
+                ppNext = &(fragmentShadingRateAttachmentInfo.pNext);
+            }
+        }
+#endif
+
         // NOTE: preserve attachments
         VkAttachmentReference2KHR* depthAttachment = nullptr;
-        VkSubpassDescriptionDepthStencilResolveKHR* subpassDescriptionDepthStencilResolve = nullptr;
         if (subpassDesc.depthAttachmentCount > 0) {
             depthAttachment = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(&subpassDesc.depthAttachmentIndex, layouts, subpassDesc.depthAttachmentCount,
-                referenceIndex, createRenderPassCompatibility, attachmentReferences.data());
+            CreateAttachmentReferences2(&subpassDesc.depthAttachmentIndex, layouts, compatibilityAttachments,
+                subpassDesc.depthAttachmentCount, referenceIndex, createRenderPassCompatibility,
+                attachmentReferences.data());
             referenceIndex += subpassDesc.depthAttachmentCount;
-            if (subpassDesc.depthResolveAttachmentCount > 0) {
+            // cannot resolve mode NONE
+            if ((subpassDesc.depthResolveAttachmentCount > 0) &&
+                (subpassDesc.depthResolveModeFlagBit || subpassDesc.stencilResolveModeFlagBit)) {
                 VkAttachmentReference2KHR* depthResolveAttachment = nullptr;
                 depthResolveAttachment = &attachmentReferences[referenceIndex];
-                CreateAttachmentReferences2(&subpassDesc.depthResolveAttachmentIndex, layouts,
+                CreateAttachmentReferences2(&subpassDesc.depthResolveAttachmentIndex, layouts, compatibilityAttachments,
                     subpassDesc.depthResolveAttachmentCount, referenceIndex, createRenderPassCompatibility,
                     attachmentReferences.data());
                 referenceIndex += subpassDesc.depthResolveAttachmentCount;
-                subpassDescriptionDepthStencilResolve = &subpassDescriptionsDepthStencilResolve[subpassIdx];
-                subpassDescriptionDepthStencilResolve->sType =
+                VkSubpassDescriptionDepthStencilResolveKHR& subpassDescriptionDepthStencilResolve =
+                    subpassDescriptionsDepthStencilResolve[subpassIdx];
+                subpassDescriptionDepthStencilResolve.sType =
                     VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE_KHR;
-                subpassDescriptionDepthStencilResolve->pNext = nullptr;
+                subpassDescriptionDepthStencilResolve.pNext = nullptr;
                 // NOTE: acceptable values needs to be evaluated from the device
                 // independent resolve not yet supported
                 const VkResolveModeFlagBitsKHR depthStencilResolveMode =
                     (VkResolveModeFlagBitsKHR)subpassDesc.depthResolveModeFlagBit;
-                subpassDescriptionDepthStencilResolve->depthResolveMode = depthStencilResolveMode;
-                subpassDescriptionDepthStencilResolve->stencilResolveMode = depthStencilResolveMode;
-                subpassDescriptionDepthStencilResolve->pDepthStencilResolveAttachment = depthResolveAttachment;
+                subpassDescriptionDepthStencilResolve.depthResolveMode = depthStencilResolveMode;
+                subpassDescriptionDepthStencilResolve.stencilResolveMode = depthStencilResolveMode;
+                subpassDescriptionDepthStencilResolve.pDepthStencilResolveAttachment = depthResolveAttachment;
+
+                if (!pFirstExt) {
+                    pFirstExt = &subpassDescriptionDepthStencilResolve;
+                    ppNext = &(subpassDescriptionDepthStencilResolve.pNext);
+                } else {
+                    *ppNext = &subpassDescriptionDepthStencilResolve;
+                    ppNext = &(subpassDescriptionDepthStencilResolve.pNext);
+                }
             }
         }
 
         constexpr VkSubpassDescriptionFlags subpassDescriptionFlags { 0 };
-        constexpr uint32_t viewMask { 0 };
         subpassDescriptions[subpassIdx] = {
             VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2_KHR,          // sType
-            subpassDescriptionDepthStencilResolve,                // pNext
+            pFirstExt,                                            // pNext
             subpassDescriptionFlags,                              // flags
             VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, // pipelineBindPoint
-            viewMask,                                             // viewMask
+            supportsMultiView ? subpassDesc.viewMask : 0,         // viewMask
             subpassDesc.inputAttachmentCount,                     // inputAttachmentCount
             inputAttachments,                                     // pInputAttachments
             subpassDesc.colorAttachmentCount,                     // colorAttachmentCount
@@ -483,12 +580,10 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
         };
 
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        // for compatibility mode we just need to pass the validation layer with bottom stage
-        VkPipelineStageFlags dstStageMask =
-            createRenderPassCompatibility ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : (VkFlags)0;
+        VkPipelineStageFlags dstStageMask = 0;
         VkAccessFlags srcAccessMask = 0;
         VkAccessFlags dstAccessMask = 0;
-        if (!createRenderPassCompatibility) {
+        {
             PLUGIN_ASSERT(srcResourceStates);
             const RenderPassAttachmentResourceStates& dstResourceStates = subpassResourceStates[subpassIdx];
             for (uint32_t attachmentIdx = 0; attachmentIdx < attachmentCount; ++attachmentIdx) {
@@ -552,21 +647,17 @@ VkRenderPass RenderPassCreatorVk::CreateRenderPass(const DeviceVk& deviceVk,
 {
     const uint32_t subpassCount = beginRenderPass.renderPassDesc.subpassCount;
     uint32_t maxAttachmentReferenceCountPerSubpass = 0;
-    bool depthStencilResolve = false;
     for (uint32_t subpassIdx = 0; subpassIdx < subpassCount; ++subpassIdx) {
         const auto& subpassDesc = beginRenderPass.subpasses[subpassIdx];
         maxAttachmentReferenceCountPerSubpass = Math::max(maxAttachmentReferenceCountPerSubpass,
             subpassDesc.inputAttachmentCount + subpassDesc.colorAttachmentCount + subpassDesc.resolveAttachmentCount +
-                subpassDesc.depthAttachmentCount + subpassDesc.depthResolveAttachmentCount);
-        // cannot resolve mode NONE
-        if ((subpassDesc.depthResolveAttachmentCount > 0) &&
-            (subpassDesc.depthResolveModeFlagBit || subpassDesc.stencilResolveModeFlagBit)) {
-            depthStencilResolve = true;
-        }
+                subpassDesc.depthAttachmentCount + subpassDesc.depthResolveAttachmentCount +
+                subpassDesc.fragmentShadingRateAttachmentCount);
     }
 
     const DeviceVk::CommonDeviceExtensions& deviceExtensions = deviceVk.GetCommonDeviceExtensions();
-    if (depthStencilResolve && deviceExtensions.renderPass2) {
+    // use renderPass2 when ever the extension is present (to make extensions work)
+    if (deviceExtensions.renderPass2) {
         return CreateRenderPassCombined2(deviceVk, beginRenderPass.renderPassDesc, lowLevelRenderPassData,
             beginRenderPass.subpasses, beginRenderPass.subpassResourceStates.data(),
             &beginRenderPass.inputResourceStates, &beginRenderPass.imageLayouts, maxAttachmentReferenceCountPerSubpass,
@@ -580,31 +671,28 @@ VkRenderPass RenderPassCreatorVk::CreateRenderPass(const DeviceVk& deviceVk,
 }
 
 VkRenderPass RenderPassCreatorVk::CreateRenderPassCompatibility(const DeviceVk& deviceVk,
-    const RenderPassDesc& renderPassDesc, const LowLevelRenderPassDataVk& lowLevelRenderPassData,
-    const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs)
+    const RenderCommandBeginRenderPass& beginRenderPass, const LowLevelRenderPassDataVk& lowLevelRenderPassData)
 {
-    const uint32_t subpassCount = renderPassDesc.subpassCount;
+    const uint32_t subpassCount = beginRenderPass.renderPassDesc.subpassCount;
     uint32_t maxAttachmentReferenceCountPerSubpass = 0;
-    bool depthStencilResolve = false;
     for (uint32_t subpassIdx = 0; subpassIdx < subpassCount; ++subpassIdx) {
-        const auto& subpassDesc = renderPassSubpassDescs[subpassIdx];
+        const auto& subpassDesc = beginRenderPass.subpasses[subpassIdx];
         maxAttachmentReferenceCountPerSubpass = Math::max(maxAttachmentReferenceCountPerSubpass,
             subpassDesc.inputAttachmentCount + subpassDesc.colorAttachmentCount + subpassDesc.resolveAttachmentCount +
-                subpassDesc.depthAttachmentCount + subpassDesc.depthResolveAttachmentCount);
-        // cannot resolve mode NONE
-        if ((subpassDesc.depthResolveAttachmentCount > 0) &&
-            (subpassDesc.depthResolveModeFlagBit || subpassDesc.stencilResolveModeFlagBit)) {
-            depthStencilResolve = true;
-        }
+                subpassDesc.depthAttachmentCount + subpassDesc.depthResolveAttachmentCount +
+                subpassDesc.fragmentShadingRateAttachmentCount);
     }
 
     const DeviceVk::CommonDeviceExtensions& deviceExtensions = deviceVk.GetCommonDeviceExtensions();
-    if (depthStencilResolve && deviceExtensions.renderPass2) {
-        return CreateRenderPassCombined2(deviceVk, renderPassDesc, lowLevelRenderPassData, renderPassSubpassDescs,
-            nullptr, nullptr, nullptr, maxAttachmentReferenceCountPerSubpass, true, rps2_);
+    // use renderPass2 when ever the extension is present (to make extensions work)
+    if (deviceExtensions.renderPass2) {
+        return CreateRenderPassCombined2(deviceVk, beginRenderPass.renderPassDesc, lowLevelRenderPassData,
+            beginRenderPass.subpasses, beginRenderPass.subpassResourceStates.data(),
+            &beginRenderPass.inputResourceStates, nullptr, maxAttachmentReferenceCountPerSubpass, true, rps2_);
     } else {
-        return CreateRenderPassCombined(deviceVk, renderPassDesc, lowLevelRenderPassData, renderPassSubpassDescs,
-            nullptr, nullptr, nullptr, maxAttachmentReferenceCountPerSubpass, true, rps1_);
+        return CreateRenderPassCombined(deviceVk, beginRenderPass.renderPassDesc, lowLevelRenderPassData,
+            beginRenderPass.subpasses, beginRenderPass.subpassResourceStates.data(),
+            &beginRenderPass.inputResourceStates, nullptr, maxAttachmentReferenceCountPerSubpass, true, rps1_);
     }
 }
 

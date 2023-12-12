@@ -21,13 +21,8 @@
 #include "PropertyTools/property_macros.h"
 
 CORE3D_BEGIN_NAMESPACE()
-using BASE_NS::array_view;
-using BASE_NS::countof;
-
-using CORE_NS::BaseManager;
-using CORE_NS::IComponentManager;
-using CORE_NS::IEcs;
-using CORE_NS::Property;
+using namespace BASE_NS;
+using namespace CORE_NS;
 
 class PreviousJointMatricesComponentManager final
     : public BaseManager<PreviousJointMatricesComponent, IPreviousJointMatricesComponentManager> {
@@ -37,7 +32,7 @@ class PreviousJointMatricesComponentManager final
     const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
-    explicit PreviousJointMatricesComponentManager(IEcs& ecs)
+    PreviousJointMatricesComponentManager(IEcs& ecs)
         : BaseManager<PreviousJointMatricesComponent, IPreviousJointMatricesComponentManager>(
               ecs, CORE_NS::GetName<PreviousJointMatricesComponent>())
     {}

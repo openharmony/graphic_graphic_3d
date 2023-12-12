@@ -30,8 +30,8 @@ struct RenderCommandBeginRenderPass;
 class GpuResourceManager;
 
 struct LowlevelFramebufferGL {
-    size_t width { 0 };
-    size_t height { 0 };
+    uint32_t width { 0 };
+    uint32_t height { 0 };
     struct SubPassPair {
         // one fbo per subpass, one resolve fbo per subpass (if needed)
         uint32_t fbo { 0 };
@@ -54,9 +54,10 @@ public:
     ~NodeContextPoolManagerGLES();
 
     void BeginFrame() override;
+    void BeginBackendFrame() override;
 
     EngineResourceHandle GetFramebufferHandle(const RenderCommandBeginRenderPass& beginRenderPass);
-    const LowlevelFramebufferGL& GetFramebuffer(const EngineResourceHandle handle) const;
+    const LowlevelFramebufferGL* GetFramebuffer(const EngineResourceHandle handle) const;
 
     void FilterRenderPass(RenderCommandBeginRenderPass& beginRenderPass);
 #if ((RENDER_VALIDATION_ENABLED == 1) || (RENDER_VULKAN_VALIDATION_ENABLED == 1))
@@ -71,6 +72,13 @@ private:
     ContextFramebufferCacheGLES framebufferCache_;
     BASE_NS::vector<uint32_t> imageMap_;
     bool multisampledRenderToTexture_ = false;
+    bool multiViewMultisampledRenderToTexture_ = false;
+    bool multiView_ = false;
+
+#if (RENDER_VALIDATION_ENABLED == 1)
+    uint64_t frameIndexFront_ { 0 };
+    uint64_t frameIndexBack_ { 0 };
+#endif
 };
 RENDER_END_NAMESPACE()
 

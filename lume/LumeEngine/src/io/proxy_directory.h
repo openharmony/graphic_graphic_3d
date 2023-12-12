@@ -18,12 +18,11 @@
 
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <core/io/intf_directory.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
-class ProxyFilesystem;
-
 class ProxyDirectory final : public IDirectory {
 public:
     explicit ProxyDirectory(BASE_NS::vector<IDirectory::Ptr>&& directories);

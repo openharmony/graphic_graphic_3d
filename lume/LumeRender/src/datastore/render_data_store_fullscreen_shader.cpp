@@ -18,7 +18,7 @@
 #include <cinttypes>
 #include <cstdint>
 
-#include <base/containers/array_view.h>
+#include <base/containers/fixed_string.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/intf_render_context.h>
 
@@ -101,8 +101,10 @@ IShaderPipelineBinder::Ptr RenderDataStoreFullscreenShader::Get(const string_vie
     if (const auto iter = nameToObject_.find(name); iter != nameToObject_.cend()) {
         return iter->second;
     } else {
+#if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_W(name_ + "RenderDataStoreFullscreenShaderName",
-            "RenderDataStoreFullscreenShader shader material not found (%s)", name.data());
+            "RENDER_VALIDATION: RenderDataStoreFullscreenShader shader material not found (%s)", name.data());
+#endif
         return {};
     }
 }
@@ -114,8 +116,10 @@ IShaderPipelineBinder::Ptr RenderDataStoreFullscreenShader::Get(const uint64_t i
     if (const auto iter = idToObject_.find(id); iter != idToObject_.cend()) {
         return iter->second;
     } else {
+#if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_W(name_ + "RenderDataStoreFullscreenShaderId",
-            "RenderDataStoreFullscreenShader shader material not found (%s)", to_string(id).c_str());
+            "RENDER_VALIDATION: RenderDataStoreFullscreenShader shader material not found (%s)", to_string(id).c_str());
+#endif
         return {};
     }
 }

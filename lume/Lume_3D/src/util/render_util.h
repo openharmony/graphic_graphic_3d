@@ -37,12 +37,20 @@ public:
 
     RENDER_NS::RenderNodeGraphDesc GetRenderNodeGraphDesc(
         const RenderScene& renderScene, const RenderCamera& renderCamera, const uint32_t flags) const override;
+    CameraRenderNodeGraphDescs GetRenderNodeGraphDescs(
+        const RenderScene& renderScene, const RenderCamera& renderCamera, const uint32_t flags) const override;
+    CameraRenderNodeGraphDescs GetRenderNodeGraphDescs(const RenderScene& renderScene, const RenderCamera& renderCamera,
+        const uint32_t flags, const BASE_NS::array_view<const RenderCamera> multiviewCameras) const override;
+
     RENDER_NS::RenderNodeGraphDesc GetRenderNodeGraphDesc(
         const RenderScene& renderScene, const uint32_t flags) const override;
+    RENDER_NS::RenderNodeGraphDesc GetRenderNodeGraphDesc(
+        const RenderScene& renderScene, const BASE_NS::string& rngFile, const uint32_t flags) const override;
 
 private:
     void InitRenderNodeGraphs();
     RENDER_NS::RenderNodeGraphDesc SelectBaseDesc(const RenderCamera& renderCamera) const;
+    RENDER_NS::RenderNodeGraphDesc GetBasePostProcessDesc(const RenderCamera& renderCamera) const;
 
     RENDER_NS::IRenderContext& context_;
     const RENDER_NS::DeviceBackendType backendType_ { RENDER_NS::DeviceBackendType::VULKAN };
@@ -50,13 +58,18 @@ private:
     RENDER_NS::RenderNodeGraphDesc rngdScene_;
     RENDER_NS::RenderNodeGraphDesc rngdCamLwrp_;
     RENDER_NS::RenderNodeGraphDesc rngdCamLwrpMsaa_;
+    RENDER_NS::RenderNodeGraphDesc rngdCamLwrpMsaaDepth_;
     RENDER_NS::RenderNodeGraphDesc rngdCamLwrpMsaaGles_;
     RENDER_NS::RenderNodeGraphDesc rngdCamHdr_;
     RENDER_NS::RenderNodeGraphDesc rngdCamHdrMsaa_;
+    RENDER_NS::RenderNodeGraphDesc rngdCamHdrMsaaDepth_;
     RENDER_NS::RenderNodeGraphDesc rngdReflCam_;
+    RENDER_NS::RenderNodeGraphDesc rngdReflCamMsaa_;
     RENDER_NS::RenderNodeGraphDesc rngdCamPrePass_;
 
     RENDER_NS::RenderNodeGraphDesc rngdDeferred_;
+
+    RENDER_NS::RenderNodeGraphDesc rngdPostProcess_;
 };
 CORE3D_END_NAMESPACE()
 

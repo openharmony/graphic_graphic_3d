@@ -17,7 +17,7 @@
 #define VULKAN_NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_VK_H
 
 #include <cstdint>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <base/containers/array_view.h>
 #include <base/containers/vector.h>

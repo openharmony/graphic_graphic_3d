@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -41,7 +42,12 @@ void main()
     // texSizeInvTexSize needs to be the output resolution
     const vec2 uv = inUv;
 
-    vec3 color = min(bloomDownscale(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler), CORE_BLOOM_CLAMP_MAX_VALUE);
+    vec3 color = vec3(0.0);
+    if ((CORE_BLOOM_QUALITY_NORMAL & CORE_POST_PROCESS_FLAGS) == CORE_BLOOM_QUALITY_NORMAL) {
+        color = bloomDownscale9(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    } else {
+        color = bloomDownscale(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    }
 
-    outColor = vec4(color, 1.0);
+    outColor = vec4(min(color, CORE_BLOOM_CLAMP_MAX_VALUE), 1.0);
 }

@@ -27,20 +27,23 @@
 #include <render/resource_handle.h>
 #include <render/util/intf_render_util.h>
 
+#include "render_backend.h"
+
 RENDER_BEGIN_NAMESPACE()
 class Device;
 class GpuResourceManager;
 class IRenderContext;
+class IRenderDataStoreDefaultStaging;
 class ShaderManager;
 class PipelineRenderNodes;
 class RenderPipeline;
-class RenderBackend;
 class RenderFrameSync;
 class RenderGraph;
 class PipelineInitializerBase;
 class RenderNodeGraphManager;
 class RenderDataStoreManager;
 class RenderUtil;
+class RenderNodeGraphGlobalShareDataManager;
 struct RenderNodeGraphNodeStore;
 
 /**
@@ -57,18 +60,19 @@ public:
     void RenderDeferred(const BASE_NS::array_view<const RenderHandleReference> renderNodeGraphs) override;
     void RenderDeferredFrame() override;
 
-    void InitNodeGraph(RenderHandle renderNodeGraphHandle);
-
 private:
+    void InitNodeGraphs(const BASE_NS::array_view<const RenderHandle> renderNodeGraphs);
+
     // same render node graphs needs to be removed before calling this
     void RenderFrameImpl(const BASE_NS::array_view<const RenderHandle> renderNodeGraphs);
+    void RenderFrameBackendImpl();
+    void RenderFramePresentImpl();
 
     void ExecuteRenderNodes(const BASE_NS::array_view<const RenderHandle> renderNodeGraphInputs,
         const BASE_NS::array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores);
-    void ExecuteRenderBackend(const BASE_NS::array_view<const RenderHandle> renderNodeGraphInputs,
-        const BASE_NS::array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores);
 
-    BASE_NS::vector<RenderHandle> GatherInputs(const BASE_NS::array_view<const RenderHandle> renderNodeGraphInputList);
+    void FillRngInputs(const BASE_NS::array_view<const RenderHandle> renderNodeGraphInputList,
+        BASE_NS::vector<RenderHandle>& rngInputs);
     void RemapBackBufferHandle(const IRenderDataStoreManager& renderData);
 
     void ProcessTimeStampEnd();
@@ -90,9 +94,12 @@ private:
     CORE_NS::IParallelTaskQueue::Ptr parallelQueue_;
     CORE_NS::ISequentialTaskQueue::Ptr sequentialQueue_;
     RenderingConfiguration renderConfig_;
+    BASE_NS::unique_ptr<RenderNodeGraphGlobalShareDataManager> rngGlobalShareDataMgr_;
 
     RenderHandleReference defaultStagingRng_;
+    RenderHandleReference defaultEndFrameStagingRng_;
     // deferred creation (only if using NodeGraphBackBufferConfiguration BackBufferType::GPU_IMAGE_BUFFER_COPY)
+    // NOTE: should be deprecated
     RenderHandleReference defaultBackBufferGpuBufferRng_;
 
     // mutex for calling RenderFrame()
@@ -106,6 +113,23 @@ private:
     uint64_t firstTime_ { ~0u };
     uint64_t previousFrameTime_ { ~0u };
     uint64_t deltaTime_ { 1 };
+
+    IRenderDataStoreDefaultStaging* dsStaging_ { nullptr };
+
+    struct RenderFrameTimeData {
+        uint64_t frameIndex { 0 };
+
+        // filled before backend run
+        // cleared after present run
+        RenderBackendBackBufferConfiguration config;
+        BASE_NS::vector<RenderHandle> rngInputs;
+        BASE_NS::vector<RenderNodeGraphNodeStore*> rngNodeStores;
+
+        // evaluated in RenderFrameBackendImpl
+        // used in RenderFramePresentImpl
+        bool hasBackendWork { false };
+    };
+    RenderFrameTimeData renderFrameTimeData_;
 };
 RENDER_END_NAMESPACE()
 

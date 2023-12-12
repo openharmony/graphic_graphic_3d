@@ -36,6 +36,7 @@
 RENDER_BEGIN_NAMESPACE()
 class IRenderBackendNode;
 class RenderFrameSync;
+class RenderFrameUtil;
 class RenderNodeGpuResourceManager;
 
 struct SubmitDependencies {
@@ -56,10 +57,7 @@ struct RenderCommandContext {
     RenderBarrierList* renderBarrierList { nullptr };
     NodeContextPsoManager* nodeContextPsoMgr { nullptr };
     NodeContextDescriptorSetManager* nodeContextDescriptorSetMgr { nullptr };
-    NodeContextPoolManager* contextPoolMgr { nullptr };
-
-    bool multiRenderCommandListRenderPassDependancy { false };
-    uint32_t multiRenderCommandListCount { 0 };
+    NodeContextPoolManager* nodeContextPoolMgr { nullptr };
 
     uint32_t renderGraphRenderNodeIndex { ~0u };
     SubmitDependencies submitDepencies;
@@ -70,6 +68,9 @@ struct RenderCommandContext {
 struct RenderCommandFrameData {
     BASE_NS::vector<RenderCommandContext> renderCommandContexts;
     RenderFrameSync* renderFrameSync { nullptr };
+    RenderFrameUtil* renderFrameUtil { nullptr };
+    // the index of the first render node in backend which needs swapchain acquired image
+    uint32_t firstSwapchainNodeIdx { ~0u };
 };
 
 struct RenderNodeContextData {
@@ -85,7 +86,7 @@ struct RenderNodeContextData {
     BASE_NS::unique_ptr<RenderNodeContextManager> renderNodeContextManager;
     BASE_NS::unique_ptr<NodeContextPsoManager> nodeContextPsoMgr;
     BASE_NS::unique_ptr<NodeContextDescriptorSetManager> nodeContextDescriptorSetMgr;
-    BASE_NS::unique_ptr<NodeContextPoolManager> contextPoolMgr;
+    BASE_NS::unique_ptr<NodeContextPoolManager> nodeContextPoolMgr;
 
     // with dynamic render node graphs we need initilization data per render node
     bool initialized { false };
@@ -97,8 +98,8 @@ struct RenderNodeContextData {
 struct RenderNodeGraphShareData {
     // render node graph inputs/outputs which can be set through render node graph manager
     static constexpr uint32_t MAX_RENDER_NODE_GRAPH_RES_COUNT { 4u };
-    RenderHandle inputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {} };
-    RenderHandle outputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {} };
+    IRenderNodeGraphShareManager::NamedResource inputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {} };
+    IRenderNodeGraphShareManager::NamedResource outputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {} };
     uint32_t inputCount { 0 };
     uint32_t outputCount { 0 };
 };
@@ -123,9 +124,6 @@ struct RenderNodeGraphNodeStore {
     // NOTE: used in backend and accessed in update
     RenderNodeGraphShareData renderNodeGraphShareData;
 
-    // NOTE: If render nodes are heavily added/removed this is not optimal
-    // due to removing of the resources in the destructor of RNG mgr
-    BASE_NS::unique_ptr<RenderNodeGpuResourceManager> renderNodeGpuResourceMgr;
     BASE_NS::unique_ptr<RenderNodeGraphShareDataManager> renderNodeGraphShareDataMgr;
 
     bool initialized { false };

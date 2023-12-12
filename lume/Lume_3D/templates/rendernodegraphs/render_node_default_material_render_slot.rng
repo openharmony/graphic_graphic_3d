@@ -13,6 +13,8 @@
                 "index": 0
             },
             "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+            "shaderRenderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+            "stateRenderSlot": "CORE3D_RS_DM_FW_OPAQUE",
             "renderSlotSortType": "by_material",
             "renderSlotCullType": "view_frustum_cull",
             "nodeFlags": 0,

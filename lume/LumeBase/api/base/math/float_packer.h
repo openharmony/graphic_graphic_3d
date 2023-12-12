@@ -16,8 +16,10 @@
 #ifndef API_BASE_MATH_FLOAT_PACKER_H
 #define API_BASE_MATH_FLOAT_PACKER_H
 
-#include <base/math/vector_util.h>
-#include <base/namespace.h>
+#include <cstdint>
+
+#include <base/math/mathf.h>
+#include <base/math/vector.h>
 
 BASE_BEGIN_NAMESPACE()
 namespace Math {
@@ -64,20 +66,20 @@ inline uint16_t F32ToF16(float val)
     noSign = (exponent > 0x47000000) ? F16_INFINITY : noSign; // Clamp-to-inf
 
     // Re-insert sign bit
-    return noSign | sign;
+    return static_cast<uint16_t>(noSign | sign);
 }
 
 /** Converts 16 bit floating point number to 32 bit float
  */
-inline constexpr float F16ToF32(uint16_t val)
+inline float F16ToF32(uint16_t val)
 {
     union {
         float f = 0.f;
         uint32_t ui;
     } f32;
 
-    uint32_t noSign = val & 0x7fff;         // Non-sign bits
-    uint32_t sign = val & 0x8000;           // Sign bit
+    uint32_t noSign = val & 0x7fffU;        // Non-sign bits
+    uint32_t sign = val & 0x8000U;          // Sign bit
     uint32_t exponent = val & F16_INFINITY; // Exponent
 
     noSign <<= F16_MANTISSA_SHIFT; // Align mantissa on MSB
@@ -103,15 +105,15 @@ inline uint32_t PackUnorm2X16(const Vec2& v)
         uint32_t out;
     } u;
 
-    u.in[0] = uint16_t(round(clamp(v[0], 0, +1) * 65535.0f));
-    u.in[1] = uint16_t(round(clamp(v[1], 0, +1) * 65535.0f));
+    u.in[0] = uint16_t(round(clamp(v[0], 0.f, +1.f) * 65535.0f));
+    u.in[1] = uint16_t(round(clamp(v[1], 0.f, +1.f) * 65535.0f));
 
     return u.out;
 }
 
 /** Unpack 32 bit integer to default lume vector2
  */
-constexpr Vec2 UnpackUnorm2X16(uint32_t p)
+inline Vec2 UnpackUnorm2X16(uint32_t p)
 {
     const union {
         uint32_t in;
@@ -138,7 +140,7 @@ inline uint32_t PackSnorm2X16(const Vec2& v)
 
 /** Unpack 32 bit integer to default lume vector2
  */
-constexpr Vec2 UnpackSnorm2X16(uint32_t p)
+inline Vec2 UnpackSnorm2X16(uint32_t p)
 {
     const union {
         uint32_t in;
@@ -163,7 +165,7 @@ inline uint32_t PackHalf2X16(const Vec2& v)
 
 /** Unpack 32 bit integer to normal lume vector2 and rise precision from 16 bit to 32 bits
  */
-constexpr Vec2 UnpackHalf2X16(uint32_t v)
+inline Vec2 UnpackHalf2X16(uint32_t v)
 {
     const union {
         uint32_t in;

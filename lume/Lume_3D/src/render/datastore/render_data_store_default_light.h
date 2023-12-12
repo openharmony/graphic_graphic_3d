@@ -34,14 +34,20 @@ RenderDataStoreDefaultLight implementation.
 */
 class RenderDataStoreDefaultLight final : public IRenderDataStoreDefaultLight {
 public:
-    explicit RenderDataStoreDefaultLight(const BASE_NS::string_view name);
+    RenderDataStoreDefaultLight(const BASE_NS::string_view name);
     ~RenderDataStoreDefaultLight() override = default;
 
+    void CommitFrameData() override {};
     void PreRender() override {};
-    void PreRenderBackend() override {};
-    // Reset and start indexing from the beginning. i.e. frame boundary reset.
+    // clear in post render
     void PostRender() override;
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override;
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     void SetShadowTypes(const ShadowTypes& shadowTypes, const uint32_t flags) override;
     ShadowTypes GetShadowTypes() const override;

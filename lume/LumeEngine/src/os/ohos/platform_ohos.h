@@ -16,11 +16,10 @@
 #ifndef CORE_OS_OHOS_PLATFORM_OHOS_H
 #define CORE_OS_OHOS_PLATFORM_OHOS_H
 
-#ifdef __OHOS_PLATFORM__
+#include <platform/ohos/core/os/intf_platform.h>
 
 #include <base/containers/string.h>
 #include <core/namespace.h>
-#include <platform/ohos/core/os/intf_platform.h>
 
 CORE_BEGIN_NAMESPACE()
 struct PlatformData {
@@ -31,11 +30,10 @@ struct PlatformData {
     /** Application plugin path */
     BASE_NS::string appPluginPath = "./";
 
-    /**Hap Info*/
+    /** Hap Info */
     BASE_NS::string hapPath = "./";
     BASE_NS::string bundleName = "./";
     BASE_NS::string moduleName = "./";
-
 };
 
 /** Interface for platform-specific functions. */
@@ -53,7 +51,5 @@ private:
 };
 
 CORE_END_NAMESPACE()
-
-#endif
 
 #endif // CORE_OS_OHOS_PLATFORM_OHOS_H

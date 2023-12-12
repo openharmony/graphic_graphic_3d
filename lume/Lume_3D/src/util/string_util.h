@@ -81,7 +81,7 @@ inline BASE_NS::vector<BASE_NS::string_view> Split(
 
         auto found = left.substr(0, pos);
         if (Trim(found) > 0) {
-            output.emplace_back(found);
+            output.push_back(found);
         }
         if (pos != BASE_NS::string_view::npos) {
             left.remove_prefix(pos + 1);

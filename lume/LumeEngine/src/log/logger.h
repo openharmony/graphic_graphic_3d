@@ -16,41 +16,49 @@
 #ifndef CORE_LOG_LOGGER_H
 #define CORE_LOG_LOGGER_H
 
+#include <cstdarg>
 #include <mutex>
 #include <set>
 
 #include <base/containers/string.h>
+#include <base/containers/string_view.h>
 #include <base/containers/vector.h>
-#include <core/log.h>
+#include <base/namespace.h>
+#include <core/intf_logger.h>
 #include <core/namespace.h>
 
+BASE_BEGIN_NAMESPACE()
+struct Uid;
+BASE_END_NAMESPACE()
+
 CORE_BEGIN_NAMESPACE()
+class IInterface;
 class Logger : public ILogger {
 public:
     static BASE_NS::string_view GetLogLevelName(LogLevel logLevel, bool shortName);
 
     explicit Logger(bool defaultOutputs);
-    ~Logger() override;
+    ~Logger() override = default;
 
-    void VLog(LogLevel logLevel, const BASE_NS::string_view filename, int lineNumber, const BASE_NS::string_view format,
-        va_list args) override;
-    void VLogOnce(const BASE_NS::string_view id, LogLevel logLevel, const BASE_NS::string_view filename, int lineNumber,
-        const BASE_NS::string_view format, va_list args) override;
-    bool VLogAssert(const BASE_NS::string_view filename, int lineNumber, bool expression,
-        const BASE_NS::string_view expressionString, const BASE_NS::string_view format, va_list args) override;
+    void VLog(LogLevel logLevel, BASE_NS::string_view filename, int lineNumber, BASE_NS::string_view format,
+        std::va_list args) override;
+    void VLogOnce(BASE_NS::string_view id, LogLevel logLevel, BASE_NS::string_view filename, int lineNumber,
+        BASE_NS::string_view format, std::va_list args) override;
+    bool VLogAssert(BASE_NS::string_view filename, int lineNumber, bool expression,
+        BASE_NS::string_view expressionString, BASE_NS::string_view format, std::va_list args) override;
 
     FORMAT_FUNC(5, 6)
-    void Log(LogLevel logLevel, const BASE_NS::string_view filename, int lineNumber,
-        FORMAT_ATTRIBUTE const char* format, ...) override;
+    void Log(LogLevel logLevel, BASE_NS::string_view filename, int lineNumber, FORMAT_ATTRIBUTE const char* format,
+        ...) override;
 
     FORMAT_FUNC(6, 7)
-    bool LogAssert(const BASE_NS::string_view filename, int lineNumber, bool expression,
-        const BASE_NS::string_view expressionString, FORMAT_ATTRIBUTE const char* format, ...) override;
+    bool LogAssert(BASE_NS::string_view filename, int lineNumber, bool expression,
+        BASE_NS::string_view expressionString, FORMAT_ATTRIBUTE const char* format, ...) override;
 
     LogLevel GetLogLevel() const override;
     void SetLogLevel(LogLevel logLevel) override;
 
-    void AddOutput(IOutput::Ptr output) override;
+    void AddOutput(IOutput::Ptr output) final;
     void CheckOnceReset() override;
 
     // IInterface

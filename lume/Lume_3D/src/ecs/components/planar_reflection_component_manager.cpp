@@ -29,7 +29,6 @@ using CORE3D_NS::PlanarReflectionComponent;
 BEGIN_ENUM(PlanarReflectionFlagBitsMetaData, PlanarReflectionComponent::FlagBits)
 DECL_ENUM(PlanarReflectionComponent::FlagBits, ACTIVE_RENDER_BIT, "Active Render")
 DECL_ENUM(PlanarReflectionComponent::FlagBits, MSAA_BIT, "MSAA")
-DECL_ENUM(PlanarReflectionComponent::FlagBits, HDR_BIT, "HDR")
 END_ENUM(PlanarReflectionFlagBitsMetaData, PlanarReflectionComponent::FlagBits)
 CORE_END_NAMESPACE()
 

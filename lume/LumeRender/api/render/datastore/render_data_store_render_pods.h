@@ -26,7 +26,9 @@ RENDER_BEGIN_NAMESPACE()
 /** \addtogroup group_render_renderdatastorerenderpods
  *  @{
  */
-/** A POD for back buffer configuration */
+/** A POD for back buffer configuration
+ * Deprecated: prefer using IRenderFrameUtil::SetBackBufferConfiguration()
+ */
 struct NodeGraphBackBufferConfiguration {
     /** Max back buffer name length */
     static constexpr uint32_t CORE_MAX_BACK_BUFFER_NAME_LENGTH { 128 };
@@ -51,18 +53,89 @@ struct NodeGraphBackBufferConfiguration {
     BackBufferType backBufferType = { BackBufferType::UNDEFINED };
 
     /** Handle to the final target.
-     * - If backbufferType is SWAPCHAIN this handle is not used.
-     * - If backbufferType is GPU_IMAGE this must point to a valid GpuImage.
-     * - If backbufferType is GPU_IMAGE_BUFFER_COPY this must point to a valid (linear) GpuImage. */
-    RenderHandleReference backBufferHandle;
-    /* - If backbufferType is GPU_IMAGE_BUFFER_COPY this must point to a valid GpuBuffer where image data is copied. */
-    RenderHandleReference gpuBufferHandle;
+     * If backbufferType is SWAPCHAIN this handle is not used.
+     * If backbufferType is GPU_IMAGE this must point to a valid GpuImage.
+     * If backbufferType is GPU_IMAGE_BUFFER_COPY this must point to a valid (linear) GpuImage. */
+    RenderHandle backBufferHandle;
+    /* If backbufferType is GPU_IMAGE_BUFFER_COPY this must point to a valid GpuBuffer where image data is copied. */
+    RenderHandle gpuBufferHandle;
 
     /** Present */
     bool present { false };
 
     /** Binary semaphore for signaling end of frame, i.e. when rendered to back buffer */
     uint64_t gpuSemaphoreHandle { 0 };
+};
+
+/** Post process name constants. */
+struct PostProcessConstants {
+    /** Render built-in post process indices */
+    enum POST_PROCESS_INDICES {
+        /** Render tonemap */
+        RENDER_TONEMAP = 0,
+        /** Render vignette */
+        RENDER_VIGNETTE = 1,
+        /** Render dither */
+        RENDER_DITHER = 2,
+        /** Render color conversion */
+        RENDER_COLOR_CONVERSION = 3,
+        /** Render fringe */
+        RENDER_COLOR_FRINGE_BIT = 4,
+
+        /** Render empty */
+        RENDER_EMPTY_5 = 5,
+        /** Render empty */
+        RENDER_EMPTY_6 = 6,
+        /** Render empty */
+        RENDER_EMPTY_7 = 7,
+
+        /** Render blur index */
+        RENDER_BLUR = 8,
+        /** Render bloom index */
+        RENDER_BLOOM = 9,
+        /** Render fxaa index */
+        RENDER_FXAA = 10,
+        /** Render taa index */
+        RENDER_TAA = 11,
+        /** Render dof index */
+        RENDER_DOF = 12,
+        /** Render motion blur */
+        RENDER_MOTION_BLUR = 13,
+        /** Built-in meaningfull post process count */
+        POST_PROCESS_COUNT = 14,
+    };
+
+    /** Render built-in post process names */
+    static constexpr BASE_NS::string_view POST_PROCESS_NAMES[POST_PROCESS_INDICES::POST_PROCESS_COUNT] {
+        "render_tonemap",
+        "render_vignette",
+        "render_dither",
+        "render_color_conversion",
+        "render_color_fringe",
+        "",
+        "",
+        "",
+        "render_blur",
+        "render_bloom",
+        "render_fxaa",
+        "render_taa",
+        "render_dof",
+        "render_motion_blur",
+    };
+
+    /** First available post process id for user custom effects */
+    static constexpr uint32_t FIRST_USER_POST_PROCESS_ID { 16u };
+    /** Last available post process id for user custom effects */
+    static constexpr uint32_t LAST_USER_POST_PROCESS_ID { 31u };
+
+    /** Global post process factor count */
+    static constexpr uint32_t GLOBAL_FACTOR_COUNT { POST_PROCESS_INDICES::POST_PROCESS_COUNT };
+    /** User global post process factor count */
+    static constexpr uint32_t USER_GLOBAL_FACTOR_COUNT { 16u };
+    /** User local post process factor count */
+    static constexpr uint32_t USER_LOCAL_FACTOR_COUNT { USER_GLOBAL_FACTOR_COUNT };
+    /** User local post process factor byte size */
+    static constexpr uint32_t USER_LOCAL_FACTOR_BYTE_SIZE { 256u };
 };
 
 /** Bloom post process configuration. */
@@ -103,7 +176,7 @@ struct BloomConfiguration {
     float dirtMaskCoefficient { 0.0f };
 
     /** Optional dirt mask image handle */
-    RenderHandleReference dirtMaskImage {};
+    RenderHandle dirtMaskImage {};
     /** Use compute dispatches for bloom */
     bool useCompute { false };
 };
@@ -227,10 +300,54 @@ struct TaaConfiguration {
     Quality quality { Quality::MEDIUM };
 };
 
+/** Depth of field configuration.
+ * This is expected to be filled so that focusPoint is between nearPlane and farPlane.
+ * Amount of blurriness:
+ * nearPlane                             focusPoint                            farPlane
+ *      nearBlur |    (nearBlur..0)    |      0     |    (0..farBlur)    | farBlur
+ *               | nearTransitionRange | focusRange | farTransitionRange |
+ */
+struct DofConfiguration {
+    /** Distance to point of focus. */
+    float focusPoint { 3.f };
+    /** Range around focusPoint which is in focus. */
+    float focusRange { 1.f };
+    /** Range before focusRange where the view transitions from blurred to focused. */
+    float nearTransitionRange { 1.f };
+    /** Range after focusRange where the view transitions from focused to blurred. */
+    float farTransitionRange { 1.f };
+    /** Blur level used close to the viewer. */
+    float nearBlur { 2.f };
+    /** Blur level used far away from the viewer. */
+    float farBlur { 2.f };
+    /** View near plane. */
+    float nearPlane { 0.1f };
+    /** View far plane. */
+    float farPlane { 1000.f };
+};
+
+/** Motion blur configuration.
+ */
+struct MotionBlurConfiguration {
+    /** Sharpness of the effect. */
+    enum class Sharpness : uint32_t { SOFT = 0, MEDIUM = 1, SHARP = 2 };
+    /** Quality of the effect. */
+    enum class Quality : uint32_t { LOW = 0U, MEDIUM = 1U, HIGH = 2U };
+
+    /** Sharpness. */
+    Sharpness sharpness { Sharpness::SHARP };
+    /** Quality. */
+    Quality quality { Quality::MEDIUM };
+    /** Alpha blending. 1.0 -> fully motion blur sample. */
+    float alpha { 1.0f };
+    /** Velocity coefficient. */
+    float velocityCoefficient { 1.0f };
+};
+
 /** Post process configuration POD. */
 struct PostProcessConfiguration {
     /** Post process enable flags. Used in shader as well, must match render_post_process_structs_common.h */
-    enum PostProcessEnableFlagbits : uint32_t {
+    enum PostProcessEnableFlagBits : uint32_t {
         /** Enable tonemap */
         ENABLE_TONEMAP_BIT = (1 << 0),
         /** Enable vignette */
@@ -250,6 +367,10 @@ struct PostProcessConfiguration {
         ENABLE_FXAA_BIT = (1 << 10),
         /** Enable TAA */
         ENABLE_TAA_BIT = (1 << 11),
+        /** Enable depth of field */
+        ENABLE_DOF_BIT = (1 << 12),
+        /** Enable motion blur */
+        ENABLE_MOTION_BLUR_BIT = (1 << 13),
     };
     using PostProcessEnableFlags = uint32_t;
 
@@ -265,6 +386,8 @@ struct PostProcessConfiguration {
         INDEX_BLOOM = 9,
         INDEX_FXAA = 10,
         INDEX_TAA = 11,
+        INDEX_DOF = 12,
+        INDEX_MOTION_BLUR = 13,
 
         INDEX_FACTOR_COUNT = 14,
     };
@@ -292,6 +415,15 @@ struct PostProcessConfiguration {
     FxaaConfiguration fxaaConfiguration;
     /** Taa antialiasing configuration */
     TaaConfiguration taaConfiguration;
+
+    /** Depth of field configuration */
+    DofConfiguration dofConfiguration;
+
+    /** Motion blur configuration */
+    MotionBlurConfiguration motionBlurConfiguration;
+
+    /** User post process factors which are automatically mapped and can be used easily anywhere in the pipeline */
+    BASE_NS::Math::Vec4 userFactors[PostProcessConstants::USER_GLOBAL_FACTOR_COUNT];
 };
 
 /** Render post process configuration (must match render_post_process_structs_common.h */
@@ -300,8 +432,11 @@ struct RenderPostProcessConfiguration {
     BASE_NS::Math::UVec4 flags { 0, 0, 0, 0 };
     // .x = delta time (ms), .y = tick delta time (ms), .z = tick total time (s), .w = frame index (asuint)
     BASE_NS::Math::Vec4 renderTimings { 0.0f, 0.0f, 0.0f, 0.0f };
-    /* All post process factors */
-    BASE_NS::Math::Vec4 factors[PostProcessConfiguration::INDEX_FACTOR_COUNT];
+    /* All built-in post process factors */
+    BASE_NS::Math::Vec4 factors[PostProcessConstants::GLOBAL_FACTOR_COUNT];
+
+    /* All user post process factors */
+    BASE_NS::Math::Vec4 userFactors[PostProcessConstants::USER_GLOBAL_FACTOR_COUNT];
 };
 
 /** Default render pod store for shader specialization */

@@ -16,10 +16,13 @@
 #ifndef CORE__IO__MEMORY_FILE_H
 #define CORE__IO__MEMORY_FILE_H
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 
 #include <base/containers/type_traits.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <core/io/intf_file.h>
 #include <core/namespace.h>
 
@@ -39,7 +42,7 @@ public:
 
     uint64_t Size() const
     {
-        return (uint64_t)buffer_.size();
+        return static_cast<uint64_t>(buffer_.size());
     }
 
     void Resize(size_t newSize)

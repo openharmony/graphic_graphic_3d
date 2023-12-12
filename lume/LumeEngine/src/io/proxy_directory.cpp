@@ -15,10 +15,18 @@
 
 #include "io/proxy_directory.h"
 
+#include <cstdint>
 #include <unordered_set>
 #include <utility>
 
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <base/util/compile_time_hashes.h>
+#include <core/io/intf_directory.h>
 #include <core/namespace.h>
 
 BASE_BEGIN_NAMESPACE()

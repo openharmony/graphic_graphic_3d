@@ -1,0 +1,466 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+precision highp float;
+precision highp int;
+
+
+
+
+
+layout(constant_id = 256)const uint CORE_BACKEND_TYPE = 0;
+
+
+
+
+layout(constant_id = 257)const float CORE_FLIP_NDC = 1.0;
+
+
+
+
+
+
+
+
+
+
+vec2 GetFragCoordUv(vec2 fragCoord, vec2 inverseTexelSize)
+{
+    vec2 uv = fragCoord * inverseTexelSize;
+    if(CORE_FLIP_NDC < 0.0){
+        uv = vec2(uv . x, 1.0 - uv . y);
+    }
+    return uv;
+}
+
+
+
+
+
+
+
+#line 24 "shader/depth_of_field.frag"
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct GlobalPostProcessStruct {
+
+    uvec4 flags;
+
+    vec4 renderTimings;
+
+
+    vec4 factors[14];
+
+
+    vec4 userFactors[16];
+};
+
+
+
+
+struct LocalPostProcessStruct {
+
+    vec4 factors[16];
+};
+
+struct LocalPostProcessPushConstantStruct {
+
+    vec4 viewportSizeInvSize;
+
+    vec4 factor;
+};
+
+struct PostProcessTonemapStruct {
+    vec4 texSizeInvTexSize;
+
+    uvec4 flags;
+
+    vec4 tonemap;
+    vec4 vignette;
+    vec4 colorFringe;
+    vec4 dither;
+
+    vec4 bloomParameters;
+};
+
+
+#line 21 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+
+
+
+
+layout(set = 0, binding = 0, std140)uniform uGlobalStructData
+{
+    GlobalPostProcessStruct uGlobalData;
+};
+layout(set = 0, binding = 1, std140)uniform uLocalStructData
+{
+    LocalPostProcessStruct uLocalData;
+};
+
+layout(push_constant, std430)uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(constant_id = 0)const uint CORE_POST_PROCESS_FLAGS = 0;
+
+
+
+
+
+
+#line 29 "shader/depth_of_field.frag"
+
+layout(set = 1, binding = 0)uniform sampler2D uTex;
+layout(set = 1, binding = 1)uniform sampler2D uNearTex;
+layout(set = 1, binding = 2)uniform sampler2D uFarTex;
+layout(set = 1, binding = 3)uniform sampler2D uDepth;
+
+
+
+layout(location = 0)in vec2 inUv;
+
+layout(location = 0)out vec4 outColor;
+
+float LinearDepth(float depth, float near, float far)
+{
+    return(far * near)/((near - far)* depth + far);
+}
+
+            mediump vec4 DepthOfField(vec2 texCoord, vec2 invTexSize, vec4 params1, vec4 params2)
+{
+    const mediump float depth = texture(uDepth, texCoord, 0). r;
+    const float linearDepth = LinearDepth(depth, params2 . z, params2 . w);
+
+    const float nearBlur = params2 . x;
+    const float farBlur = params2 . y;
+    const mediump vec4 farPlane0 = textureLod(uFarTex, texCoord, 0);
+    const mediump vec4 farPlane = textureLod(uFarTex, texCoord, farBlur);
+    const mediump vec4 focusPlane = textureLod(uTex, texCoord, 0);
+    const mediump vec4 nearPlane = textureLod(uNearTex, texCoord, nearBlur);
+
+                mediump vec4 color;
+    const mediump float farWeight = farPlane0 . a;
+    color . rgb =(farPlane . rgb * farWeight)+ focusPlane . rgb *(1.0 - farWeight);
+
+    const mediump float nearWeight = nearPlane . a;
+    color . rgb =(nearPlane . rgb * nearWeight)+ color . rgb *(1.0 - nearWeight);
+    color . a = 1.0;
+    return color;
+}
+
+void main(void)
+{
+
+
+    outColor = DepthOfField(inUv, uPc . viewportSizeInvSize . zw, uLocalData . factors[0], uLocalData . factors[1]);
+}

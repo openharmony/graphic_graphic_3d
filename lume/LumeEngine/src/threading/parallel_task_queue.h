@@ -40,6 +40,8 @@ public:
         @param task Task to execute.
     */
     void SubmitAfter(uint64_t afterIdentifier, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task);
+    void SubmitAfter(
+        BASE_NS::array_view<const uint64_t> afterIdentifiers, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task);
 
     void Submit(uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task) override;
     void Remove(uint64_t taskIdentifier) override;

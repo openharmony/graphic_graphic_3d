@@ -8,10 +8,7 @@
                 "type": "graphics",
                 "index": 0
             },
-            "shader": {
-                "name": "rendershaders://shader/fullscreen_triangle.shader",
-                "pipelineBindPoint": "graphics"
-            },
+            "shader": "rendershaders://shader/fullscreen_triangle.shader",
             "renderPass": {
                 "attachments": [
                     {

@@ -73,9 +73,9 @@ void PostProcessColorFringeBlock(in uint postProcessFlags, in vec4 chromaFactor,
 
         const vec2 uvDistToImageCenter = chroma * uvSize;
         const CORE_RELAXEDP float chromaRed =
-            texture(imgSampler, uv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y)).x;
+            textureLod(imgSampler, uv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), 0).x;
         const CORE_RELAXEDP float chromaBlue =
-            texture(imgSampler, uv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y)).z;
+            textureLod(imgSampler, uv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), 0).z;
 
         outCol.r = chromaRed;
         outCol.b = chromaBlue;
@@ -119,8 +119,8 @@ void PostProcessBloomCombineBlock(in uint postProcessFlags, in vec4 bloomFactor,
     outCol = inCol;
     if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_BLOOM_BIT) == POST_PROCESS_SPECIALIZATION_BLOOM_BIT) {
         // NOTE: lower resolution, more samples might be needed
-        const vec3 bloomColor = texture(imgSampler, uv).rgb * bloomFactor.z;
-        const vec3 dirtColor = texture(dirtImgSampler, uv).rgb * bloomFactor.w;
+        const vec3 bloomColor = textureLod(imgSampler, uv, 0).rgb * bloomFactor.z;
+        const vec3 dirtColor = textureLod(dirtImgSampler, uv, 0).rgb * bloomFactor.w;
         const vec3 bloomCombine = outCol + bloomColor + dirtColor * max(bloomColor.x, max(bloomColor.y, bloomColor.z));
         outCol.rgb = min(bloomCombine, CORE_CLAMP_MAX_VALUE);
     }

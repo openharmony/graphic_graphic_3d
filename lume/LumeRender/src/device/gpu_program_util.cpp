@@ -65,7 +65,7 @@ bool AddBindings(const DescriptorSetLayout& inDescriptorSetLayout, DescriptorSet
             }
         }
         if (!bindingAlreadyFound) {
-            outBindings.emplace_back(inBinding);
+            outBindings.push_back(inBinding);
         }
     }
     return validCombination;
@@ -110,14 +110,15 @@ void CombinePipelineLayouts(const array_view<const PipelineLayout> inPl, Pipelin
 uint32_t SpecializationByteSize(ShaderSpecialization::Constant::Type type)
 {
     switch (type) {
-        case Render::ShaderSpecialization::Constant::Type::BOOL:
+        case RENDER_NS::ShaderSpecialization::Constant::Type::BOOL:
             [[fallthrough]];
-        case Render::ShaderSpecialization::Constant::Type::UINT32:
+        case RENDER_NS::ShaderSpecialization::Constant::Type::UINT32:
             [[fallthrough]];
-        case Render::ShaderSpecialization::Constant::Type::INT32:
+        case RENDER_NS::ShaderSpecialization::Constant::Type::INT32:
             [[fallthrough]];
-        case Render::ShaderSpecialization::Constant::Type::FLOAT:
+        case RENDER_NS::ShaderSpecialization::Constant::Type::FLOAT:
             return 4;
+            break;
         default:
             break;
     }

@@ -16,8 +16,6 @@
 #ifndef API_BASE_CONTAINERS_REFCNT_PTR_H
 #define API_BASE_CONTAINERS_REFCNT_PTR_H
 
-#include <cstddef>
-
 #include <base/containers/type_traits.h>
 #include <base/namespace.h>
 

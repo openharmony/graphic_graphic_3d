@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include "vulkan/device_vk.h"
 #include "vulkan/platform_hardware_buffer_util_vk.h"
@@ -40,9 +40,9 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
         nullptr,                             // pAllocator
         &hwBufferImage.image));              // pImage
 
-    // NOTE: image aspect flags should be queried
-    const VkImageAspectFlags imageAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
     if (!useExternalFormat) {
+        // NOTE: image aspect flags should be queried
+        const VkImageAspectFlags imageAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
         // requirements are just queried to pass validation (hw buffer requirements are in hwBufferProperties)
         PlatformHardwareBufferUtil::GetImageMemoryRequirements(deviceVk, hwBufferImage.image, imageAspectFlags, false);
     }

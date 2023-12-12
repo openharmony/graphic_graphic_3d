@@ -1,0 +1,483 @@
+#version 320 es
+precision highp float;
+precision highp int;
+
+struct DefaultMaterialSingleMaterialStruct
+{
+    vec4 factors[15];
+    uvec4 indices;
+};
+
+struct DefaultMaterialMaterialStruct
+{
+    DefaultMaterialSingleMaterialStruct material[64];
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 0u
+#endif
+const uint CORE_MATERIAL_FLAGS = SPIRV_CROSS_CONSTANT_ID_1;
+const uint _497 = (CORE_MATERIAL_FLAGS & 8u);
+const bool _498 = (_497 == 8u);
+
+struct DefaultMaterialTransformSingleMaterialStruct
+{
+    uvec4 _packed[15];
+    uvec4 indices;
+};
+
+struct DefaultMaterialTransformMaterialStruct
+{
+    DefaultMaterialTransformSingleMaterialStruct material[64];
+};
+
+const uint _549 = (CORE_MATERIAL_FLAGS & 8u);
+const bool _550 = (_549 == 8u);
+
+struct DefaultCameraMatrixStruct
+{
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+    mat4 viewInv;
+    mat4 projInv;
+    mat4 viewProjInv;
+    mat4 viewPrevFrame;
+    mat4 projPrevFrame;
+    mat4 viewProjPrevFrame;
+    mat4 shadowViewProj;
+    mat4 shadowViewProjInv;
+    vec4 jitter;
+    vec4 jitterPrevFrame;
+    uvec4 indices;
+    uvec4 multiViewIndices;
+    vec4 frustumPlanes[6];
+    uvec4 counts;
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
+};
+
+struct DefaultMaterialGeneralDataStruct
+{
+    uvec4 indices;
+    vec4 viewportSizeInvViewportSize;
+    vec4 sceneTimingData;
+};
+
+const uint _780 = (CORE_MATERIAL_FLAGS & 16384u);
+const bool _781 = (_780 == 16384u);
+const uint _809 = (CORE_MATERIAL_FLAGS & 128u);
+const bool _810 = (_809 == 128u);
+const uint _822 = (CORE_MATERIAL_FLAGS & 256u);
+const bool _823 = (_822 == 256u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 0u
+#endif
+const uint CORE_MATERIAL_TYPE = SPIRV_CROSS_CONSTANT_ID_0;
+const uint _873 = (CORE_MATERIAL_FLAGS & 128u);
+const bool _874 = (_873 == 128u);
+const uint _885 = (CORE_MATERIAL_FLAGS & 256u);
+const bool _886 = (_885 == 256u);
+const uint _926 = (CORE_MATERIAL_FLAGS & 128u);
+const bool _927 = (_926 == 128u);
+const uint _938 = (CORE_MATERIAL_FLAGS & 256u);
+const bool _939 = (_938 == 256u);
+const uint _950 = (CORE_MATERIAL_FLAGS & 4u);
+const bool _951 = (_950 == 4u);
+const bool _1071 = (CORE_MATERIAL_TYPE == 2u);
+const bool _1076 = (CORE_MATERIAL_TYPE == 3u);
+
+layout(std140) uniform s1_b2
+{
+    DefaultMaterialMaterialStruct uMaterialData;
+} _s1_b2;
+
+layout(std140) uniform s1_b3
+{
+    DefaultMaterialTransformMaterialStruct uMaterialTransformData;
+} _s1_b3;
+
+layout(std140) uniform s0_b0
+{
+    DefaultCameraMatrixStruct uCameras[16];
+} _s0_b0;
+
+layout(std140) uniform s0_b1
+{
+    DefaultMaterialGeneralDataStruct uGeneralData;
+} _s0_b1;
+
+uniform mediump sampler2D s2_b0;
+uniform mediump sampler2D s2_b1[10];
+
+layout(location = 6) flat in uint inIndices;
+layout(location = 4) in vec4 inUv;
+layout(location = 5) in mediump vec4 inColor;
+layout(location = 1) out vec4 outVelocityNormal;
+layout(location = 0) in vec3 inPos;
+layout(location = 3) in vec4 inPrevPosI;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) out vec4 outBaseColor;
+layout(location = 3) out vec4 outMaterial;
+layout(location = 2) in vec4 inTangentW;
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+    if (_1071)
+    {
+        uint _3311;
+        if (_781)
+        {
+            _3311 = inIndices >> uint(16);
+        }
+        else
+        {
+            _3311 = 0u;
+        }
+        uint _1260 = floatBitsToUint(_s1_b2.uMaterialData.material[0].factors[11].y);
+        vec2 _3312;
+        if (((_1260 >> uint(16)) & 1u) == 1u)
+        {
+            _3312 = inUv.zw;
+        }
+        else
+        {
+            _3312 = inUv.xy;
+        }
+        vec2 _3319;
+        if (_498 && (((_1260 & 65535u) & 1u) == 1u))
+        {
+            _3319 = vec2(dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[0]._packed[0u].x).xy, _3312), dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[0]._packed[0u].y).xy, _3312)) + unpackHalf2x16(_s1_b3.uMaterialTransformData.material[0]._packed[0u].z).xy;
+        }
+        else
+        {
+            _3319 = _3312;
+        }
+        mediump vec4 _1214 = texture(s2_b0, _3319);
+        vec4 _1162 = (_1214 * _s1_b2.uMaterialData.material[_3311].factors[0]) * inColor;
+        mediump float _1165 = clamp(_1162.w, 0.0, 1.0);
+        mediump vec4 _3042 = _1162;
+        _3042.w = _1165;
+        if (_810)
+        {
+            if (_1165 < _s1_b2.uMaterialData.material[_3311].factors[11].x)
+            {
+                discard;
+            }
+        }
+        mediump vec4 _3324;
+        if (_823)
+        {
+            mediump vec4 _3045 = _3042;
+            _3045.w = 1.0;
+            _3324 = _3045;
+        }
+        else
+        {
+            _3324 = _3042;
+        }
+        uint _1322 = inIndices & 65535u;
+        vec4 _1337 = _s0_b0.uCameras[_1322].viewProj * vec4(inPos, 1.0);
+        vec4 _1346 = _s0_b0.uCameras[_1322].viewProjPrevFrame * vec4(inPrevPosI.xyz, 1.0);
+        vec3 _1402 = inNormal / vec3((abs(inNormal.x) + abs(inNormal.y)) + abs(inNormal.z));
+        vec2 _3321;
+        if (_1402.z >= 0.0)
+        {
+            _3321 = _1402.xy;
+        }
+        else
+        {
+            _3321 = (vec2(1.0) - abs(_1402.yx)) * vec2((_1402.x >= 0.0) ? 1.0 : (-1.0), (_1402.y >= 0.0) ? 1.0 : (-1.0));
+        }
+        outVelocityNormal = vec4(((((_1337.xy / vec2(_1337.w)) * 0.5) + vec2(0.5)) - (((_1346.xy / vec2(_1346.w)) * 0.5) + vec2(0.5))) * _s0_b1.uGeneralData.viewportSizeInvViewportSize.xy, (_3321.xy * 0.5) + vec2(0.5));
+        outBaseColor = _3324;
+        vec4 _3055 = vec4(0.0);
+        _3055.x = float(((((0u | uint(int((CORE_MATERIAL_FLAGS & 1u) == 1u))) | uint(((CORE_MATERIAL_FLAGS & 1024u) == 1024u) ? 2 : 0)) | uint(((CORE_MATERIAL_FLAGS & 2048u) == 2048u) ? 4 : 0)) << uint(3)) | CORE_MATERIAL_TYPE) * 0.0039215688593685626983642578125;
+        vec4 _3325;
+        if (CORE_MATERIAL_TYPE == 0u)
+        {
+            vec4 _3058 = _3055;
+            _3058.w = 0.0;
+            _3325 = _3058;
+        }
+        else
+        {
+            _3325 = _3055;
+        }
+        outMaterial = _3325;
+    }
+    else
+    {
+        if (_1076)
+        {
+            uint _3296;
+            if (_781)
+            {
+                _3296 = inIndices >> uint(16);
+            }
+            else
+            {
+                _3296 = 0u;
+            }
+            uint _1619 = floatBitsToUint(_s1_b2.uMaterialData.material[_3296].factors[11].y);
+            vec2 _3297;
+            if (((_1619 >> uint(16)) & 1u) == 1u)
+            {
+                _3297 = inUv.zw;
+            }
+            else
+            {
+                _3297 = inUv.xy;
+            }
+            vec2 _3304;
+            if (_550 && (((_1619 & 65535u) & 1u) == 1u))
+            {
+                _3304 = vec2(dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3296]._packed[0u].x).xy, _3297), dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3296]._packed[0u].y).xy, _3297)) + unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3296]._packed[0u].z).xy;
+            }
+            else
+            {
+                _3304 = _3297;
+            }
+            mediump vec4 _1569 = texture(s2_b0, _3304);
+            vec4 _1516 = (_1569 * _s1_b2.uMaterialData.material[_3296].factors[0]) * inColor;
+            mediump float _1519 = clamp(_1516.w, 0.0, 1.0);
+            mediump vec4 _3065 = _1516;
+            _3065.w = _1519;
+            if (_874)
+            {
+                if (_1519 < _s1_b2.uMaterialData.material[_3296].factors[11].x)
+                {
+                    discard;
+                }
+            }
+            mediump vec4 _3309;
+            if (_886)
+            {
+                mediump vec4 _3068 = _3065;
+                _3068.w = 1.0;
+                _3309 = _3068;
+            }
+            else
+            {
+                _3309 = _3065;
+            }
+            uint _1681 = inIndices & 65535u;
+            vec4 _1696 = _s0_b0.uCameras[_1681].viewProj * vec4(inPos, 1.0);
+            vec4 _1705 = _s0_b0.uCameras[_1681].viewProjPrevFrame * vec4(inPrevPosI.xyz, 1.0);
+            vec3 _1761 = inNormal / vec3((abs(inNormal.x) + abs(inNormal.y)) + abs(inNormal.z));
+            vec2 _3306;
+            if (_1761.z >= 0.0)
+            {
+                _3306 = _1761.xy;
+            }
+            else
+            {
+                _3306 = (vec2(1.0) - abs(_1761.yx)) * vec2((_1761.x >= 0.0) ? 1.0 : (-1.0), (_1761.y >= 0.0) ? 1.0 : (-1.0));
+            }
+            outVelocityNormal = vec4(((((_1696.xy / vec2(_1696.w)) * 0.5) + vec2(0.5)) - (((_1705.xy / vec2(_1705.w)) * 0.5) + vec2(0.5))) * _s0_b1.uGeneralData.viewportSizeInvViewportSize.xy, (_3306.xy * 0.5) + vec2(0.5));
+            outBaseColor = _3309;
+            vec4 _3078 = vec4(0.0);
+            _3078.x = float(((((0u | uint(int((CORE_MATERIAL_FLAGS & 1u) == 1u))) | uint(((CORE_MATERIAL_FLAGS & 1024u) == 1024u) ? 2 : 0)) | uint(((CORE_MATERIAL_FLAGS & 2048u) == 2048u) ? 4 : 0)) << uint(3)) | CORE_MATERIAL_TYPE) * 0.0039215688593685626983642578125;
+            vec4 _3310;
+            if (CORE_MATERIAL_TYPE == 0u)
+            {
+                vec4 _3081 = _3078;
+                _3081.w = 0.0;
+                _3310 = _3081;
+            }
+            else
+            {
+                _3310 = _3078;
+            }
+            outMaterial = _3310;
+        }
+        else
+        {
+            uint _3127;
+            if (_781)
+            {
+                _3127 = inIndices >> uint(16);
+            }
+            else
+            {
+                _3127 = 0u;
+            }
+            uint _2077 = floatBitsToUint(_s1_b2.uMaterialData.material[_3127].factors[11].y);
+            uint _2040 = _2077 >> uint(16);
+            vec2 _3128;
+            if ((_2040 & 1u) == 1u)
+            {
+                _3128 = inUv.zw;
+            }
+            else
+            {
+                _3128 = inUv.xy;
+            }
+            uint _2054 = _2077 & 65535u;
+            vec2 _3137;
+            if (_550 && ((_2054 & 1u) == 1u))
+            {
+                _3137 = vec2(dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[0u].x).xy, _3128), dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[0u].y).xy, _3128)) + unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[0u].z).xy;
+            }
+            else
+            {
+                _3137 = _3128;
+            }
+            mediump vec4 _2027 = texture(s2_b0, _3137);
+            vec4 _1898 = (_2027 * _s1_b2.uMaterialData.material[_3127].factors[0]) * inColor;
+            mediump float _1901 = clamp(_1898.w, 0.0, 1.0);
+            mediump vec4 _3088 = _1898;
+            _3088.w = _1901;
+            if (_927)
+            {
+                if (_1901 < _s1_b2.uMaterialData.material[_3127].factors[11].x)
+                {
+                    discard;
+                }
+            }
+            mediump vec4 _3283;
+            if (_939)
+            {
+                mediump vec4 _3091 = _3088;
+                _3091.w = 1.0;
+                _3283 = _3091;
+            }
+            else
+            {
+                _3283 = _3088;
+            }
+            vec3 _1916 = normalize(inNormal);
+            vec3 _3159;
+            if (_951)
+            {
+                vec2 _3139;
+                if ((_2040 & 2u) == 2u)
+                {
+                    _3139 = inUv.zw;
+                }
+                else
+                {
+                    _3139 = inUv.xy;
+                }
+                vec2 _3158;
+                if (_550 && ((_2054 & 2u) == 2u))
+                {
+                    _3158 = vec2(dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[1u].x).xy, _3139), dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[1u].y).xy, _3139)) + unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[1u].z).xy;
+                }
+                else
+                {
+                    _3158 = _3139;
+                }
+                vec3 _2260 = normalize(inTangentW.xyz);
+                _3159 = normalize(mat3(_2260, cross(_1916, _2260) * inTangentW.w, _1916) * normalize(((texture(s2_b1[0], _3158).xyz * 2.0) - vec3(1.0)) * vec3(_s1_b2.uMaterialData.material[_3127].factors[1].x, _s1_b2.uMaterialData.material[_3127].factors[1].x, 1.0)));
+            }
+            else
+            {
+                _3159 = _1916;
+            }
+            vec3 _3160;
+            if (gl_FrontFacing)
+            {
+                _3160 = _3159;
+            }
+            else
+            {
+                _3160 = -_3159;
+            }
+            vec2 _3161;
+            if ((_2040 & 4u) == 4u)
+            {
+                _3161 = inUv.zw;
+            }
+            else
+            {
+                _3161 = inUv.xy;
+            }
+            vec2 _3192;
+            if (_550 && ((_2054 & 4u) == 4u))
+            {
+                _3192 = vec2(dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[2u].x).xy, _3161), dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[2u].y).xy, _3161)) + unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[2u].z).xy;
+            }
+            else
+            {
+                _3192 = _3161;
+            }
+            mediump vec4 _2445 = texture(s2_b1[1], _3192);
+            vec4 _1957 = _2445 * _s1_b2.uMaterialData.material[_3127].factors[2];
+            mediump vec3 _2555 = dFdx(_1916);
+            mediump vec3 _2557 = dFdy(_1916);
+            mediump vec4 _3103 = _1957;
+            _3103.y = clamp(max(_1957.y, pow(clamp(max(dot(_2555, _2555), dot(_2557, _2557)), 0.0, 1.0), 0.333000004291534423828125)), 0.08900000154972076416015625, 1.0);
+            vec2 _3193;
+            if ((_2040 & 16u) == 16u)
+            {
+                _3193 = inUv.zw;
+            }
+            else
+            {
+                _3193 = inUv.xy;
+            }
+            vec2 _3230;
+            if (_550 && ((_2054 & 16u) == 16u))
+            {
+                _3230 = vec2(dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[4u].x).xy, _3193), dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[4u].y).xy, _3193)) + unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[4u].z).xy;
+            }
+            else
+            {
+                _3230 = _3193;
+            }
+            mediump vec4 _2584 = texture(s2_b1[3], _3230);
+            vec2 _3231;
+            if ((_2040 & 8u) == 8u)
+            {
+                _3231 = inUv.zw;
+            }
+            else
+            {
+                _3231 = inUv.xy;
+            }
+            vec2 _3274;
+            if (_550 && ((_2054 & 8u) == 8u))
+            {
+                _3274 = vec2(dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[3u].x).xy, _3231), dot(unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[3u].y).xy, _3231)) + unpackHalf2x16(_s1_b3.uMaterialTransformData.material[_3127]._packed[3u].z).xy;
+            }
+            else
+            {
+                _3274 = _3231;
+            }
+            outColor = vec4((texture(s2_b1[2], _3274).xyz * (_s1_b2.uMaterialData.material[_3127].factors[3].xyz * _s1_b2.uMaterialData.material[_3127].factors[3].w)) * _3283.w, 1.0);
+            uint _2820 = inIndices & 65535u;
+            vec4 _2835 = _s0_b0.uCameras[_2820].viewProj * vec4(inPos, 1.0);
+            vec4 _2844 = _s0_b0.uCameras[_2820].viewProjPrevFrame * vec4(inPrevPosI.xyz, 1.0);
+            vec3 _2900 = _3160 / vec3((abs(_3160.x) + abs(_3160.y)) + abs(_3160.z));
+            vec2 _3292;
+            if (_2900.z >= 0.0)
+            {
+                _3292 = _2900.xy;
+            }
+            else
+            {
+                _3292 = (vec2(1.0) - abs(_2900.yx)) * vec2((_2900.x >= 0.0) ? 1.0 : (-1.0), (_2900.y >= 0.0) ? 1.0 : (-1.0));
+            }
+            outVelocityNormal = vec4(((((_2835.xy / vec2(_2835.w)) * 0.5) + vec2(0.5)) - (((_2844.xy / vec2(_2844.w)) * 0.5) + vec2(0.5))) * _s0_b1.uGeneralData.viewportSizeInvViewportSize.xy, (_3292.xy * 0.5) + vec2(0.5));
+            outBaseColor = vec4(_3283.xyz, clamp(_2584.x * _s1_b2.uMaterialData.material[_3127].factors[4].x, 0.0, 1.0));
+            vec4 _3123 = _3103;
+            _3123.x = float(((((0u | uint(int((CORE_MATERIAL_FLAGS & 1u) == 1u))) | uint(((CORE_MATERIAL_FLAGS & 1024u) == 1024u) ? 2 : 0)) | uint(((CORE_MATERIAL_FLAGS & 2048u) == 2048u) ? 4 : 0)) << uint(3)) | CORE_MATERIAL_TYPE) * 0.0039215688593685626983642578125;
+            vec4 _3295;
+            if (CORE_MATERIAL_TYPE == 0u)
+            {
+                vec4 _3126 = _3123;
+                _3126.w = clamp(_1957.w * 10.0, 0.0, 1.0);
+                _3295 = _3126;
+            }
+            else
+            {
+                _3295 = _3123;
+            }
+            outMaterial = _3295;
+        }
+    }
+}
+

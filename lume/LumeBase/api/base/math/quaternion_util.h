@@ -20,6 +20,7 @@
 
 #include <base/math/mathf.h>
 #include <base/math/quaternion.h>
+#include <base/math/vector.h>
 #include <base/math/vector_util.h>
 #include <base/namespace.h>
 

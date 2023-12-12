@@ -17,6 +17,7 @@
 #define GLES_GPU_PROGRAM_GLES_H
 
 #include <base/containers/array_view.h>
+#include <base/containers/unique_ptr.h>
 #include <render/device/gpu_resource_desc.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
@@ -59,13 +60,15 @@ public:
     const GpuShaderProgramPlatformDataGL& GetPlatformData() const;
     const ShaderReflection& GetReflection() const override;
 
-    GpuShaderProgramGLES* Specialize(const ShaderSpecializationConstantDataView& specialization) const;
+    BASE_NS::unique_ptr<GpuShaderProgramGLES> Specialize(
+        const ShaderSpecializationConstantDataView& specialization, uint32_t views) const;
 
-    GpuShaderProgramGLES* OesPatch(const BASE_NS::array_view<const OES_Bind>& binds) const;
+    BASE_NS::unique_ptr<GpuShaderProgramGLES> OesPatch(
+        const BASE_NS::array_view<const OES_Bind>& binds, uint32_t views) const;
 
 private:
-    GpuShaderProgramGLES* Specialize(const ShaderSpecializationConstantDataView& specData,
-        const BASE_NS::array_view<const OES_Bind>& oesBinds) const;
+    BASE_NS::unique_ptr<GpuShaderProgramGLES> Specialize(const ShaderSpecializationConstantDataView& specData,
+        const BASE_NS::array_view<const OES_Bind>& oesBinds, uint32_t views) const;
     void FilterInputs(GpuShaderProgramGLES& ret) const;
     GpuShaderProgramGLES(Device& device);
     DeviceGLES& device_;
@@ -95,7 +98,8 @@ public:
     const GpuComputeProgramPlatformDataGL& GetPlatformData() const;
     const ComputeShaderReflection& GetReflection() const override;
 
-    GpuComputeProgramGLES* Specialize(const ShaderSpecializationConstantDataView& specialization) const;
+    BASE_NS::unique_ptr<GpuComputeProgramGLES> Specialize(
+        const ShaderSpecializationConstantDataView& specialization) const;
 
 private:
     GpuComputeProgramGLES(Device& device);

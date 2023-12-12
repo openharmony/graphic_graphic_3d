@@ -70,6 +70,17 @@ vec3 EnvBRDFApprox(vec3 f0, float roughness, float NoV)
     return f0 * ab.x + ab.y * f90;
 }
 
+// https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile
+// Approximation of EnvBRDFApprox for non metallic (diaelectric) materials with reflectance value of 0.04
+float EnvBRDFApproxNonmetal(float Roughness, float NoV)
+{
+    // Same as EnvBRDFApprox( 0.04, Roughness, NoV )
+    const vec2 c0 = { -1, -0.0275 };
+    const vec2 c1 = { 1, 0.0425 };
+    vec2 r = Roughness * c0 + c1;
+    return min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
+}
+
 #endif // VULKAN
 
 #endif // SHADERS__COMMON__3D_DM_INDIRECT_LIGHTING_COMMON_H

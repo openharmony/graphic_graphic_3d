@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -48,13 +49,13 @@ void main(void)
     const vec2 uv = inUv;
 
     // center
-    vec4 color = texture(sampler2D(uTex, uSampler), uv) * 0.5;
+    vec4 color = textureLod(sampler2D(uTex, uSampler), uv, 0) * 0.5;
     // corners
     // 1.0 / 8.0 = 0.125
-    color += texture(sampler2D(uTex, uSampler), uv - ths) * 0.125;
-    color += texture(sampler2D(uTex, uSampler), vec2(uv.x + ths.x, uv.y - ths.y)) * 0.125;
-    color += texture(sampler2D(uTex, uSampler), vec2(uv.x - ths.x, uv.y + ths.y)) * 0.125;
-    color += texture(sampler2D(uTex, uSampler), uv + ths) * 0.125;
+    color += textureLod(sampler2D(uTex, uSampler), uv - ths, 0) * 0.125;
+    color += textureLod(sampler2D(uTex, uSampler), vec2(uv.x + ths.x, uv.y - ths.y), 0) * 0.125;
+    color += textureLod(sampler2D(uTex, uSampler), vec2(uv.x - ths.x, uv.y + ths.y), 0) * 0.125;
+    color += textureLod(sampler2D(uTex, uSampler), uv + ths, 0) * 0.125;
 
     outColor = color.rgba;
 }

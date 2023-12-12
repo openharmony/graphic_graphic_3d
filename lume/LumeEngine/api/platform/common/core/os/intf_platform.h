@@ -16,13 +16,10 @@
 #ifndef API_CORE_OS_IPLATFORM_H
 #define API_CORE_OS_IPLATFORM_H
 
-#include <cstdint>
-
 #include <base/containers/string.h>
 #include <base/containers/unique_ptr.h>
+#include <base/namespace.h>
 #include <core/namespace.h>
-
-#include "platform_create_info.h"
 
 CORE_BEGIN_NAMESPACE()
 struct PlatformData;
@@ -37,11 +34,6 @@ public:
      * @return Platform specific data struct
      */
     virtual const PlatformData& GetPlatformData() const = 0;
-
-    /** Register platform specific paths
-     * @param fileManager File manager instance to register paths to
-     * @return Engine root directory URI
-     */
     virtual BASE_NS::string RegisterDefaultPaths(IFileManager& fileManager) = 0;
 
     /** Register platform specific plugin locations

@@ -67,6 +67,9 @@ public:
 
     void DestroyNode(ISceneNode& rootNode) override;
 
+    void AddListener(SceneNodeListener& listener) override;
+    void RemoveListener(SceneNodeListener& listener) override;
+
 private:
     class NodeAccess;
     class SceneNode;

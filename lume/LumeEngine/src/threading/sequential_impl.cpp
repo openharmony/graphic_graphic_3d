@@ -15,9 +15,11 @@
 
 #include "threading/sequential_impl.h"
 
+#include <base/containers/array_view.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
+using BASE_NS::array_view;
 using BASE_NS::vector;
 
 SequentialImpl::~SequentialImpl() = default;
@@ -32,6 +34,12 @@ void SequentialImpl::Submit(uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& t
 void SequentialImpl::SubmitAfter(uint64_t afterIdentifier, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
 {
     queue_.SubmitAfter(afterIdentifier, taskIdentifier, move(task));
+}
+
+void SequentialImpl::SubmitAfter(
+    array_view<const uint64_t> afterIdentifiers, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
+{
+    queue_.SubmitAfter(afterIdentifiers, taskIdentifier, move(task));
 }
 
 void SequentialImpl::Execute()

@@ -152,13 +152,6 @@ protected:
     IAnimationSystem& operator=(IAnimationSystem&&) = delete;
 };
 
-/** @ingroup group_ecs_systems_ianimation */
-/** Return name of this system
- */
-inline constexpr BASE_NS::string_view GetName(const IAnimationSystem*)
-{
-    return "AnimationSystem";
-}
 CORE3D_END_NAMESPACE()
 
 #endif // API_3D_ECS_SYSTEMS_IANIMATION_SYSTEM_H

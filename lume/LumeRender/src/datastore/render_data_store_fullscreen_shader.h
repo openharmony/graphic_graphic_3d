@@ -19,11 +19,9 @@
 #include <cstdint>
 #include <mutex>
 
-#include <base/containers/array_view.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
-#include <base/containers/vector.h>
 #include <base/util/uid.h>
 #include <render/datastore/intf_render_data_store_fullscreen_shader.h>
 #include <render/namespace.h>
@@ -38,10 +36,16 @@ public:
     RenderDataStoreFullscreenShader(const IRenderContext& renderContex, const BASE_NS::string_view name);
     ~RenderDataStoreFullscreenShader() override;
 
+    void CommitFrameData() override {};
     void PreRender() override {};
-    void PreRenderBackend() override {};
     void PostRender() override {};
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override {};
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     IShaderPipelineBinder::Ptr Create(const BASE_NS::string_view name, const RenderHandleReference& shader) override;
     IShaderPipelineBinder::Ptr Create(const uint64_t id, const RenderHandleReference& shader) override;

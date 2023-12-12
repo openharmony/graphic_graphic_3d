@@ -39,17 +39,18 @@ RENDER_BEGIN_NAMESPACE()
 void RenderNodeFullscreenGeneric::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
+    pipelineData_ = {};
     ParseRenderNodeInputs();
 
     useDataStoreShaderSpecialization_ = !jsonInputs_.renderDataStoreSpecialization.dataStoreName.empty();
 
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-    if (!shaderMgr.IsValid(shader_)) {
+    if (RenderHandleUtil::GetHandleType(pipelineData_.shader) != RenderHandleType::SHADER_STATE_OBJECT) {
         PLUGIN_LOG_E("RenderNodeFullscreenGeneric needs a valid shader handle");
     }
 
     if (useDataStoreShaderSpecialization_) {
-        const ShaderSpecilizationConstantView sscv = shaderMgr.GetReflectionSpecialization(shader_);
+        const ShaderSpecializationConstantView sscv = shaderMgr.GetReflectionSpecialization(pipelineData_.shader);
         shaderSpecializationData_.constants.resize(sscv.constants.size());
         shaderSpecializationData_.data.resize(sscv.constants.size());
         for (size_t idx = 0; idx < shaderSpecializationData_.constants.size(); ++idx) {
@@ -60,22 +61,23 @@ void RenderNodeFullscreenGeneric::InitNode(IRenderNodeContextManager& renderNode
     }
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
-    const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader_);
-    pipelineLayout_ = renderNodeUtil.CreatePipelineLayout(shader_);
-    constexpr DynamicStateFlags dynamicStateFlags =
-        DynamicStateFlagBits::CORE_DYNAMIC_STATE_VIEWPORT | DynamicStateFlagBits::CORE_DYNAMIC_STATE_SCISSOR;
-    psoHandle_ = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-        shader_, graphicsState, pipelineLayout_, {}, {}, dynamicStateFlags);
+    pipelineData_.pipelineLayout = shaderMgr.GetPipelineLayoutHandleByShaderHandle(pipelineData_.shader);
+    if (!RenderHandleUtil::IsValid(pipelineData_.pipelineLayout)) {
+        pipelineData_.pipelineLayout = shaderMgr.GetReflectionPipelineLayoutHandle(pipelineData_.shader);
+    }
+    pipelineData_.graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(pipelineData_.shader);
+    pipelineData_.pipelineLayoutData = shaderMgr.GetPipelineLayout(pipelineData_.pipelineLayout);
+    pipelineData_.pso = GetPsoHandle();
 
     {
-        const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
+        const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(pipelineData_.pipelineLayoutData);
         renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(dc);
     }
 
-    pipelineDescriptorSetBinder_ = renderNodeUtil.CreatePipelineDescriptorSetBinder(pipelineLayout_);
+    pipelineDescriptorSetBinder_ = renderNodeUtil.CreatePipelineDescriptorSetBinder(pipelineData_.pipelineLayoutData);
     renderNodeUtil.BindResourcesToBinder(inputResources_, *pipelineDescriptorSetBinder_);
 
-    useDataStorePushConstant_ = (pipelineLayout_.pushConstant.byteSize > 0) &&
+    useDataStorePushConstant_ = (pipelineData_.pipelineLayoutData.pushConstant.byteSize > 0) &&
                                 (!jsonInputs_.renderDataStore.dataStoreName.empty()) &&
                                 (!jsonInputs_.renderDataStore.configurationName.empty());
 }
@@ -87,7 +89,7 @@ void RenderNodeFullscreenGeneric::PreExecuteFrame()
 
 void RenderNodeFullscreenGeneric::ExecuteFrame(IRenderCommandList& cmdList)
 {
-    if (!Render::RenderHandleUtil::IsValid(shader_)) {
+    if (!RENDER_NS::RenderHandleUtil::IsValid(pipelineData_.pso)) {
         return;
     }
 
@@ -112,13 +114,15 @@ void RenderNodeFullscreenGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     }
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (!pipelineDescriptorSetBinder_->GetPipelineDescriptorSetLayoutBindingValidity()) {
-        PLUGIN_LOG_E("RenderNodeFullscreenGeneric: bindings missing (RN: %s)", renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_ONCE_E(renderNodeContextMgr_->GetName() + "_RCL_UpdateDescriptorSet_invalid_",
+            "RENDER_VALIDATION: RenderNodeFullscreenGeneric: bindings missing (RN: %s)",
+            renderNodeContextMgr_->GetName().data());
     }
 #endif
 
     cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
 
-    const RenderHandle psoHandle = GetPsoHandle(*renderNodeContextMgr_);
+    const RenderHandle psoHandle = GetPsoHandle();
     cmdList.BindPipeline(psoHandle);
 
     // bind all sets
@@ -127,6 +131,11 @@ void RenderNodeFullscreenGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     // dynamic state
     cmdList.SetDynamicStateViewport(viewportDesc);
     cmdList.SetDynamicStateScissor(scissorDesc);
+    if (renderPass.subpassDesc.fragmentShadingRateAttachmentCount > 0) {
+        cmdList.SetDynamicStateFragmentShadingRate(
+            { 1u, 1u }, FragmentShadingRateCombinerOps { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
+                            CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
+    }
 
     // push constants
     if (useDataStorePushConstant_) {
@@ -136,7 +145,7 @@ void RenderNodeFullscreenGeneric::ExecuteFrame(IRenderCommandList& cmdList)
         if (dataStore) {
             const auto dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
             if (!dataView.empty()) {
-                cmdList.PushConstant(pipelineLayout_.pushConstant, dataView.data());
+                cmdList.PushConstant(pipelineData_.pipelineLayoutData.pushConstant, dataView.data());
             }
         }
     }
@@ -145,10 +154,13 @@ void RenderNodeFullscreenGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     cmdList.EndRenderPass();
 }
 
-RenderHandle RenderNodeFullscreenGeneric::GetPsoHandle(IRenderNodeContextManager& renderNodeContextMgr)
+RenderHandle RenderNodeFullscreenGeneric::GetPsoHandle()
 {
+    // controlled by count
+    constexpr DynamicStateEnum dynamicStates[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR,
+        CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE };
     if (useDataStoreShaderSpecialization_) {
-        const auto& renderDataStoreMgr = renderNodeContextMgr.GetRenderDataStoreManager();
+        const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
         const auto dataStore = static_cast<IRenderDataStorePod const*>(
             renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStoreSpecialization.dataStoreName));
         if (dataStore) {
@@ -171,30 +183,35 @@ RenderHandle RenderNodeFullscreenGeneric::GetPsoHandle(IRenderNodeContextManager
                     }
                 }
                 if (valuesChanged) {
-                    constexpr DynamicStateFlags dynamicStateFlags = DynamicStateFlagBits::CORE_DYNAMIC_STATE_VIEWPORT |
-                                                                    DynamicStateFlagBits::CORE_DYNAMIC_STATE_SCISSOR;
                     const ShaderSpecializationConstantDataView specialization {
                         { shaderSpecializationData_.constants.data(), specializationCount },
                         { shaderSpecializationData_.data.data(), specializationCount }
                     };
-                    const RenderHandle graphicsState =
-                        renderNodeContextMgr_->GetShaderManager().GetGraphicsStateHandleByShaderHandle(shader_);
-                    psoHandle_ = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-                        shader_, graphicsState, pipelineLayout_, {}, specialization, dynamicStateFlags);
+                    const uint32_t dynamicStateCount =
+                        (inputRenderPass_.fragmentShadingRateAttachmentIndex != ~0u) ? 3u : 2u;
+                    pipelineData_.pso = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
+                        pipelineData_.shader, pipelineData_.graphicsState, pipelineData_.pipelineLayout, {},
+                        specialization, { dynamicStates, dynamicStateCount });
                 }
             } else {
+#if (RENDER_VALIDATION_ENABLED == 1)
                 const string logName = "RenderNodeFullscreenGeneric_ShaderSpecialization" +
                                        string(jsonInputs_.renderDataStoreSpecialization.configurationName);
                 PLUGIN_LOG_ONCE_E(logName.c_str(),
-                    "RenderNodeFullscreenGeneric shader specilization render data store size mismatch, name: %s, "
-                    "size:%u, podsize%u",
+                    "RENDER_VALIDATION: RenderNodeFullscreenGeneric shader specilization render data store size "
+                    "mismatch, name: %s, size:%u, podsize%u",
                     jsonInputs_.renderDataStoreSpecialization.configurationName.c_str(),
                     static_cast<uint32_t>(sizeof(ShaderSpecializationRenderPod)),
                     static_cast<uint32_t>(dataView.size_bytes()));
+#endif
             }
         }
+    } else if (!RenderHandleUtil::IsValid(pipelineData_.pso)) {
+        const uint32_t dynamicStateCount = (inputRenderPass_.fragmentShadingRateAttachmentIndex != ~0u) ? 3u : 2u;
+        pipelineData_.pso = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(pipelineData_.shader,
+            pipelineData_.graphicsState, pipelineData_.pipelineLayout, {}, {}, { dynamicStates, dynamicStateCount });
     }
-    return psoHandle_;
+    return pipelineData_.pso;
 }
 
 void RenderNodeFullscreenGeneric::ParseRenderNodeInputs()
@@ -209,7 +226,7 @@ void RenderNodeFullscreenGeneric::ParseRenderNodeInputs()
 
     const auto shaderName = parserUtil.GetStringValue(jsonVal, "shader");
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-    shader_ = shaderMgr.GetShaderHandle(shaderName);
+    pipelineData_.shader = shaderMgr.GetShaderHandle(shaderName);
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     inputRenderPass_ = renderNodeUtil.CreateInputRenderPass(jsonInputs_.renderPass);
