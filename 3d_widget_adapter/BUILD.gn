@@ -141,6 +141,9 @@ ohos_source_set("widget_adapter_source") {
         "$ace_flutter_engine_root/skia:ace_skia_ohos",
       ]
     }
+    if (defined(use_rosen_drawing) && use_rosen_drawing) {
+      defines += [ "USE_ROSEN_DRAWING" ]
+    }
 
     if (current_os == "ohos" ) {
       sources += [

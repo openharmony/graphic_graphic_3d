@@ -376,12 +376,14 @@ void TextureLayer::DrawTextureUnifyRender(SkCanvas* canvas)
     canvas->drawImage(MakePixelImage(), offsetX_, offsetY_);
     return;
 #endif
+#ifndef USE_ROSEN_DRAWING
     Rosen::RSSurfaceBufferInfo info {
         surfaceBuffer_, offsetX_, offsetY_, image_.textureInfo_.width_, image_.textureInfo_.height_
     };
 
     auto recordingCanvas = static_cast<Rosen::RSRecordingCanvas*>(canvas);
     recordingCanvas->DrawSurfaceBuffer(info);
+#endif
 }
 #endif
 
