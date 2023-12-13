@@ -278,7 +278,7 @@ ohos_source_set("lume_engine_src") {
   ]
 
   deps = [
-    "//third_party/libpng:libpng",
+    "//third_party/libpng:libpng_static",
     "//third_party/libjpeg-turbo:turbojpeg_static",
     "//third_party/zlib:shared_libz",
   ]
