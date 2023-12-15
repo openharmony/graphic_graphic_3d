@@ -364,11 +364,12 @@ lume_compile_shader("lume_render_compile_shader")
 {
   script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
   outputs = [ "$target_gen_dir" ]
-  tool_path = rebase_path("${LUME_CORE_PATH}/tools/", root_build_dir)
+  tool_path = "$target_gen_dir"
   dest_gen_path = "$target_gen_dir/assets"
   asset_path = rebase_path("./assets/render", root_build_dir)
   shader_path = "${dest_gen_path}/shaders"
   include_path = rebase_path("api", root_build_dir)
+  compileShader_deps=["${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile"]
 }
 
 lume_rofs("lume_render_rofs")
@@ -384,14 +385,17 @@ lume_rofs("lume_render_rofs")
 
   outputs = "${target_gen_dir}/assets/${output_obj}"
 
-  tool_path = rebase_path("${LUME_CORE_PATH}/tools/", root_build_dir)
+  tool_path = "$target_gen_dir"
   root = "/"
   bin_name = "BINARYDATAFORRENDER"
   size_name = "SIZEOFDATAFORRENDER"
   base_name = RENDER_ROFS 
   script = "${LUME_CORE_PATH}/tools/CompilerAsset.sh"
   copy_path = "$target_gen_dir/assets"
-  compileShader_deps = [":lume_render_compile_shader"]
+  compileShader_deps = [
+    ":lume_render_compile_shader",
+    "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile"
+    ]
   file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
 }
 

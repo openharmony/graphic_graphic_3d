@@ -40,7 +40,9 @@
           "//foundation/graphic/graphic_3d/lume/LumeRender:libPluginAGPRender",
           "//foundation/graphic/graphic_3d/lume/Lume_3D/DLL:libPluginAGP3D",
           "//foundation/graphic/graphic_3d/lume/Lume_3D:libAGP3D",
-          "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter"
+          "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
+          "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/LumeShaderCompiler:binary_compile_shader",
+          "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/lumeassetcompiler:binary_compile_asset"
         ],
         "inner_kits": [
           {

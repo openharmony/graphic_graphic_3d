@@ -12,6 +12,7 @@ declare_args() {
   CORE_DIR_NAME="LumeEngine"
   RENDER_DIR_NAME="LumeRender"
   CORE3D_DIR_NAME="Lume_3D"
+  BINARY_DIR_NAME="LumeBinaryCompile"
 
   LUME_OHOS_BUILD=true
   CORE_DEV_ENABLED=1
@@ -31,6 +32,7 @@ declare_args() {
   LUME_CORE_PATH="${LUME_ROOT}/${CORE_DIR_NAME}/"
   LUME_RENDER_PATH="${LUME_ROOT}/${RENDER_DIR_NAME}/"
   LUME_CORE3D_PATH="${LUME_ROOT}/${CORE3D_DIR_NAME}/"
+  LUME_BINARY_PATH="${LUME_ROOT}/${BINARY_DIR_NAME}/"
 
   LUME_CORE_DLL_PATH="${LUME_ROOT}/${CORE_DIR_NAME}/DLL/"
   LUME_CORE3D_DLL_PATH="${LUME_ROOT}/${CORE3D_DIR_NAME}/DLL/"
@@ -64,7 +66,7 @@ template("lume_rofs") {
     }
 
     args = [
-      invoker.tool_path,
+      rebase_path(invoker.tool_path, root_build_dir),
       "-${cpu_type}",
       rebase_path(invoker.copy_path, root_build_dir),
       invoker.root,
@@ -83,6 +85,17 @@ template("lume_rofs") {
   }
 }
 
+template("lume_binary_complile") {
+  name = target_name
+  action(name) {
+    outputs = invoker.outputs
+    script = invoker.script
+    args = [
+      rebase_path(invoker.dest_gen_path, root_build_dir)
+    ]
+  }
+}
+
 template("lume_compile_shader") {
   name = target_name
   action(name) {
@@ -91,7 +104,7 @@ template("lume_compile_shader") {
     args = [
       rebase_path(invoker.dest_gen_path, root_build_dir),
       invoker.asset_path,
-      invoker.tool_path,
+      rebase_path(invoker.tool_path, root_build_dir),
       rebase_path(invoker.shader_path, root_build_dir),
       invoker.include_path,
     ]
@@ -100,6 +113,10 @@ template("lume_compile_shader") {
       args += [
         invoker.render_include_path
       ]
+    }
+    deps = []
+    if (defined(invoker.compileShader_deps)) {
+      deps += invoker.compileShader_deps
     }
   }
 }

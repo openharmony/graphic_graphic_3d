@@ -2,6 +2,9 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
 
 set -e
+WORKING_DIR=$(cd "$(dirname "$0")"; pwd)
+PROJECT_ROOT=${WORKING_DIR%/LumeEngine*}
+echo ${PROJECT_ROOT}
 
 TOOL_PATH=$3
 SHADER_PATH=$4
@@ -24,16 +27,16 @@ compile_shader()
         rm -rf $DEST_GEN_PATH
         echo "Clean Output"
     fi
-
+    TEST_TOOL_PATH=$TOOL_PATH/../LumeBinaryCompile/LumeShaderCompiler
     mkdir -p $DEST_GEN_PATH
     chmod -R 775 $DEST_GEN_PATH
 
     cp -r ${ASSETS_PATH}/* $DEST_GEN_PATH
     if [ -z "$RENDER_INCLUDE_PATH" ];
     then
-        $TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $INCLUDE_PATH
+        $TEST_TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $PROJECT_ROOT/LumeRender/api/
     else
-        $TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $INCLUDE_PATH --include $RENDER_INCLUDE_PATH
+        $TEST_TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $PROJECT_ROOT/Lume_3D/api/ --include $PROJECT_ROOT/LumeRender/api/
     fi
 }
 

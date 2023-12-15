@@ -303,7 +303,7 @@ lume_rofs("lume_engine_rofs")
 
   outputs = "${target_gen_dir}/assets/${output_obj}"
 
-  tool_path = rebase_path("./tools/", root_build_dir)
+  tool_path = "$target_gen_dir"
   root = "/"
   bin_name = "BINARYDATAFORCORE"
   size_name = "SIZEOFDATAFORCORE"
@@ -311,6 +311,7 @@ lume_rofs("lume_engine_rofs")
   script = "./tools/CompilerAsset.sh"
   copy_path = "$target_gen_dir/assets"
   file_extension = ""
+  compileShader_deps=["${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile"]
 }
 
 source_set("lume_engine_rofs_obj") {

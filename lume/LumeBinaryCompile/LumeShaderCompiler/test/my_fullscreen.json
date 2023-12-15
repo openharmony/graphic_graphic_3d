@@ -1,0 +1,98 @@
+{
+    "target" : "my_fullscreen.frag",
+    "template" : "simple/core_fullscreen_template.json",
+    "types" : [
+        {
+            "name" : "Time",
+            "members" : [
+                {
+                    "type": "float",
+                    "name" : "t"
+                }
+            ]
+        }
+    ],
+    "uniforms" : [
+        {
+            "type": "sampler2D",
+            "name": "Image0"
+        },
+        {
+            "type": "sampler2D",
+            "name": "Image1"
+        },
+        {
+            "type": "Time",
+            "name": "uTime"
+        }
+    ],
+    "blocks" : [
+        {
+            "name" : "IMAGE",
+            "source": "simple/snippets/core_image_blocks.h",
+            "function": "GenericImageSample",
+            "inputs": [
+                {
+                    "type": "vec2",
+                    "name": "inUv"
+                },
+                {
+                    "type": "sampler2D",
+                    "name": "Image0"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "vec4",
+                    "name": "ImageRes0"
+                }
+            ]
+        },
+        {
+            "name" : "IMAGE",
+            "source": "simple/snippets/core_image_blocks.h",
+            "function": "GenericImageSample",
+            "inputs": [
+                {
+                    "type": "vec2",
+                    "name": "inUv"
+                },
+                {
+                    "type": "sampler2D",
+                    "name": "Image1"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "vec4",
+                    "name": "ImageRes1"
+                }
+            ]
+        },        
+        {
+            "name" : "LERP",
+            "source" : "simple/snippets/core_lerp_blocks.h",
+            "function" : "GenericLerp",
+            "inputs": [
+                {
+                    "type": "vec4",
+                    "name": "ImageRes0"
+                },
+                {
+                    "type": "vec4",
+                    "name": "ImageRes1"
+                },
+                {
+                    "type": "float",
+                    "name": "uTime.t"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "vec4",
+                    "name": "outColor"
+                }
+            ]     
+        }
+    ]
+}
