@@ -127,6 +127,12 @@ vec4 GetPackVelocityAndNormal(in vec2 velocity, in vec3 normal)
     return vec4(velocity, NormalOctEncode(normal));
 }
 
+vec4 GetPackPbrColor(in vec3 color, in CORE_RELAXEDP float alpha)
+{
+    // zero to hdr max clamp and alpha multiply
+    return vec4(clamp(color.rgb, 0.0, CORE3D_HDR_FLOAT_CLAMP_MAX_VALUE) * alpha, alpha);
+}
+
 // unpack
 
 float GetUnpackDepthBuffer(in float depthSample)

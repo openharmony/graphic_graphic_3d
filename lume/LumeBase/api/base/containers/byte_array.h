@@ -16,6 +16,7 @@
 #ifndef API_BASE_CONTAINERS_BYTE_ARRAY_H
 #define API_BASE_CONTAINERS_BYTE_ARRAY_H
 
+#include <cstddef>
 #include <cstdint>
 
 #include <base/containers/array_view.h>

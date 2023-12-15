@@ -18,18 +18,19 @@
 
 #include <cstdint>
 
-#include <base/containers/refcnt_ptr.h>
 #include <base/containers/string_view.h>
+#include <base/util/uid.h>
 #include <core/intf_engine.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_info.h>
-#include <core/plugin/intf_interface.h>
 
 CORE_BEGIN_NAMESPACE()
+class IInterface;
+struct EngineCreateInfo;
 class EngineFactory final : public IEngineFactory, public IClassInfo {
 public:
     EngineFactory() = default;
-    ~EngineFactory() override = default;
+    virtual ~EngineFactory() override = default;
 
     // IInterface
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;

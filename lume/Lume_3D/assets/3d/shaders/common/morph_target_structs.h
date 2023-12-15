@@ -18,7 +18,6 @@
 
 #include "render/shaders/common/render_compatibility_common.h"
 
-#define CORE_MAX_MORPH_TARGET_COUNT (256)
 #define CORE_MORPH_USE_PACKED_NOR_TAN
 #define CORE_MORPH_USE_16BIT_NOR_TAN
 

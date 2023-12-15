@@ -38,11 +38,17 @@ public:
     RenderDataStoreDefaultGpuResourceDataCopy(IRenderContext& renderContext, const BASE_NS::string_view name);
     ~RenderDataStoreDefaultGpuResourceDataCopy() override = default;
 
+    void CommitFrameData() override {};
     void PreRender() override {};
+    void PostRender() override {};
     void PreRenderBackend() override {};
     // Do copy operation in end frame.
-    void PostRender() override;
+    void PostRenderBackend() override;
     void Clear() override;
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     void AddCopyOperation(const GpuResourceDataCopy& copyOp) override;
 

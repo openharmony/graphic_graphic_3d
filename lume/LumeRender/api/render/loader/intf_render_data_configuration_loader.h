@@ -65,7 +65,7 @@ protected:
     virtual ~IRenderDataConfigurationLoader() = default;
 };
 
-inline constexpr const BASE_NS::string_view GetName(const IRenderDataConfigurationLoader*)
+inline constexpr BASE_NS::string_view GetName(const IRenderDataConfigurationLoader*)
 {
     return "IRenderDataConfigurationLoader";
 }

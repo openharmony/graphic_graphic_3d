@@ -13,8 +13,11 @@
 # limitations under the License.
 
 set -e
-
-TOOL_PATH=$3
+WORKING_DIR=$(cd "$(dirname "$0")"; pwd)
+PROJECT_ROOT=${WORKING_DIR%/LumeEngine*}
+echo ${PROJECT_ROOT}
+#TOOL_PATH=$3
+TOOL_PATH=$PROJECT_ROOT/LumeBinaryCompile/LumeShaderCompiler/build/outpus/x86_64
 SHADER_PATH=$4
 INCLUDE_PATH=$5
 
@@ -30,7 +33,7 @@ fi
 
 compile_shader()
 {
-	echo "Lume4 Compile shader $1 $2 $3 $4"
+	echo "Lume6 Compile shader $1 $2 $3 $4"
     if [ -d "$DEST_GEN_PATH" ]; then
         rm -rf $DEST_GEN_PATH
         echo "Clean Output"
@@ -42,9 +45,9 @@ compile_shader()
     cp -r ${ASSETS_PATH}/* $DEST_GEN_PATH
     if [ -z "$RENDER_INCLUDE_PATH" ];
     then
-        $TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $INCLUDE_PATH
+        $TOOL_PATH/LumeShaderCompiler --optimize --source $PROJECT_ROOT/LumeRender/assets/render/shaders --include $PROJECT_ROOT/LumeRender/api/
     else
-        $TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $INCLUDE_PATH --include $RENDER_INCLUDE_PATH
+        $TOOL_PATH/LumeShaderCompiler --optimize --source $PROJECT_ROOT/Lume_3D/assets/3d/shaders --include $PROJECT_ROOT/Lume_3D/api/ --include $PROJECT_ROOT/LumeRender/api/
     fi
 }
 

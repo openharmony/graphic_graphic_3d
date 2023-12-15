@@ -21,10 +21,12 @@
 #include <mutex>
 
 #include <base/containers/fixed_string.h>
+#include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <core/namespace.h>
 #include <core/perf/intf_performance_data_manager.h>
 

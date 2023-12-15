@@ -21,6 +21,7 @@
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
+#include <base/util/uid.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/device/intf_shader_pipeline_binder.h>
 #include <render/namespace.h>

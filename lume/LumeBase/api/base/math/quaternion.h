@@ -16,6 +16,9 @@
 #ifndef API_BASE_MATH_QUATERNION_H
 #define API_BASE_MATH_QUATERNION_H
 
+#include <cmath>
+#include <cstddef>
+
 #include <base/math/mathf.h>
 #include <base/namespace.h>
 

@@ -43,6 +43,14 @@ struct RenderNodeDesc {
     BASE_NS::string nodeJson;
 };
 
+/** Render node desctriptor */
+struct RenderNodeGraphOutputResource {
+    /** Simple output name */
+    RenderDataConstants::RenderDataFixedString name;
+    /** Name of render node instance where the output is from */
+    RenderDataConstants::RenderDataFixedString nodeName;
+};
+
 /** Render node graph descriptor */
 struct RenderNodeGraphDesc {
     /** Render node graph name */
@@ -53,6 +61,9 @@ struct RenderNodeGraphDesc {
     RenderDataConstants::RenderDataFixedString renderNodeGraphUri;
     /** Render nodes */
     BASE_NS::vector<RenderNodeDesc> nodes;
+
+    /** Render node graph output resources */
+    BASE_NS::vector<RenderNodeGraphOutputResource> outputResources;
 };
 
 struct RenderNodeDescInfo {

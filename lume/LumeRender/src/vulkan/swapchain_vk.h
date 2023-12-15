@@ -54,14 +54,20 @@ public:
     const GpuImageDesc& GetDescDepthBuffer() const override;
 
     uint32_t GetFlags() const override;
+    SurfaceTransformFlags GetSurfaceTransformFlags() const override;
+    uint64_t GetSurfaceHandle() const override;
 
 private:
     Device& device_;
+
+    VkSurfaceKHR surface_ {};
+    bool ownsSurface_ { false };
 
     GpuImageDesc desc_;
     GpuImageDesc descDepthBuffer_;
     SwapchainPlatformDataVk plat_;
     uint32_t flags_ { 0u };
+    SurfaceTransformFlags surfaceTransformFlags_ { 0u };
 };
 RENDER_END_NAMESPACE()
 

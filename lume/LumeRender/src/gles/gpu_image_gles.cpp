@@ -112,7 +112,6 @@ void GenerateImageStorage(DeviceGLES& device, const GpuImageDesc& desc, GpuImage
 #endif
 
     const Math::UVec2 size2D { desc.width, desc.height };
-    const Math::UVec3 size3D { desc.width, desc.height, desc.layerCount };
     switch (desc.imageViewType) {
         case CORE_IMAGE_VIEW_TYPE_2D: {
             PLUGIN_ASSERT_MSG(desc.layerCount == 1, "layerCount != 1 for normal texture!");
@@ -135,14 +134,17 @@ void GenerateImageStorage(DeviceGLES& device, const GpuImageDesc& desc, GpuImage
         case CORE_IMAGE_VIEW_TYPE_2D_ARRAY: {
             PLUGIN_ASSERT_MSG(desc.layerCount <= 256, "layerCount > 256 for 2D Array!");
             plat.type = GL_TEXTURE_2D_ARRAY;
-            device.TexStorage3D(plat.image, plat.type, desc.mipCount, plat.internalFormat, size3D);
+            device.TexStorage3D(plat.image, plat.type, desc.mipCount, plat.internalFormat,
+                { desc.width, desc.height, desc.layerCount });
+            break;
+        }
+        case CORE_IMAGE_VIEW_TYPE_3D: {
+            plat.type = GL_TEXTURE_3D;
+            device.TexStorage3D(
+                plat.image, plat.type, desc.mipCount, plat.internalFormat, { desc.width, desc.height, desc.depth });
             break;
         }
         case CORE_IMAGE_VIEW_TYPE_1D:
-        case CORE_IMAGE_VIEW_TYPE_3D:
-            PLUGIN_ASSERT_MSG(false, "UNHANDLED IMAGEVIEW TYPE");
-            plat.type = GL_NONE;
-            break;
         case CORE_IMAGE_VIEW_TYPE_1D_ARRAY:
         case CORE_IMAGE_VIEW_TYPE_CUBE_ARRAY:
         case CORE_IMAGE_VIEW_TYPE_MAX_ENUM:
@@ -220,7 +222,7 @@ GpuImageGLES::GpuImageGLES(Device& device, const GpuImageDesc& desc)
         GenerateImageStorage(device_, desc_, plat_);
     }
 #if (RENDER_PERF_ENABLED == 1)
-    RecordAllocation(static_cast<int64_t>(plat_.bytesperpixel * desc_.width * desc_.height));
+    RecordAllocation(static_cast<int64_t>(plat_.bytesperpixel * desc_.width * desc_.height * desc_.depth));
 #endif
 }
 
@@ -277,7 +279,7 @@ GpuImageGLES::~GpuImageGLES()
         }
 
 #if (RENDER_PERF_ENABLED == 1)
-        RecordAllocation(-static_cast<int64_t>(plat_.bytesperpixel * desc_.width * desc_.height));
+        RecordAllocation(-static_cast<int64_t>(plat_.bytesperpixel * desc_.width * desc_.height * desc_.depth));
 #endif
     }
 #if (RENDER_HAS_GLES_BACKEND == 1)

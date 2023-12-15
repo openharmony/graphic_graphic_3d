@@ -15,11 +15,15 @@
 
 #include "frustum_util.h"
 
+#include <cstdint>
+
+#include <base/containers/string_view.h>
 #include <base/math/matrix.h>
 #include <base/math/vector.h>
-#include <core/log.h>
+#include <base/math/vector_util.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
 #include <core/namespace.h>
-#include <core/plugin/intf_plugin_register.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string_view;

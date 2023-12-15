@@ -25,22 +25,20 @@
 #include <render/device/intf_device.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
-#include <render/resource_handle.h>
 #include <render/vulkan/intf_device_vk.h>
 
 #include "device/device.h"
 #include "platform_vk.h"
+#include "vulkan/swapchain_vk.h"
 
 RENDER_BEGIN_NAMESPACE()
-class RenderContext;
-
 class ComputePipelineStateObject;
 class GraphicsPipelineStateObject;
-class GpuAccelerationStructure;
 class GpuBuffer;
 class GpuComputeProgram;
 class GpuImage;
 class GpuResourceManager;
+class GpuSemaphore;
 class GpuSampler;
 class GpuShaderProgram;
 class LowLevelDeviceVk;
@@ -49,20 +47,22 @@ class NodeContextPoolManager;
 class PlatformGpuMemoryAllocator;
 class RenderFrameSync;
 class RenderBackend;
-class ShaderManager;
+class RenderContext;
+class ShaderModule;
 class Swapchain;
-class SwapchainVk;
+
+struct GpuImagePlatformData;
+struct SwapchainCreateInfo;
 struct BackendSpecificImageDesc;
 struct GpuAccelerationStructureDesc;
 struct GpuBufferDesc;
 struct GpuComputeProgramCreateData;
 struct GpuImageDesc;
-struct GpuImagePlatformData;
 struct GpuSamplerDesc;
 struct GpuShaderProgramCreateData;
 struct PipelineLayout;
+struct RenderHandle;
 struct ShaderModuleCreateInfo;
-struct SwapchainCreateInfo;
 struct QueueProperties;
 
 struct LowLevelQueueInfo {
@@ -113,7 +113,7 @@ public:
 
     PlatformGpuMemoryAllocator* GetPlatformGpuMemoryAllocator() override;
 
-    void CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo) override;
+    BASE_NS::unique_ptr<Swapchain> CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo) override;
     void DestroyDeviceSwapchain() override;
 
     void Activate() override;
@@ -132,6 +132,7 @@ public:
     BASE_NS::vector<LowLevelGpuQueueVk> GetLowLevelGpuQueues() const;
 
     BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuBufferDesc& desc) override;
+    BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuAccelerationStructureDesc& desc) override;
 
     BASE_NS::unique_ptr<GpuImage> CreateGpuImage(const GpuImageDesc& desc) override;
     BASE_NS::unique_ptr<GpuImage> CreateGpuImageView(
@@ -143,9 +144,6 @@ public:
     BASE_NS::vector<BASE_NS::unique_ptr<GpuImage>> CreateGpuImageViews(const Swapchain& platformData) override;
 
     BASE_NS::unique_ptr<GpuSampler> CreateGpuSampler(const GpuSamplerDesc& desc) override;
-
-    BASE_NS::unique_ptr<GpuAccelerationStructure> CreateGpuAccelerationStructure(
-        const GpuAccelerationStructureDesc& desc) override;
 
     BASE_NS::unique_ptr<RenderFrameSync> CreateRenderFrameSync() override;
 
@@ -164,8 +162,8 @@ public:
     BASE_NS::unique_ptr<GraphicsPipelineStateObject> CreateGraphicsPipelineStateObject(
         const GpuShaderProgram& gpuProgram, const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
-        const ShaderSpecializationConstantDataView& specializationConstants, const DynamicStateFlags dynamicStateFlags,
-        const RenderPassDesc& renderPassDesc,
+        const ShaderSpecializationConstantDataView& specializationConstants,
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
         const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
         const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData) override;
 
@@ -173,6 +171,9 @@ public:
         const GpuComputeProgram& gpuProgram, const PipelineLayout& pipelineLayout,
         const ShaderSpecializationConstantDataView& specializationConstants,
         const LowLevelPipelineLayoutData* pipelineLayoutData) override;
+
+    BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphore() override;
+    BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(const uint64_t handle) override;
 
     struct FeatureConfigurations {
         float minSampleShading { 0.25f };
@@ -189,6 +190,8 @@ public:
         bool queueFamilyForeign { false };
 
         bool renderPass2 { false };
+        bool fragmentShadingRate { false };
+        bool multiView { false };
     };
     const CommonDeviceExtensions& GetCommonDeviceExtensions() const;
     const PlatformDeviceExtensions& GetPlatformDeviceExtensions() const;
@@ -204,12 +207,20 @@ public:
 
         // VK_KHR_get_memory_requirements2 or Vulkan 1.1
         PFN_vkGetImageMemoryRequirements2 vkGetImageMemoryRequirements2 { nullptr };
+        // VK_KHR_get_physical_device_properties2 or Vulkan 1.1
+        PFN_vkGetPhysicalDeviceFeatures2 vkGetPhysicalDeviceFeatures2 { nullptr };
+        PFN_vkGetPhysicalDeviceProperties2 vkGetPhysicalDeviceProperties2 { nullptr };
 
         // VK_KHR_create_renderpass2 or Vulkan 1.2
         PFN_vkCreateRenderPass2KHR vkCreateRenderPass2KHR { nullptr };
 
         // VK_KHR_swapchain
         PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR { nullptr };
+
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+        // VK_KHR_fragment_shading_rate
+        PFN_vkCmdSetFragmentShadingRateKHR vkCmdSetFragmentShadingRateKHR { nullptr };
+#endif
 
 #if (RENDER_VULKAN_RT_ENABLED == 1)
         // VK_KHR_acceleration_structure
@@ -228,7 +239,8 @@ public:
 
 private:
     BASE_NS::vector<QueueProperties> CheckExternalConfig(const BackendExtraVk* backendConfiguration);
-    void CreateInstanceAndPhysicalDevice();
+    void CreateInstance();
+    void CreatePhysicalDevice();
     void CreateDevice(const BackendExtraVk* backendExtra, const BASE_NS::vector<LowLevelQueueInfo>& availableQueues);
     void SortAvailableQueues(const BASE_NS::vector<LowLevelQueueInfo>& availableQueues);
 

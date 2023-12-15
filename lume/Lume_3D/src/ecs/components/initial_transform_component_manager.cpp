@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+#include <core/property/property_types.h>
+
 #include "ComponentTools/base_manager.h"
 #include "ComponentTools/base_manager.inl"
 #include "ecs/components/initial_transform_component.h"
@@ -21,7 +23,7 @@
 #include "PropertyTools/property_macros.h"
 
 CORE_BEGIN_NAMESPACE()
-DECLARE_PROPERTY_TYPE(BASE_NS::vector<uint8_t>);
+DECLARE_PROPERTY_TYPE(CORE3D_NS::InitialTransformComponent::Data);
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -75,5 +77,167 @@ IComponentManager* IInitialTransformComponentManagerInstance(IEcs& ecs)
 void IInitialTransformComponentManagerDestroy(IComponentManager* instance)
 {
     delete static_cast<InitialTransformComponentManager*>(instance);
+}
+
+InitialTransformComponent::~InitialTransformComponent()
+{
+    if (type == CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        initialData.floatVectorValue.~vector();
+    }
+}
+
+InitialTransformComponent::InitialTransformComponent() : type(CORE_NS::PropertyType::FLOAT_T)
+{
+    initialData.floatValue = 0.f;
+}
+
+InitialTransformComponent::InitialTransformComponent(float value) : type(CORE_NS::PropertyType::FLOAT_T)
+{
+    initialData.floatValue = value;
+}
+
+InitialTransformComponent::InitialTransformComponent(BASE_NS::Math::Vec2 value) : type(CORE_NS::PropertyType::VEC2_T)
+{
+    initialData.vec2Value = value;
+}
+
+InitialTransformComponent::InitialTransformComponent(BASE_NS::Math::Vec3 value) : type(CORE_NS::PropertyType::VEC3_T)
+{
+    initialData.vec3Value = value;
+}
+
+InitialTransformComponent::InitialTransformComponent(BASE_NS::Math::Vec4 value) : type(CORE_NS::PropertyType::VEC4_T)
+{
+    initialData.vec4Value = value;
+}
+
+InitialTransformComponent::InitialTransformComponent(BASE_NS::Math::Quat value) : type(CORE_NS::PropertyType::QUAT_T)
+{
+    initialData.quatValue = value;
+}
+
+InitialTransformComponent::InitialTransformComponent(BASE_NS::array_view<const float> value)
+    : type(CORE_NS::PropertyType::FLOAT_VECTOR_T)
+{
+    new (&initialData.floatVectorValue) BASE_NS::vector<float>(value.cbegin(), value.cend());
+}
+
+InitialTransformComponent::InitialTransformComponent(const InitialTransformComponent& other) noexcept : type(other.type)
+{
+    if (type != CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        BASE_NS::CloneData(&initialData, sizeof(initialData), &other.initialData, sizeof(initialData));
+    } else {
+        new (&initialData.floatVectorValue) BASE_NS::vector<float>(other.initialData.floatVectorValue);
+    }
+}
+
+InitialTransformComponent::InitialTransformComponent(InitialTransformComponent&& other) noexcept : type(other.type)
+{
+    if (type != CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        BASE_NS::CloneData(&initialData, sizeof(initialData), &other.initialData, sizeof(initialData));
+    } else {
+        new (&initialData.floatVectorValue) BASE_NS::vector<float>(BASE_NS::move(other.initialData.floatVectorValue));
+        other.type = CORE_NS::PropertyType::FLOAT_T;
+    }
+}
+
+InitialTransformComponent& InitialTransformComponent::operator=(const InitialTransformComponent& other) noexcept
+{
+    if (&other != this) {
+        if (other.type != CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+            if (type == CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+                initialData.floatVectorValue.~vector();
+            }
+            BASE_NS::CloneData(&initialData, sizeof(initialData), &other.initialData, sizeof(initialData));
+        } else if (type != CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+            new (&initialData.floatVectorValue) BASE_NS::vector<float>(other.initialData.floatVectorValue);
+        } else {
+            initialData.floatVectorValue = other.initialData.floatVectorValue;
+        }
+        type = other.type;
+    }
+    return *this;
+}
+
+InitialTransformComponent& InitialTransformComponent::operator=(InitialTransformComponent&& other) noexcept
+{
+    if (&other != this) {
+        if (other.type != CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+            if (type == CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+                initialData.floatVectorValue.~vector();
+            }
+            BASE_NS::CloneData(&initialData, sizeof(initialData), &other.initialData, sizeof(initialData));
+        } else if (type != CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+            new (&initialData.floatVectorValue)
+                BASE_NS::vector<float>(BASE_NS::move(other.initialData.floatVectorValue));
+        } else {
+            initialData.floatVectorValue = other.initialData.floatVectorValue;
+        }
+        type = BASE_NS::exchange(other.type, CORE_NS::PropertyType::FLOAT_T);
+    }
+    return *this;
+}
+
+InitialTransformComponent& InitialTransformComponent::operator=(float value) noexcept
+{
+    if (type == CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        initialData.floatVectorValue.~vector();
+    }
+
+    type = CORE_NS::PropertyType::FLOAT_T;
+    initialData.floatValue = value;
+    return *this;
+}
+
+InitialTransformComponent& InitialTransformComponent::operator=(BASE_NS::Math::Vec2 value) noexcept
+{
+    if (type == CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        initialData.floatVectorValue.~vector();
+    }
+    type = CORE_NS::PropertyType::VEC2_T;
+    initialData.vec2Value = value;
+    return *this;
+}
+
+InitialTransformComponent& InitialTransformComponent::operator=(BASE_NS::Math::Vec3 value) noexcept
+{
+    if (type == CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        initialData.floatVectorValue.~vector();
+    }
+    type = CORE_NS::PropertyType::VEC3_T;
+    initialData.vec3Value = value;
+    return *this;
+}
+
+InitialTransformComponent& InitialTransformComponent::operator=(BASE_NS::Math::Vec4 value) noexcept
+{
+    if (type == CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        initialData.floatVectorValue.~vector();
+    }
+    type = CORE_NS::PropertyType::VEC4_T;
+    initialData.vec4Value = value;
+    return *this;
+}
+
+InitialTransformComponent& InitialTransformComponent::operator=(BASE_NS::Math::Quat value) noexcept
+{
+    if (type == CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        initialData.floatVectorValue.~vector();
+    }
+    type = CORE_NS::PropertyType::QUAT_T;
+    initialData.quatValue = value;
+    return *this;
+}
+
+InitialTransformComponent& InitialTransformComponent::operator=(BASE_NS::array_view<const float> value) noexcept
+{
+    if (type != CORE_NS::PropertyType::FLOAT_VECTOR_T) {
+        type = CORE_NS::PropertyType::FLOAT_VECTOR_T;
+        new (&initialData.floatVectorValue) BASE_NS::vector<float>(value.cbegin(), value.cend());
+    } else {
+        initialData.floatVectorValue.clear();
+        initialData.floatVectorValue.insert(initialData.floatVectorValue.cbegin(), value.cbegin(), value.cend());
+    }
+    return *this;
 }
 CORE3D_END_NAMESPACE()

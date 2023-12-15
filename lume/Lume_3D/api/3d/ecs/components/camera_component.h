@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(CAMERA_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define CAMERA_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_CAMERA_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_CAMERA_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/ecs/components/layer_defines.h>
@@ -26,7 +26,6 @@
 #include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_component_manager.h>
 #include <core/namespace.h>
-#include <core/property/property_types.h>
 #include <render/device/gpu_resource_desc.h>
 #include <render/resource_handle.h>
 
@@ -54,15 +53,19 @@ BEGIN_COMPONENT(ICameraComponentManager, CameraComponent)
     enum SceneFlagBits : uint32_t {
         /** Camera is rendered when it's active. */
         ACTIVE_RENDER_BIT = (1 << 0),
-        /** Main camera. If multiple main cameras, the first is chosen as ECS main camera. Main camera is treaded always
+        /** Main camera. If multiple main cameras, the first is chosen as ECS main camera. Main camera is treated always
            as active. */
         MAIN_CAMERA_BIT = (1 << 1),
     };
 
     enum PipelineFlagBits : uint32_t {
-        /** Target clear flags depth */
+        /** Target clear flags depth. Override camera render node graph loadOp with clear.
+         * Without clear the default render node graph based loadOp is used. (Default pipelines use depth clear)
+         */
         CLEAR_DEPTH_BIT = (1 << 0),
-        /** Target clear flags color */
+        /** Target clear flags color. Override camera render node graph loadOp with clear.
+         * Without clear the default render node graph based loadOp is used. (Default pipelines do not use color clear)
+         */
         CLEAR_COLOR_BIT = (1 << 1),
         /** Enable MSAA for rendering. Only affects non deferred default pipelines. */
         MSAA_BIT = (1 << 2),
@@ -80,6 +83,16 @@ BEGIN_COMPONENT(ICameraComponentManager, CameraComponent)
         VELOCITY_OUTPUT_BIT = (1 << 7),
         /* Output samplable depth */
         DEPTH_OUTPUT_BIT = (1 << 8),
+        /* Is a multi-view camera and is not be rendered separately at all
+         * The camera is added to other camera as multiViewCameras
+         */
+        MULTI_VIEW_ONLY_BIT = (1 << 9),
+        /* Generate environment cubemap dynamically for the camera
+         */
+        DYNAMIC_CUBEMAP_BIT = (1 << 10),
+        /* Disallow reflection plane for camera
+         */
+        DISALLOW_REFLECTION_BIT = (1 << 11),
     };
 
     /** Target customization */
@@ -122,8 +135,7 @@ BEGIN_COMPONENT(ICameraComponentManager, CameraComponent)
     /** Render pipeline flags.
      */
     DEFINE_BITFIELD_PROPERTY(uint32_t, pipelineFlags, "Pipeline flags", PropertyFlags::IS_BITFIELD,
-        VALUE(PipelineFlagBits::CLEAR_DEPTH_BIT | PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT),
-        CameraComponent::PipelineFlagBits)
+        VALUE(PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT), CameraComponent::PipelineFlagBits)
 
     /** Aspect ratio of the camera (perspective only).
      *  If aspect is 0 or less the aspect ratio of the canvas should be used.
@@ -196,17 +208,17 @@ BEGIN_COMPONENT(ICameraComponentManager, CameraComponent)
     /** Entity containing an EnvironmentComponent that is used by this camera when rendering. Controls indirect and
      * environment lighting options. If not defined the scene default environment options will be used.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, environment, "Environment", 0,)
+    DEFINE_PROPERTY(CORE_NS::Entity, environment, "Environment", 0, )
 
     /** Entity containing a FogComponent that is used by this camera when rendering. If not defined the
      * camera will use default RenderConfigurationComponent configuration.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, fog, "Fog", 0,)
+    DEFINE_PROPERTY(CORE_NS::Entity, fog, "Fog", 0, )
 
     /** Entity containing a PostProcessComponent that is used by this camera when rendering. If not defined the
      * camera will use default CORE3D_POST_PROCESS_CAM configuration.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, postProcess, "Post process", 0,)
+    DEFINE_PROPERTY(CORE_NS::Entity, postProcess, "Post process", 0, )
 
     /** Defines a layer mask which affects camera's rendering. Default is all layer mask, when the camera renders
      * objects from all layers. */
@@ -218,34 +230,42 @@ BEGIN_COMPONENT(ICameraComponentManager, CameraComponent)
      * Pre-pass can be done automatically as well, but for resolution/layer etc. config ser can control it better.
      * The active bit needs to be disabled from the pre-pass camera, otherwise the camera is processed normally.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, prePassCamera, "Pre-pass camera", 0,)
+    DEFINE_PROPERTY(CORE_NS::Entity, prePassCamera, "Pre-pass camera", 0, )
 
     /** NOTE: add array of four to targets */
 
     /** Custom depth target. Must be a valid handle if using RenderTarget::CUSTOM.
      */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, customDepthTarget, "Custom Depth Target", 0,)
+    DEFINE_PROPERTY(CORE_NS::EntityReference, customDepthTarget, "Custom Depth Target", 0, )
 
     /** Custom color target. Must be a valid handle if using RenderTarget::CUSTOM.
      */
-    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::EntityReference>, customColorTargets, "Custom Color Targets", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::EntityReference>, customColorTargets, "Custom Color Targets", 0, )
 
     /** Depth target creation customization
      */
-    DEFINE_PROPERTY(TargetUsage, depthTargetCustomization, "Depth Target Creation Customization", 0,)
+    DEFINE_PROPERTY(TargetUsage, depthTargetCustomization, "Depth Target Creation Customization", 0, )
 
     /** Color target creation customization
      */
-    DEFINE_PROPERTY(BASE_NS::vector<TargetUsage>, colorTargetCustomization, "Color Target Creation Customization", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<TargetUsage>, colorTargetCustomization, "Color Target Creation Customization", 0, )
 
-    /** Explicit custom camera render node graph.
+    /** Explicit custom camera render node graph. (Prefer using customRenderNodeGraphFile for correct patching)
      */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, customRenderNodeGraph, "Explicit Custom Camera Render Node Graph", 0,)
+    DEFINE_PROPERTY(CORE_NS::EntityReference, customRenderNodeGraph, "Explicit Custom Camera Render Node Graph", 0, )
 
     /** Custom camera render node graph file. (Can be patched with e.g. post process ids etc.)
      * Chosen only if no explicit customSceneRenderNodeGraph
      */
-    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Scene Render Node Graph File", 0,)
+    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Scene Render Node Graph File", 0, )
+
+    /** Multi-view camera entities for the base camera
+     */
+    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::Entity>, multiViewCameras, "Multi-view camera entities", 0, )
+
+    /** Entity containing multiple EnvironmentComponents that are pushed to camera buffers.
+     * Controls indirect and environment lighting. If not defined the scene default environment options will be used */
+    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::Entity>, environments, "Environments", 0, )
 
 END_COMPONENT(ICameraComponentManager, CameraComponent, "184c996b-67aa-4456-9f03-72e2d968931b")
 #if !defined(IMPLEMENT_MANAGER)

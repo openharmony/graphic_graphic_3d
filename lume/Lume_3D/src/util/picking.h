@@ -16,6 +16,7 @@
 #define CORE_UTIL_PICKING_H
 
 #include <3d/util/intf_picking.h>
+#include <base/containers/string_view.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
@@ -44,8 +45,13 @@ public:
 
     BASE_NS::vector<RayCastResult> RayCast(CORE_NS::IEcs const& ecs, const BASE_NS::Math::Vec3& start,
         const BASE_NS::Math::Vec3& direction) const override;
+    BASE_NS::vector<RayCastResult> RayCast(CORE_NS::IEcs const& ecs, const BASE_NS::Math::Vec3& start,
+        const BASE_NS::Math::Vec3& direction, uint64_t layerMask) const override;
+
     BASE_NS::vector<RayCastResult> RayCastFromCamera(
         CORE_NS::IEcs const& ecs, CORE_NS::Entity camera, const BASE_NS::Math::Vec2& screenPos) const override;
+    BASE_NS::vector<RayCastResult> RayCastFromCamera(CORE_NS::IEcs const& ecs, CORE_NS::Entity camera,
+        const BASE_NS::Math::Vec2& screenPos, uint64_t layerMask) const override;
 
     MinAndMax GetWorldAABB(const BASE_NS::Math::Mat4X4& world, const BASE_NS::Math::Vec3& aabbMin,
         const BASE_NS::Math::Vec3& aabbMax) const override;
@@ -60,28 +66,13 @@ public:
 
     void Ref() override;
     void Unref() override;
-
-protected:
-    BASE_NS::Math::Mat4X4 GetCameraViewToProjectionMatrix(const CameraComponent& cameraComponent) const;
-
-    constexpr bool IntersectAabb(const BASE_NS::Math::Vec3 aabbMin, const BASE_NS::Math::Vec3 aabbMax,
-        const BASE_NS::Math::Vec3 start, const BASE_NS::Math::Vec3 invDirection) const;
-
-    // Calculates AABB using WorldMatrixComponent.
-    void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
-        const IWorldMatrixComponentManager& worldMatrixComponentManager,
-        const IJointMatricesComponentManager& jointMatricesComponentManager, const IMeshComponentManager& meshManager,
-        const ISceneNode& sceneNode, bool isRecursive, MinAndMax& mamInOut) const;
-
-    // Calculates AABB using TransformComponent.
-    void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
-        const ITransformComponentManager& transformComponentManager, const IMeshComponentManager& meshManager,
-        const ISceneNode& sceneNode, const BASE_NS::Math::Mat4X4& parentWorld, bool isRecursive,
-        MinAndMax& mamInOut) const;
-
-    RayCastResult HitTestNode(ISceneNode& node, const MeshComponent& mesh, const BASE_NS::Math::Mat4X4& matrix,
-        const BASE_NS::Math::Vec3& start, const BASE_NS::Math::Vec3& invDir) const;
 };
+
+inline constexpr BASE_NS::string_view GetName(const IPicking*)
+{
+    return "IPicking";
+}
+
 CORE3D_END_NAMESPACE()
 
 #endif // CORE_UTIL_PICKING_H

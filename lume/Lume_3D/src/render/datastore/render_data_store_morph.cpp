@@ -44,7 +44,7 @@ void RenderDataStoreMorph::Clear()
 
 void RenderDataStoreMorph::AddSubmesh(const RenderDataMorph::Submesh& submesh)
 {
-    submeshes_.emplace_back(submesh);
+    submeshes_.push_back(submesh);
 }
 
 array_view<const RenderDataMorph::Submesh> RenderDataStoreMorph::GetSubmeshes() const

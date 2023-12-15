@@ -16,14 +16,23 @@
 #include "image_loader_manager.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cstring>
 
+#include <base/containers/array_view.h>
+#include <base/containers/iterator.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/image/intf_animated_image.h>
+#include <core/image/intf_image_container.h>
+#include <core/image/intf_image_loader_manager.h>
 #include <core/io/intf_file.h>
+#include <core/io/intf_file_manager.h>
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
-#include <core/perf/intf_performance_data_manager.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::array_view;
@@ -41,7 +50,7 @@ void ImageLoaderManager::RegisterImageLoader(IImageLoader::Ptr imageLoader)
 
     // NOTE: We just add the registered unique pointers to a vector. The vector is not really used for anything else.
     // And the loaders cannot be currently unregistered.
-    imageLoaders_.push_back(std::move(imageLoader));
+    imageLoaders_.push_back(move(imageLoader));
 }
 
 ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(const string_view uri, uint32_t loadFlags)

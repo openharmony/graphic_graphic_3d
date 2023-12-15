@@ -15,15 +15,26 @@
 
 #include "logger.h"
 
+#include <cstdarg>
+#include <mutex>
+#include <securec.h>
 #include <set>
+
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
+#include <core/intf_logger.h>
+#include <core/log.h>
+#include <core/namespace.h>
 
 #ifdef PLATFORM_HAS_JAVA
 #include <os/java/java_internal.h>
 #endif
-#include <securec.h>
-
-#include <core/namespace.h>
-#include <core/plugin/intf_plugin_register.h>
 
 #include "log/logger_output.h"
 
@@ -67,7 +78,7 @@ string_view Logger::GetLogLevelName(LogLevel logLevel, bool shortName)
 
 Logger::Logger(bool defaultOutputs)
 #ifdef NDEBUG
-    : logLevel_(LogLevel::LOG_INFO)
+    : logLevel_(LogLevel::LOG_VERBOSE)
 #endif
 {
     if (defaultOutputs) {
@@ -85,9 +96,8 @@ Logger::Logger(bool defaultOutputs)
     }
 }
 
-Logger::~Logger() = default;
-
-void Logger::VLog(LogLevel logLevel, const string_view filename, int lineNumber, const string_view format, va_list args)
+void Logger::VLog(
+    LogLevel logLevel, const string_view filename, int lineNumber, const string_view format, std::va_list args)
 {
     CORE_ASSERT_MSG(logLevel != LogLevel::LOG_NONE, "'None' is not a valid log level for writing to the log.");
 
@@ -96,12 +106,11 @@ void Logger::VLog(LogLevel logLevel, const string_view filename, int lineNumber,
     }
 
     // we need to make a copy of the args, since the va_list can be in an undefined state after use.
-    va_list tmp;
+    std::va_list tmp;
     va_copy(tmp, args);
 
     // use vsnprintf to calculate the required size (not supported by the _s variant)
     const int sizeNeeded = vsnprintf(nullptr, 0, format.data(), args) + 1;
-    va_end(args);
 
     std::lock_guard guard(loggerMutex_);
 
@@ -109,11 +118,8 @@ void Logger::VLog(LogLevel logLevel, const string_view filename, int lineNumber,
         buffer_.resize(static_cast<size_t>(sizeNeeded));
     }
 
-    int ret = vsnprintf_s(buffer_.data(), buffer_.size(), buffer_.size() - 1, format.data(), tmp);
+    vsnprintf_s(buffer_.data(), buffer_.size(), buffer_.size() - 1, format.data(), tmp);
     va_end(tmp);
-    if (ret < 0) {
-        return;
-    }
 
     for (auto& output : outputs_) {
         output->Write(logLevel, filename, lineNumber, buffer_.data());
@@ -121,7 +127,7 @@ void Logger::VLog(LogLevel logLevel, const string_view filename, int lineNumber,
 }
 
 void Logger::VLogOnce(const string_view id, LogLevel logLevel, const string_view filename, int lineNumber,
-    const string_view format, va_list args)
+    const string_view format, std::va_list args)
 {
     std::lock_guard<std::mutex> guard(onceMutex_);
 
@@ -132,7 +138,7 @@ void Logger::VLogOnce(const string_view id, LogLevel logLevel, const string_view
 }
 
 bool Logger::VLogAssert(const string_view filename, int lineNumber, bool expression, const string_view expressionString,
-    const string_view format, va_list args)
+    const string_view format, std::va_list args)
 {
     if (!expression) {
         char buffer[MAX_BUFFER_SIZE];
@@ -175,7 +181,7 @@ FORMAT_FUNC(5, 6)
 void Logger::Log(
     LogLevel logLevel, const string_view filename, int lineNumber, FORMAT_ATTRIBUTE const char* format, ...)
 {
-    va_list vl;
+    std::va_list vl;
     va_start(vl, format);
     VLog(logLevel, filename, lineNumber, format, vl);
     va_end(vl);
@@ -186,7 +192,7 @@ bool Logger::LogAssert(const string_view filename, int lineNumber, bool expressi
     FORMAT_ATTRIBUTE const char* format, ...)
 {
     if (!expression) {
-        va_list vl;
+        std::va_list vl;
         va_start(vl, format);
         VLogAssert(filename, lineNumber, expression, expressionString, format, vl);
         va_end(vl);

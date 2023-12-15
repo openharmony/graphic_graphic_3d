@@ -15,13 +15,24 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 
+#include <base/containers/array_view.h>
+#include <base/containers/iterator.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
+#include <core/ecs/entity.h>
+#include <core/ecs/intf_component_manager.h>
 #include <core/ecs/intf_ecs.h>
+#include <core/ecs/intf_system.h>
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
-#include <core/perf/intf_performance_data_manager.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/threading/intf_thread_pool.h>
@@ -39,8 +50,14 @@ using BASE_NS::vector;
 
 class Ecs final : public IEcs, IPluginRegister::ITypeInfoListener {
 public:
-    explicit Ecs(IClassFactory&, const IThreadPool::Ptr& threadPool);
+    Ecs(IClassFactory&, const IThreadPool::Ptr& threadPool);
     ~Ecs() override;
+
+    Ecs(const Ecs&) = delete;
+    Ecs(const Ecs&&) = delete;
+    Ecs& operator=(const Ecs&) = delete;
+    Ecs& operator=(const Ecs&&) = delete;
+
     IEntityManager& GetEntityManager() override;
     void GetComponents(Entity entity, vector<IComponentManager*>& result) override;
     vector<ISystem*> GetSystems() const override;
@@ -116,26 +133,15 @@ protected:
     std::atomic<int32_t> refcnt_ { 0 };
 };
 
-template<typename ListIterator, typename ValueType>
-auto find(ListIterator begin, ListIterator end, const ValueType& value)
-{
-    for (auto b = begin; b != end; ++b) {
-        if (*b == value) {
-            return b;
-        }
-    }
-    return end;
-}
-
 template<typename ListType, typename ValueType>
-auto find(ListType& list, const ValueType& value)
+auto Find(ListType& list, const ValueType& value)
 {
-    return find(list.begin(), list.end(), value);
+    return std::find(list.begin(), list.end(), value);
 }
 
 void Ecs::AddListener(EntityListener& listener)
 {
-    if (find(entityListeners_, &listener) != entityListeners_.end()) {
+    if (Find(entityListeners_, &listener) != entityListeners_.end()) {
         // already added.
         return;
     }
@@ -144,7 +150,7 @@ void Ecs::AddListener(EntityListener& listener)
 
 void Ecs::RemoveListener(EntityListener& listener)
 {
-    if (auto it = find(entityListeners_, &listener); it != entityListeners_.end()) {
+    if (auto it = Find(entityListeners_, &listener); it != entityListeners_.end()) {
         // Setting the listener to null instead of removing. This allows removing listeners from a listener callback.
         *it = nullptr;
         return;
@@ -153,7 +159,7 @@ void Ecs::RemoveListener(EntityListener& listener)
 
 void Ecs::AddListener(ComponentListener& listener)
 {
-    if (find(componentListeners_, &listener) != componentListeners_.end()) {
+    if (Find(componentListeners_, &listener) != componentListeners_.end()) {
         // already added.
         return;
     }
@@ -162,7 +168,7 @@ void Ecs::AddListener(ComponentListener& listener)
 
 void Ecs::RemoveListener(ComponentListener& listener)
 {
-    if (auto it = find(componentListeners_, &listener); it != componentListeners_.end()) {
+    if (auto it = Find(componentListeners_, &listener); it != componentListeners_.end()) {
         *it = nullptr;
         return;
     }
@@ -172,7 +178,7 @@ void Ecs::AddListener(IComponentManager& manager, ComponentListener& listener)
 {
     auto list = componentManagerListeners_.find(&manager);
     if (list != componentManagerListeners_.end()) {
-        if (auto it = find(list->second, &listener); it != list->second.end()) {
+        if (auto it = Find(list->second, &listener); it != list->second.end()) {
             return;
         }
         list->second.push_back(&listener);
@@ -187,7 +193,7 @@ void Ecs::RemoveListener(IComponentManager& manager, ComponentListener& listener
     if (list == componentManagerListeners_.end()) {
         return;
     }
-    if (auto it = find(list->second, &listener); it != list->second.end()) {
+    if (auto it = Find(list->second, &listener); it != list->second.end()) {
         *it = nullptr;
         return;
     }
@@ -459,29 +465,14 @@ void Ecs::ProcessEvents()
     ProcessRemoved();
 
     // Clean-up removed listeners.
-    for (auto it = entityListeners_.begin(); it != entityListeners_.end();) {
-        if (*it == nullptr) {
-            it = entityListeners_.erase(it);
-        } else {
-            it++;
-        }
-    }
-    for (auto it = componentListeners_.begin(); it != componentListeners_.end();) {
-        if (*it == nullptr) {
-            it = componentListeners_.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    entityListeners_.erase(
+        std::remove(entityListeners_.begin(), entityListeners_.end(), nullptr), entityListeners_.end());
+    componentListeners_.erase(
+        std::remove(componentListeners_.begin(), componentListeners_.end(), nullptr), componentListeners_.end());
+
     for (auto it = componentManagerListeners_.begin(); it != componentManagerListeners_.end();) {
         auto& listeners = it->second;
-        for (auto listener = listeners.begin(); listener != listeners.end();) {
-            if (*listener == nullptr) {
-                listener = listeners.erase(listener);
-            } else {
-                ++listener;
-            }
-        }
+        listeners.erase(std::remove(listeners.begin(), listeners.end(), nullptr), listeners.end());
         if (listeners.empty()) {
             it = componentManagerListeners_.erase(it);
         } else {
@@ -507,7 +498,7 @@ bool Ecs::Update(uint64_t time, uint64_t delta)
     }
 
     // Update all systems.
-    delta = static_cast<uint64_t>(delta * timeScale_);
+    delta = static_cast<uint64_t>(static_cast<float>(delta) * timeScale_);
     for (auto& s : systemOrder_) {
         CORE_CPU_PERF_SCOPE("ECS", "SystemUpdate_Cpu", s->GetName());
         if (s->Update(frameRenderingQueued, time, delta)) {

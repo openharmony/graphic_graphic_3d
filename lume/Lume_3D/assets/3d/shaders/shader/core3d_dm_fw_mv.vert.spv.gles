@@ -1,0 +1,242 @@
+#version 320 es
+#extension GL_OVR_multiview2 : require
+#ifdef GL_ARB_shader_draw_parameters
+#extension GL_ARB_shader_draw_parameters : enable
+#endif
+#define SPIRV_CROSS_CONSTANT_ID_256 1u
+layout(num_views = 1) in;
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 0u
+#endif
+const uint CORE_SUBMESH_FLAGS = SPIRV_CROSS_CONSTANT_ID_0;
+const uint _49 = (CORE_SUBMESH_FLAGS & 4u);
+const bool _51 = (_49 == 4u);
+
+struct DefaultMaterialSkinStruct
+{
+    mat4 jointMatrices[256];
+};
+
+struct DefaultMaterialSingleMeshStruct
+{
+    mat4 world;
+    mat4 normalWorld;
+    mat4 prevWorld;
+    uvec4 indices;
+    uvec4 layers;
+    uvec4 customData[2];
+};
+
+struct DefaultMaterialMeshStruct
+{
+    DefaultMaterialSingleMeshStruct mesh[64];
+};
+
+const uint _170 = (CORE_SUBMESH_FLAGS & 32u);
+const bool _171 = (_170 == 32u);
+const uint _272 = (CORE_SUBMESH_FLAGS & 32u);
+const bool _273 = (_272 == 32u);
+
+struct DefaultMaterialGeneralDataStruct
+{
+    uvec4 indices;
+    vec4 viewportSizeInvViewportSize;
+    vec4 sceneTimingData;
+};
+
+struct DefaultCameraMatrixStruct
+{
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+    mat4 viewInv;
+    mat4 projInv;
+    mat4 viewProjInv;
+    mat4 viewPrevFrame;
+    mat4 projPrevFrame;
+    mat4 viewProjPrevFrame;
+    mat4 shadowViewProj;
+    mat4 shadowViewProjInv;
+    vec4 jitter;
+    vec4 jitterPrevFrame;
+    uvec4 indices;
+    uvec4 multiViewIndices;
+    vec4 frustumPlanes[6];
+    uvec4 counts;
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_256
+#define SPIRV_CROSS_CONSTANT_ID_256 0u
+#endif
+const uint CORE_BACKEND_TYPE = SPIRV_CROSS_CONSTANT_ID_256;
+const bool _376 = (CORE_BACKEND_TYPE != 0u);
+uniform float CORE_FLIP_NDC ;
+const uint _410 = (CORE_SUBMESH_FLAGS & 32u);
+const bool _411 = (_410 == 32u);
+const uint _430 = (CORE_SUBMESH_FLAGS & 1u);
+const bool _431 = (_430 == 1u);
+const uint _457 = (CORE_SUBMESH_FLAGS & 8u);
+const bool _458 = (_457 == 8u);
+const uint _465 = (CORE_SUBMESH_FLAGS & 2u);
+const bool _466 = (_465 == 2u);
+
+layout(std140) uniform s1_b1
+{
+    DefaultMaterialSkinStruct uSkinData;
+} _s1_b1;
+
+layout(std140) uniform s1_b0
+{
+    DefaultMaterialMeshStruct uMeshMatrix;
+} _s1_b0;
+
+layout(std140) uniform s0_b1
+{
+    DefaultMaterialGeneralDataStruct uGeneralData;
+} _s0_b1;
+
+layout(std140) uniform s0_b0
+{
+    DefaultCameraMatrixStruct uCameras[16];
+} _s0_b0;
+
+layout(location = 5) in uvec4 inIndex;
+layout(location = 6) in mediump vec4 inWeight;
+#ifdef GL_ARB_shader_draw_parameters
+#define SPIRV_Cross_BaseInstance gl_BaseInstanceARB
+#else
+uniform int SPIRV_Cross_BaseInstance;
+#endif
+layout(location = 0) in vec3 inPosition;
+layout(location = 6) flat out uint outIndices;
+layout(location = 0) out vec3 outPos;
+layout(location = 3) out vec4 outPrevPosI;
+layout(location = 1) out vec3 outNormal;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) out vec4 outTangentW;
+layout(location = 4) in vec4 inTangent;
+layout(location = 4) out vec4 outUv;
+layout(location = 2) in vec2 inUv0;
+layout(location = 3) in vec2 inUv1;
+layout(location = 5) out mediump vec4 outColor;
+layout(location = 7) in mediump vec4 inColor;
+
+mat4 _785;
+
+void main()
+{
+    bool _540 = _s0_b0.uCameras[_s0_b1.uGeneralData.indices.x].multiViewIndices.x > 0u;
+    bool _547;
+    if (_540)
+    {
+        _547 = uint(gl_ViewID_OVR) <= _s0_b0.uCameras[_s0_b1.uGeneralData.indices.x].multiViewIndices.x;
+    }
+    else
+    {
+        _547 = _540;
+    }
+    bool _552;
+    if (_547)
+    {
+        _552 = gl_ViewID_OVR != 0;
+    }
+    else
+    {
+        _552 = _547;
+    }
+    uint _771;
+    if (_552)
+    {
+        _771 = _s0_b0.uCameras[_s0_b1.uGeneralData.indices.x].multiViewIndices[gl_ViewID_OVR];
+    }
+    else
+    {
+        _771 = _s0_b1.uGeneralData.indices.x;
+    }
+    mat4 _774;
+    mat3 _777;
+    mat4 _780;
+    if (_51)
+    {
+        mat4 _574 = _s1_b1.uSkinData.jointMatrices[inIndex.x] * inWeight.x;
+        mat4 _581 = _s1_b1.uSkinData.jointMatrices[inIndex.y] * inWeight.y;
+        mat4 _602 = _s1_b1.uSkinData.jointMatrices[inIndex.z] * inWeight.z;
+        mat4 _623 = _s1_b1.uSkinData.jointMatrices[inIndex.w] * inWeight.w;
+        mat4 _637 = mat4(((_574[0] + _581[0]) + _602[0]) + _623[0], ((_574[1] + _581[1]) + _602[1]) + _623[1], ((_574[2] + _581[2]) + _602[2]) + _623[2], ((_574[3] + _581[3]) + _602[3]) + _623[3]);
+        mat4 _647 = _s1_b0.uMeshMatrix.mesh[(gl_InstanceID + SPIRV_Cross_BaseInstance)].normalWorld * _637;
+        mat4 _781;
+        if (_171)
+        {
+            uvec4 _658 = inIndex + uvec4(128u);
+            mat4 _665 = _s1_b1.uSkinData.jointMatrices[_658.x] * inWeight.x;
+            mat4 _672 = _s1_b1.uSkinData.jointMatrices[_658.y] * inWeight.y;
+            mat4 _693 = _s1_b1.uSkinData.jointMatrices[_658.z] * inWeight.z;
+            mat4 _714 = _s1_b1.uSkinData.jointMatrices[_658.w] * inWeight.w;
+            _781 = _s1_b0.uMeshMatrix.mesh[(gl_InstanceID + SPIRV_Cross_BaseInstance)].prevWorld * mat4(((_665[0] + _672[0]) + _693[0]) + _714[0], ((_665[1] + _672[1]) + _693[1]) + _714[1], ((_665[2] + _672[2]) + _693[2]) + _714[2], ((_665[3] + _672[3]) + _693[3]) + _714[3]);
+        }
+        else
+        {
+            _781 = _785;
+        }
+        _780 = _781;
+        _777 = mat3(_647[0].xyz, _647[1].xyz, _647[2].xyz);
+        _774 = _s1_b0.uMeshMatrix.mesh[(gl_InstanceID + SPIRV_Cross_BaseInstance)].world * _637;
+    }
+    else
+    {
+        mat4 _786;
+        if (_273)
+        {
+            _786 = _s1_b0.uMeshMatrix.mesh[(gl_InstanceID + SPIRV_Cross_BaseInstance)].prevWorld;
+        }
+        else
+        {
+            _786 = _785;
+        }
+        _780 = _786;
+        _777 = mat3(_s1_b0.uMeshMatrix.mesh[(gl_InstanceID + SPIRV_Cross_BaseInstance)].normalWorld[0].xyz, _s1_b0.uMeshMatrix.mesh[(gl_InstanceID + SPIRV_Cross_BaseInstance)].normalWorld[1].xyz, _s1_b0.uMeshMatrix.mesh[(gl_InstanceID + SPIRV_Cross_BaseInstance)].normalWorld[2].xyz);
+        _774 = _s1_b0.uMeshMatrix.mesh[(gl_InstanceID + SPIRV_Cross_BaseInstance)].world;
+    }
+    vec4 _360 = vec4(inPosition, 1.0);
+    vec4 _361 = _774 * _360;
+    gl_Position = _s0_b0.uCameras[_771].viewProj * _361;
+    if (_376)
+    {
+        gl_Position = vec4(gl_Position.x, gl_Position.y * CORE_FLIP_NDC, fma(gl_Position.z, 2.0, -gl_Position.w), gl_Position.w);
+    }
+    outIndices = (uint((gl_InstanceID + SPIRV_Cross_BaseInstance)) << uint(16)) | (_771 & 65535u);
+    outPos = _361.xyz;
+    outPrevPosI = vec4(0.0);
+    if (_411)
+    {
+        vec4 _420 = _780 * _360;
+        outPrevPosI = vec4(_420.x, _420.y, _420.z, outPrevPosI.w);
+    }
+    outNormal = normalize(_777 * inNormal);
+    if (_431)
+    {
+        outTangentW = vec4(normalize(_777 * inTangent.xyz), inTangent.w);
+    }
+    else
+    {
+        outTangentW = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    outUv = vec4(inUv0.x, inUv0.y, outUv.z, outUv.w);
+    if (_458)
+    {
+        outUv = vec4(outUv.x, outUv.y, inUv1.x, inUv1.y);
+    }
+    if (_466)
+    {
+        outColor = inColor;
+    }
+    else
+    {
+        outColor = vec4(1.0);
+    }
+}
+

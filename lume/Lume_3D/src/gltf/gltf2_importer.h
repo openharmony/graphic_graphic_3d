@@ -17,9 +17,12 @@
 #define CORE__GLTF__GLTF2_IMPORTER_H
 
 #include <atomic>
+#include <condition_variable>
 #include <mutex>
 
 #include <3d/gltf/gltf.h>
+#include <3d/loaders/intf_scene_loader.h>
+#include <3d/util/intf_mesh_builder.h>
 #include <base/containers/string.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
@@ -27,6 +30,11 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/namespace.h>
 #include <core/threading/intf_thread_pool.h>
+
+BASE_BEGIN_NAMESPACE()
+template<class Key, class T>
+class unordered_map;
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 class IEngine;
@@ -42,6 +50,7 @@ class IShaderManager;
 RENDER_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
+class IGraphicsContext;
 class IRenderHandleComponentManager;
 class IMaterialComponentManager;
 class IMeshComponentManager;
@@ -84,6 +93,8 @@ public:
 
     const GLTFImportResult& GetResult() const override;
 
+    const GltfMeshData& GetMeshData() const override;
+
     struct DefaultMaterialShaderData {
         struct SingleShaderData {
             CORE_NS::EntityReference shader;
@@ -125,7 +136,6 @@ private:
     GatheredDataTask<T>* PrepareAnimationOutputTask(BASE_NS::unordered_map<GLTF2::Accessor*, GatheredDataTask<T>*>&,
         const GLTF2::AnimationTrack&, IAnimationOutputComponentManager*);
     void QueueImage(size_t i, BASE_NS::string&& uri, BASE_NS::string&& name);
-    void ResolveReferencedImages(BASE_NS::vector<bool>& imageLoadingRequred);
 
     void QueueTask(BASE_NS::unique_ptr<ImporterTask>&& task);
     bool ProgressTask(ImporterTask& task);
@@ -166,6 +176,7 @@ private:
     GLTFImportResult result_;
 
     std::mutex gatherTasksLock_;
+    std::condition_variable condition_;
     BASE_NS::vector<uint64_t> finishedGatherTasks_;
     BASE_NS::vector<CORE_NS::IThreadPool::IResult::Ptr> gatherTaskResults_;
 
@@ -174,6 +185,51 @@ private:
     size_t completedTasks_ { 0 };
 
     std::atomic_bool cancelled_ { false };
+
+    BASE_NS::vector<IMeshBuilder::Ptr> meshBuilders_;
+    GltfMeshData meshData_;
+};
+
+class Gltf2SceneImporter final : public ISceneImporter, IGLTF2Importer::Listener {
+public:
+    Gltf2SceneImporter(CORE_NS::IEngine& engine, RENDER_NS::IRenderContext& renderContext, CORE_NS::IEcs& ecs);
+    Gltf2SceneImporter(CORE_NS::IEngine& engine, RENDER_NS::IRenderContext& renderContext, CORE_NS::IEcs& ecs,
+        CORE_NS::IThreadPool& pool);
+    ~Gltf2SceneImporter() = default;
+
+    void ImportResources(const ISceneData::Ptr& data, ResourceImportFlags flags) override;
+    void ImportResources(
+        const ISceneData::Ptr& data, ResourceImportFlags flags, ISceneImporter::Listener* listener) override;
+    bool Execute(uint32_t timeBudget) override;
+    void Cancel() override;
+    bool IsCompleted() const override;
+    const Result& GetResult() const override;
+    const MeshData& GetMeshData() const override;
+    CORE_NS::Entity ImportScene(size_t sceneIndex) override;
+    CORE_NS::Entity ImportScene(size_t sceneIndex, SceneImportFlags flags) override;
+    CORE_NS::Entity ImportScene(size_t sceneIndex, CORE_NS::Entity parentEntity) override;
+    CORE_NS::Entity ImportScene(size_t sceneIndex, CORE_NS::Entity parentEntity, SceneImportFlags flags) override;
+
+    // IInterface
+    const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
+    IInterface* GetInterface(const BASE_NS::Uid& uid) override;
+    void Ref() override;
+    void Unref() override;
+
+    // IGLTF2Importer::Listener
+    void OnImportStarted() override;
+    void OnImportFinished() override;
+    void OnImportProgressed(size_t taskIndex, size_t taskCount) override;
+
+private:
+    CORE_NS::IEcs& ecs_;
+    IGraphicsContext* graphicsContext_ { nullptr };
+    GLTF2Importer::Ptr importer_;
+    ISceneData::Ptr data_;
+    uint32_t refcnt_ { 0 };
+    Result result_;
+    MeshData meshData_;
+    ISceneImporter::Listener* listener_ { nullptr };
 };
 } // namespace GLTF2
 

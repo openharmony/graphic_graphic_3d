@@ -43,10 +43,8 @@ void RenderDataStoreDefaultStaging::PreRender()
 
     std::lock_guard<std::mutex> lock(mutex_);
 
-    frameStagingConsumeStruct_ = std::move(stagingConsumeStruct_);
-    frameStagingDirectCopyConsumeStruct_ = std::move(stagingDirectCopyConsumeStruct_);
-
-    frameStagingConsumeGpuBuffers_ = std::move(stagingGpuBuffers_);
+    frameStagingConsumeData_ = move(stagingConsumeData_);
+    frameStagingConsumeGpuBuffers_ = move(stagingGpuBuffers_);
 }
 
 void RenderDataStoreDefaultStaging::PostRender()
@@ -62,6 +60,79 @@ void RenderDataStoreDefaultStaging::Clear()
     // The data cannot be automatically cleared here
 }
 
+void RenderDataStoreDefaultStaging::CopyImageToBuffer(const RenderHandleReference& srcHandle,
+    const RenderHandleReference& dstHandle, const BufferImageCopy& bufferImageCopy, const ResourceCopyInfo copyInfo)
+{
+    if (gpuResourceMgr_.IsGpuImage(srcHandle) && gpuResourceMgr_.IsGpuBuffer(dstHandle)) {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        auto& staging =
+            (copyInfo == ResourceCopyInfo::BEGIN_FRAME) ? stagingConsumeData_.beginFrame : stagingConsumeData_.endFrame;
+        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
+        staging.bufferImageCopies.push_back(bufferImageCopy);
+
+        staging.imageToBuffer.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_SRC_TO_DST_COPY,
+            srcHandle, dstHandle, beginIndex, 1u, {}, nullptr });
+    }
+}
+
+void RenderDataStoreDefaultStaging::CopyImageToImage(const RenderHandleReference& srcHandle,
+    const RenderHandleReference& dstHandle, const ImageCopy& imageCopy, const ResourceCopyInfo copyInfo)
+{
+    if (gpuResourceMgr_.IsGpuImage(srcHandle) && gpuResourceMgr_.IsGpuImage(dstHandle)) {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        auto& staging =
+            (copyInfo == ResourceCopyInfo::BEGIN_FRAME) ? stagingConsumeData_.beginFrame : stagingConsumeData_.endFrame;
+        const uint32_t beginIndex = static_cast<uint32_t>(staging.imageCopies.size());
+        staging.imageCopies.push_back(imageCopy);
+
+        staging.imageToImage.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_SRC_TO_DST_COPY,
+            srcHandle, dstHandle, beginIndex, 1u, {}, nullptr });
+    }
+}
+
+void RenderDataStoreDefaultStaging::CopyBufferToBuffer(const RenderHandleReference& srcHandle,
+    const RenderHandleReference& dstHandle, const BufferCopy& bufferCopy, const ResourceCopyInfo copyInfo)
+{
+    if (gpuResourceMgr_.IsGpuBuffer(srcHandle) && gpuResourceMgr_.IsGpuBuffer(dstHandle)) {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        auto& staging =
+            (copyInfo == ResourceCopyInfo::BEGIN_FRAME) ? stagingConsumeData_.beginFrame : stagingConsumeData_.endFrame;
+        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferCopies.size());
+        staging.bufferCopies.push_back(bufferCopy);
+
+        staging.bufferToBuffer.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY,
+            srcHandle, dstHandle, beginIndex, 1u, {}, nullptr });
+    }
+}
+
+void RenderDataStoreDefaultStaging::CopyBufferToImage(const RenderHandleReference& srcHandle,
+    const RenderHandleReference& dstHandle, const BufferImageCopy& bufferImageCopy, const ResourceCopyInfo copyInfo)
+{
+    if (gpuResourceMgr_.IsGpuBuffer(srcHandle) && gpuResourceMgr_.IsGpuImage(dstHandle)) {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        auto& staging =
+            (copyInfo == ResourceCopyInfo::BEGIN_FRAME) ? stagingConsumeData_.beginFrame : stagingConsumeData_.endFrame;
+        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
+        staging.bufferImageCopies.push_back(bufferImageCopy);
+
+        staging.bufferToImage.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY,
+            srcHandle, dstHandle, beginIndex, 1u, {}, nullptr });
+    }
+}
+
+void RenderDataStoreDefaultStaging::ClearColorImage(const RenderHandleReference& handle, const ClearColorValue color)
+{
+    if (gpuResourceMgr_.IsGpuImage(handle) && (!RenderHandleUtil::IsDepthImage(handle.GetHandle()))) {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        stagingConsumeData_.beginFrameClear.clears.push_back({ handle, color });
+    }
+}
+
 void RenderDataStoreDefaultStaging::CopyDataToBuffer(
     const array_view<const uint8_t>& dat, const RenderHandleReference& dstHandle, const BufferCopy& bufferCopy)
 {
@@ -74,15 +145,15 @@ void RenderDataStoreDefaultStaging::CopyDataToBuffer(
 
         std::lock_guard<std::mutex> lock(mutex_);
 
-        stagingGpuBuffers_.emplace_back(stagingBufferHandle);
+        stagingGpuBuffers_.push_back(stagingBufferHandle);
 
-        const uint32_t beginIndex = static_cast<uint32_t>(stagingConsumeStruct_.bufferCopies.size());
-        stagingConsumeStruct_.bufferCopies.emplace_back(BufferCopy { 0, 0, static_cast<uint32_t>(dat.size_bytes()) });
+        auto& staging = stagingConsumeData_.beginFrame;
+        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferCopies.size());
+        staging.bufferCopies.push_back(BufferCopy { 0, 0, static_cast<uint32_t>(dat.size_bytes()) });
 
         vector<uint8_t> copiedData(dat.cbegin().ptr(), dat.cend().ptr());
-        stagingConsumeStruct_.bufferToBuffer.emplace_back(
-            StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_VECTOR, stagingBufferHandle, dstHandle,
-                beginIndex, 1, move(copiedData), nullptr });
+        staging.bufferToBuffer.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_VECTOR,
+            stagingBufferHandle, dstHandle, beginIndex, 1, move(copiedData), nullptr });
     }
 }
 
@@ -98,7 +169,7 @@ void RenderDataStoreDefaultStaging::CopyDataToBufferOnCpu(
             std::lock_guard<std::mutex> lock(mutex_);
 
             vector<uint8_t> copiedData(dat.cbegin().ptr(), dat.cend().ptr());
-            stagingDirectCopyConsumeStruct_.dataCopies.emplace_back(
+            stagingConsumeData_.beginFrameDirect.dataCopies.push_back(
                 DirectDataCopyOnCpu { dstHandle, bufferCopy, move(copiedData) });
         } else {
             PLUGIN_LOG_E("CopyDataToBufferOnCpu invalid buffer given (needs host_visibile and host_coherent).");
@@ -118,45 +189,15 @@ void RenderDataStoreDefaultStaging::CopyDataToImage(const array_view<const uint8
 
         std::lock_guard<std::mutex> lock(mutex_);
 
-        stagingGpuBuffers_.emplace_back(stagingBufferHandle);
+        stagingGpuBuffers_.push_back(stagingBufferHandle);
 
-        const uint32_t beginIndex = static_cast<uint32_t>(stagingConsumeStruct_.bufferImageCopies.size());
-        stagingConsumeStruct_.bufferImageCopies.emplace_back(bufferImageCopy);
+        auto& staging = stagingConsumeData_.beginFrame;
+        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
+        staging.bufferImageCopies.push_back(bufferImageCopy);
 
         vector<uint8_t> copiedData(dat.cbegin().ptr(), dat.cend().ptr());
-        stagingConsumeStruct_.bufferToImage.emplace_back(
-            StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_VECTOR, stagingBufferHandle, dstHandle,
-                beginIndex, 1, move(copiedData), nullptr });
-    }
-}
-
-void RenderDataStoreDefaultStaging::CopyBufferToBuffer(
-    const RenderHandleReference& srcHandle, const RenderHandleReference& dstHandle, const BufferCopy& bufferCopy)
-{
-    if (gpuResourceMgr_.IsGpuBuffer(srcHandle) && gpuResourceMgr_.IsGpuBuffer(dstHandle)) {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        const uint32_t beginIndex = static_cast<uint32_t>(stagingConsumeStruct_.bufferCopies.size());
-        stagingConsumeStruct_.bufferCopies.emplace_back(bufferCopy);
-
-        stagingConsumeStruct_.bufferToBuffer.emplace_back(
-            StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY, srcHandle, dstHandle,
-                beginIndex, 1u, {}, nullptr });
-    }
-}
-
-void RenderDataStoreDefaultStaging::CopyBufferToImage(const RenderHandleReference& srcHandle,
-    const RenderHandleReference& dstHandle, const BufferImageCopy& bufferImageCopy)
-{
-    if (gpuResourceMgr_.IsGpuBuffer(srcHandle) && gpuResourceMgr_.IsGpuImage(dstHandle)) {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        const uint32_t beginIndex = static_cast<uint32_t>(stagingConsumeStruct_.bufferImageCopies.size());
-        stagingConsumeStruct_.bufferImageCopies.emplace_back(bufferImageCopy);
-
-        stagingConsumeStruct_.bufferToImage.emplace_back(
-            StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY, srcHandle, dstHandle,
-                beginIndex, 1u, {}, nullptr });
+        staging.bufferToImage.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_VECTOR,
+            stagingBufferHandle, dstHandle, beginIndex, 1, move(copiedData), nullptr });
     }
 }
 
@@ -166,69 +207,104 @@ void RenderDataStoreDefaultStaging::CopyBufferToImage(const RenderHandleReferenc
     if (gpuResourceMgr_.IsGpuBuffer(srcHandle) && gpuResourceMgr_.IsGpuImage(dstHandle)) {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        const uint32_t beginIndex = static_cast<uint32_t>(stagingConsumeStruct_.bufferImageCopies.size());
-        stagingConsumeStruct_.bufferImageCopies.insert(
-            stagingConsumeStruct_.bufferImageCopies.end(), bufferImageCopies.begin(), bufferImageCopies.end());
+        auto& staging = stagingConsumeData_.beginFrame;
+        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
+        staging.bufferImageCopies.insert(
+            staging.bufferImageCopies.end(), bufferImageCopies.begin(), bufferImageCopies.end());
 
-        stagingConsumeStruct_.bufferToImage.emplace_back(
-            StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY, srcHandle, dstHandle,
-                beginIndex, static_cast<uint32_t>(bufferImageCopies.size()), {}, nullptr });
+        staging.bufferToImage.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY,
+            srcHandle, dstHandle, beginIndex, static_cast<uint32_t>(bufferImageCopies.size()), {}, nullptr });
     }
+}
+
+void RenderDataStoreDefaultStaging::CopyBufferToBuffer(
+    const RenderHandleReference& srcHandle, const RenderHandleReference& dstHandle, const BufferCopy& bufferCopy)
+{
+    CopyBufferToBuffer(srcHandle, dstHandle, bufferCopy, ResourceCopyInfo::BEGIN_FRAME);
+}
+
+void RenderDataStoreDefaultStaging::CopyBufferToImage(const RenderHandleReference& srcHandle,
+    const RenderHandleReference& dstHandle, const BufferImageCopy& bufferImageCopy)
+{
+    CopyBufferToImage(srcHandle, dstHandle, bufferImageCopy, ResourceCopyInfo::BEGIN_FRAME);
 }
 
 void RenderDataStoreDefaultStaging::CopyImageToBuffer(const RenderHandleReference& srcHandle,
     const RenderHandleReference& dstHandle, const BufferImageCopy& bufferImageCopy)
 {
-    if (gpuResourceMgr_.IsGpuImage(srcHandle) && gpuResourceMgr_.IsGpuBuffer(dstHandle)) {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        const uint32_t beginIndex = static_cast<uint32_t>(stagingConsumeStruct_.bufferImageCopies.size());
-        stagingConsumeStruct_.bufferImageCopies.emplace_back(bufferImageCopy);
-
-        stagingConsumeStruct_.imageToBuffer.emplace_back(
-            StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_SRC_TO_DST_COPY, srcHandle, dstHandle,
-                beginIndex, 1u, {}, nullptr });
-    }
+    CopyImageToBuffer(srcHandle, dstHandle, bufferImageCopy, ResourceCopyInfo::BEGIN_FRAME);
 }
 
 void RenderDataStoreDefaultStaging::CopyImageToImage(
     const RenderHandleReference& srcHandle, const RenderHandleReference& dstHandle, const ImageCopy& imageCopy)
 {
-    if (gpuResourceMgr_.IsGpuImage(srcHandle) && gpuResourceMgr_.IsGpuImage(dstHandle)) {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        const uint32_t beginIndex = static_cast<uint32_t>(stagingConsumeStruct_.imageCopies.size());
-        stagingConsumeStruct_.imageCopies.emplace_back(imageCopy);
-
-        stagingConsumeStruct_.imageToImage.emplace_back(
-            StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_SRC_TO_DST_COPY, srcHandle, dstHandle,
-                beginIndex, 1u, {}, nullptr });
-    }
+    CopyImageToImage(srcHandle, dstHandle, imageCopy, ResourceCopyInfo::BEGIN_FRAME);
 }
 
-bool RenderDataStoreDefaultStaging::HasStagingData() const
+bool RenderDataStoreDefaultStaging::HasBeginStagingData() const
 {
-    if (frameStagingConsumeStruct_.bufferToBuffer.empty() && frameStagingConsumeStruct_.bufferToImage.empty() &&
-        frameStagingConsumeStruct_.imageToBuffer.empty() && frameStagingConsumeStruct_.imageToImage.empty() &&
-        frameStagingConsumeStruct_.cpuToBuffer.empty() && frameStagingConsumeStruct_.bufferCopies.empty() &&
-        frameStagingConsumeStruct_.bufferImageCopies.empty() && frameStagingConsumeStruct_.imageCopies.empty() &&
-        frameStagingDirectCopyConsumeStruct_.dataCopies.empty()) {
+    const auto& staging = frameStagingConsumeData_;
+    const auto& begStaging = staging.beginFrame;
+    const bool noBeginStaging = begStaging.bufferToBuffer.empty() && begStaging.bufferToImage.empty() &&
+                                begStaging.imageToBuffer.empty() && begStaging.imageToImage.empty() &&
+                                begStaging.cpuToBuffer.empty() && begStaging.bufferCopies.empty() &&
+                                begStaging.bufferImageCopies.empty() && begStaging.imageCopies.empty();
+    const bool noBeginDirectCopy = staging.beginFrameDirect.dataCopies.empty();
+    const bool noBeginClear = staging.beginFrameClear.clears.empty();
+    if (noBeginStaging && noBeginDirectCopy && noBeginClear) {
         return false;
     } else {
         return true;
     }
 }
 
-StagingConsumeStruct RenderDataStoreDefaultStaging::ConsumeStagingData()
+bool RenderDataStoreDefaultStaging::HasEndStagingData() const
 {
-    StagingConsumeStruct scs = move(frameStagingConsumeStruct_);
+    const auto& endStaging = frameStagingConsumeData_.endFrame;
+    const bool noEndStaging = endStaging.bufferToBuffer.empty() && endStaging.bufferToImage.empty() &&
+                              endStaging.imageToBuffer.empty() && endStaging.imageToImage.empty() &&
+                              endStaging.cpuToBuffer.empty() && endStaging.bufferCopies.empty() &&
+                              endStaging.bufferImageCopies.empty() && endStaging.imageCopies.empty();
+    if (noEndStaging) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+StagingConsumeStruct RenderDataStoreDefaultStaging::ConsumeBeginStagingData()
+{
+    StagingConsumeStruct scs = move(frameStagingConsumeData_.beginFrame);
     return scs;
 }
 
-StagingDirectDataCopyConsumeStruct RenderDataStoreDefaultStaging::ConsumeStagingDirectDataCopy()
+StagingDirectDataCopyConsumeStruct RenderDataStoreDefaultStaging::ConsumeBeginStagingDirectDataCopy()
 {
-    StagingDirectDataCopyConsumeStruct scs = move(frameStagingDirectCopyConsumeStruct_);
+    StagingDirectDataCopyConsumeStruct scs = move(frameStagingConsumeData_.beginFrameDirect);
     return scs;
+}
+
+StagingImageClearConsumeStruct RenderDataStoreDefaultStaging::ConsumeBeginStagingImageClears()
+{
+    StagingImageClearConsumeStruct scs = move(frameStagingConsumeData_.beginFrameClear);
+    return scs;
+}
+
+StagingConsumeStruct RenderDataStoreDefaultStaging::ConsumeEndStagingData()
+{
+    StagingConsumeStruct scs = move(frameStagingConsumeData_.endFrame);
+    return scs;
+}
+
+uint32_t RenderDataStoreDefaultStaging::GetImageClearByteSize() const
+{
+    uint32_t byteSize = 0;
+    for (const auto& ref : frameStagingConsumeData_.beginFrameClear.clears) {
+        const GpuImageDesc desc = gpuResourceMgr_.GetImageDescriptor(ref.handle);
+        const uint32_t pixelBytes = gpuResourceMgr_.GetFormatProperties(ref.handle).bytesPerPixel;
+        byteSize += (pixelBytes * desc.width * desc.height); // no 3D supported
+    }
+    return byteSize;
 }
 
 // for plugin / factory interface

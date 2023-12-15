@@ -19,13 +19,23 @@
 #include <limits>
 
 #include <3d/namespace.h>
+#include <base/containers/refcnt_ptr.h>
 #include <base/containers/vector.h>
-#include <base/math/vector.h>
-#include <core/ecs/entity.h>
+#include <base/math/matrix.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
+#include <core/namespace.h>
 #include <core/plugin/intf_interface.h>
+
+BASE_BEGIN_NAMESPACE()
+namespace Math {
+class Mat4X4;
+} // namespace Math
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 class IEcs;
+struct Entity;
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -95,7 +105,7 @@ public:
     virtual MinAndMax GetTransformComponentAABB(CORE_NS::Entity entity, bool isRecursive, CORE_NS::IEcs& ecs) const = 0;
 
     /**
-     * Get all nodes node hit by ray.
+     * Get all nodes hit by ray.
      * @param ecs Entity component system where hit test is done.
      * @param start Starting point of the ray.
      * @param direction Direction of the ray.
@@ -106,7 +116,20 @@ public:
         CORE_NS::IEcs const& ecs, const BASE_NS::Math::Vec3& start, const BASE_NS::Math::Vec3& direction) const = 0;
 
     /**
-     * Get all nodes node hit by ray using a camera and 2D screen coordinates as input.
+     * Get nodes hit by ray. Only entities included in the given layer mask are in the result. Entities without
+     * LayerComponent default to LayerConstants::DEFAULT_LAYER_MASK.
+     * @param ecs Entity component system where hit test is done.
+     * @param start Starting point of the ray.
+     * @param direction Direction of the ray.
+     * @param layerMask Layer mask for limiting the returned result.
+     * @return Array of raycast results that describe node that was hit and distance to intersection (ordered by
+     * distance).
+     */
+    virtual BASE_NS::vector<RayCastResult> RayCast(CORE_NS::IEcs const& ecs, const BASE_NS::Math::Vec3& start,
+        const BASE_NS::Math::Vec3& direction, uint64_t layerMask) const = 0;
+
+    /**
+     * Get all nodes hit by ray using a camera and 2D screen coordinates as input.
      * @param ecs EntityComponentSystem where hit test is done.
      * @param camera Camera entity to be used for the hit test.
      * @param screenPos screen coordinates for hit test. Where (0, 0) is the upper left corner of the screen and (1, 1)
@@ -117,15 +140,24 @@ public:
     virtual BASE_NS::vector<RayCastResult> RayCastFromCamera(
         CORE_NS::IEcs const& ecs, CORE_NS::Entity camera, const BASE_NS::Math::Vec2& screenPos) const = 0;
 
+    /**
+     * Get nodes hit by ray using a camera and 2D screen coordinates as input. Only entities included in the given layer
+     * mask are in the result. Entities without LayerComponent default to LayerConstants::DEFAULT_LAYER_MASK.
+     * @param ecs EntityComponentSystem where hit test is done.
+     * @param camera Camera entity to be used for the hit test.
+     * @param screenPos screen coordinates for hit test. Where (0, 0) is the upper left corner of the screen and (1, 1)
+     * the lower left corner.
+     * @param layerMask Layer mask for limiting the returned result.
+     * @return Array of raycast results that describe node that was hit and distance to intersection (ordered by
+     * distance).
+     */
+    virtual BASE_NS::vector<RayCastResult> RayCastFromCamera(CORE_NS::IEcs const& ecs, CORE_NS::Entity camera,
+        const BASE_NS::Math::Vec2& screenPos, uint64_t layerMask) const = 0;
+
 protected:
     IPicking() = default;
     virtual ~IPicking() = default;
 };
-
-inline constexpr BASE_NS::string_view GetName(const IPicking*)
-{
-    return "IPicking";
-}
 
 /** @} */
 CORE3D_END_NAMESPACE()

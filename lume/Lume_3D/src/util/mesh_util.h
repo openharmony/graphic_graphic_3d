@@ -64,8 +64,8 @@ public:
     CORE_NS::Entity GenerateTorus(const CORE_NS::IEcs& ecs, BASE_NS::string_view name, CORE_NS::Entity material,
         float majorRadius, float minorRadius, uint32_t majorSectors, uint32_t minorSectors) override;
 
-    explicit MeshUtil(CORE_NS::IClassFactory& factory);
-    ~MeshUtil() override = default;
+    MeshUtil(CORE_NS::IClassFactory& factory);
+    ~MeshUtil() = default;
 
     static void CalculateTangents(const BASE_NS::array_view<const uint8_t>& indices,
         const BASE_NS::array_view<const BASE_NS::Math::Vec3>& positions,

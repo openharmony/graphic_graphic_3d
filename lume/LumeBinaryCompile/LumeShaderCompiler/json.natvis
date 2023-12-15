@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="json::pair">
+    <DisplayString>{key} : {value}</DisplayString>
+  </Type>
+  <Type Name="json::value">
+    <DisplayString Condition="type == json::type::uninitialized">empty</DisplayString>
+    <DisplayString Condition="type == json::type::object">object {object_}</DisplayString>
+    <DisplayString Condition="type == json::type::array">array {array_}</DisplayString>
+    <DisplayString Condition="type == json::type::string">string {string_,s}</DisplayString>
+    <DisplayString Condition="type == json::type::number">number {number_}</DisplayString>
+    <DisplayString Condition="type == json::type::boolean">boolean {boolean_}</DisplayString>
+    <DisplayString Condition="type == json::type::null">null</DisplayString>
+    <Expand>
+      <ArrayItems Condition="type == json::type::object">
+        <Size>object_.size()</Size>
+        <ValuePointer>(const json::pair*) object_._Mypair._Myval2._Myfirst</ValuePointer>
+      </ArrayItems>
+      <ArrayItems Condition="type == json::type::array">
+        <Size>array_.size()</Size>
+        <ValuePointer>(const json::value*) array_._Mypair._Myval2._Myfirst</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+</AutoVisualizer>

@@ -1,0 +1,27 @@
+#version 450
+
+struct PushConstantStruct
+{
+    vec4 texSizeInvTexSize;
+};
+
+struct uPushConstant
+{
+    PushConstantStruct uPc;
+};
+
+uniform uPushConstant CORE_PC_0;
+
+uniform sampler2D s0_b1_s0_b0;
+
+layout(location = 0) in vec2 inUv;
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+    vec2 _22 = CORE_PC_0.uPc.texSizeInvTexSize.zw * 0.5;
+    float _63 = _22.x;
+    float _69 = _22.y;
+    outColor = ((((textureLod(s0_b1_s0_b0, inUv, 0.0) * 0.5) + (textureLod(s0_b1_s0_b0, inUv - _22, 0.0) * 0.125)) + (textureLod(s0_b1_s0_b0, vec2(inUv.x + _63, inUv.y - _69), 0.0) * 0.125)) + (textureLod(s0_b1_s0_b0, vec2(inUv.x - _63, inUv.y + _69), 0.0) * 0.125)) + (textureLod(s0_b1_s0_b0, inUv + _22, 0.0) * 0.125);
+}
+

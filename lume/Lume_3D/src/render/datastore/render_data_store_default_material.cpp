@@ -106,6 +106,8 @@ void ExtentRenderMaterialFlagsForComplexity(const RenderMaterialType materialTyp
                        ? RENDER_MATERIAL_COMPLEX_BIT
                        : RENDER_MATERIAL_BASIC_BIT;
         }
+    } else {
+        rmf |= ((rmf & complexMask) > 0) ? RENDER_MATERIAL_COMPLEX_BIT : RENDER_MATERIAL_BASIC_BIT;
     }
 }
 
@@ -114,6 +116,11 @@ inline constexpr uint32_t HashSubmeshMaterials(const RenderMaterialType material
 {
     return (((uint32_t)materialType << MATERIAL_TYPE_SHIFT) & MATERIAL_TYPE_MASK) |
            ((materialFlags << MATERIAL_FLAGS_SHIFT) & MATERIAL_FLAGS_MASK) | (submeshFlags & SUBMESH_FLAGS_MASK);
+}
+
+inline uint64_t HashMaterialId(const uint64_t id, const uint32_t instanceCount)
+{
+    return Hash(id, static_cast<uint64_t>(instanceCount));
 }
 
 void* AllocateMatrixMemory(RenderDataStoreDefaultMaterial::LinearAllocatorStruct& allocator, const size_t byteSize)
@@ -126,7 +133,7 @@ void* AllocateMatrixMemory(RenderDataStoreDefaultMaterial::LinearAllocatorStruct
     if (data) {
         return data;
     } else { // current allocator is out of memory
-        allocator.allocators.emplace_back(make_unique<LinearAllocator>(byteSize, MEMORY_ALIGNMENT));
+        allocator.allocators.push_back(make_unique<LinearAllocator>(byteSize, MEMORY_ALIGNMENT));
         allocator.currentIndex = (uint32_t)(allocator.allocators.size() - 1);
         data = allocator.allocators[allocator.currentIndex]->Allocate(byteSize);
         CORE_ASSERT_MSG(data, "render data store default material allocation : out of memory");
@@ -140,24 +147,11 @@ Math::Mat4X4* AllocateMatrices(RenderDataStoreDefaultMaterial::LinearAllocatorSt
     return static_cast<Math::Mat4X4*>(AllocateMatrixMemory(allocator, byteSize));
 }
 
-void UnpackMaterialUVec(const Math::UVec4& packed, Math::Vec4& up0, Math::Vec4& up1)
-{
-    {
-        const Math::Vec2 upxy = Math::UnpackHalf2X16(packed.x);
-        const Math::Vec2 upzw = Math::UnpackHalf2X16(packed.y);
-        up0 = Math::Vec4(upxy.x, upxy.y, upzw.x, upzw.y);
-    }
-    {
-        const Math::Vec2 upxy = Math::UnpackHalf2X16(packed.z);
-        const Math::Vec2 upzw = Math::UnpackHalf2X16(packed.w);
-        up1 = Math::Vec4(upxy.x, upxy.y, upzw.x, upzw.y);
-    }
-}
-
 RenderDataDefaultMaterial::AllMaterialUniforms MaterialUniformsPackedFromInput(
     const RenderDataDefaultMaterial::InputMaterialUniforms& input)
 {
-    RenderDataDefaultMaterial::AllMaterialUniforms amu;
+    static constexpr const RenderDataDefaultMaterial::AllMaterialUniforms initial {};
+    RenderDataDefaultMaterial::AllMaterialUniforms amu = initial;
     // premultiplication needs to be handled already with some factors like baseColor
     for (uint32_t idx = 0; idx < RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT; ++idx) {
         amu.factors.factors[idx] = input.textureData[idx].factor;
@@ -185,11 +179,11 @@ RenderDataDefaultMaterial::AllMaterialUniforms MaterialUniformsPackedFromInput(
             const Math::Vec2 translate = { tex.translation.x, tex.translation.y };
 
             // set transform bit for texture index
-            constexpr auto identityRs = Math::Vec4(1.f, 0.f, 0.f, 1.f);
+            static constexpr const auto identityRs = Math::Vec4(1.f, 0.f, 0.f, 1.f);
             const bool hasTransform = (translate.x != 0.f) || (translate.y != 0.f) || (rotateScale != identityRs);
             if (!hasTransform) {
                 // this matches packing identityRs.xy, identityRs.zw, translation.xy, and 0,0
-                constexpr auto identity = Math::UVec4(0x3c000000, 0x00003c00, 0x0, 0x0);
+                static constexpr const auto identity = Math::UVec4(0x3c000000, 0x00003c00, 0x0, 0x0);
                 amu.transforms.packed[CORE_MATERIAL_PACK_TEX_BASE_COLOR_UV_IDX + i] = identity;
             } else {
                 // using PackMaterialUVec costs packing the last unused zeros
@@ -238,8 +232,7 @@ void RenderDataStoreDefaultMaterial::Clear()
     materialAllUniforms_.clear();
     materialHandles_.clear();
     materialData_.clear();
-    materialIdToIndex_.clear();
-    materialIdToCustomResourceIndex_.clear();
+    materialIdToIndices_.clear();
     materialCustomPropertyOffsets_.clear();
     materialCustomPropertyData_.clear();
     submeshMaterialFlags_.clear();
@@ -262,7 +255,7 @@ void RenderDataStoreDefaultMaterial::Clear()
             }
             submeshJointMatricesAllocator_.allocators.clear();
             // create new single allocation for combined previous size and some extra bytes
-            submeshJointMatricesAllocator_.allocators.emplace_back(
+            submeshJointMatricesAllocator_.allocators.push_back(
                 make_unique<LinearAllocator>(fullByteSize, MEMORY_ALIGNMENT));
         }
     }
@@ -300,23 +293,23 @@ uint32_t RenderDataStoreDefaultMaterial::AddMaterialData(
     CORE_ASSERT(materialAllUniforms_.size() == materialData_.size());
     const uint32_t materialIndex = static_cast<uint32_t>(materialAllUniforms_.size());
 
-    materialHandles_.emplace_back(materialHandles);
-    materialAllUniforms_.emplace_back(MaterialUniformsPackedFromInput(materialUniforms));
-    materialData_.emplace_back(materialData);
+    materialHandles_.push_back(materialHandles);
+    materialAllUniforms_.push_back(MaterialUniformsPackedFromInput(materialUniforms));
+    materialData_.push_back(materialData);
     auto& currMaterialData = materialData_.back();
     ExtentRenderMaterialFlagsForComplexity(currMaterialData.materialType, currMaterialData.renderMaterialFlags);
 
     MaterialCustomPropertyOffset mcpo;
     if (!customData.empty()) {
-        const uint32_t maxByteSize = Math::min(static_cast<uint32_t>(customData.size_bytes()),
+        const auto offset = static_cast<uint32_t>(materialCustomPropertyData_.size_in_bytes());
+        const auto maxByteSize = Math::min(static_cast<uint32_t>(customData.size_bytes()),
             RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_PROPERTY_BYTE_SIZE);
-        mcpo.offset = static_cast<uint32_t>(materialCustomPropertyData_.size_in_bytes());
+        mcpo.offset = offset;
         mcpo.byteSize = maxByteSize;
-        materialCustomPropertyData_.resize(materialCustomPropertyData_.size_in_bytes() + maxByteSize);
-        CloneData(materialCustomPropertyData_.data(), materialCustomPropertyData_.size_in_bytes(), customData.data(),
-            customData.size_bytes());
+        materialCustomPropertyData_.resize(offset + maxByteSize);
+        CloneData(materialCustomPropertyData_.data() + offset, maxByteSize, customData.data(), maxByteSize);
     }
-    materialCustomPropertyOffsets_.emplace_back(mcpo);
+    materialCustomPropertyOffsets_.push_back(mcpo);
 
     return materialIndex;
 }
@@ -329,20 +322,87 @@ uint32_t RenderDataStoreDefaultMaterial::AddMaterialData(const uint64_t id,
     CORE_STATIC_ASSERT(RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT == MaterialComponent::TEXTURE_COUNT);
 
     CORE_ASSERT(materialAllUniforms_.size() == materialData_.size());
-    if (const auto iter = materialIdToIndex_.find(id); iter != materialIdToIndex_.cend()) {
-        CORE_ASSERT(iter->second < static_cast<uint32_t>(materialAllUniforms_.size()));
-        return iter->second;
+    auto searchId = HashMaterialId(id, static_cast<uint32_t>(1U));
+    if (const auto iter = materialIdToIndices_.find(searchId); iter != materialIdToIndices_.cend()) {
+        CORE_ASSERT(iter->second.materialIndex < static_cast<uint32_t>(materialAllUniforms_.size()));
+        return iter->second.materialIndex;
     } else {
         const uint32_t materialIndex = AddMaterialData(materialUniforms, materialHandles, materialData, customData);
-        materialIdToIndex_[id] = materialIndex;
+        materialIdToIndices_[searchId] = { materialIndex, RenderSceneDataConstants::INVALID_INDEX };
         return materialIndex;
+    }
+}
+
+uint32_t RenderDataStoreDefaultMaterial::AllocateMaterials(uint64_t id, uint32_t instanceCount)
+{
+    if (!instanceCount) {
+        return RenderSceneDataConstants::INVALID_INDEX;
+    }
+    auto searchId = HashMaterialId(id, instanceCount);
+    if (const auto iter = materialIdToIndices_.find(searchId); iter != materialIdToIndices_.cend()) {
+        CORE_ASSERT(iter->second.materialIndex < static_cast<uint32_t>(materialAllUniforms_.size()));
+        // NOTE: should probably know how many instances have been created, insert if instanceCount if bigger, update
+        // materialIdToIndex_.
+        return iter->second.materialIndex;
+    } else {
+        const uint32_t materialIndex = static_cast<uint32_t>(materialAllUniforms_.size());
+        materialHandles_.resize(materialIndex + instanceCount);
+        materialAllUniforms_.resize(materialIndex + instanceCount);
+        materialData_.resize(materialIndex + instanceCount);
+        materialCustomPropertyOffsets_.resize(materialIndex + instanceCount);
+        materialIdToIndices_[searchId] = { materialIndex, RenderSceneDataConstants::INVALID_INDEX };
+        return materialIndex;
+    }
+}
+
+void RenderDataStoreDefaultMaterial::AddInstanceMaterialData(uint32_t materialIndex, uint32_t materialInstanceIndex,
+    uint32_t materialInstanceCount, const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+    const RenderDataDefaultMaterial::MaterialHandles& materialHandles,
+    const RenderDataDefaultMaterial::MaterialData& materialData,
+    const BASE_NS::array_view<const uint8_t> customPropertyData)
+{
+    if ((materialIndex + materialInstanceIndex + materialInstanceCount) <= materialHandles_.size()) {
+        materialHandles_[materialIndex + materialInstanceIndex] = materialHandles;
+        auto& currMaterialData = materialData_[materialIndex + materialInstanceIndex];
+        currMaterialData = materialData;
+        ExtentRenderMaterialFlagsForComplexity(currMaterialData.materialType, currMaterialData.renderMaterialFlags);
+
+        // uniforms and custom property data
+        AddInstanceMaterialData(
+            materialIndex, materialInstanceIndex, materialInstanceCount, materialUniforms, customPropertyData);
+    }
+}
+
+void RenderDataStoreDefaultMaterial::AddInstanceMaterialData(uint32_t materialIndex, uint32_t materialInstanceIndex,
+    uint32_t materialInstanceCount, const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+    const BASE_NS::array_view<const uint8_t> customPropertyData)
+{
+    if ((materialIndex + materialInstanceIndex + materialInstanceCount) <= materialAllUniforms_.size()) {
+        materialAllUniforms_[materialIndex + materialInstanceIndex] = MaterialUniformsPackedFromInput(materialUniforms);
+        if (!customPropertyData.empty()) {
+            const auto offset = static_cast<uint32_t>(materialCustomPropertyData_.size_in_bytes());
+            const auto maxByteSize = Math::min(static_cast<uint32_t>(customPropertyData.size_bytes()),
+                RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_PROPERTY_BYTE_SIZE);
+            auto& mcpo = materialCustomPropertyOffsets_[materialIndex + materialInstanceIndex];
+            mcpo.offset = offset;
+            mcpo.byteSize = maxByteSize;
+            materialCustomPropertyData_.resize(offset + maxByteSize);
+            CloneData(materialCustomPropertyData_.data() + offset, maxByteSize, customPropertyData.data(), maxByteSize);
+        }
+        // duplicate the data, note handles are not duplicated
+        const auto& baseUniforms = materialAllUniforms_[materialIndex + materialInstanceIndex];
+        for (uint32_t idx = 1u; idx < materialInstanceCount; ++idx) {
+            const uint32_t currMaterialIndex = materialIndex + materialInstanceIndex + idx;
+            CORE_ASSERT(currMaterialIndex < static_cast<uint32_t>(materialAllUniforms_.size()));
+            materialAllUniforms_[currMaterialIndex] = baseUniforms;
+        }
     }
 }
 
 uint32_t RenderDataStoreDefaultMaterial::AddMeshData(const RenderMeshData& meshData)
 {
     const uint32_t meshIndex = static_cast<uint32_t>(meshData_.size());
-    meshData_.emplace_back(meshData);
+    meshData_.push_back(meshData);
     return meshIndex;
 }
 
@@ -374,35 +434,35 @@ uint32_t RenderDataStoreDefaultMaterial::AddSkinJointMatrices(
 }
 
 uint32_t RenderDataStoreDefaultMaterial::AddMaterialCustomResources(
-    const array_view<const RenderHandleReference> bindings)
-{
-    uint32_t index = RenderSceneDataConstants::INVALID_INDEX;
-    if (!bindings.empty()) {
-        index = static_cast<uint32_t>(customResourceData_.size());
-        customResourceData_.push_back({});
-        auto& dataRef = customResourceData_.back();
-        const uint32_t maxCount = Math::min(
-            static_cast<uint32_t>(bindings.size()), RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_RESOURCE_COUNT);
-        for (uint32_t idx = 0; idx < maxCount; ++idx) {
-            if (bindings[idx]) {
-                dataRef.resourceHandles[dataRef.resourceHandleCount++] = bindings[idx];
-            }
-        }
-    }
-    return index;
-}
-
-uint32_t RenderDataStoreDefaultMaterial::AddMaterialCustomResources(
     const uint64_t id, const array_view<const RenderHandleReference> bindings)
 {
-    if (const auto iter = materialIdToCustomResourceIndex_.find(id); iter != materialIdToCustomResourceIndex_.cend()) {
-        CORE_ASSERT(iter->second < static_cast<uint32_t>(customResourceData_.size()));
-        return iter->second;
+    uint32_t customResIndex = RenderSceneDataConstants::INVALID_INDEX;
+    auto searchId = HashMaterialId(id, static_cast<uint32_t>(1U));
+    if (auto iter = materialIdToIndices_.find(searchId); iter != materialIdToIndices_.end()) {
+        if (iter->second.materialCustomResourceIndex <= static_cast<uint32_t>(customResourceData_.size())) {
+            customResIndex = iter->second.materialCustomResourceIndex;
+        } else {
+            if (!bindings.empty()) {
+                customResIndex = static_cast<uint32_t>(customResourceData_.size());
+                customResourceData_.push_back({});
+                auto& dataRef = customResourceData_.back();
+                const uint32_t maxCount = Math::min(static_cast<uint32_t>(bindings.size()),
+                    RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_RESOURCE_COUNT);
+                for (uint32_t idx = 0; idx < maxCount; ++idx) {
+                    if (bindings[idx]) {
+                        dataRef.resourceHandles[dataRef.resourceHandleCount++] = bindings[idx];
+                    }
+                }
+            }
+            iter->second.materialCustomResourceIndex = customResIndex;
+        }
     } else {
-        const uint32_t customResIndex = AddMaterialCustomResources(bindings);
-        materialIdToCustomResourceIndex_[id] = customResIndex;
-        return customResIndex;
+#if (CORE3D_VALIDATION_ENABLED == 1)
+        CORE_LOG_ONCE_W("AddMaterialCustomResources_" + to_string(id),
+            "CORE3D_VALIDATION: AddMaterialCustomResources cannot add custom resources to non-existing material");
+#endif
     }
+    return customResIndex;
 }
 
 void RenderDataStoreDefaultMaterial::AddSubmesh(const RenderSubmesh& submesh)
@@ -454,60 +514,58 @@ void RenderDataStoreDefaultMaterial::AddSubmesh(
 #endif
 
     const uint32_t submeshIndex = static_cast<uint32_t>(submeshes_.size());
-    submeshes_.emplace_back(submesh);
+    submeshes_.push_back(submesh);
     auto& currSubmesh = submeshes_.back();
-    if (submesh.meshIndex >= static_cast<uint32_t>(meshData_.size())) {
-        CORE_LOG_W("invalid mesh index (%u) given", submesh.meshIndex);
+    if (currSubmesh.meshIndex >= static_cast<uint32_t>(meshData_.size())) {
+        CORE_LOG_W("invalid mesh index (%u) given", currSubmesh.meshIndex);
         currSubmesh.meshIndex = 0;
     }
-    if ((submesh.submeshFlags & RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT) &&
-        (submesh.skinJointIndex >= static_cast<uint32_t>(submeshJointMatrixIndices_.size()))) {
-        CORE_LOG_W("invalid skin joint index (%u) given", submesh.skinJointIndex);
+    if ((currSubmesh.submeshFlags & RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT) &&
+        (currSubmesh.skinJointIndex >= static_cast<uint32_t>(submeshJointMatrixIndices_.size()))) {
+        CORE_LOG_W("invalid skin joint index (%u) given", currSubmesh.skinJointIndex);
         currSubmesh.skinJointIndex = RenderSceneDataConstants::INVALID_INDEX;
     }
 
-    RenderDataDefaultMaterial::MaterialData perMaterialData;
-    const uint32_t materialCount = static_cast<uint32_t>(materialAllUniforms_.size());
-    if (submesh.materialIndex < materialCount) {
-        CORE_ASSERT(materialData_.size() == materialAllUniforms_.size());
-        perMaterialData = materialData_[submesh.materialIndex];
-    } else {
+    if (currSubmesh.materialIndex >= static_cast<uint32_t>(materialAllUniforms_.size())) {
         // NOTE: shouldn't come here with basic usage
         currSubmesh.materialIndex = AddMaterialData({}, {}, {}, {});
-        perMaterialData = materialData_[submesh.materialIndex];
+    } else {
+        CORE_ASSERT(materialData_.size() == materialAllUniforms_.size());
     }
+    const RenderDataDefaultMaterial::MaterialData& perMaterialData = materialData_[currSubmesh.materialIndex];
 
-    ExtentRenderMaterialFlagsFromSubmeshValues(submesh.submeshFlags, perMaterialData.renderMaterialFlags);
+    auto submeshRenderMaterialFlags = perMaterialData.renderMaterialFlags;
+    ExtentRenderMaterialFlagsFromSubmeshValues(currSubmesh.submeshFlags, submeshRenderMaterialFlags);
 
     const uint32_t renderHash =
-        HashSubmeshMaterials(perMaterialData.materialType, perMaterialData.renderMaterialFlags, submesh.submeshFlags);
-    submeshMaterialFlags_.emplace_back(
-        RenderDataDefaultMaterial::SubmeshMaterialFlags { perMaterialData.materialType, submesh.submeshFlags,
-            perMaterialData.extraMaterialRenderingFlags, perMaterialData.renderMaterialFlags, renderHash });
+        HashSubmeshMaterials(perMaterialData.materialType, submeshRenderMaterialFlags, currSubmesh.submeshFlags);
+    submeshMaterialFlags_.push_back(
+        RenderDataDefaultMaterial::SubmeshMaterialFlags { perMaterialData.materialType, currSubmesh.submeshFlags,
+            perMaterialData.extraMaterialRenderingFlags, submeshRenderMaterialFlags, renderHash });
 
-    const uint16_t renderSortLayerHash = (static_cast<uint16_t>(submesh.renderSortLayer) << 8u) |
-                                         (static_cast<uint16_t>(submesh.renderSortLayerOrder) & 0xffu);
+    const uint16_t renderSortLayerHash = (static_cast<uint16_t>(currSubmesh.renderSortLayer) << 8u) |
+                                         (static_cast<uint16_t>(currSubmesh.renderSortLayerOrder) & 0xffu);
     // add submeshs to slots
     for (const auto& slotRef : renderSlotAndShaders) {
         SlotSubmeshData& dataRef = slotToSubmeshIndices_[slotRef.renderSlotId];
-        dataRef.indices.emplace_back(submeshIndex);
+        dataRef.indices.push_back(submeshIndex);
         // hash for sorting (material index is certain for the same material)
         // shader and gfx state is not needed, because it's already in the material, or they are defaults
         // inverse winding can affect the final graphics state but it's in renderHash
         // we has with material index, and render hash
         // id generation does not matter to us, because this is per frame
-        uint32_t renderSortHash = submesh.materialIndex;
+        uint32_t renderSortHash = currSubmesh.materialIndex;
         HashCombine32Bit(renderSortHash, renderHash);
-        dataRef.materialData.push_back({ renderSortLayerHash, renderSortHash, perMaterialData.renderMaterialFlags,
-            slotRef.shader, slotRef.graphicsState });
+        dataRef.materialData.push_back(
+            { renderSortLayerHash, renderSortHash, submeshRenderMaterialFlags, slotRef.shader, slotRef.graphicsState });
 
         dataRef.objectCounts.submeshCount++;
-        if (submesh.skinJointIndex != RenderSceneDataConstants::INVALID_INDEX) {
+        if (currSubmesh.skinJointIndex != RenderSceneDataConstants::INVALID_INDEX) {
             dataRef.objectCounts.skinCount++;
         }
-        if ((submesh.customResourcesIndex != RenderSceneDataConstants::INVALID_INDEX) &&
-            (submesh.customResourcesIndex < static_cast<uint32_t>(customResourceData_.size()))) {
-            customResourceData_[submesh.customResourcesIndex].shaderHandle = perMaterialData.materialShader.shader;
+        if ((currSubmesh.customResourcesIndex != RenderSceneDataConstants::INVALID_INDEX) &&
+            (currSubmesh.customResourcesIndex < static_cast<uint32_t>(customResourceData_.size()))) {
+            customResourceData_[currSubmesh.customResourcesIndex].shaderHandle = perMaterialData.materialShader.shader;
         }
     }
 }
@@ -643,10 +701,15 @@ array_view<const RenderDataDefaultMaterial::MaterialHandles> RenderDataStoreDefa
 array_view<const uint8_t> RenderDataStoreDefaultMaterial::GetMaterialCustomPropertyData(
     const uint32_t materialIndex) const
 {
-    if (materialIndex < static_cast<uint32_t>(materialCustomPropertyOffsets_.size())) {
+    if ((!materialCustomPropertyData_.empty()) &&
+        (materialIndex < static_cast<uint32_t>(materialCustomPropertyOffsets_.size()))) {
         const auto& offsets = materialCustomPropertyOffsets_[materialIndex];
         CORE_ASSERT((offsets.offset + offsets.byteSize) <= materialCustomPropertyData_.size_in_bytes());
-        return { &materialCustomPropertyData_[offsets.offset], offsets.byteSize };
+        if ((offsets.offset + offsets.byteSize) <= materialCustomPropertyData_.size_in_bytes()) {
+            return { &materialCustomPropertyData_[offsets.offset], offsets.byteSize };
+        } else {
+            return {};
+        }
     } else {
         return {};
     }
@@ -672,8 +735,9 @@ uint32_t RenderDataStoreDefaultMaterial::GenerateRenderHash(
 
 uint32_t RenderDataStoreDefaultMaterial::GetMaterialIndex(const uint64_t id) const
 {
-    if (const auto iter = materialIdToIndex_.find(id); iter != materialIdToIndex_.cend()) {
-        return iter->second;
+    auto searchId = HashMaterialId(id, static_cast<uint32_t>(1U));
+    if (const auto iter = materialIdToIndices_.find(searchId); iter != materialIdToIndices_.cend()) {
+        return iter->second.materialIndex;
     } else {
         return RenderSceneDataConstants::INVALID_INDEX;
     }
@@ -681,10 +745,32 @@ uint32_t RenderDataStoreDefaultMaterial::GetMaterialIndex(const uint64_t id) con
 
 uint32_t RenderDataStoreDefaultMaterial::GetMaterialCustomResourceIndex(const uint64_t id) const
 {
-    if (const auto iter = materialIdToCustomResourceIndex_.find(id); iter != materialIdToCustomResourceIndex_.cend()) {
-        return iter->second;
+    auto searchId = HashMaterialId(id, static_cast<uint32_t>(1U));
+    if (const auto iter = materialIdToIndices_.find(searchId); iter != materialIdToIndices_.cend()) {
+        return iter->second.materialCustomResourceIndex;
     } else {
         return RenderSceneDataConstants::INVALID_INDEX;
+    }
+}
+
+RenderDataDefaultMaterial::MaterialIndices RenderDataStoreDefaultMaterial::GetMaterialIndices(const uint64_t id) const
+{
+    auto searchId = HashMaterialId(id, static_cast<uint32_t>(1U));
+    if (const auto iter = materialIdToIndices_.find(searchId); iter != materialIdToIndices_.cend()) {
+        return iter->second;
+    } else {
+        return {};
+    }
+}
+
+RenderDataDefaultMaterial::MaterialIndices RenderDataStoreDefaultMaterial::GetMaterialIndices(
+    const uint64_t id, const uint32_t instanceCount) const
+{
+    auto searchId = HashMaterialId(id, instanceCount);
+    if (const auto iter = materialIdToIndices_.find(searchId); iter != materialIdToIndices_.cend()) {
+        return iter->second;
+    } else {
+        return {};
     }
 }
 

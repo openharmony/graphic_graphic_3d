@@ -110,7 +110,7 @@ void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
                 lightCounts_.shadowCount = lightCounts_.spotShadow + lightCounts_.dirShadow;
             }
         }
-        lights_.emplace_back(std::move(renderLight));
+        lights_.push_back(move(renderLight));
     }
 }
 

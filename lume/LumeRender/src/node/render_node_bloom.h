@@ -69,6 +69,8 @@ private:
     RenderBloom renderBloom_;
     PostProcessConfiguration ppConfig_;
     RenderHandleReference postProcessUbo_;
+
+    bool valid_ { false };
 };
 RENDER_END_NAMESPACE()
 

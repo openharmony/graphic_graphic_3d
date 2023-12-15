@@ -27,7 +27,11 @@
           "resource_management"
         ],
         "third_party": [
-          "skia"
+          "skia",
+          "libpng",
+          "libjpeg-turbo",
+          "zlib",
+	  "spirv-cross"
         ]
       },
       "build": {
@@ -99,6 +103,7 @@
           }
         ],
         "test": [
+          "//foundation/graphic/graphic_3d/3d_widget_adapter/test:unittest"
         ]
       }
     }

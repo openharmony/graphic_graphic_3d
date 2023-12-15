@@ -13,19 +13,16 @@
  * limitations under the License.
  */
 
-#if !defined(RENDER_CONFIGURATION_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define RENDER_CONFIGURATION_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_RENDER_CONFIGURATION_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_RENDER_CONFIGURATION_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
 #include <base/containers/string.h>
-#include <base/math/quaternion.h>
-#include <base/math/vector.h>
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/entity.h>
+#include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
-#include <render/resource_handle.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif
@@ -72,11 +69,11 @@ BEGIN_COMPONENT(IRenderConfigurationComponentManager, RenderConfigurationCompone
     /** Entity containing an environment component that is used by default when rendering. Controls indirect and
      * environment lighting options.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, environment, "Environment", 0,)
+    DEFINE_PROPERTY(CORE_NS::Entity, environment, "Environment", 0, )
 
     /** Entity containing a fog component that is used by default when rendering.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, fog, "Fog", 0,)
+    DEFINE_PROPERTY(CORE_NS::Entity, fog, "Fog", 0, )
 
     /** Shadow type for the (ECS) scene.
      */
@@ -98,15 +95,16 @@ BEGIN_COMPONENT(IRenderConfigurationComponentManager, RenderConfigurationCompone
     DEFINE_BITFIELD_PROPERTY(SceneRenderingFlags, renderingFlags, "Rendering Flags", PropertyFlags::IS_BITFIELD,
         VALUE(CREATE_RNGS_BIT), RenderConfigurationComponent::SceneRenderingFlagBits)
 
-    /** Custom scene render node graph. (One might want to add custom scene render nodes, e.g. simulations to rng)
-     * Chosen before render node graph file.
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, customRenderNodeGraph, "Explicit Custom Scene Render Node Graph", 0,)
-
     /** Custom scene render node graph file. (Can be patched with some scene specific ids)
-     * Chosen only if no explicit customSceneRenderNodeGraph
+     * Replaces the built-in scene render node graph when processing custom render node graphs with ECS (RenderSystem).
      */
-    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Scene Render Node Graph File", 0,)
+    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Scene Render Node Graph File", 0, )
+
+    /** Custom post scene render node graph file. (Can be patched with some scene specific ids)
+     * Is added as a final render node graph from ECS (RenderSystem) when processing render node graphs.
+     */
+    DEFINE_PROPERTY(
+        BASE_NS::string, customPostSceneRenderNodeGraphFile, "Custom Post Scene Render Node Graph File", 0, )
 
 END_COMPONENT(
     IRenderConfigurationComponentManager, RenderConfigurationComponent, "7e655b3d-3cad-40b9-8179-c749be17f60b")

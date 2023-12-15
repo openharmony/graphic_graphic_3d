@@ -16,10 +16,13 @@
 #ifndef CORE__IO__DEV__FILEMONITOR_H
 #define CORE__IO__DEV__FILEMONITOR_H
 
+#include <cstdint>
+
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
@@ -68,7 +71,7 @@ private:
     bool IsWatchingDirectory(BASE_NS::string_view path);
     bool IsWatchingSubDirectory(BASE_NS::string_view path);
     void RecursivelyCollectAllFiles(BASE_NS::string& path);
-    void CleanPath(BASE_NS::string_view, BASE_NS::string&);
+    static void CleanPath(BASE_NS::string_view, BASE_NS::string&);
 
     BASE_NS::vector<BASE_NS::string> directories_;
     BASE_NS::unordered_map<BASE_NS::string, FileInfo> files_;

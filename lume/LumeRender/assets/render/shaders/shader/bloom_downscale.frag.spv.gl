@@ -1,0 +1,54 @@
+#version 450
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 0u
+#endif
+const uint CORE_POST_PROCESS_FLAGS = SPIRV_CROSS_CONSTANT_ID_0;
+const uint _403 = (2u & CORE_POST_PROCESS_FLAGS);
+const bool _405 = (_403 == 2u);
+
+struct LocalPostProcessPushConstantStruct
+{
+    vec4 viewportSizeInvSize;
+    vec4 factor;
+};
+
+struct uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+uniform uPostProcessPushConstant CORE_PC_0;
+
+uniform sampler2D s1_b0_s1_b1;
+
+layout(location = 0) in vec2 inUv;
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+    vec3 _868;
+    if (_405)
+    {
+        float _468 = -CORE_PC_0.uPc.viewportSizeInvSize.z;
+        float _553 = -CORE_PC_0.uPc.viewportSizeInvSize.w;
+        _868 = ((((((((textureLod(s1_b0_s1_b1, inUv + vec2(_468, CORE_PC_0.uPc.viewportSizeInvSize.w), 0.0).xyz * 0.0625) + (textureLod(s1_b0_s1_b1, inUv + vec2(0.0, CORE_PC_0.uPc.viewportSizeInvSize.w), 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, inUv + CORE_PC_0.uPc.viewportSizeInvSize.zw, 0.0).xyz * 0.0625)) + (textureLod(s1_b0_s1_b1, inUv + vec2(_468, 0.0), 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, inUv, 0.0).xyz * 0.25)) + (textureLod(s1_b0_s1_b1, inUv + vec2(CORE_PC_0.uPc.viewportSizeInvSize.z, 0.0), 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, inUv - CORE_PC_0.uPc.viewportSizeInvSize.zw, 0.0).xyz * 0.0625)) + (textureLod(s1_b0_s1_b1, inUv + vec2(0.0, _553), 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, inUv + vec2(CORE_PC_0.uPc.viewportSizeInvSize.z, _553), 0.0).xyz * 0.0625);
+    }
+    else
+    {
+        float _591 = inUv.x - CORE_PC_0.uPc.viewportSizeInvSize.z;
+        float _596 = inUv.y - CORE_PC_0.uPc.viewportSizeInvSize.w;
+        float _624 = inUv.x + CORE_PC_0.uPc.viewportSizeInvSize.z;
+        float _693 = inUv.y + CORE_PC_0.uPc.viewportSizeInvSize.w;
+        vec2 _736 = CORE_PC_0.uPc.viewportSizeInvSize.zw * 0.5;
+        float _743 = _736.x;
+        float _744 = inUv.x - _743;
+        float _748 = _736.y;
+        float _749 = inUv.y - _748;
+        float _763 = inUv.x + _743;
+        float _787 = inUv.y + _748;
+        _868 = ((((((((((((textureLod(s1_b0_s1_b1, vec2(_591, _596), 0.0).xyz * 0.03125) + (textureLod(s1_b0_s1_b1, vec2(inUv.x, _596), 0.0).xyz * 0.0625)) + (textureLod(s1_b0_s1_b1, vec2(_624, _596), 0.0).xyz * 0.03125)) + (textureLod(s1_b0_s1_b1, vec2(_591, inUv.y), 0.0).xyz * 0.0625)) + (textureLod(s1_b0_s1_b1, inUv, 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, vec2(_624, inUv.y), 0.0).xyz * 0.0625)) + (textureLod(s1_b0_s1_b1, vec2(_591, _693), 0.0).xyz * 0.03125)) + (textureLod(s1_b0_s1_b1, vec2(inUv.x, _693), 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, vec2(_624, _693), 0.0).xyz * 0.03125)) + (textureLod(s1_b0_s1_b1, vec2(_744, _749), 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, vec2(_763, _749), 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, vec2(_744, _787), 0.0).xyz * 0.125)) + (textureLod(s1_b0_s1_b1, vec2(_763, _787), 0.0).xyz * 0.125);
+    }
+    outColor = vec4(min(_868, vec3(64512.0)), 1.0);
+}
+

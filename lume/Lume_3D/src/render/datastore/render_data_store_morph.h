@@ -35,16 +35,22 @@ RenderDataStoreMorph implementation.
 */
 class RenderDataStoreMorph final : public IRenderDataStoreMorph {
 public:
-    explicit RenderDataStoreMorph(const BASE_NS::string_view name);
+    RenderDataStoreMorph(const BASE_NS::string_view name);
     ~RenderDataStoreMorph() override = default;
 
     void Init(const IRenderDataStoreMorph::ReserveSize& reserveSize);
 
+    void CommitFrameData() override {};
     void PreRender() override {};
-    void PreRenderBackend() override {};
     // Reset and start indexing from the beginning. i.e. frame boundary reset.
     void PostRender() override;
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override;
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     // Add submeshes safely.
     void AddSubmesh(const RenderDataMorph::Submesh& submesh) override;

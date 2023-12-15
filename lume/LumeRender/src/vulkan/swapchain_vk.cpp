@@ -28,7 +28,6 @@
 #include <render/namespace.h>
 #include <render/vulkan/intf_device_vk.h>
 
-#include "device/device.h"
 #include "util/log.h"
 #include "vulkan/create_functions_vk.h"
 #include "vulkan/device_vk.h"
@@ -70,7 +69,7 @@ struct ColorInfo {
     VkColorSpaceKHR colorSpace { VK_COLOR_SPACE_MAX_ENUM_KHR };
 };
 
-VkFormat GetColorFormat(const bool preferSrgbFormat, const vector<VkSurfaceFormatKHR>& surfaceFormats)
+VkFormat GetColorFormat(const uint32_t flags, const vector<VkSurfaceFormatKHR>& surfaceFormats)
 {
     constexpr uint32_t preferredFormatCount { 4u };
     constexpr VkFormat srgbFormats[preferredFormatCount] = { VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB,
@@ -78,6 +77,7 @@ VkFormat GetColorFormat(const bool preferSrgbFormat, const vector<VkSurfaceForma
     constexpr VkFormat nonSrgbFormats[preferredFormatCount] = { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM,
         VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB };
 
+    const bool preferSrgbFormat = (flags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT);
     const array_view<const VkFormat> formats =
         (preferSrgbFormat) ? array_view<const VkFormat> { srgbFormats, preferredFormatCount }
                            : array_view<const VkFormat> { nonSrgbFormats, preferredFormatCount };
@@ -98,7 +98,7 @@ VkFormat GetColorFormat(const bool preferSrgbFormat, const vector<VkSurfaceForma
     return VK_FORMAT_UNDEFINED;
 }
 
-ColorInfo GetColorInfo(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface, const bool preferSrgbFormat)
+ColorInfo GetColorInfo(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface, const uint32_t flags)
 {
     // Pick a color format for the swapchain.
     uint32_t surfaceFormatsCount = 0;
@@ -109,7 +109,7 @@ ColorInfo GetColorInfo(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR
         vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatsCount, surfaceFormats.data()));
 
     ColorInfo ci;
-    ci.format = GetColorFormat(preferSrgbFormat, surfaceFormats);
+    ci.format = GetColorFormat(flags, surfaceFormats);
     ci.colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR;
     for (size_t idx = 0; idx < surfaceFormats.size(); ++idx) {
         if (surfaceFormats[idx].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -125,7 +125,7 @@ ColorInfo GetColorInfo(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR
     return ci;
 }
 
-VkPresentModeKHR GetPresentMode(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface, const bool vsync)
+VkPresentModeKHR GetPresentMode(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface, const uint32_t flags)
 {
     // Pick a present mode for the swapchain.
     uint32_t presentModeCount;
@@ -135,13 +135,15 @@ VkPresentModeKHR GetPresentMode(const VkPhysicalDevice physicalDevice, const VkS
     VALIDATE_VK_RESULT(
         vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data()));
 
-    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-    const VkPresentModeKHR preferredSwapchainPresentMode =
-        vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
-    for (auto const presentMode : presentModes) {
-        if (presentMode == preferredSwapchainPresentMode) {
-            swapchainPresentMode = presentMode;
-            break;
+    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR; // FIFO must be supported by the specification.
+    if ((flags & SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT) != SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT) {
+        // immediate is really without vsync, but it might not be supported, so we also check for mailbox.
+        if (std::any_of(presentModes.cbegin(), presentModes.cend(),
+                [](const VkPresentModeKHR& supported) { return supported == VK_PRESENT_MODE_IMMEDIATE_KHR; })) {
+            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        } else if (std::any_of(presentModes.cbegin(), presentModes.cend(),
+                       [](const VkPresentModeKHR& supported) { return supported == VK_PRESENT_MODE_MAILBOX_KHR; })) {
+            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
         }
     }
 
@@ -240,163 +242,184 @@ constexpr GpuImageDesc GetDepthDesc(const uint32_t width, const uint32_t height,
 SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCreateInfo)
     : device_(device), flags_(swapchainCreateInfo.swapchainFlags)
 {
-    PLUGIN_ASSERT(flags_ != 0);
-
     const auto& devicePlatformData = (const DevicePlatformDataVk&)device_.GetPlatformData();
     auto const physicalDevice = devicePlatformData.physicalDevice;
-    auto const surface = VulkanHandleCast<VkSurfaceKHR>(swapchainCreateInfo.surfaceHandle);
-    auto const vkDevice = devicePlatformData.device;
-
-    // Sanity check that the device can use the surface.
-    // NOTE: queuFamilyIndex hardcoded, should come via devicePlatformData?
-    VkBool32 surfaceSupported = VK_FALSE;
-    VALIDATE_VK_RESULT(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, 0, surface, &surfaceSupported));
-    PLUGIN_ASSERT_MSG(surfaceSupported != VK_FALSE, "physicalDevice doesn't support given surface");
-
-    const ColorInfo ci = GetColorInfo(physicalDevice, surface, swapchainCreateInfo.preferSrgbFormat);
-
-    const VkPresentModeKHR swapchainPresentMode = GetPresentMode(physicalDevice, surface, swapchainCreateInfo.vsync);
-    // Pick an extent, image count, and transform for the swapchain.
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
-    VALIDATE_VK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities));
-
-    // NOTE: how do we handle the special case of 0xffffffffff which means the extent should be defined by the
-    // swapchain?
-    VkExtent2D swapchainExtent = surfaceCapabilities.currentExtent;
-    ClampSwapchainExtent(surfaceCapabilities, swapchainExtent);
-    plat_.swapchainImages.width = swapchainExtent.width;
-    plat_.swapchainImages.height = swapchainExtent.height;
-
-    const DeviceConfiguration deviceConfig = device_.GetDeviceConfiguration();
-    // surfaceCapabilities.maxImageCount of zero means that there is no limit
-    const uint32_t imageCount =
-        (surfaceCapabilities.maxImageCount == 0)
-            ? (Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount))
-            : (Math::min(surfaceCapabilities.maxImageCount,
-                  Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
-    PLUGIN_LOG_D("swapchainImageCount: %u", imageCount);
-
-    const VkSurfaceTransformFlagsKHR swapchainTransform =
-        (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
-            ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
-            : surfaceCapabilities.currentTransform;
-
-    constexpr VkImageUsageFlags desiredUsageFlags = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    const VkImageUsageFlags imageUsageFlags = desiredUsageFlags & surfaceCapabilities.supportedUsageFlags;
-    PLUGIN_LOG_D("swapchain usage flags, selected: %u, desired: %u, capabilities: %u", imageUsageFlags,
-        desiredUsageFlags, surfaceCapabilities.supportedUsageFlags);
-
-    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
-    if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) {
-        compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    // check for surface creation automatically
+    if ((swapchainCreateInfo.surfaceHandle == 0) && swapchainCreateInfo.window.window) {
+        CreateFunctionsVk::Window win;
+        win.instance = swapchainCreateInfo.window.instance;
+        win.window = swapchainCreateInfo.window.window;
+        surface_ = CreateFunctionsVk::CreateSurface(devicePlatformData.instance, win);
+        ownsSurface_ = true;
+    } else {
+        surface_ = VulkanHandleCast<VkSurfaceKHR>(swapchainCreateInfo.surfaceHandle);
     }
 
-    VkSwapchainCreateInfoKHR const vkSwapchainCreateInfo {
-        VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,       // sType
-        nullptr,                                           // pNext
-        0,                                                 // flags
-        surface,                                           // surface
-        imageCount,                                        // minImageCount
-        ci.format,                                         // imageFormat
-        ci.colorSpace,                                     // imageColorSpace
-        swapchainExtent,                                   // imageExtent
-        1,                                                 // imageArrayLayers
-        imageUsageFlags,                                   // imageUsage
-        VK_SHARING_MODE_EXCLUSIVE,                         // imageSharingMode
-        0,                                                 // queueFamilyIndexCount
-        nullptr,                                           // pQueueFamilyIndices
-        (VkSurfaceTransformFlagBitsKHR)swapchainTransform, // preTransform
-        compositeAlpha,                                    // compositeAlpha
-        swapchainPresentMode,                              // presentMode
-        VK_TRUE,                                           // clipped
-        VK_NULL_HANDLE,                                    // oldSwapchain
-    };
+    if (surface_ != VK_NULL_HANDLE) {
+        auto const vkDevice = devicePlatformData.device;
 
-    VALIDATE_VK_RESULT(vkCreateSwapchainKHR(vkDevice, &vkSwapchainCreateInfo, nullptr, &plat_.swapchain));
+        // Sanity check that the device can use the surface.
+        // NOTE: queuFamilyIndex hardcoded, should come via devicePlatformData?
+        VkBool32 surfaceSupported = VK_FALSE;
+        VALIDATE_VK_RESULT(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, 0, surface_, &surfaceSupported));
+        PLUGIN_ASSERT_MSG(surfaceSupported != VK_FALSE, "physicalDevice doesn't support given surface");
 
-    {
-        uint32_t realImageCount = 0;
-        VALIDATE_VK_RESULT(vkGetSwapchainImagesKHR(vkDevice, // device
-            plat_.swapchain,                                 // swapchain
-            &realImageCount,                                 // pSwapchainImageCount
-            nullptr));                                       // pSwapchainImages
+        const ColorInfo ci = GetColorInfo(physicalDevice, surface_, flags_);
 
-        plat_.swapchainImages.images.resize(realImageCount);
-        plat_.swapchainImages.imageViews.resize(realImageCount);
+        const VkPresentModeKHR swapchainPresentMode = GetPresentMode(physicalDevice, surface_, flags_);
+        // Pick an extent, image count, and transform for the swapchain.
+        VkSurfaceCapabilitiesKHR surfaceCapabilities;
+        VALIDATE_VK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface_, &surfaceCapabilities));
 
-        VALIDATE_VK_RESULT(vkGetSwapchainImagesKHR(vkDevice, // device
-            plat_.swapchain,                                 // swapchain
-            &realImageCount,                                 // pSwapchainImageCount
-            plat_.swapchainImages.images.data()));           // pSwapchainImages
+        // NOTE: how do we handle the special case of 0xffffffffff which means the extent should be defined by the
+        // swapchain?
+        VkExtent2D swapchainExtent = surfaceCapabilities.currentExtent;
+        ClampSwapchainExtent(surfaceCapabilities, swapchainExtent);
+        plat_.swapchainImages.width = swapchainExtent.width;
+        plat_.swapchainImages.height = swapchainExtent.height;
 
-        constexpr VkComponentMapping componentMapping {
-            VK_COMPONENT_SWIZZLE_IDENTITY, // r
-            VK_COMPONENT_SWIZZLE_IDENTITY, // g
-            VK_COMPONENT_SWIZZLE_IDENTITY, // b
-            VK_COMPONENT_SWIZZLE_IDENTITY, // a
-        };
-        constexpr VkImageSubresourceRange imageSubresourceRange {
-            VK_IMAGE_ASPECT_COLOR_BIT, // aspectMask
-            0,                         // baseMipLevel
-            1,                         // levelCount
-            0,                         // baseArrayLayer
-            1,                         // layerCount
-        };
+        const DeviceConfiguration deviceConfig = device_.GetDeviceConfiguration();
+        // surfaceCapabilities.maxImageCount of zero means that there is no limit
+        const uint32_t imageCount =
+            (surfaceCapabilities.maxImageCount == 0)
+                ? (Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount))
+                : (Math::min(surfaceCapabilities.maxImageCount,
+                      Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
+        PLUGIN_LOG_D("swapchainImageCount: %u", imageCount);
 
-        for (uint32_t idx = 0; idx < plat_.swapchainImages.imageViews.size(); ++idx) {
-            const VkImageViewCreateInfo imageViewCreateInfo {
-                VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
-                nullptr,                                  // pNext
-                0,                                        // flags
-                plat_.swapchainImages.images[idx],        // image
-                VK_IMAGE_VIEW_TYPE_2D,                    // viewType
-                ci.format,                                // format
-                componentMapping,                         // components
-                imageSubresourceRange                     // subresourceRange;
-            };
-            VALIDATE_VK_RESULT(vkCreateImageView(vkDevice, // device
-                &imageViewCreateInfo,                      // pCreateInfo
-                nullptr,                                   // pAllocator
-                &plat_.swapchainImages.imageViews[idx]));  // pView
+        const VkSurfaceTransformFlagsKHR swapchainTransform =
+            (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+                ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
+                : surfaceCapabilities.currentTransform;
+
+        const VkImageUsageFlags desiredUsageFlags = static_cast<VkImageUsageFlags>(swapchainCreateInfo.imageUsageFlags);
+        const VkImageUsageFlags imageUsageFlags = desiredUsageFlags & surfaceCapabilities.supportedUsageFlags;
+        PLUGIN_LOG_D("swapchain usage flags, selected: %u, desired: %u, capabilities: %u", imageUsageFlags,
+            desiredUsageFlags, surfaceCapabilities.supportedUsageFlags);
+
+        VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+        if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) {
+            compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         }
-    }
 
-    {
-        constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
-        const VkSemaphoreCreateInfo semaphoreCreateInfo {
-            VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
-            nullptr,                                 // pNext
-            semaphoreCreateFlags,                    // flags
+        VkSwapchainCreateInfoKHR const vkSwapchainCreateInfo {
+            VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,       // sType
+            nullptr,                                           // pNext
+            0,                                                 // flags
+            surface_,                                          // surface
+            imageCount,                                        // minImageCount
+            ci.format,                                         // imageFormat
+            ci.colorSpace,                                     // imageColorSpace
+            swapchainExtent,                                   // imageExtent
+            1,                                                 // imageArrayLayers
+            imageUsageFlags,                                   // imageUsage
+            VK_SHARING_MODE_EXCLUSIVE,                         // imageSharingMode
+            0,                                                 // queueFamilyIndexCount
+            nullptr,                                           // pQueueFamilyIndices
+            (VkSurfaceTransformFlagBitsKHR)swapchainTransform, // preTransform
+            compositeAlpha,                                    // compositeAlpha
+            swapchainPresentMode,                              // presentMode
+            VK_TRUE,                                           // clipped
+            VK_NULL_HANDLE,                                    // oldSwapchain
         };
-        VALIDATE_VK_RESULT(vkCreateSemaphore(vkDevice, // device
-            &semaphoreCreateInfo,                      // pCreateInfo
-            nullptr,                                   // pAllocator
-            &plat_.swapchainImages.semaphore));        // pSemaphore
-    }
 
-    desc_ = GetColorDesc(
-        plat_.swapchainImages.width, plat_.swapchainImages.height, (Format)ci.format, (ImageUsageFlags)imageUsageFlags);
+        VALIDATE_VK_RESULT(vkCreateSwapchainKHR(vkDevice, &vkSwapchainCreateInfo, nullptr, &plat_.swapchain));
 
-    if (flags_ & 0x2) {
-        const Format depthFormat = GetValidDepthFormat((const DeviceVk&)device_);
-        descDepthBuffer_ = GetDepthDesc(plat_.swapchainImages.width, plat_.swapchainImages.height, depthFormat);
+        {
+            uint32_t realImageCount = 0;
+            VALIDATE_VK_RESULT(vkGetSwapchainImagesKHR(vkDevice, // device
+                plat_.swapchain,                                 // swapchain
+                &realImageCount,                                 // pSwapchainImageCount
+                nullptr));                                       // pSwapchainImages
+
+            PLUGIN_LOG_D("swapchain realImageCount: %u", realImageCount);
+
+            plat_.swapchainImages.images.resize(realImageCount);
+            plat_.swapchainImages.imageViews.resize(realImageCount);
+
+            VALIDATE_VK_RESULT(vkGetSwapchainImagesKHR(vkDevice, // device
+                plat_.swapchain,                                 // swapchain
+                &realImageCount,                                 // pSwapchainImageCount
+                plat_.swapchainImages.images.data()));           // pSwapchainImages
+
+            constexpr VkComponentMapping componentMapping {
+                VK_COMPONENT_SWIZZLE_IDENTITY, // r
+                VK_COMPONENT_SWIZZLE_IDENTITY, // g
+                VK_COMPONENT_SWIZZLE_IDENTITY, // b
+                VK_COMPONENT_SWIZZLE_IDENTITY, // a
+            };
+            constexpr VkImageSubresourceRange imageSubresourceRange {
+                VK_IMAGE_ASPECT_COLOR_BIT, // aspectMask
+                0,                         // baseMipLevel
+                1,                         // levelCount
+                0,                         // baseArrayLayer
+                1,                         // layerCount
+            };
+
+            for (uint32_t idx = 0; idx < plat_.swapchainImages.imageViews.size(); ++idx) {
+                const VkImageViewCreateInfo imageViewCreateInfo {
+                    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
+                    nullptr,                                  // pNext
+                    0,                                        // flags
+                    plat_.swapchainImages.images[idx],        // image
+                    VK_IMAGE_VIEW_TYPE_2D,                    // viewType
+                    ci.format,                                // format
+                    componentMapping,                         // components
+                    imageSubresourceRange                     // subresourceRange;
+                };
+                VALIDATE_VK_RESULT(vkCreateImageView(vkDevice, // device
+                    &imageViewCreateInfo,                      // pCreateInfo
+                    nullptr,                                   // pAllocator
+                    &plat_.swapchainImages.imageViews[idx]));  // pView
+            }
+        }
+
+        {
+            constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
+            const VkSemaphoreCreateInfo semaphoreCreateInfo {
+                VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
+                nullptr,                                 // pNext
+                semaphoreCreateFlags,                    // flags
+            };
+            VALIDATE_VK_RESULT(vkCreateSemaphore(vkDevice, // device
+                &semaphoreCreateInfo,                      // pCreateInfo
+                nullptr,                                   // pAllocator
+                &plat_.swapchainImages.semaphore));        // pSemaphore
+        }
+
+        desc_ = GetColorDesc(plat_.swapchainImages.width, plat_.swapchainImages.height, (Format)ci.format,
+            (ImageUsageFlags)imageUsageFlags);
+
+        if (flags_ & 0x2) {
+            const Format depthFormat = GetValidDepthFormat((const DeviceVk&)device_);
+            descDepthBuffer_ = GetDepthDesc(plat_.swapchainImages.width, plat_.swapchainImages.height, depthFormat);
+        }
+    } else {
+        PLUGIN_LOG_E("Invalid surface in swapchain creation");
     }
 }
 
 SwapchainVk::~SwapchainVk()
 {
-    const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
-
+    const auto& devicePlatformData = (const DevicePlatformDataVk&)device_.GetPlatformData();
+    const VkDevice device = devicePlatformData.device;
     for (auto const imageView : plat_.swapchainImages.imageViews) {
-        vkDestroyImageView(device, // device
-            imageView,             // imageView
-            nullptr);              // pAllocator
+        if (imageView) {
+            vkDestroyImageView(device, // device
+                imageView,             // imageView
+                nullptr);              // pAllocator
+        }
     }
-    vkDestroySemaphore(device,           // device
-        plat_.swapchainImages.semaphore, // semaphore
-        nullptr);                        // pAllocator
+    if (plat_.swapchainImages.semaphore) {
+        vkDestroySemaphore(device,           // device
+            plat_.swapchainImages.semaphore, // semaphore
+            nullptr);                        // pAllocator
+    }
 
     CreateFunctionsVk::DestroySwapchain(device, plat_.swapchain);
+    if (ownsSurface_ && surface_) {
+        CreateFunctionsVk::DestroySurface(devicePlatformData.instance, surface_);
+    }
 }
 
 const SwapchainPlatformDataVk& SwapchainVk::GetPlatformData() const
@@ -417,5 +440,15 @@ const GpuImageDesc& SwapchainVk::GetDescDepthBuffer() const
 uint32_t SwapchainVk::GetFlags() const
 {
     return flags_;
+}
+
+SurfaceTransformFlags SwapchainVk::GetSurfaceTransformFlags() const
+{
+    return surfaceTransformFlags_;
+}
+
+uint64_t SwapchainVk::GetSurfaceHandle() const
+{
+    return VulkanHandleCast<uint64_t>(surface_);
 }
 RENDER_END_NAMESPACE()

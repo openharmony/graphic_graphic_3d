@@ -6,11 +6,45 @@
     "renderNodeGraphName": "",
     "nodes": [
         {
+            "typeName": "RenderNodeDefaultCameraController",
+            "nodeName": "CORE3D_RN_CAM_CTRL",
+            "gpuImageDescs": [
+                {
+                    "name": "output",
+                    "format": "r8g8b8a8_srgb",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "depth",
+                    "format": "d32_sfloat",
+                    "usageFlags": "depth_stencil_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "color",
+                    "format": "r8g8b8a8_srgb",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "history",
+                    "format": "r8g8b8a8_srgb",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                }
+            ]
+        },
+        {
             "typeName": "RenderNodeDefaultMaterialRenderSlot",
             "nodeName": "CORE3D_RN_CAM_DM_SO_MSLWRP_GLES",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_CAM"
             },
             "queue": {
@@ -18,6 +52,7 @@
                 "index": 0
             },
             "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+            "shaderMultiviewRenderSlot": "CORE3D_RS_DM_FW_OPAQUE_MV",
             "renderSlotSortType": "by_material",
             "renderSlotCullType": "view_frustum_cull",
             "nodeFlags": 1,
@@ -46,7 +81,7 @@
             "nodeName": "CORE3D_RN_CAM_DM_E_MSLWRP_GLES",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_CAM"
             },
             "queue": {
@@ -76,7 +111,7 @@
             "nodeName": "CORE3D_RN_CAM_DM_ST_MSLWRP_GLES",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_CAM"
             },
             "queue": {
@@ -84,6 +119,7 @@
                 "index": 0
             },
             "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT",
+            "shaderMultiviewRenderSlot": "CORE3D_RS_DM_FW_OPAQUE_MV",
             "renderSlotSortType": "back_to_front",
             "renderSlotCullType": "view_frustum_cull",
             "nodeFlags": 1,

@@ -27,6 +27,48 @@ RENDER_BEGIN_NAMESPACE()
 /** \addtogroup group_render_pipelinestatedesc
  *  @{
  */
+/** Size 2D */
+struct Size2D {
+    /** Width */
+    uint32_t width { 0 };
+    /** Height */
+    uint32_t height { 0 };
+};
+
+/** Size 3D */
+struct Size3D {
+    /** Width */
+    uint32_t width { 0 };
+    /** Height */
+    uint32_t height { 0 };
+    /** Depth */
+    uint32_t depth { 0 };
+};
+
+/** Offset 3D */
+struct Offset3D {
+    /** X offset */
+    int32_t x { 0 };
+    /** Y offset */
+    int32_t y { 0 };
+    /** Z offset */
+    int32_t z { 0 };
+};
+
+/** Surface transform flag bits */
+enum SurfaceTransformFlagBits {
+    /** Identity bit */
+    CORE_SURFACE_TRANSFORM_IDENTITY_BIT = 0x00000001,
+    /** Rotate 90 bit */
+    CORE_SURFACE_TRANSFORM_ROTATE_90_BIT = 0x00000002,
+    /** Rotate 180 bit */
+    CORE_SURFACE_TRANSFORM_ROTATE_180_BIT = 0x00000004,
+    /** Rotate 270 bit */
+    CORE_SURFACE_TRANSFORM_ROTATE_270_BIT = 0x00000008,
+};
+/** Container for surface transform flag bits */
+using SurfaceTransformFlags = uint32_t;
+
 /** Index type */
 enum IndexType {
     /** UINT16 */
@@ -88,6 +130,8 @@ enum FormatFeatureFlagBits {
     CORE_FORMAT_FEATURE_TRANSFER_SRC_BIT = 0x00004000,
     /** Transfer dst bit */
     CORE_FORMAT_FEATURE_TRANSFER_DST_BIT = 0x00008000,
+    /** Fragment shading rate attachment bit */
+    CORE_FORMAT_FEATURE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT = 0x40000000,
 };
 /** Format feature flags */
 using FormatFeatureFlags = uint32_t;
@@ -102,6 +146,16 @@ struct FormatProperties {
     FormatFeatureFlags bufferFeatures { 0u };
     /** Bytes per pixel */
     uint32_t bytesPerPixel { 0u };
+};
+
+/** Fragment shading rate properties */
+struct FragmentShadingRateProperties {
+    /** Min fragment shading rate attachment texel size */
+    Size2D minFragmentShadingRateAttachmentTexelSize;
+    /** Max fragment shading rate attachment texel size */
+    Size2D maxFragmentShadingRateAttachmentTexelSize;
+    /** Max fragment size */
+    Size2D maxFragmentSize;
 };
 
 /** Image layout */
@@ -128,10 +182,12 @@ enum ImageLayout {
     CORE_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL = 1000117000,
     /** Depth attachment stencil read only optimal */
     CORE_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL = 1000117001,
-    /** Present source KHR */
-    CORE_IMAGE_LAYOUT_PRESENT_SRC_KHR = 1000001002,
+    /** Present source */
+    CORE_IMAGE_LAYOUT_PRESENT_SRC = 1000001002,
+    /** Shared present source */
+    CORE_IMAGE_LAYOUT_SHARED_PRESENT = 1000111000,
     /** Shared present source KHR */
-    CORE_IMAGE_LAYOUT_SHARED_PRESENT_KHR = 1000111000,
+    CORE_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
     /** Max enumeration */
     CORE_IMAGE_LAYOUT_MAX_ENUM = 0x7FFFFFFF
 };
@@ -194,6 +250,8 @@ enum AccessFlagBits {
     CORE_ACCESS_MEMORY_READ_BIT = 0x00008000,
     /** Memory write bit */
     CORE_ACCESS_MEMORY_WRITE_BIT = 0x00010000,
+    /** Fragment shading rate attachment read bit */
+    CORE_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT = 0x00800000,
 };
 /** Container for access flag bits */
 using AccessFlags = uint32_t;
@@ -228,6 +286,8 @@ enum PipelineStageFlagBits {
     CORE_PIPELINE_STAGE_ALL_GRAPHICS_BIT = 0x00008000,
     /** All commands bit */
     CORE_PIPELINE_STAGE_ALL_COMMANDS_BIT = 0x00010000,
+    /** Fragment shading rate attacchment bit */
+    CORE_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT = 0x00400000,
 };
 /** Container for pipeline stage flag bits */
 using PipelineStageFlags = uint32_t;
@@ -281,6 +341,16 @@ enum DescriptorType {
     /** Max enumeration */
     CORE_DESCRIPTOR_TYPE_MAX_ENUM = 0x7FFFFFFF
 };
+
+/** Additional descriptor flag bits */
+enum AdditionalDescriptorFlagBits {
+    /** Immutable sampler is used */
+    CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT = 0x00000001,
+    /** Max enumeration */
+    CORE_ADDITIONAL_DESCRIPTOR_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
+};
+/** Container for sampler descriptor flag bits */
+using AdditionalDescriptorFlags = uint32_t;
 
 /** Shader stage flag bits */
 enum ShaderStageFlagBits {
@@ -652,7 +722,10 @@ union ClearValue {
     ClearDepthStencilValue depthStencil;
 };
 
-/** Dynamic state flag bits */
+/** Dynamic state flag bits
+ * Dynamic state flags only map to basic dynamic states.
+ * Use DynamicStateEnum s when creating the actual pso objects.
+ */
 enum DynamicStateFlagBits {
     /** Undefined */
     CORE_DYNAMIC_STATE_UNDEFINED = 0,
@@ -678,6 +751,32 @@ enum DynamicStateFlagBits {
 /** Dynamic state flags */
 using DynamicStateFlags = uint32_t;
 
+/** Dynamic states */
+enum DynamicStateEnum {
+    /** Viewport */
+    CORE_DYNAMIC_STATE_ENUM_VIEWPORT = 0,
+    /** Scissor */
+    CORE_DYNAMIC_STATE_ENUM_SCISSOR = 1,
+    /** Line width */
+    CORE_DYNAMIC_STATE_ENUM_LINE_WIDTH = 2,
+    /** Depth bias */
+    CORE_DYNAMIC_STATE_ENUM_DEPTH_BIAS = 3,
+    /** Blend constants */
+    CORE_DYNAMIC_STATE_ENUM_BLEND_CONSTANTS = 4,
+    /** Depth bounds */
+    CORE_DYNAMIC_STATE_ENUM_DEPTH_BOUNDS = 5,
+    /** Stencil compare mask */
+    CORE_DYNAMIC_STATE_ENUM_STENCIL_COMPARE_MASK = 6,
+    /** Stencil write mask */
+    CORE_DYNAMIC_STATE_ENUM_STENCIL_WRITE_MASK = 7,
+    /** Stencil reference */
+    CORE_DYNAMIC_STATE_ENUM_STENCIL_REFERENCE = 8,
+    /** Fragment shading rate */
+    CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE = 1000226000,
+    /** Max enumeration */
+    CORE_DYNAMIC_STATE_ENUM_MAX_ENUM = 0x7FFFFFFF
+};
+
 /** Resolve mode flag bits */
 enum ResolveModeFlagBits {
     /** None. No resolve mode done */
@@ -701,8 +800,30 @@ using ResolveModeFlags = uint32_t;
 enum SubpassContents {
     /** Inline */
     CORE_SUBPASS_CONTENTS_INLINE = 0,
-    /* Secondary command lists (Not yet supported) */
-    // CORE_SUBPASS_CONTENTS_SECONDARY_COMMAND_LISTS = 1,
+    /* Secondary command lists */
+    CORE_SUBPASS_CONTENTS_SECONDARY_COMMAND_LISTS = 1,
+};
+
+/** Fragment shading rate combiner op */
+enum FragmentShadingRateCombinerOp {
+    /** Keep */
+    CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP = 0,
+    /** Replace */
+    CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE = 1,
+    /** Min */
+    CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_MIN = 2,
+    /** Max */
+    CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX = 3,
+    /** Mul */
+    CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_MUL = 4,
+};
+
+/** Fragment shading rate combiner operations for commands */
+struct FragmentShadingRateCombinerOps {
+    /** First combiner (combine pipeline and primitive shading rates) */
+    FragmentShadingRateCombinerOp op1 { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP };
+    /** Second combiner (combine the first with attachment fragment shading rate) */
+    FragmentShadingRateCombinerOp op2 { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP };
 };
 
 /** Pipeline state constants */
@@ -714,18 +835,18 @@ struct PipelineStateConstants {
     /** GPU image all layers */
     static constexpr uint32_t GPU_IMAGE_ALL_LAYERS { ~0u };
     /** Max vertex buffer count */
-    static constexpr uint32_t MAX_VERTEX_BUFFER_COUNT { 8 };
+    static constexpr uint32_t MAX_VERTEX_BUFFER_COUNT { 8u };
 
     /** Max input attachment count */
-    static constexpr uint32_t MAX_INPUT_ATTACHMENT_COUNT { 8 };
+    static constexpr uint32_t MAX_INPUT_ATTACHMENT_COUNT { 8u };
     /** Max color attachment count */
-    static constexpr uint32_t MAX_COLOR_ATTACHMENT_COUNT { 8 };
+    static constexpr uint32_t MAX_COLOR_ATTACHMENT_COUNT { 8u };
     /** Max resolve attachment count */
-    static constexpr uint32_t MAX_RESOLVE_ATTACHMENT_COUNT { 4 };
+    static constexpr uint32_t MAX_RESOLVE_ATTACHMENT_COUNT { 4u };
     /** Max render pass attachment count */
-    static constexpr uint32_t MAX_RENDER_PASS_ATTACHMENT_COUNT { 8 };
+    static constexpr uint32_t MAX_RENDER_PASS_ATTACHMENT_COUNT { 8u };
     /** Max render node gpu wait signals */
-    static constexpr uint32_t MAX_RENDER_NODE_GPU_WAIT_SIGNALS { 4 };
+    static constexpr uint32_t MAX_RENDER_NODE_GPU_WAIT_SIGNALS { 4u };
 };
 
 /** Viewport descriptor
@@ -756,26 +877,6 @@ struct ScissorDesc {
     uint32_t extentWidth { 0 };
     /** Extent height */
     uint32_t extentHeight { 0 };
-};
-
-/** Size 3D */
-struct Size3D {
-    /** Width */
-    uint32_t width { 0 };
-    /** Height */
-    uint32_t height { 0 };
-    /** Depth */
-    uint32_t depth { 0 };
-};
-
-/** Offset 3D */
-struct Offset3D {
-    /** X offset */
-    int32_t x { 0 };
-    /** Y offset */
-    int32_t y { 0 };
-    /** Z offset */
-    int32_t z { 0 };
 };
 
 /** Image subresource layers */
@@ -905,9 +1006,9 @@ struct RenderPassDesc {
         /** Y offset */
         int32_t offsetY { 0 };
         /** Extent width */
-        uint32_t extentWidth { 0 };
+        uint32_t extentWidth { 0u };
         /** Extent height */
-        uint32_t extentHeight { 0 };
+        uint32_t extentHeight { 0u };
     };
 
     /** Attachment descriptor */
@@ -933,7 +1034,7 @@ struct RenderPassDesc {
     };
 
     /** Attachment count */
-    uint32_t attachmentCount { 0 };
+    uint32_t attachmentCount { 0u };
 
     /** Attachment handles */
     RenderHandle attachmentHandles[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
@@ -944,7 +1045,7 @@ struct RenderPassDesc {
     RenderArea renderArea;
 
     /** Subpass count */
-    uint32_t subpassCount { 0 };
+    uint32_t subpassCount { 0u };
     /** Subpass contents */
     SubpassContents subpassContents { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE };
 };
@@ -962,23 +1063,33 @@ struct RenderPassSubpassDesc {
     uint32_t colorAttachmentIndices[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT] {};
     /** Resolve attachment indices */
     uint32_t resolveAttachmentIndices[PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT] {};
+    /** Fragment shading rate attachment index */
+    uint32_t fragmentShadingRateAttachmentIndex { ~0u };
 
     // attachment counts in this subpass
     /** Depth attachment count in this subpass */
-    uint32_t depthAttachmentCount { 0 };
+    uint32_t depthAttachmentCount { 0u };
     /** Depth resolve attachment count in this subpass */
-    uint32_t depthResolveAttachmentCount { 0 };
+    uint32_t depthResolveAttachmentCount { 0u };
     /** Input attachment count in this subpass */
-    uint32_t inputAttachmentCount { 0 };
+    uint32_t inputAttachmentCount { 0u };
     /** Color attachment count in this subpass */
-    uint32_t colorAttachmentCount { 0 };
+    uint32_t colorAttachmentCount { 0u };
     /** Resolve attachment count in this subpass */
-    uint32_t resolveAttachmentCount { 0 };
+    uint32_t resolveAttachmentCount { 0u };
+    /** Fragmend shading rate attachment count in this subpass */
+    uint32_t fragmentShadingRateAttachmentCount { 0u };
 
     /** Depth resolve mode flag bit */
     ResolveModeFlagBits depthResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
     /** Stencil resolve mode flag bit */
     ResolveModeFlagBits stencilResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+
+    /** Shading rate texel size for subpass (will be clamped to device limits automatically if not set accordingly) */
+    Size2D shadingRateTexelSize { 1u, 1u };
+
+    /** Multi-view bitfield of view indices. Multi-view is ignored while zero. */
+    uint32_t viewMask { 0u };
 };
 
 /** Render pass */
@@ -986,10 +1097,26 @@ struct RenderPass {
     /** Render pass descriptor */
     RenderPassDesc renderPassDesc;
     /** Subpass start index */
-    uint32_t subpassStartIndex { 0 };
+    uint32_t subpassStartIndex { 0u };
     /** Subpass descriptor */
     RenderPassSubpassDesc subpassDesc;
 };
+
+/** Forced graphics state flag bits */
+enum GraphicsStateFlagBits {
+    /** Input assembly bit */
+    CORE_GRAPHICS_STATE_INPUT_ASSEMBLY_BIT = 0x00000001,
+    /** Rastarization state bit */
+    CORE_GRAPHICS_STATE_RASTERIZATION_STATE_BIT = 0x00000002,
+    /** Depth stencil state bit */
+    CORE_GRAPHICS_STATE_DEPTH_STENCIL_STATE_BIT = 0x00000004,
+    /** Color blend state bit */
+    CORE_GRAPHICS_STATE_COLOR_BLEND_STATE_BIT = 0x00000008,
+    /** Max enumeration */
+    CORE_GRAPHICS_STATE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
+};
+/** Container for graphics state flag bits */
+using GraphicsStateFlags = uint32_t;
 
 /** Graphics state */
 struct GraphicsState {
@@ -1118,8 +1245,6 @@ struct GraphicsState {
     DepthStencilState depthStencilState;
     /** Color blend state */
     ColorBlendState colorBlendState;
-    /** Dynamic state flags. Prefer using dynamic viewport and dynamic scissor for less graphics pipelines. */
-    DynamicStateFlags dynamicStateFlags { DynamicStateFlagBits::CORE_DYNAMIC_STATE_UNDEFINED };
 };
 
 /** Vertex input declaration */
@@ -1197,7 +1322,7 @@ struct ShaderSpecialization {
 };
 
 /** Shader specialization constant view */
-struct ShaderSpecilizationConstantView {
+struct ShaderSpecializationConstantView {
     /** Array of shader specialization constants */
     BASE_NS::array_view<const ShaderSpecialization::Constant> constants;
 };

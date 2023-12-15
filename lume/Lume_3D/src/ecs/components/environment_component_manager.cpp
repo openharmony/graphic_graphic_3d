@@ -22,16 +22,17 @@
 #include "PropertyTools/property_macros.h"
 
 CORE_BEGIN_NAMESPACE()
+using namespace CORE3D_NS;
 /** Extend propertysystem with the enums */
-DECLARE_PROPERTY_TYPE(CORE3D_NS::EnvironmentComponent::Background);
+DECLARE_PROPERTY_TYPE(EnvironmentComponent::Background);
 
 // Declare their metadata
-BEGIN_ENUM(EnvironmentComponentBackgroundTypeMetaData, CORE3D_NS::EnvironmentComponent::Background)
-DECL_ENUM(CORE3D_NS::EnvironmentComponent::Background, NONE, "None")
-DECL_ENUM(CORE3D_NS::EnvironmentComponent::Background, IMAGE, "Image")
-DECL_ENUM(CORE3D_NS::EnvironmentComponent::Background, CUBEMAP, "Cubemap")
-DECL_ENUM(CORE3D_NS::EnvironmentComponent::Background, EQUIRECTANGULAR, "Equirectangular")
-END_ENUM(EnvironmentComponentBackgroundTypeMetaData, CORE3D_NS::EnvironmentComponent::Background)
+BEGIN_ENUM(EnvironmentComponentBackgroundTypeMetaData, EnvironmentComponent::Background)
+DECL_ENUM(EnvironmentComponent::Background, NONE, "None")
+DECL_ENUM(EnvironmentComponent::Background, IMAGE, "Image")
+DECL_ENUM(EnvironmentComponent::Background, CUBEMAP, "Cubemap")
+DECL_ENUM(EnvironmentComponent::Background, EQUIRECTANGULAR, "Equirectangular")
+END_ENUM(EnvironmentComponentBackgroundTypeMetaData, EnvironmentComponent::Background)
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()

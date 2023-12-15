@@ -4,10 +4,73 @@
         "type": "rendernodegraph"
     },
     "renderNodeGraphName": "",
+    "renderNodeGraphOutputResources": [
+        {
+            "name": "output",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
+            "name": "color",
+            "nodeName": "CUSTOM_RN_CAM_CTRL"
+        },
+        {
+            "name": "depth",
+            "nodeName": "CUSTOM_RN_CAM_CTRL"
+        },
+        {
+            "name": "velocity_normal",
+            "nodeName": "CUSTOM_RN_CAM_CTRL"
+        },
+        {
+            "name": "history",
+            "nodeName": "CUSTOM_RN_CAM_CTRL"
+        },
+        {
+            "name": "history_next",
+            "nodeName": "CUSTOM_RN_CAM_CTRL"
+        }
+    ],
     "nodes": [
         {
             "typeName": "RenderNodeDefaultCameraController",
-            "nodeName": "CORE3D_RN_CAM_CTRL"
+            "nodeName": "CORE3D_RN_CAM_CTRL",
+            "gpuImageDescs": [
+                {
+                    "name": "output",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "depth",
+                    "format": "d32_sfloat",
+                    "usageFlags": "depth_stencil_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "color",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "velocity_normal",
+                    "format": "r16g16_sfloat",
+                    "usageFlags": "color_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "history",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                }
+            ]
         },
         {
             "typeName": "RenderNodeDefaultMaterialRenderSlot",
@@ -17,6 +80,7 @@
                 "index": 0
             },
             "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+            "shaderMultiviewRenderSlot": "CORE3D_RS_DM_FW_OPAQUE_MV",
             "renderSlotSortType": "by_material",
             "renderSlotCullType": "view_frustum_cull",
             "renderPass": {
@@ -91,6 +155,7 @@
                 "index": 0
             },
             "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT",
+            "shaderMultiviewRenderSlot": "CORE3D_RS_DM_FW_OPAQUE_MV",
             "renderSlotSortType": "back_to_front",
             "renderSlotCullType": "view_frustum_cull",
             "renderPass": {
@@ -120,59 +185,6 @@
                     "depthAttachmentIndex": 0,
                     "colorAttachmentIndices": [ 1, 2 ]
                 }
-            }
-        },
-        {
-            "typeName": "CORE_RN_COMBINED_POST_PROCESS",
-            "nodeName": "CORE3D_RN_CAM_COMBINEDPP",
-            "renderDataStore": {
-                "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
-                "configurationName": "CORE3D_POST_PROCESS_CAM"
-            },
-            "queue": {
-                "type": "graphics",
-                "index": 0
-            },
-            "resources": {
-                "customInputImages": [
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL",
-                        "usageName": "color"
-                    },
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL",
-                        "usageName": "depth"
-                    },
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "velocity_normal",
-                        "nodeName": "CORE3D_RN_CAM_CTRL",
-                        "usageName": "velocity"
-                    },
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "history",
-                        "nodeName": "CORE3D_RN_CAM_CTRL",
-                        "usageName": "history"
-                    },
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "history_next",
-                        "nodeName": "CORE3D_RN_CAM_CTRL",
-                        "usageName": "history_next"
-                    }
-                ],
-                "customOutputImages": [
-                    {
-                        "resourceLocation": "from_render_graph_output",
-                        "resourceIndex": 0
-                    }
-                ]
             }
         }
     ]

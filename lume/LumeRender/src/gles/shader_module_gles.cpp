@@ -18,9 +18,18 @@
 #include <algorithm>
 #include <cstdint>
 
+#include <base/containers/array_view.h>
+#include <base/containers/fixed_string.h>
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/math/vector.h>
+#include <render/device/pipeline_layout_desc.h>
+#include <render/namespace.h>
+
 #include "device/gpu_program_util.h"
 #include "device/shader_manager.h"
-#include "gles/device_gles.h"
 #include "gles/spirv_cross_helpers_gles.h"
 #include "util/log.h"
 
@@ -52,12 +61,14 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
                         samplers.push_back({ static_cast<uint8_t>(set.set), static_cast<uint8_t>(binding.binding) });
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                        // res.sampled_images;
                         Collect(set.set, binding, plat_.cbSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
                         images.push_back({ static_cast<uint8_t>(set.set), static_cast<uint8_t>(binding.binding) });
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                        // res.storage_images;
                         Collect(set.set, binding, plat_.ciSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
@@ -65,9 +76,11 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                        // res.uniform_buffers;
                         Collect(set.set, binding, plat_.ubSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                        // res.storage_buffers;
                         Collect(set.set, binding, plat_.sbSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -75,6 +88,7 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                        // res.subpass_inputs;
                         Collect(set.set, binding, plat_.siSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
@@ -221,7 +235,7 @@ ShaderModuleGLES::ShaderModuleGLES(Device& device, const ShaderModuleCreateInfo&
     }
 }
 
-ShaderModuleGLES::~ShaderModuleGLES() {}
+ShaderModuleGLES::~ShaderModuleGLES() = default;
 
 ShaderStageFlags ShaderModuleGLES::GetShaderStageFlags() const
 {
@@ -243,7 +257,7 @@ const PipelineLayout& ShaderModuleGLES::GetPipelineLayout() const
     return pipelineLayout_;
 }
 
-ShaderSpecilizationConstantView ShaderModuleGLES::GetSpecilization() const
+ShaderSpecializationConstantView ShaderModuleGLES::GetSpecilization() const
 {
     return sscv_;
 }

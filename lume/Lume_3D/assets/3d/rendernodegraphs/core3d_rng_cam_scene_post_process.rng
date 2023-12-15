@@ -1,0 +1,28 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "",
+    "renderNodeGraphOutputResources": [
+        {
+            "name": "output",
+            "nodeName": "CORE3D_RN_CAM_POST_PROCESS_CTRL"
+        }
+    ],
+    "nodes": [
+        {
+            "typeName": "RenderNodeDefaultCameraPostProcessController",
+            "nodeName": "CORE3D_RN_CAM_POST_PROCESS_CTRL",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        }
+    ]
+}

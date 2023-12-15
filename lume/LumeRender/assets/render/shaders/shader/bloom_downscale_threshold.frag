@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -41,8 +42,13 @@ layout (location = 0) out vec4 outColor;
 void main()
 {
     const vec2 uv = inUv;
-    //vec3 color = bloomDownscale(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
-    vec3 color = bloomDownscaleWeighted(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+
+    vec3 color = vec3(0.0);
+    if ((CORE_BLOOM_QUALITY_NORMAL & CORE_POST_PROCESS_FLAGS) == CORE_BLOOM_QUALITY_NORMAL) {
+        color = bloomDownscaleWeighted9(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    } else {
+        color = bloomDownscaleWeighted(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    }
 
     const float luma = CalcLuma(color);
     if (luma < uPc.factor.x)

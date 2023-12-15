@@ -36,6 +36,8 @@ layout(push_constant, std430) uniform uPostProcessPushConstant
     LocalPostProcessPushConstantStruct uPc;
 };
 
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
+
 #else
 
 #endif

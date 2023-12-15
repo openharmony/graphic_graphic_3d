@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -38,9 +39,9 @@ layout(local_size_x = cTgs, local_size_y = cTgs, local_size_z = 1) in;
 void main()
 {
     const vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) * uPc.viewportSizeInvSize.zw;
-    const vec3 baseColor = texture(sampler2D(uTex, uSampler), uv).xyz;
+    const vec3 baseColor = textureLod(sampler2D(uTex, uSampler), uv, 0).xyz;
     // NOTE: more samples (lower resolution)
-    //const vec3 bloomColor = texture(sampler2D(uTexBloom, uSampler), uv).xyz;
+    //const vec3 bloomColor = textureLod(sampler2D(uTexBloom, uSampler), uv, 0).xyz;
     const vec3 bloomColor = bloomUpscale(uv, uPc.viewportSizeInvSize.zw, uTexBloom, uSampler);
 
     vec3 finalColor = min(bloomCombine(baseColor, bloomColor, uPc.factor), CORE_BLOOM_CLAMP_MAX_VALUE);

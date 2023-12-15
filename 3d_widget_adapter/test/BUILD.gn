@@ -10,7 +10,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import("//build/test.gni")
 
 import("//build/ohos.gni")
@@ -35,7 +34,11 @@ ohos_unittest("3d_widget_adpater_test") {
   deps = [
     "//foundation/graphic/graphic_3d/3d_widget_adapter:widget_adapter_source",
     "//foundation/arkui/ace_engine//build:libace",
-    "//base/hiviewdfx/hilog/interfaces/native/innerkits:libhilog",
+  ]
+
+  external_deps = [
+    "hilog:libhilog",
+    "graphic_2d:libgl",
   ]
 
   defines = [ "USE_ACE_SKIA" ]

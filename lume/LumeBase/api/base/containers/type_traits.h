@@ -150,6 +150,7 @@ constexpr bool is_rvalue_reference_v = is_rvalue_reference<T>::value;
 
 template<class... _Types>
 using void_t = void;
+
 template<class T, class = void>
 struct add_lvalue_reference {
     using type = T;
@@ -170,6 +171,21 @@ template<class T>
 using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
 template<class T>
 using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
+
+template<class T>
+struct remove_pointer {
+    using type = T;
+};
+template<class T>
+struct remove_pointer<T*> {
+    using type = T;
+};
+template<class T>
+struct remove_pointer<T* const> {
+    using type = T;
+};
+template<class T>
+using remove_pointer_t = typename remove_pointer<T>::type;
 
 template<class T>
 add_rvalue_reference_t<T> declval() noexcept;
@@ -348,6 +364,12 @@ struct underlying_type {
 };
 template<typename _Ty>
 using underlying_type_t = typename underlying_type<_Ty>::type;
+
+template<typename T, size_t N>
+constexpr size_t countof(T (&)[N]) noexcept
+{
+    return N;
+}
 BASE_END_NAMESPACE()
 
 #endif // API_BASE_TYPE_TRAITS_H

@@ -16,30 +16,52 @@
 #ifndef API_BASE_UTIL_UID_H
 #define API_BASE_UTIL_UID_H
 
+#include <cstddef>
 #include <cstdint>
 
+#include <base/containers/string_view.h>
 #include <base/namespace.h>
-#include <base/util/compile_time_hashes.h>
+#include <base/util/hash.h>
 #include <base/util/log.h>
 
 BASE_BEGIN_NAMESPACE()
-constexpr uint8_t HexToDec(char c)
+constexpr uint8_t HexToDec(char c) noexcept
 {
-    if ('f' >= c && c >= 'a') {
-        return c - 'a' + 10;
-    } else if ('F' >= c && c >= 'A') {
-        return c - 'A' + 10;
-    } else if ('9' >= c && c >= '0') {
-        return c - '0';
+    if (c <= '9' && c >= '0') {
+        return static_cast<uint8_t>(c - '0');
     }
-
-    BASE_ASSERT(false);
+    if (c <= 'F' && c >= 'A') {
+        return static_cast<uint8_t>(c - 'A' + 10);
+    }
+    if (c <= 'f' && c >= 'a') {
+        return static_cast<uint8_t>(c - 'a' + 10);
+    }
     return 0;
 }
 
-constexpr uint8_t HexToUint8(const char* c)
+constexpr uint8_t HexToUint8(const char* c) noexcept
 {
-    return (HexToDec(c[0]) << 4) + HexToDec(c[1]);
+    return static_cast<uint8_t>((HexToDec(c[0]) << 4U) + HexToDec(c[1]));
+}
+
+constexpr bool IsUidString(string_view str) noexcept
+{
+    // UID string in the form 8-4-4-4-12. A total of 36 characters (32 hexadecimal characters and 4 hyphens).
+    if (str.size() != 36U) {
+        return false;
+    }
+
+    auto hexChars = [](string_view str) {
+        for (const auto& c : str) {
+            if (!((c <= '9' && c >= '0') || (c <= 'F' && c >= 'A') || (c <= 'f' && c >= 'a'))) {
+                return false;
+            }
+        }
+        return true;
+    };
+    return hexChars(str.substr(0U, 8U)) && (str[8U] == '-') && hexChars(str.substr(9U, 4U)) && (str[13U] == '-') &&
+           hexChars(str.substr(14U, 4U)) && (str[18U] == '-') && hexChars(str.substr(19U, 4U)) && (str[23U] == '-') &&
+           hexChars(str.substr(24U, 12U));
 }
 
 struct Uid {
@@ -47,81 +69,103 @@ struct Uid {
 
     explicit constexpr Uid(const uint8_t (&values)[16]) noexcept
     {
-        auto src = values;
-        for (auto& dst : data) {
-            dst = *src++;
+        uint64_t value = 0U;
+        for (auto first = values, last = values + 8; first != last; ++first) {
+            value = (value << 8) | *first;
         }
+        data[0] = value;
+
+        value = 0U;
+        for (auto first = values + 8, last = values + 16; first != last; ++first) {
+            value = (value << 8) | *first;
+        }
+        data[1] = value;
     }
 
     explicit constexpr Uid(const char (&str)[37])
     {
-        auto dst = data;
-        auto src = str;
-        for (size_t i = 0; i < sizeof(uint32_t); ++i) {
-            *dst++ = HexToUint8(src);
-            src += 2;
-        }
-        ++src;
-        for (size_t i = 0; i < sizeof(uint16_t); ++i) {
-            *dst++ = HexToUint8(src);
-            src += 2;
-        }
-        ++src;
-        for (size_t i = 0; i < sizeof(uint16_t); ++i) {
-            *dst++ = HexToUint8(src);
-            src += 2;
-        }
-        ++src;
-        for (size_t i = 0; i < sizeof(uint16_t); ++i) {
-            *dst++ = HexToUint8(src);
-            src += 2;
-        }
-        ++src;
-        for (size_t i = 0; i < (sizeof(uint16_t) * 3); ++i) {
-            *dst++ = HexToUint8(src);
-            src += 2;
+        if (IsUidString(str)) {
+            auto src = str;
+
+            uint64_t value = 0U;
+            for (size_t i = 0; i < sizeof(uint32_t); ++i) {
+                value = (value << 8) | HexToUint8(src);
+                src += 2;
+            }
+            ++src;
+            for (size_t i = 0; i < sizeof(uint16_t); ++i) {
+                value = (value << 8) | HexToUint8(src);
+                src += 2;
+            }
+            ++src;
+            for (size_t i = 0; i < sizeof(uint16_t); ++i) {
+                value = (value << 8) | HexToUint8(src);
+                src += 2;
+            }
+            ++src;
+            data[0U] = value;
+
+            value = 0U;
+            for (size_t i = 0; i < sizeof(uint16_t); ++i) {
+                value = (value << 8) | HexToUint8(src);
+                src += 2;
+            }
+            ++src;
+            for (size_t i = 0; i < (sizeof(uint16_t) * 3); ++i) {
+                value = (value << 8) | HexToUint8(src);
+                src += 2;
+            }
+            data[1U] = value;
         }
     }
 
-    uint8_t data[16u] {};
+    constexpr int compare(const Uid& rhs) const
+    {
+        if (data[0] < rhs.data[0]) {
+            return -1;
+        }
+        if (data[0] > rhs.data[0]) {
+            return 1;
+        }
+        if (data[1] < rhs.data[1]) {
+            return -1;
+        }
+        if (data[1] > rhs.data[1]) {
+            return 1;
+        }
+        return 0;
+    }
+    uint64_t data[2u] {};
 };
 
-inline bool operator<(const Uid& lhs, const Uid& rhs)
+inline constexpr bool operator<(const Uid& lhs, const Uid& rhs)
 {
-    auto r = rhs.data;
-    for (const auto& l : lhs.data) {
-        if (l != *r) {
-            return (l < *r);
-        }
-        ++r;
+    if (lhs.data[0] > rhs.data[0]) {
+        return false;
+    }
+    if (lhs.data[0] < rhs.data[0]) {
+        return true;
+    }
+    if (lhs.data[1] < rhs.data[1]) {
+        return true;
     }
     return false;
 }
 
-inline bool operator==(const Uid& lhs, const Uid& rhs)
+inline constexpr bool operator==(const Uid& lhs, const Uid& rhs)
 {
-    auto r = rhs.data;
-    for (const auto& l : lhs.data) {
-        if (l != *r) {
-            return false;
-        }
-        ++r;
-    }
-    return true;
+    return (lhs.data[0U] == rhs.data[0U]) && (lhs.data[1U] == rhs.data[1U]);
 }
 
-inline bool operator!=(const Uid& lhs, const Uid& rhs)
+inline constexpr bool operator!=(const Uid& lhs, const Uid& rhs)
 {
     return !(lhs == rhs);
 }
 
-template<typename T>
-uint64_t hash(const T& b);
-
 template<>
 inline uint64_t hash(const Uid& value)
 {
-    return FNV1aHash(value.data, sizeof(value.data));
+    return Hash(value.data[0], value.data[1]);
 }
 BASE_END_NAMESPACE()
 

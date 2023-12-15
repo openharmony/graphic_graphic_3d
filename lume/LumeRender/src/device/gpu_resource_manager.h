@@ -26,20 +26,24 @@
 #include <render/device/gpu_resource_desc.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/namespace.h>
+#include <render/resource_handle.h>
 
 #include "device/gpu_buffer.h"
 #include "device/gpu_image.h"
-#include "device/gpu_resource_handle_util.h" // for hash<RenderHandle>
-#include "device/gpu_resource_manager_base.h"
+#include "device/gpu_resource_handle_util.h" // for EngineResourceHandle
 
 RENDER_BEGIN_NAMESPACE()
 class Device;
-class GpuBuffer;
+class GpuAccelerationStructure;
 class GpuBufferManager;
-class GpuImage;
 class GpuImageManager;
 class GpuSampler;
 class GpuSamplerManager;
+class GpuResourceCache;
+class GpuResourceManagerBase;
+template<typename ResourceType, typename CreateInfoType>
+class GpuResourceManagerTyped;
+struct GpuImagePlatformData;
 
 /** Staging Gpu resource copy struct */
 struct StagingCopyStruct {
@@ -250,15 +254,19 @@ public:
     RenderHandleReference Create(const RenderHandleReference& replacedHandle, const GpuSamplerDesc& desc) override;
     RenderHandleReference Create(const GpuSamplerDesc& desc) override;
 
+    RenderHandleReference CreateSwapchainImage(
+        const RenderHandleReference& replacedHandle, const BASE_NS::string_view name, const GpuImageDesc& desc);
+
+    /** Does not have GPU backed data. Will be remapped to other handle */
+    RenderHandleReference CreateShallowHandle(const GpuImageDesc& desc);
+
     RenderHandleReference GetBufferHandle(const BASE_NS::string_view name) const override;
     RenderHandleReference GetImageHandle(const BASE_NS::string_view name) const override;
     RenderHandleReference GetSamplerHandle(const BASE_NS::string_view name) const override;
-    RenderHandleReference GetAccelerationStructureHandle(const BASE_NS::string_view name) const override;
 
     RenderHandle GetBufferRawHandle(const BASE_NS::string_view name) const;
     RenderHandle GetImageRawHandle(const BASE_NS::string_view name) const;
     RenderHandle GetSamplerRawHandle(const BASE_NS::string_view name) const;
-    RenderHandle GetAccelerationStructureRawHandle(const BASE_NS::string_view name) const;
 
     GpuBufferDesc GetBufferDescriptor(const RenderHandleReference& handle) const override;
     GpuImageDesc GetImageDescriptor(const RenderHandleReference& handle) const override;
@@ -308,7 +316,6 @@ public:
     GpuBuffer* GetBuffer(const RenderHandle& gpuHandle) const;
     GpuImage* GetImage(const RenderHandle& gpuHandle) const;
     GpuSampler* GetSampler(const RenderHandle& gpuHandle) const;
-    GpuAccelerationStructure* GetAccelerationStructure(const RenderHandle& gpuHandle) const;
 
     template<typename T>
     T* GetBuffer(const RenderHandle& handle) const
@@ -325,11 +332,6 @@ public:
     {
         return static_cast<T*>(GetSampler(handle));
     }
-    template<typename T>
-    T* GetAccelerationStructure(const RenderHandle& handle) const
-    {
-        return static_cast<T*>(GetAccelerationStructure(handle));
-    }
 
     // for render graph to resizing (non-locked access only valid in certain positions)
     uint32_t GetBufferHandleCount() const;
@@ -339,21 +341,36 @@ public:
     bool IsGpuImage(const RenderHandleReference& handle) const override;
     bool IsGpuSampler(const RenderHandleReference& handle) const override;
     bool IsGpuAccelerationStructure(const RenderHandleReference& handle) const override;
+    bool IsSwapchain(const RenderHandleReference& handle) const override;
     bool IsMappableOutsideRender(const RenderHandleReference& handle) const override;
     bool IsGpuBuffer(const RenderHandle& handle) const;
     bool IsGpuImage(const RenderHandle& handle) const;
     bool IsGpuSampler(const RenderHandle& handle) const;
     bool IsGpuAccelerationStructure(const RenderHandle& handle) const;
+    bool IsSwapchain(const RenderHandle& handle) const;
     bool IsValid(const RenderHandle& handle) const;
 
     FormatProperties GetFormatProperties(const RenderHandleReference& handle) const override;
     FormatProperties GetFormatProperties(const RenderHandle& handle) const;
-    FormatProperties GetFormatProperties(const BASE_NS::Format& format) const override;
+    FormatProperties GetFormatProperties(const BASE_NS::Format format) const override;
 
     GpuImageDesc CreateGpuImageDesc(const CORE_NS::IImageContainer::ImageDesc& desc) const override;
 
     BASE_NS::string GetName(const RenderHandle& handle) const;
     BASE_NS::string GetName(const RenderHandleReference& handle) const override;
+
+    BASE_NS::vector<RenderHandleReference> GetGpuBufferHandles() const override;
+    BASE_NS::vector<RenderHandleReference> GetGpuImageHandles() const override;
+    BASE_NS::vector<RenderHandleReference> GetGpuSamplerHandles() const override;
+
+    void SetDefaultGpuBufferCreationFlags(const BufferUsageFlags usageFlags) override;
+    void SetDefaultGpuImageCreationFlags(const ImageUsageFlags usageFlags) override;
+
+    IGpuResourceCache& GetGpuResourceCache() const override;
+
+    ImageAspectFlags GetImageAspectFlags(const RenderHandle& handle) const;
+    ImageAspectFlags GetImageAspectFlags(const RenderHandleReference& handle) const override;
+    ImageAspectFlags GetImageAspectFlags(const BASE_NS::Format format) const override;
 
 private:
     Device& device_;
@@ -363,19 +380,19 @@ private:
     BASE_NS::unique_ptr<GpuResourceManagerTyped<GpuBuffer, GpuBufferDesc>> gpuBufferMgr_;
     BASE_NS::unique_ptr<GpuResourceManagerTyped<GpuImage, GpuImageDesc>> gpuImageMgr_;
     BASE_NS::unique_ptr<GpuResourceManagerTyped<GpuSampler, GpuSamplerDesc>> gpuSamplerMgr_;
-    BASE_NS::unique_ptr<GpuResourceManagerTyped<GpuAccelerationStructure, GpuAccelerationStructureDesc>>
-        gpuAccelerationStructureMgr_;
+
+    BASE_NS::unique_ptr<GpuResourceCache> gpuResourceCache_;
 
     union ResourceDescriptor {
-        explicit ResourceDescriptor(const GpuBufferDesc& descriptor) : bufferDescriptor(descriptor) {}
+        explicit ResourceDescriptor(const GpuBufferDesc& descriptor) : combinedBufDescriptor { {}, descriptor } {}
         explicit ResourceDescriptor(const GpuImageDesc& descriptor) : imageDescriptor(descriptor) {}
         explicit ResourceDescriptor(const GpuSamplerDesc& descriptor) : samplerDescriptor(descriptor) {}
-        explicit ResourceDescriptor(const GpuAccelerationStructureDesc& descriptor) : accelerationDescriptor(descriptor)
+        explicit ResourceDescriptor(const GpuAccelerationStructureDesc& descriptor) : combinedBufDescriptor(descriptor)
         {}
-        GpuBufferDesc bufferDescriptor;
+        // used for GpuBufferDesc as well
+        GpuAccelerationStructureDesc combinedBufDescriptor;
         GpuImageDesc imageDescriptor;
         GpuSamplerDesc samplerDescriptor;
-        GpuAccelerationStructureDesc accelerationDescriptor;
     };
 
     // combine alloc and de-alloc
@@ -389,7 +406,7 @@ private:
 
     struct OperationDescription {
         OperationDescription(
-            RenderHandle handle, ResourceDescriptor descriptor, AllocType allocType, uint32_t optResourceIndex)
+            RenderHandle handle, const ResourceDescriptor& descriptor, AllocType allocType, uint32_t optResourceIndex)
             : handle(handle), descriptor(descriptor), allocType(allocType), optionalResourceIndex(optResourceIndex),
               optionalStagingVectorIndex(~0u), optionalStagingCopyType(StagingCopyStruct::CopyType::UNDEFINED)
         {}
@@ -416,6 +433,7 @@ private:
         BASE_NS::vector<RemapDescription> remaps;
     };
 
+    mutable std::mutex allocationMutex_;
     struct AdditionalData {
         uintptr_t resourcePtr { 0 };
         uint32_t indexToPendingData { ~0u }; // cleared to default when processed
@@ -456,7 +474,6 @@ private:
     PerManagerStore bufferStore_ { RenderHandleType::GPU_BUFFER };
     PerManagerStore imageStore_ { RenderHandleType::GPU_IMAGE };
     PerManagerStore samplerStore_ { RenderHandleType::GPU_SAMPLER };
-    PerManagerStore accelStore_ { RenderHandleType::GPU_BUFFER };
 
     // needs to be locked when called
     static uint64_t GetNextAvailableHandleId(PerManagerStore& mgrStore);
@@ -464,6 +481,15 @@ private:
     struct StoreAllocationData {
         RenderHandleReference handle;
         size_t allocationIndex { ~0u };
+    };
+    struct StoreAllocationInfo {
+        ResourceDescriptor descriptor;
+        BASE_NS::string_view name;
+        RenderHandle replacedHandle {};
+        RenderHandleType type {};
+        uint32_t optResourceIndex { ~0u };
+        uint32_t addHandleFlags { 0u };
+        AllocType allocType { AllocType::ALLOC };
     };
 
     void HandlePendingAllocationsImpl(const bool isEndFrame);
@@ -486,9 +512,7 @@ private:
         const uint64_t handleId, const uint32_t hasNameId, const uint32_t additionalInfoFlags);
 
     // needs to be locked when called
-    StoreAllocationData StoreAllocation(PerManagerStore& store, const BASE_NS::string_view name,
-        const RenderHandle& replacedHandle, RenderHandleType handleType, const ResourceDescriptor& descriptor,
-        uint32_t optionalResourceIndex, uint32_t additionalHandleFlags);
+    StoreAllocationData StoreAllocation(PerManagerStore& store, const StoreAllocationInfo& info);
 
     void CreateGpuResource(const OperationDescription& op, const uint32_t arrayIndex,
         const RenderHandleType resourceType, const uintptr_t preCreateData);
@@ -518,6 +542,9 @@ private:
     uint32_t GetPendingOptionalResourceIndex(
         const PerManagerStore& store, const RenderHandle& handle, const BASE_NS::string_view name);
 
+    // locked inside
+    BASE_NS::vector<RenderHandleReference> GetHandles(const PerManagerStore& store) const;
+
     void DebugPrintValidCounts();
 
     // list of handles that state data should be destroyed
@@ -530,6 +557,11 @@ private:
     StagingConsumeStruct perFrameStagingData_; // per frame data after LockFrameStagingData()
     BASE_NS::vector<RenderHandleReference> perFrameStagingBuffers_;
     BASE_NS::vector<RenderHandleReference> perFrameStagingScalingImages_;
+
+    // combined with bitwise OR buffer usage flags
+    BufferUsageFlags defaultBufferUsageFlags_ { 0u };
+    // combined with bitwise OR image usage flags
+    ImageUsageFlags defaultImageUsageFlags_ { 0u };
 
     // ogl object name tagging not supported ATM
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
@@ -568,7 +600,6 @@ public:
     RenderHandle GetBufferHandle(const BASE_NS::string_view name) const override;
     RenderHandle GetImageHandle(const BASE_NS::string_view name) const override;
     RenderHandle GetSamplerHandle(const BASE_NS::string_view name) const override;
-    RenderHandle GetAccelerationStructureHandle(const BASE_NS::string_view name) const override;
 
     GpuBufferDesc GetBufferDescriptor(const RenderHandle& handle) const override;
     GpuImageDesc GetImageDescriptor(const RenderHandle& handle) const override;
@@ -588,11 +619,18 @@ public:
     bool IsGpuBuffer(const RenderHandle& handle) const override;
     bool IsGpuImage(const RenderHandle& handle) const override;
     bool IsGpuSampler(const RenderHandle& handle) const override;
+    bool IsGpuAccelerationStructure(const RenderHandle& handle) const override;
+    bool IsSwapchain(const RenderHandle& handle) const override;
 
     FormatProperties GetFormatProperties(const RenderHandle& handle) const override;
     FormatProperties GetFormatProperties(const BASE_NS::Format format) const override;
 
     BASE_NS::string GetName(const RenderHandle& handle) const override;
+
+    IGpuResourceCache& GetGpuResourceCache() const override;
+
+    ImageAspectFlags GetImageAspectFlags(const RenderHandle& handle) const override;
+    ImageAspectFlags GetImageAspectFlags(const BASE_NS::Format format) const override;
 
 private:
     GpuResourceManager& gpuResourceMgr_;

@@ -1,0 +1,25 @@
+#version 320 es
+#define SPIRV_CROSS_CONSTANT_ID_256 1u
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_256
+#define SPIRV_CROSS_CONSTANT_ID_256 0u
+#endif
+const uint CORE_BACKEND_TYPE = SPIRV_CROSS_CONSTANT_ID_256;
+const bool _57 = (CORE_BACKEND_TYPE != 0u);
+uniform float CORE_FLIP_NDC ;
+
+layout(location = 0) out vec2 outUv;
+
+void main()
+{
+    float _18 = float((gl_VertexID & 1) << 2);
+    float _25 = float((gl_VertexID & 2) << 1);
+    outUv.x = _18 * 0.5;
+    outUv.y = (2.0 - _25) * 0.5;
+    gl_Position = vec4((-1.0) + _18, 1.0 - _25, 0.0, 1.0);
+    if (_57)
+    {
+        gl_Position = vec4(gl_Position.x, gl_Position.y * CORE_FLIP_NDC, fma(gl_Position.z, 2.0, -gl_Position.w), gl_Position.w);
+    }
+}
+

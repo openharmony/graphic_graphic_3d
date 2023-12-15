@@ -16,6 +16,7 @@
 #ifndef API_RENDER_IRENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
 #define API_RENDER_IRENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
 
+#include <base/util/uid.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>

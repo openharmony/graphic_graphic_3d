@@ -43,8 +43,11 @@ public:
     DescriptorSetLayoutBindingResources GetDescriptorSetLayoutBindingResources() const override;
 
     bool GetDescriptorSetLayoutBindingValidity() const override;
+    void PrintDescriptorSetLayoutBindingValidation() const override;
 
     // all must call this
+    void BindBuffer(
+        const uint32_t binding, const BindableBuffer& resource, const AdditionalDescriptorFlags flags) override;
     void BindBuffer(const uint32_t binding, const BindableBuffer& resource) override;
     void BindBuffer(const uint32_t binding, const RenderHandle handle, const uint32_t byteOffset) override;
     void BindBuffer(
@@ -53,6 +56,8 @@ public:
     void BindBuffers(const uint32_t binding, const BASE_NS::array_view<const BindableBuffer> resources) override;
 
     // all must call this
+    void BindImage(
+        const uint32_t binding, const BindableImage& resource, const AdditionalDescriptorFlags flags) override;
     void BindImage(const uint32_t binding, const BindableImage& resource) override;
     void BindImage(const uint32_t binding, const RenderHandle handle) override;
     void BindImage(const uint32_t binding, const RenderHandle handle, const RenderHandle samplerHandle) override;
@@ -60,6 +65,8 @@ public:
     void BindImages(const uint32_t binding, const BASE_NS::array_view<const BindableImage> resources) override;
 
     // all must call this
+    void BindSampler(
+        const uint32_t binding, const BindableSampler& resource, const AdditionalDescriptorFlags flags) override;
     void BindSampler(const uint32_t binding, const BindableSampler& resource) override;
     void BindSampler(const uint32_t binding, const RenderHandle handle) override;
     // for descriptor array binding
@@ -112,17 +119,25 @@ public:
     BASE_NS::array_view<const RenderHandle> GetDescriptorSetHandles(
         const uint32_t beginSet, const uint32_t count) const override;
 
+    void BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource,
+        const AdditionalDescriptorFlags flags) override;
     void BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource) override;
     void BindBuffers(
         const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const BindableBuffer> resources) override;
 
+    void BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource,
+        const AdditionalDescriptorFlags flags) override;
     void BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource) override;
     void BindImages(
         const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const BindableImage> resources) override;
 
+    void BindSampler(const uint32_t set, const uint32_t binding, const BindableSampler& resource,
+        const AdditionalDescriptorFlags flags) override;
     void BindSampler(const uint32_t set, const uint32_t binding, const BindableSampler& resource) override;
     void BindSamplers(const uint32_t set, const uint32_t binding,
         const BASE_NS::array_view<const BindableSampler> resources) override;
+
+    void PrintPipelineDescriptorSetLayoutBindingValidation() const override;
 
 protected:
     void Destroy() override;

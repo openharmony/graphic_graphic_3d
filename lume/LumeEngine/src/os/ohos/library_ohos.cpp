@@ -61,8 +61,8 @@ void LibraryOHOS::Destroy()
 
 ILibrary::Ptr ILibrary::Load(const string_view filePath)
 {
-    #define TO_STRING(name) #name
-    #define LIB_NAME(name) TO_STRING(name)
+#define TO_STRING(name) #name
+#define LIB_NAME(name) TO_STRING(name)
 
     if (filePath.find(LIB_NAME(LIB_ENGINE_CORE)) == string_view::npos &&
         filePath.find(LIB_NAME(LIB_RENDER)) == string_view::npos &&
@@ -70,7 +70,6 @@ ILibrary::Ptr ILibrary::Load(const string_view filePath)
         return ILibrary::Ptr {};
     }
 
-    CORE_LOG_E("load filePath %s", filePath.data());
     return ILibrary::Ptr { new LibraryOHOS(filePath) };
 }
 
@@ -79,4 +78,3 @@ string_view ILibrary::GetFileExtension()
     return ".so";
 }
 CORE_END_NAMESPACE()
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -52,7 +53,7 @@ fragment shader for post process and tonemapping
 */
 void main(void)
 {
-    outColor = texture(sampler2D(uTex, uSampler), inUv);
+    outColor = textureLod(sampler2D(uTex, uSampler), inUv, 0);
 
     if ((uPc.flags.x & POST_PROCESS_SPECIALIZATION_COLOR_FRINGE_BIT) ==
         POST_PROCESS_SPECIALIZATION_COLOR_FRINGE_BIT) {
@@ -64,9 +65,9 @@ void main(void)
 
         const vec2 uvDistToImageCenter = chroma * uvSize;
         const CORE_RELAXEDP float chromaRed =
-            texture(sampler2D(uTex, uSampler), inUv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y)).x;
+            textureLod(sampler2D(uTex, uSampler), inUv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), 0).x;
         const CORE_RELAXEDP float chromaBlue =
-            texture(sampler2D(uTex, uSampler), inUv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y)).z;
+            textureLod(sampler2D(uTex, uSampler), inUv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), 0).z;
 
         outColor.r = chromaRed;
         outColor.b = chromaBlue;
@@ -90,6 +91,7 @@ void main(void)
     if ((uPc.flags.x & POST_PROCESS_SPECIALIZATION_VIGNETTE_BIT) == POST_PROCESS_SPECIALIZATION_VIGNETTE_BIT) {
         const vec2 uvVal = inUv.xy * (vec2(1.0) - inUv.yx);
         const vec4 vignetteFactor = uPc.vignette;
+        // TODO: coefficient 40 baked into factor .x ?
         CORE_RELAXEDP float vignette = uvVal.x * uvVal.y * vignetteFactor.x * 40.0;
         vignette = clamp(pow(vignette, vignetteFactor.y), 0.0, 1.0);
         outColor.rgb *= vignette;

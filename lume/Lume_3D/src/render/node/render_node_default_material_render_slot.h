@@ -34,13 +34,8 @@
 
 #include "render/render_node_scene_util.h"
 
-RENDER_BEGIN_NAMESPACE()
-class IRenderNodeGpuResourceManager;
-RENDER_END_NAMESPACE()
-
 CORE3D_BEGIN_NAMESPACE()
 class IRenderDataStoreDefaultCamera;
-
 class IRenderDataStoreDefaultScene;
 
 class RenderNodeDefaultMaterialRenderSlot final : public RENDER_NS::IRenderNode {
@@ -60,8 +55,8 @@ public:
         RENDER_NS::RenderHandle depthHandle;
         RENDER_NS::RenderHandle vsmColorHandle;
 
-        RENDER_NS::RenderHandleReference pcfSamplerHandle;
-        RENDER_NS::RenderHandleReference vsmSamplerHandle;
+        RENDER_NS::RenderHandle pcfSamplerHandle;
+        RENDER_NS::RenderHandle vsmSamplerHandle;
     };
 
     struct BufferHandles {
@@ -86,6 +81,7 @@ public:
         RENDER_NS::RenderHandle shaderHandle;
         RENDER_NS::RenderHandle psoHandle;
         RENDER_NS::RenderHandle graphicsStateHandle;
+        bool needsCustomSetBindings { false };
     };
     struct AllShaderData {
         BASE_NS::vector<PerShaderData> perShaderData;
@@ -122,12 +118,19 @@ private:
         RENDER_NS::RenderSlotSortType sortType { RENDER_NS::RenderSlotSortType::NONE };
         RENDER_NS::RenderSlotCullType cullType { RENDER_NS::RenderSlotCullType::NONE };
 
-        uint32_t nodeFlags { 0u };
+        RenderSceneFlags nodeFlags { 0u };
         uint32_t renderSlotId { 0u };
+        uint32_t shaderRenderSlotId { 0u };
+        uint32_t stateRenderSlotId { 0u };
+        uint32_t shaderRenderSlotBaseId { 0u };
+        uint32_t shaderRenderSlotMultiviewId { 0u };
+        bool initialExplicitShader { false };
+        bool explicitShader { false };
         RenderSubmeshFlags nodeSubmeshExtraFlags { 0 };
         RenderMaterialFlags nodeMaterialDiscardFlags { 0 };
 
         RENDER_NS::RenderNodeGraphInputs::InputRenderPass renderPass;
+        bool hasChangeableRenderPassHandles { false };
     };
     JsonInputs jsonInputs_;
     RENDER_NS::RenderNodeHandles::InputRenderPass inputRenderPass_;
@@ -145,6 +148,7 @@ private:
     };
     struct CurrentScene {
         RenderCamera camera;
+        RENDER_NS::RenderHandle cameraEnvRadianceHandle;
         RENDER_NS::ViewportDesc viewportDesc;
         RENDER_NS::ScissorDesc scissorDesc;
 
@@ -154,13 +158,23 @@ private:
         uint32_t cameraIdx { 0u };
         IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
         IRenderDataStoreDefaultLight::LightingFlags lightingFlags { 0u };
+        RenderCamera::ShaderFlags cameraShaderFlags { 0u }; // evaluated based on camera and scene flags
+    };
+    struct SpecializationData {
+        static constexpr uint32_t MAX_FLAG_COUNT { 16u };
+        uint32_t flags[MAX_FLAG_COUNT];
+
+        uint32_t maxSpecializationCount { 0u };
+    };
+    struct PsoAndInfo {
+        RENDER_NS::RenderHandle pso;
+        bool set3 { false };
     };
 
     void ParseRenderNodeInputs();
     void RenderSubmeshes(RENDER_NS::IRenderCommandList& cmdList,
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const IRenderDataStoreDefaultCamera& dataStoreCamera);
-    void UpdateSet0(RENDER_NS::IRenderCommandList& cmdList);
-    void UpdateSet1(RENDER_NS::IRenderCommandList& cmdList);
+    void UpdateSet01(RENDER_NS::IRenderCommandList& cmdList);
     void UpdateAndBindSet2(
         RENDER_NS::IRenderCommandList& cmdList, const MaterialHandleStruct& materialHandles, const uint32_t objIdx);
     bool UpdateAndBindSet3(RENDER_NS::IRenderCommandList& cmdList,
@@ -168,9 +182,10 @@ private:
     void CreateDefaultShaderData();
     // unique scene name as input
     void GetSceneUniformBuffers(const BASE_NS::string_view us);
-    void GetCameraUniformBuffers();
-    RENDER_NS::RenderHandle CreateNewPso(const ShaderStateData& ssd,
-        const RENDER_NS::ShaderSpecializationConstantDataView& spec, const RenderSubmeshFlags submeshFlags);
+    PsoAndInfo CreateNewPso(const ShaderStateData& ssd,
+        const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
+        const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
+        const RenderCamera::ShaderFlags cameraShaderFlags);
     void ProcessSlotSubmeshes(
         const IRenderDataStoreDefaultCamera& dataStoreCamera, const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
     void UpdateCurrentScene(const IRenderDataStoreDefaultScene& dataStoreScene,
@@ -179,22 +194,32 @@ private:
     void ResetAndUpdateDescriptorSets();
 
     void UpdatePostProcessConfiguration();
-    RENDER_NS::RenderHandle GetSubmeshPso(const ShaderStateData& ssd,
+    PsoAndInfo GetSubmeshPso(const ShaderStateData& ssd,
         const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
-        const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightFlags);
+        const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
+        const RenderCamera::ShaderFlags cameraShaderFlags);
+    RENDER_NS::ShaderSpecializationConstantDataView GetShaderSpecializationView(
+        const RENDER_NS::GraphicsState& gfxState,
+        const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
+        const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
+        const RenderCamera::ShaderFlags cameraShaderFlags);
+    BASE_NS::array_view<const RENDER_NS::DynamicStateEnum> GetDynamicStates() const;
+    void EvaluateFogBits();
+    void ResetRenderSlotData(const uint32_t shaderRenderSlotId, const bool multiView);
 
     MaterialHandleStruct defaultMaterialStruct_;
-    RENDER_NS::RenderHandle defaultSkyBoxRadianceCubemap_;
 
     CurrentScene currentScene_;
     SceneRenderDataStores stores_;
 
     ObjectCounts objectCounts_;
-    BufferHandles buffers_;
+
+    SceneBufferHandles sceneBuffers_;
+    SceneCameraBufferHandles cameraBuffers_;
     ShadowBuffers shadowBuffers_;
 
     struct DefaultSamplers {
-        RENDER_NS::RenderHandleReference cubemapHandle;
+        RENDER_NS::RenderHandle cubemapHandle;
 
         RENDER_NS::RenderHandle linearHandle;
         RENDER_NS::RenderHandle nearestHandle;
@@ -211,8 +236,12 @@ private:
     };
     AllDescriptorSets allDescriptorSets_;
     AllShaderData allShaderData_;
+    SpecializationData specializationData_;
 
     RENDER_NS::RenderPass renderPass_;
+    // the base default render node graph from RNG setup
+    RENDER_NS::RenderPass rngRenderPass_;
+    bool fsrEnabled_ { false };
 
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
     BASE_NS::vector<SlotSubmeshIndex> sortedSlotSubmeshes_;

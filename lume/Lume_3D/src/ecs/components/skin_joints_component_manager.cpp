@@ -14,6 +14,7 @@
  */
 
 #include <3d/ecs/components/skin_joints_component.h>
+#include <base/containers/array_view.h>
 
 #include "ComponentTools/base_manager.h"
 #include "ComponentTools/base_manager.inl"

@@ -10,7 +10,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import("//build/ohos.gni")
 import("//foundation/graphic/graphic_2d/graphic_config.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
@@ -25,7 +24,7 @@ ohos_source_set("lume_3d_plugin_src") {
   sources = [
     "../src/plugin/dynamic_plugin.cpp",
     "../src/plugin/dynamic_registry.cpp",
-    "../src/loader/json.cpp",
+    "../src/util/json.cpp"
   ]  
 
   configs = [

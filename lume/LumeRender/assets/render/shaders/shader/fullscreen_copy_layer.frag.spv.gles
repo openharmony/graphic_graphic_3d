@@ -1,0 +1,27 @@
+#version 320 es
+precision highp float;
+precision highp int;
+
+struct LocalPostProcessPushConstantStruct
+{
+    vec4 viewportSizeInvSize;
+    vec4 factor;
+};
+
+struct uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+uniform uPostProcessPushConstant CORE_PC_0;
+
+uniform highp sampler2DArray s0_b1_s0_b0;
+
+layout(location = 0) out vec4 outColor;
+layout(location = 0) in vec2 inUv;
+
+void main()
+{
+    outColor = textureLod(s0_b1_s0_b0, vec3(inUv, CORE_PC_0.uPc.factor.x), 0.0);
+}
+

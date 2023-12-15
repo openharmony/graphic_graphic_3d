@@ -55,15 +55,18 @@ private:
     // Json resources which might need re-fetching
     struct JsonInputs {
         RenderNodeGraphInputs::InputResources resources;
+        RenderNodeGraphInputs::InputResources dispatchResources;
 
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
         RenderNodeGraphInputs::RenderDataStore renderDataStoreSpecialization;
 
         bool hasChangeableResourceHandles { false };
+        bool hasChangeableDispatchHandles { false };
     };
     JsonInputs jsonInputs_;
 
     RenderNodeHandles::InputResources inputResources_;
+    RenderNodeHandles::InputResources dispatchResources_;
     RenderHandle shader_;
 
     IPipelineDescriptorSetBinder::Ptr pipelineDescriptorSetBinder_;
@@ -81,7 +84,6 @@ private:
     };
     ShaderSpecilizationData shaderSpecializationData_;
 
-    BASE_NS::Math::UVec3 targetSize_ { 1u, 1u, 1u };
     ShaderThreadGroup threadGroupSize_ { 1u, 1u, 1u };
 };
 RENDER_END_NAMESPACE()

@@ -99,6 +99,37 @@ public:
      */
     virtual ISceneNode* GetChild(BASE_NS::string_view const& name) = 0;
 
+    /** Add the given node as a child of this node. The node will be placed last in the child list.
+     * @param node Node to add
+     * @return true if node could be added
+     */
+    virtual bool AddChild(ISceneNode& node) = 0;
+
+    /** Add the given node as a child of this node. The node will be inserted to the given index, or last if the index
+     * is out of bounds.
+     * @param index Insert location.
+     * @param node Node to add.
+     * @return true if node could be added.
+     */
+    virtual bool InsertChild(size_t index, ISceneNode& node) = 0;
+
+    /** Remove the given node from this node.
+     * @param node Node to add
+     * @return true if node could be removed.
+     */
+    virtual bool RemoveChild(ISceneNode& node) = 0;
+
+    /** Remove the node at the given index from this node.
+     * @param index Location to remove.
+     * @return true if node could be removed, false if index is out of bounds.
+     */
+    virtual bool RemoveChild(size_t index) = 0;
+
+    /** Remove all child nodes.
+     * @return true if nodes could be removed.
+     */
+    virtual bool RemoveChildren() = 0;
+
     /** Get child node of given parent node by path.
      *  @param path String of a path which is then used like (ie. path/to/child).
      */
@@ -198,6 +229,36 @@ public:
      * @param node Node to destroy.
      */
     virtual void DestroyNode(ISceneNode& node) = 0;
+
+    /** Listener for changes in SceneNode children. */
+    class SceneNodeListener {
+    public:
+        enum class EventType : uint8_t {
+            /** Child added */
+            ADDED,
+            /** Child removed */
+            REMOVED,
+        };
+        /** Signals a change in a node's children.
+         * @param parent Node where change happened.
+         * @param type Type of the change.
+         * @param child Child node.
+         * @param index Index where node was added or removed.
+         */
+        virtual void OnChildChanged(
+            const ISceneNode& parent, EventType type, const ISceneNode& child, size_t index) = 0;
+
+    protected:
+        virtual ~SceneNodeListener() = default;
+    };
+
+    /** Add listener for SceneNode events.
+     */
+    virtual void AddListener(SceneNodeListener& listener) = 0;
+
+    /** Remove SceneNode event listener.
+     */
+    virtual void RemoveListener(SceneNodeListener& listener) = 0;
 
 protected:
     INodeSystem() = default;

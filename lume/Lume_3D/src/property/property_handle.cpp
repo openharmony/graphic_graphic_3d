@@ -26,7 +26,7 @@ PropertyHandle::PropertyHandle(IPropertyApi* owner, void* data, const size_t siz
 
 PropertyHandle::PropertyHandle(PropertyHandle&& other) noexcept
     : IPropertyHandle(), owner_(BASE_NS::exchange(other.owner_, nullptr)),
-      data_(BASE_NS::exchange(other.data_, nullptr)), size_(BASE_NS::exchange(other.size_, 0))
+      data_(BASE_NS::exchange(other.data_, nullptr)), size_(BASE_NS::exchange(other.size_, 0U))
 {}
 
 PropertyHandle& PropertyHandle::operator=(PropertyHandle&& other) noexcept
@@ -34,7 +34,7 @@ PropertyHandle& PropertyHandle::operator=(PropertyHandle&& other) noexcept
     if (&other != this) {
         owner_ = BASE_NS::exchange(other.owner_, nullptr);
         data_ = BASE_NS::exchange(other.data_, nullptr);
-        size_ = BASE_NS::exchange(other.size_, 0);
+        size_ = BASE_NS::exchange(other.size_, 0U);
     }
     return *this;
 }

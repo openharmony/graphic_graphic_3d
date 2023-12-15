@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,294 +20,286 @@
 
 namespace OHOS::Render3D {
 void WidgetAdapter3DTest::SetUpTestCase()
-{
-}
+{}
 
 void WidgetAdapter3DTest::TearDownTestCase()
-{
-}
+{}
 
 void WidgetAdapter3DTest::SetUp()
-{
-}
+{}
 
 void WidgetAdapter3DTest::TearDown()
-{
-}
-
-void EngineTest::CreateEcs(uint32_t key)
-{
-    (void)(key);
-}
-
-void EngineTest::LoadCustGeometry(std::vector<OHOS::Ace::RefPtr<SVGeometry>> &shapes)
-{
-    (void)(shapes);
-}
-
-void EngineTest::SetUpCustomRenderTarget(const TextureInfo &info)
-{
-    (void)(info);
-}
-
-void EngineTest::SetUpCameraViewPort(uint32_t width, uint32_t height)
-{
-    (void)(width);
-    (void)(height);
-}
-
-void EngineTest::SetUpCameraTransform(const OHOS::Render3D::Position& position, const OHOS::Ace::Vec3& lookAtVec,
-    const OHOS::Ace::Vec3& upVec, const OHOS::Ace::Quaternion& rotation)
-{
-    (void)(position);
-    (void)(lookAtVec);
-    (void)(upVec);
-    (void)(rotation);
-}
-
-void EngineTest::SetUpCameraViewProjection(float zNear, float zFar, float fovDegrees)
-{
-    (void)(zNear);
-    (void)(zFar);
-    (void)(fovDegrees);
-}
-
-void EngineTest::SetLightProperties(int lightType, float color[], float intensity, bool shadow, float position[],
-    float rotationAngle, float rotationAxis[])
-{
-    (void)(lightType);
-    (void)(color);
-    (void)(intensity);
-    (void)(shadow);
-    (void)(position);
-    (void)(rotationAngle);
-    (void)(rotationAxis);
-}
-
-void EngineTest::LoadSceneModel(std::string modelPath)
-{
-    (void)(modelPath);
-}
-
-void EngineTest::LoadBackgroundModel(std::string modelPath, SceneViewerBackgroundType type)
-{
-    (void)(type);
-    (void)(modelPath);
-}
-
-void EngineTest::OnTouchEvent(const SceneViewerTouchEvent& event)
-{
-    (void)(event);
-}
-
-void EngineTest::Tick(const uint64_t aTotalTime, const uint64_t aDeltaTime)
-{
-    (void)(aDeltaTime);
-    (void)(aTotalTime);
-}
-
-void EngineTest::UpdateGeometries(const std::vector<OHOS::Ace::RefPtr<SVGeometry>>& shapes)
-{
-    (void)(shapes);
-}
-
-void EngineTest::UpdateGLTFAnimations(const std::vector<OHOS::Ace::RefPtr<GLTFAnimation>>& animations)
-{
-    (void)(animations);
-}
+{}
 
 bool EngineTest::LoadEngineLib()
 {
     return true;
 }
 
-bool EngineTest::InitEngine(EGLContext eglContext, const PlatformData& data)
+bool EngineTest::InitEngine(EGLContext eglContext, const PlatformData &data)
 {
     (void)(eglContext);
     (void)(data);
     return true;
 }
 
-bool EngineTest::IsAnimating()
+void EngineTest::InitializeScene(uint32_t key)
 {
-    return true;
+    (void)(key);
 }
 
-void EngineTest::AddTextureMemoryBarrrier()
+void EngineTest::SetupCameraViewPort(uint32_t width, uint32_t height)
 {
+    (void)(width);
+    (void)(height);
 }
 
-bool EngineTest::HandlesNotRead()
+void EngineTest::SetupCameraTransform(
+    const Position &position, const Vec3 &lookAt, const Vec3 &up, const Quaternion &rotation)
 {
-    return true;
+    (void)(position);
+    (void)(lookAt);
+    (void)(up);
+    (void)(rotation);
 }
 
-void EngineTest::AddLights(const std::vector<OHOS::Ace::RefPtr<SVLight>>& lights)
+void EngineTest::SetupCameraViewProjection(float zNear, float zFar, float fovDegrees)
+{
+    (void)(zNear);
+    (void)(zFar);
+    (void)(fovDegrees);
+}
+
+void EngineTest::LoadSceneModel(const std::string &modelPath)
+{
+    (void)(modelPath);
+}
+
+void EngineTest::LoadEnvModel(const std::string &modelPath, BackgroundType type)
+{
+    (void)(modelPath);
+    (void)(type);
+}
+
+void EngineTest::OnTouchEvent(const PointerEvent &event)
+{
+    (void)(event);
+}
+
+void EngineTest::OnWindowChange(const TextureInfo &textureInfo)
+{
+    (void)(textureInfo);
+}
+
+void EngineTest::UpdateGeometries(const std::vector<std::shared_ptr<Geometry>> &shapes)
+{
+    (void)(shapes);
+}
+
+void EngineTest::UpdateGLTFAnimations(const std::vector<std::shared_ptr<GLTFAnimation>> &animations)
+{
+    (void)(animations);
+}
+
+void EngineTest::UpdateLights(const std::vector<std::shared_ptr<Light>> &lights)
 {
     (void)(lights);
 }
 
-void EngineTest::AddCustomRenders(const std::vector<OHOS::Ace::RefPtr<SVCustomRenderDescriptor>>& customRenders)
+void EngineTest::UpdateCustomRender(const std::shared_ptr<CustomRenderDescriptor> &customRender)
 {
-    (void)(customRenders);
+    (void)(customRender);
+}
+
+void EngineTest::UpdateShaderPath(const std::string &shaderPath)
+{
+    (void)(shaderPath);
+}
+
+void EngineTest::UpdateImageTexturePaths(const std::vector<std::string> &imageTextures)
+{
+    (void)(imageTextures);
+}
+
+void EngineTest::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInputBuffer> &shaderInputBuffer)
+{
+    (void)(shaderInputBuffer);
+}
+
+bool EngineTest::NeedsRepaint()
+{
+    return true;
 }
 
 namespace {
 /**
- * @tc.name: SetUpSceneViewer1
- * @tc.desc: Verify SceneViewer setup
+ * @tc.name: Initialize1
+ * @tc.desc: Verify set valid engine
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
-HWTEST_F(WidgetAdapter3DTest, SetUpSceneViewer1, testing::ext::TestSize.Level1)
+HWTEST_F(WidgetAdapter3DTest, Initialize1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
+    WidgetAdapter adapter(0U);
 
     auto engine = std::make_unique<EngineTest>();
-    bool ret = adapter.SetEngine(std::move(engine));
-    ASSERT_EQ(ret, true);
-
-    TextureInfo texture {};
-    std::string gltf {};
-    std::string background {};
-    SceneViewerBackgroundType type = SceneViewerBackgroundType::CUBE_MAP;
-    ret = adapter.SetUpSceneViewer(texture, gltf, background, type);
+    bool ret = adapter.Initialize(std::move(engine));
     ASSERT_EQ(ret, true);
 }
 
 /**
- * @tc.name: SetUpCameraViewProjection1
- * @tc.desc: Verify SceneViewer setup projection
+ * @tc.name: Initialize2
+ * @tc.desc: Verify set null engine
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
-HWTEST_F(WidgetAdapter3DTest, SetUpCameraViewProjection1, testing::ext::TestSize.Level1)
+HWTEST_F(WidgetAdapter3DTest, Initialize2, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
+    WidgetAdapter adapter(0U);
+
+    bool ret = adapter.Initialize(nullptr);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: OnWindowChange1
+ * @tc.desc: Verify WidgetAdapter WindowChange
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, OnWindowChange1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+
+    TextureInfo texture{};
+    bool ret = adapter.OnWindowChange(texture);
+    ASSERT_EQ(ret, true);
+}
+
+/**
+ * @tc.name: SetupCameraTransform1
+ * @tc.desc: Verify WidgetAdapter setup Camera Transform
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, SetupCameraTransform1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    Position position{};
+    Vec3 lookAt{};
+    Vec3 up{};
+    Quaternion rotation{};
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+
+    bool ret = adapter.SetupCameraTransform(position, lookAt, up, rotation);
+    ASSERT_EQ(ret, true);
+}
+
+/**
+ * @tc.name: SetupCameraViewProjection1
+ * @tc.desc: Verify WidgetAdapter setup projection
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, SetupCameraViewProjection1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
     float near = 0.0f;
     float far = 0.0f;
     float degree = 0.0f;
 
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
+    adapter.Initialize(std::move(engine));
 
-    bool ret = adapter.SetUpCameraViewProjection(near, far, degree);
+    bool ret = adapter.SetupCameraViewProjection(near, far, degree);
     ASSERT_EQ(ret, true);
 }
 
 /**
- * @tc.name: CreateLight1
- * @tc.desc: Verify SceneViewer Create light
+ * @tc.name: SetupCameraViewport1
+ * @tc.desc: Verify WidgetAdapter setup Viewport
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
-HWTEST_F(WidgetAdapter3DTest, CreateLight1, testing::ext::TestSize.Level1)
+HWTEST_F(WidgetAdapter3DTest, SetupCameraViewport1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
-    auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
-    bool ret = adapter.CreateLight();
-    ASSERT_EQ(ret, true);
-}
-
-/**
- * @tc.name: SetUpCustomRenderTarget1
- * @tc.desc: Verify SceneViewer Create RenderTarget
- * @tc.type: FUNC
- * @tc.require: SR000GUGO2
- */
-HWTEST_F(WidgetAdapter3DTest, SetUpCustomRenderTarget1, testing::ext::TestSize.Level1)
-{
-    SceneViewerAdapter adapter(0U);
-    auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
-    TextureInfo texture;
-    bool ret = adapter.SetUpCustomRenderTarget(texture);
-
-    ASSERT_EQ(ret, true);
-}
-
-/**
- * @tc.name: UnLoadModel1
- * @tc.desc: Verify SceneViewer unload model
- * @tc.type: FUNC
- * @tc.require: SR000GUGO2
- */
-HWTEST_F(WidgetAdapter3DTest, UnLoadModel1, testing::ext::TestSize.Level1)
-{
-    SceneViewerAdapter adapter(0U);
+    WidgetAdapter adapter(0U);
+    uint32_t width = 0;
+    uint32_t height = 0;
 
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
-    bool ret = adapter.UnLoadModel();
+    adapter.Initialize(std::move(engine));
 
+    bool ret = adapter.SetupCameraViewport(width, height);
     ASSERT_EQ(ret, true);
 }
 
 /**
  * @tc.name: OnTouchEvent1
- * @tc.desc: Verify SceneViewer handle touch event
+ * @tc.desc: Verify WidgetAdapter handle touch event
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
 HWTEST_F(WidgetAdapter3DTest, OnTouchEvent1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
-    int32_t pointerId = 0;
+    WidgetAdapter adapter(0U);
+    PointerEvent event{};
 
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
-    SceneViewerTouchEvent event(pointerId);
+    adapter.Initialize(std::move(engine));
     bool ret = adapter.OnTouchEvent(event);
     ASSERT_EQ(ret, true);
 }
 
 /**
+ * @tc.name: NeedsRepaint1
+ * @tc.desc: Verify WidgetAdapter handle Repaint
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, NeedsRepaint1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.NeedsRepaint();
+    ASSERT_EQ(ret, true);
+}
+
+/**
  * @tc.name: DrawFrame1
- * @tc.desc: Verify SceneViewer render frame
+ * @tc.desc: Verify WidgetAdapter render frame
  * @tc.type: FUNC
  * @tc.require: SR000GUI0P
  */
 HWTEST_F(WidgetAdapter3DTest, DrawFrame1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
+    WidgetAdapter adapter(0U);
 
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
+    adapter.Initialize(std::move(engine));
     bool ret = adapter.DrawFrame();
     ASSERT_EQ(ret, true);
 }
 
 /**
- * @tc.name: DrawFrame1
- * @tc.desc: Verify SceneViewer tick frame
- * @tc.type: FUNC
- * @tc.require: SR000GUI0P
- */
-HWTEST_F(WidgetAdapter3DTest, Tick1, testing::ext::TestSize.Level1)
-{
-    SceneViewerAdapter adapter(0U);
-    uint64_t total = 1U;
-    uint64_t delta = 1U;
-
-    auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
-    bool ret = adapter.Tick(total, delta);
-    ASSERT_EQ(ret, true);
-}
-
-/**
- * @tc.name: AddGeometries1
- * @tc.desc: Verify SceneViewer add geometries
+ * @tc.name: UpdateGeometries1
+ * @tc.desc: Verify WidgetAdapter Update geometries
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
 HWTEST_F(WidgetAdapter3DTest, UpdateGeometries1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
+    WidgetAdapter adapter(0U);
 
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
+    adapter.Initialize(std::move(engine));
     bool ret = adapter.UpdateGeometries({});
     ASSERT_EQ(ret, true);
 }
@@ -320,70 +312,160 @@ HWTEST_F(WidgetAdapter3DTest, UpdateGeometries1, testing::ext::TestSize.Level1)
  */
 HWTEST_F(WidgetAdapter3DTest, UpdateGLTFAnimations1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
+    WidgetAdapter adapter(0U);
 
     auto engine = std::make_unique<EngineTest>();
-    adapter.SetEngine(std::move(engine));
+    adapter.Initialize(std::move(engine));
     bool ret = adapter.UpdateGLTFAnimations({});
     ASSERT_EQ(ret, true);
 }
 
 /**
- * @tc.name: SetEngine1
- * @tc.desc: Verify set null engine
+ * @tc.name: UpdateLights1
+ * @tc.desc: Verify update lights
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
-HWTEST_F(WidgetAdapter3DTest, SetEngine1, testing::ext::TestSize.Level1)
+HWTEST_F(WidgetAdapter3DTest, UpdateLights1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
+    WidgetAdapter adapter(0U);
 
-    bool ret = adapter.SetEngine(nullptr);
-    ASSERT_EQ(ret, false);
-}
-
-/**
- * @tc.name: SetEngine2
- * @tc.desc: Verify set valid engine
- * @tc.type: FUNC
- * @tc.require: SR000GUGO2
- */
-HWTEST_F(WidgetAdapter3DTest, SetEngine2, testing::ext::TestSize.Level1)
-{
-    SceneViewerAdapter adapter(0U);
     auto engine = std::make_unique<EngineTest>();
-    bool ret = adapter.SetEngine(std::move(engine));
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.UpdateLights({});
     ASSERT_EQ(ret, true);
 }
 
 /**
- * @tc.name: IsAnimating1
- * @tc.desc: Verify get animation state
+ * @tc.name: UpdateCustomRender1
+ * @tc.desc: Verify update CustomRender
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
-HWTEST_F(WidgetAdapter3DTest, IsAnimating1, testing::ext::TestSize.Level1)
+HWTEST_F(WidgetAdapter3DTest, UpdateCustomRender1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
-    auto animating = adapter.IsAnimating();
-    ASSERT_EQ(animating, false);
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.UpdateCustomRender(nullptr);
+    ASSERT_EQ(ret, true);
 }
 
 /**
- * @tc.name: IsAnimating2
- * @tc.desc: Verify get animation state
+ * @tc.name: UpdateShaderPath1
+ * @tc.desc: Verify update ShaderPath
  * @tc.type: FUNC
  * @tc.require: SR000GUGO2
  */
-HWTEST_F(WidgetAdapter3DTest, IsAnimating2, testing::ext::TestSize.Level1)
+HWTEST_F(WidgetAdapter3DTest, UpdateShaderPath1, testing::ext::TestSize.Level1)
 {
-    SceneViewerAdapter adapter(0U);
-    auto engine = std::make_unique<EngineTest>();
-    bool ret = adapter.SetEngine(std::move(engine));
-    ASSERT_EQ(ret, true);
+    WidgetAdapter adapter(0U);
+    std::string shaderPath = "path";
 
-    auto animating = adapter.IsAnimating();
-    ASSERT_EQ(animating, true);
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.UpdateShaderPath(shaderPath);
+    ASSERT_EQ(ret, true);
 }
-} // namespace
-} // namespace OHOS::Render3D
+
+/**
+ * @tc.name: UpdateImageTexturePaths1
+ * @tc.desc: Verify update ImageTexturePaths
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateImageTexturePaths1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.UpdateImageTexturePaths({});
+    ASSERT_EQ(ret, true);
+}
+
+/**
+ * @tc.name: UpdateShaderInputBuffer1
+ * @tc.desc: Verify update ImageTexturePaths
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateShaderInputBuffer1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.UpdateShaderInputBuffer(nullptr);
+    ASSERT_EQ(ret, true);
+}
+
+/**
+ * @tc.name: LoadSceneModel1
+ * @tc.desc: Verify Load SceneModel
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, LoadSceneModel1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::string scene = "scene";
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.LoadSceneModel(scene);
+    ASSERT_EQ(ret, true);
+}
+
+/**
+ * @tc.name: LoadEnvModel1
+ * @tc.desc: Verify Load EnvModel
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, LoadEnvModel1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::string enviroment = "enviroment";
+    BackgroundType type{};
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.LoadEnvModel(enviroment, type);
+    ASSERT_EQ(ret, true);
+}
+
+/**
+ * @tc.name: UnloadSceneModel1
+ * @tc.desc: Verify UnLoad SceneModel
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UnloadSceneModel1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.UnloadSceneModel();
+    ASSERT_EQ(ret, true);
+}
+
+/**
+ * @tc.name: UnloadEnvModel1
+ * @tc.desc: Verify UnLoad EnvModel
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UnloadEnvModel1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    bool ret = adapter.UnloadEnvModel();
+    ASSERT_EQ(ret, true);
+}
+}  // namespace
+}  // namespace OHOS::Render3D

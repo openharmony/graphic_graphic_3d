@@ -52,43 +52,19 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
-// our light weight straight to screen post processes are only interested in these
-static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffu };
-
-RenderHandleReference CreateCubeNodeSampler(IRenderNodeGpuResourceManager& gpuResourceMgr)
-{
-    GpuSamplerDesc sampler {
-        Filter::CORE_FILTER_LINEAR,                                  // magFilter
-        Filter::CORE_FILTER_LINEAR,                                  // minFilter
-        Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
-    };
-    sampler.minLod = 0.0f;
-    sampler.maxLod = CUBE_MAP_LOD_COEFF;
-    return gpuResourceMgr.Create(sampler);
-}
+constexpr string_view RENDER_DATA_STORE_POD_NAME { "RenderDataStorePod" };
+constexpr string_view RENDER_DATA_STORE_POST_PROCESS_NAME { "RenderDataStorePostProcess" };
+constexpr uint32_t BUILT_IN_SETS_COUNT { 2u };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
 
 RenderNodeDefaultMaterialDeferredShading::ShadowBuffers GetShadowBufferNodeData(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const string_view sceneName)
 {
     RenderNodeDefaultMaterialDeferredShading::ShadowBuffers sb;
-    GpuSamplerDesc sampler {
-        Filter::CORE_FILTER_LINEAR,                                    // magFilter
-        Filter::CORE_FILTER_LINEAR,                                    // minFilter
-        Filter::CORE_FILTER_LINEAR,                                    // mipMapMode
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, // addressModeU
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, // addressModeV
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, // addressModeW
-    };
-    sampler.borderColor = CORE_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    sb.vsmSamplerHandle = gpuResourceMgr.Create(sampler);
-
-    sampler.compareOp = CompareOp::CORE_COMPARE_OP_GREATER;
-    sampler.enableCompareOp = true;
-    sb.pcfSamplerHandle = gpuResourceMgr.Create(sampler);
+    sb.vsmSamplerHandle =
+        gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_VSM_SHADOW_SAMPLER);
+    sb.pcfSamplerHandle =
+        gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_PCF_SHADOW_SAMPLER);
 
     sb.pcfDepthHandle =
         gpuResourceMgr.GetImageHandle(sceneName + DefaultMaterialLightingConstants::SHADOW_DEPTH_BUFFER_NAME);
@@ -103,18 +79,35 @@ RenderNodeDefaultMaterialDeferredShading::ShadowBuffers GetShadowBufferNodeData(
 
     return sb;
 }
+
+RenderHandleReference CreatePostProcessDataUniformBuffer(
+    IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
+{
+    CORE_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
+    CORE_STATIC_ASSERT(
+        sizeof(LocalPostProcessStruct) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
+    return gpuResourceMgr.Create(
+        handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                    sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct) });
+}
 } // namespace
 
 void RenderNodeDefaultMaterialDeferredShading::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
+    allShaderData_ = {};
     ParseRenderNodeInputs();
 
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
 
+    allDescriptorSets_ = {};
     currentScene_ = {};
+    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+    ubos_.postProcess = CreatePostProcessDataUniformBuffer(gpuResourceMgr, ubos_.postProcess);
 
     if ((jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DIRECT_POST_PROCESS_BIT) &&
         jsonInputs_.renderDataStore.dataStoreName.empty()) {
@@ -122,23 +115,18 @@ void RenderNodeDefaultMaterialDeferredShading::InitNode(IRenderNodeContextManage
             renderNodeContextMgr_->GetName().data());
     }
 
-    auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
-    bufferHandles_.defaultBuffer = gpuResourceMgr.GetBufferHandle("CORE_DEFAULT_GPU_BUFFER");
     GetSceneUniformBuffers(stores_.dataStoreNameScene);
-    GetCameraUniformBuffers();
     shadowBuffers_ = GetShadowBufferNodeData(gpuResourceMgr, stores_.dataStoreNameScene);
 
     renderPass_ = renderNodeContextMgr_->GetRenderNodeUtil().CreateRenderPass(inputRenderPass_);
 
-    createdTargets_.cubemapSampler = CreateCubeNodeSampler(gpuResourceMgr);
-    samplerHandles_.cubemap = createdTargets_.cubemapSampler.GetHandle();
+    samplerHandles_.cubemap =
+        gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP_SAMPLER);
     samplerHandles_.linear = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_CLAMP");
     samplerHandles_.nearest = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_NEAREST_CLAMP");
     samplerHandles_.linearMip = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP");
 
     defaultColorPrePassHandle_ = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE");
-    defaultSkyBoxRadianceCubemap_ =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP);
     allShaderData_.shaderHandle = shader_;
     CreateDefaultShaderData();
     CreateDescriptorSets();
@@ -162,11 +150,17 @@ void RenderNodeDefaultMaterialDeferredShading::ExecuteFrame(IRenderCommandList& 
     const bool validRenderDataStore = dataStoreScene && dataStoreCamera && dataStoreLight;
     if (validRenderDataStore) {
         UpdateCurrentScene(*dataStoreScene, *dataStoreCamera, *dataStoreLight);
+        UpdatePostProcessConfiguration();
+        UpdateGlobalPostProcessUbo();
+    }
+    const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
+    if (jsonInputs_.hasChangeableResourceHandles) {
+        inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
+        renderNodeUtil.BindResourcesToBinder(inputResources_, *allDescriptorSets_.pipelineDescriptorSetBinder);
     }
 
     cmdList.BeginRenderPass(renderPass_.renderPassDesc, renderPass_.subpassStartIndex, renderPass_.subpassDesc);
     if (validRenderDataStore) {
-        UpdatePostProcessConfiguration();
         RenderData(cmdList);
     }
     cmdList.EndRenderPass();
@@ -174,6 +168,9 @@ void RenderNodeDefaultMaterialDeferredShading::ExecuteFrame(IRenderCommandList& 
 
 void RenderNodeDefaultMaterialDeferredShading::RenderData(IRenderCommandList& cmdList)
 {
+    if (!valid_) {
+        return;
+    }
     const RenderHandle psoHandle = GetPsoHandle();
     if (!RenderHandleUtil::IsValid(psoHandle)) {
         return; // early out
@@ -184,6 +181,8 @@ void RenderNodeDefaultMaterialDeferredShading::RenderData(IRenderCommandList& cm
     UpdateSet0(cmdList);
     // set 1, update input attachments
     UpdateSet1(cmdList);
+    // set 2-3, update user bindings
+    UpdateUserSets(cmdList);
 
     // dynamic state
     cmdList.SetDynamicStateViewport(currentScene_.viewportDesc);
@@ -191,11 +190,31 @@ void RenderNodeDefaultMaterialDeferredShading::RenderData(IRenderCommandList& cm
 
     // bind all sets
     {
-        const RenderHandle descriptorSets[] = {
+        RenderHandle descriptorSets[4U] = {
             allDescriptorSets_.set0->GetDescriptorSetHandle(),
             allDescriptorSets_.set1->GetDescriptorSetHandle(),
+            {},
+            {},
         };
-        cmdList.BindDescriptorSets(0u, { descriptorSets, countof(descriptorSets) });
+        uint32_t setCount = BUILT_IN_SETS_COUNT;
+        if (allDescriptorSets_.hasUserSet2 && allDescriptorSets_.pipelineDescriptorSetBinder) {
+            descriptorSets[setCount] = allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetHandle(setCount);
+            setCount++;
+        }
+        if (allDescriptorSets_.hasUserSet3 && allDescriptorSets_.pipelineDescriptorSetBinder) {
+            descriptorSets[setCount] = allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetHandle(setCount);
+            setCount++;
+        }
+        cmdList.BindDescriptorSets(0u, { descriptorSets, setCount });
+    }
+
+    // push constants
+    if (pipelineLayout_.pushConstant.byteSize > 0) {
+        const float fWidth = static_cast<float>(renderPass_.renderPassDesc.renderArea.extentWidth);
+        const float fHeight = static_cast<float>(renderPass_.renderPassDesc.renderArea.extentHeight);
+        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
+            ppLocalConfig_.variables.factor };
+        cmdList.PushConstant(pipelineLayout_.pushConstant, arrayviewU8(pc).data());
     }
 
     cmdList.Draw(3u, 1u, 0u, 0u);
@@ -205,25 +224,40 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateSet0(IRenderCommandList& cm
 {
     auto& binder = *allDescriptorSets_.set0;
     uint32_t bindingIndex = 0;
-    binder.BindBuffer(bindingIndex++, bufferHandles_.camera, 0u);
-    binder.BindBuffer(bindingIndex++, bufferHandles_.generalData, 0u);
+    // global
+    binder.BindBuffer(bindingIndex++, BindableBuffer { ubos_.postProcess.GetHandle() });
+    binder.BindBuffer(
+        bindingIndex++, BindableBuffer { ubos_.postProcess.GetHandle(), sizeof(GlobalPostProcessStruct) });
 
-    const RenderHandle radianceCubemap = (currentScene_.camera.environment.radianceCubemap)
-                                             ? currentScene_.camera.environment.radianceCubemap.GetHandle()
-                                             : defaultSkyBoxRadianceCubemap_;
+    // scene and camera global
+    binder.BindBuffer(bindingIndex++, sceneBuffers_.camera, 0u);
+    binder.BindBuffer(bindingIndex++, cameraBuffers_.generalData, 0u);
+
+    const RenderHandle radianceCubemap = currentScene_.cameraEnvRadianceHandle;
     const RenderHandle colorPrePass = RenderHandleUtil::IsValid(currentScene_.prePassColorTarget)
                                           ? currentScene_.prePassColorTarget
                                           : defaultColorPrePassHandle_;
 
-    binder.BindBuffer(bindingIndex++, bufferHandles_.environment, 0u);
-    binder.BindBuffer(bindingIndex++, bufferHandles_.fog, 0u);
-    binder.BindBuffer(bindingIndex++, bufferHandles_.light, 0u);
-    binder.BindBuffer(bindingIndex++, bufferHandles_.postProcess, 0u);
-    binder.BindBuffer(bindingIndex++, bufferHandles_.lightCluster, 0u);
-    binder.BindImage(bindingIndex++, colorPrePass, samplerHandles_.linearMip);
-    binder.BindImage(bindingIndex++, shadowBuffers_.vsmColorHandle, shadowBuffers_.vsmSamplerHandle.GetHandle());
-    binder.BindImage(bindingIndex++, shadowBuffers_.pcfDepthHandle, shadowBuffers_.pcfSamplerHandle.GetHandle());
-    binder.BindImage(bindingIndex++, radianceCubemap, samplerHandles_.cubemap);
+    binder.BindBuffer(bindingIndex++, cameraBuffers_.environment, 0u);
+    binder.BindBuffer(bindingIndex++, cameraBuffers_.fog, 0u);
+    binder.BindBuffer(bindingIndex++, cameraBuffers_.light, 0u);
+    binder.BindBuffer(bindingIndex++, cameraBuffers_.postProcess, 0u);
+    binder.BindBuffer(bindingIndex++, cameraBuffers_.lightCluster, 0u);
+
+    // use immutable samplers for all set 0 samplers
+    BindableImage bi;
+    bi.handle = colorPrePass;
+    bi.samplerHandle = samplerHandles_.linearMip;
+    binder.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
+    bi.handle = shadowBuffers_.vsmColorHandle;
+    bi.samplerHandle = shadowBuffers_.vsmSamplerHandle;
+    binder.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
+    bi.handle = shadowBuffers_.pcfDepthHandle;
+    bi.samplerHandle = shadowBuffers_.pcfSamplerHandle;
+    binder.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
+    bi.handle = radianceCubemap;
+    bi.samplerHandle = samplerHandles_.cubemap;
+    binder.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
 
     cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
 }
@@ -240,9 +274,37 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateSet1(IRenderCommandList& cm
     cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
 }
 
+void RenderNodeDefaultMaterialDeferredShading::UpdateUserSets(IRenderCommandList& cmdList)
+{
+    if (allDescriptorSets_.hasUserSet2 && allDescriptorSets_.pipelineDescriptorSetBinder) {
+        uint32_t set = BUILT_IN_SETS_COUNT;
+        const auto descHandle = allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetHandle(set);
+        const auto bindings =
+            allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetLayoutBindingResources(set);
+        if (RenderHandleUtil::IsValid(descHandle) && (!bindings.bindings.empty())) {
+            cmdList.UpdateDescriptorSet(descHandle, bindings);
+        }
+    }
+    if (allDescriptorSets_.hasUserSet3 && allDescriptorSets_.pipelineDescriptorSetBinder) {
+        uint32_t set = BUILT_IN_SETS_COUNT + 1u;
+        const auto descHandle = allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetHandle(set);
+        const auto bindings =
+            allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetLayoutBindingResources(set);
+        if (RenderHandleUtil::IsValid(descHandle) && (!bindings.bindings.empty())) {
+            cmdList.UpdateDescriptorSet(descHandle, bindings);
+        }
+    }
+}
+
 void RenderNodeDefaultMaterialDeferredShading::UpdateCurrentScene(const IRenderDataStoreDefaultScene& dataStoreScene,
     const IRenderDataStoreDefaultCamera& dataStoreCamera, const IRenderDataStoreDefaultLight& dataStoreLight)
 {
+    if (jsonInputs_.hasChangeableRenderPassHandles) {
+        const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
+        inputRenderPass_ = renderNodeUtil.CreateInputRenderPass(jsonInputs_.renderPass);
+        renderPass_ = renderNodeContextMgr_->GetRenderNodeUtil().CreateRenderPass(inputRenderPass_);
+    }
+
     const auto scene = dataStoreScene.GetScene();
     bool hasCustomCamera = false;
     bool isNamedCamera = false; // NOTE: legacy support will be removed
@@ -260,6 +322,9 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateCurrentScene(const IRenderD
         // store current frame camera
         currentScene_.camera = cameras[cameraIdx];
     }
+    const auto camHandles = RenderNodeSceneUtil::GetSceneCameraImageHandles(
+        *renderNodeContextMgr_, stores_.dataStoreNameScene, currentScene_.camera.name, currentScene_.camera);
+    currentScene_.cameraEnvRadianceHandle = camHandles.radianceCubemap;
 
     // renderpass needs to be valid (created in init)
     if (hasCustomCamera) {
@@ -277,6 +342,11 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateCurrentScene(const IRenderD
     currentScene_.hasShadow = ((lightCounts.dirShadow > 0) || (lightCounts.spotShadow > 0)) ? true : false;
     currentScene_.shadowTypes = dataStoreLight.GetShadowTypes();
     currentScene_.lightingFlags = dataStoreLight.GetLightingFlags();
+    currentScene_.cameraShaderFlags = currentScene_.camera.shaderFlags;
+    // remove fog explicitly if render node graph input and/or default render slot usage states so
+    if (jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DISABLE_FOG_BIT) {
+        currentScene_.cameraShaderFlags &= (~RenderCamera::ShaderFlagBits::CAMERA_SHADER_FOG_BIT);
+    }
 }
 
 RenderHandle RenderNodeDefaultMaterialDeferredShading::GetPsoHandle()
@@ -296,24 +366,22 @@ RenderHandle RenderNodeDefaultMaterialDeferredShading::GetPsoHandle()
 
             if (ref.shaderStage == ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT) {
                 if (ref.id == 0u) {
-                    specializationFlags[constantId] = 0;
+                    specializationFlags[constantId] = currentRenderPPConfiguration_.flags.x;
                 } else if (ref.id == 1u) {
                     specializationFlags[constantId] = 0;
                 } else if (ref.id == 2u) {
                     specializationFlags[constantId] = currentScene_.lightingFlags;
-                } else if (ref.id == 3u) {
-                    specializationFlags[constantId] = currentRenderPPConfiguration_.flags.x;
+                } else if (ref.id == 4u) {
+                    specializationFlags[constantId] = currentScene_.cameraShaderFlags;
                 }
             }
         }
 
-        const DynamicStateFlags dynamicStateFlags =
-            DynamicStateFlagBits::CORE_DYNAMIC_STATE_VIEWPORT | DynamicStateFlagBits::CORE_DYNAMIC_STATE_SCISSOR;
         const ShaderSpecializationConstantDataView specialization { allShaderData_.defaultSpecilizationConstants,
             specializationFlags };
-        allShaderData_.psoHandle =
-            renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(allShaderData_.shaderHandle,
-                allShaderData_.stateHandle, allShaderData_.plHandle, {}, specialization, dynamicStateFlags);
+        allShaderData_.psoHandle = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
+            allShaderData_.shaderHandle, allShaderData_.stateHandle, allShaderData_.plHandle, {}, specialization,
+            { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
     }
     return allShaderData_.psoHandle;
 }
@@ -331,7 +399,7 @@ void RenderNodeDefaultMaterialDeferredShading::CreateDefaultShaderData()
     if (shaderMgr.IsComputeShader(allShaderData_.shaderHandle) || shaderMgr.IsShader(allShaderData_.shaderHandle)) {
         allShaderData_.plHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(allShaderData_.shaderHandle);
         allShaderData_.stateHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(allShaderData_.shaderHandle);
-        const ShaderSpecilizationConstantView& sscv =
+        const ShaderSpecializationConstantView& sscv =
             shaderMgr.GetReflectionSpecialization(allShaderData_.shaderHandle);
         allShaderData_.defaultSpecilizationConstants.resize(sscv.constants.size());
         for (uint32_t idx = 0; idx < (uint32_t)allShaderData_.defaultSpecilizationConstants.size(); ++idx) {
@@ -346,107 +414,133 @@ void RenderNodeDefaultMaterialDeferredShading::CreateDescriptorSets()
 {
     auto& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
 
+    const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
-    PipelineLayout pl = renderNodeUtil.CreatePipelineLayout(allShaderData_.shaderHandle);
-    {
-        // automatic calculation
-        const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(pl);
-        descriptorSetMgr.ResetAndReserve(dc);
+    const RenderHandle plDefHandle =
+        shaderMgr.GetPipelineLayoutHandle("3dpipelinelayouts://core3d_dm_fullscreen_deferred_shading.shaderpl");
+    const PipelineLayout plDef = shaderMgr.GetPipelineLayout(plDefHandle);
+    const RenderHandle plShaderHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(allShaderData_.shaderHandle);
+    pipelineLayout_ = shaderMgr.GetPipelineLayout(plShaderHandle);
+
+    const IShaderManager::CompatibilityFlags compatibilityFlags =
+        shaderMgr.GetCompatibilityFlags(plDefHandle, plShaderHandle);
+    if (compatibilityFlags != 0) {
+        valid_ = true;
+    } else {
+        CORE_LOG_W("RN: %s incompatible pipeline layout for given shader", renderNodeContextMgr_->GetName().data());
     }
 
+    // currently we allocate just in case based on both layouts to make sure that we have enough descriptors
+    // we create pipeline descriptor set binder for convenience for user sets
+    DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
+    // double the sets for pipeline descriptor binder usage
+    for (auto& dcRef : dc.counts) {
+        dcRef.count *= 2u;
+    }
+    // add built-in set from the first set (if user set was missing something)
+    dc.counts.reserve(dc.counts.size() + plDef.descriptorSetLayouts[0U].bindings.size());
+    for (const auto& bindingRef : plDef.descriptorSetLayouts[0U].bindings) {
+        dc.counts.push_back(DescriptorCounts::TypedCount { bindingRef.descriptorType, bindingRef.descriptorCount });
+    }
+    descriptorSetMgr.ResetAndReserve(dc);
+
     {
-        const uint32_t set = 0u;
-        const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, pl);
+        // set 0 descriptors are fixed at the moment
+        constexpr uint32_t set { 0u };
+        const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, plDef);
         allDescriptorSets_.set0 =
-            descriptorSetMgr.CreateDescriptorSetBinder(descriptorSetHandle, pl.descriptorSetLayouts[set].bindings);
+            descriptorSetMgr.CreateDescriptorSetBinder(descriptorSetHandle, plDef.descriptorSetLayouts[set].bindings);
     }
     {
-        const uint32_t set = 1u;
-        const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, pl);
-        allDescriptorSets_.set1 =
-            descriptorSetMgr.CreateDescriptorSetBinder(descriptorSetHandle, pl.descriptorSetLayouts[set].bindings);
+        // input attachment count is allowed to change, so we need to create the descriptor set based on shader
+        constexpr uint32_t set { 1u };
+        const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, pipelineLayout_);
+        allDescriptorSets_.set1 = descriptorSetMgr.CreateDescriptorSetBinder(
+            descriptorSetHandle, pipelineLayout_.descriptorSetLayouts[set].bindings);
     }
-}
 
-void RenderNodeDefaultMaterialDeferredShading::GetSceneUniformBuffers(const string_view uniqueSceneName)
-{
-    const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-    bufferHandles_.camera =
-        gpuResourceMgr.GetBufferHandle(uniqueSceneName + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME);
-    bufferHandles_.light =
-        gpuResourceMgr.GetBufferHandle(uniqueSceneName + DefaultMaterialLightingConstants::LIGHT_DATA_BUFFER_NAME);
-    bufferHandles_.lightCluster = gpuResourceMgr.GetBufferHandle(
-        uniqueSceneName + DefaultMaterialLightingConstants::LIGHT_CLUSTER_DATA_BUFFER_NAME);
-
-    auto checkValidity = [](const RenderHandle defaultBuffer, bool& valid, RenderHandle& buffer) {
-        if (!RenderHandleUtil::IsValid(buffer)) {
-            valid = false;
-            buffer = defaultBuffer;
+    // pipeline descriptor set binder for user sets
+    allDescriptorSets_.pipelineDescriptorSetBinder = renderNodeUtil.CreatePipelineDescriptorSetBinder(pipelineLayout_);
+    if (allDescriptorSets_.pipelineDescriptorSetBinder) {
+        renderNodeUtil.BindResourcesToBinder(inputResources_, *allDescriptorSets_.pipelineDescriptorSetBinder);
+#if (CORE3D_VALIDATION_ENABLED == 1)
+        auto CheckBindingValidity = [](const auto builtInBindings, const auto& resources) {
+            for (const auto& res : resources) {
+                if (res.set < builtInBindings) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        bool valid = CheckBindingValidity(BUILT_IN_SETS_COUNT, inputResources_.buffers);
+        valid = valid && CheckBindingValidity(BUILT_IN_SETS_COUNT, inputResources_.images);
+        valid = valid && CheckBindingValidity(BUILT_IN_SETS_COUNT, inputResources_.samplers);
+        if (!valid) {
+            CORE_LOG_W("RN: %s does not support user bindings for sets <= %u", renderNodeContextMgr_->GetName().data(),
+                BUILT_IN_SETS_COUNT);
         }
-    };
-    bool valid = true;
-    checkValidity(bufferHandles_.defaultBuffer, valid, bufferHandles_.camera);
-    checkValidity(bufferHandles_.defaultBuffer, valid, bufferHandles_.light);
-    checkValidity(bufferHandles_.defaultBuffer, valid, bufferHandles_.lightCluster);
-    if (!valid) {
-        CORE_LOG_E(
-            "RN: %s, invalid configuration, not all scene buffers not found.", renderNodeContextMgr_->GetName().data());
+        allDescriptorSets_.hasUserSet2 = !(
+            allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetLayoutBindingResources(BUILT_IN_SETS_COUNT)
+                .bindings.empty());
+        allDescriptorSets_.hasUserSet3 = !(allDescriptorSets_.pipelineDescriptorSetBinder
+                                               ->GetDescriptorSetLayoutBindingResources(BUILT_IN_SETS_COUNT + 1u)
+                                               .bindings.empty());
+#endif
     }
 }
 
-void RenderNodeDefaultMaterialDeferredShading::GetCameraUniformBuffers()
+void RenderNodeDefaultMaterialDeferredShading::GetSceneUniformBuffers(const string_view us)
 {
+    sceneBuffers_ = RenderNodeSceneUtil::GetSceneBufferHandles(*renderNodeContextMgr_, stores_.dataStoreNameScene);
+
     string camName;
     if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
         camName = to_string(jsonInputs_.customCameraId);
     } else if (!(jsonInputs_.customCameraName.empty())) {
         camName = jsonInputs_.customCameraName;
     }
-    const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-    bufferHandles_.generalData =
-        gpuResourceMgr.GetBufferHandle(DefaultMaterialCameraConstants::CAMERA_GENERAL_BUFFER_PREFIX_NAME + camName);
-    bufferHandles_.environment =
-        gpuResourceMgr.GetBufferHandle(DefaultMaterialCameraConstants::CAMERA_ENVIRONMENT_BUFFER_PREFIX_NAME + camName);
-    bufferHandles_.fog =
-        gpuResourceMgr.GetBufferHandle(DefaultMaterialCameraConstants::CAMERA_FOG_BUFFER_PREFIX_NAME + camName);
-    bufferHandles_.postProcess = gpuResourceMgr.GetBufferHandle(
-        DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_BUFFER_PREFIX_NAME + camName);
-
-    auto checkValidity = [](const RenderHandle defaultBuffer, bool& valid, RenderHandle& buffer) {
-        if (!RenderHandleUtil::IsValid(buffer)) {
-            valid = false;
-            buffer = defaultBuffer;
-        }
-    };
-    bool valid = true;
-    checkValidity(bufferHandles_.defaultBuffer, valid, bufferHandles_.generalData);
-    checkValidity(bufferHandles_.defaultBuffer, valid, bufferHandles_.environment);
-    checkValidity(bufferHandles_.defaultBuffer, valid, bufferHandles_.fog);
-    checkValidity(bufferHandles_.defaultBuffer, valid, bufferHandles_.postProcess);
-    if (!valid) {
-        CORE_LOG_E(
-            "RN: %s, invalid configuration, not all camera buffers found.", renderNodeContextMgr_->GetName().data());
-    }
+    cameraBuffers_ =
+        RenderNodeSceneUtil::GetSceneCameraBufferHandles(*renderNodeContextMgr_, stores_.dataStoreNameScene, camName);
 }
 
 void RenderNodeDefaultMaterialDeferredShading::UpdatePostProcessConfiguration()
 {
-    if (jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DIRECT_POST_PROCESS_BIT) {
-        if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
-            auto const& dataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-            auto const dataStore = static_cast<IRenderDataStorePod const*>(
-                dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName));
-            if (dataStore) {
-                auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
-                if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
-                    const PostProcessConfiguration* data = (const PostProcessConfiguration*)dataView.data();
-                    currentRenderPPConfiguration_ =
-                        renderNodeContextMgr_->GetRenderNodeUtil().GetRenderPostProcessConfiguration(*data);
-                    currentRenderPPConfiguration_.flags.x =
-                        (currentRenderPPConfiguration_.flags.x & POST_PROCESS_IMPORTANT_FLAGS_MASK);
-                }
+    if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
+        auto& dsMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
+        if (const IRenderDataStore* ds = dsMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName); ds) {
+            if (jsonInputs_.renderDataStore.typeName == RENDER_DATA_STORE_POST_PROCESS_NAME) {
+                auto* const dataStore = static_cast<IRenderDataStorePostProcess const*>(ds);
+                ppLocalConfig_ = dataStore->Get(jsonInputs_.renderDataStore.configurationName, jsonInputs_.ppName);
             }
         }
+        if (const IRenderDataStorePod* ds =
+                static_cast<const IRenderDataStorePod*>(dsMgr.GetRenderDataStore(RENDER_DATA_STORE_POD_NAME));
+            ds) {
+            auto const dataView = ds->Get(jsonInputs_.renderDataStore.configurationName);
+            if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
+                ppGlobalConfig_ = *((const PostProcessConfiguration*)dataView.data());
+            }
+        }
+    }
+}
+
+void RenderNodeDefaultMaterialDeferredShading::UpdateGlobalPostProcessUbo()
+{
+    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+    const RenderPostProcessConfiguration rppc =
+        renderNodeContextMgr_->GetRenderNodeUtil().GetRenderPostProcessConfiguration(ppGlobalConfig_);
+    CORE_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
+    CORE_STATIC_ASSERT(sizeof(LocalPostProcessStruct) ==
+                       sizeof(IRenderDataStorePostProcess::PostProcess::Variables::customPropertyData));
+    if (auto data = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.postProcess.GetHandle())); data) {
+        const auto* dataEnd = data + sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct);
+        // global data
+        CloneData(data, size_t(dataEnd - data), &rppc, sizeof(GlobalPostProcessStruct));
+        // local data
+        data += sizeof(GlobalPostProcessStruct);
+        CloneData(
+            data, size_t(dataEnd - data), ppLocalConfig_.variables.customPropertyData, sizeof(LocalPostProcessStruct));
+        gpuResourceMgr.UnmapBuffer(ubos_.postProcess.GetHandle());
     }
 }
 
@@ -455,9 +549,12 @@ void RenderNodeDefaultMaterialDeferredShading::ParseRenderNodeInputs()
     const IRenderNodeParserUtil& parserUtil = renderNodeContextMgr_->GetRenderNodeParserUtil();
     const auto jsonVal = renderNodeContextMgr_->GetNodeJson();
     jsonInputs_.renderPass = parserUtil.GetInputRenderPass(jsonVal, "renderPass");
+    jsonInputs_.resources = parserUtil.GetInputResources(jsonVal, "resources");
     jsonInputs_.customCameraName = parserUtil.GetStringValue(jsonVal, "customCameraName");
     jsonInputs_.customCameraId = parserUtil.GetUintValue(jsonVal, "customCameraId");
     jsonInputs_.renderDataStore = parserUtil.GetRenderDataStore(jsonVal, "renderDataStore");
+
+    jsonInputs_.ppName = parserUtil.GetStringValue(jsonVal, "postProcess");
 
     jsonInputs_.nodeFlags = static_cast<uint32_t>(parserUtil.GetUintValue(jsonVal, "nodeFlags"));
     if (jsonInputs_.nodeFlags == ~0u) {
@@ -471,8 +568,21 @@ void RenderNodeDefaultMaterialDeferredShading::ParseRenderNodeInputs()
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
     shader_ = shaderMgr.GetShaderHandle(shaderName);
 
+    EvaluateFogBits();
+
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     inputRenderPass_ = renderNodeUtil.CreateInputRenderPass(jsonInputs_.renderPass);
+    inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
+    jsonInputs_.hasChangeableRenderPassHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.renderPass);
+    jsonInputs_.hasChangeableResourceHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.resources);
+}
+
+void RenderNodeDefaultMaterialDeferredShading::EvaluateFogBits()
+{
+    // if no explicit bits set we check default render slot usages
+    if ((jsonInputs_.nodeFlags & (RENDER_SCENE_ENABLE_FOG_BIT | RENDER_SCENE_DISABLE_FOG_BIT)) == 0) {
+        jsonInputs_.nodeFlags |= RenderSceneFlagBits::RENDER_SCENE_ENABLE_FOG_BIT;
+    }
 }
 
 // for plugin / factory interface

@@ -22,7 +22,7 @@
 #include "PropertyTools/property_macros.h"
 
 CORE_BEGIN_NAMESPACE()
-using BASE_NS::vector;
+using namespace BASE_NS;
 DECLARE_PROPERTY_TYPE(vector<uint8_t>);
 CORE_END_NAMESPACE()
 

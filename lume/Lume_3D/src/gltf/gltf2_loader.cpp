@@ -35,7 +35,7 @@
 
 #include "gltf/data.h"
 #include "gltf/gltf2_util.h"
-#include "loader/json_util.h"
+#include "util/json_util.h"
 
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
@@ -71,6 +71,9 @@ const string_view SUPPORTED_EXTENSIONS[] = {
 #endif
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_CLEARCOAT)
     "KHR_materials_clearcoat",
+#endif
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_EMISSIVE_STRENGTH)
+    "KHR_materials_emissive_strength",
 #endif
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_IOR)
     "KHR_materials_ior",
@@ -238,7 +241,7 @@ bool ParseOptionalString(LoadResult& loadResult, string& out, const json::value&
 template<typename Number>
 void ConvertStringToValue(const string_view str, Number& value)
 {
-#if defined(__OHOS_PLATFORM__) || defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     if constexpr (std::is_integral_v<Number>) {
         std::from_chars(str.data(), str.data() + str.size(), value);
     } else {
@@ -696,6 +699,7 @@ bool ValidateAccessor(LoadResult& loadResult, ComponentType componentType, uint3
     }
     const auto minVecSize = min.size();
     const auto maxVecSize = max.size();
+
     if (minVecSize == maxVecSize) {
         if (minVecSize && minVecSize != GetComponentsCount(dataType)) {
             SetError(loadResult, "Accessor.min and max vector size doesn't match component count");
@@ -782,6 +786,7 @@ bool ParseTextureInfo(LoadResult& loadResult, TextureInfo& info, const json::val
                 return true;
             });
     };
+
     if (!ParseObject(loadResult, jsonData, "extensions", textureTransformParser)) {
         return false;
     }
@@ -890,6 +895,7 @@ bool ParseTexture(LoadResult& loadResult, const json::value& jsonData)
 bool ParseImage(LoadResult& loadResult, const json::value& jsonData)
 {
     auto image = make_unique<Image>();
+
     if (!ParseOptionalString(loadResult, image->uri, jsonData, "uri", string())) {
         return false;
     }
@@ -1060,6 +1066,7 @@ bool ParseMaterialExtras(LoadResult& loadResult, const json::value& jsonData, Ma
 
             return true;
         };
+
         if (!ParseObject(loadResult, *extrasJson, "clearCoat", parseClearCoat)) {
             return false;
         }
@@ -1121,6 +1128,17 @@ bool ParseKhrMaterialsClearcoat(LoadResult& loadResult, const json::value& jsonD
 }
 #endif
 
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_EMISSIVE_STRENGTH)
+bool ParseKhrMaterialsEmissiveStrength(LoadResult& loadResult, const json::value& jsonData, Material& material)
+{
+    if (auto emissiveStrengthJson = jsonData.find("KHR_materials_emissive_strength"); emissiveStrengthJson) {
+        return ParseOptionalNumber(
+            loadResult, material.emissiveFactor.w, *emissiveStrengthJson, "emissiveStrength", 1.f);
+    }
+    return true;
+}
+#endif
+
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_IOR)
 bool ParseKhrMaterialsIor(LoadResult& loadResult, const json::value& jsonData, Material::Ior& ior)
 {
@@ -1145,6 +1163,7 @@ bool ParseKhrMaterialsPbrSpecularGlossiness(LoadResult& loadResult, const json::
         const auto parseDiffuseTexture = [&material](LoadResult& loadResult, const json::value& jsonData) -> bool {
             return ParseTextureInfo(loadResult, material.specularGlossiness.diffuseTexture, jsonData);
         };
+
         if (!ParseObject(loadResult, *specGlossJson, "diffuseTexture", parseDiffuseTexture)) {
             return false;
         }
@@ -1163,6 +1182,7 @@ bool ParseKhrMaterialsPbrSpecularGlossiness(LoadResult& loadResult, const json::
                                                         LoadResult& loadResult, const json::value& jsonData) -> bool {
             return ParseTextureInfo(loadResult, material.specularGlossiness.specularGlossinessTexture, jsonData);
         };
+
         if (!ParseObject(loadResult, *specGlossJson, "specularGlossinessTexture", parseSpecularGlossinessTexture)) {
             return false;
         }
@@ -1274,6 +1294,11 @@ bool ParseMaterialExtensions(LoadResult& loadResult, const json::value& jsonData
             return false;
         }
 #endif
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_EMISSIVE_STRENGTH)
+        if (!ParseKhrMaterialsEmissiveStrength(loadResult, *extensionsJson, material)) {
+            return false;
+        }
+#endif
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_IOR)
         if (!ParseKhrMaterialsIor(loadResult, *extensionsJson, material.ior)) {
             return false;
@@ -1341,9 +1366,12 @@ bool ParseMaterial(LoadResult& loadResult, const json::value& jsonData)
         result = false;
     }
 
-    if (!ParseOptionalMath(
-            loadResult, material->emissiveFactor, jsonData, "emissiveFactor", material->emissiveFactor)) {
+    if (Math::Vec3 emissive; !ParseOptionalMath(loadResult, emissive, jsonData, "emissiveFactor", emissive)) {
         result = false;
+    } else {
+        material->emissiveFactor.x = emissive.x;
+        material->emissiveFactor.y = emissive.y;
+        material->emissiveFactor.z = emissive.z;
     }
 
     string alphaMode;
@@ -2766,6 +2794,7 @@ void LoadGLTF(LoadResult& loadResult, IFile& file)
     json::value jsonObject = json::parse(raw.data());
     CORE_CPU_PERF_END(jkson);
     if (!jsonObject) {
+        SetError(loadResult, "Parsing GLTF failed: invalid JSON");
         return;
     }
 
@@ -2835,7 +2864,7 @@ bool LoadGLB(LoadResult& loadResult, IFile& file)
 
     json::value o = json::parse(jsonString.data());
     if (!o) {
-        RETURN_WITH_ERROR(loadResult, "Failed to parse GLTF file (json error).");
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: invalid JSON");
     }
 
     return ParseGLTF(loadResult, o);
@@ -2921,4 +2950,5 @@ LoadResult LoadGLTF(IFileManager& fileManager, array_view<uint8_t const> data)
     return result;
 }
 } // namespace GLTF2
+
 CORE3D_END_NAMESPACE()

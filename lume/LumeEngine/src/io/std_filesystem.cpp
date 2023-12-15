@@ -15,25 +15,50 @@
 
 #include "std_filesystem.h"
 
-#ifdef _WIN32
-#include <direct.h>
-#else
+#if defined(__has_include)
+#if __has_include(<filesystem>)
+#include <filesystem>
+// #define HAS_FILESYSTEM
+#endif
+#endif // defined(__has_include)
+
+#if !defined(HAS_FILESYSTEM)
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
 
+#include <cstdint>
+#include <cstdio>
+
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
+#include <core/io/intf_file.h>
+#include <core/log.h>
 #include <core/namespace.h>
 
 #include "io/path_tools.h"
 #include "std_directory.h"
 #include "std_file.h"
-#include "util/string_util.h"
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::make_unique;
 using BASE_NS::string;
 using BASE_NS::string_view;
 using BASE_NS::vector;
+
+namespace {
+#if defined(HAS_FILESYSTEM)
+std::filesystem::path U8Path(string_view str)
+{
+    return std::filesystem::u8path(str.begin().ptr(), str.end().ptr());
+}
+#endif
+} // namespace
 
 string StdFilesystem::ValidatePath(const string_view pathIn) const
 {
@@ -65,10 +90,7 @@ IFile::Ptr StdFilesystem::OpenFile(const string_view pathIn)
 {
     auto path = ValidatePath(pathIn);
     if (!path.empty()) {
-        auto file = make_unique<StdFile>();
-        if (file->Open(path, IFile::Mode::READ_ONLY)) {
-            return IFile::Ptr { file.release() };
-        }
+        return StdFile::Open(path, IFile::Mode::READ_ONLY);
     }
     return IFile::Ptr();
 }
@@ -77,10 +99,7 @@ IFile::Ptr StdFilesystem::CreateFile(const string_view pathIn)
 {
     auto path = ValidatePath(pathIn);
     if (!path.empty()) {
-        auto file = make_unique<StdFile>();
-        if (file->Create(path, IFile::Mode::READ_WRITE)) {
-            return IFile::Ptr { file.release() };
-        }
+        return StdFile::Create(path, IFile::Mode::READ_WRITE);
     }
 
     return IFile::Ptr();
@@ -92,17 +111,19 @@ bool StdFilesystem::DeleteFile(const string_view pathIn)
     if (path.empty()) {
         return false;
     }
-    return remove(path.c_str()) == 0;
+#if defined(HAS_FILESYSTEM)
+    std::error_code ec;
+    return std::filesystem::remove(U8Path(path), ec) && !ec;
+#else
+    return std::remove(path.c_str()) == 0;
+#endif
 }
 
 IDirectory::Ptr StdFilesystem::OpenDirectory(const string_view pathIn)
 {
     auto path = ValidatePath(pathIn);
     if (!path.empty()) {
-        auto directory = make_unique<StdDirectory>();
-        if (directory->Open(path)) {
-            return IDirectory::Ptr { directory.release() };
-        }
+        return IDirectory::Ptr { StdDirectory::Open(path).release() };
     }
 
     return IDirectory::Ptr();
@@ -112,15 +133,7 @@ IDirectory::Ptr StdFilesystem::CreateDirectory(const string_view pathIn)
 {
     auto path = ValidatePath(pathIn);
     if (!path.empty()) {
-#ifdef _WIN32
-        int result = _mkdir(string(path).c_str());
-#else
-        int result = mkdir(string(path).c_str(), S_IRWXU | S_IRWXO);
-#endif
-        if (result == 0) {
-            // Directory creation successful.
-            return OpenDirectory(path);
-        }
+        return IDirectory::Ptr { StdDirectory::Create(path).release() };
     }
 
     return IDirectory::Ptr();
@@ -132,8 +145,9 @@ bool StdFilesystem::DeleteDirectory(const string_view pathIn)
     if (path.empty()) {
         return false;
     }
-#ifdef _WIN32
-    return _rmdir(string(path).c_str()) == 0;
+#if defined(HAS_FILESYSTEM)
+    std::error_code ec;
+    return std::filesystem::remove(U8Path(path), ec) && !ec;
 #else
     return rmdir(string(path).c_str()) == 0;
 #endif
@@ -147,7 +161,13 @@ bool StdFilesystem::Rename(const string_view fromPath, const string_view toPath)
         return false;
     }
 
-    return rename(pathFrom.c_str(), pathTo.c_str()) == 0;
+#if defined(HAS_FILESYSTEM)
+    std::error_code ec;
+    std::filesystem::rename(U8Path(pathFrom), U8Path(pathTo), ec);
+    return !ec;
+#else
+    return std::rename(pathFrom.c_str(), pathTo.c_str()) == 0;
+#endif
 }
 
 vector<string> StdFilesystem::GetUriPaths(const string_view) const
@@ -166,11 +186,7 @@ StdFilesystem::StdFilesystem(string_view basePath) : basePath_(basePath)
 CORE_END_NAMESPACE()
 
 // the rest is here, due to shlwapi leaking windows CreateFile macro, and breaking build.
-#if defined(_WIN32)
-#include <shlwapi.h>
-#pragma comment(lib, "Shlwapi.lib")
-#define CORE_MAX_PATH MAX_PATH
-#else
+#if !defined(HAS_FILESYSTEM)
 #include <climits>
 #define CORE_MAX_PATH PATH_MAX
 #endif
@@ -180,20 +196,38 @@ IDirectory::Entry StdFilesystem::GetEntry(const string_view uriIn)
 {
     auto uri = ValidatePath(uriIn);
     if (!uri.empty()) {
-        struct stat ds;
+#if defined(HAS_FILESYSTEM)
+        std::error_code ec;
+        auto canonicalPath = std::filesystem::canonical(U8Path(uri), ec);
+        if (ec) {
+            return {};
+        }
+        auto status = std::filesystem::status(canonicalPath, ec);
+        if (ec) {
+            return {};
+        }
+        auto time = std::filesystem::last_write_time(canonicalPath, ec);
+        if (ec) {
+            return {};
+        }
+
+        auto asString = canonicalPath.u8string();
+        if (std::filesystem::is_directory(status)) {
+            return { IDirectory::Entry::DIRECTORY, string { asString.data(), asString.size() },
+                static_cast<uint64_t>(time.time_since_epoch().count()) };
+        }
+        if (std::filesystem::is_regular_file(status)) {
+            return { IDirectory::Entry::FILE, string { asString.data(), asString.size() },
+                static_cast<uint64_t>(time.time_since_epoch().count()) };
+        }
+#else
         auto path = string(uri);
         char canonicalPath[CORE_MAX_PATH] = { 0 };
 
-#if defined(_WIN32)
-        if (!PathCanonicalize(canonicalPath, path.c_str())) {
+        if (realpath(path.c_str(), canonicalPath) == nullptr) {
             return {};
         }
-#else
-        if (realpath(path.c_str(), canonicalPath) == NULL) {
-            return {};
-        }
-#endif
-
+        struct stat ds {};
         if (stat(canonicalPath, &ds) != 0) {
             return {};
         }
@@ -204,6 +238,7 @@ IDirectory::Entry StdFilesystem::GetEntry(const string_view uriIn)
         if ((ds.st_mode & S_IFREG)) {
             return { IDirectory::Entry::FILE, canonicalPath, static_cast<uint64_t>(ds.st_mtime) };
         }
+#endif
     }
     return {};
 }

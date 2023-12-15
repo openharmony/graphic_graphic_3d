@@ -16,11 +16,15 @@
 #ifndef API_BASE_CONTAINERS_STRING_H
 #define API_BASE_CONTAINERS_STRING_H
 
+#include <cstddef>
+#include <cstdint>
+
 #include <base/containers/allocator.h>
 #include <base/containers/iterator.h>
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
 #include <base/namespace.h>
+#include <base/util/log.h>
 
 BASE_BEGIN_NAMESPACE()
 template<class CharT>
@@ -245,6 +249,8 @@ public:
         const auto view = string_view(a);
         if (data() != view.data()) {
             assign(view.data(), view.length());
+        } else {
+            resize(view.length());
         }
         return *this;
     }
@@ -261,7 +267,11 @@ public:
             reserve(count);
             const pointer dst = data();
             const size_type cap = capacity();
-            CloneData(dst, cap * sizeof(value_type), str, count * sizeof(value_type));
+            if (static_cast<size_type>((dst > str) ? (dst - str) : (str - dst)) >= count) {
+                CloneData(dst, cap * sizeof(value_type), str, count * sizeof(value_type));
+            } else {
+                MoveData(dst, cap * sizeof(value_type), str, count * sizeof(value_type));
+            }
             dst[count] = '\0';
         } else {
             const pointer dst = data();
@@ -279,7 +289,7 @@ public:
             const size_type cap = capacity();
             count = (count <= cap) ? count : cap;
             // dst is valid, count fits capacity
-            ClearToValue(dst, cap * sizeof(value_type), ch, count * sizeof(value_type));
+            ClearToValue(dst, cap * sizeof(value_type), static_cast<uint8_t>(ch), count * sizeof(value_type));
             dst[count] = '\0';
             set_size(count);
         } else {
@@ -380,7 +390,7 @@ public:
             size = (size <= cap) ? size : cap;
             const auto count = size - oldSize;
             // ptr is valid, count fits capacity
-            ClearToValue(ptr, cap * sizeof(value_type), ch, count * sizeof(value_type));
+            ClearToValue(ptr, cap * sizeof(value_type), static_cast<uint8_t>(ch), count * sizeof(value_type));
             ptr[count] = '\0';
         }
 
@@ -429,7 +439,7 @@ public:
             erase(first + add, last);
         } else if (add > replace) {
             CloneData(data() + pos, replace * sizeof(value_type), str.data(), replace * sizeof(value_type));
-            insert(pos + replace, str.data() + replace, add - replace);
+            insert(static_cast<size_type>(pos + replace), str.data() + replace, static_cast<size_type>(add - replace));
         } else {
             CloneData(data() + pos, replace * sizeof(value_type), str.data(), add * sizeof(value_type));
         }
@@ -481,8 +491,8 @@ public:
     iterator erase(const_iterator pos)
     {
         const auto offset = pos - cbegin();
-        const auto count = 1;
-        erase(offset, count);
+        const auto count = 1U;
+        erase(static_cast<size_type>(offset), count);
 
         return iterator(begin() + offset);
     }
@@ -490,8 +500,8 @@ public:
     iterator erase(const_iterator first, const_iterator last)
     {
         const auto offset = first - cbegin();
-        const auto count = (last - first);
-        erase(offset, count);
+        const auto count = static_cast<size_type>(last - first);
+        erase(static_cast<size_type>(offset), count);
 
         return iterator(begin() + offset);
     }
@@ -647,6 +657,37 @@ public:
         return append(b.data() + pos, count);
     }
 
+    /** compares two strings */
+    int compare(string_view v) const noexcept
+    {
+        return string_view(*this).compare(v);
+    }
+
+    int compare(size_type pos1, size_type count1, string_view v) const
+    {
+        return substr(pos1, count1).compare(v);
+    }
+
+    int compare(size_type pos1, size_type count1, string_view v, size_type pos2, size_type count2) const
+    {
+        return substr(pos1, count1).compare(v.substr(pos2, count2));
+    }
+
+    int compare(CharT const* const s) const
+    {
+        return string_view(*this).compare(s);
+    }
+
+    int compare(size_type pos1, size_type count1, CharT const* const s) const
+    {
+        return substr(pos1, count1).compare(s);
+    }
+
+    int compare(size_type pos1, size_type count1, CharT const* const s, size_type count2) const
+    {
+        return substr(pos1, count1).compare(basic_string_view(s, count2));
+    }
+
     /** find substring in the view */
     size_type find(const value_type str, size_type pos = 0) const noexcept
     {
@@ -691,6 +732,37 @@ public:
         return string_view(*this).find_last_of(ch, pos);
     }
 
+    /* checks if the string starts with the given prefix */
+    bool starts_with(basic_string_view<CharT> sv) const noexcept
+    {
+        return operator basic_string_view<CharT>().starts_with(sv);
+    }
+
+    bool starts_with(CharT ch) const noexcept
+    {
+        return operator basic_string_view<CharT>().starts_with(ch);
+    }
+
+    bool starts_with(const CharT* s) const
+    {
+        return operator basic_string_view<CharT>().starts_with(s);
+    }
+
+    /* checks if the string ends with the given suffix */
+    bool ends_with(basic_string_view<CharT> sv) const noexcept
+    {
+        return operator basic_string_view<CharT>().ends_with(sv);
+    }
+
+    bool ends_with(CharT ch) const noexcept
+    {
+        return operator basic_string_view<CharT>().ends_with(ch);
+    }
+
+    bool ends_with(const CharT* s) const
+    {
+        return operator basic_string_view<CharT>().ends_with(s);
+    }
     /* find first absence of characters
     find_first_not_of
 
@@ -946,6 +1018,15 @@ inline string operator+(const string_view& a, char b)
 {
     string res;
     res.reserve(a.length() + 1);
+    res = a;
+    res += b;
+    return res;
+}
+
+inline string operator+(const char a, string_view& b)
+{
+    string res;
+    res.reserve(b.length() + 1);
     res = a;
     res += b;
     return res;

@@ -13,15 +13,14 @@
  * limitations under the License.
  */
 
-#if !defined(SKIN_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define SKIN_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_SKIN_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_SKIN_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/entity.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif

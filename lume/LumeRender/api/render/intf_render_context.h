@@ -23,6 +23,10 @@
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
+CORE_BEGIN_NAMESPACE()
+class IEngine;
+CORE_END_NAMESPACE()
+
 RENDER_BEGIN_NAMESPACE()
 class IRenderDataStoreManager;
 class IRenderNodeGraphManager;
@@ -55,10 +59,20 @@ struct VersionInfo {
  * RenderCreateInfo
  */
 struct RenderCreateInfo {
+    /** Create info flag bits to setup configuration flags */
+    enum CreateInfoFlagBits : uint32_t {
+        /** Request double buffered render data stores for better multi-threading options */
+        DOUBLE_BUFFERED_RENDER_DATA_STORES = 0x00000001,
+    };
+    /** Container for render create info flag bits */
+    using CreateInfoFlags = uint32_t;
+
     /** Application version info */
     VersionInfo applicationInfo;
     /** Device create info */
     DeviceCreateInfo deviceCreateInfo;
+    /** Creation flags */
+    CreateInfoFlags createFlags { 0 };
 };
 
 /**

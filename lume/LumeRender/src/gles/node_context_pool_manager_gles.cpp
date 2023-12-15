@@ -16,6 +16,7 @@
 #include "node_context_pool_manager_gles.h"
 
 #include <algorithm>
+#include <numeric>
 
 #include <render/namespace.h>
 
@@ -33,10 +34,28 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr const bool VERBOSE_LOGGING = false;
 constexpr const bool HASH_LAYOUTS = false;
-typedef struct {
-    uint32_t layer, mipLevel;
+constexpr const uint32_t EMPTY_ATTACHMENT = ~0u;
+
+struct BindImage {
+    uint32_t layer;
+    uint32_t mipLevel;
     const GpuImageGLES* image;
-} BindImage;
+};
+
+struct FboHash {
+    uint64_t hash;
+    GLuint fbo;
+};
+
+uint32_t HighestBit(uint32_t value)
+{
+    uint32_t count = 0;
+    while (value) {
+        ++count;
+        value >>= 1U;
+    }
+    return count;
+}
 
 void UpdateBindImages(const RenderCommandBeginRenderPass& beginRenderPass, array_view<BindImage> images,
     GpuResourceManager& gpuResourceMgr_)
@@ -49,7 +68,7 @@ void UpdateBindImages(const RenderCommandBeginRenderPass& beginRenderPass, array
     }
 }
 
-uint64_t hashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourceManager& gpuResourceMgr_)
+uint64_t HashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourceManager& gpuResourceMgr_)
 {
     const auto& renderPassDesc = beginRenderPass.renderPassDesc;
     uint64_t rpHash = 0;
@@ -83,6 +102,7 @@ uint64_t hashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourc
         if (subpass.depthAttachmentCount) {
             HashCombine(rpHash, (uint64_t)subpass.depthAttachmentIndex);
         }
+        HashCombine(rpHash, (uint64_t)subpass.viewMask);
     }
     return rpHash;
 }
@@ -93,6 +113,7 @@ bool VerifyFBO()
     status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
         // failed!
+#if (RENDER_VALIDATION_ENABLED == 1)
         switch (status) {
             case GL_FRAMEBUFFER_UNDEFINED:
                 // is returned if target is the default framebuffer, but the default framebuffer does not exist.
@@ -104,7 +125,7 @@ bool VerifyFBO()
                 break;
             case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
                 // is returned if the framebuffer does not haveat least one image attached to it.
-                PLUGIN_LOG_E("Framebuffer imcomplete missing attachment");
+                PLUGIN_LOG_E("Framebuffer incomplete missing attachment");
                 break;
             case GL_FRAMEBUFFER_UNSUPPORTED:
                 // is returned if depth and stencil attachments, if present, are not the same renderbuffer, or
@@ -123,11 +144,15 @@ bool VerifyFBO()
                 // layered, or if all populated color attachments are not from textures of the same target.
                 PLUGIN_LOG_E("Framebuffer incomplete layer targets");
                 break;
+            case GL_FRAMEBUFFER_INCOMPLETE_VIEW_TARGETS_OVR:
+                PLUGIN_LOG_E("Framebuffer incomplete view targets");
+                break;
             default: {
                 PLUGIN_LOG_E("Framebuffer other error: %x", status);
                 break;
             }
         }
+#endif
         return false;
     }
     return true;
@@ -154,28 +179,34 @@ bool IsDefaultAttachment(array_view<const BindImage> images, const RenderPassSub
     // It is not allowed to mix custom render targets and backbuffer!
     if (sb.colorAttachmentCount == 1) {
         // okay, looks good. one color...
-        const auto color = images[sb.colorAttachmentIndices[0]].image;
-        const auto& plat = static_cast<const GpuImagePlatformDataGL&>(color->GetPlatformData());
-        if ((plat.image == 0) &&                // not texture
-            (plat.renderBuffer == 0))           // not renderbuffer
-        {                                       // Colorattachment is backbuffer
-            if (sb.depthAttachmentCount == 1) { // and has one depth.
-                const auto depth = images[sb.depthAttachmentIndex].image;
-                const auto& dPlat = static_cast<const GpuImagePlatformDataGL&>(depth->GetPlatformData());
-                if ((dPlat.image == 0) && (dPlat.renderBuffer == 0)) { // depth attachment is backbuffer depth.
-                    return true;
+        if (const auto* color = images[sb.colorAttachmentIndices[0]].image) {
+            const auto& plat = static_cast<const GpuImagePlatformDataGL&>(color->GetPlatformData());
+            if ((plat.image == 0) &&                // not texture
+                (plat.renderBuffer == 0))           // not renderbuffer
+            {                                       // Colorattachment is backbuffer
+                if (sb.depthAttachmentCount == 1) { // and has one depth.
+                    const auto depth = images[sb.depthAttachmentIndex].image;
+                    const auto& dPlat = static_cast<const GpuImagePlatformDataGL&>(depth->GetPlatformData());
+                    // NOTE: CORE_DEFAULT_BACKBUFFER_DEPTH is not used legacy way anymore
+                    if ((dPlat.image == 0) && (dPlat.renderBuffer == 0)) { // depth attachment is backbuffer depth.
+                        return true;
+                    } else {
+                        // Invalid configuration. (this should be caught earlier already)
+#if (RENDER_VALIDATION_ENABLED == 1)
+                        PLUGIN_LOG_ONCE_I("backbuffer_depth_gles_mixing" + to_string(plat.image),
+                            "RENDER_VALIDATION: Depth target dropped due to using swapchain buffer (depth)");
+#endif
+                        return true;
+                    }
                 } else {
-                    // Invalid configuration. (this should be caught earlier already)
-                    PLUGIN_LOG_E("Mixing backbuffer with custom depth is not allowed!");
-                    PLUGIN_ASSERT_MSG(false, "Mixing backbuffer with custom depth is not allowed!");
+                    return true;
                 }
-            } else {
-                return true;
             }
         }
     }
     return false;
 }
+
 bool IsDefaultResolve(array_view<const BindImage> images, const RenderPassSubpassDesc& sb)
 {
     if (sb.resolveAttachmentCount == 1 && sb.depthResolveAttachmentCount == 0) {
@@ -223,14 +254,15 @@ void DeleteFbos(DeviceGLES& device, LowlevelFramebufferGL& ref)
     ref.fbos.clear();
 }
 
-void BindToFbo(GLenum attachType, const BindImage& image, size_t& width, size_t& height, bool isStarted)
+void BindToFbo(
+    GLenum attachType, const BindImage& image, uint32_t& width, uint32_t& height, uint32_t views, bool isStarted)
 {
     const GpuImagePlatformDataGL& plat = static_cast<const GpuImagePlatformDataGL&>(image.image->GetPlatformData());
     const GpuImageDesc& desc = image.image->GetDesc();
     if (isStarted) {
         // Assert that all attachments are the same size.
-        PLUGIN_ASSERT_MSG(width == desc.width, "Depth attachment is not the same size as other attachments");
-        PLUGIN_ASSERT_MSG(height == desc.height, "Depth attachment is not the same size as other attachments");
+        PLUGIN_ASSERT_MSG(width == desc.width, "Attachment is not the same size as other attachments");
+        PLUGIN_ASSERT_MSG(height == desc.height, "Attachment is not the same size as other attachments");
     }
     width = desc.width;
     height = desc.height;
@@ -252,15 +284,21 @@ void BindToFbo(GLenum attachType, const BindImage& image, size_t& width, size_t&
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachType, GL_RENDERBUFFER, plat.renderBuffer);
     } else {
         if ((plat.type == GL_TEXTURE_2D_ARRAY) || (plat.type == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
-            glFramebufferTextureLayer(
-                GL_FRAMEBUFFER, attachType, plat.image, (GLint)image.mipLevel, (GLint)image.layer);
+            if (views) {
+                glFramebufferTextureMultiviewOVR(
+                    GL_FRAMEBUFFER, attachType, plat.image, (GLint)image.mipLevel, (GLint)image.layer, (GLsizei)views);
+            } else {
+                glFramebufferTextureLayer(
+                    GL_FRAMEBUFFER, attachType, plat.image, (GLint)image.mipLevel, (GLint)image.layer);
+            }
         } else {
             glFramebufferTexture2D(GL_FRAMEBUFFER, attachType, plat.type, plat.image, (GLint)image.mipLevel);
         }
     }
 }
-void BindToFboMultisampled(GLenum attachType, const BindImage& image, const BindImage& resolveImage, size_t& width,
-    size_t& height, bool isStarted, bool multisampledRenderToTexture)
+
+void BindToFboMultisampled(GLenum attachType, const BindImage& image, const BindImage& resolveImage, uint32_t& width,
+    uint32_t& height, uint32_t views, bool isStarted, bool multisampledRenderToTexture)
 {
     const GpuImagePlatformDataGL& plat =
         static_cast<const GpuImagePlatformDataGL&>(resolveImage.image->GetPlatformData());
@@ -289,24 +327,39 @@ void BindToFboMultisampled(GLenum attachType, const BindImage& image, const Bind
     if (plat.renderBuffer) {
         PLUGIN_ASSERT((!isSrc) && (!isDst) && (!isSample) && (!isStorage) && (!isInput));
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachType, GL_RENDERBUFFER, plat.renderBuffer);
-    } else {
-        if ((plat.type == GL_TEXTURE_2D_ARRAY) || (plat.type == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
-            glFramebufferTextureLayer(
-                GL_FRAMEBUFFER, attachType, plat.image, (GLint)image.mipLevel, (GLint)image.layer);
+    } else if ((plat.type == GL_TEXTURE_2D_ARRAY) || (plat.type == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
 #if RENDER_HAS_GLES_BACKEND
-        } else if (multisampledRenderToTexture && isTrans &&
-                   ((plat.type == GL_TEXTURE_2D_MULTISAMPLE) || (desc.sampleCountFlags & ~CORE_SAMPLE_COUNT_1_BIT))) {
+        if (views && multisampledRenderToTexture && isTrans &&
+            ((plat.type == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) || (desc.sampleCountFlags & ~CORE_SAMPLE_COUNT_1_BIT))) {
             const auto samples = (desc.sampleCountFlags & CORE_SAMPLE_COUNT_8_BIT)
                                      ? 8
                                      : ((desc.sampleCountFlags & CORE_SAMPLE_COUNT_4_BIT) ? 4 : 2);
-            glFramebufferTexture2DMultisampleEXT(
-                GL_FRAMEBUFFER, attachType, plat.type, plat.image, (GLint)image.mipLevel, samples);
-#endif
+            glFramebufferTextureMultisampleMultiviewOVR(
+                GL_FRAMEBUFFER, attachType, plat.image, image.mipLevel, samples, image.layer, views);
         } else {
-            glFramebufferTexture2D(GL_FRAMEBUFFER, attachType, plat.type, plat.image, (GLint)image.mipLevel);
+#endif
+            if (views) {
+                glFramebufferTextureMultiviewOVR(
+                    GL_FRAMEBUFFER, attachType, plat.image, (GLint)image.mipLevel, (GLint)image.layer, (GLsizei)views);
+            } else {
+                glFramebufferTextureLayer(
+                    GL_FRAMEBUFFER, attachType, plat.image, (GLint)image.mipLevel, (GLint)image.layer);
+            }
+#if RENDER_HAS_GLES_BACKEND
         }
+    } else if (multisampledRenderToTexture && isTrans &&
+               ((plat.type == GL_TEXTURE_2D_MULTISAMPLE) || (desc.sampleCountFlags & ~CORE_SAMPLE_COUNT_1_BIT))) {
+        const auto samples = (desc.sampleCountFlags & CORE_SAMPLE_COUNT_8_BIT)
+                                 ? 8
+                                 : ((desc.sampleCountFlags & CORE_SAMPLE_COUNT_4_BIT) ? 4 : 2);
+        glFramebufferTexture2DMultisampleEXT(
+            GL_FRAMEBUFFER, attachType, plat.type, plat.image, (GLint)image.mipLevel, samples);
+#endif
+    } else {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attachType, plat.type, plat.image, (GLint)image.mipLevel);
     }
 }
+
 uint64_t HashAttachments(const RenderPassSubpassDesc& sb)
 {
     // generate hash for attachments.
@@ -346,44 +399,56 @@ uint32_t GenerateSubPassFBO(DeviceGLES& device, LowlevelFramebufferGL& framebuff
     device.BindFrameBuffer(fbo);
     GLenum drawBuffers[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT] = { GL_NONE };
     GLenum colorAttachmentCount = 0;
+    const auto views = HighestBit(sb.viewMask);
     for (uint32_t idx = 0; idx < sb.colorAttachmentCount; ++idx) {
         const uint32_t ci = sb.colorAttachmentIndices[idx];
-        const uint32_t original = (ci < imageMap.size()) ? imageMap[ci] : 0xff;
+        const uint32_t original = (ci < imageMap.size()) ? imageMap[ci] : EMPTY_ATTACHMENT;
         if (images[ci].image) {
             drawBuffers[idx] = GL_COLOR_ATTACHMENT0 + colorAttachmentCount;
-            if (original == 0xff) {
-                BindToFbo(drawBuffers[idx], images[ci], framebuffer.width, framebuffer.height,
+            if (original == EMPTY_ATTACHMENT) {
+                BindToFbo(drawBuffers[idx], images[ci], framebuffer.width, framebuffer.height, views,
                     (colorAttachmentCount) || (resolveAttachmentCount));
             } else {
                 BindToFboMultisampled(drawBuffers[idx], images[original], images[ci], framebuffer.width,
-                    framebuffer.height, (colorAttachmentCount) || (resolveAttachmentCount),
+                    framebuffer.height, views, (colorAttachmentCount) || (resolveAttachmentCount),
                     multisampledRenderToTexture);
             }
             ++colorAttachmentCount;
         } else {
-            PLUGIN_LOG_E("no image for color attachment %u %u", idx, ci);
+#if (RENDER_VALIDATION_ENABLED == 1)
+            PLUGIN_LOG_E("RENDER_VALIDATION: no image for color attachment %u %u", idx, ci);
+#endif
             drawBuffers[idx] = GL_NONE;
         }
     }
     glDrawBuffers((GLsizei)sb.colorAttachmentCount, drawBuffers);
     if (sb.depthAttachmentCount == 1) {
-        const auto* image = images[sb.depthAttachmentIndex].image;
+        const uint32_t di = sb.depthAttachmentIndex;
+        const auto* image = images[di].image;
+        uint32_t original = (di < imageMap.size()) ? imageMap[di] : EMPTY_ATTACHMENT;
+        if (original == EMPTY_ATTACHMENT) {
+            original = di;
+        }
         if (image) {
             const GLenum bindType = BindType(image);
             PLUGIN_ASSERT_MSG(bindType != GL_NONE, "Depth attachment has no stencil or depth");
-            BindToFboMultisampled(bindType, images[sb.depthAttachmentIndex], images[sb.depthAttachmentIndex],
-                framebuffer.width, framebuffer.height, (colorAttachmentCount) || (resolveAttachmentCount),
-                multisampledRenderToTexture);
+            BindToFboMultisampled(bindType, images[original], images[di], framebuffer.width, framebuffer.height, views,
+                (colorAttachmentCount) || (resolveAttachmentCount), multisampledRenderToTexture);
         } else {
             PLUGIN_LOG_E("no image for depth attachment");
         }
     }
     if (!VerifyFBO()) {
-        PLUGIN_LOG_E("Failed to create subpass FBO size [%zd %zd] [color:%d depth:%d resolve:%d]", framebuffer.width,
-            framebuffer.height, sb.colorAttachmentCount, sb.depthAttachmentCount, sb.resolveAttachmentCount);
-        PLUGIN_ASSERT_MSG(false, "Framebuffer creation failed!");
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_E("RENDER_VALIDATION: Failed to create subpass FBO size [%u %u] [color:%u depth:%u resolve:%u]",
+            framebuffer.width, framebuffer.height, sb.colorAttachmentCount, sb.depthAttachmentCount,
+            sb.resolveAttachmentCount);
+#endif
+        device.BindFrameBuffer(0U);
+        glDeleteFramebuffers(1, &fbo);
+        fbo = 0U;
     } else if constexpr (VERBOSE_LOGGING) {
-        PLUGIN_LOG_V("Created subpass FBO size [%zd %zd] [color:%d depth:%d resolve:%d]", framebuffer.width,
+        PLUGIN_LOG_V("Created subpass FBO size [%u %u] [color:%u depth:%u resolve:%u]", framebuffer.width,
             framebuffer.height, sb.colorAttachmentCount, sb.depthAttachmentCount, sb.resolveAttachmentCount);
     }
     return fbo;
@@ -405,9 +470,9 @@ ResolvePair GenerateResolveFBO(DeviceGLES& device, LowlevelFramebufferGL& frameb
     // currently resolving to backbuffer AND other attachments at the same time is not possible.
     if (IsDefaultResolve(images, sb)) {
         // resolving from custom render target to default fbo.
-        const auto* swp = device.GetSwapchain();
-        if (swp) {
-            const auto desc = swp->GetDesc();
+        const auto* color = images[sb.colorAttachmentIndices[0]].image;
+        if (color) {
+            const auto& desc = color->GetDesc();
             framebuffer.width = desc.width;
             framebuffer.height = desc.height;
         }
@@ -422,6 +487,7 @@ ResolvePair GenerateResolveFBO(DeviceGLES& device, LowlevelFramebufferGL& frameb
 #if (RENDER_DEBUG_GPU_RESOURCE_IDS == 1)
     PLUGIN_LOG_D("fbo id >: %u", rp.resolveFbo);
 #endif
+    const auto views = HighestBit(sb.viewMask);
     device.BindFrameBuffer(rp.resolveFbo);
     GLenum drawBuffers[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT] = { GL_NONE };
     for (uint32_t idx = 0; idx < sb.resolveAttachmentCount; ++idx) {
@@ -429,8 +495,8 @@ ResolvePair GenerateResolveFBO(DeviceGLES& device, LowlevelFramebufferGL& frameb
         const auto* image = images[ci].image;
         if (image) {
             drawBuffers[idx] = GL_COLOR_ATTACHMENT0 + rp.resolveAttachmentCount;
-            BindToFbo(
-                drawBuffers[idx], images[ci], framebuffer.width, framebuffer.height, (rp.resolveAttachmentCount > 0));
+            BindToFbo(drawBuffers[idx], images[ci], framebuffer.width, framebuffer.height, views,
+                (rp.resolveAttachmentCount > 0));
             ++rp.resolveAttachmentCount;
         } else {
             PLUGIN_LOG_E("no image for resolve attachment %u %u", idx, ci);
@@ -442,8 +508,8 @@ ResolvePair GenerateResolveFBO(DeviceGLES& device, LowlevelFramebufferGL& frameb
         const uint32_t ci = sb.depthResolveAttachmentIndex;
         const auto* image = images[ci].image;
         if (image) {
-            BindToFbo(
-                BindType(image), images[ci], framebuffer.width, framebuffer.height, (rp.resolveAttachmentCount > 0));
+            BindToFbo(BindType(image), images[ci], framebuffer.width, framebuffer.height, views,
+                (rp.resolveAttachmentCount > 0));
         } else {
             PLUGIN_LOG_E("no image for depth resolve attachment %u %u", idx, ci);
         }
@@ -452,21 +518,23 @@ ResolvePair GenerateResolveFBO(DeviceGLES& device, LowlevelFramebufferGL& frameb
 }
 
 LowlevelFramebufferGL::SubPassPair ProcessSubPass(DeviceGLES& device, LowlevelFramebufferGL& framebuffer,
-    std::map<uint64_t, GLuint>& fboMap, array_view<const BindImage> images, const array_view<const uint32_t> imageMap,
+    vector<FboHash>& fboMap, array_view<const BindImage> images, const array_view<const uint32_t> imageMap,
     const RenderPassSubpassDesc& sb, bool multisampledRenderToTexture)
 {
 #if RENDER_GL_FLIP_Y_SWAPCHAIN == 0
     if (IsDefaultAttachment(images, sb)) {
         // This subpass uses backbuffer!
-        const auto* swp = device.GetSwapchain();
-        if (swp) {
-            const auto desc = swp->GetDesc();
+        const auto* color = images[sb.colorAttachmentIndices[0]].image;
+        if (color) {
+            const auto& desc = color->GetDesc();
             framebuffer.width = desc.width;
             framebuffer.height = desc.height;
         }
         // NOTE: it is technically possible to resolve from backbuffer to a custom render target.
         // but we do not support it now.
-        PLUGIN_ASSERT_MSG(sb.resolveAttachmentCount == 0, "No resolving from default framebuffer");
+        if (sb.resolveAttachmentCount != 0) {
+            PLUGIN_LOG_E("No resolving from default framebuffer");
+        }
         return { 0, 0 };
     }
 #endif
@@ -476,17 +544,108 @@ LowlevelFramebufferGL::SubPassPair ProcessSubPass(DeviceGLES& device, LowlevelFr
     uint32_t fbo = 0;
     const auto resolveResult = GenerateResolveFBO(device, framebuffer, sb, images);
     const uint64_t subHash = HashAttachments(sb);
-    if (const auto it = fboMap.find(subHash); it != fboMap.end()) {
+    if (const auto it = std::find_if(
+            fboMap.begin(), fboMap.end(), [subHash](const FboHash& fboHash) { return fboHash.hash == subHash; });
+        it != fboMap.end()) {
         // matching fbo created already, re-use
-        fbo = it->second;
+        fbo = it->fbo;
     } else {
         fbo = GenerateSubPassFBO(device, framebuffer, sb, images, resolveResult.resolveAttachmentCount, imageMap,
             multisampledRenderToTexture);
-        fboMap[subHash] = fbo;
+        fboMap.push_back({ subHash, fbo });
     }
     return { fbo, resolveResult.resolveFbo };
 }
 
+#if RENDER_HAS_GLES_BACKEND
+void MapColorAttachments(array_view<RenderPassSubpassDesc>::iterator begin,
+    array_view<RenderPassSubpassDesc>::iterator pos, array_view<const BindImage> images, array_view<uint32_t> imageMap,
+    array_view<RenderPassDesc::AttachmentDesc> attachments)
+{
+    auto resolveAttachmentIndices = array_view(pos->resolveAttachmentIndices, pos->resolveAttachmentCount);
+    const auto colorAttachmentIndices = array_view(pos->colorAttachmentIndices, pos->colorAttachmentCount);
+    for (auto i = 0U; i < pos->resolveAttachmentCount; ++i) {
+        const auto color = colorAttachmentIndices[i];
+        // if the attachment can be used as an input attachment we can't render directly to the resolve attachment.
+        if (images[color].image &&
+            (images[color].image->GetDesc().usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            const auto subpassIdx = static_cast<uint32_t>(pos - begin);
+            const auto unique = to_string(subpassIdx) + " " + to_string(color);
+            PLUGIN_LOG_ONCE_W(unique,
+                "Subpass %u attachment %u might be used as input attachment, cannot render directly to "
+                "texture.",
+                subpassIdx, color);
+#endif
+            continue;
+        }
+        const auto resolve = exchange(resolveAttachmentIndices[i], EMPTY_ATTACHMENT);
+        // map the original attachment as the resolve
+        imageMap[color] = resolve;
+
+        // update the resolve attachment's loadOp and clearValue to match the original attachment.
+        attachments[resolve].loadOp = attachments[color].loadOp;
+        attachments[resolve].clearValue = attachments[color].clearValue;
+    }
+}
+
+void MapDepthAttachments(array_view<RenderPassSubpassDesc>::iterator begin,
+    array_view<RenderPassSubpassDesc>::iterator pos, array_view<const BindImage> images, array_view<uint32_t> imageMap,
+    array_view<RenderPassDesc::AttachmentDesc> attachments)
+{
+    if ((pos->depthResolveAttachmentCount > 0) && (pos->depthResolveModeFlagBit || pos->stencilResolveModeFlagBit)) {
+        const auto depth = pos->depthAttachmentIndex;
+        // if the attachment can be used as an input attachment we can't render directly to the resolve attachment.
+        if (images[depth].image &&
+            (images[depth].image->GetDesc().usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            const auto subpassIdx = static_cast<uint32_t>(pos - begin);
+            const auto unique = to_string(subpassIdx) + " " + to_string(depth);
+            PLUGIN_LOG_ONCE_W(unique,
+                "Subpass %u attachment %u might be used as input attachment, cannot render directly to "
+                "texture.",
+                subpassIdx, depth);
+#endif
+            return;
+        }
+        const auto resolve = pos->depthResolveAttachmentIndex;
+        // map the original attachment as the resolve
+        imageMap[depth] = resolve;
+
+        // update the resolve attachment's loadOp and clearValue to match the original attachment.
+        attachments[resolve].loadOp = attachments[depth].loadOp;
+        attachments[resolve].clearValue = attachments[depth].clearValue;
+    }
+}
+
+void UpdateSubpassAttachments(array_view<RenderPassSubpassDesc>::iterator begin,
+    array_view<RenderPassSubpassDesc>::iterator end, array_view<uint32_t> imageMap)
+{
+    // update all the attachment indices in the subpasses according to the mapping.
+    for (auto i = begin; i != end; ++i) {
+        for (auto ci = 0U; ci < i->colorAttachmentCount; ++ci) {
+            const auto oldColor = i->colorAttachmentIndices[ci];
+            if (const auto newColor = imageMap[oldColor]; newColor != EMPTY_ATTACHMENT) {
+                i->colorAttachmentIndices[ci] = newColor;
+            }
+        }
+        // check what is the last index with a valid resolve attachment
+        auto resolveCount = i->resolveAttachmentCount;
+        for (; resolveCount > 0u; --resolveCount) {
+            if (i->resolveAttachmentIndices[resolveCount - 1] != EMPTY_ATTACHMENT) {
+                break;
+            }
+        }
+        i->resolveAttachmentCount = resolveCount;
+
+        const auto oldDepth = i->depthAttachmentIndex;
+        if (const auto newDepth = imageMap[oldDepth]; newDepth != EMPTY_ATTACHMENT) {
+            i->depthAttachmentIndex = newDepth;
+            i->depthResolveAttachmentCount = 0;
+        }
+    }
+}
+#endif
 } // namespace
 
 NodeContextPoolManagerGLES::NodeContextPoolManagerGLES(Device& device, GpuResourceManager& gpuResourceManager)
@@ -496,8 +655,10 @@ NodeContextPoolManagerGLES::NodeContextPoolManagerGLES(Device& device, GpuResour
 #if RENDER_HAS_GLES_BACKEND
     if (device_.GetBackendType() == DeviceBackendType::OPENGLES) {
         multisampledRenderToTexture_ = device_.HasExtension("GL_EXT_multisampled_render_to_texture2");
+        multiViewMultisampledRenderToTexture_ = device_.HasExtension("GL_OVR_multiview_multisampled_render_to_texture");
     }
 #endif
+    multiView_ = device_.HasExtension("GL_OVR_multiview2");
 }
 
 NodeContextPoolManagerGLES::~NodeContextPoolManagerGLES()
@@ -512,10 +673,27 @@ NodeContextPoolManagerGLES::~NodeContextPoolManagerGLES()
 
 void NodeContextPoolManagerGLES::BeginFrame()
 {
+#if (RENDER_VALIDATION_ENABLED == 1)
+    frameIndexFront_ = device_.GetFrameCount();
+#endif
+}
+
+void NodeContextPoolManagerGLES::BeginBackendFrame()
+{
+    const uint64_t frameCount = device_.GetFrameCount();
+
+#if (RENDER_VALIDATION_ENABLED == 1)
+    PLUGIN_ASSERT(frameIndexBack_ != frameCount); // prevent multiple calls per frame
+    frameIndexBack_ = frameCount;
+    PLUGIN_ASSERT(frameIndexFront_ == frameIndexBack_);
+#endif
+
+    // not used
     bufferingIndex_ = 0;
+
     const auto maxAge = 2;
     const auto minAge = device_.GetCommandBufferingCount() + maxAge;
-    const auto ageLimit = (device_.GetFrameCount() < minAge) ? 0 : (device_.GetFrameCount() - minAge);
+    const auto ageLimit = (frameCount < minAge) ? 0 : (frameCount - minAge);
     const size_t limit = framebufferCache_.frameBufferFrameUseIndex.size();
     for (size_t index = 0; index < limit; ++index) {
         auto const useIndex = framebufferCache_.frameBufferFrameUseIndex[index];
@@ -536,7 +714,7 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
     const RenderCommandBeginRenderPass& beginRenderPass)
 {
     PLUGIN_ASSERT(device_.IsActive());
-    const uint64_t rpHash = hashRPD(beginRenderPass, gpuResourceMgr_);
+    const uint64_t rpHash = HashRPD(beginRenderPass, gpuResourceMgr_);
     if (const auto iter = framebufferCache_.renderPassHashToIndex.find(rpHash);
         iter != framebufferCache_.renderPassHashToIndex.cend()) {
         PLUGIN_ASSERT(iter->second < framebufferCache_.framebuffers.size());
@@ -554,21 +732,24 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
     const auto& rpd = beginRenderPass.renderPassDesc;
     fb.fbos.resize(rpd.subpassCount);
     if constexpr (VERBOSE_LOGGING) {
-        PLUGIN_LOG_V("Creating framebuffer with %d subpasses", rpd.subpassCount);
+        PLUGIN_LOG_V("Creating framebuffer with %u subpasses", rpd.subpassCount);
     }
     // NOTE: we currently expect that resolve, color and depth attachments are regular 2d textures (or
     // renderbuffers)
-    std::map<uint64_t, GLuint> fboMap;
+    vector<FboHash> fboMap;
     std::transform(std::begin(beginRenderPass.subpasses), std::begin(beginRenderPass.subpasses) + rpd.subpassCount,
         fb.fbos.data(),
         [this, &fb, &fboMap, images = array_view<const BindImage>(images),
             imageMap = array_view<const uint32_t>(imageMap_)](const RenderPassSubpassDesc& subpass) {
-            return ProcessSubPass(device_, fb, fboMap, images, imageMap, subpass, multisampledRenderToTexture_);
+            return ProcessSubPass(device_, fb, fboMap, images, imageMap, subpass,
+                subpass.viewMask ? multiViewMultisampledRenderToTexture_ : multisampledRenderToTexture_);
         });
     if constexpr (VERBOSE_LOGGING) {
-        PLUGIN_LOG_V("Created framebuffer with %d subpasses at size [%zd %zd]", rpd.subpassCount, fb.width, fb.height);
+        PLUGIN_LOG_V("Created framebuffer with %u subpasses at size [%u %u]", rpd.subpassCount, fb.width, fb.height);
     }
-
+    if (!fb.width || !fb.height) {
+        return {};
+    }
     uint32_t arrayIndex = 0;
     if (auto const pos = std::find_if(framebufferCache_.framebuffers.begin(), framebufferCache_.framebuffers.end(),
             [](auto const& framebuffer) { return framebuffer.fbos.empty(); });
@@ -577,68 +758,69 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
         *pos = move(fb);
         framebufferCache_.frameBufferFrameUseIndex[arrayIndex] = device_.GetFrameCount();
     } else {
-        framebufferCache_.framebuffers.emplace_back(move(fb));
-        framebufferCache_.frameBufferFrameUseIndex.emplace_back(device_.GetFrameCount());
+        framebufferCache_.framebuffers.push_back(move(fb));
+        framebufferCache_.frameBufferFrameUseIndex.push_back(device_.GetFrameCount());
         arrayIndex = (uint32_t)framebufferCache_.framebuffers.size() - 1;
     }
     framebufferCache_.renderPassHashToIndex[rpHash] = arrayIndex;
     return RenderHandleUtil::CreateEngineResourceHandle(RenderHandleType::UNDEFINED, arrayIndex, 0);
 }
 
-const LowlevelFramebufferGL& NodeContextPoolManagerGLES::GetFramebuffer(const EngineResourceHandle handle) const
+const LowlevelFramebufferGL* NodeContextPoolManagerGLES::GetFramebuffer(const EngineResourceHandle handle) const
 {
-    PLUGIN_ASSERT(RenderHandleUtil::IsValid(handle));
-    const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
-    PLUGIN_ASSERT(index < framebufferCache_.framebuffers.size());
-    return framebufferCache_.framebuffers[index];
+    if (RenderHandleUtil::IsValid(handle)) {
+        if (const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
+            (index < framebufferCache_.framebuffers.size())) {
+            return &framebufferCache_.framebuffers[index];
+        }
+    }
+    return nullptr;
 }
 
 void NodeContextPoolManagerGLES::FilterRenderPass(RenderCommandBeginRenderPass& beginRenderPass)
 {
+#if RENDER_HAS_GLES_BACKEND
+    if (!multisampledRenderToTexture_) {
+        return;
+    }
+    if (!multiViewMultisampledRenderToTexture_ &&
+        std::any_of(beginRenderPass.subpasses.cbegin(), beginRenderPass.subpasses.cend(),
+            [](const RenderPassSubpassDesc& subpass) { return subpass.viewMask != 0; })) {
+        return;
+    }
     imageMap_.clear();
-    imageMap_.insert(imageMap_.end(), beginRenderPass.renderPassDesc.attachmentCount, 0xff);
+    imageMap_.insert(
+        imageMap_.end(), static_cast<size_t>(beginRenderPass.renderPassDesc.attachmentCount), EMPTY_ATTACHMENT);
     auto begin = beginRenderPass.subpasses.begin();
-    auto pos = std::find_if(begin, beginRenderPass.subpasses.end(),
-        [](const RenderPassSubpassDesc& subpass) { return (subpass.resolveAttachmentCount > 0); });
-    if (pos != beginRenderPass.subpasses.end()) {
+    auto end = beginRenderPass.subpasses.end();
+    auto pos = std::find_if(begin, end, [](const RenderPassSubpassDesc& subpass) {
+        return (subpass.resolveAttachmentCount > 0) ||
+               ((subpass.depthResolveAttachmentCount > 0) &&
+                   (subpass.depthResolveModeFlagBit || subpass.stencilResolveModeFlagBit));
+    });
+    if (pos != end) {
         BindImage images[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
         UpdateBindImages(beginRenderPass, images, gpuResourceMgr_);
         if (!IsDefaultResolve(images, *pos)) {
-            const auto resolveAttachmentIndices =
-                array_view(pos->resolveAttachmentIndices, pos->resolveAttachmentCount);
-            const auto colorAttachmentIndices = array_view(pos->colorAttachmentIndices, pos->colorAttachmentCount);
-            for (auto i = 0U; i < pos->resolveAttachmentCount; ++i) {
-                const auto color = colorAttachmentIndices[i];
-                const auto resolve = resolveAttachmentIndices[i];
-                imageMap_[color] = resolve;
-                beginRenderPass.renderPassDesc.attachments[resolve].loadOp =
-                    beginRenderPass.renderPassDesc.attachments[color].loadOp;
+            // build a mapping which attachments can be skipped and render directly to the resolve
+            MapColorAttachments(begin, pos, images, imageMap_, beginRenderPass.renderPassDesc.attachments);
+            if (device_.IsDepthResolveSupported()) {
+                MapDepthAttachments(begin, pos, images, imageMap_, beginRenderPass.renderPassDesc.attachments);
             }
-            for (auto i = begin; i != pos; ++i) {
-                for (auto ci = 0U; ci < i->colorAttachmentCount; ++ci) {
-                    const auto oldColor = i->colorAttachmentIndices[ci];
-                    if (const auto newColor = imageMap_[oldColor]; newColor != 0xff) {
-                        i->colorAttachmentIndices[ci] = newColor;
-                    }
-                }
-            }
-            for (auto ci = 0U; ci < pos->colorAttachmentCount; ++ci) {
-                const auto oldColor = pos->colorAttachmentIndices[ci];
-                if (const auto newColor = imageMap_[oldColor]; newColor != 0xff) {
-                    pos->colorAttachmentIndices[ci] = newColor;
-                }
-            }
-            pos->resolveAttachmentCount = 0;
-            vector<uint32_t> map(imageMap_.size(), 0xff);
-            for (uint32_t color = 0U, end = static_cast<uint32_t>(imageMap_.size()); color < end; ++color) {
+            UpdateSubpassAttachments(begin, pos + 1, imageMap_);
+
+            // flip the mapping from attachment -> resolve to resolve -> attachment. this will be used when selecting
+            // what images are bound as attachments at the begining of the renderpass.
+            vector<uint32_t> map(imageMap_.size(), EMPTY_ATTACHMENT);
+            for (uint32_t color = 0U, last = static_cast<uint32_t>(imageMap_.size()); color < last; ++color) {
                 const auto resolve = imageMap_[color];
-                if (resolve != 0xff) {
+                if (resolve != EMPTY_ATTACHMENT) {
                     map[resolve] = color;
                 }
             }
             imageMap_ = map;
         }
     }
+#endif
 }
-
 RENDER_END_NAMESPACE()

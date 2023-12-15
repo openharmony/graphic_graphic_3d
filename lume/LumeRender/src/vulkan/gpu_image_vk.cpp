@@ -80,11 +80,11 @@ void ValidateFormat(const DevicePlatformDataVk& devicePlat, const GpuImageDesc& 
 }
 #endif
 
-constexpr uint32_t IMAGE_VIEW_USAGE_FLAGS { CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_STORAGE_BIT |
-                                            CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                            CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-                                            CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-                                            CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT };
+constexpr uint32_t IMAGE_VIEW_USAGE_FLAGS {
+    CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_STORAGE_BIT | CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+    CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+    CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT
+};
 
 BASE_NS::Format CheckDepthFormat(const DeviceVk& deviceVk, const BASE_NS::Format format)
 {
@@ -113,6 +113,8 @@ inline VkImageViewType GetBaseImageViewType(const VkImageViewType imageViewType)
         return VK_IMAGE_VIEW_TYPE_2D;
     } else if (imageViewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
         return VK_IMAGE_VIEW_TYPE_CUBE;
+    } else if (imageViewType == VK_IMAGE_VIEW_TYPE_CUBE) {
+        return VK_IMAGE_VIEW_TYPE_2D;
     }
     return imageViewType;
 }
@@ -202,7 +204,7 @@ GpuImageVk::GpuImageVk(Device& device, const GpuImageDesc& desc) : GpuImage(), d
 #endif
 
     CreateVkImage();
-    if (desc_.usageFlags & IMAGE_VIEW_USAGE_FLAGS) {
+    if ((desc_.usageFlags & IMAGE_VIEW_USAGE_FLAGS) && plat_.image) {
         CreateVkImageViews(plat_.aspectFlags, nullptr);
     }
 
@@ -217,8 +219,8 @@ GpuImageVk::GpuImageVk(Device& device, const GpuImageDesc& desc) : GpuImage(), d
 
 GpuImageVk::GpuImageVk(
     Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData, const uintptr_t hwBuffer)
-    : device_(device), plat_((const GpuImagePlatformDataVk&)platformData), desc_(desc), hwBuffer_(hwBuffer),
-      ownsResources_(false)
+    : device_(device), plat_((const GpuImagePlatformDataVk&)platformData),
+      desc_(hwBuffer ? GetImageDescFromHwBufferDesc(hwBuffer) : desc), hwBuffer_(hwBuffer), ownsResources_(false)
 {
     plat_.imageViewBase = plat_.imageView;
     FillImageDescVk(desc_, plat_);
@@ -250,6 +252,7 @@ GpuImageVk::~GpuImageVk()
         }
         destroyImageViews(device, platViews_.mipImageViews);
         destroyImageViews(device, platViews_.layerImageViews);
+        destroyImageViews(device, platViews_.layerCubemapImageViews);
     }
 
     if (ownsResources_) {
@@ -321,6 +324,7 @@ void GpuImageVk::CreateVkImage()
 void GpuImageVk::CreateVkImageViews(
     VkImageAspectFlags imageAspectFlags, const VkSamplerYcbcrConversionInfo* ycbcrConversionInfo)
 {
+    PLUGIN_ASSERT(plat_.image);
     const VkDevice vkDevice = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
 
     const VkImageViewType imageViewType = (VkImageViewType)desc_.imageViewType;
@@ -351,21 +355,28 @@ void GpuImageVk::CreateVkImageViews(
             ImageInputStruct imageInputIdentity = imageInput;
             imageInputIdentity.componentMapping = {}; // identity needed for fbo
             plat_.imageViewBase = CreateImageView(
-                vkDevice, ycbcrConversionInfo, imageInputIdentity, baseImageViewType, imageAspectFlags, 0, 1, 0, 1);
+                vkDevice, ycbcrConversionInfo, imageInputIdentity, baseImageViewType, imageAspectFlags, 0U, 1U, 0U, 1U);
         }
 
         if (plat_.mipLevels > 1) {
             platViews_.mipImageViews.resize(plat_.mipLevels);
             for (uint32_t mipIdx = 0; mipIdx < plat_.mipLevels; ++mipIdx) {
                 platViews_.mipImageViews[mipIdx] = CreateImageView(
-                    vkDevice, ycbcrConversionInfo, imageInput, baseImageViewType, imageAspectFlags, mipIdx, 1, 0, 1);
+                    vkDevice, ycbcrConversionInfo, imageInput, baseImageViewType, imageAspectFlags, mipIdx, 1U, 0U, 1U);
             }
         }
         if (plat_.arrayLayers > 1) {
             platViews_.layerImageViews.resize(plat_.arrayLayers);
             for (uint32_t layerIdx = 0; layerIdx < plat_.arrayLayers; ++layerIdx) {
-                platViews_.layerImageViews[layerIdx] = CreateImageView(
-                    vkDevice, ycbcrConversionInfo, imageInput, baseImageViewType, imageAspectFlags, 0, 1, layerIdx, 1);
+                platViews_.layerImageViews[layerIdx] = CreateImageView(vkDevice, ycbcrConversionInfo, imageInput,
+                    baseImageViewType, imageAspectFlags, 0U, 1U, layerIdx, 1U);
+            }
+        }
+        if (imageViewType == VK_IMAGE_VIEW_TYPE_CUBE) {
+            platViews_.layerCubemapImageViews.resize(plat_.mipLevels);
+            for (uint32_t mipIdx = 0; mipIdx < plat_.mipLevels; ++mipIdx) {
+                platViews_.layerCubemapImageViews[mipIdx] = CreateImageView(vkDevice, ycbcrConversionInfo, imageInput,
+                    VK_IMAGE_VIEW_TYPE_2D_ARRAY, imageAspectFlags, mipIdx, 1U, 0U, plat_.arrayLayers);
             }
         }
     }
@@ -408,20 +419,24 @@ VkImageAspectFlags GetImageAspectFlagsFromFormat(const VkFormat format)
 
     const bool isDepthFormat =
         ((format == VkFormat::VK_FORMAT_D16_UNORM) || (format == VkFormat::VK_FORMAT_X8_D24_UNORM_PACK32) ||
-            (format == VkFormat::VK_FORMAT_D32_SFLOAT) || (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT))
+            (format == VkFormat::VK_FORMAT_D32_SFLOAT) || (format == VkFormat::VK_FORMAT_D16_UNORM_S8_UINT) ||
+            (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT))
             ? true
             : false;
     if (isDepthFormat) {
         flags |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
 
         const bool isStencilFormat =
-            ((format == VkFormat::VK_FORMAT_D16_UNORM_S8_UINT) || (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT) ||
-                (format == VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT))
+            ((format == VkFormat::VK_FORMAT_S8_UINT) || (format == VkFormat::VK_FORMAT_D16_UNORM_S8_UINT) ||
+                (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT) || (format == VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT))
                 ? true
                 : false;
         if (isStencilFormat) {
             flags |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT;
         }
+
+    } else if (format == VkFormat::VK_FORMAT_S8_UINT) {
+        flags |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT;
     } else {
         flags |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
     }

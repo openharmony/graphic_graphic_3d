@@ -16,6 +16,9 @@
 #ifndef CORE_GL_UTIL_H
 #define CORE_GL_UTIL_H
 
+#include <cstdint>
+
+#include <base/namespace.h>
 #include <base/util/formats.h>
 #include <core/namespace.h>
 

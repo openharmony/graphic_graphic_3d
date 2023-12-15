@@ -33,7 +33,7 @@ class Data;
 /** Describes result of the parsing operation. */
 struct LoadResult {
     LoadResult() = default;
-    explicit LoadResult(BASE_NS::string&& error) : success(false), error(error) {}
+    LoadResult(BASE_NS::string&& error) : success(false), error(error) {}
 
     /** Indicates, whether the loading operation is successful. */
     bool success { true };

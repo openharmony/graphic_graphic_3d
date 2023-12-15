@@ -25,7 +25,7 @@ RENDER_BEGIN_NAMESPACE()
  */
 /** Default GPU resource constants */
 struct DefaultEngineGpuResourceConstants {
-    /** Default backbuffer/swapchain */
+    /** Default built-in backbuffer/swapchain */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_BACKBUFFER { "CORE_DEFAULT_BACKBUFFER" };
     /** Default backbuffer/swapchain depth (when rendering scene directly to backbuffer) */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_BACKBUFFER_DEPTH { "CORE_DEFAULT_BACKBUFFER_DEPTH" };

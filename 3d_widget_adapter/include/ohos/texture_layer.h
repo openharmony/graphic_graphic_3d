@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -94,6 +94,7 @@ private:
     void DestroyNativeWindow();
     void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow);
     void ConfigTexture(float width, float height);
+    void RemoveChild();
     // deprecated
     void UpdateRenderFinishFuture(std::shared_future<void> &ftr);
 
@@ -116,7 +117,8 @@ private:
     std::mutex ftrMut_;
     std::mutex skImageMut_;
 
-    std::shared_ptr<Rosen::RSNode> rsNode_;
+    std::shared_ptr<Rosen::RSNode> rsNode_ = nullptr;
+    std::shared_ptr<Rosen::RSNode> parent_ = nullptr;
     sptr<OHOS::Surface> producerSurface_ = nullptr;
     RenderBackend backend_ = RenderBackend::UNDEFINE;
     SurfaceType surface_ = SurfaceType::UNDEFINE;

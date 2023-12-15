@@ -17,6 +17,7 @@
 #define API_CORE_OS_COMMON_PLATFORM_CREATE_INFO_H
 
 #include <base/containers/string.h>
+#include <base/namespace.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()

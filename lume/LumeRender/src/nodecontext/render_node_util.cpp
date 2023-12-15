@@ -28,6 +28,7 @@
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
 #include <render/nodecontext/intf_render_node_util.h>
 
+#include "datastore/render_data_store_post_process.h"
 #include "device/gpu_resource_handle_util.h"
 #include "nodecontext/pipeline_descriptor_set_binder.h"
 #include "util/log.h"
@@ -69,6 +70,13 @@ RenderHandle GetRoutedResource(const IRenderNodeGpuResourceManager& gpuResourceM
                 handle = rngShareMgr.GetRegisteredRenderNodeOutput(nodeName, resourceIndex);
             }
             break;
+        case (RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_GRAPH_OUTPUT):
+            if (!name.empty()) {
+                handle = rngShareMgr.GetNamedPrevRenderNodeGraphOutput(name);
+            } else {
+                handle = rngShareMgr.GetPrevRenderNodeGraphOutput(resourceIndex);
+            }
+            break;
         default:
             break;
     }
@@ -93,7 +101,7 @@ void SetupRenderNodeResourceHandles(const IRenderNodeGpuResourceManager& gpuReso
         for (const auto& ref : input) {
             const RenderHandle handle = GetRoutedResource(gpuResourceMgr, rngShareMgr, ref.name, ref.nodeName,
                 ref.resourceLocation, ref.resourceIndex, handleType);
-            output.emplace_back(RenderNodeResource { ref.set, ref.binding, handle, {} });
+            output.push_back(RenderNodeResource { ref.set, ref.binding, handle, {}, ref.mip, ref.layer });
         }
     };
     const auto setImageHandles = [](const IRenderNodeGpuResourceManager& gpuResourceMgr,
@@ -112,7 +120,7 @@ void SetupRenderNodeResourceHandles(const IRenderNodeGpuResourceManager& gpuReso
                     sampIter++;
                 }
             }
-            output.emplace_back(RenderNodeResource { ref.set, ref.binding, handle, secondHandle });
+            output.push_back(RenderNodeResource { ref.set, ref.binding, handle, secondHandle, ref.mip, ref.layer });
         }
     };
 
@@ -149,20 +157,24 @@ RenderNodeHandles::InputRenderPass RenderNodeUtil::CreateInputRenderPass(
         for (const auto& ref : renderPass.attachments) {
             const RenderHandle handle = GetRoutedResource(gpuResourceMgr, rngShareMgr, ref.name, ref.nodeName,
                 ref.resourceLocation, ref.resourceIndex, RenderHandleType::GPU_IMAGE);
-            rp.attachments.emplace_back(RenderNodeAttachment {
-                handle, ref.loadOp, ref.storeOp, ref.stencilLoadOp, ref.stencilStoreOp, ref.clearValue });
+            rp.attachments.push_back(RenderNodeAttachment { handle, ref.loadOp, ref.storeOp, ref.stencilLoadOp,
+                ref.stencilStoreOp, ref.clearValue, ref.mip, ref.layer });
         }
 
         rp.subpassIndex = renderPass.subpassIndex;
         rp.subpassCount = renderPass.subpassCount;
+        rp.subpassContents = renderPass.subpassContents;
 
         rp.depthAttachmentIndex = renderPass.depthAttachmentIndex;
         rp.depthResolveAttachmentIndex = renderPass.depthResolveAttachmentIndex;
         rp.inputAttachmentIndices = renderPass.inputAttachmentIndices;
         rp.colorAttachmentIndices = renderPass.colorAttachmentIndices;
         rp.resolveAttachmentIndices = renderPass.resolveAttachmentIndices;
+        rp.fragmentShadingRateAttachmentIndex = renderPass.fragmentShadingRateAttachmentIndex;
         rp.depthResolveModeFlagBit = renderPass.depthResolveModeFlagBit;
         rp.stencilResolveModeFlagBit = renderPass.stencilResolveModeFlagBit;
+        rp.shadingRateTexelSize = renderPass.shadingRateTexelSize;
+        rp.viewMask = renderPass.viewMask;
     }
 
     return rp;
@@ -201,20 +213,28 @@ void RenderNodeUtil::BindResourcesToBinder(
 {
     pipelineDescriptorSetBinder.ClearBindings();
     for (const auto& ref : resources.buffers) {
-        BindableBuffer bindable;
-        bindable.handle = ref.handle;
-        pipelineDescriptorSetBinder.BindBuffer(ref.set, ref.binding, bindable);
+        if (RenderHandleUtil::IsValid(ref.handle)) {
+            BindableBuffer bindable;
+            bindable.handle = ref.handle;
+            pipelineDescriptorSetBinder.BindBuffer(ref.set, ref.binding, bindable);
+        }
     }
     for (const auto& ref : resources.images) {
-        BindableImage bindable;
-        bindable.handle = ref.handle;
-        bindable.samplerHandle = ref.secondHandle; // might be combined image sampler if valid handle
-        pipelineDescriptorSetBinder.BindImage(ref.set, ref.binding, bindable);
+        if (RenderHandleUtil::IsValid(ref.handle)) {
+            BindableImage bindable;
+            bindable.handle = ref.handle;
+            bindable.samplerHandle = ref.secondHandle; // might be combined image sampler if valid handle
+            bindable.mip = ref.mip;
+            bindable.layer = ref.layer;
+            pipelineDescriptorSetBinder.BindImage(ref.set, ref.binding, bindable);
+        }
     }
     for (const auto& ref : resources.samplers) {
-        BindableSampler bindable;
-        bindable.handle = ref.handle;
-        pipelineDescriptorSetBinder.BindSampler(ref.set, ref.binding, bindable);
+        if (RenderHandleUtil::IsValid(ref.handle)) {
+            BindableSampler bindable;
+            bindable.handle = ref.handle;
+            pipelineDescriptorSetBinder.BindSampler(ref.set, ref.binding, bindable);
+        }
     }
 }
 
@@ -226,11 +246,19 @@ DescriptorCounts RenderNodeUtil::GetDescriptorCounts(const PipelineLayout& pipel
         if (setRef.set == PipelineLayoutConstants::INVALID_INDEX) {
             continue;
         }
-        dc.counts.reserve(setRef.bindings.size());
+        dc.counts.reserve(dc.counts.size() + setRef.bindings.size());
         for (const auto& bindingRef : setRef.bindings) {
-            dc.counts.emplace_back(
-                DescriptorCounts::TypedCount { bindingRef.descriptorType, bindingRef.descriptorCount });
+            dc.counts.push_back(DescriptorCounts::TypedCount { bindingRef.descriptorType, bindingRef.descriptorCount });
         }
+    }
+    return dc;
+}
+
+DescriptorCounts RenderNodeUtil::GetDescriptorCounts(const array_view<DescriptorSetLayoutBinding> bindings) const
+{
+    DescriptorCounts dc;
+    for (const auto& bindingRef : bindings) {
+        dc.counts.push_back(DescriptorCounts::TypedCount { bindingRef.descriptorType, bindingRef.descriptorCount });
     }
     return dc;
 }
@@ -248,8 +276,8 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
         rp.renderPassDesc.attachmentCount = attachmentCount;
         for (size_t idx = 0; idx < renderPass.attachments.size(); ++idx) {
             const auto& ref = renderPass.attachments[idx];
-            rpDesc.attachments[idx] = { 0, 0, ref.loadOp, ref.storeOp, ref.stencilLoadOp, ref.stencilStoreOp,
-                ref.clearValue };
+            rpDesc.attachments[idx] = { ref.layer, ref.mip, ref.loadOp, ref.storeOp, ref.stencilLoadOp,
+                ref.stencilStoreOp, ref.clearValue };
             rpDesc.attachmentHandles[idx] = ref.handle;
             if (idx == 0) { // optimization, width and height must match (will end in error later)
                 const GpuImageDesc desc = renderNodeContextMgr_.GetGpuResourceManager().GetImageDescriptor(ref.handle);
@@ -258,6 +286,7 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
             }
         }
 
+        rpDesc.subpassContents = renderPass.subpassContents;
         rpDesc.subpassCount = renderPass.subpassCount;
         if (renderPass.subpassIndex >= renderPass.subpassCount) {
             PLUGIN_LOG_E("Render pass subpass idx < count (%u < %u)", renderPass.subpassIndex, renderPass.subpassCount);
@@ -272,12 +301,19 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
             spDesc.resolveAttachmentCount = (uint32_t)renderPass.resolveAttachmentIndices.size();
 
             spDesc.depthAttachmentCount = (renderPass.depthAttachmentIndex != ~0u) ? 1u : 0u;
-            spDesc.depthAttachmentIndex = (spDesc.depthAttachmentCount > 0) ? renderPass.depthAttachmentIndex : 0u;
+            spDesc.depthAttachmentIndex = (spDesc.depthAttachmentCount > 0) ? renderPass.depthAttachmentIndex : ~0u;
             spDesc.depthResolveAttachmentCount = (renderPass.depthResolveAttachmentIndex != ~0u) ? 1u : 0u;
             spDesc.depthResolveAttachmentIndex =
-                (spDesc.depthResolveAttachmentCount > 0) ? renderPass.depthResolveAttachmentIndex : 0u;
+                (spDesc.depthResolveAttachmentCount > 0) ? renderPass.depthResolveAttachmentIndex : ~0u;
             spDesc.depthResolveModeFlagBit = renderPass.depthResolveModeFlagBit;
             spDesc.stencilResolveModeFlagBit = renderPass.stencilResolveModeFlagBit;
+
+            spDesc.fragmentShadingRateAttachmentCount =
+                (renderPass.fragmentShadingRateAttachmentIndex != ~0u) ? 1u : 0u;
+            spDesc.fragmentShadingRateAttachmentIndex =
+                (spDesc.fragmentShadingRateAttachmentCount > 0) ? renderPass.fragmentShadingRateAttachmentIndex : ~0u;
+            spDesc.shadingRateTexelSize = renderPass.shadingRateTexelSize;
+            spDesc.viewMask = renderPass.viewMask;
 
             for (uint32_t idx = 0; idx < spDesc.inputAttachmentCount; ++idx) {
                 spDesc.inputAttachmentIndices[idx] = renderPass.inputAttachmentIndices[idx];
@@ -326,27 +362,38 @@ RenderPostProcessConfiguration RenderNodeUtil::GetRenderPostProcessConfiguration
 
     output.flags = { input.enableFlags, 0, 0, 0 };
     output.renderTimings = renderNodeContextMgr_.GetRenderNodeGraphData().renderingConfiguration.renderTimings;
-    output.factors[PostProcessConfiguration::INDEX_TONEMAP] = { input.tonemapConfiguration.exposure, 0.0f, 0.0f,
-        static_cast<float>(input.tonemapConfiguration.tonemapType) };
-    output.factors[PostProcessConfiguration::INDEX_VIGNETTE] = { input.vignetteConfiguration.coefficient,
-        input.vignetteConfiguration.power, 0.0f, 0.0f };
-    output.factors[PostProcessConfiguration::INDEX_DITHER] = { input.ditherConfiguration.amountCoefficient, 0, 0,
-        static_cast<float>(input.ditherConfiguration.ditherType) };
-    output.factors[PostProcessConfiguration::INDEX_COLOR_CONVERSION] = { 0.0f, 0.0f, 0.0f,
-        static_cast<float>(input.colorConversionConfiguration.conversionFunctionType) };
-    output.factors[PostProcessConfiguration::INDEX_COLOR_FRINGE] = { input.colorFringeConfiguration.coefficient,
-        input.colorFringeConfiguration.distanceCoefficient, 0.0f, 0.0f };
+    output.factors[PostProcessConfiguration::INDEX_TONEMAP] = PostProcessConversionHelper::GetFactorTonemap(input);
+    output.factors[PostProcessConfiguration::INDEX_VIGNETTE] = PostProcessConversionHelper::GetFactorVignette(input);
+    output.factors[PostProcessConfiguration::INDEX_DITHER] = PostProcessConversionHelper::GetFactorDither(input);
+    output.factors[PostProcessConfiguration::INDEX_COLOR_CONVERSION] =
+        PostProcessConversionHelper::GetFactorColorConversion(input);
+    output.factors[PostProcessConfiguration::INDEX_COLOR_FRINGE] = PostProcessConversionHelper::GetFactorFringe(input);
 
-    output.factors[PostProcessConfiguration::INDEX_BLUR] = { static_cast<float>(input.blurConfiguration.blurType),
-        static_cast<float>(input.blurConfiguration.blurQualityType), input.blurConfiguration.filterSize, 0 };
-    output.factors[PostProcessConfiguration::INDEX_BLOOM] = { input.bloomConfiguration.thresholdHard,
-        input.bloomConfiguration.thresholdSoft, input.bloomConfiguration.amountCoefficient,
-        input.bloomConfiguration.dirtMaskCoefficient };
+    output.factors[PostProcessConfiguration::INDEX_BLUR] = PostProcessConversionHelper::GetFactorBlur(input);
+    output.factors[PostProcessConfiguration::INDEX_BLOOM] = PostProcessConversionHelper::GetFactorBloom(input);
+    output.factors[PostProcessConfiguration::INDEX_FXAA] = PostProcessConversionHelper::GetFactorFxaa(input);
+    output.factors[PostProcessConfiguration::INDEX_TAA] = PostProcessConversionHelper::GetFactorTaa(input);
+    output.factors[PostProcessConfiguration::INDEX_DOF] = PostProcessConversionHelper::GetFactorDof(input);
+    output.factors[PostProcessConfiguration::INDEX_MOTION_BLUR] =
+        PostProcessConversionHelper::GetFactorMotionBlur(input);
 
-    output.factors[PostProcessConfiguration::INDEX_FXAA] = { static_cast<float>(input.fxaaConfiguration.sharpness),
-        static_cast<float>(input.fxaaConfiguration.quality), 0.0f, 0.0f };
-    output.factors[PostProcessConfiguration::INDEX_TAA] = { static_cast<float>(input.taaConfiguration.sharpness),
-        static_cast<float>(input.taaConfiguration.quality), 0.0f, 0.0f };
+    BASE_NS::CloneData(output.userFactors, sizeof(output.userFactors), input.userFactors, sizeof(input.userFactors));
+
+    return output;
+}
+
+RenderPostProcessConfiguration RenderNodeUtil::GetRenderPostProcessConfiguration(
+    const IRenderDataStorePostProcess::GlobalFactors& globalFactors) const
+{
+    RenderPostProcessConfiguration output;
+
+    output.flags = { globalFactors.enableFlags, 0, 0, 0 };
+    output.renderTimings = renderNodeContextMgr_.GetRenderNodeGraphData().renderingConfiguration.renderTimings;
+
+    BASE_NS::CloneData(output.factors, sizeof(output.factors), globalFactors.factors, sizeof(globalFactors.factors));
+    BASE_NS::CloneData(
+        output.userFactors, sizeof(output.userFactors), globalFactors.userFactors, sizeof(globalFactors.userFactors));
+
     return output;
 }
 

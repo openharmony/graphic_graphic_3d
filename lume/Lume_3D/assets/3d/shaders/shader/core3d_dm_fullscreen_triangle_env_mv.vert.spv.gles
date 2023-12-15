@@ -1,0 +1,97 @@
+#version 320 es
+#extension GL_OVR_multiview2 : require
+#define SPIRV_CROSS_CONSTANT_ID_256 1u
+layout(num_views = 1) in;
+
+struct DefaultMaterialGeneralDataStruct
+{
+    uvec4 indices;
+    vec4 viewportSizeInvViewportSize;
+    vec4 sceneTimingData;
+};
+
+struct DefaultCameraMatrixStruct
+{
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+    mat4 viewInv;
+    mat4 projInv;
+    mat4 viewProjInv;
+    mat4 viewPrevFrame;
+    mat4 projPrevFrame;
+    mat4 viewProjPrevFrame;
+    mat4 shadowViewProj;
+    mat4 shadowViewProjInv;
+    vec4 jitter;
+    vec4 jitterPrevFrame;
+    uvec4 indices;
+    uvec4 multiViewIndices;
+    vec4 frustumPlanes[6];
+    uvec4 counts;
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_256
+#define SPIRV_CROSS_CONSTANT_ID_256 0u
+#endif
+const uint CORE_BACKEND_TYPE = SPIRV_CROSS_CONSTANT_ID_256;
+const bool _130 = (CORE_BACKEND_TYPE != 0u);
+uniform float CORE_FLIP_NDC ;
+
+layout(std140) uniform s0_b1
+{
+    DefaultMaterialGeneralDataStruct uGeneralData;
+} _s0_b1;
+
+layout(std140) uniform s0_b0
+{
+    DefaultCameraMatrixStruct uCameras[16];
+} _s0_b0;
+
+layout(location = 0) out vec2 outUv;
+layout(location = 1) flat out uint outIndices;
+
+void main()
+{
+    float _111 = (-1.0) + float((gl_VertexID & 1) << 2);
+    float _118 = 1.0 - float((gl_VertexID & 2) << 1);
+    gl_Position = vec4(_111, _118, 1.0, 1.0);
+    if (_130)
+    {
+        gl_Position = vec4(gl_Position.x, gl_Position.y * CORE_FLIP_NDC, fma(gl_Position.z, 2.0, -gl_Position.w), gl_Position.w);
+    }
+    outUv = vec2(_111, _118);
+    bool _214 = _s0_b0.uCameras[_s0_b1.uGeneralData.indices.x].multiViewIndices.x > 0u;
+    bool _221;
+    if (_214)
+    {
+        _221 = uint(gl_ViewID_OVR) <= _s0_b0.uCameras[_s0_b1.uGeneralData.indices.x].multiViewIndices.x;
+    }
+    else
+    {
+        _221 = _214;
+    }
+    bool _226;
+    if (_221)
+    {
+        _226 = gl_ViewID_OVR != 0;
+    }
+    else
+    {
+        _226 = _221;
+    }
+    uint _249;
+    if (_226)
+    {
+        _249 = _s0_b0.uCameras[_s0_b1.uGeneralData.indices.x].multiViewIndices[gl_ViewID_OVR];
+    }
+    else
+    {
+        _249 = _s0_b1.uGeneralData.indices.x;
+    }
+    outIndices = 0u | (_249 & 65535u);
+}
+

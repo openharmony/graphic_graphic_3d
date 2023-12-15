@@ -42,7 +42,7 @@ void RenderDataStoreDefaultScene::Clear()
 void RenderDataStoreDefaultScene::SetScene(const RenderScene& renderScene)
 {
     const size_t arrIdx = scenes_.size();
-    scenes_.emplace_back(renderScene);
+    scenes_.push_back(renderScene);
     if (renderScene.name.empty()) {
         nameToScene_[to_string(nextId++)] = arrIdx;
     } else {

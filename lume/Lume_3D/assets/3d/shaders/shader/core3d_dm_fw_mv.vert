@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,9 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
+#extension GL_EXT_multiview : enable
+
+// NOTE: multiview extension is enabled
 
 // includes
 
@@ -24,10 +28,10 @@
 
 #include "3d/shaders/common/3d_dm_vert_layout_common.h"
 #define CORE3D_DM_FW_VERT_INPUT 1
-#define CORE3D_DM_DF_VERT_OUTPUT 1
+#define CORE3D_DM_FW_VERT_OUTPUT 1
 #include "3d/shaders/common/3d_dm_inout_common.h"
 
-void getWorldMatrix(out mat4 worldMatrix, out mat3 normalMatrix, out mat4 prevWorldMatrix)
+void GetWorldMatrix(out mat4 worldMatrix, out mat3 normalMatrix, out mat4 prevWorldMatrix)
 {
     if ((CORE_SUBMESH_FLAGS & CORE_SUBMESH_SKIN_BIT) == CORE_SUBMESH_SKIN_BIT) {
         mat4 world = (uSkinData.jointMatrices[inIndex.x] * inWeight.x);
@@ -53,32 +57,38 @@ void getWorldMatrix(out mat4 worldMatrix, out mat3 normalMatrix, out mat4 prevWo
     }
 }
 
+uint GetMultiViewCameraIndex()
+{
+    const uint cameraIdx = GetUnpackCameraIndex(uGeneralData);
+    const uint count = uCameras[cameraIdx].multiViewIndices[0];
+    uint newCameraIdx = cameraIdx;
+    // NOTE: when gl_ViewIndex is 0 the "main" camera is used and no multi-view indexing
+    if ((count > 0) && (gl_ViewIndex <= count) && (gl_ViewIndex != 0)) {
+        newCameraIdx = uCameras[cameraIdx].multiViewIndices[gl_ViewIndex];
+    }
+    return newCameraIdx;
+}
+
 /*
 vertex shader for basic pbr materials.
 */
 void main(void)
 {
-    const uint cameraIdx = GetUnpackCameraIndex(uGeneralData);
+    const uint cameraIdx = GetMultiViewCameraIndex();
     mat4 worldMatrix;
     mat3 normalMatrix;
     mat4 prevWorldMatrix;
-    getWorldMatrix(worldMatrix, normalMatrix, prevWorldMatrix);
+    GetWorldMatrix(worldMatrix, normalMatrix, prevWorldMatrix);
     const vec4 worldPos = worldMatrix * vec4(inPosition.xyz, 1.0);
     const vec4 projPos = uCameras[cameraIdx].viewProj * worldPos;
     CORE_VERTEX_OUT(projPos);
 
-    outPos = worldPos.xyz;
+    outIndices = GetPackFlatIndices(cameraIdx, gl_InstanceIndex);
 
-    outVelocityI = vec3(0.0, 0.0, float(gl_InstanceIndex));
+    outPos.xyz = worldPos.xyz;
+    outPrevPosI = vec4(0.0, 0.0, 0.0, 0.0);
     if ((CORE_SUBMESH_FLAGS & CORE_SUBMESH_VELOCITY_BIT) == CORE_SUBMESH_VELOCITY_BIT) {
-        // NOTE: velocity should be unjittered when reading (or calc without jitter)
-        // currently default cameras calculates the same jitter for both frames
-        const vec4 prevWorldPos = prevWorldMatrix * vec4(inPosition.xyz, 1.0);
-        const vec4 projPosPrev = uCameras[cameraIdx].viewProjPrevFrame * prevWorldPos;
-        const vec2 uvPos = (projPos.xy / projPos.w) * 0.5 + 0.5;
-        const vec2 oldUvPos = (projPosPrev.xy / projPosPrev.w) * 0.5 + 0.5;
-        // better precision for fp16 and expected in parts of engine
-        outVelocityI.xy = (uvPos - oldUvPos) * uGeneralData.viewportSizeInvViewportSize.xy;
+        outPrevPosI.xyz = (prevWorldMatrix * vec4(inPosition.xyz, 1.0)).xyz;
     }
 
     outNormal = normalize(normalMatrix * inNormal.xyz);
@@ -98,6 +108,4 @@ void main(void)
     } else {
         outColor = vec4(1.0);
     }
-
-    // velocity
 }

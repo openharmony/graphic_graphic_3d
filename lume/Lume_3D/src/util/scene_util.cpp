@@ -15,6 +15,8 @@
 
 #include "util/scene_util.h"
 
+#include <cinttypes>
+
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/animation_output_component.h>
 #include <3d/ecs/components/animation_track_component.h>
@@ -37,9 +39,11 @@
 #include <3d/render/default_material_constants.h>
 #include <3d/util/intf_mesh_util.h>
 #include <base/containers/fixed_string.h>
+#include <base/math/matrix_util.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/intf_engine.h>
+#include <core/log.h>
 #include <core/namespace.h>
 #include <core/property/intf_property_handle.h>
 #include <render/device/intf_gpu_resource_manager.h>
@@ -94,13 +98,20 @@ void SceneUtil::UpdateCameraViewport(IEcs& ecs, Entity entity, const Math::UVec2
 {
     auto ccm = GetManager<ICameraComponentManager>(ecs);
     if (ccm && CORE_NS::EntityUtil::IsValid(entity)) {
-        CameraComponent cameraComponent = ccm->Get(entity);
-        cameraComponent.aspect =
-            (renderResolution.y > 0) ? (static_cast<float>(renderResolution.x) / renderResolution.y) : 1.0f;
+        ScopedHandle<CameraComponent> cameraHandle = ccm->Write(entity);
+        if (!cameraHandle) {
+            ccm->Create(entity);
+            cameraHandle = ccm->Write(entity);
+            if (!cameraHandle) {
+                return;
+            }
+        }
+        CameraComponent& cameraComponent = *cameraHandle;
+        cameraComponent.aspect = (renderResolution.y > 0U)
+                                     ? (static_cast<float>(renderResolution.x) / static_cast<float>(renderResolution.y))
+                                     : 1.0f;
         cameraComponent.renderResolution[0] = renderResolution.x;
         cameraComponent.renderResolution[1] = renderResolution.y;
-
-        ccm->Set(entity, cameraComponent);
     }
 }
 
@@ -109,10 +120,20 @@ void SceneUtil::UpdateCameraViewport(
 {
     auto ccm = GetManager<ICameraComponentManager>(ecs);
     if (ccm && CORE_NS::EntityUtil::IsValid(entity)) {
-        CameraComponent cameraComponent = ccm->Get(entity);
+        ScopedHandle<CameraComponent> cameraHandle = ccm->Write(entity);
+        if (!cameraHandle) {
+            ccm->Create(entity);
+            cameraHandle = ccm->Write(entity);
+            if (!cameraHandle) {
+                return;
+            }
+        }
+        CameraComponent& cameraComponent = *cameraHandle;
         if (autoAspect) {
             const float aspectRatio =
-                (renderResolution.y > 0) ? (static_cast<float>(renderResolution.x) / renderResolution.y) : 1.0f;
+                (renderResolution.y > 0)
+                    ? (static_cast<float>(renderResolution.x) / static_cast<float>(renderResolution.y))
+                    : 1.0f;
 
             // Using the fov value as xfov on portrait screens to keep the object
             // better in the frame.
@@ -129,8 +150,46 @@ void SceneUtil::UpdateCameraViewport(
 
         cameraComponent.renderResolution[0] = renderResolution.x;
         cameraComponent.renderResolution[1] = renderResolution.y;
+    }
+}
 
-        ccm->Set(entity, cameraComponent);
+void SceneUtil::CameraLookAt(
+    IEcs& ecs, Entity entity, const Math::Vec3& eye, const Math::Vec3& target, const Math::Vec3& up)
+{
+    auto parentWorld = Math::Mat4X4(1.f);
+
+    auto getParent = [ncm = GetManager<INodeComponentManager>(ecs)](Entity entity) {
+        if (auto nodeHandle = ncm->Read(entity)) {
+            return nodeHandle->parent;
+        }
+        return Entity {};
+    };
+
+    // walk up the hierachy to get an up-to-date world matrix.
+    auto tcm = GetManager<ITransformComponentManager>(ecs);
+    for (Entity node = getParent(entity); EntityUtil::IsValid(node); node = getParent(node)) {
+        if (auto parentTransformHandle = tcm->Read(node)) {
+            parentWorld = Math::Trs(parentTransformHandle->position, parentTransformHandle->rotation,
+                              parentTransformHandle->scale) *
+                          parentWorld;
+        }
+    }
+
+    // entity's local transform should invert any parent transformations and apply the transform of rotating towards
+    // target and moving to eye. this transform is the inverse of the look-at matrix.
+    auto worldMatrix = Math::Inverse(parentWorld) * Math::Inverse(Math::LookAtRh(eye, target, up));
+
+    Math::Vec3 scale;
+    Math::Quat orientation;
+    Math::Vec3 translation;
+    Math::Vec3 skew;
+    Math::Vec4 perspective;
+    if (Math::Decompose(worldMatrix, scale, orientation, translation, skew, perspective)) {
+        if (auto transformHandle = tcm->Write(entity)) {
+            transformHandle->position = translation;
+            transformHandle->rotation = orientation;
+            transformHandle->scale = scale;
+        }
     }
 }
 
@@ -176,7 +235,7 @@ constexpr Math::UVec2 DEFAULT_PLANE_TARGET_SIZE { 2u, 2u };
 
 EntityReference CreateReflectionPlaneGpuImage(IGpuResourceManager& gpuResourceMgr,
     IRenderHandleComponentManager& handleManager, INameComponentManager& nameManager, const string_view name,
-    const Format format, const ImageUsageFlags usageFlags)
+    const Format format, const ImageUsageFlags usageFlags, const MemoryPropertyFlags memoryPropertyFlags)
 {
     const auto entity = handleManager.GetEcs().GetEntityManager().CreateReferenceCounted();
     handleManager.Create(entity);
@@ -184,9 +243,10 @@ EntityReference CreateReflectionPlaneGpuImage(IGpuResourceManager& gpuResourceMg
     GpuImageDesc desc;
     desc.width = DEFAULT_PLANE_TARGET_SIZE.x;
     desc.height = DEFAULT_PLANE_TARGET_SIZE.y;
-    desc.depth = 1;
+    desc.depth = 1U;
+    desc.mipCount = DefaultMaterialCameraConstants::REFLECTION_PLANE_MIP_COUNT;
     desc.format = format;
-    desc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    desc.memoryPropertyFlags = memoryPropertyFlags;
     desc.usageFlags = usageFlags;
     desc.imageType = ImageType::CORE_IMAGE_TYPE_2D;
     desc.imageTiling = ImageTiling::CORE_IMAGE_TILING_OPTIMAL;
@@ -218,14 +278,17 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
     plane.entity = nodeEntity;
     plane.colorTarget = CreateReflectionPlaneGpuImage(gpuResourceMgr, *gpuHandleCM, *nameCM,
         DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME + to_hex(nodeEntity.id),
-        Format::BASE_FORMAT_R8G8B8A8_SRGB,
-        ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT);
+        Format::BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
+        ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT,
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     // NOTE: uses transient attachement usage flag and cannot be read.
     plane.depthTarget = CreateReflectionPlaneGpuImage(gpuResourceMgr, *gpuHandleCM, *nameCM,
         DefaultMaterialCameraConstants::CAMERA_DEPTH_PREFIX_NAME + to_hex(nodeEntity.id), Format::BASE_FORMAT_D16_UNORM,
         ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+            ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
 
     if (const auto rmcHandle = renderMeshCM->Read(nodeEntity); rmcHandle) {
         const RenderMeshComponent& rmc = *rmcHandle;
@@ -246,7 +309,9 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
                         uriCM->Write(shaderEntity)->uri = uri;
                     }
                     matComponent.materialShader.shader = ecs.GetEntityManager().GetReferenceCounted(shaderEntity);
-                    matComponent.textures[MaterialComponent::TextureIndex::SHEEN].image = plane.colorTarget;
+
+                    matComponent.textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].image =
+                        plane.colorTarget;
                     matComponent.extraRenderingFlags = MaterialComponent::ExtraRenderingFlagBits::DISCARD_BIT;
                 }
             }
@@ -365,38 +430,49 @@ vector<Entity> UpdateTracks(IEcs& ecs, array_view<EntityReference> targetTracks,
     std::transform(sourceTracks.begin(), sourceTracks.end(), targetTracks.begin(),
         [&entityManager, animationTrackManager, animationOutputManager, &srcJointEntities, &srcToDstJointMapping,
             &trackTargets, scale](const EntityReference& srcTrackEntity) {
-            const auto srcTargetEntity = animationTrackManager->Read(srcTrackEntity)->target;
-            // check that the src track target is one of the src joints
-            if (const auto pos = std::find(srcJointEntities.begin(), srcJointEntities.end(), srcTargetEntity);
-                pos != srcJointEntities.end()) {
-                auto dstTrackEntity = entityManager.CreateReferenceCounted();
-                animationTrackManager->Create(dstTrackEntity);
-                auto dstTrack = animationTrackManager->Write(dstTrackEntity);
-                auto srcTrack = animationTrackManager->Read(srcTrackEntity);
-                *dstTrack = *srcTrack;
-                const auto jointIndex = (pos - srcJointEntities.begin());
-                trackTargets.push_back(srcToDstJointMapping[jointIndex]);
-                dstTrack->target = {};
+            const auto srcTrackId = animationTrackManager->GetComponentId(srcTrackEntity);
+            const auto srcTargetEntity = (srcTrackId != IComponentManager::INVALID_COMPONENT_ID)
+                                             ? animationTrackManager->Read(srcTrackId)->target
+                                             : Entity {};
+            if (EntityUtil::IsValid(srcTargetEntity)) {
+                // check that the src track target is one of the src joints
+                if (const auto pos = std::find(srcJointEntities.begin(), srcJointEntities.end(), srcTargetEntity);
+                    pos != srcJointEntities.end()) {
+                    auto dstTrackEntity = entityManager.CreateReferenceCounted();
+                    animationTrackManager->Create(dstTrackEntity);
+                    auto dstTrack = animationTrackManager->Write(dstTrackEntity);
+                    auto srcTrack = animationTrackManager->Read(srcTrackId);
+                    *dstTrack = *srcTrack;
+                    const auto jointIndex = static_cast<size_t>(pos - srcJointEntities.begin());
+                    trackTargets.push_back(srcToDstJointMapping[jointIndex]);
+                    dstTrack->target = {};
 
-                // joint position track needs to be offset
-                if ((dstTrack->component == ITransformComponentManager::UID) && (dstTrack->property == "position")) {
-                    // create new animation output with original position corrected by the scale.
-                    dstTrack->data = entityManager.CreateReferenceCounted();
-                    animationOutputManager->Create(dstTrack->data);
-                    const auto dstOutput = animationOutputManager->Write(dstTrack->data);
-                    const auto srcOutput = animationOutputManager->Read(srcTrack->data);
-                    dstOutput->type = srcOutput->type;
-                    auto& dst = dstOutput->data;
-                    const auto& src = srcOutput->data;
-                    dst.resize(src.size());
-                    const auto count = dst.size() / sizeof(Math::Vec3);
-                    const auto srcPositions = array_view(reinterpret_cast<const Math::Vec3*>(src.data()), count);
-                    auto dstPositions = array_view(reinterpret_cast<Math::Vec3*>(dst.data()), count);
-                    std::transform(srcPositions.begin(), srcPositions.end(), dstPositions.begin(),
-                        [scale](const Math::Vec3 position) { return position * scale; });
+                    // joint position track needs to be offset
+                    if ((dstTrack->component == ITransformComponentManager::UID) &&
+                        (dstTrack->property == "position")) {
+                        if (const auto srcOutputId = animationOutputManager->GetComponentId(srcTrack->data);
+                            srcOutputId != IComponentManager::INVALID_COMPONENT_ID) {
+                            // create new animation output with original position corrected by the scale.
+                            dstTrack->data = entityManager.CreateReferenceCounted();
+                            animationOutputManager->Create(dstTrack->data);
+                            const auto dstOutput = animationOutputManager->Write(dstTrack->data);
+                            const auto srcOutput = animationOutputManager->Read(srcOutputId);
+                            dstOutput->type = srcOutput->type;
+                            auto& dst = dstOutput->data;
+                            const auto& src = srcOutput->data;
+                            dst.resize(src.size());
+                            const auto count = dst.size() / sizeof(Math::Vec3);
+                            const auto srcPositions =
+                                array_view(reinterpret_cast<const Math::Vec3*>(src.data()), count);
+                            auto dstPositions = array_view(reinterpret_cast<Math::Vec3*>(dst.data()), count);
+                            std::transform(srcPositions.begin(), srcPositions.end(), dstPositions.begin(),
+                                [scale](const Math::Vec3 position) { return position * scale; });
+                        }
+                    }
+                    return dstTrackEntity;
                 }
-                return dstTrackEntity;
             }
+            CORE_LOG_W("no target for track %" PRIx64, static_cast<Entity>(srcTrackEntity).id);
             return srcTrackEntity;
         });
     return trackTargets;
@@ -444,7 +520,9 @@ IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
     {
         INameComponentManager* nameManager = GetManager<INameComponentManager>(ecs);
         nameManager->Create(dstAnimationEntity);
-        nameManager->Write(dstAnimationEntity)->name = nameManager->Read(animationEntity)->name + " retargeted";
+        auto srcName = nameManager->Read(animationEntity);
+        nameManager->Write(dstAnimationEntity)->name =
+            (srcName ? srcName->name : string_view("<empty>")) + " retargeted";
     }
 
     vector<Entity> trackTargets;
@@ -513,6 +591,7 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
         IEntityManager& entityMgr = ecs.GetEntityManager();
         const IShaderManager& shaderMgr = graphicsContext_.GetRenderContext().GetDevice().GetShaderManager();
         const uint32_t renderSlotId = shaderMgr.GetRenderSlotId(renderSlot);
+
         if (renderSlotId != ~0u) {
             const IShaderManager::RenderSlotData rsd = shaderMgr.GetRenderSlotData(renderSlotId);
             if (rsd.shader) {
@@ -534,5 +613,66 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
             CORE_LOG_W("SceneUtil: render slot id not found (%s)", renderSlot.data());
         }
     }
+}
+
+void SceneUtil::ShareSkin(IEcs& ecs, Entity targetEntity, Entity sourceEntity) const
+{
+    vector<Entity> dstToSrcJointMapping;
+
+    auto jointsManager = GetManager<ISkinJointsComponentManager>(ecs);
+    {
+        auto dstJointsComponent = jointsManager->Read(targetEntity);
+        auto srcJointsComponent = jointsManager->Read(sourceEntity);
+        if (!dstJointsComponent) {
+            CORE_LOG_E("target doesn't have SkinJointsComponent.");
+            return;
+        }
+        if (!srcJointsComponent) {
+            CORE_LOG_E("source doesn't have SkinJointsComponent.");
+            return;
+        }
+
+        auto dstJointEntities = array_view(dstJointsComponent->jointEntities, dstJointsComponent->count);
+        auto srcJointEntities = array_view(srcJointsComponent->jointEntities, srcJointsComponent->count);
+
+        dstToSrcJointMapping = CreateJointMapping(ecs, srcJointEntities, dstJointEntities);
+        if (dstJointsComponent->count != dstToSrcJointMapping.size()) {
+            CORE_LOG_E("couldn't match all joints.");
+        }
+    }
+    auto dstJointsComponent = jointsManager->Write(targetEntity);
+    std::copy(dstToSrcJointMapping.data(), dstToSrcJointMapping.data() + dstToSrcJointMapping.size(),
+        dstJointsComponent->jointEntities);
+}
+
+void SceneUtil::RegisterSceneLoader(const ISceneLoader::Ptr& loader)
+{
+    if (auto pos = std::find_if(sceneLoaders_.cbegin(), sceneLoaders_.cend(),
+            [newLoader = loader.get()](const ISceneLoader::Ptr& registered) { return registered.get() == newLoader; });
+        pos == sceneLoaders_.cend()) {
+        sceneLoaders_.push_back(loader);
+    }
+}
+
+void SceneUtil::UnregisterSceneLoader(const ISceneLoader::Ptr& loader)
+{
+    if (auto pos = std::find_if(sceneLoaders_.cbegin(), sceneLoaders_.cend(),
+            [toBeRemoved = loader.get()](
+                const ISceneLoader::Ptr& registered) { return registered.get() == toBeRemoved; });
+        pos != sceneLoaders_.cend()) {
+        sceneLoaders_.erase(pos);
+    }
+}
+
+ISceneLoader::Ptr SceneUtil::GetSceneLoader(BASE_NS::string_view uri) const
+{
+    for (auto& sceneLoader : sceneLoaders_) {
+        for (const auto& extension : sceneLoader->GetSupportedExtensions()) {
+            if (uri.ends_with(extension)) {
+                return sceneLoader;
+            }
+        }
+    }
+    return {};
 }
 CORE3D_END_NAMESPACE()

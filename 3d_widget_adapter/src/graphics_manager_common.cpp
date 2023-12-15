@@ -164,6 +164,7 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
     client->Clone(engine_.get());
     return client;
 }
+
 EGLContext GraphicsManagerCommon::GetOrCreateOffScreenContext(EGLContext eglContext)
 {
     AutoRestore scope;
@@ -196,7 +197,6 @@ void GraphicsManagerCommon::UnRegister(int32_t key)
         // Destroy proto engine
         WIDGET_LOGE("view reset proto engine");
         DeInitEngine();
-        UnloadEngineLib();
         engine_.reset();
         offScreenContextHelper_.DestroyOffScreenContext();
     }

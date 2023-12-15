@@ -1,0 +1,1007 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#version 450 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_color_conversion_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+precision highp float;
+precision highp int;
+
+
+
+
+
+layout(constant_id = 256)const uint CORE_BACKEND_TYPE = 0;
+
+
+
+
+layout(constant_id = 257)const float CORE_FLIP_NDC = 1.0;
+
+
+
+
+
+
+
+
+
+
+vec2 GetFragCoordUv(vec2 fragCoord, vec2 inverseTexelSize)
+{
+    vec2 uv = fragCoord * inverseTexelSize;
+    if(CORE_FLIP_NDC < 0.0){
+        uv = vec2(uv . x, 1.0 - uv . y);
+    }
+    return uv;
+}
+
+
+
+
+
+
+
+#line 24 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_color_conversion_common.h"
+
+
+
+
+float CalcLuma(const vec3 color)
+{
+
+    return 0.299 * color . r + 0.587 * color . g + 0.114 * color . b;
+}
+
+
+
+
+float CalcLumaFxaa(const vec3 color)
+{
+
+    return color . g *(0.587 / 0.299)+ color . r;
+}
+
+
+
+
+float LumaWeight(const float luma)
+{
+    return(1.0 /(1.0 + luma));
+}
+
+
+
+
+vec3 TonemapLuma(const vec3 color, const float luma, const float range)
+{
+    return color /(1.0 + luma / range);
+}
+
+
+
+
+vec3 TonemapLumaInv(const vec3 color, const float luma, const float range)
+{
+    return color /(1.0 - luma / range);
+}
+
+
+
+
+
+vec3 SrgbToLinear(const vec3 srgb)
+{
+    const float mlow = 1.0f / 12.92f;
+    const float mhigh = 1.0f / 1.055f;
+
+    const vec3 high = pow((srgb + 0.055f)* mhigh, vec3(2.4f));
+    const vec3 low = srgb * mlow;
+    const bvec3 cutoff = lessThan(srgb, vec3(0.04045f));
+    return mix(high, low, cutoff);
+}
+
+
+
+
+
+vec3 LinearToSrgb(const vec3 linear)
+{
+    const float mlow = 12.92f;
+    const float mhigh = 1.055f;
+
+    const vec3 high = pow(linear, vec3(0.416f))* mhigh - 0.055f;
+    const vec3 low = linear * mlow;
+    const bvec3 cutoff = lessThan(linear, vec3(0.0031308f));
+    return mix(high, low, cutoff);
+}
+
+
+
+
+
+vec3 rgbToYCoCg(const vec3 rgb)
+{
+    const float y = dot(rgb, vec3(0.25, 0.5, 0.25));
+    const float co = dot(rgb, vec3(0.5, 0.0, - 0.5));
+    const float cg = dot(rgb, vec3(- 0.25, 0.5, - 0.25));
+    return vec3(y, co, cg);
+}
+
+
+
+
+
+vec3 yCoCgToRgb(const vec3 ycocg)
+{
+    const float y = ycocg . r;
+    const float co = ycocg . g;
+    const float cg = ycocg . b;
+    return vec3(y + co - cg, y + cg, y - co - cg);
+}
+
+
+#line 23 "shader/fullscreen_taa.frag"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct GlobalPostProcessStruct {
+
+    uvec4 flags;
+
+    vec4 renderTimings;
+
+
+    vec4 factors[14];
+
+
+    vec4 userFactors[16];
+};
+
+
+
+
+struct LocalPostProcessStruct {
+
+    vec4 factors[16];
+};
+
+struct LocalPostProcessPushConstantStruct {
+
+    vec4 viewportSizeInvSize;
+
+    vec4 factor;
+};
+
+struct PostProcessTonemapStruct {
+    vec4 texSizeInvTexSize;
+
+    uvec4 flags;
+
+    vec4 tonemap;
+    vec4 vignette;
+    vec4 colorFringe;
+    vec4 dither;
+
+    vec4 bloomParameters;
+};
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+float getVignetteCoeff(const vec2 uv, mediump const float coeff, mediump const float power)
+{
+    vec2 uvVal = uv . xy *(vec2(1.0)- uv . yx);
+    float vignette = uvVal . x * uvVal . y * coeff;
+    vignette = pow(vignette, power);
+    return clamp(vignette, 0.0, 1.0);
+}
+
+
+
+
+float getChromaCoeff(const vec2 uv, mediump const float chromaCoefficient)
+{
+
+    vec2 distUv =(uv - 0.5)* 2.0;
+    return dot(distUv, distUv)* chromaCoefficient;
+}
+
+
+
+
+float RandomDither(vec2 st)
+{
+    return fract(sin(dot(st . xy, vec2(12.9898, 78.233)))* 43758.5453);
+}
+
+
+
+
+#line 24 "shader/fullscreen_taa.frag"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_tonemap_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_tonemap_common.h"
+
+
+
+
+
+vec3 TonemapAces(vec3 x)
+{
+    const float a = 2.51f;
+    const float b = 0.03f;
+    const float c = 2.43f;
+    const float d = 0.59f;
+    const float e = 0.14f;
+    return(x *(a * x + b))/(x *(c * x + d)+ e);
+}
+
+
+
+
+
+vec3 TonemapAcesFilmRec2020(vec3 x)
+{
+    float a = 15.8f;
+    float b = 2.12f;
+    float c = 1.2f;
+    float d = 5.92f;
+    float e = 1.9f;
+    return(x *(a * x + b))/(x *(c * x + d)+ e);
+}
+
+
+
+
+
+float TonemapFilmic(float x)
+{
+    const float a = 0.15f;
+    const float b = 0.50f;
+    const float c = 0.10f;
+    const float d = 0.20f;
+    const float e = 0.02f;
+    const float f = 0.30f;
+    return((x *(a * x + c * b)+ d * e)/(x *(a * x + b)+ d * f))- e / f;
+}
+vec3 TonemapFilmic(vec3 x)
+{
+    const float a = 0.15f;
+    const float b = 0.50f;
+    const float c = 0.10f;
+    const float d = 0.20f;
+    const float e = 0.02f;
+    const float f = 0.30f;
+    const float w = 11.2f;
+    const vec3 curr =((x *(a * x + c * b)+ d * e)/(x *(a * x + b)+ d * f))- e / f;
+    const float whiteScale = 1.0 / TonemapFilmic(w);
+    return curr * vec3(whiteScale);
+}
+
+
+#line 25 "shader/fullscreen_taa.frag"
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_compatibility_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 20 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+#line 1 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_structs_common.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 21 "/home/z00522378/workspace/OH_1210/foundation/graphic/graphic_3d/lume/LumeRender/api/render/shaders/common/render_post_process_layout_common.h"
+
+
+
+
+layout(set = 0, binding = 0, std140)uniform uGlobalStructData
+{
+    GlobalPostProcessStruct uGlobalData;
+};
+layout(set = 0, binding = 1, std140)uniform uLocalStructData
+{
+    LocalPostProcessStruct uLocalData;
+};
+
+layout(push_constant, std430)uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(constant_id = 0)const uint CORE_POST_PROCESS_FLAGS = 0;
+
+
+
+
+
+
+#line 29 "shader/fullscreen_taa.frag"
+
+layout(set = 1, binding = 0)uniform texture2D uDepth;
+layout(set = 1, binding = 1)uniform texture2D uColor;
+layout(set = 1, binding = 2)uniform texture2D uVelocity;
+layout(set = 1, binding = 3)uniform texture2D uHistory;
+layout(set = 1, binding = 4)uniform sampler uSampler;
+
+
+
+layout(location = 0)in vec2 inUv;
+
+layout(location = 0)out vec4 outColor;
+
+
+
+
+
+
+
+
+float GetUnpackDepthBuffer(const vec2 uv)
+{
+
+
+
+    return textureLod(sampler2D(uDepth, uSampler), uv, 0). x;
+
+}
+
+vec2 GetUnpackVelocity(const vec2 uv, const vec2 invSize)
+{
+
+
+
+    return textureLod(sampler2D(uVelocity, uSampler), uv, 0). xy * invSize;
+
+}
+
+vec2 GetVelocity()
+{
+    const uint quality = uint(uPc . factor . x + 0.5);
+    vec2 velUv = inUv;
+    if(quality >= 1){
+        const uint offsetCount = 5;
+        const ivec2 offsets[offsetCount]= {
+            ivec2(- 1, - 1),
+            ivec2(1, - 1),
+            ivec2(0, 0),
+            ivec2(- 1, 1),
+            ivec2(1, 1),
+        };
+
+
+        vec2 batch1 = vec2(1.0, textureLodOffset(sampler2D(uDepth, uSampler), inUv . xy, 0.0, offsets[0]). x);
+        vec2 batch2 = vec2(textureLodOffset(sampler2D(uDepth, uSampler), inUv . xy, 0.0, offsets[1]). x, textureLodOffset(sampler2D(uDepth, uSampler), inUv . xy, 0.0, offsets[2]). x);
+        ivec2 index = mix(ivec2(2, 0), ivec2(1, 2), lessThan(batch1, batch2));
+        batch1 = mix(batch1, batch2, lessThan(batch1, batch2));
+
+        vec2 batch3 = vec2(textureLodOffset(sampler2D(uDepth, uSampler), inUv . xy, 0.0, offsets[3]). x, textureLodOffset(sampler2D(uDepth, uSampler), inUv . xy, 0.0, offsets[4]). x);
+        index = mix(index, ivec2(3, 4), lessThan(batch1, batch3));
+        batch1 = mix(batch1, batch3, lessThan(batch1, batch3));
+
+        ivec2 offset = offsets[batch1 . x < batch1 . y ? index . x : index . y];
+        float depth = batch1 . x < batch1 . y ? batch1 . x : batch1 . y;
+
+        velUv += offset *(uPc . viewportSizeInvSize . zw);
+    }
+
+    return textureLod(sampler2D(uVelocity, uSampler), velUv, 0). xy * uPc . viewportSizeInvSize . zw;
+}
+
+
+
+vec4 ClipAabb(const vec3 aabbMin, const vec3 aabbMax, const vec4 color, const vec4 history)
+{
+    const vec3 pClip = 0.5 *(aabbMax + aabbMin);
+    const vec3 eClip = 0.5 *(aabbMax - aabbMin);
+
+    const vec4 vClip = history - vec4(pClip, color . w);
+    const vec3 vUnit = vClip . xyz - eClip;
+    const vec3 aUnit = abs(vUnit);
+    const float maUnit = max(aUnit . x, max(aUnit . y, aUnit . z));
+
+    const vec4 res =(maUnit > 1.0)?(vec4(pClip, color . w)+ vClip / maUnit): color;
+    return res;
+}
+
+void main(void)
+{
+
+    const vec2 velocity = GetVelocity();
+    const vec2 historyUv = inUv . xy - velocity;
+
+    const vec4 colorSample = textureLod(sampler2D(uColor, uSampler), inUv . xy, 0.0);
+    const float frameAlpha = colorSample . a;
+    vec4 currColor = colorSample;
+
+
+    vec4 history = textureLod(sampler2D(uHistory, uSampler), historyUv, 0.0);
+
+
+
+
+
+
+
+    vec3 bc1 = textureLodOffset(sampler2D(uColor, uSampler), inUv . xy, 0.0, ivec2(0, - 1)). rgb;
+    vec3 bc3 = textureLodOffset(sampler2D(uColor, uSampler), inUv . xy, 0.0, ivec2(- 1, 0)). rgb;
+
+    vec3 bc4 = currColor . rgb;
+    vec3 min13 = min(min(bc1, bc3), bc4);
+    vec3 max13 = max(max(bc1, bc3), bc4);
+
+    vec3 bc5 = textureLodOffset(sampler2D(uColor, uSampler), inUv . xy, 0.0, ivec2(1, 0)). rgb;
+    vec3 bc7 = textureLodOffset(sampler2D(uColor, uSampler), inUv . xy, 0.0, ivec2(0, 1)). rgb;
+    vec3 min57 = min(bc5, bc7);
+    vec3 max57 = max(bc5, bc7);
+    vec3 boxMin = min(min13, min57);
+    vec3 boxMax = max(max13, max57);
+
+
+    vec3 bc0 = textureLodOffset(sampler2D(uColor, uSampler), inUv . xy, 0.0, ivec2(- 1, - 1)). rgb;
+    vec3 bc2 = textureLodOffset(sampler2D(uColor, uSampler), inUv . xy, 0.0, ivec2(1, - 1)). rgb;
+    vec3 min02 = min(boxMin, min(bc0, bc2));
+    vec3 max02 = max(boxMax, max(bc0, bc2));
+
+    vec3 bc6 = textureLodOffset(sampler2D(uColor, uSampler), inUv . xy, 0.0, ivec2(- 1, 1)). rgb;
+    vec3 bc8 = textureLodOffset(sampler2D(uColor, uSampler), inUv . xy, 0.0, ivec2(1, 1)). rgb;
+    vec3 min68 = min(bc6, bc8);
+    vec3 max68 = max(bc6, bc8);
+
+
+    const vec3 boxMinCorner = min(min02, min68);
+    const vec3 boxMaxCorner = max(max02, max68);
+
+
+
+
+    boxMin =(boxMin + boxMinCorner)* 0.5;
+    boxMax =(boxMax + boxMaxCorner)* 0.5;
+
+
+    history . rgb = clamp(history . rgb, boxMin, boxMax);
+
+
+    const float historyLuma = CalcLuma(history . rgb);
+    const float colorLuma = CalcLuma(currColor . rgb);
+
+    history . rgb *= 1.0 /(1.0 + historyLuma);
+    currColor . rgb *= 1.0 /(1.0 + colorLuma);
+
+    const float taaAlpha = uPc . factor . a;
+    vec4 color = mix(history, currColor, taaAlpha);
+
+
+    color . rgb *= 1.0 /(1.0 - CalcLuma(color . rgb));
+
+
+    outColor = max(color, vec4(0.0));
+}

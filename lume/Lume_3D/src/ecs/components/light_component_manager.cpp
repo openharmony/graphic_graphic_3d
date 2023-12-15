@@ -23,16 +23,17 @@
 #include "PropertyTools/property_macros.h"
 
 CORE_BEGIN_NAMESPACE()
+using namespace CORE3D_NS;
+
 /** Extend propertysystem with the enums */
-DECLARE_PROPERTY_TYPE(CORE3D_NS::LightComponent::Type);
+DECLARE_PROPERTY_TYPE(LightComponent::Type);
 
 // Declare their metadata
-BEGIN_ENUM(LightTypeMetaData, CORE3D_NS::LightComponent::Type)
-DECL_ENUM(CORE3D_NS::LightComponent::Type, INVALID, "Undefined")
-DECL_ENUM(CORE3D_NS::LightComponent::Type, DIRECTIONAL, "Directional")
-DECL_ENUM(CORE3D_NS::LightComponent::Type, POINT, "Point")
-DECL_ENUM(CORE3D_NS::LightComponent::Type, SPOT, "Spot")
-END_ENUM(LightTypeMetaData, CORE3D_NS::LightComponent::Type)
+BEGIN_ENUM(LightTypeMetaData, LightComponent::Type)
+DECL_ENUM(LightComponent::Type, DIRECTIONAL, "Directional")
+DECL_ENUM(LightComponent::Type, POINT, "Point")
+DECL_ENUM(LightComponent::Type, SPOT, "Spot")
+END_ENUM(LightTypeMetaData, LightComponent::Type)
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()

@@ -34,7 +34,7 @@ public:
     /** Describes result of the parsing operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(const BASE_NS::string& error) : success(false), error(error) {}
+        explicit LoadResult(BASE_NS::string_view error) : success(false), error(error) {}
 
         /** Indicates, whether the parsing operation is successful. */
         bool success { true };

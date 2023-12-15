@@ -16,6 +16,7 @@
 #ifndef CORE_UTIL_LINEAR_ALLOCATOR_H
 #define CORE_UTIL_LINEAR_ALLOCATOR_H
 
+#include <cstdint>
 #include <cstdlib>
 #include <memory>
 

@@ -15,19 +15,14 @@
 
 #include "shader_data_loader.h"
 
-#include <algorithm>
-#include <cctype>
 #include <charconv>
-#include <locale>
 
 #include <base/containers/string.h>
 #include <base/util/uid_util.h>
 #include <core/io/intf_file_manager.h>
 #include <core/namespace.h>
 
-#include "device/shader_manager.h"
 #include "json_util.h"
-#include "shader_state_loader.h"
 #include "shader_state_loader_util.h"
 #include "util/log.h"
 
@@ -39,11 +34,13 @@ namespace {
 constexpr size_t VERSION_SIZE { 5u };
 constexpr uint32_t VERSION_MAJOR { 22u };
 
-void LoadState(const json::value& jsonData, GraphicsState& graphicsState, ShaderDataLoader::LoadResult& result)
+void LoadState(const json::value& jsonData, GraphicsState& graphicsState, GraphicsStateFlags& stateFlags,
+    ShaderDataLoader::LoadResult& result)
 {
     {
         ShaderStateLoaderUtil::ShaderStateResult ssr;
         ShaderStateLoaderUtil::ParseSingleState(jsonData, ssr);
+        ShaderStateLoaderUtil::ParseStateFlags(jsonData, stateFlags, ssr);
         if (ssr.res.success && (ssr.states.states.size() == 1u)) {
             graphicsState = move(ssr.states.states[0u]);
         } else {
@@ -57,6 +54,7 @@ void LoadSingleShaderVariant(
 {
     SafeGetJsonValue(jsonData, "renderSlotDefaultShader", result.error, data.renderSlotDefaultShader);
     SafeGetJsonValue(jsonData, "variantName", result.error, data.variantName);
+    SafeGetJsonValue(jsonData, "displayName", result.error, data.displayName);
     SafeGetJsonValue(jsonData, "vert", result.error, data.vertexShader);
     SafeGetJsonValue(jsonData, "frag", result.error, data.fragmentShader);
     SafeGetJsonValue(jsonData, "compute", result.error, data.computeShader);
@@ -71,8 +69,9 @@ void LoadSingleShaderVariant(
     SafeGetJsonValue(jsonData, "pipelineLayout", result.error, data.pipelineLayout);
 
     if (result.success) {
+        data.shaderFileStr = json::to_string(jsonData);
         if (const json::value* iter = jsonData.find("state"); iter) {
-            LoadState(*iter, data.graphicsState, result);
+            LoadState(*iter, data.graphicsState, data.stateFlags, result);
         }
         if (const json::value* iter = jsonData.find("materialMetadata"); iter) {
             data.materialMetadata = json::to_string(*iter);
@@ -80,8 +79,8 @@ void LoadSingleShaderVariant(
     }
 }
 
-ShaderDataLoader::LoadResult LoadFunc(
-    const json::value& jsonData, string& baseShader, vector<ShaderDataLoader::ShaderVariant>& shaderVariants)
+ShaderDataLoader::LoadResult LoadFunc(const json::value& jsonData, string& baseShader, string& baseCategory,
+    vector<ShaderDataLoader::ShaderVariant>& shaderVariants)
 {
     ShaderDataLoader::LoadResult result;
     // compatibility check with early out
@@ -118,6 +117,8 @@ ShaderDataLoader::LoadResult LoadFunc(
 #endif
     // base shader
     SafeGetJsonValue(jsonData, "baseShader", result.error, baseShader);
+    // category
+    SafeGetJsonValue(jsonData, "category", result.error, baseCategory);
 
     // check all variants or use (older) single variant style
     if (const json::value* iter = jsonData.find("shaders"); iter) {
@@ -126,7 +127,7 @@ ShaderDataLoader::LoadResult LoadFunc(
                 ShaderDataLoader::ShaderVariant sv;
                 LoadSingleShaderVariant(variantRef, sv, result);
                 if (result.error.empty()) {
-                    shaderVariants.emplace_back(move(sv));
+                    shaderVariants.push_back(move(sv));
                 }
             }
         }
@@ -134,7 +135,7 @@ ShaderDataLoader::LoadResult LoadFunc(
         ShaderDataLoader::ShaderVariant sv;
         LoadSingleShaderVariant(jsonData, sv, result);
         if (result.error.empty()) {
-            shaderVariants.emplace_back(move(sv));
+            shaderVariants.push_back(move(sv));
         }
     }
 
@@ -151,6 +152,11 @@ string_view ShaderDataLoader::GetUri() const
 string_view ShaderDataLoader::GetBaseShader() const
 {
     return baseShader_;
+}
+
+BASE_NS::string_view ShaderDataLoader::GetBaseCategory() const
+{
+    return baseCategory_;
 }
 
 array_view<const ShaderDataLoader::ShaderVariant> ShaderDataLoader::GetShaderVariants() const
@@ -185,7 +191,7 @@ ShaderDataLoader::LoadResult ShaderDataLoader::Load(string&& jsonData)
     LoadResult result;
     const auto json = json::parse(jsonData.data());
     if (json) {
-        result = RENDER_NS::LoadFunc(json, baseShader_, shaderVariants_);
+        result = RENDER_NS::LoadFunc(json, baseShader_, baseCategory_, shaderVariants_);
     } else {
         result.success = false;
         result.error = "Invalid json file.";

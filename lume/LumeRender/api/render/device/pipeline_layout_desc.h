@@ -114,6 +114,9 @@ struct BufferDescriptor {
 
     /** Array offset to resources for array descriptors */
     uint32_t arrayOffset { 0 };
+
+    /** Additional flags */
+    AdditionalDescriptorFlags additionalFlags { 0u };
 };
 
 /** Descriptor structure for image */
@@ -127,6 +130,9 @@ struct ImageDescriptor {
 
     /** Array offset to resources for array descriptors */
     uint32_t arrayOffset { 0 };
+
+    /** Additional flags */
+    AdditionalDescriptorFlags additionalFlags { 0u };
 };
 
 /** Descriptor structure for sampler */
@@ -138,19 +144,9 @@ struct SamplerDescriptor {
 
     /** Array offset to resources for array descriptors */
     uint32_t arrayOffset { 0 };
-};
 
-/** Descriptor structure for acceleration structure */
-struct AccelerationStructureDescriptor {
-    /** Descriptor set layout binding */
-    DescriptorSetLayoutBinding binding {};
-    /** Bindable resource structure with handle */
-    BindableBuffer resource {};
-    /** Resource state in the pipeline */
-    GpuResourceState state {};
-
-    /** Array offset to resources for array descriptors */
-    uint32_t arrayOffset { 0 };
+    /** Additional flags */
+    AdditionalDescriptorFlags additionalFlags { 0u };
 };
 
 /** Descriptor set layout binding resources */

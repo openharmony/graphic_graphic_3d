@@ -28,6 +28,8 @@
 #define CORE_BLUR_TYPE_A 4
 #define CORE_BLUR_TYPE_SOFT_DOWNSCALE_RGB 5
 #define CORE_BLUR_TYPE_DOWNSCALE_RGBA 6
+#define CORE_BLUR_TYPE_DOWNSCALE_RGBA_DOF 7
+#define CORE_BLUR_TYPE_RGBA_DOF 8
 #define CORE_BLUR_FILTER_SIZE 3
 
 #ifndef VULKAN
@@ -289,6 +291,71 @@ vec4 DownscaleRGBA(
     texture2D tex, sampler sampl, const vec2 fragCoord, const vec2 uv, const vec2 dir, const vec2 invTexSize)
 {
     return textureLod(sampler2D(tex, sampl), uv, 0);
+}
+
+vec4 DownscaleRGBADof(
+    texture2D tex, sampler sampl, const vec2 fragCoord, const vec2 uv, const vec2 dir, const vec2 invTexSize)
+{
+    const vec2 ths = invTexSize * 0.5;
+
+    vec4 color = vec4(0);
+
+    // 1.0 / 8.0 = 0.125
+    float weights[5] = { 0.5, 0.125, 0.125, 0.125, 0.125 };
+    vec4 samples[5] = {
+        // center
+        textureLod(sampler2D(tex, sampl), uv, 0),
+        // corners
+        textureLod(sampler2D(tex, sampl), uv - ths, 0),
+        textureLod(sampler2D(tex, sampl), vec2(uv.x + ths.x, uv.y - ths.y), 0),
+        textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y + ths.y), 0),
+        textureLod(sampler2D(tex, sampl), uv + ths, 0),
+    };
+    float weight = 0.0;
+    for (int i = 0; i < 5; ++i) {
+        weight += samples[i].a;
+    }
+    if (weight > 0.0) {
+        for (int i = 0; i < 5; ++i) {
+            color += samples[i] * weights[i];
+        }
+    } else {
+        color = samples[0];
+    }
+
+    return color;
+}
+
+vec4 BlurRGBADof(
+    texture2D tex, sampler sampl, const vec2 fragCoord, const vec2 uv, const vec2 dir, const vec2 invTexSize)
+{
+    const vec2 ths = invTexSize * 0.5;
+
+    CORE_RELAXEDP vec4 color = vec4(0);
+
+    CORE_RELAXEDP vec4 samples[1 + 2 * CORE_BLUR_FILTER_SIZE];
+    samples[0] = textureLod(sampler2D(tex, sampl), uv, 0);
+    float weight = samples[0].a;
+    for (int idx = 1; idx < CORE_BLUR_FILTER_SIZE; ++idx) {
+        vec2 currOffset = vec2(CORE_BLUR_OFFSETS[idx]) * dir.xy;
+
+        samples[idx * 2 - 1] = textureLod(sampler2D(tex, sampl), (vec2(fragCoord) + currOffset) * invTexSize, 0);
+        weight += samples[idx * 2 - 1].a;
+        samples[idx * 2] = textureLod(sampler2D(tex, sampl), (vec2(fragCoord) - currOffset) * invTexSize, 0);
+        weight += samples[idx * 2].a;
+    }
+    if (weight > 0.0) {
+        weight = 1.0 / weight;
+        color = samples[0] * CORE_BLUR_WEIGHTS[0] * weight;
+        for (int idx = 1; idx < CORE_BLUR_FILTER_SIZE; ++idx) {
+            color += samples[idx * 2 - 1] * CORE_BLUR_WEIGHTS[idx] * weight;
+            color += samples[idx * 2] * CORE_BLUR_WEIGHTS[idx] * weight;
+        }
+    } else {
+        color = samples[0];
+    }
+
+    return color;
 }
 
 vec3 SoftDownscaleRGBLayer(

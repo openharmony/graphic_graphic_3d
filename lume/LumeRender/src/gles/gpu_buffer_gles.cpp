@@ -25,7 +25,7 @@
 #include "gles/gl_functions.h"
 #include "util/log.h"
 
-#define IS_BIT(value, bit) (((value & bit) == bit) ? (GLboolean)GL_TRUE : (GLboolean)GL_FALSE)
+#define IS_BIT(value, bit) ((((value) & (bit)) == (bit)) ? (GLboolean)GL_TRUE : (GLboolean)GL_FALSE)
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
@@ -35,7 +35,7 @@ void RecordAllocation(const int64_t alignedByteSize)
     if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
-        pdm->UpdateData("AllGpuImages", "GPU_IMAGE", alignedByteSize);
+        pdm->UpdateData("AllGpuBuffers", "GPU_BUFFER", alignedByteSize);
     }
 }
 #endif
@@ -187,7 +187,9 @@ void* GpuBufferGLES::Map()
 
     void* ret = nullptr;
     if (isPersistantlyMapped_) {
-        ret = data_ + plat_.currentByteOffset;
+        if (data_) {
+            ret = data_ + plat_.currentByteOffset;
+        }
     } else {
         PLUGIN_ASSERT(device_.IsActive());
         const auto oldBind = device_.BoundBuffer(GL_COPY_WRITE_BUFFER);

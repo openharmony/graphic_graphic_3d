@@ -31,6 +31,7 @@ struct GpuImagePlatformDataViewsVk final {
     // generated only for color attachments
     BASE_NS::vector<VkImageView> mipImageViews;
     BASE_NS::vector<VkImageView> layerImageViews;
+    BASE_NS::vector<VkImageView> layerCubemapImageViews;
 };
 
 struct GpuImagePlatformDataConversion final {

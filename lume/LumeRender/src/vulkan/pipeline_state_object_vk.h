@@ -42,8 +42,8 @@ public:
     GraphicsPipelineStateObjectVk(Device& device, const GpuShaderProgram& gpuShaderProgram,
         const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
-        const ShaderSpecializationConstantDataView& specializationConstants, const DynamicStateFlags dynamicStateFlags,
-        const RenderPassDesc& renderPassDesc,
+        const ShaderSpecializationConstantDataView& specializationConstants,
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
         const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
         const LowLevelRenderPassData& renderPassData, const LowLevelPipelineLayoutData& pipelineLayoutData);
     ~GraphicsPipelineStateObjectVk();

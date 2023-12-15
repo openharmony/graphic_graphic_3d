@@ -13,12 +13,19 @@
  * limitations under the License.
  */
 
-
 #include "library_windows.h"
 
+#pragma warning(push)
+// C5039	'function': pointer or reference to potentially throwing function passed to extern C function under -EHc.
+// Undefined behavior may occur if this function throws an exception.
+#pragma warning(disable : 5039)
 #include <windows.h>
+#pragma warning(pop)
 
+#include <base/containers/iterator.h>
 #include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/namespace.h>
 #include <core/log.h>
 #include <core/namespace.h>
 
@@ -36,7 +43,7 @@ LibraryWindows::LibraryWindows(const string_view filename)
         }
     }
     libraryHandle_ =
-        LoadLibraryEx(tmp.c_str(), NULL, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        LoadLibraryEx(tmp.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
     if (!libraryHandle_) {
         DWORD errorCode = GetLastError();
         CORE_LOG_E("Loading dynamic library '%s' failed: 0x%lx", tmp.c_str(), errorCode);
@@ -75,4 +82,3 @@ string_view ILibrary::GetFileExtension()
     return ".dll";
 }
 CORE_END_NAMESPACE()
-

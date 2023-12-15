@@ -30,7 +30,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "device/gpu_resource_manager.h"
-#include "vulkan/gpu_acceleration_structure_vk.h"
+#include "vulkan/gpu_buffer_vk.h"
 #endif
 
 #include "util/log.h"
@@ -70,9 +70,11 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrame(IRenderCommandL
             const auto& triangles = stagingBuildData.triangles;
             const auto& aabbs = stagingBuildData.aabbs;
             const auto& instances = stagingBuildData.instances;
+            // TODO: one type blobs ATM
             for (const auto geomRef : stagingBuildData.geometry) {
                 const uint32_t startIndex = geomRef.startIndex;
                 const uint32_t count = geomRef.count;
+                // TODO:
                 PLUGIN_ASSERT(count <= 1);
                 AccelerationStructureBuildGeometryData geometry { { geomRef.data.info },
                     geomRef.data.srcAccelerationStructure.GetHandle(),
@@ -126,12 +128,13 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessInstanceD
                     for (uint32_t idx = 0; idx < dataRef.count; ++idx) {
                         const auto& instanceRef = stagingInstanceData.instances[dataRef.startIndex + idx];
                         uint64_t accelerationStructureReference = 0;
-                        if (const GpuAccelerationStructureVk* accelPtr =
-                                gpuResourceMgrImpl.GetAccelerationStructure<GpuAccelerationStructureVk>(
-                                    instanceRef.accelerationStructureReference.GetHandle());
+                        if (const GpuBufferVk* accelPtr = gpuResourceMgrImpl.GetBuffer<GpuBufferVk>(
+                                instanceRef.accelerationStructureReference.GetHandle());
                             accelPtr) {
-                            accelerationStructureReference = accelPtr->GetPlatformData().deviceAddress;
+                            accelerationStructureReference =
+                                accelPtr->GetPlatformDataAccelerationStructure().deviceAddress;
                         }
+                        // TODO:
                         VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
                             0.0f, 1.0f, 0.0f };
 

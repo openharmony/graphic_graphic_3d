@@ -16,50 +16,44 @@
 #include "log/logger_output.h"
 
 #include <chrono>
-#include <cstdarg>
 #include <ctime>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
-#include <sstream>
 #include <string_view>
 
+#include <base/containers/string_view.h>
+#include <base/namespace.h>
 #include <core/namespace.h>
 
 #include "log/logger.h"
 
 namespace LoggerUtils {
-    std::string_view GetFilename(std::string_view path)
-    {
-        if (auto const pos = path.find_last_of("\\/"); pos != std::string_view::npos) {
-            return path.substr(pos + 1);
-        }
-        return path;
+BASE_NS::string_view GetFilename(BASE_NS::string_view path)
+{
+    if (auto const pos = path.find_last_of("\\/"); pos != BASE_NS::string_view::npos) {
+        return path.substr(pos + 1);
     }
+    return path;
+}
 
-    void PrintTimeStamp(std::ostream& outputStream)
-    {
-        const auto now = std::chrono::system_clock::now();
-        const auto time = std::chrono::system_clock::to_time_t(now);
-        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-            std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+void PrintTimeStamp(std::ostream& outputStream)
+{
+    const auto now = std::chrono::system_clock::now();
+    const auto time = std::chrono::system_clock::to_time_t(now);
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
+                    std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
-        outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.");
-        outputStream << std::right << std::setfill('0') << std::setw(3) // 3: alignment
-            << ms.count() << std::setfill(' ');
-    }
+    outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.");
+    outputStream << std::right << std::setfill('0') << std::setw(3) << ms.count() << std::setfill(' '); // 3: alignment
+}
 } // namespace LoggerUtils
-
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string_view;
 
-
 class FileOutput final : public ILogger::IOutput {
 public:
     explicit FileOutput(const string_view filePath) : IOutput(), outputStream_(filePath.data(), std::ios::app) {}
-
-    ~FileOutput() override = default;
 
     void Write(
         ILogger::LogLevel logLevel, const string_view filename, int linenumber, const string_view message) override

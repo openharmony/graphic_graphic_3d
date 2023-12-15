@@ -15,6 +15,7 @@
 
 #include "pipeline_state_object_gles.h"
 
+#include <base/containers/fixed_string.h>
 #include <base/util/formats.h>
 #include <render/device/pipeline_layout_desc.h>
 #include <render/device/pipeline_state_desc.h>
@@ -96,14 +97,63 @@ void FormatToVertexType(const VertexInputDeclaration::VertexInputAttributeDescri
         PLUGIN_ASSERT_MSG(false, "Unhandled attribute format");
     }
 }
+
+DynamicStateFlags GetDynamicStateFlags(const array_view<const DynamicStateEnum> dynamicStates)
+{
+    DynamicStateFlags flags = 0;
+    for (const auto& ref : dynamicStates) {
+        switch (ref) {
+            case CORE_DYNAMIC_STATE_ENUM_VIEWPORT:
+                flags |= CORE_DYNAMIC_STATE_VIEWPORT;
+                break;
+            case CORE_DYNAMIC_STATE_ENUM_SCISSOR:
+                flags |= CORE_DYNAMIC_STATE_SCISSOR;
+                break;
+            case CORE_DYNAMIC_STATE_ENUM_LINE_WIDTH:
+                flags |= CORE_DYNAMIC_STATE_LINE_WIDTH;
+                break;
+            case CORE_DYNAMIC_STATE_ENUM_DEPTH_BIAS:
+                flags |= CORE_DYNAMIC_STATE_DEPTH_BIAS;
+                break;
+            case CORE_DYNAMIC_STATE_ENUM_BLEND_CONSTANTS:
+                flags |= CORE_DYNAMIC_STATE_BLEND_CONSTANTS;
+                break;
+            case CORE_DYNAMIC_STATE_ENUM_DEPTH_BOUNDS:
+                flags |= CORE_DYNAMIC_STATE_DEPTH_BOUNDS;
+                break;
+            case CORE_DYNAMIC_STATE_ENUM_STENCIL_COMPARE_MASK:
+                flags |= CORE_DYNAMIC_STATE_STENCIL_COMPARE_MASK;
+                break;
+            case CORE_DYNAMIC_STATE_ENUM_STENCIL_WRITE_MASK:
+                flags |= CORE_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+                break;
+            case CORE_DYNAMIC_STATE_ENUM_STENCIL_REFERENCE:
+                flags |= CORE_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+                break;
+            default:
+                break;
+        }
+    }
+    return flags;
+}
+
+uint32_t HighestBit(uint32_t value)
+{
+    uint32_t count = 0;
+    while (value) {
+        ++count;
+        value >>= 1U;
+    }
+    return count;
+}
 } // namespace
 
 GraphicsPipelineStateObjectGLES::GraphicsPipelineStateObjectGLES(Device& device,
     const GpuShaderProgram& gpuShaderProgram, const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
     const VertexInputDeclarationView& vertexInputDeclaration,
-    const ShaderSpecializationConstantDataView& specializationConstants, const DynamicStateFlags dynamicStateFlags,
-    const RenderPassDesc& renderPassDesc, const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs,
-    const uint32_t subpassIndex)
+    const ShaderSpecializationConstantDataView& specializationConstants,
+    const array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+    const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex)
     : GraphicsPipelineStateObject(), device_((DeviceGLES&)device)
 {
     plat_.graphicsState = graphicsState;
@@ -117,31 +167,38 @@ GraphicsPipelineStateObjectGLES::GraphicsPipelineStateObjectGLES(Device& device,
         plat_.vertexInputDeclaration.bindingDescriptionCount++;
     }
     plat_.renderPassDesc = renderPassDesc;
-    plat_.dynamicStateFlags = dynamicStateFlags;
+    plat_.dynamicStateFlags = GetDynamicStateFlags(dynamicStates);
 
-    const auto* source = (const GpuShaderProgramGLES*)&gpuShaderProgram;
-    specialized_.reset(source->Specialize(specializationConstants));
+    const auto& source = static_cast<const GpuShaderProgramGLES&>(gpuShaderProgram);
+
+    uint32_t views = 0U;
+    for (const auto& subpass : renderPassSubpassDescs) {
+        views = Math::max(HighestBit(subpass.viewMask), views);
+    }
+    plat_.views = views;
+
+    specialized_ = source.Specialize(specializationConstants, views);
     plat_.graphicsShader = specialized_.get();
-    MakeVAO();
+    if (plat_.graphicsShader) {
+        MakeVAO();
+    }
 }
 
-GpuShaderProgramGLES* GraphicsPipelineStateObjectGLES::GetOESProgram(const vector<OES_Bind>& oes_binds) const
+GpuShaderProgramGLES* GraphicsPipelineStateObjectGLES::GetOESProgram(array_view<const OES_Bind> oesBinds) const
 {
     BASE_NS::string key;
-    char tmp[16];
-    for (auto& bind : oes_binds) {
-        if (sprintf_s(tmp, sizeof(tmp), "%hhu_%hhu_", bind.set, bind.bind) < 0) {
-            PLUGIN_LOG_E("GetOESProgram: sprintf_s failed");
-        }
-        key += tmp;
+    for (auto& bind : oesBinds) {
+        key += BASE_NS::to_string(bind.set);
+        key += '_';
+        key += BASE_NS::to_string(bind.bind);
+        key += '_';
     }
     if (auto it = oesPrograms_.find(key); it != oesPrograms_.end()) {
         // return existing.
         return it->second.get();
     }
     // create new one.
-    unique_ptr<GpuShaderProgramGLES> prog(specialized_->OesPatch(array_view<const OES_Bind> { oes_binds }));
-    return oesPrograms_.insert({ key, move(prog) }).first->second.get();
+    return oesPrograms_.insert({ key, specialized_->OesPatch(oesBinds, plat_.views) }).first->second.get();
 }
 
 void GraphicsPipelineStateObjectGLES::MakeVAO() noexcept
@@ -197,18 +254,12 @@ ComputePipelineStateObjectGLES::ComputePipelineStateObjectGLES(Device& device,
 {
     PLUGIN_UNUSED(device_);
     plat_.pipelineLayout = pipelineLayout;
-    const auto* source = (const GpuComputeProgramGLES*)&gpuComputeProgram;
-    plat_.computeShader = specialized_ = source->Specialize(specializationConstants);
-    PLUGIN_ASSERT(device_.IsActive());
-    const auto& shaderdata = (const GpuComputeProgramPlatformDataGL&)plat_.computeShader->GetPlatformData();
-    PLUGIN_UNUSED(shaderdata);
-    PLUGIN_ASSERT(shaderdata.program != 0);
+    const auto& source = static_cast<const GpuComputeProgramGLES&>(gpuComputeProgram);
+    specialized_ = source.Specialize(specializationConstants);
+    plat_.computeShader = specialized_.get();
 }
 
-ComputePipelineStateObjectGLES::~ComputePipelineStateObjectGLES()
-{
-    delete specialized_;
-}
+ComputePipelineStateObjectGLES::~ComputePipelineStateObjectGLES() = default;
 
 const PipelineStateObjectPlatformDataGL& ComputePipelineStateObjectGLES::GetPlatformData() const
 {

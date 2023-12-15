@@ -4,17 +4,93 @@
         "type": "rendernodegraph"
     },
     "renderNodeGraphName": "",
+    "renderNodeGraphOutputResources": [
+        {
+            "name": "output",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
+            "name": "color",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
+            "name": "depth",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
+            "name": "velocity_normal",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
+            "name": "history",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
+            "name": "history_next",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        }
+    ],
     "nodes": [
         {
             "typeName": "RenderNodeDefaultCameraController",
-            "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+            "nodeName": "CORE3D_RN_CAM_CTRL",
+            "gpuImageDescs": [
+                {
+                    "name": "output",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "depth",
+                    "format": "d32_sfloat",
+                    "usageFlags": "depth_stencil_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "color",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "velocity_normal",
+                    "format": "r16g16b16a16_sfloat",
+                    "usageFlags": "color_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "history",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "base_color",
+                    "format": "r8g8b8a8_srgb",
+                    "usageFlags": "color_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "material",
+                    "format": "r8g8b8a8_unorm",
+                    "usageFlags": "color_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                }
+            ]
         },
         {
             "typeName": "RenderNodeDefaultMaterialRenderSlot",
             "nodeName": "CORE3D_RN_CAM_DM_SO_DF",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_CAM"
             },
             "queue": {
@@ -33,33 +109,33 @@
                         "clearDepth": [ 1.0, 0 ],
                         "resourceLocation": "from_named_render_node_output",
                         "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "loadOp": "clear",
                         "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "loadOp": "clear",
                         "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
                         "resourceLocation": "from_named_render_node_output",
                         "name": "velocity_normal",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "loadOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "base_color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "loadOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "material",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "subpassIndex": 0,
@@ -75,7 +151,7 @@
             "nodeName": "CORE3D_RN_CAM_DM_DS_DF",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_CAM"
             },
             "queue": {
@@ -89,27 +165,27 @@
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "velocity_normal",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "base_color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "material",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "subpassIndex": 1,
@@ -125,7 +201,7 @@
             "nodeName": "CORE3D_RN_CAM_DM_SO_COMPLEX_DF",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_CAM"
             },
             "queue": {
@@ -144,40 +220,40 @@
                         "clearDepth": [ 1.0, 0 ],
                         "resourceLocation": "from_named_render_node_output",
                         "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "loadOp": "clear",
                         "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "loadOp": "clear",
                         "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
                         "resourceLocation": "from_named_render_node_output",
                         "name": "velocity_normal",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "loadOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "base_color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "loadOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "material",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "subpassIndex": 2,
                 "subpassCount": 5,
                 "subpass": {
                     "depthAttachmentIndex": 0,
-                    "colorAttachmentIndices": [ 1, 2, 3, 4 ]
+                    "colorAttachmentIndices": [ 1, 2 ]
                 }
             }
         },
@@ -186,7 +262,7 @@
             "nodeName": "CORE3D_RN_CAM_DM_E_DF",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_CAM"
             },
             "queue": {
@@ -199,34 +275,34 @@
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "velocity_normal",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "base_color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "material",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "subpassIndex": 3,
                 "subpassCount": 5,
                 "subpass": {
                     "depthAttachmentIndex": 0,
-                    "colorAttachmentIndices": [ 1 ]
+                    "colorAttachmentIndices": [ 1, 2 ]
                 }
             }
         },
@@ -235,7 +311,7 @@
             "nodeName": "CORE3D_RN_CAM_DM_ST_DF",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_CAM"
             },
             "queue": {
@@ -252,92 +328,39 @@
                         "storeOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "storeOp": "store",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "storeOp": "store",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "velocity_normal",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "storeOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "base_color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "storeOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "material",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "subpassIndex": 4,
                 "subpassCount": 5,
                 "subpass": {
                     "depthAttachmentIndex": 0,
-                    "colorAttachmentIndices": [ 1 ]
+                    "colorAttachmentIndices": [ 1, 2 ]
                 }
-            }
-        },
-        {
-            "typeName": "CORE_RN_COMBINED_POST_PROCESS",
-            "nodeName": "CORE3D_RN_CAM_COMBINEDPP_HDRP",
-            "renderDataStore": {
-                "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
-                "configurationName": "CORE3D_POST_PROCESS_CAM"
-            },
-            "queue": {
-                "type": "graphics",
-                "index": 0
-            },
-            "resources": {
-                "customInputImages": [
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
-                        "usageName": "color"
-                    },
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
-                        "usageName": "depth"
-                    },
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "velocity_normal",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
-                        "usageName": "velocity"
-                    },
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "history",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
-                        "usageName": "history"
-                    },
-                    {
-                        "resourceLocation": "from_named_render_node_output",
-                        "name": "history_next",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_DF",
-                        "usageName": "history_next"
-                    }
-                ],
-                "customOutputImages": [
-                    {
-                        "resourceLocation": "from_render_graph_output",
-                        "resourceIndex": 0
-                    }
-                ]
             }
         }
     ]

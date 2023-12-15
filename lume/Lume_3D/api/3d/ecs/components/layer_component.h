@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(LAYER_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define LAYER_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_LAYER_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_LAYER_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/ecs/components/layer_defines.h>
@@ -22,7 +22,6 @@
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/intf_component_manager.h>
 #include <core/namespace.h>
-#include <core/property/property_types.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif
@@ -31,7 +30,7 @@ CORE3D_BEGIN_NAMESPACE()
 BEGIN_COMPONENT(ILayerComponentManager, LayerComponent)
 
     /** Defines a layer mask. */
-    DEFINE_BITFIELD_PROPERTY(uint64_t, layerMask, "Layer mask", CORE_NS::PropertyFlags::IS_BITFIELD,
+    DEFINE_BITFIELD_PROPERTY(uint64_t, layerMask, "Layer Mask", CORE_NS::PropertyFlags::IS_BITFIELD,
         VALUE(LayerConstants::DEFAULT_LAYER_MASK), LayerFlagBits)
 
 END_COMPONENT(ILayerComponentManager, LayerComponent, "01507270-f290-4f71-82f4-58f1bddeadc5")

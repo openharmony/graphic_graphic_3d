@@ -16,13 +16,23 @@
 #ifndef CORE_IMAGE_IMAGE_LOADER_MANAGER_H
 #define CORE_IMAGE_IMAGE_LOADER_MANAGER_H
 
+#include <cstdint>
+
+#include <base/containers/string_view.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/image/intf_animated_image.h>
 #include <core/image/intf_image_container.h>
 #include <core/image/intf_image_loader_manager.h>
-#include <core/io/intf_file_manager.h>
 #include <core/namespace.h>
 
+BASE_BEGIN_NAMESPACE()
+template<class T>
+class array_view;
+BASE_END_NAMESPACE()
+
 CORE_BEGIN_NAMESPACE()
+class IFile;
 class IFileManager;
 
 class ImageLoaderManager final : public IImageLoaderManager {

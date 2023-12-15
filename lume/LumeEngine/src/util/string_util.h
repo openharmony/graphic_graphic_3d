@@ -18,9 +18,10 @@
 
 #include <algorithm>
 #include <cctype>
-#include <cstdint>
+#include <cstddef>
 #include <iterator>
 
+#include <base/containers/iterator.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
@@ -83,7 +84,7 @@ inline BASE_NS::vector<BASE_NS::string_view> Split(
 
         auto found = left.substr(0, pos);
         if (Trim(found) > 0) {
-            output.emplace_back(found);
+            output.push_back(found);
         }
         if (pos != BASE_NS::string_view::npos) {
             left.remove_prefix(pos + 1);
@@ -101,8 +102,8 @@ inline bool FindAndReplaceOne(
 {
     const auto p = source.find(find);
     if (p != BASE_NS::string::npos) {
-        source.replace(source.begin() + static_cast<BASE_NS::string::difference_type>(p),
-            source.begin() + static_cast<BASE_NS::string::difference_type>(p + find.length()), replace);
+        source.replace(source.cbegin() + static_cast<BASE_NS::string::difference_type>(p),
+            source.cbegin() + static_cast<BASE_NS::string::difference_type>(p + find.length()), replace);
     }
     return (p != BASE_NS::string::npos);
 }

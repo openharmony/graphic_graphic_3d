@@ -1,0 +1,624 @@
+#version 450
+
+struct DefaultCameraMatrixStruct
+{
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+    mat4 viewInv;
+    mat4 projInv;
+    mat4 viewProjInv;
+    mat4 viewPrevFrame;
+    mat4 projPrevFrame;
+    mat4 viewProjPrevFrame;
+    mat4 shadowViewProj;
+    mat4 shadowViewProjInv;
+    vec4 jitter;
+    vec4 jitterPrevFrame;
+    uvec4 indices;
+    uvec4 multiViewIndices;
+    vec4 frustumPlanes[6];
+    uvec4 counts;
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
+};
+
+struct DefaultMaterialSingleLightStruct
+{
+    vec4 pos;
+    vec4 dir;
+    vec4 color;
+    vec4 spotLightParams;
+    vec4 shadowFactors;
+    vec4 additionalFactor;
+    uvec4 flags;
+    uvec4 indices;
+};
+
+struct DefaultMaterialLightStruct
+{
+    uint directionalLightBeginIndex;
+    uint directionalLightCount;
+    uint pointLightBeginIndex;
+    uint pointLightCount;
+    uint spotLightBeginIndex;
+    uint spotLightCount;
+    uint pad0;
+    uint pad1;
+    uvec4 clusterSizes;
+    vec4 clusterFactors;
+    vec4 atlasSizeInvSize;
+    vec4 additionalFactors;
+    DefaultMaterialSingleLightStruct lights[64];
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 0u
+#endif
+const uint CORE_LIGHTING_FLAGS = SPIRV_CROSS_CONSTANT_ID_2;
+const uint _1243 = (CORE_LIGHTING_FLAGS & 1u);
+const bool _1244 = (_1243 == 1u);
+const uint _1291 = (CORE_LIGHTING_FLAGS & 4u);
+const bool _1292 = (_1291 == 4u);
+const uint _1366 = (CORE_LIGHTING_FLAGS & 1u);
+const bool _1367 = (_1366 == 1u);
+const uint _1458 = (CORE_LIGHTING_FLAGS & 2u);
+const bool _1459 = (_1458 == 2u);
+
+struct DefaultMaterialFogStruct
+{
+    uvec4 indices;
+    vec4 firstLayer;
+    vec4 secondLayer;
+    vec4 baseFactors;
+    vec4 inscatteringColor;
+    vec4 envMapFactor;
+    vec4 additionalFactor;
+};
+
+struct DefaultMaterialEnvironmentStruct
+{
+    vec4 indirectSpecularColorFactor;
+    vec4 indirectDiffuseColorFactor;
+    vec4 envMapColorFactor;
+    vec4 values;
+    vec4 blendFactor;
+    mat4 envRotation;
+    uvec4 indices;
+    vec4 shIndirectCoefficients[9];
+    vec4 pad0;
+};
+
+struct DefaultMaterialGeneralDataStruct
+{
+    uvec4 indices;
+    vec4 viewportSizeInvViewportSize;
+    vec4 sceneTimingData;
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_4
+#define SPIRV_CROSS_CONSTANT_ID_4 0u
+#endif
+const uint CORE_CAMERA_FLAGS = SPIRV_CROSS_CONSTANT_ID_4;
+
+layout(std140) uniform s0_b2
+{
+    DefaultCameraMatrixStruct uCameras[16];
+} _s0_b2;
+
+layout(std140) uniform s0_b6
+{
+    DefaultMaterialLightStruct uLightData;
+} _s0_b6;
+
+layout(std140) uniform s0_b5
+{
+    DefaultMaterialFogStruct uFogData;
+} _s0_b5;
+
+layout(std140) uniform s0_b4
+{
+    DefaultMaterialEnvironmentStruct uEnvironmentData;
+} _s0_b4;
+
+layout(std140) uniform s0_b3
+{
+    DefaultMaterialGeneralDataStruct uGeneralData;
+} _s0_b3;
+
+uniform sampler2D s0_b10;
+uniform sampler2DShadow s0_b11;
+uniform sampler2D s1_b3;
+uniform sampler2D s1_b2;
+uniform sampler2D s1_b1;
+uniform sampler2D s1_b0;
+uniform samplerCube s0_b12;
+
+layout(location = 0) in vec2 inUv;
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+    vec4 _2512 = texelFetch(s1_b0, ivec2(gl_FragCoord.xy), 0);
+    float _2513 = _2512.x;
+    if (_2513 < 1.0)
+    {
+        vec4 _2532 = texelFetch(s1_b3, ivec2(gl_FragCoord.xy), 0);
+        uint _2549 = uint(round(_2532.x * 255.0));
+        uint _2551 = _2549 & 7u;
+        uint _2553 = _2549 >> uint(3);
+        uint _2586 = ((0u | uint(int((_2553 & 1u) == 1u))) | uint(((_2553 & 2u) == 2u) ? 1024 : 0)) | uint(((_2553 & 4u) == 4u) ? 2048 : 0);
+        vec4 _7265;
+        if (_2551 == 0u)
+        {
+            vec4 _7115 = _2532;
+            _7115.w = _2532.w * 0.100000001490116119384765625;
+            _7265 = _7115;
+        }
+        else
+        {
+            _7265 = _2532;
+        }
+        if (_2551 == 2u)
+        {
+            outColor = vec4(texelFetch(s1_b2, ivec2(gl_FragCoord.xy), 0).xyz, 1.0);
+        }
+        else
+        {
+            if (_2551 == 3u)
+            {
+                vec4 _5606 = _s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewProjInv * vec4((inUv * 2.0) - vec2(1.0), _2513, 1.0);
+                vec3 _7387;
+                if ((CORE_CAMERA_FLAGS & 1u) == 1u)
+                {
+                    vec3 _6684 = (_5606.xyz / vec3(_5606.w)) - _s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewInv[3].xyz;
+                    float _6686 = _6684.y;
+                    float _6691 = dot(_6684, _6684);
+                    float _6693 = inversesqrt(_6691);
+                    float _6696 = _6691 * _6693;
+                    float _7383;
+                    float _7384;
+                    float _7385;
+                    if (_s0_b5.uFogData.baseFactors.x > 0.0)
+                    {
+                        float _6704 = _s0_b5.uFogData.baseFactors.x * _6693;
+                        _7385 = fma(-_s0_b5.uFogData.baseFactors.x, _6693, 1.0) * _6696;
+                        _7384 = fma(_6704, _6686, _s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewInv[3].y);
+                        _7383 = fma(-_6704, _6686, _6686);
+                    }
+                    else
+                    {
+                        _7385 = _6696;
+                        _7384 = _s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewInv[3].y;
+                        _7383 = _6686;
+                    }
+                    float _6806 = max(-127.0, _s0_b5.uFogData.firstLayer.y * _7383);
+                    float _6847 = max(-127.0, _s0_b5.uFogData.secondLayer.y * _7383);
+                    _7387 = mix(vec3(0.0), (_s0_b5.uFogData.inscatteringColor.xyz * _s0_b5.uFogData.inscatteringColor.w) + (_s0_b5.uFogData.envMapFactor.xyz * _s0_b5.uFogData.envMapFactor.w), vec3(((_s0_b5.uFogData.baseFactors.y > 0.0) && (_7385 > _s0_b5.uFogData.baseFactors.y)) ? 0.0 : min(1.0 - clamp(exp2(-(fma(_s0_b5.uFogData.firstLayer.x * exp2(-max(-127.0, _s0_b5.uFogData.firstLayer.y * (_7384 - _s0_b5.uFogData.firstLayer.z))), (abs(_6806) > 0.004999999888241291046142578125) ? ((1.0 - exp2(-_6806)) / _6806) : fma(-0.2402265071868896484375, _6806, 0.693147182464599609375), (_s0_b5.uFogData.secondLayer.x * exp2(-max(-127.0, _s0_b5.uFogData.secondLayer.y * (_7384 - _s0_b5.uFogData.secondLayer.z)))) * ((abs(_6847) > 0.004999999888241291046142578125) ? ((1.0 - exp2(-_6847)) / _6847) : fma(-0.2402265071868896484375, _6847, 0.693147182464599609375))) * _7385)), 0.0, 1.0), _s0_b5.uFogData.baseFactors.z)));
+                }
+                else
+                {
+                    _7387 = vec3(0.0);
+                }
+                outColor = vec4(_7387, 1.0);
+            }
+            else
+            {
+                vec4 _2761 = texelFetch(s1_b2, ivec2(gl_FragCoord.xy), 0);
+                float _2783 = _2761.w;
+                vec2 _2800 = (texelFetch(s1_b1, ivec2(gl_FragCoord.xy), 0).zw * 2.0) - vec2(1.0);
+                float _2802 = _2800.x;
+                float _2804 = _2800.y;
+                float _2812 = (1.0 - abs(_2802)) - abs(_2804);
+                vec3 _2813 = vec3(_2802, _2804, _2812);
+                float _2817 = clamp(-_2812, 0.0, 1.0);
+                float _7266;
+                if (_2802 >= 0.0)
+                {
+                    _7266 = -_2817;
+                }
+                else
+                {
+                    _7266 = _2817;
+                }
+                float _7268;
+                if (_2804 >= 0.0)
+                {
+                    _7268 = -_2817;
+                }
+                else
+                {
+                    _7268 = _2817;
+                }
+                vec2 _2841 = _2813.xy + vec2(_7266, _7268);
+                vec3 _2777 = normalize(normalize(vec3(_2841.x, _2841.y, _2813.z)));
+                float _2853 = clamp(_7265.z, 0.0, 1.0);
+                vec3 _2858 = _2761.xyz;
+                vec3 _2861 = mix(vec3(_7265.w), _2858, vec3(_2853));
+                vec3 _2870 = _2861.xyz;
+                vec3 _2876 = mix(_2858 * (vec3(1.0) - _2870), vec3(0.0), vec3(_2853));
+                float _2892 = _7265.y * _7265.y;
+                float _2895 = _2892 * _2892;
+                vec4 _2916 = _s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewProjInv * vec4((inUv * 2.0) - vec2(1.0), _2513, 1.0);
+                vec3 _2922 = _2916.xyz / vec3(_2916.w);
+                vec3 _2650 = normalize(_s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewInv[3].xyz - _2922);
+                float _2655 = clamp(dot(_2777, _2650), 9.9999997473787516355514526367188e-05, 1.0);
+                vec3 _7304;
+                if ((_2586 & 1024u) == 1024u)
+                {
+                    vec3 _3004 = _2876 * 0.3183098733425140380859375;
+                    vec3 _7283;
+                    _7283 = vec3(0.0);
+                    vec3 _3082;
+                    for (uint _7278 = 0u; _7278 < _s0_b6.uLightData.directionalLightCount; _7283 = _3082, _7278++)
+                    {
+                        uint _3019 = _s0_b6.uLightData.directionalLightBeginIndex + _7278;
+                        vec3 _3024 = -_s0_b6.uLightData.lights[_3019].dir.xyz;
+                        float _3029 = clamp(dot(_2777, _3024), 0.0, 1.0);
+                        float _7348;
+                        if ((_2586 & 1u) == 1u)
+                        {
+                            float _7349;
+                            if ((_s0_b6.uLightData.lights[_3019].flags.x & 8u) == 8u)
+                            {
+                                vec4 _3050 = _s0_b2.uCameras[_s0_b6.uLightData.lights[_3019].flags.y].shadowViewProj * vec4(_2922, 1.0);
+                                float _7350;
+                                if (_1244)
+                                {
+                                    vec3 _3704 = _3050.xyz / vec3(_3050.w);
+                                    float _3708 = float(_s0_b6.uLightData.lights[_3019].flags.z);
+                                    float _3768 = _3704.z;
+                                    bool _3769 = _3768 > 0.0;
+                                    bool _3775;
+                                    if (_3769)
+                                    {
+                                        _3775 = _3704.x > (_s0_b6.uLightData.lights[_3019].shadowFactors.w * _3708);
+                                    }
+                                    else
+                                    {
+                                        _3775 = _3769;
+                                    }
+                                    bool _3781;
+                                    if (_3775)
+                                    {
+                                        _3781 = _3704.x < fma(_s0_b6.uLightData.lights[_3019].shadowFactors.w, _3708, _s0_b6.uLightData.lights[_3019].shadowFactors.w);
+                                    }
+                                    else
+                                    {
+                                        _3781 = _3775;
+                                    }
+                                    float _7344;
+                                    if (_3781)
+                                    {
+                                        vec4 _3716 = texture(s0_b10, _3704.xy);
+                                        float _3721 = _3716.x;
+                                        float _7347;
+                                        if (_3768 > _3721)
+                                        {
+                                            float _3733 = max(fma(-_3721, _3721, _3716.y), 9.9999997473787516355514526367188e-06);
+                                            float _3738 = _3768 - _3721;
+                                            _7347 = fma(clamp(((_3733 / fma(_3738, _3738, _3733)) - 0.20000000298023223876953125) * 1.25, 0.0, 1.0) - 1.0, _s0_b6.uLightData.lights[_3019].shadowFactors.x, 1.0);
+                                        }
+                                        else
+                                        {
+                                            _7347 = 1.0;
+                                        }
+                                        _7344 = _7347;
+                                    }
+                                    else
+                                    {
+                                        _7344 = 1.0;
+                                    }
+                                    _7350 = _7344;
+                                }
+                                else
+                                {
+                                    vec3 _3321 = _3050.xyz / vec3(_3050.w);
+                                    float _3325 = float(_s0_b6.uLightData.lights[_3019].flags.z);
+                                    float _3547 = _3321.z;
+                                    bool _3548 = _3547 > 0.0;
+                                    bool _3554;
+                                    if (_3548)
+                                    {
+                                        _3554 = _3321.x > (_s0_b6.uLightData.lights[_3019].shadowFactors.w * _3325);
+                                    }
+                                    else
+                                    {
+                                        _3554 = _3548;
+                                    }
+                                    bool _3560;
+                                    if (_3554)
+                                    {
+                                        _3560 = _3321.x < fma(_s0_b6.uLightData.lights[_3019].shadowFactors.w, _3325, _s0_b6.uLightData.lights[_3019].shadowFactors.w);
+                                    }
+                                    else
+                                    {
+                                        _3560 = _3554;
+                                    }
+                                    float _7341;
+                                    if (_3560)
+                                    {
+                                        vec2 _3348 = fma(_3321.xy, _s0_b6.uLightData.atlasSizeInvSize.xy, vec2(0.5));
+                                        vec2 _3351 = floor(_3348) - vec2(0.5);
+                                        float _3356 = fract(_3348.x);
+                                        float _3359 = fract(_3348.y);
+                                        float _3368 = _3547 - max(_s0_b6.uLightData.lights[_3019].shadowFactors.z * (1.0 - _3029), _s0_b6.uLightData.lights[_3019].shadowFactors.y);
+                                        float _3371 = fma(-3.0, _3356, 4.0);
+                                        float _3374 = fma(3.0, _3356, 1.0);
+                                        float _3380 = (fma(-2.0, _3356, 3.0) / _3371) - 2.0;
+                                        float _3383 = (3.0 + _3356) * 0.14285714924335479736328125;
+                                        float _3387 = (_3356 / _3374) + 2.0;
+                                        float _3390 = fma(-3.0, _3359, 4.0);
+                                        float _3393 = fma(3.0, _3359, 1.0);
+                                        float _3399 = (fma(-2.0, _3359, 3.0) / _3390) - 2.0;
+                                        float _3402 = (3.0 + _3359) * 0.14285714924335479736328125;
+                                        float _3406 = (_3359 / _3393) + 2.0;
+                                        _7341 = fma(fma(_3374 * _3393, texture(s0_b11, vec3(vec3(_s0_b6.uLightData.atlasSizeInvSize.zw * (_3351 + vec2(_3387, _3406)), _3368).xy, _3368)), fma(7.0 * _3393, texture(s0_b11, vec3(vec3(fma(_3351, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_3383, _3406) * _s0_b6.uLightData.atlasSizeInvSize.zw), _3368).xy, _3368)), fma(_3371 * _3393, texture(s0_b11, vec3(vec3(fma(_3351, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_3380, _3406) * _s0_b6.uLightData.atlasSizeInvSize.zw), _3368).xy, _3368)), fma(_3374 * 7.0, texture(s0_b11, vec3(vec3(fma(_3351, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_3387, _3402) * _s0_b6.uLightData.atlasSizeInvSize.zw), _3368).xy, _3368)), fma(49.0, texture(s0_b11, vec3(vec3(fma(_3351, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_3383, _3402) * _s0_b6.uLightData.atlasSizeInvSize.zw), _3368).xy, _3368)), fma(_3371 * 7.0, texture(s0_b11, vec3(vec3(fma(_3351, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_3380, _3402) * _s0_b6.uLightData.atlasSizeInvSize.zw), _3368).xy, _3368)), fma(_3374 * _3390, texture(s0_b11, vec3(vec3(fma(_3351, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_3387, _3399) * _s0_b6.uLightData.atlasSizeInvSize.zw), _3368).xy, _3368)), fma(_3371 * _3390, texture(s0_b11, vec3(vec3(fma(_3351, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_3380, _3399) * _s0_b6.uLightData.atlasSizeInvSize.zw), _3368).xy, _3368)), (7.0 * _3390) * texture(s0_b11, vec3(vec3(fma(_3351, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_3383, _3399) * _s0_b6.uLightData.atlasSizeInvSize.zw), _3368).xy, _3368)))))))))) * (-0.0069444444961845874786376953125), _s0_b6.uLightData.lights[_3019].shadowFactors.x, 1.0);
+                                    }
+                                    else
+                                    {
+                                        _7341 = 1.0;
+                                    }
+                                    _7350 = _7341;
+                                }
+                                _7349 = _7350;
+                            }
+                            else
+                            {
+                                _7349 = 1.0;
+                            }
+                            _7348 = _7349;
+                        }
+                        else
+                        {
+                            _7348 = 1.0;
+                        }
+                        vec3 _3823 = normalize(_3024 + _2650);
+                        float _3833 = clamp(dot(_2777, _3823), 0.0, 1.0);
+                        float _3886 = fma(fma(_3833, _2895, -_3833), _3833, 1.0);
+                        float _3931 = pow(1.0 - clamp(dot(_2650, _3823), 0.0, 1.0), 5.0);
+                        vec3 _3942 = vec3(_3931) + (_2870 * (1.0 - _3931));
+                        _3082 = _7283 + ((((fma(vec3(1.0) - _3942, _3004, (_3942 * ((_2895 / (3.1415927410125732421875 * (_3886 * _3886))) * min(1.0 / ((_2655 + sqrt(fma(fma(-_2655, _2895, _2655), _2655, _2895))) * (_3029 + sqrt(fma(fma(-_3029, _2895, _3029), _3029, _2895)))), 64512.0))) * 1.0) * 1.0) * _3029) * _s0_b6.uLightData.lights[_3019].color.xyz) * _7348);
+                    }
+                    vec3 _7282;
+                    if (_1292)
+                    {
+                        vec3 _7284;
+                        _7284 = _7283;
+                        vec3 _3210;
+                        for (uint _7279 = 0u; _7279 < _s0_b6.uLightData.spotLightCount; _7284 = _3210, _7279++)
+                        {
+                            uint _3100 = _s0_b6.uLightData.spotLightBeginIndex + _7279;
+                            vec3 _3107 = _s0_b6.uLightData.lights[_3100].pos.xyz - _2922;
+                            float _3109 = length(_3107);
+                            vec3 _3113 = _3107 / vec3(_3109);
+                            float _3118 = clamp(dot(_2777, _3113), 0.0, 1.0);
+                            float _7318;
+                            if ((_2586 & 1u) == 1u)
+                            {
+                                float _7319;
+                                if ((_s0_b6.uLightData.lights[_3100].flags.x & 8u) == 8u)
+                                {
+                                    vec4 _3139 = _s0_b2.uCameras[_s0_b6.uLightData.lights[_3100].flags.y].shadowViewProj * vec4(_2922, 1.0);
+                                    float _7320;
+                                    if (_1367)
+                                    {
+                                        vec3 _4363 = _3139.xyz / vec3(_3139.w);
+                                        float _4367 = float(_s0_b6.uLightData.lights[_3100].flags.z);
+                                        float _4427 = _4363.z;
+                                        bool _4428 = _4427 > 0.0;
+                                        bool _4434;
+                                        if (_4428)
+                                        {
+                                            _4434 = _4363.x > (_s0_b6.uLightData.lights[_3100].shadowFactors.w * _4367);
+                                        }
+                                        else
+                                        {
+                                            _4434 = _4428;
+                                        }
+                                        bool _4440;
+                                        if (_4434)
+                                        {
+                                            _4440 = _4363.x < fma(_s0_b6.uLightData.lights[_3100].shadowFactors.w, _4367, _s0_b6.uLightData.lights[_3100].shadowFactors.w);
+                                        }
+                                        else
+                                        {
+                                            _4440 = _4434;
+                                        }
+                                        float _7314;
+                                        if (_4440)
+                                        {
+                                            vec4 _4375 = texture(s0_b10, _4363.xy);
+                                            float _4380 = _4375.x;
+                                            float _7317;
+                                            if (_4427 > _4380)
+                                            {
+                                                float _4392 = max(fma(-_4380, _4380, _4375.y), 9.9999997473787516355514526367188e-06);
+                                                float _4397 = _4427 - _4380;
+                                                _7317 = fma(clamp(((_4392 / fma(_4397, _4397, _4392)) - 0.20000000298023223876953125) * 1.25, 0.0, 1.0) - 1.0, _s0_b6.uLightData.lights[_3100].shadowFactors.x, 1.0);
+                                            }
+                                            else
+                                            {
+                                                _7317 = 1.0;
+                                            }
+                                            _7314 = _7317;
+                                        }
+                                        else
+                                        {
+                                            _7314 = 1.0;
+                                        }
+                                        _7320 = _7314;
+                                    }
+                                    else
+                                    {
+                                        vec3 _3981 = _3139.xyz / vec3(_3139.w);
+                                        float _3985 = float(_s0_b6.uLightData.lights[_3100].flags.z);
+                                        float _4206 = _3981.z;
+                                        bool _4207 = _4206 > 0.0;
+                                        bool _4213;
+                                        if (_4207)
+                                        {
+                                            _4213 = _3981.x > (_s0_b6.uLightData.lights[_3100].shadowFactors.w * _3985);
+                                        }
+                                        else
+                                        {
+                                            _4213 = _4207;
+                                        }
+                                        bool _4219;
+                                        if (_4213)
+                                        {
+                                            _4219 = _3981.x < fma(_s0_b6.uLightData.lights[_3100].shadowFactors.w, _3985, _s0_b6.uLightData.lights[_3100].shadowFactors.w);
+                                        }
+                                        else
+                                        {
+                                            _4219 = _4213;
+                                        }
+                                        float _7311;
+                                        if (_4219)
+                                        {
+                                            vec2 _4008 = fma(_3981.xy, _s0_b6.uLightData.atlasSizeInvSize.xy, vec2(0.5));
+                                            vec2 _4011 = floor(_4008) - vec2(0.5);
+                                            float _4016 = fract(_4008.x);
+                                            float _4019 = fract(_4008.y);
+                                            float _4028 = _4206 - max(_s0_b6.uLightData.lights[_3100].shadowFactors.z * (1.0 - _3118), _s0_b6.uLightData.lights[_3100].shadowFactors.y);
+                                            float _4031 = fma(-3.0, _4016, 4.0);
+                                            float _4034 = fma(3.0, _4016, 1.0);
+                                            float _4040 = (fma(-2.0, _4016, 3.0) / _4031) - 2.0;
+                                            float _4043 = (3.0 + _4016) * 0.14285714924335479736328125;
+                                            float _4047 = (_4016 / _4034) + 2.0;
+                                            float _4050 = fma(-3.0, _4019, 4.0);
+                                            float _4053 = fma(3.0, _4019, 1.0);
+                                            float _4059 = (fma(-2.0, _4019, 3.0) / _4050) - 2.0;
+                                            float _4062 = (3.0 + _4019) * 0.14285714924335479736328125;
+                                            float _4066 = (_4019 / _4053) + 2.0;
+                                            _7311 = fma(fma(_4034 * _4053, texture(s0_b11, vec3(vec3(_s0_b6.uLightData.atlasSizeInvSize.zw * (_4011 + vec2(_4047, _4066)), _4028).xy, _4028)), fma(7.0 * _4053, texture(s0_b11, vec3(vec3(fma(_4011, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_4043, _4066) * _s0_b6.uLightData.atlasSizeInvSize.zw), _4028).xy, _4028)), fma(_4031 * _4053, texture(s0_b11, vec3(vec3(fma(_4011, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_4040, _4066) * _s0_b6.uLightData.atlasSizeInvSize.zw), _4028).xy, _4028)), fma(_4034 * 7.0, texture(s0_b11, vec3(vec3(fma(_4011, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_4047, _4062) * _s0_b6.uLightData.atlasSizeInvSize.zw), _4028).xy, _4028)), fma(49.0, texture(s0_b11, vec3(vec3(fma(_4011, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_4043, _4062) * _s0_b6.uLightData.atlasSizeInvSize.zw), _4028).xy, _4028)), fma(_4031 * 7.0, texture(s0_b11, vec3(vec3(fma(_4011, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_4040, _4062) * _s0_b6.uLightData.atlasSizeInvSize.zw), _4028).xy, _4028)), fma(_4034 * _4050, texture(s0_b11, vec3(vec3(fma(_4011, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_4047, _4059) * _s0_b6.uLightData.atlasSizeInvSize.zw), _4028).xy, _4028)), fma(_4031 * _4050, texture(s0_b11, vec3(vec3(fma(_4011, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_4040, _4059) * _s0_b6.uLightData.atlasSizeInvSize.zw), _4028).xy, _4028)), (7.0 * _4050) * texture(s0_b11, vec3(vec3(fma(_4011, _s0_b6.uLightData.atlasSizeInvSize.zw, vec2(_4043, _4059) * _s0_b6.uLightData.atlasSizeInvSize.zw), _4028).xy, _4028)))))))))) * (-0.0069444444961845874786376953125), _s0_b6.uLightData.lights[_3100].shadowFactors.x, 1.0);
+                                        }
+                                        else
+                                        {
+                                            _7311 = 1.0;
+                                        }
+                                        _7320 = _7311;
+                                    }
+                                    _7319 = _7320;
+                                }
+                                else
+                                {
+                                    _7319 = 1.0;
+                                }
+                                _7318 = _7319;
+                            }
+                            else
+                            {
+                                _7318 = 1.0;
+                            }
+                            float _3180 = clamp(fma(dot(_s0_b6.uLightData.lights[_3100].dir.xyz, -_3113), _s0_b6.uLightData.lights[_3100].spotLightParams.x, _s0_b6.uLightData.lights[_3100].spotLightParams.y), 0.0, 1.0);
+                            vec3 _4482 = normalize(_3113 + _2650);
+                            float _4492 = clamp(dot(_2777, _4482), 0.0, 1.0);
+                            float _4545 = fma(fma(_4492, _2895, -_4492), _4492, 1.0);
+                            float _4590 = pow(1.0 - clamp(dot(_2650, _4482), 0.0, 1.0), 5.0);
+                            vec3 _4601 = vec3(_4590) + (_2870 * (1.0 - _4590));
+                            _3210 = _7284 + (((((fma(vec3(1.0) - _4601, _3004, (_4601 * ((_2895 / (3.1415927410125732421875 * (_4545 * _4545))) * min(1.0 / ((_2655 + sqrt(fma(fma(-_2655, _2895, _2655), _2655, _2895))) * (_3118 + sqrt(fma(fma(-_3118, _2895, _3118), _3118, _2895)))), 64512.0))) * 1.0) * 1.0) * _3118) * _s0_b6.uLightData.lights[_3100].color.xyz) * ((_3180 * _3180) * (max(min(1.0 - pow(_3109 / _s0_b6.uLightData.lights[_3100].dir.w, 4.0), 1.0), 0.0) / (_3109 * _3109)))) * _7318);
+                        }
+                        _7282 = _7284;
+                    }
+                    else
+                    {
+                        _7282 = _7283;
+                    }
+                    vec3 _7281;
+                    if (_1459)
+                    {
+                        vec3 _7285;
+                        _7285 = _7282;
+                        for (uint _7280 = 0u; _7280 < _s0_b6.uLightData.pointLightCount; )
+                        {
+                            uint _3229 = _s0_b6.uLightData.pointLightBeginIndex + _7280;
+                            vec3 _3236 = _s0_b6.uLightData.lights[_3229].pos.xyz - _2922;
+                            float _3238 = length(_3236);
+                            vec3 _3242 = _3236 / vec3(_3238);
+                            float _3247 = clamp(dot(_2777, _3242), 0.0, 1.0);
+                            vec3 _4625 = normalize(_3242 + _2650);
+                            float _4635 = clamp(dot(_2777, _4625), 0.0, 1.0);
+                            float _4688 = fma(fma(_4635, _2895, -_4635), _4635, 1.0);
+                            float _4733 = pow(1.0 - clamp(dot(_2650, _4625), 0.0, 1.0), 5.0);
+                            vec3 _4744 = vec3(_4733) + (_2870 * (1.0 - _4733));
+                            _7285 += ((((fma(vec3(1.0) - _4744, _3004, (_4744 * ((_2895 / (3.1415927410125732421875 * (_4688 * _4688))) * min(1.0 / ((_2655 + sqrt(fma(fma(-_2655, _2895, _2655), _2655, _2895))) * (_3247 + sqrt(fma(fma(-_3247, _2895, _3247), _3247, _2895)))), 64512.0))) * 1.0) * 1.0) * _3247) * _s0_b6.uLightData.lights[_3229].color.xyz) * (max(min(1.0 - pow(_3238 / _s0_b6.uLightData.lights[_3229].dir.w, 4.0), 1.0), 0.0) / (_3238 * _3238)));
+                            _7280++;
+                            continue;
+                        }
+                        _7281 = _7285;
+                    }
+                    else
+                    {
+                        _7281 = _7282;
+                    }
+                    _7304 = _7281;
+                }
+                else
+                {
+                    _7304 = vec3(0.0);
+                }
+                vec3 _7305;
+                if ((_2586 & 2048u) == 2048u)
+                {
+                    mat3 _4758 = mat3(_s0_b4.uEnvironmentData.envRotation[0].xyz, _s0_b4.uEnvironmentData.envRotation[1].xyz, _s0_b4.uEnvironmentData.envRotation[2].xyz);
+                    vec3 _4759 = _4758 * _2777;
+                    float _4795 = _4759.y;
+                    float _4802 = _4759.z;
+                    float _4809 = _4759.x;
+                    vec3 _2705 = reflect(-_2650, _2777);
+                    vec4 _4879 = (vec4(-1.0, -0.0274999998509883880615234375, -0.572000026702880859375, 0.02199999988079071044921875) * _7265.y) + vec4(1.0, 0.0425000004470348358154296875, 1.03999996185302734375, -0.039999999105930328369140625);
+                    float _4881 = _4879.x;
+                    vec2 _4899 = (vec2(-1.03999996185302734375, 1.03999996185302734375) * fma(min(_4881 * _4881, exp2((-9.27999973297119140625) * _2655)), _4881, _4879.y)) + _4879.zw;
+                    vec4 _4939 = textureLod(s0_b12, _4758 * _2705, _s0_b4.uEnvironmentData.values.x * _7265.y);
+                    float _4965 = min(1.0 + dot(_2705, _2777), 1.0);
+                    _7305 = _7304 + ((((max(vec3(0.0), (((((((_s0_b4.uEnvironmentData.shIndirectCoefficients[0].xyz + (_s0_b4.uEnvironmentData.shIndirectCoefficients[1].xyz * _4795)) + (_s0_b4.uEnvironmentData.shIndirectCoefficients[2].xyz * _4802)) + (_s0_b4.uEnvironmentData.shIndirectCoefficients[3].xyz * _4809)) + (_s0_b4.uEnvironmentData.shIndirectCoefficients[4].xyz * (_4809 * _4795))) + (_s0_b4.uEnvironmentData.shIndirectCoefficients[5].xyz * (_4802 * _4795))) + (_s0_b4.uEnvironmentData.shIndirectCoefficients[6].xyz * fma(3.0 * _4802, _4802, -1.0))) + (_s0_b4.uEnvironmentData.shIndirectCoefficients[7].xyz * (_4809 * _4802))) + (_s0_b4.uEnvironmentData.shIndirectCoefficients[8].xyz * fma(_4809, _4809, -(_4795 * _4795)))) * _s0_b4.uEnvironmentData.indirectDiffuseColorFactor.xyz) * _2876) * _2783) + ((((_4939.xyz * (1.0 / _4939.w)) * _s0_b4.uEnvironmentData.indirectSpecularColorFactor.xyz) * ((_2870 * _4899.x) + vec3(_4899.y * clamp(50.0 * max(_2861.x, max(_2861.y, _2861.z)), 0.0, 1.0)))) * (_2783 * (_4965 * _4965))));
+                }
+                else
+                {
+                    _7305 = _7304;
+                }
+                vec3 _4998 = vec4(_7305, 1.0).xyz;
+                vec3 _7310;
+                if ((CORE_CAMERA_FLAGS & 1u) == 1u)
+                {
+                    vec3 _5005 = _2922 - _s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewInv[3].xyz;
+                    float _5007 = _5005.y;
+                    float _5012 = dot(_5005, _5005);
+                    float _5014 = inversesqrt(_5012);
+                    float _5017 = _5012 * _5014;
+                    float _7306;
+                    float _7307;
+                    float _7308;
+                    if (_s0_b5.uFogData.baseFactors.x > 0.0)
+                    {
+                        float _5025 = _s0_b5.uFogData.baseFactors.x * _5014;
+                        _7308 = fma(-_s0_b5.uFogData.baseFactors.x, _5014, 1.0) * _5017;
+                        _7307 = fma(_5025, _5007, _s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewInv[3].y);
+                        _7306 = fma(-_5025, _5007, _5007);
+                    }
+                    else
+                    {
+                        _7308 = _5017;
+                        _7307 = _s0_b2.uCameras[_s0_b3.uGeneralData.indices.x].viewInv[3].y;
+                        _7306 = _5007;
+                    }
+                    float _5127 = max(-127.0, _s0_b5.uFogData.firstLayer.y * _7306);
+                    float _5168 = max(-127.0, _s0_b5.uFogData.secondLayer.y * _7306);
+                    _7310 = mix(_4998, (_s0_b5.uFogData.inscatteringColor.xyz * _s0_b5.uFogData.inscatteringColor.w) + (_s0_b5.uFogData.envMapFactor.xyz * _s0_b5.uFogData.envMapFactor.w), vec3(((_s0_b5.uFogData.baseFactors.y > 0.0) && (_7308 > _s0_b5.uFogData.baseFactors.y)) ? 0.0 : min(1.0 - clamp(exp2(-(fma(_s0_b5.uFogData.firstLayer.x * exp2(-max(-127.0, _s0_b5.uFogData.firstLayer.y * (_7307 - _s0_b5.uFogData.firstLayer.z))), (abs(_5127) > 0.004999999888241291046142578125) ? ((1.0 - exp2(-_5127)) / _5127) : fma(-0.2402265071868896484375, _5127, 0.693147182464599609375), (_s0_b5.uFogData.secondLayer.x * exp2(-max(-127.0, _s0_b5.uFogData.secondLayer.y * (_7307 - _s0_b5.uFogData.secondLayer.z)))) * ((abs(_5168) > 0.004999999888241291046142578125) ? ((1.0 - exp2(-_5168)) / _5168) : fma(-0.2402265071868896484375, _5168, 0.693147182464599609375))) * _7308)), 0.0, 1.0), _s0_b5.uFogData.baseFactors.z)));
+                }
+                else
+                {
+                    _7310 = _4998;
+                }
+                outColor = vec4(clamp(_7310, vec3(0.0), vec3(64512.0)), 1.0);
+            }
+        }
+    }
+    else
+    {
+        outColor = vec4(0.0);
+    }
+}
+

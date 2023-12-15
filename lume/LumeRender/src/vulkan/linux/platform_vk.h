@@ -17,7 +17,9 @@
 
 #include <vulkan/vulkan.h>
 
+#include <base/containers/string.h>
 #include <base/containers/string_view.h>
+#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <render/namespace.h>
 

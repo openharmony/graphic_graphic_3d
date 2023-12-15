@@ -25,6 +25,7 @@
 #include <render/nodecontext/intf_render_node.h>
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
+#include <render/shaders/common/render_blur_common.h>
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
@@ -35,9 +36,11 @@ public:
     ~RenderBlur() = default;
 
     struct BlurInfo {
-        RenderHandle blurTarget;
+        BindableImage blurTarget;
         RenderHandle globalUbo;
         bool upScale { false };
+        uint32_t scaleType { CORE_BLUR_TYPE_DOWNSCALE_RGBA };
+        uint32_t blurType { CORE_BLUR_TYPE_RGBA };
     };
     void Init(IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo);
     void PreExecute(IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo,

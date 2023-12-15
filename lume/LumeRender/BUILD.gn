@@ -10,7 +10,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import("//build/ohos.gni")
 import("//foundation/graphic/graphic_2d/graphic_config.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
@@ -141,8 +140,12 @@ ohos_source_set("lume_render_src") {
     "src/device/device.cpp",
     "src/device/pipeline_state_object.h",
     "src/device/swapchain.h",
+    "src/device/generic/platform_hardware_buffer.cpp",
+    "src/device/gpu_resource_cache.h",
+    "src/device/gpu_resource_cache.cpp",
     "src/device/gpu_resource_handle_util.h",
     "src/device/gpu_resource_handle_util.cpp",
+    "src/device/gpu_semaphore.h",
     
     "src/device/gpu_acceleration_structure.h",
     "src/device/gpu_buffer.h",
@@ -233,6 +236,8 @@ ohos_source_set("lume_render_src") {
     "src/datastore/render_data_store_fullscreen_shader.cpp",
     "src/datastore/render_data_store_pod.h",
     "src/datastore/render_data_store_pod.cpp",
+    "src/datastore/render_data_store_post_process.h",
+    "src/datastore/render_data_store_post_process.cpp",
     
     "src/node/core_render_node_factory.h",
     "src/node/core_render_node_factory.cpp",
@@ -256,16 +261,31 @@ ohos_source_set("lume_render_src") {
     "src/node/render_node_staging.cpp",
     "src/node/render_node_back_buffer.h",
     "src/node/render_node_back_buffer.cpp",
-    "src/node/render_node_back_buffer_gpu_buffer.h",
-    "src/node/render_node_back_buffer_gpu_buffer.cpp",
     
-    "src/util/frustum_util.h",
-    "src/util/frustum_util.cpp",
     "src/util/linear_allocator.h",
     "src/util/log.h",
     "src/util/render_util.h",
     "src/util/render_util.cpp",
     "src/util/string_util.h",
+
+    "src/node/render_copy.cpp",
+    "src/node/render_copy.h",
+    "src/node/render_motion_blur.cpp",
+    "src/node/render_motion_blur.h",
+    "src/node/render_node_create_gpu_buffers.cpp",
+    "src/node/render_node_create_gpu_buffers.h",
+    "src/node/render_node_end_frame_staging.cpp",
+    "src/node/render_node_end_frame_staging.h",
+    "src/node/render_node_mip_chain_post_process.cpp",
+    "src/node/render_node_mip_chain_post_process.h",
+    "src/node/render_node_single_post_process.cpp",
+    "src/node/render_node_single_post_process.h",
+    "src/node/render_staging.cpp",
+    "src/node/render_staging.h",
+    "src/nodecontext/render_node_post_process_util.cpp",
+    "src/nodecontext/render_node_post_process_util.h",
+    "src/util/render_frame_util.cpp",
+    "src/util/render_frame_util.h",
   ]
 
   if (RENDER_BUILD_GLES) {
@@ -307,6 +327,8 @@ ohos_source_set("lume_render_src") {
       "src/gles/render_backend_gles.cpp",
       "src/gles/render_frame_sync_gles.h",
       "src/gles/render_frame_sync_gles.cpp",
+      "src/gles/generic/platform_device_gles.cpp",
+      "src/gles/gpu_semaphore_gles.cpp"
     ]
   }
 
@@ -327,8 +349,6 @@ ohos_source_set("lume_render_src") {
       "src/vulkan/pipeline_create_functions_vk.h",
       "src/vulkan/pipeline_create_functions_vk.cpp",
     
-      "src/vulkan/gpu_acceleration_structure_vk.h",
-      "src/vulkan/gpu_acceleration_structure_vk.cpp",
       "src/vulkan/gpu_buffer_vk.h",
       "src/vulkan/gpu_buffer_vk.cpp",
       "src/vulkan/gpu_image_vk.h",
@@ -355,6 +375,8 @@ ohos_source_set("lume_render_src") {
     
       "src/vulkan/gpu_query_vk.h",
       "src/vulkan/gpu_query_vk.cpp",
+      "src/vulkan/gpu_semaphore_vk.h",
+      "src/vulkan/gpu_semaphore_vk.cpp",
     ]
 
     if (LUME_OHOS_BUILD) {
@@ -380,6 +402,7 @@ lume_compile_shader("lume_render_compile_shader")
   asset_path = rebase_path("./assets/render", root_build_dir)
   shader_path = "${dest_gen_path}/shaders"
   include_path = rebase_path("api", root_build_dir)
+  compileShader_deps=["${LUME_BINARY_PATH}:lume_binary_shader_compile"]
 }
 
 lume_rofs("lume_render_rofs")
