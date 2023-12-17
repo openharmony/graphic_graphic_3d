@@ -16,8 +16,7 @@ set -e
 WORKING_DIR=$(cd "$(dirname "$0")"; pwd)
 PROJECT_ROOT=${WORKING_DIR%/LumeEngine*}
 echo ${PROJECT_ROOT}
-#TOOL_PATH=$3
-TOOL_PATH=$PROJECT_ROOT/LumeBinaryCompile/LumeShaderCompiler/build/outpus/x86_64
+TOOL_PATH=$3
 SHADER_PATH=$4
 INCLUDE_PATH=$5
 
@@ -38,16 +37,16 @@ compile_shader()
         rm -rf $DEST_GEN_PATH
         echo "Clean Output"
     fi
-
+    TEST_TOOL_PATH=$TOOL_PATH/../LumeBinaryCompile/LumeShaderCompiler
     mkdir -p $DEST_GEN_PATH
     chmod -R 775 $DEST_GEN_PATH
 
     cp -r ${ASSETS_PATH}/* $DEST_GEN_PATH
     if [ -z "$RENDER_INCLUDE_PATH" ];
     then
-        $TOOL_PATH/LumeShaderCompiler --optimize --source $PROJECT_ROOT/LumeRender/assets/render/shaders --include $PROJECT_ROOT/LumeRender/api/
+        $TEST_TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $PROJECT_ROOT/LumeRender/api/
     else
-        $TOOL_PATH/LumeShaderCompiler --optimize --source $PROJECT_ROOT/Lume_3D/assets/3d/shaders --include $PROJECT_ROOT/Lume_3D/api/ --include $PROJECT_ROOT/LumeRender/api/
+        $TEST_TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $PROJECT_ROOT/Lume_3D/api/ --include $PROJECT_ROOT/LumeRender/api/
     fi
 }
 

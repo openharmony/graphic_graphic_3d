@@ -11,12 +11,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import("//build/ohos.gni")
-import("//foundation/graphic/graphic_2d/graphic_config.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
-
-lume_binary_complile("lume_binary_shader_compile")
-{
-  script = "${LUME_BINARY_PATH}/build.sh"
+lume_binary_compile("lume_binary_shader_compile") {
+  script = "${LUME_BINARY_PATH}/LumeShaderCompiler/build.sh"
   outputs = [ "$target_gen_dir" ]
+  dest_gen_path = "$target_gen_dir"
+}
+
+group("binary_compile_shader") {
+  deps = [":lume_binary_shader_compile"]
 }

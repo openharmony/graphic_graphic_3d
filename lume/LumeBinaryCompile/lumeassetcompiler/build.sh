@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -e
 
 WORKING_DIR=$(cd "$(dirname "$0")"; pwd)
 PROJECT_ROOT=${WORKING_DIR%/foundation*}
@@ -19,7 +20,7 @@ CMAKE_ROOT=$PROJECT_ROOT/prebuilts/cmake/linux-x86/bin
 echo $CMAKE_ROOT
 
 OHOS_NDK=$PROJECT_ROOT/prebuilts/clang/ohos/linux-x86_64/llvm
-LLVM_DIR=$OHOS_NDK
+LLVM_DIR=$PROJECT_ROOT/prebuilts/clang/ohos/linux-x86_64/llvm
 echo $LLVM_DIR
 
 NINJA_HOME=$PROJECT_ROOT/prebuilts/build-tools/linux-x86/bin
@@ -27,11 +28,17 @@ echo $NINJA_HOME
 
 export PATH="$NINJA_HOME:$PATH"
 
-rm -rf $WORKING_DIR/build
+DEST_GEN_PATH=$1
 
-Compile()
+compile()
 {
-    PROJECT_DIR=$WORKING_DIR/build/outpus/$1
+    PROJECT_DIR=$DEST_GEN_PATH
+    if [ -d "$PROJECT_DIR" ]; then
+        rm -rf $PROJECT_DIR
+        echo "Clean OutPut asset"
+    fi
+    mkdir -p $PROJECT_DIR
+    chmod -R 777 $PROJECT_DIR
 
     mkdir -p $PROJECT_DIR/Strip
     $CMAKE_ROOT/cmake -H$WORKING_DIR -B$PROJECT_DIR -G Ninja
@@ -39,14 +46,14 @@ Compile()
 
     chmod 775 $PROJECT_DIR/LumeAssetCompiler
     cp -r $PROJECT_DIR/LumeAssetCompiler $PROJECT_DIR/Strip
-    $LLVM_DIR/bin/llvm-strip -s $PROJECT_DIR/Strip/LumeAssetCompiler
-    rm -rf $WORKING_DIR/../test/RofsBuild/LumeAssetCompiler
-    cp $PROJECT_DIR/Strip/LumeAssetCompiler $WORKING_DIR/../test/RofsBuild/LumeAssetCompiler
-    cd $WORKING_DIR/../test/RofsBuild/
+    #$LLVM_DIR/bin/llvm-strip -s $PROJECT_DIR/Strip/LumeAssetCompiler
+    #rm -rf $WORKING_DIR/../test/RofsBuild/LumeAssetCompiler
+    #cp $PROJECT_DIR/Strip/LumeAssetCompiler $WORKING_DIR/../test/RofsBuild/LumeAssetCompiler
+    #cd $WORKING_DIR/../test/RofsBuild/
     #./compile_rofs.sh rofs
-    cd -
+    #cd -
 }
 
-echo "compile start x86_64"
+echo "compile start asset x86_64"
 
-Compile x86_64
+compile

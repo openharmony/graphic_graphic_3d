@@ -144,8 +144,7 @@ ohos_source_set("widget_adapter_source") {
 
     if (defined(use_new_skia) && use_new_skia) {
       deps = [
-        "//third_party/skia:skia_ohos",
-        "//third_party/spirv-cross:spirv_cross_shared"
+        "//third_party/skia:skia_ohos"
       ]
     } else {
       deps = [
