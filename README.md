@@ -2,6 +2,9 @@
 
 - 简介
 - 目录
+- 编译构建
+- 说明
+    - 使用说明
 - 相关仓
 
 ## 简介
@@ -16,6 +19,20 @@ foundation/graphic/graphic_3d/
 │   ├── LumeBase                       # 引擎基础库代码
 │   ├── LumeEngine                     # 引擎加载插件、资源管理代码
 │   └── LumeRender                     # 引擎渲染后端代码
+│   └── LumeBianryCompile              # 引擎shader 编译
 ```
-
+## 编译构建
+```
+# 通过gn编译,在out目录下对应产品的文件夹中生成lib3dWidgetAdapter.z.so、libAGPDLL.z.so、libPluginAGP3D.z.so、libPluginAGPRender.z.so
+hb build graphic_3d
+```
+## 说明
+AGP引擎 作为ArkUI的组件，提供系统的3D绘制能力
+### 使用说明
+可参考ArkUI下其他组件的使用. AGP引擎主要提供3D绘制能力，包含引擎的加载，自定义灯光、相机以及纹理等能力，供开发者自定义3D模型。
 ## 相关仓
+- [**graphic_graphic_2d**](https://gitee.com/abbuu_openharmony/graphic_graphic_2d)
+- [arkui_ace_engine](https://gitee.com/openharmony/arkui_ace_engine)
+- [third_party_egl](https://gitee.com/openharmony/third_party_egl)
+- [third_party_opengles](https://gitee.com/openharmony/third_party_opengles)
+- [third_party_skia](https://gitee.com/openharmony/third_party_skia)
