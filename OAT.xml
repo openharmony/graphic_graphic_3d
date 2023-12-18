@@ -29,10 +29,6 @@
         </policylist>
         <filefilterlist>
             <filefilter name="defaultFilter" desc="Files not to check">
-                <filteritem type="filename" name="*.spv" desc="Invalid file"/>
-                <filteritem type="filename" name="*.gl" desc="Invalid file"/>
-                <filteritem type="filename" name="*.lsb" desc="Invalid file"/>
-                <filteritem type="filename" name="*.pre" desc="Invalid file"/>
                 <!--filteritem type="filename" name="*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="abcdefg/.*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="projectroot/[a-zA-Z0-9]{20,}.sh" desc="Temp files"/-->
@@ -46,7 +42,8 @@
                 <filteritem type="filename" name="*.shaderrs" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.natvis" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.vert" desc="config file,can not add license head"/>
-                <filteritem type="filename" name="*.gles" desc="config file,can not add license head"/>
+				<filteritem type="filename" name="*.gles" desc="config file,can not add license head"/>
+				<filteritem type="filepath" name="lume/LumeBinaryCompile/LumeShaderCompiler/src/io/msdirent.h" desc="License matcher rules, Watcom"/>
                 <!--filteritem type="filename" name="*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="abcdefg/.*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="projectroot/[a-zA-Z0-9]{20,}.sh" desc="Temp files"/-->
@@ -60,7 +57,8 @@
                 <filteritem type="filename" name="*.shaderrs" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.natvis" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.vert" desc="config file,can not add license head"/>
-                <filteritem type="filename" name="*.gles" desc="config file,can not add license head"/>
+				<filteritem type="filename" name="*.gles" desc="config file,can not add license head"/>
+			    <filteritem type="filepath" name="lume/LumeBinaryCompile/LumeShaderCompiler/src/io/msdirent.h" desc="License matcher rules, Watcom"/>
                 <!--filteritem type="filename" name="*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="abcdefg/.*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="projectroot/[a-zA-Z0-9]{20,}.sh" desc="Temp files"/-->
