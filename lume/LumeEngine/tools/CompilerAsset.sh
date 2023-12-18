@@ -15,9 +15,10 @@ set -e
 WORKING_DIR=$(cd "$(dirname "$0")"; pwd)
 PROJECT_ROOT=${WORKING_DIR%/LumeEngine*}
 echo ${PROJECT_ROOT}
-#TOOL_PATH=$3
-COMPILER_PATH=$PROJECT_ROOT/LumeBinaryCompile/lumeassetcompiler/build/outpus/x86_64
-#COMPILER_PATH=$1
+
+#COMPILER_PATH=$PROJECT_ROOT/LumeBinaryCompile/lumeassetcompiler/build/outpus/x86_64
+COMPILER_PATH=$1
+TEST_COMPILER_PATH=${COMPILER_PATH}/../LumeBinaryCompile/lumeassetcompiler
 CPU_TYPE=$2
 ASSETS_PATH=$3
 ROOT_PATH=$4
@@ -30,7 +31,7 @@ OUTPUT_OBJ=$9
 compile_asset()
 {
 	echo "Lume5 Compile asset $1 $2 $3 $4 $5 $6 $7 $8 $9"
-    $COMPILER_PATH/LumeAssetCompiler -linux $CPU_TYPE -extensions ".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles" $ASSETS_PATH $ROOT_PATH $BIN_NAME $SIZE_NAME $BASE_NAME
+    $TEST_COMPILER_PATH/LumeAssetCompiler -linux $CPU_TYPE -extensions ".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles" $ASSETS_PATH $ROOT_PATH $BIN_NAME $SIZE_NAME $BASE_NAME
     mv $OUTPUT_OBJ $COPY_PATH
 }
 

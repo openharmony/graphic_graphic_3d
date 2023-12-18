@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright (c) 2023 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,8 +10,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-WORKING_DIR=$(cd "$(dirname "$0")"; pwd)
-cd $WORKING_DIR/LumeShaderCompiler/
-./build.sh
-cd $WORKING_DIR/lumeassetcompiler/
-./build.sh
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+lume_binary_compile("lume_binary_assets_compile") {
+  script = "${LUME_BINARY_PATH}/lumeassetcompiler/build.sh"
+  outputs = [ "$target_gen_dir" ]
+  dest_gen_path = "$target_gen_dir"
+}
+
+group("binary_compile_asset") {
+  deps = [":lume_binary_assets_compile"]
+}

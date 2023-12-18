@@ -16,7 +16,7 @@
 #include "spirv_cross_helpers_gles.h"
 
 #include <cmath>
-#include <gl/glcorearb.h>
+#include <glcorearb.h>
 
 namespace Gles {
 namespace {

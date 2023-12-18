@@ -1,6 +1,16 @@
+
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# Copyright (C) 2018 Huawei Technologies Co, Ltd.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 cmake_minimum_required(VERSION 3.10)
 project(LumeShaderCompiler)
@@ -40,7 +50,6 @@ function(get_all_targets _result _dir)
 endfunction()
 
 function(add_subdirectory_with_folder _folder_name _folder)
-	message(STATUS "zwq ${ARGN}")
     add_subdirectory(${_folder} ${ARGN} EXCLUDE_FROM_ALL)
 
     get_all_targets(_targets "${_folder}")
@@ -89,40 +98,27 @@ set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "" FORCE)
 set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "" FORCE)
 set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 
-#set(SPIRV_HEADERS_PATH, string(REGEX MATCH "foundation\" TEST_STRING ${CMAKE_CURRENT_LIST_FILE})
-#string(REGEX MATCHALL "foundation" TEST_STRING ${CMAKE_CURRENT_LIST_FILE})
-#string(REGEX MATCHALL "zwq" TEST_STRING ${CMAKE_CURRENT_LIST_FILE})
 string(REPLACE "/foundation" ";" TEMP_PATH ${CMAKE_CURRENT_LIST_FILE})
-#string(REPLACE "/zwq" ";" TEMP_PATH ${CMAKE_CURRENT_LIST_FILE})
 list(GET TEMP_PATH 0 OHOS_ROOT_PATH)
 set(SPIRV_TOOLS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-tools")
-set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-cross")
+#set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-cross")
+set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/skia/third_party/externals/spirv-cross")
 set(GLSLANG_PATH "${OHOS_ROOT_PATH}/third_party/glslang")
+set(KHRONOS_GL "${OHOS_ROOT_PATH}/third_party/openGLES/api/GL")
+set(KHRONOS_KHR "${OHOS_ROOT_PATH}/third_party/openGLES/extensions/KHR")
 
 #SPIRV-Headers causes "INTERFACE_LIBRARY targets may only have whitelisted properties.", but we don't need to include is as it's header only
-#add_subdirectory_with_folder("3rdParty" 3rdparty/spirv-headers)
 add_library(SPIRV-Headers INTERFACE)
-#target_sources(SPIRV-Headers INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/spirv-headers")
 target_sources(SPIRV-Headers INTERFACE "${OHOS_ROOT_PATH}/third_party/spirv-headers")
-#set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/spirv-headers")
 
 set(SPIRV-Headers_SOURCE_DIR "${OHOS_ROOT_PATH}/third_party/spirv-headers")
-message(STATUS "zwq spirv-tools: ${SPIRV_TOOLS_PATH} spirv-cross: ${SPIRV_CROSS_PATH} spirv-headers: ${SPIRV-Headers_SOURCE_DIR} glslang: ${GLSLANG_PATH}")
+message(STATUS "spirv-tools: ${SPIRV_TOOLS_PATH} spirv-cross: ${SPIRV_CROSS_PATH} spirv-headers: ${SPIRV-Headers_SOURCE_DIR} glslang: ${GLSLANG_PATH}")
 add_subdirectory(${SPIRV_TOOLS_PATH} "3rdPartyST" EXCLUDE_FROM_ALL)
 add_subdirectory(${GLSLANG_PATH} "3rdPartyGL" EXCLUDE_FROM_ALL)
 add_subdirectory(${SPIRV_CROSS_PATH} "3rdPartCross" EXCLUDE_FROM_ALL)
-
-#add_subdirectory_with_folder("3rdParty" ${SPIRV_TOOLS_PATH})
-#add_subdirectory_with_folder("3rdParty" ${SPIRV_TOOLS_PATH})
-#add_subdirectory_with_folder("3rdParty" ${SPIRV_TOOLS_PATH})
-
-#add_subdirectory_with_folder("3rdParty" 3rdparty/spirv-tools)
-#add_subdirectory_with_folder("3rdParty" 3rdparty/glslang)
-#add_subdirectory_with_folder("3rdParty" 3rdparty/spirv-cross)
-
 #execute_process(COMMAND git describe --all WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/glslang" OUTPUT_VARIABLE GLSLANG_VERSION COMMAND_ERROR_IS_FATAL ANY OUTPUT_STRIP_TRAILING_WHITESPACE)
 #string(REGEX REPLACE "tags/([0-9]+).([0-9]+).([0-9]+)" "(\\1 * 10000) + (\\2 * 100) + (\\3)" GLSLANG_VERSION ${GLSLANG_VERSION})
-set(GLSLANG_VERSION "110000")
+set(GLSLANG_VERSION "120000")
 #math(EXPR GLSLANG_VERSION "${GLSLANG_VERSION}")
 
 set(sources 
@@ -148,7 +144,8 @@ add_executable(${executable} ${sources})
 target_include_directories(${executable} PRIVATE
     include
     src
-    3rdparty/khronos
+    ${KHRONOS_GL}
+    ${KHRONOS_KHR}
 )
 
 target_link_libraries(${executable} PRIVATE glslang SPIRV)
