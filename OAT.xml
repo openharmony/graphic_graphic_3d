@@ -43,7 +43,7 @@
                 <filteritem type="filename" name="*.shaderpl" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.shadergs" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.shadervid" desc="config file,can not add license head"/>
-                <filteritem type="filename" name="*.shaderrs" desc="config file,can not add license head"/>vert,gles
+                <filteritem type="filename" name="*.shaderrs" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.natvis" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.vert" desc="config file,can not add license head"/>
                 <filteritem type="filename" name="*.gles" desc="config file,can not add license head"/>
