@@ -1,0 +1,11 @@
+{
+    "name": "fullscreen",
+    "descriptorSetLayouts": [
+        {
+            "set": 0,
+            "bindings": [
+                { "binding": 0, "descriptorType": "uniform_buffer", "descriptorCount": 1, "shaderStageFlags": "fragment_bit" }
+            ]
+        }
+    ]
+}

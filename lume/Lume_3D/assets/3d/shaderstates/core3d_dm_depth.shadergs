@@ -1,0 +1,169 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "shaderstate"
+    },
+    "shaderStates": [
+        {
+            "baseShaderState": "3dshaderstates://core3d_dm_depth.shadergs",
+            "baseVariantName": "DEPTH",
+            "variantName": "DEPTH",
+            "renderSlot": "CORE3D_RS_DM_DEPTH",
+            "renderSlotDefaultShaderState": true,
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                }
+            }
+        },
+        {
+            "baseShaderState": "3dshaderstates://core3d_dm_depth.shadergs",
+            "baseVariantName": "DEPTH_DS",
+            "variantName": "DEPTH_DS",
+            "renderSlot": "CORE3D_RS_DM_DEPTH",
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "none",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                }
+            }
+        },
+        {
+            "baseShaderState": "3dshaderstates://core3d_dm_depth.shadergs",
+            "baseVariantName": "DEPTH_CW",
+            "variantName": "DEPTH_CW",
+            "renderSlot": "CORE3D_RS_DM_DEPTH",
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                }
+            }
+        },
+        {
+            "baseShaderState": "3dshaderstates://core3d_dm_depth.shadergs",
+            "baseVariantName": "DEPTH",
+            "variantName": "DEPTH_VSM",
+            "renderSlot": "CORE3D_RS_DM_DEPTH_VSM",
+            "renderSlotDefaultShaderState": true,
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                },
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "colorWriteMask": "r_bit|g_bit"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "baseShaderState": "3dshaderstates://core3d_dm_depth.shadergs",
+            "baseVariantName": "DEPTH_DS",
+            "variantName": "DEPTH_VSM_DS",
+            "renderSlot": "CORE3D_RS_DM_DEPTH_VSM",
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "none",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                },
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "colorWriteMask": "r_bit|g_bit"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "baseShaderState": "3dshaderstates://core3d_dm_depth.shadergs",
+            "baseVariantName": "DEPTH_CW",
+            "variantName": "DEPTH_VSM_CW",
+            "renderSlot": "CORE3D_RS_DM_DEPTH_VSM",
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                },
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

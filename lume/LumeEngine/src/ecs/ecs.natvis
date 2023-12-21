@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Base::array_view&lt;*&gt;">
+    <DisplayString>{{size={size_}}}</DisplayString>
+    <Expand>
+      <Item Name="[size]">size_</Item>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>begin_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Base::vector&lt;*&gt;">
+    <DisplayString>{{size={size_}}}</DisplayString>
+    <Expand>
+      <Item Name="[size]">size_</Item>
+      <Item Name="[allocator]">allocator_</Item>
+      <Item Name="[capacity]">capacity_</Item>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>($T1*)data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Base::basic_string&lt;*&gt;">
+    <DisplayString Condition="!data_.longString.isShort &amp;&amp; (data_.longString.size == 0)">empty</DisplayString>
+    <DisplayString Condition="!data_.longString.isShort &amp;&amp; (data_.longString.size &gt; 0)">{($T1*)(data_.longString.begin),s}</DisplayString>
+    <DisplayString Condition="data_.longString.isShort &amp;&amp; ((shortCapacity - data_.shortString.size) == 0)">empty</DisplayString>
+    <DisplayString Condition="data_.longString.isShort &amp;&amp; ((shortCapacity - data_.shortString.size) &gt; 0)">{data_.shortString.begin + 1,s}</DisplayString>
+    <StringView Condition="!data_.longString.isShort &amp;&amp; (data_.longString.size &gt; 0)">($T1*)(data_.longString.begin),s</StringView>
+    <StringView Condition="data_.longString.isShort &amp;&amp; ((shortCapacity - data_.shortString.size) &gt; 0)">data_.shortString.begin + 1,s</StringView>
+    <Expand>
+      <CustomListItems>
+        <If Condition="data_.longString.isShort">
+          <Item Name="[capacity]">shortCapacity</Item>
+          <Item Name="[size]">shortCapacity - data_.shortString.size</Item>
+          <Item Name="[ptr]">($T1*)(data_.shortString.begin + 1)</Item>
+        </If>
+        <If Condition="!data_.longString.isShort">
+          <Item Name="[capacity]">data_.longString.capacity</Item>
+          <Item Name="[size]">data_.longString.size</Item>
+          <Item Name="[ptr]">($T1*)data_.longString.begin</Item>
+        </If>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  <Type Name="Base::basic_string_view&lt;*&gt;">
+    <DisplayString Condition="size_==0">empty</DisplayString>
+    <DisplayString Condition="size_>0">{begin_,[size_]}</DisplayString>
+    <StringView Condition="size_>0">begin_,[size_]</StringView>
+    <Expand>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>($T1*)begin_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Base::basic_fixed_string&lt;*&gt;">
+    <DisplayString Condition="len_==0">empty</DisplayString>
+    <DisplayString Condition="len_>0">{data_,[len_]}</DisplayString>
+    <StringView Condition="len_>0">data_,[len_]</StringView>
+    <Expand>
+      <ArrayItems>
+        <Size>len_</Size>
+        <ValuePointer>($T1*)data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::pair&lt;*&gt;">
+    <DisplayString>{first}, {second}</DisplayString>
+    <Expand>
+      <Item Name="first">first</Item>
+      <Item Name="second">second</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::unordered_map_base&lt;*&gt;">
+    <DisplayString Condition="size_==0">empty</DisplayString>
+    <DisplayString Condition="size_>0">{{size={size_}}}</DisplayString>
+    <Expand>
+      <CustomListItems MaxItemsPerView="5000" ExcludeView="Test">
+        <Variable Name="index" InitialValue="0" />
+        <Variable Name="buckets" InitialValue="buckets_.size_" />
+        <Variable Name="pBucket" InitialValue="buckets_.data_" />
+        <Variable Name="node" InitialValue="*buckets_.data_" />
+
+        <Loop>
+          <If Condition="index >= buckets">
+            <Break/>
+          </If>
+          <If Condition="pBucket[index] != nullptr">
+            <Exec>node = *(pBucket + index)</Exec>
+            <Item Name="[{node->data.first}]">node->data.second</Item>
+            <Exec>node = node->next</Exec>
+            <Loop>
+              <If Condition="node != nullptr">
+                <Item Name="[{node->data.first}]">node->data.second</Item>
+                <Exec>node = node->next</Exec>
+              </If>
+              <Else>
+                <Break/>
+              </Else>
+            </Loop>
+          </If>
+          <Exec>index+=1</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="Base::unique_ptr&lt;*&gt;">
+    <DisplayString Condition="ptr_ == nullptr">null</DisplayString>
+    <DisplayString>unique_ptr {*ptr_}</DisplayString>
+    <Expand>
+      <ExpandedItem>ptr_</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="Base::PropertyData">
+    <DisplayString>{{properties={props_.size_}}}</DisplayString>
+
+    <Expand>
+      <CustomListItems>
+        <Variable Name="i" InitialValue="0"/>
+        <Variable Name="ptr" InitialValue="0ull"/>
+        <Variable Name="hash" InitialValue="0ull"/>
+        <!--<Variable Name="name" InitialValue="(const string_view*)nullptr"/>-->
+        <Variable Name="name" InitialValue="(const char*)nullptr"/>
+        <Size>props_.size_</Size>
+        <Exec>i=0</Exec>
+        <Exec>ptr=0</Exec>
+        <Exec>name=0</Exec>
+        <Loop>
+          <!--<Item Name="{props_[i].name,na}">props_[i].type.name</Item>-->
+          <Exec>ptr=(((uintptr_t)data_)+props_[i].offset)</Exec>
+
+          <!--<Exec>name=&amp;props_[i].name</Exec>-->
+          <Exec>name=props_[i].name.begin_</Exec>
+          <Exec>hash=props_[i].type.compareHash</Exec>
+          <!-- can compare by name, like this. but this is unsafe since it misses the array... -->
+          <!--<Item Name="{name,na}" Condition="strcmp(&quot;uint32_t&quot;,props_[i].type.name.begin_)==0">*(uint32_t*)ptr</Item>-->
+          
+          <!-- or hash like this -->
+          <Item Name="{name,na}" Condition="hash==0xa00a62a942b20165">*(float*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0xd03d8582534ea008">*(uint8_t*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0x32882d3b22f6b347">*(uint32_t*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0x40eb7764c80bc470">*(uint64_t*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0xcd2fd49bc6b014bd">*(bool*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0xec1e7e12ad89ac3a">*(Base::IRenderDataStoreManager*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0x757a4c2248c0b9da">*(Base::Entity*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0x21e15240cce014d3">*(Base::GpuResourceHandle*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0x91598cb8b6464ec3">*(Base::ResourceHandle*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0xd30ef5cbeb1c566f">(char*)ptr,s</Item>
+          <Item Name="{name,na}" Condition="hash==0x5d863d348adb6e38">*(Base::Math::Vec3*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0xbd2a98c671ac6319">*(Base::Math::Mat4X4*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0x04265e5df5375480">*(Base::Math::Quat*)ptr</Item>
+
+          <!-- array types -->
+          <Item Name="{name,na}" Condition="hash==0x873dfbbafdddfeb7">(float*)ptr,[props_[i].count]</Item>
+          <Item Name="{name,na}" Condition="hash==0x8619d3da2a6707a5">(uint32_t*)ptr,[props_[i].count]</Item>
+          <Item Name="{name,na}" Condition="hash==0xe20c7b9b9145ccfc">(Base::Entity*)ptr,[props_[i].count]</Item>
+          <Item Name="{name,na}" Condition="hash==0x5e8a333040c05cb3">(Base::Math::Mat4X4*)ptr,[props_[i].count]</Item>
+          <Item Name="{name,na}" Condition="hash==0xe03a172042638626">(Base::Math::Vec3*)ptr,[props_[i].count]</Item>
+          
+          <!-- complex types -->
+          <Item Name="{name,na}" Condition="hash==0x5bfe86140e100937">*(Base::vector&lt;Base::basic_string&lt;char&gt; &gt;*)ptr</Item>
+          <Item Name="{name,na}" Condition="hash==0xccfcf78fcb6a2dc2">*(Base::vector&lt;float&gt;*)ptr</Item>
+          <Exec>i++</Exec>
+        </Loop>
+      </CustomListItems>
+      <Item Name="[owner]">owner_</Item>
+      <Item Name="[size of data]">size_</Item>
+      <Item Name="[raw data]">data_</Item>
+      <Item Condition="dataHandle_!=nullptr" Name="[dataHandle]">dataHandle_</Item>
+      <Item Condition="dataW_!=data_" Name="[raw data]">dataW_</Item>
+      <Item Condition="dataHandleW_!=dataHandle_" Name="[dataHandleW]">dataHandleW_</Item>
+    </Expand>
+  </Type>  
+</AutoVisualizer>

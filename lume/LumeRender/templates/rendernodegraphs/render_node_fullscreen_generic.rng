@@ -1,0 +1,32 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "Template",
+    "nodes": [
+        {
+            "typeName": "RenderNodeFullscreenGeneric",
+            "nodeName": "RenderNodeFullscreenGeneric",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "shader": "rendershaders://shader/shader.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "CORE_DEFAULT_BACKBUFFER"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpass": {
+                    "colorAttachmentIndices": [ 0 ]
+                }
+            }
+        }
+    ]
+}

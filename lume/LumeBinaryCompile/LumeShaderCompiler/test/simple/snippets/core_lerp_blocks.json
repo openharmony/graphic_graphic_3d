@@ -1,0 +1,39 @@
+
+{
+    "source" : "core_lerp_blocks.h",
+    "blocks": [
+        {
+            "function": "GenericLerp",
+            "inputs": [
+                { "type": "vec2", "description": "Value a to be mixed" },
+                { "type": "vec2", "description": "Value b to be mixed" },
+                { "type": "float", "description": "Lerp value" }
+            ],
+            "outputs": [
+                { "type": "vec2", "descritiption": "Vec2 output result of the lerp operation" }
+            ]
+        },
+        {
+            "function": "GenericLerp",
+            "inputs": [
+                { "type": "vec3", "description": "Value a to be mixed" },
+                { "type": "vec3", "description": "Value b to be mixed" },
+                { "type": "float", "description": "Lerp value" }
+            ],
+            "outputs": [
+                { "type": "vec3", "descritiption": "Vec3 output result of the lerp operation" }
+            ]
+        },
+        {
+            "function": "GenericLerp",
+            "inputs": [
+                { "type": "vec4", "description": "Value a to be mixed" },
+                { "type": "vec4", "description": "Value b to be mixed" },
+                { "type": "float", "description": "Lerp value" }
+            ],
+            "outputs": [
+                { "type": "vec4", "descritiption": "Vec4 output result of the lerp operation" }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,17 @@
+{
+    "version": 1.0,
+    "name": "CORE3D_POST_PROCESS_REFLECTION_CAM",
+    "postProcessConfiguration": {
+        "enableFlags": "tonemap | blur",
+        "tonemapConfiguration": {
+            "tonemapType": "aces",
+            "exposure": 0.7
+        },
+        "blurConfiguration": {
+            "blurType": "normal",
+            "blurQualityType": "normal",
+            "filterSize": 1.0,
+            "maxMipLevel": 8
+        }
+    }
+}

@@ -1,0 +1,133 @@
+# Copyright (C) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+declare_args() {
+  #BUILDTYPE="Release"
+  #BUILDTYPE="MinSizeRel"
+  #BUILDTYPE="RelWithDebInfo"
+  BUILDTYPE="Release"
+
+  LUME_PATH="foundation/graphic/graphic_3d/lume/"
+
+  BASE_DIR_NAME="LumeBase"
+  CORE_DIR_NAME="LumeEngine"
+  RENDER_DIR_NAME="LumeRender"
+  CORE3D_DIR_NAME="Lume_3D"
+  BINARY_DIR_NAME="LumeBinaryCompile"
+
+  LUME_OHOS_BUILD=true
+  CORE_DEV_ENABLED=1
+
+  LIB_ENGINE_CORE="libAGPDLL"
+  LIB_RENDER="libPluginAGPRender"
+  LIB_CORE3D="libPluginAGP3D"
+}
+
+declare_args() {
+  LUME_ROOT="//${LUME_PATH}"
+}
+
+declare_args() {
+
+  LUME_BASE_PATH="${LUME_ROOT}/${BASE_DIR_NAME}/"
+  LUME_CORE_PATH="${LUME_ROOT}/${CORE_DIR_NAME}/"
+  LUME_RENDER_PATH="${LUME_ROOT}/${RENDER_DIR_NAME}/"
+  LUME_CORE3D_PATH="${LUME_ROOT}/${CORE3D_DIR_NAME}/"
+  LUME_BINARY_PATH="${LUME_ROOT}/${BINARY_DIR_NAME}/"
+
+  LUME_CORE_DLL_PATH="${LUME_ROOT}/${CORE_DIR_NAME}/DLL/"
+  LUME_CORE3D_DLL_PATH="${LUME_ROOT}/${CORE3D_DIR_NAME}/DLL/"
+}
+
+declare_args() {
+  CORE_STATIC_PLUGIN_HEADER = "\"${LUME_PATH}/${CORE_DIR_NAME}/src/static_plugin_decl.h\""
+}
+
+declare_args() {
+  USE_LIB_PNG_JPEG = true
+  USE_STB_IMAGE = false
+  STB_IMAGE_PATH = "//third_party/minimp3/player/"
+}
+
+template("lume_rofs") {
+  name = target_name
+  action(name) {
+    outputs = [invoker.outputs]
+    script = invoker.script
+    cpu_type = ""
+    output_obj = ""
+    if (target_cpu == "arm") {
+      cpu_type = "armeabi-v7a"
+      output_obj = "${invoker.base_name}_32.o"
+    }
+
+    if (target_cpu == "arm64") {
+      cpu_type = "arm64-v8a"
+      output_obj = "${invoker.base_name}_64.o"
+    }
+
+    args = [
+      rebase_path(invoker.tool_path, root_build_dir),
+      "-${cpu_type}",
+      rebase_path(invoker.copy_path, root_build_dir),
+      invoker.root,
+      invoker.bin_name,
+      invoker.size_name,
+      invoker.base_name,
+      rebase_path(invoker.copy_path, root_build_dir),
+      output_obj,
+      invoker.file_extension
+    ]
+
+    deps = []
+    if (defined(invoker.compileShader_deps)) {
+      deps += invoker.compileShader_deps
+    }
+  }
+}
+
+template("lume_binary_complile") {
+  name = target_name
+  action(name) {
+    outputs = invoker.outputs
+    script = invoker.script
+    args = [
+      rebase_path(invoker.dest_gen_path, root_build_dir)
+    ]
+  }
+}
+
+template("lume_compile_shader") {
+  name = target_name
+  action(name) {
+    script = invoker.script
+    outputs = invoker.outputs
+    args = [
+      rebase_path(invoker.dest_gen_path, root_build_dir),
+      invoker.asset_path,
+      rebase_path(invoker.tool_path, root_build_dir),
+      rebase_path(invoker.shader_path, root_build_dir),
+      invoker.include_path,
+    ]
+
+    if (defined(invoker.render_include_path)) {
+      args += [
+        invoker.render_include_path
+      ]
+    }
+    deps = []
+    if (defined(invoker.compileShader_deps)) {
+      deps += invoker.compileShader_deps
+    }
+  }
+}

@@ -1,0 +1,78 @@
+
+{
+    "source" : "core_post_process_blocks.h",
+    "blocks": [
+        {
+            "function": "PostProcessTonemapBlock",
+            "inputs": [
+                { "type": "uint", "description": "Post process flags (contains tonamap enable flag)" },
+                { "type": "vec4", "description": "Tonemap factor (.x = exposure, .w type)" },
+                { "type": "vec3", "description": "Input color" }
+            ],
+            "outputs": [
+                { "type": "vec3", "description": "Vec3 output color of operation" }
+            ]
+        },
+        {
+            "function": "PostProcessVignetteBlock",
+            "inputs": [
+                { "type": "uint", "description": "Post process flags (contains vignette enable flag)" },
+                { "type": "vec4", "description": "Vignette factor (.x = coefficient, .y = pow)" },
+                { "type": "vec2", "description": "UV values" },
+                { "type": "vec3", "description": "Input color" }
+            ],
+            "outputs": [
+                { "type": "vec3", "description": "Vec3 output color of operation" }
+            ]
+        },
+        {
+            "function": "PostProcessColorFringeBlock",
+            "inputs": [
+                { "type": "uint", "description": "Post process flags (contains color fringe enable flag)" },
+                { "type": "vec4", "description": "Chroma factor (.x = coefficient, .y = distance coefficient)" },
+                { "type": "vec2", "description": "UV values" },
+                { "type": "vec2", "description": "UV size / texel size" },
+                { "type": "sampler2D", "description": "Combined image sampler (sampled multiple times)" },
+                { "type": "vec3", "description": "Input color" }
+            ],
+            "outputs": [
+                { "type": "vec3", "description": "Vec3 output color of operation" }
+            ]
+        },
+        {
+            "function": "PostProcessDitherBlock",
+            "inputs": [
+                { "type": "uint", "description": "Post process flags (contains dither enable flag)" },
+                { "type": "vec4", "description": "Dither factor (.x = amount, .y = uvx coeff, .xz = uvy coeff)" },
+                { "type": "vec3", "description": "Input color" }
+            ],
+            "outputs": [
+                { "type": "vec3", "description": "Vec3 output color of operation" }
+            ]
+        },
+        {
+            "function": "PostProcessColorConversionBlock",
+            "inputs": [
+                { "type": "uint", "description": "Post process flags (contains color conversion enable flag)" },
+                { "type": "vec4", "description": "Color conversion factor (.w type)" },
+                { "type": "vec3", "description": "Input color" }
+            ],
+            "outputs": [
+                { "type": "vec3", "description": "Vec3 output color of operation" }
+            ]
+        },
+        {
+            "function": "PostProcessBloomCombineBlock",
+            "inputs": [
+                { "type": "uint", "description": "Post process flags (contains bloom enable flag)" },
+                { "type": "vec4", "description": "Bloom factor (.z = bloom color coeff, .w = dirt map coeff)" },
+                { "type": "sampler2D", "description": "Bloom combined image sampler" },
+                { "type": "sampler2D", "description": "Dirt map combined image sampler" },
+                { "type": "vec3", "description": "Input color" }
+            ],
+            "outputs": [
+                { "type": "vec3", "description": "Vec3 output color of operation" }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,157 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "",
+    "nodes": [
+        {
+            "typeName": "RenderNodeDefaultCameraController",
+            "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialRenderSlot",
+            "nodeName": "CORE3D_RN_CAM_DM_SO_MSAA",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+            "renderSlotSortType": "by_material",
+            "renderSlotCullType": "view_frustum_cull",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "clearDepth": [ 1.0, 0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth_msaa",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color_msaa",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color_resolve",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 3,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "inputAttachmentIndices": [],
+                    "colorAttachmentIndices": [ 1 ],
+                    "resolveAttachmentIndices": []
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultEnv",
+            "nodeName": "CORE3D_RN_CAM_DM_E_MSAA",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth_msaa",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color_msaa",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color_resolve",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    }
+                ],
+                "subpassIndex": 1,
+                "subpassCount": 3,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ],
+                    "resolveAttachmentIndices": []
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialRenderSlot",
+            "nodeName": "CORE3D_RN_CAM_DM_ST_MSAA",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT",
+            "renderSlotSortType": "back_to_front",
+            "renderSlotCullType": "view_frustum_cull",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "storeOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth_msaa",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    },
+                    {
+                        "storeOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color_msaa",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    },
+                    {
+                        "storeOp": "store",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color_resolve",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    }
+                ],
+                "subpassIndex": 2,
+                "subpassCount": 3,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ],
+                    "resolveAttachmentIndices": [ 2 ]
+                }
+            }
+        },
+        {
+            "typeName": "CORE_RN_COMBINED_POST_PROCESS",
+            "nodeName": "CORE3D_RN_CAM_COMBINEDPP_MSAA",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "PostProcess",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "resources": {
+                "customInputImages": [
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color_resolve",
+                        "nodeName": "CORE3D_RN_CAM_CTRL_MSAA"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "resourceLocation": "from_render_graph_output",
+                        "resourceIndex": 0
+                    }
+                ]
+            }
+        }
+    ]
+}

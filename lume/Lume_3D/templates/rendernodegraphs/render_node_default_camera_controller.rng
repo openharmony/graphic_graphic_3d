@@ -1,0 +1,15 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "Template",
+    "nodes": [
+        {
+            "typeName": "RenderNodeDefaultCameraController",
+            "nodeName": "RenderNodeDefaultCameraController",
+            "customCameraName": "OPTIONAL_CUSTOM_CAMERA_NAME",
+            "customCameraId": 0
+        }
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "source" : "core_image_blocks.h",
+    "blocks": [
+        {
+            "function": "GenericImageSample",
+            "inputs": [
+                { "type": "vec2", "description": "UV coordinates to sample from." },
+                { "type": "sampler2D", "description": "Combined image sampler for fetching a value." }
+            ],
+            "outputs": [
+                { "type": "vec4", "descritiption": "Vec4 sampled value from at the given UV coordinates." }
+            ]
+        }
+    ]
+}

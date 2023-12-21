@@ -1,0 +1,112 @@
+{
+    "name": "@ohos/graphic_3d",
+    "description": "graphic_3d",
+    "version": "3.1",
+    "license": "Apache License 2.0",
+    "publishAs": "code-segment",
+    "segment": {
+      "destPath": "foundation/graphic/graphic_3d"
+    },
+    "dirs": {},
+    "scripts": {},
+    "component": {
+      "name": "graphic_3d",
+      "subsystem": "graphic",
+      "syscap": [],
+      "features": [],
+      "adapted_system_type": [ "standard" ],
+      "rom": "8000KB",
+      "ram": "8000KB",
+      "deps": {
+        "components": [
+          "c_utils",
+          "hilog",
+          "graphic_2d",
+          "hitrace",
+          "init",
+          "resource_management"
+        ],
+        "third_party": [
+          "skia",
+          "libpng",
+          "libjpeg-turbo",
+          "zlib"
+        ]
+      },
+      "build": {
+        "sub_component": [
+          "//foundation/graphic/graphic_3d/lume/LumeEngine:libAGPEngine",
+          "//foundation/graphic/graphic_3d/lume/LumeEngine/DLL:libAGPDLL",
+          "//foundation/graphic/graphic_3d/lume/LumeRender:libPluginAGPRender",
+          "//foundation/graphic/graphic_3d/lume/Lume_3D/DLL:libPluginAGP3D",
+          "//foundation/graphic/graphic_3d/lume/Lume_3D:libAGP3D",
+          "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
+          "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/LumeShaderCompiler:binary_compile_shader",
+          "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/lumeassetcompiler:binary_compile_asset"
+        ],
+        "inner_kits": [
+          {
+            "type": "so",
+            "name": "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
+            "header": {
+            "header_files": [
+                "graphics_manager_common.h",
+				"graphics_task.h",
+                "i_engine.h",
+                "offscreen_context_helper.h",
+                "widget_adapter.h",
+                "texture_info.h",
+                "custom/custom_render_descriptor.h",
+                "custom/shader_input_buffer.h",
+                "data_type/constants.h",
+                "data_type/gltf_animation.h",
+                "data_type/pointer_event.h",
+                "data_type/vec3.h",
+                "data_type/geometry/cone.h",
+                "data_type/geometry/cube.h",
+                "data_type/geometry/geometry.h",
+                "data_type/geometry/sphere.h",
+                "ohos/3d_widget_adapter_log.h",
+                "ohos/graphics_manager.h",
+                "ohos/platform_data.h",
+                "ohos/texture_layer.h"
+              ],
+              "header_base": "//foundation/graphic/graphic_3d/3d_widget_adapter/include"
+            }
+          },
+          {
+            "name": "//foundation/graphic/graphic_3d/3d_widget_adapter:3dWidgetAdapterInterface",
+            "header": {
+            "header_files": [
+                "graphics_manager_common.h",
+				"graphics_task.h",
+                "i_engine.h",
+                "offscreen_context_helper.h",
+                "widget_adapter.h",
+                "texture_info.h",
+                "custom/custom_render_descriptor.h",
+                "custom/shader_input_buffer.h",
+                "data_type/constants.h",
+                "data_type/gltf_animation.h",
+                "data_type/pointer_event.h",
+                "data_type/vec3.h",
+                "data_type/geometry/cone.h",
+                "data_type/geometry/cube.h",
+                "data_type/geometry/geometry.h",
+                "data_type/geometry/sphere.h",
+                "ohos/3d_widget_adapter_log.h",
+                "ohos/graphics_manager.h",
+                "ohos/platform_data.h",
+                "ohos/texture_layer.h"
+              ],
+              "header_base": "//foundation/graphic/graphic_3d/3d_widget_adapter/include"
+            }
+          }
+        ],
+        "test": [
+          "//foundation/graphic/graphic_3d/3d_widget_adapter/test:unittest"
+        ]
+      }
+    }
+}
+

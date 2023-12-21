@@ -1,0 +1,49 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "",
+    "nodes": [
+        {
+            "typeName": "RenderNodeDefaultLights",
+            "nodeName": "CORE3D_RN_SCENE_DL"
+        },
+        {
+            "typeName": "RenderNodeDefaultCameras",
+            "nodeName": "CORE3D_RN_SCENE_CAMS"
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialObjects",
+            "nodeName": "CORE3D_RN_SCENE_MATOBJS"
+        },
+        {
+            "typeName": "RenderNodeMorph",
+            "nodeName": "CORE3D_RN_SCENE_MORPH",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultShadowRenderSlot",
+            "nodeName": "CORE3D_RN_SCENE_SHADOWS",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_DEPTH",
+            "renderSlotVsm": "CORE3D_RS_DM_DEPTH_VSM",
+            "renderSlotSortType": "by_material",
+            "renderSlotCullType": "view_frustum_cull"
+        },
+        {
+            "typeName": "RenderNodeDefaultShadowsBlur",
+            "nodeName": "CORE3D_RN_SCENE_SHADOW_BLUR",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        }
+    ]
+}
