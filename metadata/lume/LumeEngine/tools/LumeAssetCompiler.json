@@ -1,0 +1,894 @@
+{
+  "version": "2.0.0",
+  "data": {
+    "productVersion": {
+      "Pb194208a7c94b75169aeab25cf5efc61d3ab5d06d300c420baf1d103c82c6ee6": {
+        "productionName": "HarmonyOS 3.1",
+        "releaseVersion": "",
+        "serviceId": "9e6f22f1708040368c20ab0ba8ffeb1d",
+        "serviceName": "APP",
+        "serviceVersion": "HwAgpEngine.1.0.0.4.20230811172412",
+        "versionUrl": "",
+        "cmcDeltaId": "",
+        "cmcCategory": "ComponentVersion"
+      }
+    },
+    "env": {
+      "E91032039bb711031ae9ca14f922773d53556424951f35d999a6ee463818b3667": {
+        "imageId": "91032039bb711031ae9ca14f922773d53556424951f35d999a6ee463818b3667",
+        "imageName": "harmonyos4.0:ubuntuserverubuntu22.04lts_20230511172930",
+        "type": "Docker",
+        "arch": "",
+        "playbook": "https://codehub-dg-y.huawei.com/buildmc/g6239b2fb75b441c9845ca96729a04d3b/cbg_1683529635335_docker.git",
+        "branch": "master",
+        "commitId": "f8973ec539521215591507f187cf59e74cf75490",
+        "tools": [
+          {
+            "id": "0591AAGS",
+            "type": "OS",
+            "version": "Ubuntu 22.04 LTS",
+            "name": "Ubuntu server"
+          },
+          {
+            "id": "0591A9IX",
+            "type": "buildTool",
+            "version": "3.10.2",
+            "name": "Python"
+          },
+          {
+            "id": "0591A9OI",
+            "type": "buildTool",
+            "version": "6.0",
+            "name": "PyYAML"
+          },
+          {
+            "id": "0591AD9G",
+            "type": "buildTool",
+            "version": "11.0.18",
+            "name": "Bisheng JDK"
+          },
+          {
+            "id": "0591A8KY",
+            "type": "buildTool",
+            "version": "3.20.5",
+            "name": "CMake"
+          },
+          {
+            "id": "0591AD2E",
+            "type": "buildTool",
+            "version": "5.0.0",
+            "name": "chardet"
+          },
+          {
+            "id": "0591AGJL",
+            "type": "buildTool",
+            "version": "3.8.8",
+            "name": "Apache Maven"
+          },
+          {
+            "id": "0591AB7B",
+            "type": "buildTool",
+            "version": "1.5.1",
+            "name": "asn1crypto"
+          },
+          {
+            "id": "0591ABY2",
+            "type": "buildTool",
+            "version": "15.0.4",
+            "name": "LLVM"
+          },
+          {
+            "id": "0591AAJW",
+            "type": "buildTool",
+            "version": "v0.13.0",
+            "name": "xmltodict"
+          },
+          {
+            "id": "0599A5WF",
+            "type": "otherTool",
+            "version": "1.0.0",
+            "name": "p4"
+          },
+          {
+            "id": "0591ABGV",
+            "type": "buildTool",
+            "version": "v1.11.0",
+            "name": "ninja"
+          },
+          {
+            "id": "0591AD86",
+            "type": "buildTool",
+            "version": "4.0.2",
+            "name": "upx"
+          },
+          {
+            "id": "0591ABN0",
+            "type": "buildTool",
+            "version": "v2.28.1",
+            "name": "requests"
+          },
+          {
+            "id": "0593ABLG",
+            "type": "buildTool",
+            "version": "2.1.T2",
+            "name": "secBepkit"
+          },
+          {
+            "id": "0591ABSQ",
+            "type": "buildTool",
+            "version": "4.9.3",
+            "name": "ANTLR"
+          },
+          {
+            "id": "0591AD9N",
+            "type": "buildTool",
+            "version": "5.15",
+            "name": "kbuild-standalone"
+          },
+          {
+            "id": "0591ABMS",
+            "type": "buildTool",
+            "version": "4.0.2",
+            "name": "Yocto Project - Poky"
+          },
+          {
+            "id": "0591AD3T",
+            "type": "buildTool",
+            "version": "3.1-7.oe2203sp1",
+            "name": "openEuler:gperf"
+          },
+          {
+            "id": "0591AD88",
+            "type": "buildTool",
+            "version": "r25b",
+            "name": "Android NDK"
+          },
+          {
+            "id": "0591AD22",
+            "type": "buildTool",
+            "version": "8.0.1",
+            "name": "gradle"
+          },
+          {
+            "id": "0591AD2A",
+            "type": "buildTool",
+            "version": "33_r02",
+            "name": "android-sdk-platforms"
+          },
+          {
+            "id": "0591AD29",
+            "type": "buildTool",
+            "version": "33.0.1",
+            "name": "Android SDK Build Tools"
+          },
+          {
+            "id": "0591AD2B",
+            "type": "buildTool",
+            "version": "33.0.3",
+            "name": "Android SDK platform Tools"
+          },
+          {
+            "id": "0591AD26",
+            "type": "buildTool",
+            "version": "18.14.1",
+            "name": "Node.js"
+          },
+          {
+            "id": "0599A5WJ",
+            "type": "otherTool",
+            "version": "4.3.1",
+            "name": "Smbclient"
+          },
+          {
+            "id": "0599ABPQ",
+            "type": "otherTool",
+            "version": "1.0.2n",
+            "name": "llibssl1.0"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "4:11.2.0-1ubuntu1",
+            "name": "g++-multilib"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:1.2.11.dfsg-2ubuntu9",
+            "name": "lib32z1-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.0.8-5build1",
+            "name": "libbz2-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.35-0ubuntu3",
+            "name": "libc6-dev-i386"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "0.186-1build1",
+            "name": "libelf-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.4.2-4",
+            "name": "libffi-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "22.0.1-1ubuntu2.1",
+            "name": "libgl1-mesa-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.0.2-0ubuntu1.6",
+            "name": "libssl-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2:1.7.5-1",
+            "name": "libx11-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.9.13+dfsg-1build1",
+            "name": "libxml2-utils"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.9.13+dfsg-1build1",
+            "name": "libxml2-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.0207+dfsg+really+2.0134-1",
+            "name": "libxml-libxml-perl"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:1.2.11.dfsg-2ubuntu9",
+            "name": "zlib1g-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.1.34-4build2",
+            "name": "xsltproc"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "4:11.2.0-1ubuntu1",
+            "name": "gcc-arm-linux-gnueabi"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "15:10.3-2021.07-4",
+            "name": "gcc-arm-none-eabi"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2:8.2.3995-1ubuntu2",
+            "name": "xxd"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.7.13+ds-5",
+            "name": "tofrodos"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "5.34.0-3ubuntu1",
+            "name": "perl"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "5.4.1-1ubuntu1",
+            "name": "python3-yaml"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2022.01+dfsg-2ubuntu2",
+            "name": "u-boot-tools"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:3.0~exp1",
+            "name": "ruby"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:2.1.4-1",
+            "name": "mtd-utils"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "0.29.2-1ubuntu3",
+            "name": "pkg-config"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.10-2build3",
+            "name": "liblzo2-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.25-1",
+            "name": "libxml-simple-perl"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.37.2-4ubuntu3",
+            "name": "uuid-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "4.3-4.1build1",
+            "name": "make"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.9.3-2build2",
+            "name": "lz4"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.7.3-4ubuntu1",
+            "name": "gnutls-bin"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.0.2-1",
+            "name": "git-lfs"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2:4.15.5~dfsg-0ubuntu5.1",
+            "name": "samba"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:2.6.1-1ubuntu1",
+            "name": "nfs-common"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "5.16-0ubuntu3",
+            "name": "strace"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.4.0-1",
+            "name": "libglvnd-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2:6.14-1ubuntu0.1",
+            "name": "cifs-utils"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "11.2.0-19ubuntu1",
+            "name": "g++-11-multilib"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.4.0-1",
+            "name": "libgl-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.21.2-2ubuntu1",
+            "name": "wget"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.0-12build2",
+            "name": "zip"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2021.5-1",
+            "name": "x11proto-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.37.2-2",
+            "name": "libsqlite3-0"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.5.0-2",
+            "name": "genext2fs"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:6.1.5-1",
+            "name": "unrar"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.0.2-0ubuntu1.7",
+            "name": "openssl"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "59.6.0-1.2",
+            "name": "python3-setuptools"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2:8.2.3995-1ubuntu2",
+            "name": "vim"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "12.1.7+nmu3ubuntu2",
+            "name": "bsdmainutils"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "0.17-44build1",
+            "name": "telnet"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "12.9ubuntu3",
+            "name": "build-essential"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:5.1.0-1build3",
+            "name": "gawk"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "6.0-26ubuntu3",
+            "name": "unzip"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "20190909",
+            "name": "ca-certificates-java"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "6.3-2",
+            "name": "libncurses5-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "4.5.1-1",
+            "name": "ccache"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "4:11.2.0-1ubuntu1",
+            "name": "gcc"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.13+dfsg-7",
+            "name": "cpio"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.6.4-8build2",
+            "name": "flex"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.14.1-3ubuntu0.22.04.1",
+            "name": "subversion"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.21.1ubuntu2.1",
+            "name": "dpkg"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "8.6.11+1build2",
+            "name": "tcl"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.38-3ubuntu1+9build1",
+            "name": "binutils-mingw-w64"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "4:11.2.0-1ubuntu1",
+            "name": "gcc-multilib"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.4.6",
+            "name": "apt-utils"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:5.9~svn20110310-16build1",
+            "name": "exuberant-ctags"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.10.4-0ubuntu2",
+            "name": "python3"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "0.21-4ubuntu4",
+            "name": "gettext"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.9.9-1ubuntu2",
+            "name": "sudo"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "20210827-4build1",
+            "name": "ftp"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "5.45.4-2build1",
+            "name": "expect"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.38-3ubuntu1",
+            "name": "binutils"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "15.9-1",
+            "name": "cscope"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:2.34.1-1ubuntu1.2",
+            "name": "git"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "7.81.0-1ubuntu1.3",
+            "name": "curl"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.60+git20181103.0eebece-1ubuntu5",
+            "name": "net-tools"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.9.1-2ubuntu2",
+            "name": "doxygen"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.10.4-0ubuntu1",
+            "name": "python3-distutils"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3:20211215-1",
+            "name": "iputils-ping"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "9:1.1.11-3.2ubuntu1",
+            "name": "genisoimage"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "7.4.2-2",
+            "name": "dos2unix"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2:3.8.2+dfsg-1build1",
+            "name": "bison"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "29-1ubuntu1",
+            "name": "kmod"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "3.2.3-8ubuntu3",
+            "name": "rsync"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.4.18-5ubuntu2",
+            "name": "m4"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:5.41-3",
+            "name": "file"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:8.9p1-3",
+            "name": "openssh-server"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.2.27-3ubuntu2.1",
+            "name": "gnupg"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "6.3-2",
+            "name": "lib32ncurses-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.07.1-3build1",
+            "name": "bc"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "2.35-0ubuntu3",
+            "name": "locales"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.10-4ubuntu4",
+            "name": "gzip"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "0.99.22.2",
+            "name": "software-properties-common"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.14-3ubuntu3",
+            "name": "libxcb1-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.90-1",
+            "name": "cloc"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:1.1.3-0ubuntu5",
+            "name": "libxdmcp-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:8.9p1-3",
+            "name": "ssh"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1:1.0.9-1build5",
+            "name": "libxau-dev"
+          },
+          {
+            "id": "",
+            "type": "systemTool",
+            "version": "1.6-2.1ubuntu3",
+            "name": "jq"
+          }
+        ]
+      }
+    },
+    "sourceCode": {
+      "S1ab9c89baaaf90abf9c7adc9596d5da16391072067d7b7b45d466109afe3c8b4": {
+        "repoUrl": "http://mgit2-tm.rnd.huawei.com/huawei/libs/LumeCompiler.git",
+        "branch": "HMOS_master_common_lumecompiler_master",
+        "commitId": "3c3f7ef7d0243fb8e692f264c9121e453e425866",
+        "tag": "",
+        "type": "gerrit",
+        "path": "LumeCompiler"
+      }
+    },
+    "buildJob": {
+      "Ba66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb": {
+        "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
+        "buildJobName": "",
+        "buildJobUrl": "https://cde.cbg.huawei.com/projectSpace/business/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?iframeUrl=buildrelease%2Fpipeline%2Fdetails&pipelineId=9e6f22f1708040368c20ab0ba8ffeb1d&jobId=2d9e0da9-a261-422d-af9e-18eda14d671f",
+        "buildStatus": "SUCCESS"
+      }
+    },
+    "artifactRepo": {},
+    "artifactDependency": {}
+  },
+  "moduleInfo": [
+    {
+      "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
+      "id": "fc9695b4d0299c00f8e1773321b2df0ff72061f6ae4fa4ef927612ffedb2c143",
+      "repoType": "GENERIC_CMC",
+      "toolType": "ART_GET",
+      "cmcDeltaId": "",
+      "groupId": "HarmonyOS 3.1",
+      "artifactId": "APP",
+      "version": "HwAgpEngine.1.0.0.4.20230811172412",
+      "fileList": [
+        {
+          "fileUrl": "lfghelix03-ap:1666;HW-APK/IRD/HwAgpEngine/HarmonyOS-Master-ALL-Global-Full-None-FullyFeature;IRD_HwAgpEngine_HarmonyOS-Master-ALL-Global-Full-None-FullyFeature_1.0.0.4_20230811_02"
+        }
+      ],
+      "productVersion": {
+        "$path": "$.data.productVersion.Pb194208a7c94b75169aeab25cf5efc61d3ab5d06d300c420baf1d103c82c6ee6"
+      },
+      "dependencyInfo": {
+        "dependenciesId": [],
+        "dependencies": []
+      }
+    }
+  ],
+  "envInfo": [
+    {
+      "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
+      "$path": "$.data.env.E91032039bb711031ae9ca14f922773d53556424951f35d999a6ee463818b3667"
+    }
+  ],
+  "sourceCodeInfo": [
+    {
+      "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
+      "repoList": [
+        {
+          "$path": "$.data.sourceCode.S1ab9c89baaaf90abf9c7adc9596d5da16391072067d7b7b45d466109afe3c8b4",
+          "label": [
+            "BUILD"
+          ]
+        }
+      ]
+    }
+  ],
+  "dependenciesCode": [
+    {
+      "buildJobId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
+      "dependencyIds": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      ],
+      "dependencies": [
+        {
+          "id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "dependencyIds": [],
+          "manifestFile": "",
+          "repoGroup": [
+            {
+              "type": "OPENSOURCE",
+              "manifestFile": "",
+              "repoList": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "buildProjectInfo": {
+    "projectId": "9e6f22f1708040368c20ab0ba8ffeb1d",
+    "buildId": "a66a0422e16aae435dddf9bdbcfc0d7f7d6a2ef64406e51825079ef20236f3cb",
+    "buildName": "HwAgpEngine",
+    "buildSystem": "CDE",
+    "buildUrl": "https://cde.cbg.huawei.com/projectSpace/business/9255c75d73464365a0c63bf426990f08/buildrelease/pipeline/details/9e6f22f1708040368c20ab0ba8ffeb1d?iframeUrl=buildrelease%2Fpipeline%2Fdetails&pipelineId=9e6f22f1708040368c20ab0ba8ffeb1d&jobId=2d9e0da9-a261-422d-af9e-18eda14d671f",
+    "buildStatus": "SUCCESS",
+    "buildLockFileId": "",
+    "buildLockFileName": "",
+    "buildLockFilePath": "",
+    "sourceCode": {
+      "repoUrl": "",
+      "branch": "",
+      "commitId": "",
+      "tag": "",
+      "type": "",
+      "buildJobId": "",
+      "manifestRoot": "false"
+    },
+    "buildTrigger": "h00382658",
+    "serviceId": "9e6f22f1708040368c20ab0ba8ffeb1d",
+    "serviceName": "APP",
+    "productionLineIdType": "PBI",
+    "productionLineId": "",
+    "productionLineName": "",
+    "productionId": "",
+    "productionName": ""
+  },
+  "artifactsRepoUrl": []
+}
