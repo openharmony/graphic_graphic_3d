@@ -51,7 +51,7 @@ compile()
     cp -r $PROJECT_DIR/LumeShaderCompiler $PROJECT_DIR/Strip
     #$LLVM_DIR/bin/llvm-strip -s $PROJECT_DIR/Strip/LumeShaderCompiler
     rm -rf $WORKING_DIR/../test/RofsBuild/LumeShaderCompiler
-    cp $PROJECT_DIR/Strip/LumeShaderCompiler $WORKING_DIR/../test/RofsBuild/LumeShaderCompiler
+    #cp $PROJECT_DIR/Strip/LumeShaderCompiler $WORKING_DIR/../test/RofsBuild/LumeShaderCompiler
     cd $WORKING_DIR/../test/RofsBuild/
     #./compile_rofs.sh shader
     cd -

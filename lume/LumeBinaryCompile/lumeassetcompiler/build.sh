@@ -46,7 +46,7 @@ compile()
     cp -r $PROJECT_DIR/LumeAssetCompiler $PROJECT_DIR/Strip
     #$LLVM_DIR/bin/llvm-strip -s $PROJECT_DIR/Strip/LumeAssetCompiler
     rm -rf $WORKING_DIR/../test/RofsBuild/LumeAssetCompiler
-    cp $PROJECT_DIR/Strip/LumeAssetCompiler $WORKING_DIR/../test/RofsBuild/LumeAssetCompiler
+    #cp $PROJECT_DIR/Strip/LumeAssetCompiler $WORKING_DIR/../test/RofsBuild/LumeAssetCompiler
     cd $WORKING_DIR/../test/RofsBuild/
     #./compile_rofs.sh rofs
     cd -

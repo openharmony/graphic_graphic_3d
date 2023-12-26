@@ -1,9 +1,23 @@
+# Copyright (C) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# Copyright (C) 2018 Huawei Technologies Co, Ltd.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 cmake_minimum_required(VERSION 3.10)
 project(LumeShaderCompiler)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    # enable multi-processor compilation
+    add_compile_options(/MP)
+endif()
 
 #workaround for "PythonInterp" finds old version of python...
 find_package (Python3 COMPONENTS Interpreter)
@@ -96,7 +110,7 @@ set(SPIRV_TOOLS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-tools")
 set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/skia/third_party/externals/spirv-cross")
 set(GLSLANG_PATH "${OHOS_ROOT_PATH}/third_party/glslang")
 set(KHRONOS_GL "${OHOS_ROOT_PATH}/third_party/openGLES/api/GL")
-set(KHRONOS_KHR "${OHOS_ROOT_PATH}/third_party/openGLES/extensions/KHR")
+set(KHRONOS_KHR "${OHOS_ROOT_PATH}/third_party/EGL/api/KHR")
 
 # SPIRV-Headers causes "INTERFACE_LIBRARY targets may only have whitelisted properties.", but we don't need to include is as it's header only
 add_library(SPIRV-Headers INTERFACE)
@@ -108,7 +122,7 @@ add_subdirectory(${GLSLANG_PATH} "3rdPartyGL" EXCLUDE_FROM_ALL)
 add_subdirectory(${SPIRV_CROSS_PATH} "3rdPartCross" EXCLUDE_FROM_ALL )
 #execute_process(COMMAND git describe --all WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/glslang" OUTPUT_VARIABLE GLSLANG_VERSION COMMAND_ERROR_IS_FATAL ANY OUTPUT_STRIP_TRAILING_WHITESPACE)
 #string(REGEX REPLACE "tags/([0-9]+).([0-9]+).([0-9]+)" "(\\1 * 10000) + (\\2 * 100) + (\\3)" GLSLANG_VERSION ${GLSLANG_VERSION})
-set(GLSLANG_VERSION "110000")
+set(GLSLANG_VERSION "120000")
 #math(EXPR GLSLANG_VERSION "${GLSLANG_VERSION}")
 
 set(sources
