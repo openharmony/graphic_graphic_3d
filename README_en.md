@@ -1,33 +1,50 @@
 # AGP Engine
 
-- Introduction
-- Directory Structure
-- Compilation and Building
-- Description
-    - Usage
-- Repositories Involved
-
 ## Introduction
-The AGP engine is Huawei's self-developed 3D rendering engine, which is an important part of the Graphic module of the operating system, shielding the differences between different GPU hardware drivers and different rendering backends, and providing basic rendering APIs and 3D rendering capabilities. As a software framework, the main function of the AGP rendering engine is to create, render, and manage 3D worlds, and modules such as plug-in system, rendering component, GPU resource management component, and ECS component system are all key parts of the AGP engine. The APG engine-based 3D widget is the basic component of ArKUI, which provides the ability to load models, animate playback, customize lights, cameras, and textures for developers to customize 3D models.
+The Ark Graphics Platform (AGP) engine is a cross-platform, high-performance real-time 3D engine that is easy to use, high-quality, and scalable. The engine is designed with an advanced Entity-Component-System (ECS) architecture and is modularly encapsulated (such as material definitions, post-processing effects, etc.), providing developers with a flexible and easy-to-use development kit. The AGP engine supports the Opengl ES/Vulkan backend to reduce developers' dependence on hardware resources.
+
+The main structure of the AGP engine is shown in the following figure:
+
+![AGP引擎架构图](./figures/graphic_3d_architecture.jpg)
+
+The layering of the OpenHarmony 3D graphics stack is described as follows:
+
+• Interface layer: provides graphical native API capabilities and ECS component systems.
+
+• Engine layer
+
+| Module                     | Competency description                                                                                       |
+|------------------------|--------------------------------------------------------------------------------------------|
+| Model parsing         | Provides the ability to parse GLTF models.                                                                               |
+| Material Definitions            | Definitions for materials such as PBR (Physically Based Rendering) are provided.                               |
+| animation           | Provides animation engine-related capabilities such as rigid bodies, bones, etc.                            |
+| Lighting & Shadows & Reflections | Provide directional light, point light, spot light source and other light sources; Algorithms such as PCF (Hard Shadow-Based Anti-Aliasing Algorithm) are available.      |
+| Post-processing effects | It mainly completes post-processing effects such as ToneMapping, Bloom, HDR (High Dynamic Range Imaging), FXAA (Fast Approximate Anti-Aliasing), and Blur.      |
+| Plug-in system                | Provides the ability to load various plugins and develop new features with plugins. |
+| resource management                | This module provides resource management capabilities, including memory management, thread management, and GPU resource management. |
+| System abstraction                | It mainly includes file system, window system, debugging system, etc. |
+
+• Graphical backend: OpenGL ES, Vulkan backend supported.
+
 ## Directory Structure
 
 ```
 foundation/graphic/graphic_3d/
-├── 3d_widget_adapter                  # Interface code with ArkUI
+├── 3d_widget_adapter                  # Adapt to the ArkUI interface code
 ├── lume                               # Engine core code
-│   ├── Lume_3D                        # Engine 3D rendering code
-│   ├── LumeBase                       # The underlying library code of the engine
-│   ├── LumeEngine                     # The engine loads plug-ins and resource management code
-│   └── LumeRender                     # The engine renders the backend code
-│   └── LumeBianryCompile              # Engine shader compilation
+│   ├── Lume_3D                        # ECS framework, 3D model analysis, and 3D rendering basic capabilities
+│   ├── LumeBase                       # Basic data types, math libraries
+│   ├── LumeEngine                     # Resource management, thread management, cross-platform, plug-in system
+│   └── LumeRender                     # Engine backend, render pipeline
+│   └── LumeBinaryCompile              # Engine shader compilation
 ```
 ## Compilation and Building
+Through GN compilation, the lib3dWidgetAdapter.z.so, libAGPDLL.z.so, libPluginAGP3D.z.so, and libPluginAGPRender.z.so are generated in the folder of the corresponding product in the out directory.
 ```
-# Through GN compilation, the lib3dWidgetAdapter.z.so, libAGPDLL.z.so, libPluginAGP3D.z.so, and libPluginAGPRender.z.so are generated in the folder of the corresponding product in the out directory
 hb build graphic_3d
 ```
 ## Description
-AGP Engine As a component of ArkUI, it provides the 3D drawing capability of the system
+AGP Engine As a component of ArkUI, it provides the 3D drawing capability of the system.
 ### Usage
 For more information, please refer to the use of other components in ArkUI. The AGP engine mainly provides 3D painting capabilities, including engine loading, custom lighting, camera, and texture capabilities, for developers to customize 3D models.
 ## Repositories Involved
