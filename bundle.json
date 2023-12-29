@@ -12,7 +12,7 @@
     "component": {
       "name": "graphic_3d",
       "subsystem": "graphic",
-      "syscap": [],
+      "syscap": ["SystemCapability.ArkUi.Graphics3D"],
       "features": [],
       "adapted_system_type": [ "standard" ],
       "rom": "8000KB",
