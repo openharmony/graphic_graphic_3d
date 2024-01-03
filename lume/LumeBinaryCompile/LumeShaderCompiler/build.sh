@@ -30,22 +30,32 @@ DEST_GEN_PATH=$1
  
 compile()
 {
-	PROJECT_DIR=$DEST_GEN_PATH
-	if [ -d "$PROJECT_DIR" ]; then
+    PROJECT_DIR=$DEST_GEN_PATH
+    if [ -d "$PROJECT_DIR" ]; then
         rm -rf $PROJECT_DIR
         echo "Clean Output"
     fi
 	mkdir -p $PROJECT_DIR
     chmod -R 775 $PROJECT_DIR
     $CMAKE_ROOT/cmake --version
- 
+
+    NINJA_TOOL=ninja
+    if [ $HW_NINJA_NAME ]; then
+        echo "Lume shader Compile use ninja_back"
+        NINJA_TOOL=$NINJA_HOME/$HW_NINJA_NAME 
+    else
+        echo "Lume Shader Compile use ninja"
+        NINJA_TOOL=$NINJA_HOME/ninja
+    fi
+
     $CMAKE_ROOT/cmake -H$WORKING_DIR -B$PROJECT_DIR -DCMAKE_CXX_FLAGS_RELEASE=-O2 \
     -DCMAKE_SYSTEM_NAME=Linux \
     -DOHOS_NDK=${LLVM_DIR} -DCMAKE_TOOLCHAIN_FILE=$WORKING_DIR/shader.compile.toolchain.cmake \
-    -G Ninja
+    -G Ninja -DCMAKE_MAKE_PROGRAM=$NINJA_TOOL
+
 #-DCMAKE_SYSROOT=$LLVM_DIR/lib/x86_64-unknow-linux-gnu
-    ninja -C $PROJECT_DIR  -f build.ninja
- 
+    $NINJA_TOOL -C $PROJECT_DIR  -f build.ninja
+
     mkdir $PROJECT_DIR/Strip
     chmod 775 $PROJECT_DIR/LumeShaderCompiler
     cp -r $PROJECT_DIR/LumeShaderCompiler $PROJECT_DIR/Strip

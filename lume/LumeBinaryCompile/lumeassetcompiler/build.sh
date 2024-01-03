@@ -30,8 +30,8 @@ DEST_GEN_PATH=$1
  
 compile()
 {
-	PROJECT_DIR=$DEST_GEN_PATH
-	if [ -d "$PROJECT_DIR" ]; then
+    PROJECT_DIR=$DEST_GEN_PATH
+    if [ -d "$PROJECT_DIR" ]; then
         rm -rf $PROJECT_DIR
         echo "Clean Output"
     fi
@@ -39,9 +39,17 @@ compile()
     chmod -R 775 $PROJECT_DIR
  
     mkdir -p $PROJECT_DIR/Strip
-    $CMAKE_ROOT/cmake -H$WORKING_DIR -B$PROJECT_DIR -G Ninja
-    ninja -C $PROJECT_DIR  -f build.ninja
-	
+
+    NINJA_TOOL=ninja
+    if [ $HW_NINJA_NAME ]; then
+        echo "Lume assert Compile use ninja_back"
+        NINJA_TOOL=$NINJA_HOME/$HW_NINJA_NAME
+    else
+        echo "Lume assert Compile use ninja"
+        NINJA_TOOL=$NINJA_HOME/ninja
+    fi
+    $CMAKE_ROOT/cmake -H$WORKING_DIR -B$PROJECT_DIR -G Ninja -DCMAKE_MAKE_PROGRAM=$NINJA_TOOL
+    $NINJA_TOOL -C $PROJECT_DIR  -f build.ninja
     chmod 775 $PROJECT_DIR/LumeAssetCompiler
     cp -r $PROJECT_DIR/LumeAssetCompiler $PROJECT_DIR/Strip
     #$LLVM_DIR/bin/llvm-strip -s $PROJECT_DIR/Strip/LumeAssetCompiler
