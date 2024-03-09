@@ -172,7 +172,7 @@ ohos_source_set("widget_adapter_source") {
         "graphic_2d:libgl",
         "c_utils:utils",
         "graphic_2d:librender_service_client",
-        "graphic_2d:surface",
+        "graphic_surface:surface",
         "hilog:libhilog",
         "hitrace:hitrace_meter",
       ]
