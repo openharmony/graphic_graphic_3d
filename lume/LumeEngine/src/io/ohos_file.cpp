@@ -96,8 +96,7 @@ bool OhosFileDirectory::IsDir(BASE_NS::string_view path, std::vector<std::string
 {
     auto state = dirResMgr_->GetResMgr()->GetRawFileList(path.data(), fileList);
     if (state != OHOS::Global::Resource::SUCCESS || fileList.empty()) {
-        CORE_LOG_E("GetRawfilepath error, filename:%s, error:%u, fileList.size(): %u", path.data(), state,
-            fileList.size());
+        CORE_LOG_E("GetRawfilepath error, filename:%s, error:%u", path.data(), state);
         return false;
     }
     return true;
@@ -146,7 +145,7 @@ BASE_NS::vector<IDirectory::Entry> OhosFileDirectory::GetEntries() const
             result.emplace_back(entry);
         }
     }
-    CORE_LOG_I("start get Entries size is %u", result.size());
+    CORE_LOG_I("start get Entries size is %d", static_cast<int>(result.size()));
     return result;
 }
 
