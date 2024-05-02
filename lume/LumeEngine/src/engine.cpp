@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,31 +17,39 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cinttypes>
 #include <cstring>
 
-#include <base/containers/fixed_string.h>
+#include <base/containers/array_view.h>
+#include <base/containers/iterator.h>
+#include <base/containers/refcnt_ptr.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/engine_info.h>
 #include <core/implementation_uids.h>
+#include <core/intf_engine.h>
+#include <core/io/intf_file_manager.h>
 #include <core/io/intf_filesystem_api.h>
 #include <core/log.h>
 #include <core/namespace.h>
-#include <core/perf/cpu_perf_scope.h>
-#include <core/plugin/intf_plugin_decl.h>
+#include <core/os/intf_platform.h>
+#include <core/plugin/intf_class_factory.h>
+#include <core/plugin/intf_class_register.h>
+#include <core/plugin/intf_interface.h>
+#include <core/plugin/intf_plugin.h>
+#include <core/plugin/intf_plugin_register.h>
 #include <core/threading/intf_thread_pool.h>
 
 #include "image/image_loader_manager.h"
 #include "image/loaders/image_loader_ktx.h"
 #include "image/loaders/image_loader_stb_image.h"
-#include "image/loaders/image_loader_libpng.h"
-#include "image/loaders/image_loader_libjpeg.h"
-#include "io/dev/file_monitor.h"
-#include "os/intf_library.h"
 #include "os/platform.h"
-#include "threading/task_queue.h"
-#include "util/string_util.h"
 
 #if (CORE_PERF_ENABLED == 1)
 #include "perf/performance_data_manager.h"
@@ -62,18 +70,6 @@ using BASE_NS::string;
 using BASE_NS::string_view;
 using BASE_NS::Uid;
 
-#if (CORE_DEV_ENABLED == 1)
-bool NotSpirv(const string& aFileUri)
-{
-    constexpr const auto SPIRV = ".spv";
-
-    if (auto const pos = aFileUri.rfind(SPIRV); pos != string::npos) {
-        return std::strlen(SPIRV) != (aFileUri.length() - pos);
-    }
-    return true;
-}
-#endif
-
 // This is defined in the CMake generated version.cpp
 void LogEngineBuildInfo()
 {
@@ -86,9 +82,8 @@ void LogEngineBuildInfo()
     CORE_LOG_I("Version: %s (DEBUG)", GetVersion().data());
 #endif
 
-    CORE_LOG_I("Build info:");
-    CORE_LOG_I("  CORE_VALIDATION_ENABLED=" CORE_TO_STRING(CORE_VALIDATION_ENABLED));
-    CORE_LOG_I("  CORE_DEV_ENABLED=" CORE_TO_STRING(CORE_DEV_ENABLED));
+    CORE_LOG_I("CORE_VALIDATION_ENABLED=" CORE_TO_STRING(CORE_VALIDATION_ENABLED));
+    CORE_LOG_I("CORE_DEV_ENABLED=" CORE_TO_STRING(CORE_DEV_ENABLED));
 }
 } // namespace
 
@@ -123,7 +118,6 @@ Engine::~Engine()
 
     UnloadPlugins();
 
-    fileMonitor_.reset();
     fileManager_.reset();
 }
 
@@ -152,35 +146,18 @@ void Engine::Init()
     imageManager_ = make_unique<ImageLoaderManager>(*fileManager_);
 
     // Pre-register some basic image formats.
-    imageManager_->RegisterImageLoader(CreateImageLoaderStbImage());
-    imageManager_->RegisterImageLoader(CreateImageLoaderLibPNGImage());
-    imageManager_->RegisterImageLoader(CreateImageLoaderLibJPEGImage());
-    imageManager_->RegisterImageLoader(CreateImageLoaderKtx());
 
     LoadPlugins();
 
-#if (CORE_DEV_ENABLED == 1)
-    {
-        fileMonitor_ = make_unique<FileMonitor>(*fileManager_);
-
-        fileMonitor_->AddPath("shaders://");
-    }
-#endif
     GetPluginRegister().AddListener(*this);
-}
-
-string_view Engine::GetRootPath()
-{
-    return rooturi_;
 }
 
 void Engine::RegisterDefaultPaths()
 {
-    rooturi_ = platform_->RegisterDefaultPaths(*fileManager_);
-
+    platform_->RegisterDefaultPaths(*fileManager_);
 #if (CORE_EMBEDDED_ASSETS_ENABLED == 1)
     // Create engine:// protocol that points to embedded engine asset files.
-    CORE_LOG_I("Registered core asset path: 'corerofs://core/'");
+    CORE_LOG_D("Registered core asset path: 'corerofs://core/'");
     fileManager_->RegisterPath("engine", "corerofs://core/", false);
 #endif
 
@@ -281,11 +258,10 @@ EngineTime Engine::GetEngineTime() const
 
 const IInterface* Engine::GetInterface(const Uid& uid) const
 {
-    if (uid == IEngine::UID) {
+    if ((uid == IEngine::UID) || (uid == IClassFactory::UID) || (uid == IInterface::UID)) {
         return static_cast<const IEngine*>(this);
-    } else if (uid == IClassFactory::UID) {
-        return static_cast<const IClassFactory*>(this);
-    } else if (uid == IClassRegister::UID) {
+    }
+    if (uid == IClassRegister::UID) {
         return static_cast<const IClassRegister*>(this);
     }
 
@@ -294,11 +270,10 @@ const IInterface* Engine::GetInterface(const Uid& uid) const
 
 IInterface* Engine::GetInterface(const Uid& uid)
 {
-    if (uid == IEngine::UID) {
+    if ((uid == IEngine::UID) || (uid == IClassFactory::UID) || (uid == IInterface::UID)) {
         return static_cast<IEngine*>(this);
-    } else if (uid == IClassFactory::UID) {
-        return static_cast<IClassFactory*>(this);
-    } else if (uid == IClassRegister::UID) {
+    }
+    if (uid == IClassRegister::UID) {
         return static_cast<IClassRegister*>(this);
     }
 
@@ -318,7 +293,7 @@ void Engine::UnregisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
     if (!interfaceTypeInfos_.empty()) {
         const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
-        if ((*pos)->uid == interfaceInfo.uid) {
+        if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == interfaceInfo.uid) {
             interfaceTypeInfos_.erase(pos);
         }
     }
@@ -331,12 +306,12 @@ array_view<const InterfaceTypeInfo* const> Engine::GetInterfaceMetadata() const
 
 const InterfaceTypeInfo& Engine::GetInterfaceMetadata(const Uid& uid) const
 {
-    static InterfaceTypeInfo invalidType {};
+    static constexpr InterfaceTypeInfo invalidType {};
 
     if (!interfaceTypeInfos_.empty()) {
         const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
-        if ((*pos) && (*pos)->uid == uid) {
+        if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == uid) {
             return *(*pos);
         }
     }
@@ -380,11 +355,11 @@ void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> 
         for (const auto* info : typeInfos) {
             if (info && info->typeUid == IEnginePlugin::UID) {
                 auto enginePlugin = static_cast<const IEnginePlugin*>(info);
-                if (auto pos = std::find_if(plugins_.begin(), plugins_.end(),
+                if (auto pos = std::find_if(plugins_.cbegin(), plugins_.cend(),
                         [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
                             return pluginData.second == enginePlugin;
                         });
-                    pos != plugins_.end()) {
+                    pos != plugins_.cend()) {
                     if (enginePlugin->destroyPlugin) {
                         enginePlugin->destroyPlugin(pos->first);
                     }

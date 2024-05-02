@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -57,6 +57,16 @@ public:
         BACKEND_FLAG_BITS_EXPLICIT_GL = (1 << 2),
     };
     using BackendFlags = uint32_t;
+    /** Execute flagbits from HasExecuteFrameWork().
+     * There's room to add more flags for e.g. type of work (or to not parallelize by itself)
+     */
+    enum ExecuteFlagBits : uint32_t {
+        /** Default behaviour */
+        EXECUTE_FLAG_BITS_DEFAULT = 0,
+        /** Do not execute render frame */
+        EXECUTE_FLAG_BITS_DO_NOT_EXECUTE = (1 << 0),
+    };
+    using ExecuteFlags = uint32_t;
 
     IRenderNode(const IRenderNode&) = delete;
     IRenderNode& operator=(const IRenderNode&) = delete;
@@ -76,11 +86,17 @@ public:
      */
     virtual void PreExecuteFrame() = 0;
 
-    /** Parallel, called every frame after every ExecuteCreateGpuResources().
+    /** Parallel, called every frame after every PreExecuteFrame.
+     * Is not run if HasExecuteFrameWork() returns false.
      * Do NOT create gpu resources here.
      * @param cmdList Render command list for rendering/compute calls.
      */
     virtual void ExecuteFrame(IRenderCommandList& cmdList) = 0;
+
+    /** Called every frame before ExecuteFrame.
+     * @param ExecuteFlags Execute flags information for ExecuteFrame run.
+     */
+    virtual ExecuteFlags GetExecuteFlags() const = 0;
 
 protected:
     IRenderNode() = default;

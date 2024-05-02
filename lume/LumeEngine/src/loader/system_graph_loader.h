@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,12 +16,14 @@
 #ifndef CORE__LOADER__SYSTEM_GRAPH_LOADER_H
 #define CORE__LOADER__SYSTEM_GRAPH_LOADER_H
 
-#include <base/containers/array_view.h>
+#include <base/containers/string_view.h>
+#include <base/namespace.h>
 #include <core/ecs/intf_system_graph_loader.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
-class IEngine;
+class IEcs;
+class IInterface;
 class IFileManager;
 
 class SystemGraphLoader final : public ISystemGraphLoader {

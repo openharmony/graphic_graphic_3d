@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,14 +16,18 @@
 #ifndef API_CORE_ECS_IENTITY_MANAGER_H
 #define API_CORE_ECS_IENTITY_MANAGER_H
 
-#include <cstddef>
+#include <cstdint>
 
 #include <base/containers/generic_iterator.h>
-#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <core/ecs/entity.h>
 #include <core/ecs/entity_reference.h>
 #include <core/namespace.h>
+
+BASE_BEGIN_NAMESPACE()
+template<class T1, class T2>
+struct pair;
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 /** @ingroup group_ecs_ientitymanager */
@@ -86,19 +90,6 @@ public:
      *  @param state New active status
      */
     virtual void SetActive(const Entity entity, bool state) = 0;
-
-    /** Get list of added entities since last call.
-     */
-    virtual BASE_NS::vector<Entity> GetAddedEntities() = 0;
-
-    /** Get list of removed entities since last call.
-     */
-    virtual BASE_NS::vector<Entity> GetRemovedEntities() = 0;
-
-    /** Get list of events.
-        These are in actual event order, there can be more than one event per entity.
-     */
-    virtual BASE_NS::vector<BASE_NS::pair<Entity, EventType>> GetEvents() = 0;
 
     /** Returns generation ID of current entity manager state, this id changes whenever entities are created or
      * destroyed.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,7 +32,7 @@ EngineResourceHandle GpuQueryManager::Create(const string_view name, unique_ptr<
 {
     PLUGIN_ASSERT(nameToHandle_.count(name) == 0 && "not an unique gpu query name");
 
-    resources_.emplace_back(move(gpuQuery));
+    resources_.push_back(move(gpuQuery));
     const uint32_t index = (uint32_t)resources_.size() - 1;
 
     const EngineResourceHandle handle =

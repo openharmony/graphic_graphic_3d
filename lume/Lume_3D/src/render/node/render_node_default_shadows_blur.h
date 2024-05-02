@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,6 +39,7 @@ public:
     void InitNode(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "6bf65ac3-6ede-4baa-a61a-2207085b235c" };
@@ -99,6 +100,7 @@ private:
     SceneRenderDataStores stores_;
 
     IRenderDataStoreDefaultLight::ShadowTypes shadowTypes_;
+    uint32_t shadowCount_ { 0U };
 };
 CORE3D_END_NAMESPACE()
 

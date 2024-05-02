@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,11 +22,19 @@
 #include <map>
 #include <mutex>
 
+#include <base/containers/fixed_string.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
 #include <base/math/mathf.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
 #include <core/log.h>
 #include <core/namespace.h>
-#include <core/plugin/intf_interface.h>
-#include <core/plugin/intf_plugin_register.h>
+#include <core/perf/intf_performance_data_manager.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::make_unique;
@@ -136,8 +144,8 @@ int64_t PerformanceDataManager::EndTimer(IPerformanceDataManager::TimerHandle ha
     return static_cast<int64_t>(duration_cast<microseconds>(dt).count());
 }
 
-void PerformanceDataManager::UpdateData(
-    const string_view subCategory, const string_view name, const int64_t microSeconds)
+void PerformanceDataManager::UpdateData([[maybe_unused]] const string_view subCategory,
+    [[maybe_unused]] const string_view name, [[maybe_unused]] const int64_t microSeconds)
 {
 #if (CORE_PERF_ENABLED == 1)
     std::lock_guard<std::mutex> lock(dataMutex_);
@@ -163,7 +171,7 @@ vector<IPerformanceDataManager::PerformanceData> PerformanceDataManager::GetData
 #endif
 }
 
-void PerformanceDataManager::RemoveData(const string_view subCategory)
+void PerformanceDataManager::RemoveData([[maybe_unused]] const string_view subCategory)
 {
 #if (CORE_PERF_ENABLED == 1)
     std::lock_guard<std::mutex> lock(dataMutex_);
@@ -195,7 +203,7 @@ void PerformanceDataManager::DumpToLog() const
 // IInterface
 const IInterface* PerformanceDataManager::GetInterface(const Uid& uid) const
 {
-    if (uid == IPerformanceDataManager::UID) {
+    if ((uid == IPerformanceDataManager::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;
@@ -203,7 +211,7 @@ const IInterface* PerformanceDataManager::GetInterface(const Uid& uid) const
 
 IInterface* PerformanceDataManager::GetInterface(const Uid& uid)
 {
-    if (uid == IPerformanceDataManager::UID) {
+    if ((uid == IPerformanceDataManager::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;
@@ -213,16 +221,15 @@ void PerformanceDataManager::Ref() {}
 
 void PerformanceDataManager::Unref() {}
 
-IPerformanceDataManager* PerformanceDataManagerFactory::Get(const string_view category)
+IPerformanceDataManager* PerformanceDataManagerFactory::Get([[maybe_unused]] const string_view category)
 {
 #if (CORE_PERF_ENABLED == 1)
     std::lock_guard lock(mutex_);
     if (auto pos = managers_.find(category); pos != managers_.end()) {
         return pos->second.get();
-    } else {
-        auto inserted = managers_.insert({ category, make_unique<PerformanceDataManager>(category) });
-        return inserted.first->second.get();
     }
+    auto inserted = managers_.insert({ category, make_unique<PerformanceDataManager>(category) });
+    return inserted.first->second.get();
 #else
     return {};
 #endif
@@ -246,7 +253,7 @@ vector<IPerformanceDataManager*> PerformanceDataManagerFactory::GetAllCategories
 // IInterface
 const IInterface* PerformanceDataManagerFactory::GetInterface(const Uid& uid) const
 {
-    if (uid == IPerformanceDataManagerFactory::UID) {
+    if ((uid == IPerformanceDataManagerFactory::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;
@@ -254,7 +261,7 @@ const IInterface* PerformanceDataManagerFactory::GetInterface(const Uid& uid) co
 
 IInterface* PerformanceDataManagerFactory::GetInterface(const Uid& uid)
 {
-    if (uid == IPerformanceDataManagerFactory::UID) {
+    if ((uid == IPerformanceDataManagerFactory::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;

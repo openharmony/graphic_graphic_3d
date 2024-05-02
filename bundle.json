@@ -25,13 +25,22 @@
           "graphic_surface",
           "hitrace",
           "init",
-          "resource_management"
+          "resource_management",
+          "vulkan-headers",
+          "libpng",
+          "zlib",
+          "libjpeg-turbo",
+          "napi",
+          "ability_runtime",
+          "bundle_framework"
         ],
         "third_party": [
           "skia",
           "libpng",
           "libjpeg-turbo",
-          "zlib"
+          "zlib",
+          "vulkan-headers",
+          "vulkan-loader"
         ]
       },
       "build": {

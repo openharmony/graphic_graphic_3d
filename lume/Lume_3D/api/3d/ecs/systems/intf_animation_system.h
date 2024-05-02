@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -152,13 +152,6 @@ protected:
     IAnimationSystem& operator=(IAnimationSystem&&) = delete;
 };
 
-/** @ingroup group_ecs_systems_ianimation */
-/** Return name of this system
- */
-inline constexpr BASE_NS::string_view GetName(const IAnimationSystem*)
-{
-    return "AnimationSystem";
-}
 CORE3D_END_NAMESPACE()
 
 #endif // API_3D_ECS_SYSTEMS_IANIMATION_SYSTEM_H

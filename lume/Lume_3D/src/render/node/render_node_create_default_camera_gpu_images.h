@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -34,7 +34,12 @@ public:
 
     void InitNode(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
-    void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
+    void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override {};
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        // no work in execute
+        return IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE;
+    }
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "c694a5bd-c6f6-4167-9b61-cf481632c171" };
@@ -49,22 +54,19 @@ private:
 
     void ParseRenderNodeInputs();
 
+    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
     struct JsonInputs {
         BASE_NS::vector<RENDER_NS::RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> gpuImageDescs;
+
+        BASE_NS::string customCameraName;
+        uint64_t customCameraId { INVALID_CAM_ID };
     };
     JsonInputs jsonInputs_;
 
     SceneRenderDataStores stores_;
 
-    struct Names {
-        BASE_NS::string globalName;
-        BASE_NS::string shareName;
-    };
-    BASE_NS::vector<Names> imageNames_;
-    BASE_NS::vector<RENDER_NS::GpuImageDesc> descs_;
+    BASE_NS::vector<RENDER_NS::RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> descs_;
     BASE_NS::vector<RENDER_NS::RenderHandleReference> resourceHandles_;
-
-    BASE_NS::string customCameraName_;
 };
 CORE3D_END_NAMESPACE()
 

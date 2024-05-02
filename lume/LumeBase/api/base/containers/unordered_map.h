@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,11 +16,15 @@
 #ifndef API_BASE_CONTAINERS_UNORDERED_MAP_H
 #define API_BASE_CONTAINERS_UNORDERED_MAP_H
 
+#include <cstddef>
+#include <cstdint>
+
 #include <base/containers/iterator.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
+#include <base/util/log.h>
 
 BASE_BEGIN_NAMESPACE()
 template<class T>
@@ -308,7 +312,7 @@ public:
     }
     iterator erase(const_iterator pos)
     {
-        if (pos == end() || !pos.it_) {
+        if (pos.owner_ != this || !pos.it_) {
             return end();
         }
         list_node* node = nullptr;
@@ -345,29 +349,17 @@ public:
 
         return iterator { *this, next };
     }
-    iterator erase(const key_type& key)
+    size_t erase(const key_type& key)
     {
-        const auto* entry = get_entry(index(key), key);
-        return erase(const_iterator { *this, entry });
+        if (auto entry = detach_entry(key)) {
+            release(entry);
+            return 1u;
+        }
+        return 0u;
     }
     node_type extract(const key_type& key)
     {
-        const auto ind = index(key);
-        auto entry = get_entry(ind, key);
-        if (entry) {
-            if (entry->prev) {
-                entry->prev->next = entry->next;
-                entry->prev = nullptr;
-            } else {
-                buckets_[ind] = entry->next;
-            }
-            if (entry->next) {
-                entry->next->prev = entry->prev;
-                entry->next = nullptr;
-            }
-            --size_;
-        }
-        return node_type { entry };
+        return node_type { detach_entry(key) };
     }
     pair<iterator, bool> insert(value_type&& v)
     {
@@ -413,10 +405,10 @@ public:
         const auto ind = index(key);
         auto res = get_entry(ind, key);
         if (res) {
-            res->data.second = BASE_NS::move(value);
+            res->data.second = BASE_NS::forward<M>(value);
             return { iterator { *this, res }, false };
         }
-        auto nl = allocate(key, BASE_NS::move(value));
+        auto nl = allocate(key, BASE_NS::forward<M>(value));
         return { iterator { *this, create_entry(ind, nl) }, true };
     }
     iterator begin() noexcept
@@ -468,7 +460,7 @@ public:
     }
     size_t count(const key_type& key) const
     {
-        return contains(key) ? 1 : 0;
+        return contains(key) ? 1U : 0U;
     }
     mapped_type& operator[](const key_type& key)
     {
@@ -649,11 +641,34 @@ protected:
     template<class k>
     uint32_t index(const k& key) const
     {
-        const uint64_t GOLDEN_RATIO_64 = 0x9E3779B97F4A7C15ull;
-        const uint64_t shift = 64u - shift_amount_;
-        uint64_t h = hash(key);
-        h ^= h >> shift;
-        return static_cast<uint32_t>(((GOLDEN_RATIO_64 * h) >> shift));
+        if (shift_amount_) {
+            const uint64_t GOLDEN_RATIO_64 = 0x9E3779B97F4A7C15ull;
+            const uint64_t shift = 64u - shift_amount_;
+            uint64_t h = hash(key);
+            h ^= h >> shift;
+            return static_cast<uint32_t>(((GOLDEN_RATIO_64 * h) >> shift));
+        }
+        return 0u;
+    }
+    template<class k>
+    list_node* detach_entry(const k& key)
+    {
+        const auto ind = index(key);
+        auto entry = get_entry(ind, key);
+        if (entry) {
+            if (entry->prev) {
+                entry->prev->next = entry->next;
+            } else {
+                buckets_[ind] = entry->next;
+            }
+            if (entry->next) {
+                entry->next->prev = entry->prev;
+            }
+            entry->prev = nullptr;
+            entry->next = nullptr;
+            --size_;
+        }
+        return entry;
     }
     void rehash()
     {
@@ -721,7 +736,7 @@ public:
     }
     size_t count(const string_view& key) const
     {
-        return contains(key) ? 1 : 0;
+        return contains(key) ? 1U : 0U;
     }
 
     // expose string overloads as well
@@ -731,16 +746,19 @@ public:
     auto& operator[](const string_view& key)
     {
         const auto ind = base::index(key);
-        auto b = base::get_entry(ind, key);
-        if (b) {
+        if (auto b = base::get_entry(ind, key)) {
             return b->data.second;
         }
         return base::create_entry(ind, typename base::key_type(key))->data.second;
     }
 
-    auto erase(const string_view& key)
+    size_t erase(const string_view& key)
     {
-        return erase(base::make_const_iterator(base::get_entry(base::index(key), key)));
+        if (auto* entry = base::detach_entry(key)) {
+            base::release(entry);
+            return 1u;
+        }
+        return 0u;
     }
 
     pair<typename base::iterator, bool> insert(pair<string_view, T>&& v)
@@ -763,6 +781,19 @@ public:
             return { base::make_iterator(entry), false };
         }
         entry = base::create_entry(ind, typename base::key_type(v.first), v.second);
+        return { base::make_iterator(entry), true };
+    }
+
+    template<class M>
+    pair<typename base::iterator, bool> insert_or_assign(const string_view& key, M&& value)
+    {
+        const auto ind = base::index(key);
+        auto entry = base::get_entry(ind, key);
+        if (entry) {
+            entry->data.second = BASE_NS::forward<M>(value);
+            return { base::make_iterator(entry), false };
+        }
+        entry = base::create_entry(ind, typename base::key_type(key), BASE_NS::forward<M>(value));
         return { base::make_iterator(entry), true };
     }
 };

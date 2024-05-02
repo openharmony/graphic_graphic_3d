@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -50,12 +50,14 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
+constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+
 static constexpr uint32_t UBO_OFFSET_ALIGNMENT { 256u };
 static constexpr uint32_t MAX_SHADOW_ATLAS_WIDTH { 8192u };
 
-inline uint64_t HashShaderAndSubmesh(const uint64_t shaderDataHash, const RenderSubmeshFlags submeshFlags)
+inline uint64_t HashShaderAndSubmesh(const uint64_t shaderDataHash, const uint32_t renderHash)
 {
-    uint64_t hash = (uint64_t)submeshFlags;
+    uint64_t hash = (uint64_t)renderHash;
     HashCombine(hash, shaderDataHash);
     return hash;
 }
@@ -131,7 +133,6 @@ void RenderNodeDefaultShadowRenderSlot::InitNode(IRenderNodeContextManager& rend
 
     auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
     {
-        // creating temp images
         shadowBuffers_.depthName =
             stores_.dataStoreNameScene + DefaultMaterialLightingConstants::SHADOW_DEPTH_BUFFER_NAME;
         shadowBuffers_.vsmColorName =
@@ -143,6 +144,7 @@ void RenderNodeDefaultShadowRenderSlot::InitNode(IRenderNodeContextManager& rend
     }
 
     // reset
+    validShadowNode_ = false;
     currentScene_ = {};
     allShaderData_ = {};
     objectCounts_ = {};
@@ -150,17 +152,21 @@ void RenderNodeDefaultShadowRenderSlot::InitNode(IRenderNodeContextManager& rend
     CreateDefaultShaderData();
 
     uboHandles_.generalData = CreateGeneralDataUniformBuffer(gpuResourceMgr);
-    uboHandles_.camera = gpuResourceMgr.GetBufferHandle(
-        stores_.dataStoreNameScene + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME);
-    uboHandles_.mesh = gpuResourceMgr.GetBufferHandle(
-        stores_.dataStoreNameScene + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME);
-    uboHandles_.skinJoint = gpuResourceMgr.GetBufferHandle(
-        stores_.dataStoreNameScene + DefaultMaterialMaterialConstants::SKIN_DATA_BUFFER_NAME);
+    const string_view us = stores_.dataStoreNameScene;
+    uboHandles_.camera = gpuResourceMgr.GetBufferHandle(us + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME);
+    uboHandles_.mesh = gpuResourceMgr.GetBufferHandle(us + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME);
+    uboHandles_.skinJoint =
+        gpuResourceMgr.GetBufferHandle(us + DefaultMaterialMaterialConstants::SKIN_DATA_BUFFER_NAME);
+    if (RenderHandleUtil::IsValid(uboHandles_.camera) && RenderHandleUtil::IsValid(uboHandles_.mesh) &&
+        RenderHandleUtil::IsValid(uboHandles_.skinJoint)) {
+        validShadowNode_ = true;
+    }
 }
 
 void RenderNodeDefaultShadowRenderSlot::PreExecuteFrame()
 {
-    if (!validShadowNode) {
+    shadowCount_ = 0U;
+    if (!validShadowNode_) {
         return;
     }
 
@@ -183,13 +189,13 @@ void RenderNodeDefaultShadowRenderSlot::PreExecuteFrame()
     if (dataStoreLight && dataStoreCamera && dataStoreScene) {
         const auto scene = dataStoreScene->GetScene();
         const auto lightCounts = dataStoreLight->GetLightCounts();
-        const uint32_t shadowCount = lightCounts.shadowCount;
+        shadowCount_ = lightCounts.shadowCount;
 
         const Math::UVec2 res = dataStoreLight->GetShadowQualityResolution();
         auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
         const IRenderDataStoreDefaultLight::ShadowTypes shadowTypes = dataStoreLight->GetShadowTypes();
-        if (shadowCount > 0) {
-            const uint32_t xWidth = Math::min(res.x * shadowCount, MAX_SHADOW_ATLAS_WIDTH);
+        if (shadowCount_ > 0) {
+            const uint32_t xWidth = Math::min(res.x * shadowCount_, MAX_SHADOW_ATLAS_WIDTH);
             const uint32_t yHeight = res.y;
             const bool xChanged = (xWidth != shadowBuffers_.width);
             const bool yChanged = (yHeight != shadowBuffers_.height);
@@ -212,9 +218,20 @@ void RenderNodeDefaultShadowRenderSlot::PreExecuteFrame()
     }
 }
 
+IRenderNode::ExecuteFlags RenderNodeDefaultShadowRenderSlot::GetExecuteFlags() const
+{
+    // NOTE: shadow buffers should not be read
+    // we can leave there old data without clearing if shadow count goes to zero
+    if (validShadowNode_ && (shadowCount_ > 0U)) {
+        return 0U;
+    } else {
+        return IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE;
+    }
+}
+
 void RenderNodeDefaultShadowRenderSlot::ExecuteFrame(IRenderCommandList& cmdList)
 {
-    if (!validShadowNode) {
+    if ((!validShadowNode_) || (shadowCount_ == 0U)) {
         return;
     }
 
@@ -228,6 +245,7 @@ void RenderNodeDefaultShadowRenderSlot::ExecuteFrame(IRenderCommandList& cmdList
         const auto scene = storeScene->GetScene();
         const auto lightCounts = storeLight->GetLightCounts();
         const uint32_t shadowCounts = lightCounts.shadowCount;
+        CORE_ASSERT(shadowCounts == shadowCount_);
         if (shadowCounts == 0) {
             return; // early out
         }
@@ -243,17 +261,26 @@ void RenderNodeDefaultShadowRenderSlot::ExecuteFrame(IRenderCommandList& cmdList
         cmdList.BeginRenderPass(renderPass_.renderPassDesc, renderPass_.subpassStartIndex, renderPass_.subpassDesc);
 
         uint32_t shadowPassIdx = 0;
-        for (uint32_t lightIdx = 0; lightIdx < lights.size(); ++lightIdx) {
-            const auto& light = lights[lightIdx];
+        for (const auto& light : lights) {
             if ((light.lightUsageFlags & RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT) == 0) {
                 continue;
             }
-            const auto& camera = cameras[light.shadowCameraIndex];
-            // sort slot data to be accessible
-            ProcessSlotSubmeshes(*storeCamera, *storeMaterial, light.shadowCameraIndex);
-            if (!sortedSlotSubmeshes_.empty()) {
-                RenderSubmeshes(
-                    cmdList, *storeMaterial, shadowBuffers_.shadowTypes.shadowType, camera, light, shadowPassIdx);
+#if (CORE3D_VALIDATION_ENABLED == 1)
+            if (light.shadowCameraIndex >= static_cast<uint32_t>(cameras.size())) {
+                const string onceName = string(renderNodeContextMgr_->GetName().data()) + "_too_many_cam";
+                CORE_LOG_ONCE_W(onceName,
+                    "CORE3D_VALIDATION: RN: %s, shadow cameras dropped, too many cameras in scene",
+                    renderNodeContextMgr_->GetName().data());
+            }
+#endif
+            if (light.shadowCameraIndex < static_cast<uint32_t>(cameras.size())) {
+                const auto& camera = cameras[light.shadowCameraIndex];
+                // sort slot data to be accessible
+                ProcessSlotSubmeshes(*storeCamera, *storeMaterial, light.shadowCameraIndex);
+                if (!sortedSlotSubmeshes_.empty()) {
+                    RenderSubmeshes(
+                        cmdList, *storeMaterial, shadowBuffers_.shadowTypes.shadowType, camera, light, shadowPassIdx);
+                }
             }
 
             shadowPassIdx++;
@@ -271,18 +298,19 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
     CORE_ASSERT(submeshCount <= objectCounts_.maxSlotSubmeshCount);
 
     // dynamic state
-    const int32_t xOffset = static_cast<int32_t>(light.shadowIndex * currentScene_.res.x);
-    ViewportDesc vd = currentScene_.viewportDesc;
-    vd.x = static_cast<float>(xOffset);
-    ScissorDesc sd = currentScene_.scissorDesc;
-    sd.offsetX = xOffset;
-    cmdList.SetDynamicStateViewport(vd);
-    cmdList.SetDynamicStateScissor(sd);
+    {
+        const int32_t xOffset = static_cast<int32_t>(light.shadowIndex * currentScene_.res.x);
+        ViewportDesc vd = currentScene_.viewportDesc;
+        vd.x = static_cast<float>(xOffset);
+        ScissorDesc sd = currentScene_.scissorDesc;
+        sd.offsetX = xOffset;
+        cmdList.SetDynamicStateViewport(vd);
+        cmdList.SetDynamicStateScissor(sd);
+    }
 
     // set 0, update camera
-    UpdateSet0(cmdList, shadowPassIdx);
     // set 1, update mesh matrices and skinning data (uses dynamic offset)
-    UpdateSet1(cmdList, shadowPassIdx);
+    UpdateSet01(cmdList, shadowPassIdx);
 
     const uint64_t camLayerMask = camera.layerMask;
     RenderHandle boundPsoHandle = {};
@@ -291,6 +319,7 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
     const auto& selectableShaders =
         (shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM) ? vsmShaders_ : pcfShaders_;
     const auto& submeshes = dataStoreMaterial.GetSubmeshes();
+    const auto& submeshMaterialFlags = dataStoreMaterial.GetSubmeshMaterialFlags();
     for (size_t idx = 0; idx < submeshCount; ++idx) {
         const uint32_t submeshIndex = sortedSlotSubmeshes_[idx].submeshIndex;
         const auto& currSubmesh = submeshes[submeshIndex];
@@ -299,15 +328,17 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
         if ((camLayerMask & currSubmesh.layerMask) == 0) {
             continue;
         }
+        const auto& currMaterialFlags = submeshMaterialFlags[submeshIndex];
         // get shader and graphics state and start hashing
         const auto& ssp = sortedSlotSubmeshes_[idx];
+        const uint32_t renderHash = currMaterialFlags.renderHash;
         ShaderStateData ssd { ssp.shaderHandle, ssp.gfxStateHandle, 0, selectableShaders.basic,
             selectableShaders.basicState };
         ssd.hash = (ssd.shader.id << 32U) | (ssd.gfxState.id & 0xFFFFffff);
         HashCombine(ssd.hash, ((ssd.defaultShader.id << 32U) | (ssd.defaultShaderState.id & 0xFFFFffff)));
-        ssd.hash = HashShaderAndSubmesh(ssd.hash, currSubmesh.submeshFlags);
+        ssd.hash = HashShaderAndSubmesh(ssd.hash, renderHash);
         if (ssd.hash != boundShaderHash) {
-            const RenderHandle psoHandle = GetSubmeshPso(ssd, currSubmesh.submeshFlags);
+            const RenderHandle psoHandle = GetSubmeshPso(ssd, currMaterialFlags, currSubmesh.submeshFlags);
             if (psoHandle.id != boundPsoHandle.id) {
                 boundShaderHash = ssd.hash;
                 boundPsoHandle = psoHandle;
@@ -336,19 +367,16 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
 
         // vertex buffers and draw
         if (currSubmesh.vertexBufferCount > 0) {
-            CORE_ASSERT(currSubmesh.vertexBufferCount > RenderSceneDataConstants::MESH_WEIGHT_INDEX);
-            VertexBuffer vertexBuffers[] = {
-                ConvertVertexBuffer(currSubmesh.vertexBuffers[0]),
-                ConvertVertexBuffer(currSubmesh.vertexBuffers[RenderSceneDataConstants::MESH_INDEX_INDEX]),
-                ConvertVertexBuffer(currSubmesh.vertexBuffers[RenderSceneDataConstants::MESH_WEIGHT_INDEX]),
-            };
-            const array_view<const VertexBuffer> vertexBuffer(vertexBuffers, countof(vertexBuffers));
-            cmdList.BindVertexBuffers(vertexBuffer);
+            VertexBuffer vbs[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
+            for (uint32_t vbIdx = 0; vbIdx < currSubmesh.vertexBufferCount; ++vbIdx) {
+                vbs[vbIdx] = ConvertVertexBuffer(currSubmesh.vertexBuffers[vbIdx]);
+            }
+            cmdList.BindVertexBuffers({ vbs, currSubmesh.vertexBufferCount });
         }
         const auto& dc = currSubmesh.drawCommand;
         const RenderVertexBuffer& iArgs = currSubmesh.indirectArgsBuffer;
         const bool indirectDraw = iArgs.bufferHandle ? true : false;
-        if (currSubmesh.indexBuffer.indexType != IndexType::CORE_INDEX_TYPE_MAX_ENUM) {
+        if (currSubmesh.indexBuffer.byteSize > 0U) {
             cmdList.BindIndexBuffer(ConvertIndexBuffer(currSubmesh.indexBuffer));
             if (indirectDraw) {
                 cmdList.DrawIndexedIndirect(iArgs.bufferHandle.GetHandle(), iArgs.bufferOffset, 1u, 0u);
@@ -365,24 +393,26 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
     }
 }
 
-void RenderNodeDefaultShadowRenderSlot::UpdateSet0(IRenderCommandList& cmdList, const uint32_t shadowPassIdx)
+void RenderNodeDefaultShadowRenderSlot::UpdateSet01(IRenderCommandList& cmdList, const uint32_t shadowPassIdx)
 {
-    auto& binder = *allDescriptorSets_.set0[shadowPassIdx];
-    uint32_t bindingIndex = 0;
-    binder.BindBuffer(bindingIndex++, uboHandles_.camera, 0u);
-    binder.BindBuffer(bindingIndex++, uboHandles_.generalData.GetHandle(), UBO_OFFSET_ALIGNMENT * shadowPassIdx);
-    cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-}
-
-void RenderNodeDefaultShadowRenderSlot::UpdateSet1(IRenderCommandList& cmdList, const uint32_t shadowPassIdx)
-{
-    constexpr uint32_t meshSize = sizeof(DefaultMaterialMeshStruct);
-    constexpr uint32_t skinSize = sizeof(DefaultMaterialSkinStruct);
-    auto& binder = *allDescriptorSets_.set1[shadowPassIdx];
-    uint32_t bindingIndex = 0;
-    binder.BindBuffer(bindingIndex++, uboHandles_.mesh, 0u, meshSize);
-    binder.BindBuffer(bindingIndex++, uboHandles_.skinJoint, 0u, skinSize);
-    cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
+    auto& binder0 = *allDescriptorSets_.set0[shadowPassIdx];
+    auto& binder1 = *allDescriptorSets_.set1[shadowPassIdx];
+    {
+        uint32_t bindingIndex = 0;
+        binder0.BindBuffer(bindingIndex++, uboHandles_.camera, 0u);
+        binder0.BindBuffer(bindingIndex++, uboHandles_.generalData.GetHandle(), UBO_OFFSET_ALIGNMENT * shadowPassIdx);
+    }
+    {
+        constexpr uint32_t meshSize = sizeof(DefaultMaterialMeshStruct);
+        constexpr uint32_t skinSize = sizeof(DefaultMaterialSkinStruct);
+        uint32_t bindingIndex = 0;
+        binder1.BindBuffer(bindingIndex++, uboHandles_.mesh, 0u, meshSize);
+        binder1.BindBuffer(bindingIndex++, uboHandles_.skinJoint, 0u, skinSize);
+    }
+    const RenderHandle handles[] { binder0.GetDescriptorSetHandle(), binder1.GetDescriptorSetHandle() };
+    const DescriptorSetLayoutBindingResources resources[] { binder0.GetDescriptorSetLayoutBindingResources(),
+        binder1.GetDescriptorSetLayoutBindingResources() };
+    cmdList.UpdateDescriptorSets(handles, resources);
 }
 
 void RenderNodeDefaultShadowRenderSlot::CreateDefaultShaderData()
@@ -408,7 +438,7 @@ void RenderNodeDefaultShadowRenderSlot::CreateDefaultShaderData()
         pcfShaders_.basicState = rsd.graphicsState.GetHandle();
         if (shaderMgr.IsShader(pcfShaders_.basic)) {
             allShaderData_.slotHasShaders = true;
-            const ShaderSpecilizationConstantView& sscv = shaderMgr.GetReflectionSpecialization(pcfShaders_.basic);
+            const ShaderSpecializationConstantView& sscv = shaderMgr.GetReflectionSpecialization(pcfShaders_.basic);
             allShaderData_.defaultSpecilizationConstants.resize(sscv.constants.size());
             for (uint32_t idx = 0; idx < (uint32_t)allShaderData_.defaultSpecilizationConstants.size(); ++idx) {
                 allShaderData_.defaultSpecilizationConstants[idx] = sscv.constants[idx];
@@ -426,55 +456,64 @@ void RenderNodeDefaultShadowRenderSlot::CreateDefaultShaderData()
 RenderHandle RenderNodeDefaultShadowRenderSlot::CreateNewPso(const ShaderStateData& ssd,
     const ShaderSpecializationConstantDataView& specialization, const RenderSubmeshFlags submeshFlags)
 {
-    constexpr DynamicStateFlags dynamicStateFlags =
-        DynamicStateFlagBits::CORE_DYNAMIC_STATE_VIEWPORT | DynamicStateFlagBits::CORE_DYNAMIC_STATE_SCISSOR;
-
     const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-    RenderHandle currShaderHandle = ssd.defaultShader;
-    RenderHandle currPlHandle = allShaderData_.defaultPlHandle;
-    RenderHandle currVidHandle = allShaderData_.defaultVidHandle;
-    RenderHandle currStateHandle = ssd.defaultShaderState;
-
-    if (RenderHandleUtil::IsValid(ssd.shader)) {
+    RenderHandle currShader;
+    RenderHandle currPl;
+    RenderHandle currVid;
+    RenderHandle currState;
+    // first try to find matching shader
+    if (RenderHandleUtil::GetHandleType(ssd.shader) == RenderHandleType::SHADER_STATE_OBJECT) {
+        currShader = ssd.shader; // force given shader
         const RenderHandle slotShader = shaderMgr.GetShaderHandle(ssd.shader, currentScene_.renderSlotId);
         if (RenderHandleUtil::IsValid(slotShader)) {
-            currShaderHandle = slotShader;
+            currShader = slotShader; // override with render slot variant
         }
-        const RenderHandle customVidHandle = shaderMgr.GetVertexInputDeclarationHandleByShaderHandle(currShaderHandle);
-        currVidHandle = RenderHandleUtil::IsValid(customVidHandle) ? customVidHandle : currVidHandle;
-
-        currPlHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(currShaderHandle);
+        // if not explicit gfx state given, check if shader has graphics state for this slot
+        if (!RenderHandleUtil::IsValid(ssd.gfxState)) {
+            const auto gfxStateHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(currShader);
+            if (shaderMgr.GetRenderSlotId(gfxStateHandle) == currentScene_.renderSlotId) {
+                currState = gfxStateHandle;
+            }
+        }
+        currVid = shaderMgr.GetVertexInputDeclarationHandleByShaderHandle(currShader);
+        currPl = shaderMgr.GetPipelineLayoutHandleByShaderHandle(currShader);
     }
-    if (RenderHandleUtil::IsValid(ssd.gfxState)) {
+    if (RenderHandleUtil::GetHandleType(ssd.gfxState) == RenderHandleType::GRAPHICS_STATE) {
         const RenderHandle slotState = shaderMgr.GetGraphicsStateHandle(ssd.gfxState, currentScene_.renderSlotId);
         if (RenderHandleUtil::IsValid(slotState)) {
-            currStateHandle = slotState;
+            currState = slotState;
         }
     }
+
+    // fallback to defaults if needed
+    currShader = RenderHandleUtil::IsValid(currShader) ? currShader : ssd.defaultShader;
+    currPl = RenderHandleUtil::IsValid(currPl) ? currPl : allShaderData_.defaultPlHandle;
+    currVid = RenderHandleUtil::IsValid(currVid) ? currVid : allShaderData_.defaultVidHandle;
+    currState = RenderHandleUtil::IsValid(currState) ? currState : ssd.defaultShaderState;
 
     auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
     RenderHandle psoHandle;
     // ATM pipeline layout setup to shader is not forced. Use default if not an extra set.
     if (IsInverseWinding(submeshFlags)) {
         // we create a new graphics state with inverse winding
-        GraphicsState gfxState = shaderMgr.GetGraphicsState(currStateHandle);
+        GraphicsState gfxState = shaderMgr.GetGraphicsState(currState);
         gfxState.rasterizationState.frontFace = FrontFace::CORE_FRONT_FACE_CLOCKWISE;
-        const PipelineLayout& pl = shaderMgr.GetPipelineLayout(currPlHandle);
-        const VertexInputDeclarationView vidv = shaderMgr.GetVertexInputDeclarationView(currVidHandle);
-        psoHandle =
-            psoMgr.GetGraphicsPsoHandle(currShaderHandle, gfxState, pl, vidv, specialization, dynamicStateFlags);
+        const PipelineLayout& pl = shaderMgr.GetPipelineLayout(currPl);
+        const VertexInputDeclarationView vidv = shaderMgr.GetVertexInputDeclarationView(currVid);
+        psoHandle = psoMgr.GetGraphicsPsoHandle(
+            currShader, gfxState, pl, vidv, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
     } else {
         psoHandle = psoMgr.GetGraphicsPsoHandle(
-            currShaderHandle, currStateHandle, currPlHandle, currVidHandle, specialization, dynamicStateFlags);
+            currShader, currState, currPl, currVid, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
     }
 
-    allShaderData_.perShaderData.emplace_back(PerShaderData { currShaderHandle, psoHandle, currStateHandle });
+    allShaderData_.perShaderData.push_back(PerShaderData { currShader, psoHandle, currState });
     allShaderData_.shaderIdToData[ssd.hash] = (uint32_t)allShaderData_.perShaderData.size() - 1;
     return psoHandle;
 }
 
-RenderHandle RenderNodeDefaultShadowRenderSlot::GetSubmeshPso(
-    const ShaderStateData& ssd, const RenderSubmeshFlags submeshFlags)
+RenderHandle RenderNodeDefaultShadowRenderSlot::GetSubmeshPso(const ShaderStateData& ssd,
+    const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags, const RenderSubmeshFlags submeshFlags)
 {
     if (const auto dataIter = allShaderData_.shaderIdToData.find(ssd.hash);
         dataIter != allShaderData_.shaderIdToData.cend()) {
@@ -494,6 +533,9 @@ RenderHandle RenderNodeDefaultShadowRenderSlot::GetSubmeshPso(
                 switch (ref.id) {
                     case 0u:
                         specializationFlags[constantId] = submeshFlags;
+                        break;
+                    case 1u:
+                        specializationFlags[constantId] = submeshMaterialFlags.renderMaterialFlags;
                         break;
                     default:
                         break;

@@ -38,7 +38,7 @@ fragment shader for post process and tonemapping
 */
 void main(void)
 {
-    outColor = texture(sampler2D(uTex, uSampler), inUv);
+    outColor = textureLod(sampler2D(uTex, uSampler), inUv, 0);
 
     if ((uPc.flags.x & POST_PROCESS_SPECIALIZATION_COLOR_FRINGE_BIT) ==
         POST_PROCESS_SPECIALIZATION_COLOR_FRINGE_BIT) {
@@ -50,9 +50,9 @@ void main(void)
 
         const vec2 uvDistToImageCenter = chroma * uvSize;
         const CORE_RELAXEDP float chromaRed =
-            texture(sampler2D(uTex, uSampler), inUv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y)).x;
+            textureLod(sampler2D(uTex, uSampler), inUv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), 0).x;
         const CORE_RELAXEDP float chromaBlue =
-            texture(sampler2D(uTex, uSampler), inUv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y)).z;
+            textureLod(sampler2D(uTex, uSampler), inUv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), 0).z;
 
         outColor.r = chromaRed;
         outColor.b = chromaBlue;

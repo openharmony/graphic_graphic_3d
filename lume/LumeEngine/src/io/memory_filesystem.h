@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,13 +16,20 @@
 #ifndef CORE__IO__MEMORY_FILESYSTEM_H
 #define CORE__IO__MEMORY_FILESYSTEM_H
 
+#include <memory>
+
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
+#include <core/io/intf_file.h>
 #include <core/io/intf_file_system.h>
 #include <core/namespace.h>
 
-#include "memory_file.h"
-
 CORE_BEGIN_NAMESPACE()
+class MemoryFileStorage;
 
 /** Memory protocol.
  * Protocol implementation that wraps a buffer in memory.
@@ -34,7 +41,7 @@ public:
     MemoryFilesystem(MemoryFilesystem const&) = delete;
     MemoryFilesystem& operator=(MemoryFilesystem const&) = delete;
 
-    IDirectory::Entry GetEntry(BASE_NS::string_view uri) override;
+    IDirectory::Entry GetEntry(BASE_NS::string_view path) override;
     IFile::Ptr OpenFile(BASE_NS::string_view path) override;
     IFile::Ptr CreateFile(BASE_NS::string_view path) override;
     bool DeleteFile(BASE_NS::string_view path) override;

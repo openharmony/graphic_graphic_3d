@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,15 +16,14 @@
 #define API_CORE_PERF_CPU_PERF_SCOPE_H
 
 #if (CORE_PERF_ENABLED == 1)
-#include <cstdint>
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
+#include <base/namespace.h>
 #include <core/implementation_uids.h>
 #include <core/namespace.h>
 #include <core/perf/intf_performance_data_manager.h>
 #include <core/plugin/intf_class_register.h>
-#include <core/plugin/intf_plugin_register.h>
 
 CORE_BEGIN_NAMESPACE()
 class CpuPerfScope final {
@@ -71,7 +70,8 @@ CORE_END_NAMESPACE()
 #define CORE_CONCAT_NOEXP(value0, value1) value0##value1
 #define CORE_CONCAT(value0, value1) CORE_CONCAT_NOEXP(value0, value1)
 
-#define CORE_CPU_PERF_BEGIN(timerName, category, subCategory, name) CpuPerfScope timerName(category, subCategory, name);
+#define CORE_CPU_PERF_BEGIN(timerName, category, subCategory, name) \
+    CORE_NS::CpuPerfScope timerName(category, subCategory, name);
 #define CORE_CPU_PERF_END(timerName) timerName.Stop();
 #define CORE_CPU_PERF_SCOPE(category, subCategory, name) \
     CORE_NS::CpuPerfScope CORE_CONCAT(cpuPerfScope_, __LINE__)(category, subCategory, name)

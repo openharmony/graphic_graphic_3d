@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,13 +40,20 @@ public:
     explicit RenderDataStoreDefaultCamera(const BASE_NS::string_view name);
     ~RenderDataStoreDefaultCamera() override = default;
 
+    void CommitFrameData() override {};
     void PreRender() override {};
-    void PreRenderBackend() override {};
-    // Reset and start indexing from the beginning. i.e. frame boundary reset.
+    // clear in post render
     void PostRender() override;
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override;
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     void AddCamera(const RenderCamera& camera) override;
+    void AddEnvironment(const RenderCamera::Environment& environment) override;
 
     BASE_NS::array_view<const RenderCamera> GetCameras() const override;
     RenderCamera GetCamera(const BASE_NS::string_view name) const override;
@@ -54,6 +61,10 @@ public:
     uint32_t GetCameraIndex(const BASE_NS::string_view name) const override;
     uint32_t GetCameraIndex(const uint64_t id) const override;
     uint32_t GetCameraCount() const override;
+
+    BASE_NS::array_view<const RenderCamera::Environment> GetEnvironments() const override;
+    RenderCamera::Environment GetEnvironment(const uint64_t id) const override;
+    uint32_t GetEnvironmentCount() const override;
 
     // for plugin / factory interface
     static constexpr char const* const TYPE_NAME = "RenderDataStoreDefaultCamera";
@@ -79,7 +90,7 @@ private:
     const BASE_NS::string name_;
 
     BASE_NS::vector<RenderCamera> cameras_;
-    uint32_t nextId { 0u };
+    BASE_NS::vector<RenderCamera::Environment> environments_;
 };
 CORE3D_END_NAMESPACE()
 

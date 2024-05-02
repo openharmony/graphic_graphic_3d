@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <base/containers/array_view.h>
+#include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <core/image/intf_image_container.h>
 #include <render/device/gpu_resource_desc.h>
@@ -35,6 +36,8 @@ struct BackendSpecificImageDesc {};
 
 /** Backend specific buffer descriptor */
 struct BackendSpecificBufferDesc {};
+
+class IGpuResourceCache;
 
 /** Gpu resource manager.
  *  Internally synchronized.
@@ -166,7 +169,9 @@ public:
      */
     virtual RenderHandleReference Create(const GpuImageDesc& desc, CORE_NS::IImageContainer::Ptr image) = 0;
 
-    /** Create a GpuImage with unique image name from external texture
+    /** Create a GpuImage with unique image name from external image resource
+     * NOTE: the external image resource is not owned and not deleted by the manager when the handle is destroyed
+     * (e.g. if using hw buffers the hw buffer reference is released)
      *  @param name Name of image
      *  @param desc Descriptor
      *  @param backendSpecificData Image description
@@ -195,13 +200,14 @@ public:
      */
     virtual RenderHandleReference Create(const GpuSamplerDesc& desc) = 0;
 
-    /** Create unnamed GpuAccelerationStructure.
+    /** Create unnamed GpuAccelerationStructure. A GPU buffer handle is returned with additional acceleration structure.
      *  @param desc Descriptor
      *  @return Returns A valid resource handle if the creation was successfull.
      */
     virtual RenderHandleReference Create(const GpuAccelerationStructureDesc& desc) = 0;
 
-    /** Create uniely named GpuAccelerationStructure. If name is found, the handle is replaced
+    /** Create uniquely named GpuAccelerationStructure. If name is found, the handle is replaced
+     *  A GPU buffer handle is returned with additional acceleration structure.
      *  @param name Unique name for the acceleration structure
      *  @param desc Descriptor
      *  @return Returns A valid resource handle if the creation was successfull.
@@ -209,6 +215,7 @@ public:
     virtual RenderHandleReference Create(const BASE_NS::string_view name, const GpuAccelerationStructureDesc& desc) = 0;
 
     /** Create GpuAccelerationStructure and replace the given handle if it's valid (the same is returned in valid case).
+     *  A GPU buffer handle is returned with additional acceleration structure.
      *  @param replacedHandle A valid handle which current resource will be destroyed and replaced with a new one.
      *  @param desc Descriptor
      *  @return Returns A valid resource handle if the creation was successfull.
@@ -233,12 +240,6 @@ public:
      *  @return Returns A valid resource handle if the named resource is available.
      */
     virtual RenderHandleReference GetSamplerHandle(const BASE_NS::string_view name) const = 0;
-
-    /** Get acceleration structure handle. (Invalid handle if not found.)
-     *  @param name Name of acceleration structure
-     *  @return Returns A valid resource handle if the named resource is available.
-     */
-    virtual RenderHandleReference GetAccelerationStructureHandle(const BASE_NS::string_view name) const = 0;
 
     /** Get buffer descriptor
      *  @param handle Handle to resource
@@ -299,8 +300,13 @@ public:
     virtual bool IsGpuImage(const RenderHandleReference& handle) const = 0;
     /** Checks if resource is a GPU sampler */
     virtual bool IsGpuSampler(const RenderHandleReference& handle) const = 0;
-    /** Checks if resource is a GPU acceleration structure */
+    /** Checks if resource is a GPU acceleration structure. If is GPU acceleration structure, it is GPU buffer as well.
+     */
     virtual bool IsGpuAccelerationStructure(const RenderHandleReference& handle) const = 0;
+    /** Image has been created to be used as a swapchain image. Fast check based on handle.
+     * Due to possible remapping with built-in CORE_DEFAULT_BACKBUFFER might not be an actual swapchain.
+     */
+    virtual bool IsSwapchain(const RenderHandleReference& handle) const = 0;
 
     /** Checks if resource is a client mappable */
     virtual bool IsMappableOutsideRender(const RenderHandleReference& handle) const = 0;
@@ -308,7 +314,7 @@ public:
     /** Returns supported flags for given resource handle format. */
     virtual FormatProperties GetFormatProperties(const RenderHandleReference& handle) const = 0;
     /** Returns supported flags for given format. */
-    virtual FormatProperties GetFormatProperties(const BASE_NS::Format& format) const = 0;
+    virtual FormatProperties GetFormatProperties(const BASE_NS::Format format) const = 0;
 
     /** Returns GpuImageDesc based on image container's ImageDesc.
      * Conversion helper when loading images with image loaders.
@@ -328,6 +334,49 @@ public:
      * @return string Name of the resource.
      */
     virtual BASE_NS::string GetName(const RenderHandleReference& handle) const = 0;
+
+    /** Returns all valid GPU buffer render handles.
+     * @return vector of handles.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> GetGpuBufferHandles() const = 0;
+    /** Returns all valid GPU image render handles.
+     * @return vector of handles.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> GetGpuImageHandles() const = 0;
+    /** Returns all valid GPU sampler render handles.
+     * @return vector of handles.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> GetGpuSamplerHandles() const = 0;
+
+    /** Force default GPU buffer creation usage flags. Used as bitwise OR with given descs.
+     * NOTE: Reduced performance expected
+     * Use only in situtation when necessary and not in real products.
+     * @param bufferUsageFlags Default buffer usage flags. With zero no flags (default)
+     */
+    virtual void SetDefaultGpuBufferCreationFlags(const BufferUsageFlags usageFlags) = 0;
+    /** Force default GPU image creation usage flags. Used as bitwise OR with given descs.
+     * NOTE: Reduced performance expected
+     * Use only in situtation when necessary and not in real products.
+     * @param bufferUsageFlags Default buffer usage flags. With zero no flags (default)
+     */
+    virtual void SetDefaultGpuImageCreationFlags(const ImageUsageFlags usageFlags) = 0;
+
+    /** Get gpu resource cache.
+     * @return Reference to GPU resource cache interface.
+     */
+    virtual IGpuResourceCache& GetGpuResourceCache() const = 0;
+
+    /** Get image aspect flags for a given resource handle format.
+     * @param handle Render handle reference.
+     * @return Image aspect flags for a given format.
+     */
+    virtual ImageAspectFlags GetImageAspectFlags(const RenderHandleReference& handle) const = 0;
+
+    /** Get image aspect flags for a given format.
+     * @param format Format.
+     * @return Image aspect flags for a given format.
+     */
+    virtual ImageAspectFlags GetImageAspectFlags(const BASE_NS::Format format) const = 0;
 
 protected:
     IGpuResourceManager() = default;
@@ -424,13 +473,15 @@ public:
      */
     virtual RenderHandleReference Create(const GpuAccelerationStructureDesc& desc) = 0;
 
-    /** Create a GpuAccelerationStructureDesc with unique name.
-     *  @param name Name for sampler
+    /** Create a GpuAccelerationStructureDesc with unique name.  A GPU buffer handle is returned with additional
+     * acceleration structure.
+     *  @param name Name for acceleration structure.
      *  @param desc Descriptor
      */
     virtual RenderHandleReference Create(const BASE_NS::string_view name, const GpuAccelerationStructureDesc& desc) = 0;
 
-    /** Create a GpuAccelerationStructureDesc with replaced handle.
+    /** Create a GpuAccelerationStructureDesc with replaced handle. A GPU buffer handle is returned with additional
+     * acceleration structure.
      *  @param handle Replaced handle
      *  @param desc Descriptor
      */
@@ -451,11 +502,6 @@ public:
      *  @param name Name of sampler
      */
     virtual RenderHandle GetSamplerHandle(const BASE_NS::string_view name) const = 0;
-
-    /** Get acceleration structure handle
-     *  @param name Name of acceleration structure
-     */
-    virtual RenderHandle GetAccelerationStructureHandle(const BASE_NS::string_view name) const = 0;
 
     /** Get buffer descriptor
      *  @param handle Handle to resource
@@ -502,6 +548,13 @@ public:
     virtual bool IsGpuImage(const RenderHandle& handle) const = 0;
     /** Checks if resource is a GPU sampler */
     virtual bool IsGpuSampler(const RenderHandle& handle) const = 0;
+    /** Checks if resource is a GPU acceleration structure. If is GPU acceleration structure, it is GPU buffer as
+     * well. */
+    virtual bool IsGpuAccelerationStructure(const RenderHandle& handle) const = 0;
+    /** Image has been created to be used as a swapchain image. Fast check based on handle.
+     * Due to possible remapping with built-in CORE_DEFAULT_BACKBUFFER might not be an actual swapchain.
+     */
+    virtual bool IsSwapchain(const RenderHandle& handle) const = 0;
 
     /** Returns supported flags for given resource handle format. */
     virtual FormatProperties GetFormatProperties(const RenderHandle& handle) const = 0;
@@ -514,6 +567,23 @@ public:
      * @return string Name of the resource.
      */
     virtual BASE_NS::string GetName(const RenderHandle& handle) const = 0;
+
+    /** Get gpu resource cache.
+     * @return Reference to GPU resource cache interface.
+     */
+    virtual IGpuResourceCache& GetGpuResourceCache() const = 0;
+
+    /** Get image aspect flags for given format.
+     * @param handle Render handle of the resource
+     * @return Image aspect flags for given format.
+     */
+    virtual ImageAspectFlags GetImageAspectFlags(const RenderHandle& handle) const = 0;
+
+    /** Get image aspect flags for given format.
+     * @param format Format.
+     * @return Image aspect flags for given format.
+     */
+    virtual ImageAspectFlags GetImageAspectFlags(const BASE_NS::Format format) const = 0;
 
 protected:
     IRenderNodeGpuResourceManager() = default;

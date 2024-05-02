@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -216,7 +216,6 @@ CORE_JSON_SERIALIZE_ENUM(BASE_NS::Format,
         { BASE_NS::Format::BASE_FORMAT_G8_B8_R8_3PLANE_422_UNORM, "G8_B8_R8_3PLANE_422_UNORM" },
         { BASE_NS::Format::BASE_FORMAT_G8_B8R8_2PLANE_422_UNORM, "G8_B8R8_2PLANE_422_UNORM" },
         { BASE_NS::Format::BASE_FORMAT_G8_B8_R8_3PLANE_444_UNORM, "G8_B8_R8_3PLANE_444_UNORM" },
-        { BASE_NS::Format::BASE_FORMAT_MAX_ENUM, nullptr },
     })
 // clang-format on
 BASE_END_NAMESPACE()

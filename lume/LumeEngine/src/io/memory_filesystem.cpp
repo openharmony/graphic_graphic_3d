@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,15 @@
 
 #include "memory_filesystem.h"
 
+#include <memory>
+
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
+#include <core/io/intf_file.h>
 #include <core/namespace.h>
 
 #include "memory_file.h"
@@ -55,25 +64,25 @@ IFile::Ptr MemoryFilesystem::CreateFile(const string_view path)
 
 bool MemoryFilesystem::DeleteFile(const string_view path)
 {
-    return memoryFiles_.erase(path) != memoryFiles_.end();
+    return memoryFiles_.erase(path) != 0u;
 }
 
-IDirectory::Ptr MemoryFilesystem::OpenDirectory(const string_view path)
+IDirectory::Ptr MemoryFilesystem::OpenDirectory(const string_view /* path */)
 {
     return IDirectory::Ptr();
 }
 
-IDirectory::Ptr MemoryFilesystem::CreateDirectory(const string_view path)
+IDirectory::Ptr MemoryFilesystem::CreateDirectory(const string_view /* path */)
 {
     return IDirectory::Ptr();
 }
 
-bool MemoryFilesystem::DeleteDirectory(const string_view path)
+bool MemoryFilesystem::DeleteDirectory(const string_view /* path */)
 {
     return false;
 }
 
-bool MemoryFilesystem::Rename(const string_view fromPath, const string_view toPath)
+bool MemoryFilesystem::Rename(const string_view /* fromPath */, const string_view /* toPath */)
 {
     return false;
 }

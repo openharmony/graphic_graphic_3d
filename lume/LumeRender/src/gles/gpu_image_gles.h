@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -45,6 +45,7 @@ struct GpuImagePlatformDataGL final : public GpuImagePlatformData {
     BASE_NS::Math::UVec4 swizzle;
     uint32_t renderBuffer; // For render targets... (can not be sampled or used in compute)
     uintptr_t eglImage;    // For creating image from EGLImage
+    uintptr_t hwBuffer;    // For creating image from AHardwareBuffer
     uint32_t mipLevel { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
 };
 

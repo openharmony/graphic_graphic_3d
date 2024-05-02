@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,8 +32,6 @@ enum ImageType {
     CORE_IMAGE_TYPE_2D = 1,
     /** 3D */
     CORE_IMAGE_TYPE_3D = 2,
-    /** Max enumeration */
-    CORE_IMAGE_TYPE_MAX_ENUM = 0x7FFFFFFF
 };
 
 /** Image view type */
@@ -52,8 +50,6 @@ enum ImageViewType {
     CORE_IMAGE_VIEW_TYPE_2D_ARRAY = 5,
     /** Cube array */
     CORE_IMAGE_VIEW_TYPE_CUBE_ARRAY = 6,
-    /** Max enumeration */
-    CORE_IMAGE_VIEW_TYPE_MAX_ENUM = 0x7FFFFFFF
 };
 
 /** Image tiling */
@@ -62,8 +58,6 @@ enum ImageTiling {
     CORE_IMAGE_TILING_OPTIMAL = 0,
     /** Linear */
     CORE_IMAGE_TILING_LINEAR = 1,
-    /** Max enumeration */
-    CORE_IMAGE_TILING_MAX_ENUM = 0x7FFFFFFF
 };
 
 /** Image usage flag bits */
@@ -84,6 +78,8 @@ enum ImageUsageFlagBits {
     CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
     /** Input attachment bit */
     CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT = 0x00000080,
+    /** Fragment shading rate attachment bit */
+    CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT = 0x00000100,
 };
 /** Container for image usage flag bits */
 using ImageUsageFlags = uint32_t;
@@ -210,8 +206,6 @@ enum BorderColor {
     CORE_BORDER_COLOR_FLOAT_OPAQUE_WHITE = 4,
     /** Int opaque white */
     CORE_BORDER_COLOR_INT_OPAQUE_WHITE = 5,
-    /** Max enumeration */
-    CORE_BORDER_COLOR_MAX_ENUM = 0x7FFFFFFF
 };
 
 /** Sample count flag bits */
@@ -250,8 +244,6 @@ enum ComponentSwizzle : uint32_t {
     CORE_COMPONENT_SWIZZLE_B = 5,
     /** Swizzle alpha */
     CORE_COMPONENT_SWIZZLE_A = 6,
-    /** Max enumeration */
-    CORE_COMPONENT_SWIZZLE_MAX_ENUM = 0x7FFFFFFF
 };
 
 /** Acceleration structure create flag bits */
@@ -362,13 +354,13 @@ struct ComponentMapping {
 /** GPU image descriptor */
 struct GpuImageDesc {
     /** Image type */
-    ImageType imageType { ImageType::CORE_IMAGE_TYPE_MAX_ENUM };
+    ImageType imageType { ImageType::CORE_IMAGE_TYPE_2D };
     /** Image view type */
-    ImageViewType imageViewType { ImageViewType::CORE_IMAGE_VIEW_TYPE_MAX_ENUM };
+    ImageViewType imageViewType { ImageViewType::CORE_IMAGE_VIEW_TYPE_2D };
     /** Format */
     BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
     /** Image tiling */
-    ImageTiling imageTiling { ImageTiling::CORE_IMAGE_TILING_MAX_ENUM };
+    ImageTiling imageTiling { ImageTiling::CORE_IMAGE_TILING_OPTIMAL };
     /** Usage tiling */
     ImageUsageFlags usageFlags { 0 };
     /** Memory property flags */
@@ -381,16 +373,16 @@ struct GpuImageDesc {
     EngineImageCreationFlags engineCreationFlags { 0 };
 
     /** Width */
-    uint32_t width { 0 };
+    uint32_t width { 1u };
     /** Height */
-    uint32_t height { 0 };
+    uint32_t height { 1u };
     /** Depth */
-    uint32_t depth { 0 };
+    uint32_t depth { 1u };
 
     /** Mip count */
-    uint32_t mipCount { 1 };
+    uint32_t mipCount { 1u };
     /** Layer count */
-    uint32_t layerCount { 1 };
+    uint32_t layerCount { 1u };
 
     /** Sample count flags */
     SampleCountFlags sampleCountFlags { SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT };

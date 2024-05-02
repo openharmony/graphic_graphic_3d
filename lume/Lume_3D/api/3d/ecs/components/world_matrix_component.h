@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(WORLD_MATRIX_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define WORLD_MATRIX_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_WORLD_MATRIX_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_WORLD_MATRIX_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>

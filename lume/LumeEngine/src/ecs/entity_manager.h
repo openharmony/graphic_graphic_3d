@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,12 +16,23 @@
 #ifndef CORE_ECS_ENTITY_MANAGER_H
 #define CORE_ECS_ENTITY_MANAGER_H
 
-#include <base/containers/unordered_map.h>
+#include <cstddef>
+#include <cstdint>
+
+#include <base/containers/generic_iterator.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/ecs/entity.h>
+#include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/namespace.h>
 
-CORE_BEGIN_NAMESPACE()
-class EntityManager final : public IEntityManager {
+BASE_BEGIN_NAMESPACE()
+template<class T1, class T2>
+struct pair;
+BASE_END_NAMESPACE()
+
+CORE_BEGIN_NAMESPACE() class EntityManager final : public IEntityManager {
 public:
     EntityManager();
     explicit EntityManager(const size_t entityCount);
@@ -34,9 +45,6 @@ public:
     void DestroyAllEntities() override;
 
     bool IsAlive(const Entity entity) const override;
-    BASE_NS::vector<Entity> GetAddedEntities() override;
-    BASE_NS::vector<Entity> GetRemovedEntities() override;
-    BASE_NS::vector<BASE_NS::pair<Entity, EventType>> GetEvents() override;
 
     uint32_t GetGenerationCounter() const override;
 
@@ -44,6 +52,9 @@ public:
     Iterator::Ptr End(IteratorType type) const override;
 
     void SetActive(const Entity entity, bool state) override;
+
+    BASE_NS::vector<Entity> GetRemovedEntities();
+    BASE_NS::vector<BASE_NS::pair<Entity, EventType>> GetEvents();
 
     // Marks all entities with zero refcnt as DEAD.
     void UpdateDeadEntities();
@@ -68,12 +79,12 @@ private:
         IEntityReferenceCounter::Ptr counter;
     };
     BASE_NS::vector<EntityState> entities_;
-    BASE_NS::vector<Entity> addedList_;
     BASE_NS::vector<Entity> removedList_;
+    BASE_NS::vector<uint32_t> freeList_;
     BASE_NS::vector<BASE_NS::pair<Entity, IEntityManager::EventType>> eventList_;
     uint32_t generationCounter_ { 0 };
 
-    class IteratorImpl : public Iterator {
+    class IteratorImpl final : public Iterator {
         const EntityManager* owner_ { nullptr };
         uint32_t index_ { 0 };
         IteratorType type_;

@@ -1,0 +1,85 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "Template",
+    "nodes": [
+        {
+            "typeName": "RenderNodeDefaultMaterialDeferredShading",
+            "nodeName": "RenderNodeDefaultMaterialDeferredShading",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "nodeFlags": 0,
+            "shader": "3dshaders://shader/dm_fullscreen_deferred_shading.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "RenderNodeDefaultCameraController"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "RenderNodeDefaultCameraController"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "velocity_normal",
+                        "nodeName": "RenderNodeDefaultCameraController"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "base_color",
+                        "nodeName": "RenderNodeDefaultCameraController"
+                    },
+                    {
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "material",
+                        "nodeName": "RenderNodeDefaultCameraController"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpass": {
+                    "colorAttachmentIndices": [ 1 ],
+                    "inputAttachmentIndices": [ 0, 2, 3, 4 ]
+                }
+            },
+            "resources": {
+                "images": [
+                    {
+                        "set": 2,
+                        "binding": 0,
+                        "name": "ssr_target"
+                    },
+                    {
+                        "set": 2,
+                        "binding": 1,
+                        "name": "ssao_target"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 2,
+                        "binding": 0,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    },
+                    {
+                        "set": 2,
+                        "binding": 1,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ]
+            }
+        }
+    ]
+}

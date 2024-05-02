@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,7 +17,7 @@
 
 #include <cinttypes>
 #include <cstdint>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <render/namespace.h>
 
@@ -53,9 +53,11 @@ RenderFrameSyncVk::~RenderFrameSyncVk()
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
 
     for (auto& ref : frameFences_) {
-        vkDestroyFence(device, // device
-            ref.fence,         // fence
-            nullptr);          // pAllocator
+        if (ref.fence) {
+            vkDestroyFence(device, // device
+                ref.fence,         // fence
+                nullptr);          // pAllocator
+        }
     }
 }
 
@@ -70,22 +72,23 @@ void RenderFrameSyncVk::WaitForFrameFence()
 
     if (frameFences_[bufferingIndex_].signalled) {
         VkFence fence = frameFences_[bufferingIndex_].fence;
-        const VkResult res = vkWaitForFences(device, // device
-            1,                                       // fenceCount
-            &fence,                                  // pFences
-            VK_TRUE,                                 // waitAll
-            UINT64_MAX);                             // timeout
-        if (res == VK_SUCCESS) {
-            VALIDATE_VK_RESULT(vkResetFences(device, // device
-                1,                                   // fenceCount
-                &fence));                            // pFences
+        if (fence) {
+            const VkResult res = vkWaitForFences(device, // device
+                1U,                                      // fenceCount
+                &fence,                                  // pFences
+                VK_TRUE,                                 // waitAll
+                UINT64_MAX);                             // timeout
+            if (res == VK_SUCCESS) {
+                VALIDATE_VK_RESULT(vkResetFences(device, // device
+                    1,                                   // fenceCount
+                    &fence));                            // pFences
 
-            frameFences_[bufferingIndex_].signalled = false;
-        } else {
-            PLUGIN_LOG_E("vkWaitForFences VkResult: %i. Frame count: %" PRIu64 ". Device invalidated.", res,
-                device_.GetFrameCount());
-            device_.SetDeviceStatus(false);
-            PLUGIN_ASSERT(false);
+                frameFences_[bufferingIndex_].signalled = false;
+            } else {
+                PLUGIN_LOG_E("vkWaitForFences VkResult: %i. Frame count: %" PRIu64 ". Device invalidated.", res,
+                    device_.GetFrameCount());
+                device_.SetDeviceStatus(false);
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,15 +16,18 @@
 #ifndef API_CORE_IFILE_MONITOR_H
 #define API_CORE_IFILE_MONITOR_H
 
-#include <cstdint>
-
 #include <base/containers/refcnt_ptr.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
-#include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <base/util/uid.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_interface.h>
+
+BASE_BEGIN_NAMESPACE()
+template<typename T>
+class vector;
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 class IFileManager;

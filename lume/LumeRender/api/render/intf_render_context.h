@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,10 @@
 #include <render/device/intf_device.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
+
+CORE_BEGIN_NAMESPACE()
+class IEngine;
+CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderDataStoreManager;
@@ -55,10 +59,24 @@ struct VersionInfo {
  * RenderCreateInfo
  */
 struct RenderCreateInfo {
+    /** Create info flag bits to setup configuration flags */
+    enum CreateInfoFlagBits : uint32_t {
+        /** Request double buffered render data stores for better multi-threading options */
+        DOUBLE_BUFFERED_RENDER_DATA_STORES = 0x00000001,
+        /** Request separate render frame backend (backend graphics API control) */
+        SEPARATE_RENDER_FRAME_BACKEND = 0x00000002,
+        /** Request separate render frame present (backend graphics API presentation) */
+        SEPARATE_RENDER_FRAME_PRESENT = 0x00000004,
+    };
+    /** Container for render create info flag bits */
+    using CreateInfoFlags = uint32_t;
+
     /** Application version info */
     VersionInfo applicationInfo;
     /** Device create info */
     DeviceCreateInfo deviceCreateInfo;
+    /** Creation flags */
+    CreateInfoFlags createFlags { 0 };
 };
 
 /**

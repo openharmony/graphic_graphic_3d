@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,17 @@
 #include <algorithm>
 #include <atomic>
 
+#include <base/containers/generic_iterator.h>
+#include <base/containers/iterator.h>
+#include <base/containers/refcnt_ptr.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/ecs/entity.h>
+#include <core/ecs/entity_reference.h>
+#include <core/ecs/intf_entity_manager.h>
 #include <core/log.h>
 #include <core/namespace.h>
 
@@ -40,11 +51,16 @@ Entity MakeEntityId(uint32_t g, uint32_t i)
 {
     return { (static_cast<uint64_t>(g) << 32l) | i };
 }
+
 class EntityReferenceCounter final : public IEntityReferenceCounter {
 public:
     using Ptr = BASE_NS::refcnt_ptr<EntityReferenceCounter>;
     EntityReferenceCounter() = default;
     ~EntityReferenceCounter() override = default;
+    EntityReferenceCounter(const EntityReferenceCounter&) = delete;
+    EntityReferenceCounter& operator=(const EntityReferenceCounter&) = delete;
+    EntityReferenceCounter(EntityReferenceCounter&&) = delete;
+    EntityReferenceCounter& operator=(EntityReferenceCounter&&) = delete;
 
 protected:
     void Ref() noexcept override
@@ -70,7 +86,7 @@ private:
 };
 } // namespace
 
-EntityManager::EntityManager() : EntityManager((const size_t)64) {}
+EntityManager::EntityManager() : EntityManager(64u) {}
 
 EntityManager::EntityManager(const size_t entityCount)
 {
@@ -80,8 +96,8 @@ EntityManager::EntityManager(const size_t entityCount)
 EntityManager::~EntityManager()
 {
     // count live entities, should be zero
-    int32_t liveEntities = 0;
-    int32_t inactiveEntities = 0;
+    [[maybe_unused]] int32_t liveEntities = 0;
+    [[maybe_unused]] int32_t inactiveEntities = 0;
     for (const auto& e : entities_) {
         if (EntityState::State::ALIVE == e.state) {
             ++liveEntities;
@@ -96,20 +112,16 @@ EntityManager::~EntityManager()
 
 Entity EntityManager::Create()
 {
-    // find first free, dead, or with zero refcnt.
-    auto it = std::find_if(entities_.begin(), entities_.end(), [](const auto& b) {
-        return (b.state == EntityState::State::FREE) || (b.state == EntityState::State::DEAD) ||
-               (b.counter && (b.counter->GetRefCount() == 0));
-    });
     Entity result;
-    if (it == entities_.end()) {
+    if (freeList_.empty()) {
         const auto generation = 1U;
-        const auto id = (uint32_t)entities_.size();
+        const auto id = static_cast<uint32_t>(entities_.size());
         entities_.push_back({ EntityState::State::ALIVE, generation, nullptr });
         result = MakeEntityId(generation, id);
     } else {
-        const auto id = (uint32_t)(it - entities_.begin());
-        auto& slot = *it;
+        const auto id = freeList_.back();
+        freeList_.pop_back();
+        auto& slot = entities_[id];
         // if the slot isn't free report a dead entity
         if (slot.state != EntityState::State::FREE) {
             const auto deadEntity = MakeEntityId(slot.generation, id);
@@ -122,7 +134,6 @@ Entity EntityManager::Create()
         slot.state = EntityState::State::ALIVE;
         result = MakeEntityId(slot.generation, id);
     }
-    addedList_.push_back(result);
     eventList_.push_back({ result, EventType::CREATED });
     ++generationCounter_;
     return result;
@@ -130,21 +141,18 @@ Entity EntityManager::Create()
 
 EntityReference EntityManager::CreateReferenceCounted()
 {
-    // find first free or dead.
-    auto it = std::find_if(entities_.begin(), entities_.end(), [](const auto& b) {
-        return (b.state == EntityState::State::FREE) || (b.state == EntityState::State::DEAD) ||
-               (b.counter && (b.counter->GetRefCount() == 0));
-    });
     Entity result;
-    if (it == entities_.end()) {
+    if (freeList_.empty()) {
         const auto generation = 1U;
-        const auto id = (uint32_t)entities_.size();
+        const auto id = static_cast<uint32_t>(entities_.size());
         entities_.push_back(
             { EntityState::State::ALIVE, generation, IEntityReferenceCounter::Ptr { new EntityReferenceCounter } });
         result = MakeEntityId(generation, id);
     } else {
-        const auto id = (uint32_t)(it - entities_.begin());
-        auto& slot = *it;
+        const auto id = freeList_.back();
+        freeList_.pop_back();
+        auto& slot = entities_[id];
+
         // if the slot isn't free report a dead entity
         if (slot.state != EntityState::State::FREE) {
             const auto deadEntity = MakeEntityId(slot.generation, id);
@@ -158,7 +166,6 @@ EntityReference EntityManager::CreateReferenceCounted()
         slot.state = EntityState::State::ALIVE;
         result = MakeEntityId(slot.generation, id);
     }
-    addedList_.push_back(result);
     eventList_.push_back({ result, EventType::CREATED });
     ++generationCounter_;
     return EntityReference(result, entities_[GetId(result)].counter);
@@ -176,12 +183,12 @@ EntityReference EntityManager::GetReferenceCounted(const Entity entity)
                     // entity wasn't yet reference counted so add a counter
                     e.counter.reset(new EntityReferenceCounter);
                     return { entity, e.counter };
-                } else if (e.counter->GetRefCount() > 0) {
+                }
+                if (e.counter->GetRefCount() > 0) {
                     // reference count is still valid
                     return { entity, e.counter };
-                } else {
-                    // reference count has expired, but we won't revive the entity.
                 }
+                // reference count has expired, but we won't revive the entity.
             }
         }
     }
@@ -207,7 +214,7 @@ void EntityManager::Destroy(const Entity entity)
 
 void EntityManager::DestroyAllEntities()
 {
-    for (uint32_t i = 0; i < (uint32_t)entities_.size(); ++i) {
+    for (uint32_t i = 0, count = static_cast<uint32_t>(entities_.size()); i < count; ++i) {
         auto& e = entities_[i];
         if ((EntityState::State::ALIVE == e.state) || (EntityState::State::INACTIVE == e.state)) {
             auto entity = MakeEntityId(e.generation, i);
@@ -235,13 +242,9 @@ bool EntityManager::IsAlive(const Entity entity) const
     return false;
 }
 
-vector<Entity> EntityManager::GetAddedEntities()
-{
-    return move(addedList_);
-}
-
 vector<Entity> EntityManager::GetRemovedEntities()
 {
+    const auto freeSize = freeList_.size();
     for (const Entity& e : removedList_) {
         const uint32_t id = GetId(e);
         if (id < entities_.size()) {
@@ -249,10 +252,27 @@ vector<Entity> EntityManager::GetRemovedEntities()
                 CORE_ASSERT(entities_[id].state == EntityState::State::DEAD);
                 if (id < entities_.size() - 1) {
                     entities_[id].state = EntityState::State::FREE;
+                    freeList_.push_back(id);
                 } else {
                     entities_.resize(entities_.size() - 1);
                 }
             }
+        }
+    }
+    if (const auto finalFreeSize = freeList_.size()) {
+        // by sorting with greater and using pop_back in creation we keep entities_ filled from the beginning.
+        // could be removed not useful.
+        if (finalFreeSize != freeSize) {
+            std::sort(freeList_.begin(), freeList_.end(), std::greater {});
+        }
+        // check from the beginning that ids don't go out-of-bounds and remove problematic ones.
+        // most likely they never are so linear is better than lower_bounds.
+        auto count = 0U;
+        while ((count < finalFreeSize) && (freeList_[count] >= entities_.size())) {
+            ++count;
+        }
+        if (count) {
+            freeList_.erase(freeList_.cbegin(), freeList_.cbegin() + count);
         }
     }
     return move(removedList_);
@@ -271,9 +291,10 @@ vector<pair<Entity, IEntityManager::EventType>> EntityManager::GetEvents()
 void EntityManager::SetActive(const Entity entity, bool state)
 {
     if (EntityUtil::IsValid(entity)) {
-        EntityState::State oldState, newState;
+        EntityState::State oldState;
+        EntityState::State newState;
         EventType event;
-        if (state == true) {
+        if (state) {
             oldState = EntityState::State::INACTIVE;
             newState = EntityState::State::ALIVE;
             event = EventType::ACTIVATED;
@@ -299,7 +320,7 @@ void EntityManager::SetActive(const Entity entity, bool state)
 void EntityManager::UpdateDeadEntities()
 {
     const auto removedCount = removedList_.size();
-    for (uint32_t id = 0, count = (uint32_t)entities_.size(); id < count; ++id) {
+    for (uint32_t id = 0, count = static_cast<uint32_t>(entities_.size()); id < count; ++id) {
         auto& e = entities_[id];
         if ((e.state != EntityState::State::FREE) && e.counter && (e.counter->GetRefCount() == 0)) {
             const Entity entity = MakeEntityId(e.generation, id);
@@ -368,7 +389,7 @@ Entity EntityManager::IteratorImpl::Get() const
 
 IEntityManager::Iterator::Ptr EntityManager::MakeIterator(uint32_t index, IteratorType type) const
 {
-    auto del = [](Iterator* it) { delete (EntityManager::IteratorImpl*)(it); };
+    auto del = [](Iterator* it) { delete static_cast<EntityManager::IteratorImpl*>(it); };
     auto p = new EntityManager::IteratorImpl(*this, index, type);
     return { p, del };
 }

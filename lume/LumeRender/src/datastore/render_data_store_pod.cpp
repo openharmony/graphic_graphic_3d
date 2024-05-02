@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -50,9 +50,7 @@ void RenderDataStorePod::CreatePod(
             }
 
             auto& typeNameRef = typeNameToPodNames_[tpName];
-            const uint32_t typeNameVectorIndex = (uint32_t)typeNameRef.size();
-            nameToDataOffset_[name] = { static_cast<uint32_t>(prevByteSize), static_cast<uint32_t>(srcData.size()),
-                typeNameVectorIndex };
+            nameToDataOffset_[name] = { static_cast<uint32_t>(prevByteSize), static_cast<uint32_t>(srcData.size()) };
             typeNameRef.emplace_back(name);
         }
     } // end of lock
@@ -68,16 +66,26 @@ void RenderDataStorePod::DestroyPod(const string_view typeName, const string_vie
 {
     const auto lock = std::lock_guard(mutex_);
 
-    if (const auto iter = nameToDataOffset_.find(name); iter == nameToDataOffset_.end()) {
-        const auto& ref = iter->second;
-        PLUGIN_ASSERT(ref.index + ref.byteSize <= (uint32_t)dataStore_.size());
-        const uint32_t typeNameVectorIndex = ref.typeNameVectorIndex;
-        dataStore_.erase(dataStore_.begin() + static_cast<int32_t>(ref.index),
-            dataStore_.end() + static_cast<int32_t>(ref.byteSize));
+    if (const auto iter = nameToDataOffset_.find(name); iter != nameToDataOffset_.end()) {
+        const auto offsetToData = iter->second;
+        PLUGIN_ASSERT(offsetToData.index + offsetToData.byteSize <= (uint32_t)dataStore_.size());
+        const auto first = dataStore_.cbegin() + static_cast<int32_t>(offsetToData.index);
+        const auto last = first + static_cast<int32_t>(offsetToData.byteSize);
+        dataStore_.erase(first, last);
         nameToDataOffset_.erase(iter);
+        // move the index of pods after the destroyed pod by the size of the pod
+        for (auto& nameToOffset : nameToDataOffset_) {
+            if (nameToOffset.second.index > offsetToData.index) {
+                nameToOffset.second.index -= offsetToData.byteSize;
+            }
+        }
         if (auto tpIter = typeNameToPodNames_.find(typeName); tpIter != typeNameToPodNames_.end()) {
-            PLUGIN_ASSERT(typeNameVectorIndex < (uint32_t)tpIter->second.size());
-            tpIter->second.erase(tpIter->second.begin() + static_cast<int32_t>(typeNameVectorIndex));
+            for (auto nameIter = tpIter->second.cbegin(); nameIter != tpIter->second.cend(); ++nameIter) {
+                if (*nameIter == name) {
+                    tpIter->second.erase(nameIter);
+                    break;
+                }
+            }
         }
     } else {
         PLUGIN_LOG_I("pod not found: %s", name.data());

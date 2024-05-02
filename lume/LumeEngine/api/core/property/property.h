@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,10 +16,13 @@
 #ifndef API_CORE_PROPERTY_PROPERTY_H
 #define API_CORE_PROPERTY_PROPERTY_H
 
+#include <cstddef>
 #include <cstdint>
 
 #include <base/containers/array_view.h>
 #include <base/containers/string_view.h>
+#include <base/namespace.h>
+#include <base/util/compile_time_hashes.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
@@ -68,16 +71,17 @@ struct PropertyTypeDecl {
 };
 
 /** Equality operator, returns true if types are the same */
-inline bool operator==(const PropertyTypeDecl& aA, const PropertyTypeDecl& aB)
+constexpr inline bool operator==(const PropertyTypeDecl& aA, const PropertyTypeDecl& aB)
 {
     return aA.compareHash == aB.compareHash;
 }
 
 /** Inequality operator, returns true if types are not the same */
-inline bool operator!=(const PropertyTypeDecl& aA, const PropertyTypeDecl& aB)
+constexpr inline bool operator!=(const PropertyTypeDecl& aA, const PropertyTypeDecl& aB)
 {
     return aA.compareHash != aB.compareHash;
 }
+
 /** @} */
 struct EnumMetaData {
     BASE_NS::string_view name;

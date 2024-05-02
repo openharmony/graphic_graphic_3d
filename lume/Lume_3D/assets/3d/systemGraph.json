@@ -5,44 +5,25 @@
     },
     "systems": [
         {
-            "typeName": "AnimationSystem",
-            "properties": {
-            }
+            "typeName": "AnimationSystem"
         },
         {
-            "typeName": "LocalMatrixSystem",
-            "properties": {
-            }
+            "typeName": "LocalMatrixSystem"
         },
         {
-            "typeName": "NodeSystem",
-            "properties": {
-            }
+            "typeName": "NodeSystem"
         },
         {
-            "typeName": "RenderPreprocessorSystem",
-            "properties": {
-                "dataStoreMaterial": "RenderDataStoreDefaultMaterial",
-                "dataStoreCamera": "RenderDataStoreDefaultCamera",
-                "dataStoreLight": "RenderDataStoreDefaultLight",
-                "dataStoreScene": "RenderDataStoreDefaultScene",
-                "dataStoreMorph": "RenderDataStoreMorph"
-            }
+            "typeName": "SkinningSystem"
+        },        
+        {
+            "typeName": "RenderPreprocessorSystem"
         },
         {
-            "typeName": "MorphingSystem",
-            "properties": {
-            }
+            "typeName": "MorphingSystem"
         },
         {
-            "typeName": "SkinningSystem",
-            "properties": {
-            }
-        },
-        {
-            "typeName": "RenderSystem",
-            "properties": {
-            }
+            "typeName": "RenderSystem"
         }
     ]
 }

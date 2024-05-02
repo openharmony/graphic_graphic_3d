@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -41,35 +41,7 @@ declare(PFNGLBLENDEQUATIONSEPARATEIPROC, glBlendEquationSeparatei);
 declare(PFNGLREADNPIXELSPROC, glReadnPixels)
 #endif
 
-// define GL_EXT_buffer_storage if not defined in gl headers.
-#ifndef GL_EXT_buffer_storage
-#define GL_EXT_buffer_storage 1
-#ifndef GL_MAP_READ_BIT
-const unsigned int GL_MAP_READ_BIT = 0x0001;
-#endif
-#ifndef GL_MAP_WRITE_BIT
-const unsigned int GL_MAP_WRITE_BIT = 0x0002;
-#endif
-const unsigned int GL_MAP_PERSISTENT_BIT_EXT = 0x0040;
-const unsigned int GL_MAP_COHERENT_BIT_EXT = 0x0080;
-const unsigned int GL_DYNAMIC_STORAGE_BIT_EXT = 0x0100;
-const unsigned int GL_CLIENT_STORAGE_BIT_EXT = 0x0200;
-const unsigned int GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT_EXT = 0x00004000;
-const unsigned int GL_BUFFER_IMMUTABLE_STORAGE_EXT = 0x821F;
-const unsigned int GL_BUFFER_STORAGE_FLAGS_EXT = 0x8220;
-typedef void(GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC)(
-    GLenum target, GLsizeiptr size, const void* data, GLbitfield flags);
-#endif
-
-// We hope to use GL_EXT_buffer_storage
-declare(PFNGLBUFFERSTORAGEEXTPROC, glBufferStorageEXT);
-
-// define GL_OES_EGL_image if not defined in gl headers.
-#ifndef GL_OES_EGL_image
-#define GL_OES_EGL_image
-using GLeglImageOES = void*;
-using PFNGLEGLIMAGETARGETTEXTURE2DOESPROC = void(GL_APIENTRYP*)(GLenum target, GLeglImageOES image);
-#endif /* GL_OES_EGL_image */
+    declare(PFNGLBUFFERSTORAGEEXTPROC, glBufferStorageEXT);
 
 declare(PFNGLEGLIMAGETARGETTEXTURE2DOESPROC, glEGLImageTargetTexture2DOES);
 
@@ -81,25 +53,16 @@ const unsigned int GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT = 0x8D56;
 const unsigned int GL_MAX_SAMPLES_EXT 0x8D57;
 using PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC = void(GL_APIENTRYP)(
     GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height);
-using PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC = void(GL_APIENTRYP )(
+using PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC = void(GL_APIENTRYP)(
     GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLsizei samples);
 #endif /* GL_EXT_multisampled_render_to_texture */
 
 declare(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC, glRenderbufferStorageMultisampleEXT);
 declare(PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC, glFramebufferTexture2DMultisampleEXT);
 
-#ifndef GL_EXT_disjoint_timer_query
-#define GL_EXT_disjoint_timer_query 1
-#define GL_QUERY_COUNTER_BITS_EXT 0x8864
-#define GL_CURRENT_QUERY_EXT 0x8865
-#define GL_QUERY_RESULT_EXT 0x8866
-#define GL_QUERY_RESULT_AVAILABLE_EXT 0x8867
-#define GL_TIME_ELAPSED_EXT 0x88BF
-#define GL_TIMESTAMP_EXT 0x8E28
-#define GL_GPU_DISJOINT_EXT 0x8FBB
+declare(PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC, glFramebufferTextureMultiviewOVR);
 
-using PFNGLGETQUERYOBJECTUI64VEXTPROC = void(GL_APIENTRYP)(GLuint id, GLenum pname, GLuint64* params);
-#endif /* GL_EXT_disjoint_timer_query */
+declare(PFNGLFRAMEBUFFERTEXTUREMULTISAMPLEMULTIVIEWOVRPROC, glFramebufferTextureMultisampleMultiviewOVR);
 
 declare(PFNGLGETQUERYOBJECTUI64VEXTPROC, glGetQueryObjectui64vEXT);
 #elif RENDER_HAS_GL_BACKEND
@@ -135,6 +98,7 @@ declare(PFNGLCHECKFRAMEBUFFERSTATUSPROC, glCheckFramebufferStatus);
 declare(PFNGLCLEARBUFFERFIPROC, glClearBufferfi);
 declare(PFNGLCLEARBUFFERFVPROC, glClearBufferfv);
 declare(PFNGLCLEARBUFFERIVPROC, glClearBufferiv);
+declare(PFNGLCLEARTEXIMAGEPROC, glClearTexImage);
 declare(PFNGLCOLORMASKPROC, glColorMask);
 declare(PFNGLCOLORMASKIPROC, glColorMaski);
 declare(PFNGLCOMPILESHADERPROC, glCompileShader);
@@ -191,7 +155,9 @@ declare(PFNGLGENVERTEXARRAYSPROC, glGenVertexArrays);
 declare(PFNGLGETSTRINGPROC, glGetString);
 declare(PFNGLGETSTRINGIPROC, glGetStringi);
 declare(PFNGLGETFLOATVPROC, glGetFloatv);
+declare(PFNGLGETFLOATI_VPROC, glGetFloati_v);
 declare(PFNGLGETINTEGERVPROC, glGetIntegerv);
+declare(PFNGLGETINTEGER64VPROC, glGetInteger64v);
 declare(PFNGLGETINTEGERI_VPROC, glGetIntegeri_v);
 declare(PFNGLGETPROGRAMINFOLOGPROC, glGetProgramInfoLog);
 declare(PFNGLGETPROGRAMIVPROC, glGetProgramiv);
@@ -240,6 +206,7 @@ declare(PFNGLCLIENTWAITSYNCPROC, glClientWaitSync);
 declare(PFNGLDELETESYNCPROC, glDeleteSync);
 declare(PFNGLFENCESYNCPROC, glFenceSync);
 declare(PFNGLBUFFERSTORAGEPROC, glBufferStorage);
+declare(PFNGLCOPYIMAGESUBDATAPROC, glCopyImageSubData);
 
 declare(PFNGLTEXSTORAGE2DMULTISAMPLEPROC, glTexStorage2DMultisample);
 
@@ -288,6 +255,8 @@ declare(PFNGLBINDRENDERBUFFERPROC, glBindRenderbuffer);
 declare(PFNGLRENDERBUFFERSTORAGEPROC, glRenderbufferStorage);
 declare(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC, glRenderbufferStorageMultisample);
 declare(PFNGLDELETERENDERBUFFERSPROC, glDeleteRenderbuffers);
+
+declare(PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC, glFramebufferTextureMultiviewOVR);
 #else
 #pragma(error, "Neither GL or GLES is enabled in GLFunctions.h")
 #endif

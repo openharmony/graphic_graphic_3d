@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -247,6 +247,15 @@ struct RenderDataDefaultMaterial {
         /** Basic depth slot for shadows and depth pre-pass */
         SLOT_TYPE_DEPTH = 2,
     };
+
+    /** Material indices.
+     */
+    struct MaterialIndices {
+        /** Material index */
+        uint32_t materialIndex { ~0u };
+        /** Material custom resource index */
+        uint32_t materialCustomResourceIndex { ~0u };
+    };
 };
 
 /** @ingroup group_render_irenderdatastoredefaultmaterial */
@@ -293,6 +302,40 @@ public:
         const RenderDataDefaultMaterial::MaterialData& materialData,
         const BASE_NS::array_view<const uint8_t> customPropertyData) = 0;
 
+    /** Reserve space for instanceCount materials.
+     * @param id Material component id. In typical ECS usage material entity id.
+     * @param instanceCount How many submesh instances will be will be draw.
+     * @return Material index for the first submesh instance.
+     */
+    virtual uint32_t AllocateMaterials(uint64_t id, uint32_t instanceCount) = 0;
+
+    /** Add material with preallocated index.
+     * @param materialIndex Index to first submesh material (from AllocateMaterials).
+     * @param materialInstanceIndex Offset to submesh instance's material.
+     * @param materialInstanceCount How many times is the material data duplicated.
+     * @param materialUniforms input material uniforms.
+     * @param materialHandles raw GPU resource handles.
+     * @param materialData Material data.
+     * @param customPropertyData Custom property data per material.
+     */
+    virtual void AddInstanceMaterialData(uint32_t materialIndex, uint32_t materialInstanceIndex,
+        uint32_t materialInstanceCount, const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+        const RenderDataDefaultMaterial::MaterialHandles& materialHandles,
+        const RenderDataDefaultMaterial::MaterialData& materialData,
+        const BASE_NS::array_view<const uint8_t> customPropertyData) = 0;
+
+    /** Add material with preallocated index. Material handles and material data is not passed as inputs.
+     * Use for inputting material GPU instances (the shader data and material GPU image handles cannot change)
+     * @param materialIndex Index to first submesh material (from AllocateMaterials).
+     * @param materialInstanceIndex Offset to submesh instance's material.
+     * @param materialInstanceCount How many times is the material data duplicated.
+     * @param materialUniforms input material uniforms.
+     * @param customPropertyData Custom property data per material.
+     */
+    virtual void AddInstanceMaterialData(uint32_t materialIndex, uint32_t materialInstanceIndex,
+        uint32_t materialInstanceCount, const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+        const BASE_NS::array_view<const uint8_t> customPropertyData) = 0;
+
     /** Get material index if already created with the same id.
      * It's beneficial to use unique materials and use as few of them as possible (there will be copying and such).
      * @param id Material component id. In typical ECS usage material entity id.
@@ -308,6 +351,20 @@ public:
      */
     virtual uint32_t GetMaterialCustomResourceIndex(const uint64_t id) const = 0;
 
+    /** Get material indices.
+     * @param id Material component id. In typical ECS usage material entity id.
+     * @return Material indices.
+     */
+    virtual RenderDataDefaultMaterial::MaterialIndices GetMaterialIndices(const uint64_t id) const = 0;
+
+    /** Get material indices.
+     * @param id Material component id. In typical ECS usage material entity id.
+     * @paran instanceCount Expected instance count for the material id.
+     * @return Material indices.
+     */
+    virtual RenderDataDefaultMaterial::MaterialIndices GetMaterialIndices(
+        uint64_t id, uint32_t instanceCount) const = 0;
+
     /** Add skin joint matrices and get an index for render submesh.
      * If skinJointMatrices.size() != previousSkinJointMatrices.size()
      * The skinJointMatrices are copied to previous frame buffer.
@@ -318,18 +375,6 @@ public:
      */
     virtual uint32_t AddSkinJointMatrices(const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> skinJointMatrices,
         const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> prevSkinJointMatrices) = 0;
-
-    /** Add custom material resources. (Extra resources on top of default material resources)
-     * With built-in default material render nodes, the resources are mapped to user
-     * defined custom pipeline layout to the single descriptor set which is after default material descriptor sets.
-     * The pipeline layout must be compatible.
-     * Invalid GPU resource handles are ignored.
-     * @param bindings Valid GPU resource handles. (<= MAX_MATERIAL_CUSTOM_RESOURCE_COUNT)
-     * @return Index for custom material resources. (if no bindings are given
-     * RenderSceneDataConstants::INVALID_INDEX is returned)
-     */
-    virtual uint32_t AddMaterialCustomResources(
-        const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> bindings) = 0;
 
     /** Add custom material resources. (Extra resources on top of default material resources)
      * With built-in default material render nodes, the resources are mapped to user

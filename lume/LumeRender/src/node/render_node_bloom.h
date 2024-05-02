@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,6 +40,8 @@ public:
     void PreExecuteFrame() override;
     void ExecuteFrame(IRenderCommandList& cmdList) override;
 
+    ExecuteFlags GetExecuteFlags() const override;
+
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "cc25f8bd-bad6-48f9-8cb2-af24681643b6" };
     static constexpr char const* TYPE_NAME = "RenderNodeBloom";
@@ -69,6 +71,8 @@ private:
     RenderBloom renderBloom_;
     PostProcessConfiguration ppConfig_;
     RenderHandleReference postProcessUbo_;
+
+    bool valid_ { false };
 };
 RENDER_END_NAMESPACE()
 

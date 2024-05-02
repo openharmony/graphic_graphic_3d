@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,6 +35,10 @@ public:
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        return 0U;
+    }
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "ea17a490-c3b7-453a-851f-79a20e324159" };
@@ -48,7 +52,7 @@ private:
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     void ParseRenderNodeInputs();
-    RenderHandle GetPsoHandle(IRenderNodeContextManager& renderNodeContextMgr);
+    RenderHandle GetPsoHandle();
 
     // Json resources which might need re-fetching
     struct JsonInputs {
@@ -65,9 +69,15 @@ private:
 
     RenderNodeHandles::InputRenderPass inputRenderPass_;
     RenderNodeHandles::InputResources inputResources_;
-    RenderHandle shader_;
-    PipelineLayout pipelineLayout_;
-    RenderHandle psoHandle_;
+    struct PipelineData {
+        RenderHandle shader;
+        RenderHandle graphicsState;
+        RenderHandle pso;
+        RenderHandle pipelineLayout;
+
+        PipelineLayout pipelineLayoutData;
+    };
+    PipelineData pipelineData_;
 
     // data store push constant
     bool useDataStorePushConstant_ { false };

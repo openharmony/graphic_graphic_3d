@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -57,6 +57,15 @@ public:
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraId,
         const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo,
         BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices);
+
+    static SceneBufferHandles GetSceneBufferHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName);
+    static SceneCameraBufferHandles GetSceneCameraBufferHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+        const BASE_NS::string_view cameraName);
+    static SceneCameraImageHandles GetSceneCameraImageHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+        const BASE_NS::string_view cameraName, const RenderCamera& camera);
 };
 
 class RenderNodeSceneUtilImpl : public IRenderNodeSceneUtil {
@@ -74,6 +83,14 @@ public:
     void GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial, uint32_t cameraId,
         const RenderSlotInfo& renderSlotInfo, BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices) override;
+
+    SceneBufferHandles GetSceneBufferHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName) override;
+    SceneCameraBufferHandles GetSceneCameraBufferHandles(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
+        const BASE_NS::string_view sceneName, const BASE_NS::string_view cameraName) override;
+    SceneCameraImageHandles GetSceneCameraImageHandles(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
+        const BASE_NS::string_view sceneName, const BASE_NS::string_view cameraName,
+        const RenderCamera& camera) override;
 
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
     IInterface* GetInterface(const BASE_NS::Uid& uid) override;

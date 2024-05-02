@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +14,19 @@
  */
 #ifndef CORE_UTIL_FRUSTUM_UTIL_H
 #define CORE_UTIL_FRUSTUM_UTIL_H
+
+#include <base/containers/string_view.h>
+#include <base/namespace.h>
+#include <core/namespace.h>
 #include <core/util/intf_frustum_util.h>
+
+BASE_BEGIN_NAMESPACE()
+namespace Math {
+class Mat4X4;
+class Vec3;
+} // namespace Math
+struct Uid;
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 class FrustumUtil final : public IFrustumUtil {
@@ -29,5 +41,10 @@ public:
     void Ref() override;
     void Unref() override;
 };
+
+inline constexpr BASE_NS::string_view GetName(const IFrustumUtil*)
+{
+    return "IFrustumUtil";
+}
 CORE_END_NAMESPACE()
 #endif // CORE_UTIL_FRUSTUM_UTIL_H

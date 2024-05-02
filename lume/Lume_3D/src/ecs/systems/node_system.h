@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -67,13 +67,19 @@ public:
 
     void DestroyNode(ISceneNode& rootNode) override;
 
+    void AddListener(SceneNodeListener& listener) override;
+    void RemoveListener(SceneNodeListener& listener) override;
+
 private:
     class NodeAccess;
     class SceneNode;
     class NodeCache;
+    struct State;
+    struct NodeInfo;
 
     void CollectChangedNodes(ISceneNode& node, BASE_NS::vector<ISceneNode*>& result);
-    void UpdateTransformationRecursive(ISceneNode& node, BASE_NS::Math::Mat4X4 const& matrix, bool enabled);
+    NodeInfo ProcessNode(SceneNode* node, const bool parentEnabled, const CORE_NS::ComponentQuery::ResultRow* row);
+    void UpdateTransformations(ISceneNode& node, BASE_NS::Math::Mat4X4 const& matrix, bool enabled);
     void GatherNodeEntities(const ISceneNode& node, BASE_NS::vector<CORE_NS::Entity>& entities) const;
     bool UpdatePreviousWorldMatrices();
 

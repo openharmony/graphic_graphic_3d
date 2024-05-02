@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -54,6 +54,7 @@ uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& physicalDevi
 
 VkImageCreateInfo GetHwBufferImageCreateInfo(const GpuImageDesc& desc)
 {
+    // NOTE: undefined layout
     return VkImageCreateInfo {
         VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,            // sType
         nullptr,                                        // pNext
@@ -69,7 +70,7 @@ VkImageCreateInfo GetHwBufferImageCreateInfo(const GpuImageDesc& desc)
         VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,       // sharingMode
         0,                                              // queueFamilyIndexCount
         nullptr,                                        // pQueueFamilyIndices
-        VkImageLayout::VK_IMAGE_LAYOUT_PREINITIALIZED,  // initialLayout
+        VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,       // initialLayout
     };
 }
 

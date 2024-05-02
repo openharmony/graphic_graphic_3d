@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,7 @@ RENDER_BEGIN_NAMESPACE()
  */
 /** Default GPU resource constants */
 struct DefaultEngineGpuResourceConstants {
-    /** Default backbuffer/swapchain */
+    /** Default built-in backbuffer/swapchain */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_BACKBUFFER { "CORE_DEFAULT_BACKBUFFER" };
     /** Default backbuffer/swapchain depth (when rendering scene directly to backbuffer) */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_BACKBUFFER_DEPTH { "CORE_DEFAULT_BACKBUFFER_DEPTH" };

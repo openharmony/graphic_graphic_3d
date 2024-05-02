@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,11 +30,66 @@
 #include "util/log.h"
 
 RENDER_BEGIN_NAMESPACE()
+namespace DescriptorSetBinderUtil {
+constexpr RenderHandleType GetRenderHandleType(const DescriptorType dt)
+{
+    if (dt == CORE_DESCRIPTOR_TYPE_SAMPLER) {
+        return RenderHandleType::GPU_SAMPLER;
+    } else if (((dt >= CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) && (dt <= CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE)) ||
+               (dt == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
+        return RenderHandleType::GPU_IMAGE;
+    } else if (((dt >= CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) &&
+                (dt <= CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) ||
+               (dt == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE)) {
+        return RenderHandleType::GPU_BUFFER;
+    }
+    return RenderHandleType::UNDEFINED;
+}
+
+constexpr PipelineStageFlags GetPipelineStageFlags(const ShaderStageFlags shaderStageFlags)
+{
+    PipelineStageFlags pipelineStageFlags { 0 };
+    if (shaderStageFlags & ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT) {
+        pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    }
+    if (shaderStageFlags & ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT) {
+        pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    if (shaderStageFlags & ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT) {
+        pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    }
+    return pipelineStageFlags;
+}
+
+constexpr AccessFlags GetAccessFlags(const DescriptorType dt)
+{
+    if ((dt == CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) || (dt == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
+        (dt == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)) {
+        return CORE_ACCESS_UNIFORM_READ_BIT;
+    } else if ((dt == CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) || (dt == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
+               (dt == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) || (dt == CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE)) {
+        // NOTE: could be optimized with shader reflection info
+        return (CORE_ACCESS_SHADER_READ_BIT | CORE_ACCESS_SHADER_WRITE_BIT);
+    } else if (dt == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
+        return CORE_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+    } else {
+        // CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+        // CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+        // CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT
+        // CORE_DESCRIPTOR_TYPE_SAMPLER
+        // CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE
+        return CORE_ACCESS_SHADER_READ_BIT;
+    }
+}
+} // namespace DescriptorSetBinderUtil
+
 /** DescriptorSetBinder.
  */
 class DescriptorSetBinder final : public IDescriptorSetBinder {
 public:
     DescriptorSetBinder(const RenderHandle handle,
+        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
+    explicit DescriptorSetBinder(
         const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
     ~DescriptorSetBinder() = default;
 
@@ -43,8 +98,11 @@ public:
     DescriptorSetLayoutBindingResources GetDescriptorSetLayoutBindingResources() const override;
 
     bool GetDescriptorSetLayoutBindingValidity() const override;
+    void PrintDescriptorSetLayoutBindingValidation() const override;
 
     // all must call this
+    void BindBuffer(
+        const uint32_t binding, const BindableBuffer& resource, const AdditionalDescriptorFlags flags) override;
     void BindBuffer(const uint32_t binding, const BindableBuffer& resource) override;
     void BindBuffer(const uint32_t binding, const RenderHandle handle, const uint32_t byteOffset) override;
     void BindBuffer(
@@ -53,6 +111,8 @@ public:
     void BindBuffers(const uint32_t binding, const BASE_NS::array_view<const BindableBuffer> resources) override;
 
     // all must call this
+    void BindImage(
+        const uint32_t binding, const BindableImage& resource, const AdditionalDescriptorFlags flags) override;
     void BindImage(const uint32_t binding, const BindableImage& resource) override;
     void BindImage(const uint32_t binding, const RenderHandle handle) override;
     void BindImage(const uint32_t binding, const RenderHandle handle, const RenderHandle samplerHandle) override;
@@ -60,6 +120,8 @@ public:
     void BindImages(const uint32_t binding, const BASE_NS::array_view<const BindableImage> resources) override;
 
     // all must call this
+    void BindSampler(
+        const uint32_t binding, const BindableSampler& resource, const AdditionalDescriptorFlags flags) override;
     void BindSampler(const uint32_t binding, const BindableSampler& resource) override;
     void BindSampler(const uint32_t binding, const RenderHandle handle) override;
     // for descriptor array binding
@@ -69,6 +131,7 @@ protected:
     void Destroy() override;
 
 private:
+    void Init(const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
     void InitFillBindings(const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings,
         const uint32_t bufferCount, const uint32_t imageCount, const uint32_t samplerCount);
 
@@ -96,6 +159,8 @@ public:
     PipelineDescriptorSetBinder(const PipelineLayout& pipelineLayout,
         const BASE_NS::array_view<const RenderHandle> handles,
         const BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings);
+    PipelineDescriptorSetBinder(const PipelineLayout& pipelineLayout,
+        const BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings);
     ~PipelineDescriptorSetBinder() = default;
 
     void ClearBindings() override;
@@ -112,22 +177,34 @@ public:
     BASE_NS::array_view<const RenderHandle> GetDescriptorSetHandles(
         const uint32_t beginSet, const uint32_t count) const override;
 
+    void BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource,
+        const AdditionalDescriptorFlags flags) override;
     void BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource) override;
     void BindBuffers(
         const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const BindableBuffer> resources) override;
 
+    void BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource,
+        const AdditionalDescriptorFlags flags) override;
     void BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource) override;
     void BindImages(
         const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const BindableImage> resources) override;
 
+    void BindSampler(const uint32_t set, const uint32_t binding, const BindableSampler& resource,
+        const AdditionalDescriptorFlags flags) override;
     void BindSampler(const uint32_t set, const uint32_t binding, const BindableSampler& resource) override;
     void BindSamplers(const uint32_t set, const uint32_t binding,
         const BASE_NS::array_view<const BindableSampler> resources) override;
+
+    void PrintPipelineDescriptorSetLayoutBindingValidation() const override;
 
 protected:
     void Destroy() override;
 
 private:
+    // binder can be created without valid handles
+    void Init(const PipelineLayout& pipelineLayout, const BASE_NS::array_view<const RenderHandle> handles,
+        const BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings, bool validHandles);
+
     // set -> actual vector index
     uint32_t setToBinderIndex_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { ~0u, ~0u, ~0u, ~0u };
 

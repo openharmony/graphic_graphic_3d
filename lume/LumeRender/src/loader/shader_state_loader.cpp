@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,10 +38,7 @@ ShaderStateLoaderUtil::ShaderStateResult LoadImpl(const string_view jsonString)
         ShaderStateLoaderUtil::ShaderStateResult ssr = ShaderStateLoaderUtil::LoadStates(json);
         return ssr;
     } else {
-        ShaderStateLoaderUtil::ShaderStateResult ssr;
-        ssr.res.success = true;
-        ssr.res.error = "Invalid json file.";
-        return ssr;
+        return ShaderStateLoaderUtil::ShaderStateResult { ShaderStateLoader::LoadResult { "Invalid json file." }, {} };
     }
 }
 } // namespace

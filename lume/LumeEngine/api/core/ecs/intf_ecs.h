@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,25 +16,29 @@
 #ifndef API_CORE_ECS_IECS_H
 #define API_CORE_ECS_IECS_H
 
-#include <base/containers/array_view.h>
+#include <cstdint>
+
 #include <base/containers/refcnt_ptr.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <core/ecs/entity.h>
-#include <core/ecs/intf_component_manager.h>
 #include <core/ecs/intf_entity_manager.h>
-#include <core/ecs/intf_system.h>
 #include <core/namespace.h>
 #include <core/threading/intf_thread_pool.h>
 
 BASE_BEGIN_NAMESPACE()
 struct Uid;
+template<class T>
+class array_view;
 BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 class IClassFactory;
 class ISystem;
+class IComponentManager;
 struct SystemTypeInfo;
 struct ComponentManagerTypeInfo;
+
 /** \addtogroup group_ecs_iecs
  *  @{
  */
@@ -235,14 +239,14 @@ protected:
 template<class T>
 T* GetManager(const CORE_NS::IEcs& ecs)
 {
-    return reinterpret_cast<T*>(ecs.GetComponentManager(T::UID));
+    return static_cast<T*>(ecs.GetComponentManager(T::UID));
 }
 
 /** Get system */
 template<class T>
 T* GetSystem(const CORE_NS::IEcs& ecs)
 {
-    return reinterpret_cast<T*>(ecs.GetSystem(T::UID));
+    return static_cast<T*>(ecs.GetSystem(T::UID));
 }
 /** @} */
 CORE_END_NAMESPACE()

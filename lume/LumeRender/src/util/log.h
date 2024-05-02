@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -56,8 +56,10 @@
 
 #else
 
-// Strip all verbose and debug logging code if requested.
-#if defined(PLUGIN_LOG_NO_DEBUG) && (PLUGIN_LOG_NO_DEBUG == 1)
+// Disable debug logs by default for release builds.
+// PLUGIN_LOG_DEBUG compile option can be used to force debug logs also in release builds.
+#if defined(NDEBUG) && !(defined(PLUGIN_LOG_DEBUG) && (PLUGIN_LOG_DEBUG == 1))
+
 #define PLUGIN_LOG_V(...)
 #define PLUGIN_LOG_D(...)
 #define PLUGIN_LOG_ONCE_V(...)

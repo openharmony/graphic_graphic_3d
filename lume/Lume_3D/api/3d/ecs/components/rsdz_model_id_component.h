@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,14 +13,13 @@
  * limitations under the License.
  */
 
-#if !defined(RSDZ_MODEL_ID_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define RSDZ_MODEL_ID_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_RSDZ_MODEL_ID_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_RSDZ_MODEL_ID_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif // IMPLEMENT_MANAGER
@@ -38,4 +37,4 @@ END_COMPONENT(IRSDZModelIdComponentManager, RSDZModelIdComponent, "a4b1877f-0feb
 CORE3D_END_NAMESPACE()
 #endif // IMPLEMENT_MANAGER
 
-#endif // __RSDZ_MODEL_ID_COMPONENT__
+#endif // API_3D_ECS_COMPONENTS_RSDZ_MODEL_ID_COMPONENT_H

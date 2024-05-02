@@ -3,6 +3,8 @@
         "version": "22.00",
         "type": "shader"
     },
+    "category" : "Render/Effect",
+    "displayName" : "Fullscreen Downscale",
     "vert": "rendershaders://shader/fullscreen_triangle.vert.spv",
     "frag": "rendershaders://shader/fullscreen_downscale.frag.spv",
     "state": {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -45,17 +45,25 @@ float GetPcfSample(sampler2DShadow shadow, const vec2 baseUv, const vec2 offset,
     return texture(shadow, vec3(baseUv + uvOffset, compZ)).x;
 }
 
+bool ValidShadowRange(const vec3 shadowCoord, float stepSize, float shadowIdx)
+{
+    const float xMin = stepSize * shadowIdx;
+    const float xMax = xMin + stepSize;
+    return ((shadowCoord.z > 0.0) && (shadowCoord.x > xMin) && (shadowCoord.x < xMax));
+}
+
 // http://www.ludicon.com/castano/blog/articles/shadow-mapping-summary-part-1/
 // MIT license: https://github.com/TheRealMJP/Shadows/blob/master/Shadows/Mesh.hlsl
-float CalcPcfShadow(sampler2DShadow shadow, vec4 inShadowCoord, float NoL, vec4 shadowFactor)
+float CalcPcfShadow(
+    sampler2DShadow shadow, vec4 inShadowCoord, float NoL, vec4 shadowFactor, vec4 atlasSizeInvSize, uvec2 shadowFlags)
 {
     // divide for perspective (just in case if used)
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (shadowCoord.z > 0.0) {
-        const vec2 textureSize = vec2(textureSize(shadow, 0).xy);
-        const vec2 texelSize = 1.0 / textureSize;
+    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x))) {
+        const vec2 textureSize = atlasSizeInvSize.xy;
+        const vec2 texelSize = atlasSizeInvSize.zw;
         const float normalBias = shadowFactor.z;
         const float depthBias = shadowFactor.y;
         const float bias = max(normalBias * (1.0 - NoL), depthBias);
@@ -118,13 +126,14 @@ float CalcPcfShadow(sampler2DShadow shadow, vec4 inShadowCoord, float NoL, vec4 
 
     return light;
 }
-float CalcPcfShadowMed(sampler2DShadow shadow, vec4 inShadowCoord, float NoL, vec4 shadowFactor)
+float CalcPcfShadowMed(
+    sampler2DShadow shadow, vec4 inShadowCoord, float NoL, vec4 shadowFactor, vec4 atlasSizeInvSize, uvec2 shadowFlags)
 {
     // divide for perspective (just in case if used)
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (shadowCoord.z > 0.0) {
+    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x))) {
         const vec2 textureSize = vec2(textureSize(shadow, 0).xy);
         const vec2 texelSize = 1.0 / textureSize;
         const float normalBias = shadowFactor.z;
@@ -180,13 +189,14 @@ float CalcPcfShadowMed(sampler2DShadow shadow, vec4 inShadowCoord, float NoL, ve
     return light;
 }
 
-float CalcPcfShadowSimpleSample(sampler2DShadow shadow, vec4 inShadowCoord, vec4 shadowFactor)
+float CalcPcfShadowSimpleSample(
+    sampler2DShadow shadow, vec4 inShadowCoord, vec4 shadowFactor, vec4 atlasSizeInvSize, uvec2 shadowFlags)
 {
     // divide for perspective (just in case if used)
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (shadowCoord.z > 0.0) {
+    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x))) {
         const float bias = 0.002;
         const vec2 baseUv = shadowCoord.xy;
         const float compareDepth = shadowCoord.z - bias;
@@ -210,13 +220,14 @@ float ReduceLightBleedingVsm(float pMax, float amount)
     return LinstepVsm(amount, 1.0, pMax);
 }
 
-float CalcVsmShadow(sampler2D shadow, vec4 inShadowCoord, float NoL, vec4 shadowFactors)
+float CalcVsmShadow(
+    sampler2D shadow, vec4 inShadowCoord, float NoL, vec4 shadowFactors, vec4 atlasSizeInvSize, uvec2 shadowFlags)
 {
     // divide for perspective (just in case if used)
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (shadowCoord.z > 0.0) {
+    if (ValidShadowRange(shadowCoord, shadowFactors.w, float(shadowFlags.x))) {
         const vec2 moments = texture(shadow, shadowCoord.xy).xy;
         if (shadowCoord.z > moments.x) {
             float variance = moments.y - (moments.x * moments.x);
@@ -234,13 +245,14 @@ float CalcVsmShadow(sampler2D shadow, vec4 inShadowCoord, float NoL, vec4 shadow
     return light;
 }
 
-float CalcVsmShadowSimpleSample(sampler2D shadow, vec4 inShadowCoord, vec4 shadowFactors)
+float CalcVsmShadowSimpleSample(
+    sampler2D shadow, vec4 inShadowCoord, vec4 shadowFactors, vec4 atlasSizeInvSize, uvec2 shadowFlags)
 {
     // divide for perspective (just in case if used)
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (shadowCoord.z > 0.0) {
+    if (ValidShadowRange(shadowCoord, shadowFactors.w, float(shadowFlags.x))) {
         const vec2 moments = texture(shadow, shadowCoord.xy).xy;
         if (shadowCoord.z > moments.x) {
             float variance = moments.y - (moments.x * moments.x);

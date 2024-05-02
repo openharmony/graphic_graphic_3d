@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,6 +39,14 @@ struct StagingDirectDataCopyConsumeStruct {
     BASE_NS::vector<DirectDataCopyOnCpu> dataCopies;
 };
 
+struct ImageClearCommand {
+    RenderHandleReference handle;
+    ClearColorValue color;
+};
+struct StagingImageClearConsumeStruct {
+    BASE_NS::vector<ImageClearCommand> clears;
+};
+
 /**
 RenderDataStoreDefaultStaging implementation.
 */
@@ -47,10 +55,16 @@ public:
     RenderDataStoreDefaultStaging(IRenderContext& renderContext, const BASE_NS::string_view name);
     ~RenderDataStoreDefaultStaging() override;
 
+    void CommitFrameData() override {};
     void PreRender() override;
-    void PreRenderBackend() override {};
     void PostRender() override;
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override;
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     void CopyDataToBuffer(const BASE_NS::array_view<const uint8_t>& data, const RenderHandleReference& dstHandle,
         const BufferCopy& bufferCopy) override;
@@ -75,9 +89,25 @@ public:
     void CopyImageToImage(const RenderHandleReference& srcHandle, const RenderHandleReference& dstHandle,
         const ImageCopy& imageCopy) override;
 
-    bool HasStagingData() const;
-    StagingConsumeStruct ConsumeStagingData();
-    StagingDirectDataCopyConsumeStruct ConsumeStagingDirectDataCopy();
+    void ClearColorImage(const RenderHandleReference& handle, const ClearColorValue color) override;
+
+    void CopyImageToBuffer(const RenderHandleReference& srcHandle, const RenderHandleReference& dstHandle,
+        const BufferImageCopy& bufferImageCopy, const ResourceCopyInfo copyInfo) override;
+    void CopyImageToImage(const RenderHandleReference& srcHandle, const RenderHandleReference& dstHandle,
+        const ImageCopy& imageCopy, const ResourceCopyInfo copyInfo) override;
+    void CopyBufferToBuffer(const RenderHandleReference& srcHandle, const RenderHandleReference& dstHandle,
+        const BufferCopy& bufferCopy, const ResourceCopyInfo copyInfo) override;
+    void CopyBufferToImage(const RenderHandleReference& srcHandle, const RenderHandleReference& dstHandle,
+        const BufferImageCopy& bufferImageCopy, const ResourceCopyInfo copyInfo) override;
+
+    bool HasBeginStagingData() const;
+    bool HasEndStagingData() const;
+    StagingConsumeStruct ConsumeBeginStagingData();
+    StagingDirectDataCopyConsumeStruct ConsumeBeginStagingDirectDataCopy();
+    StagingImageClearConsumeStruct ConsumeBeginStagingImageClears();
+    StagingConsumeStruct ConsumeEndStagingData();
+
+    uint32_t GetImageClearByteSize() const;
 
     // for plugin / factory interface
     static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultStaging";
@@ -106,12 +136,17 @@ private:
 
     mutable std::mutex mutex_;
 
-    StagingConsumeStruct stagingConsumeStruct_;
-    StagingDirectDataCopyConsumeStruct stagingDirectCopyConsumeStruct_;
+    struct StagingConsumeData {
+        StagingConsumeStruct beginFrame;
+        StagingConsumeStruct endFrame;
 
+        StagingDirectDataCopyConsumeStruct beginFrameDirect;
+
+        StagingImageClearConsumeStruct beginFrameClear;
+    };
+    StagingConsumeData stagingConsumeData_;
     // in pre render data moved here
-    StagingConsumeStruct frameStagingConsumeStruct_;
-    StagingDirectDataCopyConsumeStruct frameStagingDirectCopyConsumeStruct_;
+    StagingConsumeData frameStagingConsumeData_;
 
     BASE_NS::vector<RenderHandleReference> stagingGpuBuffers_;
     BASE_NS::vector<RenderHandleReference> frameStagingConsumeGpuBuffers_;

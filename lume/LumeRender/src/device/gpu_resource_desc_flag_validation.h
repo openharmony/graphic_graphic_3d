@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,7 +37,7 @@ struct GpuResourceDescFlagValidation {
         CORE_IMAGE_USAGE_TRANSFER_SRC_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT |
         CORE_IMAGE_USAGE_STORAGE_BIT | CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
         CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-        CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT
+        CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT
     };
 
     static constexpr uint32_t ALL_MEMORY_PROPERTY_FLAGS = {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -61,16 +61,18 @@ void LibraryOHOS::Destroy()
 
 ILibrary::Ptr ILibrary::Load(const string_view filePath)
 {
-    #define TO_STRING(name) #name
-    #define LIB_NAME(name) TO_STRING(name)
+#define TO_STRING(name) #name
+#define LIB_NAME(name) TO_STRING(name)
 
     if (filePath.find(LIB_NAME(LIB_ENGINE_CORE)) == string_view::npos &&
         filePath.find(LIB_NAME(LIB_RENDER)) == string_view::npos &&
-        filePath.find(LIB_NAME(LIB_CORE3D)) == string_view::npos) {
+        filePath.find(LIB_NAME(LIB_CORE3D)) == string_view::npos &&
+        filePath.find("libMotPhysPlugin.z.so") == string_view::npos &&
+        filePath.find("libPluginMetaObject") == string_view::npos &&
+        filePath.find("libPluginSceneWidget") == string_view::npos) {
         return ILibrary::Ptr {};
     }
 
-    CORE_LOG_E("load filePath %s", filePath.data());
     return ILibrary::Ptr { new LibraryOHOS(filePath) };
 }
 
@@ -79,4 +81,3 @@ string_view ILibrary::GetFileExtension()
     return ".so";
 }
 CORE_END_NAMESPACE()
-

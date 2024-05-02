@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,19 +16,30 @@
 #ifndef CORE_IMAGE_IMAGE_LOADER_MANAGER_H
 #define CORE_IMAGE_IMAGE_LOADER_MANAGER_H
 
+#include <cstdint>
+
+#include <base/containers/string_view.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/image/intf_animated_image.h>
 #include <core/image/intf_image_container.h>
 #include <core/image/intf_image_loader_manager.h>
-#include <core/io/intf_file_manager.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_plugin_register.h>
+
+BASE_BEGIN_NAMESPACE()
+template<class T>
+class array_view;
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
+class IFile;
 class IFileManager;
 
-class ImageLoaderManager final : public IImageLoaderManager {
+class ImageLoaderManager final : public IImageLoaderManager, private IPluginRegister::ITypeInfoListener {
 public:
-    explicit ImageLoaderManager(IFileManager& fileManager) : fileManager_(fileManager) {};
-    ~ImageLoaderManager() override = default;
+    explicit ImageLoaderManager(IFileManager& fileManager);
+    ~ImageLoaderManager() override;
 
     void RegisterImageLoader(IImageLoader::Ptr imageLoader) override;
 
@@ -41,14 +52,21 @@ public:
     LoadAnimatedResult LoadAnimatedImage(
         BASE_NS::array_view<const uint8_t> imageFileBytes, uint32_t loadFlags) override;
 
+    BASE_NS::vector<ImageType> GetSupportedTypes() const override;
+
     static LoadResult ResultFailure(const BASE_NS::string_view error);
     static LoadResult ResultSuccess(IImageContainer::Ptr image);
     static LoadAnimatedResult ResultFailureAnimated(const BASE_NS::string_view error);
     static LoadAnimatedResult ResultSuccessAnimated(IAnimatedImage::Ptr image);
 
 private:
+    void OnTypeInfoEvent(EventType type, BASE_NS::array_view<const ITypeInfo* const> typeInfos) override;
     IFileManager& fileManager_;
-    BASE_NS::vector<IImageLoader::Ptr> imageLoaders_;
+    struct RegisteredImageLoader {
+        BASE_NS::Uid uid;
+        IImageLoader::Ptr instance;
+    };
+    BASE_NS::vector<RegisteredImageLoader> imageLoaders_;
 };
 CORE_END_NAMESPACE()
 

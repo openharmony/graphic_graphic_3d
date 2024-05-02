@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,15 +13,14 @@
  * limitations under the License.
  */
 
-#if !defined(MATERIAL_EXTENSION_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define MATERIAL_EXTENSION_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_MATERIAL_EXTENSION_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_MATERIAL_EXTENSION_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
 #include <core/ecs/component_struct_macros.h>
+#include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
-#include <render/resource_handle.h>
 
 CORE3D_BEGIN_NAMESPACE()
 /** \addtogroup group_material_materialextensioncomponent
@@ -30,6 +29,7 @@ CORE3D_BEGIN_NAMESPACE()
 #endif
 
 /** Material extension component properties.
+ * NOTE: "DEPRECATED" prefer using MaterialComponent::customResources and EnvironmentComponent::customResources
  * Can extend default material model with additional resources for custom shaders.
  * GPU resources are owned by the component and destroyed when the component is destroyed.
  * Can be used to default material render slots and default material env node.
@@ -55,7 +55,8 @@ BEGIN_COMPONENT(IMaterialExtensionComponentManager, MaterialExtensionComponent)
      * One needs to use custom shader with custom pipeline layout (predefined set) to access these in shader.
      * Resources are owned by the component and destroyed when it's destroyed.
      */
-    DEFINE_ARRAY_PROPERTY(CORE_NS::EntityReference, ResourceIndex::RESOURCE_COUNT, resources, "", 0,)
+    DEFINE_ARRAY_PROPERTY(
+        CORE_NS::EntityReference, ResourceIndex::RESOURCE_COUNT, resources, "Custom Material Resources", 0, )
 
 END_COMPONENT(IMaterialExtensionComponentManager, MaterialExtensionComponent, "98416b5a-8780-4444-be4f-d0c972a09a2f")
 #if !defined(IMPLEMENT_MANAGER)

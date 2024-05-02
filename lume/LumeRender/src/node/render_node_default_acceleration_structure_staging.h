@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,6 +37,10 @@ public:
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        return 0U;
+    }
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "377f5d6c-3951-4a0b-9d5b-7ef8d5e6f235" };

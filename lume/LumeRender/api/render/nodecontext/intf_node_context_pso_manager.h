@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -63,57 +63,53 @@ public:
         const ShaderSpecializationConstantDataView& shaderSpecialization) = 0;
 
     /** Creates new graphics psos on demand and caches. Prefer using this method.
-     * Add additional dynamic state flags that will be combined with the ones in shader handle's GraphicsState
-     * Prefer using dynamic viewport and dynamic scissor for less graphics pipelines
+     * Add additional dynamic states and atleast prefer using dynamic viewport and dynamic scissor
+     * for less graphics pipelines
      * All inputs are copied, ie. no need to store them
      * @param shaderHandle A valid shader handle
-     * @param graphicsStateHandle A valid shader handle
-     * @param pipelineLayoutHandle A valid pipeline layout handle
-     * @param vertexInputDeclarationHandle If a valid handle, it is used. Otherwise empty vertex input declaration.
-     * @param graphicsStateHandle If a valid handle, it overrides the default graphics state which comes from the
-     * shader.
+     * @param graphicsState A valid graphics state handle
+     * @param pipelineLayout A valid pipeline layout handle
+     * @param vertexInputDeclaration If a valid handle, it is used. Otherwise empty vertex input declaration.
      * @param shaderSpecialization Shader specialization
-     * @param dynamicStateFlags Dynamic state flags
-     * @param graphicsState Override graphics state
+     * @param dynamicStates Dynamic state enums
      * @return Graphics pso handle
      */
     virtual RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const RenderHandle graphicsState,
         const RenderHandle pipelineLayout, const RenderHandle vertexInputDeclaration,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) = 0;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) = 0;
 
     /** Creates new graphics psos on demand and caches.
-     * Add additional dynamic state flags that will be combined with the ones in shader handle's GraphicsState
      * Prefer using dynamic viewport and dynamic scissor for less graphics pipelines
      * All inputs are copied, ie. no need to store them
-     * @param shaderHandle Handle to shader resource
+     * @param shader Handle to shader resource
+     * @param graphicsState Handle to graphics state
      * @param pipelineLayout Pipeline layout
      * @param vertexInputDeclarationView Vertex input declaration view
      * @param shaderSpecialization Shader specialization
-     * @param dynamicStateFlags Dynamic state flags
+     * @param dynamicStates Dynamic state enums
      * @return Graphics pso handle
      */
     virtual RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const RenderHandle graphicsState,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) = 0;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) = 0;
 
     /** Creates new graphics psos on demand and caches. Overrides the default graphics state from shader.
-     * Add additional dynamic state flags that will be combined with the ones in shader handle's GraphicsState
      * Prefer using dynamic viewport and dynamic scissor for less graphics pipelines
      * All inputs are copied, ie. no need to store them
      * @param shaderHandle Handle to shader resource
+     * @param graphicsState A graphics state which overrides the default graphics state from the shader
      * @param pipelineLayout Pipeline layout
      * @param vertexInputDeclarationView Vertex input declaration view
      * @param shaderSpecialization Shader specialization
-     * @param dynamicStateFlags Dynamic state flags
-     * @param graphicsState A graphics state which overrides the default graphics state from the shader
+     * @param dynamicStates Dynamic state enums
      * @return Graphics pso handle
      */
     virtual RenderHandle GetGraphicsPsoHandle(const RenderHandle shaderHandle, const GraphicsState& graphicsState,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) = 0;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) = 0;
 
 protected:
     INodeContextPsoManager() = default;

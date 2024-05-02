@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,11 +15,15 @@
 
 #include "frustum_util.h"
 
+#include <cstdint>
+
+#include <base/containers/string_view.h>
 #include <base/math/matrix.h>
 #include <base/math/vector.h>
-#include <core/log.h>
+#include <base/math/vector_util.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
 #include <core/namespace.h>
-#include <core/plugin/intf_plugin_register.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string_view;
@@ -82,7 +86,7 @@ bool FrustumUtil::SphereFrustumCollision(const Frustum& frustum, const Vec3 pos,
 
 const IInterface* FrustumUtil::GetInterface(const Uid& uid) const
 {
-    if (uid == IFrustumUtil::UID) {
+    if ((uid == IFrustumUtil::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;
@@ -90,7 +94,7 @@ const IInterface* FrustumUtil::GetInterface(const Uid& uid) const
 
 IInterface* FrustumUtil::GetInterface(const Uid& uid)
 {
-    if (uid == IFrustumUtil::UID) {
+    if ((uid == IFrustumUtil::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;

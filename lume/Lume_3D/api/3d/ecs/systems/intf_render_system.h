@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,8 +35,8 @@ public:
     /** Rendering related data stores to feed data to renderer.
      */
     struct Properties {
-        /** Data store manager */
-        RENDER_NS::IRenderDataStoreManager* dataStoreManager { nullptr };
+        // NOTE: These all should be DEPRECATED
+
         /** Data store for scene */
         BASE_NS::string dataStoreScene;
         /** Data store for camera */
@@ -47,6 +47,9 @@ public:
         BASE_NS::string dataStoreMaterial;
         /** Data store for morphing (passed to rendering) */
         BASE_NS::string dataStoreMorph;
+
+        /** Data store prefix for other data stores in e.g. different plugins */
+        BASE_NS::string dataStorePrefix;
     };
 
     /** Get render node graphs for this ECS render system.

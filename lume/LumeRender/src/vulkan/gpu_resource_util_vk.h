@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,7 +26,7 @@ BASE_BEGIN_NAMESPACE()
 class ByteArray;
 BASE_END_NAMESPACE()
 RENDER_BEGIN_NAMESPACE()
-class Device;
+class IDevice;
 class GpuBuffer;
 class GpuImage;
 class GpuSampler;
@@ -34,10 +34,10 @@ class GpuSampler;
 namespace GpuResourceUtil {
 void CopyGpuBufferVk(GpuBuffer& buffer, BASE_NS::ByteArray& byteArray);
 void DebugObjectNameVk(
-    const Device& device, const VkObjectType objectType, const uint64_t castedHandle, const BASE_NS::string_view name);
-void DebugBufferNameVk(const Device& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
-void DebugImageNameVk(const Device& device, const GpuImage& image, const BASE_NS::string_view name);
-void DebugSamplerNameVk(const Device& device, const GpuSampler& sampler, const BASE_NS::string_view name);
+    const IDevice& device, const VkObjectType objectType, const uint64_t castedHandle, const BASE_NS::string_view name);
+void DebugBufferNameVk(const IDevice& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
+void DebugImageNameVk(const IDevice& device, const GpuImage& image, const BASE_NS::string_view name);
+void DebugSamplerNameVk(const IDevice& device, const GpuSampler& sampler, const BASE_NS::string_view name);
 } // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()
 

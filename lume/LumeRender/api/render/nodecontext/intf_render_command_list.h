@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,14 +20,19 @@
 
 #include <base/containers/array_view.h>
 #include <base/util/uid.h>
-#include <render/device/pipeline_layout_desc.h>
-#include <render/device/pipeline_state_desc.h>
+#include <core/plugin/intf_interface.h>
+#include <render/device/gpu_resource_desc.h>
 #include <render/namespace.h>
-#include <render/nodecontext/intf_render_node_interface.h>
-#include <render/render_data_structures.h>
 #include <render/resource_handle.h>
 
 RENDER_BEGIN_NAMESPACE()
+struct RenderPassDesc;
+struct RenderPassSubpassDesc;
+struct PushConstant;
+struct IndexBuffer;
+struct VertexBuffer;
+struct ImageBlit;
+
 /** @ingroup group_render_irendercommandlist */
 /** Call methods to add render commands to a render command list.
  * Render command list is unique for every render node.
@@ -36,9 +41,9 @@ RENDER_BEGIN_NAMESPACE()
  * RenderCommandList does not do heavy processing on unnecessary state changes etc.
  * Prefer setting data, bindings etc. only once and do not add empty draw and/or dispatches.
  */
-class IRenderCommandList : public IRenderNodeInterface {
+class IRenderCommandList : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid("59d9798e-7fff-4eb5-8fb9-3ffa48e9ff34");
+    static constexpr auto UID = BASE_NS::Uid("744d8a3c-82cd-44f5-9fcb-769b33ceca1b");
 
     /** Can only be called inside of a render pass.
      * @param vertexCount Vertex count
@@ -80,7 +85,7 @@ public:
 
     /** Dispatch a compute program.
      * @param groupCountX Group count x
-     * @param aGroupCountY Group count y
+     * @param groupCountY Group count y
      * @param groupCountZ Group count z
      */
     virtual void Dispatch(const uint32_t groupCountX, const uint32_t groupCountY, const uint32_t groupCountZ) = 0;
@@ -96,11 +101,18 @@ public:
      */
     virtual void BindPipeline(const RenderHandle psoHandle) = 0;
 
-    /** Push constant
+    /** Push constant. The data is copied.
      * @param pushConstant Push constant
      * @param data Data
      */
-    virtual void PushConstant(const PushConstant& pushConstant, const uint8_t* data) = 0;
+    virtual void PushConstantData(
+        const struct PushConstant& pushConstant, const BASE_NS::array_view<const uint8_t> data) = 0;
+
+    /** Push constant. The data is copied. Prefer using PushConstantData -method. This will be deprecated.
+     * @param pushConstant Push constant
+     * @param data Data
+     */
+    virtual void PushConstant(const struct PushConstant& pushConstant, const uint8_t* data) = 0;
 
     /** Bind vertex buffers
      * @param vertexBuffers Vertex buffers
@@ -245,6 +257,13 @@ public:
     virtual void UpdateDescriptorSet(
         const RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources) = 0;
 
+    /** Update descriptor sets with given bindings. Array view sizes must match.
+     * @param handles Handles for descriptor sets
+     * @param bindingResources Binding resources for descriptor sets
+     */
+    virtual void UpdateDescriptorSets(const BASE_NS::array_view<const RenderHandle> handles,
+        const BASE_NS::array_view<const DescriptorSetLayoutBindingResources> bindingResources) = 0;
+
     /** Bind a single descriptor set to pipeline.
      * There can be maximum of 4 sets. I.e. the maximum set index is 3.
      * @param set Set to bind
@@ -269,6 +288,31 @@ public:
      */
     virtual void BindDescriptorSets(const uint32_t firstSet, const BASE_NS::array_view<const RenderHandle> handles) = 0;
 
+    /** BindDescriptorSetData
+     */
+    struct BindDescriptorSetData {
+        /** Descriptor set handle */
+        RenderHandle handle;
+        /** Descriptor set dynamic buffer offsets */
+        BASE_NS::array_view<const uint32_t> dynamicOffsets;
+    };
+
+    /** Bind a single descriptor set to pipeline.
+     * There can be maximum of 4 sets. I.e. the maximum set index is 3.
+     * @param set Set to bind
+     * @param descriptorSetData Descriptor set data
+     */
+    virtual void BindDescriptorSet(const uint32_t set, const BindDescriptorSetData& desriptorSetData) = 0;
+
+    /** Bind multiple descriptor sets to pipeline some with dynamic offsets.
+     * There can be maximum of 4 sets. I.e. the maximum set index is 3.
+     * Descriptor sets needs to be a contiguous set.
+     * @param firstSet First set index
+     * @param descriptorSetData Descriptor set data
+     */
+    virtual void BindDescriptorSets(
+        const uint32_t firstSet, const BASE_NS::array_view<const BindDescriptorSetData> descriptorSetData) = 0;
+
     /** Build acceleration structures
      * @param geometry Acceleration structure build geometry data
      * @param triangles Geometry triangles
@@ -279,6 +323,17 @@ public:
         const BASE_NS::array_view<const AccelerationStructureGeometryTrianglesData> triangles,
         const BASE_NS::array_view<const AccelerationStructureGeometryAabbsData> aabbs,
         const BASE_NS::array_view<const AccelerationStructureGeometryInstancesData> instances) = 0;
+
+    /** Clear color image.
+     * This should only be needed when initializing images to some values.
+     * Often render pass attachment clears and shader clears are needed.
+     * Some backends might not support this, i.e. one might need to use higher level paths for e.g. OpenGLES
+     * @param handle Handle of the image
+     * @param color Clear color values
+     * @param ranges Array view of image subresource ranges
+     */
+    virtual void ClearColorImage(const RenderHandle handle, const ClearColorValue color,
+        const BASE_NS::array_view<const ImageSubresourceRange> ranges) = 0;
 
     /** Set dynamic state viewport
      * @param viewportDesc Viewport descriptor
@@ -331,6 +386,13 @@ public:
      * @param reference Reference
      */
     virtual void SetDynamicStateStencilReference(const StencilFaceFlags faceMask, const uint32_t reference) = 0;
+
+    /** Set dynamic state fragmend shading rate.
+     * @param fragmentSize Fragment size, pipeline fragment shading rate. (Valid values 1, 2, 4)
+     * @param combinerOps Combiner operations
+     */
+    virtual void SetDynamicStateFragmentShadingRate(
+        const Size2D& fragmentSize, const FragmentShadingRateCombinerOps& combinerOps) = 0;
 
     /** Set execute backend frame position. The position where the method is ran.
      * Often this might be the only command in the render command list, when using backend nodes.

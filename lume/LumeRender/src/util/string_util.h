@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -83,7 +83,7 @@ inline BASE_NS::vector<BASE_NS::string_view> Split(
 
         auto found = left.substr(0, pos);
         if (Trim(found) > 0) {
-            output.emplace_back(found);
+            output.push_back(found);
         }
         if (pos != BASE_NS::string_view::npos) {
             left.remove_prefix(pos + 1);

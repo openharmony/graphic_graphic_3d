@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -36,12 +36,20 @@ public:
      *  @param skinIbmEntity Entity where we get skin ibm matrices.
      *  @param joints List of entities which are the joints of the skin. The order should match the order of the skin
      * IBM entity's matrices.
-     *  @param entity Entity to skin.
+     *  @param entity Entity where we get node which we use in instance creation.
      *  @param skeleton Entity pointing to the node that is the common root of the joint entity hierarchy (optional).
      */
     virtual void CreateInstance(CORE_NS::Entity const& skinIbmEntity,
         BASE_NS::array_view<const CORE_NS::Entity> const& joints, CORE_NS::Entity const& entity,
         CORE_NS::Entity const& skeleton) = 0;
+
+    /** Creates a skin instance for the given entity.
+     *  @param skinIbmEntity Entity where we get skin ibm matrices and joint entities.
+     *  @param entity Entity where we get node which we use in instance creation.
+     *  @param skeleton Entity pointing to the node that is the common root of the joint entity hierarchy (optional).
+     */
+    virtual void CreateInstance(
+        CORE_NS::Entity const& skinIbmEntity, CORE_NS::Entity const& entity, CORE_NS::Entity const& skeleton) = 0;
 
     /** Destroys Skin Instance.
      *  @param entity Entity whose skin instance is destroyed.

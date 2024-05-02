@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,19 +17,38 @@
 
 #include <charconv>
 #include <cinttypes>
+#include <cstddef>
+#include <cstdint>
 
+#include <base/containers/array_view.h>
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/math/quaternion.h>
+#include <base/math/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
+#include <core/ecs/entity.h>
+#include <core/ecs/intf_ecs.h>
 #include <core/ecs/intf_system.h>
-#include <core/intf_engine.h>
+#include <core/ecs/intf_system_graph_loader.h>
 #include <core/io/intf_file.h>
 #include <core/io/intf_file_manager.h>
 #include <core/log.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
+#include <core/property/property.h>
 #include <core/property/property_types.h>
 
 #define JSON_IMPL
+#include <core/json/json.h>
+
 #include "json_util.h"
 
 CORE_BEGIN_NAMESPACE()
@@ -128,7 +147,7 @@ void ReadHandlePropertyValue(const json::value& jsonData, PropertyValue& propert
 }
 
 template<class VecType, size_t n>
-void ReadVecPropertyValue(const json::value& jsonData, PropertyValue& propertyData, string& error)
+void ReadVecPropertyValue(const json::value& jsonData, PropertyValue& propertyData, string& /* error */)
 {
     if (auto const array = jsonData.find(propertyData.info->name); array) {
         VecType& result = propertyData.Get<VecType>();
@@ -311,11 +330,10 @@ bool ParseSystem(const json::value& jsonData, const array_view<const ITypeInfo* 
         ParseProperties(jsonData, *system, error);
 
         return true;
-    } else {
-        CORE_LOG_W("Cannot find system: %s (optional: %s)", typeName.c_str(), (optional ? "true" : "false"));
-        if (!optional) {
-            error += "Cannot find system: " + typeName + ".\n";
-        }
+    }
+    CORE_LOG_W("Cannot find system: %s (optional: %s)", typeName.c_str(), (optional ? "true" : "false"));
+    if (!optional) {
+        error += "Cannot find system: " + typeName + ".\n";
     }
 
     return optional;
@@ -382,9 +400,8 @@ SystemGraphLoader::LoadResult SystemGraphLoader::LoadString(const string_view js
         finalResult.success = finalResult.error.empty();
 
         return finalResult;
-    } else {
-        return LoadResult("Invalid json file.");
     }
+    return LoadResult("Invalid json file.");
 }
 
 SystemGraphLoader::SystemGraphLoader(IFileManager& fileManager) : fileManager_ { fileManager } {}
@@ -402,7 +419,7 @@ ISystemGraphLoader::Ptr SystemGraphLoaderFactory::Create(IFileManager& fileManag
 
 const IInterface* SystemGraphLoaderFactory::GetInterface(const Uid& uid) const
 {
-    if (uid == ISystemGraphLoaderFactory::UID) {
+    if ((uid == ISystemGraphLoaderFactory::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;
@@ -410,7 +427,7 @@ const IInterface* SystemGraphLoaderFactory::GetInterface(const Uid& uid) const
 
 IInterface* SystemGraphLoaderFactory::GetInterface(const Uid& uid)
 {
-    if (uid == ISystemGraphLoaderFactory::UID) {
+    if ((uid == ISystemGraphLoaderFactory::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;

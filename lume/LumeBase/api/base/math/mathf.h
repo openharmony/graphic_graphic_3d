@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,31 +29,27 @@ constexpr const float BASE_EPSILON = 1.192092896e-07f; // smallest such that 1.0
  */
 /** Returns Minimum value of 2 given parameter */
 template<typename T>
-static constexpr inline const T& min(const T& a, const T& b) noexcept
+constexpr inline const T& min(const T& a, const T& b) noexcept
 {
     return a < b ? a : b;
 }
 
 /** Returns Maximum value of 2 given parameter */
 template<typename T>
-static constexpr inline const T& max(const T& a, const T& b) noexcept
+constexpr inline const T& max(const T& a, const T& b) noexcept
 {
     return a > b ? a : b;
 }
 
 /** Clamps value between minimum and maximum value */
-static constexpr inline float clamp(float value, float min, float max)
+template<typename T>
+constexpr inline const T& clamp(const T& value, const T& min, const T& max)
 {
-    if (value < min) {
-        value = min;
-    } else if (value > max) {
-        value = max;
-    }
-    return value;
+    return (value < min) ? min : (value > max) ? max : value;
 }
 
 /** Clamps value between 0 and 1 and then returns it */
-static constexpr inline float clamp01(float value)
+constexpr inline float clamp01(float value)
 {
     if (value < 0) {
         return 0;
@@ -65,103 +61,103 @@ static constexpr inline float clamp01(float value)
 }
 
 /** Returns Absolute value of given float */
-static constexpr inline float abs(float value)
+constexpr inline float abs(float value)
 {
     return value < 0 ? -value : value;
 }
 
 /** Returns Absolute value of given integer */
-static constexpr inline int abs(int value)
+constexpr inline int abs(int value)
 {
     return value < 0 ? -value : value;
 }
 
 /** Floor the given float value */
-static float floor(float value)
+inline float floor(float value)
 {
     return floorf(value);
 }
 
 /** Ceil the given float value */
-static float ceil(float value)
+inline float ceil(float value)
 {
     return ceilf(value);
 }
 
 /** Returns largest integer smaller to or equal to value */
-static int floorToInt(float value)
+inline int floorToInt(float value)
 {
     return static_cast<int>(floor(value));
 }
 
 /** Returns smallest integer greater to or equal to value */
-static int ceilToInt(float value)
+inline int ceilToInt(float value)
 {
     return static_cast<int>(ceil(value));
 }
 
 /** Interpolates between floats a and b by t and t is clamped value between 0 and 1 */
-static constexpr inline float lerp(float a, float b, float t)
+constexpr inline float lerp(float a, float b, float t)
 {
     return a + (b - a) * clamp01(t);
 }
 
 /** Returns value rounded to the nearest integer */
-static float round(float value)
+inline float round(float value)
 {
     return roundf(value);
 }
 
 /** Returns square root of value */
-static float sqrt(float value)
+inline float sqrt(float value)
 {
     return sqrtf(value);
 }
 
 /** Returns the sine of angle value in radians */
-static float sin(float value)
+inline float sin(float value)
 {
     return sinf(value);
 }
 
 /** Returns the cosine of angle value in radians */
-static float cos(float value)
+inline float cos(float value)
 {
     return cosf(value);
 }
 
 /** Returns the tangent of angle value in radians */
-static float tan(float value)
+inline float tan(float value)
 {
     return tanf(value);
 }
 
 /** Returns f raised to power p */
-static float pow(float f, float p)
+inline float pow(float f, float p)
 {
     return powf(f, p);
 }
 
 /** atan wrapper for float */
-static float atan(float f)
+inline float atan(float f)
 {
     return atanf(f);
 }
 
 /** atan2 wrapper for float */
-static float atan2(float a, float b)
+inline float atan2(float a, float b)
 {
     return atan2f(a, b);
 }
 
 /** asin wrapper for float */
-static float asin(float value)
+inline float asin(float value)
 {
     return asinf(value);
 }
 
 /** acos wrapper for float */
-static float acos(float value)
+inline float acos(float value)
 {
     return acosf(value);
 }

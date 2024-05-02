@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -53,6 +53,7 @@ CORE_JSON_SERIALIZE_ENUM(GpuQueue::QueueType,
 
 CORE_JSON_SERIALIZE_ENUM(DescriptorType,
     {
+        { DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM, nullptr },
         { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, "sampler" },
         { DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, "combined_image_sampler" },
         { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, "sampled_image" },
@@ -64,7 +65,6 @@ CORE_JSON_SERIALIZE_ENUM(DescriptorType,
         { DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "uniform_buffer_dynamic" },
         { DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, "storage_buffer_dynamic" },
         { DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, "input_attachment" },
-        { DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM, nullptr },
     })
 
 CORE_JSON_SERIALIZE_ENUM(AttachmentLoadOp,
@@ -82,29 +82,32 @@ CORE_JSON_SERIALIZE_ENUM(AttachmentStoreOp,
 
 CORE_JSON_SERIALIZE_ENUM(ImageType,
     {
+        { ImageType::CORE_IMAGE_TYPE_2D, nullptr }, // default
         { ImageType::CORE_IMAGE_TYPE_1D, "1d" },
         { ImageType::CORE_IMAGE_TYPE_2D, "2d" },
         { ImageType::CORE_IMAGE_TYPE_3D, "3d" },
-        { ImageType::CORE_IMAGE_TYPE_MAX_ENUM, nullptr },
     })
 
 CORE_JSON_SERIALIZE_ENUM(ImageViewType,
-    { { ImageViewType::CORE_IMAGE_VIEW_TYPE_1D, "1d" }, { ImageViewType::CORE_IMAGE_VIEW_TYPE_2D, "2d" },
+    {
+        { ImageViewType::CORE_IMAGE_VIEW_TYPE_2D, nullptr }, // default
+        { ImageViewType::CORE_IMAGE_VIEW_TYPE_1D, "1d" }, { ImageViewType::CORE_IMAGE_VIEW_TYPE_2D, "2d" },
         { ImageViewType::CORE_IMAGE_VIEW_TYPE_3D, "3d" }, { ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE, "cube" },
         { ImageViewType::CORE_IMAGE_VIEW_TYPE_1D_ARRAY, "1d_array" },
         { ImageViewType::CORE_IMAGE_VIEW_TYPE_2D_ARRAY, "2d_array" },
         { ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE_ARRAY, "cube_array" },
-        { ImageViewType::CORE_IMAGE_VIEW_TYPE_MAX_ENUM, nullptr } })
+    })
 
 CORE_JSON_SERIALIZE_ENUM(ImageTiling,
     {
+        { ImageTiling::CORE_IMAGE_TILING_OPTIMAL, nullptr }, // default
         { ImageTiling::CORE_IMAGE_TILING_OPTIMAL, "optimal" },
         { ImageTiling::CORE_IMAGE_TILING_LINEAR, "linear" },
-        { ImageTiling::CORE_IMAGE_TILING_MAX_ENUM, nullptr },
     })
 
 CORE_JSON_SERIALIZE_ENUM(ImageUsageFlagBits,
     {
+        { (ImageUsageFlagBits)0, nullptr },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_SRC_BIT, "transfer_src" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_DST_BIT, "transfer_dst" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT, "sampled" },
@@ -113,27 +116,28 @@ CORE_JSON_SERIALIZE_ENUM(ImageUsageFlagBits,
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, "depth_stencil_attachment" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, "transient_attachment" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, "input_attachment" },
-        { (ImageUsageFlagBits)0, nullptr },
+        { ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT, "fragment_shading_rate_attachment" },
     })
 
 CORE_JSON_SERIALIZE_ENUM(ImageCreateFlagBits,
     {
+        { (ImageCreateFlagBits)0, nullptr },
         { ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, "cube_compatible" },
         { ImageCreateFlagBits::CORE_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT, "2d_array_compatible" },
-        { (ImageCreateFlagBits)0, nullptr },
     })
 
 CORE_JSON_SERIALIZE_ENUM(EngineImageCreationFlagBits,
     {
+        { (EngineImageCreationFlagBits)0, nullptr },
         { EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, "dynamic_barriers" },
         { EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS,
             "reset_state_on_frame_borders" },
         { EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_GENERATE_MIPS, "generate_mips" },
-        { (EngineImageCreationFlagBits)0, nullptr },
     })
 
 CORE_JSON_SERIALIZE_ENUM(SampleCountFlagBits,
     {
+        { (SampleCountFlagBits)0, nullptr },
         { SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, "1bit" },
         { SampleCountFlagBits::CORE_SAMPLE_COUNT_2_BIT, "2bit" },
         { SampleCountFlagBits::CORE_SAMPLE_COUNT_4_BIT, "4bit" },
@@ -141,45 +145,51 @@ CORE_JSON_SERIALIZE_ENUM(SampleCountFlagBits,
         { SampleCountFlagBits::CORE_SAMPLE_COUNT_16_BIT, "16bit" },
         { SampleCountFlagBits::CORE_SAMPLE_COUNT_32_BIT, "32bit" },
         { SampleCountFlagBits::CORE_SAMPLE_COUNT_64_BIT, "64bit" },
-        { (SampleCountFlagBits)0, nullptr },
     })
 
 CORE_JSON_SERIALIZE_ENUM(MemoryPropertyFlagBits,
     {
+        { (MemoryPropertyFlagBits)0, nullptr },
         { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "device_local" },
         { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "host_visible" },
         { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT, "host_coherent" },
         { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_CACHED_BIT, "host_cached" },
         { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, "lazily_allocated" },
         { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_PROTECTED_BIT, "protected" },
-        { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM, nullptr },
     })
 
 CORE_JSON_SERIALIZE_ENUM(EngineBufferCreationFlagBits,
     {
-        { EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS, "dynamic_barriers" },
         { (EngineBufferCreationFlagBits)0, nullptr },
+        { EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS, "dynamic_barriers" },
     })
 
 CORE_JSON_SERIALIZE_ENUM(BufferUsageFlagBits,
     {
+        { (BufferUsageFlagBits)0, nullptr },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_SRC_BIT, "transfer_src" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_DST_BIT, "transfer_dst" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, "uniform_texel" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "uniform" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, "storage_texel" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, "storage" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_INDEX_BUFFER_BIT, "index" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT, "vertex" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT, "indirect" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT, "shader_binding_table" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, "shader_device_address" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT, "acceleration_structure_build_input_read_only" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT, "acceleration_structure_storage" },
     })
 
 CORE_JSON_SERIALIZE_ENUM(RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits,
     {
+        { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::MAX_DEPENDENCY_FLAG_ENUM, nullptr },
         { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::FORMAT, "format" },
         { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::SIZE, "size" },
         { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::MIP_COUNT, "mipCount" },
         { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::LAYER_COUNT, "layerCount" },
         { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::SAMPLES, "samples" },
-        { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::MAX_DEPENDENCY_FLAG_ENUM, nullptr },
     })
 
 CORE_JSON_SERIALIZE_ENUM(RenderNodeGraphResourceLocationType,
@@ -189,6 +199,7 @@ CORE_JSON_SERIALIZE_ENUM(RenderNodeGraphResourceLocationType,
         { RenderNodeGraphResourceLocationType::FROM_RENDER_GRAPH_OUTPUT, "from_render_graph_output" },
         { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_OUTPUT, "from_previous_render_node_output" },
         { RenderNodeGraphResourceLocationType::FROM_NAMED_RENDER_NODE_OUTPUT, "from_named_render_node_output" },
+        { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_GRAPH_OUTPUT, "from_previous_render_node_graph_output" },
     })
 
 CORE_JSON_SERIALIZE_ENUM(ResolveModeFlagBits,
@@ -198,6 +209,12 @@ CORE_JSON_SERIALIZE_ENUM(ResolveModeFlagBits,
         { ResolveModeFlagBits::CORE_RESOLVE_MODE_AVERAGE_BIT, "average" },
         { ResolveModeFlagBits::CORE_RESOLVE_MODE_MIN_BIT, "min" },
         { ResolveModeFlagBits::CORE_RESOLVE_MODE_MAX_BIT, "max" },
+    })
+
+CORE_JSON_SERIALIZE_ENUM(SubpassContents,
+    {
+        { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE, "inline" },
+        { SubpassContents::CORE_SUBPASS_CONTENTS_SECONDARY_COMMAND_LISTS, "secondary_command_lists" },
     })
 // clang-format on
 inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInputs::Resource>& context)
@@ -209,6 +226,8 @@ inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInp
     SafeGetJsonValue(jsonData, "resourceIndex", context.error, context.data.resourceIndex);
     SafeGetJsonValue(jsonData, "nodeName", context.error, context.data.nodeName);
     SafeGetJsonValue(jsonData, "usageName", context.error, context.data.usageName);
+    SafeGetJsonValue(jsonData, "mip", context.error, context.data.mip);
+    SafeGetJsonValue(jsonData, "layer", context.error, context.data.layer);
 }
 
 inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInputs::Attachment>& context)
@@ -253,6 +272,9 @@ inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInp
     SafeGetJsonEnum(jsonData, "resourceLocation", context.error, context.data.resourceLocation);
     SafeGetJsonValue(jsonData, "resourceIndex", context.error, context.data.resourceIndex);
     SafeGetJsonValue(jsonData, "nodeName", context.error, context.data.nodeName);
+
+    SafeGetJsonValue(jsonData, "mip", context.error, context.data.mip);
+    SafeGetJsonValue(jsonData, "layer", context.error, context.data.layer);
 }
 
 inline void FromJson(
@@ -283,6 +305,15 @@ inline void FromJson(
     SafeGetJsonBitfield<RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits>(
         jsonData, "dependencyFlags", context.error, context.data.dependencyFlags);
     SafeGetJsonValue(jsonData, "dependencySizeScale", context.error, context.data.dependencySizeScale);
+
+    if (auto const pos = jsonData.find("shadingRateTexelSize"); pos) {
+        if (pos->is_array() && pos->array_.size() == 2) {
+            if (pos->array_[0].is_number() && pos->array_[1u].is_number()) {
+                context.data.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
+                context.data.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();
+            }
+        }
+    }
 
     if ((context.data.desc.format == Format::BASE_FORMAT_UNDEFINED) && context.data.dependencyImageName.empty()) {
         context.error += "undefined gpu image desc format\n";
@@ -322,6 +353,7 @@ void ParseRenderpass(const string_view name, const json::value& node,
         ParseArray<decltype(renderPass.attachments)::value_type>(*rp, "attachments", renderPass.attachments, result);
         SafeGetJsonValue(*rp, "subpassIndex", result.error, renderPass.subpassIndex);
         SafeGetJsonValue(*rp, "subpassCount", result.error, renderPass.subpassCount);
+        SafeGetJsonEnum(*rp, "subpassContents", result.error, renderPass.subpassContents);
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (renderPass.subpassIndex >= renderPass.subpassCount) {
             PLUGIN_LOG_E("RENDER_VALIDATION: render pass subpass index must be smaller than subpass index");
@@ -332,6 +364,8 @@ void ParseRenderpass(const string_view name, const json::value& node,
             SafeGetJsonValue(*sp, "depthResolveAttachmentIndex", result.error, renderPass.depthResolveAttachmentIndex);
             SafeGetJsonEnum(*sp, "depthResolveModeFlagBit", result.error, renderPass.depthResolveModeFlagBit);
             SafeGetJsonEnum(*sp, "stencilResolveModeFlagBit", result.error, renderPass.stencilResolveModeFlagBit);
+            SafeGetJsonEnum(
+                *sp, "fragmentShadingRateAttachmentIndex", result.error, renderPass.fragmentShadingRateAttachmentIndex);
 #if (RENDER_VALIDATION_ENABLED == 1)
             if ((renderPass.depthResolveAttachmentIndex != ~0u) &&
                 ((renderPass.depthResolveModeFlagBit | renderPass.stencilResolveModeFlagBit) == 0)) {
@@ -359,6 +393,17 @@ void ParseRenderpass(const string_view name, const json::value& node,
             getAttachmentIndices("inputAttachmentIndices", *sp, renderPass.inputAttachmentIndices);
             getAttachmentIndices("colorAttachmentIndices", *sp, renderPass.colorAttachmentIndices);
             getAttachmentIndices("resolveAttachmentIndices", *sp, renderPass.resolveAttachmentIndices);
+
+            if (auto const pos = sp->find("shadingRateTexelSize"); pos) {
+                if (pos->is_array() && pos->array_.size() == 2) { // 2 :size
+                    if (pos->array_[0].is_number() && pos->array_[1u].is_number()) {
+                        renderPass.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
+                        renderPass.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();
+                    }
+                }
+            }
+
+            SafeGetJsonValue(*sp, "viewMask", result.error, renderPass.viewMask);
         }
     }
 }
@@ -366,7 +411,7 @@ void ParseRenderpass(const string_view name, const json::value& node,
 void ParseResources(const string_view name, const json::value& node, RenderNodeGraphInputs::InputResources& resources,
     LoadResult& result)
 {
-    if (auto const res = node.find("resources"); res) {
+    if (auto const res = node.find(name); res) {
         ParseArray<decltype(resources.buffers)::value_type>(*res, "buffers", resources.buffers, result);
         ParseArray<decltype(resources.images)::value_type>(*res, "images", resources.images, result);
         ParseArray<decltype(resources.samplers)::value_type>(*res, "samplers", resources.samplers, result);
@@ -391,10 +436,9 @@ RenderNodeParserUtil::~RenderNodeParserUtil() = default;
 uint64_t RenderNodeParserUtil::GetUintValue(const json::value& jsonValue, const string_view name) const
 {
     uint64_t val = std::numeric_limits<uint64_t>::max();
-    LoadResult result;
-    SafeGetJsonValue(jsonValue, name, result.error, val);
-    if (!result.error.empty()) {
-        PLUGIN_LOG_W("GetUintValue: %s", result.error.c_str());
+    string error;
+    if (!SafeGetJsonValue(jsonValue, name, error, val)) {
+        PLUGIN_LOG_W("GetUintValue: %s", error.c_str());
     }
     return val;
 }
@@ -402,10 +446,9 @@ uint64_t RenderNodeParserUtil::GetUintValue(const json::value& jsonValue, const 
 int64_t RenderNodeParserUtil::GetIntValue(const json::value& jsonValue, const string_view name) const
 {
     int64_t val = std::numeric_limits<int64_t>::max();
-    LoadResult result;
-    SafeGetJsonValue(jsonValue, name, result.error, val);
-    if (!result.error.empty()) {
-        PLUGIN_LOG_W("GetIntValue: %s", result.error.c_str());
+    string error;
+    if (!SafeGetJsonValue(jsonValue, name, error, val)) {
+        PLUGIN_LOG_W("GetIntValue: %s", error.c_str());
     }
     return val;
 }
@@ -413,10 +456,9 @@ int64_t RenderNodeParserUtil::GetIntValue(const json::value& jsonValue, const st
 float RenderNodeParserUtil::GetFloatValue(const json::value& jsonValue, const string_view name) const
 {
     float val = std::numeric_limits<float>::max();
-    LoadResult result;
-    SafeGetJsonValue(jsonValue, name, result.error, val);
-    if (!result.error.empty()) {
-        PLUGIN_LOG_W("GetFloatValue: %s", result.error.c_str());
+    string error;
+    if (!SafeGetJsonValue(jsonValue, name, error, val)) {
+        PLUGIN_LOG_W("GetFloatValue: %s", error.c_str());
     }
     return val;
 }
@@ -424,10 +466,9 @@ float RenderNodeParserUtil::GetFloatValue(const json::value& jsonValue, const st
 string RenderNodeParserUtil::GetStringValue(const json::value& jsonValue, const string_view name) const
 {
     string parsedString;
-    LoadResult result;
-    SafeGetJsonValue(jsonValue, name, result.error, parsedString);
-    if (!result.error.empty()) {
-        PLUGIN_LOG_W("GetStringValue: %s", result.error.c_str());
+    string error;
+    if (!SafeGetJsonValue(jsonValue, name, error, parsedString)) {
+        PLUGIN_LOG_W("GetStringValue: %s", error.c_str());
     }
     return parsedString;
 }
@@ -435,8 +476,8 @@ string RenderNodeParserUtil::GetStringValue(const json::value& jsonValue, const 
 RenderNodeGraphInputs::InputRenderPass RenderNodeParserUtil::GetInputRenderPass(
     const json::value& jsonValue, const string_view name) const
 {
-    LoadResult result;
     RenderNodeGraphInputs::InputRenderPass renderPass;
+    LoadResult result;
     ParseRenderpass(name, jsonValue, renderPass, result);
     if (!result.error.empty()) {
         PLUGIN_LOG_W("GetInputRenderPass: %s", result.error.c_str());
@@ -447,8 +488,8 @@ RenderNodeGraphInputs::InputRenderPass RenderNodeParserUtil::GetInputRenderPass(
 RenderNodeGraphInputs::InputResources RenderNodeParserUtil::GetInputResources(
     const json::value& jsonValue, const string_view name) const
 {
-    LoadResult result;
     RenderNodeGraphInputs::InputResources resources;
+    LoadResult result;
     ParseResources(name, jsonValue, resources, result);
     if (!result.error.empty()) {
         PLUGIN_LOG_W("GetInputResources: %s", result.error.c_str());
@@ -459,9 +500,9 @@ RenderNodeGraphInputs::InputResources RenderNodeParserUtil::GetInputResources(
 RenderNodeGraphInputs::RenderDataStore RenderNodeParserUtil::GetRenderDataStore(
     const json::value& jsonValue, const string_view name) const
 {
-    LoadResult result;
     RenderNodeGraphInputs::RenderDataStore renderDataStore;
-    if (auto const dataStore = jsonValue.find("renderDataStore"); dataStore) {
+    LoadResult result;
+    if (auto const dataStore = jsonValue.find(name); dataStore) {
         SafeGetJsonValue(*dataStore, "dataStoreName", result.error, renderDataStore.dataStoreName);
         SafeGetJsonValue(*dataStore, "typeName", result.error, renderDataStore.typeName);
         SafeGetJsonValue(*dataStore, "configurationName", result.error, renderDataStore.configurationName);
@@ -475,8 +516,8 @@ RenderNodeGraphInputs::RenderDataStore RenderNodeParserUtil::GetRenderDataStore(
 vector<RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> RenderNodeParserUtil::GetGpuImageDescs(
     const json::value& jsonValue, const string_view name) const
 {
-    LoadResult result;
     vector<RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> resources;
+    LoadResult result;
     if (const auto ref = jsonValue.find(name); ref) {
         if (ref->is_array()) {
             ParseArray<decltype(resources)::value_type>(jsonValue, name.data(), resources, result);
@@ -493,8 +534,8 @@ vector<RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> RenderNodeParserUtil:
 vector<RenderNodeGraphInputs::RenderNodeGraphGpuBufferDesc> RenderNodeParserUtil::GetGpuBufferDescs(
     const json::value& jsonValue, const string_view name) const
 {
-    LoadResult result;
     vector<RenderNodeGraphInputs::RenderNodeGraphGpuBufferDesc> resources;
+    LoadResult result;
     if (const auto ref = jsonValue.find(name); ref) {
         if (ref->is_array()) {
             ParseArray<decltype(resources)::value_type>(jsonValue, name.data(), resources, result);
@@ -511,11 +552,10 @@ vector<RenderNodeGraphInputs::RenderNodeGraphGpuBufferDesc> RenderNodeParserUtil
 RenderSlotSortType RenderNodeParserUtil::GetRenderSlotSortType(
     const json::value& jsonValue, const string_view name) const
 {
-    LoadResult result;
-    RenderSlotSortType sortType;
-    SafeGetJsonEnum(jsonValue, "renderSlotSortType", result.error, sortType);
-    if (!result.error.empty()) {
-        PLUGIN_LOG_W("GetRenderSlotSortType: %s", result.error.c_str());
+    RenderSlotSortType sortType = RenderSlotSortType::NONE;
+    string error;
+    if (!SafeGetJsonEnum(jsonValue, name, error, sortType)) {
+        PLUGIN_LOG_W("GetRenderSlotSortType: %s", error.c_str());
     }
     return sortType;
 }
@@ -523,12 +563,31 @@ RenderSlotSortType RenderNodeParserUtil::GetRenderSlotSortType(
 RenderSlotCullType RenderNodeParserUtil::GetRenderSlotCullType(
     const json::value& jsonValue, const string_view name) const
 {
-    LoadResult result;
-    RenderSlotCullType cullType;
-    SafeGetJsonEnum(jsonValue, "renderSlotCullType", result.error, cullType);
-    if (!result.error.empty()) {
-        PLUGIN_LOG_W("GetRenderSlotCullType: %s", result.error.c_str());
+    RenderSlotCullType cullType = RenderSlotCullType::NONE;
+    string error;
+    if (!SafeGetJsonEnum(jsonValue, name, error, cullType)) {
+        PLUGIN_LOG_W("GetRenderSlotCullType: %s", error.c_str());
     }
     return cullType;
 }
+
+const CORE_NS::IInterface* RenderNodeParserUtil::GetInterface(const BASE_NS::Uid& uid) const
+{
+    if ((uid == IRenderNodeParserUtil::UID) || (uid == IInterface::UID)) {
+        return this;
+    }
+    return nullptr;
+}
+
+CORE_NS::IInterface* RenderNodeParserUtil::GetInterface(const BASE_NS::Uid& uid)
+{
+    if ((uid == IRenderNodeParserUtil::UID) || (uid == IInterface::UID)) {
+        return this;
+    }
+    return nullptr;
+}
+
+void RenderNodeParserUtil::Ref() {}
+
+void RenderNodeParserUtil::Unref() {}
 RENDER_END_NAMESPACE()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,6 +28,7 @@
 #include <render/nodecontext/intf_render_node_parser_util.h>
 #include <render/nodecontext/intf_render_node_util.h>
 
+#include "datastore/render_data_store_pod.h"
 #include "util/log.h"
 
 // shaders
@@ -38,27 +39,39 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr uint32_t UBO_OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
-constexpr uint32_t MAX_POST_PROCESS_EFFECT_COUNT { 2 };
 
 RenderHandleReference CreatePostProcessDataUniformBuffer(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
 {
-    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == UBO_OFFSET_ALIGNMENT);
+    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
     PLUGIN_STATIC_ASSERT(sizeof(LocalPostProcessStruct) == UBO_OFFSET_ALIGNMENT);
-    return gpuResourceMgr.Create(handle,
-        GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, UBO_OFFSET_ALIGNMENT * MAX_POST_PROCESS_EFFECT_COUNT });
+    return gpuResourceMgr.Create(
+        handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                    sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct) });
+}
+
+inline BindableImage GetBindableImage(const RenderNodeResource& res)
+{
+    return BindableImage { res.handle, res.mip, res.layer, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, res.secondHandle };
 }
 } // namespace
 
 void RenderNodeBloom::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
+    valid_ = true;
+
     renderNodeContextMgr_ = &renderNodeContextMgr;
     ParseRenderNodeInputs();
 
     if (jsonInputs_.renderDataStore.dataStoreName.empty()) {
         PLUGIN_LOG_E("RenderNodeBloom: render data store configuration not set in render node graph");
+    }
+    if (jsonInputs_.renderDataStore.typeName != RenderDataStorePod::TYPE_NAME) {
+        PLUGIN_LOG_E("RenderNodeBloom: render data store type name not supported (%s != %s)",
+            jsonInputs_.renderDataStore.typeName.data(), RenderDataStorePod::TYPE_NAME);
+        valid_ = false;
     }
 
     postProcessUbo_ =
@@ -66,14 +79,18 @@ void RenderNodeBloom::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 
     ProcessPostProcessConfiguration(renderNodeContextMgr_->GetRenderDataStoreManager());
     renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(renderBloom_.GetDescriptorCounts());
-    const RenderBloom::BloomInfo info { inputResources_.customInputImages[0].handle,
-        inputResources_.customOutputImages[0].handle, postProcessUbo_.GetHandle(),
+    const RenderBloom::BloomInfo info { GetBindableImage(inputResources_.customInputImages[0]),
+        GetBindableImage(inputResources_.customOutputImages[0]), postProcessUbo_.GetHandle(),
         ppConfig_.bloomConfiguration.useCompute };
     renderBloom_.Init(renderNodeContextMgr, info);
 }
 
 void RenderNodeBloom::PreExecuteFrame()
 {
+    if (!valid_) {
+        return;
+    }
+
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     if (jsonInputs_.hasChangeableResourceHandles) {
         inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
@@ -81,26 +98,38 @@ void RenderNodeBloom::PreExecuteFrame()
     ProcessPostProcessConfiguration(renderNodeContextMgr_->GetRenderDataStoreManager());
     UpdatePostProcessData(ppConfig_);
 
-    const RenderBloom::BloomInfo info { inputResources_.customInputImages[0].handle,
-        inputResources_.customOutputImages[0].handle, postProcessUbo_.GetHandle(),
+    const RenderBloom::BloomInfo info { GetBindableImage(inputResources_.customInputImages[0]),
+        GetBindableImage(inputResources_.customOutputImages[0]), postProcessUbo_.GetHandle(),
         ppConfig_.bloomConfiguration.useCompute };
     renderBloom_.PreExecute(*renderNodeContextMgr_, info, ppConfig_);
 }
 
 void RenderNodeBloom::ExecuteFrame(IRenderCommandList& cmdList)
 {
+    if (!valid_) {
+        return;
+    }
+
     renderBloom_.Execute(*renderNodeContextMgr_, cmdList, ppConfig_);
+}
+
+IRenderNode::ExecuteFlags RenderNodeBloom::GetExecuteFlags() const
+{
+    // At the moment bloom needs typically copy even though it would not be in use
+    return ExecuteFlagBits::EXECUTE_FLAG_BITS_DEFAULT;
 }
 
 void RenderNodeBloom::ProcessPostProcessConfiguration(const IRenderNodeRenderDataStoreManager& dataStoreMgr)
 {
     if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
-        auto const dataStore = static_cast<IRenderDataStorePod const*>(
-            dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName));
-        if (dataStore) {
-            auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
-            if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
-                ppConfig_ = *((const PostProcessConfiguration*)dataView.data());
+        if (const IRenderDataStore* ds = dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName);
+            ds) {
+            if (jsonInputs_.renderDataStore.typeName == RenderDataStorePod::TYPE_NAME) {
+                auto const dataStore = static_cast<IRenderDataStorePod const*>(ds);
+                auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
+                if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
+                    ppConfig_ = *((const PostProcessConfiguration*)dataView.data());
+                }
             }
         }
     }

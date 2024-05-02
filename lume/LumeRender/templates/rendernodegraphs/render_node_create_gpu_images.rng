@@ -11,6 +11,7 @@
             "gpuImageDescs": [
                 {
                     "name": "RGBA16Target",
+                    "shareName": "RGBA16Target",
                     "imageType": "2d",
                     "imageViewType": "2d",
                     "format": "r16g16b16a16_sfloat",
@@ -38,7 +39,8 @@
                     "sampleCountFlags": "4bit",
                     "dependencyImageName": "CORE_DEFAULT_BACKBUFFER_DEPTH",
                     "dependencyFlags": "format | size | mip_count | layer_count | samples",
-                    "dependencySizeScale" 1.0,
+                    "dependencySizeScale" : 1.0,
+                    "shadingRateTexelSize": [ 1, 1 ]
                 }
             ]
         }

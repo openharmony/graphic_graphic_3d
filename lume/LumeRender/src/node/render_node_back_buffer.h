@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,9 +37,13 @@ public:
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override {};
     void ExecuteFrame(IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        return 0U;
+    }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "6b15f334-872b-4963-acc8-691b30de7501" };
+    static constexpr BASE_NS::Uid UID { "f1dc030b-1081-4ca5-a195-1d8bfc1a036c" };
     static constexpr char const* TYPE_NAME = "RenderNodeBackBuffer";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;

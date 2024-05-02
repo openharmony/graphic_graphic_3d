@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,10 +16,24 @@
 #include "io/file_manager.h"
 
 #include <algorithm>
+#include <cstddef>
 
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
+#include <core/io/intf_directory.h>
+#include <core/io/intf_file.h>
 #include <core/io/intf_file_manager.h>
+#include <core/io/intf_file_system.h>
 #include <core/log.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_interface.h>
 
 #include "io/path_tools.h"
 #include "io/proxy_filesystem.h"
@@ -35,7 +49,8 @@ using BASE_NS::vector;
 
 string FileManager::FixPath(string_view pathIn) const
 {
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     if (ParseUri(pathIn, protocol, path)) {
         // Try to identify relative "file" uris, and convert them to absolute.
         if (protocol == "file") {
@@ -109,15 +124,15 @@ void FileManager::Unref()
 
 IFile::Ptr FileManager::OpenFile(const string_view uriIn)
 {
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     auto uri = FixPath(uriIn);
     if (ParseUri(uri, protocol, path)) {
         IFilesystem* filesystem = GetFilesystem(protocol);
         if (filesystem) {
             return filesystem->OpenFile(path);
-        } else {
-            CORE_LOG_E("Failed to open file, no file system for uri: '%s'", string(uri).c_str());
         }
+        CORE_LOG_E("Failed to open file, no file system for uri: '%s'", string(uri).c_str());
     } else {
         CORE_LOG_E("Failed to open file, invalid uri: '%s'", string(uri).c_str());
     }
@@ -127,15 +142,15 @@ IFile::Ptr FileManager::OpenFile(const string_view uriIn)
 
 IFile::Ptr FileManager::CreateFile(const string_view uriIn)
 {
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     auto uri = FixPath(uriIn);
     if (ParseUri(uri, protocol, path)) {
         IFilesystem* filesystem = GetFilesystem(protocol);
         if (filesystem) {
             return filesystem->CreateFile(path);
-        } else {
-            CORE_LOG_E("Failed to create file, no file system for uri: '%s'", string(uri).c_str());
         }
+        CORE_LOG_E("Failed to create file, no file system for uri: '%s'", string(uri).c_str());
     } else {
         CORE_LOG_E("Failed to create file, invalid uri: '%s'", string(uri).c_str());
     }
@@ -145,7 +160,8 @@ IFile::Ptr FileManager::CreateFile(const string_view uriIn)
 
 bool FileManager::DeleteFile(const string_view uriIn)
 {
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     auto uri = FixPath(uriIn);
     if (ParseUri(uri, protocol, path)) {
         IFilesystem* filesystem = GetFilesystem(protocol);
@@ -159,12 +175,13 @@ bool FileManager::DeleteFile(const string_view uriIn)
 
 bool FileManager::Rename(const string_view fromUri, const string_view toUri)
 {
-    string_view fromProtocol, fromPath;
-    string_view toProtocol, toPath;
+    string_view fromProtocol;
+    string_view fromPath;
     auto from = FixPath(fromUri);
-    auto to = FixPath(toUri);
-
     if (ParseUri(from, fromProtocol, fromPath)) {
+        string_view toProtocol;
+        string_view toPath;
+        auto to = FixPath(toUri);
         if (ParseUri(to, toProtocol, toPath)) {
             if (fromProtocol == toProtocol) {
                 IFilesystem* filesystem = GetFilesystem(fromProtocol);
@@ -182,15 +199,15 @@ bool FileManager::Rename(const string_view fromUri, const string_view toUri)
 
 IDirectory::Entry FileManager::GetEntry(const string_view uriIn)
 {
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     auto uri = FixPath(uriIn);
     if (ParseUri(uri, protocol, path)) {
         IFilesystem* filesystem = GetFilesystem(protocol);
         if (filesystem) {
             return filesystem->GetEntry(path);
-        } else {
-            CORE_LOG_E("Failed to get entry for uri, no file system for uri: '%s'", string(uri).c_str());
         }
+        CORE_LOG_E("Failed to get entry for uri, no file system for uri: '%s'", string(uri).c_str());
     } else {
         CORE_LOG_E("Failed to get entry for uri, invalid uri: '%s'", string(uri).c_str());
     }
@@ -199,15 +216,15 @@ IDirectory::Entry FileManager::GetEntry(const string_view uriIn)
 }
 IDirectory::Ptr FileManager::OpenDirectory(const string_view uriIn)
 {
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     auto uri = FixPath(uriIn);
     if (ParseUri(uri, protocol, path)) {
         IFilesystem* filesystem = GetFilesystem(protocol);
         if (filesystem) {
             return filesystem->OpenDirectory(path);
-        } else {
-            CORE_LOG_E("Failed to open directory, no file system for uri: '%s'", string(uri).c_str());
         }
+        CORE_LOG_E("Failed to open directory, no file system for uri: '%s'", string(uri).c_str());
     } else {
         CORE_LOG_E("Failed to open directory, invalid uri: '%s'", string(uri).c_str());
     }
@@ -217,15 +234,15 @@ IDirectory::Ptr FileManager::OpenDirectory(const string_view uriIn)
 
 IDirectory::Ptr FileManager::CreateDirectory(const string_view uriIn)
 {
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     auto uri = FixPath(uriIn);
     if (ParseUri(uri, protocol, path)) {
         IFilesystem* filesystem = GetFilesystem(protocol);
         if (filesystem) {
             return filesystem->CreateDirectory(path);
-        } else {
-            CORE_LOG_E("Failed to create directory, no file system for uri: '%s'", string(uri).c_str());
         }
+        CORE_LOG_E("Failed to create directory, no file system for uri: '%s'", string(uri).c_str());
     } else {
         CORE_LOG_E("Failed to create directory, invalid uri: '%s'", string(uri).c_str());
     }
@@ -235,7 +252,8 @@ IDirectory::Ptr FileManager::CreateDirectory(const string_view uriIn)
 
 bool FileManager::DeleteDirectory(const string_view uriIn)
 {
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     auto uri = FixPath(uriIn);
     if (ParseUri(uri, protocol, path)) {
         IFilesystem* filesystem = GetFilesystem(protocol);
@@ -249,9 +267,9 @@ bool FileManager::DeleteDirectory(const string_view uriIn)
 
 void FileManager::RegisterFilesystem(const string_view protocol, IFilesystem::Ptr filesystem)
 {
-    CORE_ASSERT_MSG(filesystems_.find(protocol) == filesystems_.end(), "File system already registered");
+    CORE_ASSERT_MSG(filesystems_.find(protocol) == filesystems_.cend(), "File system already registered");
 
-    filesystems_[protocol] = std::move(filesystem);
+    filesystems_[protocol] = move(filesystem);
 }
 
 void FileManager::UnregisterFilesystem(const string_view protocol)
@@ -277,7 +295,8 @@ void FileManager::UnregisterAssetPath(const string_view uriIn)
 vector<string> FileManager::GetAbsolutePaths(const string_view uriIn) const
 {
     vector<string> ret;
-    string_view protocol, path;
+    string_view protocol;
+    string_view path;
     auto uri = FixPath(uriIn);
     if (ParseUri(uri, protocol, path)) {
         const IFilesystem* filesystem = GetFilesystem(protocol);
@@ -287,15 +306,16 @@ vector<string> FileManager::GetAbsolutePaths(const string_view uriIn) const
             for (auto& uriPath : uriPaths) {
                 if (uriPath.find("file://") == string::npos) {
                     auto tmp = GetAbsolutePaths(uriPath);
-                    ret.insert(ret.end(), tmp.begin(), tmp.end());
+                    ret.insert(ret.cend(), tmp.cbegin(), tmp.cend());
                 } else {
-                    ret.emplace_back(std::move(uriPath));
+                    ret.push_back(move(uriPath));
                 }
             }
         }
     }
     std::transform(ret.begin(), ret.end(), ret.begin(), [](const string& uri) {
-        string_view protocol, path;
+        string_view protocol;
+        string_view path;
         if (ParseUri(uri, protocol, path)) {
             return StdDirectory::ResolveAbsolutePath(path, true);
         }

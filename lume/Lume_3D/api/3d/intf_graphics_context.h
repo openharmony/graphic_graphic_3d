@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,10 +18,9 @@
 
 #include <3d/namespace.h>
 #include <base/containers/array_view.h>
-#include <base/containers/string_view.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_interface.h>
-#include <render/resource_handle.h>
+#include <render/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
 class IEngine;
@@ -30,6 +29,7 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderContext;
+class RenderHandleReference;
 RENDER_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -87,11 +87,6 @@ protected:
     IGraphicsContext() = default;
     virtual ~IGraphicsContext() = default;
 };
-
-inline constexpr BASE_NS::string_view GetName(const IGraphicsContext*)
-{
-    return "IGraphicsContext3D";
-}
 CORE3D_END_NAMESPACE()
 
 #endif // API_3D_IGRAPHICS_CONTEXT_H

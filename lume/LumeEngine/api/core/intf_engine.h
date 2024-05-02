@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,22 +16,28 @@
 #ifndef API_CORE_IENGINE_H
 #define API_CORE_IENGINE_H
 
-#include <base/containers/array_view.h>
+#include <cstdint>
+
 #include <base/containers/refcnt_ptr.h>
 #include <base/containers/string_view.h>
+#include <base/namespace.h>
 #include <base/util/uid.h>
 #include <core/ecs/intf_ecs.h>
-#include <core/engine_info.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_factory.h>
-#include <core/plugin/intf_class_register.h>
 #include <core/plugin/intf_interface.h>
-#include <core/threading/intf_thread_pool.h>
+
+BASE_BEGIN_NAMESPACE()
+template<class T>
+class array_view;
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 struct EngineCreateInfo;
 class IFileManager;
 class IImageLoaderManager;
+class IPlatform;
+class IThreadPool;
 
 /** \addtogroup group_iengine
  *  @{
@@ -81,9 +87,6 @@ public:
      *  @return EngineTime struct.
      */
     virtual EngineTime GetEngineTime() const = 0;
-
-    /* returns path to engine root */
-    virtual BASE_NS::string_view GetRootPath() = 0;
 
     /** Creates a new ECS instance.
      * @return ECS instance.

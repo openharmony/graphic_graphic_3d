@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +14,6 @@
  */
 
 #include "library_linux.h"
-
 
 #include <dlfcn.h>
 
@@ -32,7 +31,7 @@ LibraryLinux::LibraryLinux(const string_view filename)
     libraryHandle_ = dlopen(tmp.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (!libraryHandle_) {
         const char* errorMessage = dlerror();
-        if (errorMessage != NULL) {
+        if (errorMessage != nullptr) {
             CORE_LOG_E("Loading dynamic library '%s' failed: %s", filename.data(), errorMessage);
         }
     }
@@ -70,4 +69,3 @@ string_view ILibrary::GetFileExtension()
     return ".so";
 }
 CORE_END_NAMESPACE()
-

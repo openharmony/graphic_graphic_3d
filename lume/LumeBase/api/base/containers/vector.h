@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,10 +35,9 @@ allocators are partially done.
 // Allow support for initializer lists
 #define BASE_VECTOR_HAS_INITIALIZE_LIST
 
-#if !defined(BASE_HAS_ENGINE)
-// yes, use the c headers. don't care about the c++ types and defines here.
+#include <cassert>
+#include <cstddef> // size_t, ptrdiff_t
 #include <cstdint> // uint8_t
-#endif
 
 #ifdef STANDALONE_BASE_VECTOR
 // STANDALONE has no dependencies to other engine parts.
@@ -225,19 +224,15 @@ public:
         enable_if_t<is_same<remove_const_t<typename InputIt::value_type>, value_type>::value, int> = 0>
     vector(InputIt first, InputIt last) : allocator_(default_allocator())
     {
-        const difference_type size = last - first;
+        const auto size = static_cast<size_type>(last - first);
         reserve(size);
-        pointer dst = data_;
-        for (; first != last; first++, dst++) {
-            const value_type& v = *first;
-            init_copy(dst, &v, 1);
-        }
+        init_copy(data_, first, last);
         size_ = size;
     }
 
     vector(const_pointer first, const_pointer last) : allocator_(default_allocator())
     {
-        const difference_type size = last - first;
+        const auto size = static_cast<size_type>(last - first);
         reserve(size);
         init_copy(data_, first, size);
         size_ = size;
@@ -437,7 +432,7 @@ public:
     {
         // destroy the objects that we don't need anymore
         if (size_ > count) {
-            destroy(begin() + count, end());
+            destroy(begin() + static_cast<difference_type>(count), end());
             size_ = count;
         }
         pointer tmp = setup_storage(count);
@@ -454,7 +449,7 @@ public:
     {
         // destroy the objects that we don't need anymore
         if (size_ > count) {
-            destroy(begin() + count, end());
+            destroy(begin() + static_cast<difference_type>(count), end());
             size_ = count;
         }
         pointer tmp = setup_storage(count);
@@ -568,7 +563,7 @@ public:
             pointer begin = data_;
             pointer insrt = begin + p;
             pointer end = begin + size_;
-            res = init_move(tmp, begin, p); // move old objects from before pos
+            res = init_move(tmp, begin, static_cast<size_type>(p)); // move old objects from before pos
             pointer next = init_move(res, &value, 1);
             init_move(next, insrt, size_ - p);       // move old objects from after pos
             destroy(iterator(begin), iterator(end)); // Destroy the moved from items..
@@ -598,7 +593,7 @@ public:
             pointer insrt = begin + p;
             pointer end = begin + size_;
             // Use new storage.
-            res = init_move(tmp, begin, p); // move old objects from before pos
+            res = init_move(tmp, begin, static_cast<size_type>(p)); // move old objects from before pos
             pointer next = init_copy(res, &value, 1);
             init_move(next, insrt, size_ - p);       // move old objects from after pos
             destroy(iterator(begin), iterator(end)); // Destroy the moved from items..
@@ -632,7 +627,7 @@ public:
             pointer insrt = begin + p;
             pointer end = begin + size_;
             // Use new storage.
-            res = init_move(tmp, begin, p); // move old objects from before pos
+            res = init_move(tmp, begin, static_cast<size_type>(p)); // move old objects from before pos
             pointer next = init_fill(res, count, value);
             init_move(next, insrt, size_ - p);       // move old objects from after pos
             destroy(iterator(begin), iterator(end)); // Destroy the moved from items..
@@ -666,10 +661,72 @@ public:
         return insert_impl(pos, first, last);
     }
 
+    void append(size_type count, const T& value)
+    {
+        if (count == 0) {
+            return;
+        }
+        pointer tmp = allocate_if_needed(static_cast<size_type>(size_ + count));
+        if (tmp != data_) {
+            pointer begin = data_;
+            size_type size = size_;
+            init_move(tmp, begin, size);                      // Move old objects
+            destroy(iterator(begin), iterator(begin + size)); // Destroy the moved from items..
+            // Free old storage
+            allocator_.free(data_);
+            data_ = tmp;
+        }
+        init_fill(tmp + size_, count, value);
+        size_ += count;
+    }
+
+    template<class InputIt,
+        enable_if_t<is_same<remove_const_t<typename InputIt::value_type>, value_type>::value, int> = 0>
+    void append(InputIt first, InputIt last)
+    {
+        if (first == last) {
+            return;
+        }
+        difference_type cnt = last - first;
+        pointer tmp = allocate_if_needed(static_cast<size_type>(size_ + cnt));
+        if (tmp != data_) {
+            pointer begin = data_;
+            size_type size = size_;
+            init_move(tmp, begin, size);                      // Move old objects
+            destroy(iterator(begin), iterator(begin + size)); // Destroy the moved from items..
+            // Free old storage
+            allocator_.free(data_);
+            data_ = tmp;
+        }
+        init_copy(tmp + size_, first, last); // Copy the new objects
+        size_ += cnt;
+    }
+
+    void append(const_pointer first, const_pointer last)
+    {
+        if (first == last) {
+            return;
+        }
+        difference_type cnt = last - first;
+        pointer tmp = allocate_if_needed(static_cast<size_type>(size_ + cnt));
+        if (tmp != data_) {
+            pointer begin = data_;
+            size_type size = size_;
+            init_move(tmp, begin, size);                      // Move old objects
+            destroy(iterator(begin), iterator(begin + size)); // Destroy the moved from items..
+            // Free old storage
+            allocator_.free(data_);
+            data_ = tmp;
+        }
+        init_copy(tmp + size_, first, cnt); // Copy the new objects
+        size_ += cnt;
+    }
+
     iterator erase(const_iterator pos)
     {
         BASE_ASSERT(pos >= cbegin());
         BASE_ASSERT(pos <= cend());
+        // todo: validate.
         if (pos == cend()) {
             return end();
         }
@@ -694,9 +751,9 @@ public:
             }
 
             // destroy the leftovers.
-            const size_t newSize = size_ - (last - first);
+            const auto newSize = static_cast<difference_type>(size_) - (last - first);
             destroy(begin() + newSize, end());
-            size_ = newSize;
+            size_ = static_cast<size_type>(newSize);
         }
         return iterator((pointer)first.ptr());
     }
@@ -712,7 +769,7 @@ public:
             pointer insrt = pos.ptr();
             pointer ed = end().ptr();
             // Use new storage.
-            res = init_move(tmp, bgin, p); // move old objects from before pos
+            res = init_move(tmp, bgin, static_cast<size_type>(p)); // move old objects from before pos
             pointer next = res + 1;
             ::new (res) T(forward<Args>(args)...);
             init_move(next, insrt, size_ - p);     // move old objects from after pos
@@ -1045,10 +1102,10 @@ protected:
             BASE_NS::is_same_v<typename has_iterator_category<InputIt>::category, BASE_NS::random_access_iterator_tag>;
         if constexpr (BASE_NS::is_pointer_v<InputIt> && matching_type) {
             const difference_type cnt = last - first;
-            return init_copy(pos, first, cnt);
+            return init_copy(pos, first, static_cast<size_type>(cnt));
         } else if constexpr (is_random_access && has_ptr_method<InputIt>::value && matching_type) {
             const difference_type cnt = last.ptr() - first.ptr();
-            return init_copy(pos, first.ptr(), cnt);
+            return init_copy(pos, first.ptr(), static_cast<size_type>(cnt));
         } else {
             constexpr auto convertible_type =
                 BASE_NS::is_convertible_v<BASE_NS::remove_const_t<BASE_NS::remove_reference_t<decltype(*first)>>,
@@ -1057,10 +1114,10 @@ protected:
             for (InputIt cur = first; cur != last; ++cur) {
                 if constexpr (matching_type) {
                     // Same type so, no need to convert first.
-                    init_copy(pos, &*cur, 1);
+                    init_copy(pos, &*cur, 1U);
                 } else if constexpr (convertible_type) {
-                    value_type tmp = *cur;
-                    init_copy(pos, &tmp, 1);
+                    value_type tmp = static_cast<value_type>(*cur);
+                    init_copy(pos, &tmp, 1U);
                 }
                 ++pos;
             }
@@ -1102,7 +1159,7 @@ protected:
             if (tmp && todo > 0) {
                 // Move old items to new storage.
                 init_move(tmp, data_, todo);
-                destroy(begin(), begin() + todo); // Destroy the moved from items..
+                destroy(begin(), begin() + static_cast<difference_type>(todo)); // Destroy the moved from items..
             }
             // free old storage
             allocator_.free(data_);
@@ -1120,17 +1177,17 @@ protected:
         pointer res = nullptr;
 
         difference_type cnt = last - first;
-        pointer tmp = allocate_if_needed(size_ + cnt);
+        pointer tmp = allocate_if_needed(static_cast<size_type>(size_ + cnt));
         if (tmp != data_) {
             difference_type p = pos - cbegin();
             pointer begin = data_;
             pointer insrt = begin + p;
             pointer end = begin + size_;
             // Fill new storage
-            res = init_move(tmp, begin, p);             // move old objects from before pos
-            pointer next = init_copy(res, first, last); // copy new objects
-            init_move(next, insrt, size_ - p);          // move old objects from after pos
-            destroy(iterator(begin), iterator(end));    // Destroy the moved from items..
+            res = init_move(tmp, begin, static_cast<size_type>(p));    // move old objects from before pos
+            pointer next = init_copy(res, first, last);                // copy new objects
+            init_move(next, insrt, static_cast<size_type>(size_ - p)); // move old objects from after pos
+            destroy(iterator(begin), iterator(end));                   // Destroy the moved from items..
             // Free old storage
             allocator_.free(data_);
             data_ = tmp;
@@ -1143,7 +1200,7 @@ protected:
                 reverse_move(end - 1, res, end + (cnt - 1));
                 // copy over the existing items.
                 const difference_type intializedSlots = end - res;
-                const size_t cnt2 = (intializedSlots > cnt) ? cnt : intializedSlots;
+                const auto cnt2 = (intializedSlots > cnt) ? cnt : intializedSlots;
                 copy(res, first, first + cnt2);
                 // init-copy over the uninitialized ones..
                 init_copy(res + cnt2, first + cnt2, last);

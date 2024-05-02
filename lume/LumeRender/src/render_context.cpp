@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,9 +28,10 @@
 #include "datastore/render_data_store_default_acceleration_structure_staging.h"
 #include "datastore/render_data_store_default_gpu_resource_data_copy.h"
 #include "datastore/render_data_store_default_staging.h"
-#include "datastore/render_data_store_fullscreen_shader.h"
 #include "datastore/render_data_store_manager.h"
 #include "datastore/render_data_store_pod.h"
+#include "datastore/render_data_store_post_process.h"
+#include "datastore/render_data_store_shader_passes.h"
 #include "default_engine_constants.h"
 #include "device/device.h"
 #include "device/shader_manager.h"
@@ -39,6 +40,7 @@
 #include "nodecontext/render_node_graph_manager.h"
 #include "nodecontext/render_node_graph_node_store.h"
 #include "nodecontext/render_node_manager.h"
+#include "nodecontext/render_node_post_process_util.h"
 #include "renderer.h"
 #include "util/render_util.h"
 
@@ -83,9 +85,8 @@ void LogRenderBuildInfo()
 #define RENDER_TO_STRING_INTERNAL(x) #x
 #define RENDER_TO_STRING(x) RENDER_TO_STRING_INTERNAL(x)
 
-    PLUGIN_LOG_I("Build info:");
-    PLUGIN_LOG_I("  RENDER_VALIDATION_ENABLED=" RENDER_TO_STRING(RENDER_VALIDATION_ENABLED));
-    PLUGIN_LOG_I("  RENDER_DEV_ENABLED=" RENDER_TO_STRING(RENDER_DEV_ENABLED));
+    PLUGIN_LOG_I("RENDER_VALIDATION_ENABLED=" RENDER_TO_STRING(RENDER_VALIDATION_ENABLED));
+    PLUGIN_LOG_I("RENDER_DEV_ENABLED=" RENDER_TO_STRING(RENDER_DEV_ENABLED));
 }
 
 template<class RenderDataStoreType>
@@ -108,7 +109,8 @@ void RegisterCoreRenderDataStores(RenderDataStoreManager& renderDataStoreManager
     renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStoreDefaultStaging>());
     renderDataStoreManager.AddRenderDataStoreFactory(
         FillRenderDataStoreTypeInfo<RenderDataStoreDefaultGpuResourceDataCopy>());
-    renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStoreFullscreenShader>());
+    renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStoreShaderPasses>());
+    renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStorePostProcess>());
 }
 
 template<typename DataStoreType>
@@ -123,7 +125,8 @@ void CreateDefaultRenderDataStores(IRenderDataStoreManager& renderDataStoreManag
 {
     // add pod store
     {
-        auto renderDataStorePod = CreateDataStore<RenderDataStorePod>(renderDataStoreManager, "RenderDataStorePod");
+        auto renderDataStorePod =
+            CreateDataStore<RenderDataStorePod>(renderDataStoreManager, RenderDataStorePod::TYPE_NAME);
         if (renderDataStorePod) {
             IRenderDataStorePod* renderDataStorePodTyped = static_cast<IRenderDataStorePod*>(renderDataStorePod);
 
@@ -141,11 +144,12 @@ void CreateDefaultRenderDataStores(IRenderDataStoreManager& renderDataStoreManag
     }
 
     CreateDataStore<RenderDataStoreDefaultAccelerationStructureStaging>(
-        renderDataStoreManager, "RenderDataStoreDefaultAccelerationStructureStaging");
-    CreateDataStore<RenderDataStoreDefaultStaging>(renderDataStoreManager, "RenderDataStoreDefaultStaging");
+        renderDataStoreManager, RenderDataStoreDefaultAccelerationStructureStaging::TYPE_NAME);
+    CreateDataStore<RenderDataStoreDefaultStaging>(renderDataStoreManager, RenderDataStoreDefaultStaging::TYPE_NAME);
     CreateDataStore<RenderDataStoreDefaultGpuResourceDataCopy>(
-        renderDataStoreManager, "RenderDataStoreDefaultGpuResourceDataCopy");
-    CreateDataStore<RenderDataStoreFullscreenShader>(renderDataStoreManager, "RenderDataStoreFullscreenShader");
+        renderDataStoreManager, RenderDataStoreDefaultGpuResourceDataCopy::TYPE_NAME);
+    CreateDataStore<RenderDataStoreShaderPasses>(renderDataStoreManager, RenderDataStoreShaderPasses::TYPE_NAME);
+    CreateDataStore<RenderDataStorePostProcess>(renderDataStoreManager, RenderDataStorePostProcess::TYPE_NAME);
 }
 
 void CreateDefaultBuffers(IGpuResourceManager& gpuResourceMgr, vector<RenderHandleReference>& defaultGpuResources)
@@ -163,7 +167,7 @@ void CreateDefaultBuffers(IGpuResourceManager& gpuResourceMgr, vector<RenderHand
 void CreateDefaultTextures(IGpuResourceManager& gpuResourceMgr, vector<RenderHandleReference>& defaultGpuResources)
 {
     GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-        Format::BASE_FORMAT_R8G8B8A8_SRGB, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+        Format::BASE_FORMAT_R8G8B8A8_UNORM, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
         ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_DST_BIT,
         MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         0, // ImageCreateFlags
@@ -175,7 +179,7 @@ void CreateDefaultTextures(IGpuResourceManager& gpuResourceMgr, vector<RenderHan
     const auto rgbDataView = array_view(reinterpret_cast<const uint8_t*>(rgbData), sizeOfUint32 * countof(rgbData));
     defaultGpuResources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE, desc, rgbDataView));
-    constexpr const uint32_t rgbDataWhite[4u] = { 0xff, 0xff, 0xff, 0xff };
+    constexpr const uint32_t rgbDataWhite[4u] = { 0xFFFFffff, 0xFFFFffff, 0xFFFFffff, 0xFFFFffff };
     const auto rgbDataViewWhite =
         array_view(reinterpret_cast<const uint8_t*>(rgbDataWhite), sizeOfUint32 * countof(rgbDataWhite));
     defaultGpuResources.push_back(
@@ -205,8 +209,10 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, vector<RenderHand
             SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
             {},
         };
-        defaultGpuResources.push_back(
-            gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER, desc));
+        GpuResourceManager& gpuResourceMgrImpl = (GpuResourceManager&)gpuResourceMgr;
+        // create as a swapchain image to get correct handle flags for fast check-up for additional processing
+        defaultGpuResources.push_back(gpuResourceMgrImpl.CreateSwapchainImage(
+            {}, DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER, desc));
     }
     {
         GpuImageDesc desc {
@@ -302,6 +308,21 @@ void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, vector<RenderHan
     defaultGpuResources.push_back(gpuResourceMgr.Create(
         DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP, linearMipmapClamp));
 }
+
+string_view GetPipelineCacheUri(DeviceBackendType backendType)
+{
+    switch (backendType) {
+        case DeviceBackendType::VULKAN:
+            return "cache://deviceVkCache.bin";
+        case DeviceBackendType::OPENGLES:
+            return "cache://deviceGLESCache.bin";
+        case DeviceBackendType::OPENGL:
+            return "cache://deviceGLCache.bin";
+        default:
+            break;
+    }
+    return "";
+}
 } // namespace
 
 IRenderContext* RenderPluginState::CreateInstance(IEngine& engine)
@@ -325,7 +346,9 @@ void RenderPluginState::Destroy()
 RenderContext::RenderContext(RenderPluginState& pluginState, IEngine& engine)
     : pluginState_(pluginState), engine_(engine), fileManager_(&engine.GetFileManager())
 {
-    RegisterInterfaceType(interfaceInfo_);
+    for (const auto& ref : interfaceInfos_) {
+        RegisterInterfaceType(ref);
+    }
     LogRenderBuildInfo();
     RegisterDefaultPaths();
 }
@@ -333,6 +356,10 @@ RenderContext::RenderContext(RenderPluginState& pluginState, IEngine& engine)
 RenderContext::~RenderContext()
 {
     GetPluginRegister().RemoveListener(*this);
+
+    if (device_) {
+        device_->WaitForIdle();
+    }
 
     for (auto& info : plugins_) {
         if (info.second && info.second->destroyPlugin) {
@@ -343,11 +370,19 @@ RenderContext::~RenderContext()
     // NOTE: device needs to be active for render resources (e.g. with GLES)
     if (device_) {
         device_->Activate();
+
+        if (device_->GetDeviceConfiguration().configurationFlags & CORE_DEVICE_CONFIGURATION_PIPELINE_CACHE_BIT) {
+            vector<uint8_t> pipelineCache = device_->GetPipelineCache();
+            if (auto file = fileManager_->CreateFile(GetPipelineCacheUri(device_->GetBackendType())); file) {
+                file->Write(pipelineCache.data(), pipelineCache.size());
+            }
+        }
     }
     defaultGpuResources_.clear();
     renderer_.reset();
     renderNodeGraphMgr_.reset();
     renderDataStoreMgr_.reset();
+    renderUtil_.reset(); // GLES semaphore/fence destruction device needs to be active
     if (device_) {
         device_->Deactivate();
     }
@@ -357,14 +392,23 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
 {
     PLUGIN_LOG_D("Render init.");
 
-    device_ = CreateDevice(createInfo.deviceCreateInfo);
+    createInfo_ = createInfo;
+    device_ = CreateDevice(createInfo_.deviceCreateInfo);
     if (!device_) {
         PLUGIN_LOG_E("device not created successfully, invalid render interface");
         return RenderResultCode::RENDER_ERROR;
     } else {
         device_->Activate();
 
-        renderUtil_ = make_unique<RenderUtil>(*this);
+        // Initialize the pipeline/ program cache.
+        if (device_->GetDeviceConfiguration().configurationFlags & CORE_DEVICE_CONFIGURATION_PIPELINE_CACHE_BIT) {
+            vector<uint8_t> pipelineCache;
+            if (auto file = fileManager_->OpenFile(GetPipelineCacheUri(device_->GetBackendType())); file) {
+                pipelineCache.resize(static_cast<size_t>(file->GetLength()));
+                file->Read(pipelineCache.data(), pipelineCache.size());
+            }
+            device_->InitializePipelineCache(pipelineCache);
+        }
 
         // set engine file manager with registered paths
         ShaderManager& shaderMgr = (ShaderManager&)device_->GetShaderManager();
@@ -373,7 +417,8 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
         {
             IShaderManager::ShaderFilePathDesc desc;
             desc.shaderPath = "rendershaders://";
-            // NOTE: does not have states, pls and vids
+            desc.pipelineLayoutPath = "renderpipelinelayouts://";
+            // NOTE: does not have states and vids
             shaderMgr.LoadShaderFiles(desc);
         }
         // make sure shaders found above have been created
@@ -398,6 +443,8 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
         for (auto info : CORE_NS::GetPluginRegister().GetTypeInfos(RenderNodeTypeInfo::UID)) {
             renderNodeMgr.AddRenderNodeFactory(*static_cast<const RenderNodeTypeInfo*>(info));
         }
+
+        renderUtil_ = make_unique<RenderUtil>(*this);
 
         renderer_ = make_unique<Renderer>(*this);
 
@@ -468,7 +515,7 @@ void RenderContext::RegisterDefaultPaths()
     // Already handeled during plugin registration. If own filemanager instance is used then these are needed.
 #if (RENDER_EMBEDDED_ASSETS_ENABLED == 1)
     // Create engine:// protocol that points to embedded engine asset files.
-    PLUGIN_LOG_I("Registered core asset path: 'rofsRndr://render/'");
+    PLUGIN_LOG_D("Registered core asset path: 'rofsRndr://render/'");
     fileManager_->RegisterPath("render", "rofsRndr://render/", false);
 #endif
     for (uint32_t idx = 0; idx < countof(RENDER_DATA_PATHS); ++idx) {
@@ -513,13 +560,17 @@ string_view RenderContext::GetVersion()
     return {};
 }
 
+RenderCreateInfo RenderContext::GetCreateInfo() const
+{
+    return createInfo_;
+}
+
 const IInterface* RenderContext::GetInterface(const Uid& uid) const
 {
-    if (uid == IRenderContext::UID) {
+    if ((uid == IRenderContext::UID) || (uid == IClassFactory::UID) || (uid == IInterface::UID)) {
         return static_cast<const IRenderContext*>(this);
-    } else if (uid == IClassFactory::UID) {
-        return static_cast<const IClassFactory*>(this);
-    } else if (uid == IClassRegister::UID) {
+    }
+    if (uid == IClassRegister::UID) {
         return static_cast<const IClassRegister*>(this);
     }
     return nullptr;
@@ -527,11 +578,10 @@ const IInterface* RenderContext::GetInterface(const Uid& uid) const
 
 IInterface* RenderContext::GetInterface(const Uid& uid)
 {
-    if (uid == IRenderContext::UID) {
+    if ((uid == IRenderContext::UID) || (uid == IClassFactory::UID) || (uid == IInterface::UID)) {
         return static_cast<IRenderContext*>(this);
-    } else if (uid == IClassFactory::UID) {
-        return static_cast<IClassFactory*>(this);
-    } else if (uid == IClassRegister::UID) {
+    }
+    if (uid == IClassRegister::UID) {
         return static_cast<IClassRegister*>(this);
     }
     return nullptr;
@@ -572,7 +622,7 @@ void RenderContext::UnregisterInterfaceType(const InterfaceTypeInfo& interfaceIn
     if (!interfaceTypeInfos_.empty()) {
         const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
-        if ((*pos)->uid == interfaceInfo.uid) {
+        if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == interfaceInfo.uid) {
             interfaceTypeInfos_.erase(pos);
         }
     }
@@ -590,7 +640,7 @@ const InterfaceTypeInfo& RenderContext::GetInterfaceMetadata(const Uid& uid) con
     if (!interfaceTypeInfos_.empty()) {
         const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
-        if ((*pos) && (*pos)->uid == uid) {
+        if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == uid) {
             return *(*pos);
         }
     }

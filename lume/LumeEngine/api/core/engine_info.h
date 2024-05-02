@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,8 +19,9 @@
 #include <cstdint>
 
 #include <base/containers/string.h>
+#include <base/namespace.h>
 #include <core/namespace.h>
-#include <core/os/intf_platform.h>
+#include <core/os/platform_create_info.h>
 
 CORE_BEGIN_NAMESPACE()
 /** \addtogroup group_engineinfo

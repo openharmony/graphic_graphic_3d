@@ -4,24 +4,24 @@
 
 // includes
 
-#include "3d/shaders/common/3d_dm_structures_common.h"
 #include "3d/shaders/common/3d_dm_indirect_lighting_common.h"
+#include "3d/shaders/common/3d_dm_structures_common.h"
 #include "3d/shaders/common/3d_dm_target_packing_common.h"
 
 // sets
 
 #include "3d/shaders/common/3d_dm_env_frag_layout_common.h"
+#define CORE3D_USE_SCENE_FOG_IN_ENV
+#include "3d/shaders/common/3d_dm_inplace_env_common.h"
 #include "3d/shaders/common/3d_dm_inplace_post_process.h"
 
 // in / out
 
 layout(location = 0) in vec2 inUv;
+layout(location = 1) in flat uint inIndices;
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outVelocityNormal;
-
-//>DECLARATIONS_CORE3D_ENV
-#include "common/core3d_env_blocks.h"
 
 /*
 fragment shader for environment sampling
@@ -30,8 +30,8 @@ void main(void)
 {
     outColor = vec4(0.0, 0.0, 0.0, 1.0);
 
-    EnvironmentMapSampleBlock(CORE_DEFAULT_ENV_TYPE, inUv, uImgCubeSampler, uImgSampler, outColor);
-    //>FUNCTIONS_CORE3D_ENV
+    const uint cameraIdx = GetUnpackFlatIndicesCameraIdx(inIndices);
+    InplaceEnvironmentBlock(CORE_DEFAULT_ENV_TYPE, cameraIdx, inUv, uImgCubeSampler, uImgSampler, outColor);
 
     // specialization for post process
     if (CORE_POST_PROCESS_FLAGS > 0) {

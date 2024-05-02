@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 
 #include <cstdint>
 
+#include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
@@ -35,6 +36,8 @@ public:
     virtual const GpuImageDesc& GetDescDepthBuffer() const = 0;
 
     virtual uint32_t GetFlags() const = 0;
+    virtual SurfaceTransformFlags GetSurfaceTransformFlags() const = 0;
+    virtual uint64_t GetSurfaceHandle() const = 0;
 };
 RENDER_END_NAMESPACE()
 

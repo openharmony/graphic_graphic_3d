@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -105,6 +105,16 @@ IRenderNodeGraphLoader::LoadResult ParseRenderNode(const json::value& node, Rend
     return nodeResult;
 }
 
+IRenderNodeGraphLoader::LoadResult ParseOutputResources(const json::value& node, RenderNodeGraphOutputResource& data)
+{
+    IRenderNodeGraphLoader::LoadResult nodeResult;
+
+    SafeGetJsonValue(node, "nodeName", nodeResult.error, data.nodeName);
+    SafeGetJsonValue(node, "name", nodeResult.error, data.name);
+
+    return nodeResult;
+}
+
 void CompatibilityCheck(const json::value& json, RenderNodeGraphLoader::LoadResult& result)
 {
     string ver;
@@ -170,12 +180,29 @@ RenderNodeGraphLoader::LoadResult RenderNodeGraphLoader::LoadString(const string
 
         vector<RenderNodeDesc> nodeDescriptors;
         if (const auto nodes = json.find("nodes"); nodes) {
-            nodeDescriptors.reserve(nodes->array_.size());
+            if (nodes->is_array()) {
+                nodeDescriptors.reserve(nodes->array_.size());
+                for (auto const& node : nodes->array_) {
+                    RenderNodeDesc data;
+                    LoadResult nodeResult = ParseRenderNode(node, data);
+                    if (nodeResult.error.empty()) {
+                        nodeDescriptors.push_back(move(data));
+                    } else {
+                        finalResult.error += nodeResult.error;
+                    }
+                }
+            } else {
+                finalResult.error += "\"nodes\" must to be an array.";
+            }
+        }
+        vector<RenderNodeGraphOutputResource> outputResources;
+        if (const auto nodes = json.find("renderNodeGraphOutputResources"); nodes) {
+            outputResources.reserve(nodes->array_.size());
             for (auto const& node : nodes->array_) {
-                RenderNodeDesc data;
-                LoadResult nodeResult = ParseRenderNode(node, data);
+                RenderNodeGraphOutputResource data;
+                LoadResult nodeResult = ParseOutputResources(node, data);
                 if (nodeResult.error.empty()) {
-                    nodeDescriptors.emplace_back(move(data));
+                    outputResources.push_back(move(data));
                 } else {
                     finalResult.error += nodeResult.error;
                 }
@@ -188,6 +215,7 @@ RenderNodeGraphLoader::LoadResult RenderNodeGraphLoader::LoadString(const string
             finalResult.desc.renderNodeGraphDataStoreName = renderNodeGraphDataStoreName;
             finalResult.desc.renderNodeGraphUri = uri;
             finalResult.desc.nodes = move(nodeDescriptors);
+            finalResult.desc.outputResources = move(outputResources);
         }
 
         return finalResult;

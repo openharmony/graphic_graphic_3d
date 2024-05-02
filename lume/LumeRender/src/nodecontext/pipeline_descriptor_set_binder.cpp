@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,43 +32,6 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr uint8_t INVALID_BIDX { 16 };
-
-PipelineStageFlags GetPipelineStageFlags(const ShaderStageFlags shaderStageFlags)
-{
-    PipelineStageFlags pipelineStageFlags { 0 };
-
-    if (shaderStageFlags & ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT) {
-        pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-    } else if (shaderStageFlags & ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT) {
-        pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    } else if (shaderStageFlags & ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT) {
-        pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-
-    return pipelineStageFlags;
-}
-
-constexpr AccessFlags GetAccessFlags(const DescriptorType dt)
-{
-    if ((dt == CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) || (dt == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
-        (dt == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)) {
-        return CORE_ACCESS_UNIFORM_READ_BIT;
-    } else if ((dt == CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) || (dt == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
-               (dt == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) || (dt == CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE)) {
-        // NOTE: could be optimized with shader reflection info
-        return (CORE_ACCESS_SHADER_READ_BIT | CORE_ACCESS_SHADER_WRITE_BIT);
-    } else if (dt == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
-        return CORE_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-    } else {
-        // CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-        // CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE
-        // CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT
-        // CORE_DESCRIPTOR_TYPE_SAMPLER
-        // CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE
-        return CORE_ACCESS_SHADER_READ_BIT;
-    }
-}
-
 constexpr ImageLayout GetImageLayout(const DescriptorType dt)
 {
     if ((dt == CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) || (dt == CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
@@ -93,21 +56,6 @@ inline constexpr bool CheckValidImageDescriptor(const DescriptorType dt)
            (dt == CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE) || (dt == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
 }
 
-constexpr RenderHandleType GetRenderHandleType(const DescriptorType dt)
-{
-    if (dt == CORE_DESCRIPTOR_TYPE_SAMPLER) {
-        return RenderHandleType::GPU_SAMPLER;
-    } else if (((dt >= CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) && (dt <= CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE)) ||
-               (dt == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
-        return RenderHandleType::GPU_IMAGE;
-    } else if (((dt >= CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) &&
-                   (dt <= CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) ||
-               (dt == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE)) {
-        return RenderHandleType::GPU_BUFFER;
-    }
-    return RenderHandleType::UNDEFINED;
-}
-
 struct DescriptorCounts {
     uint32_t count { 0 };
     uint32_t arrayCount { 0 };
@@ -121,7 +69,16 @@ DescriptorSetBinder::DescriptorSetBinder(
     if (RenderHandleUtil::GetHandleType(handle) != RenderHandleType::DESCRIPTOR_SET) {
         PLUGIN_LOG_E("invalid handle in descriptor set binder creation");
     }
+    Init(descriptorSetLayoutBindings);
+}
 
+DescriptorSetBinder::DescriptorSetBinder(const array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings)
+{
+    Init(descriptorSetLayoutBindings);
+}
+
+void DescriptorSetBinder::Init(const array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings)
+{
     bindings_.resize(descriptorSetLayoutBindings.size());
     for (size_t idx = 0; idx < descriptorSetLayoutBindings.size(); ++idx) {
         maxBindingCount_ = Math::max(maxBindingCount_, descriptorSetLayoutBindings[idx].binding);
@@ -129,11 +86,14 @@ DescriptorSetBinder::DescriptorSetBinder(
     // +1 for binding count
     maxBindingCount_ = Math::min(maxBindingCount_ + 1, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
 
+#if (RENDER_VALIDATION_ENABLED == 1)
+    uint32_t minDescriptorCount = ~0U;
+#endif
     DescriptorCounts bufferCounts;
     DescriptorCounts imageCounts;
     DescriptorCounts samplerCounts;
     for (const auto& binding : descriptorSetLayoutBindings) {
-        const RenderHandleType type = GetRenderHandleType(binding.descriptorType);
+        const RenderHandleType type = DescriptorSetBinderUtil::GetRenderHandleType(binding.descriptorType);
         // we don't have duplicates, array descriptor from index 1 can be found directly from arrayOffset
         const uint32_t arrayCount = (binding.descriptorCount > 1) ? (binding.descriptorCount - 1) : 0;
         if (type == RenderHandleType::GPU_BUFFER) {
@@ -146,7 +106,16 @@ DescriptorSetBinder::DescriptorSetBinder(
             samplerCounts.count++;
             samplerCounts.arrayCount += arrayCount;
         }
+#if (RENDER_VALIDATION_ENABLED == 1)
+        minDescriptorCount = Math::min(minDescriptorCount, binding.descriptorCount);
+#endif
     }
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if ((minDescriptorCount == 0U) && (!descriptorSetLayoutBindings.empty())) {
+        PLUGIN_LOG_W("RENDER_VALIDATION: Descriptors with descriptor count of zero which might indicate non-sized "
+                     "arrays in shaders. Resize the descriptor counts before creating descriptor sets and binders.");
+    }
+#endif
     buffers_.resize(bufferCounts.count + bufferCounts.arrayCount);
     images_.resize(imageCounts.count + imageCounts.arrayCount);
     samplers_.resize(samplerCounts.count + samplerCounts.arrayCount);
@@ -177,13 +146,14 @@ void DescriptorSetBinder::InitFillBindings(
         // setup expected bindings
         descriptorBindingMask_ |= (1 << currBinding.binding.binding);
 
-        const AccessFlags accessFlags = GetAccessFlags(currBinding.binding.descriptorType);
+        const AccessFlags accessFlags = DescriptorSetBinderUtil::GetAccessFlags(currBinding.binding.descriptorType);
         const ShaderStageFlags shaderStageFlags = currBinding.binding.shaderStageFlags;
-        const PipelineStageFlags pipelineStageFlags = GetPipelineStageFlags(currBinding.binding.shaderStageFlags);
+        const PipelineStageFlags pipelineStageFlags =
+            DescriptorSetBinderUtil::GetPipelineStageFlags(currBinding.binding.shaderStageFlags);
         if (idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
             bindingToIndex_[currBinding.binding.binding] = static_cast<uint8_t>(idx);
         }
-        const RenderHandleType type = GetRenderHandleType(currBinding.binding.descriptorType);
+        const RenderHandleType type = DescriptorSetBinderUtil::GetRenderHandleType(currBinding.binding.descriptorType);
         if (type == RenderHandleType::GPU_BUFFER) {
             currBinding.resourceIndex = bufferIdx.count;
             PLUGIN_ASSERT(bufferIdx.count < buffers_.size());
@@ -229,6 +199,15 @@ void DescriptorSetBinder::InitFillBindings(
 void DescriptorSetBinder::ClearBindings()
 {
     bindingMask_ = 0;
+    auto ClearResourcesBindings = [](auto& resources) {
+        for (auto& ref : resources) {
+            ref.resource = {};
+            ref.additionalFlags = 0u;
+        }
+    };
+    ClearResourcesBindings(buffers_);
+    ClearResourcesBindings(images_);
+    ClearResourcesBindings(samplers_);
 }
 
 RenderHandle DescriptorSetBinder::GetDescriptorSetHandle() const
@@ -238,10 +217,12 @@ RenderHandle DescriptorSetBinder::GetDescriptorSetHandle() const
 
 DescriptorSetLayoutBindingResources DescriptorSetBinder::GetDescriptorSetLayoutBindingResources() const
 {
-    DescriptorSetLayoutBindingResources dslbr { bindings_, buffers_, images_, samplers_, descriptorBindingMask_,
+    return DescriptorSetLayoutBindingResources { bindings_, buffers_, images_, samplers_, descriptorBindingMask_,
         bindingMask_ };
+}
 
-#if (RENDER_VALIDATION_ENABLED == 1)
+void DescriptorSetBinder::PrintDescriptorSetLayoutBindingValidation() const
+{
     auto CheckValidity = [](const auto& vec, const string_view strView) {
         for (size_t idx = 0; idx < vec.size(); ++idx) {
             if (!RenderHandleUtil::IsValid(vec[idx].resource.handle)) {
@@ -254,9 +235,6 @@ DescriptorSetLayoutBindingResources DescriptorSetBinder::GetDescriptorSetLayoutB
     CheckValidity(buffers_, "buffer");
     CheckValidity(images_, "image");
     CheckValidity(samplers_, "sampler");
-#endif
-
-    return dslbr;
 }
 
 bool DescriptorSetBinder::GetDescriptorSetLayoutBindingValidity() const
@@ -264,7 +242,8 @@ bool DescriptorSetBinder::GetDescriptorSetLayoutBindingValidity() const
     return (bindingMask_ == descriptorBindingMask_);
 }
 
-void DescriptorSetBinder::BindBuffer(const uint32_t binding, const BindableBuffer& resource)
+void DescriptorSetBinder::BindBuffer(
+    const uint32_t binding, const BindableBuffer& resource, const AdditionalDescriptorFlags flags)
 {
     const RenderHandleType handleType = RenderHandleUtil::GetHandleType(resource.handle);
     const bool validHandleType = (handleType == RenderHandleType::GPU_BUFFER);
@@ -280,6 +259,7 @@ void DescriptorSetBinder::BindBuffer(const uint32_t binding, const BindableBuffe
             const auto& bind = bindings_[index];
             const DescriptorType descriptorType = bind.binding.descriptorType;
             if (CheckValidBufferDescriptor(descriptorType)) {
+                buffers_[bind.resourceIndex].additionalFlags = flags;
                 buffers_[bind.resourceIndex].resource = resource;
                 bindingMask_ |= (1 << binding);
             } else {
@@ -294,6 +274,11 @@ void DescriptorSetBinder::BindBuffer(const uint32_t binding, const BindableBuffe
             "RENDER_VALIDATION: PipelineDescriptorSetBinder::BindBuffer() invalid handle");
     }
 #endif
+}
+
+void DescriptorSetBinder::BindBuffer(const uint32_t binding, const BindableBuffer& resource)
+{
+    BindBuffer(binding, resource, 0);
 }
 
 void DescriptorSetBinder::BindBuffer(const uint32_t binding, const RenderHandle handle, const uint32_t byteOffset)
@@ -354,7 +339,8 @@ void DescriptorSetBinder::BindBuffers(const uint32_t binding, const BASE_NS::arr
     }
 }
 
-void DescriptorSetBinder::BindImage(const uint32_t binding, const BindableImage& resource)
+void DescriptorSetBinder::BindImage(
+    const uint32_t binding, const BindableImage& resource, const AdditionalDescriptorFlags flags)
 {
     const bool validHandleType = (RenderHandleUtil::GetHandleType(resource.handle) == RenderHandleType::GPU_IMAGE);
     if ((binding < maxBindingCount_) && validHandleType) {
@@ -367,6 +353,7 @@ void DescriptorSetBinder::BindImage(const uint32_t binding, const BindableImage&
                     ? (RenderHandleUtil::GetHandleType(resource.samplerHandle) == RenderHandleType::GPU_SAMPLER)
                     : true;
             if (CheckValidImageDescriptor(descriptorType) && validSamplerHandling) {
+                images_[bind.resourceIndex].additionalFlags = flags;
                 BindableImage& bindableImage = images_[bind.resourceIndex].resource;
                 if (resource.imageLayout != CORE_IMAGE_LAYOUT_UNDEFINED) {
                     bindableImage.imageLayout = resource.imageLayout;
@@ -392,6 +379,11 @@ void DescriptorSetBinder::BindImage(const uint32_t binding, const BindableImage&
             "RENDER_VALIDATION: PipelineDescriptorSetBinder::BindImage() invalid handle");
     }
 #endif
+}
+
+void DescriptorSetBinder::BindImage(const uint32_t binding, const BindableImage& resource)
+{
+    BindImage(binding, resource, 0);
 }
 
 void DescriptorSetBinder::BindImage(const uint32_t binding, const RenderHandle handle)
@@ -456,7 +448,8 @@ void DescriptorSetBinder::BindImages(const uint32_t binding, const array_view<co
     }
 }
 
-void DescriptorSetBinder::BindSampler(const uint32_t binding, const BindableSampler& resource)
+void DescriptorSetBinder::BindSampler(
+    const uint32_t binding, const BindableSampler& resource, const AdditionalDescriptorFlags flags)
 {
     const bool validHandleType = (RenderHandleUtil::GetHandleType(resource.handle) == RenderHandleType::GPU_SAMPLER);
     if ((binding < maxBindingCount_) && validHandleType) {
@@ -465,6 +458,7 @@ void DescriptorSetBinder::BindSampler(const uint32_t binding, const BindableSamp
             const auto& bind = bindings_[index];
             const DescriptorType descriptorType = bind.binding.descriptorType;
             if (descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLER) {
+                samplers_[bind.resourceIndex].additionalFlags = flags;
                 samplers_[bind.resourceIndex].resource = resource;
                 bindingMask_ |= (1 << binding);
             } else {
@@ -479,6 +473,11 @@ void DescriptorSetBinder::BindSampler(const uint32_t binding, const BindableSamp
             "RENDER_VALIDATION: PipelineDescriptorSetBinder::BindSampler() invalid handle");
     }
 #endif
+}
+
+void DescriptorSetBinder::BindSampler(const uint32_t binding, const BindableSampler& resource)
+{
+    BindSampler(binding, resource, 0);
 }
 
 void DescriptorSetBinder::BindSampler(const uint32_t binding, const RenderHandle handle)
@@ -540,18 +539,29 @@ PipelineDescriptorSetBinder::PipelineDescriptorSetBinder(const PipelineLayout& p
     const array_view<const RenderHandle> handles,
     const array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings)
 {
-    if ((pipelineLayout.descriptorSetCount != descriptorSetsLayoutBindings.size()) ||
-        (handles.size() != descriptorSetsLayoutBindings.size())) {
-        PLUGIN_LOG_E("pipeline layout counts does not match descriptor set layout bindings");
-    }
+    Init(pipelineLayout, handles, descriptorSetsLayoutBindings, true);
+}
 
+PipelineDescriptorSetBinder::PipelineDescriptorSetBinder(const PipelineLayout& pipelineLayout,
+    const array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings)
+{
+    PLUGIN_STATIC_ASSERT(PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT == 4U);
+    RenderHandle handles[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { {}, {}, {}, {} };
+    Init(pipelineLayout, { handles, descriptorSetsLayoutBindings.size() }, descriptorSetsLayoutBindings, false);
+}
+
+void PipelineDescriptorSetBinder::Init(const PipelineLayout& pipelineLayout,
+    const BASE_NS::array_view<const RenderHandle> handles,
+    const BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings, bool validHandles)
+{
     descriptorSetBinders_.reserve(descriptorSetsLayoutBindings.size());
     setIndices_.reserve(descriptorSetsLayoutBindings.size());
     descriptorSetHandles_.reserve(descriptorSetsLayoutBindings.size());
 
+    uint32_t setToBinderIdx = 0;
     for (uint32_t setIdx = 0; setIdx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++setIdx) {
         const auto& pipelineDescRef = pipelineLayout.descriptorSetLayouts[setIdx];
-        if (pipelineDescRef.set == PipelineLayoutConstants::INVALID_INDEX) {
+        if (pipelineDescRef.set >= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
             continue;
         }
 
@@ -560,9 +570,13 @@ PipelineDescriptorSetBinder::PipelineDescriptorSetBinder(const PipelineLayout& p
         const auto descHandle = handles[setIdx];
 
         // create binder
-        descriptorSetBinders_.emplace_back(descHandle, descRef.binding);
-        setIndices_.emplace_back(set);
-        descriptorSetHandles_.emplace_back(descHandle);
+        if (validHandles) {
+            descriptorSetBinders_.emplace_back(descHandle, descRef.binding);
+        } else {
+            descriptorSetBinders_.emplace_back(descRef.binding);
+        }
+        setIndices_.push_back(set);
+        descriptorSetHandles_.push_back(descHandle);
 
         vector<DescriptorSetLayoutBinding> dslb(pipelineDescRef.bindings.size());
         for (size_t bindingIdx = 0; bindingIdx < pipelineDescRef.bindings.size(); ++bindingIdx) {
@@ -576,9 +590,8 @@ PipelineDescriptorSetBinder::PipelineDescriptorSetBinder(const PipelineLayout& p
 #endif
 
             dslb[bindingIdx] = descPipelineRef;
-
-            setToBinderIndex_[set] = (uint32_t)setIdx;
         }
+        setToBinderIndex_[set] = setToBinderIdx++;
     }
 }
 
@@ -589,14 +602,20 @@ void PipelineDescriptorSetBinder::ClearBindings()
     }
 }
 
-void PipelineDescriptorSetBinder::BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource)
+void PipelineDescriptorSetBinder::BindBuffer(
+    const uint32_t set, const uint32_t binding, const BindableBuffer& resource, const AdditionalDescriptorFlags flags)
 {
     if (set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
         const uint32_t setIdx = setToBinderIndex_[set];
         if (setIdx < static_cast<uint32_t>(descriptorSetBinders_.size())) {
-            descriptorSetBinders_[setIdx].BindBuffer(binding, resource);
+            descriptorSetBinders_[setIdx].BindBuffer(binding, resource, flags);
         }
     }
+}
+
+void PipelineDescriptorSetBinder::BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource)
+{
+    BindBuffer(set, binding, resource, 0);
 }
 
 void PipelineDescriptorSetBinder::BindBuffers(
@@ -610,14 +629,20 @@ void PipelineDescriptorSetBinder::BindBuffers(
     }
 }
 
-void PipelineDescriptorSetBinder::BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource)
+void PipelineDescriptorSetBinder::BindImage(
+    const uint32_t set, const uint32_t binding, const BindableImage& resource, const AdditionalDescriptorFlags flags)
 {
     if (set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
         const uint32_t setIdx = setToBinderIndex_[set];
         if (setIdx < static_cast<uint32_t>(descriptorSetBinders_.size())) {
-            descriptorSetBinders_[setIdx].BindImage(binding, resource);
+            descriptorSetBinders_[setIdx].BindImage(binding, resource, flags);
         }
     }
+}
+
+void PipelineDescriptorSetBinder::BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource)
+{
+    BindImage(set, binding, resource, 0);
 }
 
 void PipelineDescriptorSetBinder::BindImages(
@@ -632,14 +657,20 @@ void PipelineDescriptorSetBinder::BindImages(
 }
 
 void PipelineDescriptorSetBinder::BindSampler(
-    const uint32_t set, const uint32_t binding, const BindableSampler& resource)
+    const uint32_t set, const uint32_t binding, const BindableSampler& resource, const AdditionalDescriptorFlags flags)
 {
     if (set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
         const uint32_t setIdx = setToBinderIndex_[set];
         if (setIdx < static_cast<uint32_t>(descriptorSetBinders_.size())) {
-            descriptorSetBinders_[setIdx].BindSampler(binding, resource);
+            descriptorSetBinders_[setIdx].BindSampler(binding, resource, flags);
         }
     }
+}
+
+void PipelineDescriptorSetBinder::BindSampler(
+    const uint32_t set, const uint32_t binding, const BindableSampler& resource)
+{
+    BindSampler(set, binding, resource, 0);
 }
 
 void PipelineDescriptorSetBinder::BindSamplers(
@@ -685,6 +716,13 @@ bool PipelineDescriptorSetBinder::GetPipelineDescriptorSetLayoutBindingValidity(
         }
     }
     return valid;
+}
+
+void PipelineDescriptorSetBinder::PrintPipelineDescriptorSetLayoutBindingValidation() const
+{
+    for (const auto& ref : descriptorSetBinders_) {
+        ref.PrintDescriptorSetLayoutBindingValidation();
+    }
 }
 
 uint32_t PipelineDescriptorSetBinder::GetDescriptorSetCount() const

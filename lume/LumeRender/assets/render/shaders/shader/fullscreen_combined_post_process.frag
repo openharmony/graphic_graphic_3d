@@ -34,7 +34,7 @@ layout(location = 0) out vec4 outColor;
  */
 void main(void)
 {
-    outColor = texture(uImgSampler, inUv);
+    outColor = textureLod(uImgSampler, inUv, 0);
 
     //>FUNCTIONS_CORE_POST_PROCESS
     PostProcessColorFringeBlock(uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_FRINGE], inUv,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,6 +40,11 @@ public:
     void InitNode(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        // there should be cameras every frame with 3D
+        return 0U;
+    }
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "b42910bb-33c4-4790-a257-3f1837415fce" };

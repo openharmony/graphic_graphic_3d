@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,6 +39,43 @@ struct SceneRenderDataStores {
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameCamera;
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameLight;
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameMorph;
+
+    BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNamePrefix;
+};
+
+struct SceneBufferHandles {
+    /* Camera buffer handle */
+    RENDER_NS::RenderHandle camera;
+    /* Material buffer handle */
+    RENDER_NS::RenderHandle material;
+    /* Material transforms buffer handle */
+    RENDER_NS::RenderHandle materialTransform;
+    /* Material custom buffer handle */
+    RENDER_NS::RenderHandle materialCustom;
+    /* Mesh buffer handle */
+    RENDER_NS::RenderHandle mesh;
+    /* Skin joint buffer handle */
+    RENDER_NS::RenderHandle skinJoint;
+};
+
+struct SceneCameraBufferHandles {
+    /* Environment buffer handle */
+    RENDER_NS::RenderHandle environment;
+    /* Fog buffer handle */
+    RENDER_NS::RenderHandle fog;
+    /* General data buffer handle */
+    RENDER_NS::RenderHandle generalData;
+    /* Post process buffer handle */
+    RENDER_NS::RenderHandle postProcess;
+    /* Light buffer handle */
+    RENDER_NS::RenderHandle light;
+    /* Light cluster buffer handle */
+    RENDER_NS::RenderHandle lightCluster;
+};
+
+struct SceneCameraImageHandles {
+    /* Camera radiance cubemap handle */
+    RENDER_NS::RenderHandle radianceCubemap;
 };
 
 /**
@@ -110,6 +147,29 @@ public:
     virtual void GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial, uint32_t cameraId,
         const RenderSlotInfo& renderSlotInfo, BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices) = 0;
+
+    /** Get scene uniform buffers.
+     * @param sceneName Name of the current scene.
+     */
+    virtual SceneBufferHandles GetSceneBufferHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName) = 0;
+
+    /** Get camera uniform buffers.
+     * @param sceneName Name of the current scene.
+     * @param cameraName Name of the current camera.
+     */
+    virtual SceneCameraBufferHandles GetSceneCameraBufferHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+        const BASE_NS::string_view cameraName) = 0;
+
+    /** Get camera images.
+     * @param sceneName Name of the current scene.
+     * @param cameraName Name of the current camera.
+     * @param camera Render camera.
+     */
+    virtual SceneCameraImageHandles GetSceneCameraImageHandles(
+        RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+        const BASE_NS::string_view cameraName, const RenderCamera& camera) = 0;
 
 protected:
     IRenderNodeSceneUtil() = default;

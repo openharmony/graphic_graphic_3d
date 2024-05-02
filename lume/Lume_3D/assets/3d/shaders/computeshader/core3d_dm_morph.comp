@@ -8,9 +8,9 @@
 
 // sets
 
-layout(set = 0, binding = 0, std140) uniform uMorphData
+layout(set = 0, binding = 0, std140) restrict readonly buffer uMorphData
 {
-    MorphTargetInfoStruct uObjects[CORE_MAX_MORPH_TARGET_COUNT / 4];
+    MorphTargetInfoStruct uObjects[];
 };
 
 layout(set = 1, binding = 0, std430) restrict readonly buffer IndexData

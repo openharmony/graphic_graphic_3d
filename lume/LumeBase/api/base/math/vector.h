@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #ifndef API_BASE_MATH_VECTOR_H
 #define API_BASE_MATH_VECTOR_H
 
+#include <cstddef>
 #include <cstdint>
 
 #include <base/math/mathf.h>
@@ -28,7 +29,6 @@ namespace Math {
 class Vec2;
 class Vec3;
 class Vec4;
-class Mat4X4;
 
 /** @ingroup group_math_vector */
 /** Vector2 presentation */

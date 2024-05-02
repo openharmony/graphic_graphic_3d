@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,6 +39,7 @@ public:
     void InitNode(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "8e5bd3ad-f95b-4c47-9cf2-a9d908aa7c72" };
@@ -58,7 +59,9 @@ private:
     SceneRenderDataStores stores_;
 
     uint32_t maxObjectCount_ { 0 };
-    RENDER_NS::RenderHandleReference objectUniformBufferHandle_;
+    uint32_t maxStructCount_ { 0 };
+    uint32_t bufferSize_ { 0 };
+    RENDER_NS::RenderHandleReference morphTargetBufferHandle_;
 
     RENDER_NS::RenderHandle psoHandle_;
 
@@ -71,6 +74,8 @@ private:
         BASE_NS::vector<RENDER_NS::IDescriptorSetBinder::Ptr> outputs;
     };
     AllDescriptorSets allDescriptorSets_;
+
+    bool hasExecuteData_ { false };
 };
 CORE3D_END_NAMESPACE()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,11 +16,20 @@
 #include "image/loaders/image_loader_ktx.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 
+#include <base/containers/allocator.h>
+#include <base/containers/array_view.h>
 #include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
-#include <core/io/intf_file_manager.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <base/util/formats.h>
+#include <core/image/intf_image_container.h>
+#include <core/image/intf_image_loader_manager.h>
+#include <core/io/intf_file.h>
 #include <core/log.h>
 #include <core/namespace.h>
 
@@ -43,11 +52,10 @@ uint32_t ReadU32(const uint8_t** data)
     CORE_ASSERT(data);
     CORE_ASSERT(*data);
 
-    uint32_t value;
-    value = *(*data)++;
-    value |= *(*data)++ << 8;
-    value |= *(*data)++ << 16;
-    value |= *(*data)++ << 24;
+    uint32_t value = *(*data)++;
+    value |= static_cast<uint32_t>(*(*data)++) << 8;
+    value |= static_cast<uint32_t>(*(*data)++) << 16;
+    value |= static_cast<uint32_t>(*(*data)++) << 24;
     return value;
 }
 
@@ -56,10 +64,9 @@ uint32_t ReadU32FlipEndian(const uint8_t** data)
     CORE_ASSERT(data);
     CORE_ASSERT(*data);
 
-    uint32_t value;
-    value = static_cast<uint32_t>(*(*data)++ << 24);
-    value |= static_cast<uint32_t>(*(*data)++ << 16);
-    value |= static_cast<uint32_t>(*(*data)++ << 8);
+    uint32_t value = static_cast<uint32_t>(*(*data)++) << 24;
+    value |= static_cast<uint32_t>(*(*data)++) << 16;
+    value |= static_cast<uint32_t>(*(*data)++) << 8;
     value |= static_cast<uint32_t>(*(*data)++);
     return value;
 }
@@ -122,11 +129,12 @@ IImageContainer::ImageType GetImageType(const KtxHeader& header)
 {
     if (header.pixelHeight == 0 && header.pixelDepth == 0) {
         return IImageContainer::ImageType::TYPE_1D;
-    } else if (header.pixelDepth == 0) {
-        return IImageContainer::ImageType::TYPE_2D;
-    } else {
-        return IImageContainer::ImageType::TYPE_3D;
     }
+    if (header.pixelDepth == 0) {
+        return IImageContainer::ImageType::TYPE_2D;
+    }
+
+    return IImageContainer::ImageType::TYPE_3D;
 }
 
 IImageContainer::ImageViewType GetImageViewType(const KtxHeader& header, IImageContainer::ImageType imageType)
@@ -141,7 +149,8 @@ IImageContainer::ImageViewType GetImageViewType(const KtxHeader& header, IImageC
         }
         return (isArray ? IImageContainer::ImageViewType::VIEW_TYPE_CUBE_ARRAY
                         : IImageContainer::ImageViewType::VIEW_TYPE_CUBE);
-    } else if (isArray) {
+    }
+    if (isArray) {
         switch (imageType) {
             case IImageContainer::ImageType::TYPE_1D:
                 return IImageContainer::ImageViewType::VIEW_TYPE_1D_ARRAY;
@@ -149,7 +158,7 @@ IImageContainer::ImageViewType GetImageViewType(const KtxHeader& header, IImageC
                 return IImageContainer::ImageViewType::VIEW_TYPE_2D_ARRAY;
             case IImageContainer::ImageType::TYPE_3D:
                 // 3d arrays are not supported.
-                return IImageContainer::ImageViewType::VIEW_TYPE_MAX_ENUM;
+                [[fallthrough]];
             case IImageContainer::ImageType::TYPE_MAX_ENUM:
                 return IImageContainer::ImageViewType::VIEW_TYPE_MAX_ENUM;
         }
@@ -176,8 +185,6 @@ public:
     KtxImage(unique_ptr<uint8_t[]>&& fileBytes, size_t fileBytesLength)
         : fileBytes_(CORE_NS::move(fileBytes)), fileBytesLength_(fileBytesLength)
     {}
-
-    ~KtxImage() noexcept override = default;
 
     using Ptr = BASE_NS::unique_ptr<KtxImage, Deleter>;
 
@@ -237,13 +244,8 @@ public:
             const uint32_t validOffset =
                 static_cast<uint32_t>(currentImageElementOffset / bytesPerBlock * bytesPerBlock);
             uint8_t* imageBytes = const_cast<uint8_t*>(image->imageBytes_);
-            if (imageBytes && (image->imageBytesLength_ - validOffset >= subelementLength)) {
-                int ret = memmove_s(imageBytes + validOffset, subelementLength,
-                    imageBytes + currentImageElementOffset, subelementLength);
-                if (ret != 0) {
-                    CORE_LOG_E("memmove failed.");
-                }
-            } else {
+            if (memmove_s(imageBytes + validOffset, image->imageBytesLength_ - validOffset,
+                    imageBytes + currentImageElementOffset, subelementLength) != EOK) {
                 CORE_LOG_E("memmove failed.");
             }
             image->imageBuffers_[imageBufferIndex].bufferOffset = validOffset;
@@ -426,7 +428,8 @@ public:
                     CORE_LOG_V(
                         "  mips=%u faces=%u arrayElements=%u", inputMipCount, ktx.numberOfFaces, arrayElementCount);
                     CORE_LOG_V("  mipmapLevel=%u lodsize=%zu end=%zu filesize=%zu.", mipmapLevel, lodSize,
-                        data - image->fileBytes_.get() + lodSize, image->fileBytesLength_);
+                        static_cast<size_t>(data - image->fileBytes_.get() + static_cast<ptrdiff_t>(lodSize)),
+                        image->fileBytesLength_);
                     return ImageLoaderManager::ResultFailure("Invalid ktx data.");
                 }
 
@@ -469,7 +472,8 @@ public:
     {
         if (!fileBytes) {
             return ImageLoaderManager::ResultFailure("Input data must not be null.");
-        } else if (fileBytesLength < KTX_HEADER_LENGTH) {
+        }
+        if (fileBytesLength < KTX_HEADER_LENGTH) {
             return ImageLoaderManager::ResultFailure("Not enough data for parsing ktx.");
         }
 
@@ -485,13 +489,16 @@ public:
         if (memcmp(ktxHeader.identifier, KTX_IDENTIFIER_REFERENCE, KTX_IDENTIFIER_LENGTH) != 0) {
             CORE_LOG_D("Ktx invalid file identifier.");
             return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-        } else if (ktxHeader.endianness != KTX_FILE_ENDIANNESS && ktxHeader.endianness != KTX_FILE_ENDIANNESS_FLIPPED) {
+        }
+        if (ktxHeader.endianness != KTX_FILE_ENDIANNESS && ktxHeader.endianness != KTX_FILE_ENDIANNESS_FLIPPED) {
             CORE_LOG_D("Ktx invalid endian marker.");
             return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-        } else if (ktxHeader.numberOfFaces != 1 && ktxHeader.numberOfFaces != 6u) { // 1 for regular, 6 for cubemaps
+        }
+        if (ktxHeader.numberOfFaces != 1 && ktxHeader.numberOfFaces != 6u) { // 1 for regular, 6 for cubemaps
             CORE_LOG_D("Ktx invalid numberOfFaces.");
             return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-        } else if (ktxHeader.pixelWidth == 0) {
+        }
+        if (ktxHeader.pixelWidth == 0) {
             CORE_LOG_D("Ktx pixelWidth can't be 0.");
             return ImageLoaderManager::ResultFailure("Invalid ktx data.");
         }
@@ -636,7 +643,7 @@ public:
         // NOTE: could reuse this and remove the extra copy here if the data would be given as a unique_ptr.
         unique_ptr<uint8_t[]> buffer = make_unique<uint8_t[]>(static_cast<size_t>(imageFileBytes.size()));
         if (buffer) {
-            std::copy(imageFileBytes.begin().ptr(), imageFileBytes.end().ptr(), buffer.get());
+            std::copy(imageFileBytes.begin(), imageFileBytes.end(), buffer.get());
         }
 
         return KtxImage::Load(move(buffer), imageFileBytes.size(), loadFlags);
@@ -645,31 +652,36 @@ public:
     bool CanLoad(array_view<const uint8_t> imageFileBytes) const override
     {
         // Check for KTX
-        return (memcmp(imageFileBytes.data(), KTX_IDENTIFIER_REFERENCE, KTX_IDENTIFIER_LENGTH) == 0);
+        return (imageFileBytes.size() >= KTX_IDENTIFIER_LENGTH) &&
+               (memcmp(imageFileBytes.data(), KTX_IDENTIFIER_REFERENCE, KTX_IDENTIFIER_LENGTH) == 0);
     }
 
     // No animated KTX
-    ImageLoaderManager::LoadAnimatedResult LoadAnimatedImage(IFile& file, uint32_t loadFlags) override
+    ImageLoaderManager::LoadAnimatedResult LoadAnimatedImage(IFile& /* file */, uint32_t /* loadFlags */) override
     {
         return ImageLoaderManager::ResultFailureAnimated("Animated KTX not supported.");
     }
 
     ImageLoaderManager::LoadAnimatedResult LoadAnimatedImage(
-        array_view<const uint8_t> imageFileBytes, uint32_t loadFlags) override
+        array_view<const uint8_t> /* imageFileBytes */, uint32_t /* loadFlags */) override
     {
         return ImageLoaderManager::ResultFailureAnimated("Animated KTX not supported.");
     }
 
+    vector<IImageLoaderManager::ImageType> GetSupportedTypes() const override
+    {
+        return vector<IImageLoaderManager::ImageType>(std::begin(KTX_IMAGE_TYPES), std::end(KTX_IMAGE_TYPES));
+    }
+
 protected:
-    ~ImageLoaderKtx() = default;
-    void Destroy() override
+    void Destroy() final
     {
         delete this;
     }
 };
 } // namespace
 
-IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderKtx()
+IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderKtx(PluginToken)
 {
     return ImageLoaderManager::IImageLoader::Ptr { new ImageLoaderKtx() };
 }

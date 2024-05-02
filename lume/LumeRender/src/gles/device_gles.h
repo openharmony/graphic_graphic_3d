@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <map>
 #include <mutex>
 
 #include <base/containers/string_view.h>
@@ -32,6 +31,7 @@
 #include <render/resource_handle.h>
 
 #include "device/device.h"
+#include "gles/swapchain_gles.h"
 
 #if RENDER_HAS_GLES_BACKEND
 #include "egl_state.h"
@@ -42,11 +42,11 @@
 
 RENDER_BEGIN_NAMESPACE()
 class ComputePipelineStateObject;
-class GpuAccelerationStructure;
 class GpuBuffer;
 class GpuComputeProgram;
 class GpuImage;
 class GpuResourceManager;
+class GpuSemaphore;
 class GpuSampler;
 class GpuShaderProgram;
 class GraphicsPipelineStateObject;
@@ -108,7 +108,7 @@ public:
     PlatformGpuMemoryAllocator* GetPlatformGpuMemoryAllocator() override;
 
     // (re-)create swapchain
-    void CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo) override;
+    BASE_NS::unique_ptr<Swapchain> CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo) override;
     void DestroyDeviceSwapchain() override;
 
     bool IsActive() const;
@@ -124,6 +124,7 @@ public:
     BASE_NS::vector<uint8_t> GetPipelineCache() const override;
 
     BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuBufferDesc& desc) override;
+    BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuAccelerationStructureDesc& desc) override;
 
     // Create gpu image resources
     BASE_NS::unique_ptr<GpuImage> CreateGpuImage(const GpuImageDesc& desc) override;
@@ -134,9 +135,6 @@ public:
     BASE_NS::vector<BASE_NS::unique_ptr<GpuImage>> CreateGpuImageViews(const Swapchain& platformSwapchain) override;
 
     BASE_NS::unique_ptr<GpuSampler> CreateGpuSampler(const GpuSamplerDesc& desc) override;
-
-    BASE_NS::unique_ptr<GpuAccelerationStructure> CreateGpuAccelerationStructure(
-        const GpuAccelerationStructureDesc& desc) override;
 
     BASE_NS::unique_ptr<RenderFrameSync> CreateRenderFrameSync() override;
 
@@ -155,8 +153,8 @@ public:
     BASE_NS::unique_ptr<GraphicsPipelineStateObject> CreateGraphicsPipelineStateObject(
         const GpuShaderProgram& gpuProgram, const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
-        const ShaderSpecializationConstantDataView& specializationConstants, const DynamicStateFlags dynamicStateFlags,
-        const RenderPassDesc& renderPassDesc,
+        const ShaderSpecializationConstantDataView& specializationConstants,
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
         const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
         const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData) override;
 
@@ -165,19 +163,25 @@ public:
         const ShaderSpecializationConstantDataView& specializationConstants,
         const LowLevelPipelineLayoutData* pipelineLayoutData) override;
 
+    BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphore() override;
+    BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(const uint64_t handle) override;
+
+    void SetBackendConfig(const BackendConfig& config) override;
+
     // Internal apis, only usable by other parts of GLES backend.
     bool HasExtension(BASE_NS::string_view extension) const;
+    void Activate(RenderHandle swapchain);
 #if RENDER_HAS_GL_BACKEND
     const WGLHelpers::WGLState& GetEglState();
 #endif
 #if RENDER_HAS_GLES_BACKEND
     const EGLHelpers::EGLState& GetEglState();
+    bool IsDepthResolveSupported() const;
 #endif
 
     uint32_t CacheProgram(
         BASE_NS::string_view vertSource, BASE_NS::string_view fragSource, BASE_NS::string_view compSource);
     void ReleaseProgram(uint32_t program);
-    SwapchainGLES* GetSwapchain();
 
     void UseProgram(uint32_t program);
     void BindBuffer(uint32_t target, uint32_t buffer);
@@ -236,6 +240,8 @@ public:
 
     const ImageFormat& GetGlImageFormat(BASE_NS::Format format) const;
 
+    void SwapBuffers(const SwapchainGLES&);
+
 private:
     enum BufferBindId : uint32_t {
         UNIFORM_BUFFER_BIND = 0,
@@ -275,6 +281,7 @@ private:
 #endif
         TEXTURE_2D_MULTISAMPLE = 3,
         TEXTURE_2D_ARRAY = 4,
+        TEXTURE_3D = 5,
         MAX_TEXTURE_TARGET_ID
     };
 
@@ -293,7 +300,7 @@ private:
     void UnBindVertexArray(uint32_t vao);
     void UnBindFrameBuffer(uint32_t fbo);
 
-    std::map<BASE_NS::string, bool> extensions_;
+    BASE_NS::vector<BASE_NS::string_view> extensions_;
     BASE_NS::vector<ImageFormat> supportedFormats_;
 
     enum { VERTEX_CACHE = 0, FRAGMENT_CACHE = 1, COMPUTE_CACHE = 2, MAX_CACHES };
@@ -337,6 +344,7 @@ private:
 #if RENDER_HAS_GLES_BACKEND
     const DeviceBackendType backendType_ = DeviceBackendType::OPENGLES;
     EGLHelpers::EGLState eglState_;
+    BackendConfigGLES backendConfig_ { {}, false };
 #endif
     mutable std::mutex activeMutex_;
     uint32_t isActive_ { 0 };
@@ -415,6 +423,12 @@ public:
     ~LowLevelDeviceGLES() = default;
 
     DeviceBackendType GetBackendType() const override;
+
+#if RENDER_HAS_EXPERIMENTAL
+    void Activate() override;
+    void Deactivate() override;
+    void SwapBuffers() override;
+#endif
 
 private:
     DeviceGLES& deviceGLES_;

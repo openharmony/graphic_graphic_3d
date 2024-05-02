@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #define CORE_UTIL_PICKING_H
 
 #include <3d/util/intf_picking.h>
+#include <base/containers/string_view.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
@@ -44,8 +45,17 @@ public:
 
     BASE_NS::vector<RayCastResult> RayCast(CORE_NS::IEcs const& ecs, const BASE_NS::Math::Vec3& start,
         const BASE_NS::Math::Vec3& direction) const override;
+    BASE_NS::vector<RayCastResult> RayCast(CORE_NS::IEcs const& ecs, const BASE_NS::Math::Vec3& start,
+        const BASE_NS::Math::Vec3& direction, uint64_t layerMask) const override;
+    BASE_NS::vector<RayTriangleCastResult> RayCast(const BASE_NS::Math::Vec3& start,
+        const BASE_NS::Math::Vec3& direction, BASE_NS::array_view<const BASE_NS::Math::Vec3> triangles) const override;
+
     BASE_NS::vector<RayCastResult> RayCastFromCamera(
         CORE_NS::IEcs const& ecs, CORE_NS::Entity camera, const BASE_NS::Math::Vec2& screenPos) const override;
+    BASE_NS::vector<RayCastResult> RayCastFromCamera(CORE_NS::IEcs const& ecs, CORE_NS::Entity camera,
+        const BASE_NS::Math::Vec2& screenPos, uint64_t layerMask) const override;
+    BASE_NS::vector<RayTriangleCastResult> RayCastFromCamera(CORE_NS::IEcs const& ecs, CORE_NS::Entity camera,
+        const BASE_NS::Math::Vec2& screenPos, BASE_NS::array_view<const BASE_NS::Math::Vec3> triangles) const override;
 
     MinAndMax GetWorldAABB(const BASE_NS::Math::Mat4X4& world, const BASE_NS::Math::Vec3& aabbMin,
         const BASE_NS::Math::Vec3& aabbMax) const override;
@@ -62,26 +72,29 @@ public:
     void Unref() override;
 
 protected:
-    BASE_NS::Math::Mat4X4 GetCameraViewToProjectionMatrix(const CameraComponent& cameraComponent) const;
-
-    constexpr bool IntersectAabb(const BASE_NS::Math::Vec3 aabbMin, const BASE_NS::Math::Vec3 aabbMax,
-        const BASE_NS::Math::Vec3 start, const BASE_NS::Math::Vec3 invDirection) const;
-
-    // Calculates AABB using WorldMatrixComponent.
-    void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
-        const IWorldMatrixComponentManager& worldMatrixComponentManager,
-        const IJointMatricesComponentManager& jointMatricesComponentManager, const IMeshComponentManager& meshManager,
-        const ISceneNode& sceneNode, bool isRecursive, MinAndMax& mamInOut) const;
-
-    // Calculates AABB using TransformComponent.
-    void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
-        const ITransformComponentManager& transformComponentManager, const IMeshComponentManager& meshManager,
-        const ISceneNode& sceneNode, const BASE_NS::Math::Mat4X4& parentWorld, bool isRecursive,
-        MinAndMax& mamInOut) const;
-
-    RayCastResult HitTestNode(ISceneNode& node, const MeshComponent& mesh, const BASE_NS::Math::Mat4X4& matrix,
-        const BASE_NS::Math::Vec3& start, const BASE_NS::Math::Vec3& invDir) const;
+    /** Safely compute the inverse of a direction 1/direction with zero checking. */
+    inline BASE_NS::Math::Vec3 DirectionVectorInverse(const BASE_NS::Math::Vec3& direction) const
+    {
+        BASE_NS::Math::Vec3 invDir { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max() };
+        if (direction.x != 0.f) {
+            invDir.x = 1.f / direction.x;
+        }
+        if (direction.y != 0.f) {
+            invDir.y = 1.f / direction.y;
+        }
+        if (direction.z != 0.f) {
+            invDir.z = 1.f / direction.z;
+        }
+        return invDir;
+    }
 };
+
+inline constexpr BASE_NS::string_view GetName(const IPicking*)
+{
+    return "IPicking";
+}
+
 CORE3D_END_NAMESPACE()
 
 #endif // CORE_UTIL_PICKING_H

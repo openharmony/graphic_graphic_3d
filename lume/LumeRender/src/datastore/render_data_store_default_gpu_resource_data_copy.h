@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,11 +38,17 @@ public:
     RenderDataStoreDefaultGpuResourceDataCopy(IRenderContext& renderContext, const BASE_NS::string_view name);
     ~RenderDataStoreDefaultGpuResourceDataCopy() override = default;
 
+    void CommitFrameData() override {};
     void PreRender() override {};
+    void PostRender() override {};
     void PreRenderBackend() override {};
     // Do copy operation in end frame.
-    void PostRender() override;
+    void PostRenderBackend() override;
     void Clear() override;
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     void AddCopyOperation(const GpuResourceDataCopy& copyOp) override;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,12 +23,13 @@
 #include "util/log.h"
 
 RENDER_BEGIN_NAMESPACE()
-#define VALIDATE_VK_RESULT(vk_func)                                                                       \
-    {                                                                                                     \
-        const VkResult result = (vk_func);                                                                \
-        PLUGIN_UNUSED(result);                                                                            \
-        PLUGIN_ASSERT_MSG(result == VK_SUCCESS, "vulkan result is not VK_SUCCESS : %d", (int32_t)result); \
+#define VALIDATE_VK_RESULT(vk_func)                                                \
+    {                                                                              \
+        const VkResult result = (vk_func);                                         \
+        if (result != VK_SUCCESS) {                                                \
+            PLUGIN_LOG_E("vulkan result is not VK_SUCCESS : %d", (int32_t)result); \
+        }                                                                          \
     }
 RENDER_END_NAMESPACE()
 
-#endif // CORE__GFX__VULKAN__VALIDATE_VK_H
+#endif // VULKAN_VALIDATE_VK_H

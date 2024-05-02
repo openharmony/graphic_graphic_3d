@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,7 +17,7 @@
 
 #include <algorithm>
 #include <cinttypes>
-#ifndef NDEBUG
+#if !defined(NDEBUG) || (defined(PLUGIN_LOG_DEBUG) && (PLUGIN_LOG_DEBUG == 1))
 #include <sstream>
 #include <thread>
 #endif
@@ -27,8 +27,11 @@
 #include <render/namespace.h>
 
 #include "device/device.h"
-#include "device/gpu_acceleration_structure.h"
+#include "device/gpu_buffer.h"
+#include "device/gpu_image.h"
+#include "device/gpu_resource_cache.h"
 #include "device/gpu_resource_desc_flag_validation.h"
+#include "device/gpu_resource_manager_base.h"
 #include "device/gpu_sampler.h"
 #include "resource_handle_impl.h"
 #include "util/log.h"
@@ -88,25 +91,6 @@ constexpr RenderHandleInfoFlags GetAdditionalImageFlagsFromFormat(const Format f
     return flags;
 }
 
-Format ForceUpdateUnsupportedFormat(const Format format)
-{
-    // NOTE: should do a linear list of formats with unsupported formats
-    // one could use simple r8_unorm related formats which are all supported
-    // NOTE: place this list to device where is FormatProperties as well
-#if (RENDER_VALIDATION_ENABLED == 1)
-    PLUGIN_LOG_W("RENDER_VALIDATION: unsupported format: %u", format);
-#endif
-    Format newFormat = format;
-    if (format == BASE_FORMAT_R8_SRGB) {
-        newFormat = BASE_FORMAT_R8_UNORM;
-    } else if (format == BASE_FORMAT_R8G8_SRGB) {
-        newFormat = BASE_FORMAT_R8G8_UNORM;
-    } else if (format == BASE_FORMAT_R8G8B8_SRGB) {
-        newFormat = BASE_FORMAT_R8G8B8_UNORM;
-    }
-    return newFormat;
-}
-
 #if (RENDER_VALIDATION_ENABLED == 1)
 void ValidateGpuBufferDesc(const GpuBufferDesc& desc)
 {
@@ -122,11 +106,24 @@ void ValidateGpuBufferDesc(const GpuBufferDesc& desc)
     if ((desc.memoryPropertyFlags & (~GpuResourceDescFlagValidation::ALL_MEMORY_PROPERTY_FLAGS)) != 0) {
         PLUGIN_LOG_E("RENDER_VALIDATION: Invalid MemoryPropertyFlags (%u)", desc.memoryPropertyFlags);
     }
+    if ((desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER) &&
+        ((desc.memoryPropertyFlags & MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0)) {
+        PLUGIN_LOG_E(
+            "RENDER_VALIDATION: Invalid MemoryPropertyFlags for CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER (%u)",
+            desc.memoryPropertyFlags);
+    }
+    if (desc.byteSize == 0) {
+        PLUGIN_LOG_E("RENDER_VALIDATION: Buffer byteSize must larger than zero");
+    }
 }
 
 void ValidateGpuImageDesc(const GpuImageDesc& desc, const string_view name)
 {
     bool valid = true;
+    if (desc.format == Format::BASE_FORMAT_UNDEFINED) {
+        PLUGIN_LOG_E("RENDER_VALIDATION: Undefined image format");
+        valid = false;
+    }
     if (desc.imageType > ImageType::CORE_IMAGE_TYPE_3D) {
         PLUGIN_LOG_E("RENDER_VALIDATION: Unsupported image type");
         valid = false;
@@ -194,9 +191,24 @@ void ValidateGpuImageDesc(const GpuImageDesc& desc, const string_view name)
             valid = false;
         }
     }
+    if ((desc.layerCount > 1u) && (desc.imageViewType <= CORE_IMAGE_VIEW_TYPE_3D)) {
+        PLUGIN_LOG_E("RENDER_VALIDATION: If image layer count (%u) is larger than 1, then image view type must be "
+                     "CORE_IMAGE_VIEW_TYPE_XX_ARRAY",
+            desc.layerCount);
+        valid = false;
+    }
 
     if ((!valid) && (!name.empty())) {
         PLUGIN_LOG_E("RENDER_VALIDATION: validation issue(s) with image (name: %s)", name.data());
+    }
+}
+
+void ValidateGpuAccelerationStructureDesc(const GpuAccelerationStructureDesc& desc)
+{
+    ValidateGpuBufferDesc(desc.bufferDesc);
+    if ((desc.bufferDesc.usageFlags & CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT) == 0) {
+        PLUGIN_LOG_E("RENDER_VALIDATION: usageFlags must include CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT "
+                     "for acceleration structures");
     }
 }
 
@@ -358,14 +370,13 @@ GpuResourceManager::GpuResourceManager(Device& device, const CreateInfo& createI
     : device_(device), gpuResourceMgrFlags_(createInfo.flags),
       gpuBufferMgr_(make_unique<GpuResourceManagerTyped<GpuBuffer, GpuBufferDesc>>(device)),
       gpuImageMgr_(make_unique<GpuResourceManagerTyped<GpuImage, GpuImageDesc>>(device)),
-      gpuSamplerMgr_(make_unique<GpuResourceManagerTyped<GpuSampler, GpuSamplerDesc>>(device)),
-      gpuAccelerationStructureMgr_(
-          make_unique<GpuResourceManagerTyped<GpuAccelerationStructure, GpuAccelerationStructureDesc>>(device))
+      gpuSamplerMgr_(make_unique<GpuResourceManagerTyped<GpuSampler, GpuSamplerDesc>>(device))
 {
+    gpuResourceCache_ = make_unique<GpuResourceCache>(*this);
+
     bufferStore_.mgr = gpuBufferMgr_.get();
     imageStore_.mgr = gpuImageMgr_.get();
     samplerStore_.mgr = gpuSamplerMgr_.get();
-    accelStore_.mgr = gpuAccelerationStructureMgr_.get();
 
     const MemoryPropertyFlags deviceSharedMemoryPropertyFlags = device_.GetSharedMemoryPropertyFlags();
     // remove create info flag if not really available
@@ -378,6 +389,10 @@ GpuResourceManager::GpuResourceManager(Device& device, const CreateInfo& createI
 
 GpuResourceManager::~GpuResourceManager()
 {
+    // reset cache before logging
+    // cache logs it's own un-released resources
+    gpuResourceCache_.reset();
+
 #if (RENDER_VALIDATION_ENABLED == 1)
     auto checkAndPrintValidation = [](const PerManagerStore& store, const string_view name) {
         uint32_t aliveCounter = 0;
@@ -395,7 +410,6 @@ GpuResourceManager::~GpuResourceManager()
     checkAndPrintValidation(bufferStore_, "GPU buffer");
     checkAndPrintValidation(imageStore_, "GPU image");
     checkAndPrintValidation(samplerStore_, "GPU sampler");
-    checkAndPrintValidation(accelStore_, "GPU acceleration structure");
 #endif
 }
 
@@ -405,28 +419,20 @@ RenderHandleReference GpuResourceManager::Get(const RenderHandle& handle) const
         const RenderHandleType handleType = RenderHandleUtil::GetHandleType(handle);
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         if (handleType == RenderHandleType::GPU_BUFFER) {
-            if (RenderHandleUtil::IsGpuAccelerationStructure(handle)) {
-                auto& store = accelStore_;
-                auto const clientLock = std::lock_guard(store.clientMutex);
-                if (arrayIndex < static_cast<uint32_t>(store.clientHandles.size())) {
-                    return store.clientHandles[arrayIndex];
-                }
-            } else {
-                auto& store = bufferStore_;
-                auto const clientLock = std::lock_guard(store.clientMutex);
-                if (arrayIndex < static_cast<uint32_t>(store.clientHandles.size())) {
-                    return store.clientHandles[arrayIndex];
-                }
+            auto& store = bufferStore_;
+            auto const clientLock = std::shared_lock(store.clientMutex);
+            if (arrayIndex < static_cast<uint32_t>(store.clientHandles.size())) {
+                return store.clientHandles[arrayIndex];
             }
         } else if (handleType == RenderHandleType::GPU_IMAGE) {
             auto& store = imageStore_;
-            auto const clientLock = std::lock_guard(store.clientMutex);
+            auto const clientLock = std::shared_lock(store.clientMutex);
             if (arrayIndex < static_cast<uint32_t>(store.clientHandles.size())) {
                 return store.clientHandles[arrayIndex];
             }
         } else if (handleType == RenderHandleType::GPU_SAMPLER) {
             auto& store = samplerStore_;
-            auto const clientLock = std::lock_guard(store.clientMutex);
+            auto const clientLock = std::shared_lock(store.clientMutex);
             if (arrayIndex < static_cast<uint32_t>(store.clientHandles.size())) {
                 return store.clientHandles[arrayIndex];
             }
@@ -478,7 +484,8 @@ uint32_t GpuResourceManager::GetPendingOptionalResourceIndex(
 RenderHandleReference GpuResourceManager::CreateStagingBuffer(const GpuBufferDesc& desc)
 {
     PerManagerStore& store = bufferStore_;
-    return StoreAllocation(store, {}, {}, RenderHandleType::GPU_BUFFER, ResourceDescriptor { desc }, ~0u, 0u).handle;
+    return StoreAllocation(store, { ResourceDescriptor { desc }, {}, {}, RenderHandleType::GPU_BUFFER, ~0u, 0u })
+        .handle;
 }
 
 // needs to be locked when called
@@ -488,28 +495,48 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::CreateBuffer(
 #if (RENDER_VALIDATION_ENABLED == 1)
     ValidateGpuBufferDesc(desc);
 #endif
-
+    MemoryPropertyFlags additionalMemPropFlags = 0U;
+    if (device_.GetBackendType() == DeviceBackendType::VULKAN) {
+        additionalMemPropFlags = (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER)
+                                    ? (MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+                                    : 0U;
+    } else {
+        additionalMemPropFlags = (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER)
+                                    ? (MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                                            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+                                    : 0U;
+    }
+    const GpuBufferDesc validatedDesc {
+        desc.usageFlags | defaultBufferUsageFlags_,
+        desc.memoryPropertyFlags | additionalMemPropFlags,
+        desc.engineCreationFlags,
+        Math::max(desc.byteSize, 1u),
+        desc.format,
+    };
     PerManagerStore& store = bufferStore_;
-    if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
+    if (validatedDesc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
         // replace immediate created if still pending (i.e. not usable on the GPU)
         // memory pointers on client become invalid
         const uint32_t emplaceResourceIndex = static_cast<uint32_t>(store.pendingData.buffers.size());
         const uint32_t optionalResourceIndex =
             Math::min(emplaceResourceIndex, GetPendingOptionalResourceIndex(store, replacedHandle, name));
 
-        unique_ptr<GpuBuffer> gpuBuffer = device_.CreateGpuBuffer(desc);
-        if (gpuBuffer) {
+        if (unique_ptr<GpuBuffer> gpuBuffer = [this](const GpuBufferDesc validatedDesc) {
+            // protect GPU memory allocations
+            auto lock = std::lock_guard(allocationMutex_);
+            return device_.CreateGpuBuffer(validatedDesc);
+        }(validatedDesc)) {
             // safety checks
             if ((optionalResourceIndex < emplaceResourceIndex) &&
                 (optionalResourceIndex < store.pendingData.buffers.size())) {
                 store.pendingData.buffers[optionalResourceIndex] = move(gpuBuffer);
             } else {
-                store.pendingData.buffers.emplace_back(move(gpuBuffer));
+                store.pendingData.buffers.push_back(move(gpuBuffer));
             }
         }
 
-        const StoreAllocationData sad = StoreAllocation(store, name, replacedHandle, RenderHandleType::GPU_BUFFER,
-            ResourceDescriptor { desc }, optionalResourceIndex, 0u);
+        StoreAllocationData sad = StoreAllocation(store, { ResourceDescriptor { validatedDesc }, name, replacedHandle,
+                                                             RenderHandleType::GPU_BUFFER, optionalResourceIndex, 0u });
         // additional data is increased in StoreAllocation
         // there are as many additional data elements as clientHandle elements
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(sad.handle.GetHandle());
@@ -519,8 +546,8 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::CreateBuffer(
         }
         return sad;
     } else {
-        return StoreAllocation(
-            store, name, replacedHandle, RenderHandleType::GPU_BUFFER, ResourceDescriptor { desc }, ~0u, 0u);
+        return StoreAllocation(store,
+            { ResourceDescriptor { validatedDesc }, name, replacedHandle, RenderHandleType::GPU_BUFFER, ~0u, 0u });
     }
 }
 
@@ -588,7 +615,6 @@ RenderHandleReference GpuResourceManager::Create(
 
     GpuBufferDesc validDesc = GetValidGpuBufferDesc(desc);
     CheckAndEnableMemoryOptimizations(gpuResourceMgrFlags_, validDesc);
-    PLUGIN_ASSERT(validDesc.byteSize == data.size_bytes());
     const bool useStagingBuffer =
         (validDesc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ? false : true;
 
@@ -605,9 +631,9 @@ RenderHandleReference GpuResourceManager::Create(
 
         auto const stagingLock = std::lock_guard(stagingMutex_);
 
-        stagingOperations_.bufferCopies.emplace_back(BufferCopy { 0, 0, minByteSize });
+        stagingOperations_.bufferCopies.push_back(BufferCopy { 0, 0, minByteSize });
         const uint32_t beginIndex = (uint32_t)stagingOperations_.bufferCopies.size() - 1;
-        vector<uint8_t> copiedData(data.cbegin().ptr(), data.cend().ptr());
+        vector<uint8_t> copiedData(data.cbegin().ptr(), data.cbegin().ptr() + minByteSize);
 
         // add staging vector index handle to resource handle in pending allocations
         PLUGIN_ASSERT(sad.allocationIndex < store.pendingData.allocations.size());
@@ -619,13 +645,12 @@ RenderHandleReference GpuResourceManager::Create(
         if (useStagingBuffer) {
             const uint32_t stagingBufferByteSize =
                 useStagingBuffer ? static_cast<uint32_t>(copiedData.size_in_bytes()) : 0u;
-            stagingOperations_.bufferToBuffer.emplace_back(
+            stagingOperations_.bufferToBuffer.push_back(
                 StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_VECTOR, {}, sad.handle, beginIndex, 1,
                     move(copiedData), nullptr, Format::BASE_FORMAT_UNDEFINED, stagingBufferByteSize, false });
         } else {
-            stagingOperations_.cpuToBuffer.emplace_back(
-                StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_VECTOR, {}, sad.handle, beginIndex, 1,
-                    move(copiedData), nullptr, Format::BASE_FORMAT_UNDEFINED, 0u, false });
+            stagingOperations_.cpuToBuffer.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_VECTOR,
+                {}, sad.handle, beginIndex, 1, move(copiedData), nullptr, Format::BASE_FORMAT_UNDEFINED, 0u, false });
         }
         handle = move(sad.handle);
     }
@@ -670,35 +695,37 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::CreateImage(
 #endif
 
     PerManagerStore& store = imageStore_;
-    GpuImageDesc validatedDesc {
-        desc.imageType,
-        desc.imageViewType,
-        desc.format,
-        (desc.imageTiling > ImageTiling::CORE_IMAGE_TILING_LINEAR) ? ImageTiling::CORE_IMAGE_TILING_OPTIMAL
-                                                                   : desc.imageTiling,
-        desc.usageFlags & GpuResourceDescFlagValidation::ALL_GPU_IMAGE_USAGE_FLAGS,
-        ((desc.memoryPropertyFlags != 0) ? desc.memoryPropertyFlags
-                                         : MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) &
-            GpuResourceDescFlagValidation::ALL_MEMORY_PROPERTY_FLAGS,
-        desc.createFlags & GpuResourceDescFlagValidation::ALL_IMAGE_CREATE_FLAGS,
-        desc.engineCreationFlags,
-        Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.width)),
-        Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.height)),
-        Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.depth)),
-        Math::max(
-            1u, Math::min(desc.mipCount,
+    const StoreAllocationInfo info {
+        ResourceDescriptor { GpuImageDesc {
+            desc.imageType,
+            desc.imageViewType,
+            device_.GetFormatOrFallback(desc.format),
+            (desc.imageTiling > ImageTiling::CORE_IMAGE_TILING_LINEAR) ? ImageTiling::CORE_IMAGE_TILING_OPTIMAL
+                                                                       : desc.imageTiling,
+            (desc.usageFlags & GpuResourceDescFlagValidation::ALL_GPU_IMAGE_USAGE_FLAGS) | defaultImageUsageFlags_,
+            ((desc.memoryPropertyFlags != 0) ? desc.memoryPropertyFlags
+                                             : MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) &
+                GpuResourceDescFlagValidation::ALL_MEMORY_PROPERTY_FLAGS,
+            desc.createFlags & GpuResourceDescFlagValidation::ALL_IMAGE_CREATE_FLAGS,
+            desc.engineCreationFlags,
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.width)),
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.height)),
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.depth)),
+            Math::max(1u,
+                Math::min(desc.mipCount,
                     static_cast<uint32_t>(std::log2f(static_cast<float>(Math::max(desc.width, desc.height)))) + 1u)),
-        Math::max(1u, desc.layerCount),
-        Math::max(1u, desc.sampleCountFlags),
-        desc.componentMapping,
+            Math::max(1u, desc.layerCount),
+            Math::max(1u, desc.sampleCountFlags),
+            desc.componentMapping,
+        } },
+        name, replacedHandle, RenderHandleType::GPU_IMAGE, ~0u, 0u
     };
-    const FormatProperties formatProperties = device_.GetFormatProperties(desc.format);
-    if (((desc.imageTiling == CORE_IMAGE_TILING_OPTIMAL) && (formatProperties.optimalTilingFeatures == 0)) ||
-        ((desc.imageTiling == CORE_IMAGE_TILING_LINEAR) && (formatProperties.linearTilingFeatures == 0))) {
-        validatedDesc.format = ForceUpdateUnsupportedFormat(validatedDesc.format);
+    if (info.descriptor.imageDescriptor.format == Format::BASE_FORMAT_UNDEFINED) {
+        PLUGIN_LOG_E("Undefined image BASE_FORMAT_UNDEFINED (input format %u)", static_cast<uint32_t>(desc.format));
+        return {};
     }
-    return StoreAllocation(store, name, replacedHandle, RenderHandleType::GPU_IMAGE,
-        ResourceDescriptor { std::move(validatedDesc) }, ~0u, 0u);
+
+    return StoreAllocation(store, info);
 }
 
 RenderHandleReference GpuResourceManager::Create(const RenderHandleReference& replacedHandle, const GpuImageDesc& desc)
@@ -750,7 +777,7 @@ void GpuResourceManager::RemapGpuImageHandle(
                                       (clientResourceArrayIndex < (uint32_t)store.clientHandles.size()));
         if (validClientHandles) {
             store.descriptions[clientArrayIndex] = store.descriptions[clientResourceArrayIndex];
-            store.pendingData.remaps.emplace_back(RemapDescription { clientHandle, clientHandleGpuResource });
+            store.pendingData.remaps.push_back(RemapDescription { clientHandle, clientHandleGpuResource });
         }
     }
 
@@ -780,7 +807,7 @@ RenderHandleReference GpuResourceManager::Create(
                 format = desc.format;
             }
             for (const auto& copyRef : copies) {
-                stagingOperations_.bufferImageCopies.emplace_back(ConvertCoreBufferImageCopy(copyRef));
+                stagingOperations_.bufferImageCopies.push_back(ConvertCoreBufferImageCopy(copyRef));
             }
 
             // add staging handle to resource handle in pending allocations
@@ -792,7 +819,7 @@ RenderHandleReference GpuResourceManager::Create(
             const uint32_t stagingBufferByteSize = static_cast<uint32_t>(image->GetData().size_bytes());
             const uint32_t count = static_cast<uint32_t>(copies.size());
             const uint32_t beginIndex = static_cast<uint32_t>(stagingOperations_.bufferImageCopies.size()) - count;
-            stagingOperations_.bufferToImage.emplace_back(
+            stagingOperations_.bufferToImage.push_back(
                 StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_IMAGE_CONTAINER, {}, sad.handle, beginIndex,
                     count, {}, move(image), format, stagingBufferByteSize, false });
         }
@@ -823,7 +850,7 @@ RenderHandleReference GpuResourceManager::Create(const string_view name, const G
 #if (RENDER_VALIDATION_ENABLED == 1)
                 ValidateGpuImageCopy(desc, copyRef, name);
 #endif
-                stagingOperations_.bufferImageCopies.emplace_back(copyRef);
+                stagingOperations_.bufferImageCopies.push_back(copyRef);
             }
             // add staging vector index to resource alloc in pending allocations
             PLUGIN_ASSERT(sad.allocationIndex < store.pendingData.allocations.size());
@@ -836,7 +863,7 @@ RenderHandleReference GpuResourceManager::Create(const string_view name, const G
             const uint32_t beginIndex = (uint32_t)stagingOperations_.bufferImageCopies.size() - count;
 
             vector<uint8_t> copiedData(data.cbegin().ptr(), data.cend().ptr());
-            stagingOperations_.bufferToImage.emplace_back(
+            stagingOperations_.bufferToImage.push_back(
                 StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_VECTOR, {}, sad.handle, beginIndex, count,
                     move(copiedData), nullptr, format, stagingBufferByteSize, false });
         }
@@ -872,20 +899,24 @@ RenderHandleReference GpuResourceManager::CreateView(
     const uint32_t optionalResourceIndex =
         Math::min(emplaceResourceIndex, GetPendingOptionalResourceIndex(store, {}, name));
 
-    unique_ptr<GpuImage> gpuImage = device_.CreateGpuImageView(desc, gpuImagePlatformData);
-    if (gpuImage) {
+    if (unique_ptr<GpuImage> gpuImage = [this](const GpuImageDesc& desc,
+        const GpuImagePlatformData& gpuImagePlatformData) {
+            // protect GPU memory allocations
+            auto lock = std::lock_guard(allocationMutex_);
+            return device_.CreateGpuImageView(desc, gpuImagePlatformData);
+        } (desc, gpuImagePlatformData)) {
         // safety checks
         if ((optionalResourceIndex < emplaceResourceIndex) &&
             (optionalResourceIndex < store.pendingData.images.size())) {
             store.pendingData.images[optionalResourceIndex] = move(gpuImage);
         } else {
-            store.pendingData.images.emplace_back(move(gpuImage));
+            store.pendingData.images.push_back(move(gpuImage));
         }
     }
     device_.Deactivate();
 
     return StoreAllocation(
-        store, name, {}, RenderHandleType::GPU_IMAGE, ResourceDescriptor { desc }, optionalResourceIndex, 0u)
+        store, { ResourceDescriptor { desc }, name, {}, RenderHandleType::GPU_IMAGE, optionalResourceIndex, 0u })
         .handle;
 }
 
@@ -903,8 +934,13 @@ RenderHandleReference GpuResourceManager::CreateView(
 
     // additional handle flags provide information if platform conversion is needed
     uint32_t additionalHandleFlags = 0u;
-    unique_ptr<GpuImage> gpuImage = device_.CreateGpuImageView(desc, backendSpecificData);
-    if (gpuImage) {
+
+    if (unique_ptr<GpuImage> gpuImage = 
+        [this](const GpuImageDesc& desc, const BackendSpecificImageDesc& backendSpecificData) {
+            // protect GPU memory allocations
+            auto lock = std::lock_guard(allocationMutex_);
+            return device_.CreateGpuImageView(desc, backendSpecificData);
+        } (desc, backendSpecificData)) {
         const auto additionalImageFlags = gpuImage->GetAdditionalFlags();
         additionalHandleFlags =
             (additionalImageFlags & GpuImage::AdditionalFlagBits::ADDITIONAL_PLATFORM_CONVERSION_BIT)
@@ -915,14 +951,18 @@ RenderHandleReference GpuResourceManager::CreateView(
             (optionalResourceIndex < store.pendingData.images.size())) {
             store.pendingData.images[optionalResourceIndex] = move(gpuImage);
         } else {
-            store.pendingData.images.emplace_back(move(gpuImage));
+            store.pendingData.images.push_back(move(gpuImage));
         }
     }
     device_.Deactivate();
 
-    const auto handle = StoreAllocation(store, name, {}, RenderHandleType::GPU_IMAGE, ResourceDescriptor { desc },
-        optionalResourceIndex, additionalHandleFlags)
-                            .handle;
+    const auto& images = store.pendingData.images;
+    const auto& finalDesc = (optionalResourceIndex < images.size() && images[optionalResourceIndex])
+                                ? images[optionalResourceIndex]->GetDesc()
+                                : desc;
+    auto handle = StoreAllocation(store, { ResourceDescriptor { finalDesc }, name, {}, RenderHandleType::GPU_IMAGE,
+                                             optionalResourceIndex, additionalHandleFlags })
+                      .handle;
 #if (RENDER_VALIDATION_ENABLED == 1)
     if ((additionalHandleFlags & CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION) &&
         !RenderHandleUtil::IsPlatformConversionResource(handle.GetHandle())) {
@@ -956,7 +996,8 @@ RenderHandleReference GpuResourceManager::Create(const string_view name, const G
     PerManagerStore& store = samplerStore_;
     const auto lock = std::lock_guard(store.clientMutex);
 
-    return StoreAllocation(store, name, {}, RenderHandleType::GPU_SAMPLER, ResourceDescriptor { desc }, ~0u, 0u).handle;
+    return StoreAllocation(store, { ResourceDescriptor { desc }, name, {}, RenderHandleType::GPU_SAMPLER, ~0u, 0u })
+        .handle;
 }
 
 RenderHandleReference GpuResourceManager::Create(
@@ -974,7 +1015,8 @@ RenderHandleReference GpuResourceManager::Create(
     PerManagerStore& store = samplerStore_;
     const auto lock = std::lock_guard(store.clientMutex);
 
-    return StoreAllocation(store, {}, rawHandle, RenderHandleType::GPU_SAMPLER, ResourceDescriptor { desc }, ~0u, 0u)
+    return StoreAllocation(
+        store, { ResourceDescriptor { desc }, {}, rawHandle, RenderHandleType::GPU_SAMPLER, ~0u, 0u })
         .handle;
 }
 
@@ -986,15 +1028,23 @@ RenderHandleReference GpuResourceManager::Create(const GpuSamplerDesc& desc)
 GpuResourceManager::StoreAllocationData GpuResourceManager::CreateAccelerationStructure(
     const BASE_NS::string_view name, const RenderHandle& replacedHandle, const GpuAccelerationStructureDesc& desc)
 {
-    PerManagerStore& store = accelStore_;
+    PerManagerStore& store = bufferStore_;
+#if (RENDER_VALIDATION_ENABLED == 1)
+    ValidateGpuAccelerationStructureDesc(desc);
+#endif
+    GpuAccelerationStructureDesc validatedDesc = desc;
+    validatedDesc.bufferDesc.usageFlags |= defaultBufferUsageFlags_;
+    validatedDesc.bufferDesc.byteSize = Math::max(validatedDesc.bufferDesc.byteSize, 1u),
+    validatedDesc.bufferDesc.usageFlags |= CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT;
+
     constexpr auto additionalBufferFlags = CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE;
-    return StoreAllocation(store, name, replacedHandle, RenderHandleType::GPU_BUFFER, ResourceDescriptor { desc }, ~0u,
-        additionalBufferFlags);
+    return StoreAllocation(store, { ResourceDescriptor { validatedDesc }, name, replacedHandle,
+                                      RenderHandleType::GPU_BUFFER, ~0u, additionalBufferFlags });
 }
 
 RenderHandleReference GpuResourceManager::Create(const GpuAccelerationStructureDesc& desc)
 {
-    PerManagerStore& store = accelStore_;
+    PerManagerStore& store = bufferStore_;
     const auto lock = std::lock_guard(store.clientMutex);
 
     return CreateAccelerationStructure("", {}, desc).handle;
@@ -1002,7 +1052,7 @@ RenderHandleReference GpuResourceManager::Create(const GpuAccelerationStructureD
 
 RenderHandleReference GpuResourceManager::Create(const string_view name, const GpuAccelerationStructureDesc& desc)
 {
-    PerManagerStore& store = accelStore_;
+    PerManagerStore& store = bufferStore_;
     const auto lock = std::lock_guard(store.clientMutex);
 
     return CreateAccelerationStructure(name, {}, desc).handle;
@@ -1015,16 +1065,104 @@ RenderHandleReference GpuResourceManager::Create(
 #if (RENDER_VALIDATION_ENABLED == 1)
     const bool valid = RenderHandleUtil::IsValid(rawHandle);
     const RenderHandleType type = RenderHandleUtil::GetHandleType(rawHandle);
-    if (valid && (type != RenderHandleType::GPU_BUFFER) && (RenderHandleUtil::IsGpuAccelerationStructure(rawHandle))) {
+    if (valid &&
+        ((type != RenderHandleType::GPU_BUFFER) || (!RenderHandleUtil::IsGpuAccelerationStructure(rawHandle)))) {
         PLUGIN_LOG_E("RENDER_VALIDATION: trying to replace a non GPU acceleration structure handle (type: %u) with "
                      "GpuAccelerationStructureDesc",
             (uint32_t)type);
     }
 #endif
-    PerManagerStore& store = accelStore_;
+    PerManagerStore& store = bufferStore_;
     const auto lock = std::lock_guard(store.clientMutex);
 
     return CreateAccelerationStructure("", rawHandle, desc).handle;
+}
+
+RenderHandleReference GpuResourceManager::CreateSwapchainImage(
+    const RenderHandleReference& replacedHandle, const BASE_NS::string_view name, const GpuImageDesc& desc)
+{
+#if (RENDER_VALIDATION_ENABLED == 1)
+    ValidateGpuImageDesc(desc, "");
+#endif
+
+    PerManagerStore& store = imageStore_;
+    const auto lock = std::lock_guard(store.clientMutex);
+
+    const uint32_t addFlags = RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE;
+    // NOTE: no mips for swapchains
+    // TODO: NOTE: allocation type is undefined
+    const StoreAllocationInfo info {
+        ResourceDescriptor { GpuImageDesc {
+            desc.imageType,
+            desc.imageViewType,
+            device_.GetFormatOrFallback(desc.format),
+            (desc.imageTiling > ImageTiling::CORE_IMAGE_TILING_LINEAR) ? ImageTiling::CORE_IMAGE_TILING_OPTIMAL
+                                                                       : desc.imageTiling,
+            (desc.usageFlags & GpuResourceDescFlagValidation::ALL_GPU_IMAGE_USAGE_FLAGS) | defaultImageUsageFlags_,
+            ((desc.memoryPropertyFlags != 0) ? desc.memoryPropertyFlags
+                                             : MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) &
+                GpuResourceDescFlagValidation::ALL_MEMORY_PROPERTY_FLAGS,
+            desc.createFlags & GpuResourceDescFlagValidation::ALL_IMAGE_CREATE_FLAGS,
+            desc.engineCreationFlags,
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.width)),
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.height)),
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.depth)),
+            1u, // hard-coded mip count
+            Math::max(1u, desc.layerCount),
+            Math::max(1u, desc.sampleCountFlags),
+            desc.componentMapping,
+        } },
+        name, replacedHandle.GetHandle(), RenderHandleType::GPU_IMAGE, ~0u, addFlags, AllocType::UNDEFINED
+    };
+    if (info.descriptor.imageDescriptor.format == Format::BASE_FORMAT_UNDEFINED) {
+        PLUGIN_LOG_E("Undefined image BASE_FORMAT_UNDEFINED (input format %u)", static_cast<uint32_t>(desc.format));
+        return {};
+    }
+
+    return StoreAllocation(store, info).handle;
+}
+
+RenderHandleReference GpuResourceManager::CreateShallowHandle(const GpuImageDesc& desc)
+{
+    PerManagerStore& store = imageStore_;
+    const auto lock = std::lock_guard(store.clientMutex);
+
+#if (RENDER_VALIDATION_ENABLED == 1)
+    ValidateGpuImageDesc(desc, "");
+#endif
+
+    const uint32_t addFlags = RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE;
+    const StoreAllocationInfo info {
+        ResourceDescriptor { GpuImageDesc {
+            desc.imageType,
+            desc.imageViewType,
+            device_.GetFormatOrFallback(desc.format),
+            (desc.imageTiling > ImageTiling::CORE_IMAGE_TILING_LINEAR) ? ImageTiling::CORE_IMAGE_TILING_OPTIMAL
+                                                                       : desc.imageTiling,
+            (desc.usageFlags & GpuResourceDescFlagValidation::ALL_GPU_IMAGE_USAGE_FLAGS) | defaultImageUsageFlags_,
+            ((desc.memoryPropertyFlags != 0) ? desc.memoryPropertyFlags
+                                             : MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) &
+                GpuResourceDescFlagValidation::ALL_MEMORY_PROPERTY_FLAGS,
+            desc.createFlags & GpuResourceDescFlagValidation::ALL_IMAGE_CREATE_FLAGS,
+            desc.engineCreationFlags,
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.width)),
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.height)),
+            Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.depth)),
+            Math::max(1u,
+                Math::min(desc.mipCount,
+                    static_cast<uint32_t>(std::log2f(static_cast<float>(Math::max(desc.width, desc.height)))) + 1u)),
+            Math::max(1u, desc.layerCount),
+            Math::max(1u, desc.sampleCountFlags),
+            desc.componentMapping,
+        } },
+        "", {}, RenderHandleType::GPU_IMAGE, ~0u, addFlags, AllocType::UNDEFINED
+    };
+    if (info.descriptor.imageDescriptor.format == Format::BASE_FORMAT_UNDEFINED) {
+        PLUGIN_LOG_E("Undefined image BASE_FORMAT_UNDEFINED (input format %u)", static_cast<uint32_t>(desc.format));
+        return {};
+    }
+
+    return StoreAllocation(store, info).handle;
 }
 
 // has staging lock and possible gpu buffer lock inside
@@ -1095,7 +1233,6 @@ void GpuResourceManager::Destroy(PerManagerStore& store, const RenderHandle& han
         }
 
         // we do not set default values to GpuXDesc (we leave the old data, it won't be used)
-        // old code: store.descriptions[arrayIndex] = {};
         // invalidate handle, noticed when trying to re-destroy (early-out in the beginning of the if)
         store.clientHandles[arrayIndex] = {};
 
@@ -1140,13 +1277,8 @@ void GpuResourceManager::Destroy(const RenderHandle& handle)
     if (RenderHandleUtil::IsValid(handle)) {
         const RenderHandleType handleType = RenderHandleUtil::GetHandleType(handle);
         if (handleType == RenderHandleType::GPU_BUFFER) {
-            if (RenderHandleUtil::IsGpuAccelerationStructure(handle)) {
-                const auto clientLock = std::lock_guard(accelStore_.clientMutex);
-                Destroy(accelStore_, handle);
-            } else {
-                const auto clientLock = std::lock_guard(bufferStore_.clientMutex);
-                Destroy(bufferStore_, handle);
-            }
+            const auto clientLock = std::lock_guard(bufferStore_.clientMutex);
+            Destroy(bufferStore_, handle);
         } else if (handleType == RenderHandleType::GPU_IMAGE) {
             const auto clientLock = std::lock_guard(imageStore_.clientMutex);
             Destroy(imageStore_, handle);
@@ -1165,7 +1297,7 @@ RenderHandleReference GpuResourceManager::GetHandle(const PerManagerStore& store
         return RenderHandleReference {};
     }
 
-    auto const clientLock = std::lock_guard(store.clientMutex);
+    auto const clientLock = std::shared_lock(store.clientMutex);
     if (auto const pos = store.nameToClientIndex.find(name); pos != store.nameToClientIndex.end()) {
         PLUGIN_ASSERT(pos->second < static_cast<uint32_t>(store.clientHandles.size()));
         return store.clientHandles[pos->second];
@@ -1181,7 +1313,7 @@ RenderHandle GpuResourceManager::GetRawHandle(const PerManagerStore& store, cons
         return RenderHandle {};
     }
 
-    auto const clientLock = std::lock_guard(store.clientMutex);
+    auto const clientLock = std::shared_lock(store.clientMutex);
     if (auto const pos = store.nameToClientIndex.find(name); pos != store.nameToClientIndex.end()) {
         PLUGIN_ASSERT(pos->second < static_cast<uint32_t>(store.clientHandles.size()));
         return store.clientHandles[pos->second].GetHandle();
@@ -1206,11 +1338,6 @@ RenderHandleReference GpuResourceManager::GetSamplerHandle(const string_view nam
     return GetHandle(samplerStore_, name);
 }
 
-RenderHandleReference GpuResourceManager::GetAccelerationStructureHandle(const string_view name) const
-{
-    return GetHandle(accelStore_, name);
-}
-
 RenderHandle GpuResourceManager::GetBufferRawHandle(const string_view name) const
 {
     return GetRawHandle(bufferStore_, name);
@@ -1226,11 +1353,6 @@ RenderHandle GpuResourceManager::GetSamplerRawHandle(const string_view name) con
     return GetRawHandle(samplerStore_, name);
 }
 
-RenderHandle GpuResourceManager::GetAccelerationStructureRawHandle(const BASE_NS::string_view name) const
-{
-    return GetRawHandle(accelStore_, name);
-}
-
 GpuBufferDesc GpuResourceManager::GetBufferDescriptor(const RenderHandle& handle) const
 {
     if (!IsGpuBuffer(handle)) {
@@ -1239,7 +1361,7 @@ GpuBufferDesc GpuResourceManager::GetBufferDescriptor(const RenderHandle& handle
     {
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         const PerManagerStore& store = bufferStore_;
-        auto const clientLock = std::lock_guard(store.clientMutex);
+        auto const clientLock = std::shared_lock(store.clientMutex);
         if (arrayIndex < (uint32_t)store.descriptions.size()) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
@@ -1249,7 +1371,7 @@ GpuBufferDesc GpuResourceManager::GetBufferDescriptor(const RenderHandle& handle
                     "RENDER_VALIDATION: buffer client handle is not current generation (name:%s)", name.c_str());
             }
 #endif
-            return store.descriptions[arrayIndex].bufferDescriptor;
+            return store.descriptions[arrayIndex].combinedBufDescriptor.bufferDesc;
         }
     }
     return GpuBufferDesc {};
@@ -1268,7 +1390,7 @@ GpuImageDesc GpuResourceManager::GetImageDescriptor(const RenderHandle& handle) 
     {
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         const PerManagerStore& store = imageStore_;
-        auto const clientLock = std::lock_guard(store.clientMutex);
+        auto const clientLock = std::shared_lock(store.clientMutex);
         if (arrayIndex < (uint32_t)store.descriptions.size()) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
@@ -1297,7 +1419,7 @@ GpuSamplerDesc GpuResourceManager::GetSamplerDescriptor(const RenderHandle& hand
     {
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         const PerManagerStore& store = samplerStore_;
-        auto const clientLock = std::lock_guard(store.clientMutex);
+        auto const clientLock = std::shared_lock(store.clientMutex);
         if (arrayIndex < (uint32_t)store.descriptions.size()) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
@@ -1325,8 +1447,8 @@ GpuAccelerationStructureDesc GpuResourceManager::GetAccelerationStructureDescrip
     }
     {
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
-        const PerManagerStore& store = accelStore_;
-        auto const clientLock = std::lock_guard(store.clientMutex);
+        const PerManagerStore& store = bufferStore_;
+        auto const clientLock = std::shared_lock(store.clientMutex);
         if (arrayIndex < (uint32_t)store.descriptions.size()) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
@@ -1337,7 +1459,7 @@ GpuAccelerationStructureDesc GpuResourceManager::GetAccelerationStructureDescrip
                     name.c_str());
             }
 #endif
-            return store.descriptions[arrayIndex].accelerationDescriptor;
+            return store.descriptions[arrayIndex].combinedBufDescriptor;
         }
     }
     return GpuAccelerationStructureDesc {};
@@ -1355,11 +1477,7 @@ string GpuResourceManager::GetName(const RenderHandle& handle) const
         const PerManagerStore* store = nullptr;
         const RenderHandleType handleType = RenderHandleUtil::GetHandleType(handle);
         if (handleType == RenderHandleType::GPU_BUFFER) {
-            if (RenderHandleUtil::IsGpuAccelerationStructure(handle)) {
-                store = &accelStore_;
-            } else {
-                store = &bufferStore_;
-            }
+            store = &bufferStore_;
         } else if (handleType == RenderHandleType::GPU_IMAGE) {
             store = &imageStore_;
         } else if (handleType == RenderHandleType::GPU_SAMPLER) {
@@ -1382,6 +1500,45 @@ string GpuResourceManager::GetName(const RenderHandleReference& handle) const
     return GetName(handle.GetHandle());
 }
 
+vector<RenderHandleReference> GpuResourceManager::GetHandles(const PerManagerStore& store) const
+{
+    const auto lock = std::shared_lock(store.clientMutex);
+
+    vector<RenderHandleReference> res;
+    res.reserve(store.clientHandles.size());
+    for (const auto& ref : store.clientHandles) {
+        if (ref) {
+            res.push_back(ref);
+        }
+    }
+    return res;
+}
+
+vector<RenderHandleReference> GpuResourceManager::GetGpuBufferHandles() const
+{
+    return GetHandles(bufferStore_);
+}
+
+vector<RenderHandleReference> GpuResourceManager::GetGpuImageHandles() const
+{
+    return GetHandles(imageStore_);
+}
+
+vector<RenderHandleReference> GpuResourceManager::GetGpuSamplerHandles() const
+{
+    return GetHandles(samplerStore_);
+}
+
+void GpuResourceManager::SetDefaultGpuBufferCreationFlags(const BufferUsageFlags usageFlags)
+{
+    defaultBufferUsageFlags_ = usageFlags;
+}
+
+void GpuResourceManager::SetDefaultGpuImageCreationFlags(const ImageUsageFlags usageFlags)
+{
+    defaultImageUsageFlags_ = usageFlags;
+}
+
 void GpuResourceManager::CreateGpuResource(const OperationDescription& op, const uint32_t arrayIndex,
     const RenderHandleType resourceType, const uintptr_t preCreatedResVec)
 {
@@ -1389,27 +1546,32 @@ void GpuResourceManager::CreateGpuResource(const OperationDescription& op, const
         PLUGIN_ASSERT(preCreatedResVec);
         if (RenderHandleUtil::IsGpuAccelerationStructure(op.handle)) {
             PLUGIN_ASSERT(op.optionalResourceIndex == ~0u);
-            gpuAccelerationStructureMgr_->Create(arrayIndex, op.descriptor.accelerationDescriptor, {});
+            gpuBufferMgr_->Create<GpuAccelerationStructureDesc>(arrayIndex,
+                op.descriptor.combinedBufDescriptor.bufferDesc, {}, true, op.descriptor.combinedBufDescriptor);
         } else {
             if (op.optionalResourceIndex != ~0u) {
                 BufferVector& res = *(reinterpret_cast<BufferVector*>(reinterpret_cast<void*>(preCreatedResVec)));
-                gpuBufferMgr_->Create(arrayIndex, op.descriptor.bufferDescriptor, move(res[op.optionalResourceIndex]));
+                gpuBufferMgr_->Create<GpuAccelerationStructureDesc>(arrayIndex,
+                    op.descriptor.combinedBufDescriptor.bufferDesc, move(res[op.optionalResourceIndex]), false,
+                    op.descriptor.combinedBufDescriptor);
             } else {
-                gpuBufferMgr_->Create(arrayIndex, op.descriptor.bufferDescriptor, {});
+                gpuBufferMgr_->Create<GpuAccelerationStructureDesc>(arrayIndex,
+                    op.descriptor.combinedBufDescriptor.bufferDesc, {}, false, op.descriptor.combinedBufDescriptor);
             }
         }
     } else if (resourceType == RenderHandleType::GPU_IMAGE) {
         PLUGIN_ASSERT(preCreatedResVec);
         if (op.optionalResourceIndex != ~0u) {
             ImageVector& images = *(reinterpret_cast<ImageVector*>(reinterpret_cast<void*>(preCreatedResVec)));
-            gpuImageMgr_->Create(arrayIndex, op.descriptor.imageDescriptor, move(images[op.optionalResourceIndex]));
+            gpuImageMgr_->Create<uint32_t>(
+                arrayIndex, op.descriptor.imageDescriptor, move(images[op.optionalResourceIndex]), false, 0);
         } else {
-            gpuImageMgr_->Create(arrayIndex, op.descriptor.imageDescriptor, {});
+            gpuImageMgr_->Create<uint32_t>(arrayIndex, op.descriptor.imageDescriptor, {}, false, 0);
         }
     } else if (resourceType == RenderHandleType::GPU_SAMPLER) {
         PLUGIN_ASSERT(preCreatedResVec == 0);
         PLUGIN_ASSERT(op.optionalResourceIndex == ~0u);
-        gpuSamplerMgr_->Create(arrayIndex, op.descriptor.samplerDescriptor, {});
+        gpuSamplerMgr_->Create<uint32_t>(arrayIndex, op.descriptor.samplerDescriptor, {}, false, 0);
     }
 }
 
@@ -1448,7 +1610,8 @@ void GpuResourceManager::HandlePendingAllocationsImpl(const bool isFrameEnd)
 {
     auto handleStorePendingAllocations = [this](PerManagerStore& store, bool isFrameEnd) {
         store.clientMutex.lock();
-
+        // protect GPU memory allocations
+        allocationMutex_.lock();
         // check for handle destructions
         for (const auto& handleRef : store.clientHandles) {
             if (handleRef && (handleRef.GetRefCount() <= 1)) {
@@ -1480,7 +1643,7 @@ void GpuResourceManager::HandlePendingAllocationsImpl(const bool isFrameEnd)
             // NOTE: immediately created resource replacing should be prevented (ptr might be present still)
             if (allocation.allocType == AllocType::REMOVED) {
                 PLUGIN_ASSERT(arrayIndex < static_cast<uint32_t>(store.clientHandles.size()));
-                store.availableHandleIds.emplace_back(allocation.handle.id);
+                store.availableHandleIds.push_back(allocation.handle.id);
                 store.clientHandles[arrayIndex] = {};
                 store.additionalData[arrayIndex] = {};
                 continue;
@@ -1499,22 +1662,33 @@ void GpuResourceManager::HandlePendingAllocationsImpl(const bool isFrameEnd)
                 CreateGpuResource(allocation, arrayIndex, store.handleType, pendingRes);
                 store.gpuHandles[arrayIndex] = gpuHandle;
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
-                store.debugTagAllocations.emplace_back(allocation.handle);
+                store.debugTagAllocations.push_back(allocation.handle);
 #endif
-            } else if (isFrameEnd || (!RenderHandleUtil::IsDeferredDestroy(allocation.handle))) {
-                PLUGIN_ASSERT(allocation.allocType == AllocType::DEALLOC);
-                store.availableHandleIds.emplace_back(allocation.handle.id);
-                DestroyGpuResource(allocation, arrayIndex, store.handleType, store);
+            } else if (allocation.allocType == AllocType::DEALLOC) {
+                if (RenderHandleUtil::IsDeferredDestroy(allocation.handle) && (!isFrameEnd)) {
+                    // push deferred destroys back to wait for the end of the frame destruction
+                    store.pendingData.allocations.push_back(allocation);
+                } else {
+                    store.availableHandleIds.push_back(allocation.handle.id);
+                    DestroyGpuResource(allocation, arrayIndex, store.handleType, store);
+                }
             }
+            // there might be undefined type, e.g. for shallow handles
+
             // render graph frame state reset for trackable and not auto reset frame states
             // with alloc there might be a replace which needs this as well as with dealloc
             if (RenderHandleUtil::IsDynamicResource(allocation.handle) &&
                 (!RenderHandleUtil::IsResetOnFrameBorders(allocation.handle))) {
                 PLUGIN_ASSERT((store.handleType == RenderHandleType::GPU_BUFFER) ||
                               (store.handleType == RenderHandleType::GPU_IMAGE));
-                clientHandleStateDestroy_.resources.emplace_back(allocation.handle);
+                clientHandleStateDestroy_.resources.push_back(allocation.handle);
             }
         }
+
+        // inside mutex (calls device)
+        store.mgr->HandlePendingDeallocations();
+
+        allocationMutex_.unlock();
         // although the pendingData was moved and doesn't need locks anymore, other parts of the store are modified
         // as well so we need to hold the lock until here.
         store.clientMutex.unlock();
@@ -1528,16 +1702,10 @@ void GpuResourceManager::HandlePendingAllocationsImpl(const bool isFrameEnd)
     handleStorePendingAllocations(bufferStore_, isFrameEnd);
     handleStorePendingAllocations(imageStore_, isFrameEnd);
     handleStorePendingAllocations(samplerStore_, isFrameEnd);
-    handleStorePendingAllocations(accelStore_, isFrameEnd);
 
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     ProcessDebugTags();
 #endif
-
-    gpuBufferMgr_->HandlePendingDeallocations();
-    gpuImageMgr_->HandlePendingDeallocations();
-    gpuSamplerMgr_->HandlePendingDeallocations();
-    gpuAccelerationStructureMgr_->HandlePendingDeallocations();
 }
 
 void GpuResourceManager::HandlePendingAllocations()
@@ -1584,18 +1752,22 @@ void GpuResourceManager::LockFrameStagingData()
     }
 
     // create frame staging buffers and set handles for staging
-    perFrameStagingBuffers_.reserve(
-        perFrameStagingData_.bufferToBuffer.size() + perFrameStagingData_.bufferToImage.size());
-    for (auto& ref : perFrameStagingData_.bufferToBuffer) {
-        if ((!ref.invalidOperation) && (ref.stagingBufferByteSize > 0)) {
-            perFrameStagingBuffers_.emplace_back(CreateStagingBuffer(GetStagingBufferDesc(ref.stagingBufferByteSize)));
-            ref.srcHandle = perFrameStagingBuffers_.back();
+    {
+        std::lock_guard lock(bufferStore_.clientMutex);
+
+        perFrameStagingBuffers_.reserve(
+            perFrameStagingData_.bufferToBuffer.size() + perFrameStagingData_.bufferToImage.size());
+        for (auto& ref : perFrameStagingData_.bufferToBuffer) {
+            if ((!ref.invalidOperation) && (ref.stagingBufferByteSize > 0)) {
+                perFrameStagingBuffers_.push_back(CreateStagingBuffer(GetStagingBufferDesc(ref.stagingBufferByteSize)));
+                ref.srcHandle = perFrameStagingBuffers_.back();
+            }
         }
-    }
-    for (auto& ref : perFrameStagingData_.bufferToImage) {
-        if ((!ref.invalidOperation) && (ref.stagingBufferByteSize > 0)) {
-            perFrameStagingBuffers_.emplace_back(CreateStagingBuffer(GetStagingBufferDesc(ref.stagingBufferByteSize)));
-            ref.srcHandle = perFrameStagingBuffers_.back();
+        for (auto& ref : perFrameStagingData_.bufferToImage) {
+            if ((!ref.invalidOperation) && (ref.stagingBufferByteSize > 0)) {
+                perFrameStagingBuffers_.push_back(CreateStagingBuffer(GetStagingBufferDesc(ref.stagingBufferByteSize)));
+                ref.srcHandle = perFrameStagingBuffers_.back();
+            }
         }
     }
 
@@ -1746,16 +1918,12 @@ void GpuResourceManager::DebugPrintValidCounts()
     PLUGIN_LOG_D("GPU buffer count: %u", static_cast<uint32_t>(gpuBufferMgr_->GetValidResourceCount()));
     PLUGIN_LOG_D("GPU image count: %u", static_cast<uint32_t>(gpuImageMgr_->GetValidResourceCount()));
     PLUGIN_LOG_D("GPU sampler count: %u", static_cast<uint32_t>(gpuSamplerMgr_->GetValidResourceCount()));
-    PLUGIN_LOG_D("GPU acceleration structure count: %u",
-        static_cast<uint32_t>(gpuAccelerationStructureMgr_->GetValidResourceCount()));
 #endif
 }
 
 void GpuResourceManager::WaitForIdleAndDestroyGpuResources()
 {
-#ifndef NDEBUG
     PLUGIN_LOG_D("WFIADGR thread id: %" PRIu64, (uint64_t)std::hash<std::thread::id> {}(std::this_thread::get_id()));
-#endif
     device_.Activate();
     device_.WaitForIdle();
 
@@ -1763,6 +1931,7 @@ void GpuResourceManager::WaitForIdleAndDestroyGpuResources()
     // 2. throw away everything else that's pending
     auto DestroyPendingData = [this](PerManagerStore& store) {
         const auto lock = std::lock_guard(store.clientMutex);
+        const auto allocLock = std::lock_guard(allocationMutex_);
 
         auto pd = CommitPendingData(store);
         if (store.clientHandles.size() > store.gpuHandles.size()) {
@@ -1775,14 +1944,14 @@ void GpuResourceManager::WaitForIdleAndDestroyGpuResources()
 #endif
         for (const auto& ref : pd.allocations) {
             if (ref.allocType == AllocType::DEALLOC) {
-                store.availableHandleIds.emplace_back(ref.handle.id);
+                store.availableHandleIds.push_back(ref.handle.id);
                 DestroyImmediate(store, ref.handle);
                 // render graph frame state reset for trackable and not auto reset frame states
                 if (RenderHandleUtil::IsDynamicResource(ref.handle) &&
                     (!RenderHandleUtil::IsResetOnFrameBorders(ref.handle))) {
                     PLUGIN_ASSERT((store.handleType == RenderHandleType::GPU_BUFFER) ||
                                   (store.handleType == RenderHandleType::GPU_IMAGE));
-                    clientHandleStateDestroy_.resources.emplace_back(ref.handle);
+                    clientHandleStateDestroy_.resources.push_back(ref.handle);
                 }
 #if (RENDER_VALIDATION_ENABLED == 1)
                 dc++;
@@ -1795,22 +1964,27 @@ void GpuResourceManager::WaitForIdleAndDestroyGpuResources()
         PLUGIN_LOG_D("WFIADGR: d: %u r (type:%u)", dc, uint32_t(store.handleType));
         PLUGIN_LOG_D("WFIADGR: pa cl: %u (t:%u)", (uint32_t)pd.allocations.size() - dc, uint32_t(store.handleType));
 #endif
+
+        // inside mutex (calls device)
+        store.mgr->HandlePendingDeallocationsImmediate();
     };
 
     DestroyPendingData(bufferStore_);
     DestroyPendingData(imageStore_);
     DestroyPendingData(samplerStore_);
-    DestroyPendingData(accelStore_);
 
     // make sure that all staging resources are forcefully destroyed
     LockFrameStagingData();
     ConsumeStagingData(); // consume cpu data
     DestroyFrameStaging();
 
-    gpuBufferMgr_->HandlePendingDeallocationsImmediate();
-    gpuImageMgr_->HandlePendingDeallocationsImmediate();
-    gpuSamplerMgr_->HandlePendingDeallocationsImmediate();
-    gpuAccelerationStructureMgr_->HandlePendingDeallocationsImmediate();
+    {
+        // additional possible staging buffer clean-up
+        auto& store = bufferStore_;
+        const auto lock = std::lock_guard(store.clientMutex);
+        const auto allocLock = std::lock_guard(allocationMutex_);
+        store.mgr->HandlePendingDeallocationsImmediate();
+    }
 
     DebugPrintValidCounts();
 
@@ -1843,11 +2017,7 @@ EngineResourceHandle GpuResourceManager::GetGpuHandle(const RenderHandle& client
 {
     const RenderHandleType handleType = RenderHandleUtil::GetHandleType(clientHandle);
     if (handleType == RenderHandleType::GPU_BUFFER) {
-        if (RenderHandleUtil::IsGpuAccelerationStructure(clientHandle)) {
-            return GetGpuHandle(accelStore_, clientHandle);
-        } else {
-            return GetGpuHandle(bufferStore_, clientHandle);
-        }
+        return GetGpuHandle(bufferStore_, clientHandle);
     } else if (handleType == RenderHandleType::GPU_IMAGE) {
         return GetGpuHandle(imageStore_, clientHandle);
     } else if (handleType == RenderHandleType::GPU_SAMPLER) {
@@ -1876,12 +2046,6 @@ GpuSampler* GpuResourceManager::GetSampler(const RenderHandle& handle) const
     return gpuSamplerMgr_->Get(RenderHandleUtil::GetIndexPart(resHandle));
 }
 
-GpuAccelerationStructure* GpuResourceManager::GetAccelerationStructure(const RenderHandle& handle) const
-{
-    const EngineResourceHandle resHandle = GetGpuHandle(accelStore_, handle);
-    return gpuAccelerationStructureMgr_->Get(RenderHandleUtil::GetIndexPart(resHandle));
-}
-
 uint32_t GpuResourceManager::GetBufferHandleCount() const
 {
     return static_cast<uint32_t>(bufferStore_.gpuHandles.size());
@@ -1901,7 +2065,8 @@ RenderHandle GpuResourceManager::CreateClientHandle(const RenderHandleType type,
     const uint32_t index = RenderHandleUtil::GetIndexPart(handleId);
     const uint32_t generationIndex = RenderHandleUtil::GetGenerationIndexPart(handleId) + 1; // next gen
     if (type == RenderHandleType::GPU_BUFFER) {
-        const auto& rd = resourceDescriptor.bufferDescriptor;
+        // NOTE: additional flags for GPU acceleration structure might be needed
+        const auto& rd = resourceDescriptor.combinedBufDescriptor.bufferDesc;
         RenderHandleInfoFlags infoFlags = (rd.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS)
                                               ? CORE_RESOURCE_HANDLE_DYNAMIC_TRACK
                                               : 0u;
@@ -1925,6 +2090,10 @@ RenderHandle GpuResourceManager::CreateClientHandle(const RenderHandleType type,
         infoFlags |= (rd.engineCreationFlags & CORE_ENGINE_IMAGE_CREATION_DEFERRED_DESTROY)
                          ? CORE_RESOURCE_HANDLE_DEFERRED_DESTROY
                          : 0;
+        infoFlags |= ((rd.engineCreationFlags & CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS) &&
+                         (resourceDescriptor.imageDescriptor.mipCount > 1U))
+                         ? CORE_RESOURCE_HANDLE_DYNAMIC_ADDITIONAL_STATE
+                         : 0u;
         // force transient attachments to be state reset on frame borders
         infoFlags |= ((rd.engineCreationFlags & CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS) ||
                          (rd.usageFlags & CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT))
@@ -1956,31 +2125,17 @@ uint64_t GpuResourceManager::GetNextAvailableHandleId(PerManagerStore& store)
 
 // needs to be locked when called
 // staging cannot be locked when called
-GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(PerManagerStore& store,
-    const string_view name, const RenderHandle& replacedHandle, RenderHandleType handleType,
-    const ResourceDescriptor& descriptor, uint32_t optionalResourceIndex, uint32_t additionalHandleFlags)
+GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(
+    PerManagerStore& store, const StoreAllocationInfo& info)
 {
     // NOTE: PerManagerStore gpu handles cannot be touched here
     StoreAllocationData data;
 
     // there cannot be both (valid name and a valid replaced handle)
-    const uint32_t replaceArrayIndex = RenderHandleUtil::GetIndexPart(replacedHandle);
+    const uint32_t replaceArrayIndex = RenderHandleUtil::GetIndexPart(info.replacedHandle);
     bool hasReplaceHandle = (replaceArrayIndex < (uint32_t)store.clientHandles.size());
-    const uint32_t hasNameId = (!name.empty()) ? 1u : 0u;
-    if (hasNameId != 0u) {
-        if (auto const iter = store.nameToClientIndex.find(name); iter != store.nameToClientIndex.cend()) {
-            PLUGIN_ASSERT(iter->second < static_cast<uint32_t>(store.clientHandles.size()));
-            data.handle = store.clientHandles[iter->second];
-            PLUGIN_ASSERT_MSG(!RenderHandleUtil::IsDeferredDestroy(data.handle.GetHandle()),
-                "deferred desctruction resources cannot be replaced");
-        } else {
-            const uint64_t handleId = GetNextAvailableHandleId(store);
-            data.handle = RenderHandleReference(
-                CreateClientHandle(handleType, descriptor, handleId, hasNameId, additionalHandleFlags),
-                IRenderReferenceCounter::Ptr(new RenderReferenceCounter()));
-            store.nameToClientIndex[name] = RenderHandleUtil::GetIndexPart(data.handle.GetHandle());
-        }
-    } else if (hasReplaceHandle) {
+    const uint32_t hasNameId = (!info.name.empty()) ? 1u : 0u;
+    if (hasReplaceHandle) {
         data.handle = store.clientHandles[replaceArrayIndex];
         // NOTE: should be documented better, and prevented
         PLUGIN_ASSERT_MSG(!RenderHandleUtil::IsDeferredDestroy(data.handle.GetHandle()),
@@ -1991,14 +2146,31 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(PerM
 #endif
             const uint64_t handleId = GetNextAvailableHandleId(store);
             data.handle = RenderHandleReference(
-                CreateClientHandle(handleType, descriptor, handleId, hasNameId, additionalHandleFlags),
+                CreateClientHandle(info.type, info.descriptor, handleId, hasNameId, info.addHandleFlags),
                 IRenderReferenceCounter::Ptr(new RenderReferenceCounter()));
             hasReplaceHandle = false;
+            if (hasNameId) {
+                // NOTE: should remove old name if it was in use
+                store.nameToClientIndex[info.name] = RenderHandleUtil::GetIndexPart(data.handle.GetHandle());
+            }
+        }
+    } else if (hasNameId != 0u) {
+        if (auto const iter = store.nameToClientIndex.find(info.name); iter != store.nameToClientIndex.cend()) {
+            PLUGIN_ASSERT(iter->second < static_cast<uint32_t>(store.clientHandles.size()));
+            data.handle = store.clientHandles[iter->second];
+            PLUGIN_ASSERT_MSG(!RenderHandleUtil::IsDeferredDestroy(data.handle.GetHandle()),
+                "deferred desctruction resources cannot be replaced");
+        } else {
+            const uint64_t handleId = GetNextAvailableHandleId(store);
+            data.handle = RenderHandleReference(
+                CreateClientHandle(info.type, info.descriptor, handleId, hasNameId, info.addHandleFlags),
+                IRenderReferenceCounter::Ptr(new RenderReferenceCounter()));
+            store.nameToClientIndex[info.name] = RenderHandleUtil::GetIndexPart(data.handle.GetHandle());
         }
     } else {
         const uint64_t handleId = GetNextAvailableHandleId(store);
         data.handle = RenderHandleReference(
-            CreateClientHandle(handleType, descriptor, handleId, hasNameId, additionalHandleFlags),
+            CreateClientHandle(info.type, info.descriptor, handleId, hasNameId, info.addHandleFlags),
             IRenderReferenceCounter::Ptr(new RenderReferenceCounter()));
     }
 
@@ -2007,17 +2179,17 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(PerM
     PLUGIN_ASSERT(store.clientHandles.size() == store.descriptions.size());
     PLUGIN_ASSERT(store.clientHandles.size() == store.additionalData.size());
     if (arrayIndex >= (uint32_t)store.clientHandles.size()) {
-        store.clientHandles.emplace_back(data.handle);
+        store.clientHandles.push_back(data.handle);
         store.additionalData.push_back({});
-        store.descriptions.emplace_back(descriptor);
+        store.descriptions.push_back(info.descriptor);
     } else {
         store.clientHandles[arrayIndex] = data.handle;
         // store.additionalData[arrayIndex] cannot be cleared here (staging cleaned based on this)
-        store.descriptions[arrayIndex] = descriptor;
+        store.descriptions[arrayIndex] = info.descriptor;
     }
 
 #if (RENDER_DEBUG_GPU_RESOURCE_IDS == 1)
-    PLUGIN_LOG_E("gpu resource allocation %" PRIx64 " (name: %s)", data.handle.GetHandle().id, name.data());
+    PLUGIN_LOG_E("gpu resource allocation %" PRIx64 " (name: %s)", data.handle.GetHandle().id, info.name.data());
 #endif
 
     // store allocation for GPU allocation
@@ -2025,8 +2197,7 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(PerM
     // needs to find the allocation and replace
     if (hasReplaceHandle || (hasNameId != 0)) {
         if (const uint32_t pendingArrIndex = store.additionalData[arrayIndex].indexToPendingData;
-            pendingArrIndex != INVALID_PENDING_INDEX) {
-            PLUGIN_ASSERT(pendingArrIndex < store.pendingData.allocations.size());
+            (pendingArrIndex != INVALID_PENDING_INDEX) && (pendingArrIndex < store.pendingData.allocations.size())) {
             data.allocationIndex = pendingArrIndex;
         }
     }
@@ -2034,15 +2205,15 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(PerM
         data.allocationIndex = store.pendingData.allocations.size();
         store.additionalData[arrayIndex].indexToPendingData = static_cast<uint32_t>(data.allocationIndex);
         store.pendingData.allocations.emplace_back(
-            data.handle.GetHandle(), descriptor, AllocType::ALLOC, optionalResourceIndex);
+            data.handle.GetHandle(), info.descriptor, info.allocType, info.optResourceIndex);
     } else { // quite rare case and slow path
         // replace this frame's allocation
         auto& allocOp = store.pendingData.allocations[data.allocationIndex];
         // invalid flag should be only needed and all the allocations would be done later
         // i.e. create staging buffers and fetch based on index in render node staging
         RemoveStagingOperations(allocOp);
-        store.pendingData.allocations[data.allocationIndex] = { data.handle.GetHandle(), descriptor, AllocType::ALLOC,
-            optionalResourceIndex };
+        store.pendingData.allocations[data.allocationIndex] = { data.handle.GetHandle(), info.descriptor,
+            info.allocType, info.optResourceIndex };
     }
 
     return data;
@@ -2066,6 +2237,11 @@ bool GpuResourceManager::IsGpuSampler(const RenderHandleReference& handle) const
 bool GpuResourceManager::IsGpuAccelerationStructure(const RenderHandleReference& handle) const
 {
     return IsGpuAccelerationStructure(handle.GetHandle());
+}
+
+bool GpuResourceManager::IsSwapchain(const RenderHandleReference& handle) const
+{
+    return IsSwapchain(handle.GetHandle());
 }
 
 bool GpuResourceManager::IsMappableOutsideRender(const RenderHandleReference& handle) const
@@ -2093,6 +2269,11 @@ bool GpuResourceManager::IsGpuAccelerationStructure(const RenderHandle& handle) 
     return RenderHandleUtil::IsGpuAccelerationStructure(handle);
 }
 
+bool GpuResourceManager::IsSwapchain(const RenderHandle& handle) const
+{
+    return RenderHandleUtil::IsSwapchain(handle);
+}
+
 bool GpuResourceManager::IsValid(const RenderHandle& handle) const
 {
     return RenderHandleUtil::IsValid(handle);
@@ -2117,9 +2298,57 @@ FormatProperties GpuResourceManager::GetFormatProperties(const RenderHandleRefer
     return GetFormatProperties(handle.GetHandle());
 }
 
-FormatProperties GpuResourceManager::GetFormatProperties(const Format& format) const
+FormatProperties GpuResourceManager::GetFormatProperties(const Format format) const
 {
     return device_.GetFormatProperties(format);
+}
+
+ImageAspectFlags GpuResourceManager::GetImageAspectFlags(const RenderHandleReference& handle) const
+{
+    return GetImageAspectFlags(handle.GetHandle());
+}
+
+ImageAspectFlags GpuResourceManager::GetImageAspectFlags(const RenderHandle& handle) const
+{
+    const RenderHandleType type = RenderHandleUtil::GetHandleType(handle);
+    Format format = Format::BASE_FORMAT_UNDEFINED;
+    if (type == RenderHandleType::GPU_BUFFER) {
+        const GpuBufferDesc desc = GetBufferDescriptor(handle);
+        format = desc.format;
+    } else if (type == RenderHandleType::GPU_IMAGE) {
+        const GpuImageDesc desc = GetImageDescriptor(handle);
+        format = desc.format;
+    }
+    return GetImageAspectFlags(format);
+}
+
+ImageAspectFlags GpuResourceManager::GetImageAspectFlags(const BASE_NS::Format format) const
+{
+    ImageAspectFlags flags {};
+    const bool isDepthFormat = ((format == BASE_FORMAT_D16_UNORM) || (format == BASE_FORMAT_X8_D24_UNORM_PACK32) ||
+                                   (format == BASE_FORMAT_D32_SFLOAT) || (format == BASE_FORMAT_D16_UNORM_S8_UINT) ||
+                                   (format == BASE_FORMAT_D24_UNORM_S8_UINT))
+                                   ? true
+                                   : false;
+    if (isDepthFormat) {
+        flags |= ImageAspectFlagBits::CORE_IMAGE_ASPECT_DEPTH_BIT;
+
+        const bool isStencilFormat =
+            ((format == BASE_FORMAT_S8_UINT) || (format == BASE_FORMAT_D16_UNORM_S8_UINT) ||
+                (format == BASE_FORMAT_D24_UNORM_S8_UINT) || (format == BASE_FORMAT_D32_SFLOAT_S8_UINT))
+                ? true
+                : false;
+        if (isStencilFormat) {
+            flags |= ImageAspectFlagBits::CORE_IMAGE_ASPECT_STENCIL_BIT;
+        }
+
+    } else if (format == BASE_FORMAT_S8_UINT) {
+        flags |= ImageAspectFlagBits::CORE_IMAGE_ASPECT_STENCIL_BIT;
+    } else if (format != BASE_FORMAT_UNDEFINED) {
+        flags |= ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT;
+    }
+
+    return flags;
 }
 
 GpuImageDesc GpuResourceManager::CreateGpuImageDesc(const CORE_NS::IImageContainer::ImageDesc& desc) const
@@ -2146,6 +2375,11 @@ GpuImageDesc GpuResourceManager::CreateGpuImageDesc(const CORE_NS::IImageContain
     gpuImageDesc.mipCount = desc.mipCount;
     gpuImageDesc.layerCount = desc.layerCount;
     return gpuImageDesc;
+}
+
+IGpuResourceCache& GpuResourceManager::GetGpuResourceCache() const
+{
+    return *gpuResourceCache_;
 }
 
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
@@ -2289,11 +2523,6 @@ RenderHandle RenderNodeGpuResourceManager::GetSamplerHandle(const string_view na
     return gpuResourceMgr_.GetSamplerRawHandle(name);
 }
 
-RenderHandle RenderNodeGpuResourceManager::GetAccelerationStructureHandle(const string_view name) const
-{
-    return gpuResourceMgr_.GetAccelerationStructureRawHandle(name);
-}
-
 GpuBufferDesc RenderNodeGpuResourceManager::GetBufferDescriptor(const RenderHandle& handle) const
 {
     return gpuResourceMgr_.GetBufferDescriptor(handle);
@@ -2365,6 +2594,16 @@ bool RenderNodeGpuResourceManager::IsGpuSampler(const RenderHandle& handle) cons
     return RenderHandleUtil::IsGpuSampler(handle);
 }
 
+bool RenderNodeGpuResourceManager::IsGpuAccelerationStructure(const RenderHandle& handle) const
+{
+    return RenderHandleUtil::IsGpuAccelerationStructure(handle);
+}
+
+bool RenderNodeGpuResourceManager::IsSwapchain(const RenderHandle& handle) const
+{
+    return RenderHandleUtil::IsSwapchain(handle);
+}
+
 FormatProperties RenderNodeGpuResourceManager::GetFormatProperties(const RenderHandle& handle) const
 {
     return gpuResourceMgr_.GetFormatProperties(handle);
@@ -2375,9 +2614,24 @@ FormatProperties RenderNodeGpuResourceManager::GetFormatProperties(const Format 
     return gpuResourceMgr_.GetFormatProperties(format);
 }
 
+ImageAspectFlags RenderNodeGpuResourceManager::GetImageAspectFlags(const RenderHandle& handle) const
+{
+    return gpuResourceMgr_.GetImageAspectFlags(handle);
+}
+
+ImageAspectFlags RenderNodeGpuResourceManager::GetImageAspectFlags(const Format format) const
+{
+    return gpuResourceMgr_.GetImageAspectFlags(format);
+}
+
 string RenderNodeGpuResourceManager::GetName(const RenderHandle& handle) const
 {
     return gpuResourceMgr_.GetName(handle);
+}
+
+IGpuResourceCache& RenderNodeGpuResourceManager::GetGpuResourceCache() const
+{
+    return gpuResourceMgr_.GetGpuResourceCache();
 }
 
 RENDER_END_NAMESPACE()

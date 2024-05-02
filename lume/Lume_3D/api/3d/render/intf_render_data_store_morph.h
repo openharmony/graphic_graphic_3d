@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,6 +21,7 @@
 #include <3d/namespace.h>
 #include <3d/render/render_data_defines_3d.h>
 #include <base/containers/array_view.h>
+#include <base/containers/vector.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
@@ -33,8 +34,6 @@ RenderDataMorph.
 struct RenderDataMorph {
     /** Max vertex buffer count */
     static constexpr uint32_t MAX_VERTEX_BUFFER_COUNT { 3 };
-    /** Max morph target count */
-    static constexpr uint32_t MAX_MORPH_TARGET_COUNT { 64 };
 
     /** Submesh */
     struct Submesh {
@@ -53,14 +52,14 @@ struct RenderDataMorph {
         /** Number of morph targets */
         uint32_t morphTargetCount { 0 };
 
-        /** Count of continuous non-zero weights */
-        uint32_t activeTargetCount { 0 };
-
-        /** Target ID */
-        uint16_t morphTargetId[MAX_MORPH_TARGET_COUNT];
-
-        /** Weight value for target (0 - activeTargetCount values must be non-zero) */
-        float morphTargetWeight[MAX_MORPH_TARGET_COUNT];
+        struct Target {
+            /** Target ID */
+            uint32_t id;
+            /** Weight value for target (must be non-zero) */
+            float weight;
+        };
+        /** Targets with non-zero weights */
+        BASE_NS::vector<Target> activeTargets;
     };
 };
 

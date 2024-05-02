@@ -4,17 +4,45 @@
         "type": "rendernodegraph"
     },
     "renderNodeGraphName": "",
+    "renderNodeGraphOutputResources": [
+        {
+            "name": "output",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        }
+    ],
     "nodes": [
         {
             "typeName": "RenderNodeDefaultCameraController",
-            "nodeName": "CORE3D_RN_CAM_CTRL_REFL"
+            "nodeName": "CORE3D_RN_CAM_CTRL",
+            "gpuImageDescs": [
+                {
+                    "name": "output",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "depth",
+                    "format": "d16_unorm",
+                    "usageFlags": "depth_stencil_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers | reset_state_on_frame_borders"
+                },
+                {
+                    "name": "color",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                }
+            ]
         },
         {
             "typeName": "RenderNodeDefaultMaterialRenderSlot",
             "nodeName": "CORE3D_RN_CAM_DM_SO_REFL",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_REFLECTION_CAM"
             },
             "queue": {
@@ -32,13 +60,14 @@
                         "clearDepth": [ 1.0, 0 ],
                         "resourceLocation": "from_named_render_node_output",
                         "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_REFL"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
-                        "loadOp": "dont_care",
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_REFL"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "subpassIndex": 0,
@@ -54,7 +83,7 @@
             "nodeName": "CORE3D_RN_CAM_DM_E_REFL",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_REFLECTION_CAM"
             },
             "queue": {
@@ -67,12 +96,12 @@
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_REFL"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_REFL"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "subpassIndex": 1,
@@ -88,7 +117,7 @@
             "nodeName": "CORE3D_RN_CAM_DM_ST_REFL",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_REFLECTION_CAM"
             },
             "queue": {
@@ -105,13 +134,13 @@
                         "storeOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "depth",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_REFL"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
                         "storeOp": "store",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_REFL"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "subpassIndex": 2,
@@ -127,7 +156,7 @@
             "nodeName": "CORE3D_RN_CAM_COMBINED_PP_REFL",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
-                "typeName": "PostProcess",
+                "typeName": "RenderDataStorePod",
                 "configurationName": "CORE3D_POST_PROCESS_REFLECTION_CAM"
             },
             "queue": {
@@ -139,13 +168,14 @@
                     {
                         "resourceLocation": "from_named_render_node_output",
                         "name": "color",
-                        "nodeName": "CORE3D_RN_CAM_CTRL_REFL"
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ],
                 "customOutputImages": [
                     {
-                        "resourceLocation": "from_render_graph_output",
-                        "resourceIndex": 0
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "output",
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
                     }
                 ]
             }

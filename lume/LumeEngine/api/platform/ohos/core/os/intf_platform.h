@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,7 +22,6 @@
 #include <base/containers/string_view.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
-
 #include <core/namespace.h>
 #include <core/os/platform_create_info.h>
 
@@ -39,17 +38,12 @@ public:
      * @return Platform specific data struct
      */
     virtual const PlatformData& GetPlatformData() const = 0;
-
-    /** Register platform specific paths
-     * @param fileManager File manager instance to register paths to
-     * @return Engine root directory URI
-     */
     virtual BASE_NS::string RegisterDefaultPaths(IFileManager& fileManager) = 0;
-
     /** Register platform specific plugin locations
      * @param registry Plugin registry instance to register paths to
      */
     virtual void RegisterPluginLocations(IPluginRegister& registry) = 0;
+
 protected:
     // Needed for unique_ptr usage
     friend BASE_NS::default_delete<IPlatform>;

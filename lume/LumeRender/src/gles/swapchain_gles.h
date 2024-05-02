@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,7 +38,7 @@ struct SwapchainImagesGLES {
 };
 
 struct SwapchainPlatformDataGL final {
-    uintptr_t surface; // currently EGLDisplay (on GLES) or HDC (on GL/Windows)
+    uintptr_t surface; // currently EGLSurface (on GLES) or HDC (on GL/Windows)
 #if RENDER_GL_FLIP_Y_SWAPCHAIN
     BASE_NS::vector<uint32_t> fbos; // FBO for the swapchain.
 #endif
@@ -58,8 +58,13 @@ public:
     const GpuImageDesc& GetDescDepthBuffer() const override;
 
     uint32_t GetFlags() const override;
+    SurfaceTransformFlags GetSurfaceTransformFlags() const override
+    {
+        return 0U; // nothing should be done
+    }
+    uint64_t GetSurfaceHandle() const override;
 
-    uint32_t GetNextImage();
+    uint32_t GetNextImage() const;
 
 private:
     DeviceGLES& device_;
@@ -68,6 +73,7 @@ private:
     GpuImageDesc descDepthBuffer_ {};
     SwapchainPlatformDataGL plat_ {};
     uint32_t flags_ { 0u };
+    bool ownsSurface_ { false };
 };
 RENDER_END_NAMESPACE()
 

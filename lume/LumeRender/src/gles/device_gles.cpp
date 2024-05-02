@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,7 +22,6 @@
 #include <base/util/compile_time_hashes.h>
 #include <render/namespace.h>
 
-#include "device/gpu_acceleration_structure.h"
 #include "device/gpu_program_util.h"
 #include "device/gpu_resource_manager.h"
 #include "device/shader_manager.h"
@@ -32,6 +31,7 @@
 #include "gles/gpu_image_gles.h"
 #include "gles/gpu_program_gles.h"
 #include "gles/gpu_sampler_gles.h"
+#include "gles/gpu_semaphore_gles.h"
 #include "gles/node_context_descriptor_set_manager_gles.h"
 #include "gles/node_context_pool_manager_gles.h"
 #include "gles/pipeline_state_object_gles.h"
@@ -51,6 +51,7 @@ namespace {
 // there is an implementation limit in our resource caching which limits it to 16... (this is why we use 16 instead of
 // 32)
 constexpr const uint32_t TEMP_BIND_UNIT = 15;
+constexpr const string_view EXT_BUFFER_STORAGE = "GL_EXT_buffer_storage";
 #if RENDER_GL_DEBUG
 #define DUMP(a)                       \
     {                                 \
@@ -65,55 +66,78 @@ constexpr const uint32_t TEMP_BIND_UNIT = 15;
         glGetIntegeri_v(a, index, &val);         \
         PLUGIN_LOG_V(#a "[%d]: %d", index, val); \
     }
+
 static bool (*filterErrorFunc)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
     const string_view message, const void* userParam) noexcept = nullptr;
-#define DOCASE(x)  \
-    case x:        \
-        return #x; \
-        break;
+
 static auto SourceName(GLenum source)
 {
     switch (source) {
-        DOCASE(GL_DEBUG_SOURCE_API);
-        DOCASE(GL_DEBUG_SOURCE_WINDOW_SYSTEM);
-        DOCASE(GL_DEBUG_SOURCE_SHADER_COMPILER);
-        DOCASE(GL_DEBUG_SOURCE_THIRD_PARTY);
-        DOCASE(GL_DEBUG_SOURCE_APPLICATION);
-        DOCASE(GL_DEBUG_SOURCE_OTHER);
+        case GL_DEBUG_SOURCE_API:
+            return "GL_DEBUG_SOURCE_API";
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+            return "GL_DEBUG_SOURCE_WINDOW_SYSTEM";
+        case GL_DEBUG_SOURCE_SHADER_COMPILER:
+            return "GL_DEBUG_SOURCE_SHADER_COMPILER";
+        case GL_DEBUG_SOURCE_THIRD_PARTY:
+            return "GL_DEBUG_SOURCE_THIRD_PARTY";
+        case GL_DEBUG_SOURCE_APPLICATION:
+            return "GL_DEBUG_SOURCE_APPLICATION";
+        case GL_DEBUG_SOURCE_OTHER:
+            return "GL_DEBUG_SOURCE_OTHER";
+
         default:
             break;
     }
     return "UNKNOWN";
 }
+
 static auto TypeName(GLenum type)
 {
     switch (type) {
-        DOCASE(GL_DEBUG_TYPE_ERROR);
-        DOCASE(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR);
-        DOCASE(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR);
-        DOCASE(GL_DEBUG_TYPE_PORTABILITY);
-        DOCASE(GL_DEBUG_TYPE_PERFORMANCE);
-        DOCASE(GL_DEBUG_TYPE_MARKER);
-        DOCASE(GL_DEBUG_TYPE_PUSH_GROUP);
-        DOCASE(GL_DEBUG_TYPE_POP_GROUP);
-        DOCASE(GL_DEBUG_TYPE_OTHER);
+        case GL_DEBUG_TYPE_ERROR:
+            return "GL_DEBUG_TYPE_ERROR";
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+            return "GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR";
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+            return "GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR";
+        case GL_DEBUG_TYPE_PORTABILITY:
+            return "GL_DEBUG_TYPE_PORTABILITY";
+        case GL_DEBUG_TYPE_PERFORMANCE:
+            return "GL_DEBUG_TYPE_PERFORMANCE";
+        case GL_DEBUG_TYPE_MARKER:
+            return "GL_DEBUG_TYPE_MARKER";
+        case GL_DEBUG_TYPE_PUSH_GROUP:
+            return "GL_DEBUG_TYPE_PUSH_GROUP";
+        case GL_DEBUG_TYPE_POP_GROUP:
+            return "GL_DEBUG_TYPE_POP_GROUP";
+        case GL_DEBUG_TYPE_OTHER:
+            return "GL_DEBUG_TYPE_OTHER";
+
         default:
             break;
     }
     return "UNKNOWN";
 }
+
 static auto SeverityName(GLenum severity)
 {
     switch (severity) {
-        DOCASE(GL_DEBUG_SEVERITY_LOW);
-        DOCASE(GL_DEBUG_SEVERITY_MEDIUM);
-        DOCASE(GL_DEBUG_SEVERITY_HIGH);
-        DOCASE(GL_DEBUG_SEVERITY_NOTIFICATION);
+        case GL_DEBUG_SEVERITY_LOW:
+            return "GL_DEBUG_SEVERITY_LOW";
+        case GL_DEBUG_SEVERITY_MEDIUM:
+            return "GL_DEBUG_SEVERITY_MEDIUM";
+        case GL_DEBUG_SEVERITY_HIGH:
+            return "GL_DEBUG_SEVERITY_HIGH";
+        case GL_DEBUG_SEVERITY_NOTIFICATION:
+            return "GL_DEBUG_SEVERITY_NOTIFICATION";
+
         default:
             break;
     }
     return "UNKNOWN";
 }
+
 #ifndef APIENTRY
 #define APIENTRY
 #endif
@@ -130,7 +154,7 @@ static void APIENTRY OnGlError(GLenum source, GLenum type, GLuint id, GLenum sev
         PLUGIN_LOG_E("---------------------opengl-callback-start------------\n"
                      "source: %s\n"
                      "type: %s\n"
-                     "id: %d\n"
+                     "id: %u\n"
                      "severity: %s\n"
                      "message: %s\n"
                      "---------------------opengl-callback-end--------------\n",
@@ -139,7 +163,7 @@ static void APIENTRY OnGlError(GLenum source, GLenum type, GLuint id, GLenum sev
         PLUGIN_LOG_D("---------------------opengl-callback-start------------\n"
                      "source: %s\n"
                      "type: %s\n"
-                     "id: %d\n"
+                     "id: %u\n"
                      "severity: %s\n"
                      "message: %s\n"
                      "---------------------opengl-callback-end--------------\n",
@@ -150,6 +174,242 @@ static void APIENTRY OnGlError(GLenum source, GLenum type, GLuint id, GLenum sev
 #define DUMP(a)
 #define DUMP_INDEX(a, index)
 #endif
+
+struct FormatFeatures {
+    GLenum internalFormat;
+    FormatFeatureFlags flags;
+};
+
+// image store and atomic operations seem to go hand in hand
+static constexpr const FormatFeatureFlags ATOMIC_STORE =
+    CORE_FORMAT_FEATURE_STORAGE_IMAGE_BIT | CORE_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
+// no writable texture buffers in gl?
+static constexpr const FormatFeatureFlags TEXEL_BUF = CORE_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
+// color renderable
+static constexpr const FormatFeatureFlags CR = CORE_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+// texture filterable
+static constexpr const FormatFeatureFlags TF = CORE_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+//  required texture formats. assume can be sampled, and transfered to/from
+static constexpr const FormatFeatureFlags TEX =
+    CORE_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | CORE_FORMAT_FEATURE_TRANSFER_SRC_BIT | CORE_FORMAT_FEATURE_TRANSFER_SRC_BIT;
+// required depth format
+static constexpr const FormatFeatureFlags DS = CORE_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | TEX | TF;
+
+static constexpr const FormatFeatureFlags TF_TEX = TF | TEX;
+#if RENDER_HAS_GL_BACKEND
+static constexpr const FormatFeatureFlags CR_TEX = CR | TEX; // color renderable, texture format
+#endif
+static constexpr const FormatFeatureFlags CR_REND_TEX = CR | TEX; // color renderable, renderbuffer, texture format
+#if RENDER_HAS_GLES_BACKEND
+static constexpr const FormatFeatureFlags CR_TF_REND_TEX = CR | TF | TEX;
+#endif
+
+static constexpr const FormatFeatures IMAGE_FORMAT_FEATURES[] = {
+#if RENDER_HAS_GL_BACKEND
+    { GL_R8, CR_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R8_SNORM, CR_TEX | ATOMIC_STORE },
+    { GL_R16, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R16_SNORM, CR_TEX | ATOMIC_STORE },
+    { GL_RG8, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RG8_SNORM, CR_TEX | ATOMIC_STORE },
+    { GL_RG16, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RG16_SNORM, CR_TEX | ATOMIC_STORE },
+    // R3_G3_B2 not in base format
+    { GL_RGB4, CR_TEX },
+    // RGB5 not in base format
+    { GL_RGB565, CR_REND_TEX },
+    { GL_RGB8, CR_TEX },
+    { GL_RGB8_SNORM, CR_TEX },
+    { GL_RGB10, CR_TEX },
+    { GL_RGB12, CR_TEX },
+    { GL_RGB16, CR_TEX },
+    { GL_RGB16_SNORM, CR_TEX },
+    // RGBA2 not in base format
+    { GL_RGBA4, CR_REND_TEX },
+    { GL_RGB5_A1, CR_REND_TEX },
+    { GL_RGBA8, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA8_SNORM, CR_TEX | ATOMIC_STORE },
+    { GL_RGB10_A2, CR_REND_TEX | ATOMIC_STORE },
+    { GL_RGB10_A2UI, CR_REND_TEX | ATOMIC_STORE },
+    { GL_RGBA12, CR_TEX },
+    { GL_RGBA16, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA16_SNORM, CR_TEX | ATOMIC_STORE },
+    { GL_SRGB8, CR_TEX },
+    { GL_SRGB8_ALPHA8, CR_REND_TEX },
+    { GL_R16F, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RG16F, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGB16F, CR_TEX },
+    { GL_RGBA16F, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R32F, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RG32F, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGB32F, CR_TEX | TEXEL_BUF | TEXEL_BUF },
+    { GL_RGBA32F, CR_REND_TEX | ATOMIC_STORE },
+    { GL_R11F_G11F_B10F, CR_REND_TEX | ATOMIC_STORE },
+    { GL_RGB9_E5, TEX },
+    { GL_R8I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R8UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R16I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R16UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_R32I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R32UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RG8I, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG8UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG16I, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG16UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RG32I, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG32UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_RGB8I, CR_TEX },
+    { GL_RGB8UI, CR_TEX },
+    { GL_RGB16I, CR_TEX },
+    { GL_RGB16UI, CR_TEX },
+    { GL_RGB32I, CR_TEX | TEXEL_BUF },
+    { GL_RGB32UI, CR_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA8I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA8UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA16I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA16UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA32I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA32UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+#elif RENDER_HAS_GLES_BACKEND
+    { GL_R8, CR_TF_REND_TEX | TEXEL_BUF },
+    { GL_R8_SNORM, TF_TEX },
+    { GL_RG8, CR_TF_REND_TEX | TEXEL_BUF },
+    { GL_RG8_SNORM, TF_TEX },
+    { GL_RGB8, CR_TF_REND_TEX },
+    { GL_RGB8_SNORM, TF_TEX },
+    { GL_RGB565, CR_TF_REND_TEX },
+    { GL_RGBA4, CR_TF_REND_TEX },
+    { GL_RGB5_A1, CR_TF_REND_TEX },
+    { GL_RGBA8, CR_TF_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA8_SNORM, TF_TEX | ATOMIC_STORE },
+    { GL_RGB10_A2, CR_TF_REND_TEX },
+    { GL_RGB10_A2UI, CR_REND_TEX },
+    { GL_SRGB8, TF_TEX },
+    { GL_SRGB8_ALPHA8, CR_TF_REND_TEX },
+    { GL_R16F, CR_TF_REND_TEX | TEXEL_BUF },
+    { GL_RG16F, CR_TF_REND_TEX | TEXEL_BUF },
+    { GL_RGB16F, TF_TEX },
+    { GL_RGBA16F, CR_TF_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R32F, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RG32F, CR_REND_TEX | TEXEL_BUF },
+    { GL_RGB32F, TEX | TEXEL_BUF },
+    { GL_RGBA32F, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R11F_G11F_B10F, CR_TF_REND_TEX },
+    { GL_RGB9_E5, TF_TEX },
+    { GL_R8I, CR_REND_TEX | TEXEL_BUF },
+    { GL_R8UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_R16I, CR_REND_TEX | TEXEL_BUF },
+    { GL_R16UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_R32I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_R32UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG8I, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG8UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG16I, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG16UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG32I, CR_REND_TEX | TEXEL_BUF },
+    { GL_RG32UI, CR_REND_TEX | TEXEL_BUF },
+    { GL_RGB8I, TEX },
+    { GL_RGB8UI, TEX },
+    { GL_RGB16I, TEX },
+    { GL_RGB16UI, TEX },
+    { GL_RGB32I, TEX | TEXEL_BUF },
+    { GL_RGB32UI, TEX | TEXEL_BUF },
+    { GL_RGBA8I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA8UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA16I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA16UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA32I, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+    { GL_RGBA32UI, CR_REND_TEX | ATOMIC_STORE | TEXEL_BUF },
+#endif
+    { GL_DEPTH_COMPONENT16, DS },
+    { GL_DEPTH_COMPONENT24, DS },
+    { GL_DEPTH_COMPONENT32F, DS },
+    { GL_DEPTH24_STENCIL8, DS },
+    { GL_DEPTH32F_STENCIL8, DS },
+    { GL_STENCIL_INDEX8, DS },
+
+#if (defined(GL_EXT_texture_sRGB_R8) && (GL_EXT_texture_sRGB_R8))
+    { GL_SR8_EXT, TF_TEX },
+#endif
+
+#if (defined(GL_EXT_texture_sRGB_RG8) && (GL_EXT_texture_sRGB_RG8))
+    { GL_SRG8_EXT, TF_TEX },
+#endif
+
+#if defined(GL_EXT_texture_format_BGRA8888) && (GL_EXT_texture_format_BGRA8888)
+    { GL_BGRA_EXT, CR_REND_TEX },
+#endif
+
+#if defined(GL_EXT_texture_norm16) && (GL_EXT_texture_norm16)
+    { GL_R16_EXT, CR_TF_REND_TEX },
+    { GL_RG16_EXT, CR_TF_REND_TEX },
+    { GL_RGB16_EXT, TF_TEX },
+    { GL_RGBA16_EXT, CR_TF_REND_TEX },
+    { GL_R16_SNORM_EXT, TF_TEX },
+    { GL_RG16_SNORM_EXT, TF_TEX },
+    { GL_RGB16_SNORM_EXT, TF_TEX },
+    { GL_RGBA16_SNORM_EXT, TF_TEX },
+#endif
+
+    { GL_COMPRESSED_R11_EAC, TF_TEX },
+    { GL_COMPRESSED_SIGNED_R11_EAC, TF_TEX },
+    { GL_COMPRESSED_RG11_EAC, TF_TEX },
+    { GL_COMPRESSED_SIGNED_RG11_EAC, TF_TEX },
+    { GL_COMPRESSED_RGB8_ETC2, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ETC2, TF_TEX },
+    { GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2, TF_TEX },
+    { GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2, TF_TEX },
+    { GL_COMPRESSED_RGBA8_ETC2_EAC, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC, TF_TEX },
+#if RENDER_HAS_GLES_BACKEND
+    { GL_COMPRESSED_RGBA_ASTC_4x4, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_5x4, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_5x5, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_6x5, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_6x6, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_8x5, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_8x6, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_8x8, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_10x5, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_10x6, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_10x8, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_10x10, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_12x10, TF_TEX },
+    { GL_COMPRESSED_RGBA_ASTC_12x12, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10, TF_TEX },
+    { GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12, TF_TEX },
+#endif
+#if defined(GL_EXT_texture_compression_s3tc) && (GL_EXT_texture_compression_s3tc)
+    { GL_COMPRESSED_RGB_S3TC_DXT1_EXT, TF_TEX },
+    { GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, TF_TEX },
+    { GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, TF_TEX },
+    { GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, TF_TEX },
+#endif
+#if defined(GL_ARB_texture_compression_bptc) && (GL_ARB_texture_compression_bptc)
+    { GL_COMPRESSED_RGBA_BPTC_UNORM_ARB, TF_TEX },
+    { GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB, TF_TEX },
+    { GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB, TF_TEX },
+    { GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB, TF_TEX },
+#endif
+#if defined(GL_EXT_texture_compression_rgtc) && (GL_EXT_texture_compression_rgtc)
+    { GL_COMPRESSED_RED_RGTC1_EXT, TF_TEX },
+    { GL_COMPRESSED_SIGNED_RED_RGTC1_EXT, TF_TEX },
+    { GL_COMPRESSED_RED_GREEN_RGTC2_EXT, TF_TEX },
+    { GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT, TF_TEX },
+#endif
+};
 
 // Dont allow SRGB_R8 and SRGB_R8G8 internal formats, instead use the GL_SRGB8 with swizzle as workaround.
 #define USE_EXTENSION_FORMATS
@@ -204,10 +464,17 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_NORM16[] = {
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_R16G16_UNORM, GL_RG, GL_RG16_EXT, GL_UNSIGNED_SHORT, 4, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
-    // three component UNORM format not supported -> fallback to half float
-    { BASE_FORMAT_R16G16B16_UNORM, GL_RGB, GL_RGB16F, GL_HALF_FLOAT, 6, { false, 0, 0, 0 },
+    { BASE_FORMAT_R16G16B16_UNORM, GL_RGB, GL_RGB16_EXT, GL_UNSIGNED_SHORT, 6, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_R16G16B16A16_UNORM, GL_RGBA, GL_RGBA16_EXT, GL_UNSIGNED_SHORT, 8, { false, 0, 0, 0 },
+        { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
+    { BASE_FORMAT_R16_SNORM, GL_RED, GL_R16_SNORM_EXT, GL_SHORT, 2, { false, 0, 0, 0 },
+        { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
+    { BASE_FORMAT_R16G16_SNORM, GL_RG, GL_RG16_SNORM_EXT, GL_SHORT, 4, { false, 0, 0, 0 },
+        { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
+    { BASE_FORMAT_R16G16B16_SNORM, GL_RGB, GL_RGB16_SNORM_EXT, GL_SHORT, 6, { false, 0, 0, 0 },
+        { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
+    { BASE_FORMAT_R16G16B16A16_SNORM, GL_RGBA, GL_RGBA16_SNORM_EXT, GL_SHORT, 8, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
 };
 #endif
@@ -295,7 +562,8 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS[] = {
     // These are required in GL and GLES
     { BASE_FORMAT_R8_UNORM, GL_RED, GL_R8, GL_UNSIGNED_BYTE, 1, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
-    { BASE_FORMAT_R8_SNORM, GL_RED, GL_R8, GL_BYTE, 1, { false, 0, 0, 0 }, { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
+    { BASE_FORMAT_R8_SNORM, GL_RED, GL_R8_SNORM, GL_BYTE, 1, { false, 0, 0, 0 },
+        { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_R8G8_UNORM, GL_RG, GL_RG8, GL_UNSIGNED_BYTE, 2, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_R8G8_SNORM, GL_RG, GL_RG8, GL_BYTE, 2, { false, 0, 0, 0 }, { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
@@ -397,11 +665,12 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS[] = {
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_D32_SFLOAT, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT32F, GL_FLOAT, 4, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
-    { BASE_FORMAT_D24_UNORM_S8_UINT, GL_DEPTH_STENCIL, GL_DEPTH24_STENCIL8, GL_UNSIGNED_INT_24_8, 4, { false, 0, 0, 0 },
-        { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
-    // DEPTH32F_STENCIL8 not in base formats
     { BASE_FORMAT_S8_UINT, GL_STENCIL_INDEX, GL_STENCIL_INDEX8, GL_UNSIGNED_BYTE, 1, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
+    { BASE_FORMAT_D24_UNORM_S8_UINT, GL_DEPTH_STENCIL, GL_DEPTH24_STENCIL8, GL_UNSIGNED_INT_24_8, 4, { false, 0, 0, 0 },
+        { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
+    { BASE_FORMAT_D32_SFLOAT_S8_UINT, GL_DEPTH_STENCIL, GL_DEPTH32F_STENCIL8, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, 8,
+        { false, 0, 0, 0 }, { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     // EAC
     { BASE_FORMAT_EAC_R11_UNORM_BLOCK, GL_RED, GL_COMPRESSED_R11_EAC, GL_UNSIGNED_BYTE, 0,
         { true, 4, 4, BLOCK_BITS_64 }, { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
@@ -727,6 +996,8 @@ inline DeviceGLES::TextureTargetId DeviceGLES::TextureTargetToTargetId(uint32_t 
         return TextureTargetId::TEXTURE_2D_MULTISAMPLE;
     } else if (target == GL_TEXTURE_2D_ARRAY) {
         return TextureTargetId::TEXTURE_2D_ARRAY;
+    } else if (target == GL_TEXTURE_3D) {
+        return TextureTargetId::TEXTURE_3D;
     }
     PLUGIN_ASSERT_MSG(false, "UNHANDLED TEXTURE TARGET UNIT");
     return TextureTargetId::MAX_TEXTURE_TARGET_ID;
@@ -746,9 +1017,26 @@ inline uint32_t DeviceGLES::TextureTargetIdToTarget(DeviceGLES::TextureTargetId 
         return GL_TEXTURE_2D_MULTISAMPLE;
     } else if (target == TextureTargetId::TEXTURE_2D_ARRAY) {
         return GL_TEXTURE_2D_ARRAY;
+    } else if (target == TextureTargetId::TEXTURE_3D) {
+        return GL_TEXTURE_3D;
     }
     PLUGIN_ASSERT_MSG(false, "UNHANDLED TEXTURE TARGET UNIT");
     return 0;
+}
+
+void DeviceGLES::Activate(RenderHandle swapchain)
+{
+    if (HasSwapchain()) {
+        eglState_.SetContext(static_cast<const SwapchainGLES*>(GetSwapchain(swapchain)));
+    } else {
+        // bind the dummy surface as there is no swapchain.
+        eglState_.SetContext(nullptr);
+    }
+}
+
+void DeviceGLES::SwapBuffers(const SwapchainGLES& swapchain)
+{
+    eglState_.SwapBuffers(swapchain);
 }
 
 #if RENDER_HAS_GL_BACKEND
@@ -760,6 +1048,13 @@ const WGLHelpers::WGLState& DeviceGLES::GetEglState()
 {
     return eglState_;
 }
+
+#if RENDER_HAS_GLES_BACKEND
+bool DeviceGLES::IsDepthResolveSupported() const
+{
+    return backendConfig_.allowDepthResolve;
+}
+#endif
 
 DeviceGLES::DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& createInfo)
     : Device(renderContext, createInfo)
@@ -783,14 +1078,22 @@ DeviceGLES::DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& cre
     PLUGIN_LOG_I("GL_SHADING_LANGUAGE_VERSION: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
     GLint n = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    for (GLint i = 0; i < n; i++) {
-        const auto ext = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
-        PLUGIN_LOG_D("  GL_EXTENSION: %s", ext);
-        extensions_[ext] = true;
+    extensions_.reserve(n + 1U);
+    for (GLuint i = 0U; i < static_cast<GLuint>(n); ++i) {
+        const auto ext = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
+        PLUGIN_LOG_V("  GL_EXTENSION: %s", ext);
+        extensions_.emplace_back(ext);
     }
+    std::sort(extensions_.begin(), extensions_.end(),
+        [](const string_view& lhs, const string_view& rhs) { return lhs < rhs; });
+
 #if RENDER_HAS_GL_BACKEND
     // Extension in OpenGL ES, but part of core in OpenGL.
-    extensions_["GL_EXT_buffer_storage"] = true;
+    if (const auto pos = std::lower_bound(extensions_.cbegin(), extensions_.cend(), EXT_BUFFER_STORAGE,
+            [](const string_view& element, const string_view& value) { return element < value; });
+        (pos == extensions_.cend()) || (*pos != EXT_BUFFER_STORAGE)) {
+        extensions_.insert(pos, EXT_BUFFER_STORAGE);
+    }
     // Seamless cubemaps are always on in vulkan and gles 3.0..
     // (3.0 made it required, not supported prior to 3.0 es)
     // on desktop gl, it's optional.
@@ -825,14 +1128,6 @@ DeviceGLES::DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& cre
     std::sort(supportedFormats_.begin(), supportedFormats_.end(),
         [](const ImageFormat& lhs, const ImageFormat& rhs) { return lhs.coreFormat < rhs.coreFormat; });
 
-    // Add fallbacks for unsupported formats
-    for (const auto& fallback : IMAGE_FORMATS_FALLBACK) {
-        if (const auto pos = std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), fallback.coreFormat,
-                [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
-            (pos == supportedFormats_.end()) || (pos->coreFormat != fallback.coreFormat)) {
-            supportedFormats_.insert(pos, fallback);
-        }
-    }
     const GpuResourceManager::CreateInfo grmCreateInfo {
         GpuResourceManager::GPU_RESOURCE_MANAGER_OPTIMIZE_STAGING_MEMORY,
     };
@@ -848,9 +1143,11 @@ DeviceGLES::~DeviceGLES()
         Activate(); // make sure we are active during teardown..
         WaitForIdle();
 
+        // must release handles before taking down gpu resource manager.
+        swapchains_.clear();
+
         gpuResourceMgr_.reset();
         shaderMgr_.reset();
-        swapchain_.reset();
         eglState_.DestroyContext();
         Deactivate(); // make sure the previous context is still active..
     }
@@ -858,7 +1155,8 @@ DeviceGLES::~DeviceGLES()
 
 bool DeviceGLES::HasExtension(const string_view extension) const
 {
-    return (extensions_.find({ extension.data(), extension.size() }) != extensions_.end());
+    return std::binary_search(extensions_.begin(), extensions_.end(), extension,
+        [](const string_view& element, const string_view value) { return element < value; });
 }
 
 DeviceBackendType DeviceGLES::GetBackendType() const
@@ -878,13 +1176,34 @@ ILowLevelDevice& DeviceGLES::GetLowLevelDevice() const
 
 FormatProperties DeviceGLES::GetFormatProperties(const Format format) const
 {
-    // NOTE: not currently implemented, but GL(ES) driver fixes most of the issues
-    return FormatProperties {
-        DeviceFormatSupportConstants::ALL_FLAGS_SUPPORTED,
-        DeviceFormatSupportConstants::ALL_FLAGS_SUPPORTED,
-        DeviceFormatSupportConstants::ALL_FLAGS_SUPPORTED,
-        GpuProgramUtil::FormatByteSize(format),
-    };
+    FormatProperties properties;
+    auto& glFormat = GetGlImageFormat(format);
+    if (glFormat.internalFormat != GL_NONE) {
+        if (auto pos = std::find_if(std::begin(IMAGE_FORMAT_FEATURES), std::end(IMAGE_FORMAT_FEATURES),
+                [internalFormat = glFormat.internalFormat](
+                    const FormatFeatures& features) { return features.internalFormat == internalFormat; });
+            pos != std::end(IMAGE_FORMAT_FEATURES)) {
+            // split texel buffer support to bufferFeatures
+            properties.linearTilingFeatures = properties.optimalTilingFeatures =
+                pos->flags & ~CORE_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
+            // assume if the format can be sampled it can be used as a vertex buffer.
+            properties.bufferFeatures =
+                ((pos->flags & CORE_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ? CORE_FORMAT_FEATURE_VERTEX_BUFFER_BIT : 0U) |
+                (pos->flags & CORE_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT);
+#if RENDER_HAS_GL_BACKEND
+            // desktop GL can filter anything
+            properties.linearTilingFeatures |= TF;
+            properties.optimalTilingFeatures |= TF;
+#endif
+            // can probably blit if not compressed
+            if (!glFormat.compression.compressed) {
+                properties.linearTilingFeatures |= CORE_FORMAT_FEATURE_BLIT_DST_BIT | CORE_FORMAT_FEATURE_BLIT_SRC_BIT;
+                properties.optimalTilingFeatures |= CORE_FORMAT_FEATURE_BLIT_DST_BIT | CORE_FORMAT_FEATURE_BLIT_SRC_BIT;
+            }
+            properties.bytesPerPixel = glFormat.bytesperpixel;
+        }
+    }
+    return properties;
 }
 
 AccelerationStructureBuildSizes DeviceGLES::GetAccelerationStructureBuildSizes(
@@ -902,27 +1221,20 @@ PlatformGpuMemoryAllocator* DeviceGLES::GetPlatformGpuMemoryAllocator()
     return nullptr;
 }
 
-SwapchainGLES* DeviceGLES::GetSwapchain()
-{
-    PLUGIN_ASSERT(HasSwapchain());
-    return static_cast<SwapchainGLES*>(swapchain_.get());
-}
-
 // (re-)create swapchain
-void DeviceGLES::CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo)
+unique_ptr<Swapchain> DeviceGLES::CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo)
 {
     PLUGIN_ASSERT(IsActive());
-    WaitForIdle();
-    swapchain_ = make_unique<SwapchainGLES>(*this, swapchainCreateInfo);
+    auto swapchain = make_unique<SwapchainGLES>(*this, swapchainCreateInfo);
     // Switch to the new swapchain.
-    eglState_.SetContext(GetSwapchain());
+    eglState_.SetContext(swapchain.get());
+    return swapchain;
 }
 
 void DeviceGLES::DestroyDeviceSwapchain()
 {
     PLUGIN_ASSERT(IsActive());
-    WaitForIdle();
-    swapchain_.reset();
+    // TODO:
     // Drop to dummycontext (ie. 1x1 surface etc...)
     eglState_.SetContext(nullptr);
 }
@@ -935,14 +1247,12 @@ bool DeviceGLES::IsActive() const
 void DeviceGLES::Activate()
 {
     activeMutex_.lock();
+    PLUGIN_ASSERT_MSG(isActive_ == 0, "Activate called while already inactive");
     if (isActive_ == 0) {
         eglState_.SaveContext();
-        if (HasSwapchain()) {
-            eglState_.SetContext(GetSwapchain());
-        } else {
-            // bind the dummy surface as there is no swapchain.
-            eglState_.SetContext(nullptr);
-        }
+
+        constexpr RenderHandle defaultSwapchain {};
+        Activate(defaultSwapchain);
     }
     isActive_++;
 }
@@ -1113,7 +1423,8 @@ const DeviceGLES::ShaderCache::Entry& DeviceGLES::CacheShader(int type, const st
         messages.resize(static_cast<size_t>(logLength));
         glGetShaderInfoLog(entry.shader, logLength, 0, messages.data());
         PLUGIN_LOG_F("Shader compilation error: %s", messages.c_str());
-        PLUGIN_ASSERT_MSG(result == GL_TRUE, "GpuProgram shader compile failed");
+        glDeleteShader(entry.shader);
+        entry.shader = 0U;
     }
     caches[type].cache.push_back(entry);
     return caches[type].cache.back();
@@ -1162,8 +1473,12 @@ uint32_t DeviceGLES::CacheProgram(
         string messages;
         messages.resize(static_cast<size_t>(logLength));
         glGetProgramInfoLog(program, logLength, 0, messages.data());
-        PLUGIN_LOG_F("Shader linking error: %s", messages.c_str());
-        PLUGIN_ASSERT_MSG(result == GL_TRUE, "GpuProgram linking failed");
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_ONCE_E("gl_shader_linking_error_" + to_string(program),
+            "RENDER_VALIDATION: Shader linking error: %s", messages.c_str());
+#endif
+        glDeleteProgram(program);
+        return 0U;
     }
     // Add the program to cache
     programs_.push_back(
@@ -1236,6 +1551,9 @@ uint32_t DeviceGLES::BoundProgram() const
 uint32_t DeviceGLES::BoundBuffer(uint32_t target) const
 {
     const uint32_t targetId = GenericTargetToTargetId(target);
+    if (targetId >= MAX_BUFFER_BIND_ID) {
+        return 0;
+    }
     const auto& slot = bufferBound_[targetId];
     if (!slot.bound) {
         return 0;
@@ -1246,6 +1564,9 @@ uint32_t DeviceGLES::BoundBuffer(uint32_t target) const
 uint32_t DeviceGLES::BoundBuffer(uint32_t target, uint32_t binding) const
 {
     const uint32_t targetId = IndexedTargetToTargetId(target);
+    if (targetId >= MAX_BUFFER_BIND_ID || binding >= MAX_BINDING_VALUE) {
+        return 0;
+    }
     const auto& slot = boundBuffers_[targetId][binding];
     if (!slot.cached) {
         return 0;
@@ -1255,6 +1576,9 @@ uint32_t DeviceGLES::BoundBuffer(uint32_t target, uint32_t binding) const
 
 uint32_t DeviceGLES::BoundSampler(uint32_t textureUnit) const
 {
+    if (textureUnit >= MAX_SAMPLERS) {
+        return 0;
+    }
     const uint32_t bound = boundSampler_[textureUnit];
     return bound ? (bound - 1) : bound;
 }
@@ -1262,6 +1586,9 @@ uint32_t DeviceGLES::BoundSampler(uint32_t textureUnit) const
 uint32_t DeviceGLES::BoundTexture(uint32_t textureUnit, uint32_t target) const
 {
     const uint32_t targetId = TextureTargetToTargetId(target);
+    if (textureUnit >= MAX_TEXTURE_UNITS || targetId >= MAX_TEXTURE_TARGET_ID) {
+        return 0;
+    }
     const uint32_t bound = boundTexture_[textureUnit][targetId];
     if (bound == 0) {
         return 0; // bound 0 == nothing has been bound via cache yet.
@@ -1410,6 +1737,12 @@ const DeviceGLES::ImageFormat& DeviceGLES::GetGlImageFormat(const Format format)
     if (const auto pos = std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), format,
             [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
         (pos != supportedFormats_.end()) && (pos->coreFormat == format)) {
+        return *pos;
+    }
+    if (const auto pos = std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
+            [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
+        (pos != std::end(IMAGE_FORMATS_FALLBACK)) && (pos->coreFormat == format)) {
+        PLUGIN_LOG_I("using fallback for format %u", format);
         return *pos;
     }
     PLUGIN_LOG_I("asking for unsupported format %u", format);
@@ -1709,12 +2042,17 @@ void DeviceGLES::BindElementBuffer(uint32_t buffer)
 
 bool DeviceGLES::AllowThreadedProcessing() const
 {
-    return HasExtension("GL_EXT_buffer_storage");
+    return HasExtension(EXT_BUFFER_STORAGE);
 }
 
 unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const GpuBufferDesc& desc)
 {
     return make_unique<GpuBufferGLES>(*this, desc);
+}
+
+unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const GpuAccelerationStructureDesc& desc)
+{
+    return make_unique<GpuBufferGLES>(*this, desc.bufferDesc);
 }
 
 unique_ptr<GpuImage> DeviceGLES::CreateGpuImage(const GpuImageDesc& desc)
@@ -1747,48 +2085,9 @@ vector<unique_ptr<GpuImage>> DeviceGLES::CreateGpuImageViews(const Swapchain& pl
     return gpuImages;
 }
 
-unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
-    const GpuImageDesc& desc, const BackendSpecificImageDesc& platformData)
-{
-    PLUGIN_ASSERT(IsActive());
-    GpuImagePlatformDataGL data {};
-#if RENDER_HAS_GLES_BACKEND
-    if (backendType_ == DeviceBackendType::OPENGLES) {
-        const ImageDescGLES& tmp = (const ImageDescGLES&)platformData;
-        data.type = tmp.type;
-        data.image = tmp.image;
-        data.bytesperpixel = tmp.bytesperpixel;
-        data.dataType = tmp.dataType;
-        data.format = tmp.format;
-        data.internalFormat = tmp.internalFormat;
-        data.eglImage = tmp.eglImage;
-    }
-#endif
-#if RENDER_HAS_GL_BACKEND
-    if (backendType_ == DeviceBackendType::OPENGL) {
-        const ImageDescGL& tmp = (const ImageDescGL&)platformData;
-        data.type = tmp.type;
-        data.image = tmp.image;
-        data.bytesperpixel = tmp.bytesperpixel;
-        data.dataType = tmp.dataType;
-        data.format = tmp.format;
-        data.internalFormat = tmp.internalFormat;
-    }
-#endif
-    data.swizzle = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
-    return CreateGpuImageView(desc, data);
-}
-
 unique_ptr<GpuSampler> DeviceGLES::CreateGpuSampler(const GpuSamplerDesc& desc)
 {
     return make_unique<GpuSamplerGLES>(*this, desc);
-}
-
-unique_ptr<GpuAccelerationStructure> DeviceGLES::CreateGpuAccelerationStructure(
-    const GpuAccelerationStructureDesc& desc)
-{
-    // NOTE: not supported
-    return nullptr;
 }
 
 unique_ptr<RenderFrameSync> DeviceGLES::CreateRenderFrameSync()
@@ -1836,16 +2135,18 @@ unique_ptr<NodeContextPoolManager> DeviceGLES::CreateNodeContextPoolManager(
 unique_ptr<GraphicsPipelineStateObject> DeviceGLES::CreateGraphicsPipelineStateObject(
     const GpuShaderProgram& gpuProgram, const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
     const VertexInputDeclarationView& vertexInputDeclaration,
-    const ShaderSpecializationConstantDataView& specializationConstants, const DynamicStateFlags dynamicStateFlags,
-    const RenderPassDesc& renderPassDesc, const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs,
-    const uint32_t subpassIndex, const LowLevelRenderPassData* renderPassData,
-    const LowLevelPipelineLayoutData* pipelineLayoutData)
+    const ShaderSpecializationConstantDataView& specializationConstants,
+    const array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+    const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
+    const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData)
 {
     PLUGIN_ASSERT(!renderPassData);
     PLUGIN_ASSERT(!pipelineLayoutData);
-    return make_unique<GraphicsPipelineStateObjectGLES>(*this, gpuProgram, graphicsState, pipelineLayout,
-        vertexInputDeclaration, specializationConstants, dynamicStateFlags, renderPassDesc, renderPassSubpassDescs,
+    auto pipeline = make_unique<GraphicsPipelineStateObjectGLES>(*this, gpuProgram, graphicsState, pipelineLayout,
+        vertexInputDeclaration, specializationConstants, dynamicStates, renderPassDesc, renderPassSubpassDescs,
         subpassIndex);
+    return unique_ptr<GraphicsPipelineStateObject> { pipeline->GetPlatformData().graphicsShader ? pipeline.release()
+                                                                                                : nullptr };
 }
 
 unique_ptr<ComputePipelineStateObject> DeviceGLES::CreateComputePipelineStateObject(const GpuComputeProgram& gpuProgram,
@@ -1853,7 +2154,28 @@ unique_ptr<ComputePipelineStateObject> DeviceGLES::CreateComputePipelineStateObj
     const LowLevelPipelineLayoutData* pipelineLayoutData)
 {
     PLUGIN_ASSERT(!pipelineLayoutData);
-    return make_unique<ComputePipelineStateObjectGLES>(*this, gpuProgram, pipelineLayout, specializationConstants);
+    auto pipeline =
+        make_unique<ComputePipelineStateObjectGLES>(*this, gpuProgram, pipelineLayout, specializationConstants);
+    return unique_ptr<ComputePipelineStateObject> { pipeline->GetPlatformData().computeShader ? pipeline.release()
+                                                                                              : nullptr };
+}
+
+unique_ptr<GpuSemaphore> DeviceGLES::CreateGpuSemaphore()
+{
+    return make_unique<GpuSemaphoreGles>(*this);
+}
+
+unique_ptr<GpuSemaphore> DeviceGLES::CreateGpuSemaphoreView(const uint64_t handle)
+{
+    return make_unique<GpuSemaphoreGles>(*this, handle);
+}
+
+void DeviceGLES::SetBackendConfig(const BackendConfig& config)
+{
+#if RENDER_HAS_GLES_BACKEND
+    backendConfig_.allowDepthResolve = static_cast<const BackendConfigGLES&>(config).allowDepthResolve &&
+                                       HasExtension("GL_EXT_multisampled_render_to_texture2");
+#endif
 }
 
 LowLevelDeviceGLES::LowLevelDeviceGLES(DeviceGLES& deviceGLES)
@@ -1864,4 +2186,26 @@ DeviceBackendType LowLevelDeviceGLES::GetBackendType() const
 {
     return deviceGLES_.GetBackendType();
 }
+
+#if RENDER_HAS_EXPERIMENTAL
+void LowLevelDeviceGLES::Activate()
+{
+    deviceGLES_.Activate();
+}
+
+void LowLevelDeviceGLES::Deactivate()
+{
+    deviceGLES_.Deactivate();
+}
+
+void LowLevelDeviceGLES::SwapBuffers()
+{
+    if (deviceGLES_.IsActive() && deviceGLES_.HasSwapchain()) {
+        RenderHandle defaultSwapChain {};
+        auto sc = static_cast<const SwapchainGLES*>(deviceGLES_.GetSwapchain(defaultSwapChain));
+        deviceGLES_.SwapBuffers(*sc);
+    }
+}
+#endif
+
 RENDER_END_NAMESPACE()

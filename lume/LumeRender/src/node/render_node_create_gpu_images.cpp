@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,9 +15,9 @@
 
 #include "render_node_create_gpu_images.h"
 
-#include <base/containers/unordered_map.h>
-#include <base/math/mathf.h>
+#include <render/device/intf_device.h>
 #include <render/device/intf_gpu_resource_manager.h>
+#include <render/intf_render_context.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
 #include <render/nodecontext/intf_render_command_list.h>
@@ -144,6 +144,11 @@ void CheckFormat(const IRenderNodeGpuResourceManager& gpuResourceMgr, const stri
     }
 }
 
+inline constexpr Size2D LocalClamp(const Size2D val, const Size2D minVal, const Size2D maxVal)
+{
+    return Size2D { Math::max(minVal.width, Math::min(val.width, maxVal.width)),
+        Math::max(minVal.height, Math::min(val.height, maxVal.height)) };
+}
 } // namespace
 
 void RenderNodeCreateGpuImages::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
@@ -152,11 +157,14 @@ void RenderNodeCreateGpuImages::InitNode(IRenderNodeContextManager& renderNodeCo
     ParseRenderNodeInputs();
 
     if (jsonInputs_.gpuImageDescs.empty()) {
-        PLUGIN_LOG_W("RenderNodeCreateDefaultCameraGpuImages: No gpu image descs given");
+        PLUGIN_LOG_W("RenderNodeCreateGpuImages: No gpu image descs given");
     }
 
     auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
     descs_.reserve(jsonInputs_.gpuImageDescs.size());
+    dependencyHandles_.reserve(jsonInputs_.gpuImageDescs.size());
+    dependencyList_.reserve(jsonInputs_.gpuImageDescs.size());
+    shadingRateTexelSizes_.reserve(jsonInputs_.gpuImageDescs.size());
     for (const auto& ref : jsonInputs_.gpuImageDescs) {
         GpuImageDesc desc = ref.desc;
         if (desc.format != Format::BASE_FORMAT_UNDEFINED) {
@@ -177,12 +185,18 @@ void RenderNodeCreateGpuImages::InitNode(IRenderNodeContextManager& renderNodeCo
                 PLUGIN_LOG_E("GpuImage dependency name not found: %s", ref.dependencyImageName.c_str());
             }
         }
-        dependencyHandles_.emplace_back(dependencyHandle);
-        dependencyList_.emplace_back(dependencyList);
+        dependencyHandles_.push_back(dependencyHandle);
+        dependencyList_.push_back(dependencyList);
+        shadingRateTexelSizes_.push_back(GetClampedShadingRateTexelSize(ref.shadingRateTexelSize));
 
         names_.push_back({ string(ref.name), string(ref.shareName) });
-        descs_.emplace_back(desc);
-        resourceHandles_.emplace_back(gpuResourceMgr.Create(ref.name, desc));
+        descs_.push_back(desc);
+
+        // NOTE: shading rate is not in the desc
+        desc.width = static_cast<uint32_t>(Math::ceil(float(desc.width) / float(shadingRateTexelSizes_.back().width)));
+        desc.height =
+            static_cast<uint32_t>(Math::ceil(float(desc.height) / float(shadingRateTexelSizes_.back().height)));
+        resourceHandles_.push_back(gpuResourceMgr.Create(ref.name, desc));
     }
 
     // broadcast the resources
@@ -204,6 +218,13 @@ void RenderNodeCreateGpuImages::PreExecuteFrame()
 
             const bool recreateImage = CheckForDescUpdates(dependencyDesc, dependencyList, descRef);
             if (recreateImage) {
+                descs_[idx] = descRef;
+                // NOTE: shading rate is not in the desc
+                const Size2D shadingRateTexelSize = shadingRateTexelSizes_[idx];
+                descRef.width =
+                    static_cast<uint32_t>(Math::ceil(float(descRef.width) / float(shadingRateTexelSize.width)));
+                descRef.height =
+                    static_cast<uint32_t>(Math::ceil(float(descRef.height) / float(shadingRateTexelSize.height)));
                 // replace the handle
                 resourceHandles_[idx] = gpuResourceMgr.Create(resourceHandles_[idx], descRef);
             }
@@ -217,7 +238,25 @@ void RenderNodeCreateGpuImages::PreExecuteFrame()
     }
 }
 
-void RenderNodeCreateGpuImages::ExecuteFrame(IRenderCommandList& cmdList) {}
+Size2D RenderNodeCreateGpuImages::GetClampedShadingRateTexelSize(const Size2D& shadingRateTexelSize)
+{
+    Size2D srts = { 1u, 1u };
+    if ((shadingRateTexelSize.width > 1u) || (shadingRateTexelSize.height > 1u)) {
+        const IDevice& device = renderNodeContextMgr_->GetRenderContext().GetDevice();
+        auto fsrProps = device.GetCommonDeviceProperties().fragmentShadingRateProperties;
+        fsrProps.minFragmentShadingRateAttachmentTexelSize.width =
+            Math::max(1U, fsrProps.minFragmentShadingRateAttachmentTexelSize.width);
+        fsrProps.minFragmentShadingRateAttachmentTexelSize.height =
+            Math::max(1U, fsrProps.minFragmentShadingRateAttachmentTexelSize.height);
+        fsrProps.maxFragmentShadingRateAttachmentTexelSize.width =
+            Math::max(1U, fsrProps.maxFragmentShadingRateAttachmentTexelSize.width);
+        fsrProps.maxFragmentShadingRateAttachmentTexelSize.height =
+            Math::max(1U, fsrProps.maxFragmentShadingRateAttachmentTexelSize.height);
+        srts = LocalClamp(shadingRateTexelSize, fsrProps.minFragmentShadingRateAttachmentTexelSize,
+            fsrProps.maxFragmentShadingRateAttachmentTexelSize);
+    }
+    return srts;
+}
 
 void RenderNodeCreateGpuImages::ParseRenderNodeInputs()
 {

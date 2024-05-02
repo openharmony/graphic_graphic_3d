@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include <mutex>
 
 #include <base/containers/array_view.h>
+#include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unique_ptr.h>
@@ -49,14 +50,19 @@ constexpr const uint32_t INVALID_SM_INDEX { ~0u };
 
 struct ComputeShaderCreateData {
     BASE_NS::string_view path;
-    uint32_t renderSlotId { ~0u };
+    uint32_t renderSlotId { INVALID_SM_INDEX };
+    uint32_t categoryId { INVALID_SM_INDEX };
     uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
     uint32_t shaderModuleIndex { INVALID_SM_INDEX };
+
+    BASE_NS::string_view shaderFileStr;
+    BASE_NS::string_view materialMetadata;
 };
 
 struct ShaderCreateData {
     BASE_NS::string_view path;
-    uint32_t renderSlotId { ~0u };
+    uint32_t renderSlotId { INVALID_SM_INDEX };
+    uint32_t categoryId { INVALID_SM_INDEX };
     uint32_t vertexInputDeclarationIndex { INVALID_SM_INDEX };
     uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
     uint32_t graphicsStateIndex { INVALID_SM_INDEX };
@@ -64,6 +70,7 @@ struct ShaderCreateData {
     uint32_t vertShaderModuleIndex { INVALID_SM_INDEX };
     uint32_t fragShaderModuleIndex { INVALID_SM_INDEX };
 
+    BASE_NS::string_view shaderFileStr;
     BASE_NS::string_view materialMetadata;
 };
 
@@ -125,9 +132,12 @@ private:
 Not internally synchronized. */
 class ShaderManager final : public IShaderManager {
 public:
+    static constexpr uint32_t MAX_DEFAULT_NAME_LENGTH { 128 };
+
     explicit ShaderManager(Device& device);
     ~ShaderManager() override;
 
+    RenderHandleReference Get(const RenderHandle& handle) const override;
     RenderHandleReference CreateComputeShader(const ComputeShaderCreateInfo& createInfo) override;
     RenderHandleReference CreateComputeShader(const ComputeShaderCreateInfo& createInfo,
         const BASE_NS::string_view baseShaderPath, const BASE_NS::string_view variantName) override;
@@ -145,18 +155,20 @@ public:
     void SetRenderSlotData(const uint32_t renderSlotId, const RenderHandleReference& shaderHandle,
         const RenderHandleReference& stateHandle) override;
 
-    RenderHandleReference GetShaderHandle(const BASE_NS::string_view name) const override;
+    uint32_t CreateCategoryId(const BASE_NS::string_view category);
+
+    RenderHandleReference GetShaderHandle(const BASE_NS::string_view path) const override;
     RenderHandleReference GetShaderHandle(
-        const BASE_NS::string_view name, const BASE_NS::string_view variantName) const override;
+        const BASE_NS::string_view path, const BASE_NS::string_view variantName) const override;
     RenderHandleReference GetShaderHandle(
         const RenderHandleReference& handle, const uint32_t renderSlotId) const override;
     RenderHandleReference GetShaderHandle(const RenderHandle& handle, const uint32_t renderSlotId) const;
     BASE_NS::vector<RenderHandleReference> GetShaders(const uint32_t renderSlotId) const override;
     BASE_NS::vector<RenderHandle> GetShaderRawHandles(const uint32_t renderSlotId) const;
 
-    RenderHandleReference GetGraphicsStateHandle(const BASE_NS::string_view name) const override;
+    RenderHandleReference GetGraphicsStateHandle(const BASE_NS::string_view path) const override;
     RenderHandleReference GetGraphicsStateHandle(
-        const BASE_NS::string_view name, const BASE_NS::string_view variantName) const override;
+        const BASE_NS::string_view path, const BASE_NS::string_view variantName) const override;
     RenderHandleReference GetGraphicsStateHandle(
         const RenderHandleReference& handle, const uint32_t renderSlotId) const override;
     RenderHandleReference GetGraphicsStateHandle(const RenderHandle& handle, const uint32_t renderSlotId) const;
@@ -166,23 +178,25 @@ public:
     GraphicsState GetGraphicsState(const RenderHandleReference& handle) const override;
     const GraphicsState& GetGraphicsStateRef(const RenderHandleReference& handle) const;
     const GraphicsState& GetGraphicsStateRef(const RenderHandle& handle) const;
+    BASE_NS::vector<RenderHandleReference> GetGraphicsStates(const uint32_t renderSlotId) const override;
 
     uint32_t GetRenderSlotId(const BASE_NS::string_view renderSlot) const override;
     uint32_t GetRenderSlotId(const RenderHandleReference& handle) const override;
     uint32_t GetRenderSlotId(const RenderHandle& handle) const;
     RenderSlotData GetRenderSlotData(const uint32_t renderSlotId) const override;
+    BASE_NS::string GetRenderSlotName(const uint32_t renderSlotId) const override;
 
     RenderHandleReference GetVertexInputDeclarationHandleByShaderHandle(
         const RenderHandleReference& handle) const override;
     RenderHandleReference GetVertexInputDeclarationHandleByShaderHandle(const RenderHandle& handle) const;
-    RenderHandleReference GetVertexInputDeclarationHandle(const BASE_NS::string_view name) const override;
+    RenderHandleReference GetVertexInputDeclarationHandle(const BASE_NS::string_view path) const override;
     VertexInputDeclarationView GetVertexInputDeclarationView(const RenderHandleReference& handle) const override;
     VertexInputDeclarationView GetVertexInputDeclarationView(const RenderHandle& handle) const;
 
     RenderHandleReference GetPipelineLayoutHandleByShaderHandle(const RenderHandleReference& handle) const override;
     RenderHandleReference GetPipelineLayoutHandleByShaderHandle(const RenderHandle& handle) const;
 
-    RenderHandleReference GetPipelineLayoutHandle(const BASE_NS::string_view name) const override;
+    RenderHandleReference GetPipelineLayoutHandle(const BASE_NS::string_view path) const override;
     PipelineLayout GetPipelineLayout(const RenderHandleReference& handle) const override;
     PipelineLayout GetPipelineLayout(const RenderHandle& handle) const;
     const PipelineLayout& GetPipelineLayoutRef(const RenderHandle& handle) const;
@@ -191,8 +205,8 @@ public:
     RenderHandleReference GetReflectionPipelineLayoutHandle(const RenderHandleReference& handle) const override;
     PipelineLayout GetReflectionPipelineLayout(const RenderHandleReference& handle) const override;
     const PipelineLayout& GetReflectionPipelineLayoutRef(const RenderHandle& handle) const;
-    ShaderSpecilizationConstantView GetReflectionSpecialization(const RenderHandleReference& handle) const override;
-    ShaderSpecilizationConstantView GetReflectionSpecialization(const RenderHandle& handle) const;
+    ShaderSpecializationConstantView GetReflectionSpecialization(const RenderHandleReference& handle) const override;
+    ShaderSpecializationConstantView GetReflectionSpecialization(const RenderHandle& handle) const;
     VertexInputDeclarationView GetReflectionVertexInputDeclaration(const RenderHandleReference& handle) const override;
     VertexInputDeclarationView GetReflectionVertexInputDeclaration(const RenderHandle& handle) const;
     ShaderThreadGroup GetReflectionThreadGroupSize(const RenderHandleReference& handle) const override;
@@ -200,12 +214,15 @@ public:
 
     uint64_t HashGraphicsState(const GraphicsState& graphicsState) const override;
 
-    RenderHandleReference Create(const ComputeShaderCreateData& createInfo, const BASE_NS::string_view baseShaderPath,
-        const BASE_NS::string_view variantName);
-    RenderHandleReference Create(const ShaderCreateData& createInfo, const BASE_NS::string_view baseShaderPath,
-        const BASE_NS::string_view variantName);
+    struct ShaderPathCreateData {
+        const BASE_NS::string_view baseShaderPath;
+        const BASE_NS::string_view variantName;
+        const BASE_NS::string_view displayName;
+    };
+    RenderHandleReference Create(const ComputeShaderCreateData& createInfo, const ShaderPathCreateData& pathCreateInfo);
+    RenderHandleReference Create(const ShaderCreateData& createInfo, const ShaderPathCreateData& pathCreateInfo);
     // NOTE: Can be used to add additional base uri name for a shader which has variant names
-    void AddAdditionalNameForHandle(const RenderHandleReference& handle, const BASE_NS::string_view name);
+    void AddAdditionalNameForHandle(const RenderHandleReference& handle, const BASE_NS::string_view path);
 
     const GpuComputeProgram* GetGpuComputeProgram(const RenderHandle& gpuHandle) const;
     const GpuShaderProgram* GetGpuShaderProgram(const RenderHandle& gpuHandle) const;
@@ -213,11 +230,11 @@ public:
     void HandlePendingAllocations();
 
     // replaces if already found
-    uint32_t CreateShaderModule(const BASE_NS::string_view name, const ShaderModuleCreateInfo& createInfo);
+    uint32_t CreateShaderModule(const BASE_NS::string_view path, const ShaderModuleCreateInfo& createInfo);
     // returns null if not found (i.e. needs to be created)
     ShaderModule* GetShaderModule(const uint32_t index) const;
     // returns ~0u if not found (i.e. needs to be created)
-    uint32_t GetShaderModuleIndex(const BASE_NS::string_view name) const;
+    uint32_t GetShaderModuleIndex(const BASE_NS::string_view path) const;
 
     bool IsComputeShader(const RenderHandleReference& handle) const override;
     bool IsShader(const RenderHandleReference& handle) const override;
@@ -227,6 +244,7 @@ public:
     void ReloadShaderFile(const BASE_NS::string_view uri) override;
     void UnloadShaderFiles(const ShaderFilePathDesc& desc) override;
 
+    const BASE_NS::string_view GetShaderFile(const RenderHandleReference& handle) const override;
     const CORE_NS::json::value* GetMaterialMetadata(const RenderHandleReference& handle) const override;
 
     void Destroy(const RenderHandleReference& handle) override;
@@ -235,21 +253,38 @@ public:
         const RenderHandleReference& handle, const ShaderStageFlags shaderStageFlags) const override;
     BASE_NS::vector<RenderHandle> GetShaders(const RenderHandle& handle, const ShaderStageFlags shaderStageFlags) const;
 
+    BASE_NS::vector<RenderHandleReference> GetShaders() const override;
+    BASE_NS::vector<RenderHandleReference> GetGraphicsStates() const override;
+    BASE_NS::vector<RenderHandleReference> GetPipelineLayouts() const override;
+    BASE_NS::vector<RenderHandleReference> GetVertexInputDeclarations() const override;
+
     IdDesc GetIdDesc(const RenderHandleReference& handle) const override;
+    uint64_t GetFrameIndex(const RenderHandleReference& handle) const override;
 
     IShaderPipelineBinder::Ptr CreateShaderPipelineBinder(const RenderHandleReference& handle) const override;
+    IShaderPipelineBinder::Ptr CreateShaderPipelineBinder(
+        const RenderHandleReference& handle, const RenderHandleReference& plHandle) const override;
+    IShaderPipelineBinder::Ptr CreateShaderPipelineBinder(
+        const RenderHandleReference& handle, const PipelineLayout& pipelineLayout) const override;
 
     CompatibilityFlags GetCompatibilityFlags(const RenderHandle& lhs, const RenderHandle& rhs) const;
     CompatibilityFlags GetCompatibilityFlags(
         const RenderHandleReference& lhs, const RenderHandleReference& rhs) const override;
 
-    // reload spv files (old behaviour for automatic shader monitor)
-    void ReloadSpvFiles(const BASE_NS::array_view<BASE_NS::string>& spvFiles);
+    GraphicsStateFlags GetForcedGraphicsStateFlags(const RenderHandle& handle) const;
+    GraphicsStateFlags GetForcedGraphicsStateFlags(const RenderHandleReference& handle) const override;
+    GraphicsStateFlags GetForcedGraphicsStateFlags(const uint32_t renderSlotId) const override;
 
     // set (engine) file manager to be usable with shader loading with shader manager api
     void SetFileManager(CORE_NS::IFileManager& fileMgr);
-    bool HasReloadedShaders() const;
+    bool HasReloadedShaderForBackend() const;
+    BASE_NS::array_view<const RenderHandle> GetReloadedShadersForBackend() const;
 
+    struct ShaderNameData {
+        BASE_NS::fixed_string<MAX_DEFAULT_NAME_LENGTH> path;
+        BASE_NS::fixed_string<MAX_DEFAULT_NAME_LENGTH> variantName;
+        BASE_NS::fixed_string<MAX_DEFAULT_NAME_LENGTH> displayName;
+    };
     struct ComputeMappings {
         struct Data {
             RenderHandleReference rhr;
@@ -258,8 +293,12 @@ public:
             uint32_t renderSlotId { INVALID_SM_INDEX };
             uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
             uint32_t reflectionPipelineLayoutIndex { INVALID_SM_INDEX };
+            uint32_t categoryId { INVALID_SM_INDEX };
+
+            uint64_t frameIndex { 0 };
         };
         BASE_NS::vector<Data> clientData;
+        BASE_NS::vector<ShaderNameData> nameData;
     };
     struct GraphicsMappings {
         struct Data {
@@ -272,14 +311,21 @@ public:
 
             uint32_t vertexInputDeclarationIndex { INVALID_SM_INDEX };
             uint32_t graphicsStateIndex { INVALID_SM_INDEX };
+
+            uint32_t categoryId { INVALID_SM_INDEX };
+
+            uint64_t frameIndex { 0 };
         };
         BASE_NS::vector<Data> clientData;
+        BASE_NS::vector<ShaderNameData> nameData;
     };
     struct GraphicsStateData {
         struct Indices {
             uint64_t hash { 0 };
             uint32_t renderSlotId { INVALID_SM_INDEX };
             uint32_t baseVariantIndex { INVALID_SM_INDEX };
+            // forced state flags
+            GraphicsStateFlags stateFlags { 0u };
         };
         BASE_NS::vector<RenderHandleReference> rhr;
         BASE_NS::vector<GraphicsState> graphicsStates;
@@ -307,9 +353,10 @@ private:
         uint32_t renderSlotIndex { INVALID_SM_INDEX };
         uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
         uint32_t reflectionPipelineLayoutIndex { INVALID_SM_INDEX };
+        uint32_t categoryIndex { INVALID_SM_INDEX };
     };
     RenderHandle CreateClientData(
-        const BASE_NS::string_view name, const RenderHandleType type, const ClientDataIndices& cdi);
+        const BASE_NS::string_view path, const RenderHandleType type, const ClientDataIndices& cdi);
 
     void DestroyShader(const RenderHandle handle);
     void DestroyGraphicsState(const RenderHandle handle);
@@ -317,6 +364,9 @@ private:
     void DestroyVertexInputDeclaration(const RenderHandle handle);
 
     IdDesc GetShaderIdDesc(const RenderHandle handle) const;
+    uint64_t GetShaderFrameIndex(const RenderHandle handle) const;
+
+    BASE_NS::string GetCategoryName(const uint32_t categoryId) const;
 
     // NOTE: ATM GpuComputeProgram and GpuShaderPrograms are currently re-created for every new shader created
     // will be stored and re-used in the future
@@ -343,6 +393,12 @@ private:
         BASE_NS::unordered_map<BASE_NS::string, uint32_t> nameToId;
     };
     RenderSlotIds renderSlotIds_;
+
+    struct Category {
+        BASE_NS::vector<BASE_NS::string> data;
+        BASE_NS::unordered_map<BASE_NS::string, uint32_t> nameToId;
+    };
+    Category category_;
 
     struct ComputeShaderAllocs {
         RenderHandle handle;
@@ -420,7 +476,7 @@ private:
     ComputeShaderReflection defaultComputeShaderReflection_;
     ShaderReflection defaultShaderReflection_;
     GraphicsState defaultGraphicsState_;
-    ShaderSpecilizationConstantView defaultSSCV_;
+    ShaderSpecializationConstantView defaultSSCV_;
     VertexInputDeclarationView defaultVIDV_;
     ShaderThreadGroup defaultSTG_;
 
@@ -429,8 +485,10 @@ private:
         CORE_NS::json::value json;
     };
     BASE_NS::unordered_map<RenderHandle, MaterialMetadata> shaderToMetadata_;
+    BASE_NS::unordered_map<RenderHandle, BASE_NS::string> handleToShaderDataFile_;
 
-    bool hasReloadedShaders_ { false };
+    BASE_NS::vector<RenderHandle> reloadedShaders_;
+    BASE_NS::vector<RenderHandle> reloadedShadersForBackend_;
 };
 
 class RenderNodeShaderManager final : public IRenderNodeShaderManager {
@@ -438,15 +496,15 @@ public:
     explicit RenderNodeShaderManager(const ShaderManager& shaderMgr);
     ~RenderNodeShaderManager() = default;
 
-    RenderHandle GetShaderHandle(const BASE_NS::string_view name) const override;
+    RenderHandle GetShaderHandle(const BASE_NS::string_view path) const override;
     RenderHandle GetShaderHandle(
-        const BASE_NS::string_view name, const BASE_NS::string_view variantName) const override;
+        const BASE_NS::string_view path, const BASE_NS::string_view variantName) const override;
     RenderHandle GetShaderHandle(const RenderHandle& name, const uint32_t renderSlotId) const override;
     BASE_NS::vector<RenderHandle> GetShaders(const uint32_t renderSlotId) const override;
 
-    RenderHandle GetGraphicsStateHandle(const BASE_NS::string_view name) const override;
+    RenderHandle GetGraphicsStateHandle(const BASE_NS::string_view path) const override;
     RenderHandle GetGraphicsStateHandle(
-        const BASE_NS::string_view name, const BASE_NS::string_view variantName) const override;
+        const BASE_NS::string_view path, const BASE_NS::string_view variantName) const override;
     RenderHandle GetGraphicsStateHandle(const RenderHandle& handle, const uint32_t renderSlotId) const override;
     RenderHandle GetGraphicsStateHandleByHash(const uint64_t hash) const override;
     RenderHandle GetGraphicsStateHandleByShaderHandle(const RenderHandle& handle) const override;
@@ -457,16 +515,16 @@ public:
     IShaderManager::RenderSlotData GetRenderSlotData(const uint32_t renderSlotId) const override;
 
     RenderHandle GetVertexInputDeclarationHandleByShaderHandle(const RenderHandle& handle) const override;
-    RenderHandle GetVertexInputDeclarationHandle(const BASE_NS::string_view name) const override;
+    RenderHandle GetVertexInputDeclarationHandle(const BASE_NS::string_view path) const override;
     VertexInputDeclarationView GetVertexInputDeclarationView(const RenderHandle& handle) const override;
 
     RenderHandle GetPipelineLayoutHandleByShaderHandle(const RenderHandle& handle) const override;
     const PipelineLayout& GetPipelineLayout(const RenderHandle& handle) const override;
-    RenderHandle GetPipelineLayoutHandle(const BASE_NS::string_view name) const override;
+    RenderHandle GetPipelineLayoutHandle(const BASE_NS::string_view path) const override;
 
     RenderHandle GetReflectionPipelineLayoutHandle(const RenderHandle& handle) const override;
     const PipelineLayout& GetReflectionPipelineLayout(const RenderHandle& handle) const override;
-    ShaderSpecilizationConstantView GetReflectionSpecialization(const RenderHandle& handle) const override;
+    ShaderSpecializationConstantView GetReflectionSpecialization(const RenderHandle& handle) const override;
     VertexInputDeclarationView GetReflectionVertexInputDeclaration(const RenderHandle& handle) const override;
     ShaderThreadGroup GetReflectionThreadGroupSize(const RenderHandle& handle) const override;
 
@@ -481,6 +539,9 @@ public:
 
     IShaderManager::CompatibilityFlags GetCompatibilityFlags(
         const RenderHandle& lhs, const RenderHandle& rhs) const override;
+
+    GraphicsStateFlags GetForcedGraphicsStateFlags(const RenderHandle& handle) const override;
+    GraphicsStateFlags GetForcedGraphicsStateFlags(const uint32_t renderSlotId) const override;
 
 private:
     const ShaderManager& shaderMgr_;

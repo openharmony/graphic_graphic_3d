@@ -3,6 +3,8 @@
         "version": "22.00",
         "type": "shader"
     },
+    "category" : "Render/Effect",
+    "displayName" : "Bloom Combine",
     "vert": "rendershaders://shader/fullscreen_triangle.vert.spv",
     "frag": "rendershaders://shader/bloom_combine.frag.spv",
     "state": {

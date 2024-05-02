@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,13 +16,16 @@
 #include "threading/dispatcher_task_queue.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <deque>
 #include <mutex>
 
+#include <base/containers/array_view.h>
+#include <base/containers/iterator.h>
+#include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
-#include <core/log.h>
 #include <core/namespace.h>
-
-#include "os/platform.h"
+#include <core/threading/intf_thread_pool.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::vector;
@@ -59,7 +62,7 @@ void DispatcherTaskQueue::Submit(uint64_t taskIdentifier, IThreadPool::ITask::Pt
 {
     std::lock_guard lock(queueLock_);
 
-    tasks_.emplace_back(taskIdentifier, std::move(task));
+    tasks_.emplace_back(taskIdentifier, move(task));
 }
 
 void DispatcherTaskQueue::SubmitAfter(uint64_t afterIdentifier, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
@@ -68,9 +71,26 @@ void DispatcherTaskQueue::SubmitAfter(uint64_t afterIdentifier, uint64_t taskIde
 
     auto it = std::find(tasks_.begin(), tasks_.end(), afterIdentifier);
     if (it != tasks_.end()) {
-        tasks_.emplace(++it, taskIdentifier, std::move(task));
+        tasks_.emplace(++it, taskIdentifier, move(task));
     } else {
-        tasks_.emplace_back(taskIdentifier, std::move(task));
+        tasks_.emplace_back(taskIdentifier, move(task));
+    }
+}
+
+void DispatcherTaskQueue::SubmitAfter(
+    BASE_NS::array_view<const uint64_t> afterIdentifiers, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
+{
+    ptrdiff_t pos = -1;
+    for (const auto afterIdentifier : afterIdentifiers) {
+        auto it = std::find(tasks_.begin(), tasks_.end(), afterIdentifier);
+        if (it != tasks_.end()) {
+            pos = std::max(pos, std::distance(tasks_.begin(), it));
+        }
+    }
+    if (pos >= 0) {
+        tasks_.emplace(tasks_.begin() + (pos + 1), taskIdentifier, move(task));
+    } else {
+        tasks_.emplace_back(taskIdentifier, move(task));
     }
 }
 
@@ -84,7 +104,7 @@ void DispatcherTaskQueue::Execute()
         std::lock_guard lock(queueLock_);
 
         if (!tasks_.empty()) {
-            entry = std::move(tasks_.front());
+            entry = BASE_NS::move(tasks_.front());
             tasks_.pop_front();
             hasTaskEntry = true;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -36,7 +36,7 @@ CORE3D_BEGIN_NAMESPACE()
 /** Mesh builder interface for building meshes */
 class IMeshBuilder : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "3d0f8c8e-dc7a-4949-95aa-c3e30bb3bb44" };
+    static constexpr auto UID = BASE_NS::Uid { "8d2892a4-77e5-4304-a5aa-38f866b7c788" };
 
     using Ptr = BASE_NS::refcnt_ptr<IMeshBuilder>;
 
@@ -51,7 +51,7 @@ public:
         /** Morph target count */
         uint32_t morphTargetCount { 0 };
         /** Index type */
-        RENDER_NS::IndexType indexType { RENDER_NS::IndexType::CORE_INDEX_TYPE_MAX_ENUM };
+        RENDER_NS::IndexType indexType { RENDER_NS::IndexType::CORE_INDEX_TYPE_UINT32 };
 
         /** Material */
         CORE_NS::Entity material {};
@@ -61,6 +61,16 @@ public:
         bool colors { false };
         /** Joints */
         bool joints { false };
+    };
+
+    /** GPU buffer create info */
+    struct GpuBufferCreateInfo {
+        /** Vertex buffer additional usage flags */
+        RENDER_NS::BufferUsageFlags vertexBufferFlags { 0U };
+        /** Index buffer additional usage flags */
+        RENDER_NS::BufferUsageFlags indexBufferFlags { 0U };
+        /** Morph buffer additional usage flags */
+        RENDER_NS::BufferUsageFlags morphBufferFlags { 0U };
     };
 
     /** Setup vertex declaration and submesh count for the builder. Also resets the builder for re-use.
@@ -83,37 +93,28 @@ public:
      * data is being fed to submeshes. */
     virtual void Allocate() = 0;
 
-    /** Set geometry data for a given submesh.
-     * @param submeshIndex Index of the submesh.
-     * @param positions Position data, in vector3 format (x, y, z), this parameter is required.
-     * @param normals Normal data, in vector3 format (x, y, z), this parameter is required.
-     * @param texcoords0 Texture coordinate 0 data, in vector2 format (u, v), this parameter is required.
-     * @param texcoords1 Texture coordinate 1 data, in vector2 format (u, v), this parameter is optional.
-     * @param tangents Tangent data, in vector4 format (x, y, z, w), this parameter is optional.
-     * @param colors Vertex color data, in vector4 format (r, g, b, a), this parameter is optional.
-     */
-    virtual void SetVertexData(size_t submeshIndex, const BASE_NS::array_view<const BASE_NS::Math::Vec3>& positions,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec3>& normals,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec2>& texcoords0,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec2>& texcoords1,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec4>& tangents,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec4>& colors) = 0;
+    /** Struct for passing data to the mesh builder.*/
+    struct DataBuffer {
+        /** Format of each element in buffer. e.g. three float values per element would be R32G32B32_SFLOAT. */
+        BASE_NS::Format format;
+        /** Offset between elements. This should match the size of one element for tightly packed values. */
+        uint32_t stride;
+        /** Byte arrays which will be interpreted based on format and stride. */
+        BASE_NS::array_view<const uint8_t> buffer;
+    };
 
     /** Set geometry data for a given submesh.
      * @param submeshIndex Index of the submesh.
-     * @param positions Position data as a float array (3 * vertexCount values), this parameter is required.
-     * @param normals Normal data as a float array (3 * vertexCount values), this parameter is required.
-     * @param texcoords0 Texture coordinate 0 data as a float array (2 * vertexCount values), this parameter is
-     * required.
-     * @param texcoords1 Texture coordinate 1 data as a float array (2 * vertexCount values), this parameter is
-     * optional.
-     * @param tangents Tangent data as a float array (4 * vertexCount values), this parameter is optional.
-     * @param colors Vertex color data as a float array (4 * vertexCount values), this parameter is optional.
+     * @param positions Position data (3 * vertexCount values), this parameter is required.
+     * @param normals Normal data (3 * vertexCount values), this parameter is required.
+     * @param texcoords0 Texture coordinate 0 data (2 * vertexCount values), this parameter is required.
+     * @param texcoords1 Texture coordinate 1 data (2 * vertexCount values), this parameter is optional.
+     * @param tangents Tangent data (4 * vertexCount values), this parameter is optional.
+     * @param colors Vertex color data  (4 * vertexCount values), this parameter is optional.
      */
-    virtual void SetVertexData(size_t submeshIndex, const BASE_NS::array_view<const float>& positions,
-        const BASE_NS::array_view<const float>& normals, const BASE_NS::array_view<const float>& texcoords0,
-        const BASE_NS::array_view<const float>& texcoords1, const BASE_NS::array_view<const float>& tangents,
-        const BASE_NS::array_view<const float>& colors) = 0;
+    virtual void SetVertexData(size_t submeshIndex, const DataBuffer& positions, const DataBuffer& normals,
+        const DataBuffer& texcoords0, const DataBuffer& texcoords1, const DataBuffer& tangents,
+        const DataBuffer& colors) = 0;
 
     /** Set Axis-aligned bounding box for a submesh.
      * @param submeshIndex Index of the submesh.
@@ -126,25 +127,23 @@ public:
      * @param submeshIndex Index of the submesh.
      * @param positions Array of vertex positions in submesh.
      */
-    virtual void CalculateAABB(
-        size_t submeshIndex, const BASE_NS::array_view<const BASE_NS::Math::Vec3>& positions) = 0;
+    virtual void CalculateAABB(size_t submeshIndex, const DataBuffer& positions) = 0;
 
     /** Set triangle indices for a submesh.
      * @param submeshIndex Index of the submesh.
-     * @param indices Index data as byte array (submesh import info defines the format).
+     * @param indices Index data.
      */
-    virtual void SetIndexData(size_t submeshIndex, const BASE_NS::array_view<const uint8_t>& indices) = 0;
+    virtual void SetIndexData(size_t submeshIndex, const DataBuffer& indices) = 0;
 
     /** Set Joint data for a submesh.
      * @param submeshIndex Index of the submesh.
-     * @param jointData Joint indices per vertex where each index is size of uint8_t, (4 indices per bone).
-     * @param weightData Joint weights per vertex where each weight is size of float, (4 weights per bone).
-     * @param vertexPositions Position data that is used for skin bounds calculations as a float array (3 * vertexCount
+     * @param jointData Joint indices per vertex, (4 indices per bone).
+     * @param weightData Joint weights per vertex , (4 weights per bone).
+     * @param vertexPositions Position data that is used for skin bounds calculations (3 * vertexCount
      * values), this data should match the data set with SetVertexData().
      */
-    virtual void SetJointData(size_t submeshIndex, const BASE_NS::array_view<const uint8_t>& jointData,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec4>& weightData,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec3>& vertexPositions) = 0;
+    virtual void SetJointData(size_t submeshIndex, const DataBuffer& jointData, const DataBuffer& weightData,
+        const DataBuffer& vertexPositions) = 0;
 
     /** Set Morph targets for a submesh.
      * @param submeshIndex Index of the submesh.
@@ -158,21 +157,19 @@ public:
      * @param targetTangents Morph target vertex tangents (delta offsets from base vertex, total size of array is
      * target_count * vertex_count).
      */
-    virtual void SetMorphTargetData(size_t submeshIndex,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec3>& basePositions,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec3>& baseNormals,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec4>& baseTangents,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec3>& targetPositions,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec3>& targetNormals,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec3>& targetTangents) = 0;
+    virtual void SetMorphTargetData(size_t submeshIndex, const DataBuffer& basePositions, const DataBuffer& baseNormals,
+        const DataBuffer& baseTangents, const DataBuffer& targetPositions, const DataBuffer& targetNormals,
+        const DataBuffer& targetTangents) = 0;
 
     /** Returns all vertex data of this mesh. */
     virtual BASE_NS::array_view<const uint8_t> GetVertexData() const = 0;
+
     /** Returns all index data of this mesh. */
     virtual BASE_NS::array_view<const uint8_t> GetIndexData() const = 0;
 
     /** Returns all joint data of this mesh. */
     virtual BASE_NS::array_view<const uint8_t> GetJointData() const = 0;
+
     /** Returns all morph target data of this mesh. */
     virtual BASE_NS::array_view<const uint8_t> GetMorphTargetData() const = 0;
 
@@ -183,7 +180,7 @@ public:
     virtual BASE_NS::array_view<const float> GetJointBoundsData() const = 0;
 
     /** Returns all submeshes of this mesh. */
-    virtual const BASE_NS::array_view<const MeshComponent::Submesh> GetSubmeshes() const = 0;
+    virtual BASE_NS::array_view<const MeshComponent::Submesh> GetSubmeshes() const = 0;
 
     /** Returns total vertex count in this mesh, note that this function should be called after Allocate() has been
      * called. */
@@ -192,6 +189,15 @@ public:
     /** Returns total index count in this mesh, note that 16bit indices are packed (two per one 32-bit slot) and there
      * might be padding involved. */
     virtual uint32_t GetIndexCount() const = 0;
+
+    /** Creates GPU buffers and copies the data passed in by the Set*Data calls.
+     */
+    virtual void CreateGpuResources() = 0;
+
+    /** Creates GPU buffers and copies the data passed in by the Set*Data calls.
+     * @param Additional create info with additional flags for buffers.
+     */
+    virtual void CreateGpuResources(const GpuBufferCreateInfo& createInfo) = 0;
 
     /** Helper for creating an entity with a mesh component. The mesh component is filled using the previously given
      * data (submeshes, vertex data, index data, etc.). NOTE: the mesh component owns the attached GPU resources.

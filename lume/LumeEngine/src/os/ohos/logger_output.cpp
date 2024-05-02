@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,14 +19,13 @@
 #include <cstdarg>
 #include <ctime>
 #include <fstream>
+#include <hilog/log.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string_view>
-
-#include <hilog/log.h>
-
 #include <unistd.h>
+
 #include <core/namespace.h>
 
 #include "log/logger.h"
@@ -61,7 +60,7 @@ public:
     void Write(
         ILogger::LogLevel logLevel, const string_view filename, int linenumber, const string_view message) override
     {
-        LogLevel logPriority;
+        int logPriority;
         switch (logLevel) {
             case ILogger::LogLevel::LOG_VERBOSE:
                 logPriority = LOG_LEVEL_MIN;
@@ -97,9 +96,9 @@ public:
             auto const filenameView = GetFilename({ filename.data(), filename.size() });
             outputStream << '(' << filenameView << ':' << linenumber << "): ";
             outputStream << std::string_view(message.data(), message.size());
-            HiLogPrint(LOG_CORE, logPriority, domain, logTag_.data(), "%{public}s", outputStream.str().c_str());
+            HiLogPrint(LOG_CORE, LOG_ERROR, domain, logTag_.data(), "%{public}s", outputStream.str().c_str());
         } else {
-            HiLogPrint(LOG_CORE, logPriority, domain, logTag_.data(), "%{public}s", message.data());
+            HiLogPrint(LOG_CORE, LOG_ERROR, domain, logTag_.data(), "%{public}s", message.data());
         }
     }
 
@@ -108,6 +107,7 @@ protected:
     {
         delete this;
     }
+
 private:
     static constexpr std::string_view logTag_ = "ohos_lume";
 };
@@ -121,5 +121,4 @@ ILogger::IOutput::Ptr CreateLoggerDebugOutput()
 {
     return {};
 }
-
 CORE_END_NAMESPACE()

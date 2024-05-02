@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 
 #include <vulkan/vulkan_core.h>
 
+#include <base/containers/array_view.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
@@ -30,6 +31,8 @@
 #include "vulkan/pipeline_create_functions_vk.h"
 
 #if (RENDER_PERF_ENABLED == 1)
+#include <atomic>
+
 #include "device/gpu_buffer.h"
 #include "perf/cpu_timer.h"
 #include "perf/gpu_query_manager.h"
@@ -58,6 +61,9 @@ struct CommandBufferSubmitter {
     struct CommandBuffer {
         VkCommandBuffer commandBuffer { VK_NULL_HANDLE };
         VkSemaphore semaphore { VK_NULL_HANDLE };
+
+        // not submitted, executed in primary command buffer
+        VkCommandBuffer secondaryCommandBuffer { VK_NULL_HANDLE };
     };
 
     VkSemaphore presentationWaitSemaphore { VK_NULL_HANDLE };
@@ -102,11 +108,16 @@ private:
         const RenderCommandBeginRenderPass* renderCommandBeginRenderPass { nullptr };
         LowLevelRenderPassDataVk lowLevelRenderPassData;
         LowLevelPipelineLayoutDataVk lowLevelPipelineLayoutData;
+        bool primaryRenderPass { false };      // related to secondary command buffers
+        bool secondaryCommandBuffer { false }; // related to secondary command buffers
+        bool validCommandList { true };
+        bool validBindings { true };
 
         IRenderBackendNode* backendNode { nullptr };
 
         // matching pso handle to pipeline layout
         RenderHandle psoHandle;
+        VkPipeline pipeline { VK_NULL_HANDLE };
         VkPipelineLayout pipelineLayout { VK_NULL_HANDLE };
 
         // has bitmask for immutable samplers with special handling needed resources
@@ -123,6 +134,8 @@ private:
 
         uint32_t multiRenderCommandListIndex { 0 };
         uint32_t multiRenderCommandListCount { 0 };
+        bool secondaryCommandBuffer { false };
+        bool multiRenderNodeCmdList { false };
     };
 
     struct DebugNames {
@@ -134,11 +147,24 @@ private:
     void AcquirePresentationInfo(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
 
-    void RenderProcessCommandLists(RenderCommandFrameData& renderCommandFrameData);
+    void RenderProcessCommandLists(
+        RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
     void RenderProcessSubmitCommandLists(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
     void RenderSingleCommandList(RenderCommandContext& renderCommandCtx, const uint32_t cmdBufIdx,
+        const MultiRenderCommandListDesc& mrclDesc, const DebugNames& debugNames);
+
+    void UpdateCommandListDescriptorSets(
+        const RenderCommandList& renderCommandList, StateCache& stateCache, NodeContextDescriptorSetManager& ncdsm);
+
+    // secondary command buffers related methods
+    void RenderPrimaryRenderPass(const RenderCommandFrameData& renderCommandFrameData,
+        RenderCommandContext& renderCommandCtx, const uint32_t cmdBufIdx,
         const MultiRenderCommandListDesc& multiRenderCommandListDesc, const DebugNames& debugNames);
+    void RenderExecuteSecondaryCommandLists(
+        const LowLevelCommandBufferVk& cmdBuffer, const LowLevelCommandBufferVk& executeCmdBuffer);
+    VkCommandBufferInheritanceInfo RenderGetCommandBufferInheritanceInfo(
+        const RenderCommandList& renderCommandList, NodeContextPoolManager& poolMgr);
 
     void RenderCommand(const RenderCommandDraw& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
@@ -177,9 +203,6 @@ private:
     void RenderCommand(const RenderCommandBlitImage& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
 
-    void RenderCommand(const RenderCommandUpdateDescriptorSets& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
-        NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache,
-        NodeContextDescriptorSetManager& ncdsm);
     void RenderCommand(const RenderCommandBindDescriptorSets& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, StateCache& stateCache,
         NodeContextDescriptorSetManager& ncdsm);
@@ -188,6 +211,9 @@ private:
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
 
     void RenderCommand(const RenderCommandBuildAccelerationStructure& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+        NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
+
+    void RenderCommand(const RenderCommandClearColorImage& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
 
     // dynamic states
@@ -205,6 +231,9 @@ private:
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
     void RenderCommand(const RenderCommandDynamicStateStencil& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
+    void RenderCommand(const RenderCommandDynamicStateFragmentShadingRate& renderCmd,
+        const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
+        const StateCache& stateCache);
 
     void RenderCommand(const RenderCommandExecuteBackendFramePosition& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
@@ -216,7 +245,7 @@ private:
     Device& device_;
     DeviceVk& deviceVk_;
     GpuResourceManager& gpuResourceMgr_;
-    CORE_NS::IParallelTaskQueue* queue_;
+    CORE_NS::IParallelTaskQueue* queue_ { nullptr };
 
     CommandBufferSubmitter commandBufferSubmitter_;
 
@@ -230,11 +259,16 @@ private:
         GpuResourceState renderGraphProcessedState;
         ImageLayout imageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
         VkImage swapchainImage { VK_NULL_HANDLE };
+        VkSwapchainKHR swapchain { VK_NULL_HANDLE };
     };
-    PresentationInfo presentationInfo_;
+    struct PresentationData {
+        bool present { true };
+        BASE_NS::vector<PresentationInfo> infos;
+    };
+    PresentationData presentationData_;
 
     // internal presentationInfo_ state change (called 0 or 1 time from random thread for presentation layout change)
-    void RenderPresentationLayout(const LowLevelCommandBufferVk& cmdBuf);
+    void RenderPresentationLayout(const LowLevelCommandBufferVk& cmdBuf, const uint32_t cmdBufferIdx);
 
 #if (RENDER_PERF_ENABLED == 1)
 
@@ -242,9 +276,9 @@ private:
     void EndFrameTimers();
 
     void WritePerfTimeStamp(const LowLevelCommandBufferVk& cmdBuf, const BASE_NS::string_view name,
-        const uint32_t queryIndex, const VkPipelineStageFlagBits stageFlagBits);
+        const uint32_t queryIndex, const VkPipelineStageFlagBits stageFlagBits, const StateCache& stateCache);
     void CopyPerfTimeStamp(
-        const LowLevelCommandBufferVk& cmdBuf, const BASE_NS::string_view name, const StateCache& cache);
+        const LowLevelCommandBufferVk& cmdBuf, const BASE_NS::string_view name, const StateCache& stateCache);
 
     BASE_NS::unique_ptr<GpuQueryManager> gpuQueryMgr_;
     struct PerfDataSet {
@@ -252,6 +286,8 @@ private:
         CpuTimer cpuTimer;
 
         uint32_t gpuBufferOffset { 0 };
+
+        PerfCounters perfCounters;
     };
     BASE_NS::unordered_map<BASE_NS::string, PerfDataSet> timers_;
 #if (RENDER_GPU_TIMESTAMP_QUERIES_ENABLED == 1)
@@ -261,6 +297,8 @@ private:
         uint32_t currentOffset { 0 };
         BASE_NS::unique_ptr<GpuBuffer> gpuBuffer;
         void* mappedData { nullptr };
+
+        std::atomic_int64_t fullGpuCounter = 0;
     };
     PerfGpuTimerData perfGpuTimerData_;
 #endif

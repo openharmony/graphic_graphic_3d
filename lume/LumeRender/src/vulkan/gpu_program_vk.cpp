@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -53,8 +53,8 @@ GpuShaderProgramVk::GpuShaderProgramVk(Device& device, const GpuShaderProgramCre
             plat_.vert = ((const ShaderModulePlatformDataVk&)mod.GetPlatformData()).shaderModule;
             pipelineLayout = mod.GetPipelineLayout();
             const auto& sscv = mod.GetSpecilization();
-            constants_ =
-                vector<ShaderSpecialization::Constant>(sscv.constants.cbegin().ptr(), sscv.constants.cend().ptr());
+            // has sort inside
+            GpuProgramUtil::CombineSpecializationConstants(sscv.constants, constants_);
 
             // not owned, directly reflected from vertex shader module
             const auto& vidv = mod.GetVertexInputDeclaration();

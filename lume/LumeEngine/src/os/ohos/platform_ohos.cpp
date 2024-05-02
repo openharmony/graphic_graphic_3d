@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,15 +14,15 @@
  */
 
 #include "platform_ohos.h"
-#include "os/platform.h"
 
+#include <core/io/intf_file_manager.h>
 #include <core/log.h>
 #include <core/namespace.h>
-#include <core/io/intf_file_manager.h>
-#include "io/ohos_filesystem.h"
+
+#include "os/ohos/ohos_filesystem.h"
+#include "os/platform.h"
 
 CORE_BEGIN_NAMESPACE()
-
 PlatformOHOS::PlatformOHOS(PlatformCreateInfo const& createInfo)
 {
     plat_.coreRootPath = createInfo.coreRootPath;
@@ -33,10 +33,6 @@ PlatformOHOS::PlatformOHOS(PlatformCreateInfo const& createInfo)
     plat_.moduleName = createInfo.moduleName;
 }
 
-PlatformOHOS::~PlatformOHOS()
-{
-}
-
 BASE_NS::string PlatformOHOS::RegisterDefaultPaths(IFileManager& fileManager)
 {
     // register HapFilesystem
@@ -45,25 +41,14 @@ BASE_NS::string PlatformOHOS::RegisterDefaultPaths(IFileManager& fileManager)
     BASE_NS::string moduleName = plat_.moduleName;
     fileManager.RegisterFilesystem("OhosRawFile",
         IFilesystem::Ptr{new Core::OhosFilesystem(hapPath, bundleName, moduleName)});
-
     CORE_LOG_I("Registered hapFilesystem by Platform: 'hapPath:%s bundleName:%s moduleName:%s'",
         hapPath.c_str(), bundleName.c_str(), moduleName.c_str());
-    // register path to system plugins (this does not actually do anything anymore, pluginregistry has it's one
-    // filemanager instance etc..) Root path is the location where system plugins , non-rofs assets etc could be held.
     const BASE_NS::string coreDirectory = "file://" + plat_.coreRootPath;
-
-    // Create plugins:// protocol that points to plugin files under coredirectory.
     fileManager.RegisterPath("plugins", coreDirectory, false);
-
-#if (CORE_EMBEDDED_ASSETS_ENABLED == 0) || (CORE_DEV_ENABLED == 1)
-    const BASE_NS::string assetRoot = plat_.appRootPath + "assets/";
-
-    // Create engine:// protocol that points to core asset files on the filesystem.
-    CORE_LOG_I("Registered core asset path: '%score/'", assetRoot.c_str());
-    fileManager.RegisterPath("engine", assetRoot + "core/", false);
-#endif
     return coreDirectory;
 }
+
+PlatformOHOS::~PlatformOHOS() {}
 
 void PlatformOHOS::RegisterPluginLocations(IPluginRegister& registry)
 {
@@ -83,5 +68,4 @@ CORE_NS::IPlatform::Ptr Platform::Create(PlatformCreateInfo const& createInfo)
 {
     return CORE_NS::IPlatform::Ptr(new PlatformOHOS(createInfo));
 }
-
 CORE_END_NAMESPACE()

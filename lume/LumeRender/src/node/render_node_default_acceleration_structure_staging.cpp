@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,7 +30,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "device/gpu_resource_manager.h"
-#include "vulkan/gpu_acceleration_structure_vk.h"
+#include "vulkan/gpu_buffer_vk.h"
 #endif
 
 #include "util/log.h"
@@ -126,11 +126,11 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessInstanceD
                     for (uint32_t idx = 0; idx < dataRef.count; ++idx) {
                         const auto& instanceRef = stagingInstanceData.instances[dataRef.startIndex + idx];
                         uint64_t accelerationStructureReference = 0;
-                        if (const GpuAccelerationStructureVk* accelPtr =
-                                gpuResourceMgrImpl.GetAccelerationStructure<GpuAccelerationStructureVk>(
-                                    instanceRef.accelerationStructureReference.GetHandle());
+                        if (const GpuBufferVk* accelPtr = gpuResourceMgrImpl.GetBuffer<GpuBufferVk>(
+                                instanceRef.accelerationStructureReference.GetHandle());
                             accelPtr) {
-                            accelerationStructureReference = accelPtr->GetPlatformData().deviceAddress;
+                            accelerationStructureReference =
+                                accelPtr->GetPlatformDataAccelerationStructure().deviceAddress;
                         }
                         VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
                             0.0f, 1.0f, 0.0f };

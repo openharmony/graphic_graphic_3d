@@ -3,6 +3,8 @@
         "version": "22.00",
         "type": "shader"
     },
+    "category" : "Render/Effect",
+    "displayName" : "Fullscreen Copy",
     "vert": "rendershaders://shader/fullscreen_triangle.vert.spv",
     "frag": "rendershaders://shader/fullscreen_copy.frag.spv",
     "state": {

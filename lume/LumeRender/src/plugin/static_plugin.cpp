@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+#include <base/containers/fixed_string.h>
 #include <core/intf_engine.h>
 #include <core/io/intf_file_manager.h>
 #include <core/plugin/intf_plugin.h>
@@ -23,8 +24,10 @@
 // Include the declarations directly from engine.
 // NOTE: macro defined by cmake as CORE_STATIC_PLUGIN_HEADER="${CORE_ROOT_DIRECTORY}/src/static_plugin_decl.h"
 // this is so that the core include directories are not leaked here, but we want this one header in this case.
+#ifndef __APPLE__
 #include CORE_STATIC_PLUGIN_HEADER
 #include "registry_data.cpp"
+#endif
 
 // Rofs Data.
 extern "C" {
@@ -67,10 +70,6 @@ PluginToken CreatePlugin(IEngine& engine)
     fileManager.RegisterPath(SSTATES, SHADER_STATE_PATH, false);
     fileManager.RegisterPath(RENDERDATA, RENDERDATA_PATH, false);
 #endif
-#if (RENDER_EMBEDDED_ASSETS_ENABLED == 0) || (RENDER_DEV_ENABLED == 1)
-    const BASE_NS::string assets = engine.GetRootPath() + "../LumeRender/assets/render/";
-    fileManager.RegisterPath("engine", assets, true);
-#endif
 
     return token;
 }
@@ -87,12 +86,8 @@ void DestroyPlugin(PluginToken token)
     fileManager.UnregisterPath(RENDERDATA, RENDERDATA_PATH);
     fileManager.UnregisterFilesystem(ROFS);
 #endif
-#if (RENDER_EMBEDDED_ASSETS_ENABLED == 0) || (RENDER_DEV_ENABLED == 1)
-    const auto assets = state->engine_.GetRootPath() + "../LumeRender/assets/render/";
-    fileManager.UnregisterPath("engine", assets);
-#endif
-    auto& registry = *state->engine_.GetInterface<IClassRegister>();
 
+    auto& registry = *state->engine_.GetInterface<IClassRegister>();
     registry.UnregisterInterfaceType(state->interfaceInfo_);
 
     delete state;

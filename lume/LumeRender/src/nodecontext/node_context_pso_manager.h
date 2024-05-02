@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -56,6 +56,8 @@ public:
     NodeContextPsoManager(Device& device, ShaderManager& shaderManager);
     ~NodeContextPsoManager() = default;
 
+    void BeginBackendFrame();
+
     RenderHandle GetComputePsoHandle(const RenderHandle shader, const RenderHandle pipelineLayout,
         const ShaderSpecializationConstantDataView& shaderSpecialization) override;
     RenderHandle GetComputePsoHandle(const RenderHandle shader, const PipelineLayout& pipelineLayout,
@@ -64,15 +66,15 @@ public:
     RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const RenderHandle graphicsState,
         const RenderHandle pipelineLayout, const RenderHandle vertexInputDeclaration,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) override;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
     RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const RenderHandle graphicsState,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) override;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
     RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const GraphicsState& graphicsState,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
-        const DynamicStateFlags dynamicStateFlags) override;
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
 
     const ComputePipelineStateObject* GetComputePso(
         const RenderHandle handle, const LowLevelPipelineLayoutData* pipelineLayoutData);
@@ -96,8 +98,8 @@ private:
     // graphics state handle should be invalid if custom graphics state is given
     RenderHandle GetGraphicsPsoHandleImpl(const RenderHandle shaderHandle, const RenderHandle graphicsStateHandle,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
-        const ShaderSpecializationConstantDataView& shaderSpecialization, const DynamicStateFlags dynamicStateFlags,
-        const GraphicsState* graphicsState);
+        const ShaderSpecializationConstantDataView& shaderSpecialization,
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const GraphicsState* graphicsState);
 
     struct ComputePipelineStateCreationData {
         RenderHandle shaderHandle;
@@ -110,6 +112,12 @@ private:
         // hash (shader hash), resource handle
         BASE_NS::unordered_map<uint64_t, RenderHandle> hashToHandle;
 
+        struct DestroyData {
+            BASE_NS::unique_ptr<ComputePipelineStateObject> pso;
+            uint64_t frameIndex { 0 };
+        };
+        BASE_NS::vector<DestroyData> pendingPsoDestroys;
+
 #if (RENDER_VALIDATION_ENABLED == 1)
         BASE_NS::unordered_map<RenderHandle, PipelineLayout> handleToPipelineLayout;
 #endif
@@ -120,20 +128,30 @@ private:
         RenderHandle shaderHandle;
         RenderHandle graphicsStateHandle;
         PipelineLayout pipelineLayout;
-        DynamicStateFlags dynamicStateFlags { DynamicStateFlagBits::CORE_DYNAMIC_STATE_UNDEFINED };
 
         VertexInputDeclarationDataWrapper vertexInputDeclaration;
         ShaderSpecializationConstantDataWrapper shaderSpecialization;
         BASE_NS::unique_ptr<GraphicsState> customGraphicsState;
+        BASE_NS::vector<DynamicStateEnum> dynamicStates;
     };
     struct GraphicsPipelineStateCache {
         BASE_NS::vector<GraphicsPipelineStateCreationData> psoCreationData;
         // (handle.id (+ vk renderpass compatibility hash)
         // vulkan needs pso per every render pass configuration (for GL array would be enough, but we use
         // renderhandle.id)
-        BASE_NS::unordered_map<uint64_t, BASE_NS::unique_ptr<GraphicsPipelineStateObject>> pipelineStateObjects;
+        struct PsoData {
+            BASE_NS::unique_ptr<GraphicsPipelineStateObject> pso;
+            RenderHandle shaderHandle;
+        };
+        BASE_NS::unordered_map<uint64_t, PsoData> pipelineStateObjects;
         // hash (shader hash), resource handle
         BASE_NS::unordered_map<uint64_t, RenderHandle> hashToHandle;
+
+        struct DestroyData {
+            BASE_NS::unique_ptr<GraphicsPipelineStateObject> pso;
+            uint64_t frameIndex { 0 };
+        };
+        BASE_NS::vector<DestroyData> pendingPsoDestroys;
 
 #if (RENDER_VALIDATION_ENABLED == 1)
         BASE_NS::unordered_map<RenderHandle, PipelineLayout> handleToPipelineLayout;

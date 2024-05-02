@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -282,8 +282,12 @@ enum Format {
     BASE_FORMAT_D32_SFLOAT = 126,
     /** S8 UINT */
     BASE_FORMAT_S8_UINT = 127,
+    /** D16 UNORM S8 UINT */
+    BASE_FORMAT_D16_UNORM_S8_UINT = 128,
     /** D24 UNORM S8 UINT */
     BASE_FORMAT_D24_UNORM_S8_UINT = 129,
+    /** D32 SFLOAT S8 UINT */
+    BASE_FORMAT_D32_SFLOAT_S8_UINT = 130,
     /** BC1 RGB UNORM BLOCK */
     BASE_FORMAT_BC1_RGB_UNORM_BLOCK = 131,
     /** BC1 RGB SRGB BLOCK */
@@ -407,7 +411,6 @@ enum Format {
     /** G8 B8R8 3PLANE 444 UNORM */
     BASE_FORMAT_G8_B8_R8_3PLANE_444_UNORM = 1000156006,
     /** Max enumeration */
-    BASE_FORMAT_MAX_ENUM = 0x7FFFFFFF
 };
 /** @} */
 BASE_END_NAMESPACE()

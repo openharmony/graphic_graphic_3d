@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,5 @@
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
-const char* GetVersionInfo() { return "GIT_TAG: 2022.02.1 GIT_REVISION: 34eac7a GIT_BRANCH: release"; }
+const char* GetVersionInfo() { return "GIT_TAG: 2023.12.0 GIT_REVISION: 6620e07 GIT_BRANCH: dev"; }
 RENDER_END_NAMESPACE()
-

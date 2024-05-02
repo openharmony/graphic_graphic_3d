@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,6 +37,10 @@ public:
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        return 0U;
+    }
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "dc5da6df-0234-4275-b7a3-d68421e76313" };
@@ -55,15 +59,18 @@ private:
     // Json resources which might need re-fetching
     struct JsonInputs {
         RenderNodeGraphInputs::InputResources resources;
+        RenderNodeGraphInputs::InputResources dispatchResources;
 
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
         RenderNodeGraphInputs::RenderDataStore renderDataStoreSpecialization;
 
         bool hasChangeableResourceHandles { false };
+        bool hasChangeableDispatchHandles { false };
     };
     JsonInputs jsonInputs_;
 
     RenderNodeHandles::InputResources inputResources_;
+    RenderNodeHandles::InputResources dispatchResources_;
     RenderHandle shader_;
 
     IPipelineDescriptorSetBinder::Ptr pipelineDescriptorSetBinder_;
@@ -81,7 +88,6 @@ private:
     };
     ShaderSpecilizationData shaderSpecializationData_;
 
-    BASE_NS::Math::UVec3 targetSize_ { 1u, 1u, 1u };
     ShaderThreadGroup threadGroupSize_ { 1u, 1u, 1u };
 };
 RENDER_END_NAMESPACE()

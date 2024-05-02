@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +14,7 @@
  */
 
 #include "image/loaders/image_loader_libjpeg.h"
-
+#if defined(USE_LIB_PNG_JPEG) && (USE_LIB_PNG_JPEG == 1)
 #include <csetjmp>
 #include "jpeglib.h"
 #include "jerror.h"
@@ -94,6 +94,48 @@ public:
     LibJPEGImage() : LibBaseImage()
     {}
 
+    static void ReadBuffer16Bit(jpeg_decompress_struct &cinfo, uint16_t *buff, int row_stride, bool needVerticalFlip)
+    {
+#ifdef LIBJPEG_SUPPORT_12_BIT
+        J12SAMPARRAY rowPointers12 = static_cast<J12SAMPARRAY>((*cinfo.mem->alloc_sarray)(
+            reinterpret_cast<j_common_ptr>(&cinfo), JPOOL_IMAGE, static_cast<uint32_t>(row_stride), 1));
+        if (rowPointers12 == nullptr) {
+            CORE_LOG_E("rowPointers12 is null");
+            return;
+        }
+        int pos = 0;
+        while (cinfo.output_scanline < cinfo.output_height) {
+            jpeg12_read_scanlines(&cinfo, rowPointers12, 1);
+            HandleLittleEndian(rowPointers12, row_stride);
+            if (needVerticalFlip) {
+                VerticalFlipRow(rowPointers12[0], cinfo.output_width, static_cast<uint32_t>(cinfo.output_components));
+            }
+            for (int k = 0; k < row_stride; k++) {
+                buff[pos++] = rowPointers12[0][k];
+            }
+        }
+#endif
+    }
+    static void ReadBuffer8Bit(jpeg_decompress_struct &cinfo, uint8_t *buff, int row_stride, bool needVerticalFlip)
+    {
+        JSAMPARRAY rowPointers8 = (*cinfo.mem->alloc_sarray)(
+            reinterpret_cast<j_common_ptr>(&cinfo), JPOOL_IMAGE, static_cast<uint32_t>(row_stride), 1);
+        if (rowPointers8 == nullptr) {
+            CORE_LOG_E("rowPointers8 is null");
+            return;
+        }
+        int pos = 0;
+        while (cinfo.output_scanline < cinfo.output_height) {
+            jpeg_read_scanlines(&cinfo, rowPointers8, 1);
+            if (needVerticalFlip) {
+                VerticalFlipRow(rowPointers8[0], cinfo.output_width, static_cast<uint32_t>(cinfo.output_components));
+            }
+            for (int k = 0; k < row_stride; k++) {
+                buff[pos++] = rowPointers8[0][k];
+            }
+        }
+    }
+
     static LibBaseImagePtr LoadFromMemory(jpeg_decompress_struct &cinfo, uint32_t loadFlags, Info &info)
     {
         LibBaseImagePtr imageBytes = nullptr;
@@ -107,43 +149,27 @@ public:
         }
 
         int row_stride = static_cast<int>(cinfo.output_width) * cinfo.output_components;
-        int pos = 0;
         bool needVerticalFlip = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) != 0;
         if (info.is16bpc) {
 #ifdef LIBJPEG_SUPPORT_12_BIT
-            J12SAMPARRAY rowPointers12 = (J12SAMPARRAY)(*cinfo.mem->alloc_sarray)(
-                (j_common_ptr)&cinfo, JPOOL_IMAGE, static_cast<uint32_t>(row_stride), 1);
-            uint16_t *buff = (uint16_t *)malloc(imgSize * sizeof(uint16_t));
-            while (cinfo.output_scanline < cinfo.output_height) {
-                jpeg12_read_scanlines(&cinfo, rowPointers12, 1);
-                HandleLittleEndian(rowPointers12, row_stride);
-                if (needVerticalFlip) {
-                    VerticalFlipRow(
-                        rowPointers12[0], cinfo.output_width, static_cast<uint32_t>(cinfo.output_components));
-                }
-                for (int k = 0; k < row_stride; k++) {
-                    buff[pos++] = rowPointers12[0][k];
-                }
+            uint16_t *buff = static_cast<uint16_t *>(malloc(imgSize * sizeof(uint16_t)));
+            if (buff == nullptr) {
+                CORE_LOG_E("malloc fail return null");
+                return imageBytes;
             }
+            ReadBuffer16Bit(cinfo, buff, row_stride, needVerticalFlip);
 #else
             uint16_t *buff = nullptr;
             CORE_LOG_E("libjpeg do not support 12/16 bit in current version");
 #endif
             imageBytes = {buff, FreeLibBaseImageBytes};
         } else {
-            JSAMPARRAY rowPointers8 =
-                (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, static_cast<uint32_t>(row_stride), 1);
-            uint8_t *buff = (uint8_t *)malloc(imgSize * sizeof(uint8_t));
-            while (cinfo.output_scanline < cinfo.output_height) {
-                jpeg_read_scanlines(&cinfo, rowPointers8, 1);
-                if (needVerticalFlip) {
-                    VerticalFlipRow(
-                        rowPointers8[0], cinfo.output_width, static_cast<uint32_t>(cinfo.output_components));
-                }
-                for (int k = 0; k < row_stride; k++) {
-                    buff[pos++] = rowPointers8[0][k];
-                }
+            uint8_t *buff = static_cast<uint8_t *>(malloc(imgSize * sizeof(uint8_t)));
+            if (buff == nullptr) {
+                CORE_LOG_E("malloc fail return null");
+                return imageBytes;
             }
+            ReadBuffer8Bit(cinfo, buff, row_stride, needVerticalFlip);
             imageBytes = {buff, FreeLibBaseImageBytes};
         }
         return imageBytes;
@@ -283,6 +309,12 @@ public:
         return ImageLoaderManager::ResultFailureAnimated("Animation not supported.");
     }
 
+    BASE_NS::vector<IImageLoaderManager::ImageType> GetSupportedTypes() const override
+    {
+        return BASE_NS::vector<IImageLoaderManager::ImageType>(std::begin(JPEG_IMAGE_TYPES),
+            std::end(JPEG_IMAGE_TYPES));
+    }
+
 protected:
     ~ImageLoaderLibJPEGImage() = default;
     void Destroy() override
@@ -291,8 +323,9 @@ protected:
     }
 };
 }  // namespace
-IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderLibJPEGImage()
+IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderLibJPEGImage(PluginToken)
 {
     return ImageLoaderManager::IImageLoader::Ptr{new ImageLoaderLibJPEGImage()};
 }
 CORE_END_NAMESPACE()
+#endif // defined(USE_LIB_PNG_JPEG) && (USE_LIB_PNG_JPEG == 1)

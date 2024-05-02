@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,13 +16,8 @@
 #ifndef API_BASE_CONTAINERS_ALLOCATOR_H
 #define API_BASE_CONTAINERS_ALLOCATOR_H
 
-#include <cstddef>
 #include <cstdint>
-
-#if !defined(BASE_HAS_ENGINE)
-#include <malloc.h> // malloc, free
-#endif
-
+#include <cstdlib> // malloc, free
 #include <securec.h>
 
 #include <base/namespace.h>
@@ -38,11 +33,11 @@ struct allocator {
 
 inline bool CloneData(void* const dst, const size_t dstSize, const void* const src, const size_t srcSize)
 {
-    BASE_ASSERT(src && dst && dstSize >= srcSize);
     if (dst && src && srcSize <= dstSize) {
         // Note: arguments for memcpy have been verified.
-        if (memcpy_s(dst, dstSize, src, srcSize) != 0) {
-            BASE_LOG_E("CloneData: memcpy failed");
+        auto status = memcpy_s(dst, dstSize, src, srcSize);
+        if (status != 0) {
+            return false;
         }
     } else {
         BASE_LOG_E("CloneData invalid arguments.");
@@ -52,11 +47,11 @@ inline bool CloneData(void* const dst, const size_t dstSize, const void* const s
 
 inline bool MoveData(void* const dst, const size_t dstSize, const void* const src, const size_t srcSize)
 {
-    BASE_ASSERT(src && dst && dstSize >= srcSize);
     if (dst && src && srcSize <= dstSize) {
         // Note: arguments for memmove have been verified.
-        if (memmove_s(dst, dstSize, src, srcSize) != 0) {
-            BASE_LOG_E("MoveData: memmove failed");
+        auto status = memmove_s(dst, dstSize, src, srcSize);
+        if (status != 0) {
+            return false;
         }
     } else {
         BASE_LOG_E("MoveData invalid arguments.");
@@ -73,8 +68,9 @@ inline bool ClearToValue(void* dst, size_t dstSize, uint8_t val, size_t count)
         count = dstSize;
     }
     // Note: arguments for memset have been verified.
-    if (memset_s(dst, dstSize, val, count) != 0) {
-        BASE_LOG_E("ClearToValue: memset failed");
+    auto status = memset_s(dst, dstSize, val, count);
+    if (status != 0) {
+        return false;
     }
     return true;
 }

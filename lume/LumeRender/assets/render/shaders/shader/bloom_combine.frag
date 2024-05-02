@@ -28,9 +28,9 @@ layout (location = 0) out vec4 outColor;
 void main()
 {
     const vec2 uv = inUv;
-    const vec3 baseColor = texture(sampler2D(uTex, uSampler), uv).xyz;
+    const vec3 baseColor = textureLod(sampler2D(uTex, uSampler), uv, 0).xyz;
     // NOTE: more samples (lower resolution)
-    const vec3 bloomColor = texture(sampler2D(uTexBloom, uSampler), uv).xyz;
+    const vec3 bloomColor = textureLod(sampler2D(uTexBloom, uSampler), uv, 0).xyz;
 
     vec3 finalColor = min(bloomCombine(baseColor, bloomColor, uPc.factor), CORE_BLOOM_CLAMP_MAX_VALUE);
     outColor = vec4(finalColor, 1.0);

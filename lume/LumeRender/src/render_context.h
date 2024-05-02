@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,23 +20,23 @@
 
 #include <base/containers/string.h>
 #include <base/containers/unique_ptr.h>
+#include <base/containers/unordered_map.h>
 #include <core/ecs/intf_component_manager.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_plugin.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
-#include "datastore/render_data_store_manager.h"
-#include "device/device.h"
 #include "loader/render_data_configuration_loader.h"
-#include "nodecontext/render_node_graph_manager.h"
-#include "renderer.h"
+#include "nodecontext/render_node_post_process_util.h"
 
 CORE_BEGIN_NAMESPACE()
 class IEngine;
 class IFileManager;
 CORE_END_NAMESPACE()
+
 RENDER_BEGIN_NAMESPACE()
 class Device;
 class Renderer;
@@ -53,9 +53,10 @@ class IRenderNodeGraphManager;
 class IRenderUtil;
 
 struct RenderPluginState;
+struct IRenderPlugin;
 
 class RenderContext final : public IRenderContext,
-                            public virtual CORE_NS::IClassRegister,
+                            public CORE_NS::IClassRegister,
                             CORE_NS::IPluginRegister::ITypeInfoListener {
 public:
     RenderContext(RenderPluginState& pluginState, CORE_NS::IEngine& engine);
@@ -81,6 +82,8 @@ public:
     CORE_NS::IEngine& GetEngine() const override;
 
     BASE_NS::string_view GetVersion() override;
+
+    RenderCreateInfo GetCreateInfo() const;
 
     // IInterface
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
@@ -115,24 +118,39 @@ private:
     BASE_NS::unique_ptr<RenderUtil> renderUtil_;
     RenderDataConfigurationLoaderImpl renderDataConfigurationLoader_;
 
-    CORE_NS::InterfaceTypeInfo interfaceInfo_ {
-        this,
-        UID_RENDER_DATA_CONFIGURATION_LOADER,
-        CORE_NS::GetName<IRenderDataConfigurationLoader>().data(),
-        {},
-        [](CORE_NS::IClassRegister& registry, CORE_NS::PluginToken token) -> CORE_NS::IInterface* {
-            if (token) {
-                return &(static_cast<RenderContext*>(token)->renderDataConfigurationLoader_);
-            }
-            return nullptr;
+    CORE_NS::InterfaceTypeInfo interfaceInfos_[2U] {
+        CORE_NS::InterfaceTypeInfo {
+            this,
+            UID_RENDER_DATA_CONFIGURATION_LOADER,
+            CORE_NS::GetName<IRenderDataConfigurationLoader>().data(),
+            {}, // nullptr for CreateInstance
+            [](CORE_NS::IClassRegister& registry, CORE_NS::PluginToken token) -> CORE_NS::IInterface* {
+                if (token) {
+                    return &(static_cast<RenderContext*>(token)->renderDataConfigurationLoader_);
+                }
+                return nullptr;
+            },
+        },
+        CORE_NS::InterfaceTypeInfo {
+            this, UID_RENDER_NODE_POST_PROCESS_UTIL, CORE_NS::GetName<IRenderNodePostProcessUtil>().data(),
+            [](CORE_NS::IClassFactory&, CORE_NS::PluginToken token) -> CORE_NS::IInterface* {
+                if (token) {
+                    return new RenderNodePostProcessUtilImpl();
+                }
+                return nullptr;
+            },
+            nullptr, // nullptr for GetInstance
         },
     };
+
     uint32_t refCount_ { 0 };
 
     BASE_NS::vector<BASE_NS::pair<CORE_NS::PluginToken, const IRenderPlugin*>> plugins_;
     BASE_NS::vector<const CORE_NS::InterfaceTypeInfo*> interfaceTypeInfos_;
 
     BASE_NS::vector<RenderHandleReference> defaultGpuResources_;
+
+    RenderCreateInfo createInfo_ {};
 };
 
 struct RenderPluginState {

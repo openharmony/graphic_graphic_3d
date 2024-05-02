@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,24 +25,26 @@ VkSurfaceKHR CreateFunctionsVk::CreateSurface(VkInstance instance, Window const&
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     PLUGIN_ASSERT_MSG(instance, "null instance in CreateSurface()");
 
+    if (nativeWindow.window && nativeWindow.instance) {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR) reinterpret_cast<void*>(
-        vkGetInstanceProcAddr(instance, "vkCreateWin32SurfaceKHR"));
-    if (!vkCreateWin32SurfaceKHR) {
-        PLUGIN_LOG_E("Missing VK_KHR_win32_surface extension");
-        return surface;
-    }
-    VkWin32SurfaceCreateInfoKHR const surfaceCreateInfo {
-        VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, // sType
-        nullptr,                                         // pNext
-        0,                                               // flags
-        HINSTANCE(nativeWindow.hinstance),               // hinstance
-        HWND(nativeWindow.window)                        // hwnd
-    };
-    VALIDATE_VK_RESULT(vkCreateWin32SurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface));
+        PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR) reinterpret_cast<void*>(
+            vkGetInstanceProcAddr(instance, "vkCreateWin32SurfaceKHR"));
+        if (!vkCreateWin32SurfaceKHR) {
+            PLUGIN_LOG_E("Missing VK_KHR_win32_surface extension");
+            return surface;
+        }
+        VkWin32SurfaceCreateInfoKHR const surfaceCreateInfo {
+            VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, // sType
+            nullptr,                                         // pNext
+            0,                                               // flags
+            HINSTANCE(nativeWindow.instance),                // hinstance
+            HWND(nativeWindow.window)                        // hwnd
+        };
+        VALIDATE_VK_RESULT(vkCreateWin32SurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface));
 #else
 #error Missing platform surface type.
 #endif
+    }
 
     return surface;
 }

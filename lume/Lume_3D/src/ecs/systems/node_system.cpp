@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #include "node_system.h"
 
 #include <PropertyTools/property_api_impl.inl>
+#include <cinttypes>
 #include <cstdlib>
 #include <utility>
 
@@ -33,6 +34,13 @@
 #include "ecs/components/previous_world_matrix_component.h"
 #include "util/string_util.h"
 
+CORE_BEGIN_NAMESPACE()
+bool operator<(const Entity& lhs, const Entity& rhs)
+{
+    return lhs.id < rhs.id;
+}
+CORE_END_NAMESPACE()
+
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -47,13 +55,10 @@ template<class T>
 T* RecursivelyLookupNodeByPath(T& node, size_t index, const vector<string_view>& path)
 {
     // Access to children will automatically refresh cache.
-    auto children = node.GetChildren();
-
     // Loop through all childs, see if there is a node with given name.
     // If found, then recurse in to that node branch and see if lookup is able to complete in that branch.
-    for (size_t i = 0; i < children.size(); i++) {
-        T* child = children[i];
-        if (child->GetName() == path[index]) {
+    for (T* child : node.GetChildren()) {
+        if (child && child->GetName() == path[index]) {
             // Found node with requested name, lookup completed?
             if (index + 1 >= path.size()) {
                 return child;
@@ -80,17 +85,15 @@ T* RecursivelyLookupNodeByName(T& node, string_view name)
     }
 
     // Access to children will automatically refresh cache.
-    auto children = node.GetChildren();
-
     // Loop through all childs, see if there is a node with given name.
-    for (size_t i = 0; i < children.size(); i++) {
-        T* child = children[i];
-
-        // Continue lookup recursively.
-        T* result = RecursivelyLookupNodeByName(*child, name);
-        if (result) {
-            // We have a hit.
-            return result;
+    for (T* child : node.GetChildren()) {
+        if (child) {
+            // Continue lookup recursively.
+            T* result = RecursivelyLookupNodeByName(*child, name);
+            if (result) {
+                // We have a hit.
+                return result;
+            }
         }
     }
 
@@ -112,23 +115,33 @@ bool RecursivelyLookupNodesByComponent(
     }
 
     // Access to children will automatically refresh cache.
-    auto children = node.GetChildren();
-
     // Loop through all childs, see if there is a node with given name.
     // If found, then recurse in to that node branch and see if lookup is able to complete in that branch.
-    for (size_t i = 0; i < children.size(); i++) {
-        T* child = children[i];
-
-        // Continue lookup recursively.
-        if (RecursivelyLookupNodesByComponent(*child, componentManager, results, singleNodeLookup)) {
-            result = true;
-            if (singleNodeLookup) {
-                return result;
+    for (T* child : node.GetChildren()) {
+        if (child) {
+            // Continue lookup recursively.
+            if (RecursivelyLookupNodesByComponent(*child, componentManager, results, singleNodeLookup)) {
+                result = true;
+                if (singleNodeLookup) {
+                    return result;
+                }
             }
         }
     }
 
     return result;
+}
+
+template<typename ListType, typename ValueType>
+inline auto Find(ListType&& list, ValueType&& value)
+{
+    return std::find(list.begin(), list.end(), BASE_NS::forward<ValueType>(value));
+}
+
+template<typename ListType, typename Predicate>
+inline auto FindIf(ListType&& list, Predicate&& pred)
+{
+    return std::find_if(list.begin(), list.end(), BASE_NS::forward<Predicate>(pred));
 }
 } // namespace
 
@@ -136,6 +149,25 @@ bool RecursivelyLookupNodesByComponent(
 class NodeSystem::NodeAccess {
 public:
     virtual ~NodeAccess() = default;
+
+    virtual string GetName(Entity entity) const = 0;
+    virtual void SetName(Entity entity, string_view name) = 0;
+
+    virtual Math::Vec3 GetPosition(Entity entity) const = 0;
+    virtual Math::Quat GetRotation(Entity entity) const = 0;
+    virtual Math::Vec3 GetScale(Entity entity) const = 0;
+    virtual void SetScale(Entity entity, const Math::Vec3& scale) = 0;
+    virtual void SetPosition(Entity entity, const Math::Vec3& position) = 0;
+    virtual void SetRotation(Entity entity, const Math::Quat& rotation) = 0;
+
+    virtual bool GetEnabled(Entity entity) const = 0;
+    virtual void SetEnabled(Entity entity, bool isEnabled) = 0;
+    virtual bool GetEffectivelyEnabled(Entity entity) const = 0;
+    virtual ISceneNode* GetParent(Entity entity) const = 0;
+    virtual void SetParent(Entity entity, ISceneNode const& node) = 0;
+
+    virtual void Notify(const ISceneNode& parent, NodeSystem::SceneNodeListener::EventType type,
+        const ISceneNode& child, size_t index) = 0;
 
     virtual NodeSystem::SceneNode* GetNode(Entity const& entity) const = 0;
     virtual void Refresh() = 0;
@@ -145,62 +177,42 @@ public:
 class NodeSystem::SceneNode : public ISceneNode {
 public:
     struct NodeState {
+        Entity parent { 0 };
         uint32_t localMatrixGeneration { 0 };
-        Entity parent {};
         bool enabled { false };
+        bool parentChanged { false };
     };
 
     SceneNode(const SceneNode& other) = delete;
     SceneNode& operator=(const SceneNode& node) = delete;
 
-    SceneNode(Entity entity, NodeAccess& nodeAccess, INameComponentManager& nameComponentManager,
-        INodeComponentManager& nodeComponentManager, ITransformComponentManager& transformComponentManager)
-        : entity_(entity), nodeAccess_(nodeAccess), nameManager_(nameComponentManager),
-          nodeManager_(nodeComponentManager), transformManager_(transformComponentManager)
-    {}
+    SceneNode(Entity entity, NodeAccess& nodeAccess) : entity_(entity), nodeAccess_(nodeAccess) {}
 
     ~SceneNode() override = default;
 
     string GetName() const override
     {
-        if (const auto nameId = nameManager_.GetComponentId(entity_);
-            nameId != IComponentManager::INVALID_COMPONENT_ID) {
-            return nameManager_.Get(entity_).name;
-        } else {
-            return "";
-        }
+        return nodeAccess_.GetName(entity_);
     }
 
     void SetName(const string_view name) override
     {
-        if (ScopedHandle<NameComponent> data = nameManager_.Write(entity_); data) {
-            data->name = name;
-        }
+        nodeAccess_.SetName(entity_, name);
     }
 
     void SetEnabled(bool isEnabled) override
     {
-        if (ScopedHandle<NodeComponent> data = nodeManager_.Write(entity_); data) {
-            data->enabled = isEnabled;
-        }
+        nodeAccess_.SetEnabled(entity_, isEnabled);
     }
 
     bool GetEnabled() const override
     {
-        bool enabled = true;
-        if (ScopedHandle<const NodeComponent> data = nodeManager_.Read(entity_); data) {
-            enabled = data->enabled;
-        }
-        return enabled;
+        return nodeAccess_.GetEnabled(entity_);
     }
 
     bool GetEffectivelyEnabled() const override
     {
-        bool effectivelyEnabled = true;
-        if (ScopedHandle<const NodeComponent> data = nodeManager_.Read(entity_); data) {
-            effectivelyEnabled = data->effectivelyEnabled;
-        }
-        return effectivelyEnabled;
+        return nodeAccess_.GetEffectivelyEnabled(entity_);
     }
 
     ISceneNode* GetParent() const override
@@ -211,32 +223,31 @@ public:
 
         nodeAccess_.Refresh();
 
-        Entity parent;
-        if (ScopedHandle<const NodeComponent> data = nodeManager_.Read(entity_); data) {
-            parent = data->parent;
-        }
-
-        return nodeAccess_.GetNode(parent);
+        return nodeAccess_.GetParent(entity_);
     }
 
     void SetParent(ISceneNode const& node) override
     {
+        nodeAccess_.Refresh();
+
         // Ensure we are not ancestors of the new parent.
         CORE_ASSERT(IsAncestorOf(node) == false);
-        if (ScopedHandle<NodeComponent> data = nodeManager_.Write(entity_); data) {
-            data->parent = node.GetEntity();
-        }
+
+        nodeAccess_.SetParent(entity_, node);
     }
 
     bool IsAncestorOf(ISceneNode const& node) override
     {
+        nodeAccess_.Refresh();
+
         ISceneNode const* curNode = &node;
         while (curNode != nullptr) {
             if (curNode == this) {
                 return true;
             }
+            const auto currEntity = curNode->GetEntity();
 
-            curNode = curNode->GetParent();
+            curNode = EntityUtil::IsValid(currEntity) ? nodeAccess_.GetParent(currEntity) : nullptr;
         }
 
         return false;
@@ -263,12 +274,10 @@ public:
     {
         // Access to children will automatically refresh cache.
         auto children = GetChildren();
-
-        for (size_t i = 0; i < children.size(); i++) {
-            const ISceneNode* child = children[i];
-            if (child->GetName() == name) {
-                return child;
-            }
+        if (auto pos =
+                FindIf(children, [name](const ISceneNode* child) { return child && (child->GetName() == name); });
+            pos != children.end()) {
+            return *pos;
         }
 
         return nullptr;
@@ -278,15 +287,92 @@ public:
     {
         // Access to children will automatically refresh cache.
         auto children = GetChildren();
-
-        for (size_t i = 0; i < children.size(); i++) {
-            ISceneNode* child = children[i];
-            if (child->GetName() == name) {
-                return child;
-            }
+        if (auto pos =
+                FindIf(children, [name](const ISceneNode* child) { return child && (child->GetName() == name); });
+            pos != children.end()) {
+            return *pos;
         }
 
         return nullptr;
+    }
+
+    bool AddChild(ISceneNode& node) override
+    {
+        auto children = GetChildren();
+        if (auto pos = Find(children, &node); pos == children.end()) {
+            nodeAccess_.SetParent(node.GetEntity(), *this);
+            nodeAccess_.Notify(*this, INodeSystem::SceneNodeListener::EventType::ADDED, node, children_.size() - 1U);
+            return true;
+        }
+        return false;
+    }
+
+    bool InsertChild(size_t index, ISceneNode& node) override
+    {
+        const auto children = GetChildren();
+        if (auto pos = Find(children, &node); pos == children.cend()) {
+            nodeAccess_.SetParent(node.GetEntity(), *this);
+            if (index < children_.size()) {
+                std::rotate(children_.begin() + static_cast<ptrdiff_t>(index), children_.end() - 1, children_.end());
+            } else {
+                index = children_.size() - 1U;
+            }
+            nodeAccess_.Notify(*this, INodeSystem::SceneNodeListener::EventType::ADDED, node, index);
+            return true;
+        }
+        return false;
+    }
+
+    bool RemoveChild(ISceneNode& node) override
+    {
+        if (EntityUtil::IsValid(entity_)) {
+            const auto children = GetChildren();
+            if (auto pos = Find(children, &node); pos != children.cend()) {
+                const auto index = pos - children.begin();
+                nodeAccess_.SetParent(node.GetEntity(), *nodeAccess_.GetNode({}));
+                nodeAccess_.Notify(
+                    *this, INodeSystem::SceneNodeListener::EventType::REMOVED, node, static_cast<size_t>(index));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool RemoveChild(size_t index) override
+    {
+        if (EntityUtil::IsValid(entity_) && !children_.empty()) {
+            nodeAccess_.Refresh();
+            if (index < children_.size()) {
+                if (auto* node = children_[index]) {
+                    nodeAccess_.SetParent(node->GetEntity(), *nodeAccess_.GetNode({}));
+                    nodeAccess_.Notify(*this, INodeSystem::SceneNodeListener::EventType::REMOVED, *node, index);
+                    return true;
+                } else {
+                    CORE_LOG_W("Node %" PRIx64 " with null child at %zu", entity_.id, index);
+                    children_.erase(children_.cbegin() + static_cast<ptrdiff_t>(index));
+                }
+            }
+        }
+        return false;
+    }
+
+    bool RemoveChildren() override
+    {
+        if (EntityUtil::IsValid(entity_) && !children_.empty()) {
+            auto root = nodeAccess_.GetNode({});
+            while (!children_.empty()) {
+                if (auto* node = children_.back()) {
+                    const auto index = children_.size() - 1U;
+                    nodeAccess_.SetParent(node->entity_, *root);
+                    nodeAccess_.Notify(*this, INodeSystem::SceneNodeListener::EventType::REMOVED, *node, index);
+                } else {
+                    CORE_LOG_W("Node %" PRIx64 " with null child at %zu", entity_.id, children_.size() - 1U);
+                    children_.pop_back();
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     const ISceneNode* LookupNodeByPath(string_view const& path) const override
@@ -359,68 +445,32 @@ public:
 
     Math::Vec3 GetPosition() const override
     {
-        if (const auto nameId = transformManager_.GetComponentId(entity_);
-            nameId != IComponentManager::INVALID_COMPONENT_ID) {
-            return transformManager_.Get(entity_).position;
-        } else {
-            return Math::Vec3();
-        }
+        return nodeAccess_.GetPosition(entity_);
     }
 
     Math::Quat GetRotation() const override
     {
-        if (const auto nameId = transformManager_.GetComponentId(entity_);
-            nameId != IComponentManager::INVALID_COMPONENT_ID) {
-            return transformManager_.Get(entity_).rotation;
-        } else {
-            return Math::Quat();
-        }
+        return nodeAccess_.GetRotation(entity_);
     }
 
     Math::Vec3 GetScale() const override
     {
-        if (const auto nameId = transformManager_.GetComponentId(entity_);
-            nameId != IComponentManager::INVALID_COMPONENT_ID) {
-            return transformManager_.Get(entity_).scale;
-        } else {
-            return Math::Vec3 { 1.0f, 1.0f, 1.0f };
-        }
+        return nodeAccess_.GetScale(entity_);
     }
 
     void SetScale(const Math::Vec3& scale) override
     {
-        if (ScopedHandle<TransformComponent> data = transformManager_.Write(entity_); data) {
-            data->scale = scale;
-        }
+        return nodeAccess_.SetScale(entity_, scale);
     }
 
     void SetPosition(const Math::Vec3& position) override
     {
-        if (ScopedHandle<TransformComponent> data = transformManager_.Write(entity_); data) {
-            data->position = position;
-        }
+        nodeAccess_.SetPosition(entity_, position);
     }
 
     void SetRotation(const Math::Quat& rotation) override
     {
-        if (ScopedHandle<TransformComponent> data = transformManager_.Write(entity_); data) {
-            data->rotation = rotation;
-        }
-    }
-
-    // Internally for NodeSystem to skip unneccessary NodeCache::Refresh calls
-    SceneNode* GetParentNoRefresh() const
-    {
-        Entity parent;
-        if (ScopedHandle<const NodeComponent> data = nodeManager_.Read(entity_); data) {
-            parent = data->parent;
-        }
-
-        if (EntityUtil::IsValid(parent)) {
-            return nodeAccess_.GetNode(parent);
-        } else {
-            return nullptr;
-        }
+        nodeAccess_.SetRotation(entity_, rotation);
     }
 
     // Internally for NodeSystem to skip unneccessary NodeCache::Refresh calls
@@ -437,14 +487,11 @@ public:
 
 private:
     const Entity entity_;
-    NodeState lastState_ {};
 
     NodeAccess& nodeAccess_;
-    INameComponentManager& nameManager_;
-    INodeComponentManager& nodeManager_;
-    ITransformComponentManager& transformManager_;
 
     vector<SceneNode*> children_;
+    NodeState lastState_ {};
 
     friend NodeSystem;
     friend NodeSystem::NodeCache;
@@ -466,31 +513,305 @@ public:
 
     void Reset()
     {
-        auto rootNode = nodes_.extract(Entity());
-        nodes_.clear();
-        nodes_.insert(move(rootNode));
+        const auto first = nodeEntities_.cbegin();
+        const auto last = nodeEntities_.cend();
+        if (auto pos = std::lower_bound(
+                first, last, Entity(), [](const Entity& lhs, const Entity& rhs) { return lhs.id < rhs.id; });
+            (pos != last) && (*pos == Entity())) {
+            const auto index = static_cast<size_t>(pos - first);
+            auto rootNode = move(nodes_[index]);
+            rootNode->children_.clear();
+            nodes_.clear();
+            nodes_.push_back(move(rootNode));
+            nodeEntities_.clear();
+            nodeEntities_.push_back(Entity());
+            auto entry = lookUp_.extract(Entity());
+            lookUp_.clear();
+            lookUp_.insert(move(entry));
+        }
     }
 
     SceneNode* AddNode(Entity const& entity)
     {
         SceneNode* result;
 
-        auto node = make_unique<SceneNode>(
-            entity, *this, nameComponentManager_, nodeComponentManager_, transformComponentManager_);
+        auto node = make_unique<SceneNode>(entity, *this);
         result = node.get();
+        const auto first = nodeEntities_.cbegin();
+        const auto last = nodeEntities_.cend();
+        auto pos =
+            std::lower_bound(first, last, entity, [](const Entity& lhs, const Entity& rhs) { return lhs.id < rhs.id; });
+        const auto index = pos - first;
+        if ((pos == last) || (*pos != entity)) {
+            nodeEntities_.insert(pos, entity);
+            lookUp_[entity] = node.get();
+            nodes_.insert(nodes_.cbegin() + index, move(node));
+        } else {
+            lookUp_[entity] = node.get();
+            nodes_[static_cast<size_t>(index)] = move(node);
+        }
 
-        nodes_[entity] = move(node);
+        if (auto handle = nodeComponentManager_.Read(entity)) {
+            if (auto* parent = GetNode(handle->parent)) {
+                // Set parent / child relationship.
+                parent->children_.push_back(result);
+                result->lastState_.parent = handle->parent;
+            }
+            result->lastState_.parentChanged = true;
+        }
+
+        // check if some node thinks it should be the child of the new node and it there.
+        for (const auto& nodePtr : nodes_) {
+            if (nodePtr->lastState_.parent == entity) {
+                result->children_.push_back(nodePtr.get());
+            }
+        }
 
         return result;
     }
 
+    string GetName(const Entity entity) const override
+    {
+        if (const auto nameId = nameComponentManager_.GetComponentId(entity);
+            nameId != IComponentManager::INVALID_COMPONENT_ID) {
+            return nameComponentManager_.Get(entity).name;
+        } else {
+            return "";
+        }
+    }
+
+    void SetName(const Entity entity, const string_view name) override
+    {
+        if (ScopedHandle<NameComponent> data = nameComponentManager_.Write(entity); data) {
+            data->name = name;
+        }
+    }
+
+    Math::Vec3 GetPosition(const Entity entity) const override
+    {
+        if (const auto nameId = transformComponentManager_.GetComponentId(entity);
+            nameId != IComponentManager::INVALID_COMPONENT_ID) {
+            return transformComponentManager_.Get(entity).position;
+        } else {
+            return Math::Vec3();
+        }
+    }
+
+    Math::Quat GetRotation(const Entity entity) const override
+    {
+        if (const auto nameId = transformComponentManager_.GetComponentId(entity);
+            nameId != IComponentManager::INVALID_COMPONENT_ID) {
+            return transformComponentManager_.Get(entity).rotation;
+        } else {
+            return Math::Quat();
+        }
+    }
+
+    Math::Vec3 GetScale(const Entity entity) const override
+    {
+        if (const auto nameId = transformComponentManager_.GetComponentId(entity);
+            nameId != IComponentManager::INVALID_COMPONENT_ID) {
+            return transformComponentManager_.Get(entity).scale;
+        } else {
+            return Math::Vec3 { 1.0f, 1.0f, 1.0f };
+        }
+    }
+
+    void SetScale(const Entity entity, const Math::Vec3& scale) override
+    {
+        if (ScopedHandle<TransformComponent> data = transformComponentManager_.Write(entity); data) {
+            data->scale = scale;
+        }
+    }
+
+    void SetPosition(const Entity entity, const Math::Vec3& position) override
+    {
+        if (ScopedHandle<TransformComponent> data = transformComponentManager_.Write(entity); data) {
+            data->position = position;
+        }
+    }
+
+    void SetRotation(const Entity entity, const Math::Quat& rotation) override
+    {
+        if (ScopedHandle<TransformComponent> data = transformComponentManager_.Write(entity); data) {
+            data->rotation = rotation;
+        }
+    }
+
+    bool GetEnabled(const Entity entity) const override
+    {
+        bool enabled = true;
+        if (ScopedHandle<const NodeComponent> data = nodeComponentManager_.Read(entity); data) {
+            enabled = data->enabled;
+        }
+        return enabled;
+    }
+
+    static void DisableTree(SceneNode* node, INodeComponentManager& nodeComponentManager)
+    {
+        BASE_NS::vector<SceneNode*> stack;
+        stack.push_back(node);
+
+        while (!stack.empty()) {
+            auto current = stack.back();
+            stack.pop_back();
+            if (!current) {
+                continue;
+            }
+            auto* handle = nodeComponentManager.GetData(current->entity_);
+            if (!handle) {
+                continue;
+            }
+            // if a node is effectively enabled, update and add children. otherwise we can assume the node had been
+            // disabled earlier and its children are already disabled.
+            if (ScopedHandle<const NodeComponent>(handle)->effectivelyEnabled) {
+                ScopedHandle<NodeComponent>(handle)->effectivelyEnabled = false;
+                stack.append(current->children_.cbegin(), current->children_.cend());
+            }
+        }
+    }
+
+    static void EnableTree(SceneNode* node, INodeComponentManager& nodeComponentManager)
+    {
+        BASE_NS::vector<SceneNode*> stack;
+        stack.push_back(node);
+
+        while (!stack.empty()) {
+            auto current = stack.back();
+            stack.pop_back();
+            if (!current) {
+                continue;
+            }
+            auto* childHandle = nodeComponentManager.GetData(current->entity_);
+            if (!childHandle) {
+                continue;
+            }
+            // if a node is enabled, update and add children. otherwise the node and its children remain effectivaly
+            // disabled.
+            if (ScopedHandle<const NodeComponent>(childHandle)->enabled) {
+                ScopedHandle<NodeComponent>(childHandle)->effectivelyEnabled = true;
+                stack.append(current->children_.cbegin(), current->children_.cend());
+            }
+        }
+    }
+
+    void SetEnabled(const Entity entity, const bool isEnabled) override
+    {
+        auto* handle = nodeComponentManager_.GetData(entity);
+        if (!handle) {
+            return;
+        }
+        const auto nodeComponent = *ScopedHandle<const NodeComponent>(handle);
+        if (nodeComponent.enabled == isEnabled) {
+            return;
+        }
+
+        ScopedHandle<NodeComponent>(handle)->enabled = isEnabled;
+
+        const auto nodeGeneration = nodeComponentManager_.GetGenerationCounter();
+        if ((nodeComponentGenerationId_ + 1U) != nodeGeneration) {
+            // if generation count has changed, we can only update this node.
+            return;
+        }
+        nodeComponentGenerationId_ = nodeGeneration;
+
+        if (isEnabled == nodeComponent.effectivelyEnabled) {
+            // if effectivelyEnabled matches the new state, there's no need to update the tree.
+            return;
+        }
+
+        auto node = GetNode(entity);
+        if (!node) {
+            // if the node can't be found, we can only update this node.
+            return;
+        }
+
+        if (!isEnabled) {
+            DisableTree(node, nodeComponentManager_);
+        } else if (auto parent = GetNode(nodeComponent.parent); !parent || !parent->GetEffectivelyEnabled()) {
+            // if the node's parent is disabled, there's no need to update the tree.
+            return;
+        } else {
+            EnableTree(node, nodeComponentManager_);
+        }
+
+        nodeComponentGenerationId_ = nodeComponentManager_.GetGenerationCounter();
+    }
+
+    bool GetEffectivelyEnabled(const Entity entity) const override
+    {
+        bool effectivelyEnabled = true;
+        if (ScopedHandle<const NodeComponent> data = nodeComponentManager_.Read(entity); data) {
+            effectivelyEnabled = data->effectivelyEnabled;
+        }
+        return effectivelyEnabled;
+    }
+
+    ISceneNode* GetParent(const Entity entity) const override
+    {
+        Entity parent;
+        if (ScopedHandle<const NodeComponent> data = nodeComponentManager_.Read(entity); data) {
+            parent = data->parent;
+        }
+
+        return GetNode(parent);
+    }
+
+    void SetParent(const Entity entity, ISceneNode const& node) override
+    {
+        Entity oldParent;
+        const auto newParent = node.GetEntity();
+        const auto effectivelyEnabled = node.GetEffectivelyEnabled();
+        if (ScopedHandle<NodeComponent> data = nodeComponentManager_.Write(entity); data) {
+            oldParent = data->parent;
+            data->parent = newParent;
+            data->effectivelyEnabled = effectivelyEnabled;
+        }
+        UpdateParent(entity, oldParent, newParent);
+    }
+
+    void Notify(const ISceneNode& parent, NodeSystem::SceneNodeListener::EventType type, const ISceneNode& child,
+        size_t index) override
+    {
+        for (auto* listener : listeners_) {
+            if (listener) {
+                listener->OnChildChanged(parent, type, child, index);
+            }
+        }
+    }
+
     SceneNode* GetNode(Entity const& entity) const override
     {
-        const auto it = nodes_.find(entity);
-        if (it != nodes_.end()) {
-            return it->second.get();
+        auto pos = lookUp_.find(entity);
+        if (pos != lookUp_.end()) {
+            return pos->second;
         }
         return nullptr;
+    }
+
+    void UpdateParent(Entity entity, Entity oldParent, Entity newParent)
+    {
+        const uint32_t nodeGenerationId = nodeComponentManager_.GetGenerationCounter();
+        if (nodeGenerationId <= (nodeComponentGenerationId_ + 1U)) {
+            nodeComponentGenerationId_ = nodeGenerationId;
+
+            if (SceneNode* node = GetNode(entity)) {
+                if (SceneNode* parent = GetNode(oldParent); parent) {
+                    parent->children_.erase(std::remove(parent->children_.begin(), parent->children_.end(), node),
+                        parent->children_.cend());
+                    node->lastState_.parent = {};
+                }
+                if (SceneNode* parent = GetNode(newParent); parent) {
+                    // Set parent / child relationship.
+                    parent->children_.push_back(node);
+                    node->lastState_.parent = newParent;
+                }
+                node->lastState_.parentChanged = true;
+            } else {
+                CORE_LOG_W("Updating parent of invalid node %" PRIx64 " (old %" PRIx64 " new %" PRIx64 ")", entity.id,
+                    oldParent.id, newParent.id);
+            }
+        }
     }
 
     void Refresh() override
@@ -502,59 +823,151 @@ public:
             return;
         }
 
-        // Look up entities that no longer exist.
-        for (NodeCache::Nodes::const_iterator it = nodes_.begin(), end = nodes_.end(); it != end;) {
-            SceneNode* node = it->second.get();
-
-            // Reset.
-            node->children_.clear();
-            // Do not destroy root.
-            if (!EntityUtil::IsValid(node->GetEntity())) {
-                ++it;
-                continue;
-            }
-
-            if (!entityManager_.IsAlive(node->GetEntity()) || !nodeComponentManager_.HasComponent(node->GetEntity())) {
-                // This node no longer exists.
-                it = nodes_.erase(it);
-            } else {
-                ++it;
-            }
+        vector<Entity> entitiesWithNode;
+        // allocate space for all entities + extra for collecting removed and added entities. worst case is that all
+        // the old ones have been removed and everything is new.
+        const auto nodeComponents = nodeComponentManager_.GetComponentCount();
+        entitiesWithNode.reserve((nodeComponents + nodeEntities_.size()) * 2U);
+        entitiesWithNode.resize(nodeComponents);
+        for (IComponentManager::ComponentId i = 0; i < nodeComponents; ++i) {
+            auto entity = nodeComponentManager_.GetEntity(i);
+            entitiesWithNode[i] = entity;
         }
+
+        auto first = entitiesWithNode.begin();
+        auto last = entitiesWithNode.end();
+
+        // remove inactive entities
+        last = entitiesWithNode.erase(
+            std::remove_if(first, last, [&em = entityManager_](Entity entity) { return !em.IsAlive(entity); }), last);
+
+        std::sort(first, last, [](Entity lhs, Entity rhs) { return lhs.id < rhs.id; });
+
+        // there's at least the root (invalid/default constructed entity)
+        entitiesWithNode.insert(first, Entity());
+        last = entitiesWithNode.end();
+
+        // Look up entities that no longer exist.
+        auto inserter = std::back_inserter(entitiesWithNode);
+        inserter = std::set_difference(nodeEntities_.cbegin(), nodeEntities_.cend(), first, last, inserter,
+            [](Entity lhs, Entity rhs) { return lhs.id < rhs.id; });
+
+        auto lastRemoved = entitiesWithNode.end();
+
+        // Look up entities that have been added.
+        inserter = std::set_difference(first, last, nodeEntities_.cbegin(), nodeEntities_.cend(), inserter,
+            [](Entity lhs, Entity rhs) { return lhs.id < rhs.id; });
+        auto lastAdded = entitiesWithNode.end();
+
+        // Remove !alive entities and those without node component
+        std::for_each(last, lastRemoved, [this](Entity oldEntity) {
+            const auto first = nodeEntities_.cbegin();
+            const auto last = nodeEntities_.cend();
+            if (auto pos =
+                    std::lower_bound(first, last, oldEntity, [](Entity lhs, Entity rhs) { return lhs.id < rhs.id; });
+                (pos != last) && (*pos == oldEntity)) {
+                const auto index = pos - first;
+                // detach the node from its parent before cleanup
+                {
+                    auto* node = nodes_[static_cast<size_t>(index)].get();
+                    Entity parentEntity = static_cast<SceneNode*>(node)->lastState_.parent;
+                    if (auto parentIt = lookUp_.find(parentEntity); parentIt != lookUp_.end()) {
+                        auto& children = parentIt->second->children_;
+                        children.erase(std::remove(children.begin(), children.end(), node), children.cend());
+                    }
+                    // can we rely on lastState_.parent, or also check from node component?
+                    if (ScopedHandle<const NodeComponent> data = nodeComponentManager_.Read(oldEntity); data) {
+                        if (parentEntity != data->parent) {
+                            if (auto parentIt = lookUp_.find(data->parent); parentIt != lookUp_.end()) {
+                                auto& children = parentIt->second->children_;
+                                children.erase(std::remove(children.begin(), children.end(), node), children.cend());
+                            }
+                        }
+                    }
+                }
+                nodeEntities_.erase(pos);
+                nodes_.erase(nodes_.cbegin() + index);
+                lookUp_.erase(oldEntity);
+            }
+        });
 
         // Add entities that appeared since last refresh.
-        for (IComponentManager::ComponentId i = 0; i < nodeComponentManager_.GetComponentCount(); i++) {
-            const Entity entity = nodeComponentManager_.GetEntity(i);
-            if (!GetNode(entity) && entityManager_.IsAlive(entity)) {
-                AddNode(entity);
-            }
-        }
+        std::for_each(lastRemoved, lastAdded, [this](Entity newEntity) { AddNode(newEntity); });
 
-        for (IComponentManager::ComponentId i = 0; i < nodeComponentManager_.GetComponentCount(); i++) {
-            // Get associated entity.
-            const Entity entity = nodeComponentManager_.GetEntity(i);
-            if (entityManager_.IsAlive(entity)) {
-                // Get node component.
-                const Entity parentEntity = nodeComponentManager_.Read(i)->parent;
-
-                // Get node and it's parent.
-                SceneNode* parent = GetNode(parentEntity);
-                if (parent) {
-                    // Set parent / child relationship.
-                    SceneNode* node = GetNode(entity);
-                    parent->children_.push_back(node);
+        std::for_each(first, last, [this](Entity entity) {
+            if (SceneNode* sceneNode = GetNode(entity)) {
+                if (const auto nodeComponent = nodeComponentManager_.Read(entity)) {
+                    if (sceneNode->lastState_.parent != nodeComponent->parent) {
+                        if (SceneNode* oldParent = GetNode(sceneNode->lastState_.parent)) {
+                            oldParent->children_.erase(
+                                std::remove(oldParent->children_.begin(), oldParent->children_.end(), sceneNode),
+                                oldParent->children_.cend());
+                        }
+                        sceneNode->lastState_.parent = {};
+                        sceneNode->lastState_.parentChanged = true;
+                        if (SceneNode* newParent = GetNode(nodeComponent->parent)) {
+                            // Set parent / child relationship.
+                            if (std::none_of(newParent->children_.cbegin(), newParent->children_.cend(),
+                                    [sceneNode](const SceneNode* childNode) { return childNode == sceneNode; })) {
+                                newParent->children_.push_back(sceneNode);
+                            }
+                            sceneNode->lastState_.parent = nodeComponent->parent;
+                        }
+                    }
                 }
             }
-        }
+        });
 
         nodeComponentGenerationId_ = nodeGenerationId;
         entityGenerationId_ = entityGenerationId;
     }
 
-private:
-    using Nodes = unordered_map<Entity, unique_ptr<SceneNode>>;
+    void InternalNodeUpdate()
+    {
+        const uint32_t nodeGenerationId = nodeComponentManager_.GetGenerationCounter();
+        const uint32_t entityGenerationId = entityManager_.GetGenerationCounter();
+        if (nodeGenerationId <= (nodeComponentGenerationId_ + 1U) && entityGenerationId <= (entityGenerationId_ + 1U)) {
+            nodeComponentGenerationId_ = nodeGenerationId;
+            entityGenerationId_ = entityGenerationId;
+        }
+    }
 
-    Nodes nodes_;
+    // Internally for NodeSystem to skip unneccessary NodeCache::Refresh calls
+    SceneNode* GetParentNoRefresh(ISceneNode const& node) const
+    {
+        Entity parent;
+        if (ScopedHandle<const NodeComponent> data = nodeComponentManager_.Read(node.GetEntity()); data) {
+            parent = data->parent;
+        }
+
+        if (EntityUtil::IsValid(parent)) {
+            return GetNode(parent);
+        }
+        return nullptr;
+    }
+
+    void AddListener(SceneNodeListener& listener)
+    {
+        if (Find(listeners_, &listener) != listeners_.end()) {
+            // already added.
+            return;
+        }
+        listeners_.push_back(&listener);
+    }
+
+    void RemoveListener(SceneNodeListener& listener)
+    {
+        if (auto it = Find(listeners_, &listener); it != listeners_.end()) {
+            *it = nullptr;
+            return;
+        }
+    }
+
+private:
+    vector<Entity> nodeEntities_;
+    vector<unique_ptr<SceneNode>> nodes_;
+    unordered_map<Entity, SceneNode*> lookUp_;
+
     uint32_t nodeComponentGenerationId_ = { 0 };
     uint32_t entityGenerationId_ = { 0 };
 
@@ -562,6 +975,15 @@ private:
     INodeComponentManager& nodeComponentManager_;
     ITransformComponentManager& transformComponentManager_;
     IEntityManager& entityManager_;
+
+    BASE_NS::vector<SceneNodeListener*> listeners_;
+};
+
+// State when traversing node tree.
+struct NodeSystem::State {
+    SceneNode* node;
+    Math::Mat4X4 parentMatrix;
+    bool parentEnabled;
 };
 
 void NodeSystem::SetActive(bool state)
@@ -621,10 +1043,13 @@ ISceneNode& NodeSystem::GetRootNode() const
 
 ISceneNode* NodeSystem::GetNode(Entity entity) const
 {
-    // Make sure node cache is valid.
-    cache_->Refresh();
+    if (EntityUtil::IsValid(entity)) {
+        // Make sure node cache is valid.
+        cache_->Refresh();
 
-    return cache_->GetNode(entity);
+        return cache_->GetNode(entity);
+    }
+    return nullptr;
 }
 
 ISceneNode* NodeSystem::CreateNode()
@@ -636,8 +1061,8 @@ ISceneNode* NodeSystem::CreateNode()
     transformManager_.Create(entity);
     localMatrixManager_.Create(entity);
     worldMatrixManager_.Create(entity);
-
-    return GetNode(entity);
+    cache_->InternalNodeUpdate();
+    return cache_->AddNode(entity);
 }
 
 ISceneNode* NodeSystem::CloneNode(const ISceneNode& node, bool recursive)
@@ -701,9 +1126,15 @@ void NodeSystem::DestroyNode(ISceneNode& rootNode)
     auto* node = static_cast<SceneNode*>(&rootNode);
     for (bool done = false; !done && node;) {
         if (auto child = node->PopChildNoRefresh(); !child) {
-            const auto* destroy = std::exchange(node, node->GetParentNoRefresh());
+            auto* destroy = std::exchange(node, cache_->GetParentNoRefresh(*node));
             if (destroy == &rootNode) {
                 done = true;
+                if (node) {
+                    node->children_.erase(
+                        std::remove(node->children_.begin(), node->children_.end(), destroy), node->children_.cend());
+                    destroy->lastState_.parent = {};
+                    destroy->lastState_.parentChanged = true;
+                }
                 // check this is not the root node which cannot be destroyed.
                 const auto entity = destroy->GetEntity();
                 if (EntityUtil::IsValid(entity)) {
@@ -716,6 +1147,16 @@ void NodeSystem::DestroyNode(ISceneNode& rootNode)
             node = child;
         }
     }
+}
+
+void NodeSystem::AddListener(SceneNodeListener& listener)
+{
+    cache_->AddListener(listener);
+}
+
+void NodeSystem::RemoveListener(SceneNodeListener& listener)
+{
+    cache_->RemoveListener(listener);
 }
 
 void NodeSystem::Initialize()
@@ -738,9 +1179,6 @@ bool NodeSystem::Update(bool, uint64_t, uint64_t)
         return false;
     }
 
-    // Make sure node cache is valid.
-    cache_->Refresh();
-
     nodeQuery_.Execute();
 
     // Cache world matrices from previous frame.
@@ -750,6 +1188,9 @@ bool NodeSystem::Update(bool, uint64_t, uint64_t)
         nodeGeneration_ == nodeManager_.GetGenerationCounter()) {
         return false;
     }
+
+    // Make sure node cache is valid.
+    cache_->Refresh();
 
     vector<ISceneNode*> changedNodes;
     changedNodes.reserve(256u); // reserve a chunk to fit a large scene.
@@ -768,12 +1209,15 @@ bool NodeSystem::Update(bool, uint64_t, uint64_t)
                 if (row->IsValidComponentId(WORLD_INDEX)) {
                     parentMatrix = worldMatrixManager_.Get(row->components[WORLD_INDEX]).matrix;
                 }
-
-                parentEnabled = nodeManager_.Read(row->components[NODE_INDEX])->effectivelyEnabled;
+                if (auto nodeHandle = nodeManager_.Read(row->components[NODE_INDEX])) {
+                    parentEnabled = nodeHandle->effectivelyEnabled;
+                } else {
+                    CORE_LOG_W("%" PRIx64 " missing Node", row->entity.id);
+                }
             }
         }
 
-        UpdateTransformationRecursive(*node, parentMatrix, parentEnabled);
+        UpdateTransformations(*node, parentMatrix, parentEnabled);
     }
 
     // Store generation counters.
@@ -785,8 +1229,15 @@ bool NodeSystem::Update(bool, uint64_t, uint64_t)
             // Create missing PreviousWorldMatrixComponents and initialize with current world.
             if (!row.IsValidComponentId(PREV_WORLD_INDEX) && row.IsValidComponentId(WORLD_INDEX)) {
                 prevWorldMatrixManager_.Create(row.entity);
-                prevWorldMatrixManager_.Write(row.entity)->matrix =
-                    worldMatrixManager_.Read(row.components[WORLD_INDEX])->matrix;
+                if (auto dst = prevWorldMatrixManager_.Write(row.entity)) {
+                    if (auto src = worldMatrixManager_.Read(row.components[WORLD_INDEX])) {
+                        dst->matrix = src->matrix;
+                    } else {
+                        CORE_LOG_W("%" PRIx64 " missing WorldMatrix", row.entity.id);
+                    }
+                } else {
+                    CORE_LOG_W("%" PRIx64 " missing PreviousWorldMatrix", row.entity.id);
+                }
             }
         }
     }
@@ -816,60 +1267,99 @@ void NodeSystem::CollectChangedNodes(ISceneNode& node, vector<ISceneNode*>& resu
         }
 
         // If node enabled state or parent component has changed, the sub-tree needs to be recalculated.
-        {
-            const auto& nodeComponent = nodeManager_.Read(row->components[NODE_INDEX]);
-            const bool parentChanged = lastState.parent != nodeComponent->parent;
+        if (const auto& nodeComponent = nodeManager_.Read(row->components[NODE_INDEX])) {
+            const bool parentChanged = (lastState.parent != nodeComponent->parent) || lastState.parentChanged;
             const bool enabledChanged = lastState.enabled != nodeComponent->enabled;
             if (parentChanged || enabledChanged) {
                 result.push_back(&node);
                 return;
             }
+        } else {
+            CORE_LOG_W("%" PRIx64 " missing Node", row->entity.id);
         }
     }
-    auto const& children = node.GetChildren();
-    for (size_t i = 0; i < children.size(); ++i) {
-        CollectChangedNodes(*(children[i]), result);
+
+    for (auto* const child : node.GetChildren()) {
+        if (child) {
+            CollectChangedNodes(*child, result);
+        }
     }
 }
 
-void NodeSystem::UpdateTransformationRecursive(ISceneNode& node, Math::Mat4X4 const& matrix, bool enabled)
+struct NodeSystem::NodeInfo {
+    Entity parent;
+    bool isEffectivelyEnabled;
+    bool effectivelyEnabledChanged;
+};
+
+NodeSystem::NodeInfo NodeSystem::ProcessNode(
+    SceneNode* node, const bool parentEnabled, const ComponentQuery::ResultRow* row)
 {
-    SceneNode& sceneNode = (SceneNode&)(node);
+    NodeInfo info;
+    info.isEffectivelyEnabled = parentEnabled;
+    info.effectivelyEnabledChanged = false;
 
-    if (auto row = nodeQuery_.FindResultRow(sceneNode.GetEntity()); row) {
-        bool isEffectivelyEnabled = enabled;
-        Entity parent;
-        {
-            IPropertyHandle* handle = nodeManager_.GetData(row->components[NODE_INDEX]);
-            auto nc = ScopedHandle<const NodeComponent>(handle);
-            parent = nc->parent;
-            const bool nodeEnabled = nc->enabled;
-            // Update effectively enabled status if it has changed (e.g. due to parent enabled state changes).
-            isEffectivelyEnabled = nodeEnabled && enabled;
-            if (nc->effectivelyEnabled != isEffectivelyEnabled) {
-                ScopedHandle<NodeComponent>(handle)->effectivelyEnabled = isEffectivelyEnabled;
-            }
-            sceneNode.lastState_.enabled = nodeEnabled;
+    IPropertyHandle* handle = nodeManager_.GetData(row->components[NODE_INDEX]);
+    auto nc = ScopedHandle<const NodeComponent>(handle);
+    info.parent = nc->parent;
+    const bool nodeEnabled = nc->enabled;
+    // Update effectively enabled status if it has changed (e.g. due to parent enabled state changes).
+    info.isEffectivelyEnabled = info.isEffectivelyEnabled && nodeEnabled;
+    if (nc->effectivelyEnabled != info.isEffectivelyEnabled) {
+        ScopedHandle<NodeComponent>(handle)->effectivelyEnabled = info.isEffectivelyEnabled;
+        cache_->InternalNodeUpdate();
+        info.effectivelyEnabledChanged = true;
+    }
+    node->lastState_.enabled = nodeEnabled;
+
+    return info;
+}
+
+void NodeSystem::UpdateTransformations(ISceneNode& node, Math::Mat4X4 const& matrix, bool enabled)
+{
+    BASE_NS::vector<State> stack;
+    stack.reserve(nodeManager_.GetComponentCount());
+    stack.push_back(State { static_cast<SceneNode*>(&node), matrix, enabled });
+    while (!stack.empty()) {
+        auto state = stack.back();
+        stack.pop_back();
+
+        auto row = nodeQuery_.FindResultRow(state.node->GetEntity());
+        if (!row) {
+            continue;
         }
-        Math::Mat4X4 pm = matrix;
+        const auto nodeInfo = ProcessNode(state.node, state.parentEnabled, row);
 
-        if (isEffectivelyEnabled && row->IsValidComponentId(LOCAL_INDEX)) {
-            pm = pm * localMatrixManager_.Read(row->components[LOCAL_INDEX])->matrix;
+        Math::Mat4X4& pm = state.parentMatrix;
+
+        if (nodeInfo.isEffectivelyEnabled && row->IsValidComponentId(LOCAL_INDEX)) {
+            if (auto local = localMatrixManager_.Read(row->components[LOCAL_INDEX])) {
+                pm = pm * local->matrix;
+            } else {
+                CORE_LOG_W("%" PRIx64 " missing LocalWorldMatrix", row->entity.id);
+            }
+
             if (row->IsValidComponentId(WORLD_INDEX)) {
-                auto worldMatrixHandle = worldMatrixManager_.Write(row->components[WORLD_INDEX]);
-                worldMatrixHandle->matrix = pm;
+                if (auto worldMatrixHandle = worldMatrixManager_.Write(row->components[WORLD_INDEX])) {
+                    worldMatrixHandle->matrix = pm;
+                } else {
+                    CORE_LOG_W("%" PRIx64 " missing WorldMatrix", row->entity.id);
+                }
             } else {
                 worldMatrixManager_.Set(row->entity, { pm });
             }
 
             // Save the values that were used to calculate current world matrix.
-            sceneNode.lastState_.localMatrixGeneration =
+            state.node->lastState_.localMatrixGeneration =
                 localMatrixManager_.GetComponentGeneration(row->components[LOCAL_INDEX]);
-            sceneNode.lastState_.parent = parent;
+            state.node->lastState_.parent = nodeInfo.parent;
         }
-
-        for (auto const& child : sceneNode.GetChildren()) {
-            UpdateTransformationRecursive(*child, pm, isEffectivelyEnabled);
+        if (nodeInfo.isEffectivelyEnabled || nodeInfo.effectivelyEnabledChanged) {
+            for (auto* child : state.node->GetChildren()) {
+                if (child) {
+                    stack.push_back(State { static_cast<SceneNode*>(child), pm, nodeInfo.isEffectivelyEnabled });
+                }
+            }
         }
     }
 }
@@ -878,7 +1368,9 @@ void NodeSystem::GatherNodeEntities(const ISceneNode& node, vector<Entity>& enti
 {
     entities.push_back(node.GetEntity());
     for (const ISceneNode* child : node.GetChildren()) {
-        GatherNodeEntities(*child, entities);
+        if (child) {
+            GatherNodeEntities(*child, entities);
+        }
     }
 }
 
@@ -891,8 +1383,15 @@ bool NodeSystem::UpdatePreviousWorldMatrices()
         for (const auto& row : nodeQuery_.GetResults()) {
             const bool hasPrev = row.IsValidComponentId(PREV_WORLD_INDEX);
             if (hasPrev && row.IsValidComponentId(WORLD_INDEX)) {
-                prevWorldMatrixManager_.Write(row.components[PREV_WORLD_INDEX])->matrix =
-                    worldMatrixManager_.Read(row.components[WORLD_INDEX])->matrix;
+                if (auto dst = prevWorldMatrixManager_.Write(row.components[PREV_WORLD_INDEX])) {
+                    if (auto src = worldMatrixManager_.Read(row.components[WORLD_INDEX])) {
+                        dst->matrix = src->matrix;
+                    } else {
+                        CORE_LOG_W("%" PRIx64 " missing WorldMatrix", row.entity.id);
+                    }
+                } else {
+                    CORE_LOG_W("%" PRIx64 " missing PreviousWorldMatrix", row.entity.id);
+                }
             } else if (!hasPrev) {
                 missingPrevWorldMatrix = true;
             }

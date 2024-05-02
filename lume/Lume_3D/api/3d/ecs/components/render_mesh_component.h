@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(RENDER_MESH_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define RENDER_MESH_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_RENDER_MESH_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_RENDER_MESH_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
@@ -22,7 +22,6 @@
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/entity.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif
@@ -36,14 +35,14 @@ BEGIN_COMPONENT(IRenderMeshComponentManager, RenderMeshComponent)
     static constexpr uint32_t RENDER_MESH_CUSTOM_DATA_VEC4_COUNT { 2u };
 #endif
     /** Mesh entity. */
-    DEFINE_PROPERTY(CORE_NS::Entity, mesh, "Mesh", 0,)
+    DEFINE_PROPERTY(CORE_NS::Entity, mesh, "Mesh", 0, )
 
     /** Render mesh batch entity. */
-    DEFINE_PROPERTY(CORE_NS::Entity, renderMeshBatch, "Render mesh batch", 0,)
+    DEFINE_PROPERTY(CORE_NS::Entity, renderMeshBatch, "Render Mesh Batch", 0, )
 
     /** Additional per render mesh custom data for shader customization */
     DEFINE_ARRAY_PROPERTY(BASE_NS::Math::UVec4, RENDER_MESH_CUSTOM_DATA_VEC4_COUNT, customData,
-        "Additional shader custom data", 0, ARRAY_VALUE({ 0u, 0u, 0u, 0u }))
+        "Additional Shader Data", 0, ARRAY_VALUE({ 0u, 0u, 0u, 0u }))
 END_COMPONENT(IRenderMeshComponentManager, RenderMeshComponent, "311f8817-1878-4363-a6e6-68cc2299ea8d")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()

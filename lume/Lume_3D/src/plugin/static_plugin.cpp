@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/animation_input_component.h>
 #include <3d/ecs/components/animation_output_component.h>
+#include <3d/ecs/components/animation_state_component.h>
 #include <3d/ecs/components/animation_track_component.h>
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/environment_component.h>
@@ -33,6 +34,7 @@
 #include <3d/ecs/components/physical_camera_component.h>
 #include <3d/ecs/components/planar_reflection_component.h>
 #include <3d/ecs/components/post_process_component.h>
+#include <3d/ecs/components/post_process_configuration_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 #include <3d/ecs/components/render_handle_component.h>
 #include <3d/ecs/components/render_mesh_batch_component.h>
@@ -44,7 +46,6 @@
 #include <3d/ecs/components/transform_component.h>
 #include <3d/ecs/components/uri_component.h>
 #include <3d/ecs/components/world_matrix_component.h>
-#include <3d/ecs/systems/intf_animation_system.h>
 #include <3d/ecs/systems/intf_morphing_system.h>
 #include <3d/ecs/systems/intf_node_system.h>
 #include <3d/ecs/systems/intf_render_preprocessor_system.h>
@@ -55,19 +56,23 @@
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/intf_plugin.h>
 
-#include "ecs/components/animation_state_component.h"
 #include "ecs/components/initial_transform_component.h"
 #include "ecs/components/previous_joint_matrices_component.h"
 #include "ecs/components/previous_world_matrix_component.h"
+#include "ecs/systems/animation_system.h"
 #include "ecs/systems/local_matrix_system.h"
 #include "render/datastore/render_data_store_default_camera.h"
 #include "render/datastore/render_data_store_default_light.h"
 #include "render/datastore/render_data_store_default_material.h"
 #include "render/datastore/render_data_store_default_scene.h"
 #include "render/datastore/render_data_store_morph.h"
+#include "render/node/render_node_camera_cubemap.h"
+#include "render/node/render_node_camera_single_post_process.h"
 #include "render/node/render_node_create_default_camera_gpu_images.h"
 #include "render/node/render_node_default_camera_controller.h"
+#include "render/node/render_node_default_camera_post_process_controller.h"
 #include "render/node/render_node_default_cameras.h"
+#include "render/node/render_node_default_depth_render_slot.h"
 #include "render/node/render_node_default_env.h"
 #include "render/node/render_node_default_lights.h"
 #include "render/node/render_node_default_material_deferred_shading.h"
@@ -80,8 +85,10 @@
 // Include the declarations directly from engine.
 // NOTE: macro defined by cmake as CORE_STATIC_PLUGIN_HEADER="${CORE_ROOT_DIRECTORY}/src/static_plugin_decl.h"
 // this is so that the core include directories are not leaked here, but we want this one header in this case.
+#ifndef __APPLE__
 #include CORE_STATIC_PLUGIN_HEADER
 #include "registry_data.cpp"
+#endif
 
 #define SYSTEM_FACTORY(type) type##Instance, type##Destroy
 #define MANAGER_FACTORY(type) type##Instance, type##Destroy
@@ -139,6 +146,7 @@ MANAGER(ENVIRONMENT_COMPONENT_TYPE_INFO, IEnvironmentComponentManager);
 MANAGER(FOG_COMPONENT_TYPE_INFO, IFogComponentManager);
 MANAGER(RENDER_HANDLE_COMPONENT_TYPE_INFO, IRenderHandleComponentManager);
 MANAGER(POST_PROCESS_COMPONENT_TYPE_INFO, IPostProcessComponentManager);
+MANAGER(POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO, IPostProcessConfigurationComponentManager);
 MANAGER(LAYER_COMPONENT_TYPE_INFO, ILayerComponentManager);
 MANAGER(RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, IRenderMeshBatchComponentManager);
 MANAGER(PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO, IPreviousWorldMatrixComponentManager);
@@ -154,6 +162,18 @@ static constexpr Uid NODE_SYSTEM_RW_DEPS[] = { WORLD_MATRIX_COMPONENT_TYPE_INFO.
     PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO.uid };
 static constexpr Uid NODE_SYSTEM_R_DEPS[] = { NAME_COMPONENT_TYPE_INFO.uid, TRANSFORM_COMPONENT_TYPE_INFO.uid,
     LOCAL_MATRIX_COMPONENT_TYPE_INFO.uid, RSDZ_MODEL_ID_COMPONENT_TYPE_INFO.uid };
+
+// Render preprocessor system dependencies.
+static constexpr Uid RENDER_PREPROCESSOR_SYSTEM_R_DEPS[] = {
+    JOINT_MATRICES_COMPONENT_TYPE_INFO.uid,
+    LAYER_COMPONENT_TYPE_INFO.uid,
+    MATERIAL_COMPONENT_TYPE_INFO.uid,
+    MESH_COMPONENT_TYPE_INFO.uid,
+    NODE_COMPONENT_TYPE_INFO.uid,
+    RENDER_MESH_COMPONENT_TYPE_INFO.uid,
+    SKIN_COMPONENT_TYPE_INFO.uid,
+    WORLD_MATRIX_COMPONENT_TYPE_INFO.uid,
+};
 
 // Render system dependencies.
 static constexpr Uid RENDER_SYSTEM_RW_DEPS[] = {
@@ -176,6 +196,7 @@ static constexpr Uid RENDER_SYSTEM_R_DEPS[] = {
     RENDER_HANDLE_COMPONENT_TYPE_INFO.uid,
     JOINT_MATRICES_COMPONENT_TYPE_INFO.uid,
     POST_PROCESS_COMPONENT_TYPE_INFO.uid,
+    POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO.uid,
     LAYER_COMPONENT_TYPE_INFO.uid,
     RENDER_MESH_BATCH_COMPONENT_TYPE_INFO.uid,
     PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO.uid,
@@ -230,14 +251,14 @@ static constexpr ComponentManagerTypeInfo CORE_COMPONENT_TYPE_INFOS[] = { CAMERA
     MESH_COMPONENT_TYPE_INFO, URI_COMPONENT_TYPE_INFO, SKIN_IBM_COMPONENT_TYPE_INFO, ANIMATION_COMPONENT_TYPE_INFO,
     ANIMATION_INPUT_COMPONENT_TYPE_INFO, ANIMATION_OUTPUT_COMPONENT_TYPE_INFO, ANIMATION_STATE_COMPONENT_TYPE_INFO,
     ANIMATION_TRACK_COMPONENT_TYPE_INFO, ENVIRONMENT_COMPONENT_TYPE_INFO, FOG_COMPONENT_TYPE_INFO,
-    RENDER_HANDLE_COMPONENT_TYPE_INFO, POST_PROCESS_COMPONENT_TYPE_INFO, LAYER_COMPONENT_TYPE_INFO,
-    RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO,
+    RENDER_HANDLE_COMPONENT_TYPE_INFO, POST_PROCESS_COMPONENT_TYPE_INFO, POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO,
+    LAYER_COMPONENT_TYPE_INFO, RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO,
     PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO };
 } // namespace
 
 SYSTEM(LOCAL_MATRIX_SYSTEM_TYPE_INFO, LocalMatrixSystem, LOCAL_MATRIX_SYSTEM_RW_DEPS, LOCAL_MATRIX_SYSTEM_R_DEPS);
 SYSTEM(NODE_SYSTEM_TYPE_INFO, INodeSystem, NODE_SYSTEM_RW_DEPS, NODE_SYSTEM_R_DEPS);
-SYSTEM(RENDER_PREPROCESSOR_SYSTEM_TYPE_INFO, IRenderPreprocessorSystem, {}, {});
+SYSTEM(RENDER_PREPROCESSOR_SYSTEM_TYPE_INFO, IRenderPreprocessorSystem, {}, RENDER_PREPROCESSOR_SYSTEM_R_DEPS);
 SYSTEM(RENDER_SYSTEM_TYPE_INFO, IRenderSystem, RENDER_SYSTEM_RW_DEPS, RENDER_SYSTEM_R_DEPS);
 SYSTEM(ANIMATION_SYSTEM_TYPE_INFO, IAnimationSystem, ANIMATION_SYSTEM_RW_DEPS, ANIMATION_SYSTEM_R_DEPS);
 SYSTEM(SKINNING_SYSTEM_TYPE_INFO, ISkinningSystem, SKINNING_SYSTEM_RW_DEPS, SKINNING_SYSTEM_R_DEPS);
@@ -272,7 +293,9 @@ static constexpr RenderDataStoreTypeInfo CORE_RENDER_DATA_STORE_INFOS[] = {
 static constexpr RenderNodeTypeInfo CORE_RENDER_NODE_TYPE_INFOS[] = {
     Fill<RenderNodeTypeInfo, RenderNodeCreateDefaultCameraGpuImages>(),
     Fill<RenderNodeTypeInfo, RenderNodeDefaultCameraController>(),
+    Fill<RenderNodeTypeInfo, RenderNodeDefaultCameraPostProcessController>(),
     Fill<RenderNodeTypeInfo, RenderNodeDefaultCameras>(),
+    Fill<RenderNodeTypeInfo, RenderNodeDefaultDepthRenderSlot>(),
     Fill<RenderNodeTypeInfo, RenderNodeDefaultEnv>(),
     Fill<RenderNodeTypeInfo, RenderNodeDefaultLights>(),
     Fill<RenderNodeTypeInfo, RenderNodeDefaultMaterialDeferredShading>(),
@@ -281,6 +304,8 @@ static constexpr RenderNodeTypeInfo CORE_RENDER_NODE_TYPE_INFOS[] = {
     Fill<RenderNodeTypeInfo, RenderNodeDefaultShadowRenderSlot>(),
     Fill<RenderNodeTypeInfo, RenderNodeDefaultShadowsBlur>(),
     Fill<RenderNodeTypeInfo, RenderNodeMorph>(),
+    Fill<RenderNodeTypeInfo, RenderNodeCameraSinglePostProcess>(),
+    Fill<RenderNodeTypeInfo, RenderNodeCameraCubemap>(),
 };
 } // namespace
 
