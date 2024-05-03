@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Huawei Device Co., Ltd.
+# Copyright (C) 2024 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,54 +15,65 @@ declare_args() {
   #BUILDTYPE="Release"
   #BUILDTYPE="MinSizeRel"
   #BUILDTYPE="RelWithDebInfo"
-  BUILDTYPE="Release"
+  BUILDTYPE = "Release"
 
-  LUME_PATH="foundation/graphic/graphic_3d/lume/"
+  LUME_PATH = "foundation/graphic/graphic_3d/lume/"
 
-  BASE_DIR_NAME="LumeBase"
-  CORE_DIR_NAME="LumeEngine"
-  RENDER_DIR_NAME="LumeRender"
-  CORE3D_DIR_NAME="Lume_3D"
-  BINARY_DIR_NAME="LumeBinaryCompile"
+  BASE_DIR_NAME = "LumeBase"
+  CORE_DIR_NAME = "LumeEngine"
+  RENDER_DIR_NAME = "LumeRender"
+  CORE3D_DIR_NAME = "Lume_3D"
+  BINARY_DIR_NAME = "LumeBinaryCompile"
 
-  LUME_OHOS_BUILD=true
-  CORE_DEV_ENABLED=1
+  LUME_OHOS_BUILD = true
+  CORE_DEV_ENABLED = 1
 
-  LIB_ENGINE_CORE="libAGPDLL"
-  LIB_RENDER="libPluginAGPRender"
-  LIB_CORE3D="libPluginAGP3D"
+  LIB_ENGINE_CORE = "libAGPDLL"
+  LIB_RENDER = "libPluginAGPRender"
+  LIB_CORE3D = "libPluginAGP3D"
+  LIB_VULKAN_3D = "//third_party/vulkan-loader:vulkan_loader"
+  METAOBJECT_DIR_NAME = "metaobject"
+  SCENEWIDGETPLUGIN_DIR_NAME = "scenewidgetplugin"
+  ECS_HELPER = "ecshelper"
 }
 
 declare_args() {
-  LUME_ROOT="//${LUME_PATH}"
+  LUME_ROOT = "//${LUME_PATH}"
 }
 
 declare_args() {
+  LUME_BASE_PATH = "${LUME_ROOT}/${BASE_DIR_NAME}/"
+  LUME_CORE_PATH = "${LUME_ROOT}/${CORE_DIR_NAME}/"
+  LUME_RENDER_PATH = "${LUME_ROOT}/${RENDER_DIR_NAME}/"
+  LUME_CORE3D_PATH = "${LUME_ROOT}/${CORE3D_DIR_NAME}/"
+  LUME_BINARY_PATH = "${LUME_ROOT}/${BINARY_DIR_NAME}/"
+  LUME_ECS_HELPER_PATH = "${LUME_ROOT}/${CORE_DIR_NAME}/${ECS_HELPER}/"
+  LUME_METAOBJECT_PATH = "${LUME_ROOT}/${METAOBJECT_DIR_NAME}"
+  LUME_SCP_PATH = "${LUME_ROOT}/${SCENEWIDGETPLUGIN_DIR_NAME}"
 
-  LUME_BASE_PATH="${LUME_ROOT}/${BASE_DIR_NAME}/"
-  LUME_CORE_PATH="${LUME_ROOT}/${CORE_DIR_NAME}/"
-  LUME_RENDER_PATH="${LUME_ROOT}/${RENDER_DIR_NAME}/"
-  LUME_CORE3D_PATH="${LUME_ROOT}/${CORE3D_DIR_NAME}/"
-  LUME_BINARY_PATH="${LUME_ROOT}/${BINARY_DIR_NAME}/"
-
-  LUME_CORE_DLL_PATH="${LUME_ROOT}/${CORE_DIR_NAME}/DLL/"
-  LUME_CORE3D_DLL_PATH="${LUME_ROOT}/${CORE3D_DIR_NAME}/DLL/"
+  LUME_CORE_DLL_PATH = "${LUME_ROOT}/${CORE_DIR_NAME}/DLL/"
+  LUME_CORE3D_DLL_PATH = "${LUME_ROOT}/${CORE3D_DIR_NAME}/DLL/"
 }
 
 declare_args() {
-  CORE_STATIC_PLUGIN_HEADER = "\"${LUME_PATH}/${CORE_DIR_NAME}/src/static_plugin_decl.h\""
+  CORE_STATIC_PLUGIN_HEADER =
+      "\"${LUME_PATH}/${CORE_DIR_NAME}/src/static_plugin_decl.h\""
 }
 
 declare_args() {
   USE_LIB_PNG_JPEG = true
   USE_STB_IMAGE = false
-  STB_IMAGE_PATH = "//third_party/minimp3/player/"
+  STB_IMAGE_PATH = "//foundation/graphic/graphic_3d/lume/TMP_STB/"
+}
+
+declare_args() {
+  KIT_3D_ENABLE = true
 }
 
 template("lume_rofs") {
   name = target_name
   action(name) {
-    outputs = [invoker.outputs]
+    outputs = [ invoker.outputs ]
     script = invoker.script
     cpu_type = ""
     output_obj = ""
@@ -86,7 +97,7 @@ template("lume_rofs") {
       invoker.base_name,
       rebase_path(invoker.copy_path, root_build_dir),
       output_obj,
-      invoker.file_extension
+      invoker.file_extension,
     ]
 
     deps = []
@@ -101,9 +112,7 @@ template("lume_binary_complile") {
   action(name) {
     outputs = invoker.outputs
     script = invoker.script
-    args = [
-      rebase_path(invoker.dest_gen_path, root_build_dir)
-    ]
+    args = [ rebase_path(invoker.dest_gen_path, root_build_dir) ]
   }
 }
 
@@ -121,9 +130,7 @@ template("lume_compile_shader") {
     ]
 
     if (defined(invoker.render_include_path)) {
-      args += [
-        invoker.render_include_path
-      ]
+      args += [ invoker.render_include_path ]
     }
     deps = []
     if (defined(invoker.compileShader_deps)) {

@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Huawei Device Co., Ltd.
+# Copyright (C) 2023-2024 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -47,7 +47,10 @@ config("lume3d_config") {
     "-Wno-reorder",
     "-Wno-unused-function",
     "-Wno-tautological-unsigned-zero-compare",
-    "-Wno-missing-braces",
+
+    "-Wno-nullability-completeness",
+    "-Wno-ignored-qualifiers",
+    "-Wno-switch",
 
     "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
     "-DCORE_BUILD_2D = 0",
@@ -66,7 +69,7 @@ config("lume3d_config") {
     "-DCORE_DEBUG_MARKERS_ENABLED = 0",
     "-DRENDER_HAS_GL_BACKEND=0",
     "-DRENDER_HAS_GLES_BACKEND = 1",
-    "-DRENDER_HAS_VULKAN_BACKEND = 0",
+    "-DRENDER_HAS_VULKAN_BACKEND = 1",
     "-DVK_USE_PLATFORM_ANDROID_KHR = 1",
     "-DCORE_LOG_NO_DEBUG=0",
     "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
@@ -119,7 +122,10 @@ ohos_source_set("widget_adapter_source") {
     "//foundation/graphic/graphic_2d/rosen/modules/",
   ]
 
-  defines = [ "CORE_HAS_GLES_BACKEND=1" ]
+  defines = [
+    "CORE_HAS_GLES_BACKEND=1",
+    "CORE_HAS_VULKAN_BACKEND=1",
+  ]
 
   configs = [
     ":widget_adapter_config",
@@ -129,8 +135,10 @@ ohos_source_set("widget_adapter_source") {
   public_configs = [ ":widget_adapter_config" ]
 
   if (defined(use_new_skia) && use_new_skia) {
+    #external_deps = [ "skia:skia_canvaskit" ]
     deps = [ "//third_party/skia:skia_ohos" ]
   } else {
+    #external_deps = [ "flutter:ace_skia_ohos" ]
     deps = [ "$ace_flutter_engine_root/skia:ace_skia_ohos" ]
   }
   if (defined(use_rosen_drawing) && use_rosen_drawing) {
@@ -149,13 +157,15 @@ ohos_source_set("widget_adapter_source") {
       "core/include/lume/ohos",
     ]
 
-    external_deps = [
+    external_deps = [ "vulkan-headers:vulkan_headers" ]
+    external_deps += [
       "c_utils:utils",
       "graphic_2d:libgl",
       "graphic_2d:librender_service_client",
       "graphic_surface:surface",
       "hilog:libhilog",
       "hitrace:hitrace_meter",
+      "init:libbegetutil",
     ]
 
     defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
@@ -177,40 +187,31 @@ ohos_source_set("widget_adapter_source") {
     }
   }
 
-  if (current_os == "android") {
-    sources += [
-      "core/src/lume/android/lume.cpp",
-      "src/android/graphics_manager.cpp",
-      "src/android/skia_texture.cpp",
-      "src/android/texture_layer.cpp",
-    ]
-
-    include_dirs += [
-      "core/include/android",
-      "core/include/lume/android",
-    ]
-
-    aosp_deps = [
-      "shared_library:libEGL",
-      "shared_library:libGLESv2",
-      "shared_library:libandroid",
-    ]
-
-    deps += [ "$ace_flutter_engine_root:third_party_flutter_engine_android" ]
-    defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}" ]
-  }
-
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
 
 group("3dWidgetAdapterInterface") {
-  public_configs = [ ":widget_adapter_config" ]
+  public_configs = [
+    ":widget_adapter_config",
+    "../3d_scene_adapter:scene_adapter_config",
+    "../kits/js:napi_config",
+  ]
 }
 
 ohos_shared_library("lib3dWidgetAdapter") {
-  deps = [ ":widget_adapter_source" ]
-  public_configs = [ ":widget_adapter_config" ]
+  deps = [
+    ":widget_adapter_source",
+    "../3d_scene_adapter:scene_adapter_static",
+  ]
+
+  public_deps = []
+
+  public_configs = [
+    ":widget_adapter_config",
+    "../3d_scene_adapter:scene_adapter_config",
+    "../kits/js:napi_config",
+  ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

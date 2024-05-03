@@ -52,6 +52,7 @@ public:
     void BindOffScreenContext();
     virtual PlatformData GetPlatformData() const = 0;
     virtual PlatformData GetPlatformData(const HapInfo& hapInfo) const = 0;
+    const HapInfo& GetHapInfo() const;
     bool HasMultiEcs();
     RenderBackend GetRenderBackendType(int32_t key);
 #if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
@@ -78,6 +79,7 @@ private:
     bool engineLoaded_ = false;
     bool engineInited_ = false;
     std::unordered_map<int32_t, RenderBackend> backends_;
+    HapInfo hapInfo_;
 #if defined(MULTI_ECS_UPDATE_AT_ONCE) && (MULTI_ECS_UPDATE_AT_ONCE == 1)
     std::unordered_map<void*, void*> ecss_;
 #endif

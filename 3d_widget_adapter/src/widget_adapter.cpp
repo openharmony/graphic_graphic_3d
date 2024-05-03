@@ -124,13 +124,13 @@ bool WidgetAdapter::UpdateShaderPath(const std::string& shaderPath)
     auto tempPath = const_cast<std::string&> (shaderPath);
     auto index = tempPath.find_last_of("/");
     auto strSize = tempPath.size();
-    if (index != -1 && index != (strSize - 1)) {
+    if (index != std::string::npos && index != (strSize - 1)) {
         auto fileName = tempPath.substr(index + 1);
         auto suffixIndex = fileName.find_last_of(".");
-        if (suffixIndex != -1) {
+        if (suffixIndex != std::string::npos) {
             tempPath = tempPath.substr(0, index);
             auto dirIndex = tempPath.find_last_of("/");
-            tempPath = (dirIndex != -1) ? tempPath.substr(0, dirIndex) : tempPath;
+            tempPath = (dirIndex != std::string::npos) ? tempPath.substr(0, dirIndex) : tempPath;
         }
     }
     auto shaderPathOut = const_cast<const std::string&> (tempPath);

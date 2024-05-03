@@ -1,0 +1,158 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//build/ohos/ace/ace.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("lume3d_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+  ]
+
+  if (current_os == "ohos") {
+    include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
+  }
+
+  configs = []
+
+  cflags = [
+    "-Wall",
+    "-fexceptions",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-ignored-qualifiers",
+    "-Wno-unused-lambda-capture",
+    "-Wno-unused-but-set-variable",
+
+    "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "-DCORE_BUILD_2D = 0",
+    "-DCORE_BUILD_VULKAN=0",
+    "-DCORE_BUILD_GL=0",
+    "-DCORE_BUILD_GLES=1",
+    "-DCORE_DEV_ENABLED=0",
+    "-DCORE_TESTS_ENABLED=0",
+    "-DCORE_GL_DEBUG=0",
+    "-DCORE_VALIDATION_ENABLED = 0",
+    "-DCORE_VULKAN_VALIDATION_ENABLED = 0",
+    "-DCORE_EMBEDDED_ASSETS_ENABLED = 2",
+    "-DCORE_ENABLE_GPU_QUERIES=0",
+    "-DCORE_DEBUG_GPU_RESOURCE_IDS = 0",
+    "-DCORE_DEBUG_COMMAND_MARKERS_ENABLED = 0",
+    "-DCORE_DEBUG_MARKERS_ENABLED = 0",
+    "-DRENDER_HAS_GL_BACKEND=0",
+    "-DRENDER_HAS_GLES_BACKEND = 1",
+    "-DRENDER_HAS_VULKAN_BACKEND = 1",
+    "-DVK_USE_PLATFORM_ANDROID_KHR = 1",
+    "-DCORE_LOG_NO_DEBUG=0",
+    "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
+    "-DCORE_LOG_TO_CONSOLE",
+    "-DCORE_LOG_DISABLED=0",
+    "-DCORE_DYNAMIC=1",
+  ]
+}
+
+config("scene_adapter_config") {
+  defines = []
+
+  include_dirs = [ "include" ]
+  if (KIT_3D_ENABLE) {
+    defines = [ "KIT_3D_ENABLE=$KIT_3D_ENABLE" ]
+  }
+}
+
+group("sceneAdapterInterface") {
+  public_configs = [ ":scene_adapter_config" ]
+}
+
+ohos_source_set("scene_adapter_source") {
+  sources = [
+    "src/scene_adapter.cpp",
+    "src/scene_bridge.cpp",
+  ]
+
+  include_dirs = [
+    "include",
+    "../3d_widget_adapter/core/include",
+    "../lume/metaobject/include",
+    "../lume/scenewidgetplugin/plugin/include",
+  ]
+
+  defines = [
+    "CORE_HAS_GLES_BACKEND=1",
+    "CORE_HAS_VULKAN_BACKEND=1",
+  ]
+
+  configs = [
+    ":lume3d_config",
+    "../3d_widget_adapter:widget_adapter_config",
+  ]
+  external_deps = [
+    "ability_runtime:ability_manager",
+    "ability_runtime:app_context",
+    "ability_runtime:data_ability_helper",
+    "ability_runtime:napi_base_context",
+    "bundle_framework:appexecfwk_base",
+    "bundle_framework:appexecfwk_core",
+    "c_utils:utils",
+    "graphic_2d:librender_service_client",
+    "hilog:libhilog",
+    "hitrace:hitrace_meter",
+    "init:libbegetutil",
+    "napi:ace_napi",
+  ]
+
+  defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
+
+  if (target_cpu == "arm") {
+    defines += [
+      "PLATFORM_CORE_ROOT_PATH=/system/lib/",
+      "PLATFORM_APP_ROOT_PATH=/system/lib/",
+      "PLATFORM_APP_PLUGIN_PATH=/system/lib/",
+    ]
+  }
+
+  if (target_cpu == "arm64") {
+    defines += [
+      "PLATFORM_CORE_ROOT_PATH=/system/lib64/",
+      "PLATFORM_APP_ROOT_PATH=/system/lib64/",
+      "PLATFORM_APP_PLUGIN_PATH=/system/lib64/",
+    ]
+  }
+
+  deps = [ "../kits/js:napiInterface" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_static_library("scene_adapter_static") {
+  deps = [ ":scene_adapter_source" ]
+  public_configs = [
+    ":scene_adapter_config",
+    ":lume3d_config",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

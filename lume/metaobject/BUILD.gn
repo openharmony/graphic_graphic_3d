@@ -1,0 +1,227 @@
+# Copyright (C) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("lume_metaobject_config") {
+  include_dirs = [
+    "3rdparty/",
+    "src/",
+    "include",
+  ]
+
+  defines = [
+    "__OHOS_PLATFORM__",
+    "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE3D_SHARED_LIBRARY=1",
+    "CORE3D_VALIDATION_ENABLED=0",
+    "CORE3D_TESTS_ENABLED=0",
+    "CORE3D_DEV_ENABLED=${CORE_DEV_ENABLED}",
+    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }",
+  ]
+  cflags = [
+    "-Wall",
+    "-fexceptions",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-ignored-qualifiers",
+    "-Wno-unused-lambda-capture",
+    "-Wno-unused-but-set-variable",
+  ]
+  cflags_cc = [
+    "-Wno-overloaded-virtual",
+    "-Wno-missing-braces",
+  ]
+}
+
+ohos_source_set("lume_metaobject_src") {
+  public_configs = [
+    ":lume_metaobject_config",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default",
+  ]
+
+  sources = [
+    "src/animation/animation.h",
+    "src/animation/animation_controller.cpp",
+    "src/animation/animation_controller.h",
+    "src/animation/animation_modifier.h",
+    "src/animation/animation_state.cpp",
+    "src/animation/animation_state.h",
+    "src/animation/interpolator.cpp",
+    "src/animation/interpolator.h",
+    "src/animation/intf_animation_internal.h",
+    "src/animation/keyframe_animation.cpp",
+    "src/animation/keyframe_animation.h",
+    "src/animation/modifiers/loop.cpp",
+    "src/animation/modifiers/loop.h",
+    "src/animation/modifiers/reverse.cpp",
+    "src/animation/modifiers/reverse.h",
+    "src/animation/modifiers/speed.cpp",
+    "src/animation/modifiers/speed.h",
+    "src/animation/parallel_animation.cpp",
+    "src/animation/parallel_animation.h",
+    "src/animation/property_animation.cpp",
+    "src/animation/property_animation.h",
+    "src/animation/sequential_animation.cpp",
+    "src/animation/sequential_animation.h",
+    "src/animation/staggered_animation_state.cpp",
+    "src/animation/staggered_animation_state.h",
+    "src/animation/track_animation.cpp",
+    "src/animation/track_animation.h",
+    "src/animation/track_animation_state.cpp",
+    "src/animation/track_animation_state.h",
+    "src/attachment_container.cpp",
+    "src/attachment_container.h",
+    "src/base_object.cpp",
+    "src/base_object.h",
+    "src/call_context.cpp",
+    "src/call_context.h",
+    "src/class_registry.cpp",
+    "src/class_registry.h",
+    "src/connector.cpp",
+    "src/connector.h",
+    "src/container/container.cpp",
+    "src/container/container.h",
+    "src/container/container_base.cpp",
+    "src/container/container_base.h",
+    "src/container/flat_container.cpp",
+    "src/container/flat_container.h",
+    "src/container/object_container.cpp",
+    "src/container/object_container.h",
+    "src/container/object_flat_container.cpp",
+    "src/container/object_flat_container.h",
+    "src/container_observer.cpp",
+    "src/container_observer.h",
+    "src/content_object.cpp",
+    "src/curves/bezier_curve.cpp",
+    "src/curves/bezier_curve.h",
+    "src/curves/easing_curve.cpp",
+    "src/curves/easing_curve.h",
+    "src/engine/engine_input_property_manager.cpp",
+    "src/engine/engine_input_property_manager.h",
+    "src/engine/engine_value.cpp",
+    "src/engine/engine_value.h",
+    "src/engine/engine_value_manager.cpp",
+    "src/engine/engine_value_manager.h",
+    "src/functions.cpp",
+    "src/functions.h",
+    "src/future.cpp",
+    "src/future.h",
+    "src/loaders/class_content_loader.cpp",
+    "src/loaders/class_content_loader.h",
+    "src/loaders/csv_parser.cpp",
+    "src/loaders/csv_parser.h",
+    "src/loaders/csv_string_resource_loader.cpp",
+    "src/loaders/csv_string_resource_loader.h",
+    "src/loaders/json_content_loader.cpp",
+    "src/loaders/json_content_loader.h",
+    "src/manual_clock.cpp",
+    "src/meta_object.cpp",
+    "src/meta_object.h",
+    "src/meta_object_lib.cpp",
+    "src/meta_object_lib.h",
+    "src/metadata.cpp",
+    "src/metadata.h",
+    "src/model/composite_object_provider.cpp",
+    "src/model/composite_object_provider.h",
+    "src/model/container_data_model.cpp",
+    "src/model/container_data_model.h",
+    "src/model/content_loader_object_provider.cpp",
+    "src/model/content_loader_object_provider.h",
+    "src/model/instantiating_object_provider.cpp",
+    "src/model/instantiating_object_provider.h",
+    "src/model/object_provider_base.cpp",
+    "src/model/object_provider_base.h",
+    "src/number.cpp",
+    "src/number.h",
+    "src/object.cpp",
+    "src/object.h",
+    "src/object_context.cpp",
+    "src/object_context.h",
+    "src/object_hierarchy_observer.cpp",
+    "src/object_hierarchy_observer.h",
+    "src/object_registry.cpp",
+    "src/object_registry.h",
+    "src/plugin.cpp",
+    "src/polling_task_queue.cpp",
+    "src/property/bind.cpp",
+    "src/property/bind.h",
+    "src/property/dependencies.cpp",
+    "src/property/dependencies.h",
+    "src/property/property.cpp",
+    "src/property/property.h",
+    "src/property/stack_property.cpp",
+    "src/property/stack_property.h",
+    "src/proxy_object.cpp",
+    "src/proxy_object.h",
+    "src/random.cpp",
+    "src/random.h",
+    "src/ref_uri_util.cpp",
+    "src/ref_uri_util.h",
+    "src/register_anys.cpp",
+    "src/register_default_anims.cpp",
+    "src/register_default_objs.cpp",
+    "src/register_engine_access.cpp",
+    "src/register_entities.cpp",
+    "src/register_value_serializers.cpp",
+    "src/serialization/backend/debug_output.cpp",
+    "src/serialization/backend/debug_output.h",
+    "src/serialization/backend/json_input.cpp",
+    "src/serialization/backend/json_input.h",
+    "src/serialization/backend/json_output.cpp",
+    "src/serialization/backend/json_output.h",
+    "src/serialization/exporter.cpp",
+    "src/serialization/exporter.h",
+    "src/serialization/importer.cpp",
+    "src/serialization/importer.h",
+    "src/serialization/json_exporter.cpp",
+    "src/serialization/json_exporter.h",
+    "src/serialization/json_importer.cpp",
+    "src/serialization/json_importer.h",
+    "src/serialization/metav1_compat.cpp",
+    "src/serialization/metav1_compat.h",
+    "src/startable_object_controller.cpp",
+    "src/startable_object_controller.h",
+    "src/system_clock.cpp",
+    "src/task_queue.h",
+    "src/threaded_task_queue.cpp",
+  ]
+
+  external_deps = [ "c_utils:utils" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_static_library("libMetaObject") {
+  public_deps = [ ":lume_metaobject_src" ]
+  output_extension = "so"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("libPluginMetaObject") {
+  public_deps = [ ":libMetaObject" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

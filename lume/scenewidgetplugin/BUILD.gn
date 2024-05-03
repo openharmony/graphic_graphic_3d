@@ -1,0 +1,170 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("lume_scenewidget_config") {
+  include_dirs = [
+    "plugin/include",
+    "plugin/src",
+  ]
+
+  defines = [
+    "__OHOS_PLATFORM__",
+    "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE3D_SHARED_LIBRARY=1",
+    "CORE3D_VALIDATION_ENABLED=0",
+    "CORE3D_TESTS_ENABLED=0",
+    "CORE3D_DEV_ENABLED=${CORE_DEV_ENABLED}",
+    "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }",
+  ]
+
+  cflags = [
+    "-Wno-unused-function",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-logical-op-parentheses",
+    "-Wno-unused-local-typedef",
+
+    "-fvisibility=hidden",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-Wno-ignored-qualifiers",
+  ]
+
+  cflags_cc = [
+    "-std=c++17",
+    "-Wno-overloaded-virtual",
+    "-Wno-thread-safety-attributes",
+    "-Wno-missing-braces",
+    "-frtti",
+  ]
+}
+
+ohos_source_set("lume_scenewidget_src") {
+  public_configs = [
+    ":lume_scenewidget_config",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default",
+    "${LUME_METAOBJECT_PATH}:lume_metaobject_config",
+    "${LUME_ECS_HELPER_PATH}:lume_engine_ecshelper_config",
+  ]
+
+  sources = [
+    "plugin/src/PropertyHandlerArrayHolder.h",
+    "plugin/src/anim_impl.cpp",
+    "plugin/src/anim_impl.h",
+    "plugin/src/asset_loader.cpp",
+    "plugin/src/asset_loader.h",
+    "plugin/src/asset_manager.cpp",
+    "plugin/src/asset_manager.h",
+    "plugin/src/asset_migration.cpp",
+    "plugin/src/asset_migration.h",
+    "plugin/src/bind_templates.inl",
+    "plugin/src/camera_impl.cpp",
+    "plugin/src/camera_impl.h",
+    "plugin/src/component_dll.cpp",
+    "plugin/src/ecs_animation.cpp",
+    "plugin/src/ecs_animation.h",
+    "plugin/src/ecs_listener.h",
+    "plugin/src/ecs_object.cpp",
+    "plugin/src/ecs_serializer.cpp",
+    "plugin/src/ecs_serializer.h",
+    "plugin/src/ecs_util.h",
+    "plugin/src/entity_collection.cpp",
+    "plugin/src/entity_collection.h",
+    "plugin/src/env_impl.cpp",
+    "plugin/src/env_impl.h",
+    "plugin/src/graphicsstate_impl.cpp",
+    "plugin/src/graphicsstate_impl.h",
+    "plugin/src/hierarchy_controller.cpp",
+    "plugin/src/hierarchy_controller.h",
+    "plugin/src/intf_multi_mesh_initialization.h",
+    "plugin/src/intf_node_private.h",
+    "plugin/src/intf_postprocess_private.h",
+    "plugin/src/intf_resource_private.h",
+    "plugin/src/json.h",
+    "plugin/src/json_util.h",
+    "plugin/src/light_impl.cpp",
+    "plugin/src/light_impl.h",
+    "plugin/src/material_impl.cpp",
+    "plugin/src/material_impl.h",
+    "plugin/src/mesh_impl.cpp",
+    "plugin/src/mesh_impl.h",
+    "plugin/src/multimesh_impl.cpp",
+    "plugin/src/multimesh_impl.h",
+    "plugin/src/node_impl.cpp",
+    "plugin/src/node_impl.h",
+    "plugin/src/node_impl.h",
+    "plugin/src/postprocess_effect_impl.cpp",
+    "plugin/src/postprocess_effect_impl.h",
+    "plugin/src/postprocess_impl.cpp",
+    "plugin/src/postprocess_impl.h",
+    "plugin/src/propertyholder_impl.cpp",
+    "plugin/src/propertyholder_impl.h",
+    "plugin/src/register_engine_access.cpp",
+    "plugin/src/render_configuration_impl.cpp",
+    "plugin/src/render_configuration_impl.h",
+    "plugin/src/resource_container.cpp",
+    "plugin/src/resource_container.h",
+    "plugin/src/scene_holder.cpp",
+    "plugin/src/scene_holder.h",
+    "plugin/src/scene_impl.cpp",
+    "plugin/src/scene_nodes.cpp",
+    "plugin/src/shader_impl.cpp",
+    "plugin/src/shader_impl.h",
+    "plugin/src/submesh_impl.cpp",
+    "plugin/src/submesh_impl.h",
+    "plugin/src/submeshhandler.cpp",
+    "plugin/src/task_utils.h",
+    "plugin/src/textureinfo_impl.cpp",
+    "plugin/src/textureinfo_impl.h",
+  ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+    "${LUME_METAOBJECT_PATH}/include",
+  ]
+  deps = [
+    "${LUME_ECS_HELPER_PATH}:libAGPEcshelper",
+    "${LUME_METAOBJECT_PATH}:libPluginMetaObject",
+  ]
+
+  external_deps = [ "c_utils:utils" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_static_library("libSceneWidget") {
+  public_deps = [ ":lume_scenewidget_src" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+ohos_shared_library("libPluginSceneWidget") {
+  public_deps = [ ":libSceneWidget" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
