@@ -345,7 +345,7 @@
         {
             "baseShaderState": "3dshaderstates://core3d_dm.shadergs",
             "baseVariantName": "OPAQUE_FW_CW",
-            "variantName": "OPAQUE_FW_CW",
+            "variantName": "OPAQUE_DF_CW",
             "renderSlot": "CORE3D_RS_DM_DF_OPAQUE",
             "state": {
                 "rasterizationState": {

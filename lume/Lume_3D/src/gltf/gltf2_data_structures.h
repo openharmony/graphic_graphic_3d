@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,6 +30,7 @@
 #define GLTF2_EXTENSION_KHR_LIGHTS
 #define GLTF2_EXTENSION_KHR_LIGHTS_PBR
 #define GLTF2_EXTENSION_KHR_MATERIALS_CLEARCOAT
+#define GLTF2_EXTENSION_KHR_MATERIALS_EMISSIVE_STRENGTH
 #define GLTF2_EXTENSION_KHR_MATERIALS_IOR
 #define GLTF2_EXTENSION_KHR_MATERIALS_PBRSPECULARGLOSSINESS
 #define GLTF2_EXTENSION_KHR_MATERIALS_SHEEN
@@ -469,7 +470,7 @@ struct Material {
 
     TextureInfo emissiveTexture;
 
-    BASE_NS::Math::Vec3 emissiveFactor; // "default": [ 0.0, 0.0, 0.0 ],
+    BASE_NS::Math::Vec4 emissiveFactor = BASE_NS::Math::Vec4(0.f, 0.f, 0.f, 1.f); // "default": [ 0.0, 0.0, 0.0 ],
 
     AlphaMode alphaMode = AlphaMode::OPAQUE;
 
@@ -752,7 +753,7 @@ struct Animation {
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
 struct KHRLight {
     BASE_NS::string name;
-    LightType type = LightType::AMBIENT;
+    LightType type = LightType::DIRECTIONAL;
     BASE_NS::Math::Vec3 color = BASE_NS::Math::Vec3(1.f, 1.f, 1.f); // RGB
     float intensity = 1.0f; // Intensity of the light source in lumens. default 1.0
 

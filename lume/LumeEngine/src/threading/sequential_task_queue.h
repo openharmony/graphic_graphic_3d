@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,11 @@
 
 #include "threading/task_queue.h"
 
+BASE_BEGIN_NAMESPACE()
+template<class T>
+class array_view;
+BASE_END_NAMESPACE()
+
 CORE_BEGIN_NAMESPACE()
 // Non-thread safe sequential task queue, executes tasks sequentially one-by-one.
 // This queue type is not thread safe and should be only used from one thread.
@@ -40,6 +45,9 @@ public:
         @param task Task to execute.
     */
     void SubmitAfter(uint64_t afterIdentifier, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task);
+
+    void SubmitAfter(
+        BASE_NS::array_view<const uint64_t> afterIdentifiers, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task);
 
     /** Submit task to execution queue, to be run before another task.
         @param beforeIdentifier Identifier of the task that is run after the submitted task.

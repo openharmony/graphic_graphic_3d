@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,7 @@
 #define API_RENDER_IRENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H
 
 #include <base/containers/byte_array.h>
+#include <base/util/uid.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>

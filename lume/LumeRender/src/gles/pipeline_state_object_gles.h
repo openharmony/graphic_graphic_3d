@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -41,6 +41,7 @@ struct PipelineStateObjectPlatformDataGL final {
     RenderPassDesc renderPassDesc;
     DynamicStateFlags dynamicStateFlags;
     uint32_t vao;
+    uint32_t views;
 };
 
 class GraphicsPipelineStateObjectGLES final : public GraphicsPipelineStateObject {
@@ -48,22 +49,22 @@ public:
     GraphicsPipelineStateObjectGLES(Device& device, const GpuShaderProgram& gpuShaderProgram,
         const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
-        const ShaderSpecializationConstantDataView& specializationConstants, const DynamicStateFlags dynamicStateFlags,
-        const RenderPassDesc& renderPassDesc,
+        const ShaderSpecializationConstantDataView& specializationConstants,
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
         const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex);
 
     ~GraphicsPipelineStateObjectGLES();
 
     const PipelineStateObjectPlatformDataGL& GetPlatformData() const;
 
-    GpuShaderProgramGLES* GetOESProgram(const BASE_NS::vector<OES_Bind>& oes_binds) const;
+    GpuShaderProgramGLES* GetOESProgram(BASE_NS::array_view<const OES_Bind> oesBinds) const;
 
 private:
     void MakeVAO() noexcept;
     DeviceGLES& device_;
 
-    PipelineStateObjectPlatformDataGL plat_ {};
     BASE_NS::unique_ptr<GpuShaderProgramGLES> specialized_;
+    PipelineStateObjectPlatformDataGL plat_ {};
 
     mutable BASE_NS::unordered_map<BASE_NS::string, BASE_NS::unique_ptr<GpuShaderProgramGLES>>
         oesPrograms_; // generated dynamically.
@@ -80,8 +81,8 @@ public:
 private:
     DeviceGLES& device_;
 
+    BASE_NS::unique_ptr<GpuComputeProgramGLES> specialized_ { nullptr };
     PipelineStateObjectPlatformDataGL plat_ {};
-    GpuComputeProgramGLES* specialized_ { nullptr };
 };
 RENDER_END_NAMESPACE()
 

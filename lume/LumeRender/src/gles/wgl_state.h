@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,15 +46,21 @@ public:
     const DevicePlatformData& GetPlatformData() const;
 
     void SaveContext();
-    void SetContext(SwapchainGLES* swapChain);
+    void SetContext(const SwapchainGLES* swapChain);
     void RestoreContext();
     void* ErrorFilter() const;
 
     bool HasExtension(BASE_NS::string_view) const;
-
+    uintptr_t CreateSurface(uintptr_t window, uintptr_t instance) const noexcept;
+    void DestroySurface(uintptr_t surface) const noexcept;
     bool GetSurfaceInformation(HDC surface, GlesImplementation::SurfaceInfo& res) const;
+    void SwapBuffers(const SwapchainGLES& swapChain);
 
 protected:
+    bool GetInformation(HDC surface, int32_t configId, GlesImplementation::SurfaceInfo& res) const;
+    int ChoosePixelFormat(HDC dc, const BASE_NS::vector<int>& inattributes);
+
+    HMODULE glModule_ = nullptr;
     DevicePlatformDataGL plat_;
     struct ContextState {
         HGLRC context { nullptr };
@@ -62,14 +68,12 @@ protected:
     };
     ContextState oldContext_;
     ContextState dummyContext_;
-    bool vSync_ = false;
-    bool oldIsSet_ = false;
-    HMODULE glModule_ = NULL;
     BASE_NS::string extensions_;
     BASE_NS::vector<BASE_NS::string_view> extensionList_;
-    bool GetInformation(HDC surface, int32_t configId, GlesImplementation::SurfaceInfo& res) const;
-    int ChoosePixelFormat(HDC dc, const BASE_NS::vector<int>& inattributes);
-    bool hasSRGBFB_, hasColorSpace_;
+    bool vSync_ = true;
+    bool oldIsSet_ = false;
+    bool hasSRGBFB_ = false;
+    bool hasColorSpace_ = false;
 };
 } // namespace WGLHelpers
 RENDER_END_NAMESPACE()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -55,20 +55,18 @@ struct QueueProperties {
     bool canPresent { false };
 };
 
-struct Window {
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    uintptr_t hinstance;
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    uintptr_t connection;
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    uintptr_t display;
-#endif
-    uintptr_t window;
-};
-
 class CreateFunctionsVk {
 public:
+    struct Window {
+        // Win: hinstance
+        // Linux: connection
+        // Mac: display
+        uintptr_t instance;
+        uintptr_t window;
+    };
+
     static InstanceWrapper CreateInstance(const VersionInfo& engineInfo, const VersionInfo& appInfo);
+    static InstanceWrapper GetWrapper(VkInstance instance);
     static void DestroyInstance(VkInstance instance);
 
     static VkDebugReportCallbackEXT CreateDebugCallback(
@@ -80,6 +78,9 @@ public:
     static void DestroyDebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger);
 
     static PhysicalDeviceWrapper CreatePhysicalDevice(VkInstance instance, QueueProperties const& queueProperties);
+    static PhysicalDeviceWrapper GetWrapper(VkPhysicalDevice physicalDevice);
+    static bool HasExtension(
+        BASE_NS::array_view<const VkExtensionProperties> physicalDeviceExtensions, BASE_NS::string_view extension);
 
     static DeviceWrapper CreateDevice(VkInstance instance, VkPhysicalDevice physicalDevice,
         const BASE_NS::vector<VkExtensionProperties>& physicalDeviceExtensions,

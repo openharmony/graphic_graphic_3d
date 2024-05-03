@@ -34,13 +34,13 @@ void main(void)
     const vec2 uv = inUv;
 
     // center
-    vec4 color = texture(sampler2D(uTex, uSampler), uv) * 0.5;
+    vec4 color = textureLod(sampler2D(uTex, uSampler), uv, 0) * 0.5;
     // corners
     // 1.0 / 8.0 = 0.125
-    color += texture(sampler2D(uTex, uSampler), uv - ts) * 0.125;
-    color += texture(sampler2D(uTex, uSampler), uv + vec2(ts.x, -ts.y)) * 0.125;
-    color += texture(sampler2D(uTex, uSampler), uv + vec2(-ts.x, ts.y)) * 0.125;
-    color += texture(sampler2D(uTex, uSampler), uv + ts) * 0.125;
+    color += textureLod(sampler2D(uTex, uSampler), uv - ts, 0) * 0.125;
+    color += textureLod(sampler2D(uTex, uSampler), uv + vec2(ts.x, -ts.y), 0) * 0.125;
+    color += textureLod(sampler2D(uTex, uSampler), uv + vec2(-ts.x, ts.y), 0) * 0.125;
+    color += textureLod(sampler2D(uTex, uSampler), uv + ts, 0) * 0.125;
 
     outColor = color.rgba;
 }

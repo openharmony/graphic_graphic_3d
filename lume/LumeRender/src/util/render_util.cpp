@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,7 +26,20 @@
 RENDER_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 
-RenderUtil::RenderUtil(const IRenderContext& renderContext) : renderContext_(renderContext) {}
+RenderUtil::RenderUtil(const IRenderContext& renderContext) : renderContext_(renderContext)
+{
+    renderFrameUtil_ = make_unique<RenderFrameUtil>(renderContext);
+}
+
+void RenderUtil::BeginFrame()
+{
+    renderFrameUtil_->BeginFrame();
+}
+
+void RenderUtil::EndFrame()
+{
+    renderFrameUtil_->EndFrame();
+}
 
 RenderHandleDesc RenderUtil::GetRenderHandleDesc(const RenderHandleReference& handle) const
 {
@@ -97,6 +110,11 @@ void RenderUtil::SetRenderTimings(const RenderTimings::Times& times)
 RenderTimings RenderUtil::GetRenderTimings() const
 {
     return renderTimings_;
+}
+
+IRenderFrameUtil& RenderUtil::GetRenderFrameUtil() const
+{
+    return *renderFrameUtil_;
 }
 
 RENDER_END_NAMESPACE()

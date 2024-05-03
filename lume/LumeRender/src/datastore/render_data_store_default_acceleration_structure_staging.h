@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <mutex>
 
+#include <base/containers/string.h>
 #include <base/containers/vector.h>
 #include <base/util/uid.h>
 #include <render/datastore/intf_render_data_store_default_acceleration_structure_staging.h>
@@ -26,9 +27,8 @@
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
-#include "device/gpu_resource_manager.h"
-
 RENDER_BEGIN_NAMESPACE()
+class IGpuResourceManager;
 class IRenderContext;
 
 struct AccelerationStructureBuildConsumeStruct {
@@ -63,10 +63,16 @@ public:
     RenderDataStoreDefaultAccelerationStructureStaging(IRenderContext& renderContext, const BASE_NS::string_view name);
     ~RenderDataStoreDefaultAccelerationStructureStaging() override;
 
+    void CommitFrameData() override {};
     void PreRender() override;
-    void PreRenderBackend() override {};
     void PostRender() override;
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override;
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
         const BASE_NS::array_view<const StagingAccelerationStructureGeometryTrianglesData> geometries) override;

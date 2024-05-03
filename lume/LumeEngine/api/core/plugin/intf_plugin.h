@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,10 +16,8 @@
 #ifndef API_CORE_PLUGIN_IPLUGIN_H
 #define API_CORE_PLUGIN_IPLUGIN_H
 
-#include <cstdint>
-
 #include <base/containers/array_view.h>
-#include <base/util/compile_time_hashes.h>
+#include <base/namespace.h>
 #include <base/util/uid.h>
 #include <core/namespace.h>
 

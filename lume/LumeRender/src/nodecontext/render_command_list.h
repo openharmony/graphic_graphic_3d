@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,18 +20,14 @@
 #include <cstdint>
 
 #include <base/containers/array_view.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
-#include <base/util/formats.h>
-#include <render/device/pipeline_layout_desc.h>
-#include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_render_command_list.h>
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
-
-#include "nodecontext/pipeline_descriptor_set_binder.h"
-#include "util/log.h"
 
 RENDER_BEGIN_NAMESPACE()
 class GpuResourceManager;
@@ -61,6 +57,8 @@ enum class DrawType : uint32_t {
 // CopyBuffer
 // CopyBufferImage
 // BlitImage
+// ClearColorImage
+
 enum class RenderCommandType : uint32_t {
     UNDEFINED,
     DRAW,
@@ -80,12 +78,13 @@ enum class RenderCommandType : uint32_t {
 
     BARRIER_POINT,
 
-    UPDATE_DESCRIPTOR_SETS,
     BIND_DESCRIPTOR_SETS,
 
     PUSH_CONSTANT,
 
     BUILD_ACCELERATION_STRUCTURE,
+
+    CLEAR_COLOR_IMAGE,
 
     DYNAMIC_STATE_VIEWPORT,
     DYNAMIC_STATE_SCISSOR,
@@ -94,6 +93,7 @@ enum class RenderCommandType : uint32_t {
     DYNAMIC_STATE_BLEND_CONSTANTS,
     DYNAMIC_STATE_DEPTH_BOUNDS,
     DYNAMIC_STATE_STENCIL,
+    DYNAMIC_STATE_FRAGMENT_SHADING_RATE,
 
     EXECUTE_BACKEND_FRAME_POSITION,
 
@@ -101,7 +101,56 @@ enum class RenderCommandType : uint32_t {
 
     GPU_QUEUE_TRANSFER_RELEASE,
     GPU_QUEUE_TRANSFER_ACQUIRE,
+
+    COUNT, // used as the number of values and must be last
 };
+
+#if RENDER_DEBUG_COMMAND_MARKERS_ENABLED
+// These names should match the RenderCommandType enum values.
+constexpr const char* COMMAND_NAMES[] = {
+    "Undefined",
+    "Draw",
+    "DrawIndirect",
+    "Dispatch",
+    "DispatchIndirect",
+    "BindPipeline",
+    "BeginRenderPass",
+    "NextSubpass",
+    "EndRenderPass",
+    "BindVertexBuffers",
+    "BindIndexBuffer",
+    "CopyBuffer",
+    "CopyBufferImage",
+    "CopyImage",
+    "BlitImage",
+
+    "BarrierPoint",
+    "BindDescriptorSets",
+
+    "PushConstant",
+
+    "BuildAccelerationStructures",
+
+    "ClearColorImage",
+
+    "DynamicStateViewport",
+    "DynamicStateScissor",
+    "DynamicStateLineWidth",
+    "DynamicStateDepthBias",
+    "DynamicStateBlendConstants",
+    "DynamicStateDepthBounds",
+    "DynamicStateStencil",
+    "DynamicStateFragmentShadingRate",
+
+    "ExecuteBackendFramePosition",
+
+    "WriteTimestamp",
+
+    "GpuQueueTransferRelease",
+    "GpuQueueTransferAcquire",
+};
+static_assert(BASE_NS::countof(COMMAND_NAMES) == (static_cast<uint32_t>(RenderCommandType::COUNT)));
+#endif
 
 enum class RenderPassBeginType : uint32_t {
     RENDER_PASS_BEGIN,
@@ -151,20 +200,18 @@ struct RenderCommandBindPipeline {
     PipelineBindPoint pipelineBindPoint;
 };
 
-struct RenderCommandUpdateDescriptorSets {
-    RenderHandle descriptorSetHandles[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { {}, {}, {}, {} };
-};
-
 struct RenderCommandBindDescriptorSets {
     RenderHandle psoHandle; // this is the previously BindPipeline() pso handle
 
     uint32_t firstSet { 0u };
     uint32_t setCount { 0u };
-    PLUGIN_STATIC_ASSERT(PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT == 4);
     RenderHandle descriptorSetHandles[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { {}, {}, {}, {} };
 
-    uint32_t dynamicOffsetCount { 0u };
-    uint32_t* dynamicOffsets { nullptr };
+    struct DescriptorSetDynamicOffsets {
+        uint32_t dynamicOffsetCount { 0u };
+        uint32_t* dynamicOffsets { nullptr };
+    };
+    DescriptorSetDynamicOffsets descriptorSetDynamicOffsets[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
 };
 
 struct RenderPassImageLayouts {
@@ -182,7 +229,6 @@ struct RenderPassImageLayouts {
 };
 
 struct RenderPassAttachmentResourceStates {
-    PLUGIN_STATIC_ASSERT(PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT == 8u);
     // the state of resources when used in render pass (subpasses)
     GpuResourceState states[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] {};
     ImageLayout layouts[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] { CORE_IMAGE_LAYOUT_UNDEFINED,
@@ -223,6 +269,7 @@ struct RenderCommandBlitImage {
 
     Filter filter { Filter::CORE_FILTER_NEAREST };
 
+    // added already in render command list methods to correct layouts
     ImageLayout srcImageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
     ImageLayout dstImageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
 };
@@ -263,6 +310,9 @@ struct RenderCommandBarrierPoint {
 
     uint32_t vertexIndexBarrierIndexBegin { ~0u };
     uint32_t vertexIndexBarrierCount { 0u };
+
+    uint32_t indirectBufferBarrierIndexBegin { ~0u };
+    uint32_t indirectBufferBarrierCount { 0u };
 
     uint32_t descriptorSetHandleIndexBegin { ~0u };
     uint32_t descriptorSetHandleCount { 0 };
@@ -326,6 +376,15 @@ struct RenderCommandBuildAccelerationStructure {
     BASE_NS::array_view<AccelerationStructureGeometryInstancesData> instancesView;
 };
 
+struct RenderCommandClearColorImage {
+    RenderHandle handle;
+    ClearColorValue color;
+    // added already in render command list methods to correct layout
+    ImageLayout imageLayout { CORE_IMAGE_LAYOUT_UNDEFINED };
+
+    BASE_NS::array_view<ImageSubresourceRange> ranges;
+};
+
 // dynamic states
 struct RenderCommandDynamicStateViewport {
     ViewportDesc viewportDesc;
@@ -367,6 +426,11 @@ struct RenderCommandDynamicStateStencil {
     uint32_t mask { 0 };
 };
 
+struct RenderCommandDynamicStateFragmentShadingRate {
+    Size2D fragmentSize { 1u, 1u };
+    FragmentShadingRateCombinerOps combinerOps {};
+};
+
 struct RenderCommandWriteTimestamp {
     RenderHandle handle;
     uint32_t queryIndex { 0 };
@@ -382,13 +446,24 @@ struct RenderCommandWithType {
     void* rc { nullptr };
 };
 
+struct MultiRenderPassCommandListData {
+    uint32_t subpassCount { 1u };
+    uint32_t rpBeginCmdIndex { ~0u };
+    uint32_t rpEndCmdIndex { ~0u };
+    uint32_t rpBarrierCmdIndex { ~0u };
+    bool secondaryCmdLists { false };
+};
+
+// RenderCommandList implementation
+// NOTE: Many early optimizations cannot be done in the render command list
+// (e.g. render pass and pipeline hashes are fully evaluated in the backend)
 class RenderCommandList final : public IRenderCommandList {
 public:
     struct LinearAllocatorStruct {
         BASE_NS::vector<BASE_NS::unique_ptr<LinearAllocator>> allocators;
     };
 
-    RenderCommandList(NodeContextDescriptorSetManager& nodeContextDescriptorSetMgr,
+    RenderCommandList(const BASE_NS::string_view nodeName, NodeContextDescriptorSetManager& nodeContextDescriptorSetMgr,
         const GpuResourceManager& gpuResourceMgr, const NodeContextPsoManager& nodeContextPsoMgr, const GpuQueue& queue,
         const bool enableMultiQueue);
     ~RenderCommandList() = default;
@@ -401,12 +476,14 @@ public:
     bool HasValidRenderCommands() const;
     GpuQueue GetGpuQueue() const;
     bool HasMultiRenderCommandListSubpasses() const;
-    uint32_t GetMultiRenderCommandListSubpassCount() const;
+    MultiRenderPassCommandListData GetMultiRenderCommandListData() const;
 
     BASE_NS::array_view<const CommandBarrier> GetCustomBarriers() const;
-    BASE_NS::array_view<const VertexBuffer> GetVertexInputBufferBarriers() const;
+    BASE_NS::array_view<const VertexBuffer> GetRenderpassVertexInputBufferBarriers() const;
+    BASE_NS::array_view<const VertexBuffer> GetRenderpassIndirectBufferBarriers() const;
     // for barriers
     BASE_NS::array_view<const RenderHandle> GetDescriptorSetHandles() const;
+    BASE_NS::array_view<const RenderHandle> GetUpdateDescriptorSetHandles() const;
 
     // reset buffers and data
     void BeginFrame();
@@ -430,7 +507,9 @@ public:
 
     void BindPipeline(const RenderHandle psoHandle) override;
 
-    void PushConstant(const RENDER_NS::PushConstant& pushConstant, const uint8_t* data) override;
+    void PushConstantData(
+        const struct RENDER_NS::PushConstant& pushConstant, const BASE_NS::array_view<const uint8_t> data) override;
+    void PushConstant(const struct RENDER_NS::PushConstant& pushConstant, const uint8_t* data) override;
 
     void BindVertexBuffers(const BASE_NS::array_view<const VertexBuffer> vertexBuffers) override;
     void BindIndexBuffer(const IndexBuffer& indexBuffer) override;
@@ -469,18 +548,23 @@ public:
 
     void UpdateDescriptorSet(
         const RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources) override;
+    void UpdateDescriptorSets(const BASE_NS::array_view<const RenderHandle> handles,
+        const BASE_NS::array_view<const DescriptorSetLayoutBindingResources> bindingResources) override;
     void BindDescriptorSet(const uint32_t set, const RenderHandle handle) override;
     void BindDescriptorSet(const uint32_t set, const RenderHandle handle,
         const BASE_NS::array_view<const uint32_t> dynamicOffsets) override;
     void BindDescriptorSets(const uint32_t firstSet, const BASE_NS::array_view<const RenderHandle> handles) override;
-    // only supports setting dynamic offsets when there is a single descriptor set
-    void BindDescriptorSets(const uint32_t firstSet, const BASE_NS::array_view<const RenderHandle> handles,
-        const BASE_NS::array_view<const uint32_t> dynamicOffsets);
+    void BindDescriptorSet(const uint32_t set, const BindDescriptorSetData& desriptorSetData) override;
+    void BindDescriptorSets(
+        const uint32_t firstSet, const BASE_NS::array_view<const BindDescriptorSetData> descriptorSetData) override;
 
     void BuildAccelerationStructures(const AccelerationStructureBuildGeometryData& geometry,
         const BASE_NS::array_view<const AccelerationStructureGeometryTrianglesData> triangles,
         const BASE_NS::array_view<const AccelerationStructureGeometryAabbsData> aabbs,
         const BASE_NS::array_view<const AccelerationStructureGeometryInstancesData> instances) override;
+
+    void ClearColorImage(const RenderHandle handle, const ClearColorValue color,
+        const BASE_NS::array_view<const ImageSubresourceRange> ranges) override;
 
     // dynamic states
     void SetDynamicStateViewport(const ViewportDesc& viewportDesc) override;
@@ -493,20 +577,19 @@ public:
     void SetDynamicStateStencilCompareMask(const StencilFaceFlags faceMask, const uint32_t compareMask) override;
     void SetDynamicStateStencilWriteMask(const StencilFaceFlags faceMask, const uint32_t writeMask) override;
     void SetDynamicStateStencilReference(const StencilFaceFlags faceMask, const uint32_t reference) override;
+    void SetDynamicStateFragmentShadingRate(
+        const Size2D& fragmentSize, const FragmentShadingRateCombinerOps& combinerOps) override;
 
     void SetExecuteBackendFramePosition() override;
 
-    // for IRenderNodeInterface
-    BASE_NS::string_view GetTypeName() const override
-    {
-        return "IRenderCommandList";
-    }
-    BASE_NS::Uid GetUid() const override
-    {
-        return IRenderCommandList::UID;
-    }
+    // IInterface
+    const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
+    CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override;
+    void Ref() override;
+    void Unref() override;
 
 private:
+    const BASE_NS::string nodeName_;
 #if (RENDER_VALIDATION_ENABLED == 1)
     // used for validation
     const GpuResourceManager& gpuResourceMgr_;
@@ -519,15 +602,18 @@ private:
     // on compute this happens before Dispatch -methods
     void AddBarrierPoint(const RenderCommandType renderCommandType);
 
-    void ProcessInputAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
+    bool ProcessInputAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
         RenderPassAttachmentResourceStates& subpassResourceStates);
-    void ProcessColorAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
+    bool ProcessColorAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
         RenderPassAttachmentResourceStates& subpassResourceStates);
-    void ProcessResolveAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
+    bool ProcessResolveAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
         RenderPassAttachmentResourceStates& subpassResourceStates);
-    void ProcessDepthAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
+    bool ProcessDepthAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
         RenderPassAttachmentResourceStates& subpassResourceStates);
+    bool ProcessFragmentShadingRateAttachments(const RenderPassDesc& renderPassDsc,
+        const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates);
 
+    void ValidateRenderPass(const RenderPassDesc& renderPassDesc);
     void ValidatePipeline();
     void ValidatePipelineLayout();
 
@@ -558,7 +644,7 @@ private:
         // handle for validation
         RenderHandle currentPsoHandle;
         bool checkBindPipelineLayout { false };
-        PipelineBindPoint currentPsoBindPoint { PipelineBindPoint::CORE_PIPELINE_BIND_POINT_MAX_ENUM };
+        PipelineBindPoint currentPsoBindPoint { PipelineBindPoint::CORE_PIPELINE_BIND_POINT_GRAPHICS };
 
         uint32_t currentBoundSetsMask { 0u }; // bitmask for all descriptor sets
         DescriptorSetBind currentBoundSets[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
@@ -580,8 +666,8 @@ private:
     bool validReleaseAcquire_ { false };
 
     // true if render pass has been begun with subpasscount > 1 and not all subpasses given
-    bool hasMultiRenderCommandListSubpasses_ { false };
-    uint32_t multiRendercommandListSubpassCount_ { 1u };
+    bool hasMultiRpCommandListSubpasses_ { false };
+    MultiRenderPassCommandListData multiRpCommandListData_ {};
 
     BASE_NS::vector<RenderCommandWithType> renderCommands_;
 
@@ -592,11 +678,19 @@ private:
     // store all vertex and index buffer barriers to this list and provide indices in "barrier point"
     // barriers are batched in this point and command is commit to the real GPU command buffer
     // obviously barriers are only needed in begin render pass barrier point
-    BASE_NS::vector<VertexBuffer> vertexInputBufferBarriers_;
+    BASE_NS::vector<VertexBuffer> rpVertexInputBufferBarriers_;
+
+    // store all renderpass draw indirect barriers to this list and provide indices in "barrier point"
+    // barriers are batched in this point and command is commit to the real GPU command buffer
+    // obviously barriers are only needed in begin render pass barrier point
+    BASE_NS::vector<VertexBuffer> rpIndirectBufferBarriers_;
 
     // store all descriptor set handles to this list and provide indices in "barrier point"
     // barriers are batched in this point and command is commit to the real GPU command buffer
     BASE_NS::vector<RenderHandle> descriptorSetHandlesForBarriers_;
+
+    // store all descriptor set handles which are updated to this list
+    BASE_NS::vector<RenderHandle> descriptorSetHandlesForUpdates_;
 
     // linear allocator for render command list commands
     LinearAllocatorStruct allocator_;

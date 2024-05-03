@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,18 +24,18 @@ BASE_BEGIN_NAMESPACE()
 class ByteArray;
 BASE_END_NAMESPACE()
 RENDER_BEGIN_NAMESPACE()
-class Device;
+class IDevice;
 class GpuBuffer;
 class GpuImage;
 class GpuSampler;
 class GpuResourceManager;
 
 namespace GpuResourceUtil {
-void CopyGpuResource(const Device& device, const GpuResourceManager& gpuResourceMgr, const RenderHandle handle,
+void CopyGpuResource(const IDevice& device, const GpuResourceManager& gpuResourceMgr, const RenderHandle handle,
     BASE_NS::ByteArray& byteArray);
-void DebugBufferName(const Device& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
-void DebugImageName(const Device& device, const GpuImage& image, const BASE_NS::string_view name);
-void DebugSamplerName(const Device& device, const GpuSampler& sampler, const BASE_NS::string_view name);
+void DebugBufferName(const IDevice& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
+void DebugImageName(const IDevice& device, const GpuImage& image, const BASE_NS::string_view name);
+void DebugSamplerName(const IDevice& device, const GpuSampler& sampler, const BASE_NS::string_view name);
 } // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()
 

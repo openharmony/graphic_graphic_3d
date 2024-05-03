@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,6 +21,7 @@
 
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/joint_matrices_component.h>
+#include <3d/ecs/components/layer_component.h>
 #include <3d/ecs/components/mesh_component.h>
 #include <3d/ecs/components/render_mesh_component.h>
 #include <3d/ecs/components/transform_component.h>
@@ -38,40 +39,39 @@
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property/intf_property_handle.h>
 
+#include "util/scene_util.h"
+
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace CORE_NS;
 using namespace RENDER_NS;
 
-Math::Mat4X4 Picking::GetCameraViewToProjectionMatrix(const CameraComponent& cameraComponent) const
+namespace {
+MinAndMax GetWorldAABB(const Math::Mat4X4& world, const Math::Vec3& aabbMin, const Math::Vec3& aabbMax)
 {
-    switch (cameraComponent.projection) {
-        case CameraComponent::Projection::ORTHOGRAPHIC: {
-            auto orthoProj = Math::OrthoRhZo(cameraComponent.xMag * -0.5f, cameraComponent.xMag * 0.5f,
-                cameraComponent.yMag * -0.5f, cameraComponent.yMag * 0.5f, cameraComponent.zNear, cameraComponent.zFar);
-            orthoProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
-            return orthoProj;
-        }
+    // Based on https://gist.github.com/cmf028/81e8d3907035640ee0e3fdd69ada543f
+    const auto center = (aabbMin + aabbMax) * 0.5f;
+    const auto extents = aabbMax - center;
 
-        case CameraComponent::Projection::PERSPECTIVE: {
-            auto persProj = Math::PerspectiveRhZo(
-                cameraComponent.yFov, cameraComponent.aspect, cameraComponent.zNear, cameraComponent.zFar);
-            persProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
-            return persProj;
-        }
+    const auto centerW = Math::MultiplyPoint3X4(world, center);
 
-        case CameraComponent::Projection::CUSTOM: {
-            return cameraComponent.customProjectionMatrix;
-        }
-
-        default:
-            CORE_ASSERT(false);
-            return Math::Mat4X4(1.0f);
+    Math::Mat3X3 absWorld;
+    for (auto i = 0U; i < countof(absWorld.base); ++i) {
+        absWorld.base[i].x = Math::abs(world.base[i].x);
+        absWorld.base[i].y = Math::abs(world.base[i].y);
+        absWorld.base[i].z = Math::abs(world.base[i].z);
     }
+
+    Math::Vec3 extentsW;
+    extentsW.x = absWorld.x.x * extents.x + absWorld.y.x * extents.y + absWorld.z.x * extents.z;
+    extentsW.y = absWorld.x.y * extents.x + absWorld.y.y * extents.y + absWorld.z.y * extents.z;
+    extentsW.z = absWorld.x.z * extents.x + absWorld.y.z * extents.y + absWorld.z.z * extents.z;
+
+    return MinAndMax { centerW - extentsW, centerW + extentsW };
 }
 
-constexpr bool Picking::IntersectAabb(
-    Math::Vec3 aabbMin, Math::Vec3 aabbMax, Math::Vec3 start, Math::Vec3 invDirection) const
+constexpr bool IntersectAabb(
+    Math::Vec3 aabbMin, Math::Vec3 aabbMax, Math::Vec3 start, Math::Vec3 invDirection, float& hitDistance)
 {
     const float tx1 = (aabbMin.x - start.x) * invDirection.x;
     const float tx2 = (aabbMax.x - start.x) * invDirection.x;
@@ -91,14 +91,62 @@ constexpr bool Picking::IntersectAabb(
     tmin = Math::max(tmin, Math::min(tz1, tz2));
     tmax = Math::min(tmax, Math::max(tz1, tz2));
 
+    hitDistance = tmin;
+    // If hitDistance < 0, ray origin was inside the AABB.
+    if (hitDistance < 0.0f) {
+        hitDistance = tmax;
+        // No hit, set distance to 0.
+        if (hitDistance < 0.0f) {
+            hitDistance = 0.0f;
+        }
+    }
+
     return tmax >= tmin && tmax > 0.0f;
 }
 
+bool IntersectTriangle(const Math::Vec3 triangle[3], const Math::Vec3 start, const Math::Vec3 direction,
+    float& hitDistance, Math::Vec2& uv)
+{
+    const Math::Vec3 v0v1 = triangle[1] - triangle[0];
+    const Math::Vec3 v0v2 = triangle[2] - triangle[0];
+
+    const Math::Vec3 pvec = Math::Cross(direction, v0v2);
+    const float det = Math::Dot(v0v1, pvec);
+
+    // ray and triangle are parallel and backface culling
+    if (det < Math::EPSILON) {
+        hitDistance = 0.f;
+        return false;
+    }
+
+    const float invDet = 1.f / det;
+    const Math::Vec3 tvec = start - triangle[0];
+
+    const float u = Math::Dot(tvec, pvec) * invDet;
+    if (u < 0 || u > 1) {
+        hitDistance = 0.f;
+        uv = Math::Vec2(0, 0);
+        return false;
+    }
+
+    const Math::Vec3 qvec = Math::Cross(tvec, v0v1);
+    const float v = Math::Dot(direction, qvec) * invDet;
+    if (v < 0 || u + v > 1) {
+        hitDistance = 0.f;
+        uv = Math::Vec2(0, 0);
+        return false;
+    }
+
+    hitDistance = Math::Dot(v0v2, qvec) * invDet;
+    uv = Math::Vec2(u, v);
+    return true;
+}
+
 // Calculates AABB using WorldMatrixComponent.
-void Picking::UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
+void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
     const IWorldMatrixComponentManager& worldMatrixComponentManager,
     const IJointMatricesComponentManager& jointMatricesComponentManager, const IMeshComponentManager& meshManager,
-    const ISceneNode& sceneNode, bool isRecursive, MinAndMax& mamInOut) const
+    const ISceneNode& sceneNode, bool isRecursive, MinAndMax& mamInOut)
 {
     const Entity entity = sceneNode.GetEntity();
     if (const auto jointMatrices = jointMatricesComponentManager.Read(entity); jointMatrices) {
@@ -132,9 +180,9 @@ void Picking::UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshC
 }
 
 // Calculates AABB using TransformComponent.
-void Picking::UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
+void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
     const ITransformComponentManager& transformComponentManager, const IMeshComponentManager& meshManager,
-    const ISceneNode& sceneNode, const Math::Mat4X4& parentWorld, bool isRecursive, MinAndMax& mamInOut) const
+    const ISceneNode& sceneNode, const Math::Mat4X4& parentWorld, bool isRecursive, MinAndMax& mamInOut)
 {
     const Entity entity = sceneNode.GetEntity();
     Math::Mat4X4 worldMatrix = parentWorld;
@@ -167,35 +215,82 @@ void Picking::UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshC
     }
 }
 
-RayCastResult Picking::HitTestNode(ISceneNode& node, const MeshComponent& mesh, const Math::Mat4X4& matrix,
-    const Math::Vec3& start, const Math::Vec3& invDir) const
+RayCastResult HitTestNode(ISceneNode& node, const MeshComponent& mesh, const Math::Mat4X4& matrix,
+    const Math::Vec3& start, const Math::Vec3& invDir)
 {
     RayCastResult raycastResult;
+    const auto direction = Math::Vec3(1.f / invDir.x, 1.f / invDir.y, 1.f / invDir.z);
 
     const MinAndMax meshMinMax = GetWorldAABB(matrix, mesh.aabbMin, mesh.aabbMax);
-    if (IntersectAabb(meshMinMax.minAABB, meshMinMax.maxAABB, start, invDir)) {
+    float distance = 0;
+    if (IntersectAabb(meshMinMax.minAABB, meshMinMax.maxAABB, start, invDir, distance)) {
         if (mesh.submeshes.size() > 1) {
-            raycastResult.distance = std::numeric_limits<float>::max();
+            raycastResult.centerDistance = std::numeric_limits<float>::max();
 
             for (auto const& submesh : mesh.submeshes) {
                 const MinAndMax submeshMinMax = GetWorldAABB(matrix, submesh.aabbMin, submesh.aabbMax);
-                if (IntersectAabb(submeshMinMax.minAABB, submeshMinMax.maxAABB, start, invDir)) {
-                    const float distance =
+                if (IntersectAabb(submeshMinMax.minAABB, submeshMinMax.maxAABB, start, invDir, distance)) {
+                    const float centerDistance =
                         Math::Magnitude((submeshMinMax.maxAABB + submeshMinMax.minAABB) / 2.f - start);
-                    if (distance < raycastResult.distance) {
+                    if (centerDistance < raycastResult.centerDistance) {
                         raycastResult.node = &node;
+                        raycastResult.centerDistance = centerDistance;
                         raycastResult.distance = distance;
+                        raycastResult.worldPosition = start + direction * distance;
                     }
                 }
             }
         } else {
-            raycastResult.distance = Math::Magnitude((meshMinMax.minAABB + meshMinMax.maxAABB) / 2.f - start);
+            raycastResult.centerDistance = Math::Magnitude((meshMinMax.minAABB + meshMinMax.maxAABB) / 2.f - start);
+            raycastResult.distance = distance;
             raycastResult.node = &node;
+            raycastResult.worldPosition = start + direction * raycastResult.distance;
         }
     }
 
     return raycastResult;
 }
+
+Math::Vec3 ScreenToWorld(const CameraComponent& cameraComponent, const WorldMatrixComponent& cameraWorldMatrixComponent,
+    Math::Vec3 screenCoordinate)
+{
+    screenCoordinate.x = (screenCoordinate.x - 0.5f) * 2.f;
+    screenCoordinate.y = (screenCoordinate.y - 0.5f) * 2.f;
+
+    bool isCameraNegative = false;
+    Math::Mat4X4 projToView =
+        Math::Inverse(CameraMatrixUtil::CalculateProjectionMatrix(cameraComponent, isCameraNegative));
+
+    auto const& worldFromView = cameraWorldMatrixComponent.matrix;
+    const auto viewCoordinate =
+        (projToView * Math::Vec4(screenCoordinate.x, screenCoordinate.y, screenCoordinate.z, 1.f));
+    auto worldCoordinate = worldFromView * viewCoordinate;
+    worldCoordinate /= worldCoordinate.w;
+    return Math::Vec3 { worldCoordinate.x, worldCoordinate.y, worldCoordinate.z };
+}
+
+struct Ray {
+    Math::Vec3 origin;
+    Math::Vec3 direction;
+};
+
+Ray RayFromCamera(const CameraComponent& cameraComponent, const WorldMatrixComponent& cameraWorldMatrixComponent,
+    Math::Vec2 screenCoordinate)
+{
+    if (cameraComponent.projection == CORE3D_NS::CameraComponent::Projection::ORTHOGRAPHIC) {
+        const Math::Vec3 worldPos = CORE3D_NS::ScreenToWorld(
+            cameraComponent, cameraWorldMatrixComponent, Math::Vec3(screenCoordinate.x, screenCoordinate.y, 0.0f));
+        const auto direction = cameraWorldMatrixComponent.matrix * Math::Vec4(0.0f, 0.0f, -1.0f, 0.0f);
+        return Ray { worldPos, direction };
+    }
+    // Ray origin is the camera world position.
+    const Math::Vec3& rayOrigin = Math::Vec3(cameraWorldMatrixComponent.matrix.w);
+    const Math::Vec3 targetPos = CORE3D_NS::ScreenToWorld(
+        cameraComponent, cameraWorldMatrixComponent, Math::Vec3(screenCoordinate.x, screenCoordinate.y, 1.0f));
+    const Math::Vec3 direction = Math::Normalize(targetPos - rayOrigin);
+    return Ray { rayOrigin, direction };
+}
+} // namespace
 
 Math::Vec3 Picking::ScreenToWorld(IEcs const& ecs, Entity cameraEntity, Math::Vec3 screenCoordinate) const
 {
@@ -214,21 +309,8 @@ Math::Vec3 Picking::ScreenToWorld(IEcs const& ecs, Entity cameraEntity, Math::Ve
     if (worldMatrixId == IComponentManager::INVALID_COMPONENT_ID) {
         return {};
     }
-
-    const CameraComponent cameraComponent = cameraComponentManager->Get(cameraId);
-
-    screenCoordinate.x = (screenCoordinate.x - 0.5f) * 2.f;
-    screenCoordinate.y = (screenCoordinate.y - 0.5f) * 2.f;
-
-    Math::Mat4X4 projToView = Math::Inverse(GetCameraViewToProjectionMatrix(cameraComponent));
-
-    const WorldMatrixComponent worldMatrixComponent = worldMatrixComponentManager->Get(worldMatrixId);
-    auto const& worldFromView = worldMatrixComponent.matrix;
-    const auto viewCoordinate =
-        (projToView * Math::Vec4(screenCoordinate.x, screenCoordinate.y, screenCoordinate.z, 1.f));
-    auto worldCoordinate = worldFromView * viewCoordinate;
-    worldCoordinate /= worldCoordinate.w;
-    return Math::Vec3 { worldCoordinate.x, worldCoordinate.y, worldCoordinate.z };
+    return CORE3D_NS::ScreenToWorld(
+        *cameraComponentManager->Read(cameraId), worldMatrixComponentManager->Get(worldMatrixId), screenCoordinate);
 }
 
 Math::Vec3 Picking::WorldToScreen(IEcs const& ecs, Entity cameraEntity, Math::Vec3 worldCoordinate) const
@@ -250,7 +332,8 @@ Math::Vec3 Picking::WorldToScreen(IEcs const& ecs, Entity cameraEntity, Math::Ve
     }
 
     const CameraComponent cameraComponent = cameraComponentManager->Get(cameraId);
-    Math::Mat4X4 viewToProj = GetCameraViewToProjectionMatrix(cameraComponent);
+    bool isCameraNegative = false;
+    Math::Mat4X4 viewToProj = CameraMatrixUtil::CalculateProjectionMatrix(cameraComponent, isCameraNegative);
 
     const WorldMatrixComponent worldMatrixComponent = worldMatrixComponentManager->Get(worldMatrixId);
     auto const worldToView = Math::Inverse(worldMatrixComponent.matrix);
@@ -280,19 +363,21 @@ vector<RayCastResult> Picking::RayCast(const IEcs& ecs, const Math::Vec3& start,
     auto const& worldMatrixComponentManager = GetManager<IWorldMatrixComponentManager>(ecs);
     auto const& jointMatricesComponentManager = GetManager<IJointMatricesComponentManager>(ecs);
     auto const& meshComponentManager = *GetManager<IMeshComponentManager>(ecs);
+    float distance = 0;
 
-    auto const invDir = Math::Vec3(1.f / direction.x, 1.f / direction.y, 1.f / direction.z);
+    auto const invDir = DirectionVectorInverse(direction);
     for (IComponentManager::ComponentId i = 0; i < renderMeshComponentManager->GetComponentCount(); i++) {
         const Entity id = renderMeshComponentManager->GetEntity(i);
         if (auto node = nodeSystem->GetNode(id); node) {
             if (const auto jointMatrices = jointMatricesComponentManager->Read(id); jointMatrices) {
                 // Use the skinned aabb's.
                 const auto& jointMatricesComponent = *jointMatrices;
-                if (IntersectAabb(
-                        jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start, invDir)) {
-                    const float distance = Math::Magnitude(
+                if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start,
+                        invDir, distance)) {
+                    const float centerDistance = Math::Magnitude(
                         (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f - start);
-                    result.emplace_back(RayCastResult { node, distance });
+                    const Math::Vec3 hitPosition = start + direction * distance;
+                    result.push_back(RayCastResult { node, centerDistance, distance, hitPosition });
                 }
                 continue;
             } else {
@@ -322,6 +407,85 @@ vector<RayCastResult> Picking::RayCast(const IEcs& ecs, const Math::Vec3& start,
     return result;
 }
 
+vector<RayCastResult> Picking::RayCast(
+    const IEcs& ecs, const Math::Vec3& start, const Math::Vec3& direction, uint64_t layerMask) const
+{
+    vector<RayCastResult> result;
+
+    auto nodeSystem = GetSystem<INodeSystem>(ecs);
+    auto const& renderMeshComponentManager = GetManager<IRenderMeshComponentManager>(ecs);
+    auto const& layerComponentManager = GetManager<ILayerComponentManager>(ecs);
+    auto const& worldMatrixComponentManager = GetManager<IWorldMatrixComponentManager>(ecs);
+    auto const& jointMatricesComponentManager = GetManager<IJointMatricesComponentManager>(ecs);
+    auto const& meshComponentManager = *GetManager<IMeshComponentManager>(ecs);
+
+    auto const invDir = DirectionVectorInverse(direction);
+    float distance = 0;
+    for (IComponentManager::ComponentId i = 0; i < renderMeshComponentManager->GetComponentCount(); i++) {
+        const Entity id = renderMeshComponentManager->GetEntity(i);
+        if (auto node = nodeSystem->GetNode(id); node) {
+            if (layerComponentManager->Get(id).layerMask & layerMask) {
+                if (const auto jointMatrices = jointMatricesComponentManager->Read(id); jointMatrices) {
+                    // Use the skinned aabb's.
+                    const auto& jointMatricesComponent = *jointMatrices;
+                    if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start,
+                            invDir, distance)) {
+                        const float centerDistance = Math::Magnitude(
+                            (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f -
+                            start);
+                        const Math::Vec3 hitPosition = start + direction * distance;
+                        result.push_back(RayCastResult { node, centerDistance, distance, hitPosition });
+                    }
+                } else {
+                    if (const auto worldMatrixId = worldMatrixComponentManager->GetComponentId(id);
+                        worldMatrixId != IComponentManager::INVALID_COMPONENT_ID) {
+                        auto const renderMeshComponent = renderMeshComponentManager->Get(i);
+                        if (const auto meshHandle = meshComponentManager.Read(renderMeshComponent.mesh); meshHandle) {
+                            auto const worldMatrixComponent = worldMatrixComponentManager->Get(worldMatrixId);
+                            const auto raycastResult =
+                                HitTestNode(*node, *meshHandle, worldMatrixComponent.matrix, start, invDir);
+                            if (raycastResult.node) {
+                                result.push_back(raycastResult);
+                            }
+                        } else {
+                            CORE_LOG_W("no mesh resource for entity %" PRIx64 ", resource %" PRIx64, id.id,
+                                renderMeshComponent.mesh.id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    std::sort(
+        result.begin(), result.end(), [](const auto& lhs, const auto& rhs) { return (lhs.distance < rhs.distance); });
+
+    return result;
+}
+
+BASE_NS::vector<RayTriangleCastResult> Core3D::Picking::RayCast(const BASE_NS::Math::Vec3& start,
+    const BASE_NS::Math::Vec3& direction, BASE_NS::array_view<const BASE_NS::Math::Vec3> triangles) const
+{
+    vector<RayTriangleCastResult> result;
+
+    if (triangles.size() % 3 != 0) { // 3 ：param
+        CORE_LOG_W("Number of triangles vertices not divisible by 3!");
+        return result;
+    }
+
+    float distance = 0.f;
+    Math::Vec2 uv;
+    for (size_t ii = 0; ii < triangles.size(); ii += 3) { // 3 ：param
+        if (IntersectTriangle(&triangles[ii], start, direction, distance, uv)) {
+            const Math::Vec3 hitPosition = start + direction * distance;
+
+            result.push_back(RayTriangleCastResult { distance, hitPosition, uv, static_cast<uint64_t>(ii / 3) });
+        }
+    }
+
+    return result;
+}
+
 vector<RayCastResult> Picking::RayCastFromCamera(IEcs const& ecs, Entity camera, const Math::Vec2& screenPos) const
 {
     const auto* worldMatrixManager = GetManager<IWorldMatrixComponentManager>(ecs);
@@ -333,46 +497,62 @@ vector<RayCastResult> Picking::RayCastFromCamera(IEcs const& ecs, Entity camera,
     const auto wmcId = worldMatrixManager->GetComponentId(camera);
     const auto ccId = cameraManager->GetComponentId(camera);
     if (wmcId != IComponentManager::INVALID_COMPONENT_ID && ccId != IComponentManager::INVALID_COMPONENT_ID) {
+        const auto cameraComponent = cameraManager->Read(ccId);
         const auto worldMatrixComponent = worldMatrixManager->Get(wmcId);
-        const auto cameraComponent = cameraManager->Get(ccId);
-        if (cameraComponent.projection == CORE3D_NS::CameraComponent::Projection::ORTHOGRAPHIC) {
-            const Math::Vec3 worldPos = ScreenToWorld(ecs, camera, Math::Vec3(screenPos.x, screenPos.y, 0.0f));
-            const auto direction = worldMatrixComponent.matrix * Math::Vec4(0.0f, 0.0f, -1.0f, 0.0f);
-            return RayCast(ecs, worldPos, direction);
-        } else {
-            // Ray origin is the camera world position.
-            const Math::Vec3& rayOrigin = Math::Vec3(worldMatrixComponent.matrix.w);
-            const Math::Vec3 targetPos = ScreenToWorld(ecs, camera, Math::Vec3(screenPos.x, screenPos.y, 1.0f));
-            const Math::Vec3 direction = Math::Normalize(targetPos - rayOrigin);
-            return RayCast(ecs, rayOrigin, direction);
-        }
+        const Ray ray = RayFromCamera(*cameraComponent, worldMatrixComponent, screenPos);
+        return RayCast(ecs, ray.origin, ray.direction);
     }
 
     return vector<RayCastResult>();
 }
 
+vector<RayCastResult> Picking::RayCastFromCamera(
+    IEcs const& ecs, Entity camera, const Math::Vec2& screenPos, uint64_t layerMask) const
+{
+    const auto* worldMatrixManager = GetManager<IWorldMatrixComponentManager>(ecs);
+    const auto* cameraManager = GetManager<ICameraComponentManager>(ecs);
+    if (!worldMatrixManager || !cameraManager) {
+        return vector<RayCastResult>();
+    }
+
+    const auto wmcId = worldMatrixManager->GetComponentId(camera);
+    const auto ccId = cameraManager->GetComponentId(camera);
+    if (wmcId != IComponentManager::INVALID_COMPONENT_ID && ccId != IComponentManager::INVALID_COMPONENT_ID) {
+        const auto cameraComponent = cameraManager->Read(ccId);
+        const auto worldMatrixComponent = worldMatrixManager->Get(wmcId);
+        const Ray ray = RayFromCamera(*cameraComponent, worldMatrixComponent, screenPos);
+        return RayCast(ecs, ray.origin, ray.direction, layerMask);
+    }
+
+    return vector<RayCastResult>();
+}
+
+BASE_NS::vector<RayTriangleCastResult> Core3D::Picking::RayCastFromCamera(CORE_NS::IEcs const& ecs,
+    CORE_NS::Entity camera, const BASE_NS::Math::Vec2& screenPos,
+    BASE_NS::array_view<const BASE_NS::Math::Vec3> triangles) const
+{
+    const auto* worldMatrixManager = GetManager<IWorldMatrixComponentManager>(ecs);
+    const auto* cameraManager = GetManager<ICameraComponentManager>(ecs);
+    if (!worldMatrixManager || !cameraManager) {
+        return vector<RayTriangleCastResult>();
+    }
+
+    const auto wmcId = worldMatrixManager->GetComponentId(camera);
+    const auto ccId = cameraManager->GetComponentId(camera);
+    if (wmcId != IComponentManager::INVALID_COMPONENT_ID && ccId != IComponentManager::INVALID_COMPONENT_ID) {
+        const auto cameraComponent = cameraManager->Read(ccId);
+        const auto worldMatrixComponent = worldMatrixManager->Get(wmcId);
+        const Ray ray = RayFromCamera(*cameraComponent, worldMatrixComponent, screenPos);
+
+        return RayCast(ray.origin, ray.direction, triangles);
+    }
+
+    return BASE_NS::vector<RayTriangleCastResult>();
+}
+
 MinAndMax Picking::GetWorldAABB(const Math::Mat4X4& world, const Math::Vec3& aabbMin, const Math::Vec3& aabbMax) const
 {
-    auto const aabb0 = Math::MultiplyPoint3X4(world, Math::Vec3(aabbMin.x, aabbMin.y, aabbMin.z));
-    auto const aabb1 = Math::MultiplyPoint3X4(world, Math::Vec3(aabbMax.x, aabbMin.y, aabbMin.z));
-    auto const aabb2 = Math::MultiplyPoint3X4(world, Math::Vec3(aabbMin.x, aabbMax.y, aabbMin.z));
-    auto const aabb3 = Math::MultiplyPoint3X4(world, Math::Vec3(aabbMax.x, aabbMax.y, aabbMin.z));
-    auto const aabb4 = Math::MultiplyPoint3X4(world, Math::Vec3(aabbMin.x, aabbMin.y, aabbMax.z));
-    auto const aabb5 = Math::MultiplyPoint3X4(world, Math::Vec3(aabbMax.x, aabbMin.y, aabbMax.z));
-    auto const aabb6 = Math::MultiplyPoint3X4(world, Math::Vec3(aabbMin.x, aabbMax.y, aabbMax.z));
-    auto const aabb7 = Math::MultiplyPoint3X4(world, Math::Vec3(aabbMax.x, aabbMax.y, aabbMax.z));
-
-    MinAndMax mam;
-    mam.minAABB = Math::min(aabb0,
-        Math::min(aabb1,
-            Math::min(aabb2,
-                Math::min(aabb3, Math::min(aabb4, Math::min(aabb4, Math::min(aabb5, Math::min(aabb6, aabb7))))))));
-    mam.maxAABB = Math::max(aabb0,
-        Math::max(aabb1,
-            Math::max(aabb2,
-                Math::max(aabb3, Math::max(aabb4, Math::max(aabb4, Math::max(aabb5, Math::max(aabb6, aabb7))))))));
-
-    return mam;
+    return CORE3D_NS::GetWorldAABB(world, aabbMin, aabbMax);
 }
 
 MinAndMax Picking::GetWorldMatrixComponentAABB(Entity entity, bool isRecursive, IEcs& ecs) const
@@ -410,7 +590,7 @@ MinAndMax Picking::GetTransformComponentAABB(Entity entity, bool isRecursive, IE
 
 const IInterface* Picking::GetInterface(const Uid& uid) const
 {
-    if (uid == IPicking::UID) {
+    if ((uid == IPicking::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;
@@ -418,7 +598,7 @@ const IInterface* Picking::GetInterface(const Uid& uid) const
 
 IInterface* Picking::GetInterface(const Uid& uid)
 {
-    if (uid == IPicking::UID) {
+    if ((uid == IPicking::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;

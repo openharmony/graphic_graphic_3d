@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -50,7 +50,10 @@ void RenderFrameSyncGLES::WaitForFrameFence()
 {
     if (frameFences_[bufferingIndex_].aFence) {
         GLsync fence = (GLsync)(frameFences_[bufferingIndex_].aFence);
-        glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, UINT64_MAX);
+        const GLenum result = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, UINT64_MAX);
+        if ((result != GL_ALREADY_SIGNALED) && (result != GL_CONDITION_SATISFIED)) {
+            PLUGIN_LOG_E("glClientWaitSync returned %x", result);
+        }
         glDeleteSync(fence);
         frameFences_[bufferingIndex_].aFence = nullptr;
     } else {

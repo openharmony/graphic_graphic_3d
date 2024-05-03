@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,6 @@
 
 #include "render/shaders/common/render_compatibility_common.h"
 
-#define CORE_MAX_MORPH_TARGET_COUNT (256)
 #define CORE_MORPH_USE_PACKED_NOR_TAN
 #define CORE_MORPH_USE_16BIT_NOR_TAN
 

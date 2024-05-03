@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -97,12 +97,20 @@ static inline Vec2 PerpendicularCCW(const Vec2& value)
     return Vec2(value.y, -value.x);
 }
 
-/** Return vector2 rotated clock wise by angle radians */
+/** Return vector2 rotated clock wise by angle radians (Y down)*/
 static inline Vec2 RotateCW(const Vec2& value, float angle)
 {
     const float s = Math::sin(angle);
     const float c = Math::cos(angle);
     return Vec2(value.x * c - value.y * s, value.y * c + value.x * s);
+}
+
+/** Return vector2 rotated counter clock wise by angle radians (Y down) */
+static inline Vec2 RotateCCW(const Vec2& value, float angle)
+{
+    const float s = Math::sin(angle);
+    const float c = Math::cos(angle);
+    return Vec2(value.x * c + value.y * s, value.y * c - value.x * s);
 }
 
 /** Return intersection of two Vec2 start points and direction vectors. Returns boolean flag indicating if the vectors

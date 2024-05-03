@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,11 +17,13 @@
 #define API_BASE_CONTAINERS_ARRAYVIEW_H
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 
 #include <base/containers/iterator.h>
 #include <base/containers/type_traits.h>
 #include <base/namespace.h>
+#include <base/util/hash.h>
 #include <base/util/log.h>
 
 BASE_BEGIN_NAMESPACE()
@@ -31,7 +33,7 @@ template<class T>
 class array_view {
 public:
     using value_type = T;
-    using difference_type = size_t;
+    using difference_type = ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
 
@@ -43,11 +45,12 @@ public:
     using const_iterator = BASE_NS::const_iterator<array_view<T>>;
 
     constexpr array_view() noexcept : begin_(nullptr), size_(0) {}
-    constexpr array_view(pointer aBegin, pointer aEnd) noexcept : begin_(aBegin), size_(aEnd - aBegin)
+    constexpr array_view(pointer begin, pointer end) noexcept
+        : begin_(begin), size_(static_cast<size_type>(end - begin))
     {
-        BASE_ASSERT(aEnd >= aBegin);
+        BASE_ASSERT(end >= begin);
     }
-    constexpr array_view(pointer aBegin, size_type aSize) noexcept : begin_(aBegin), size_(aSize) {}
+    constexpr array_view(pointer begin, size_type aSize) noexcept : begin_(begin), size_(aSize) {}
     template<size_t N>
     constexpr array_view(value_type (&arr)[N]) noexcept : begin_(arr), size_(N)
     {}
@@ -139,11 +142,6 @@ private:
 };
 
 template<typename T, size_t N>
-constexpr size_t countof(T (&)[N]) noexcept
-{
-    return N;
-}
-template<typename T, size_t N>
 constexpr array_view<T> arrayview(T (&arr)[N]) noexcept
 {
     return array_view<T>(arr, N);
@@ -153,6 +151,12 @@ template<typename T>
 constexpr array_view<const uint8_t> arrayviewU8(const T& arr) noexcept
 {
     return array_view(reinterpret_cast<const uint8_t*>(&arr), sizeof(arr));
+}
+
+template<typename T>
+inline uint64_t hash(const array_view<T>& view)
+{
+    return FNV1aHash(view.data(), view.size());
 }
 BASE_END_NAMESPACE()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,13 +15,24 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 
+#include <base/containers/array_view.h>
+#include <base/containers/iterator.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
+#include <core/ecs/entity.h>
+#include <core/ecs/intf_component_manager.h>
 #include <core/ecs/intf_ecs.h>
+#include <core/ecs/intf_system.h>
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
-#include <core/perf/intf_performance_data_manager.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/threading/intf_thread_pool.h>
@@ -39,8 +50,14 @@ using BASE_NS::vector;
 
 class Ecs final : public IEcs, IPluginRegister::ITypeInfoListener {
 public:
-    explicit Ecs(IClassFactory&, const IThreadPool::Ptr& threadPool);
+    Ecs(IClassFactory&, const IThreadPool::Ptr& threadPool);
     ~Ecs() override;
+
+    Ecs(const Ecs&) = delete;
+    Ecs(const Ecs&&) = delete;
+    Ecs& operator=(const Ecs&) = delete;
+    Ecs& operator=(const Ecs&&) = delete;
+
     IEntityManager& GetEntityManager() override;
     void GetComponents(Entity entity, vector<IComponentManager*>& result) override;
     vector<ISystem*> GetSystems() const override;
@@ -87,9 +104,8 @@ protected:
     // IPluginRegister::ITypeInfoListener
     void OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typeInfos) override;
 
-    void ProcessAdded();
-    void ProcessModified();
-    void ProcessRemoved();
+    void ProcessComponentEvents(
+        IEcs::ComponentListener::EventType eventType, array_view<const Entity> removedEntities) const;
 
     IThreadPool::Ptr threadPool_;
 
@@ -114,28 +130,53 @@ protected:
     vector<pair<PluginToken, const IEcsPlugin*>> plugins_;
     float timeScale_ { 1.f };
     std::atomic<int32_t> refcnt_ { 0 };
+
+    bool processingEvents_ { false };
 };
 
-template<typename ListIterator, typename ValueType>
-auto find(ListIterator begin, ListIterator end, const ValueType& value)
+template<typename ListType, typename ValueType>
+auto Find(ListType& list, const ValueType& value)
 {
-    for (auto b = begin; b != end; ++b) {
-        if (*b == value) {
-            return b;
-        }
-    }
-    return end;
+    return std::find(list.begin(), list.end(), value);
 }
 
-template<typename ListType, typename ValueType>
-auto find(ListType& list, const ValueType& value)
+void ProcessEntityListeners(const array_view<const pair<Entity, IEntityManager::EventType>> states,
+    const array_view<IEcs::EntityListener*> entityListeners)
 {
-    return find(list.begin(), list.end(), value);
+    // handle state changes (collect to groups of same kind of events)
+    vector<Entity> res;
+    res.reserve(states.size());
+    auto type = states[0U].second;
+    for (const auto& s : states) {
+        if (s.second != type) {
+            if (!res.empty()) {
+                // Let listeners know that entity state has changed.
+                for (auto* listener : entityListeners) {
+                    if (listener) {
+                        listener->OnEntityEvent(type, res);
+                    }
+                }
+                // start collecting new events.
+                res.clear();
+            }
+            type = s.second;
+        }
+        // add to event list.
+        res.push_back(s.first);
+    }
+    if (!res.empty()) {
+        // Send the final events.
+        for (auto* listener : entityListeners) {
+            if (listener) {
+                listener->OnEntityEvent(type, res);
+            }
+        }
+    }
 }
 
 void Ecs::AddListener(EntityListener& listener)
 {
-    if (find(entityListeners_, &listener) != entityListeners_.end()) {
+    if (Find(entityListeners_, &listener) != entityListeners_.end()) {
         // already added.
         return;
     }
@@ -144,7 +185,7 @@ void Ecs::AddListener(EntityListener& listener)
 
 void Ecs::RemoveListener(EntityListener& listener)
 {
-    if (auto it = find(entityListeners_, &listener); it != entityListeners_.end()) {
+    if (auto it = Find(entityListeners_, &listener); it != entityListeners_.end()) {
         // Setting the listener to null instead of removing. This allows removing listeners from a listener callback.
         *it = nullptr;
         return;
@@ -153,7 +194,7 @@ void Ecs::RemoveListener(EntityListener& listener)
 
 void Ecs::AddListener(ComponentListener& listener)
 {
-    if (find(componentListeners_, &listener) != componentListeners_.end()) {
+    if (Find(componentListeners_, &listener) != componentListeners_.end()) {
         // already added.
         return;
     }
@@ -162,7 +203,7 @@ void Ecs::AddListener(ComponentListener& listener)
 
 void Ecs::RemoveListener(ComponentListener& listener)
 {
-    if (auto it = find(componentListeners_, &listener); it != componentListeners_.end()) {
+    if (auto it = Find(componentListeners_, &listener); it != componentListeners_.end()) {
         *it = nullptr;
         return;
     }
@@ -172,7 +213,7 @@ void Ecs::AddListener(IComponentManager& manager, ComponentListener& listener)
 {
     auto list = componentManagerListeners_.find(&manager);
     if (list != componentManagerListeners_.end()) {
-        if (auto it = find(list->second, &listener); it != list->second.end()) {
+        if (auto it = Find(list->second, &listener); it != list->second.end()) {
             return;
         }
         list->second.push_back(&listener);
@@ -187,7 +228,7 @@ void Ecs::RemoveListener(IComponentManager& manager, ComponentListener& listener
     if (list == componentManagerListeners_.end()) {
         return;
     }
-    if (auto it = find(list->second, &listener); it != list->second.end()) {
+    if (auto it = Find(list->second, &listener); it != list->second.end()) {
         *it = nullptr;
         return;
     }
@@ -332,162 +373,117 @@ Entity Ecs::CloneEntity(const Entity entity)
     return clonedEntity;
 }
 
-void Ecs::ProcessAdded()
+void Ecs::ProcessComponentEvents(
+    ComponentListener::EventType eventType, const array_view<const Entity> removedEntities) const
 {
-    // Process added components.
-    for (auto& m : managerOrder_) {
-        vector<Entity> addedComponents = m->GetAddedComponents();
-        if (!addedComponents.empty()) {
-            // Let listeners know that there are new components.
-            // global listeners
-            for (auto* listener : componentListeners_) {
-                if (listener) {
-                    listener->OnComponentEvent(ComponentListener::EventType::CREATED, *m, addedComponents);
-                }
-            }
-            // per manager listeners
-            if (auto it = componentManagerListeners_.find(m.get()); it != componentManagerListeners_.end()) {
-                for (auto* listener : it->second) {
-                    if (listener) {
-                        listener->OnComponentEvent(ComponentListener::EventType::CREATED, *m, addedComponents);
-                    }
-                }
-            }
-        }
-
-        m->Gc();
+    vector<Entity> (IComponentManager::*getter)();
+    switch (eventType) {
+        case ComponentListener::EventType::CREATED:
+            getter = &IComponentManager::GetAddedComponents;
+            break;
+        case ComponentListener::EventType::MODIFIED:
+            getter = &IComponentManager::GetUpdatedComponents;
+            break;
+        case ComponentListener::EventType::DESTROYED:
+            getter = &IComponentManager::GetRemovedComponents;
+            break;
+        default:
+            return;
     }
-}
-
-void Ecs::ProcessModified()
-{
-    for (auto& m : managerOrder_) {
-        vector<Entity> updatedComponents = m->GetUpdatedComponents();
-        if (!updatedComponents.empty()) {
-            // Let listeners know that there are modified components.
+    for (const auto& m : managerOrder_) {
+        vector<Entity> affectedEntities = (*m.*getter)();
+        if (!removedEntities.empty()) {
+            affectedEntities.erase(
+                std::remove_if(affectedEntities.begin(), affectedEntities.end(),
+                    [removedEntities](const Entity& entity) {
+                        const auto pos = std::lower_bound(removedEntities.cbegin(), removedEntities.cend(), entity,
+                            [](const Entity& entity, const Entity& removed) { return entity.id < removed.id; });
+                        return ((pos != removedEntities.cend()) && !(entity.id < pos->id));
+                    }),
+                affectedEntities.cend());
+        }
+        if (!affectedEntities.empty()) {
             // global listeners
             for (auto* listener : componentListeners_) {
                 if (listener) {
-                    listener->OnComponentEvent(ComponentListener::EventType::MODIFIED, *m, updatedComponents);
+                    listener->OnComponentEvent(eventType, *m, affectedEntities);
                 }
             }
             // per manager listeners
-            if (auto it = componentManagerListeners_.find(m.get()); it != componentManagerListeners_.end()) {
+            if (auto it = componentManagerListeners_.find(m.get()); it != componentManagerListeners_.cend()) {
                 for (auto* listener : it->second) {
                     if (listener) {
-                        listener->OnComponentEvent(ComponentListener::EventType::MODIFIED, *m, updatedComponents);
+                        listener->OnComponentEvent(eventType, *m, affectedEntities);
                     }
                 }
             }
         }
-    }
-}
-
-void Ecs::ProcessRemoved()
-{
-    // Get list of removed entities.
-    vector<Entity> removed = entityManager_.GetRemovedEntities();
-
-    // Process removed components (and remove components for removed entities also)
-    for (auto& m : managerOrder_) {
-        if (!removed.empty()) {
-            // Destroy all components related to these entities.
-            m->Destroy(removed);
-        }
-
-        vector<Entity> removedComponents = m->GetRemovedComponents();
-        if (!removedComponents.empty()) {
-            // Let listeners know that there are removed components.
-            // global listeners
-            for (auto* listener : componentListeners_) {
-                if (listener) {
-                    listener->OnComponentEvent(ComponentListener::EventType::DESTROYED, *m, removedComponents);
-                }
-            }
-            // per manager listeners
-            if (auto it = componentManagerListeners_.find(m.get()); it != componentManagerListeners_.end()) {
-                for (auto* listener : it->second) {
-                    if (listener) {
-                        listener->OnComponentEvent(ComponentListener::EventType::DESTROYED, *m, removedComponents);
-                    }
-                }
-            }
-        }
-
-        m->Gc();
     }
 }
 
 void Ecs::ProcessEvents()
 {
-    entityManager_.UpdateDeadEntities();
+    if (processingEvents_) {
+        CORE_ASSERT_MSG(false, "Calling ProcessEvents() from an event callback is not allowed");
+        return;
+    }
+    processingEvents_ = true;
 
-    // handle state changes (collect to groups of same kind of events)
-    auto states = entityManager_.GetEvents();
-    if (!states.empty()) {
-        vector<Entity> res;
-        auto type = states.front().second;
-        for (const auto& s : states) {
-            if (s.second != type) {
-                if (!res.empty()) {
-                    // Let listeners know that entity state has changed.
-                    for (auto* listener : entityListeners_) {
-                        if (listener) {
-                            listener->OnEntityEvent(type, res);
-                        }
-                    }
-                    // start collecting new events.
-                    res.clear();
-                }
-                type = s.second;
-            }
-            // add to event list.
-            res.push_back(s.first);
+    vector<Entity> allRemovedEntities;
+    bool deadEntities = false;
+    do {
+        // Let entity manager check entity reference counts
+        entityManager_.UpdateDeadEntities();
+
+        // Send entity related events
+        if (const auto events = entityManager_.GetEvents(); !events.empty()) {
+            ProcessEntityListeners(events, entityListeners_);
         }
-        if (!res.empty()) {
-            // Send the final events.
-            for (auto* listener : entityListeners_) {
-                if (listener) {
-                    listener->OnEntityEvent(type, res);
-                }
-            }
+
+        // Remove components for removed entities.
+        const vector<Entity> removed = entityManager_.GetRemovedEntities();
+        deadEntities = !removed.empty();
+        if (deadEntities) {
+            allRemovedEntities.append(removed.cbegin(), removed.cend());
         }
+        for (auto& m : managerOrder_) {
+            // Destroy all components related to these entities.
+            if (deadEntities) {
+                m->Destroy(removed);
+            }
+            m->Gc();
+        }
+        // Destroying components may release the last reference for some entity so we loop until there are no new
+        // deaths reported.
+    } while (deadEntities);
+
+    if (!allRemovedEntities.empty()) {
+        std::sort(allRemovedEntities.begin(), allRemovedEntities.end(),
+            [](const Entity& lhs, const Entity& rhs) { return lhs.id < rhs.id; });
     }
 
-    ProcessAdded();
-    ProcessModified();
-    ProcessRemoved();
+    // Send component related events
+    ProcessComponentEvents(ComponentListener::EventType::CREATED, allRemovedEntities);
+    ProcessComponentEvents(ComponentListener::EventType::MODIFIED, allRemovedEntities);
+    ProcessComponentEvents(ComponentListener::EventType::DESTROYED, {});
 
     // Clean-up removed listeners.
-    for (auto it = entityListeners_.begin(); it != entityListeners_.end();) {
-        if (*it == nullptr) {
-            it = entityListeners_.erase(it);
-        } else {
-            it++;
-        }
-    }
-    for (auto it = componentListeners_.begin(); it != componentListeners_.end();) {
-        if (*it == nullptr) {
-            it = componentListeners_.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    for (auto it = componentManagerListeners_.begin(); it != componentManagerListeners_.end();) {
+    entityListeners_.erase(
+        std::remove(entityListeners_.begin(), entityListeners_.end(), nullptr), entityListeners_.cend());
+    componentListeners_.erase(
+        std::remove(componentListeners_.begin(), componentListeners_.end(), nullptr), componentListeners_.cend());
+
+    for (auto it = componentManagerListeners_.begin(); it != componentManagerListeners_.cend();) {
         auto& listeners = it->second;
-        for (auto listener = listeners.begin(); listener != listeners.end();) {
-            if (*listener == nullptr) {
-                listener = listeners.erase(listener);
-            } else {
-                ++listener;
-            }
-        }
+        listeners.erase(std::remove(listeners.begin(), listeners.end(), nullptr), listeners.cend());
         if (listeners.empty()) {
             it = componentManagerListeners_.erase(it);
         } else {
             ++it;
         }
     }
+
+    processingEvents_ = false;
 }
 
 void Ecs::Initialize()
@@ -507,7 +503,7 @@ bool Ecs::Update(uint64_t time, uint64_t delta)
     }
 
     // Update all systems.
-    delta = static_cast<uint64_t>(delta * timeScale_);
+    delta = static_cast<uint64_t>(static_cast<float>(delta) * timeScale_);
     for (auto& s : systemOrder_) {
         CORE_CPU_PERF_SCOPE("ECS", "SystemUpdate_Cpu", s->GetName());
         if (s->Update(frameRenderingQueued, time, delta)) {
@@ -593,7 +589,7 @@ inline auto RemoveUid(Container& container, const Uid& uid)
 {
     container.erase(std::remove_if(container.begin(), container.end(),
                         [&uid](const auto& thing) { return thing->GetUid() == uid; }),
-        container.end());
+        container.cend());
 }
 
 void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typeInfos)
@@ -606,7 +602,7 @@ void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typ
             if (info && info->typeUid == SystemTypeInfo::UID) {
                 const auto systemInfo = static_cast<const SystemTypeInfo*>(info);
                 // for systems Untinitialize should be called before destroying the instance
-                if (auto pos = systems_.find(systemInfo->uid); pos != systems_.end()) {
+                if (const auto pos = systems_.find(systemInfo->uid); pos != systems_.cend()) {
                     pos->second->Uninitialize();
                     systems_.erase(pos);
                 }
@@ -615,8 +611,8 @@ void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typ
                 const auto managerInfo = static_cast<const ComponentManagerTypeInfo*>(info);
                 // BaseManager expects that the component list is empty when it's destroyed. might be also
                 // nice to notify all the listeners that the components are being destroyed.
-                if (auto pos = managers_.find(managerInfo->uid); pos != managers_.end()) {
-                    auto manager = pos->second;
+                if (const auto pos = managers_.find(managerInfo->uid); pos != managers_.end()) {
+                    auto* manager = pos->second;
 
                     // remove all the components.
                     const auto components = static_cast<IComponentManager::ComponentId>(manager->GetComponentCount());
@@ -628,8 +624,8 @@ void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typ
                     if (const auto listenerIt = componentManagerListeners_.find(manager);
                         !componentListeners_.empty() ||
                         ((listenerIt != componentManagerListeners_.end()) && !listenerIt->second.empty())) {
-                        if (vector<Entity> removed = manager->GetRemovedComponents(); !removed.empty()) {
-                            const auto removedView = array_view<Entity>(removed);
+                        if (const vector<Entity> removed = manager->GetRemovedComponents(); !removed.empty()) {
+                            const auto removedView = array_view<const Entity>(removed);
                             for (auto* lister : componentListeners_) {
                                 if (lister) {
                                     lister->OnComponentEvent(

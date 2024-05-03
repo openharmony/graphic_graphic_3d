@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -103,6 +103,36 @@ struct BindableSampler {
     RenderHandle handle {};
 };
 
+/** Bindable buffer with render handle reference */
+struct BindableBufferWithHandleReference {
+    /** Handle */
+    RenderHandleReference handle;
+    /** Byte offset to buffer */
+    uint32_t byteOffset { 0u };
+    /** Byte size for buffer binding */
+    uint32_t byteSize { PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
+};
+
+/** Bindable image with render handle reference */
+struct BindableImageWithHandleReference {
+    /** Handle */
+    RenderHandleReference handle;
+    /** Mip level for specific binding */
+    uint32_t mip { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+    /** Layer level for specific binding */
+    uint32_t layer { PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    /** Custom image layout */
+    ImageLayout imageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+    /** Sampler handle for combined image sampler */
+    RenderHandleReference samplerHandle;
+};
+
+/** Bindable with sampler handle reference */
+struct BindableSamplerWithHandleReference {
+    /** Handle */
+    RenderHandleReference handle;
+};
+
 /** Descriptor structure for buffer */
 struct BufferDescriptor {
     /** Descriptor set layout binding */
@@ -114,6 +144,9 @@ struct BufferDescriptor {
 
     /** Array offset to resources for array descriptors */
     uint32_t arrayOffset { 0 };
+
+    /** Additional flags */
+    AdditionalDescriptorFlags additionalFlags { 0u };
 };
 
 /** Descriptor structure for image */
@@ -127,6 +160,9 @@ struct ImageDescriptor {
 
     /** Array offset to resources for array descriptors */
     uint32_t arrayOffset { 0 };
+
+    /** Additional flags */
+    AdditionalDescriptorFlags additionalFlags { 0u };
 };
 
 /** Descriptor structure for sampler */
@@ -138,19 +174,9 @@ struct SamplerDescriptor {
 
     /** Array offset to resources for array descriptors */
     uint32_t arrayOffset { 0 };
-};
 
-/** Descriptor structure for acceleration structure */
-struct AccelerationStructureDescriptor {
-    /** Descriptor set layout binding */
-    DescriptorSetLayoutBinding binding {};
-    /** Bindable resource structure with handle */
-    BindableBuffer resource {};
-    /** Resource state in the pipeline */
-    GpuResourceState state {};
-
-    /** Array offset to resources for array descriptors */
-    uint32_t arrayOffset { 0 };
+    /** Additional flags */
+    AdditionalDescriptorFlags additionalFlags { 0u };
 };
 
 /** Descriptor set layout binding resources */

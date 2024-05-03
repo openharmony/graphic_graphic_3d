@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,7 @@
 #define CORE__GLTF__DATA_H
 
 #include <3d/gltf/gltf.h>
+#include <3d/loaders/intf_scene_loader.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
 #include <core/io/intf_file.h>
@@ -106,6 +107,31 @@ public:
 protected:
     CORE_NS::IFileManager& fileManager_;
     void Destroy() override;
+};
+
+class SceneData : public ISceneData {
+public:
+    static constexpr auto UID = BASE_NS::Uid { "e745a051-2372-4935-8ed1-30dfc0d5f305" };
+
+    using Ptr = BASE_NS::refcnt_ptr<SceneData>;
+
+    SceneData(BASE_NS::unique_ptr<GLTF2::Data> data);
+
+    const GLTF2::Data* GetData() const;
+
+    size_t GetDefaultSceneIndex() const override;
+    size_t GetSceneCount() const override;
+
+    const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
+    IInterface* GetInterface(const BASE_NS::Uid& uid) override;
+    void Ref() override;
+    void Unref() override;
+
+protected:
+    friend Ptr;
+
+    uint32_t refcnt_ { 0 };
+    BASE_NS::unique_ptr<GLTF2::Data> data_;
 };
 } // namespace GLTF2
 CORE3D_END_NAMESPACE()

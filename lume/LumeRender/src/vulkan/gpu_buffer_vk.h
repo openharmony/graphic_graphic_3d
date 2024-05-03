@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,13 +28,25 @@
 RENDER_BEGIN_NAMESPACE()
 class Device;
 
+struct GpuAccelerationStructurePlatformDataVk final {
+    VkBuffer buffer { VK_NULL_HANDLE };
+    uint32_t byteSize { 0u };
+    uint64_t deviceAddress { 0 };
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    VkAccelerationStructureKHR accelerationStructure { VK_NULL_HANDLE };
+#endif
+};
+
 class GpuBufferVk final : public GpuBuffer {
 public:
     GpuBufferVk(Device& device, const GpuBufferDesc& desc);
+    GpuBufferVk(Device& device, const GpuAccelerationStructureDesc& desc);
     ~GpuBufferVk();
 
     const GpuBufferDesc& GetDesc() const override;
     const GpuBufferPlatformDataVk& GetPlatformData() const;
+    const GpuAccelerationStructureDesc& GetDescAccelerationStructure() const;
+    const GpuAccelerationStructurePlatformDataVk& GetPlatformDataAccelerationStructure() const;
 
     void* Map() override;
     void* MapMemory() override;
@@ -42,15 +54,20 @@ public:
 
 private:
     void AllocateMemory(const VkMemoryPropertyFlags requiredFlags, const VkMemoryPropertyFlags preferredFlags);
+    void CreateBufferImpl();
 
     Device& device_;
 
     GpuBufferPlatformDataVk plat_;
     GpuBufferDesc desc_;
 
+    GpuAccelerationStructurePlatformDataVk platAccel_;
+    GpuAccelerationStructureDesc descAccel_;
+
     bool isPersistantlyMapped_ { false };
     bool isMappable_ { false };
     bool isRingBuffer_ { false };
+    bool isAccelerationStructure_ { false };
     uint32_t bufferingCount_ { 1u };
 
     // debug assert usage only

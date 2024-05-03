@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,8 +18,8 @@
 
 #include <base/util/uid.h>
 #include <core/json/json.h>
+#include <core/plugin/intf_interface.h>
 #include <render/namespace.h>
-#include <render/nodecontext/intf_render_node_interface.h>
 #include <render/render_data_structures.h>
 
 RENDER_BEGIN_NAMESPACE()
@@ -36,11 +36,11 @@ class IRenderNodeParserUtil;
 /** @ingroup group_render_irendernodecontextmanager */
 /**
  * Provides access to render node managers and resources.
- * In addition provides access to IRenderNodeContextInterfaces.
+ * In addition provides access to IRenderNodeInterface.
  */
-class IRenderNodeContextManager : public IRenderNodeInterface {
+class IRenderNodeContextManager : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid("7c7cf4c3-4acc-4609-afa6-365ce5d0031c");
+    static constexpr auto UID = BASE_NS::Uid("3079720c-e2bd-45df-959c-6becd637564a");
 
     /** Get render data store manager. Global render data store manager for accessing various render data stores.
      */
@@ -105,14 +105,14 @@ public:
 
     /** Get render node context specific render node interface by UID.
      */
-    virtual IRenderNodeInterface* GetInterface(const BASE_NS::Uid& uid) const = 0;
+    virtual CORE_NS::IInterface* GetRenderNodeContextInterface(const BASE_NS::Uid& uid) const = 0;
 
     /** Get render node context interfaces by UID with interface type cast
      */
     template<typename InterfaceType>
-    InterfaceType* GetInterface()
+    InterfaceType* GetRenderNodeContextInterface()
     {
-        return static_cast<InterfaceType*>(GetInterface(InterfaceType::UID));
+        return static_cast<InterfaceType*>(GetRenderNodeContextInterface(InterfaceType::UID));
     }
 
 protected:

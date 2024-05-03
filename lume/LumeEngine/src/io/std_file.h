@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,7 @@
 #ifndef CORE__IO__STD_FILE_H
 #define CORE__IO__STD_FILE_H
 
-#include <cstdio>
+#include <fstream>
 
 #include <base/containers/string_view.h>
 #include <core/io/intf_file.h>
@@ -28,16 +28,16 @@ CORE_BEGIN_NAMESPACE()
  */
 class StdFile final : public IFile {
 public:
-    StdFile() = default;
+    StdFile(Mode mode, std::fstream&& stream);
     ~StdFile() override;
 
     Mode GetMode() const override;
 
     // Open an existing file, fails if the file does not exist.
-    bool Open(BASE_NS::string_view path, Mode mode);
+    static IFile::Ptr Open(BASE_NS::string_view path, Mode mode);
 
     // Create a new file, the existing file will be overridden.
-    bool Create(BASE_NS::string_view path, Mode mode);
+    static IFile::Ptr Create(BASE_NS::string_view path, Mode mode);
 
     // Close file.
     void Close() override;
@@ -62,7 +62,7 @@ private:
     bool IsValidPath(const BASE_NS::string_view path);
 
     Mode mode_ { Mode::INVALID };
-    FILE* file_ { nullptr };
+    mutable std::fstream file_;
 };
 CORE_END_NAMESPACE()
 

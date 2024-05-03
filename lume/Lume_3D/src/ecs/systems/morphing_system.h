@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,6 +21,7 @@
 
 #include <3d/ecs/components/morph_component.h>
 #include <3d/ecs/systems/intf_morphing_system.h>
+#include <3d/render/intf_render_data_store_morph.h>
 #include <base/containers/array_view.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
@@ -37,7 +38,6 @@ class IRenderHandleComponentManager;
 class INodeComponentManager;
 class IMeshComponentManager;
 class IMorphComponentManager;
-class IRenderDataStoreMorph;
 class IRenderMeshComponentManager;
 struct MeshComponent;
 struct MorphComponent;
@@ -69,7 +69,7 @@ private:
         BASE_NS::array_view<const CORE_NS::Entity> entities) override;
 
     bool Morph(const MeshComponent& mesh, const MorphComponent& mc, bool dirty);
-    void SetDataStore(RENDER_NS::IRenderDataStoreManager* manager, const BASE_NS::string_view name);
+    void SetDataStore(RENDER_NS::IRenderDataStoreManager& manager, const BASE_NS::string_view name);
     bool active_;
     CORE_NS::IEcs& ecs_;
     RENDER_NS::IRenderContext* renderContext_ = nullptr;
@@ -86,6 +86,7 @@ private:
     BASE_NS::unordered_map<CORE_NS::Entity, bool> dirty_;
     BASE_NS::vector<CORE_NS::Entity> reset_;
     CORE_NS::ComponentQuery nodeQuery_;
+    RenderDataMorph::Submesh currentMorphSubmesh_;
 };
 CORE3D_END_NAMESPACE()
 #endif // CORE_ECS_MORPHINGSYSTEM_H

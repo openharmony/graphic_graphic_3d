@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,10 +38,16 @@ public:
     explicit RenderDataStorePod(const BASE_NS::string_view name);
     ~RenderDataStorePod() override = default;
 
+    void CommitFrameData() override {};
     void PreRender() override {};
-    void PreRenderBackend() override {};
     void PostRender() override {};
+    void PreRenderBackend() override {};
+    void PostRenderBackend() override {};
     void Clear() override {};
+    uint32_t GetFlags() const override
+    {
+        return 0;
+    };
 
     void CreatePod(const BASE_NS::string_view typeName, const BASE_NS::string_view name,
         const BASE_NS::array_view<const uint8_t> data) override;
@@ -82,7 +88,6 @@ private:
     struct OffsetToData {
         uint32_t index { 0 };
         uint32_t byteSize { 0 };
-        uint32_t typeNameVectorIndex { 0 };
     };
     BASE_NS::unordered_map<BASE_NS::string, OffsetToData> nameToDataOffset_;
 

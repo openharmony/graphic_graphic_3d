@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 
 #include <cstdint>
 
+#include <render/device/gpu_resource_desc.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 
@@ -40,6 +41,10 @@ enum SwapchainFlagBits {
     CORE_SWAPCHAIN_COLOR_BUFFER_BIT = 0x00000001,
     /** Depth buffer */
     CORE_SWAPCHAIN_DEPTH_BUFFER_BIT = 0x00000002,
+    /** Enable v-sync */
+    CORE_SWAPCHAIN_VSYNC_BIT = 0x00000004,
+    /** Hint to prefer sRGB format */
+    CORE_SWAPCHAIN_SRGB_BIT = 0x00000008,
 };
 /** Container for swapchain flag bits */
 using SwapchainFlags = uint32_t;
@@ -48,12 +53,21 @@ using SwapchainFlags = uint32_t;
 struct SwapchainCreateInfo {
     /** Surface handle */
     uint64_t surfaceHandle { 0 };
-    /** Vertical sync enabled */
-    bool vsync { true };
-    /** Prefer sRBG format */
-    bool preferSrgbFormat { true };
     /** Swapchain flags */
     SwapchainFlags swapchainFlags { SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT };
+    /** Needed image usage flags for swapchain color image. Checked against supported */
+    ImageUsageFlags imageUsageFlags { ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT };
+
+    struct SwapchainWindow {
+        /** Platform window pointer */
+        uintptr_t window { 0 };
+        /** Platform instance (hInstance, connection, display) */
+        uintptr_t instance { 0 };
+    };
+    /** Window handles. Creates surface automatically.
+     * NOTE: do not create surface for surfaceHandle if the window and instance is provided
+     */
+    SwapchainWindow window;
 };
 
 struct DeviceConfiguration {
@@ -91,7 +105,7 @@ enum class DeviceBackendType {
     OPENGL
 };
 
-/** @ingroup group_gfx_idevice */
+/** @ingroup group_idevice */
 /** Device create info */
 struct DeviceCreateInfo {
     /** Backend type to be created */
@@ -100,6 +114,12 @@ struct DeviceCreateInfo {
     DeviceConfiguration deviceConfiguration;
     /** Backend configuration pointer */
     const BackendExtra* backendConfiguration { nullptr };
+};
+
+/** Common device properties for various features */
+struct CommonDeviceProperties {
+    /** Fragment shading rate properties */
+    FragmentShadingRateProperties fragmentShadingRateProperties;
 };
 
 /** @ingroup group_gfx_ilowleveldevice */
@@ -114,11 +134,19 @@ protected:
     virtual ~ILowLevelDevice() = default;
 };
 
-/** @ingroup group_gfx_idevice */
+/** @ingroup group_idevice */
 struct DevicePlatformData {};
 
-/** @ingroup group_gfx_idevice */
-/** IDevice */
+/** Settings which can be changed after device has been created. */
+struct BackendConfig {};
+
+/** @ingroup group_idevice
+ * IDevice interface for accessing device.
+ * Not internally synchronized and therefore Create And Destroy -menthods
+ * need to be called from the rendering thread.
+ * NOTE: Even though CreateSwapchainHandle returns a reference counted image handle,
+ * one needs to explicitly destroy the swapchain with DestroySwapchain(handle)
+ */
 class IDevice {
 public:
     /** Create a swapchain for graphics API use.
@@ -129,6 +157,25 @@ public:
     /** Destroys swapchain
      */
     virtual void DestroySwapchain() = 0;
+
+    /** Create a swapchain for graphics API use. Prefer using this method.
+     * Replace handle to re-use the same shallow handle throughout the Render.
+     * Add global unique image name to get global access to the resource.
+     * @param swapchainCreateInfo Swapchain creation info.
+     * @param replacedHandle Handle to be used as a shallow render handle for swapchain images.
+     * @param name Optional unique global name for the image.
+     */
+    virtual RenderHandleReference CreateSwapchainHandle(const SwapchainCreateInfo& swapchainCreateInfo,
+        const RenderHandleReference& replacedHandle, const BASE_NS::string_view name) = 0;
+
+    /** Create a swapchain for graphics API use.
+     *  @param swapchainCreateInfo Swapchain creation info.
+     */
+    virtual RenderHandleReference CreateSwapchainHandle(const SwapchainCreateInfo& swapchainCreateInfo) = 0;
+
+    /** Destroys swapchain
+     */
+    virtual void DestroySwapchain(const RenderHandleReference& handle) = 0;
 
     /** Returns backend type (vulkan, gles, etc) */
     virtual DeviceBackendType GetBackendType() const = 0;
@@ -143,6 +190,9 @@ public:
 
     /** Returns supported flags for given format. */
     virtual FormatProperties GetFormatProperties(const BASE_NS::Format format) const = 0;
+
+    /** Returns common device properties */
+    virtual const CommonDeviceProperties& GetCommonDeviceProperties() const = 0;
 
     /** Returns acceleration structure build sizes. Only a single geometry data should be valid.
      *  @param geometryInfo Build geometry info for size calculations.
@@ -170,12 +220,23 @@ public:
     /** Get low level device interface. Needs to be cast to correct ILowLevelDeviceXX based on backend type. */
     virtual ILowLevelDevice& GetLowLevelDevice() const = 0;
 
+    /** Update backend configuration.
+     * @param config Backend type specific settings.
+     */
+    virtual void SetBackendConfig(const BackendConfig& config) = 0;
+
+    /** Get device configuration.
+     * The device configuration is updated after creation, i.e. the config might not match the device creation struct.
+     * @return Returns device configuration.
+     */
+    virtual DeviceConfiguration GetDeviceConfiguration() const = 0;
+
 protected:
     IDevice() = default;
     virtual ~IDevice() = default;
 };
 
-/** @ingroup group_gfx_idevice */
+/** @ingroup group_idevice */
 struct GpuBufferPlatformData {};
 struct GpuImagePlatformData {};
 struct GpuSamplerPlatformData {};

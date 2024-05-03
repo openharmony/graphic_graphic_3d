@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,22 +13,17 @@
  * limitations under the License.
  */
 
-#if !defined(SKIN_JOINTS_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define SKIN_JOINTS_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_SKIN_JOINTS_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_SKIN_JOINTS_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
-#include <base/math/matrix.h>
-#include <base/math/vector.h>
+#include <3d/shaders/common/3d_dm_structures_common.h>
 #include <core/ecs/component_struct_macros.h>
+#include <core/ecs/entity.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
-#include <render/resource_handle.h>
 
 CORE3D_BEGIN_NAMESPACE()
-namespace {
-#include <3d/shaders/common/3d_dm_structures_common.h>
-}
 #endif
 /** Contains the entities which are the joints in the skinned entities hierarchy. SkinComponent points the ISkin
  * resources containing joint names and the inverse bind matrices of the joints. JointMatricesComponent contains the

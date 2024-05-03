@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,16 +13,16 @@
  * limitations under the License.
  */
 
-#if !defined(MESH_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define MESH_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_MESH_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_MESH_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
+#include <base/math/vector.h>
 #include <base/util/formats.h>
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
 #include <render/device/gpu_resource_desc.h>
 
 CORE3D_BEGIN_NAMESPACE()
@@ -103,7 +103,7 @@ BEGIN_COMPONENT(IMeshComponentManager, MeshComponent)
             /** Byte size to be used */
             uint32_t byteSize { MAX_BUFFER_ACCESS_BYTE_SIZE };
             /** Enumeration for index type (uint16, uint32) */
-            RENDER_NS::IndexType indexType { RENDER_NS::IndexType::CORE_INDEX_TYPE_MAX_ENUM };
+            RENDER_NS::IndexType indexType { RENDER_NS::IndexType::CORE_INDEX_TYPE_UINT32 };
         };
 
         /** Instance count */
@@ -154,16 +154,16 @@ BEGIN_COMPONENT(IMeshComponentManager, MeshComponent)
 #endif
 
     /** Submeshes */
-    DEFINE_PROPERTY(BASE_NS::vector<Submesh>, submeshes, "", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<Submesh>, submeshes, "Submeshes", 0, )
 
     /** Joint bounds */
-    DEFINE_PROPERTY(BASE_NS::vector<float>, jointBounds, "", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<float>, jointBounds, "Joint Bounds", 0, )
 
     /** AABB min */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec3, aabbMin, "", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
+    DEFINE_PROPERTY(BASE_NS::Math::Vec3, aabbMin, "Min AABB", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
 
     /** AABB max */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec3, aabbMax, "", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
+    DEFINE_PROPERTY(BASE_NS::Math::Vec3, aabbMax, "Max AABB", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
 END_COMPONENT(IMeshComponentManager, MeshComponent, "cd08dae1-d13b-4a4a-a317-56acbb332f76")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()

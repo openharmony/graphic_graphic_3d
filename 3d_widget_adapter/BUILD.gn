@@ -47,6 +47,7 @@ config("lume3d_config") {
     "-Wno-reorder",
     "-Wno-unused-function",
     "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-missing-braces",
 
     "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
     "-DCORE_BUILD_2D = 0",

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(ANIMATION_INPUT_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define ANIMATION_INPUT_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_ANIMATION_INPUT_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_ANIMATION_INPUT_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
@@ -22,21 +22,20 @@
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/intf_component_manager.h>
 #include <core/namespace.h>
-#include <core/property/property_types.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif
 
 /**
- * Animation input component represents animation keyframe time stamps in seconds.
+ * Animation input component represents animation keyframe timestamps in seconds.
  */
 BEGIN_COMPONENT(IAnimationInputComponentManager, AnimationInputComponent)
 
-    /** Keyframe time stamps in seconds. */
-    DEFINE_PROPERTY(BASE_NS::vector<float>, timestamps, "", 0,)
+    /** Keyframe timestamps in seconds. */
+    DEFINE_PROPERTY(BASE_NS::vector<float>, timestamps, "Keyframe Timestamps", 0, )
 
 END_COMPONENT(IAnimationInputComponentManager, AnimationInputComponent, "a6e72690-4e42-47ba-9104-b0d16541838b")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()
 #endif
-#endif // __ANIMATION_INPUT_COMPONENT__
+#endif // API_3D_ECS_COMPONENTS_ANIMATION_INPUT_COMPONENT_H

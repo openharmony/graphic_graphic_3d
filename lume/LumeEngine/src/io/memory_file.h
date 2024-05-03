@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,10 +16,13 @@
 #ifndef CORE__IO__MEMORY_FILE_H
 #define CORE__IO__MEMORY_FILE_H
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 
 #include <base/containers/type_traits.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <core/io/intf_file.h>
 #include <core/namespace.h>
 
@@ -39,7 +42,7 @@ public:
 
     uint64_t Size() const
     {
-        return (uint64_t)buffer_.size();
+        return static_cast<uint64_t>(buffer_.size());
     }
 
     void Resize(size_t newSize)

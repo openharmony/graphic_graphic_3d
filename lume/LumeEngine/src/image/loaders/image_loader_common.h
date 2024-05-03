@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -102,19 +102,26 @@ public:
             allocSucc = false;
             return;
         }
-        rowPointers = (T **)malloc(height * sizeof(T *));
-        allocHeight = static_cast<int>(height);
-
-        size_t rowbytes = width * channels * channelSize;
+        size_t rowbytes = static_cast<size_t>(width * channels) * channelSize;
         if (rowbytes <= 0 || rowbytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
             allocSucc = false;
             return;
         }
+        rowPointers = (T **)malloc(height * sizeof(T *));
+        if (rowPointers == nullptr) {
+            CORE_LOG_E("malloc fail return null");
+            return;
+        }
+        allocHeight = static_cast<int>(height);
         for (int i = 0; i < allocHeight; i++) {
             rowPointers[i] = nullptr; /* security precaution */
         }
         for (int i = 0; i < allocHeight; i++) {
             rowPointers[i] = (T *)malloc(rowbytes);
+            if (rowPointers[i] == nullptr) {
+                CORE_LOG_E("malloc fail return null");
+                return;
+            }
         }
         allocSucc = true;
     }

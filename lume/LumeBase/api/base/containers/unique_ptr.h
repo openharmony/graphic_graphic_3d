@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,12 +32,14 @@ struct default_delete {
 
     void operator()(T* ptr) const
     {
+        static_assert(sizeof(T), "can't delete an incomplete type");
         delete ptr;
     }
 
     template<class U>
     void operator()(U* ptr) const
     {
+        static_assert(sizeof(U), "can't delete an incomplete type");
         delete ptr;
     }
 };
@@ -52,12 +54,14 @@ struct default_delete<T[]> {
 
     void operator()(T* ptr) const
     {
+        static_assert(sizeof(T), "can't delete an incomplete type");
         delete[] ptr;
     }
 
     template<class U>
     void operator()(U* ptr) const
     {
+        static_assert(sizeof(U), "can't delete an incomplete type");
         delete[] ptr;
     }
 };

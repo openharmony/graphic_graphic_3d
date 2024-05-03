@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,7 @@
 #include "node_context_pool_manager_vk.h"
 
 #include <cstdint>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <base/containers/fixed_string.h>
 #include <base/math/mathf.h>
@@ -55,6 +55,9 @@ uint64_t BASE_NS::hash(const RENDER_NS::RenderPassSubpassDesc& subpass)
     if (subpass.depthAttachmentCount) {
         HashCombine(seed, static_cast<uint64_t>(subpass.depthAttachmentIndex));
     }
+    if (subpass.viewMask > 1U) {
+        HashCombine(seed, subpass.viewMask);
+    }
     return seed;
 }
 
@@ -67,14 +70,23 @@ struct FBSize {
 };
 
 inline void HashRenderPassCompatibility(uint64_t& hash, const RenderPassDesc& renderPassDesc,
-    const LowLevelRenderPassCompatibilityDescVk& renderPassCompatibilityDesc, const RenderPassSubpassDesc& subpasses)
+    const LowLevelRenderPassCompatibilityDescVk& renderPassCompatibilityDesc, const RenderPassSubpassDesc& subpasses,
+    const RenderPassAttachmentResourceStates& intputResourceStates)
 {
     for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
         const LowLevelRenderPassCompatibilityDescVk::Attachment& atCompatibilityDesc =
             renderPassCompatibilityDesc.attachments[idx];
         HashCombine(hash, static_cast<uint64_t>(atCompatibilityDesc.format),
             static_cast<uint64_t>(atCompatibilityDesc.sampleCountFlags));
+        // render pass needs have matching stage masks
+        HashCombine(hash, static_cast<uint64_t>(intputResourceStates.states[idx].pipelineStageFlags));
+        if (subpasses.viewMask > 1U) {
+            // with multi-view extension, renderpass updated for all mips
+            HashCombine(hash, (static_cast<uint64_t>(renderPassDesc.attachments[idx].layer) << 32ULL) |
+                                  (static_cast<uint64_t>(renderPassDesc.attachments[idx].mipLevel)));
+        }
     }
+    // NOTE: subpass resources states are not hashed
     HashRange(hash, &subpasses, &subpasses + renderPassDesc.subpassCount);
 }
 
@@ -98,6 +110,18 @@ inline void HashFramebuffer(
     }
 }
 
+inline void HashRenderPassOps(uint64_t& hash, const RenderPassDesc& renderPassDesc)
+{
+    for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
+        const auto& attachRef = renderPassDesc.attachments[idx];
+        const uint64_t opHash = (static_cast<uint64_t>(attachRef.loadOp) << 48ULL) |
+                                (static_cast<uint64_t>(attachRef.storeOp) << 32ULL) |
+                                (static_cast<uint64_t>(attachRef.stencilLoadOp) << 16ULL) |
+                                (static_cast<uint64_t>(attachRef.stencilStoreOp));
+        HashCombine(hash, opHash);
+    }
+}
+
 struct RenderPassHashes {
     uint64_t renderPassCompatibilityHash { 0 };
     uint64_t renderPassHash { 0 };  // continued hashing from compatibility
@@ -113,10 +137,11 @@ inline RenderPassHashes HashBeginRenderPass(const RenderCommandBeginRenderPass& 
 
     PLUGIN_ASSERT(renderPassDesc.subpassCount > 0);
     HashRenderPassCompatibility(rpHashes.renderPassCompatibilityHash, renderPassDesc, renderPassCompatibilityDesc,
-        beginRenderPass.subpasses[0]);
+        beginRenderPass.subpasses[0], beginRenderPass.inputResourceStates);
 
     rpHashes.renderPassHash = rpHashes.renderPassCompatibilityHash; // for starting point
     HashRenderPassLayouts(rpHashes.renderPassHash, renderPassDesc, beginRenderPass.imageLayouts);
+    HashRenderPassOps(rpHashes.renderPassHash, renderPassDesc);
 
     rpHashes.frameBufferHash = rpHashes.renderPassCompatibilityHash; // depends on the compatible render pass
     HashFramebuffer(rpHashes.frameBufferHash, renderPassDesc, gpuResourceMgr);
@@ -125,119 +150,139 @@ inline RenderPassHashes HashBeginRenderPass(const RenderCommandBeginRenderPass& 
 }
 
 VkFramebuffer CreateFramebuffer(const GpuResourceManager& gpuResourceMgr, const RenderPassDesc& renderPassDesc,
-    const VkDevice device, const VkRenderPass compatibleRenderPass)
+    const LowLevelRenderPassDataVk& renderPassData, const VkDevice device)
 {
     const uint32_t attachmentCount = renderPassDesc.attachmentCount;
     PLUGIN_ASSERT(attachmentCount <= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
 
-    FBSize size;
+    // the size is taken from the render pass data
+    // there might e.g. fragment shading rate images whose size differ
+    FBSize size { renderPassData.framebufferSize.width, renderPassData.framebufferSize.height, 1u };
     VkImageView imageViews[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
     uint32_t viewIndex = 0;
 
+    bool validImageViews = true;
     for (uint32_t idx = 0; idx < attachmentCount; ++idx) {
         const RenderHandle handle = renderPassDesc.attachmentHandles[idx];
         const RenderPassDesc::AttachmentDesc& attachmentDesc = renderPassDesc.attachments[idx];
-        const GpuImageVk* image = gpuResourceMgr.GetImage<GpuImageVk>(handle);
-        PLUGIN_ASSERT(image);
-        if (image) {
-            const GpuImageDesc& imageDesc = image->GetDesc();
-            size.width = imageDesc.width;
-            size.height = imageDesc.height;
-
+        if (const GpuImageVk* image = gpuResourceMgr.GetImage<GpuImageVk>(handle); image) {
             const GpuImagePlatformDataVk& plat = image->GetPlatformData();
             const GpuImagePlatformDataViewsVk& imagePlat = image->GetPlatformDataViews();
             imageViews[viewIndex] = plat.imageViewBase;
-            if ((attachmentDesc.mipLevel >= 1) && (attachmentDesc.mipLevel < imagePlat.mipImageViews.size())) {
+            if ((renderPassData.viewMask > 1u) && (plat.arrayLayers > 1u)) {
+                // multi-view, we select the view with all the layers, but the layers count is 1
+                if ((!imagePlat.mipImageAllLayerViews.empty()) &&
+                    (attachmentDesc.mipLevel < static_cast<uint32_t>(imagePlat.mipImageAllLayerViews.size()))) {
+                    imageViews[viewIndex] = imagePlat.mipImageAllLayerViews[attachmentDesc.mipLevel];
+                } else {
+                    imageViews[viewIndex] = plat.imageView;
+                }
+                size.layers = 1u;
+            } else if ((attachmentDesc.mipLevel >= 1) && (attachmentDesc.mipLevel < imagePlat.mipImageViews.size())) {
                 imageViews[viewIndex] = imagePlat.mipImageViews[attachmentDesc.mipLevel];
-                size.width = Math::max(1u, size.width >> attachmentDesc.mipLevel);
-                size.height = Math::max(1u, size.height >> attachmentDesc.mipLevel);
             } else if ((attachmentDesc.layer >= 1) && (attachmentDesc.layer < imagePlat.layerImageViews.size())) {
                 imageViews[viewIndex] = imagePlat.layerImageViews[attachmentDesc.layer];
             }
             viewIndex++;
         }
+        if (!imageViews[idx]) {
+            validImageViews = false;
+        }
     }
-    PLUGIN_ASSERT(viewIndex == attachmentCount);
-
-    const VkFramebufferCreateInfo framebufferCreateInfo {
-        VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, // sType
-        nullptr,                                   // pNext
-        VkFramebufferCreateFlags { 0 },            // flags
-        compatibleRenderPass,                      // renderPass
-        attachmentCount,                           // attachmentCount
-        imageViews,                                // pAttachments
-        size.width,                                // width
-        size.height,                               // height
-        size.layers,                               // layers
-    };
-
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (!validImageViews || (viewIndex != attachmentCount)) {
+        PLUGIN_LOG_E("RENDER_VALIDATION: invalid image attachment in FBO creation");
+    }
+#endif
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
-    VALIDATE_VK_RESULT(vkCreateFramebuffer(device, // device
-        &framebufferCreateInfo,                    // pCreateInfo
-        nullptr,                                   // pAllocator
-        &framebuffer));                            // pFramebuffer
+    if (validImageViews && (viewIndex == attachmentCount)) {
+        const VkFramebufferCreateInfo framebufferCreateInfo {
+            VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, // sType
+            nullptr,                                   // pNext
+            VkFramebufferCreateFlags { 0 },            // flags
+            renderPassData.renderPassCompatibility,    // renderPass
+            attachmentCount,                           // attachmentCount
+            imageViews,                                // pAttachments
+            size.width,                                // width
+            size.height,                               // height
+            size.layers,                               // layers
+        };
+
+        VALIDATE_VK_RESULT(vkCreateFramebuffer(device, // device
+            &framebufferCreateInfo,                    // pCreateInfo
+            nullptr,                                   // pAllocator
+            &framebuffer));                            // pFramebuffer
+    }
 
     return framebuffer;
+}
+
+ContextCommandPoolVk CreateContextCommandPool(
+    const VkDevice device, const VkCommandBufferLevel cmdBufferLevel, const uint32_t queueFamilyIndex)
+{
+    constexpr VkCommandPoolCreateFlags commandPoolCreateFlags { 0u };
+    const VkCommandPoolCreateInfo commandPoolCreateInfo {
+        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
+        nullptr,                                    // pNext
+        commandPoolCreateFlags,                     // flags
+        queueFamilyIndex,                           // queueFamilyIndexlayers
+    };
+    constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
+    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo {
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
+        nullptr,                                 // pNext
+        semaphoreCreateFlags,                    // flags
+    };
+
+    ContextCommandPoolVk ctxPool;
+    VALIDATE_VK_RESULT(vkCreateCommandPool(device, // device
+        &commandPoolCreateInfo,                    // pCreateInfo
+        nullptr,                                   // pAllocator
+        &ctxPool.commandPool));                    // pCommandPool
+
+    // pre-create command buffers and semaphores
+    const VkCommandBufferAllocateInfo commandBufferAllocateInfo {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
+        nullptr,                                        // pNext
+        ctxPool.commandPool,                            // commandPool
+        cmdBufferLevel,                                 // level
+        1,                                              // commandBufferCount
+    };
+
+    VALIDATE_VK_RESULT(vkAllocateCommandBuffers(device, // device
+        &commandBufferAllocateInfo,                     // pAllocateInfo
+        &ctxPool.commandBuffer.commandBuffer));         // pCommandBuffers
+
+    VALIDATE_VK_RESULT(vkCreateSemaphore(device, // device
+        &semaphoreCreateInfo,                    // pCreateInfo
+        nullptr,                                 // pAllocator
+        &ctxPool.commandBuffer.semaphore));      // pSemaphore
+
+    return ctxPool;
 }
 } // namespace
 
 NodeContextPoolManagerVk::NodeContextPoolManagerVk(
     Device& device, GpuResourceManager& gpuResourceManager, const GpuQueue& gpuQueue)
-    : NodeContextPoolManager(), device_ { device }, gpuResourceMgr_ { gpuResourceManager }
+    : NodeContextPoolManager(), device_ { device }, gpuResourceMgr_ { gpuResourceManager }, gpuQueue_(gpuQueue)
 {
     const DeviceVk& deviceVk = static_cast<const DeviceVk&>(device_);
     const VkDevice vkDevice = static_cast<const DevicePlatformDataVk&>(device_.GetPlatformData()).device;
 
     const LowLevelGpuQueueVk lowLevelGpuQueue = deviceVk.GetGpuQueue(gpuQueue);
-
     const uint32_t bufferingCount = device_.GetCommandBufferingCount();
     if (bufferingCount > 0) {
         // prepare and create command buffers
         commandPools_.resize(bufferingCount);
-
-        constexpr VkCommandPoolCreateFlags commandPoolCreateFlags { 0u };
+        commandSecondaryPools_.resize(bufferingCount);
         const uint32_t queueFamilyIndex = lowLevelGpuQueue.queueInfo.queueFamilyIndex;
-        const VkCommandPoolCreateInfo commandPoolCreateInfo {
-            VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
-            nullptr,                                    // pNext
-            commandPoolCreateFlags,                     // flags
-            queueFamilyIndex,                           // queueFamilyIndexlayers
-        };
-        constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
-        constexpr VkSemaphoreCreateInfo semaphoreCreateInfo {
-            VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
-            nullptr,                                 // pNext
-            semaphoreCreateFlags,                    // flags
-        };
-
         for (uint32_t frameIdx = 0; frameIdx < commandPools_.size(); ++frameIdx) {
-            auto& cmdPool = commandPools_[frameIdx];
-            VALIDATE_VK_RESULT(vkCreateCommandPool(vkDevice, // device
-                &commandPoolCreateInfo,                      // pCreateInfo
-                nullptr,                                     // pAllocator
-                &cmdPool.commandPool));                      // pCommandPool
-
-            // pre-create command buffers and semaphores
-            constexpr VkCommandBufferLevel commandBufferLevel { VK_COMMAND_BUFFER_LEVEL_PRIMARY };
-            const VkCommandBufferAllocateInfo commandBufferAllocateInfo {
-                VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
-                nullptr,                                        // pNext
-                cmdPool.commandPool,                            // commandPool
-                commandBufferLevel,                             // level
-                1,                                              // commandBufferCount
-            };
-
-            VALIDATE_VK_RESULT(vkAllocateCommandBuffers(vkDevice, // device
-                &commandBufferAllocateInfo,                       // pAllocateInfo
-                &cmdPool.commandBuffer.commandBuffer));           // pCommandBuffers
-
-            VALIDATE_VK_RESULT(vkCreateSemaphore(vkDevice, // device
-                &semaphoreCreateInfo,                      // pCreateInfo
-                nullptr,                                   // pAllocator
-                &cmdPool.commandBuffer.semaphore));        // pSemaphore
-
-            // NOTE: cmd buffers taged in first beginFrame
+            commandPools_[frameIdx] = CreateContextCommandPool(
+                vkDevice, VkCommandBufferLevel::VK_COMMAND_BUFFER_LEVEL_PRIMARY, queueFamilyIndex);
+            commandSecondaryPools_[frameIdx] = CreateContextCommandPool(
+                vkDevice, VkCommandBufferLevel::VK_COMMAND_BUFFER_LEVEL_SECONDARY, queueFamilyIndex);
         }
+        // NOTE: cmd buffers tagged in first beginFrame
     }
 }
 
@@ -245,14 +290,22 @@ NodeContextPoolManagerVk::~NodeContextPoolManagerVk()
 {
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
 
-    for (auto& cmdPoolRef : commandPools_) {
-        vkDestroySemaphore(device,              // device
-            cmdPoolRef.commandBuffer.semaphore, // semaphore
-            nullptr);                           // pAllocator
-        vkDestroyCommandPool(device,            // device
-            cmdPoolRef.commandPool,             // commandPool
-            nullptr);                           // pAllocator
-    }
+    auto DestroyContextCommandPool = [](const auto& device, const auto& commandPools) {
+        for (auto& cmdPoolRef : commandPools) {
+            if (cmdPoolRef.commandBuffer.semaphore) {
+                vkDestroySemaphore(device,              // device
+                    cmdPoolRef.commandBuffer.semaphore, // semaphore
+                    nullptr);                           // pAllocator
+            }
+            if (cmdPoolRef.commandPool) {
+                vkDestroyCommandPool(device, // device
+                    cmdPoolRef.commandPool,  // commandPool
+                    nullptr);                // pAllocator
+            }
+        }
+    };
+    DestroyContextCommandPool(device, commandPools_);
+    DestroyContextCommandPool(device, commandSecondaryPools_);
 
     for (auto& ref : framebufferCache_.hashToElement) {
         if (ref.second.frameBuffer != VK_NULL_HANDLE) {
@@ -275,12 +328,31 @@ NodeContextPoolManagerVk::~NodeContextPoolManagerVk()
 
 void NodeContextPoolManagerVk::BeginFrame()
 {
+#if (RENDER_VALIDATION_ENABLED == 1)
+    frameIndexFront_ = device_.GetFrameCount();
+#endif
+}
+
+void NodeContextPoolManagerVk::BeginBackendFrame()
+{
+    const uint64_t frameCount = device_.GetFrameCount();
+
+#if (RENDER_VALIDATION_ENABLED == 1)
+    PLUGIN_ASSERT(frameIndexBack_ != frameCount); // prevent multiple calls per frame
+    frameIndexBack_ = frameCount;
+    PLUGIN_ASSERT(frameIndexFront_ == frameIndexBack_);
+#endif
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     if (firstFrame_) {
         firstFrame_ = false;
         for (const auto& cmdPoolRef : commandPools_) {
             GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_COMMAND_BUFFER,
                 VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer), debugName_ + "_cmd_buf");
+        }
+        // TODO: deferred creation
+        for (const auto& cmdPoolRef : commandSecondaryPools_) {
+            GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer), debugName_ + "_secondary_cmd_buf");
         }
     }
 #endif
@@ -289,15 +361,16 @@ void NodeContextPoolManagerVk::BeginFrame()
 
     constexpr uint64_t additionalFrameCount { 2u };
     const auto minAge = device_.GetCommandBufferingCount() + additionalFrameCount;
-    const auto ageLimit = (device_.GetFrameCount() < minAge) ? 0 : (device_.GetFrameCount() - minAge);
+    const auto ageLimit = (frameCount < minAge) ? 0 : (frameCount - minAge);
 
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
     {
         auto& cache = framebufferCache_.hashToElement;
         for (auto iter = cache.begin(); iter != cache.end();) {
             if (iter->second.frameUseIndex < ageLimit) {
-                PLUGIN_ASSERT(iter->second.frameBuffer != VK_NULL_HANDLE);
-                vkDestroyFramebuffer(device, iter->second.frameBuffer, nullptr);
+                if (iter->second.frameBuffer) {
+                    vkDestroyFramebuffer(device, iter->second.frameBuffer, nullptr);
+                }
                 iter = cache.erase(iter);
             } else {
                 ++iter;
@@ -308,8 +381,9 @@ void NodeContextPoolManagerVk::BeginFrame()
         auto& cache = renderPassCache_.hashToElement;
         for (auto iter = cache.begin(); iter != cache.end();) {
             if (iter->second.frameUseIndex < ageLimit) {
-                PLUGIN_ASSERT(iter->second.renderPass != VK_NULL_HANDLE);
-                renderPassCreator_.DestroyRenderPass(device, iter->second.renderPass);
+                if (iter->second.renderPass) {
+                    renderPassCreator_.DestroyRenderPass(device, iter->second.renderPass);
+                }
                 iter = cache.erase(iter);
             } else {
                 ++iter;
@@ -320,7 +394,19 @@ void NodeContextPoolManagerVk::BeginFrame()
 
 const ContextCommandPoolVk& NodeContextPoolManagerVk::GetContextCommandPool() const
 {
+#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
+    PLUGIN_ASSERT(frameIndexFront_ == frameIndexBack_);
+#endif
     return commandPools_[bufferingIndex_];
+}
+
+const ContextCommandPoolVk& NodeContextPoolManagerVk::GetContextSecondaryCommandPool() const
+{
+#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
+    PLUGIN_ASSERT(frameIndexFront_ == frameIndexBack_);
+#endif
+    PLUGIN_ASSERT(bufferingIndex_ < static_cast<uint32_t>(commandSecondaryPools_.size()));
+    return commandSecondaryPools_[bufferingIndex_];
 }
 
 LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
@@ -329,19 +415,25 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
     LowLevelRenderPassDataVk renderPassData;
     renderPassData.subpassIndex = beginRenderPass.subpassStartIndex;
 
+    PLUGIN_ASSERT(renderPassData.subpassIndex < static_cast<uint32_t>(beginRenderPass.subpasses.size()));
+    const DeviceVk& deviceVk = (const DeviceVk&)device_;
+    if (deviceVk.GetCommonDeviceExtensions().multiView) {
+        renderPassData.viewMask = beginRenderPass.subpasses[renderPassData.subpassIndex].viewMask;
+    }
+
     // collect render pass attachment compatibility info and default viewport/scissor
     for (uint32_t idx = 0; idx < beginRenderPass.renderPassDesc.attachmentCount; ++idx) {
-        const GpuImage* image = gpuResourceMgr_.GetImage(beginRenderPass.renderPassDesc.attachmentHandles[idx]);
-        PLUGIN_ASSERT(image);
-        if (image) {
-            const auto& imageDesc = image->GetDesc();
-            renderPassData.renderPassCompatibilityDesc.attachments[idx] = { (VkFormat)imageDesc.format,
-                (VkSampleCountFlagBits)imageDesc.sampleCountFlags };
+        if (const GpuImageVk* image =
+                gpuResourceMgr_.GetImage<const GpuImageVk>(beginRenderPass.renderPassDesc.attachmentHandles[idx]);
+            image) {
+            const auto& platData = image->GetPlatformData();
+            renderPassData.renderPassCompatibilityDesc.attachments[idx] = { platData.format, platData.samples,
+                platData.aspectFlags };
             if (idx == 0) {
-                uint32_t maxFbWidth = imageDesc.width;
-                uint32_t maxFbHeight = imageDesc.height;
+                uint32_t maxFbWidth = platData.extent.width;
+                uint32_t maxFbHeight = platData.extent.height;
                 const auto& attachmentRef = beginRenderPass.renderPassDesc.attachments[idx];
-                if ((attachmentRef.mipLevel >= 1) && (attachmentRef.mipLevel < imageDesc.mipCount)) {
+                if ((attachmentRef.mipLevel >= 1) && (attachmentRef.mipLevel < platData.mipLevels)) {
                     maxFbWidth = Math::max(1u, maxFbWidth >> attachmentRef.mipLevel);
                     maxFbHeight = Math::max(1u, maxFbHeight >> attachmentRef.mipLevel);
                 }
@@ -361,7 +453,6 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
         renderPassData.frameBufferHash = rpHashes.frameBufferHash;
     }
 
-    const DeviceVk& deviceVk = (const DeviceVk&)device_;
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
     const uint64_t frameCount = device_.GetFrameCount();
 
@@ -371,8 +462,8 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
             iter != cache.hashToElement.cend()) {
             renderPassData.renderPassCompatibility = iter->second.renderPass;
         } else { // new
-            renderPassData.renderPassCompatibility = renderPassCreator_.CreateRenderPassCompatibility(
-                deviceVk, beginRenderPass.renderPassDesc, renderPassData, beginRenderPass.subpasses);
+            renderPassData.renderPassCompatibility =
+                renderPassCreator_.CreateRenderPassCompatibility(deviceVk, beginRenderPass, renderPassData);
             cache.hashToElement[renderPassData.renderPassCompatibilityHash] = { 0,
                 renderPassData.renderPassCompatibility };
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
@@ -388,8 +479,8 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
             iter->second.frameUseIndex = frameCount;
             renderPassData.framebuffer = iter->second.frameBuffer;
         } else { // new
-            renderPassData.framebuffer = CreateFramebuffer(
-                gpuResourceMgr_, beginRenderPass.renderPassDesc, device, renderPassData.renderPassCompatibility);
+            renderPassData.framebuffer =
+                CreateFramebuffer(gpuResourceMgr_, beginRenderPass.renderPassDesc, renderPassData, device);
             cache.hashToElement[renderPassData.frameBufferHash] = { frameCount, renderPassData.framebuffer };
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
             GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_FRAMEBUFFER,

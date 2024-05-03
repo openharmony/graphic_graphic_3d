@@ -1,0 +1,32 @@
+{                                                                                                                       
+    "compatibility_info": {                                                                                         
+        "version": "22.00",                                                                                             
+        "type": "systemgraph"                                                                                           
+    },                                                                                                                  
+    "systems": [                                                                                                        
+        {                                                                                                               
+            "typeName": "AnimationSystem"                                                                               
+        },                                                                                                              
+        {                                                                                                               
+            "typeName": "LocalMatrixSystem"                                                                             
+        },                                                                                                              
+        {                                                                                                               
+            "typeName": "NodeSystem"                                                                                    
+        },                                                                                                              
+        {                                                                                                               
+            "typeName": "SkinningSystem"                                                                                
+        },                                                                                                              
+        {                                                                                                               
+            "typeName": "RenderPreprocessorSystem"                                                                      
+        },                                                                                                              
+        {                                                                                                               
+            "typeName": "MorphingSystem"                                                                                
+        },                                                                                                              
+        {                                                                                                               
+            "typeName": "RenderSystem"                                                                                  
+        },
+        {
+            "typeName": "MotphysSystem"
+        }
+    ]                                                                                                                   
+}                                                          

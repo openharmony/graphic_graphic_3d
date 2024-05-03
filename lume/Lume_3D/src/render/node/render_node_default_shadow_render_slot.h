@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -44,6 +44,7 @@ public:
     void InitNode(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override;
 
     struct ShadowBuffers {
         BASE_NS::string depthName;
@@ -104,8 +105,7 @@ private:
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial,
         const IRenderDataStoreDefaultLight::ShadowType shadowType, const RenderCamera& camera, const RenderLight& light,
         const uint32_t shadowPassIdx);
-    void UpdateSet0(RENDER_NS::IRenderCommandList& cmdList, const uint32_t shadowPassIdx);
-    void UpdateSet1(RENDER_NS::IRenderCommandList& cmdList, const uint32_t shadowPassIdx);
+    void UpdateSet01(RENDER_NS::IRenderCommandList& cmdList, const uint32_t shadowPassIdx);
 
     void UpdateGeneralDataUniformBuffers(const IRenderDataStoreDefaultLight& dataStoreLight);
     void CreateDefaultShaderData();
@@ -118,7 +118,9 @@ private:
     void UpdateCurrentScene(
         const IRenderDataStoreDefaultScene& dataStoreScene, const IRenderDataStoreDefaultLight& dataStoreLight);
 
-    RENDER_NS::RenderHandle GetSubmeshPso(const ShaderStateData& ssd, const RenderSubmeshFlags submeshFlags);
+    RENDER_NS::RenderHandle GetSubmeshPso(const ShaderStateData& ssd,
+        const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
+        const RenderSubmeshFlags submeshFlags);
 
     struct JsonInputs {
         RENDER_NS::RenderSlotSortType sortType { RENDER_NS::RenderSlotSortType::NONE };
@@ -176,7 +178,8 @@ private:
     RENDER_NS::RenderPass renderPass_;
     BASE_NS::vector<SlotSubmeshIndex> sortedSlotSubmeshes_;
 
-    bool validShadowNode { true };
+    bool validShadowNode_ { true };
+    uint32_t shadowCount_ { 0U };
 };
 CORE3D_END_NAMESPACE()
 

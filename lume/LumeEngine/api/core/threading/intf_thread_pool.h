@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,10 +18,18 @@
 
 #include <cstdint>
 
+#include <base/containers/refcnt_ptr.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_interface.h>
+
+BASE_BEGIN_NAMESPACE()
+template<class T>
+class array_view;
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 /** \addtogroup group_threading
@@ -60,6 +68,7 @@ public:
     class IResult {
     public:
         virtual void Wait() = 0;
+        virtual bool IsDone() const = 0;
 
         struct Deleter {
             constexpr Deleter() noexcept = default;
@@ -110,6 +119,15 @@ public:
      * @param task Pointer to a task instance.
      */
     virtual void SubmitAfter(uint64_t afterIdentifier, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task) = 0;
+
+    /** Adds a task to be executed later with multiple dependencies.
+     * @param afterIdentifiers Identifiers of the tasks that must be executed prior this task. Unknown identifiers will
+     * be skipped.
+     * @param taskIdentifier Identifier for the task.
+     * @param task Pointer to a task instance.
+     */
+    virtual void SubmitAfter(BASE_NS::array_view<const uint64_t> afterIdentifiers, uint64_t taskIdentifier,
+        IThreadPool::ITask::Ptr&& task) = 0;
 
     /** Remove all tasks from queue. */
     virtual void Clear() = 0;

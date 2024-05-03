@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -130,6 +130,10 @@ string Specialize(ShaderStageFlags mask, const string_view shaderTemplate,
 {
     if (shaderTemplate.empty()) {
         return {};
+    }
+    if (data.data.empty()) {
+        // missing specialization constant values
+        return string(shaderTemplate);
     }
     bool ok = false;
     for (const auto& spc : data.constants) {

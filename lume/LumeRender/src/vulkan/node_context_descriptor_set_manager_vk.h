@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,7 +17,7 @@
 #define VULKAN_NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_VK_H
 
 #include <cstdint>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <base/containers/array_view.h>
 #include <base/containers/vector.h>
@@ -78,6 +78,37 @@ struct LowLevelContextDescriptorPoolVk {
     BASE_NS::vector<DescriptorSetData> descriptorSets;
 };
 
+struct LowLevelContextDescriptorWriteDataVk {
+    BASE_NS::vector<VkWriteDescriptorSet> writeDescriptorSets;
+    BASE_NS::vector<VkDescriptorBufferInfo> descriptorBufferInfos;
+    BASE_NS::vector<VkDescriptorImageInfo> descriptorImageInfos;
+    BASE_NS::vector<VkDescriptorImageInfo> descriptorSamplerInfos;
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    BASE_NS::vector<VkWriteDescriptorSetAccelerationStructureKHR> descriptorAccelInfos;
+#endif
+
+    uint32_t writeBindingCount { 0U };
+    uint32_t bufferBindingCount { 0U };
+    uint32_t imageBindingCount { 0U };
+    uint32_t samplerBindingCount { 0U };
+
+    void Clear()
+    {
+        writeBindingCount = 0U;
+        bufferBindingCount = 0U;
+        imageBindingCount = 0U;
+        samplerBindingCount = 0U;
+
+        writeDescriptorSets.clear();
+        descriptorBufferInfos.clear();
+        descriptorImageInfos.clear();
+        descriptorSamplerInfos.clear();
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+        descriptorAccelInfos.clear();
+#endif
+    }
+};
+
 class NodeContextDescriptorSetManagerVk final : public NodeContextDescriptorSetManager {
 public:
     explicit NodeContextDescriptorSetManagerVk(Device& device);
@@ -96,8 +127,11 @@ public:
     const LowLevelDescriptorCountsVk& GetLowLevelDescriptorCounts(const RenderHandle handle);
     const LowLevelDescriptorSetVk* GetDescriptorSet(const RenderHandle handle) const;
 
+    LowLevelContextDescriptorWriteDataVk& GetLowLevelDescriptorWriteData();
+
     // deferred gpu descriptor set creation happens here
     void UpdateDescriptorSetGpuHandle(const RenderHandle handle) override;
+    void UpdateCpuDescriptorSetPlatform(const DescriptorSetLayoutBindingResources& bindingResources) override;
 
 private:
     Device& device_;
@@ -105,6 +139,8 @@ private:
     void CreateGpuDescriptorSet(const uint32_t bufferCount, const RenderHandle clientHandle,
         const CpuDescriptorSet& cpuDescriptorSet, LowLevelContextDescriptorPoolVk& descriptorPool);
     void DestroyPool(LowLevelContextDescriptorPoolVk& descriptorPool);
+    void ClearDescriptorSetWriteData();
+    void ResizeDescriptorSetWriteData();
 
     uint32_t bufferingCount_ { 0 };
     LowLevelContextDescriptorPoolVk descriptorPool_[DESCRIPTOR_SET_INDEX_TYPE_COUNT];
@@ -126,6 +162,8 @@ private:
     // use same vector, so we do not re-create the same with every reset
     // the memory allocation is small
     BASE_NS::vector<VkDescriptorPoolSize> descriptorPoolSizes_;
+
+    LowLevelContextDescriptorWriteDataVk lowLevelDescriptorWriteData_;
 
     uint32_t oneFrameDescSetGeneration_ { 0u };
 #if (RENDER_VALIDATION_ENABLED == 1)

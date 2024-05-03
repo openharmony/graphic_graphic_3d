@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,17 +16,16 @@
 #ifndef CORE__LOADER__JSON_UTIL_H
 #define CORE__LOADER__JSON_UTIL_H
 
-#include <cerrno>
+#include <algorithm>
 #include <cstdlib>
 
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
-#include <base/math/mathf.h>
+#include <base/containers/type_traits.h>
+#include <base/namespace.h>
 #include <core/json/json.h>
 #include <core/namespace.h>
-
-#include "util/string_util.h"
 
 CORE_BEGIN_NAMESPACE()
 template<typename T, BASE_NS::enable_if_t<BASE_NS::is_same_v<bool, T>, bool> = true>

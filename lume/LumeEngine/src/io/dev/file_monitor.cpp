@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,10 +15,20 @@
 
 #include "io/dev/file_monitor.h"
 
+#include <cstddef>
+
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
 #include <core/io/intf_file_manager.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
-#include <core/perf/intf_performance_data_manager.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string;
@@ -35,27 +45,32 @@ void FileMonitor::RecursivelyCollectAllFiles(string& path)
     const auto& entries = dir->GetEntries();
     const size_t oldLength = path.length();
     for (const IDirectory::Entry& entry : entries) {
+        if (entry.name == "." || entry.name == "..") {
+            continue;
+        }
+
         path.reserve(oldLength + entry.name.length() + 1);
         path += entry.name;
-        if (entry.type == IDirectory::Entry::FILE) {
-            auto iterator = files_.find(path);
-            if (iterator != files_.end()) {
-                // File being tracked, see if it is modified.
-                if (entry.timestamp == iterator->second.timestamp) {
-                    iterator->second.state = FileInfo::NOCHANGE;
-                } else {
-                    iterator->second.timestamp = entry.timestamp;
-                    iterator->second.state = FileInfo::MODIFIED;
-                }
+
+        if (entry.type == IDirectory::Entry::DIRECTORY) {
+            path += '/';
+        }
+
+        auto iterator = files_.find(path);
+        if (iterator != files_.end()) {
+            // File or directory being tracked, see if it is modified.
+            if (entry.timestamp == iterator->second.timestamp) {
+                iterator->second.state = FileInfo::NOCHANGE;
             } else {
-                // This is a new file, start tracking it.
-                files_.insert({ path, { entry.timestamp, FileInfo::ADDED } });
+                iterator->second.timestamp = entry.timestamp;
+                iterator->second.state = FileInfo::MODIFIED;
             }
-        } else if (entry.type == IDirectory::Entry::DIRECTORY) {
-            if (entry.name != "." && entry.name != "..") {
-                path += '/';
-                RecursivelyCollectAllFiles(path);
-            }
+        } else {
+            // This is a new file or directory, start tracking it.
+            files_.insert({ path, { entry.timestamp, FileInfo::ADDED } });
+        }
+        if (entry.type == IDirectory::Entry::DIRECTORY) {
+            RecursivelyCollectAllFiles(path);
         }
         path.resize(oldLength);
     }
@@ -72,8 +87,9 @@ void FileMonitor::CleanPath(const string_view inPath, string& path)
         path = inPath;
     }
     for (auto& c : path) {
-        if (c == '\\')
+        if (c == '\\') {
             c = '/';
+        }
     }
 }
 
@@ -103,8 +119,8 @@ bool FileMonitor::RemovePath(const string_view inPath)
 {
     string path;
     CleanPath(inPath, path);
-    vector<string>::iterator iterator = directories_.begin();
-    for (; iterator != directories_.end(); ++iterator) {
+    auto iterator = directories_.cbegin();
+    for (; iterator != directories_.cend(); ++iterator) {
         if (*iterator == path) {
             // scan through tracked files, and remove the ones that start with "path"
             for (auto it = files_.begin(); it != files_.end();) {
@@ -161,11 +177,11 @@ void FileMonitor::ScanModifications(vector<string>& added, vector<string>& remov
     // See which of the files are removed.
     for (auto it = files_.begin(); it != files_.end();) {
         if (it->second.state == FileInfo::REMOVED) {
-            removed.emplace_back(it->first);
+            removed.push_back(it->first);
         } else if (it->second.state == FileInfo::MODIFIED) {
-            modified.emplace_back(it->first);
+            modified.push_back(it->first);
         } else if (it->second.state == FileInfo::ADDED) {
-            added.emplace_back(it->first);
+            added.push_back(it->first);
         }
         if (it->second.state != FileInfo::REMOVED) {
             // default state is removed.
@@ -182,7 +198,7 @@ vector<string> FileMonitor::GetMonitoredFiles() const
     vector<string> filesRes;
     filesRes.reserve(files_.size());
     for (auto& f : files_) {
-        filesRes.emplace_back(f.first);
+        filesRes.push_back(f.first);
     }
     return filesRes;
 }

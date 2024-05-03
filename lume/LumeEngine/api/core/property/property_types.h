@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,23 +16,39 @@
 #ifndef API_CORE_PROPERTY_PROPERTY_TYPES_H
 #define API_CORE_PROPERTY_PROPERTY_TYPES_H
 
-#include <cstddef>
 #include <cstdint>
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
-#include <base/containers/vector.h>
-#include <base/math/matrix.h>
-#include <base/math/quaternion.h>
-#include <base/util/compile_time_hashes.h>
-#include <base/util/uid.h>
-#include <core/ecs/entity.h>
-#include <core/ecs/entity_reference.h>
+#include <base/namespace.h>
 #include <core/namespace.h>
 #include <core/property/property.h>
 
+BASE_BEGIN_NAMESPACE()
+namespace Math {
+class Mat3X3;
+class Mat4X4;
+class Quat;
+class IVec2;
+class IVec3;
+class IVec4;
+class UVec2;
+class UVec3;
+class UVec4;
+class Vec2;
+class Vec3;
+class Vec4;
+} // namespace Math
+struct Uid;
+template<typename T>
+class vector;
+BASE_END_NAMESPACE()
+
 CORE_BEGIN_NAMESPACE()
+class EntityReference;
+struct Entity;
+
 namespace PropertyType {
 /* Primitive types */
 inline constexpr PropertyTypeDecl BOOL_T = PROPERTYTYPE(bool);
@@ -68,6 +84,9 @@ inline constexpr PropertyTypeDecl FLOAT_ARRAY_T = PROPERTYTYPE_ARRAY(float);
 inline constexpr PropertyTypeDecl DOUBLE_ARRAY_T = PROPERTYTYPE_ARRAY(double);
 
 /* Extended types */
+inline constexpr PropertyTypeDecl IVEC2_T = PROPERTYTYPE(BASE_NS::Math::IVec2);
+inline constexpr PropertyTypeDecl IVEC3_T = PROPERTYTYPE(BASE_NS::Math::IVec3);
+inline constexpr PropertyTypeDecl IVEC4_T = PROPERTYTYPE(BASE_NS::Math::IVec4);
 inline constexpr PropertyTypeDecl VEC2_T = PROPERTYTYPE(BASE_NS::Math::Vec2);
 inline constexpr PropertyTypeDecl VEC3_T = PROPERTYTYPE(BASE_NS::Math::Vec3);
 inline constexpr PropertyTypeDecl VEC4_T = PROPERTYTYPE(BASE_NS::Math::Vec4);
@@ -82,6 +101,9 @@ inline constexpr PropertyTypeDecl ENTITY_T = PROPERTYTYPE(Entity);
 inline constexpr PropertyTypeDecl ENTITY_REFERENCE_T = PROPERTYTYPE(EntityReference);
 inline constexpr PropertyTypeDecl STRING_T = PROPERTYTYPE(BASE_NS::string);
 
+inline constexpr PropertyTypeDecl IVEC2_ARRAY_T = PROPERTYTYPE_ARRAY(BASE_NS::Math::IVec2);
+inline constexpr PropertyTypeDecl IVEC3_ARRAY_T = PROPERTYTYPE_ARRAY(BASE_NS::Math::IVec3);
+inline constexpr PropertyTypeDecl IVEC4_ARRAY_T = PROPERTYTYPE_ARRAY(BASE_NS::Math::IVec4);
 inline constexpr PropertyTypeDecl VEC2_ARRAY_T = PROPERTYTYPE_ARRAY(BASE_NS::Math::Vec2);
 inline constexpr PropertyTypeDecl VEC3_ARRAY_T = PROPERTYTYPE_ARRAY(BASE_NS::Math::Vec3);
 inline constexpr PropertyTypeDecl VEC4_ARRAY_T = PROPERTYTYPE_ARRAY(BASE_NS::Math::Vec4);

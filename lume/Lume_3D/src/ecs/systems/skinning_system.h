@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include <3d/ecs/systems/intf_skinning_system.h>
 #include <base/math/matrix.h>
 #include <core/namespace.h>
+#include <core/threading/intf_thread_pool.h>
 
 CORE3D_BEGIN_NAMESPACE()
 class INodeComponentManager;
@@ -61,6 +62,8 @@ public:
 
     void CreateInstance(CORE_NS::Entity const& skinIbmEntity, BASE_NS::array_view<const CORE_NS::Entity> const& joints,
         CORE_NS::Entity const& entity, CORE_NS::Entity const& skeleton) override;
+    void CreateInstance(
+        CORE_NS::Entity const& skinIbmEntity, CORE_NS::Entity const& entity, CORE_NS::Entity const& skeleton) override;
     void DestroyInstance(CORE_NS::Entity const& entity) override;
 
 private:
@@ -90,6 +93,11 @@ private:
     uint32_t worldMatrixGeneration_ { 0 };
     uint32_t jointMatricesGeneration_ { 0 };
     CORE_NS::PropertyApiImpl<void> SKINNING_SYSTEM_PROPERTIES;
+
+    CORE_NS::IThreadPool::Ptr threadPool_;
+    class SkinTask;
+    BASE_NS::vector<SkinTask> tasks_;
+    BASE_NS::vector<CORE_NS::IThreadPool::IResult::Ptr> taskResults_;
 };
 CORE3D_END_NAMESPACE()
 

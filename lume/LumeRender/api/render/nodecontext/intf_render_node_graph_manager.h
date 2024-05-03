@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,6 +43,14 @@ struct RenderNodeDesc {
     BASE_NS::string nodeJson;
 };
 
+/** Render node desctriptor */
+struct RenderNodeGraphOutputResource {
+    /** Simple output name */
+    RenderDataConstants::RenderDataFixedString name;
+    /** Name of render node instance where the output is from */
+    RenderDataConstants::RenderDataFixedString nodeName;
+};
+
 /** Render node graph descriptor */
 struct RenderNodeGraphDesc {
     /** Render node graph name */
@@ -53,6 +61,9 @@ struct RenderNodeGraphDesc {
     RenderDataConstants::RenderDataFixedString renderNodeGraphUri;
     /** Render nodes */
     BASE_NS::vector<RenderNodeDesc> nodes;
+
+    /** Render node graph output resources */
+    BASE_NS::vector<RenderNodeGraphOutputResource> outputResources;
 };
 
 struct RenderNodeDescInfo {

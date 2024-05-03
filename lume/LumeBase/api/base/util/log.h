@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,15 +18,15 @@
 
 #ifndef NDEBUG
 #include <cassert>
-#define BASE_ASSERT(cond) assert(cond);
-#define BASE_ASSERT_MSG(cond, msg) assert((cond) && (msg));
+#define BASE_ASSERT(cond) assert(cond)
+#define BASE_ASSERT_MSG(cond, msg) assert((cond) && (msg))
 
 #include <cstdio>
-#define BASE_LOG_E(...) ::fprintf(stderr, __VA_ARGS__);
+#define BASE_LOG_E(...) ::fprintf(stderr, __VA_ARGS__)
 #else
-#define BASE_ASSERT(cond)
-#define BASE_ASSERT_MSG(cond, msg)
-#define BASE_LOG_E(...)
+#define BASE_ASSERT(cond) ((void)0)
+#define BASE_ASSERT_MSG(cond, msg) ((void)0)
+#define BASE_LOG_E(...) ((void)0)
 #endif
 
 #endif // API_BASE_UTIL_LOG_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,6 +29,7 @@
 #include <core/plugin/intf_plugin_register.h>
 #include <core/util/intf_frustum_util.h>
 #include <render/datastore/intf_render_data_store_manager.h>
+#include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/nodecontext/intf_render_node.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
@@ -44,7 +45,9 @@ using namespace RENDER_NS;
 namespace {
 inline bool operator<(const SlotSubmeshIndex& lhs, const SlotSubmeshIndex& rhs)
 {
-    if (lhs.sortLayerKey <= rhs.sortLayerKey) {
+    if (lhs.sortLayerKey < rhs.sortLayerKey) {
+        return true;
+    } else if (lhs.sortLayerKey == rhs.sortLayerKey) {
         return (lhs.sortKey < rhs.sortKey);
     } else {
         return false;
@@ -53,7 +56,9 @@ inline bool operator<(const SlotSubmeshIndex& lhs, const SlotSubmeshIndex& rhs)
 
 inline bool operator>(const SlotSubmeshIndex& lhs, const SlotSubmeshIndex& rhs)
 {
-    if (lhs.sortLayerKey >= rhs.sortLayerKey) {
+    if (lhs.sortLayerKey > rhs.sortLayerKey) {
+        return true;
+    } else if (lhs.sortLayerKey == rhs.sortLayerKey) {
         return (lhs.sortKey > rhs.sortKey);
     } else {
         return false;
@@ -112,8 +117,10 @@ void UpdateCustomCameraTargets(const RenderCamera& camera, RenderPass& renderPas
     }
 }
 
-void UpdateCustomCameraClears(const RenderCamera& camera, RenderPass& renderPass)
+void UpdateCustomCameraLoadStore(const RenderCamera& camera, RenderPass& renderPass)
 {
+    // NOTE: if clear bits given the camera RNG loadOp is overrided with clear
+    // otherwise the loadOp is the one from RNG
     auto& subpassDesc = renderPass.subpassDesc;
     if ((subpassDesc.depthAttachmentCount == 1) &&
         (subpassDesc.depthAttachmentIndex < PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT)) {
@@ -121,19 +128,30 @@ void UpdateCustomCameraClears(const RenderCamera& camera, RenderPass& renderPass
         if ((camera.flags & RenderCamera::CAMERA_FLAG_CLEAR_DEPTH_BIT)) {
             attRef.loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             attRef.clearValue.depthStencil = camera.clearDepthStencil;
-        } else { // no clear requested
-            attRef.loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
+        }
+        if (((camera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) == 0) &&
+            (camera.flags & RenderCamera::CAMERA_FLAG_OUTPUT_DEPTH_BIT)) {
+            attRef.storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         }
     }
-    // NOTE: clear/handles only the first target ATM, keep MSAA as the first color attachment
-    if ((subpassDesc.colorAttachmentCount > 0) &&
-        subpassDesc.colorAttachmentIndices[0] < PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
-        auto& attRef = renderPass.renderPassDesc.attachments[subpassDesc.colorAttachmentIndices[0u]];
-        if (camera.flags & RenderCamera::CAMERA_FLAG_CLEAR_COLOR_BIT) {
-            attRef.loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
-            attRef.clearValue.color = camera.clearColorValues;
-        } else { // no clear requested
-            attRef.loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
+    for (uint32_t idx = 0; idx < subpassDesc.colorAttachmentCount; ++idx) {
+        if (subpassDesc.colorAttachmentIndices[idx] < PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+            auto& attRef = renderPass.renderPassDesc.attachments[subpassDesc.colorAttachmentIndices[idx]];
+            if (camera.flags & RenderCamera::CAMERA_FLAG_CLEAR_COLOR_BIT) {
+                attRef.loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
+                attRef.clearValue.color = camera.clearColorValues;
+            }
+        }
+    }
+}
+
+void UpdateCameraFlags(const RenderCamera& camera, RenderPass& renderPass)
+{
+    if (camera.multiViewCameraCount > 0U) {
+        // NOTE: does not over write viewmask if it has some special values
+        if (renderPass.subpassDesc.viewMask <= 1U) {
+            const uint32_t layerCount = camera.multiViewCameraCount + 1U;
+            renderPass.subpassDesc.viewMask = (1U << layerCount) - 1U;
         }
     }
 }
@@ -156,6 +174,7 @@ SceneRenderDataStores RenderNodeSceneUtil::GetSceneRenderDataStores(
         stores.dataStoreNameLight =
             rs.dataStoreNameLight.empty() ? "RenderDataStoreDefaultLight" : rs.dataStoreNameLight;
         stores.dataStoreNameMorph = rs.dataStoreNameMorph.empty() ? "RenderDataStoreMorph" : rs.dataStoreNameMorph;
+        stores.dataStoreNamePrefix = rs.dataStoreNamePrefix;
     }
     return stores;
 }
@@ -201,11 +220,12 @@ ScissorDesc RenderNodeSceneUtil::CreateScissorFromCamera(const RenderCamera& cam
 void RenderNodeSceneUtil::UpdateRenderPassFromCamera(const RenderCamera& camera, RenderPass& renderPass)
 {
     renderPass.renderPassDesc.renderArea = { 0, 0, camera.renderResolution.x, camera.renderResolution.y };
-    if (camera.targetType == RenderCamera::CameraTargetType::TARGET_TYPE_CUSTOM_TARGETS) {
+    if (camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUSTOM_TARGETS_BIT) {
         UpdateCustomCameraTargets(camera, renderPass);
     }
     // NOTE: UpdateCustomCameraClears(camera, renderPass) is not yet called
     UpdateRenderArea(camera.scissor, renderPass.renderPassDesc.renderArea);
+    UpdateCameraFlags(camera, renderPass);
 }
 
 void RenderNodeSceneUtil::UpdateRenderPassFromCustomCamera(
@@ -213,11 +233,12 @@ void RenderNodeSceneUtil::UpdateRenderPassFromCustomCamera(
 {
     renderPass.renderPassDesc.renderArea = { 0, 0, camera.renderResolution.x, camera.renderResolution.y };
     // NOTE: legacy support is only taken into account when isNamedCamera flag is true
-    if ((camera.targetType == RenderCamera::CameraTargetType::TARGET_TYPE_CUSTOM_TARGETS) && isNamedCamera) {
+    if ((camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUSTOM_TARGETS_BIT) && isNamedCamera) {
         UpdateCustomCameraTargets(camera, renderPass);
     }
-    UpdateCustomCameraClears(camera, renderPass);
+    UpdateCustomCameraLoadStore(camera, renderPass);
     UpdateRenderArea(camera.scissor, renderPass.renderPassDesc.renderArea);
+    UpdateCameraFlags(camera, renderPass);
 }
 
 void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
@@ -273,7 +294,7 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
             } else {
                 sortKey = (sortKey << sDepthShift) | ((uint64_t)slotSubmeshMatData[idx].renderSortHash & sRenderMask);
             }
-            refSubmeshIndices.emplace_back(SlotSubmeshIndex { (uint32_t)submeshIndex,
+            refSubmeshIndices.push_back(SlotSubmeshIndex { (uint32_t)submeshIndex,
                 submeshMatData.combinedRenderSortLayer, sortKey, submeshMatData.renderSortHash,
                 submeshMatData.shader.GetHandle(), submeshMatData.gfxState.GetHandle() });
         }
@@ -287,6 +308,102 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
     } else if (renderSlotInfo.sortType == RenderSlotSortType::BACK_TO_FRONT) {
         std::sort(refSubmeshIndices.begin(), refSubmeshIndices.end(), Greater<SlotSubmeshIndex>());
     }
+}
+
+SceneBufferHandles RenderNodeSceneUtil::GetSceneBufferHandles(
+    RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName)
+{
+    SceneBufferHandles buffers;
+    const auto& gpuMgr = renderNodeContextMgr.GetGpuResourceManager();
+    buffers.camera = gpuMgr.GetBufferHandle(sceneName + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME);
+    buffers.material = gpuMgr.GetBufferHandle(sceneName + DefaultMaterialMaterialConstants::MATERIAL_DATA_BUFFER_NAME);
+    buffers.materialTransform =
+        gpuMgr.GetBufferHandle(sceneName + DefaultMaterialMaterialConstants::MATERIAL_TRANSFORM_DATA_BUFFER_NAME);
+    buffers.materialCustom =
+        gpuMgr.GetBufferHandle(sceneName + DefaultMaterialMaterialConstants::MATERIAL_USER_DATA_BUFFER_NAME);
+    buffers.mesh = gpuMgr.GetBufferHandle(sceneName + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME);
+    buffers.skinJoint = gpuMgr.GetBufferHandle(sceneName + DefaultMaterialMaterialConstants::SKIN_DATA_BUFFER_NAME);
+
+    const RenderHandle defaultBuffer = gpuMgr.GetBufferHandle("CORE_DEFAULT_GPU_BUFFER");
+    auto checkValidity = [](const RenderHandle defaultBuffer, bool& valid, RenderHandle& buffer) {
+        if (!RenderHandleUtil::IsValid(buffer)) {
+            valid = false;
+            buffer = defaultBuffer;
+        }
+    };
+    bool valid = true;
+    checkValidity(defaultBuffer, valid, buffers.camera);
+    checkValidity(defaultBuffer, valid, buffers.material);
+    checkValidity(defaultBuffer, valid, buffers.materialTransform);
+    checkValidity(defaultBuffer, valid, buffers.materialCustom);
+    checkValidity(defaultBuffer, valid, buffers.mesh);
+    checkValidity(defaultBuffer, valid, buffers.skinJoint);
+    if (!valid) {
+        CORE_LOG_E(
+            "RN: %s, invalid configuration, not all scene buffers not found.", renderNodeContextMgr.GetName().data());
+    }
+    return buffers;
+}
+
+SceneCameraBufferHandles RenderNodeSceneUtil::GetSceneCameraBufferHandles(
+    RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+    const BASE_NS::string_view cameraName)
+{
+    SceneCameraBufferHandles buffers;
+    const auto& gpuMgr = renderNodeContextMgr.GetGpuResourceManager();
+    buffers.generalData = gpuMgr.GetBufferHandle(
+        sceneName + DefaultMaterialCameraConstants::CAMERA_GENERAL_BUFFER_PREFIX_NAME + cameraName);
+    buffers.environment = gpuMgr.GetBufferHandle(
+        sceneName + DefaultMaterialCameraConstants::CAMERA_ENVIRONMENT_BUFFER_PREFIX_NAME + cameraName);
+    buffers.fog =
+        gpuMgr.GetBufferHandle(sceneName + DefaultMaterialCameraConstants::CAMERA_FOG_BUFFER_PREFIX_NAME + cameraName);
+    buffers.postProcess = gpuMgr.GetBufferHandle(
+        sceneName + DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_BUFFER_PREFIX_NAME + cameraName);
+
+    buffers.light = gpuMgr.GetBufferHandle(
+        sceneName + DefaultMaterialCameraConstants::CAMERA_LIGHT_BUFFER_PREFIX_NAME + cameraName);
+    buffers.lightCluster = gpuMgr.GetBufferHandle(
+        sceneName + DefaultMaterialCameraConstants::CAMERA_LIGHT_CLUSTER_BUFFER_PREFIX_NAME + cameraName);
+
+    const RenderHandle defaultBuffer = gpuMgr.GetBufferHandle("CORE_DEFAULT_GPU_BUFFER");
+    auto checkValidity = [](const RenderHandle defaultBuffer, bool& valid, RenderHandle& buffer) {
+        if (!RenderHandleUtil::IsValid(buffer)) {
+            valid = false;
+            buffer = defaultBuffer;
+        }
+    };
+    bool valid = true;
+    checkValidity(defaultBuffer, valid, buffers.generalData);
+    checkValidity(defaultBuffer, valid, buffers.environment);
+    checkValidity(defaultBuffer, valid, buffers.fog);
+    checkValidity(defaultBuffer, valid, buffers.postProcess);
+    checkValidity(defaultBuffer, valid, buffers.light);
+    checkValidity(defaultBuffer, valid, buffers.lightCluster);
+    if (!valid) {
+        CORE_LOG_E(
+            "RN: %s, invalid configuration, not all camera buffers found.", renderNodeContextMgr.GetName().data());
+    }
+    return buffers;
+}
+
+SceneCameraImageHandles RenderNodeSceneUtil::GetSceneCameraImageHandles(
+    RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+    const BASE_NS::string_view cameraName, const RenderCamera& camera)
+{
+    SceneCameraImageHandles handles;
+    const auto& gpuMgr = renderNodeContextMgr.GetGpuResourceManager();
+    if (camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_DYNAMIC_CUBEMAP_BIT) {
+        handles.radianceCubemap = gpuMgr.GetImageHandle(
+            sceneName + DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME + "RADIANCE_CUBEMAP_" + cameraName);
+    }
+    if (!RenderHandleUtil::IsValid(handles.radianceCubemap)) {
+        handles.radianceCubemap = camera.environment.radianceCubemap.GetHandle();
+    }
+    if (!RenderHandleUtil::IsValid(handles.radianceCubemap)) {
+        handles.radianceCubemap =
+            gpuMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP);
+    }
+    return handles;
 }
 
 SceneRenderDataStores RenderNodeSceneUtilImpl::GetSceneRenderDataStores(
@@ -324,9 +441,28 @@ void RenderNodeSceneUtilImpl::GetRenderSlotSubmeshes(const IRenderDataStoreDefau
         dataStoreCamera, dataStoreMaterial, cameraId, renderSlotInfo, refSubmeshIndices);
 }
 
+SceneBufferHandles RenderNodeSceneUtilImpl::GetSceneBufferHandles(
+    IRenderNodeContextManager& renderNodeContextMgr, const string_view sceneName)
+{
+    return RenderNodeSceneUtil::GetSceneBufferHandles(renderNodeContextMgr, sceneName);
+}
+
+SceneCameraBufferHandles RenderNodeSceneUtilImpl::GetSceneCameraBufferHandles(
+    IRenderNodeContextManager& renderNodeContextMgr, const string_view sceneName, const string_view cameraName)
+{
+    return RenderNodeSceneUtil::GetSceneCameraBufferHandles(renderNodeContextMgr, sceneName, cameraName);
+}
+
+SceneCameraImageHandles RenderNodeSceneUtilImpl::GetSceneCameraImageHandles(
+    RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
+    const BASE_NS::string_view cameraName, const RenderCamera& camera)
+{
+    return RenderNodeSceneUtil::GetSceneCameraImageHandles(renderNodeContextMgr, sceneName, cameraName, camera);
+}
+
 const IInterface* RenderNodeSceneUtilImpl::GetInterface(const Uid& uid) const
 {
-    if (uid == IRenderNodeSceneUtil::UID) {
+    if ((uid == IRenderNodeSceneUtil::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;
@@ -334,7 +470,7 @@ const IInterface* RenderNodeSceneUtilImpl::GetInterface(const Uid& uid) const
 
 IInterface* RenderNodeSceneUtilImpl::GetInterface(const Uid& uid)
 {
-    if (uid == IRenderNodeSceneUtil::UID) {
+    if ((uid == IRenderNodeSceneUtil::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;

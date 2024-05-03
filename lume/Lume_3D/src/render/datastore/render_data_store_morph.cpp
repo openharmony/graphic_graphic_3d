@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -44,7 +44,7 @@ void RenderDataStoreMorph::Clear()
 
 void RenderDataStoreMorph::AddSubmesh(const RenderDataMorph::Submesh& submesh)
 {
-    submeshes_.emplace_back(submesh);
+    submeshes_.push_back(submesh);
 }
 
 array_view<const RenderDataMorph::Submesh> RenderDataStoreMorph::GetSubmeshes() const

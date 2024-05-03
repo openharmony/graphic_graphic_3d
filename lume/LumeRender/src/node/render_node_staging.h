@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,12 +16,14 @@
 #ifndef RENDER_RENDER__NODE__RENDER_NODE_STAGING_H
 #define RENDER_RENDER__NODE__RENDER_NODE_STAGING_H
 
+#include <base/util/uid.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_render_node.h>
 #include <render/render_data_structures.h>
 
 #include "device/gpu_resource_manager.h"
+#include "node/render_staging.h"
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
@@ -38,6 +40,10 @@ public:
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        return 0U;
+    }
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "22a56820-befb-4e12-83ee-3cad3f685b0a" };
@@ -50,17 +56,7 @@ public:
 private:
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
-    void CopyHostToStaging(
-        const IRenderNodeGpuResourceManager& gpuResourceMgr, const StagingConsumeStruct& stagingData);
-    void CopyStagingToImages(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
-        const StagingConsumeStruct& stagingData, const StagingConsumeStruct& renderDataStoreStagingData);
-    void CopyStagingToBuffers(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
-        const StagingConsumeStruct& renderDataStoreStagingData);
-    void CopyImagesToBuffers(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
-        const StagingConsumeStruct& stagingData, const StagingConsumeStruct& renderDataStoreStagingData);
-    void CopyImagesToImages(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
-        const StagingConsumeStruct& stagingData, const StagingConsumeStruct& renderDataStoreStagingData);
-
+    RenderStaging renderStaging;
     BASE_NS::string dataStoreNameStaging_;
 };
 RENDER_END_NAMESPACE()

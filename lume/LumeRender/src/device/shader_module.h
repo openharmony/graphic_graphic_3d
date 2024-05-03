@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,7 +40,7 @@ public:
     virtual const ShaderModulePlatformData& GetPlatformData() const = 0;
 
     virtual const PipelineLayout& GetPipelineLayout() const = 0;
-    virtual ShaderSpecilizationConstantView GetSpecilization() const = 0;
+    virtual ShaderSpecializationConstantView GetSpecilization() const = 0;
 
     /* The following are not found from every shader, data might be zeros */
 

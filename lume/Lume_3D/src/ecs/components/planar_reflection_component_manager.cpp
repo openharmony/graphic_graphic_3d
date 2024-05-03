@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,7 +29,6 @@ using CORE3D_NS::PlanarReflectionComponent;
 BEGIN_ENUM(PlanarReflectionFlagBitsMetaData, PlanarReflectionComponent::FlagBits)
 DECL_ENUM(PlanarReflectionComponent::FlagBits, ACTIVE_RENDER_BIT, "Active Render")
 DECL_ENUM(PlanarReflectionComponent::FlagBits, MSAA_BIT, "MSAA")
-DECL_ENUM(PlanarReflectionComponent::FlagBits, HDR_BIT, "HDR")
 END_ENUM(PlanarReflectionFlagBitsMetaData, PlanarReflectionComponent::FlagBits)
 CORE_END_NAMESPACE()
 

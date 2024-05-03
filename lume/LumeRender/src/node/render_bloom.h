@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,8 +35,8 @@ public:
     ~RenderBloom() = default;
 
     struct BloomInfo {
-        RenderHandle input;
-        RenderHandle output;
+        BindableImage input;
+        BindableImage output;
         RenderHandle globalUbo;
         bool useCompute { false };
     };
@@ -48,7 +48,7 @@ public:
         const PostProcessConfiguration& ppConfig);
 
     DescriptorCounts GetDescriptorCounts() const;
-    // call after Execute, to get the output
+    // call after PreExecute, to get the output
     RenderHandle GetFinalTarget() const;
 
 private:
@@ -71,17 +71,32 @@ private:
     void CreateRenderPsos(IRenderNodeContextManager& renderNodeContextMgr);
     std::pair<RenderHandle, const PipelineLayout&> CreateAndReflectRenderPso(
         IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view shader,
-        const RenderPass& renderPass, const DynamicStateFlags dynamicStateFlags);
+        const RenderPass& renderPass);
     void UpdateGlobalSet(IRenderCommandList& cmdList);
 
     static constexpr uint32_t TARGET_COUNT { 7u };
+    static constexpr uint32_t CORE_BLOOM_QUALITY_LOW { 1u };
+    static constexpr uint32_t CORE_BLOOM_QUALITY_NORMAL { 2u };
+    static constexpr uint32_t CORE_BLOOM_QUALITY_HIGH { 4u };
+    static constexpr int CORE_BLOOM_QUALITY_COUNT { 3u };
+
     struct Targets {
         std::array<RenderHandleReference, TARGET_COUNT> tex1;
+        // separate target needed in graphics bloom upscale
+        std::array<RenderHandleReference, TARGET_COUNT> tex2;
         std::array<BASE_NS::Math::UVec2, TARGET_COUNT> tex1Size;
     };
     Targets targets_;
 
     struct PSOs {
+        struct DownscaleHandles {
+            RenderHandle regular;
+            RenderHandle threshold;
+        };
+
+        std::array<DownscaleHandles, CORE_BLOOM_QUALITY_COUNT> downscaleHandles;
+        std::array<DownscaleHandles, CORE_BLOOM_QUALITY_COUNT> downscaleHandlesCompute;
+
         RenderHandle downscaleAndThreshold;
         RenderHandle downscale;
         RenderHandle upscale;

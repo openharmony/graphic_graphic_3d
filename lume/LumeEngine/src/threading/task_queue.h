@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,7 @@
 #define CORE_THREADING_TASK_QUEUE_H
 
 #include <atomic>
+#include <cstdint>
 #include <functional>
 
 #include <base/containers/vector.h>
@@ -30,10 +31,10 @@ class FunctionTask final : public IThreadPool::ITask {
 public:
     static Ptr Create(std::function<void()> func)
     {
-        return Ptr { new FunctionTask(func) };
+        return Ptr { new FunctionTask(move(func)) };
     }
 
-    explicit FunctionTask(std::function<void()> func) : func_(func) {};
+    explicit FunctionTask(std::function<void()> func) : func_(move(func)) {};
 
     void operator()() override
     {
@@ -110,13 +111,13 @@ protected:
     };
 
     struct Entry {
-        Entry();
+        Entry() = default;
         Entry(uint64_t identifier, IThreadPool::ITask::Ptr task);
         bool operator==(uint64_t identifier) const;
         bool operator==(const Entry& other) const;
 
         IThreadPool::ITask::Ptr task;
-        uint64_t identifier;
+        uint64_t identifier {};
         BASE_NS::vector<uint64_t> dependencies;
     };
 

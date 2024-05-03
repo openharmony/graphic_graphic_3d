@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,9 +40,9 @@ struct DefaultMaterialLightingConstants {
     /** Max shadow count */
     static constexpr uint32_t MAX_SHADOW_COUNT { 8u };
 
-    /** Light data buffer name */
+    /** Light data buffer name. Default material pipelines uses per camera ligh buffers */
     static constexpr const BASE_NS::string_view LIGHT_DATA_BUFFER_NAME { "CORE3D_DM_LIGHT_DATA_BUFFER" };
-    /** Light cluster data buffer name */
+    /** Light cluster data buffer name. Default material pipelines uses per camera ligh buffers */
     static constexpr const BASE_NS::string_view LIGHT_CLUSTER_DATA_BUFFER_NAME {
         "CORE3D_DM_LIGHT_CLUSTER_DATA_BUFFER"
     };
@@ -106,7 +106,7 @@ struct DefaultMaterialShaderConstants {
     /** Default material forward shader with automatic render slot and graphics state setup */
     static constexpr const BASE_NS::string_view OPAQUE_SHADER_NAME { "3dshaders://shader/core3d_dm_fw.shader" };
     /** Default material forward shader graphics state with automatic render slot and graphics state setup */
-    static constexpr const BASE_NS::string_view SHADER_STATE_NAME { "3dshaderstates://core3d_dm_fw.shadergs" };
+    static constexpr const BASE_NS::string_view SHADER_STATE_NAME { "3dshaderstates://core3d_dm.shadergs" };
     /** Default material depth shader */
     static constexpr const BASE_NS::string_view DEPTH_SHADER_NAME { "3dshaders://shader/core3d_dm_depth.shader" };
     /** Default material forward env shader */
@@ -121,6 +121,8 @@ struct DefaultMaterialShaderConstants {
 struct DefaultMaterialCameraConstants {
     /** Max camera count. This includes scene and shadow cameras.  */
     static constexpr const uint32_t MAX_CAMERA_COUNT { CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT };
+    /** Max environment count.  */
+    static constexpr const uint32_t MAX_ENVIRONMENT_COUNT { CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT };
 
     /** Camera data buffer name (this is usable in the whole pipeline / scene) */
     static constexpr const BASE_NS::string_view CAMERA_DATA_BUFFER_NAME { "CORE3D_DM_CAM_DATA_BUF" };
@@ -134,10 +136,18 @@ struct DefaultMaterialCameraConstants {
     static constexpr const BASE_NS::string_view CAMERA_POST_PROCESS_BUFFER_PREFIX_NAME {
         "CORE3D_DM_CAM_POST_PROCESS_BUF_"
     };
+    /** Camera prefix for per light buffers */
+    static constexpr const BASE_NS::string_view CAMERA_LIGHT_BUFFER_PREFIX_NAME { "CORE3D_DM_CAM_LIGHT_BUF_" };
+    /** Camera prefix for per light cluster buffers */
+    static constexpr const BASE_NS::string_view CAMERA_LIGHT_CLUSTER_BUFFER_PREFIX_NAME {
+        "CORE3D_DM_CAM_LIGHT_CLUSTER_BUF_"
+    };
 
-    /** Camera color buffer prefix (often combined with scene name + camera id) */
+    /** Camera color buffer prefix (often combined with scene name + prefix name + to_hex(camera id))
+     * For example: RenderDataStoreDefaultSceneCORE3D_CAMERA_DEPTH_40000000D
+     */
     static constexpr const BASE_NS::string_view CAMERA_COLOR_PREFIX_NAME { "CORE3D_CAMERA_COLOR_" };
-    /** Camera depth buffer prefix  (often combined with scene name + camera id) */
+    /** Camera depth buffer prefix  (often combined with scene name + to_hex(camera id)) */
     static constexpr const BASE_NS::string_view CAMERA_DEPTH_PREFIX_NAME { "CORE3D_CAMERA_DEPTH_" };
 
     /** Default camera post process name (often combined with default name + post process id) */
@@ -158,41 +168,55 @@ struct DefaultMaterialCameraConstants {
 /** Default material GPU resource constants */
 struct DefaultMaterialGpuResourceConstants {
     /** Default material base color, white srgb */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_BASE_COLOR { "CORE3D_DM_BASE_COLOR" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_BASE_COLOR { "CORE_DEFAULT_GPU_IMAGE_WHITE" };
     /** Default material emissive, white srgb */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_EMISSIVE { "CORE3D_DM_BASE_COLOR" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_EMISSIVE { "CORE_DEFAULT_GPU_IMAGE_WHITE" };
     /** Default material normal */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_NORMAL { "CORE3D_DM_NORMAL" };
     /** Default material material map, white linear */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_MATERIAL { "CORE3D_DM_MATERIAL" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_MATERIAL { "CORE_DEFAULT_GPU_IMAGE_WHITE" };
     /** Default material ambient occlusion, white */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_AO { "CORE3D_DM_AO" };
 
     /** Default material clearcoat intensity, white */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_CLEARCOAT { "CORE3D_DM_MATERIAL" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_CLEARCOAT { "CORE_DEFAULT_GPU_IMAGE_WHITE" };
     /** Default material clearcoat roughness, white */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_CLEARCOAT_ROUGHNESS { "CORE3D_DM_MATERIAL" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_CLEARCOAT_ROUGHNESS {
+        "CORE_DEFAULT_GPU_IMAGE_WHITE"
+    };
     /** Default material clearcoat normal */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_CLEARCOAT_NORMAL { "CORE3D_DM_NORMAL" };
 
     /** Default material clearcoat intensity, white */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_SHEEN { "CORE3D_DM_MATERIAL" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_SHEEN { "CORE_DEFAULT_GPU_IMAGE_WHITE" };
 
     /** Default material specular, white srgb */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_SPECULAR { "CORE3D_DM_BASE_COLOR" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_SPECULAR { "CORE_DEFAULT_GPU_IMAGE_WHITE" };
 
     /** Default material transmission, white */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_MATERIAL_TRANSMISSION { "CORE3D_DM_AO" };
 
     /** Default material radiance cubemap */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_RADIANCE_CUBEMAP { "CORE_DM_RADIANCE_CUBEMAP" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_RADIANCE_CUBEMAP { "CORE3D_DM_RADIANCE_CUBEMAP" };
 
     /** Default skybox */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_SKYBOX_CUBEMAP { "CORE_DM_SKYBOX_CUBEMAP" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_SKYBOX_CUBEMAP { "CORE3D_DM_SKYBOX_CUBEMAP" };
+
+    /** Default radiance cubemap sampler */
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_RADIANCE_CUBEMAP_SAMPLER {
+        "CORE3D_DM_RADIANCE_CUBEMAP_SAMPLER"
+    };
+    /** Default VSM shadow sampler */
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_VSM_SHADOW_SAMPLER { "CORE3D_DM_VSM_SHADOW_SAMPLER" };
+    /** Default PCF shadow sampler */
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_PCF_SHADOW_SAMPLER { "CORE3D_DM_PCF_SHADOW_SAMPLER" };
 };
 
 /** Default material render node share constants */
 struct DefaultMaterialRenderNodeConstants {
+    /** Render node default camera controller output name for depth */
+    static constexpr const BASE_NS::string_view CORE_DM_CAMERA_OUTPUT { "output" };
+
     /** Render node default camera controller output name for depth */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_DEPTH { "depth" };
     /** Render node default camera controller output name for color */
@@ -201,8 +225,6 @@ struct DefaultMaterialRenderNodeConstants {
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_DEPTH_MSAA { "depth_msaa" };
     /** Render node default camera controller output name for color msaa */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_COLOR_MSAA { "color_msaa" };
-    /** Render node default camera controller output name for color resolve */
-    static constexpr const BASE_NS::string_view CORE_DM_CAMERA_COLOR_RESOLVE { "color_resolve" };
     /** Render node default camera controller output name for history */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_HISTORY { "history" };
     /** Render node default camera controller output name for history to be outputted for next frame */
@@ -214,6 +236,8 @@ struct DefaultMaterialRenderNodeConstants {
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_BASE_COLOR { "base_color" };
     /** Render node default camera controller output name for deferred material */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_MATERIAL { "material" };
+    /** Render node default camera controller output name for camera dynamic radiance cubemap */
+    static constexpr const BASE_NS::string_view CORE_DM_CAMERA_RADIANCE_CUBEMAP { "radiance_cubemap" };
 
     /** Render node default camera controller output name for deferred custom buffers
      * Is a prefix for the final name.

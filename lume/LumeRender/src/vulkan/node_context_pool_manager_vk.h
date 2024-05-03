@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,7 +43,6 @@ struct ContextCommandPoolVk {
     // every command buffer is taken from the single pool and pre-allocated
     VkCommandPool commandPool { VK_NULL_HANDLE };
     LowLevelCommandBufferVk commandBuffer;
-    bool isRecorded { false };
 };
 
 struct ContextFramebufferCacheVk {
@@ -68,18 +67,22 @@ public:
     ~NodeContextPoolManagerVk();
 
     void BeginFrame() override;
+    void BeginBackendFrame() override;
 
     const ContextCommandPoolVk& GetContextCommandPool() const;
+    const ContextCommandPoolVk& GetContextSecondaryCommandPool() const;
 
     LowLevelRenderPassDataVk GetRenderPassData(const RenderCommandBeginRenderPass& beginRenderPass);
 
 private:
     Device& device_;
     GpuResourceManager& gpuResourceMgr_;
+    const GpuQueue gpuQueue_ {};
 
     uint32_t bufferingIndex_ { 0 };
 
     BASE_NS::vector<ContextCommandPoolVk> commandPools_;
+    BASE_NS::vector<ContextCommandPoolVk> commandSecondaryPools_;
     ContextFramebufferCacheVk framebufferCache_;
     ContextRenderPassCacheVk renderPassCache_;
     ContextRenderPassCacheVk renderPassCompatibilityCache_;
@@ -88,6 +91,10 @@ private:
     void SetValidationDebugName(const BASE_NS::string_view debugName) override;
     BASE_NS::string debugName_;
     bool firstFrame_ { true };
+#endif
+#if (RENDER_VALIDATION_ENABLED == 1)
+    uint64_t frameIndexFront_ { 0 };
+    uint64_t frameIndexBack_ { 0 };
 #endif
 };
 RENDER_END_NAMESPACE()

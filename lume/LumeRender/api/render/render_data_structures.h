@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -51,10 +51,7 @@ struct VertexBuffer {
     uint32_t byteSize { PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
 };
 
-/** Handle to gpu buffer.
-    Byte offset to buffer.
-    Index buffer type.
-*/
+/** Index buffer */
 struct IndexBuffer {
     /** Buffer handle */
     RenderHandle bufferHandle;
@@ -63,7 +60,29 @@ struct IndexBuffer {
     /** Byte size */
     uint32_t byteSize { PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
     /** Index type */
-    IndexType indexType { IndexType::CORE_INDEX_TYPE_MAX_ENUM };
+    IndexType indexType { IndexType::CORE_INDEX_TYPE_UINT32 };
+};
+
+/** Vertex buffer with render handle reference */
+struct VertexBufferWithHandleReference {
+    /** Buffer handle */
+    RenderHandleReference bufferHandle;
+    /** Buffer offset */
+    uint32_t bufferOffset { 0 };
+    /** Byte size */
+    uint32_t byteSize { PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
+};
+
+/** Index buffer with render handle reference */
+struct IndexBufferWithHandleReference {
+    /** Buffer handle */
+    RenderHandleReference bufferHandle;
+    /** Buffer offset */
+    uint32_t bufferOffset { 0 };
+    /** Byte size */
+    uint32_t byteSize { PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
+    /** Index type */
+    IndexType indexType { IndexType::CORE_INDEX_TYPE_UINT32 };
 };
 
 /** Helper struct for descriptor types and their counts.
@@ -72,7 +91,7 @@ struct DescriptorCounts {
     /** Typed count */
     struct TypedCount {
         /** Type */
-        DescriptorType type { CORE_DESCRIPTOR_TYPE_MAX_ENUM };
+        DescriptorType type { DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM };
         /** Count */
         uint32_t count { 0u };
     };
@@ -129,6 +148,8 @@ enum class RenderNodeGraphResourceLocationType : uint32_t {
     FROM_PREVIOUS_RENDER_NODE_OUTPUT = 3,
     /** Get output index from named render node */
     FROM_NAMED_RENDER_NODE_OUTPUT = 4,
+    /** Get output from the previous render node graph */
+    FROM_PREVIOUS_RENDER_NODE_GRAPH_OUTPUT = 5,
 };
 
 /** Set for default command buffer recording.
@@ -149,6 +170,10 @@ struct RenderNodeResource {
     RenderHandle handle {};
     /** Second handle (e.g. sampler for combined image sampler) */
     RenderHandle secondHandle {};
+    /** Mip level for image binding */
+    uint32_t mip { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+    /** Layer for image binding */
+    uint32_t layer { PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
 };
 
 /** Render node attachment */
@@ -168,6 +193,11 @@ struct RenderNodeAttachment {
 
     /** Clear value */
     ClearValue clearValue;
+
+    /** Mip level */
+    uint32_t mip { 0u };
+    /** Layer */
+    uint32_t layer { 0u };
 };
 
 /** RenderNodeHandles.
@@ -181,9 +211,11 @@ struct RenderNodeHandles {
 
         /** Subpass index, if subpass index is other that zero, render pass is patched to previous render passes */
         uint32_t subpassIndex { 0u };
-
         /** Subpass count, automatically calculated from render node graph setup */
         uint32_t subpassCount { 1u };
+
+        /** Render pass subpass contents */
+        SubpassContents subpassContents { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE };
 
         // render pass subpass attachment indices
         /** Depth attachment index */
@@ -196,11 +228,18 @@ struct RenderNodeHandles {
         BASE_NS::vector<uint32_t> colorAttachmentIndices;
         /** Resolve attachment indices */
         BASE_NS::vector<uint32_t> resolveAttachmentIndices;
+        /** Fragment shading rate attachment index */
+        uint32_t fragmentShadingRateAttachmentIndex { ~0u };
 
         /** Depth resolve mode flag bit */
         ResolveModeFlagBits depthResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
         /** Stencil resolve mode flag bit */
         ResolveModeFlagBits stencilResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+
+        /** Shading rate attachment texel size for subpass */
+        Size2D shadingRateTexelSize { 1u, 1u };
+        /** Multi-view bitfield of view indices. Multi-view is ignored while zero. */
+        uint32_t viewMask { 0u };
     };
 
     /** Input resources */
@@ -246,6 +285,13 @@ struct RenderNodeGraphInputs {
         uint32_t resourceIndex { ~0u };
         /** Node name, with FROM_NAMED_RENDER_NODE_OUTPUT */
         RenderDataConstants::RenderDataFixedString nodeName;
+
+        /** Additional binding information */
+
+        /** Mip level for image binding */
+        uint32_t mip { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+        /** Layer for image binding */
+        uint32_t layer { PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
     };
 
     /** Attachment */
@@ -271,6 +317,11 @@ struct RenderNodeGraphInputs {
         uint32_t resourceIndex { ~0u };
         /** Node name, with FROM_NAMED_RENDER_NODE_OUTPUT */
         RenderDataConstants::RenderDataFixedString nodeName;
+
+        /** Mip level */
+        uint32_t mip { 0u };
+        /** Layer */
+        uint32_t layer { 0u };
     };
 
     /** Shader input */
@@ -286,11 +337,12 @@ struct RenderNodeGraphInputs {
 
         /** Subpass index, if subpass index is not zero, this subpass is patched to previous render pass */
         uint32_t subpassIndex { 0u };
-
         /** Subpass count, calculated automatically when loading render node graph */
         uint32_t subpassCount { 1u };
 
-        // render pass subpass attachment indices
+        /** Render pass subpass contents */
+        SubpassContents subpassContents { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE };
+
         /** Depth attachment index */
         uint32_t depthAttachmentIndex { ~0u };
         /** Depth resolve attachment index */
@@ -301,11 +353,19 @@ struct RenderNodeGraphInputs {
         BASE_NS::vector<uint32_t> colorAttachmentIndices;
         /** Resolve attachment indices */
         BASE_NS::vector<uint32_t> resolveAttachmentIndices;
+        /** Fragment shading rate attachment index */
+        uint32_t fragmentShadingRateAttachmentIndex { ~0u };
 
         /** Depth resolve mode flag bit */
         ResolveModeFlagBits depthResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
         /** Stencil resolve mode flag bit */
         ResolveModeFlagBits stencilResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+
+        /** Shading rate attachment texel size for subpass
+         */
+        Size2D shadingRateTexelSize { 1u, 1u };
+        /** Multi-view bitfield of view indices. Multi-view is ignored while zero. */
+        uint32_t viewMask { 0u };
     };
 
     /** Input resources (Descriptor sets etc.) */
@@ -371,6 +431,10 @@ struct RenderNodeGraphInputs {
         DependencyFlags dependencyFlags { 0 };
         /** Dependency size scale (scales only the size if size is a dependency) */
         float dependencySizeScale { 1.0f };
+        /** Fragment shading rate requested texel size
+         * Will check the valid values and divides the size
+         */
+        Size2D shadingRateTexelSize { 1u, 1u };
         /** Image descriptor (GpuImageDesc) */
         GpuImageDesc desc;
     };

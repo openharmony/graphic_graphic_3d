@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,7 +46,7 @@ GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
 {
     auto loadResult = GLTF2::LoadGLTF(fileManager, uri);
     GLTFLoadResult result;
-    result.error = std::move(loadResult.error);
+    result.error = move(loadResult.error);
     result.success = loadResult.success;
     result.data = IGLTFData::Ptr { loadResult.data.release() };
 
@@ -63,7 +63,7 @@ GLTFLoadResult Gltf2::LoadGLTF(array_view<uint8_t const> data)
 {
     auto loadResult = GLTF2::LoadGLTF(fileManager_, data);
     GLTFLoadResult result;
-    result.error = std::move(loadResult.error);
+    result.error = move(loadResult.error);
     result.success = loadResult.success;
     result.data = IGLTFData::Ptr { loadResult.data.release() };
     return result;
@@ -101,6 +101,67 @@ IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs, IThreadPool& pool)
     }
     return nullptr;
 }
+
+ISceneLoader::Result Gltf2::Load(string_view uri)
+{
+    ISceneLoader::Result sceneResult;
+    auto loadResult = GLTF2::LoadGLTF(fileManager_, uri);
+    sceneResult.error = loadResult.success ? 0 : 1;
+    sceneResult.message = BASE_NS::move(loadResult.error);
+    sceneResult.data.reset(new GLTF2::SceneData(BASE_NS::move(loadResult.data)));
+    return sceneResult;
+}
+
+ISceneImporter::Ptr Gltf2::CreateSceneImporter(IEcs& ecs)
+{
+    CORE_ASSERT(engine_ && renderContext_);
+    if (engine_ && renderContext_) {
+        return ISceneImporter::Ptr { new GLTF2::Gltf2SceneImporter(*engine_, *renderContext_, ecs) };
+    }
+    return nullptr;
+}
+
+ISceneImporter::Ptr Gltf2::CreateSceneImporter(IEcs& ecs, IThreadPool& pool)
+{
+    CORE_ASSERT(engine_ && renderContext_);
+    if (engine_ && renderContext_) {
+        return ISceneImporter::Ptr { new GLTF2::Gltf2SceneImporter(*engine_, *renderContext_, ecs, pool) };
+    }
+    return nullptr;
+}
+
+array_view<const string_view> Gltf2::GetSupportedExtensions() const
+{
+    static constexpr string_view extensions[] = { "gltf", "glb" };
+    return extensions;
+}
+
+// IInterface
+const IInterface* Gltf2::GetInterface(const Uid& uid) const
+{
+    if (uid == ISceneLoader::UID) {
+        return static_cast<const ISceneLoader*>(this);
+    }
+    if (uid == IInterface::UID) {
+        return static_cast<const IInterface*>(this);
+    }
+    return nullptr;
+}
+
+IInterface* Gltf2::GetInterface(const Uid& uid)
+{
+    if (uid == ISceneLoader::UID) {
+        return static_cast<ISceneLoader*>(this);
+    }
+    if (uid == IInterface::UID) {
+        return static_cast<IInterface*>(this);
+    }
+    return nullptr;
+}
+
+void Gltf2::Ref() {}
+
+void Gltf2::Unref() {}
 
 // Api exporting function.
 bool Gltf2::SaveGLTF(IEcs& ecs, const string_view uri)

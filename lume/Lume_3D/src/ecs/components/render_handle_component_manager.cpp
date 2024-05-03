@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,12 +20,18 @@
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
+#include <render/resource_handle.h>
 
 #include "ComponentTools/base_manager.h"
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
 #include "PropertyTools/property_macros.h"
+
+CORE_BEGIN_NAMESPACE()
+DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandle);
+DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandleReference);
+CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
 using BASE_NS::array_view;

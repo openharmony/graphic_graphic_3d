@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,7 @@
 #include "gles/gl_functions.h"
 #include "util/log.h"
 
-#define IS_BIT(value, bit) (((value & bit) == bit) ? (GLboolean)GL_TRUE : (GLboolean)GL_FALSE)
+#define IS_BIT(value, bit) ((((value) & (bit)) == (bit)) ? (GLboolean)GL_TRUE : (GLboolean)GL_FALSE)
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
@@ -35,7 +35,7 @@ void RecordAllocation(const int64_t alignedByteSize)
     if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
-        pdm->UpdateData("AllGpuImages", "GPU_IMAGE", alignedByteSize);
+        pdm->UpdateData("AllGpuBuffers", "GPU_BUFFER", alignedByteSize);
     }
 }
 #endif
@@ -187,7 +187,9 @@ void* GpuBufferGLES::Map()
 
     void* ret = nullptr;
     if (isPersistantlyMapped_) {
-        ret = data_ + plat_.currentByteOffset;
+        if (data_) {
+            ret = data_ + plat_.currentByteOffset;
+        }
     } else {
         PLUGIN_ASSERT(device_.IsActive());
         const auto oldBind = device_.BoundBuffer(GL_COPY_WRITE_BUFFER);

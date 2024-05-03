@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,11 +16,13 @@
 #ifndef API_CORE_PLUGIN_ICLASS_FACTORY_H
 #define API_CORE_PLUGIN_ICLASS_FACTORY_H
 
+#include <base/containers/refcnt_ptr.h>
+#include <base/namespace.h>
 #include <base/util/uid.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_register.h>
 #include <core/plugin/intf_interface.h>
-#include <core/plugin/intf_plugin.h>
+#include <core/plugin/intf_plugin_register.h>
 
 CORE_BEGIN_NAMESPACE()
 class IClassFactory : public IInterface {

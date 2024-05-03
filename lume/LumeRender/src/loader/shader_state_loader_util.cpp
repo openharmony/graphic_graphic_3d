@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,7 +28,7 @@ RENDER_BEGIN_NAMESPACE()
 // clang-format off
 CORE_JSON_SERIALIZE_ENUM(PrimitiveTopology,
     {
-        { CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM, nullptr },
+        { CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, nullptr }, // default
         { CORE_PRIMITIVE_TOPOLOGY_POINT_LIST, "point_list" },
         { CORE_PRIMITIVE_TOPOLOGY_LINE_LIST, "line_list" },
         { CORE_PRIMITIVE_TOPOLOGY_LINE_STRIP, "line_strip" },
@@ -44,7 +44,6 @@ CORE_JSON_SERIALIZE_ENUM(PrimitiveTopology,
 
 CORE_JSON_SERIALIZE_ENUM(PolygonMode,
     {
-        { CORE_POLYGON_MODE_MAX_ENUM, nullptr },
         { CORE_POLYGON_MODE_FILL, "fill" },
         { CORE_POLYGON_MODE_LINE, "line" },
         { CORE_POLYGON_MODE_POINT, "point" },
@@ -52,7 +51,7 @@ CORE_JSON_SERIALIZE_ENUM(PolygonMode,
 
 CORE_JSON_SERIALIZE_ENUM(CullModeFlagBits,
     {
-        { CORE_CULL_MODE_FLAG_BITS_MAX_ENUM, nullptr },
+        { (CullModeFlagBits)0, nullptr },
         { CORE_CULL_MODE_NONE, "none" },
         { CORE_CULL_MODE_FRONT_BIT, "front" },
         { CORE_CULL_MODE_BACK_BIT, "back" },
@@ -61,14 +60,12 @@ CORE_JSON_SERIALIZE_ENUM(CullModeFlagBits,
 
 CORE_JSON_SERIALIZE_ENUM(FrontFace,
     {
-        { CORE_FRONT_FACE_MAX_ENUM, nullptr },
         { CORE_FRONT_FACE_COUNTER_CLOCKWISE, "counter_clockwise" },
         { CORE_FRONT_FACE_CLOCKWISE, "clockwise" },
     })
 
 CORE_JSON_SERIALIZE_ENUM(CompareOp,
     {
-        { CORE_COMPARE_OP_MAX_ENUM, nullptr },
         { CORE_COMPARE_OP_NEVER, "never" },
         { CORE_COMPARE_OP_LESS, "less" },
         { CORE_COMPARE_OP_EQUAL, "equal" },
@@ -81,7 +78,6 @@ CORE_JSON_SERIALIZE_ENUM(CompareOp,
 
 CORE_JSON_SERIALIZE_ENUM(StencilOp,
     {
-        { CORE_STENCIL_OP_MAX_ENUM, nullptr },
         { CORE_STENCIL_OP_KEEP, "keep" },
         { CORE_STENCIL_OP_ZERO, "zero" },
         { CORE_STENCIL_OP_REPLACE, "replace" },
@@ -94,7 +90,6 @@ CORE_JSON_SERIALIZE_ENUM(StencilOp,
 
 CORE_JSON_SERIALIZE_ENUM(BlendFactor,
     {
-        { CORE_BLEND_FACTOR_MAX_ENUM, nullptr },
         { CORE_BLEND_FACTOR_ZERO, "zero" },
         { CORE_BLEND_FACTOR_ONE, "one" },
         { CORE_BLEND_FACTOR_SRC_COLOR, "src_color" },
@@ -118,7 +113,6 @@ CORE_JSON_SERIALIZE_ENUM(BlendFactor,
 
 CORE_JSON_SERIALIZE_ENUM(BlendOp,
     {
-        { CORE_BLEND_OP_MAX_ENUM, nullptr },
         { CORE_BLEND_OP_ADD, "add" },
         { CORE_BLEND_OP_SUBTRACT, "subtract" },
         { CORE_BLEND_OP_REVERSE_SUBTRACT, "reverse_subtract" },
@@ -128,16 +122,24 @@ CORE_JSON_SERIALIZE_ENUM(BlendOp,
 
 CORE_JSON_SERIALIZE_ENUM(ColorComponentFlagBits,
     {
-        { CORE_COLOR_COMPONENT_FLAG_BITS_MAX_ENUM, nullptr },
+        { (ColorComponentFlagBits)0, nullptr },
         { CORE_COLOR_COMPONENT_R_BIT, "r_bit" },
         { CORE_COLOR_COMPONENT_G_BIT, "g_bit" },
         { CORE_COLOR_COMPONENT_B_BIT, "b_bit" },
         { CORE_COLOR_COMPONENT_A_BIT, "a_bit" },
     })
 
+CORE_JSON_SERIALIZE_ENUM(GraphicsStateFlagBits,
+    {
+        { (GraphicsStateFlagBits)0, nullptr },
+        { CORE_GRAPHICS_STATE_INPUT_ASSEMBLY_BIT, "input_assembly_bit" },
+        { CORE_GRAPHICS_STATE_RASTERIZATION_STATE_BIT, "rasterization_state_bit" },
+        { CORE_GRAPHICS_STATE_DEPTH_STENCIL_STATE_BIT, "depth_stencil_state_bit" },
+        { CORE_GRAPHICS_STATE_COLOR_BLEND_STATE_BIT, "color_blend_state_bit" },
+    })
+
 CORE_JSON_SERIALIZE_ENUM(LogicOp,
     {
-        { CORE_LOGIC_OP_MAX_ENUM, nullptr },
         { CORE_LOGIC_OP_CLEAR, "clear" },
         { CORE_LOGIC_OP_AND, "and" },
         { CORE_LOGIC_OP_AND_REVERSE, "and_reverse" },
@@ -260,6 +262,11 @@ void FromJson(const json::value& jsonData, JsonContext<GraphicsState::ColorBlend
 }
 
 namespace ShaderStateLoaderUtil {
+void ParseStateFlags(const CORE_NS::json::value& jsonData, GraphicsStateFlags& stateFlags, ShaderStateResult& ssr)
+{
+    SafeGetJsonBitfield<GraphicsStateFlagBits>(jsonData, "stateFlags", ssr.res.error, stateFlags);
+}
+
 void ParseSingleState(const json::value& jsonData, ShaderStateResult& ssr)
 {
     GraphicsState graphicsState;
@@ -309,7 +316,7 @@ void ParseSingleState(const json::value& jsonData, ShaderStateResult& ssr)
 
     ssr.res.success = ssr.res.error.empty();
     if (ssr.res.success) {
-        ssr.states.states.emplace_back(move(graphicsState));
+        ssr.states.states.push_back(move(graphicsState));
     }
 }
 
@@ -331,10 +338,13 @@ ShaderStateResult LoadStates(const json::value& jsonData)
                     if (ssr.res.error.empty()) {
                         SafeGetJsonValue(state, "baseShaderState", ssr.res.error, variant.baseShaderState);
                         SafeGetJsonValue(state, "baseVariantName", ssr.res.error, variant.baseVariantName);
+                        SafeGetJsonValue(state, "slot", ssr.res.error, variant.renderSlot);
                         SafeGetJsonValue(state, "renderSlot", ssr.res.error, variant.renderSlot);
                         SafeGetJsonValue(
                             state, "renderSlotDefaultShaderState", ssr.res.error, variant.renderSlotDefaultState);
-                        ssr.states.variantData.emplace_back(move(variant));
+                        SafeGetJsonBitfield<GraphicsStateFlagBits>(
+                            state, "stateFlags", ssr.res.error, variant.stateFlags);
+                        ssr.states.variantData.push_back(move(variant));
                     }
                 }
             }

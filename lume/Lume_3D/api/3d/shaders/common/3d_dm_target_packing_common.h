@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -125,6 +125,12 @@ vec2 GetPackVelocity(in vec2 velocity)
 vec4 GetPackVelocityAndNormal(in vec2 velocity, in vec3 normal)
 {
     return vec4(velocity, NormalOctEncode(normal));
+}
+
+vec4 GetPackPbrColor(in vec3 color, in CORE_RELAXEDP float alpha)
+{
+    // zero to hdr max clamp and alpha multiply
+    return vec4(clamp(color.rgb, 0.0, CORE3D_HDR_FLOAT_CLAMP_MAX_VALUE) * alpha, alpha);
 }
 
 // unpack

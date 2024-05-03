@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,6 +39,7 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 namespace {
+constexpr BASE_NS::Math::Mat4X4 ZERO_MATRIX_4X4 = {};
 constexpr BASE_NS::Math::Mat4X4 SHADOW_BIAS_MATRIX = BASE_NS::Math::Mat4X4 { 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f,
     0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f };
 constexpr BASE_NS::Math::Mat4X4 GetShadowBias(const uint32_t shadowIndex, const uint32_t shadowCount)
@@ -46,7 +47,7 @@ constexpr BASE_NS::Math::Mat4X4 GetShadowBias(const uint32_t shadowIndex, const 
     const float theShadowCount = static_cast<float>(Math::max(1u, shadowCount));
     const float invShadowCount = (1.0f / theShadowCount);
     const float sc = 0.5f * invShadowCount;
-    const float so = invShadowCount * shadowIndex;
+    const float so = invShadowCount * static_cast<float>(shadowIndex);
     return BASE_NS::Math::Mat4X4 { sc, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, sc + so, 0.5f,
         0.0f, 1.0f };
 }
@@ -80,6 +81,22 @@ inline constexpr Math::UVec2 GetPacked64(const uint64_t value)
 {
     return { static_cast<uint32_t>(value >> 32) & 0xFFFFffff, static_cast<uint32_t>(value & 0xFFFFffff) };
 }
+
+inline constexpr Math::UVec4 GetMultiViewCameraIndices(
+    const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam)
+{
+    Math::UVec4 mvIndices { 0U, 0U, 0U, 0U };
+    CORE_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 3U);
+    const uint32_t inputCount = cam.multiViewCameraCount;
+    for (uint32_t idx = 0U; idx < inputCount; ++idx) {
+        const uint64_t id = cam.multiViewCameraIds[idx];
+        if (id != RenderSceneDataConstants::INVALID_ID) {
+            mvIndices[0U]++; // recalculates the count
+            mvIndices[mvIndices[0U]] = Math::min(rds->GetCameraIndex(id), CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - 1U);
+        }
+    }
+    return mvIndices;
+}
 } // namespace
 
 void RenderNodeDefaultCameras::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
@@ -95,6 +112,7 @@ void RenderNodeDefaultCameras::InitNode(IRenderNodeContextManager& renderNodeCon
     const string bufferName =
         stores_.dataStoreNameScene.c_str() + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME;
 
+    CORE_STATIC_ASSERT((sizeof(DefaultCameraMatrixStruct) % CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT) == 0);
     auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
     resHandle_ = gpuResourceMgr.Create(
         bufferName, { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -134,6 +152,7 @@ void RenderNodeDefaultCameras::ExecuteFrame(IRenderCommandList& cmdList)
 
                 for (uint32_t idx = 0; idx < cameraCount; ++idx) {
                     const auto& currCamera = cameras[idx];
+                    const Math::UVec4 mvCameraIndices = GetMultiViewCameraIndices(dsCamera, currCamera);
                     auto dat =
                         reinterpret_cast<DefaultCameraMatrixStruct*>(data + sizeof(DefaultCameraMatrixStruct) * idx);
 
@@ -166,6 +185,7 @@ void RenderNodeDefaultCameras::ExecuteFrame(IRenderCommandList& cmdList)
                     const Math::UVec2 packedId = GetPacked64(currCamera.id);
                     const Math::UVec2 packedLayer = GetPacked64(currCamera.layerMask);
                     dat->indices = { packedId.x, packedId.y, packedLayer.x, packedLayer.y };
+                    dat->multiViewIndices = mvCameraIndices;
 
                     // frustum planes
                     if (frustumUtil_) {
@@ -174,6 +194,12 @@ void RenderNodeDefaultCameras::ExecuteFrame(IRenderCommandList& cmdList)
                         CloneData(dat->frustumPlanes, CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT * sizeof(Math::Vec4),
                             frustum.planes, Frustum::PLANE_COUNT * sizeof(Math::Vec4));
                     }
+
+                    // padding
+                    dat->counts = { currCamera.environmentCount, 0U, 0U, 0U };
+                    dat->pad0 = { 0U, 0U, 0U, 0U };
+                    dat->matPad0 = ZERO_MATRIX_4X4;
+                    dat->matPad1 = ZERO_MATRIX_4X4;
                 }
 
                 gpuResMgr.UnmapBuffer(resHandle_.GetHandle());

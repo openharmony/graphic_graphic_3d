@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -110,12 +110,12 @@ void RenderNodeDefaultMaterialObjects::UpdateMeshBuffer(const IRenderDataStoreDe
         CORE_STATIC_ASSERT(meshByteSize >= UBO_BIND_OFFSET_ALIGNMENT);
         CORE_STATIC_ASSERT(sizeof(RenderMeshData) == sizeof(DefaultMaterialSingleMeshStruct));
         const auto* meshDataPtrEnd = meshDataPtr + meshByteSize * objectCounts_.maxMeshCount;
-        const auto meshData = dataStoreMaterial.GetMeshData();
-        for (const auto& meshDataRef : meshData) {
-            if (!CloneData(meshDataPtr, size_t(meshDataPtrEnd - meshDataPtr), &meshDataRef, sizeof(meshDataRef))) {
+        if (const auto meshData = dataStoreMaterial.GetMeshData(); !meshData.empty()) {
+            // clone all at once, they are in order
+            const size_t cloneByteSize = meshData.size_bytes();
+            if (!CloneData(meshDataPtr, size_t(meshDataPtrEnd - meshDataPtr), meshData.data(), cloneByteSize)) {
                 CORE_LOG_I("meshData ubo copying failed");
             }
-            meshDataPtr = meshDataPtr + meshByteSize;
         }
 
         gpuResourceMgr.UnmapBuffer(ubos_.mesh.GetHandle());
@@ -141,7 +141,8 @@ void RenderNodeDefaultMaterialObjects::UpdateSkinBuffer(const IRenderDataStoreDe
             if (!CloneData(skinData, size_t(skinDataEnd - skinData), jointRef.data, copySize)) {
                 CORE_LOG_I("skinData ubo copying failed");
             }
-            if (!CloneData(skinData + ptrOffset, size_t(skinDataEnd - skinData), jointRef.data + copyCount, copySize)) {
+            if (!CloneData(skinData + ptrOffset, size_t(skinDataEnd - (skinData + ptrOffset)),
+                    jointRef.data + copyCount, copySize)) {
                 CORE_LOG_I("skinData ubo copying failed");
             }
             skinData = skinData + sizeof(DefaultMaterialSkinStruct);
@@ -198,6 +199,7 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
     constexpr uint32_t overEstimate { 16u };
     constexpr uint32_t baseStructSize = CORE_UNIFORM_BUFFER_MAX_BIND_SIZE;
     constexpr uint32_t singleComponentStructSize = UBO_BIND_OFFSET_ALIGNMENT;
+    const string_view us = stores_.dataStoreNameScene;
     // instancing utilization for mesh and materials
     if (objectCounts_.maxMeshCount < objectCounts.maxMeshCount) {
         // mesh matrix uses max ubo bind size to utilize gpu instancing
@@ -210,8 +212,7 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
         objectCounts_.maxMeshCount = (byteSize / singleComponentStructSize) - MIN_UBO_OBJECT_COUNT;
         CORE_ASSERT((int32_t(byteSize / singleComponentStructSize) - int32_t(MIN_UBO_OBJECT_COUNT)) > 0);
 
-        ubos_.mesh = gpuResourceMgr.Create(
-            stores_.dataStoreNameScene.c_str() + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME,
+        ubos_.mesh = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME,
             GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, byteSize });
@@ -219,8 +220,7 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
     if (objectCounts_.maxSkinCount < objectCounts.maxSkinCount) {
         objectCounts_.maxSkinCount = objectCounts.maxSkinCount + (objectCounts.maxSkinCount / overEstimate);
 
-        ubos_.submeshSkin = gpuResourceMgr.Create(
-            stores_.dataStoreNameScene.c_str() + DefaultMaterialMaterialConstants::SKIN_DATA_BUFFER_NAME,
+        ubos_.submeshSkin = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::SKIN_DATA_BUFFER_NAME,
             GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
@@ -240,17 +240,13 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
             (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
             CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, byteSize };
 
-        ubos_.mat = gpuResourceMgr.Create(
-            stores_.dataStoreNameScene.c_str() + DefaultMaterialMaterialConstants::MATERIAL_DATA_BUFFER_NAME,
-            bufferDesc);
+        ubos_.mat = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_DATA_BUFFER_NAME, bufferDesc);
 
         ubos_.matTransform = gpuResourceMgr.Create(
-            stores_.dataStoreNameScene.c_str() + DefaultMaterialMaterialConstants::MATERIAL_TRANSFORM_DATA_BUFFER_NAME,
-            bufferDesc);
+            us + DefaultMaterialMaterialConstants::MATERIAL_TRANSFORM_DATA_BUFFER_NAME, bufferDesc);
 
-        ubos_.userMat = gpuResourceMgr.Create(
-            stores_.dataStoreNameScene.c_str() + DefaultMaterialMaterialConstants::MATERIAL_USER_DATA_BUFFER_NAME,
-            bufferDesc);
+        ubos_.userMat =
+            gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_USER_DATA_BUFFER_NAME, bufferDesc);
     }
 }
 

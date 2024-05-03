@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,7 +26,7 @@ PropertyHandle::PropertyHandle(IPropertyApi* owner, void* data, const size_t siz
 
 PropertyHandle::PropertyHandle(PropertyHandle&& other) noexcept
     : IPropertyHandle(), owner_(BASE_NS::exchange(other.owner_, nullptr)),
-      data_(BASE_NS::exchange(other.data_, nullptr)), size_(BASE_NS::exchange(other.size_, 0))
+      data_(BASE_NS::exchange(other.data_, nullptr)), size_(BASE_NS::exchange(other.size_, 0U))
 {}
 
 PropertyHandle& PropertyHandle::operator=(PropertyHandle&& other) noexcept
@@ -34,7 +34,7 @@ PropertyHandle& PropertyHandle::operator=(PropertyHandle&& other) noexcept
     if (&other != this) {
         owner_ = BASE_NS::exchange(other.owner_, nullptr);
         data_ = BASE_NS::exchange(other.data_, nullptr);
-        size_ = BASE_NS::exchange(other.size_, 0);
+        size_ = BASE_NS::exchange(other.size_, 0U);
     }
     return *this;
 }

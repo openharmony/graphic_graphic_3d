@@ -3,9 +3,11 @@
         "version": "22.00",
         "type": "shader"
     },
+    "category": "3D/Material",
     "baseShader": "3dshaders://shader/core3d_dm_depth.shader",
     "shaders": [
         {
+            "displayName": "Depth",
             "variantName": "DEPTH",
             "renderSlot": "CORE3D_RS_DM_DEPTH",
             "renderSlotDefaultShader": true,
@@ -32,6 +34,7 @@
             }
         },
         {
+            "displayName": "Depth VSM",
             "variantName": "DEPTH_VSM",
             "renderSlot": "CORE3D_RS_DM_DEPTH_VSM",
             "renderSlotDefaultShader": true,

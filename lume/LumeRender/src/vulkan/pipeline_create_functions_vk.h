@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,6 +37,7 @@ struct LowLevelRenderPassCompatibilityDescVk final {
     struct Attachment {
         VkFormat format { VkFormat::VK_FORMAT_UNDEFINED };
         VkSampleCountFlagBits sampleCountFlags { VK_SAMPLE_COUNT_1_BIT };
+        VkImageAspectFlags aspectFlags { 0u };
     };
     Attachment attachments[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
 };
@@ -48,6 +49,7 @@ struct LowLevelRenderPassDataVk final : public LowLevelRenderPassData {
     VkViewport viewport { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     VkRect2D scissor { { 0, 0 }, { 0, 0 } };
     VkExtent2D framebufferSize { 0, 0 };
+    uint32_t viewMask { 0u };
 
     uint64_t renderPassCompatibilityHash { 0 };
     uint64_t renderPassHash { 0 };
@@ -77,21 +79,25 @@ public:
     // self-contained, only uses member vector for temporary storage
     VkRenderPass CreateRenderPass(const DeviceVk& deviceVk, const RenderCommandBeginRenderPass& beginRenderPass,
         const LowLevelRenderPassDataVk& lowLevelRenderPassData);
-    VkRenderPass CreateRenderPassCompatibility(const DeviceVk& deviceVk, const RenderPassDesc& renderPassDesc,
-        const LowLevelRenderPassDataVk& lowLevelRenderPassData,
-        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs);
+    VkRenderPass CreateRenderPassCompatibility(const DeviceVk& deviceVk,
+        const RenderCommandBeginRenderPass& beginRenderPass, const LowLevelRenderPassDataVk& lowLevelRenderPassData);
     void DestroyRenderPass(VkDevice device, VkRenderPass renderPass);
 
     struct RenderPassStorage1 {
         BASE_NS::vector<VkSubpassDescription> subpassDescriptions;
         BASE_NS::vector<VkSubpassDependency> subpassDependencies;
         BASE_NS::vector<VkAttachmentReference> attachmentReferences;
+
+        BASE_NS::vector<uint32_t> multiViewMasks;
     };
     struct RenderPassStorage2 {
         BASE_NS::vector<VkSubpassDescription2KHR> subpassDescriptions;
         BASE_NS::vector<VkSubpassDependency2KHR> subpassDependencies;
         BASE_NS::vector<VkAttachmentReference2KHR> attachmentReferences;
         BASE_NS::vector<VkSubpassDescriptionDepthStencilResolveKHR> subpassDescriptionsDepthStencilResolve;
+#if (RENDER_VULKAN_FSR_ENABLED == 1)
+        BASE_NS::vector<VkFragmentShadingRateAttachmentInfoKHR> fragmentShadingRateAttachmentInfos;
+#endif
     };
 
 private:

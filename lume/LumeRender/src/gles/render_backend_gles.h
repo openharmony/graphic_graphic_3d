@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,6 +23,8 @@
 #include "nodecontext/render_command_list.h"
 #include "render_backend.h"
 #if defined(RENDER_PERF_ENABLED) && (RENDER_PERF_ENABLED == 1)
+#include <atomic>
+
 #include "device/gpu_buffer.h"
 #include "perf/cpu_timer.h"
 #include "perf/gpu_query_manager.h"
@@ -73,6 +75,9 @@ public:
 
 private:
     void RenderSingleCommandList(const RenderCommandContext& renderCommandCtx);
+    void RenderProcessEndCommandLists(
+        RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
+
     void RenderCommandDraw(const RenderCommandWithType&);
     void RenderCommandDrawIndirect(const RenderCommandWithType&);
     void RenderCommandDispatch(const RenderCommandWithType&);
@@ -90,9 +95,9 @@ private:
     void RenderCommandCopyImage(const RenderCommandWithType&);
     void RenderCommandBlitImage(const RenderCommandWithType&);
     void RenderCommandBarrierPoint(const RenderCommandWithType&);
-    void RenderCommandUpdateDescriptorSets(const RenderCommandWithType&);
     void RenderCommandBindDescriptorSets(const RenderCommandWithType&);
     void RenderCommandPushConstant(const RenderCommandWithType&);
+    void RenderCommandClearColorImage(const RenderCommandWithType&);
     void RenderCommandDynamicStateViewport(const RenderCommandWithType&);
     void RenderCommandDynamicStateScissor(const RenderCommandWithType&);
     void RenderCommandDynamicStateLineWidth(const RenderCommandWithType&);
@@ -100,13 +105,14 @@ private:
     void RenderCommandDynamicStateBlendConstants(const RenderCommandWithType&);
     void RenderCommandDynamicStateDepthBounds(const RenderCommandWithType&);
     void RenderCommandDynamicStateStencil(const RenderCommandWithType&);
+    void RenderCommandFragmentShadingRate(const RenderCommandWithType& renderCmd);
     void RenderCommandExecuteBackendFramePosition(const RenderCommandWithType&);
     void RenderCommandWriteTimestamp(const RenderCommandWithType&);
     void RenderCommandUndefined(const RenderCommandWithType&);
     typedef void (RenderBackendGLES::*RenderCommandHandler)(const RenderCommandWithType&);
     // Following array must match in order of RenderCommandType
     // Count of render command types
-    static constexpr uint32_t RENDER_COMMAND_COUNT = ((uint32_t)RenderCommandType::GPU_QUEUE_TRANSFER_ACQUIRE) + 1u;
+    static constexpr uint32_t RENDER_COMMAND_COUNT = (static_cast<uint32_t>(RenderCommandType::COUNT));
     static constexpr RenderCommandHandler COMMAND_HANDLERS[RENDER_COMMAND_COUNT] = {
         &RenderBackendGLES::RenderCommandUndefined, &RenderBackendGLES::RenderCommandDraw,
         &RenderBackendGLES::RenderCommandDrawIndirect, &RenderBackendGLES::RenderCommandDispatch,
@@ -116,13 +122,14 @@ private:
         &RenderBackendGLES::RenderCommandBindIndexBuffer, &RenderBackendGLES::RenderCommandCopyBuffer,
         &RenderBackendGLES::RenderCommandCopyBufferImage, &RenderBackendGLES::RenderCommandCopyImage,
         &RenderBackendGLES::RenderCommandBlitImage, &RenderBackendGLES::RenderCommandBarrierPoint,
-        &RenderBackendGLES::RenderCommandUpdateDescriptorSets, &RenderBackendGLES::RenderCommandBindDescriptorSets,
-        &RenderBackendGLES::RenderCommandPushConstant,
+        &RenderBackendGLES::RenderCommandBindDescriptorSets, &RenderBackendGLES::RenderCommandPushConstant,
         &RenderBackendGLES::RenderCommandUndefined, /* RenderCommandBuildAccelerationStructure */
-        &RenderBackendGLES::RenderCommandDynamicStateViewport, &RenderBackendGLES::RenderCommandDynamicStateScissor,
-        &RenderBackendGLES::RenderCommandDynamicStateLineWidth, &RenderBackendGLES::RenderCommandDynamicStateDepthBias,
+        &RenderBackendGLES::RenderCommandClearColorImage, &RenderBackendGLES::RenderCommandDynamicStateViewport,
+        &RenderBackendGLES::RenderCommandDynamicStateScissor, &RenderBackendGLES::RenderCommandDynamicStateLineWidth,
+        &RenderBackendGLES::RenderCommandDynamicStateDepthBias,
         &RenderBackendGLES::RenderCommandDynamicStateBlendConstants,
         &RenderBackendGLES::RenderCommandDynamicStateDepthBounds, &RenderBackendGLES::RenderCommandDynamicStateStencil,
+        &RenderBackendGLES::RenderCommandFragmentShadingRate,
         &RenderBackendGLES::RenderCommandExecuteBackendFramePosition, &RenderBackendGLES::RenderCommandWriteTimestamp,
         &RenderBackendGLES::RenderCommandUndefined, /* RenderCommandGpuQueueTransferRelease */
         &RenderBackendGLES::RenderCommandUndefined  /* RenderCommandGpuQueueTransferAcquire */
@@ -140,7 +147,7 @@ private:
     void ClearScissorInit(const RenderPassDesc::RenderArea& aArea);
     void ClearScissorSet();
     void ClearScissorReset();
-    void SetPushConstant(uint32_t program, const Gles::PushConstantReflection& pc, const void* data);
+    static void SetPushConstant(uint32_t program, const Gles::PushConstantReflection& pc, const void* data);
     void SetPushConstants(uint32_t program, const BASE_NS::array_view<Gles::PushConstantReflection>& pushConstants);
     void DoSubPass(uint32_t subPass);
 
@@ -184,6 +191,7 @@ private:
     struct PerfDataSet {
         EngineResourceHandle gpuHandle;
         CpuTimer cpuTimer;
+        uint32_t counter;
     };
     BASE_NS::unordered_map<BASE_NS::string, PerfDataSet> timers_;
 
@@ -199,6 +207,8 @@ private:
         CpuTimer present;
     };
     CommonBackendCpuTimers commonCpuTimers_;
+
+    std::atomic_int64_t fullGpuCounter_ { 0 };
 #endif
     PolygonMode polygonMode_ = PolygonMode::CORE_POLYGON_MODE_FILL;
     PrimitiveTopology topology_ = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -211,7 +221,7 @@ private:
     struct {
         uint32_t id { 0 };
         uintptr_t offset { 0 };
-        IndexType type { CORE_INDEX_TYPE_MAX_ENUM };
+        IndexType type { CORE_INDEX_TYPE_UINT32 };
     } boundIndexBuffer_;
 
     void ResetState();
@@ -226,7 +236,7 @@ private:
     };
     BindState boundObjects_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
 
-    Gles::Bind& SetupBind(const DescriptorSetLayoutBinding& res, BASE_NS::vector<Gles::Bind>& resources);
+    static Gles::Bind& SetupBind(const DescriptorSetLayoutBinding& res, BASE_NS::vector<Gles::Bind>& resources);
     void BindSampler(const BindableSampler& res, Gles::Bind& obj, uint32_t index);
     void BindImage(const BindableImage& res, const GpuResourceState& resState, Gles::Bind& obj, uint32_t index);
     void BindImageSampler(const BindableImage& res, const GpuResourceState& resState, Gles::Bind& obj, uint32_t index);
@@ -234,7 +244,7 @@ private:
     void BindVertexInputs(
         const VertexInputDeclarationData& decldata, const BASE_NS::array_view<const int32_t>& vertexInputs);
     void ProcessBindings(const struct RenderCommandBindDescriptorSets& renderCmd,
-        const DescriptorSetLayoutBindingResources& data, uint32_t set, uint32_t& curDynamic);
+        const DescriptorSetLayoutBindingResources& data, uint32_t set);
     void ScanPasses(const RenderPassDesc& rpd);
     int32_t InvalidateColor(BASE_NS::array_view<uint32_t> invalidateAttachment, const RenderPassDesc& rpd,
         const RenderPassSubpassDesc& currentSubPass);
@@ -298,6 +308,7 @@ private:
     bool scissorBoxUpdated_ { false };
     bool viewportDepthRangeUpdated_ { false };
     bool viewportUpdated_ { false };
+    bool commandListValid_ { false };
     void FlushViewportScissors();
 
     void BufferToImageCopy(const struct RenderCommandCopyBufferImage& renderCmd);

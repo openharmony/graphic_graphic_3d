@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -102,7 +102,6 @@ GpuSamplerGLES::GpuSamplerGLES(Device& device, const GpuSamplerDesc& desc) : dev
             color[0] = color[1] = color[2] = color[3] = 1.f;
             break;
         }
-        case CORE_BORDER_COLOR_MAX_ENUM:
         default:
             color[0] = color[1] = color[2] = color[3] = 0.f;
             break;

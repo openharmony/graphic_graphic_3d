@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,7 +30,7 @@ struct ComputeShaderReflection {
     /** Pipeline layout */
     PipelineLayout pipelineLayout;
     /** Shader specialization constant view */
-    ShaderSpecilizationConstantView shaderSpecializationConstantView;
+    ShaderSpecializationConstantView shaderSpecializationConstantView;
 
     /** Thread group size X */
     uint32_t threadGroupSizeX { 0 };
@@ -45,7 +45,7 @@ struct ShaderReflection {
     /** Pipeline layout */
     PipelineLayout pipelineLayout;
     /** Shader specialization constant view */
-    ShaderSpecilizationConstantView shaderSpecializationConstantView;
+    ShaderSpecializationConstantView shaderSpecializationConstantView;
     /** Vertex input declaration view */
     VertexInputDeclarationView vertexInputDeclarationView;
 };

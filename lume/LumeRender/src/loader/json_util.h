@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,6 +25,7 @@
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
 #include <base/math/mathf.h>
+#include <base/math/vector.h>
 #include <base/util/uid.h>
 #include <base/util/uid_util.h>
 #include <core/json/json.h>
@@ -255,6 +256,15 @@ void SafeGetJsonMask(
             error += "Failed to read value: " + element + " (" + CORE_NS::json::to_string(*mask) + ")";
         }
     }
+}
+
+template<class JsonType, typename T,
+    BASE_NS::enable_if_t<BASE_NS::is_array_v<decltype(T::data)> &&
+                             BASE_NS::is_arithmetic_v<BASE_NS::remove_extent_t<decltype(T::data)>>,
+        bool> = true>
+inline void FromJson(const JsonType& jsonData, T& output)
+{
+    FromJson(jsonData, output.data);
 }
 RENDER_END_NAMESPACE()
 

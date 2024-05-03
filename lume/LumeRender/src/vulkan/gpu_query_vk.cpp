@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,7 +15,7 @@
 
 #include "gpu_query_vk.h"
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <render/namespace.h>
 
@@ -55,9 +55,11 @@ GpuQueryVk::~GpuQueryVk()
 {
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
     for (auto& ref : plats_) {
-        vkDestroyQueryPool(device, // device
-            ref.queryPool,         // queryPool
-            nullptr);              // pAllocator
+        if (ref.queryPool) {
+            vkDestroyQueryPool(device, // device
+                ref.queryPool,         // queryPool
+                nullptr);              // pAllocator
+        }
     }
 }
 

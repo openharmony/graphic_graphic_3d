@@ -27,8 +27,13 @@ layout (location = 0) out vec4 outColor;
 void main()
 {
     const vec2 uv = inUv;
-    //vec3 color = bloomDownscale(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
-    vec3 color = bloomDownscaleWeighted(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+
+    vec3 color = vec3(0.0);
+    if ((CORE_BLOOM_QUALITY_NORMAL & CORE_POST_PROCESS_FLAGS) == CORE_BLOOM_QUALITY_NORMAL) {
+        color = bloomDownscaleWeighted9(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    } else {
+        color = bloomDownscaleWeighted(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    }
 
     const float luma = CalcLuma(color);
     if (luma < uPc.factor.x)

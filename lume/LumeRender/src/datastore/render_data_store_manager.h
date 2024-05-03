@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,9 +39,11 @@ public:
     RenderDataStoreManager(const RenderDataStoreManager&) = delete;
     RenderDataStoreManager& operator=(const RenderDataStoreManager&) = delete;
 
+    void CommitFrameData() override;
     void PreRender();
-    void PreRenderBackend();
     void PostRender();
+    void PreRenderBackend();
+    void PostRenderBackend();
 
     // uses locking mechanism
     IRenderDataStore* GetRenderDataStore(const BASE_NS::string_view name) const override;
@@ -52,10 +54,18 @@ public:
     IRenderDataStore* Create(const BASE_NS::Uid& dataStoreTypeUid, char const* dataStoreName) override;
     void Destroy(const BASE_NS::Uid& dataStoreTypeUid, IRenderDataStore* instance) override;
 
+    RenderDataStoreFlags GetRenderDataStoreFlags() const override;
+
+    FrameIndices GetFrameIndices() const override;
+
     // Not synchronized and not in API
     void AddRenderDataStoreFactory(const RenderDataStoreTypeInfo& typeInfo);
     // Not synchronized and not in API
     void RemoveRenderDataStoreFactory(const RenderDataStoreTypeInfo& typeInfo);
+
+#if (RENDER_VALIDATION_ENABLED == 1)
+    void ValidateCommitFrameData() const;
+#endif
 
 private:
     IRenderContext& renderContext_;
@@ -84,6 +94,12 @@ private:
     // lock not needed for access
     BASE_NS::unordered_map<uint64_t, IRenderDataStore*> renderAccessStores_;
     BASE_NS::unordered_map<uint64_t, RenderDataStoreTypeInfo> factories_;
+
+    RenderDataStoreFlags renderDataStoreFlags_ { 0u };
+    uint32_t frameWriteIndex_ { 0u };
+#if (RENDER_VALIDATION_ENABLED == 1)
+    uint64_t commitDeviceFrameIndex_ { 0u };
+#endif
 };
 
 class RenderNodeRenderDataStoreManager final : public IRenderNodeRenderDataStoreManager {

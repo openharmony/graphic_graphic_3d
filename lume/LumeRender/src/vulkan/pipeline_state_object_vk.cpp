@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,14 +18,13 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <base/util/formats.h>
 #include <render/device/pipeline_layout_desc.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 
-#include "device/device.h"
 #include "device/gpu_program.h"
 #include "device/gpu_program_util.h"
 #include "device/gpu_resource_handle_util.h"
@@ -40,7 +39,15 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t MAX_DYNAMIC_STATE_COUNT { 9 };
+constexpr uint32_t MAX_DYNAMIC_STATE_COUNT { 10u };
+
+constexpr VkDescriptorSetLayoutCreateInfo EMPTY_LAYOUT_INFO {
+    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
+    nullptr,                                             // pNext
+    0U,                                                  // flags
+    0U,                                                  // bindingCount
+    nullptr,                                             // pBindings
+};
 
 void GetVertexInputs(const VertexInputDeclarationView& vertexInputDeclaration,
     vector<VkVertexInputBindingDescription>& vertexInputBindingDescriptions,
@@ -94,11 +101,12 @@ void GetDescriptorSetFillData(const PipelineLayout& pipelineLayout,
     VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT];
     for (uint32_t operationIdx = 0; operationIdx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++operationIdx) {
         const auto& descRef = pipelineLayout.descriptorSetLayouts[operationIdx];
-        if (descRef.set == PipelineLayoutConstants::INVALID_INDEX) {
+        if ((ds.descriptorSetCount >= pipelineLayout.descriptorSetCount) &&
+            (descRef.set == PipelineLayoutConstants::INVALID_INDEX)) {
             continue;
         }
         ds.descriptorSetCount++;
-        const uint32_t setIdx = descRef.set;
+        const uint32_t setIdx = operationIdx;
         const auto& descSetLayoutData = pipelineLayoutDataVk.descriptorSetLayouts[setIdx];
         // NOTE: we are currently only doing handling of special (immutable sampler needing) layouts
         // with the descriptor set layout coming from the real descriptor set
@@ -107,38 +115,46 @@ void GetDescriptorSetFillData(const PipelineLayout& pipelineLayout,
             ds.descriptorSetLayouts[setIdx] = descSetLayoutData.descriptorSetLayout;
             ds.descriptorSetLayoutOwnership[setIdx] = false; // not owned, cannot be destroyed
         } else {
-            const uint32_t bindingCount = static_cast<uint32_t>(descRef.bindings.size());
-            PLUGIN_ASSERT(bindingCount <= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
-            for (uint32_t bindingOpIdx = 0; bindingOpIdx < bindingCount; ++bindingOpIdx) {
-                const auto& bindingRef = descRef.bindings[bindingOpIdx];
-                const VkShaderStageFlags shaderStageFlags = (VkShaderStageFlags)bindingRef.shaderStageFlags;
-                const uint32_t bindingIdx = bindingRef.binding;
-                const VkDescriptorType descriptorType = (VkDescriptorType)bindingRef.descriptorType;
-                const uint32_t descriptorCount = bindingRef.descriptorCount;
-
-                PLUGIN_ASSERT((shaderStageFlags & neededShaderStageFlags) > 0);
-                descriptorSetLayoutBindings[bindingOpIdx] = {
-                    bindingIdx,       // binding
-                    descriptorType,   // descriptorType
-                    descriptorCount,  // descriptorCount
-                    shaderStageFlags, // stageFlags
-                    nullptr,          // pImmutableSamplers
-                };
-            }
-
             constexpr VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateFlags { 0 };
-            const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {
-                VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
-                nullptr,                                             // pNext
-                descriptorSetLayoutCreateFlags,                      // flags
-                bindingCount,                                        // bindingCount
-                descriptorSetLayoutBindings,                         // pBindings
-            };
+            if (descRef.set == PipelineLayoutConstants::INVALID_INDEX) {
+                // provide empty layout for empty set
+                VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
+                    &EMPTY_LAYOUT_INFO,                                // pCreateInfo
+                    nullptr,                                           // pAllocator
+                    &ds.descriptorSetLayouts[setIdx]));                // pSetLayout
+            } else {
+                const uint32_t bindingCount = static_cast<uint32_t>(descRef.bindings.size());
+                PLUGIN_ASSERT(bindingCount <= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
+                for (uint32_t bindingOpIdx = 0; bindingOpIdx < bindingCount; ++bindingOpIdx) {
+                    const auto& bindingRef = descRef.bindings[bindingOpIdx];
+                    const VkShaderStageFlags shaderStageFlags = (VkShaderStageFlags)bindingRef.shaderStageFlags;
+                    const uint32_t bindingIdx = bindingRef.binding;
+                    const VkDescriptorType descriptorType = (VkDescriptorType)bindingRef.descriptorType;
+                    const uint32_t descriptorCount = bindingRef.descriptorCount;
 
-            VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
-                &descriptorSetLayoutCreateInfo,                    // pCreateInfo
-                nullptr,                                           // pAllocator
-                &ds.descriptorSetLayouts[setIdx]));                // pSetLayout
+                    PLUGIN_ASSERT((shaderStageFlags & neededShaderStageFlags) > 0);
+                    descriptorSetLayoutBindings[bindingOpIdx] = {
+                        bindingIdx,       // binding
+                        descriptorType,   // descriptorType
+                        descriptorCount,  // descriptorCount
+                        shaderStageFlags, // stageFlags
+                        nullptr,          // pImmutableSamplers
+                    };
+                }
+
+                const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {
+                    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
+                    nullptr,                                             // pNext
+                    descriptorSetLayoutCreateFlags,                      // flags
+                    bindingCount,                                        // bindingCount
+                    descriptorSetLayoutBindings,                         // pBindings
+                };
+
+                VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
+                    &descriptorSetLayoutCreateInfo,                    // pCreateInfo
+                    nullptr,                                           // pAllocator
+                    &ds.descriptorSetLayouts[setIdx]));                // pSetLayout
+            }
         }
     }
 
@@ -158,10 +174,10 @@ void GetDescriptorSetFillData(const PipelineLayout& pipelineLayout,
 GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, const GpuShaderProgram& gpuShaderProgram,
     const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
     const VertexInputDeclarationView& vertexInputDeclaration,
-    const ShaderSpecializationConstantDataView& specializationConstants, const DynamicStateFlags dynamicStateFlags,
-    const RenderPassDesc& renderPassDesc, const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs,
-    const uint32_t subpassIndex, const LowLevelRenderPassData& renderPassData,
-    const LowLevelPipelineLayoutData& pipelineLayoutData)
+    const ShaderSpecializationConstantDataView& specializationConstants,
+    const array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+    const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
+    const LowLevelRenderPassData& renderPassData, const LowLevelPipelineLayoutData& pipelineLayoutData)
     : GraphicsPipelineStateObject(), device_(device)
 {
     PLUGIN_ASSERT(!renderPassSubpassDescs.empty());
@@ -296,13 +312,11 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
     VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo {};
     pipelineDynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 
-    VkDynamicState dynamicStates[MAX_DYNAMIC_STATE_COUNT];
-    uint32_t dynamicStateCount = 0;
-    if (dynamicStateFlags != 0) {
-        for (uint32_t idx = 0; idx < MAX_DYNAMIC_STATE_COUNT; ++idx) {
-            if (((dynamicStateFlags >> idx) & 0x1) == 1) {
-                dynamicStates[dynamicStateCount++] = (VkDynamicState)idx;
-            }
+    VkDynamicState vkDynamicStates[MAX_DYNAMIC_STATE_COUNT];
+    uint32_t dynamicStateCount = Math::min(MAX_DYNAMIC_STATE_COUNT, static_cast<uint32_t>(dynamicStates.size()));
+    if (dynamicStateCount > 0) {
+        for (uint32_t idx = 0; idx < dynamicStateCount; ++idx) {
+            vkDynamicStates[idx] = (VkDynamicState)dynamicStates[idx];
         }
 
         constexpr VkPipelineDynamicStateCreateFlags pipelineDynamicStateCreateFlags { 0 };
@@ -311,7 +325,7 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
             nullptr,                                              // pNext
             pipelineDynamicStateCreateFlags,                      // flags
             dynamicStateCount,                                    // dynamicStateCount
-            dynamicStates,                                        // pDynamicStates
+            vkDynamicStates,                                      // pDynamicStates
         };
     }
 
@@ -344,11 +358,11 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
             constantSize                        // entry.size
         };
         if (constant.shaderStage & CORE_SHADER_STAGE_VERTEX_BIT) {
-            vertexStageSpecializations.emplace_back(entry);
+            vertexStageSpecializations.push_back(entry);
             vertexDataSize = std::max(vertexDataSize, constant.offset + constantSize);
         }
         if (constant.shaderStage & CORE_SHADER_STAGE_FRAGMENT_BIT) {
-            fragmentStageSpecializations.emplace_back(entry);
+            fragmentStageSpecializations.push_back(entry);
             fragmentDataSize = std::max(fragmentDataSize, constant.offset + constantSize);
         }
     }
@@ -414,7 +428,8 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
     VkSampleCountFlagBits sampleCountFlagBits { VK_SAMPLE_COUNT_1_BIT };
     if (renderPassSubpassDescs[subpassIndex].colorAttachmentCount > 0) {
         const auto& ref = lowLevelRenderPassDataVk.renderPassCompatibilityDesc.attachments[0];
-        sampleCountFlagBits = (VkSampleCountFlagBits)ref.sampleCountFlags;
+        sampleCountFlagBits = (ref.sampleCountFlags == 0) ? VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT
+                                                          : (VkSampleCountFlagBits)ref.sampleCountFlags;
     }
 
     VkBool32 sampleShadingEnable = VK_FALSE;
@@ -499,12 +514,16 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
 GraphicsPipelineStateObjectVk::~GraphicsPipelineStateObjectVk()
 {
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
-    vkDestroyPipeline(device,       // device
-        plat_.pipeline,             // pipeline
-        nullptr);                   // pAllocator
-    vkDestroyPipelineLayout(device, // device
-        plat_.pipelineLayout,       // pipelineLayout
-        nullptr);                   // pAllocator
+    if (plat_.pipeline) {
+        vkDestroyPipeline(device, // device
+            plat_.pipeline,       // pipeline
+            nullptr);             // pAllocator
+    }
+    if (plat_.pipelineLayout) {
+        vkDestroyPipelineLayout(device, // device
+            plat_.pipelineLayout,       // pipelineLayout
+            nullptr);                   // pAllocator
+    }
 }
 
 const PipelineStateObjectPlatformDataVk& GraphicsPipelineStateObjectVk::GetPlatformData() const
@@ -536,7 +555,7 @@ ComputePipelineStateObjectVk::ComputePipelineStateObjectVk(Device& device, const
             constantSize                        // entry.size
         };
         if (constant.shaderStage & CORE_SHADER_STAGE_COMPUTE_BIT) {
-            computeStateSpecializations.emplace_back(entry);
+            computeStateSpecializations.push_back(entry);
             computeDataSize = std::max(computeDataSize, constant.offset + constantSize);
         }
     }

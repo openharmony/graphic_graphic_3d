@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,19 +15,23 @@
 
 #include "threading/parallel_task_queue.h"
 
+#include <algorithm>
 #include <condition_variable>
 #include <mutex>
-#include <queue>
-#include <thread>
 
+#include <base/containers/array_view.h>
+#include <base/containers/iterator.h>
+#include <base/containers/refcnt_ptr.h>
+#include <base/containers/type_traits.h>
+#include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <core/log.h>
 #include <core/namespace.h>
-
-#include "os/platform.h"
+#include <core/threading/intf_thread_pool.h>
 
 CORE_BEGIN_NAMESPACE()
+using BASE_NS::array_view;
 using BASE_NS::unordered_map;
 using BASE_NS::vector;
 
@@ -40,7 +44,6 @@ struct ParallelTaskQueue::TaskState {
 class ParallelTaskQueue::Task final : public IThreadPool::ITask {
 public:
     explicit Task(TaskState& state, IThreadPool::ITask& task, uint64_t id);
-    ~Task() = default;
 
     void operator()() override;
 
@@ -85,14 +88,14 @@ ParallelTaskQueue::~ParallelTaskQueue()
 
 void ParallelTaskQueue::Submit(uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
 {
-    CORE_ASSERT(std::find(tasks_.begin(), tasks_.end(), taskIdentifier) == tasks_.end());
+    CORE_ASSERT(std::find(tasks_.cbegin(), tasks_.cend(), taskIdentifier) == tasks_.cend());
 
     tasks_.emplace_back(taskIdentifier, std::move(task));
 }
 
 void ParallelTaskQueue::SubmitAfter(uint64_t afterIdentifier, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
 {
-    CORE_ASSERT(std::find(tasks_.begin(), tasks_.end(), taskIdentifier) == tasks_.end());
+    CORE_ASSERT(std::find(tasks_.cbegin(), tasks_.cend(), taskIdentifier) == tasks_.cend());
 
     auto it = std::find(tasks_.begin(), tasks_.end(), afterIdentifier);
     if (it != tasks_.end()) {
@@ -105,10 +108,27 @@ void ParallelTaskQueue::SubmitAfter(uint64_t afterIdentifier, uint64_t taskIdent
     }
 }
 
+void ParallelTaskQueue::SubmitAfter(
+    array_view<const uint64_t> afterIdentifiers, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
+{
+    if (std::all_of(
+            afterIdentifiers.cbegin(), afterIdentifiers.cend(), [&tasks = tasks_](const uint64_t afterIdentifier) {
+                return std::any_of(tasks.cbegin(), tasks.cend(),
+                    [afterIdentifier](const TaskQueue::Entry& entry) { return entry.identifier == afterIdentifier; });
+            })) {
+        Entry entry(taskIdentifier, std::move(task));
+        entry.dependencies.insert(entry.dependencies.cend(), afterIdentifiers.begin(), afterIdentifiers.end());
+
+        tasks_.push_back(std::move(entry));
+    } else {
+        tasks_.emplace_back(taskIdentifier, std::move(task));
+    }
+}
+
 void ParallelTaskQueue::Remove(uint64_t taskIdentifier)
 {
-    auto it = std::find(tasks_.begin(), tasks_.end(), taskIdentifier);
-    if (it != tasks_.end()) {
+    auto it = std::find(tasks_.cbegin(), tasks_.cend(), taskIdentifier);
+    if (it != tasks_.cend()) {
         tasks_.erase(it);
     }
 }
@@ -126,7 +146,7 @@ void ParallelTaskQueue::QueueTasks(vector<size_t>& waiting, TaskState& state)
         return;
     }
 
-    for (vector<size_t>::iterator it = waiting.begin(); it != waiting.end();) {
+    for (vector<size_t>::const_iterator it = waiting.cbegin(); it != waiting.cend();) {
         // Entry to handle.
         Entry& entry = tasks_[*it];
 

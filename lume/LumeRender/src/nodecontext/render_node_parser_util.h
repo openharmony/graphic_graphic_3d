@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -58,15 +58,11 @@ public:
     RenderSlotCullType GetRenderSlotCullType(
         const CORE_NS::json::value& jsonValue, const BASE_NS::string_view name) const override;
 
-    // for IRenderNodeInterface
-    BASE_NS::string_view GetTypeName() const override
-    {
-        return "IRenderNodeParserUtil";
-    }
-    BASE_NS::Uid GetUid() const override
-    {
-        return IRenderNodeParserUtil::UID;
-    }
+    // IInterface
+    const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
+    CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override;
+    void Ref() override;
+    void Unref() override;
 
 private:
 };

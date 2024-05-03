@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -113,6 +113,26 @@ IPicking* GetPicking(IEcs& ecs)
 }
 } // namespace
 
+class SkinningSystem::SkinTask final : public IThreadPool::ITask {
+public:
+    SkinTask(SkinningSystem& system, array_view<const ComponentQuery::ResultRow> results)
+        : system_(system), results_(results) {};
+
+    void operator()() override
+    {
+        for (const ComponentQuery::ResultRow& row : results_) {
+            system_.UpdateSkin(row);
+        }
+    }
+
+protected:
+    void Destroy() override {}
+
+private:
+    SkinningSystem& system_;
+    array_view<const ComponentQuery::ResultRow> results_;
+};
+
 SkinningSystem::SkinningSystem(IEcs& ecs)
     : active_(true), ecs_(ecs), picking_(*GetPicking(ecs)), skinManager_(*GetManager<ISkinComponentManager>(ecs)),
       skinIbmManager_(*GetManager<ISkinIbmComponentManager>(ecs)),
@@ -122,7 +142,7 @@ SkinningSystem::SkinningSystem(IEcs& ecs)
       worldMatrixManager_(*GetManager<IWorldMatrixComponentManager>(ecs)),
       nodeManager_(*GetManager<INodeComponentManager>(ecs)),
       renderMeshManager_(*GetManager<IRenderMeshComponentManager>(ecs)),
-      meshManager_(*GetManager<IMeshComponentManager>(ecs))
+      meshManager_(*GetManager<IMeshComponentManager>(ecs)), threadPool_(ecs.GetThreadPool())
 {}
 
 void SkinningSystem::SetActive(bool state)
@@ -221,8 +241,10 @@ void SkinningSystem::UpdateSkin(const ComponentQuery::ResultRow& row)
 
     const auto skinIbmHandle = skinIbmManager_.Read(skinComponent.skin);
     if (!skinIbmHandle) {
+#if (CORE3D_VALIDATION_ENABLED == 1)
         auto const onceId = to_hex(row.entity.id);
         CORE_LOG_ONCE_W(onceId.c_str(), "Invalid skin resource for entity %s", onceId.c_str());
+#endif
         return;
     }
 
@@ -232,9 +254,11 @@ void SkinningSystem::UpdateSkin(const ComponentQuery::ResultRow& row)
 
     auto const& ibmMatrices = skinIbmHandle->matrices;
     if (jointEntities.size() != ibmMatrices.size()) {
+#if (CORE3D_VALIDATION_ENABLED == 1)
         auto const onceId = to_hex(row.entity.id);
         CORE_LOG_ONCE_W(onceId.c_str(), "Entity (%zu) and description (%zu) counts don't match for entity %s",
             jointEntities.size(), ibmMatrices.size(), onceId.c_str());
+#endif
         return;
     }
 
@@ -243,7 +267,7 @@ void SkinningSystem::UpdateSkin(const ComponentQuery::ResultRow& row)
     jointMatrices.count = jointEntities.size();
 
     UpdateJointTransformations(isEnabled, jointEntities, ibmMatrices, jointMatrices, skinEntityWorldInverse);
-    if (row.IsValidComponentId(3u)) {
+    if (row.IsValidComponentId(RENDER_MESH_INDEX)) {
         if (const auto renderMeshHandle = renderMeshManager_.Read(row.components[RENDER_MESH_INDEX]);
             renderMeshHandle) {
             const RenderMeshComponent& renderMeshComponent = *renderMeshHandle;
@@ -287,8 +311,33 @@ bool SkinningSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
 
     worldMatrixGeneration_ = worldMatrixManager_.GetGenerationCounter();
 
-    for (const ComponentQuery::ResultRow& row : componentQuery_.GetResults()) {
-        UpdateSkin(row);
+    const auto threadCount = threadPool_->GetNumberOfThreads();
+    const auto queryResults = componentQuery_.GetResults();
+    const auto resultCount = queryResults.size();
+    constexpr size_t minTaskSize = 8U;
+    const auto taskSize = Math::max(minTaskSize, resultCount / (threadCount == 0 ? 1 : threadCount));
+    const auto tasks = resultCount / (taskSize == 0 ? 1 : taskSize);
+
+    tasks_.clear();
+    tasks_.reserve(tasks);
+
+    taskResults_.clear();
+    taskResults_.reserve(tasks);
+    for (size_t i = 0; i < tasks; ++i) {
+        auto& task = tasks_.emplace_back(*this, array_view(queryResults.data() + i * taskSize, taskSize));
+        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr { &task }));
+    }
+
+    // Skin the tail in the main thread.
+    if (const auto remaining = resultCount - (tasks * taskSize); remaining) {
+        auto finalBatch = array_view(queryResults.data() + tasks * taskSize, remaining);
+        for (const ComponentQuery::ResultRow& row : finalBatch) {
+            UpdateSkin(row);
+        }
+    }
+
+    for (const auto& result : taskResults_) {
+        result->Wait();
     }
 
     if (missingPrevJointMatrices) {
@@ -344,6 +393,50 @@ void SkinningSystem::CreateInstance(
             std::copy(joints.begin(), joints.end(), jointEntities.begin());
         }
     }
+}
+
+void SkinningSystem::CreateInstance(Entity const& skinIbmEntity, Entity const& entity, Entity const& skeleton)
+{
+    if (!EntityUtil::IsValid(entity) || !skinJointsManager_.HasComponent(skinIbmEntity) ||
+        !skinIbmManager_.HasComponent(skinIbmEntity)) {
+        return;
+    }
+
+    // validate skin joints
+    if (const auto jointsHandle = skinJointsManager_.Read(skinIbmEntity); jointsHandle) {
+        const auto joints = array_view(jointsHandle->jointEntities, jointsHandle->count);
+        if (!std::all_of(
+                joints.begin(), joints.end(), [](const Entity& entity) { return EntityUtil::IsValid(entity); })) {
+            return;
+        }
+        if (const auto skinIbmHandle = skinIbmManager_.Read(skinIbmEntity); skinIbmHandle) {
+            if (skinIbmHandle->matrices.size() != joints.size()) {
+                CORE_LOG_E("Skin bone count doesn't match the given joints (%zu, %zu)!", skinIbmHandle->matrices.size(),
+                    joints.size());
+                return;
+            }
+        }
+    }
+
+    skinManager_.Create(entity);
+    if (auto skinHandle = skinManager_.Write(entity); skinHandle) {
+        skinHandle->skin = skinIbmEntity;
+        skinHandle->skinRoot = entity;
+        skinHandle->skeleton = skeleton;
+    }
+
+    skinJointsManager_.Create(entity);
+    const auto dstJointsHandle = skinJointsManager_.Write(entity);
+    const auto srcJointsHandle = skinJointsManager_.Read(skinIbmEntity);
+    if (dstJointsHandle && srcJointsHandle) {
+        dstJointsHandle->count = srcJointsHandle->count;
+        std::copy(srcJointsHandle->jointEntities,
+            srcJointsHandle->jointEntities + static_cast<ptrdiff_t>(srcJointsHandle->count),
+            dstJointsHandle->jointEntities);
+    }
+
+    // joint matrices will be written during Update call
+    jointMatricesManager_.Create(entity);
 }
 
 void SkinningSystem::DestroyInstance(Entity const& entity)

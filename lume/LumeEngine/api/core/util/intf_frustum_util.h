@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,12 +16,18 @@
 #ifndef API_CORE_UTIL_FRUSTUM_UTIL_H
 #define API_CORE_UTIL_FRUSTUM_UTIL_H
 
-#include <cstdint>
-
-#include <base/math/matrix.h>
+#include <base/containers/refcnt_ptr.h>
 #include <base/math/vector.h>
+#include <base/namespace.h>
+#include <base/util/uid.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_interface.h>
+
+BASE_BEGIN_NAMESPACE()
+namespace Math {
+class Mat4X4;
+} // namespace Math
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 /** \addtogroup group_util_frustumutil
@@ -76,11 +82,6 @@ protected:
     IFrustumUtil() = default;
     virtual ~IFrustumUtil() = default;
 };
-
-inline constexpr BASE_NS::string_view GetName(const IFrustumUtil*)
-{
-    return "IFrustumUtil";
-}
 
 /** @} */
 CORE_END_NAMESPACE()

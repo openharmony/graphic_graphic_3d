@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,6 +35,8 @@ layout(push_constant, std430) uniform uPostProcessPushConstant
 {
     LocalPostProcessPushConstantStruct uPc;
 };
+
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
 
 #else
 

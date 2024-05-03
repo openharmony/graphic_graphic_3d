@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,10 +18,12 @@
 
 #include <base/containers/array_view.h>
 #include <base/containers/unique_ptr.h>
+#include <core/property/intf_property_handle.h>
 #include <render/device/pipeline_layout_desc.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
+#include <render/render_data_structures.h>
 #include <render/resource_handle.h>
 
 RENDER_BEGIN_NAMESPACE()
@@ -32,53 +34,65 @@ RENDER_BEGIN_NAMESPACE()
  */
 class IShaderPipelineBinder {
 public:
-    /** Bindable buffer */
-    struct Buffer {
-        /** Handle */
+    /** Dispatch data */
+    struct DispatchCommand {
+        /**
+         * Render handle for dispatching.
+         * 1. If image -> imageSize / tgs
+         * 2. If buffer -> dispatch indirect
+         */
+        RenderHandleReference handle {};
+        /**
+         * Thread group count.
+         * Only used if the handle is invalid.
+         */
+        ShaderThreadGroup threadGroupCount;
+
+        /** Indirect args buffer offset */
+        uint32_t argsOffset { 0U };
+    };
+    /** Draw command */
+    struct DrawCommand {
+        /** Vertex count */
+        uint32_t vertexCount { 0U };
+        /** Index count */
+        uint32_t indexCount { 0U };
+        /** Instance count */
+        uint32_t instanceCount { 1U };
+
+        /** Indirect args */
+        RenderHandleReference argsHandle {};
+        /** Indirect args buffer offset */
+        uint32_t argsOffset { 0U };
+    };
+    /** Property binding data */
+    struct PropertyBindingView {
+        /** Descriptor set index */
+        uint32_t set { ~0U };
+        /** Descriptor set binding index */
+        uint32_t binding { ~0U };
+
+        /** Array view to data */
+        BASE_NS::array_view<const uint8_t> data;
+    };
+    /** Resource binding */
+    struct ResourceBinding {
+        /** Descriptor set index */
+        uint32_t set { PipelineLayoutConstants::INVALID_INDEX };
+        /** Descriptor set binding index */
+        uint32_t binding { PipelineLayoutConstants::INVALID_INDEX };
+        /** Descriptor count */
+        uint32_t descriptorCount { 0U };
+        /** Descriptor set binding array offset for array resources. Offset to first array resource. */
+        uint32_t arrayOffset { 0U };
+
+        /** Resource handle */
         RenderHandleReference handle;
-        /** Byte offset to buffer */
-        uint32_t byteOffset { 0u };
-        /** Byte size for buffer binding */
-        uint32_t byteSize { PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
     };
 
-    /** Bindable image */
-    struct Image {
-        /** Handle */
-        RenderHandleReference handle;
-        /** Mip level for specific binding */
-        uint32_t mip { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
-        /** Layer level for specific binding */
-        uint32_t layer { PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
-        /** Sampler handle for combined image sampler */
-        RenderHandleReference samplerHandle;
-    };
-
-    /** Bindable sampler */
-    struct Sampler {
-        /** Handle */
-        RenderHandleReference handle;
-    };
-
-    /** Bindable binding */
-    struct Binding {
-        /** Binding */
-        uint32_t binding { ~0u };
-        /** Index to resources arrays */
-        uint32_t resIdx { ~0u };
-        /** Type for resources arrays */
-        RenderHandleType type { RenderHandleType::UNDEFINED };
-    };
-
-    /** Bindable resource view
+    /** Clear bindings.
      */
-    struct DescriptorSetView {
-        BASE_NS::array_view<const Buffer> buffers;
-        BASE_NS::array_view<const Image> images;
-        BASE_NS::array_view<const Sampler> samplers;
-
-        BASE_NS::array_view<const Binding> bindings;
-    };
+    virtual void ClearBindings() = 0;
 
     /** Get binding validity. Checks through all bindings that they have valid handles.
      */
@@ -94,20 +108,12 @@ public:
      * @param binding Binding index
      * @param handle Binding resource handle
      */
-    virtual void Bind(const uint32_t set, const uint32_t binding, const RenderHandleReference& handle) = 0;
-
-    /** Set uniform data which will be bind to shader with UBO in set/binding.
-     * @param set Set index
-     * @param binding Binding index
-     * @param data Uniform data which is bind to shader with UBO in correct set/binding.
-     */
-    virtual void SetUniformData(
-        const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const uint8_t> data) = 0;
+    virtual void Bind(uint32_t set, uint32_t binding, const RenderHandleReference& handle) = 0;
 
     /** Set push constant data for shader access.
      * @param data Uniform data which is bind to shader with UBO in correct set/binding.
      */
-    virtual void SetPushConstantData(const BASE_NS::array_view<const uint8_t> data) = 0;
+    virtual void SetPushConstantData(BASE_NS::array_view<const uint8_t> data) = 0;
 
     /** Bind buffer.
      * @param set Set index
@@ -115,31 +121,129 @@ public:
      * @param resource Binding resource
      * buffer)
      */
-    virtual void BindBuffer(const uint32_t set, const uint32_t binding, const Buffer& resource) = 0;
+    virtual void BindBuffer(uint32_t set, uint32_t binding, const BindableBufferWithHandleReference& resource) = 0;
 
+    /** Bind buffers for array binding.
+     * @param set Set index
+     * @param binding Binding index
+     * @param resources Binding resources
+     * buffer)
+     */
+    virtual void BindBuffers(
+        uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableBufferWithHandleReference> resources) = 0;
+    
     /** Bind image.
      * @param set Set index
      * @param binding Binding index
      * @param resource Binding resource handle
      */
-    virtual void BindImage(const uint32_t set, const uint32_t binding, const Image& resource) = 0;
+    virtual void BindImage(uint32_t set, uint32_t binding, const BindableImageWithHandleReference& resource) = 0;
+    
+    /** Bind images for array bindings.
+     * @param set Set index
+     * @param binding Binding index
+     * @param resource Binding resource handle
+     */
+    virtual void BindImages(
+        uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableImageWithHandleReference> resources) = 0;
 
     /** Bind sampler
      * @param set Set index
      * @param binding Binding index
      * @param handle Binding resource handle
      */
-    virtual void BindSampler(const uint32_t set, const uint32_t binding, const Sampler& resource) = 0;
+    virtual void BindSampler(uint32_t set, uint32_t binding, const BindableSamplerWithHandleReference& resource) = 0;
 
-    /** Get bindable resources
-     * @return BindableResourceView to resources
+    /** Bind sampler for array bindings.
+     * @param set Set index
+     * @param binding Binding index
+     * @param handle Binding resource handle
      */
-    virtual DescriptorSetView GetDescriptorSetView(const uint32_t set) const = 0;
+    virtual void BindSamplers(
+        uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableSamplerWithHandleReference> resources) = 0;
+    
+    /** Bind vertex buffers
+     * @param vertexBuffers vertex buffers
+     */
+    virtual void BindVertexBuffers(BASE_NS::array_view<const VertexBufferWithHandleReference> vertexBuffers) = 0;
+
+    /** Bind index Buffer
+     * @param indexBuffer vertex Buffer
+     */
+    virtual void BindIndexBuffer(const IndexBufferWithHandleReference& indexBuffer) = 0;
+
+    /** Set draw command
+     * @param indexBuffer vertex Buffer
+     */
+    virtual void SetDrawCommand(const DrawCommand& drawCommand) = 0;
+
+    /** Bind dispatch command
+     * @param indexBuffer vertex Buffer
+     */
+    virtual void SetDispatchCommand(const DispatchCommand& dispatchCommand) = 0;
+
+    /** Get render time bindable resources
+     * @return DescriptorSetLayoutBindingResources to resources
+     */
+    virtual DescriptorSetLayoutBindingResources GetDescriptorSetLayoutBindingResources(uint32_t set) const = 0;
 
     /** Get push constant data
      * @return array_view of push data
      */
-    virtual BASE_NS::array_view<const uint8_t> GetPushData() const = 0;
+    virtual BASE_NS::array_view<const uint8_t> GetPushConstantData() const = 0;
+
+    /** Get vertex buffers
+     * @return View of vertex buffers
+     */
+    virtual BASE_NS::array_view<const VertexBufferWithHandleReference> GetVertexBuffers() const = 0;
+
+    /** Get index buffers
+     * @return IndexBuffer
+     */
+    virtual IndexBufferWithHandleReference GetIndexBuffer() const = 0;
+
+    /** Get draw command
+     * @return DrawCommand
+     */
+    virtual DrawCommand GetDrawCommand() const = 0;
+
+    /** Get dispatch command
+     * @return DispatchCommand
+     */
+    virtual DispatchCommand GetDispatchCommand() const = 0;
+
+    /** Get pipeline Layout
+     * @return PipelineLayout
+     */
+    virtual PipelineLayout GetPipelineLayout() const = 0;
+
+    /** Get property handle for built-in custom, material properties. Check th pointer always.
+     *  @return Pointer to property handle if properties present, nullptr otherwise.
+     */
+   virtual CORE_NS::IPropertyHandle* GetProperties() = 0;
+
+   /** Get binding property handle for built-in binding properties. Check the pointer always.
+    * @return Pointer to property handle if properties present, nullptr otherwise.
+    */
+   virtual CORE_NS::IPropertyHandle* GetBindingProperties() = 0;
+
+    /** Get resource binding.
+     * @param set Set index
+     * @param binding Binding index
+     * @return Resource binding
+     */
+    virtual ResourceBinding GetResourceBinding(uint32_t set, uint32_t binding) const = 0;
+
+    /** Get property binding data and binding information
+     *  the data is not automatically move to GPU access (render node(s) should handle that)
+     * @return PropertyBindingView
+     */
+    virtual PropertyBindingView GetPropertyBindingView() const = 0;
+
+    /** Get property binding byte size.
+     * @return Data byte size.
+     */
+    virtual uint32_t GetPropertyBindingByteSize() const = 0;
 
     using Ptr = BASE_NS::refcnt_ptr<IShaderPipelineBinder>;
 

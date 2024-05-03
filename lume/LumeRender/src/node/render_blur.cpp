@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,6 +37,8 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
+constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+
 constexpr uint32_t MAX_MIP_COUNT { 16u };
 constexpr uint32_t MAX_PASS_PER_LEVEL_COUNT { 3u };
 constexpr bool GAUSSIAN_TYPE { true };
@@ -53,7 +55,7 @@ void RenderBlur::Init(IRenderNodeContextManager& renderNodeContextMgr, const Blu
     }
     {
         imageData_ = {};
-        imageData_.mipImage = blurInfo.blurTarget;
+        imageData_.mipImage = blurInfo.blurTarget.handle;
         samplerHandle_ = renderNodeContextMgr.GetGpuResourceManager().GetSamplerHandle(
             DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_CLAMP);
     }
@@ -83,7 +85,7 @@ void RenderBlur::PreExecute(
     IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo, const PostProcessConfiguration& ppConfig)
 {
     blurInfo_ = blurInfo;
-    imageData_.mipImage = blurInfo.blurTarget;
+    imageData_.mipImage = blurInfo.blurTarget.handle;
     globalUbo_ = blurInfo.globalUbo;
 
     const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
@@ -119,27 +121,21 @@ void RenderBlur::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRende
 
     if (!RenderHandleUtil::IsValid(renderData_.psoScale)) {
         const auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
-        constexpr DynamicStateFlags dynamicStateFlags =
-            DynamicStateFlagBits::CORE_DYNAMIC_STATE_VIEWPORT | DynamicStateFlagBits::CORE_DYNAMIC_STATE_SCISSOR;
-        const ShaderSpecilizationConstantView sscv = shaderMgr.GetReflectionSpecialization(renderData_.shader);
+        const ShaderSpecializationConstantView sscv = shaderMgr.GetReflectionSpecialization(renderData_.shader);
         const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(renderData_.shader);
         {
-            const uint32_t specializationFlags = CORE_BLUR_TYPE_DOWNSCALE_RGBA;
-            const ShaderSpecializationConstantDataView specDataView {
-                { sscv.constants.data(), sscv.constants.size() },
-                { &specializationFlags, 1u },
-            };
-            renderData_.psoScale = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-                renderData_.shader, graphicsState, renderData_.pipelineLayout, {}, specDataView, dynamicStateFlags);
+            const uint32_t specializationFlags[] = { blurInfo_.scaleType };
+            const ShaderSpecializationConstantDataView specDataView { sscv.constants, specializationFlags };
+            renderData_.psoScale =
+                renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(renderData_.shader, graphicsState,
+                    renderData_.pipelineLayout, {}, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
         }
         {
-            const uint32_t specializationFlags = CORE_BLUR_TYPE_RGBA;
-            const ShaderSpecializationConstantDataView specDataView {
-                { sscv.constants.data(), sscv.constants.size() },
-                { &specializationFlags, 1u },
-            };
-            renderData_.psoBlur = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-                renderData_.shader, graphicsState, renderData_.pipelineLayout, {}, specDataView, dynamicStateFlags);
+            const uint32_t specializationFlags[] = { blurInfo_.blurType };
+            const ShaderSpecializationConstantDataView specDataView { sscv.constants, specializationFlags };
+            renderData_.psoBlur =
+                renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(renderData_.shader, graphicsState,
+                    renderData_.pipelineLayout, {}, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
         }
     }
 
@@ -156,7 +152,7 @@ void RenderBlur::UpdateGlobalSet(IRenderCommandList& cmdList)
     binder.ClearBindings();
     uint32_t binding = 0u;
     binder.BindBuffer(binding++, globalUbo_, 0);
-    binder.BindBuffer(binding++, globalUbo_, 0);
+    binder.BindBuffer(binding++, globalUbo_, sizeof(GlobalPostProcessStruct));
     cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
 }
 
@@ -180,7 +176,7 @@ constexpr ImageResourceBarrier COL_ATTACHMENT { CORE_ACCESS_COLOR_ATTACHMENT_WRI
 constexpr ImageResourceBarrier SHDR_READ { CORE_ACCESS_SHADER_READ_BIT, CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
     CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 // transition the final mip level to read only as well
-constexpr ImageResourceBarrier FINAL_SRC { CORE_ACCESS_SHADER_READ_BIT | CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+constexpr ImageResourceBarrier FINAL_SRC { CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
     CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
     CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 constexpr ImageResourceBarrier FINAL_DST { CORE_ACCESS_SHADER_READ_BIT,
@@ -427,7 +423,7 @@ void RenderBlur::CreateTargets(IRenderNodeContextManager& renderNodeContextMgr, 
 {
     Math::UVec2 texSize = baseSize / 2u;
     texSize.x = Math::max(1u, texSize.x);
-    texSize.x = Math::max(1u, texSize.x);
+    texSize.y = Math::max(1u, texSize.y);
     if (texSize.x != tempTarget_.texSize.x || texSize.y != tempTarget_.texSize.y) {
         tempTarget_.texSize = texSize;
         tempTarget_.format = imageData_.format;

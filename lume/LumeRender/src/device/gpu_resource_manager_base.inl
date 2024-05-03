@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,8 +39,10 @@ inline ResourceType* GpuResourceManagerTyped<ResourceType, CreateInfoType>::Get(
 }
 
 template<typename ResourceType, typename CreateInfoType>
-inline void GpuResourceManagerTyped<ResourceType, CreateInfoType>::Create(
-    const uint32_t index, const CreateInfoType& desc, BASE_NS::unique_ptr<ResourceType> optionalResource)
+template<typename AdditionalInfoType>
+inline void GpuResourceManagerTyped<ResourceType, CreateInfoType>::Create(const uint32_t index,
+    const CreateInfoType& desc, BASE_NS::unique_ptr<ResourceType> optionalResource, const bool useAdditionalDesc,
+    const AdditionalInfoType& additionalDesc)
 {
     if (index < static_cast<uint32_t>(resources_.size())) { // use existing location
         // add old for deallocation if found
@@ -52,27 +54,27 @@ inline void GpuResourceManagerTyped<ResourceType, CreateInfoType>::Create(
             resources_[index] = move(optionalResource);
         } else {
             if constexpr (BASE_NS::is_same_v<ResourceType, GpuBuffer>) {
-                resources_[index] = device_.CreateGpuBuffer(desc);
+                if (useAdditionalDesc) {
+                    resources_[index] = device_.CreateGpuBuffer(additionalDesc);
+                } else {
+                    resources_[index] = device_.CreateGpuBuffer(desc);
+                }
             } else if constexpr (BASE_NS::is_same_v<ResourceType, GpuImage>) {
                 resources_[index] = device_.CreateGpuImage(desc);
             } else if constexpr (BASE_NS::is_same_v<ResourceType, GpuSampler>) {
                 resources_[index] = device_.CreateGpuSampler(desc);
-            } else if constexpr (BASE_NS::is_same_v<ResourceType, GpuAccelerationStructure>) {
-                resources_[index] = device_.CreateGpuAccelerationStructure(desc);
             }
         }
     } else {
         if (optionalResource) {
-            resources_.emplace_back(move(optionalResource));
+            resources_.push_back(move(optionalResource));
         } else {
             if constexpr (BASE_NS::is_same_v<ResourceType, GpuBuffer>) {
-                resources_.emplace_back(device_.CreateGpuBuffer(desc));
+                resources_.push_back(device_.CreateGpuBuffer(desc));
             } else if constexpr (BASE_NS::is_same_v<ResourceType, GpuImage>) {
-                resources_.emplace_back(device_.CreateGpuImage(desc));
+                resources_.push_back(device_.CreateGpuImage(desc));
             } else if constexpr (BASE_NS::is_same_v<ResourceType, GpuSampler>) {
-                resources_.emplace_back(device_.CreateGpuSampler(desc));
-            } else if constexpr (BASE_NS::is_same_v<ResourceType, GpuAccelerationStructure>) {
-                resources_.emplace_back(device_.CreateGpuAccelerationStructure(desc));
+                resources_.push_back(device_.CreateGpuSampler(desc));
             }
         }
         PLUGIN_ASSERT(index == static_cast<uint32_t>(resources_.size() - 1u));

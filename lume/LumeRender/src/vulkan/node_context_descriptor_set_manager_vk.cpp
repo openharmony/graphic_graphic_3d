@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,8 +15,9 @@
 #include "node_context_descriptor_set_manager_vk.h"
 
 #include <algorithm>
+#include <cinttypes>
 #include <cstdint>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <base/math/mathf.h>
 #include <render/device/pipeline_state_desc.h>
@@ -29,11 +30,23 @@
 #include "util/log.h"
 #include "vulkan/device_vk.h"
 #include "vulkan/gpu_image_vk.h"
+#include "vulkan/gpu_sampler_vk.h"
 #include "vulkan/validate_vk.h"
 
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
+namespace {
+const VkSampler* GetSampler(const GpuResourceManager& gpuResourceMgr, const RenderHandle handle)
+{
+    if (const auto* gpuSampler = static_cast<GpuSamplerVk*>(gpuResourceMgr.GetSampler(handle)); gpuSampler) {
+        return &(gpuSampler->GetPlatformData().sampler);
+    } else {
+        return nullptr;
+    }
+}
+} // namespace
+
 NodeContextDescriptorSetManagerVk::NodeContextDescriptorSetManagerVk(Device& device)
     : NodeContextDescriptorSetManager(), device_ { device },
       bufferingCount_(
@@ -110,7 +123,7 @@ void NodeContextDescriptorSetManagerVk::ResetAndReserve(const DescriptorCounts& 
             pd.descriptorPool.descriptorPool = move(descriptorPool.descriptorPool);
             pd.descriptorPool.descriptorSets = move(descriptorPool.descriptorSets);
             pd.frameIndex = device_.GetFrameCount();
-            pendingDeallocations_.emplace_back(move(pd));
+            pendingDeallocations_.push_back(move(pd));
 
             descriptorPool.descriptorSets.clear();
             descriptorPool.descriptorPool = VK_NULL_HANDLE;
@@ -120,7 +133,7 @@ void NodeContextDescriptorSetManagerVk::ResetAndReserve(const DescriptorCounts& 
         descriptorPoolSizes_.reserve(descriptorCounts.counts.size()); // max count reserve
         for (const auto& ref : descriptorCounts.counts) {
             if (ref.count > 0) {
-                descriptorPoolSizes_.emplace_back(
+                descriptorPoolSizes_.push_back(
                     VkDescriptorPoolSize { (VkDescriptorType)ref.type, ref.count * bufferingCount_ });
             }
         }
@@ -150,18 +163,21 @@ void NodeContextDescriptorSetManagerVk::BeginFrame()
 {
     NodeContextDescriptorSetManager::BeginFrame();
 
+    ClearDescriptorSetWriteData();
+
     oneFrameDescriptorNeed_ = {};
     auto& oneFrameDescriptorPool = descriptorPool_[DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME];
-    if (oneFrameDescriptorPool.descriptorPool) {
+    if (oneFrameDescriptorPool.descriptorPool || oneFrameDescriptorPool.additionalPlatformDescriptorPool) {
         const uint32_t descriptorSetCount = static_cast<uint32_t>(oneFrameDescriptorPool.descriptorSets.size());
         PendingDeallocations pd;
-        pd.descriptorPool.descriptorPool = move(oneFrameDescriptorPool.descriptorPool);
+        pd.descriptorPool.descriptorPool = exchange(oneFrameDescriptorPool.descriptorPool, VK_NULL_HANDLE);
+        pd.descriptorPool.additionalPlatformDescriptorPool =
+            exchange(oneFrameDescriptorPool.additionalPlatformDescriptorPool, VK_NULL_HANDLE);
         pd.descriptorPool.descriptorSets = move(oneFrameDescriptorPool.descriptorSets);
         pd.frameIndex = device_.GetFrameCount();
-        pendingDeallocations_.emplace_back(move(pd));
+        pendingDeallocations_.push_back(move(pd));
 
         oneFrameDescriptorPool.descriptorSets.reserve(descriptorSetCount);
-        oneFrameDescriptorPool.descriptorPool = VK_NULL_HANDLE;
     }
     oneFrameDescriptorPool.descriptorSets.clear();
 
@@ -172,7 +188,7 @@ void NodeContextDescriptorSetManagerVk::BeginFrame()
         pd.descriptorPool.additionalPlatformDescriptorPool = move(descriptorPool.additionalPlatformDescriptorPool);
         // no buffering set
         pd.frameIndex = device_.GetFrameCount();
-        pendingDeallocations_.emplace_back(move(pd));
+        pendingDeallocations_.push_back(move(pd));
         descriptorPool.additionalPlatformDescriptorPool = VK_NULL_HANDLE;
         // immediate desctruction of descriptor set layouts
         const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
@@ -210,6 +226,9 @@ void NodeContextDescriptorSetManagerVk::BeginFrame()
 
 void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
 {
+    // resize vector data
+    ResizeDescriptorSetWriteData();
+
     auto CreateDescriptorPool = [](const VkDevice device, const uint32_t descriptorSetCount,
                                     VkDescriptorPool& descriptorPool,
                                     vector<VkDescriptorPoolSize>& descriptorPoolSizes) {
@@ -264,7 +283,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
             for (uint32_t idx = 0; idx < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE; ++idx) {
                 const uint8_t count = descriptorCounts[idx];
                 if (count > 0) {
-                    descriptorPoolSizes_.emplace_back(VkDescriptorPoolSize { (VkDescriptorType)idx, count });
+                    descriptorPoolSizes_.push_back(VkDescriptorPoolSize { (VkDescriptorType)idx, count });
                 }
             }
             if (!descriptorPoolSizes_.empty()) {
@@ -286,7 +305,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
             for (uint32_t idx = 0; idx < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE; ++idx) {
                 const uint8_t count = oneFrameDescriptorNeed_.descriptorCount[idx];
                 if (count > 0) {
-                    descriptorPoolSizes_.emplace_back(VkDescriptorPoolSize { (VkDescriptorType)idx, count });
+                    descriptorPoolSizes_.push_back(VkDescriptorPoolSize { (VkDescriptorType)idx, count });
                 }
             }
 
@@ -294,8 +313,77 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
                 CreateDescriptorPool(device, descriptorSetCount, descriptorPool.descriptorPool, descriptorPoolSizes_);
             }
         }
+        // check the need for additional platform conversion bindings
+        if (hasPlatformConversionBindings_) {
+            uint32_t platConvDescriptorSetCount = 0u;
+            uint8_t platConvDescriptorCounts[OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE] { 0 };
+            for (const auto& cpuDescriptorSetRef : cpuDescriptorSets) {
+                if (cpuDescriptorSetRef.hasPlatformConversionBindings) {
+                    platConvDescriptorSetCount++;
+                    for (const auto& bindingRef : cpuDescriptorSetRef.bindings) {
+                        uint32_t descriptorCount = bindingRef.binding.descriptorCount;
+                        const uint32_t descTypeIndex = static_cast<uint32_t>(bindingRef.binding.descriptorType);
+                        if (descTypeIndex < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE) {
+                            if ((bindingRef.binding.descriptorType ==
+                                    DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
+                                RenderHandleUtil::IsPlatformConversionResource(
+                                    cpuDescriptorSetRef.images[bindingRef.resourceIndex].resource.handle)) {
+                                // expecting planar formats and making sure that there is enough descriptors
+                                constexpr uint32_t descriptorCountMultiplier = 3u;
+                                descriptorCount *= descriptorCountMultiplier;
+                            }
+                            platConvDescriptorCounts[descTypeIndex] += static_cast<uint8_t>(descriptorCount);
+                        }
+                    }
+                }
+            }
+            if (descriptorSetCount > 0) {
+                PLUGIN_ASSERT(descriptorPool.additionalPlatformDescriptorPool == VK_NULL_HANDLE);
+                descriptorPoolSizes_.clear();
+                descriptorPoolSizes_.reserve(OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE);
+                // no buffering, only descriptors for one frame
+                for (uint32_t idx = 0; idx < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE; ++idx) {
+                    const uint8_t count = platConvDescriptorCounts[idx];
+                    if (count > 0) {
+                        descriptorPoolSizes_.push_back(VkDescriptorPoolSize { (VkDescriptorType)idx, count });
+                    }
+                }
+                if (!descriptorPoolSizes_.empty()) {
+                    CreateDescriptorPool(device, descriptorSetCount, descriptorPool.additionalPlatformDescriptorPool,
+                        descriptorPoolSizes_);
+                }
+            }
+        }
     }
 }
+
+namespace {
+void IncreaseDescriptorSetCounts(const DescriptorSetLayoutBinding& refBinding,
+    LowLevelDescriptorCountsVk& descSetCounts, uint32_t& dynamicOffsetCount)
+{
+    if (NodeContextDescriptorSetManager::IsDynamicDescriptor(refBinding.descriptorType)) {
+        dynamicOffsetCount++;
+    }
+    const uint32_t descriptorCount = refBinding.descriptorCount;
+    if (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLER) {
+        descSetCounts.samplerCount += descriptorCount;
+    } else if (((refBinding.descriptorType >= CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
+                        (refBinding.descriptorType <= CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE)) ||
+                    (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
+        descSetCounts.imageCount += descriptorCount;
+    } else if (((refBinding.descriptorType >= CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) &&
+                        (refBinding.descriptorType <= CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) ||
+                    (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE)) {
+        descSetCounts.bufferCount += descriptorCount;
+    }
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (!((refBinding.descriptorType <= CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) ||
+            (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE))) {
+        PLUGIN_LOG_W("RENDER_VALIDATION: descriptor type not found");
+    }
+#endif
+}
+} // namespace
 
 RenderHandle NodeContextDescriptorSetManagerVk::CreateDescriptorSet(
     const array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings)
@@ -303,7 +391,11 @@ RenderHandle NodeContextDescriptorSetManagerVk::CreateDescriptorSet(
     RenderHandle clientHandle;
     auto& cpuDescriptorSets = cpuDescriptorSets_[DESCRIPTOR_SET_INDEX_TYPE_STATIC];
     auto& descriptorPool = descriptorPool_[DESCRIPTOR_SET_INDEX_TYPE_STATIC];
-    PLUGIN_ASSERT_MSG(cpuDescriptorSets.size() < maxSets_, "no more descriptor sets available");
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (cpuDescriptorSets.size() >= maxSets_) {
+        PLUGIN_LOG_E("RENDER_VALIDATION: No more descriptor sets available");
+    }
+#endif
     if (cpuDescriptorSets.size() < maxSets_) {
         uint32_t dynamicOffsetCount = 0;
         CpuDescriptorSet newSet;
@@ -314,38 +406,21 @@ RenderHandle NodeContextDescriptorSetManagerVk::CreateDescriptorSet(
         for (const auto& refBinding : descriptorSetLayoutBindings) {
             // NOTE: sort from 0 to n
             newSet.bindings.push_back({ refBinding, {} });
-            if (IsDynamicDescriptor(refBinding.descriptorType)) {
-                dynamicOffsetCount++;
-            }
-
-            const uint32_t descriptorCount = refBinding.descriptorCount;
-            if (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLER) {
-                descSetData.descriptorCounts.samplerCount += descriptorCount;
-            } else if (((refBinding.descriptorType >= CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
-                           (refBinding.descriptorType <= CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE)) ||
-                       (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
-                descSetData.descriptorCounts.imageCount += refBinding.descriptorCount;
-            } else if (((refBinding.descriptorType >= CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) &&
-                           (refBinding.descriptorType <= CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) ||
-                       (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE)) {
-                descSetData.descriptorCounts.bufferCount += refBinding.descriptorCount;
-            } else {
-                PLUGIN_ASSERT_MSG(false, "descriptor type not found");
-            }
+            IncreaseDescriptorSetCounts(refBinding, descSetData.descriptorCounts, dynamicOffsetCount);
         }
         newSet.buffers.resize(descSetData.descriptorCounts.bufferCount);
         newSet.images.resize(descSetData.descriptorCounts.imageCount);
         newSet.samplers.resize(descSetData.descriptorCounts.samplerCount);
 
         const uint32_t arrayIndex = (uint32_t)cpuDescriptorSets.size();
-        cpuDescriptorSets.emplace_back(move(newSet));
+        cpuDescriptorSets.push_back(move(newSet));
 
         auto& currCpuDescriptorSet = cpuDescriptorSets[arrayIndex];
         currCpuDescriptorSet.dynamicOffsetDescriptors.resize(dynamicOffsetCount);
 
         // allocate storage from vector to gpu descriptor sets
         // don't create the actual gpu descriptor sets yet
-        descriptorPool.descriptorSets.emplace_back(descSetData);
+        descriptorPool.descriptorSets.push_back(descSetData);
 
         // NOTE: can be used directly to index
         clientHandle = RenderHandleUtil::CreateHandle(RenderHandleType::DESCRIPTOR_SET, arrayIndex, 0);
@@ -369,27 +444,7 @@ RenderHandle NodeContextDescriptorSetManagerVk::CreateOneFrameDescriptorSet(
     for (const auto& refBinding : descriptorSetLayoutBindings) {
         // NOTE: sort from 0 to n
         newSet.bindings.push_back({ refBinding, {} });
-        if (IsDynamicDescriptor(refBinding.descriptorType)) {
-            dynamicOffsetCount++;
-        }
-
-        if (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLER) {
-            descSetData.descriptorCounts.samplerCount += refBinding.descriptorCount;
-        } else if (((refBinding.descriptorType >= CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
-                       (refBinding.descriptorType <= CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE)) ||
-                   (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
-            descSetData.descriptorCounts.imageCount += refBinding.descriptorCount;
-        } else if (((refBinding.descriptorType >= CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) &&
-                       (refBinding.descriptorType <= CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) ||
-                   (refBinding.descriptorType == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE)) {
-            descSetData.descriptorCounts.bufferCount += refBinding.descriptorCount;
-        } else {
-            PLUGIN_LOG_E("descriptor type not found");
-        }
-
-        newSet.buffers.resize(descSetData.descriptorCounts.bufferCount);
-        newSet.images.resize(descSetData.descriptorCounts.imageCount);
-        newSet.samplers.resize(descSetData.descriptorCounts.samplerCount);
+        IncreaseDescriptorSetCounts(refBinding, descSetData.descriptorCounts, dynamicOffsetCount);
 
         if (static_cast<uint32_t>(refBinding.descriptorType) < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE) {
             oneFrameDescriptorNeed_.descriptorCount[refBinding.descriptorType] +=
@@ -397,15 +452,19 @@ RenderHandle NodeContextDescriptorSetManagerVk::CreateOneFrameDescriptorSet(
         }
     }
 
+    newSet.buffers.resize(descSetData.descriptorCounts.bufferCount);
+    newSet.images.resize(descSetData.descriptorCounts.imageCount);
+    newSet.samplers.resize(descSetData.descriptorCounts.samplerCount);
+
     const uint32_t arrayIndex = static_cast<uint32_t>(cpuDescriptorSets.size());
-    cpuDescriptorSets.emplace_back(move(newSet));
+    cpuDescriptorSets.push_back(move(newSet));
 
     auto& currCpuDescriptorSet = cpuDescriptorSets[arrayIndex];
     currCpuDescriptorSet.dynamicOffsetDescriptors.resize(dynamicOffsetCount);
 
     // allocate storage from vector to gpu descriptor sets
     // don't create the actual gpu descriptor sets yet
-    descriptorPool.descriptorSets.emplace_back(descSetData);
+    descriptorPool.descriptorSets.push_back(descSetData);
 
     // NOTE: can be used directly to index
     clientHandle = RenderHandleUtil::CreateHandle(
@@ -426,11 +485,12 @@ void NodeContextDescriptorSetManagerVk::CreateGpuDescriptorSet(const uint32_t bu
     }
 #endif
     const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(clientHandle);
+    VkDescriptorBindingFlags descriptorBindingFlags[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT];
     VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT];
     const uint32_t bindingCount = Math::min(static_cast<uint32_t>(cpuDescriptorSet.bindings.size()),
         PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
     const bool hasPlatformBindings = cpuDescriptorSet.hasPlatformConversionBindings;
-    bool hasImmutableSamplers = false;
+    const bool hasBindImmutableSamplers = cpuDescriptorSet.hasImmutableSamplers;
     uint16_t immutableSamplerBitmask = 0;
     const auto& gpuResourceMgr = static_cast<const GpuResourceManager&>(device_.GetGpuResourceManager());
     // NOTE: if we cannot provide explicit flags that custom immutable sampler with conversion is needed
@@ -442,7 +502,21 @@ void NodeContextDescriptorSetManagerVk::CreateGpuDescriptorSet(const uint32_t bu
         const VkShaderStageFlags stageFlags = (VkShaderStageFlags)cpuBinding.binding.shaderStageFlags;
         const uint32_t bindingIdx = cpuBinding.binding.binding;
         const VkSampler* immutableSampler = nullptr;
-        if (hasPlatformBindings && (descriptorType == VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)) {
+        if (hasBindImmutableSamplers) {
+            if (descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                const auto& imgRef = cpuDescriptorSet.images[cpuBinding.resourceIndex];
+                if (imgRef.additionalFlags & CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT) {
+                    immutableSampler = GetSampler(gpuResourceMgr, imgRef.resource.samplerHandle);
+                    immutableSamplerBitmask |= (1 << bindingIdx);
+                }
+            } else if (descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) {
+                const auto& samRef = cpuDescriptorSet.samplers[cpuBinding.resourceIndex];
+                if (samRef.additionalFlags & CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT) {
+                    immutableSampler = GetSampler(gpuResourceMgr, samRef.resource.handle);
+                    immutableSamplerBitmask |= (1 << bindingIdx);
+                }
+            }
+        } else if (hasPlatformBindings && (descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)) {
             const RenderHandle handle = cpuDescriptorSet.images[cpuBinding.resourceIndex].resource.handle;
             if (RenderHandleUtil::IsPlatformConversionResource(handle)) {
                 if (const auto* gpuImage = static_cast<GpuImageVk*>(gpuResourceMgr.GetImage(handle)); gpuImage) {
@@ -450,16 +524,15 @@ void NodeContextDescriptorSetManagerVk::CreateGpuDescriptorSet(const uint32_t bu
                     immutableSampler = &(gpuImage->GetPlaformDataConversion().sampler);
                     if ((additionalFlags & GpuImage::AdditionalFlagBits::ADDITIONAL_PLATFORM_CONVERSION_BIT) &&
                         immutableSampler) {
-                        hasImmutableSamplers = true;
                         immutableSamplerBitmask |= (1 << bindingIdx);
                     }
+#if (RENDER_VALIDATION_ENABLED == 1)
+                    if (!immutableSampler) {
+                        PLUGIN_LOG_W("RENDER_VALIDATION: immutable sampler for platform conversion resource not found");
+                    }
+#endif
                 }
             }
-#if (RENDER_VALIDATION_ENABLED == 1)
-            if (!immutableSampler) {
-                PLUGIN_LOG_W("RENDER_VALIDATION: immutable sampler for platform conversion resource not found");
-            }
-#endif
         }
         descriptorSetLayoutBindings[idx] = {
             bindingIdx,                         // binding
@@ -468,12 +541,26 @@ void NodeContextDescriptorSetManagerVk::CreateGpuDescriptorSet(const uint32_t bu
             stageFlags,                         // stageFlags
             immutableSampler,                   // pImmutableSamplers
         };
+        // NOTE: partially bound is not used at the moment
+        descriptorBindingFlags[idx] = 0U;
     }
 
-    constexpr VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateFlags { 0 };
+    const DeviceVk& deviceVk = (const DeviceVk&)device_;
+
+    const VkDescriptorSetLayoutBindingFlagsCreateInfo descriptorSetLayoutBindingFlagsCreateInfo {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO, // sType
+        nullptr,                                                           // pNext
+        bindingCount,                                                      // bindingCount
+        descriptorBindingFlags,                                            // pBindingFlags
+    };
+    const bool dsiEnabled = deviceVk.GetCommonDeviceExtensions().descriptorIndexing;
+    const void* pNextPtr = dsiEnabled ? (&descriptorSetLayoutBindingFlagsCreateInfo) : nullptr;
+    // NOTE: update after bind etc. are not currently in use
+    // descriptor set indexing is used with normal binding model
+    constexpr VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateFlags { 0U };
     const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
-        nullptr,                                             // pNext
+        pNextPtr,                                            // pNext
         descriptorSetLayoutCreateFlags,                      // flags
         bindingCount,                                        // bindingCount
         descriptorSetLayoutBindings,                         // pBindings
@@ -483,7 +570,7 @@ void NodeContextDescriptorSetManagerVk::CreateGpuDescriptorSet(const uint32_t bu
     for (uint32_t idx = 0; idx < bufferCount; ++idx) {
         LowLevelDescriptorSetVk newDescriptorSet;
         newDescriptorSet.flags |=
-            (hasImmutableSamplers) ? LowLevelDescriptorSetVk::DESCRIPTOR_SET_LAYOUT_IMMUTABLE_SAMPLER_BIT : 0u;
+            (immutableSamplerBitmask != 0) ? LowLevelDescriptorSetVk::DESCRIPTOR_SET_LAYOUT_IMMUTABLE_SAMPLER_BIT : 0u;
         newDescriptorSet.immutableSamplerBitmask = immutableSamplerBitmask;
 
         VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
@@ -491,10 +578,10 @@ void NodeContextDescriptorSetManagerVk::CreateGpuDescriptorSet(const uint32_t bu
             nullptr,                                           // pAllocator
             &newDescriptorSet.descriptorSetLayout));           // pSetLayout
 
-        // for immutable set we use created additional descriptor pool (currently only used with ycbcr)
-        const VkDescriptorPool descriptorPoolVk = (immutableSamplerBitmask != 0)
-                                                      ? descriptorPool.additionalPlatformDescriptorPool
-                                                      : descriptorPool.descriptorPool;
+        // for platform immutable set we use created additional descriptor pool (currently only used with ycbcr)
+        const bool platImmutable = (hasPlatformBindings && (immutableSamplerBitmask != 0));
+        const VkDescriptorPool descriptorPoolVk =
+            platImmutable ? descriptorPool.additionalPlatformDescriptorPool : descriptorPool.descriptorPool;
         PLUGIN_ASSERT(descriptorPoolVk);
         const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo {
             VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, // sType
@@ -508,7 +595,7 @@ void NodeContextDescriptorSetManagerVk::CreateGpuDescriptorSet(const uint32_t bu
             &descriptorSetAllocateInfo,                     // pAllocateInfo
             &newDescriptorSet.descriptorSet));              // pDescriptorSets
 
-        if (immutableSamplerBitmask != 0) {
+        if (platImmutable) {
             descriptorPool.descriptorSets[arrayIndex].additionalPlatformSet = newDescriptorSet;
         } else {
             PLUGIN_ASSERT(descriptorPool.descriptorSets[arrayIndex].bufferingSet[idx].descriptorSet == VK_NULL_HANDLE);
@@ -557,13 +644,21 @@ const LowLevelDescriptorSetVk* NodeContextDescriptorSetManagerVk::GetDescriptorS
                 (cpuDescriptorSets[arrayIndex].hasPlatformConversionBindings &&
                     descriptorPool.descriptorSets[arrayIndex].additionalPlatformSet.descriptorSet);
             if (useAdditionalSet) {
-                PLUGIN_ASSERT_MSG(descriptorPool.descriptorSets[arrayIndex].additionalPlatformSet.descriptorSet,
-                    "descriptor set not updated");
+#if (RENDER_VALIDATION_ENABLED == 1)
+                if (!descriptorPool.descriptorSets[arrayIndex].additionalPlatformSet.descriptorSet) {
+                    PLUGIN_LOG_ONCE_E(debugName_.c_str() + to_string(handle.id) + "_dsnu0",
+                        "RENDER_VALIDATION: descriptor set not updated (handle:%" PRIx64 ")", handle.id);
+                }
+#endif
                 set = &descriptorPool.descriptorSets[arrayIndex].additionalPlatformSet;
             } else {
                 const uint32_t bufferingIndex = cpuDescriptorSets[arrayIndex].currentGpuBufferingIndex;
-                PLUGIN_ASSERT_MSG(descriptorPool.descriptorSets[arrayIndex].bufferingSet[bufferingIndex].descriptorSet,
-                    "descriptor set not updated");
+#if (RENDER_VALIDATION_ENABLED == 1)
+                if (!descriptorPool.descriptorSets[arrayIndex].bufferingSet[bufferingIndex].descriptorSet) {
+                    PLUGIN_LOG_ONCE_E(debugName_.c_str() + to_string(handle.id) + "_dsn1",
+                        "RENDER_VALIDATION: descriptor set not updated (handle:%" PRIx64 ")", handle.id);
+                }
+#endif
                 set = &descriptorPool.descriptorSets[arrayIndex].bufferingSet[bufferingIndex];
             }
         }
@@ -571,20 +666,27 @@ const LowLevelDescriptorSetVk* NodeContextDescriptorSetManagerVk::GetDescriptorS
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (set) {
             if (set->descriptorSet == VK_NULL_HANDLE) {
-                PLUGIN_LOG_E("RENDER_VALIDATION: descriptor set has not been updated prior to binding");
-                PLUGIN_LOG_E(
-                    "RENDER_VALIDATION: gpu descriptor set created ? %u, descriptor set node: %s, buffer count: %u, "
+                PLUGIN_LOG_ONCE_E(debugName_.c_str() + to_string(handle.id) + "_dsnu2",
+                    "RENDER_VALIDATION: descriptor set has not been updated prior to binding");
+                PLUGIN_LOG_ONCE_E(debugName_.c_str() + to_string(handle.id) + "_dsnu3",
+                    "RENDER_VALIDATION: gpu descriptor set created? %u, descriptor set node: %s, set: %u, "
+                    "buffer count: %u, "
                     "image count: %u, sampler count: %u",
-                    (uint32_t)cpuDescriptorSets[arrayIndex].gpuDescriptorSetCreated, debugName_.c_str(),
-                    (uint32_t)descriptorPool.descriptorSets[arrayIndex].descriptorCounts.bufferCount,
-                    (uint32_t)descriptorPool.descriptorSets[arrayIndex].descriptorCounts.imageCount,
-                    (uint32_t)descriptorPool.descriptorSets[arrayIndex].descriptorCounts.samplerCount);
+                    (uint32_t)cpuDescriptorSets[arrayIndex].gpuDescriptorSetCreated, debugName_.c_str(), descSetIdx,
+                    descriptorPool.descriptorSets[arrayIndex].descriptorCounts.bufferCount,
+                    descriptorPool.descriptorSets[arrayIndex].descriptorCounts.imageCount,
+                    descriptorPool.descriptorSets[arrayIndex].descriptorCounts.samplerCount);
             }
         }
 #endif
     }
 
     return set;
+}
+
+LowLevelContextDescriptorWriteDataVk& NodeContextDescriptorSetManagerVk::GetLowLevelDescriptorWriteData()
+{
+    return lowLevelDescriptorWriteData_;
 }
 
 void NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const RenderHandle handle)
@@ -631,4 +733,34 @@ void NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const Rende
     }
 #endif
 }
+
+void NodeContextDescriptorSetManagerVk::UpdateCpuDescriptorSetPlatform(
+    const DescriptorSetLayoutBindingResources& bindingResources)
+{
+    lowLevelDescriptorWriteData_.writeBindingCount += static_cast<uint32_t>(bindingResources.bindings.size());
+
+    lowLevelDescriptorWriteData_.bufferBindingCount += static_cast<uint32_t>(bindingResources.buffers.size());
+    lowLevelDescriptorWriteData_.imageBindingCount += static_cast<uint32_t>(bindingResources.images.size());
+    lowLevelDescriptorWriteData_.samplerBindingCount += static_cast<uint32_t>(bindingResources.samplers.size());
+}
+
+void NodeContextDescriptorSetManagerVk::ClearDescriptorSetWriteData()
+{
+    lowLevelDescriptorWriteData_.Clear();
+}
+
+void NodeContextDescriptorSetManagerVk::ResizeDescriptorSetWriteData()
+{
+    auto& descWd = lowLevelDescriptorWriteData_;
+    if (descWd.writeBindingCount > 0U) {
+        lowLevelDescriptorWriteData_.writeDescriptorSets.resize(descWd.writeBindingCount);
+        lowLevelDescriptorWriteData_.descriptorBufferInfos.resize(descWd.bufferBindingCount);
+        lowLevelDescriptorWriteData_.descriptorImageInfos.resize(descWd.imageBindingCount);
+        lowLevelDescriptorWriteData_.descriptorSamplerInfos.resize(descWd.samplerBindingCount);
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+        lowLevelDescriptorWriteData_.descriptorAccelInfos.resize(descWd.bufferBindingCount);
+#endif
+    }
+}
+
 RENDER_END_NAMESPACE()

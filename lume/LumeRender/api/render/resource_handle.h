@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,7 +20,6 @@
 
 #include <base/containers/generic_iterator.h>
 #include <base/containers/refcnt_ptr.h>
-#include <base/containers/string.h>
 #include <core/property/property.h>
 #include <render/namespace.h>
 
@@ -93,13 +92,13 @@ namespace RenderHandleUtil {
 constexpr const uint64_t RENDER_HANDLE_TYPE_MASK { 0xf };
 
 /** Checks validity of a handle */
-inline bool IsValid(const RenderHandle handle)
+inline constexpr bool IsValid(const RenderHandle handle)
 {
     return (handle.id != INVALID_RESOURCE_HANDLE);
 }
 
 /** Returns handle type */
-inline RenderHandleType GetHandleType(const RenderHandle handle)
+inline constexpr RenderHandleType GetHandleType(const RenderHandle handle)
 {
     return (RenderHandleType)(handle.id & RENDER_HANDLE_TYPE_MASK);
 }
@@ -235,21 +234,6 @@ int32_t RenderHandleReference::GetRefCount() const noexcept
         return 0u;
     }
 }
-
-/** Render handle description */
-struct RenderHandleDesc {
-    /** Type */
-    RenderHandleType type { RenderHandleType::UNDEFINED };
-    /** Additional ID */
-    uint64_t id { 0 };
-    /** Reference count for this handle as seen from the client side */
-    int32_t refCount { 0 };
-    /** Name and/or path of the resource */
-    BASE_NS::string name;
-    /** Additional name of the resource */
-    BASE_NS::string additionalName;
-};
-
 RENDER_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()

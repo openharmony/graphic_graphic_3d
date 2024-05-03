@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(SKIN_IBM_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define SKIN_IBM_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_SKIN_IBM_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_SKIN_IBM_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
@@ -22,7 +22,6 @@
 #include <base/math/matrix.h>
 #include <core/ecs/component_struct_macros.h>
 #include <core/ecs/intf_component_manager.h>
-#include <core/property/property_types.h>
 
 CORE3D_BEGIN_NAMESPACE()
 #endif
@@ -30,7 +29,7 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(ISkinIbmComponentManager, SkinIbmComponent)
 
-    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::Math::Mat4X4>, matrices, "", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::Math::Mat4X4>, matrices, "Inverse Bind Matrices", 0, )
 
 END_COMPONENT(ISkinIbmComponentManager, SkinIbmComponent, "f62fc6d6-de51-42f6-86fd-bed8ce5f3d03")
 #if !defined(IMPLEMENT_MANAGER)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -65,7 +65,7 @@ bool AddBindings(const DescriptorSetLayout& inDescriptorSetLayout, DescriptorSet
             }
         }
         if (!bindingAlreadyFound) {
-            outBindings.emplace_back(inBinding);
+            outBindings.push_back(inBinding);
         }
     }
     return validCombination;
@@ -110,13 +110,13 @@ void CombinePipelineLayouts(const array_view<const PipelineLayout> inPl, Pipelin
 uint32_t SpecializationByteSize(ShaderSpecialization::Constant::Type type)
 {
     switch (type) {
-        case Render::ShaderSpecialization::Constant::Type::BOOL:
+        case RENDER_NS::ShaderSpecialization::Constant::Type::BOOL:
             [[fallthrough]];
-        case Render::ShaderSpecialization::Constant::Type::UINT32:
+        case RENDER_NS::ShaderSpecialization::Constant::Type::UINT32:
             [[fallthrough]];
-        case Render::ShaderSpecialization::Constant::Type::INT32:
+        case RENDER_NS::ShaderSpecialization::Constant::Type::INT32:
             [[fallthrough]];
-        case Render::ShaderSpecialization::Constant::Type::FLOAT:
+        case RENDER_NS::ShaderSpecialization::Constant::Type::FLOAT:
             return 4;
         default:
             break;

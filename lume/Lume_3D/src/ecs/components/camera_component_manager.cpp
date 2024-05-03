@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,6 +43,7 @@ DECLARE_PROPERTY_TYPE(Format);
 BEGIN_ENUM(CameraTypeMetaData, CameraComponent::Projection)
 DECL_ENUM(CameraComponent::Projection, ORTHOGRAPHIC, "Orthographic")
 DECL_ENUM(CameraComponent::Projection, PERSPECTIVE, "Perspective")
+DECL_ENUM(CameraComponent::Projection, FRUSTUM, "Frustum")
 DECL_ENUM(CameraComponent::Projection, CUSTOM, "Custom Projection")
 END_ENUM(CameraTypeMetaData, CameraComponent::Projection)
 
@@ -69,10 +70,11 @@ DECL_ENUM(CameraComponent::PipelineFlagBits, CLEAR_COLOR_BIT, "Clear Color")
 DECL_ENUM(CameraComponent::PipelineFlagBits, MSAA_BIT, "MSAA")
 DECL_ENUM(CameraComponent::PipelineFlagBits, ALLOW_COLOR_PRE_PASS_BIT, "Allow Color Pre-Pass")
 DECL_ENUM(CameraComponent::PipelineFlagBits, FORCE_COLOR_PRE_PASS_BIT, "Force Color Pre-Pass")
-DECL_ENUM(CameraComponent::PipelineFlagBits, HISTORY_BIT, "Create and store history image")
-DECL_ENUM(CameraComponent::PipelineFlagBits, JITTER_BIT, "Jitter camera, offset within pixel")
-DECL_ENUM(CameraComponent::PipelineFlagBits, VELOCITY_OUTPUT_BIT, "Output samplable velocity")
-DECL_ENUM(CameraComponent::PipelineFlagBits, DEPTH_OUTPUT_BIT, "Output samplable depth")
+DECL_ENUM(CameraComponent::PipelineFlagBits, HISTORY_BIT, "Create And Store History Image")
+DECL_ENUM(CameraComponent::PipelineFlagBits, JITTER_BIT, "Jitter Camera, Offset Within Pixel")
+DECL_ENUM(CameraComponent::PipelineFlagBits, VELOCITY_OUTPUT_BIT, "Output Samplable Velocity")
+DECL_ENUM(CameraComponent::PipelineFlagBits, DEPTH_OUTPUT_BIT, "Output Samplable Depth")
+DECL_ENUM(CameraComponent::PipelineFlagBits, MULTI_VIEW_ONLY_BIT, "Camera Will Be Used Only As A Multi-View Layer")
 END_ENUM(CameraPipelineFlagBitsMetaData, CameraComponent::PipelineFlagBits)
 
 // define some meaningful image formats for camera component usage
@@ -89,10 +91,12 @@ DECL_ENUM(Format, BASE_FORMAT_D32_SFLOAT, "BASE_FORMAT_D32_SFLOAT")
 DECL_ENUM(Format, BASE_FORMAT_D24_UNORM_S8_UINT, "BASE_FORMAT_D24_UNORM_S8_UINT")
 END_ENUM(FormatMetaData, Format)
 
-BEGIN_METADATA(CameraImageFormatsMetaData, CameraComponent::TargetUsage)
-DECL_PROPERTY2(CameraComponent::TargetUsage, format, "", 0)
-DECL_PROPERTY2(CameraComponent::TargetUsage, usageFlags, "", 0)
-END_METADATA(CameraImageFormatsMetaData, CameraComponent::TargetUsage)
+BEGIN_METADATA(CameraTargetUsageMetaData, CameraComponent::TargetUsage)
+DECL_PROPERTY2(CameraComponent::TargetUsage, format, "Format", 0)
+DECL_PROPERTY2(CameraComponent::TargetUsage, usageFlags, "Usage", 0)
+END_METADATA(CameraTargetUsageMetaData, CameraComponent::TargetUsage)
+
+DECLARE_CONTAINER_API(CameraTargetUsageContainerApi, CameraComponent::TargetUsage)
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()

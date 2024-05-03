@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,6 +25,7 @@
 #include <render/nodecontext/intf_render_node.h>
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
+#include <render/shaders/common/render_blur_common.h>
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
@@ -35,9 +36,11 @@ public:
     ~RenderBlur() = default;
 
     struct BlurInfo {
-        RenderHandle blurTarget;
+        BindableImage blurTarget;
         RenderHandle globalUbo;
         bool upScale { false };
+        uint32_t scaleType { CORE_BLUR_TYPE_DOWNSCALE_RGBA };
+        uint32_t blurType { CORE_BLUR_TYPE_RGBA };
     };
     void Init(IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo);
     void PreExecute(IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo,

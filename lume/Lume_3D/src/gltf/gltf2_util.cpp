@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include <cstring>
 
 #include <base/containers/fixed_string.h>
+#include <base/util/base64_decode.h>
 #include <core/io/intf_file_manager.h>
 #include <core/log.h>
 #include <core/namespace.h>
@@ -31,69 +32,6 @@ using namespace CORE_NS;
 namespace GLTF2 {
 namespace {
 using ByteBuffer = vector<uint8_t>;
-
-inline uint8_t Base64(uint8_t c)
-{
-    /*
-    '+' 62
-    '/' 63
-    '=' 0
-    '0' '9' 52 61
-    'A' 'Z' 0 25
-    'a' 'z' 26 51
-    */
-    if (c <= 'z' && c >= 'a') {
-        return c - 'a' + 26u;
-    } else if (c <= 'Z' && c >= 'A') {
-        return c - 'A' + 0u;
-    } else if (c <= '9' && c >= '0') {
-        return c - '0' + 52u;
-    } else if (c == '=') {
-        return 0u;
-    } else if (c == '/') {
-        return 63u;
-    } else if (c == '+') {
-        return 62u;
-    } else {
-        CORE_LOG_W("Base64: invalid character");
-        return 0u;
-    }
-}
-
-void Base64Decode(string_view const& encodedString, size_t aOffset, vector<uint8_t>& decodedBinary)
-{
-    // a base64 encoded string should be padded to the next four bytes with '=' characters.
-    const size_t encodedDataSize = encodedString.size() - aOffset;
-    if (encodedDataSize % 4u) {
-        CORE_LOG_W("base64: encoded string not multiple of 4");
-        return;
-    }
-
-    // the length of the decoded binary data will be 3/4 of the encoded string.
-    decodedBinary.resize(encodedDataSize * 3u / 4u);
-
-    auto out = decodedBinary.data();
-
-    uint32_t bits = 0u;
-    for (auto it = encodedString.data() + aOffset, end = encodedString.data() + encodedString.size(); it != end;
-         bits = 0u) {
-        // map each character into a 6 bit value and pack the values tightly in 24 bits.
-        bits |= Base64((uint8_t)(*it++)) << (3u * 6u);
-        bits |= Base64((uint8_t)(*it++)) << (2u * 6u);
-        bits |= Base64((uint8_t)(*it++)) << (1u * 6u);
-        bits |= Base64((uint8_t)(*it++)) << (0u * 6u);
-
-        // store the resulting decoded 8 bit decoded values
-        *out++ = uint8_t((bits >> 16u) & 0xff);
-        *out++ = uint8_t((bits >> 8u) & 0xff);
-        *out++ = uint8_t((bits >> 0u) & 0xff);
-    }
-
-    // pop as many decoded bytes as there's padding in the encoded string.
-    for (auto it = encodedString.data() + encodedDataSize; *it-- == '=';) {
-        decodedBinary.pop_back();
-    }
-}
 
 vector<uint8_t> Read(const uint8_t* src, uint32_t componentByteSize, uint32_t componentCount, uint32_t elementSize,
     size_t byteStride, uint32_t count)
@@ -142,7 +80,7 @@ vector<uint8_t> Read(Accessor const& accessor)
     if (elementSize == byteStride || byteStride == 0u) {
         readBytes = accessor.count * elementSize;
     } else {
-        readBytes = accessor.count * byteStride;
+        readBytes = (accessor.count - 1) * byteStride + elementSize;
     }
 
     if (bufferRemaining < readBytes) {
@@ -184,7 +122,7 @@ BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& file
         if (buffer.uri.size()) {
             uri = buffer.uri;
             offset = 0u;
-        } else if (data.defaultResourcesOffset >= 0u) {
+        } else if (data.defaultResourcesOffset >= 0) {
             uri = data.defaultResources;
             offset = static_cast<uint32_t>(data.defaultResourcesOffset);
         } else {
@@ -871,8 +809,8 @@ string_view ValidatePrimitiveAttribute(
                 [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
         } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
-                       [accessorComponentType](
-                           const ComponentType& validType) { return validType == accessorComponentType; })) {
+                        [accessorComponentType](
+                            const ComponentType& validType) { return validType == accessorComponentType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].componentTypeError;
         }
     } else {
@@ -935,8 +873,8 @@ string_view ValidatePrimitiveAttributeQuatization(
                 [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
         } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
-                       [accessorComponentType](
-                           const ComponentType& validType) { return validType == accessorComponentType; })) {
+                        [accessorComponentType](
+                            const ComponentType& validType) { return validType == accessorComponentType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].componentTypeError;
         }
     } else {
@@ -1049,8 +987,7 @@ string_view ParseDataUri(const string_view in, size_t& offsetToData)
     return mediaType.substr(0u, pos); // NOTE: return media-type without any of the parameters.
 }
 
-bool DecodeDataURI(
-    vector<uint8_t>& out, const string_view in, size_t reqBytes, bool checkSize, string_view& outMimeType)
+bool DecodeDataURI(vector<uint8_t>& out, string_view in, size_t reqBytes, bool checkSize, string_view& outMimeType)
 {
     size_t offsetToData = 0u;
     out.clear();
@@ -1059,8 +996,8 @@ bool DecodeDataURI(
     } else {
         outMimeType = mimeType;
     }
-
-    Base64Decode(in, offsetToData, out);
+    in.remove_prefix(offsetToData);
+    out = BASE_NS::Base64Decode(in);
 
     if (out.empty()) {
         return false;
@@ -1115,15 +1052,15 @@ GLTFLoadDataResult& GLTFLoadDataResult::operator=(GLTFLoadDataResult&& other) no
 {
     success = other.success;
     normalized = other.normalized;
-    error = std::move(other.error);
+    error = move(other.error);
     componentType = other.componentType;
     componentByteSize = other.componentByteSize;
     componentCount = other.componentCount;
     elementSize = other.elementSize;
     elementCount = other.elementCount;
-    min = std::move(other.min);
-    max = std::move(other.max);
-    data = std::move(other.data);
+    min = move(other.min);
+    max = move(other.max);
+    data = move(other.data);
 
     return *this;
 }
@@ -1209,18 +1146,19 @@ GLTFLoadDataResult LoadData(Accessor const& accessor)
     result.min = accessor.min;
     result.max = accessor.max;
 
-    if (bufferView && bufferView->buffer) {
-        vector<uint8_t> fileData = Read(accessor);
-        if (fileData.empty()) {
-            result.error = "Failed to load attribute data.\n";
-            result.success = false;
+    if (bufferView) {
+        if (bufferView->buffer) {
+            vector<uint8_t> fileData = Read(accessor);
+            if (fileData.empty()) {
+                result.error = "Failed to load attribute data.\n";
+                result.success = false;
+            }
+
+            result.data.swap(fileData);
         }
-
-        result.data.swap(fileData);
-    }
-
-    if (accessor.sparse.count) {
-        LoadSparseAccessor(accessor, result);
+        if (accessor.sparse.count) {
+            LoadSparseAccessor(accessor, result);
+        }
     }
 
     return result;
@@ -1257,14 +1195,14 @@ vector<string> Data::GetExternalFileUris()
     // All images in this glTF.
     for (auto const& image : images) {
         if (!IsDataURI(image->uri)) {
-            result.emplace_back(image->uri);
+            result.push_back(image->uri);
         }
     }
 
     // All buffers in this glTF (in case there are several .bin files).
     for (auto const& buffer : buffers) {
         if (!IsDataURI(buffer->uri)) {
-            result.emplace_back(buffer->uri);
+            result.push_back(buffer->uri);
         }
     }
 
@@ -1272,7 +1210,7 @@ vector<string> Data::GetExternalFileUris()
     // All thumbnails glTF (in case there are non-embedded thumbnail uris).
     for (auto const& thumbnail : thumbnails) {
         if (!IsDataURI(thumbnail.uri)) {
-            result.emplace_back(thumbnail.uri);
+            result.push_back(thumbnail.uri);
         }
     }
 #endif
@@ -1338,6 +1276,64 @@ IGLTFData::ThumbnailImage Data::GetThumbnailImage(size_t thumbnailIndex)
 void Data::Destroy()
 {
     delete this;
+}
+
+// class SceneData from GLTFData.h
+SceneData::SceneData(unique_ptr<GLTF2::Data> data) : data_(BASE_NS::move(data)) {}
+
+const GLTF2::Data* SceneData::GetData() const
+{
+    return data_.get();
+}
+
+size_t SceneData::GetDefaultSceneIndex() const
+{
+    return data_->GetDefaultSceneIndex();
+}
+
+size_t SceneData::GetSceneCount() const
+{
+    return data_->GetSceneCount();
+}
+
+const IInterface* SceneData::GetInterface(const BASE_NS::Uid& uid) const
+{
+    if (uid == ISceneData::UID) {
+        return static_cast<const ISceneData*>(this);
+    }
+    if (uid == SceneData::UID) {
+        return static_cast<const SceneData*>(this);
+    }
+    if (uid == IInterface::UID) {
+        return static_cast<const IInterface*>(this);
+    }
+    return nullptr;
+}
+
+IInterface* SceneData::GetInterface(const BASE_NS::Uid& uid)
+{
+    if (uid == ISceneData::UID) {
+        return static_cast<ISceneData*>(this);
+    }
+    if (uid == SceneData::UID) {
+        return static_cast<SceneData*>(this);
+    }
+    if (uid == IInterface::UID) {
+        return static_cast<IInterface*>(this);
+    }
+    return nullptr;
+}
+
+void SceneData::Ref()
+{
+    ++refcnt_;
+}
+
+void SceneData::Unref()
+{
+    if (--refcnt_ == 0) {
+        delete this;
+    }
 }
 } // namespace GLTF2
 CORE3D_END_NAMESPACE()

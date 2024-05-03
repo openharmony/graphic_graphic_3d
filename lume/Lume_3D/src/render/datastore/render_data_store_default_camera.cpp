@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -36,7 +36,7 @@ void RenderDataStoreDefaultCamera::PostRender()
 void RenderDataStoreDefaultCamera::Clear()
 {
     cameras_.clear();
-    nextId = 0;
+    environments_.clear();
 }
 
 void RenderDataStoreDefaultCamera::AddCamera(const RenderCamera& camera)
@@ -44,7 +44,7 @@ void RenderDataStoreDefaultCamera::AddCamera(const RenderCamera& camera)
     if (const uint32_t arrIdx = static_cast<uint32_t>(cameras_.size());
         arrIdx < DefaultMaterialCameraConstants::MAX_CAMERA_COUNT) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        if ((camera.id != 0xFFFFFFFFffff) || (!camera.name.empty())) {
+        if ((camera.id != RenderSceneDataConstants::INVALID_ID) || (!camera.name.empty())) {
             for (const auto& cam : cameras_) {
                 if ((camera.id == cam.id) || ((!camera.name.empty()) && (camera.name == cam.name))) {
                     CORE_LOG_ONCE_W(to_string(camera.id) + camera.name,
@@ -54,13 +54,29 @@ void RenderDataStoreDefaultCamera::AddCamera(const RenderCamera& camera)
             }
         }
 #endif
-        cameras_.emplace_back(camera);
+        cameras_.push_back(camera);
     } else {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_ONCE_W("drop_camera_count_full", "CORE_VALIDATION: camera dropped (max count: %u)",
+        CORE_LOG_ONCE_W("drop_camera_count_full", "CORE3D_VALIDATION: camera dropped (max count: %u)",
             DefaultMaterialCameraConstants::MAX_CAMERA_COUNT);
 #endif
     }
+}
+
+void RenderDataStoreDefaultCamera::AddEnvironment(const RenderCamera::Environment& environment)
+{
+#if (CORE3D_VALIDATION_ENABLED == 1)
+    if (environment.id != RenderSceneDataConstants::INVALID_ID) {
+        for (const auto& env : environments_) {
+            if (environment.id == env.id) {
+                CORE_LOG_ONCE_W("rdsdc_add_env" + to_string(environment.id),
+                    "CORE_VALIDATION: non unique camera id: %" PRIu64, env.id);
+            }
+        }
+    }
+#endif
+    // NOTE: there's only per camera environment limit at the moment, no environment limit for scene
+    environments_.push_back(environment);
 }
 
 array_view<const RenderCamera> RenderDataStoreDefaultCamera::GetCameras() const
@@ -111,6 +127,26 @@ uint32_t RenderDataStoreDefaultCamera::GetCameraIndex(const uint64_t id) const
 uint32_t RenderDataStoreDefaultCamera::GetCameraCount() const
 {
     return static_cast<uint32_t>(cameras_.size());
+}
+
+array_view<const RenderCamera::Environment> RenderDataStoreDefaultCamera::GetEnvironments() const
+{
+    return environments_;
+}
+
+RenderCamera::Environment RenderDataStoreDefaultCamera::GetEnvironment(const uint64_t id) const
+{
+    for (const auto& envRef : environments_) {
+        if (envRef.id == id) {
+            return envRef;
+        }
+    }
+    return {};
+}
+
+uint32_t RenderDataStoreDefaultCamera::GetEnvironmentCount() const
+{
+    return static_cast<uint32_t>(environments_.size());
 }
 
 RENDER_NS::IRenderDataStore* RenderDataStoreDefaultCamera::Create(RENDER_NS::IRenderContext&, char const* name)

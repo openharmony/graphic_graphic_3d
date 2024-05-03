@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,7 +19,7 @@
 #include <cstdint>
 
 #include <base/namespace.h>
-#include <base/util/compile_time_hashes.h>
+#include <base/util/hash.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
@@ -46,6 +46,10 @@ enum RenderHandleInfoFlagBits {
     CORE_RESOURCE_HANDLE_MAP_OUTSIDE_RENDERER = 0x00000020,
     CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION = 0x00000040, // e.g. hwBuffer ycbcr conversion / oes
     CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE = 0x00000080,
+    CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE = 0x00000100,
+    CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE =
+        0x00000200, // created to be used as swapchain (fast check for additional processing)
+    CORE_RESOURCE_HANDLE_DYNAMIC_ADDITIONAL_STATE = 0x00000400, // additional image state tracking
 };
 using RenderHandleInfoFlags = uint32_t;
 
@@ -68,61 +72,86 @@ RenderHandle CreateGpuResourceHandle(const RenderHandleType type, const RenderHa
     const uint32_t index, const uint32_t generationIndex, const uint32_t hasNameId);
 
 // only related to GPU resources
-inline bool IsDynamicResource(const RenderHandle handle)
+inline constexpr bool IsDynamicResource(const RenderHandle handle)
+{
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_DYNAMIC_TRACK);
+}
+inline constexpr bool IsDynamicAdditionalStateResource(const RenderHandle handle)
 {
     return ((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
-           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_DYNAMIC_TRACK;
+           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_DYNAMIC_ADDITIONAL_STATE;
 }
-inline bool IsResetOnFrameBorders(const RenderHandle handle)
+inline constexpr bool IsResetOnFrameBorders(const RenderHandle handle)
+{
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_RESET_ON_FRAME_BORDERS);
+}
+inline constexpr bool IsDepthImage(const RenderHandle handle)
+{
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_DEPTH_IMAGE);
+}
+inline constexpr bool IsDeferredDestroy(const RenderHandle handle)
+{
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_DEFERRED_DESTROY);
+}
+inline constexpr bool IsMappableOutsideRenderer(const RenderHandle handle)
+{
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_MAP_OUTSIDE_RENDERER);
+}
+inline constexpr bool IsImmediatelyCreated(const RenderHandle handle)
+{
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_IMMEDIATELY_CREATED);
+}
+inline constexpr bool IsPlatformConversionResource(const RenderHandle handle)
+{
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION);
+}
+inline constexpr bool IsShallowResource(const RenderHandle handle)
+{
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE);
+}
+inline constexpr bool IsSwapchain(const RenderHandle& handle)
 {
     return ((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
-           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_RESET_ON_FRAME_BORDERS;
+           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE;
 }
-inline bool IsDepthImage(const RenderHandle handle)
+inline constexpr uint32_t GetHasNamePart(const RenderHandle handle)
 {
-    return ((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
-           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_DEPTH_IMAGE;
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           ((handle.id & RES_HANDLE_HAS_NAME_MASK) >> RES_HANDLE_HAS_NAME_SHIFT);
 }
-inline bool IsDeferredDestroy(const RenderHandle handle)
-{
-    return ((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
-           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_DEFERRED_DESTROY;
-}
-inline bool IsMappableOutsideRenderer(const RenderHandle handle)
-{
-    return ((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
-           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_MAP_OUTSIDE_RENDERER;
-}
-inline bool IsImmediatelyCreated(const RenderHandle handle)
-{
-    return ((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
-           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_IMMEDIATELY_CREATED;
-}
-inline bool IsPlatformConversionResource(const RenderHandle handle)
-{
-    return ((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
-           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION;
-}
-inline uint32_t GetHasNamePart(const RenderHandle handle)
-{
-    return (handle.id & RES_HANDLE_HAS_NAME_MASK) >> RES_HANDLE_HAS_NAME_SHIFT;
-}
-inline bool IsGpuBuffer(const RenderHandle& handle)
+inline constexpr bool IsGpuBuffer(const RenderHandle& handle)
 {
     return RenderHandleUtil::GetHandleType(handle) == RenderHandleType::GPU_BUFFER;
 }
-inline bool IsGpuImage(const RenderHandle& handle)
+inline constexpr bool IsGpuImage(const RenderHandle& handle)
 {
     return RenderHandleUtil::GetHandleType(handle) == RenderHandleType::GPU_IMAGE;
 }
-inline bool IsGpuSampler(const RenderHandle& handle)
+inline constexpr bool IsGpuSampler(const RenderHandle& handle)
 {
     return RenderHandleUtil::GetHandleType(handle) == RenderHandleType::GPU_SAMPLER;
 }
-inline bool IsGpuAccelerationStructure(const RenderHandle& handle)
+inline constexpr bool IsGpuAccelerationStructure(const RenderHandle& handle)
 {
-    return ((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
-           RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE;
+    return (handle.id != INVALID_RESOURCE_HANDLE) &&
+           (((handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+               RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE);
 }
 
 RenderHandle CreateHandle(const RenderHandleType type, const uint32_t index);
@@ -130,46 +159,46 @@ RenderHandle CreateHandle(const RenderHandleType type, const uint32_t index, con
 RenderHandle CreateHandle(
     const RenderHandleType type, const uint32_t index, const uint32_t generationIndex, const uint32_t additionalData);
 
-inline uint32_t GetIndexPart(const RenderHandle handle)
+inline constexpr uint32_t GetIndexPart(const RenderHandle handle)
 {
     return (handle.id & RES_HANDLE_ID_MASK) >> RES_HANDLE_ID_SHIFT;
 }
-inline uint32_t GetIndexPart(const uint64_t handleId)
+inline constexpr uint32_t GetIndexPart(const uint64_t handleId)
 {
     return (handleId & RES_HANDLE_ID_MASK) >> RES_HANDLE_ID_SHIFT;
 }
-inline uint32_t GetGenerationIndexPart(const RenderHandle handle)
+inline constexpr uint32_t GetGenerationIndexPart(const RenderHandle handle)
 {
     return (handle.id & RES_HANDLE_GENERATION_MASK) >> RES_HANDLE_GENERATION_SHIFT;
 }
-inline uint32_t GetGenerationIndexPart(const uint64_t handleId)
+inline constexpr uint32_t GetGenerationIndexPart(const uint64_t handleId)
 {
     return (handleId & RES_HANDLE_GENERATION_MASK) >> RES_HANDLE_GENERATION_SHIFT;
 }
 
-inline uint32_t GetAdditionalData(const RenderHandle handle)
+inline constexpr uint32_t GetAdditionalData(const RenderHandle handle)
 {
     return (handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT;
 }
 // 0xF (1 << descriptorSetIndex)
-inline uint32_t GetPipelineLayoutDescriptorSetMask(const RenderHandle handle)
+inline constexpr uint32_t GetPipelineLayoutDescriptorSetMask(const RenderHandle handle)
 {
     return (handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT;
 }
 
-inline bool IsValid(const EngineResourceHandle& handle)
+inline constexpr bool IsValid(const EngineResourceHandle& handle)
 {
     return handle.id != INVALID_RESOURCE_HANDLE;
 }
-inline RenderHandleType GetHandleType(const EngineResourceHandle& handle)
+inline constexpr RenderHandleType GetHandleType(const EngineResourceHandle& handle)
 {
     return GetHandleType(RenderHandle { handle.id });
 }
-inline uint32_t GetIndexPart(const EngineResourceHandle& handle)
+inline constexpr uint32_t GetIndexPart(const EngineResourceHandle& handle)
 {
     return GetIndexPart(RenderHandle { handle.id });
 }
-inline uint32_t GetGenerationIndexPart(const EngineResourceHandle& handle)
+inline constexpr uint32_t GetGenerationIndexPart(const EngineResourceHandle& handle)
 {
     return GetGenerationIndexPart(RenderHandle { handle.id });
 }
@@ -179,13 +208,10 @@ EngineResourceHandle CreateEngineResourceHandle(
 RENDER_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
-template<typename T>
-uint64_t hash(const T& b);
-
 template<>
-inline uint64_t hash(const RENDER_NS::RenderHandle& handle)
+inline uint64_t hash(const RENDER_NS::RenderHandle& value)
 {
-    return handle.id;
+    return value.id;
 }
 BASE_END_NAMESPACE()
 

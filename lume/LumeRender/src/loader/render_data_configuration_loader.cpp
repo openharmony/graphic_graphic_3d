@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -90,18 +90,20 @@ CORE_JSON_SERIALIZE_ENUM(FxaaConfiguration::Quality,
         { FxaaConfiguration::Quality::MEDIUM, "medium" },
         { FxaaConfiguration::Quality::HIGH, "high" },
     })
-CORE_JSON_SERIALIZE_ENUM(PostProcessConfiguration::PostProcessEnableFlagbits,
+CORE_JSON_SERIALIZE_ENUM(PostProcessConfiguration::PostProcessEnableFlagBits,
     {
-        { static_cast<PostProcessConfiguration::PostProcessEnableFlagbits>(0x7FFFFFFF), nullptr },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_TONEMAP_BIT, "tonemap" },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_VIGNETTE_BIT, "vignette" },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_DITHER_BIT, "dither" },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_COLOR_CONVERSION_BIT, "color_conversion" },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_COLOR_FRINGE_BIT, "color_fringe" },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_BLUR_BIT, "blur" },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_BLOOM_BIT, "bloom" },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_FXAA_BIT, "fxaa" },
-        { PostProcessConfiguration::PostProcessEnableFlagbits::ENABLE_TAA_BIT, "taa" },
+        { static_cast<PostProcessConfiguration::PostProcessEnableFlagBits>(0x7FFFFFFF), nullptr },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_TONEMAP_BIT, "tonemap" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_VIGNETTE_BIT, "vignette" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_DITHER_BIT, "dither" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_COLOR_CONVERSION_BIT, "color_conversion" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_COLOR_FRINGE_BIT, "color_fringe" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLUR_BIT, "blur" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT, "bloom" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_FXAA_BIT, "fxaa" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_TAA_BIT, "taa" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_DOF_BIT, "dof" },
+        { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_MOTION_BLUR_BIT, "motion_blur" },
     })
 // clang-format on
 namespace {
@@ -120,7 +122,7 @@ IRenderDataConfigurationLoader::LoadedPostProcess LoadPostProcess(const json::va
     }
     if (err.empty()) {
         if (const auto iter = jsonData.find("postProcessConfiguration"); iter) {
-            SafeGetJsonBitfield<PostProcessConfiguration::PostProcessEnableFlagbits>(
+            SafeGetJsonBitfield<PostProcessConfiguration::PostProcessEnableFlagBits>(
                 *iter, "enableFlags", err, ppConfig.enableFlags);
 
             if (const auto cIter = iter->find("bloomConfiguration"); cIter) {
@@ -228,7 +230,7 @@ IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoaderI
 
 const IInterface* RenderDataConfigurationLoaderImpl::GetInterface(const BASE_NS::Uid& uid) const
 {
-    if (uid == IRenderDataConfigurationLoader::UID) {
+    if ((uid == IRenderDataConfigurationLoader::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;
@@ -236,7 +238,7 @@ const IInterface* RenderDataConfigurationLoaderImpl::GetInterface(const BASE_NS:
 
 IInterface* RenderDataConfigurationLoaderImpl::GetInterface(const BASE_NS::Uid& uid)
 {
-    if (uid == IRenderDataConfigurationLoader::UID) {
+    if ((uid == IRenderDataConfigurationLoader::UID) || (uid == IInterface::UID)) {
         return this;
     }
     return nullptr;

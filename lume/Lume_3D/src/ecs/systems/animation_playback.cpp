@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,9 @@
 #include "animation_playback.h"
 
 #include <3d/ecs/components/animation_component.h>
+#include <3d/ecs/components/animation_input_component.h>
+#include <3d/ecs/components/animation_state_component.h>
+#include <3d/ecs/components/animation_track_component.h>
 #include <3d/ecs/components/name_component.h>
 #include <base/containers/fixed_string.h>
 #include <base/math/mathf.h>
@@ -26,8 +29,6 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/implementation_uids.h>
 #include <core/namespace.h>
-
-#include "ecs/components/animation_state_component.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -120,10 +121,21 @@ void AnimationPlayback::SetTimePosition(float timePosition)
 
 float AnimationPlayback::GetAnimationLength() const
 {
-    if (auto handle = animationStateManager_->Read(animation_); handle) {
-        return handle->length;
+    float maxLength = 0.f;
+    if (auto handle = animationManager_->Read(animation_); handle) {
+        auto trackManager = GetManager<IAnimationTrackComponentManager>(animationManager_->GetEcs());
+        auto inputManager = GetManager<IAnimationInputComponentManager>(animationManager_->GetEcs());
+        for (const auto& trackEntity : handle->tracks) {
+            if (auto track = trackManager->Read(trackEntity); track) {
+                if (auto inputData = inputManager->Read(track->timestamps); inputData) {
+                    if (!inputData->timestamps.empty()) {
+                        maxLength = Math::max(maxLength, inputData->timestamps.back());
+                    }
+                }
+            }
+        }
     }
-    return 0.f;
+    return maxLength;
 }
 
 void AnimationPlayback::SetStartOffset(float startOffset)

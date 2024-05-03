@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -68,6 +68,17 @@ vec3 EnvBRDFApprox(vec3 f0, float roughness, float NoV)
     // 2% f0, takes into account alpha
     const float f90 = clamp(50.0 * max(f0.x, max(f0.y, f0.z)), 0.0, 1.0);
     return f0 * ab.x + ab.y * f90;
+}
+
+// https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile
+// Approximation of EnvBRDFApprox for non metallic (diaelectric) materials with reflectance value of 0.04
+float EnvBRDFApproxNonmetal(float Roughness, float NoV)
+{
+    // Same as EnvBRDFApprox( 0.04, Roughness, NoV )
+    const vec2 c0 = { -1, -0.0275 };
+    const vec2 c1 = { 1, 0.0425 };
+    vec2 r = Roughness * c0 + c1;
+    return min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y; // 9.28 : param
 }
 
 #endif // VULKAN

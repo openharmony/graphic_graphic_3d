@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,11 @@
 #ifndef CORE__IO__STD_DIRECTORY_H
 #define CORE__IO__STD_DIRECTORY_H
 
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
 #include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
 #include <core/io/intf_directory.h>
 #include <core/namespace.h>
 
@@ -25,10 +29,11 @@ struct DirImpl;
 
 class StdDirectory final : public IDirectory {
 public:
-    StdDirectory();
+    StdDirectory(BASE_NS::unique_ptr<DirImpl>);
     ~StdDirectory() override;
 
-    bool Open(BASE_NS::string_view path);
+    static IDirectory::Ptr Create(BASE_NS::string_view path);
+    static IDirectory::Ptr Open(BASE_NS::string_view path);
     void Close() override;
 
     BASE_NS::vector<Entry> GetEntries() const override;

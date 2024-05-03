@@ -36,7 +36,7 @@ float GetUnpackDepthBuffer(const vec2 uv)
 #if (ENABLE_INPUT_ATTACHMENTS == 1)
     return subpassLoad(uDepth).x;
 #else
-    return texture(sampler2D(uDepth, uSampler), uv).x;
+    return textureLod(sampler2D(uDepth, uSampler), uv, 0).x;
 #endif
 }
 
@@ -45,7 +45,7 @@ vec2 GetUnpackVelocity(const vec2 uv, const vec2 invSize)
 #if (ENABLE_INPUT_ATTACHMENTS == 1)
     return subpassLoad(uVelocity).xy;
 #else
-    return texture(sampler2D(uVelocity, uSampler), uv).xy * invSize;
+    return textureLod(sampler2D(uVelocity, uSampler), uv, 0).xy * invSize;
 #endif
 }
 
@@ -62,49 +62,24 @@ vec2 GetVelocity()
             ivec2(-1, 1),
             ivec2(1, 1),
         };
-        ivec2 offset = ivec2(0, 0);
-        float depth = 1.0f;
-        // NOTE: needs compile time constant offset and does not compile if e.g. passed to function
-        {
-            const float currDepth = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[0]).x;
-            if (currDepth < depth) {
-                depth = currDepth;
-                offset = offsets[0];
-            }
-        }
-        {
-            const float currDepth = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[1]).x;
-            if (currDepth < depth) {
-                depth = currDepth;
-                offset = offsets[1];
-            }
-        }
-        {
-            const float currDepth = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[2]).x;
-            if (currDepth < depth) {
-                depth = currDepth;
-                offset = offsets[2];
-            }
-        }
-        {
-            const float currDepth = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[3]).x;
-            if (currDepth < depth) {
-                depth = currDepth;
-                offset = offsets[3];
-            }
-        }
-        {
-            const float currDepth = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[4]).x;
-            if (currDepth < depth) {
-                depth = currDepth;
-                offset = offsets[4];
-            }
-        }
 
-        velUv += vec2(offset) * (uPc.viewportSizeInvSize.zw);
+        // NOTE: needs compile time constant offset and does not compile if e.g. passed to function
+        vec2 batch1 = vec2(1.0, textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[0]).x);
+        vec2 batch2 = vec2(textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[1]).x, textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[2]).x);
+        ivec2 index = mix(ivec2(2, 0), ivec2(1, 2), lessThan(batch1, batch2));
+        batch1 = mix(batch1, batch2, lessThan(batch1, batch2));
+
+        vec2 batch3 = vec2(textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[3]).x, textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[4]).x);
+        index = mix(index, ivec2(3, 4), lessThan(batch1, batch3));
+        batch1 = mix(batch1, batch3, lessThan(batch1, batch3));
+
+        ivec2 offset = offsets[batch1.x < batch1.y?index.x:index.y];
+        float depth = batch1.x <batch1.y ? batch1.x :  batch1.y;
+
+        velUv += offset * (uPc.viewportSizeInvSize.zw);
     }
     // multiply velocity to correct uv offsets
-    return texture(sampler2D(uVelocity, uSampler), velUv).xy * uPc.viewportSizeInvSize.zw;
+    return textureLod(sampler2D(uVelocity, uSampler), velUv, 0).xy * uPc.viewportSizeInvSize.zw;
 }
 
 // clip towards aabb center
@@ -139,29 +114,41 @@ void main(void)
     // 0 1 2
     // 3 4 5
     // 6 7 8
-    vec3 bc[9];
-    bc[0] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, -1)).rgb;
-    bc[1] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, -1)).rgb;
-    bc[2] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, -1)).rgb;
-    bc[3] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 0)).rgb;
+
+    // Box filter for history
+    // diamond shape
+    vec3 bc1 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, -1)).rgb;
+    vec3 bc3 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 0)).rgb;
     // center sample
-    bc[4] = currColor.rgb;
+    vec3 bc4 = currColor.rgb;
+    vec3 min13 = min(min(bc1, bc3), bc4);
+    vec3 max13 = max(max(bc1, bc3), bc4);
+
+    vec3 bc5 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 0)).rgb;
+    vec3 bc7 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, 1)).rgb;
+    vec3 min57 = min(bc5, bc7);
+    vec3 max57 = max(bc5, bc7);
+    vec3 boxMin = min(min13, min57);
+    vec3 boxMax = max(max13, max57);
+
     //
-    bc[5] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 0)).rgb;
-    bc[6] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 1)).rgb;
-    bc[7] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, 1)).rgb;
-    bc[8] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 1)).rgb;
+    vec3 bc0 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, -1)).rgb;
+    vec3 bc2 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, -1)).rgb;
+    vec3 min02 = min(boxMin, min(bc0, bc2));
+    vec3 max02 = max(boxMax, max(bc0, bc2));
+
+    vec3 bc6 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 1)).rgb;
+    vec3 bc8 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 1)).rgb;
+    vec3 min68 = min(bc6, bc8);
+    vec3 max68 = max(bc6, bc8);
+
+    // corners
+    const vec3 boxMinCorner = min(min02, min68);
+    const vec3 boxMaxCorner = max(max02, max68);
 
     // NOTE: add
     // filter with tonemapping and yCoCG
 
-    // Box filter for history
-    // diamond shape
-    vec3 boxMin = min(bc[4], min(min(bc[1], bc[3]), min(bc[5], bc[7])));
-    vec3 boxMax = max(bc[4], max(max(bc[1], bc[3]), max(bc[5], bc[7])));
-    // corners
-    const vec3 boxMinCorner = min(boxMin, min(min(bc[0], bc[2]), min(bc[6], bc[8])));
-    const vec3 boxMaxCorner = max(boxMax, max(max(bc[0], bc[2]), max(bc[6], bc[8])));
     boxMin = (boxMin + boxMinCorner) * 0.5;
     boxMax = (boxMax + boxMaxCorner) * 0.5;
 
@@ -175,7 +162,7 @@ void main(void)
     history.rgb *= 1.0 / (1.0 + historyLuma);
     currColor.rgb *= 1.0 / (1.0 + colorLuma);
 
-    const float taaAlpha = 0.1;
+    const float taaAlpha = uPc.factor.a;
     vec4 color = mix(history, currColor, taaAlpha);
 
     // inverse tonemap

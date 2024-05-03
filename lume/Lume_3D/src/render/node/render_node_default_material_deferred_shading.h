@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,6 +21,7 @@
 #include <base/containers/string.h>
 #include <base/util/uid.h>
 #include <core/namespace.h>
+#include <render/datastore/intf_render_data_store_post_process.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_node.h>
@@ -41,6 +42,10 @@ public:
     void InitNode(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
     void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        return 0U;
+    }
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "2abdac7a-de6c-4e82-b562-665a0553fc55" };
@@ -55,18 +60,24 @@ public:
         RENDER_NS::RenderHandle fog;
         RENDER_NS::RenderHandle generalData;
         RENDER_NS::RenderHandle postProcess;
+
         RENDER_NS::RenderHandle camera;
         RENDER_NS::RenderHandle light;
         RENDER_NS::RenderHandle lightCluster;
 
         RENDER_NS::RenderHandle defaultBuffer;
     };
+    struct UboHandles {
+        // first 512 aligned is global post process
+        // after (256) we have effect local data
+        RENDER_NS::RenderHandleReference postProcess;
+    };
     struct ShadowBuffers {
         RENDER_NS::RenderHandle pcfDepthHandle;
         RENDER_NS::RenderHandle vsmColorHandle;
 
-        RENDER_NS::RenderHandleReference pcfSamplerHandle;
-        RENDER_NS::RenderHandleReference vsmSamplerHandle;
+        RENDER_NS::RenderHandle pcfSamplerHandle;
+        RENDER_NS::RenderHandle vsmSamplerHandle;
     };
     struct AllShaderData {
         uint64_t psoHash { 0 };
@@ -83,20 +94,24 @@ private:
 
     void ParseRenderNodeInputs();
     void RenderData(RENDER_NS::IRenderCommandList& cmdList);
-    void UpdateSet0(RENDER_NS::IRenderCommandList& cmdList);
-    void UpdateSet1(RENDER_NS::IRenderCommandList& cmdList);
+    void UpdateSet01(RENDER_NS::IRenderCommandList& cmdList);
+    void UpdateUserSets(RENDER_NS::IRenderCommandList& cmdList);
     void UpdatePostProcessConfiguration();
+    void UpdateGlobalPostProcessUbo();
     void UpdateCurrentScene(const IRenderDataStoreDefaultScene& dataStoreScene,
         const IRenderDataStoreDefaultCamera& dataStoreCamera, const IRenderDataStoreDefaultLight& dataStoreLight);
     RENDER_NS::RenderHandle GetPsoHandle();
-    void GetSceneUniformBuffers(const BASE_NS::string_view uniqueSceneName);
-    void GetCameraUniformBuffers();
+    // unique scene name
+    void GetSceneUniformBuffers(const BASE_NS::string_view us);
     void CreateDefaultShaderData();
     void CreateDescriptorSets();
+    void EvaluateFogBits();
 
     static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
     struct JsonInputs {
         RENDER_NS::RenderNodeGraphInputs::RenderDataStore renderDataStore;
+        BASE_NS::string ppName;
+        RENDER_NS::RenderNodeGraphInputs::InputResources resources;
 
         BASE_NS::string customCameraName;
         uint64_t customCameraId { INVALID_CAM_ID };
@@ -105,19 +120,19 @@ private:
         uint32_t renderSlotId { 0u };
 
         RENDER_NS::RenderNodeGraphInputs::InputRenderPass renderPass;
+        bool hasChangeableRenderPassHandles { false };
+        bool hasChangeableResourceHandles { false };
     };
     JsonInputs jsonInputs_;
     RENDER_NS::RenderNodeHandles::InputRenderPass inputRenderPass_;
+    RENDER_NS::RenderNodeHandles::InputResources inputResources_;
 
     SceneRenderDataStores stores_;
 
-    BufferHandles bufferHandles_;
+    SceneBufferHandles sceneBuffers_;
+    SceneCameraBufferHandles cameraBuffers_;
+    UboHandles ubos_;
     ShadowBuffers shadowBuffers_;
-
-    struct CreatedTargets {
-        RENDER_NS::RenderHandleReference cubemapSampler;
-    };
-    CreatedTargets createdTargets_;
 
     struct SamplerHandles {
         RENDER_NS::RenderHandle cubemap;
@@ -132,12 +147,18 @@ private:
     struct DescriptorSets {
         RENDER_NS::IDescriptorSetBinder::Ptr set0;
         RENDER_NS::IDescriptorSetBinder::Ptr set1;
+
+        // user inputs (not built-in)
+        bool hasUserSet2 { false };
+        bool hasUserSet3 { false };
+        RENDER_NS::IPipelineDescriptorSetBinder::Ptr pipelineDescriptorSetBinder;
     };
     DescriptorSets allDescriptorSets_;
     AllShaderData allShaderData_;
 
     struct CurrentScene {
         RenderCamera camera;
+        RENDER_NS::RenderHandle cameraEnvRadianceHandle;
         RENDER_NS::ViewportDesc viewportDesc;
         RENDER_NS::ScissorDesc scissorDesc;
 
@@ -146,13 +167,19 @@ private:
         bool hasShadow { false };
         IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
         IRenderDataStoreDefaultLight::LightingFlags lightingFlags { 0u };
+        RenderCamera::ShaderFlags cameraShaderFlags { 0u }; // evaluated based on camera and scene flags
     };
     CurrentScene currentScene_;
 
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
-    RENDER_NS::RenderHandle defaultSkyBoxRadianceCubemap_;
     RENDER_NS::RenderPass renderPass_;
     RENDER_NS::RenderHandle shader_;
+    RENDER_NS::PipelineLayout pipelineLayout_;
+
+    RENDER_NS::PostProcessConfiguration ppGlobalConfig_;
+    RENDER_NS::IRenderDataStorePostProcess::PostProcess ppLocalConfig_;
+
+    bool valid_ { false };
 };
 CORE3D_END_NAMESPACE()
 

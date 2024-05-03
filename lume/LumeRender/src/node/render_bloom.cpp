@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #include "render_bloom.h"
 
 #include <base/containers/fixed_string.h>
+#include <base/containers/unordered_map.h>
 #include <base/math/vector.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
@@ -38,6 +39,10 @@
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
+namespace {
+constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+}
+
 void RenderBloom::Init(IRenderNodeContextManager& renderNodeContextMgr, const BloomInfo& bloomInfo)
 {
     bloomInfo_ = bloomInfo;
@@ -52,7 +57,8 @@ void RenderBloom::Init(IRenderNodeContextManager& renderNodeContextMgr, const Bl
             Filter::CORE_FILTER_LINEAR,                                  // minFilter
             Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
             SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE  // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
         });
 }
 
@@ -61,7 +67,8 @@ void RenderBloom::PreExecute(IRenderNodeContextManager& renderNodeContextMgr, co
 {
     bloomInfo_ = bloomInfo;
 
-    const GpuImageDesc& imgDesc = renderNodeContextMgr.GetGpuResourceManager().GetImageDescriptor(bloomInfo_.input);
+    const GpuImageDesc& imgDesc =
+        renderNodeContextMgr.GetGpuResourceManager().GetImageDescriptor(bloomInfo_.input.handle);
     uint32_t sizeDenom = 1u;
     if (ppConfig.bloomConfiguration.bloomQualityType == BloomConfiguration::QUALITY_TYPE_LOW) {
         sizeDenom = 2u;
@@ -83,6 +90,16 @@ void RenderBloom::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRend
         bloomEnabled_ = true;
     }
 
+    const auto bloomQualityType = ppConfig.bloomConfiguration.bloomQualityType;
+    PLUGIN_ASSERT(bloomQualityType < CORE_BLOOM_QUALITY_COUNT);
+    if (bloomInfo_.useCompute) {
+        psos_.downscale = psos_.downscaleHandlesCompute[bloomQualityType].regular;
+        psos_.downscaleAndThreshold = psos_.downscaleHandlesCompute[bloomQualityType].threshold;
+    } else {
+        psos_.downscale = psos_.downscaleHandles[bloomQualityType].regular;
+        psos_.downscaleAndThreshold = psos_.downscaleHandles[bloomQualityType].threshold;
+    }
+
     if (!bloomEnabled_) {
         bloomConfiguration.amountCoefficient = 0.0f;
     }
@@ -99,10 +116,13 @@ void RenderBloom::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRend
         // .w = -will multiply the dirt mask effect
         bloomConfiguration.dirtMaskCoefficient);
 
-    if (bloomInfo_.useCompute) {
-        ComputeBloom(renderNodeContextMgr, cmdList);
-    } else {
-        GraphicsBloom(renderNodeContextMgr, cmdList);
+    const bool validBinders = binders_.globalSet0.get() != nullptr;
+    if (validBinders) {
+        if (bloomInfo_.useCompute) {
+            ComputeBloom(renderNodeContextMgr, cmdList);
+        } else {
+            GraphicsBloom(renderNodeContextMgr, cmdList);
+        }
     }
 }
 
@@ -120,10 +140,11 @@ DescriptorCounts RenderBloom::GetDescriptorCounts() const
 
 RenderHandle RenderBloom::GetFinalTarget() const
 {
-    if (RenderHandleUtil::IsValid(bloomInfo_.output)) {
-        return bloomInfo_.output;
+    if (RenderHandleUtil::IsValid(bloomInfo_.output.handle)) {
+        return bloomInfo_.output.handle;
     } else {
-        return targets_.tex1[0u].GetHandle();
+        // output tex1 on compute and tex2 on graphics
+        return bloomInfo_.useCompute ? (targets_.tex1[0u].GetHandle()) : (targets_.tex2[0u].GetHandle());
     }
 }
 
@@ -133,7 +154,7 @@ void RenderBloom::UpdateGlobalSet(IRenderCommandList& cmdList)
     binder.ClearBindings();
     uint32_t binding = 0u;
     binder.BindBuffer(binding++, bloomInfo_.globalUbo, 0);
-    binder.BindBuffer(binding++, bloomInfo_.globalUbo, 0);
+    binder.BindBuffer(binding++, bloomInfo_.globalUbo, sizeof(GlobalPostProcessStruct));
     cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
 }
 
@@ -149,7 +170,7 @@ void RenderBloom::ComputeBloom(IRenderNodeContextManager& renderNodeContextMgr, 
         ComputeUpscale(pc, cmdList);
     }
     // needs to be done even when bloom is disabled if node is in use
-    if (RenderHandleUtil::IsValid(bloomInfo_.output)) {
+    if (RenderHandleUtil::IsValid(bloomInfo_.output.handle)) {
         ComputeCombine(pc, cmdList);
     }
 }
@@ -184,7 +205,7 @@ void RenderBloom::ComputeDownscaleAndThreshold(const PushConstant& pc, IRenderCo
     uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
         1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
 
-    cmdList.PushConstant(pc, reinterpret_cast<uint8_t*>(&uPc));
+    cmdList.PushConstantData(pc, arrayviewU8(uPc));
 
     cmdList.Dispatch((targetSize.x + tgs.x - 1) / tgs.x, (targetSize.y + tgs.y - 1) / tgs.y, 1);
 }
@@ -194,19 +215,23 @@ void RenderBloom::ComputeDownscale(const PushConstant& pc, IRenderCommandList& c
     cmdList.BindPipeline(psos_.downscale);
     const ShaderThreadGroup tgs = psos_.downscaleTGS;
 
-    cmdList.BindDescriptorSet(0u, binders_.globalSet0->GetDescriptorSetHandle());
-
+    RenderHandle sets[2u] {};
+    sets[0u] = binders_.globalSet0->GetDescriptorSetHandle();
     for (size_t i = 1; i < targets_.tex1.size(); ++i) {
-        auto& binder = *binders_.downscale[i];
-        binder.ClearBindings();
+        {
+            auto& binder = *binders_.downscale[i];
+            sets[1u] = binder.GetDescriptorSetHandle();
+            binder.ClearBindings();
 
-        uint32_t binding = 0;
-        binder.BindImage(binding++, { targets_.tex1[i].GetHandle() });
-        binder.BindImage(binding++, { targets_.tex1[i - 1].GetHandle() });
-        binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
+            uint32_t binding = 0;
+            binder.BindImage(binding++, { targets_.tex1[i].GetHandle() });
+            binder.BindImage(binding++, { targets_.tex1[i - 1].GetHandle() });
+            binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
 
-        cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-        cmdList.BindDescriptorSet(1u, binder.GetDescriptorSetHandle());
+            cmdList.UpdateDescriptorSet(
+                binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
+        }
+        cmdList.BindDescriptorSets(0u, sets);
 
         const auto targetSize = targets_.tex1Size[i];
 
@@ -214,7 +239,7 @@ void RenderBloom::ComputeDownscale(const PushConstant& pc, IRenderCommandList& c
         uPc.factor = bloomParameters_;
         uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
             1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
-        cmdList.PushConstant(pc, reinterpret_cast<uint8_t*>(&uPc));
+        cmdList.PushConstantData(pc, arrayviewU8(uPc));
 
         cmdList.Dispatch((targetSize.x + tgs.x - 1) / tgs.x, (targetSize.y + tgs.y - 1) / tgs.y, 1);
     }
@@ -225,21 +250,23 @@ void RenderBloom::ComputeUpscale(const PushConstant& pc, IRenderCommandList& cmd
     cmdList.BindPipeline(psos_.upscale);
     const ShaderThreadGroup tgs = psos_.upscaleTGS;
 
-    cmdList.BindDescriptorSet(0u, binders_.globalSet0->GetDescriptorSetHandle());
+    RenderHandle sets[2u] {};
+    sets[0u] = binders_.globalSet0->GetDescriptorSetHandle();
 
     for (size_t i = targets_.tex1.size() - 1; i != 0; --i) {
-        auto& binder = *binders_.upscale[i];
-        binder.ClearBindings();
+        {
+            auto& binder = *binders_.upscale[i];
+            sets[1u] = binder.GetDescriptorSetHandle();
+            binder.ClearBindings();
 
-        // NOTE: double binding
-        binder.BindImage(0u, { targets_.tex1[i].GetHandle() });
-        binder.BindImage(0u, { targets_.tex1[i].GetHandle() });
-        binder.BindImage(1u, { targets_.tex1[i - 1].GetHandle() });
-        binder.BindSampler(2u, { samplerHandle_.GetHandle() });
+            binder.BindImage(0u, { targets_.tex1[i - 1].GetHandle() });
+            binder.BindImage(1u, { targets_.tex1[i].GetHandle() });
+            binder.BindSampler(2u, { samplerHandle_.GetHandle() });
 
-        // update the descriptor set bindings for set 1
-        cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-        cmdList.BindDescriptorSet(1u, binder.GetDescriptorSetHandle());
+            cmdList.UpdateDescriptorSet(
+                binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
+        }
+        cmdList.BindDescriptorSets(0u, sets);
 
         const auto targetSize = targets_.tex1Size[i - 1];
 
@@ -247,7 +274,7 @@ void RenderBloom::ComputeUpscale(const PushConstant& pc, IRenderCommandList& cmd
         uPc.factor = bloomParameters_;
         uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
             1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
-        cmdList.PushConstant(pc, reinterpret_cast<uint8_t*>(&uPc));
+        cmdList.PushConstantData(pc, arrayviewU8(uPc));
 
         cmdList.Dispatch((targetSize.x + tgs.x - 1) / tgs.x, (targetSize.y + tgs.y - 1) / tgs.y, 1);
     }
@@ -283,7 +310,7 @@ void RenderBloom::ComputeCombine(const PushConstant& pc, IRenderCommandList& cmd
     uPc.factor = bloomParameters_;
     uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
         1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
-    cmdList.PushConstant(pc, reinterpret_cast<uint8_t*>(&uPc));
+    cmdList.PushConstantData(pc, arrayviewU8(uPc));
 
     cmdList.Dispatch((targetSize.x + tgs.x - 1) / tgs.x, (targetSize.y + tgs.y - 1) / tgs.y, 1);
 }
@@ -310,7 +337,7 @@ void RenderBloom::GraphicsBloom(IRenderNodeContextManager& renderNodeContextMgr,
         RenderUpscale(renderPass, pc, cmdList);
     }
     // combine (needs to be done even when bloom is disabled if node is in use
-    if (RenderHandleUtil::IsValid(bloomInfo_.output)) {
+    if (RenderHandleUtil::IsValid(bloomInfo_.output.handle)) {
         RenderCombine(renderPass, pc, cmdList);
     }
 }
@@ -348,7 +375,7 @@ void RenderBloom::RenderDownscaleAndThreshold(
     uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
         1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
 
-    cmdList.PushConstant(pc, reinterpret_cast<uint8_t*>(&uPc));
+    cmdList.PushConstantData(pc, arrayviewU8(uPc));
     cmdList.Draw(3u, 1u, 0u, 0u);
     cmdList.EndRenderPass();
 }
@@ -388,7 +415,7 @@ void RenderBloom::RenderDownscale(RenderPass& renderPass, const PushConstant& pc
         uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
             1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
 
-        cmdList.PushConstant(pc, reinterpret_cast<uint8_t*>(&uPc));
+        cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Draw(3u, 1u, 0u, 0u);
         cmdList.EndRenderPass();
     }
@@ -399,17 +426,23 @@ void RenderBloom::RenderUpscale(RenderPass& renderPass, const PushConstant& pc, 
     RenderPass renderPassUpscale = renderPass;
     renderPassUpscale.subpassDesc.inputAttachmentCount = 1;
     renderPassUpscale.subpassDesc.inputAttachmentIndices[0] = 0;
-    renderPassUpscale.renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_LOAD;
+    renderPassUpscale.renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPassUpscale.renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
 
     RenderHandle sets[2u] {};
     sets[0u] = binders_.globalSet0->GetDescriptorSetHandle();
+    PLUGIN_ASSERT(targets_.tex1.size() == targets_.tex2.size());
+    RenderHandle input;
+    if (targets_.tex1.size() >= 1) {
+        input = targets_.tex1[targets_.tex1.size() - 1].GetHandle();
+    }
     for (size_t idx = targets_.tex1.size() - 1; idx != 0; --idx) {
         const auto targetSize = targets_.tex1Size[idx - 1];
         const ViewportDesc viewportDesc { 0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y) };
         const ScissorDesc scissorDesc = { 0, 0, targetSize.x, targetSize.y };
 
-        renderPassUpscale.renderPassDesc.attachmentHandles[0] = targets_.tex1[idx - 1].GetHandle();
+        // tex2 as output
+        renderPassUpscale.renderPassDesc.attachmentHandles[0] = targets_.tex2[idx - 1].GetHandle();
         renderPassUpscale.renderPassDesc.renderArea = { 0, 0, targetSize.x, targetSize.y };
         cmdList.BeginRenderPass(renderPassUpscale.renderPassDesc, 0, renderPassUpscale.subpassDesc);
 
@@ -424,10 +457,8 @@ void RenderBloom::RenderUpscale(RenderPass& renderPass, const PushConstant& pc, 
             binder.ClearBindings();
 
             uint32_t binding = 0;
-            binder.BindImage(binding++, { targets_.tex1[idx].GetHandle() });
-            binder.BindImage(
-                binding++, { targets_.tex1[idx - 1].GetHandle(), PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
-                               PipelineStateConstants::GPU_IMAGE_ALL_LAYERS, ImageLayout::CORE_IMAGE_LAYOUT_GENERAL });
+            binder.BindImage(binding++, { input });
+            binder.BindImage(binding++, { targets_.tex1[idx - 1].GetHandle() });
             binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
             cmdList.UpdateDescriptorSet(
                 binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
@@ -438,9 +469,12 @@ void RenderBloom::RenderUpscale(RenderPass& renderPass, const PushConstant& pc, 
         uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
             1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
 
-        cmdList.PushConstant(pc, reinterpret_cast<uint8_t*>(&uPc));
+        cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Draw(3u, 1u, 0u, 0u);
         cmdList.EndRenderPass();
+
+        // next pass input
+        input = renderPassUpscale.renderPassDesc.attachmentHandles[0];
     }
 }
 
@@ -448,7 +482,7 @@ void RenderBloom::RenderCombine(RenderPass& renderPass, const PushConstant& pc, 
 {
     const auto targetSize = baseSize_;
 
-    renderPass.renderPassDesc.attachmentHandles[0] = bloomInfo_.output;
+    renderPass.renderPassDesc.attachmentHandles[0] = bloomInfo_.output.handle;
     renderPass.renderPassDesc.renderArea = { 0, 0, targetSize.x, targetSize.y };
     cmdList.BeginRenderPass(renderPass.renderPassDesc, 0, renderPass.subpassDesc);
 
@@ -466,7 +500,8 @@ void RenderBloom::RenderCombine(RenderPass& renderPass, const PushConstant& pc, 
 
         uint32_t binding = 0;
         binder.BindImage(binding++, { bloomInfo_.input });
-        binder.BindImage(binding++, { targets_.tex1[0].GetHandle() });
+        // tex2 handle has the final result
+        binder.BindImage(binding++, { targets_.tex2[0].GetHandle() });
         binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
 
         cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
@@ -478,7 +513,7 @@ void RenderBloom::RenderCombine(RenderPass& renderPass, const PushConstant& pc, 
     uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
         1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
 
-    cmdList.PushConstant(pc, reinterpret_cast<uint8_t*>(&uPc));
+    cmdList.PushConstantData(pc, arrayviewU8(uPc));
     cmdList.Draw(3u, 1u, 0u, 0u);
     cmdList.EndRenderPass();
 }
@@ -511,7 +546,8 @@ void RenderBloom::CreateTargets(IRenderNodeContextManager& renderNodeContextMgr,
             usageFlags,
             MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             0,
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS |
+                EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS,
             startTargetSize.x,
             startTargetSize.y,
             1u,
@@ -533,10 +569,16 @@ void RenderBloom::CreateTargets(IRenderNodeContextManager& renderNodeContextMgr,
             desc.height = (desc.height >= 1u) ? desc.height : 1u;
             targets_.tex1Size[idx] = Math::UVec2(desc.width, desc.height);
 #if (RENDER_VALIDATION_ENABLED == 1)
-            const auto targetName = nodeName + "_Bloom_" + to_string(idx);
-            targets_.tex1[idx] = gpuResourceMgr.Create(targetName, desc);
+            const auto baseTargetName = nodeName + "_Bloom_" + to_string(idx);
+            targets_.tex1[idx] = gpuResourceMgr.Create(baseTargetName + "_A", desc);
+            if (!bloomInfo_.useCompute) {
+                targets_.tex2[idx] = gpuResourceMgr.Create(baseTargetName + "_B", desc);
+            }
 #else
             targets_.tex1[idx] = gpuResourceMgr.Create(targets_.tex1[idx], desc);
+            if (!bloomInfo_.useCompute) {
+                targets_.tex2[idx] = gpuResourceMgr.Create(targets_.tex2[idx], desc);
+            }
 #endif
         }
     }
@@ -556,6 +598,38 @@ void RenderBloom::CreateComputePsos(IRenderNodeContextManager& renderNodeContext
     const auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     INodeContextPsoManager& psoMgr = renderNodeContextMgr.GetPsoManager();
     INodeContextDescriptorSetManager& dSetMgr = renderNodeContextMgr.GetDescriptorSetManager();
+
+    constexpr BASE_NS::pair<BloomConfiguration::BloomQualityType, uint32_t> configurations[] = {
+        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_LOW, RenderBloom::CORE_BLOOM_QUALITY_LOW },
+        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL, RenderBloom::CORE_BLOOM_QUALITY_NORMAL },
+        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_HIGH, RenderBloom::CORE_BLOOM_QUALITY_HIGH }
+    };
+    for (const auto& configuration : configurations) {
+        {
+            auto shader = shaderMgr.GetShaderHandle("rendershaders://computeshader/bloom_downscale.shader");
+            const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shader);
+            ShaderSpecializationConstantView specializations = shaderMgr.GetReflectionSpecialization(shader);
+            const ShaderSpecializationConstantDataView specDataView {
+                { specializations.constants.data(), specializations.constants.size() },
+                { &configuration.second, 1u },
+            };
+
+            psos_.downscaleHandlesCompute[configuration.first].regular =
+                psoMgr.GetComputePsoHandle(shader, pl, specDataView);
+        }
+        {
+            auto shader = shaderMgr.GetShaderHandle("rendershaders://computeshader/bloom_downscale_threshold.shader");
+            const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shader);
+
+            ShaderSpecializationConstantView specializations = shaderMgr.GetReflectionSpecialization(shader);
+            const ShaderSpecializationConstantDataView specDataView {
+                { specializations.constants.data(), specializations.constants.size() },
+                { &configuration.second, 1u },
+            };
+            psos_.downscaleHandlesCompute[configuration.first].threshold =
+                psoMgr.GetComputePsoHandle(shader, pl, specDataView);
+        }
+    }
 
     constexpr uint32_t globalSet = 0u;
     constexpr uint32_t localSetIdx = 1u;
@@ -612,8 +686,7 @@ void RenderBloom::CreateComputePsos(IRenderNodeContextManager& renderNodeContext
 }
 
 std::pair<RenderHandle, const PipelineLayout&> RenderBloom::CreateAndReflectRenderPso(
-    IRenderNodeContextManager& renderNodeContextMgr, const string_view shader, const RenderPass& renderPass,
-    const DynamicStateFlags dynamicStateFlags)
+    IRenderNodeContextManager& renderNodeContextMgr, const string_view shader, const RenderPass& renderPass)
 {
     const auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     const RenderHandle shaderHandle = shaderMgr.GetShaderHandle(shader.data());
@@ -621,8 +694,8 @@ std::pair<RenderHandle, const PipelineLayout&> RenderBloom::CreateAndReflectRend
     const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shaderHandle);
 
     auto& psoMgr = renderNodeContextMgr.GetPsoManager();
-    const RenderHandle pso =
-        psoMgr.GetGraphicsPsoHandle(shaderHandle, graphicsStateHandle, pl, {}, {}, dynamicStateFlags);
+    const RenderHandle pso = psoMgr.GetGraphicsPsoHandle(
+        shaderHandle, graphicsStateHandle, pl, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
     return { pso, pl };
 }
 
@@ -630,7 +703,7 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
 {
     RenderPass renderPass;
     renderPass.renderPassDesc.attachmentCount = 1;
-    renderPass.renderPassDesc.attachmentHandles[0] = bloomInfo_.input;
+    renderPass.renderPassDesc.attachmentHandles[0] = bloomInfo_.input.handle;
     renderPass.renderPassDesc.renderArea = { 0, 0, baseSize_.x, baseSize_.y };
     renderPass.renderPassDesc.subpassCount = 1;
     renderPass.renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -640,15 +713,50 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.colorAttachmentIndices[0] = 0;
 
-    constexpr DynamicStateFlags dynamicStateFlags = CORE_DYNAMIC_STATE_VIEWPORT | CORE_DYNAMIC_STATE_SCISSOR;
+    constexpr BASE_NS::pair<BloomConfiguration::BloomQualityType, uint32_t> configurations[] = {
+        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_LOW, RenderBloom::CORE_BLOOM_QUALITY_LOW },
+        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL, RenderBloom::CORE_BLOOM_QUALITY_NORMAL },
+        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_HIGH, RenderBloom::CORE_BLOOM_QUALITY_HIGH }
+    };
+
+    const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr.GetShaderManager();
+    INodeContextPsoManager& psoMgr = renderNodeContextMgr.GetPsoManager();
+
+    for (const auto& configuration : configurations) {
+        {
+            auto shader = shaderMgr.GetShaderHandle("rendershaders://shader/bloom_downscale.shader");
+            const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shader);
+            ShaderSpecializationConstantView specializations = shaderMgr.GetReflectionSpecialization(shader);
+            const ShaderSpecializationConstantDataView specDataView {
+                { specializations.constants.data(), specializations.constants.size() },
+                { &configuration.second, 1u },
+            };
+            const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader);
+            psos_.downscaleHandles[configuration.first].regular = psoMgr.GetGraphicsPsoHandle(
+                shader, graphicsState, pl, {}, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        }
+
+        {
+            auto shader = shaderMgr.GetShaderHandle("rendershaders://shader/bloom_downscale_threshold.shader");
+            const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shader);
+            ShaderSpecializationConstantView specializations = shaderMgr.GetReflectionSpecialization(shader);
+            const ShaderSpecializationConstantDataView specDataView {
+                { specializations.constants.data(), specializations.constants.size() },
+                { &configuration.second, 1u },
+            };
+            const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader);
+            psos_.downscaleHandles[configuration.first].threshold = psoMgr.GetGraphicsPsoHandle(
+                shader, graphicsState, pl, {}, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        }
+    }
 
     INodeContextDescriptorSetManager& dSetMgr = renderNodeContextMgr.GetDescriptorSetManager();
     constexpr uint32_t globalSet = 0u;
     constexpr uint32_t localSet = 1u;
     // the first one creates the global set as well
     {
-        const auto [pso, pipelineLayout] = CreateAndReflectRenderPso(renderNodeContextMgr,
-            "rendershaders://shader/bloom_downscale_threshold.shader", renderPass, dynamicStateFlags);
+        const auto [pso, pipelineLayout] = CreateAndReflectRenderPso(
+            renderNodeContextMgr, "rendershaders://shader/bloom_downscale_threshold.shader", renderPass);
         psos_.downscaleAndThreshold = pso;
 
         const auto& gBinds = pipelineLayout.descriptorSetLayouts[globalSet].bindings;
@@ -659,7 +767,7 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
     }
     {
         const auto [pso, pipelineLayout] = CreateAndReflectRenderPso(
-            renderNodeContextMgr, "rendershaders://shader/bloom_downscale.shader", renderPass, dynamicStateFlags);
+            renderNodeContextMgr, "rendershaders://shader/bloom_downscale.shader", renderPass);
         psos_.downscale = pso;
         const auto& binds = pipelineLayout.descriptorSetLayouts[localSet].bindings;
         for (uint32_t idx = 0; idx < TARGET_COUNT; ++idx) {
@@ -667,8 +775,8 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
         }
     }
     {
-        const auto [pso, pipelineLayout] = CreateAndReflectRenderPso(
-            renderNodeContextMgr, "rendershaders://shader/bloom_upscale.shader", renderPass, dynamicStateFlags);
+        const auto [pso, pipelineLayout] =
+            CreateAndReflectRenderPso(renderNodeContextMgr, "rendershaders://shader/bloom_upscale.shader", renderPass);
         psos_.upscale = pso;
         const auto& binds = pipelineLayout.descriptorSetLayouts[localSet].bindings;
         for (uint32_t idx = 0; idx < TARGET_COUNT; ++idx) {
@@ -676,8 +784,8 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
         }
     }
     {
-        const auto [pso, pipelineLayout] = CreateAndReflectRenderPso(
-            renderNodeContextMgr, "rendershaders://shader/bloom_combine.shader", renderPass, dynamicStateFlags);
+        const auto [pso, pipelineLayout] =
+            CreateAndReflectRenderPso(renderNodeContextMgr, "rendershaders://shader/bloom_combine.shader", renderPass);
         psos_.combine = pso;
         const auto& binds = pipelineLayout.descriptorSetLayouts[localSet].bindings;
         binders_.combine = dSetMgr.CreateDescriptorSetBinder(dSetMgr.CreateDescriptorSet(binds), binds);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -157,31 +157,6 @@ void ShaderLoader::LoadFile(const string_view uri, const bool forceReload)
     }
 }
 
-void ShaderLoader::Reload(const array_view<string>& shaderSpvFiles)
-{
-    std::set<string> names;
-    for (auto const& file : shaderSpvFiles) {
-        ShaderStageFlags shaderStageFlags = 0;
-#if (RENDER_DEV_ENABLED == 1)
-        // re-load only works properly with dev enabled
-        if (auto const pos = fileToShaderNames_.find(file); pos != fileToShaderNames_.end()) {
-            shaderStageFlags = pos->second.shaderStageFlags;
-            names.insert(pos->second.shaderNames.begin(), pos->second.shaderNames.end());
-        }
-#endif
-        // re-create shader module
-        const auto shaderFile = LoadShaderFile(file, shaderStageFlags);
-        if (!shaderFile.data.empty() && (shaderStageFlags != 0)) {
-            const ShaderModuleCreateInfo moduleCreateInfo { shaderStageFlags, shaderFile.data,
-                { shaderFile.reflectionData } };
-            shaderMgr_.CreateShaderModule(file, moduleCreateInfo);
-        }
-#if (RENDER_VALIDATION_ENABLED == 1)
-        PLUGIN_LOG_W("RENDER_VALIDATION: cannot reload spv files due to missing shader stage flags info");
-#endif
-    }
-}
-
 void ShaderLoader::HandleShaderFile(
     const string_view fullFileName, const IDirectory::Entry& entry, const bool forceReload)
 {
@@ -329,11 +304,10 @@ ShaderLoader::ShaderFile ShaderLoader::LoadShaderFile(const string_view shader, 
     return info;
 }
 
-RenderHandleReference ShaderLoader::CreateComputeShader(
-    const ShaderDataLoader& shaderDataLoader, const bool forceReload)
+RenderHandleReference ShaderLoader::CreateComputeShader(const ShaderDataLoader& dataLoader, const bool forceReload)
 {
     RenderHandleReference firstShaderVariantRhr;
-    const array_view<const ShaderDataLoader::ShaderVariant> shaderVariants = shaderDataLoader.GetShaderVariants();
+    const array_view<const ShaderDataLoader::ShaderVariant> shaderVariants = dataLoader.GetShaderVariants();
     for (const auto& shaderVariant : shaderVariants) {
         const string_view computeShader = shaderVariant.computeShader;
         uint32_t index = INVALID_SM_INDEX;
@@ -349,12 +323,17 @@ RenderHandleReference ShaderLoader::CreateComputeShader(
             }
         }
         if (index != INVALID_SM_INDEX) {
-            const string_view uri = shaderDataLoader.GetUri();
-            const string_view baseShaderPath = shaderDataLoader.GetBaseShader();
+            const string_view uri = dataLoader.GetUri();
+            const string_view baseShaderPath = dataLoader.GetBaseShader();
+            const string_view baseCategory = dataLoader.GetBaseCategory();
             const string_view variantName = shaderVariant.variantName;
+            const string_view displayName = shaderVariant.displayName;
             const string_view pipelineLayout = shaderVariant.pipelineLayout;
             const string_view renderSlot = shaderVariant.renderSlot;
-            const uint32_t rsId = renderSlot.empty() ? INVALID_SM_INDEX : shaderMgr_.CreateRenderSlotId(renderSlot);
+            const string_view shaderFileStr = shaderVariant.shaderFileStr;
+            const string_view matMetadataStr = shaderVariant.materialMetadata;
+            const uint32_t rsId = shaderMgr_.CreateRenderSlotId(renderSlot);
+            const uint32_t catId = shaderMgr_.CreateCategoryId(baseCategory);
             const uint32_t plIndex =
                 (pipelineLayout.empty())
                     ? INVALID_SM_INDEX
@@ -364,7 +343,9 @@ RenderHandleReference ShaderLoader::CreateComputeShader(
             RenderHandleReference rhr;
             if (!firstShaderVariantRhr) {
                 // NOTE: empty variant name
-                rhr = shaderMgr_.Create(ComputeShaderCreateData { uri, rsId, plIndex, index }, baseShaderPath, {});
+                rhr = shaderMgr_.Create(
+                    ComputeShaderCreateData { uri, rsId, catId, plIndex, index, shaderFileStr, matMetadataStr },
+                    { baseShaderPath, {}, displayName });
                 firstShaderVariantRhr = rhr;
                 // add additional fullname with variant for the base shader
                 if (!variantName.empty()) {
@@ -372,7 +353,8 @@ RenderHandleReference ShaderLoader::CreateComputeShader(
                 }
             } else {
                 rhr = shaderMgr_.Create(
-                    ComputeShaderCreateData { uri, rsId, plIndex, index }, baseShaderPath, variantName);
+                    ComputeShaderCreateData { uri, rsId, catId, plIndex, index, shaderFileStr, matMetadataStr },
+                    { baseShaderPath, variantName, displayName });
             }
             if (shaderVariant.renderSlotDefaultShader) {
                 shaderMgr_.SetRenderSlotData(rsId, rhr, {});
@@ -384,11 +366,10 @@ RenderHandleReference ShaderLoader::CreateComputeShader(
     return firstShaderVariantRhr;
 }
 
-RenderHandleReference ShaderLoader::CreateGraphicsShader(
-    const ShaderDataLoader& shaderDataLoader, const bool forceReload)
+RenderHandleReference ShaderLoader::CreateGraphicsShader(const ShaderDataLoader& dataLoader, const bool forceReload)
 {
     RenderHandleReference firstShaderVariantRhr;
-    const array_view<const ShaderDataLoader::ShaderVariant> shaderVariants = shaderDataLoader.GetShaderVariants();
+    const array_view<const ShaderDataLoader::ShaderVariant> shaderVariants = dataLoader.GetShaderVariants();
     for (const auto& svRef : shaderVariants) {
         const string_view vertexShader = svRef.vertexShader;
         const string_view fragmentShader = svRef.fragmentShader;
@@ -407,40 +388,43 @@ RenderHandleReference ShaderLoader::CreateGraphicsShader(
             }
         }
         if ((vertIndex != INVALID_SM_INDEX) && (fragIndex != INVALID_SM_INDEX)) {
-            const string_view uri = shaderDataLoader.GetUri();
+            const string_view uri = dataLoader.GetUri();
             // creating the default graphics state with full name
             const string fullName = uri + svRef.variantName;
             // default graphics state is created beforehand
-            const RenderHandleReference defaultGfxState =
-                shaderMgr_.CreateGraphicsState({ fullName, svRef.graphicsState }, { svRef.renderSlot, {}, {}, {} });
-            const uint32_t rsId =
-                svRef.renderSlot.empty() ? INVALID_SM_INDEX : shaderMgr_.CreateRenderSlotId(svRef.renderSlot);
+            const RenderHandleReference defaultGfxState = shaderMgr_.CreateGraphicsState(
+                { fullName, svRef.graphicsState }, { svRef.renderSlot, {}, {}, {}, svRef.stateFlags });
+            const uint32_t rsId = shaderMgr_.CreateRenderSlotId(svRef.renderSlot);
+            const uint32_t catId = shaderMgr_.CreateCategoryId(dataLoader.GetBaseCategory());
             const uint32_t plIndex = svRef.pipelineLayout.empty()
                                          ? INVALID_SM_INDEX
                                          : RenderHandleUtil::GetIndexPart(
-                                               shaderMgr_.GetPipelineLayoutHandle(svRef.pipelineLayout).GetHandle());
+                                            shaderMgr_.GetPipelineLayoutHandle(svRef.pipelineLayout).GetHandle());
             const uint32_t vidIndex =
                 svRef.vertexInputDeclaration.empty()
                     ? INVALID_SM_INDEX
                     : RenderHandleUtil::GetIndexPart(
-                        shaderMgr_.GetVertexInputDeclarationHandle(svRef.vertexInputDeclaration).GetHandle());
+                          shaderMgr_.GetVertexInputDeclarationHandle(svRef.vertexInputDeclaration).GetHandle());
             const uint32_t stateIndex = RenderHandleUtil::GetIndexPart(defaultGfxState.GetHandle());
+            const string_view shaderStr = svRef.shaderFileStr;
             const string_view matMeta = svRef.materialMetadata;
             // if many variants, the first is shader created without variant name
             // it will have additional name for searching though
             RenderHandleReference rhr;
             if (!firstShaderVariantRhr) {
                 // NOTE: empty variant name
-                rhr = shaderMgr_.Create({ uri, rsId, vidIndex, plIndex, stateIndex, vertIndex, fragIndex, matMeta },
-                    shaderDataLoader.GetBaseShader(), {});
+                rhr = shaderMgr_.Create(
+                    { uri, rsId, catId, vidIndex, plIndex, stateIndex, vertIndex, fragIndex, shaderStr, matMeta },
+                    { dataLoader.GetBaseShader(), {}, svRef.displayName });
                 firstShaderVariantRhr = rhr;
                 // add additional fullname with variant for the base shader
                 if (!svRef.variantName.empty()) {
                     shaderMgr_.AddAdditionalNameForHandle(firstShaderVariantRhr, fullName);
                 }
             } else {
-                rhr = shaderMgr_.Create({ uri, rsId, vidIndex, plIndex, stateIndex, vertIndex, fragIndex, matMeta },
-                    shaderDataLoader.GetBaseShader(), svRef.variantName);
+                rhr = shaderMgr_.Create(
+                    { uri, rsId, catId, vidIndex, plIndex, stateIndex, vertIndex, fragIndex, shaderStr, matMeta },
+                    { dataLoader.GetBaseShader(), svRef.variantName, svRef.displayName });
             }
             if (svRef.renderSlotDefaultShader) {
                 shaderMgr_.SetRenderSlotData(rsId, rhr, {});
@@ -452,21 +436,21 @@ RenderHandleReference ShaderLoader::CreateGraphicsShader(
     return firstShaderVariantRhr;
 }
 
-RenderHandleReference ShaderLoader::CreateShader(const ShaderDataLoader& shaderDataLoader, const bool forceReload)
+RenderHandleReference ShaderLoader::CreateShader(const ShaderDataLoader& dataLoader, const bool forceReload)
 {
-    const array_view<const ShaderDataLoader::ShaderVariant> shaderVariants = shaderDataLoader.GetShaderVariants();
+    const array_view<const ShaderDataLoader::ShaderVariant> shaderVariants = dataLoader.GetShaderVariants();
     if (shaderVariants.empty()) {
         return {};
     }
 
     const string_view compShader = shaderVariants[0].computeShader;
     if (!compShader.empty()) {
-        return CreateComputeShader(shaderDataLoader, forceReload);
+        return CreateComputeShader(dataLoader, forceReload);
     } else {
         const string_view vertShader = shaderVariants[0].vertexShader;
         const string_view fragShader = shaderVariants[0].fragmentShader;
         if (!vertShader.empty() && !fragShader.empty()) {
-            return CreateGraphicsShader(shaderDataLoader, forceReload);
+            return CreateGraphicsShader(dataLoader, forceReload);
         }
     }
     return {};
@@ -498,7 +482,7 @@ void ShaderLoader::CreateShaderStates(const string_view uri,
         const ShaderManager::GraphicsStateCreateInfo createInfo { uri, states[stateIdx] };
         const auto& variant = variantData[stateIdx];
         const ShaderManager::GraphicsStateVariantCreateInfo variantCreateInfo { variant.renderSlot, variant.variantName,
-            variant.baseShaderState, variant.baseVariantName };
+            variant.baseShaderState, variant.baseVariantName, variant.stateFlags };
         const RenderHandleReference handle = shaderMgr_.CreateGraphicsState(createInfo, variantCreateInfo);
         if (variant.renderSlotDefaultState && (!variant.renderSlot.empty())) {
             const uint32_t renderSlotId = shaderMgr_.GetRenderSlotId(variant.renderSlot);

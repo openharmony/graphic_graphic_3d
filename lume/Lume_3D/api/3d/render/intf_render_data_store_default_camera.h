@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -66,6 +66,26 @@ public:
      * @return Count of cameras in RenderCamera array.
      */
     virtual uint32_t GetCameraCount() const = 0;
+
+    /** Add environment to scene.
+     * @param environment A environment to be added.
+     */
+    virtual void AddEnvironment(const RenderCamera::Environment& environment) = 0;
+
+    /** Get all environments for particular scene id.
+     * @return array view to all environments.
+     */
+    virtual BASE_NS::array_view<const RenderCamera::Environment> GetEnvironments() const = 0;
+
+    /** Get environment by id.
+     * @return render environment.
+     */
+    virtual RenderCamera::Environment GetEnvironment(const uint64_t id) const = 0;
+
+    /** Get environment count.
+     * @return Count of environments.
+     */
+    virtual uint32_t GetEnvironmentCount() const = 0;
 
 protected:
     IRenderDataStoreDefaultCamera() = default;

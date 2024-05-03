@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,8 +16,6 @@
 #ifndef API_CORE_OS_OHOS_PLATFORM_CREATE_INFO_H
 #define API_CORE_OS_OHOS_PLATFORM_CREATE_INFO_H
 
-#ifdef __OHOS_PLATFORM__
-
 #include <base/containers/string.h>
 #include <core/namespace.h>
 
@@ -31,14 +29,11 @@ struct PlatformCreateInfo {
     BASE_NS::string appRootPath = "./";
     /** Application plugin path */
     BASE_NS::string appPluginPath = "./";
-
-    /**HapInfo*/
+    /** HapInfo */
     BASE_NS::string hapPath = "./";
     BASE_NS::string bundleName = "./";
     BASE_NS::string moduleName = "./";
 };
 CORE_END_NAMESPACE()
-
-#endif // __OHOS_PLATFORM__
 
 #endif // API_CORE_OS_OHOS_PLATFORM_CREATE_INFO_H

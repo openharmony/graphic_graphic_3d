@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,9 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE_OS_LINUX_LIBRARY_LINUX_H
-#define CORE_OS_LINUX_LIBRARY_LINUX_H
-
+#ifndef CORE_OS_OHOS_LIBRARY_OHOS_H
+#define CORE_OS_OHOS_LIBRARY_OHOS_H
 
 #include <core/namespace.h>
 
@@ -37,4 +36,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_OS_LINUX_LIBRARY_LINUX_H
+#endif // CORE_OS_OHOS_LIBRARY_OHOS_H

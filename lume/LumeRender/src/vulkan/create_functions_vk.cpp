@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <base/containers/vector.h>
 #include <render/intf_render_context.h>
@@ -63,7 +63,7 @@ inline void LogPhysicalDeviceProperties(const VkPhysicalDeviceProperties& physic
     PLUGIN_LOG_D("vendor id: %x", physicalDeviceProperties.vendorID);
     PLUGIN_LOG_D("device id: %x", physicalDeviceProperties.deviceID);
     PLUGIN_LOG_D("device name: %s", physicalDeviceProperties.deviceName);
-    PLUGIN_LOG_D("device type: %u", physicalDeviceProperties.deviceType);
+    PLUGIN_LOG_D("device type: %d", physicalDeviceProperties.deviceType);
     PLUGIN_LOG_D("timestampPeriod: %f", physicalDeviceProperties.limits.timestampPeriod);
 }
 
@@ -176,9 +176,8 @@ vector<LowLevelQueueInfo> CreateFunctionsVk::GetAvailableQueues(
     return availableQueues;
 }
 
-InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo, const VersionInfo& appInfo)
+vector<VkExtensionProperties> GetInstanceExtensions()
 {
-    InstanceWrapper wrapper;
     uint32_t instanceExtensionPropertyCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, // pLayerName
         &instanceExtensionPropertyCount,            // propertyCount
@@ -187,15 +186,64 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
     vkEnumerateInstanceExtensionProperties(nullptr, // pLayerName
         &instanceExtensionPropertyCount,            // propertyCount
         instanceExtensions.data());                 // pProperties
+    return instanceExtensions;
+}
+
+vector<VkLayerProperties> GetInstancLayers()
+{
+    uint32_t instanceLayerPropertyCount = 0;
+    vkEnumerateInstanceLayerProperties(&instanceLayerPropertyCount, // pPropertyCount
+        nullptr);                                                   // pProperties
+    vector<VkLayerProperties> instanceLayers(instanceLayerPropertyCount);
+    vkEnumerateInstanceLayerProperties(&instanceLayerPropertyCount, // pPropertyCount
+        instanceLayers.data());                                     // pProperties
+    return instanceLayers;
+}
+
+InstanceWrapper CreateFunctionsVk::GetWrapper(VkInstance instance)
+{
+    InstanceWrapper wrapper;
+    wrapper.instance = instance;
+
+#if (!defined(NDEBUG) || RENDER_VULKAN_VALIDATION_ENABLED == 1)
+    vector<VkExtensionProperties> instanceExtensions = GetInstanceExtensions();
+
+#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
+    const char* debugExtension = nullptr;
+#endif
+    for (const auto& ref : instanceExtensions) {
+        PLUGIN_LOG_V("%s", ref.extensionName);
+#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
+        if (strcmp(ref.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
+            wrapper.debugUtilsSupported = true;
+            debugExtension = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+        } else if (!debugExtension && strcmp(ref.extensionName, VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == 0) {
+            wrapper.debugReportSupported = true;
+            debugExtension = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+        }
+#endif
+    }
+#endif
+    const uint32_t apiVersion = GetInstanceApiVersion();
+    wrapper.apiMajor = VK_VERSION_MAJOR(apiVersion);
+    wrapper.apiMinor = VK_VERSION_MINOR(apiVersion);
+    return wrapper;
+}
+
+InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo, const VersionInfo& appInfo)
+{
+    InstanceWrapper wrapper;
+
+    vector<VkExtensionProperties> instanceExtensions = GetInstanceExtensions();
 
     // NOTE: check extensions...
-    PLUGIN_LOG_D("Vulkan: available extensions:");
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     const char* debugExtension = nullptr;
 #endif
 #if (!defined(NDEBUG) || RENDER_VULKAN_VALIDATION_ENABLED == 1)
+    PLUGIN_LOG_V("Vulkan: available extensions:");
     for (const auto& ref : instanceExtensions) {
-        PLUGIN_LOG_D("%s", ref.extensionName);
+        PLUGIN_LOG_V("%s", ref.extensionName);
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
         if (strcmp(ref.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
             wrapper.debugUtilsSupported = true;
@@ -209,6 +257,9 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
 #endif
 
     vector<const char*> extensions = { VK_KHR_SURFACE_EXTENSION_NAME, GetPlatformSurfaceName() };
+#ifdef __APPLE__
+    extensions.push_back("VK_KHR_portability_enumeration");
+#endif
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     if (debugExtension) {
         extensions.push_back(debugExtension);
@@ -226,14 +277,9 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
         })) {
     }
 
-    uint32_t instanceLayerPropertyCount = 0;
-    vkEnumerateInstanceLayerProperties(&instanceLayerPropertyCount, // pPropertyCount
-        nullptr);                                                   // pProperties
-    vector<VkLayerProperties> instanceLayers(instanceLayerPropertyCount);
-    vkEnumerateInstanceLayerProperties(&instanceLayerPropertyCount, // pPropertyCount
-        instanceLayers.data());                                     // pProperties
-    PLUGIN_LOG_D("Vulkan: available layers:");
+    vector<VkLayerProperties> instanceLayers = GetInstancLayers();
 #if (!defined(NDEBUG) || RENDER_VULKAN_VALIDATION_ENABLED == 1)
+    PLUGIN_LOG_D("Vulkan: available layers:");
     for (const auto& ref : instanceLayers) {
         PLUGIN_LOG_D("%s", ref.layerName);
     }
@@ -244,17 +290,18 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
         "VK_LAYER_KHRONOS_validation",
 #endif
     };
-    if (!std::all_of(layers.begin(), layers.end(), [&instanceLayers](auto const requiredLayer) {
-            const bool supported =
-                std::any_of(instanceLayers.begin(), instanceLayers.end(), [&requiredLayer](const auto& supportedLayer) {
-                    return (std::strcmp(supportedLayer.layerName, requiredLayer) == 0);
-                });
-            if (!supported) {
-                PLUGIN_LOG_E("some layers are not supported! Layer name: %s", requiredLayer);
-            }
-            return supported;
-        })) {
-    }
+    layers.erase(std::remove_if(layers.begin(), layers.end(),
+                     [&instanceLayers](const char* requiredLayer) {
+                         const bool supported = std::any_of(instanceLayers.begin(), instanceLayers.end(),
+                             [&requiredLayer](const VkLayerProperties& supportedLayer) {
+                                 return (std::strcmp(supportedLayer.layerName, requiredLayer) == 0);
+                             });
+                         if (!supported) {
+                             PLUGIN_LOG_E("some layers are not supported! Layer name: %s", requiredLayer);
+                         }
+                         return !supported;
+                     }),
+        layers.cend());
 
     const uint32_t apiVersion = GetInstanceApiVersion();
     wrapper.apiMajor = VK_VERSION_MAJOR(apiVersion);
@@ -276,12 +323,16 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
     const VkInstanceCreateInfo instanceCreateInfo {
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // sType
         nullptr,                                // pNext
-        0,                                      // flags
-        &applicationInfo,                       // pApplicationInfo
-        (uint32_t)layers.size(),                // enabledLayerCount
-        layers.data(),                          // ppEnabledLayerNames
-        (uint32_t)extensions.size(),            // enabledExtensionCount
-        extensions.data(),                      // ppEnabledExtensionNames
+#ifdef __APPLE__
+        VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR, // flags
+#else
+        0, // flags
+#endif
+        &applicationInfo,            // pApplicationInfo
+        (uint32_t)layers.size(),     // enabledLayerCount
+        layers.data(),               // ppEnabledLayerNames
+        (uint32_t)extensions.size(), // enabledExtensionCount
+        extensions.data(),           // ppEnabledExtensionNames
     };
 
     VALIDATE_VK_RESULT(vkCreateInstance(&instanceCreateInfo, // pCreateInfo
@@ -399,49 +450,62 @@ void CreateFunctionsVk::DestroyDebugMessenger(VkInstance instance, VkDebugUtilsM
 #endif
 }
 
-PhysicalDeviceWrapper CreateFunctionsVk::CreatePhysicalDevice(
-    VkInstance instance, QueueProperties const& queueProperties)
+PhysicalDeviceWrapper CreateFunctionsVk::GetWrapper(VkPhysicalDevice physicalDevice)
 {
-    uint32_t physicalDeviceCount = 0;
-    VALIDATE_VK_RESULT(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr));
-
-    VkPhysicalDevice physicalDevice { VK_NULL_HANDLE };
-
-    uint32_t usedPhysicalDeviceCount { 1 }; // only one device, the first
-    const VkResult result = vkEnumeratePhysicalDevices(instance, &usedPhysicalDeviceCount, &physicalDevice);
-    PLUGIN_UNUSED(result);
-    PLUGIN_ASSERT_MSG((result == VK_SUCCESS || result == VK_INCOMPLETE), "vulkan device enumeration failed");
-
     VkPhysicalDeviceProperties physicalDeviceProperties;
     vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
     VkPhysicalDeviceFeatures physicalDeviceFeatures;
     vkGetPhysicalDeviceFeatures(physicalDevice, &physicalDeviceFeatures);
 
+    uint32_t extensionPropertyCount = 0;
+    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionPropertyCount, nullptr);
+    vector<VkExtensionProperties> extensions(extensionPropertyCount);
+    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionPropertyCount, extensions.data());
+    std::sort(extensions.begin(), extensions.end(), [](const VkExtensionProperties& lhs, VkExtensionProperties& rhs) {
+        return std::strcmp(lhs.extensionName, rhs.extensionName) < 0;
+    });
     VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemoryProperties);
+    if constexpr (CORE_ENABLE_VULKAN_PHYSICAL_DEVICE_PRINT) {
+        LogPhysicalDeviceProperties(physicalDeviceProperties);
+        for (uint32_t idx = 0; idx < extensions.size(); ++idx) {
+            PLUGIN_LOG_V(
+                "physical device extension: %s %u", extensions[idx].extensionName, extensions[idx].specVersion);
+        }
+#ifndef NDEBUG
+        LogPhysicalDeviceMemoryProperties(physicalDeviceMemoryProperties);
+#endif
+    }
+
+    return { physicalDevice, move(extensions),
+        { move(physicalDeviceProperties), move(physicalDeviceFeatures), move(physicalDeviceMemoryProperties) } };
+}
+
+PhysicalDeviceWrapper CreateFunctionsVk::CreatePhysicalDevice(
+    VkInstance instance, QueueProperties const& queueProperties)
+{
+    uint32_t physicalDeviceCount = 0;
+    VALIDATE_VK_RESULT(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr));
+
+    uint32_t usedPhysicalDeviceCount { 1 }; // only one device, the first
+    // some drivers write out physicalDeviceCount instead of usedPhysicalDeviceCount VkPhysicalDevices so we need enough
+    // space
+    vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount, VK_NULL_HANDLE);
+    const VkResult result = vkEnumeratePhysicalDevices(instance, &usedPhysicalDeviceCount, physicalDevices.data());
+    PLUGIN_UNUSED(result);
+    PLUGIN_ASSERT_MSG((result == VK_SUCCESS || result == VK_INCOMPLETE), "vulkan device enumeration failed");
+
+    const VkPhysicalDevice physicalDevice = physicalDevices[0];
 
     uint32_t queueFamilyPropertyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropertyCount, nullptr);
     vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyPropertyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropertyCount, queueFamilyProperties.data());
 
-    uint32_t extensionPropertyCount = 0;
-    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionPropertyCount, nullptr);
-    vector<VkExtensionProperties> extensions(extensionPropertyCount);
-    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionPropertyCount, extensions.data());
-
     if constexpr (CORE_ENABLE_VULKAN_PHYSICAL_DEVICE_PRINT) {
         PLUGIN_LOG_D("physical device count: %u", physicalDeviceCount);
-        LogPhysicalDeviceProperties(physicalDeviceProperties);
         LogQueueFamilyProperties(instance, physicalDevice, queueFamilyProperties);
-        for (uint32_t idx = 0; idx < extensions.size(); ++idx) {
-            PLUGIN_LOG_D(
-                "physical device extension: %s %u", extensions[idx].extensionName, extensions[idx].specVersion);
-        }
-#ifndef NDEBUG
-        LogPhysicalDeviceMemoryProperties(physicalDeviceMemoryProperties);
-#endif
     }
 
     const auto suitableQueue = FindSuitableQueue(queueFamilyProperties, queueProperties);
@@ -450,9 +514,20 @@ PhysicalDeviceWrapper CreateFunctionsVk::CreatePhysicalDevice(
             queueProperties.canPresent);
         return {};
     }
+    return GetWrapper(physicalDevice);
+}
 
-    return { physicalDevice, move(extensions),
-        { move(physicalDeviceProperties), move(physicalDeviceFeatures), move(physicalDeviceMemoryProperties) } };
+bool CreateFunctionsVk::HasExtension(
+    array_view<const VkExtensionProperties> physicalDeviceExtensions, string_view extension)
+{
+    VkExtensionProperties value;
+    value.extensionName[extension.copy(
+        value.extensionName, Math::min(countof(value.extensionName), extension.size()), 0U)] = '\0';
+    value.specVersion = 1;
+    return std::binary_search(physicalDeviceExtensions.cbegin(), physicalDeviceExtensions.cend(), value,
+        [](const VkExtensionProperties& element, const VkExtensionProperties& value) {
+            return std::strcmp(element.extensionName, value.extensionName) < 0;
+        });
 }
 
 DeviceWrapper CreateFunctionsVk::CreateDevice(VkInstance instance, VkPhysicalDevice physicalDevice,
@@ -497,12 +572,10 @@ DeviceWrapper CreateFunctionsVk::CreateDevice(VkInstance instance, VkPhysicalDev
 #endif
     };
     vector<const char*> extensions;
-    for (uint32_t idx = 0; idx < preferredDeviceExtensions.size(); ++idx) {
-        for (uint32_t jdx = 0; jdx < physicalDeviceExtensions.size(); ++jdx) {
-            if (preferredDeviceExtensions[idx].compare(physicalDeviceExtensions[jdx].extensionName) == 0) {
-                extensions.push_back(physicalDeviceExtensions[jdx].extensionName);
-                deviceWrapper.extensions.push_back(physicalDeviceExtensions[jdx].extensionName);
-            }
+    for (const string_view& preferredDeviceExtension : preferredDeviceExtensions) {
+        if (HasExtension(physicalDeviceExtensions, preferredDeviceExtension)) {
+            extensions.push_back(preferredDeviceExtension.data());
+            deviceWrapper.extensions.push_back(preferredDeviceExtension.data());
         }
     }
     if constexpr (CORE_ENABLE_VULKAN_PHYSICAL_DEVICE_PRINT) {
@@ -556,10 +629,9 @@ void CreateFunctionsVk::DestroySurface(VkInstance instance, VkSurfaceKHR surface
 
 void CreateFunctionsVk::DestroySwapchain(VkDevice device, VkSwapchainKHR swapchain)
 {
-    PLUGIN_ASSERT_MSG(device, "null device in DestroySwapchain()");
-    PLUGIN_ASSERT_MSG(swapchain, "null swapchain in DestroySwapchain()");
-
-    vkDestroySwapchainKHR(device, swapchain, nullptr);
+    if (device && swapchain) {
+        vkDestroySwapchainKHR(device, swapchain, nullptr);
+    }
 }
 
 VkPipelineCache CreateFunctionsVk::CreatePipelineCache(VkDevice device, array_view<const uint8_t> initialData)

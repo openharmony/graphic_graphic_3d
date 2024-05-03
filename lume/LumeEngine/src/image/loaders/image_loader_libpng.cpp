@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,10 +14,12 @@
  */
 
 #include "image/loaders/image_loader_libpng.h"
-
+#if defined(USE_LIB_PNG_JPEG) && (USE_LIB_PNG_JPEG == 1)
 #include "png.h"
 #include "pngstruct.h"
 #include "pnginfo.h"
+#include <core/log.h>
+#include "base/containers/string.h"
 
 #include "image/loaders/image_loader_common.h"
 
@@ -117,6 +119,10 @@ public:
         }
 
         png_bytep buff = static_cast<png_bytep>(malloc(imgSize * sizeof(uint8_t)));
+        if (buff == nullptr) {
+            CORE_LOG_E("malloc fail return null");
+            return imageBytes;
+        }
         imageBytes = {buff, FreeLibBaseImageBytes};
 
         png_read_image(png_ptr, rp.rowPointers);
@@ -272,6 +278,10 @@ public:
         return ImageLoaderManager::ResultFailureAnimated("Animation not supported.");
     }
 
+    BASE_NS::vector<IImageLoaderManager::ImageType> GetSupportedTypes() const override
+    {
+        return BASE_NS::vector<IImageLoaderManager::ImageType>(std::begin(PNG_IMAGE_TYPES), std::end(PNG_IMAGE_TYPES));
+    }
 protected:
     ~ImageLoaderLibPNGImage() = default;
     void Destroy() override
@@ -280,8 +290,9 @@ protected:
     }
 };
 }  // namespace
-IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderLibPNGImage()
+IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderLibPNGImage(PluginToken)
 {
     return ImageLoaderManager::IImageLoader::Ptr{new ImageLoaderLibPNGImage()};
 }
 CORE_END_NAMESPACE()
+#endif // defined(USE_LIB_PNG_JPEG) && (USE_LIB_PNG_JPEG == 1)

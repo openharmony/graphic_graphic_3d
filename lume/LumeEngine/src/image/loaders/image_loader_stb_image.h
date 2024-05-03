@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,15 +19,19 @@
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
-#ifdef USE_STB_IMAGE
-#if USE_STB_IMAGE
-IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderStbImage();
+static const CORE_NS::IImageLoaderManager::ImageType STB_IMAGE_TYPES[] = {
+    { "image/png", "png" },
+    { "image/jpeg", "jpeg" },
+    { "image/jpeg", "jpg" },
+};
+
+#if defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)
+IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderStbImage(PluginToken);
 #else
-static inline IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderStbImage()
+static inline IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderStbImage(PluginToken)
 {
     return {};
 }
-#endif
 #endif
 CORE_END_NAMESPACE()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,7 +37,12 @@ public:
 
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
-    void ExecuteFrame(IRenderCommandList& cmdList) override;
+    void ExecuteFrame(IRenderCommandList& cmdList) override {};
+    ExecuteFlags GetExecuteFlags() const override
+    {
+        // no work in execute
+        return IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE;
+    }
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "9942031e-c80c-4d38-ae08-65555592b4df" };
@@ -60,6 +65,7 @@ private:
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     void ParseRenderNodeInputs();
+    Size2D GetClampedShadingRateTexelSize(const Size2D& shadingRateTexelSize);
 
     struct JsonInputs {
         BASE_NS::vector<RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> gpuImageDescs;
@@ -76,6 +82,7 @@ private:
 
     BASE_NS::vector<RenderHandle> dependencyHandles_;
     BASE_NS::vector<DependencyList> dependencyList_;
+    BASE_NS::vector<Size2D> shadingRateTexelSizes_;
 };
 RENDER_END_NAMESPACE()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,21 +20,30 @@
 
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
+#include <base/containers/string_view.h>
 #include <base/containers/unique_ptr.h>
-#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/ecs/intf_ecs.h>
 #include <core/engine_info.h>
 #include <core/intf_engine.h>
 #include <core/io/intf_file_manager.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_class_register.h>
+#include <core/plugin/intf_interface.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 
-#include "os/intf_library.h"
-#include "os/platform.h"
+BASE_BEGIN_NAMESPACE()
+struct Uid;
+template<class T1, class T2>
+struct pair;
+BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
-class IEcs;
+class IImageLoaderManager;
+class IPlatform;
+class IThreadPool;
 
 class Engine final : public IEngine, virtual public IClassRegister, IPluginRegister::ITypeInfoListener {
 public:
@@ -51,8 +60,6 @@ public:
     const IPlatform& GetPlatform() const override;
 
     EngineTime GetEngineTime() const override;
-
-    BASE_NS::string_view GetRootPath() override;
 
     IEcs::Ptr CreateEcs() override;
     IEcs::Ptr CreateEcs(IThreadPool& threadPool) override;
@@ -83,19 +90,16 @@ private:
     void RegisterDefaultPaths();
     void LoadPlugins();
     void UnloadPlugins();
-    bool TickFrame(IEcs& ecs, uint64_t totalTime, uint64_t deltaTime);
+    static bool TickFrame(IEcs& ecs, uint64_t totalTime, uint64_t deltaTime);
 
     uint64_t firstTime_ { ~0u };
     uint64_t previousFrameTime_ { ~0u };
     uint64_t deltaTime_ { 1 };
 
     BASE_NS::unique_ptr<IPlatform> platform_;
-    BASE_NS::string rooturi_;
     ContextInfo applicationContext_;
 
     IFileManager::Ptr fileManager_;
-
-    BASE_NS::unique_ptr<class FileMonitor> fileMonitor_;
 
     BASE_NS::unique_ptr<class ImageLoaderManager> imageManager_;
     uint32_t refCount_ { 0 };

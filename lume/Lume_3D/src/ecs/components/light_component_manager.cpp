@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,7 +28,6 @@ DECLARE_PROPERTY_TYPE(CORE3D_NS::LightComponent::Type);
 
 // Declare their metadata
 BEGIN_ENUM(LightTypeMetaData, CORE3D_NS::LightComponent::Type)
-DECL_ENUM(CORE3D_NS::LightComponent::Type, INVALID, "Undefined")
 DECL_ENUM(CORE3D_NS::LightComponent::Type, DIRECTIONAL, "Directional")
 DECL_ENUM(CORE3D_NS::LightComponent::Type, POINT, "Point")
 DECL_ENUM(CORE3D_NS::LightComponent::Type, SPOT, "Spot")

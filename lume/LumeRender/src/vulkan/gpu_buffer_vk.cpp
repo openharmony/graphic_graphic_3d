@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -96,8 +96,96 @@ GpuBufferVk::GpuBufferVk(Device& device, const GpuBufferDesc& desc)
       isRingBuffer_(desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER),
       bufferingCount_(isRingBuffer_ ? device_.GetCommandBufferingCount() : 1u)
 {
+    CreateBufferImpl();
+}
+
+GpuBufferVk::GpuBufferVk(Device& device, const GpuAccelerationStructureDesc& desc)
+    : device_(device), desc_(desc.bufferDesc), descAccel_(desc),
+      isPersistantlyMapped_(
+          (desc_.memoryPropertyFlags & MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
+          (desc_.memoryPropertyFlags & MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT)),
+      isRingBuffer_(desc_.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER),
+      isAccelerationStructure_(true), bufferingCount_(isRingBuffer_ ? device_.GetCommandBufferingCount() : 1u)
+{
+    CreateBufferImpl();
+
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    PLUGIN_ASSERT(desc.bufferDesc.usageFlags & CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT);
+    platAccel_.buffer = plat_.buffer;
+    platAccel_.byteSize = plat_.fullByteSize;
+
+    constexpr VkFlags createFlags = 0;
+    const VkAccelerationStructureTypeKHR accelerationStructureType =
+        static_cast<VkAccelerationStructureTypeKHR>(descAccel_.accelerationStructureType);
+    VkAccelerationStructureCreateInfoKHR createInfo {
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR, // sType
+        nullptr,                                                  // pNext
+        createFlags,                                              // createFlags
+        plat_.buffer,                                             // buffer
+        0,                                                        // offset
+        (VkDeviceSize)platAccel_.byteSize,                        // size
+        accelerationStructureType,                                // type
+        0,                                                        // deviceAddress
+    };
+
+    const DeviceVk& deviceVk = (const DeviceVk&)device_;
+    const DevicePlatformDataVk& devicePlat = (const DevicePlatformDataVk&)device_.GetPlatformData();
+    const VkDevice vkDevice = devicePlat.device;
+
+    const DeviceVk::ExtFunctions& extFunctions = deviceVk.GetExtFunctions();
+    if (extFunctions.vkCreateAccelerationStructureKHR && extFunctions.vkGetAccelerationStructureDeviceAddressKHR) {
+        VALIDATE_VK_RESULT(extFunctions.vkCreateAccelerationStructureKHR(vkDevice, // device
+            &createInfo,                                                           // pCreateInfo
+            nullptr,                                                               // pAllocator
+            &platAccel_.accelerationStructure));                                   // pAccelerationStructure
+
+        if (platAccel_.accelerationStructure) {
+            const VkAccelerationStructureDeviceAddressInfoKHR addressInfo {
+                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR, // sType
+                nullptr,                                                          // pNext
+                platAccel_.accelerationStructure,                                 // accelerationStructure
+            };
+            platAccel_.deviceAddress = extFunctions.vkGetAccelerationStructureDeviceAddressKHR(vkDevice, // device
+                &addressInfo);                                                                           // pInfo
+        }
+    }
+#endif
+}
+
+GpuBufferVk::~GpuBufferVk()
+{
+    if (isMapped_) {
+        Unmap();
+    }
+
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    if (isAccelerationStructure_ && platAccel_.accelerationStructure) {
+        const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
+        const DeviceVk& deviceVk = (const DeviceVk&)device_;
+        const DeviceVk::ExtFunctions& extFunctions = deviceVk.GetExtFunctions();
+        if (extFunctions.vkDestroyAccelerationStructureKHR) {
+            extFunctions.vkDestroyAccelerationStructureKHR(device, // device
+                platAccel_.accelerationStructure,                  // accelerationStructure
+                nullptr);                                          // pAllocator
+        }
+    }
+#endif
+
+    if (PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator(); gpuMemAllocator) {
+        gpuMemAllocator->DestroyBuffer(plat_.buffer, mem_.allocation);
+#if (RENDER_PERF_ENABLED == 1)
+        RecordAllocation(*gpuMemAllocator, desc_, -static_cast<int64_t>(plat_.fullByteSize));
+#endif
+    }
+#if (RENDER_DEBUG_GPU_RESOURCE_IDS == 1)
+    PLUGIN_LOG_E("gpu buffer id <: 0x%" PRIxPTR, (uintptr_t)plat_.buffer);
+#endif
+}
+
+void GpuBufferVk::CreateBufferImpl()
+{
     PLUGIN_ASSERT_MSG(
-        (isRingBuffer_ && isPersistantlyMapped_) || !isRingBuffer_, "dynamic ring buffer needs persistend mapping");
+        (isRingBuffer_ && isPersistantlyMapped_) || !isRingBuffer_, "dynamic ring buffer needs persistent mapping");
 
     VkMemoryPropertyFlags memoryPropertyFlags = static_cast<VkMemoryPropertyFlags>(desc_.memoryPropertyFlags);
     const VkMemoryPropertyFlags requiredFlags =
@@ -105,7 +193,7 @@ GpuBufferVk::GpuBufferVk(Device& device, const GpuBufferDesc& desc)
                                    CORE_MEMORY_PROPERTY_PROTECTED_BIT)));
     const VkMemoryPropertyFlags preferredFlags = memoryPropertyFlags;
 
-    const auto& limits = static_cast<const DevicePlatformDataVk&>(device.GetPlatformData())
+    const auto& limits = static_cast<const DevicePlatformDataVk&>(device_.GetPlatformData())
                              .physicalDeviceProperties.physicalDeviceProperties.limits;
     // force min buffer alignment always
     const uint32_t minBufferAlignment = GetMinBufferAlignment(limits);
@@ -122,29 +210,12 @@ GpuBufferVk::GpuBufferVk(Device& device, const GpuBufferDesc& desc)
             (VkMemoryPropertyFlags)gpuMemAllocator->GetMemoryTypeProperties(mem_.allocationInfo.memoryType);
         isMappable_ = (memFlags & VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ? true : false;
 #if (RENDER_PERF_ENABLED == 1)
-        RecordAllocation(*gpuMemAllocator, desc, plat_.fullByteSize);
+        RecordAllocation(*gpuMemAllocator, desc_, plat_.fullByteSize);
 #endif
     }
 
 #if (RENDER_DEBUG_GPU_RESOURCE_IDS == 1)
     PLUGIN_LOG_E("gpu buffer id >: 0x%" PRIxPTR, (uintptr_t)plat_.buffer);
-#endif
-}
-
-GpuBufferVk::~GpuBufferVk()
-{
-    if (isMapped_) {
-        Unmap();
-    }
-
-    if (PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator(); gpuMemAllocator) {
-        gpuMemAllocator->DestroyBuffer(plat_.buffer, mem_.allocation);
-#if (RENDER_PERF_ENABLED == 1)
-        RecordAllocation(*gpuMemAllocator, desc_, -static_cast<int64_t>(plat_.fullByteSize));
-#endif
-    }
-#if (RENDER_DEBUG_GPU_RESOURCE_IDS == 1)
-    PLUGIN_LOG_E("gpu buffer id <: 0x%" PRIxPTR, (uintptr_t)plat_.buffer);
 #endif
 }
 
@@ -156,6 +227,16 @@ const GpuBufferDesc& GpuBufferVk::GetDesc() const
 const GpuBufferPlatformDataVk& GpuBufferVk::GetPlatformData() const
 {
     return plat_;
+}
+
+const GpuAccelerationStructureDesc& GpuBufferVk::GetDescAccelerationStructure() const
+{
+    return descAccel_;
+}
+
+const GpuAccelerationStructurePlatformDataVk& GpuBufferVk::GetPlatformDataAccelerationStructure() const
+{
+    return platAccel_;
 }
 
 void* GpuBufferVk::Map()
@@ -176,7 +257,9 @@ void* GpuBufferVk::Map()
 
     void* data { nullptr };
     if (isPersistantlyMapped_) {
-        data = reinterpret_cast<uint8_t*>(mem_.allocationInfo.pMappedData) + plat_.currentByteOffset;
+        if (mem_.allocationInfo.pMappedData) {
+            data = reinterpret_cast<uint8_t*>(mem_.allocationInfo.pMappedData) + plat_.currentByteOffset;
+        }
     } else {
         PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator();
         if (gpuMemAllocator) {
@@ -245,10 +328,17 @@ void GpuBufferVk::AllocateMemory(const VkMemoryPropertyFlags requiredFlags, cons
 
     VmaAllocationCreateFlags allocationCreateFlags { 0 };
     if (isPersistantlyMapped_) {
-        allocationCreateFlags |=
-            (VmaAllocationCreateFlags)(VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                                       VmaAllocationCreateFlagBits::
-                                           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+        allocationCreateFlags |= static_cast<VmaAllocationCreateFlags>(
+            VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT
+#ifdef USE_NEW_VMA
+            | VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+#endif
+        );
+    }
+    if (desc_.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+#ifdef USE_NEW_VMA
+        allocationCreateFlags |= VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+#endif
     }
 
     PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator();
@@ -257,14 +347,20 @@ void GpuBufferVk::AllocateMemory(const VkMemoryPropertyFlags requiredFlags, cons
         // can be null handle -> default allocator
         const VmaPool customPool = gpuMemAllocator->GetBufferPool(desc_);
         const VmaAllocationCreateInfo allocationCreateInfo {
-            allocationCreateFlags,                 // flags
+            allocationCreateFlags, // flags
+#ifdef USE_NEW_VMA
             VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO, // usage
-            requiredFlags,                         // requiredFlags
-            preferredFlags,                        // preferredFlags
-            0,                                     // memoryTypeBits
-            customPool,                            // pool
-            nullptr,                               // pUserData
-            0.f,                                   // priority
+#else
+            VmaMemoryUsage::VMA_MEMORY_USAGE_UNKNOWN, // usage
+#endif
+            requiredFlags,  // requiredFlags
+            preferredFlags, // preferredFlags
+            0,              // memoryTypeBits
+            customPool,     // pool
+            nullptr,        // pUserData
+#ifdef USE_NEW_VMA
+            0.f, // priority
+#endif
         };
 
         gpuMemAllocator->CreateBuffer(

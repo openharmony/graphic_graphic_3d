@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -99,6 +99,8 @@ public:
         RenderHandle pipelineLayout;
         /* Optional render slot mask */
         uint32_t renderSlotId { ~0u };
+        /* Optional category id */
+        uint32_t categoryId { ~0u };
     };
     struct ShaderCreateInfo {
         /* Path, used as a name */
@@ -114,6 +116,8 @@ public:
         RenderHandle vertexInputDeclaration;
         /* Optional render slot mask */
         uint32_t renderSlotId { ~0u };
+        /* Optional category id */
+        uint32_t categoryId { ~0u };
     };
 
     struct PipelineLayoutCreateInfo {
@@ -137,6 +141,8 @@ public:
         BASE_NS::string_view baseShaderState;
         /* Base graphics state variant name */
         BASE_NS::string_view baseVariant;
+        /* Forced graphics state flags */
+        GraphicsStateFlags stateFlags { 0u };
     };
     struct VertexInputDeclarationCreateInfo {
         /* Path, used as a name */
@@ -150,8 +156,14 @@ public:
         BASE_NS::string path;
         /* Variant name */
         BASE_NS::string variant;
-        /* Render slot id mask */
-        uint32_t renderSlotId { ~0u };
+        /* Display name */
+        BASE_NS::string displayName;
+        /* Category name */
+        BASE_NS::string category;
+        /* Render slot id */
+        BASE_NS::string renderSlot;
+        /* Frame index when the shader was loaded. (Can be used as a "timestamp" for caching) */
+        uint64_t frameIndex { 0 };
     };
     /* Render slot data. Used for default render slot data handles */
     struct RenderSlotData {
@@ -174,6 +186,12 @@ public:
         /* Vertex input declarations path */
         BASE_NS::string_view vertexInputDeclarationPath;
     };
+
+    /** Get render handle reference of raw handle.
+     *  @param handle Raw render handle
+     *  @return Returns A render handle reference for the handle.
+     */
+    virtual RenderHandleReference Get(const RenderHandle& handle) const = 0;
 
     /** Create a compute shader. Prefer loading shaders from json files.
      *  @param createInfo A create info with valid parameters.
@@ -248,18 +266,18 @@ public:
         const RenderHandleReference& stateHandle) = 0;
 
     /** Get shader handle.
-     *  @param name Name of the shader.
+     *  @param path Path/Name of the shader.
      *  @return Returns shader handle.
      */
-    virtual RenderHandleReference GetShaderHandle(const BASE_NS::string_view name) const = 0;
+    virtual RenderHandleReference GetShaderHandle(const BASE_NS::string_view path) const = 0;
 
     /** Get shader variant handle. One can fetch and explicit handle to variant.
-     *  @param name Name of the base shader.
+     *  @param path Path/Name of the base shader.
      *  @param variantName Name of variant.
      *  @return Returns shader gpu resource handle.
      */
     virtual RenderHandleReference GetShaderHandle(
-        const BASE_NS::string_view name, const BASE_NS::string_view variantName) const = 0;
+        const BASE_NS::string_view path, const BASE_NS::string_view variantName) const = 0;
 
     /** Get shader handle. Tries to find a shader variant for provided render slot id.
      *  @param handle Shader handle.
@@ -271,20 +289,21 @@ public:
 
     /** Get shaders
      *  @param renderSlotId Id of render slot
+     *  @return Returns shader handles for given render slot id.
      */
     virtual BASE_NS::vector<RenderHandleReference> GetShaders(const uint32_t renderSlotId) const = 0;
 
     /** Get graphics state based on path name
-     *  @param name Unique name of the graphics state
+     *  @param path Path/Name of the graphics state
      */
-    virtual RenderHandleReference GetGraphicsStateHandle(const BASE_NS::string_view name) const = 0;
+    virtual RenderHandleReference GetGraphicsStateHandle(const BASE_NS::string_view path) const = 0;
 
     /** Get graphics state based on name and variant name
-     *  @param name Unique name of the graphics state
+     *  @param path Path/Name of the graphics state
      *  @param name Variant name of the graphics state
      */
     virtual RenderHandleReference GetGraphicsStateHandle(
-        const BASE_NS::string_view name, const BASE_NS::string_view variantName) const = 0;
+        const BASE_NS::string_view path, const BASE_NS::string_view variantName) const = 0;
 
     /** Get graphics state handle. Tries to find a graphics state variant for provided render slot id.
      *  Returns the given handle if it's own slot matches.
@@ -295,20 +314,29 @@ public:
     virtual RenderHandleReference GetGraphicsStateHandle(
         const RenderHandleReference& handle, const uint32_t renderSlotId) const = 0;
 
-    /** Get graphics state based on graphics state hash
-     *  @param hash A hash created with HashGraphicsState()
+    /** Get graphics state based on graphics state hash.
+     *  @param hash A hash created with HashGraphicsState().
+     *  @return Graphics state handle.
      */
     virtual RenderHandleReference GetGraphicsStateHandleByHash(const uint64_t hash) const = 0;
 
     /** Get graphics state handle based on shader handle. The default graphics in shader json.
      *  @param handle Valid shader handle.
+     *  @return Graphics state handle.
      */
     virtual RenderHandleReference GetGraphicsStateHandleByShaderHandle(const RenderHandleReference& handle) const = 0;
 
-    /** Get graphics state
-     *  @param handle Graphics state render handle
+    /** Get graphics state.
+     *  @param handle Graphics state render handle.
+     *  @return Graphics state for the handle.
      */
     virtual GraphicsState GetGraphicsState(const RenderHandleReference& handle) const = 0;
+
+    /** Get graphics states.
+     *  @param renderSlotId Id of render slot.
+     *  @return Returns all graphics state handles for the render slot id.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> GetGraphicsStates(const uint32_t renderSlotId) const = 0;
 
     /** Get render slot ID
      *  @param renderSlot Name of render slot
@@ -328,6 +356,12 @@ public:
      */
     virtual RenderSlotData GetRenderSlotData(const uint32_t renderSlotId) const = 0;
 
+    /** Get render slot name.
+     *  @param renderSlotId Render slot id.
+     *  @return render slot name.
+     */
+    virtual BASE_NS::string GetRenderSlotName(const uint32_t renderSlotId) const = 0;
+
     /** Get vertex input declaration handle by shader handle.
      *  @param handle A handle of the shader which vertex input declaration data handle will be returned.
      *  @return Returns a data handle for vertex input declaration.
@@ -336,10 +370,10 @@ public:
         const RenderHandleReference& handle) const = 0;
 
     /** Get vertex input declaration handle by vertex input declaration name.
-     *  @param name A name of the vertex input declaration given in data.
+     *  @param path Path/Name of the vertex input declaration given in data.
      *  @return Returns a data handle for vertex input declaration.
      */
-    virtual RenderHandleReference GetVertexInputDeclarationHandle(const BASE_NS::string_view name) const = 0;
+    virtual RenderHandleReference GetVertexInputDeclarationHandle(const BASE_NS::string_view path) const = 0;
 
     /** Get vertex input declaration view by vertex input declaration data handle.
      *  The return value should not be hold into as it contains array_views to data which my change.
@@ -361,10 +395,10 @@ public:
     virtual PipelineLayout GetPipelineLayout(const RenderHandleReference& handle) const = 0;
 
     /** Get pipeline layout handle by pipeline layout name.
-     *  @param name A name of the pipeline layout.
+     *  @param path Path/Name of the pipeline layout.
      *  @return Returns a handle to pipeline layout.
      */
-    virtual RenderHandleReference GetPipelineLayoutHandle(const BASE_NS::string_view name) const = 0;
+    virtual RenderHandleReference GetPipelineLayoutHandle(const BASE_NS::string_view path) const = 0;
 
     /** Get pipeline layout handle for reflected shader data.
      *  @param handle A handle to a valid shader or compute shader.
@@ -382,7 +416,7 @@ public:
      *  @param handle A handle to a valid shader or compute shader.
      *  @return Returns a view to shader specialization. The struct should not be holded unto.
      */
-    virtual ShaderSpecilizationConstantView GetReflectionSpecialization(const RenderHandleReference& handle) const = 0;
+    virtual ShaderSpecializationConstantView GetReflectionSpecialization(const RenderHandleReference& handle) const = 0;
 
     /** Get vertex input declaration reflected from the shader. (Zero values if shader does not have one)
      *  @param handle A handle to a valid shader.
@@ -429,6 +463,12 @@ public:
      */
     virtual void UnloadShaderFiles(const ShaderFilePathDesc& desc) = 0;
 
+    /** Get json string.
+     * @param handle A handle to a valid shader.
+     * @return Returns string view of loaded shader file.
+     */
+    virtual const BASE_NS::string_view GetShaderFile(const RenderHandleReference& handle) const = 0;
+
     /** Get material metadata for the shader.
      * @param handle A handle to a valid shader.
      * @return Returns available metadata as JSON.
@@ -456,6 +496,12 @@ public:
      */
     virtual IdDesc GetIdDesc(const RenderHandleReference& handle) const = 0;
 
+    /** Get frame update index for a RenderHandle.
+     * @param handle A handle to a valid render handle.
+     * @return Returns frame index.
+     */
+    virtual uint64_t GetFrameIndex(const RenderHandleReference& handle) const = 0;
+
     /** Reload shader file and create resources.
      *  NOTE: Force re-creates shader modules from spv -files in shader json.
      *  NOTE: Do not call on perf-critical path.
@@ -465,11 +511,47 @@ public:
      */
     virtual void ReloadShaderFile(const BASE_NS::string_view uri) = 0;
 
+    /** Get all shaders.
+     *  @return vector of all shaders.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> GetShaders() const = 0;
+
+    /** Get all graphics states.
+     *  @return vector of all graphics states.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> GetGraphicsStates() const = 0;
+
+    /** Get all pipeline layouts.
+     *  @return vector of all pipeline layouts.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> GetPipelineLayouts() const = 0;
+
+    /** Get all vertex input declarations.
+     *  @return vector of all vertex input declarations.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> GetVertexInputDeclarations() const = 0;
+
     /** Create shader pipeline binder.
      *  @param handle Shader handle.
      *  @return Returns shader pipeline binder.
      */
     virtual IShaderPipelineBinder::Ptr CreateShaderPipelineBinder(const RenderHandleReference& handle) const = 0;
+
+    /** Create shader pipeline binder.
+     *  @param handle Shader handle.
+     *  @param plHandle Enforced pipeline layout handle.
+     *  @return Returns shader pipeline binder.
+     */
+    virtual IShaderPipelineBinder::Ptr CreateShaderPipelineBinder(
+        const RenderHandleReference& handle, const RenderHandleReference& plHandle) const = 0;
+
+    /** Create shader pipeline binder.
+     *  @param handle Shader handle.
+     *  @param pipelineLayout Enforced pipeline layout.
+     *  @return Returns shader pipeline binder.
+     */
+    virtual IShaderPipelineBinder::Ptr CreateShaderPipelineBinder(
+        const RenderHandleReference& handle, const PipelineLayout& pipelineLayout) const = 0;
 
     /** Compatibility flags */
     enum CompatibilityFlagBits {
@@ -488,6 +570,18 @@ public:
      */
     virtual CompatibilityFlags GetCompatibilityFlags(
         const RenderHandleReference& lhs, const RenderHandleReference& rhs) const = 0;
+
+    /** Check forced graphics states. Can be set for render slot variants.
+     *  @param handle Graphics state or shader handle. Faster to check with graphics state handle.
+     *  @return Returns forced graphics state flags.
+     */
+    virtual GraphicsStateFlags GetForcedGraphicsStateFlags(const RenderHandleReference& handle) const = 0;
+
+    /** Check forced graphics states. Can be set for render slot variants.
+     *  @param renderSlotId Render slot id. Find the base graphics state and checks the forced flags
+     *  @return Returns forced graphics state flags.
+     */
+    virtual GraphicsStateFlags GetForcedGraphicsStateFlags(const uint32_t renderSlotId) const = 0;
 
 protected:
     IShaderManager() = default;
@@ -508,18 +602,18 @@ protected:
 class IRenderNodeShaderManager {
 public:
     /** Get shader handle (any type).
-     *  @param name Name of the shader.
+     *  @param path Path/Name of the shader.
      *  @return Returns shader handle.
      */
-    virtual RenderHandle GetShaderHandle(const BASE_NS::string_view name) const = 0;
+    virtual RenderHandle GetShaderHandle(const BASE_NS::string_view path) const = 0;
 
     /** Get shader handle.
-     *  @param name Name of the shader.
+     *  @param path Path/Name of the shader.
      *  @param variantName Name of the variant.
      *  @return Returns shader gpu resource handle.
      */
     virtual RenderHandle GetShaderHandle(
-        const BASE_NS::string_view name, const BASE_NS::string_view variantName) const = 0;
+        const BASE_NS::string_view path, const BASE_NS::string_view variantName) const = 0;
 
     /** Get shader handle. Tries to find variant of shader with given render slot id.
      *  @param handle Shader handle.
@@ -534,16 +628,16 @@ public:
     virtual BASE_NS::vector<RenderHandle> GetShaders(const uint32_t renderSlotId) const = 0;
 
     /** Get graphics state based on name
-     *  @param name Unique name of the graphics state
+     *  @param path Path/Name of the graphics state
      */
-    virtual RenderHandle GetGraphicsStateHandle(const BASE_NS::string_view name) const = 0;
+    virtual RenderHandle GetGraphicsStateHandle(const BASE_NS::string_view path) const = 0;
 
     /** Get graphics state based on name
-     *  @param name Unique name of the graphics state
+     *  @param path Path/Name of the graphics state
      *  @param variantName Variant name of the graphics state
      */
     virtual RenderHandle GetGraphicsStateHandle(
-        const BASE_NS::string_view name, const BASE_NS::string_view variantName) const = 0;
+        const BASE_NS::string_view path, const BASE_NS::string_view variantName) const = 0;
 
     /** Get graphics state handle. Tries to find variant of graphics state with given render slot id.
      *  Returns the given handle if its render slot id matches.
@@ -593,10 +687,10 @@ public:
     virtual RenderHandle GetVertexInputDeclarationHandleByShaderHandle(const RenderHandle& handle) const = 0;
 
     /** Get vertex input declaration handle by vertex input declaration name.
-     *  @param name A name of the vertex input declaration given in data.
+     *  @param path Path/Name of the vertex input declaration given in data.
      *  @return Returns a data handle for vertex input declaration.
      */
-    virtual RenderHandle GetVertexInputDeclarationHandle(const BASE_NS::string_view name) const = 0;
+    virtual RenderHandle GetVertexInputDeclarationHandle(const BASE_NS::string_view path) const = 0;
 
     /** Get vertex input declaration view by vertex input declaration data handle.
      *  The return value should not be hold into as it contains array_views to data which my change.
@@ -618,10 +712,10 @@ public:
     virtual const PipelineLayout& GetPipelineLayout(const RenderHandle& handle) const = 0;
 
     /** Get pipeline layout handle by pipeline layout name.
-     *  @param name A name of the pipeline layout.
+     *  @param path Path/Name of the pipeline layout.
      *  @return Returns a handle to pipeline layout.
      */
-    virtual RenderHandle GetPipelineLayoutHandle(const BASE_NS::string_view name) const = 0;
+    virtual RenderHandle GetPipelineLayoutHandle(const BASE_NS::string_view path) const = 0;
 
     /** Get pipeline layout handle for the shader reflection pipeline layout.
      *  @param handle A handle to a valid shader or compute shader.
@@ -639,7 +733,7 @@ public:
      *  @param handle A handle to a valid shader or compute shader.
      *  @return Returns a view to shader specialization. The struct should not be holded unto.
      */
-    virtual ShaderSpecilizationConstantView GetReflectionSpecialization(const RenderHandle& handle) const = 0;
+    virtual ShaderSpecializationConstantView GetReflectionSpecialization(const RenderHandle& handle) const = 0;
 
     /** Get vertex input declaration reflected from the shader. (Zero values if shader does not have one)
      *  @param handle A handle to a valid shader.
@@ -681,6 +775,18 @@ public:
      */
     virtual IShaderManager::CompatibilityFlags GetCompatibilityFlags(
         const RenderHandle& lhs, const RenderHandle& rhs) const = 0;
+
+    /** Check forced graphics states. Can be set for render slot variants.
+     *  @param handle Graphics state or shader handle. Faster to check with graphics state handle.
+     *  @return Returns forced graphics state flags.
+     */
+    virtual GraphicsStateFlags GetForcedGraphicsStateFlags(const RenderHandle& handle) const = 0;
+
+    /** Check forced graphics states. Can be set for render slot variants.
+     *  @param renderSlotId Render slot id. Find the base graphics state and checks the forced flags
+     *  @return Returns forced graphics state flags.
+     */
+    virtual GraphicsStateFlags GetForcedGraphicsStateFlags(const uint32_t renderSlotId) const = 0;
 
 protected:
     IRenderNodeShaderManager() = default;

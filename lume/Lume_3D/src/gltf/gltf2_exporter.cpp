@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -62,7 +62,7 @@
 #include "gltf/data.h"
 #include "gltf/gltf2_data_structures.h"
 #include "gltf/gltf2_util.h"
-#include "loader/json_util.h"
+#include "util/json_util.h"
 
 template<>
 uint64_t BASE_NS::hash(const bool& val)
@@ -249,7 +249,7 @@ uint32_t FindOrAddIndex(vector<T>& handles, const T& handle)
         handlePos != handles.end()) {
         return static_cast<uint32_t>(std::distance(handles.begin(), handlePos));
     } else {
-        handles.emplace_back(handle);
+        handles.push_back(handle);
         return static_cast<uint32_t>(handles.size() - 1);
     }
 }
@@ -533,10 +533,8 @@ void ExportGltfLight(const IEcs& ecs, const Entities& entities, ExportResult& re
                 auto const lightComponent = lightManager->Get(lightEntity);
                 switch (lightComponent.type) {
                     default:
-                    case LightComponent::Type::INVALID:
-                        exportLight->type = LightType::INVALID;
-
                         CORE_LOG_E("cannot export light %u", static_cast<uint32_t>(lightComponent.type));
+                        exportLight->type = LightType::DIRECTIONAL;
 
                         result.error += "failed to export light";
                         result.success = false;
@@ -567,12 +565,7 @@ void ExportGltfLight(const IEcs& ecs, const Entities& entities, ExportResult& re
 
 Accessor* StoreInverseBindMatrices(array_view<const Math::Mat4X4> ibls, BufferHelper& bufferHelper)
 {
-    vector<Math::Mat4X4> inverseBindMatrices;
-    inverseBindMatrices.reserve(ibls.size());
-    for (auto const& matrix : ibls) {
-        inverseBindMatrices.emplace_back(matrix);
-    }
-
+    vector<Math::Mat4X4> inverseBindMatrices(ibls.cbegin(), ibls.cend());
     if (!inverseBindMatrices.empty()) {
         auto matrixData = array_view(
             reinterpret_cast<uint8_t*>(inverseBindMatrices.data()), inverseBindMatrices.size() * sizeof(Math::Mat4X4));
@@ -615,11 +608,6 @@ struct NodeDepth {
         return (depth == rhs.depth) && (node == rhs.node);
     }
 };
-
-inline bool SameDepth(const NodeDepth& lhs, const NodeDepth& rhs)
-{
-    return lhs.depth == rhs.depth;
-}
 
 Node* FindSkeletonRoot(array_view<GLTF2::Node*> joints)
 {
@@ -686,7 +674,7 @@ void ExportGltfSkins(const IEcs& ecs, const Entities& entities, const vector<uni
                         for (auto jointEntity : array_view(skinJointsHandle->jointEntities, skinJointsHandle->count)) {
                             if (auto const jointIndex = FindHandleIndex(entities.nodes, jointEntity);
                                 jointIndex < nodeArray.size()) {
-                                exportSkin->joints.emplace_back(nodeArray[jointIndex].get());
+                                exportSkin->joints.push_back(nodeArray[jointIndex].get());
                             } else {
                                 CORE_LOG_D("joint node not exported");
                             }
@@ -757,8 +745,8 @@ Accessor* AnimationInput(
                 inputMin = std::min(value, inputMin);
                 inputMax = std::max(value, inputMax);
             }
-            inputAccessor->min.emplace_back(inputMin);
-            inputAccessor->max.emplace_back(inputMax);
+            inputAccessor->min.push_back(inputMin);
+            inputAccessor->max.push_back(inputMax);
         }
 
         return inputAccessor;
@@ -821,10 +809,10 @@ void CleanupAnimation(Animation& exportAnimation)
 {
     // Remove all tracks that don't have a node, sampler or sampler is missing input or output.
     exportAnimation.tracks.erase(std::find_if(exportAnimation.tracks.begin(), exportAnimation.tracks.end(),
-                                     [](const AnimationTrack& track) {
-                                         return !track.channel.node || !track.sampler || !track.sampler->input ||
-                                                !track.sampler->output;
-                                     }),
+                                    [](const AnimationTrack& track) {
+                                        return !track.channel.node || !track.sampler || !track.sampler->input ||
+                                               !track.sampler->output;
+                                    }),
         exportAnimation.tracks.end());
 
     // Remove all samplers missing input or output.
@@ -986,7 +974,7 @@ inline uint32_t GetTextureIndex(const MaterialComponent& materialDesc,
         auto const imageIndex = textureHelper.GetImageIndex(image);
         RenderHandleReference sampler;
         if (auto handle = gpuHandleManager.Read(materialDesc.textures[textureIndex].sampler); handle) {
-            image = handle->reference;
+            sampler = handle->reference;
         }
         auto const samplerIndex = (sampler) ? textureHelper.GetSamplerIndex(sampler) : 0xFFFFffff;
         return textureHelper.GetTextureIndex(samplerIndex, imageIndex);
@@ -1253,7 +1241,7 @@ void ExportGltfMaterials(const IEngine& engine, const IMaterialComponentManager&
             [](const ResourceEntity& lhs, const ResourceEntity& rhs) { return lhs.handle < rhs.handle; });
 
         // Create Samplers
-        if (textureHash.HasSamplers()) {
+        if (device && textureHash.HasSamplers()) {
             result.data->samplers = textureHash.GenerateGltfSamplers(device->GetGpuResourceManager());
         }
 
@@ -1426,7 +1414,7 @@ json::value ExportAnimations(Data const& data)
                 }
                 jsonChannels.array_.push_back(move(jsonChannel));
             }
-            jsonAnimation["channels"] = std::move(jsonChannels);
+            jsonAnimation["channels"] = move(jsonChannels);
         }
         if (!animation->name.empty()) {
             jsonAnimation["name"] = string_view(animation->name);
@@ -1623,6 +1611,17 @@ json::value ExportClearcoat(const Material::Clearcoat& clearcoat)
 }
 #endif
 
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_EMISSIVE_STRENGTH)
+json::value ExportEmissiveStrength(const float strength)
+{
+    json::value jsonEmissiveStrength = json::value::object {};
+    if (strength != 1.f) {
+        jsonEmissiveStrength["emissiveStrength"] = strength;
+    }
+    return jsonEmissiveStrength;
+}
+#endif
+
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_IOR)
 json::value ExportIor(const Material::Ior& ior)
 {
@@ -1709,6 +1708,12 @@ json::value ExportMaterialExtensions(
         AppendUnique(jsonExtensionsUsed, "KHR_materials_clearcoat");
     }
 #endif
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_EMISSIVE_STRENGTH)
+    if (auto emissiveStrength = ExportEmissiveStrength(material.emissiveFactor.w); !emissiveStrength.empty()) {
+        jsonExtensions["KHR_materials_emissive_strength"] = move(emissiveStrength);
+        AppendUnique(jsonExtensionsUsed, "KHR_materials_emissive_strength");
+    }
+#endif
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_IOR)
     if (auto ior = ExportIor(material.ior); !ior.empty()) {
         jsonExtensions["KHR_materials_ior"] = move(ior);
@@ -1775,8 +1780,10 @@ json::value ExportMaterials(Data const& data, json::value& jsonExtensionsUsed, j
         if (material->emissiveTexture.index != GLTF_INVALID_INDEX) {
             jsonMaterial["emissiveTexture"] = ExportTextureInfo(material->emissiveTexture);
         }
-        if (material->emissiveFactor != DEFAULT_EMISSIVE_FACTOR) {
-            jsonMaterial["emissiveFactor"] = material->emissiveFactor.data;
+        if (Math::Vec3 emissiveFactor(
+                material->emissiveFactor.x, material->emissiveFactor.y, material->emissiveFactor.z);
+            emissiveFactor != DEFAULT_EMISSIVE_FACTOR) {
+            jsonMaterial["emissiveFactor"] = emissiveFactor.data;
         }
         if (material->alphaMode != AlphaMode::OPAQUE) {
             jsonMaterial["alphaMode"] = GetAlphaMode(material->alphaMode);
@@ -2382,17 +2389,17 @@ void AttachParent(const ISceneNode& node, const IEcs& ecs, Scene& scene, Node& e
             // Parent has been exported -> node has a parent and will be added to the parents list of children.
             exportNode.parent = nodeArray[parentIndex].get();
             if (std::none_of(exportNode.parent->children.begin(), exportNode.parent->children.end(),
-                    [&exportNode](const auto childNode) { return childNode == &exportNode; })) {
+                [&exportNode](const auto childNode) { return childNode == &exportNode; })) {
                 exportNode.parent->children.push_back(&exportNode);
                 exportNode.parent->tmpChildren.push_back(nodeIndex);
             }
         } else {
             // Parent hasn't been exported i.e. it's outside this scene hierarchy -> add node as a scene root.
-            scene.nodes.emplace_back(&exportNode);
+            scene.nodes.push_back(&exportNode);
         }
     } else {
         // Parent marked to be excluded from exporting -> add node as a scene root.
-        scene.nodes.emplace_back(&exportNode);
+        scene.nodes.push_back(&exportNode);
     }
 }
 

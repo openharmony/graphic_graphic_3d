@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,9 +18,18 @@
 #include <algorithm>
 #include <cstdint>
 
+#include <base/containers/array_view.h>
+#include <base/containers/fixed_string.h>
+#include <base/containers/iterator.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <base/containers/type_traits.h>
+#include <base/math/vector.h>
+#include <render/device/pipeline_layout_desc.h>
+#include <render/namespace.h>
+
 #include "device/gpu_program_util.h"
 #include "device/shader_manager.h"
-#include "gles/device_gles.h"
 #include "gles/spirv_cross_helpers_gles.h"
 #include "util/log.h"
 
@@ -221,7 +230,7 @@ ShaderModuleGLES::ShaderModuleGLES(Device& device, const ShaderModuleCreateInfo&
     }
 }
 
-ShaderModuleGLES::~ShaderModuleGLES() {}
+ShaderModuleGLES::~ShaderModuleGLES() = default;
 
 ShaderStageFlags ShaderModuleGLES::GetShaderStageFlags() const
 {
@@ -243,7 +252,7 @@ const PipelineLayout& ShaderModuleGLES::GetPipelineLayout() const
     return pipelineLayout_;
 }
 
-ShaderSpecilizationConstantView ShaderModuleGLES::GetSpecilization() const
+ShaderSpecializationConstantView ShaderModuleGLES::GetSpecilization() const
 {
     return sscv_;
 }

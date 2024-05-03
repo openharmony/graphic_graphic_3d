@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,18 +17,15 @@
 #define CORE_OS_PLATFORM_H
 
 #include <base/containers/unique_ptr.h>
-#include <core/os/intf_platform.h>
-#include <core/os/platform_create_info.h>
 #include <core/namespace.h>
+#include <core/os/intf_platform.h>
 
 CORE_BEGIN_NAMESPACE()
-
-class Platform
-{
+struct PlatformCreateInfo;
+class Platform {
 public:
     static CORE_NS::IPlatform::Ptr Create(CORE_NS::PlatformCreateInfo const& createInfo);
 };
-
 CORE_END_NAMESPACE()
 
 #endif // CORE_OS_PLATFORM_H

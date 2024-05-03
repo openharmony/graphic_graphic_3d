@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,12 +15,16 @@
 
 #include "engine_factory.h"
 
+#include <base/containers/string_view.h>
+#include <base/util/uid.h>
 #include <core/implementation_uids.h>
+#include <core/intf_engine.h>
+#include <core/namespace.h>
+#include <core/plugin/intf_class_info.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string_view;
 using BASE_NS::Uid;
-using BASE_NS::vector;
 
 // Engine factory
 IEngine::Ptr CreateEngine(EngineCreateInfo const& createInfo);
@@ -42,9 +46,10 @@ string_view EngineFactory::GetClassName() const
 
 const IInterface* EngineFactory::GetInterface(const Uid& uid) const
 {
-    if (uid == IEngineFactory::UID) {
+    if ((uid == IEngineFactory::UID) || (uid == IInterface::UID)) {
         return static_cast<const IEngineFactory*>(this);
-    } else if (uid == IClassInfo::UID) {
+    }
+    if (uid == IClassInfo::UID) {
         return static_cast<const IClassInfo*>(this);
     }
     return nullptr;
@@ -52,9 +57,10 @@ const IInterface* EngineFactory::GetInterface(const Uid& uid) const
 
 IInterface* EngineFactory::GetInterface(const Uid& uid)
 {
-    if (uid == IEngineFactory::UID) {
+    if ((uid == IEngineFactory::UID) || (uid == IInterface::UID)) {
         return static_cast<IEngineFactory*>(this);
-    } else if (uid == IClassInfo::UID) {
+    }
+    if (uid == IClassInfo::UID) {
         return static_cast<IClassInfo*>(this);
     }
     return nullptr;

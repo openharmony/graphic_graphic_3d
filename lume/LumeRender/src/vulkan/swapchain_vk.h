@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -36,7 +36,7 @@ struct SwapchainImagesVk {
     uint32_t width { 0 };
     uint32_t height { 0 };
 
-    VkSemaphore semaphore { VK_NULL_HANDLE };
+    BASE_NS::vector<VkSemaphore> semaphores;
 };
 
 struct SwapchainPlatformDataVk final {
@@ -54,14 +54,26 @@ public:
     const GpuImageDesc& GetDescDepthBuffer() const override;
 
     uint32_t GetFlags() const override;
+    SurfaceTransformFlags GetSurfaceTransformFlags() const override;
+    uint64_t GetSurfaceHandle() const override;
+
+    // only for locked backend usage to get always the next semaphore index in image acquire
+    uint32_t GetNextAcquireSwapchainSemaphoreIndex() const;
 
 private:
     Device& device_;
+
+    VkSurfaceKHR surface_ {};
+    bool ownsSurface_ { false };
 
     GpuImageDesc desc_;
     GpuImageDesc descDepthBuffer_;
     SwapchainPlatformDataVk plat_;
     uint32_t flags_ { 0u };
+    SurfaceTransformFlags surfaceTransformFlags_ { 0u };
+
+    // mutable object for locked backend usage only
+    mutable uint32_t currSemaphoreIdx_ { 0U };
 };
 RENDER_END_NAMESPACE()
 

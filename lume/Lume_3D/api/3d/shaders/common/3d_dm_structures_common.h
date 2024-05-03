@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,6 +26,8 @@
 #define CORE_MATERIAL_PACKED_UNIFORM_UVEC4_COUNT 15
 
 #define CORE_MATERIAL_DEFAULT_REFLECTANCE 0.04
+
+#define CORE3D_HDR_FLOAT_CLAMP_MAX_VALUE 64512.0
 
 // base color is separated
 #define CORE_MATERIAL_TEX_NORMAL_IDX 0
@@ -103,6 +105,9 @@
 #define CORE_MATERIAL_SPECULAR_BIT (1 << 9)
 #define CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT (1 << 10)
 #define CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT (1 << 11)
+// basic (1 << 12)
+// complex (1 << 13)
+#define CORE_MATERIAL_GPU_INSTANCING_BIT (1 << 14)
 
 // needs to match api/core/render/intf_render_data_store_default_light LightingFlagBits
 #define CORE_LIGHTING_SHADOW_TYPE_VSM_BIT (1 << 0)
@@ -123,6 +128,9 @@
 #define CORE_LIGHT_USAGE_SPOT_LIGHT_BIT (1 << 2)
 #define CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT (1 << 3)
 
+// CORE_CAMERA_FLAGS related to render_data_defines_3d.h CameraShaderFlags
+#define CORE_CAMERA_FOG_BIT (1 << 0)
+
 // needs to match api/core/render/render_data_defines.h BackgroundType
 #define CORE_BACKGROUND_TYPE_IMAGE 1
 #define CORE_BACKGROUND_TYPE_CUBEMAP 2
@@ -142,6 +150,7 @@
 
 #define CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT 64
 #define CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT 16
+#define CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT 8
 
 #define CORE_DEFAULT_MATERIAL_MAX_SH_VEC3_VALUE_COUNT 9
 
@@ -205,6 +214,7 @@ constexpr uint32_t CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET { 128u };
 
 constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT { 64u };
 constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT { 16u };
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT { 8u };
 
 constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_SH_VEC3_VALUE_COUNT { 9u };
 
@@ -274,12 +284,12 @@ struct DefaultMaterialSingleLightStruct {
     vec4 color;
     // .x is inner cone angle, .y is outer cone angle, .z is light angle scale, .w is light angle offset
     vec4 spotLightParams;
-    // .x = shadow strength, .y = depth bias, .z = normal bias
+    // .x = shadow strength, .y = depth bias, .z = normal bias, .w = shadow uv step size
     vec4 shadowFactors;
     // additional factors for customization
     vec4 additionalFactor;
 
-    // .x is light flags, .y is shadow camera idx, .z is shadow idx in atlas
+    // .x is light flags, .y is shadow camera idx, .z is shadow idx in atlas, .w is shadow count
     uvec4 flags;
     // .xy = unique id (64-bit), .zw = layer mask (64 bit)
     uvec4 indices;
@@ -300,6 +310,9 @@ struct DefaultMaterialLightStruct {
 
     uvec4 clusterSizes;
     vec4 clusterFactors;
+
+    vec4 atlasSizeInvSize;
+    vec4 additionalFactors;
 
     DefaultMaterialSingleLightStruct lights[CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT];
 };
@@ -329,8 +342,8 @@ struct DefaultMaterialEnvironmentStruct {
     vec4 envMapColorFactor;
     // .r = radiance cubemap mip count, .g = specular cubemap lod level
     vec4 values;
-    // additional factors for customization
-    vec4 additionalFactor;
+    // blender factor for multi-env case
+    vec4 blendFactor;
 
     // Environment rotation matrix.
     mat4 envRotation;
@@ -340,6 +353,9 @@ struct DefaultMaterialEnvironmentStruct {
 
     // spherical harmonics for indirect diffuse environment lighting (3 bands)
     vec4 shIndirectCoefficients[CORE_DEFAULT_MATERIAL_MAX_SH_VEC3_VALUE_COUNT];
+
+    // padding
+    vec4 pad0;
 };
 
 struct DefaultMaterialFogStruct {
@@ -385,8 +401,17 @@ struct DefaultCameraMatrixStruct {
 
     // .xy = unique id (64-bit), .zw = layer mask (64 bit)
     uvec4 indices;
+    // .x multi-view camera additional layer count, .yzw 3 multi-view camera indices
+    uvec4 multiViewIndices;
 
     vec4 frustumPlanes[CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT];
+
+    // .x environment count
+    uvec4 counts;
+    // padding to 256
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
 };
 
 #ifdef VULKAN
@@ -409,6 +434,27 @@ struct DefaultMaterialUnpackedPostProcessStruct {
     float vignetteCoeff;
     float vignettePower;
 };
+
+uint GetPackFlatIndices(const uint cameraIdx, const uint instanceIdx)
+{
+    return ((instanceIdx << 16) | (cameraIdx & 0xffff)); // 16 : bit size
+}
+
+void GetUnpackFlatIndices(in uint indices, out uint cameraIdx, out uint instanceIdx)
+{
+    cameraIdx = indices & 0xffff;
+    instanceIdx = indices >> 16;
+}
+
+uint GetUnpackFlatIndicesInstanceIdx(in uint indices)
+{
+    return (indices >> 16);
+}
+
+uint GetUnpackFlatIndicesCameraIdx(in uint indices)
+{
+    return (indices & 0xffff);
+}
 
 uint GetUnpackCameraIndex(const DefaultMaterialGeneralDataStruct dmgds)
 {
@@ -436,6 +482,17 @@ struct DefaultMaterialUnpackedTexTransformStruct {
     vec4 rotateScale;
     vec2 translate;
 };
+
+DefaultMaterialUnpackedTexTransformStruct GetUnpackTextureTransform(const uvec4 packedTexTransform)
+{
+    DefaultMaterialUnpackedTexTransformStruct dm;
+    dm.rotateScale = UnpackVec4Half2x16(packedTexTransform.xy);
+    dm.translate = UnpackVec4Half2x16(packedTexTransform.zw).xy;
+    return dm;
+}
+
+// DEPRECATED base methods with struct inputs
+#ifdef CORE3D_USE_DEPRECATED_UNPACK_METHODS
 
 vec4 GetUnpackBaseColor(const DefaultMaterialMaterialStruct dmms)
 {
@@ -553,14 +610,6 @@ vec4 GetUnpackMaterialTextureInfoSlotFactor(
     return dmms.material[instanceIdx].factors[maxIndex].xyzw;
 }
 
-DefaultMaterialUnpackedTexTransformStruct GetUnpackTextureTransform(const uvec4 packedTexTransform)
-{
-    DefaultMaterialUnpackedTexTransformStruct dm;
-    dm.rotateScale = UnpackVec4Half2x16(packedTexTransform.xy);
-    dm.translate = UnpackVec4Half2x16(packedTexTransform.zw).xy;
-    return dm;
-}
-
 // transform = high bits (16)
 // uv set bit = low bits (0)
 uint GetUnpackTexCoordInfo(const DefaultMaterialMaterialStruct dmms)
@@ -574,6 +623,8 @@ uint GetUnpackTexCoordInfo(const DefaultMaterialTransformMaterialStruct dmms)
 {
     return dmms.material[0].packed[CORE_MATERIAL_PACK_ADDITIONAL_IDX].y;
 }
+
+#endif // CORE3D_USE_DEPRECATED_UNPACK_METHODS
 
 #endif
 

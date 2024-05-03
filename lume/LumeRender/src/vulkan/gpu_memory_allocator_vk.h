@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,10 +16,17 @@
 #ifndef VULKAN_GPU_MEMORY_ALLOCATOR_VK_H
 #define VULKAN_GPU_MEMORY_ALLOCATOR_VK_H
 
+// vulkan_core must be before vk_mem_alloc
+// clang-format off
+#include <vulkan/vulkan_core.h>
+#ifdef __OHOS_PLATFORM__
+#include "../../../../../../../third_party/skia/third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
+#else
 #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
+#endif
+// clang-format on
 #include <cstddef>
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
 
 #include <base/containers/string.h>
 #include <base/containers/unordered_map.h>

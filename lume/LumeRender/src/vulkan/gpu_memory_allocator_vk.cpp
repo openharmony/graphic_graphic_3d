@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,17 +15,45 @@
 
 #include "gpu_memory_allocator_vk.h"
 
+#include <cinttypes>
 #include <vulkan/vulkan_core.h>
 
 // Including the external library header <vk_mem_alloc.h> causes a warning. Disabling it.
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4701)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-qualifiers"
+#pragma clang diagnostic ignored "-Wswitch"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#pragma GCC diagnostic ignored "-Wswitch"
+#endif
+// vma_mem_alloc.h will use VMA_NULLABLE and VMA_NOT_NULL as clang nullability attribtues but does a
+// poor job at using them everywhere. Thus it causes lots of clang compiler warnings. We just
+// disable them here by defining them to be nothing.
+#ifdef VMA_NULLABLE
+#undef VMA_NULLABLE
+#define VMA_NULLABLE
+#endif
+#ifdef VMA_NOT_NULL
+#undef VMA_NOT_NULL
+#define VMA_NOT_NULL
 #endif
 #define VMA_IMPLEMENTATION
+#ifdef __OHOS_PLATFORM__
+#include "../../../../../../../third_party/skia/third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
+#else
 #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
+#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 #include <base/containers/vector.h>
@@ -96,8 +124,10 @@ void LogStats(VmaAllocator aAllocator)
 VmaVulkanFunctions GetVmaVulkanFunctions(VkInstance instance, VkDevice device)
 {
     VmaVulkanFunctions funs {};
+#ifdef USE_NEW_VMA
     funs.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
     funs.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+#endif
     funs.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
     funs.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
     funs.vkAllocateMemory = vkAllocateMemory;
@@ -122,8 +152,8 @@ VmaVulkanFunctions GetVmaVulkanFunctions(VkInstance instance, VkDevice device)
         (PFN_vkGetBufferMemoryRequirements2)vkGetDeviceProcAddr(device, "vkGetBufferMemoryRequirements2");
     funs.vkGetImageMemoryRequirements2KHR =
         (PFN_vkGetImageMemoryRequirements2)vkGetDeviceProcAddr(device, "vkGetImageMemoryRequirements2");
-    funs.vkBindBufferMemory2KHR = (PFN_vkBindBufferMemory2)vkGetDeviceProcAddr(device, "vkBindBufferMemory2");
-    funs.vkBindImageMemory2KHR = (PFN_vkBindImageMemory2)vkGetDeviceProcAddr(device, "vkBindImageMemory2");
+    funs.vkBindBufferMemory2KHR = (PFN_vkBindBufferMemory2)(void*)vkGetDeviceProcAddr(device, "vkBindBufferMemory2");
+    funs.vkBindImageMemory2KHR = (PFN_vkBindImageMemory2)(void*)vkGetDeviceProcAddr(device, "vkBindImageMemory2");
     funs.vkGetPhysicalDeviceMemoryProperties2KHR = (PFN_vkGetPhysicalDeviceMemoryProperties2)vkGetInstanceProcAddr(
         instance, "vkGetPhysicalDeviceMemoryProperties2");
 #else
@@ -217,31 +247,36 @@ void PlatformGpuMemoryAllocator::CreateBuffer(const VkBufferCreateInfo& bufferCr
     if (result != VK_SUCCESS) {
         if ((result == VK_ERROR_OUT_OF_DEVICE_MEMORY) && (allocationCreateInfo.pool != VK_NULL_HANDLE)) {
             PLUGIN_LOG_D(
-                "Out of buffer memory with custom memory pool (i.e. block size might be exceeded), bytesize: %u, "
-                "falling back to default memory pool",
-                (uint32_t)bufferCreateInfo.size);
+                "Out of buffer memory with custom memory pool (i.e. block size might be exceeded), bytesize: %" PRIu64
+                ", falling back to default memory pool",
+                bufferCreateInfo.size);
             VmaAllocationCreateInfo fallBackAllocationCreateInfo = allocationCreateInfo;
             fallBackAllocationCreateInfo.pool = VK_NULL_HANDLE;
             result = vmaCreateBuffer(
                 allocator_, &bufferCreateInfo, &fallBackAllocationCreateInfo, &buffer, &allocation, &allocationInfo);
         }
         if (result != VK_SUCCESS) {
-            PLUGIN_LOG_E("VKResult not VK_SUCCESS in buffer memory allocation(result : %i), allocation bytesize : %u",
-                (int32_t)result, (uint32_t)bufferCreateInfo.size);
-            PLUGIN_ASSERT(false);
+            PLUGIN_LOG_E(
+                "VKResult not VK_SUCCESS in buffer memory allocation(result : %i), (allocation bytesize : %" PRIu64 ")",
+                (int32_t)result, bufferCreateInfo.size);
         }
     }
 
 #if (RENDER_PERF_ENABLED == 1)
-    memoryDebugStruct_.buffer += (uint64_t)allocation->GetSize();
-    LogStats(allocator_);
+    if (allocation) {
+        memoryDebugStruct_.buffer += (uint64_t)allocation->GetSize();
+        LogStats(allocator_);
+    }
 #endif
 }
 
 void PlatformGpuMemoryAllocator::DestroyBuffer(VkBuffer buffer, VmaAllocation allocation)
 {
 #if (RENDER_PERF_ENABLED == 1)
-    const uint64_t byteSize = (uint64_t)allocation->GetSize();
+    uint64_t byteSize = 0;
+    if (allocation) {
+        byteSize = (uint64_t)allocation->GetSize();
+    }
 #endif
 
     vmaDestroyBuffer(allocator_, // allocator
@@ -249,8 +284,10 @@ void PlatformGpuMemoryAllocator::DestroyBuffer(VkBuffer buffer, VmaAllocation al
         allocation);             // allocation
 
 #if (RENDER_PERF_ENABLED == 1)
-    memoryDebugStruct_.buffer -= byteSize;
-    LogStats(allocator_);
+    if (allocation) {
+        memoryDebugStruct_.buffer -= byteSize;
+        LogStats(allocator_);
+    }
 #endif
 }
 
@@ -273,20 +310,25 @@ void PlatformGpuMemoryAllocator::CreateImage(const VkImageCreateInfo& imageCreat
             allocator_, &imageCreateInfo, &fallBackAllocationCreateInfo, &image, &allocation, &allocationInfo);
     }
     if (result != VK_SUCCESS) {
-        PLUGIN_LOG_E("VKResult not VK_SUCCESS in image memory allocation(result : %i)", (int32_t)result);
-        PLUGIN_ASSERT(false);
+        PLUGIN_LOG_E("VKResult not VK_SUCCESS in image memory allocation(result : %i) (bytesize : %" PRIu64 ")",
+            (int32_t)result, allocationInfo.size);
     }
 
 #if (RENDER_PERF_ENABLED == 1)
-    memoryDebugStruct_.image += (uint64_t)allocation->GetSize();
-    LogStats(allocator_);
+    if (allocation) {
+        memoryDebugStruct_.image += (uint64_t)allocation->GetSize();
+        LogStats(allocator_);
+    }
 #endif
 }
 
 void PlatformGpuMemoryAllocator::DestroyImage(VkImage image, VmaAllocation allocation)
 {
 #if (RENDER_PERF_ENABLED == 1)
-    const uint64_t byteSize = (uint64_t)allocation->GetSize();
+    uint64_t byteSize = 0;
+    if (allocation) {
+        byteSize = (uint64_t)allocation->GetSize();
+    }
 #endif
 
     vmaDestroyImage(allocator_, // allocator
@@ -294,8 +336,10 @@ void PlatformGpuMemoryAllocator::DestroyImage(VkImage image, VmaAllocation alloc
         allocation);            // allocation
 
 #if (RENDER_PERF_ENABLED == 1)
-    memoryDebugStruct_.image -= byteSize;
-    LogStats(allocator_);
+    if (allocation) {
+        memoryDebugStruct_.image -= byteSize;
+        LogStats(allocator_);
+    }
 #endif
 }
 

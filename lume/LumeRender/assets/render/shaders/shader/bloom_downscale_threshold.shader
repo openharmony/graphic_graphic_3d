@@ -3,6 +3,8 @@
         "version": "22.00",
         "type": "shader"
     },
+    "category" : "Render/Effect",
+    "displayName" : "Bloom Downscale Threshold",
     "vert": "rendershaders://shader/fullscreen_triangle.vert.spv",
     "frag": "rendershaders://shader/bloom_downscale_threshold.frag.spv",
     "state": {

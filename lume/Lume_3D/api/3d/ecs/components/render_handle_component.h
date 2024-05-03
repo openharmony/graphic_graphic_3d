@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#if !defined(RENDER_HANDLE_COMPONENT) || defined(IMPLEMENT_MANAGER)
-#define RENDER_HANDLE_COMPONENT
+#if !defined(API_3D_ECS_COMPONENTS_RENDER_HANDLE_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_RENDER_HANDLE_COMPONENT_H
 
 #if !defined(IMPLEMENT_MANAGER)
 #include <3d/namespace.h>
@@ -24,7 +24,6 @@
 #include <core/ecs/intf_component_manager.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/namespace.h>
-#include <core/property/property_types.h>
 #include <render/resource_handle.h>
 
 CORE3D_BEGIN_NAMESPACE()
@@ -42,7 +41,7 @@ BEGIN_COMPONENT(IRenderHandleComponentManager, RenderHandleComponent)
      * Further details of the image can be queried with IGpuResourceManager::IsGpuBuffer/Image/Sampler*,
      * IGpuResourceManager::GetBuffer/Image/SamplerDescriptor.
      */
-    DEFINE_PROPERTY(RENDER_NS::RenderHandleReference, reference, "Render handle reference", 0,)
+    DEFINE_PROPERTY(RENDER_NS::RenderHandleReference, reference, "Render Handle Reference", 0, )
 
 END_COMPONENT_EXT(
     IRenderHandleComponentManager, RenderHandleComponent, "fb5c16b5-c369-4f7b-bc02-5398ddfdfa1d",
@@ -96,4 +95,4 @@ inline CORE_NS::EntityReference GetOrCreateEntityReference(CORE_NS::IEntityManag
 
 CORE3D_END_NAMESPACE()
 #endif
-#endif // __RENDER_HANDLE_COMPONENT__
+#endif // API_3D_ECS_COMPONENTS_RENDER_HANDLE_COMPONENT_H

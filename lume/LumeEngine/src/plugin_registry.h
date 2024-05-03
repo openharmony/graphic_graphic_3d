@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -81,11 +81,11 @@ protected:
     struct PluginData {
         ILibrary::Ptr library;
         PluginToken token;
-        uint32_t refcnt;
+        int32_t refcnt;
     };
 
-    void RegisterPlugin(ILibrary::Ptr, const IPlugin& pd);
-    void UnregisterPlugin(const IPlugin& pd, PluginToken token);
+    void RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, bool asDependency);
+    static void UnregisterPlugin(const IPlugin& plugin, PluginToken token);
 
     BASE_NS::vector<PluginData> pluginDatas_;
     BASE_NS::vector<const IPlugin*> plugins_;

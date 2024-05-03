@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -56,7 +56,6 @@ public:
         const RenderNodeGraphInputs& renderNodeGraphInputs;
         const BASE_NS::string_view& name;
         const BASE_NS::string_view& nodeJson;
-        RenderNodeGpuResourceManager& gpuResourceMgr;
         NodeContextDescriptorSetManager& descriptorSetMgr;
         NodeContextPsoManager& psoMgr;
         RenderCommandList& cmdList;
@@ -91,17 +90,12 @@ public:
 
     IRenderContext& GetRenderContext() const override;
 
-    IRenderNodeInterface* GetInterface(const BASE_NS::Uid& uid) const override;
+    CORE_NS::IInterface* GetRenderNodeContextInterface(const BASE_NS::Uid& uid) const override;
 
-    // for IRenderNodeInterface
-    BASE_NS::string_view GetTypeName() const override
-    {
-        return "IRenderNodeContextManager";
-    }
-    BASE_NS::Uid GetUid() const override
-    {
-        return IRenderNodeContextManager::UID;
-    }
+    const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
+    CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override;
+    void Ref() override;
+    void Unref() override;
 
 private:
     IRenderContext& renderContext_;
@@ -111,7 +105,6 @@ private:
     const BASE_NS::string nodeName_;
     const BASE_NS::string nodeJson_;
 
-    RenderNodeGpuResourceManager& renderNodeGpuResourceMgr_;
     RenderNodeGraphShareDataManager& renderNodeGraphShareDataMgr_;
     NodeContextDescriptorSetManager& descriptorSetMgr_;
     NodeContextPsoManager& psoMgr_;
@@ -119,10 +112,11 @@ private:
 
     struct ContextInterface {
         BASE_NS::Uid uid {};
-        IRenderNodeInterface* contextInterface { nullptr };
+        CORE_NS::IInterface* contextInterface { nullptr };
     };
     BASE_NS::vector<ContextInterface> contextInterfaces_;
 
+    BASE_NS::unique_ptr<RenderNodeGpuResourceManager> renderNodeGpuResourceMgr_;
     BASE_NS::unique_ptr<RenderNodeShaderManager> renderNodeShaderMgr_;
     BASE_NS::unique_ptr<RenderNodeRenderDataStoreManager> renderNodeRenderDataStoreMgr_;
     BASE_NS::unique_ptr<RenderNodeUtil> renderNodeUtil_;

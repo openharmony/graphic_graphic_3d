@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -42,6 +42,8 @@
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
+constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+
 PostProcessTonemapStruct FillPushConstant(
     const GpuImageDesc& dstImageDesc, const RenderPostProcessConfiguration& currentRenderPostProcessConfiguration_)
 {
@@ -106,6 +108,7 @@ void RenderNodeBackBuffer::ExecuteFrame(IRenderCommandList& cmdList)
 
     CheckForPsoSpecilization(ppConfig);
 
+    const uint32_t firstSetIndex = pipelineDescriptorSetBinder_->GetFirstSet();
     for (auto refIndex : pipelineDescriptorSetBinder_->GetSetIndices()) {
         const auto descHandle = pipelineDescriptorSetBinder_->GetDescriptorSetHandle(refIndex);
         const auto bindings = pipelineDescriptorSetBinder_->GetDescriptorSetLayoutBindingResources(refIndex);
@@ -116,7 +119,7 @@ void RenderNodeBackBuffer::ExecuteFrame(IRenderCommandList& cmdList)
     cmdList.BindPipeline(psoHandle_);
 
     // bind all sets
-    cmdList.BindDescriptorSets(0, pipelineDescriptorSetBinder_->GetDescriptorSetHandles());
+    cmdList.BindDescriptorSets(firstSetIndex, pipelineDescriptorSetBinder_->GetDescriptorSetHandles());
 
     // dynamic state
     cmdList.SetDynamicStateViewport(currentViewportDesc_);
@@ -141,11 +144,10 @@ void RenderNodeBackBuffer::CheckForPsoSpecilization(const PostProcessConfigurati
         renderNodeContextMgr_->GetRenderNodeUtil().GetRenderPostProcessConfiguration(postProcessConfiguration);
     if (!RenderHandleUtil::IsValid(psoHandle_)) {
         auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-        const DynamicStateFlags dynamicStateFlags =
-            DynamicStateFlagBits::CORE_DYNAMIC_STATE_VIEWPORT | DynamicStateFlagBits::CORE_DYNAMIC_STATE_SCISSOR;
         const RenderHandle graphicsState =
             renderNodeContextMgr_->GetShaderManager().GetGraphicsStateHandleByShaderHandle(shader_);
-        psoHandle_ = psoMgr.GetGraphicsPsoHandle(shader_, graphicsState, pipelineLayout_, {}, {}, dynamicStateFlags);
+        psoHandle_ = psoMgr.GetGraphicsPsoHandle(
+            shader_, graphicsState, pipelineLayout_, {}, {}, { DYNAMIC_STATES, BASE_NS::countof(DYNAMIC_STATES) });
     }
 
     // store new values

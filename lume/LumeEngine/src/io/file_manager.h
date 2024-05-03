@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,8 +16,15 @@
 #ifndef CORE__IO__FILEMANAGER_H
 #define CORE__IO__FILEMANAGER_H
 
+#include <cstdint>
+
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_directory.h>
+#include <core/io/intf_file.h>
 #include <core/io/intf_file_manager.h>
 #include <core/io/intf_file_system.h>
 #include <core/namespace.h>
@@ -60,6 +67,7 @@ public:
     void UnregisterPath(BASE_NS::string_view protocol, BASE_NS::string_view uri) override;
 
     virtual IFilesystem::Ptr CreateROFilesystem(const void* const data, uint64_t size) override;
+
 private:
     // NOTE: Johannes Pystynen 2019/10/25, Faster access when protocol is known.
     IFilesystem* GetFilesystem(BASE_NS::string_view protocol) const;

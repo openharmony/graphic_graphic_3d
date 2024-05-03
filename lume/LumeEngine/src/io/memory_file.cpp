@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,7 +17,12 @@
 
 #include <cstdint>
 #include <cstring>
+#include <memory>
 
+#include <base/containers/allocator.h>
+#include <base/containers/vector.h>
+#include <base/namespace.h>
+#include <core/io/intf_file.h>
 #include <core/log.h>
 #include <core/namespace.h>
 
@@ -26,17 +31,16 @@ using BASE_NS::CloneData;
 
 uint64_t MemoryFileStorage::Write(uint64_t index, const void* buffer, uint64_t count)
 {
-    ptrdiff_t idx = static_cast<ptrdiff_t>(index);
     if (index >= buffer_.size()) {
         return 0;
     }
-    if (CloneData(buffer_.data() + idx, buffer_.size() - idx, buffer, static_cast<size_t>(count))) {
+    if (CloneData(buffer_.data() + index, buffer_.size() - index, buffer, static_cast<size_t>(count))) {
         return count;
     }
     return 0;
 }
 
-MemoryFile::MemoryFile(std::shared_ptr<MemoryFileStorage>&& buffer) : buffer_(std::move(buffer)) {}
+MemoryFile::MemoryFile(std::shared_ptr<MemoryFileStorage>&& buffer) : buffer_(move(buffer)) {}
 
 IFile::Mode MemoryFile::GetMode() const
 {

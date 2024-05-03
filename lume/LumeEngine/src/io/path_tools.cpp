@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,7 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "path_tools.h"
+
+#include <cstdlib>
+
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
+#include <core/log.h>
+#include <core/namespace.h>
 
 #include "util/string_util.h"
 
@@ -34,12 +42,18 @@ bool IsRelative(const string_view path)
     return path[0] != '/';
 }
 
-bool ParseUri(const string_view uri, string_view& protocol, string_view& path)
+bool ParseUri(string_view uri, string_view& protocol, string_view& path)
 {
-    const size_t index = uri.find("://");
+    const size_t index = uri.find(':');
     if (index != string_view::npos) {
         protocol = uri.substr(0, index);
-        path = uri.substr(index + 3); // 3: path size without protocol
+        // remove scheme and separator
+        uri.remove_prefix(index + 1U);
+        // remove the authority separator if it's there
+        if (uri.starts_with("//")) {
+            uri.remove_prefix(2U);
+        }
+        path = uri;
         return true;
     }
 
@@ -60,10 +74,7 @@ string NormalizePath(string_view path)
             continue;
         }
         auto pos = path.find_first_of('/', 0);
-        if (const string_view sub = path.substr(0, pos); sub == ".") {
-            path = path.substr(pos);
-            continue;
-        } else if (sub == "..") {
+        if (const string_view sub = path.substr(0, pos); sub == "..") {
             if ((!res.empty()) && (res.back() == '/')) {
                 res.resize(res.size() - 1);
             }
@@ -81,14 +92,16 @@ string NormalizePath(string_view path)
                 res.push_back('/');
                 break;
             }
+        } else if (sub == ".") {
+            path = path.substr(pos);
+            continue;
         } else {
             res.append(sub);
         }
         if (pos == string::npos) {
             break;
-        } else {
-            res.push_back('/');
         }
+        res.push_back('/');
         path = path.substr(pos);
     }
     return res;
@@ -100,8 +113,11 @@ string GetCurrentDirectory()
 #if defined(__linux__) || defined(__APPLE__)
     // OSX and linux both implement the "null buf" extension which allocates the required amount of space.
     auto tmp = getcwd(nullptr, 0);
-    if ((tmp) && (string_view(tmp).back() == '/')) {
+    if (tmp) {
         basePath = tmp;
+        if (basePath.back() != '/') {
+            basePath += '/';
+        }
         free(tmp);
     } else {
         // fallback to root (either out-of-memory or the CWD is inaccessible for current user)
