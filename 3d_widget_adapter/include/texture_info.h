@@ -41,7 +41,6 @@ struct WindowChangeInfo {
     float heightScale = 1.0f;
     bool recreateWindow = true;
     SurfaceType surfaceType = SurfaceType::SURFACE_TEXTURE;
-
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_TEXTURE_INFO_H

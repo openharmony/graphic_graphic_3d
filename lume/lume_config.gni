@@ -32,8 +32,8 @@ declare_args() {
   LIB_RENDER = "libPluginAGPRender"
   LIB_CORE3D = "libPluginAGP3D"
   LIB_VULKAN_3D = "//third_party/vulkan-loader:vulkan_loader"
-  METAOBJECT_DIR_NAME="metaobject"
-  SCENEWIDGETPLUGIN_DIR_NAME="scenewidgetplugin"
+  METAOBJECT_DIR_NAME = "metaobject"
+  SCENEWIDGETPLUGIN_DIR_NAME = "scenewidgetplugin"
   ECS_HELPER = "ecshelper"
 }
 

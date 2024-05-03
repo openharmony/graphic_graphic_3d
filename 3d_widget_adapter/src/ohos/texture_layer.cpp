@@ -41,7 +41,7 @@ struct TextureImage {
     TextureInfo textureInfo_;
 };
 
-class TextureLayerImpl: public TextureLayer {
+class TextureLayerImpl : public TextureLayer {
 public:
     explicit TextureLayerImpl(int32_t key);
     virtual ~TextureLayerImpl();
@@ -229,7 +229,7 @@ TextureInfo TextureLayer::GetTextureInfo()
 
 void TextureLayer::SetParent(std::shared_ptr<Rosen::RSNode>& parent)
 {
-    return textureLayer_->SetParent(parent);    
+    return textureLayer_->SetParent(parent);
 }
 
 TextureInfo TextureLayer::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
