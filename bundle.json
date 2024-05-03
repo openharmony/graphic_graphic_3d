@@ -32,7 +32,8 @@
           "libjpeg-turbo",
           "napi",
           "ability_runtime",
-          "bundle_framework"
+          "bundle_framework",
+          "egl"
         ],
         "third_party": [
           "skia",
@@ -40,7 +41,8 @@
           "libjpeg-turbo",
           "zlib",
           "vulkan-headers",
-          "vulkan-loader"
+          "vulkan-loader",
+          "egl"
         ]
       },
       "build": {
@@ -52,7 +54,10 @@
           "//foundation/graphic/graphic_3d/lume/Lume_3D:libAGP3D",
           "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
           "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/LumeShaderCompiler:binary_compile_shader",
-          "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/lumeassetcompiler:binary_compile_asset"
+          "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/lumeassetcompiler:binary_compile_asset",
+          "//foundation/graphic/graphic_3d/lume/metaobject:libPluginMetaObject",
+          "//foundation/graphic/graphic_3d/lume/scenewidgetplugin:libPluginSceneWidget",
+          "//foundation/graphic/graphic_3d/kits/js:libscene"
         ],
         "inner_kits": [
           {
@@ -61,7 +66,7 @@
             "header": {
             "header_files": [
                 "graphics_manager_common.h",
-				"graphics_task.h",
+                "graphics_task.h",
                 "i_engine.h",
                 "offscreen_context_helper.h",
                 "widget_adapter.h",
@@ -89,7 +94,7 @@
             "header": {
             "header_files": [
                 "graphics_manager_common.h",
-				"graphics_task.h",
+                "graphics_task.h",
                 "i_engine.h",
                 "offscreen_context_helper.h",
                 "widget_adapter.h",
@@ -110,6 +115,16 @@
                 "ohos/texture_layer.h"
               ],
               "header_base": "//foundation/graphic/graphic_3d/3d_widget_adapter/include"
+            }
+          },
+          {
+            "name": "//foundation/graphic/graphic_3d/3d_scene_adapter:sceneAdapterInterface",
+            "header": {
+              "header_files": [
+                "scene_adapter/scene_adapter.h",
+                "scene_adapter/scene_bridge.h"
+              ],
+              "header_base": "//foundation/graphic/graphic_3d/3d_scene_adapter/include"
             }
           }
         ],
