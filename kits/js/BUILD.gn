@@ -141,8 +141,10 @@ ohos_source_set("napi_source") {
   public_configs = [ ":napi_config" ]
 
   deps = [ "../../3d_widget_adapter:lib3dWidgetAdapter" ]
+
   external_deps = [
     "c_utils:utils",
+    "egl:libEGL",
     "hilog:libhilog",
     "hitrace:hitrace_meter",
     "init:libbegetutil",
