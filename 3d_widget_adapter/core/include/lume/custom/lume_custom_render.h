@@ -53,16 +53,16 @@ struct CustomRenderInput {
 class LumeCustomRender {
 public:
     LumeCustomRender(bool needsFrameCallback): needsFrameCallback_(needsFrameCallback) {};
-    virtual ~LumeCustomRender();
+    ~LumeCustomRender();
 
-    virtual BASE_NS::vector<RENDER_NS::RenderHandleReference> GetRenderHandles();
     void Initialize(const CustomRenderInput& input);
+    const RENDER_NS::RenderHandleReference GetRenderHandle();
     void LoadImages(const std::vector<std::string>& imageUris);
     void RegistorShaderPath(const std::string& shaderPath);
-    virtual bool UpdateShaderInputBuffer(const std::shared_ptr<ShaderInputBuffer>& shaderInputBuffer);
+    bool UpdateShaderInputBuffer(const std::shared_ptr<ShaderInputBuffer>& shaderInputBuffer);
     void UpdateShaderSpecialization(const std::vector<uint32_t>& values);
-    virtual void OnSizeChange(int32_t width, int32_t height);
-    virtual void OnDrawFrame();
+    void OnSizeChange(int32_t width, int32_t height);
+    void OnDrawFrame();
     void LoadRenderNodeGraph(const std::string& rngUri, const RENDER_NS::RenderHandleReference& output);
     void UnloadImages();
     void UnloadRenderNodeGraph();
@@ -70,27 +70,8 @@ public:
     {
         return needsFrameCallback_;
     }
-    void SetScaleInfo(float widthScale, float heightScale)
-    {
-        widthScale_ = widthScale;
-        heightScale_ = heightScale;
-    }
-protected:
-    float widthScale_ = 1.0f;
-    float heightScale_ = 1.0f;
-    uint32_t width_ = 0U;
-    uint32_t height_ = 0U;
 
 private:
-    const RENDER_NS::RenderHandleReference GetRenderHandle();
-    void SetRenderOutput(const RENDER_NS::RenderHandleReference& output);
-    void LoadImage(const std::string& imageUri);
-    void GetDefaultStaging();
-    void PrepareResolutionInputBuffer();
-    void DestroyBuffer();
-    void DestroyDataStorePod();
-    void DestroyRes();
-
     CORE_NS::IEngine::Ptr engine_;
     CORE3D_NS::IGraphicsContext::Ptr graphicsContext_;
     RENDER_NS::IRenderContext::Ptr renderContext_;
@@ -120,6 +101,14 @@ private:
     const char* const IMAGE_NAME = "IMAGE";
     const char* const INPUT_BUFFER = "INPUT_BUFFER";
     const char* const RESOLUTION_BUFFER = "RESOLUTION_BUFFER";
+
+    void SetRenderOutput(const RENDER_NS::RenderHandleReference& output);
+    void LoadImage(const std::string& imageUri);
+    void GetDefaultStaging();
+    void PrepareResolutionInputBuffer();
+    void DestroyBuffer();
+    void DestroyDataStorePod();
+    void DestroyRes();
 };
 
 } // namespace name

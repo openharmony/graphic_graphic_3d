@@ -125,17 +125,21 @@ void LumeCustomRender::DestroyDataStorePod()
 
 void  LumeCustomRender::LoadImages(const std::vector<std::string>& imageUris)
 {
+    WIDGET_LOGD("lume custom render load images");
     for (auto& imageUri : imageUris) {
         LoadImage(imageUri);
-    }
-    const std::string& turboTexture = "OhosRawFile://assets/blue_ball_compressed.png";
-    if (imageUris.back().find("ball_compressed") != std::string::npos) {
-        LoadImage(turboTexture);
     }
 }
 
 void LumeCustomRender::LoadImage(const std::string& imageUri)
 {
+    auto find = std::find_if(images_.begin(), images_.end(),
+        [&imageUri](const std::pair<std::string, CORE_NS::EntityReference>& image) {
+            return image.first == imageUri;
+        });
+    if (find != images_.end()) {
+        return;
+    }
     auto& imageManager = engine_->GetImageLoaderManager();
     auto& gpuResourceMgr = renderContext_->GetDevice().GetGpuResourceManager();
     auto handleManager = CORE_NS::GetManager<CORE3D_NS::IRenderHandleComponentManager>(*ecs_);
@@ -177,12 +181,6 @@ LumeCustomRender::~LumeCustomRender()
 void LumeCustomRender::OnSizeChange(int32_t width, int32_t height)
 {
     uint32_t floatSize = 2u;
-    if (width <= 0 || height <= 0) {
-        WIDGET_LOGE("width and height must be larger than zero");
-        return;
-    }
-    width_ = width;
-    height_ = height;
     const float* buffer = resolutionBuffer_.Map(floatSize);
     if (!buffer) {
         WIDGET_LOGE("custom render resolution resolutionBuffer error!");
@@ -215,11 +213,6 @@ void LumeCustomRender::OnSizeChange(int32_t width, int32_t height)
     renderDataStoreDefaultStaging_->CopyDataToBufferOnCpu(data, resolutionBufferHandle_, bufferCopy);
 }
 
-BASE_NS::vector<RENDER_NS::RenderHandleReference> LumeCustomRender::GetRenderHandles()
-{
-    return { renderHandle_ };
-}
-
 const RENDER_NS::RenderHandleReference LumeCustomRender::GetRenderHandle()
 {
     return renderHandle_;
@@ -241,6 +234,7 @@ void LumeCustomRender::LoadRenderNodeGraph(const std::string& rngUri,
 
     renderHandle_ = graphManager.Create(
         RENDER_NS::IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, result.desc);
+    SetRenderOutput(output);
 }
 
 void LumeCustomRender::UnloadRenderNodeGraph()

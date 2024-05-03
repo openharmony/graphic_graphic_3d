@@ -19,27 +19,12 @@
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/light_component.h>
-#include <3d/ecs/components/material_component.h>
-#include <3d/ecs/components/name_component.h>
-#include <3d/ecs/components/node_component.h>
-#include <3d/ecs/components/post_process_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
-#include <3d/ecs/components/render_handle_component.h>
-#include <3d/ecs/components/render_mesh_component.h>
+#include <3d/ecs/components/post_process_component.h>
 #include <3d/ecs/components/transform_component.h>
-#include <3d/ecs/components/uri_component.h>
 #include <3d/ecs/systems/intf_animation_system.h>
-#include <3d/ecs/systems/intf_morphing_system.h>
-#include <3d/ecs/systems/intf_node_system.h>
-#include <3d/ecs/systems/intf_render_system.h>
-
-#include <3d/implementation_uids.h>
 #include <3d/gltf/gltf.h>
 #include <3d/intf_graphics_context.h>
-
-#include <3d/util/intf_mesh_util.h>
-#include <3d/util/intf_picking.h>
-#include <3d/util/intf_scene_util.h>
 
 #include <base/containers/string_view.h>
 #include <base/math/mathf.h>
@@ -161,7 +146,7 @@ public:
 protected:
     virtual CORE_NS::PlatformCreateInfo ToEnginePlatformData(const PlatformData& data) const = 0;
     virtual void RegisterAssertPath() = 0;
-    void LoadSystemGraph(BASE_NS::string sysGraph);
+    void LoadSystemGraph();
     void CreateEcs(uint32_t key);
     void CreateScene();
     void DestroyScene();
@@ -202,7 +187,7 @@ protected:
     void CollectRenderHandles();
     void GetLightPositionAndRotation(const std::shared_ptr<OHOS::Render3D::Light>& light,
         BASE_NS::Math::Vec3& position, BASE_NS::Math::Quat& rotation);
-    std::shared_ptr<LumeCustomRender> CustomRenderFactory(const std::string& renderNodeGraph, bool needsFrameCallback);
+
     CORE_NS::IEngine::Ptr engine_;
     CORE_NS::IEcs::Ptr ecs_;
     CORE_NS::Entity cameraEntity_;
@@ -231,20 +216,11 @@ protected:
     RENDER_NS::RenderHandleReference gpuResourceImgHandle_;
     RENDER_NS::RenderHandleReference gpuDepthTargetHandle_;
     RENDER_NS::IDevice *device_ = nullptr;
-    RENDER_NS::RenderHandleReference swapchainHandle_;
 
     OrbitCameraHelper orbitCamera_;
     std::vector<std::shared_ptr<GLTFAnimation>> gltfAnimations_;
     std::vector<std::shared_ptr<Geometry>> shapes_;
     std::unordered_map<std::string, std::shared_ptr<Geometry>> shapesMap_;
-
-    CORE3D_NS::IMaterialComponentManager* materialManager_ { nullptr };
-    CORE3D_NS::IMeshComponentManager* meshManager_ { nullptr };
-    CORE3D_NS::INameComponentManager* nameManager_ { nullptr };
-    CORE3D_NS::IUriComponentManager* uriManager_ { nullptr };
-    CORE3D_NS::IRenderHandleComponentManager* gpuHandleManager_ { nullptr };
-    CORE3D_NS::INodeSystem* nodeSystem_ { nullptr };
-    CORE3D_NS::IRenderMeshComponentManager* renderMeshManager_ { nullptr };
 
     // Shader
     std::shared_ptr<LumeCustomRender> customRender_;
@@ -264,7 +240,6 @@ protected:
     bool needsRedraw_ = false;
     bool needsFrameCallback_ = false;
     void* nativeWindow_ = nullptr;
-    bool activateWeatherPhys_ = false;
 
     EGLSurface eglSurface_ = EGL_NO_SURFACE;
     TextureInfo textureInfo_;

@@ -16,31 +16,19 @@
 #ifndef OHOS_RENDER_3D_TEXTURE_INFO_H
 #define OHOS_RENDER_3D_TEXTURE_INFO_H
 
+#include <GLES/gl.h>
 #include <cstdint>
-#include <data_type/constants.h>
 
 namespace OHOS::Render3D {
 struct TextureInfo {
     uint32_t width_ = 0U;
     uint32_t height_ = 0U;
-    uint32_t textureId_ = 0U;
+    GLuint textureId_ = 0U;
     void* nativeWindow_ = nullptr;
     float widthScale_ = 1.0f;
     float heightScale_ = 1.0f;
     float customRatio_ = 0.1f;
     bool recreateWindow_ = true;
-};
-
-struct WindowChangeInfo {
-    float offsetX = 0.0f;
-    float offsetY = 0.0f;
-    float width = 0.0f;
-    float height = 0.0f;
-    float scale = 1.0f;
-    float widthScale = 1.0f;
-    float heightScale = 1.0f;
-    bool recreateWindow = true;
-    SurfaceType surfaceType = SurfaceType::SURFACE_TEXTURE;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_TEXTURE_INFO_H

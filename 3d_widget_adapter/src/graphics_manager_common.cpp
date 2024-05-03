@@ -125,7 +125,6 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
         }
     }
 
-    hapInfo_ = hapInfo;
     auto client = EngineFactory::CreateEngine(type);
     client->Clone(engine_.get());
     return client;
@@ -212,11 +211,6 @@ RenderBackend GraphicsManagerCommon::GetRenderBackendType(int32_t key)
         backend = it->second;
     }
     return backend;
-}
-
-const HapInfo& GraphicsManagerCommon::GetHapInfo() const
-{
-    return hapInfo_;
 }
 
 bool GraphicsManagerCommon::HasMultiEcs()

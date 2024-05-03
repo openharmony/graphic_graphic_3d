@@ -73,14 +73,6 @@
 #include "graphics_manager.h"
 #include "widget_trace.h"
 
-#include "include/gpu/vk/GrVkExtensions.h"
-#include "vulkan/vulkan_core.h"
-#include "vulkan/vulkan_ohos.h"
-
-#include <parameter.h>
-#include <parameters.h>
-#include "param/sys_param.h"
-
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
 
 CORE_BEGIN_NAMESPACE()
@@ -169,7 +161,6 @@ void LumeCommon::Clone(IEngine* proto)
     renderContext_ = p->GetRenderContext();
     graphicsContext_ = p->GetGraphicsContext();
     device_ = p->GetDevice();
-    activateWeatherPhys_ = p->activateWeatherPhys_;
 }
 
 bool LumeCommon::InitEngine(EGLContext gfxContext, const PlatformData& data)
@@ -211,10 +202,8 @@ void LumeCommon::OnWindowChange(const TextureInfo& textureInfo)
     float widthScale = textureInfo.widthScale_;
     float heightScale = textureInfo.heightScale_;
     SetupCameraViewPort(textureInfo.width_ * widthScale, textureInfo.height_ * heightScale);
-
     if (customRender_) { // this moment customRender may not ready
         customRender_->OnSizeChange(textureInfo.width_ * widthScale, textureInfo.height_ * heightScale);
-        customRender_->SetScaleInfo(widthScale, heightScale);
     }
 }
 
@@ -233,27 +222,36 @@ RENDER_NS::IRenderContext::Ptr LumeCommon::CreateRenderContext(EGLContext gfxCon
         return nullptr;
     }
 
-    Render::DeviceCreateInfo deviceCreateInfo;
-    std::string backendProp = system::GetParameter("AGP_BACKEMD_CONFIG", "gles");
-    RENDER_NS::BackendExtraVk vkExtra;
+#if CORE_HAS_VULKAN_BACKEND
+    Core::BackendExtraVk vkExtra;
+    Core::DeviceCreateInfo vulkanDeviceCreateInfo;
+    vulkanDeviceCreateInfo.backendType = Core::DeviceBackendType::VULKAN;
+    vulkanDeviceCreateInfo.backendConfiguration = &vkExtra;
+#endif
+
+#if CORE_HAS_GLES_BACKEND
     RENDER_NS::BackendExtraGLES glesExtra;
-    if (backendProp == "vulkan") {
-        vkExtra.extensions.extensionNames.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
-        vkExtra.extensions.extensionNames.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-        vkExtra.extensions.extensionNames.push_back(VK_KHR_MAINTENANCE2_EXTENSION_NAME);
-        vkExtra.extensions.extensionNames.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
-        vkExtra.extensions.extensionNames.push_back(VK_KHR_BIND_MEMORY_2_EXTENSION_NAME);
-        deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::VULKAN;
-        deviceCreateInfo.backendConfiguration = &vkExtra;
-    } else {
-        glesExtra.applicationContext = EGL_NO_CONTEXT;
-        glesExtra.sharedContext = gfxContext;
-        glesExtra.MSAASamples = 0;
-        glesExtra.depthBits = 0; // 24 bits of depth buffer.
-        deviceCreateInfo.backendType = Render::DeviceBackendType::OPENGLES;
-        deviceCreateInfo.backendConfiguration = &glesExtra;
-    }
-    WIDGET_LOGD("config backend %s", backendProp.c_str());
+    glesExtra.applicationContext = EGL_NO_CONTEXT;
+    glesExtra.sharedContext = gfxContext;
+    glesExtra.MSAASamples = 0;
+    glesExtra.depthBits = 0; // 24 bits of depth buffer.
+    Render::DeviceCreateInfo glesDeviceCreateInfo;
+    glesDeviceCreateInfo.backendType = Render::DeviceBackendType::OPENGLES;
+    glesDeviceCreateInfo.backendConfiguration = &glesExtra;
+
+#endif
+
+#if CORE_HAS_GL_BACKEND
+    Core::BackendExtraGL glExtra;
+    glExtra.MSAASamples = 0;
+    glExtra.depthBits = 24;
+    glExtra.alphaBits = 8;
+    glExtra.stencilBits = 0;
+    DeviceCreateInfo glDeviceCreateInfo;
+    glDeviceCreateInfo.backendType = DeviceBackendType::OPENGL;
+    glDeviceCreateInfo.backendConfiguration = &glExtra;
+#endif
+
     const RENDER_NS::RenderCreateInfo renderCreateInfo {
         {
             "core_gltf_viewer", // name
@@ -261,7 +259,7 @@ RENDER_NS::IRenderContext::Ptr LumeCommon::CreateRenderContext(EGLContext gfxCon
             0,
             0,
         },
-        deviceCreateInfo,
+        glesDeviceCreateInfo,
     };
 
     auto ret =  renderContext_->Init(renderCreateInfo);
@@ -353,11 +351,9 @@ void LumeCommon::UpdateCustomRender(const std::shared_ptr<CustomRenderDescriptor
 {
     if (customRenderDescriptor) {
         auto needsFrameCallback = customRenderDescriptor->NeedsFrameCallback();
-        if (!customRender_) {
-            customRender_ = std::make_shared<LumeCustomRender>(needsFrameCallback);
-        }
+        customRender_ = std::make_shared<LumeCustomRender>(needsFrameCallback);
         customRender_->Initialize({ GetCoreEngine(), GetGraphicsContext(), GetRenderContext(), ecs_,
-            textureInfo_.width_ * textureInfo_.widthScale_, textureInfo_.height_ * textureInfo_.heightScale_});
+            textureInfo_.width_, textureInfo_.height_ });
         customRender_->LoadRenderNodeGraph(customRenderDescriptor->GetUri(), gpuResourceImgHandle_);
         if (needsFrameCallback) {
             needsFrameCallback_ = needsFrameCallback;
@@ -535,7 +531,9 @@ void LumeCommon::DrawFrame()
     auto* ecs = ecs_.get();
     if (const bool needsRender = engine_->TickFrame(BASE_NS::array_view(&ecs, 1)); needsRender) {
         // Collect render handles here
-        CollectRenderHandles();
+        if (renderHandles_.empty()) {
+            CollectRenderHandles();
+        }
 
         //Update custom renders
         const Core::EngineTime et = engine_->GetEngineTime();
@@ -853,10 +851,7 @@ void LumeCommon::CollectRenderHandles()
     renderHandles_.clear();
 
     if (customRender_) {
-        auto rngs = customRender_->GetRenderHandles();
-        for (auto r : rngs) {
-            renderHandles_.push_back(r);
-        }
+        renderHandles_.push_back(customRender_->GetRenderHandle());
     }
 
     if (!renderHandles_.empty()) {
@@ -885,7 +880,7 @@ void LumeCommon::CreateEcs(uint32_t key)
     ecs_ = engine_->CreateEcs();
 }
 
-void LumeCommon::LoadSystemGraph(BASE_NS::string sysGraph)
+void LumeCommon::LoadSystemGraph()
 {
     auto& ecs = *ecs_;
     static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc{ "shaders://" };
@@ -894,22 +889,12 @@ void LumeCommon::LoadSystemGraph(BASE_NS::string sysGraph)
     auto graphFactory = CORE_NS::GetInstance<CORE_NS::ISystemGraphLoaderFactory>(
         CORE_NS::UID_SYSTEM_GRAPH_LOADER);
     auto systemGraphLoader = graphFactory->Create(engine_->GetFileManager());
-    auto result = systemGraphLoader->Load(sysGraph, ecs);
-    if (!result.success) {
-        WIDGET_LOGE("load system graph %s error %s", sysGraph.c_str(), result.error.c_str());
-    }
+    systemGraphLoader->Load("rofs3D://systemGraph.json", ecs);
 
     ecs.Initialize();
     transformManager_ = CORE_NS::GetManager<CORE3D_NS::ITransformComponentManager>(ecs);
     cameraManager_ = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(ecs);
     sceneManager_ = CORE_NS::GetManager<CORE3D_NS::IRenderConfigurationComponentManager>(ecs);
-    materialManager_ = CORE_NS::GetManager<CORE3D_NS::IMaterialComponentManager>(ecs);
-    meshManager_ = CORE_NS::GetManager<CORE3D_NS::IMeshComponentManager>(ecs);
-    nameManager_ = CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(ecs);
-    uriManager_ = CORE_NS::GetManager<CORE3D_NS::IUriComponentManager>(ecs);
-    gpuHandleManager_ = CORE_NS::GetManager<CORE3D_NS::IRenderHandleComponentManager>(ecs);
-    nodeSystem_ = CORE_NS::GetSystem<CORE3D_NS::INodeSystem>(ecs);
-    renderMeshManager_ = CORE_NS::GetManager<CORE3D_NS::IRenderMeshComponentManager>(ecs);
     lightManager_ = CORE_NS::GetManager<CORE3D_NS::ILightComponentManager>(ecs);
     postprocessManager_ = CORE_NS::GetManager<CORE3D_NS::IPostProcessComponentManager>(ecs);
 }
@@ -994,7 +979,8 @@ void LumeCommon::CreateCamera()
     if (auto cameraWriteHandle = cameraManager_->Write(cameraEntity_); cameraWriteHandle) {
         cameraWriteHandle->sceneFlags |= CORE3D_NS::CameraComponent::MAIN_CAMERA_BIT |
             CORE3D_NS::CameraComponent::ACTIVE_RENDER_BIT;
-        cameraWriteHandle->pipelineFlags |= CORE3D_NS::CameraComponent::MSAA_BIT;
+        cameraWriteHandle->pipelineFlags |= CORE3D_NS::CameraComponent::MSAA_BIT |
+            CORE3D_NS::CameraComponent::ALLOW_COLOR_PRE_PASS_BIT;
         cameraWriteHandle->renderingPipeline = CORE3D_NS::CameraComponent::RenderingPipeline::FORWARD;
     }
 }
@@ -1299,35 +1285,28 @@ void LumeCommon::LoadCustGeometry(const std::vector<std::shared_ptr<Geometry>>& 
 bool LumeCommon::DestroySwapchain()
 {
     WIDGET_LOGD("LumeCommon::DestroySwapchin");
-#ifdef CREATE_SURFACE
     EGLBoolean ret = EGL_TRUE;
+    if (eglSurface_ == EGL_NO_SURFACE) {
+        return true;
+    }
+
     if (!device_) {
         WIDGET_LOGE("no device but has eglSurface");
         return false;
     }
 
-    if (eglSurface_ == EGL_NO_SURFACE) {
-        return true;
-    }
-
-    if (swapchainHandle_ && device_) {
-        device_->DestroySwapchain(swapchainHandle_);
-    }
-
     const auto& data = static_cast<const RENDER_NS::DevicePlatformDataGLES&>(device_->GetPlatformData());
+    device_->DestroySwapchain();
     ret = eglDestroySurface(data.display, eglSurface_);
     eglSurface_ = EGL_NO_SURFACE;
-#endif
-    // need check destroy swapchain
-    swapchainHandle_ = {};
-    return true;
+
+    return static_cast<bool>(ret);
 }
 
 void LumeCommon::InitializeScene(uint32_t key)
 {
     CreateEcs(key);
-    BASE_NS::string sysGraph = "rofs3D://systemGraph.json";
-    LoadSystemGraph(sysGraph);
+    LoadSystemGraph();
     CreateCamera();
 }
 
@@ -1335,7 +1314,6 @@ bool LumeCommon::CreateSwapchain(void* nativeWindow)
 {
     WIDGET_SCOPED_TRACE("LumeCommon::CreateSwapchain");
     WIDGET_LOGD("LumeCommon::CreateSwapchain");
-#ifdef CREATE_SURFACE
     if (nativeWindow == nullptr) {
         return false;
     }
@@ -1380,27 +1358,13 @@ bool LumeCommon::CreateSwapchain(void* nativeWindow)
             WIDGET_LOGE("fail to create linear egl surface for reason %d", error);
         }
     }
-    RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
-        reinterpret_cast<uint64_t>(eglSurface_),
-        RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
-            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT,
-    };
-#endif
-    RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
-        // reinterpret_cast<uint64_t>(eglSurface_), true, true,
-        0U,
-        RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
-        RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |
-        RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT,
-        RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        {
-            reinterpret_cast<uintptr_t>(nativeWindow),
-            reinterpret_cast<uintptr_t>(static_cast<const RENDER_NS::DevicePlatformDataGLES&>(
-                device_->GetPlatformData()).display)
-        }
 
+    RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
+        reinterpret_cast<uint64_t>(eglSurface_), true, true,
+            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
+            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT
     };
-    swapchainHandle_ = device_->CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
+    device_->CreateSwapchain(swapchainCreateInfo);
     return eglSurface_ != EGL_NO_SURFACE;
 }
 
@@ -1411,24 +1375,25 @@ void LumeCommon::SetupCustomRenderTarget(const TextureInfo &info)
         return;
     }
 
-    auto& ecs = *ecs_;
-    auto cameraComponent = cameraManager_->Write(cameraEntity_);
-    auto* rhcManager = CORE_NS::GetManager<CORE3D_NS::IRenderHandleComponentManager>(ecs);
-    cameraComponent->customColorTargets.clear();
-    CORE_NS::EntityReference imageEntity;
-    
     if (info.textureId_ == 0U && info.nativeWindow_) {
         // need check recreate window
         CreateSwapchain(info.nativeWindow_);
-        imageEntity = GetOrCreateEntityReference(ecs.GetEntityManager(), *rhcManager, swapchainHandle_);
-    } else {
-        auto imageEntity = CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(),
-            *rhcManager, SetupGpuImageTarget());
-        auto depthEntity = CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(),
-            *rhcManager, SetupGpuDepthTarget());
+        return;
     }
-    cameraComponent->postProcess = postprocessEntity_;
+
+    auto& ecs = *ecs_;
+    auto cameraComponent = cameraManager_->Write(cameraEntity_);
+    auto* rhcManager = CORE_NS::GetManager<CORE3D_NS::IRenderHandleComponentManager>(ecs);
+
+    auto imageEntity = CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(),
+        *rhcManager, SetupGpuImageTarget());
+    auto depthEntity = CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(),
+        *rhcManager, SetupGpuDepthTarget());
+
+    cameraComponent->customColorTargets.clear();
     cameraComponent->customColorTargets.emplace_back(std::move(imageEntity));
+    cameraComponent->customDepthTarget = std::move(depthEntity);
+    cameraComponent->postProcess = postprocessEntity_;
 }
 
 void LumeCommon::UpdateLights(const std::vector<std::shared_ptr<OHOS::Render3D::Light>>& lights)

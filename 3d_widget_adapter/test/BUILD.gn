@@ -23,7 +23,9 @@ module_output_path = "graphic_3d/3d_widget_adapter_test"
 ohos_unittest("3d_widget_adpater_test") {
   module_out_path = module_output_path
 
-  sources = [ "3d_widget_adapter_test.cpp" ]
+  sources = [
+    "3d_widget_adapter_test.cpp",
+  ]
 
   include_dirs = [
     "${ace_root}",
@@ -32,12 +34,12 @@ ohos_unittest("3d_widget_adpater_test") {
 
   deps = [
     "//foundation/graphic/graphic_3d/3d_widget_adapter:widget_adapter_source",
+    "//foundation/arkui/ace_engine//build:libace",
   ]
 
   external_deps = [
-    "ace_engine:libace",
-    "graphic_2d:libgl",
     "hilog:libhilog",
+    "graphic_2d:libgl",
   ]
 
   defines = [ "USE_ACE_SKIA" ]
