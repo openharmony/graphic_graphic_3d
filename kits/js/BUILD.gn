@@ -1,0 +1,167 @@
+# Copyright (C) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+declare_args() {
+}
+
+config("lume3d_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+  ]
+
+  if (current_os == "ohos") {
+    include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
+  }
+
+  configs = []
+
+  cflags = [
+    "-Wall",
+    "-fexceptions",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+
+    "-Wno-nullability-completeness",
+    "-Wno-ignored-qualifiers",
+    "-Wno-switch",
+
+    "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "-DCORE_BUILD_2D = 0",
+    "-DCORE_BUILD_VULKAN=0",
+    "-DCORE_BUILD_GL=0",
+    "-DCORE_BUILD_GLES=1",
+    "-DCORE_DEV_ENABLED=0",
+    "-DCORE_TESTS_ENABLED=0",
+    "-DCORE_GL_DEBUG=0",
+    "-DCORE_VALIDATION_ENABLED = 0",
+    "-DCORE_VULKAN_VALIDATION_ENABLED = 0",
+    "-DCORE_EMBEDDED_ASSETS_ENABLED = 2",
+    "-DCORE_ENABLE_GPU_QUERIES=0",
+    "-DCORE_DEBUG_GPU_RESOURCE_IDS = 0",
+    "-DCORE_DEBUG_COMMAND_MARKERS_ENABLED = 0",
+    "-DCORE_DEBUG_MARKERS_ENABLED = 0",
+    "-DRENDER_HAS_GL_BACKEND=0",
+    "-DRENDER_HAS_GLES_BACKEND = 1",
+    "-DRENDER_HAS_VULKAN_BACKEND = 1",
+    "-DVK_USE_PLATFORM_ANDROID_KHR = 1",
+    "-DCORE_LOG_NO_DEBUG=0",
+    "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
+    "-DCORE_LOG_TO_CONSOLE",
+    "-DCORE_LOG_DISABLED=0",
+    "-DCORE_DYNAMIC=1",
+  ]
+}
+
+config("napi_config") {
+  defines = []
+
+  if (current_os == "ohos") {
+    defines += [
+      "__OHOS_PLATFORM__",
+      "__SCENE_ADAPTER__",
+    ]
+  }
+
+  include_dirs = [
+    "include",
+    "include/napi",
+  ]
+
+  cflags = [
+    "-Wno-unused-but-set-variable",
+    "-Wno-unused-lambda-capture",
+    "-Wno-unused-variable",
+  ]
+}
+
+ohos_source_set("napi_source") {
+  sources = [
+    "src/AnimationJS.cpp",
+    "src/BaseObjectJS.cpp",
+    "src/CameraJS.cpp",
+    "src/ColorProxy.cpp",
+    "src/EnvironmentJS.cpp",
+    "src/GeometryJS.cpp",
+    "src/ImageJS.cpp",
+    "src/LightJS.cpp",
+    "src/MaterialJS.cpp",
+    "src/MeshJS.cpp",
+    "src/NodeImpl.cpp",
+    "src/NodeJS.cpp",
+    "src/ObjectProxy.cpp",
+    "src/PostProcJS.cpp",
+    "src/PropertyProxy.cpp",
+    "src/QuatProxy.cpp",
+    "src/SceneJS.cpp",
+    "src/SceneResourceImpl.cpp",
+    "src/ShaderJS.cpp",
+    "src/SubMeshJS.cpp",
+    "src/ToneMapJS.cpp",
+    "src/Vec2Proxy.cpp",
+    "src/Vec3Proxy.cpp",
+    "src/Vec4Proxy.cpp",
+    "src/native_module_export.cpp",
+    "src/register_module.cpp",
+  ]
+
+  include_dirs = [ "../../3d_widget_adapter/includ/ohos" ]
+
+  defines = []
+
+  configs = [
+    ":lume3d_config",
+    "${LUME_METAOBJECT_PATH}:lume_metaobject_config",
+    "${LUME_SCP_PATH}:lume_scenewidget_config",
+    "../../3d_scene_adapter:scene_adapter_config",
+  ]
+
+  public_configs = [ ":napi_config" ]
+
+  deps = [ "../../3d_widget_adapter:lib3dWidgetAdapter" ]
+  external_deps = [
+    "c_utils:utils",
+    "graphic_2d:libgl",
+    "hilog:libhilog",
+    "hitrace:hitrace_meter",
+    "init:libbegetutil",
+    "napi:ace_napi",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+group("napiInterface") {
+  public_configs = [ ":napi_config" ]
+}
+
+ohos_shared_library("libscene") {
+  deps = [ ":napi_source" ]
+  public_configs = [ ":napi_config" ]
+  relative_install_dir = "module/graphics"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
