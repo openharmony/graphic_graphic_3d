@@ -36,7 +36,8 @@ private:
     // JS properties
     napi_value GetToneMapping(NapiApi::FunctionContext<>& ctx);
     void SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-
+    napi_value GetBloom(NapiApi::FunctionContext<>& ctx);
+    void SetBloom(NapiApi::FunctionContext<bool>& ctx);
     NapiApi::StrongRef toneMap_; // keep a strong ref..
 
     NapiApi::WeakRef camera_; // weak ref to owning camera.

@@ -334,14 +334,25 @@ BASE_NS::vector<CORE_NS::Entity> SceneHolder::RenderCameras()
             }
         }
     }
-    /*if (activeCameras.empty()) {
-        // no active cameras so do nothing.
-        return {};
-    }*/
     isRunningFrame_ = true;
     // Tick frame. One camera could have static view while other is moving
     IEcs* ecs = ecs_.get();
-    const bool needsRender = renderContext_->GetEngine().TickFrame(BASE_NS::array_view(&ecs, 1));
+    ecs->ProcessEvents();
+    using namespace std::chrono;
+    const auto currentTime =
+        static_cast<uint64_t>(duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count());
+    if (firstTime_ == ~0u) {
+        previousFrameTime_ = firstTime_ = currentTime;
+    }
+    auto deltaTime = currentTime - previousFrameTime_;
+    constexpr auto limitHz = duration_cast<microseconds>(duration<float, std::ratio<1, 15u>>(1)).count();
+    if (deltaTime > limitHz) {
+        deltaTime = limitHz; // clampthe time step to no longer than 15hz.
+    }
+    previousFrameTime_ = currentTime;
+    const uint64_t totalTime = currentTime - firstTime_;
+    const bool needsRender = ecs->Update(totalTime, deltaTime);
+    ecs->ProcessEvents();
     auto renderHandles = graphicsContext3D_->GetRenderNodeGraphs(*ecs_);
 
     if ((needsRender) && (!renderHandles.empty())) {
@@ -350,8 +361,7 @@ BASE_NS::vector<CORE_NS::Entity> SceneHolder::RenderCameras()
         renderer.RenderDeferred(renderHandles);
     } else {
         // did not render anything.
-        bool nr;
-        nr = needsRender;
+        bool nr = needsRender;
         activeCameras.clear();
     }
     isRunningFrame_ = false;
@@ -406,98 +416,6 @@ void SceneHolder::ProcessEvents()
         ecs_->ProcessEvents();
         requiresEventProcessing_ = false;
     }
-}
-
-
-bool SceneHolder::UpdateScene()
-{
-    using namespace std::chrono;
-    const auto currentTime =
-        static_cast<uint64_t>(duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count());
-
-    if (firstTime_ == ~0u) {
-        previousFrameTime_ = firstTime_ = currentTime;
-    }
-    deltaTime_ = currentTime - previousFrameTime_;
-    previousFrameTime_ = currentTime;
-
-    const uint64_t totalTime = currentTime - firstTime_;
-
-    // nobody has asked for updates, yet
-    if (!ecs_ || isReadyForNewFrame_.empty()) {
-        return true;
-    }
-
-    CORE_NS::Entity target;
-
-    for (auto& ref : isReadyForNewFrame_) {
-        if (ref.second) {
-            if (ref.first == SCENE_NS::IScene::DEFAULT_CAMERA) {
-                target = defaultCameraEntity_;
-                ref.second = false;
-                break;
-            } else {
-                target.id = ref.first;
-                if (EntityUtil::IsValid(target)) {
-                    break;
-                }
-            }
-        }
-    }
-
-    if (!EntityUtil::IsValid(target)) {
-        return true;
-    }
-
-    auto& renderContext = graphicsContext3D_->GetRenderContext();
-
-    IEcs* ecs = ecs_.get();
-
-    isRunningFrame_ = true;
-    // Tick frame. One camera could have static view while other is moving
-    if (const bool needsRender = TickFrame(*ecs, totalTime, deltaTime_); needsRender) {
-        // The scene needs to be rendered.
-        RENDER_NS::IRenderer& renderer = renderContext.GetRenderer();
-        auto renderHandle = graphicsContext3D_->GetRenderNodeGraphs(*ecs_);
-        renderer.RenderDeferred(renderHandle);
-
-        // per camera
-        /*for (auto& camera : cameras_) {
-            if (camera->resized) {
-                // Viewport size has changed, need to re-create image. This may fail
-                camera->image = graphicsContext2D_->BitmapFactory().CreateInstance(camera->colorImage);
-                camera->resized = false;
-            }
-
-            // Mark the widget dirty and schedule a redraw.
-            if (sceneUpdatedCallback_) {
-                // Avoid queuing multiple frames.
-                auto handle = camera->entity.id;
-                auto image = camera->image;
-                if (image) {
-                    isReadyForNewFrame_[handle] = false;
-
-                    QueueApplicationTask(MakeTask(
-                        [handle, image](auto self) {
-                            self->sceneUpdatedCallback_->Invoke(image, handle);
-                            return false;
-                        },
-                        me_));
-                }
-            }
-        }*/
-    }
-    isRunningFrame_ = false;
-
-    if (requiresEventProcessing_) {
-        ProcessEvents();
-    }
-
-    if (updateSceneTaskQueue_) {
-        updateSceneTaskQueue_->ProcessTasks();
-    }
-    // Schedule new update to scene.
-    return true;
 }
 
 bool SceneHolder::CreateDefaultEcs()
@@ -952,42 +870,6 @@ void SceneHolder::IntrospectNodeless()
 
     RemoveUriComponentsFromMeshes();
     ResolveAnimations();
-}
-
-void SceneHolder::ScheduleUpdates()
-{
-    // Cancel if any update tasks are queued.
-    if (updateTaskToken_) {
-        engineTaskQueue_->CancelTask(updateTaskToken_);
-        updateTaskToken_ = nullptr;
-    }
-
-    // Do not allow zero interval.
-    auto interval = refreshInterval_;
-    if (interval.ToMilliseconds() == 0) {
-        interval = META_NS::TimeSpan::Milliseconds(1);
-    }
-
-    // Start updating the scene in periodical interval.
-    updateTaskToken_ =
-        engineTaskQueue_->AddTask(MakeTask([](auto holder) { return holder->UpdateScene(); }, me_), interval);
-}
-
-void SceneHolder::SetRefreshInterval(META_NS::TimeSpan interval)
-{
-    QueueEngineTask(MakeTask(
-                        [interval](auto self) {
-                            if (interval != self->refreshInterval_) {
-                                self->refreshInterval_ = interval;
-                                if (self->updateTaskToken_) {
-                                    self->ScheduleUpdates();
-                                }
-                            }
-
-                            return false;
-                        },
-                        me_),
-        false);
 }
 
 bool GetEntityId(const CORE_NS::Entity& entity, BASE_NS::string_view& entityName,
@@ -1600,9 +1482,7 @@ void SceneHolder::LoadScene()
                                  },
                                  sceneInitializedCallback_, id, cameraId),
             false);
-    }
-    // Call back the app thread, notify that new scene is loaded
-    else if (sceneLoadedCallback_) {
+    } else if (sceneLoadedCallback_) { // Call back the app thread, notify that new scene is loaded
         QueueApplicationTask(MakeTask(
                                  [](auto sceneLoadedCallback, auto loadingStatus) {
                                      if (sceneLoadedCallback) {
@@ -1718,10 +1598,7 @@ void SceneHolder::RenameEntity(CORE_NS::Entity entity, const BASE_NS::string& na
         // Root level entity collection item
         if (BASE_NS::string_view prevName = scene_->GetUniqueIdentifier(entity); !prevName.empty()) {
             scene_->SetUniqueIdentifier(name, scene_->GetEntity(prevName));
-        }
-        // Experimentals: Subcollection root (will not traverse further, the rest should go through normal property
-        // serialization)
-        else if (nodeComponentManager_->HasComponent(entity)) {
+        } else if (nodeComponentManager_->HasComponent(entity)) {
             if (auto ecsNode = nodeSystem_->GetNode(entity)) {
                 if (const auto& children = ecsNode->GetChildren(); children.size()) {
                     if (auto ix = scene_->GetSubCollectionIndexByRoot(children[0]->GetEntity()); ix != -1) {
@@ -1730,6 +1607,8 @@ void SceneHolder::RenameEntity(CORE_NS::Entity entity, const BASE_NS::string& na
                 }
             }
         }
+        // Experimentals: Subcollection root (will not traverse further, the rest should go through normal property
+        // serialization)
     }
 }
 
@@ -2514,28 +2393,6 @@ void SceneHolder::EnableLightComponent(CORE_NS::Entity entity)
         }
     }
 }
-
-/*void SceneHolder::EnableCanvasComponent(CORE_NS::Entity entity)
-{
-    if (ecs_) {
-        if (EntityUtil::IsValid(entity)) {
-            if (!canvasComponentManager_->HasComponent(entity)) {
-                canvasComponentManager_->Create(entity);
-            }
-        }
-    }
-}
-
-UI_NS::IView::Ptr SceneHolder::GetCanvasView(CORE_NS::Entity entity)
-{
-    UI_NS::IView::Ptr ret {};
-    if (ecs_ && CORE_NS::EntityUtil::IsValid(entity)) {
-        if (auto canvasSystem = static_cast<IToolkitSystem*>(ecs_->GetSystem(ICanvasManager::UID))) {
-            ret = canvasSystem->GetViewForEntity(entity);
-        }
-    }
-    return ret;
-}*/
 
 template<typename T>
 constexpr inline CORE3D_NS::IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexcept

@@ -39,6 +39,7 @@ void PostProcJS::Init(napi_env env, napi_value exports)
     BASE_NS::vector<napi_property_descriptor> node_props;
     // clang-format off
 
+    node_props.push_back(GetSetProperty<bool, PostProcJS, &PostProcJS::GetBloom, &PostProcJS::SetBloom>("bloom"));
     node_props.emplace_back(GetSetProperty<Object, PostProcJS, &PostProcJS::GetToneMapping,
         &PostProcJS::SetToneMapping>("toneMapping"));
     node_props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, PostProcJS, &PostProcJS::Dispose>("destroy"));
@@ -239,4 +240,32 @@ napi_value PostProcJS::GetToneMapping(NapiApi::FunctionContext<>& ctx)
     }
     toneMap_.Reset();
     return ctx.GetNull();
+}
+
+napi_value PostProcJS::GetBloom(NapiApi::FunctionContext<>& ctx)
+{
+    bool enabled = false;
+    if (auto postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(GetNativeObject())) {
+        ExecSyncTask([postproc, &enabled]() {
+            SCENE_NS::IBloom::Ptr bloom = postproc->Bloom()->GetValue();
+            enabled = bloom->Enabled()->GetValue();
+            return META_NS::IAny::Ptr {};
+        });
+    }
+
+    napi_value value;
+    napi_status status = napi_get_boolean(ctx, enabled, &value);
+    return value;
+}
+
+void PostProcJS::SetBloom(NapiApi::FunctionContext<bool>& ctx)
+{
+    bool enable = ctx.Arg<0>();
+    if (auto postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(GetNativeObject())) {
+        ExecSyncTask([postproc, enable]() {
+            SCENE_NS::IBloom::Ptr bloom = postproc->Bloom()->GetValue();
+            bloom->Enabled()->SetValue(enable);
+            return META_NS::IAny::Ptr {};
+        });
+    }
 }

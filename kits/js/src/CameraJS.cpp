@@ -95,6 +95,7 @@ void CameraJS::Init(napi_env env, napi_value exports)
     node_props.push_back(GetSetProperty<float, CameraJS, &CameraJS::GetNear, &CameraJS::SetNear>("nearPlane"));
     node_props.push_back(GetSetProperty<float, CameraJS, &CameraJS::GetFar, &CameraJS::SetFar>("farPlane"));
     node_props.push_back(GetSetProperty<bool, CameraJS, &CameraJS::GetEnabled, &CameraJS::SetEnabled>("enabled"));
+    node_props.push_back(GetSetProperty<bool, CameraJS, &CameraJS::GetMSAA, &CameraJS::SetMSAA>("msaa"));
     node_props.push_back(
         GetSetProperty<Object, CameraJS, &CameraJS::GetPostProcess, &CameraJS::SetPostProcess>("postProcess"));
     node_props.push_back(GetSetProperty<Object, CameraJS, &CameraJS::GetColor, &CameraJS::SetColor>("clearColor"));
@@ -462,18 +463,22 @@ void CameraJS::SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     if (clearColor_ == nullptr) {
         clearColor_ = BASE_NS::make_unique<ColorProxy>(ctx, camera->ClearColor());
     }
-    bool enable = false;
     NapiApi::Object obj = ctx.Arg<0>();
     if (obj) {
         clearColor_->SetValue(obj);
-        enable = true;
+        clearColorEnabled_ = true;
     } else {
-        enable = false;
+        clearColorEnabled_ = false;
     }
-    ExecSyncTask([camera, &enable]() {
+    ExecSyncTask([camera, clearColorEnabled = clearColorEnabled_, msaaEnabled = msaaEnabled_]() {
         // enable camera clear
         uint32_t curBits = camera->PipelineFlags()->GetValue();
-        if (enable) {
+        if (msaaEnabled) {
+            curBits |= PipelineFlagBits::MSAA_BIT;
+        } else {
+            curBits &= ~PipelineFlagBits::MSAA_BIT;
+        }
+        if (clearColorEnabled) {
             curBits |= PipelineFlagBits::CLEAR_COLOR_BIT;
         } else {
             curBits &= ~PipelineFlagBits::CLEAR_COLOR_BIT;
@@ -495,5 +500,43 @@ void CameraJS::ReleaseObject(const META_NS::IObject::Ptr& obj)
 {
     if (obj) {
         resources_.erase((uintptr_t)obj.get());
+    }
+}
+
+napi_value CameraJS::GetMSAA(NapiApi::FunctionContext<>& ctx)
+{
+    bool enabled = false;
+    if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
+        ExecSyncTask([camera, &enabled]() {
+            uint32_t curBits = camera->PipelineFlags()->GetValue();
+            enabled = curBits & PipelineFlagBits::MSAA_BIT;
+            return META_NS::IAny::Ptr {};
+        });
+    }
+
+    napi_value value;
+    napi_status status = napi_get_boolean(ctx, enabled, &value);
+    return value;
+}
+
+void CameraJS::SetMSAA(NapiApi::FunctionContext<bool>& ctx)
+{
+    msaaEnabled_ = ctx.Arg<0>();
+    if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
+        ExecSyncTask([camera, msaaEnabled = msaaEnabled_, clearColorEnabled = clearColorEnabled_]() {
+            uint32_t curBits = camera->PipelineFlags()->GetValue();
+            if (msaaEnabled) {
+                curBits |= PipelineFlagBits::MSAA_BIT;
+            } else {
+                curBits &= ~PipelineFlagBits::MSAA_BIT;
+            }
+            if (clearColorEnabled) {
+                curBits |= PipelineFlagBits::CLEAR_COLOR_BIT;
+            } else {
+                curBits &= ~PipelineFlagBits::CLEAR_COLOR_BIT;
+            }
+            camera->PipelineFlags()->SetValue(curBits);
+            return META_NS::IAny::Ptr {};
+        });
     }
 }

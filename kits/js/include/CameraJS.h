@@ -50,13 +50,15 @@ private:
 
     napi_value GetEnabled(NapiApi::FunctionContext<>& ctx);
     void SetEnabled(NapiApi::FunctionContext<bool>& ctx);
-
+    napi_value GetMSAA(NapiApi::FunctionContext<>& ctx);
+    void SetMSAA(NapiApi::FunctionContext<bool>& ctx);
     napi_value GetColor(NapiApi::FunctionContext<>& ctx);
     void SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     BASE_NS::unique_ptr<ColorProxy> clearColor_;
     NapiApi::StrongRef postProc_;
-
+    bool msaaEnabled_ { false };
+    bool clearColorEnabled_ { false };
     BASE_NS::unordered_map<uintptr_t, META_NS::IObject::Ptr> resources_;
 };
 #endif // OHOS_RENDER_3D_CAMERA_JS_H

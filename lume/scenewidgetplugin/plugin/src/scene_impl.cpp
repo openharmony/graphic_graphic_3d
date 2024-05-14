@@ -81,8 +81,6 @@ class SceneImpl final : public META_NS::ObjectContainerFwd<SceneImpl, SCENE_NS::
     META_IMPLEMENT_INTERFACE_PROPERTY(META_NS::INamed, BASE_NS::string, Name, {})
     META_IMPLEMENT_INTERFACE_PROPERTY(
         SCENE_NS::IScene, BASE_NS::string, SystemGraphUri, "project://assets/config/system_graph.json")
-    META_IMPLEMENT_INTERFACE_PROPERTY(
-        SCENE_NS::IScene, META_NS::TimeSpan, RefreshInterval, META_NS::TimeSpan::Microseconds(16667))
     META_IMPLEMENT_INTERFACE_READONLY_PROPERTY(
         SCENE_NS::IScene, uint32_t, Status, SCENE_STATUS_UNINITIALIZED, META_NS::DEFAULT_PROPERTY_FLAGS_NO_SER)
     META_IMPLEMENT_INTERFACE_READONLY_PROPERTY(SCENE_NS::IScene, SCENE_NS::INode::Ptr, RootNode, {})
@@ -273,15 +271,8 @@ class SceneImpl final : public META_NS::ObjectContainerFwd<SceneImpl, SCENE_NS::
             sceneHolder_->ChangeCamera(META_ACCESS_PROPERTY(DefaultCamera)->GetValue());
         }
     }
-
-    void OnRefreshIntervalChanged()
-    {
-        // Async, sceneholder takes over
-        if (sceneHolder_) {
-            sceneHolder_->SetRefreshInterval(RefreshInterval()->GetValue());
-        }
-    }
-
+    
+    // Async, sceneholder takes over
     BASE_NS::vector<META_NS::IAnimation::Ptr> allAnims_;
     BASE_NS::vector<META_NS::IAnimation::Ptr> GetAnimations() override
     {
@@ -1693,12 +1684,7 @@ private:
                 META_NS::MakeCallback<META_NS::IOnChanged>([this]() { this->Load(Uri()->GetValue()); }));
         }
 
-        if (RefreshInterval()) {
-            // Start listening changes of the scene controller properties. These may go to different place some day
-            intervalHandlerToken_ = RefreshInterval()->OnChanged()->AddHandler(
-                META_NS::MakeCallback<META_NS::IOnChanged>(this, &SceneImpl::OnRefreshIntervalChanged));
-        }
-
+        // Start listening changes of the scene controller properties. These may go to different place some day
         if (SystemGraphUri()) {
             systemGraphUriHandlerToken_ = SystemGraphUri()->OnChanged()->AddHandler(
                 META_NS::MakeCallback<META_NS::IOnChanged>(this, &SceneImpl::onSystemGraphUriChanged));
@@ -1715,11 +1701,6 @@ private:
         if (RootNode()) {
             RootNode()->OnChanged()->RemoveHandler(rootNodeChangedToken_);
             rootNodeChangedToken_ = {};
-        }
-
-        if (RefreshInterval()) {
-            RefreshInterval()->OnChanged()->RemoveHandler(intervalHandlerToken_);
-            intervalHandlerToken_ = {};
         }
 
         if (SystemGraphUri()) {
@@ -1743,7 +1724,6 @@ private:
         hierarchyController_->SetTarget(contentObject, changeMode);
     }
 
-    META_NS::IEvent::Token intervalHandlerToken_ {};
     META_NS::IEvent::Token systemGraphUriHandlerToken_ {};
     META_NS::IEvent::Token renderSizeHandlerToken_ {};
     META_NS::IEvent::Token cameraHandlerToken_ {};
