@@ -160,7 +160,8 @@ ohos_source_set("widget_adapter_source") {
     external_deps = [ "vulkan-headers:vulkan_headers" ]
     external_deps += [
       "c_utils:utils",
-      "graphic_2d:libgl",
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3",
       "graphic_2d:librender_service_client",
       "graphic_surface:surface",
       "hilog:libhilog",
