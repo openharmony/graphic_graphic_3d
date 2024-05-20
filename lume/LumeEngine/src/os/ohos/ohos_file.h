@@ -21,6 +21,7 @@
 #ifndef CORE__IO__OHOS_FILE_H
 #define CORE__IO__OHOS_FILE_H
 
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -61,17 +62,18 @@ public:
     void UpdateResManager(const PlatformHapInfo& hapInfo);
     void Ref()
     {
-        refCount_++;
+        refCount_.fetch_add(1, std::memory_order_relaxed);
     }
     void Unref()
     {
-        if (--refCount_ == 0) {
+        if (refCount_.fetch_sub(1, std::memory_order_release) == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             delete this;
         }
     }
 
 private:
-    uint32_t refCount_ { 0 };
+    std::atomic_int32_t refCount_ { 0 };
     PlatformHapInfo hapInfo_;
     std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager_  { nullptr };
     BASE_NS::unordered_map<BASE_NS::string,

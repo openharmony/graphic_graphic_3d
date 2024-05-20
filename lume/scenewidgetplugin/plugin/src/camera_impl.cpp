@@ -220,6 +220,25 @@ class CameraImpl
                 propHandler_, PostProcess(), meta, "CameraComponent.postProcess", ONE_WAY_TO_ECS);
         }
 
+        auto updateCustom = [this]() {
+            auto pipeline = RenderingPipeline()->GetValue();
+            if (pipeline == SCENE_NS::ICamera::SceneCameraPipeline::SCENE_CAM_PIPELINE_FORWARD) {
+                auto ecs0 = interface_cast<SCENE_NS::IEcsObject>(GetSelf());
+                auto ecs = ecs0->GetEcs();
+                auto ent = ecs0->GetEntity();
+                if (auto cameraManager = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(*ecs)) {
+                    if (cameraManager->HasComponent(ent)) {
+                        auto data = cameraManager->Get(ent);
+                        data.colorTargetCustomization.clear();
+                        data.colorTargetCustomization.push_back({ BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT, {} });
+                        cameraManager->Set(ent, data);
+                    }
+                }
+            };
+        };
+        updateCustom();
+        RenderingPipeline()->OnChanged()->AddHandler(
+            META_NS::MakeCallback<META_NS::IOnChanged>(updateCustom), reinterpret_cast<uint64_t>(this));
         return true;
     }
 

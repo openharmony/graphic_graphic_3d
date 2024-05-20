@@ -240,9 +240,6 @@ void EntityCollection::RemoveEntities(array_view<const EntityReference> entities
 
 void EntityCollection::SetId(string_view id, EntityReference entity)
 {
-#if 0
-    CORE_LOG_V("EntityCollection '%s': Set entity id: %" PRIx64 " = '%s'", src_.c_str(), entity.operator Entity().id, string(id).c_str());
-#endif
     namedEntities_[id] = entity;
 }
 
