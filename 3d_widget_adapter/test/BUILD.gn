@@ -36,7 +36,8 @@ ohos_unittest("3d_widget_adpater_test") {
 
   external_deps = [
     "ace_engine:libace",
-    "graphic_2d:libgl",
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
     "hilog:libhilog",
   ]
 
