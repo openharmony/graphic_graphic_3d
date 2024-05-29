@@ -15,6 +15,7 @@
 #include "engine_value_manager.h"
 
 #include <core/property/intf_property_api.h>
+#include <core/property/scoped_handle.h>
 
 #include <meta/api/make_callback.h>
 #include <meta/interface/engine/intf_engine_data.h>
@@ -24,25 +25,36 @@ META_BEGIN_NAMESPACE()
 
 namespace Internal {
 
+template<typename Type>
+static Type ReadValueFromEngine(const EnginePropertyParams& params)
+{
+    Type res {};
+    CORE_NS::ScopedHandle<const Type> guard { params.handle };
+    if (guard) {
+        res = *(const Type*)((uintptr_t) & *guard + params.Offset());
+    }
+    return res;
+}
+
 EngineValueManager::~EngineValueManager()
 {
-    BASE_NS::Uid id;
+    ITaskQueue::WeakPtr q;
     ITaskQueue::Token token {};
     {
         std::unique_lock lock { mutex_ };
-        id = queueId_;
+        q = queue_;
         token = task_token_;
     }
-    if (id != BASE_NS::Uid {} && token) {
-        if (auto queue = GetTaskQueueRegistry().GetTaskQueue(id)) {
+    if (token) {
+        if (auto queue = q.lock()) {
             queue->CancelTask(token);
         }
     }
 }
 
-void EngineValueManager::SetNotificationThread(const BASE_NS::Uid& queueId)
+void EngineValueManager::SetNotificationQueue(const ITaskQueue::WeakPtr& q)
 {
-    queueId_ = queueId;
+    queue_ = q;
 }
 static IEngineValueInternal::Ptr GetCompatibleValueInternal(IEngineValue::Ptr p, EnginePropertyParams params)
 {
@@ -128,6 +140,64 @@ bool EngineValueManager::ConstructValue(EnginePropertyParams property, EngineVal
     std::unique_lock lock { mutex_ };
     AddValue(property, options);
     return true;
+}
+bool EngineValueManager::ConstructValueImpl(
+    EnginePropertyParams params, BASE_NS::string pathTaken, BASE_NS::string_view path, EngineValueOptions options)
+{
+    if (path == params.property.name) {
+        if (!options.namePrefix.empty() && !pathTaken.empty()) {
+            options.namePrefix += ".";
+        }
+        options.namePrefix += pathTaken;
+        std::unique_lock lock { mutex_ };
+        AddValue(params, options);
+        return true;
+    }
+    path.remove_prefix(params.property.name.size() + 1);
+    if (!pathTaken.empty()) {
+        pathTaken += ".";
+    }
+    pathTaken += params.property.name;
+    if (params.property.type == PROPERTYTYPE(CORE_NS::IPropertyHandle*)) {
+        if (CORE_NS::IPropertyHandle* h = ReadValueFromEngine<CORE_NS::IPropertyHandle*>(params)) {
+            return ConstructValueImpl(h, BASE_NS::move(pathTaken), path, options);
+        }
+    } else {
+        auto root = path.substr(0, path.find_first_of('.'));
+        for (auto&& p : params.property.metaData.memberProperties) {
+            if (p.name == root) {
+                EnginePropertyParams propParams { params.handle, p, params.Offset() };
+                propParams.pushValueToEngineDirectly = options.pushValuesDirectlyToEngine;
+                return ConstructValueImpl(propParams, BASE_NS::move(pathTaken), path, options);
+            }
+        }
+    }
+    return false;
+}
+bool EngineValueManager::ConstructValueImpl(
+    CORE_NS::IPropertyHandle* handle, BASE_NS::string pathTaken, BASE_NS::string_view path, EngineValueOptions options)
+{
+    if (!handle) {
+        return false;
+    }
+    if (auto api = handle->Owner()) {
+        auto root = path.substr(0, path.find_first_of('.'));
+        if (!root.empty()) {
+            for (auto& prop : api->MetaData()) {
+                if (prop.name == root) {
+                    EnginePropertyParams params { handle, prop };
+                    params.pushValueToEngineDirectly = options.pushValuesDirectlyToEngine;
+                    return ConstructValueImpl(params, BASE_NS::move(pathTaken), path, options);
+                }
+            }
+        }
+    }
+    return false;
+}
+bool EngineValueManager::ConstructValue(
+    CORE_NS::IPropertyHandle* handle, BASE_NS::string_view path, EngineValueOptions options)
+{
+    return ConstructValueImpl(handle, "", BASE_NS::string(path), options);
 }
 bool EngineValueManager::RemoveValue(BASE_NS::string_view name)
 {
@@ -236,8 +306,8 @@ bool EngineValueManager::Sync(EngineSyncDirection dir)
             ret = ret && res;
         }
         notify = notify && !task_token_;
-        if (notify && queueId_ != BASE_NS::Uid {}) {
-            if (auto queue = GetTaskQueueRegistry().GetTaskQueue(queueId_)) {
+        if (notify && !queue_.expired()) {
+            if (auto queue = queue_.lock()) {
                 task_token_ = queue->AddTask(MakeCallback<ITaskQueueTask>([this] {
                     NotifySyncs();
                     return false;

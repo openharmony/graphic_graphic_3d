@@ -239,7 +239,7 @@ napi_value PostProcJS::GetToneMapping(NapiApi::FunctionContext<>& ctx)
         return tonemapJS;
     }
     toneMap_.Reset();
-    return ctx.GetNull();
+    return ctx.GetUndefined();
 }
 
 napi_value PostProcJS::GetBloom(NapiApi::FunctionContext<>& ctx)

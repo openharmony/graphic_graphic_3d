@@ -35,11 +35,22 @@ META_BEGIN_NAMESPACE()
 class EventHandler {
 public:
     META_NO_COPY(EventHandler)
-    META_DEFAULT_MOVE(EventHandler)
     EventHandler() noexcept = default;
     virtual ~EventHandler()
     {
         Unsubscribe();
+    }
+    EventHandler(EventHandler&& other) noexcept
+        : event_ { BASE_NS::move(other.event_) }, token_ { BASE_NS::exchange(other.token_, {}) }
+    {}
+    EventHandler& operator=(EventHandler&& other) noexcept
+    {
+        if (&other != this) {
+            Unsubscribe();
+            event_ = BASE_NS::move(other.event_);
+            token_ = BASE_NS::exchange(other.token_, {});
+        }
+        return *this;
     }
 
     template<typename EventType>

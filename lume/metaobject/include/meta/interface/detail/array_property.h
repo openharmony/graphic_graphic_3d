@@ -150,10 +150,11 @@ public:
 
     AnyReturnValue SetDefaultValue(BASE_NS::array_view<const ValueType> value)
     {
-        return this->SetDefaultValueAny(ArrayAny<ValueType>(BASE_NS::move(value)));
+        return this->SetDefaultValueAny(ArrayAny<ValueType>(value));
     }
 
-    AnyReturnValue SetDefaultValue(BASE_NS::vector<ValueType> value)
+    template<typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, ValueType>>>
+    AnyReturnValue SetDefaultValue(BASE_NS::vector<T> value)
     {
         return this->SetDefaultValueAny(ArrayAny<ValueType>(BASE_NS::move(value)));
     }
@@ -176,10 +177,11 @@ public:
 
     AnyReturnValue SetValue(BASE_NS::array_view<const ValueType> value)
     {
-        return this->SetValueAny(ArrayAny<ValueType>(BASE_NS::move(value)));
+        return this->SetValueAny(ArrayAny<ValueType>(value));
     }
 
-    AnyReturnValue SetValue(BASE_NS::vector<ValueType> value)
+    template<typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, ValueType>>>
+    AnyReturnValue SetValue(BASE_NS::vector<T> value)
     {
         return this->SetValueAny(ArrayAny<ValueType>(BASE_NS::move(value)));
     }

@@ -36,10 +36,11 @@ public:
     EngineValueManager() = default;
     ~EngineValueManager() override;
 
-    void SetNotificationThread(const BASE_NS::Uid& queueId) override;
+    void SetNotificationQueue(const ITaskQueue::WeakPtr&) override;
     bool ConstructValues(CORE_NS::IPropertyHandle* handle, EngineValueOptions) override;
     bool ConstructValues(IValue::Ptr value, EngineValueOptions) override;
     bool ConstructValue(EnginePropertyParams property, EngineValueOptions) override;
+    bool ConstructValue(CORE_NS::IPropertyHandle* handle, BASE_NS::string_view path, EngineValueOptions) override;
 
     bool RemoveValue(BASE_NS::string_view name) override;
     void RemoveAll() override;
@@ -56,10 +57,14 @@ private:
     void NotifySyncs();
     IProperty::Ptr PropertyFromValue(BASE_NS::string_view name, const IEngineValue::Ptr&) const;
     void AddValue(EnginePropertyParams p, EngineValueOptions options);
+    bool ConstructValueImpl(CORE_NS::IPropertyHandle* handle, BASE_NS::string pathTaken, BASE_NS::string_view path,
+        EngineValueOptions options);
+    bool ConstructValueImpl(
+        EnginePropertyParams params, BASE_NS::string pathTaken, BASE_NS::string_view path, EngineValueOptions options);
 
 private:
     mutable std::shared_mutex mutex_;
-    BASE_NS::Uid queueId_;
+    ITaskQueue::WeakPtr queue_;
     struct ValueInfo {
         IEngineValue::Ptr value;
         bool notify {};
