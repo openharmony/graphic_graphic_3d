@@ -166,7 +166,9 @@ napi_value NodeImpl::GetPath(NapiApi::FunctionContext<>& ctx)
     BASE_NS::string path;
     if (node) {
         ExecSyncTask([node, &path]() {
-            path = node->Path()->GetValue();
+            if (interface_cast<META_NS::IContainable>(node)->GetParent()) {
+                path = node->Path()->GetValue();
+            }
             return META_NS::IAny::Ptr {};
         });
     }
@@ -314,10 +316,12 @@ napi_value NodeImpl::GetChildContainer(NapiApi::FunctionContext<>& ctx)
 {
     // make sure the child list is up to date.
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
-    ExecSyncTask([node]() {
-        node->BuildChildren(SCENE_NS::INode::BuildBehavior::NODE_BUILD_ONLY_DIRECT_CHILDREN);
-        return META_NS::IAny::Ptr {};
-    });
+    if (node) {
+        ExecSyncTask([node]() {
+            node->BuildChildren(SCENE_NS::INode::BuildBehavior::NODE_BUILD_ONLY_DIRECT_CHILDREN);
+            return META_NS::IAny::Ptr {};
+        });
+    }
 
     // Node implements Container<Node>
     return ctx.This();
@@ -327,7 +331,6 @@ napi_value NodeImpl::GetChildContainer(NapiApi::FunctionContext<>& ctx)
 bool SkipNode(SCENE_NS::INode::Ptr node)
 {
     auto o = interface_cast<META_NS::IObject>(node);
-    auto classname = o->GetClassName();
     auto classid = o->GetClassId();
     // white list of nodes that are actual nodes..
     if ((classid == SCENE_NS::ClassId::Camera) || (classid == SCENE_NS::ClassId::Light) ||
@@ -426,11 +429,13 @@ napi_value NodeImpl::AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     // make the js object keep a weak ref again (scene keeps the native object alive)
     // (or move ownership back from SceneJS? and remove dispose hook?)
-    auto tro = GetRootObject(ctx, childJS);
-    auto native = tro->GetNativeObject();
-    tro->SetNativeObject(nullptr, true);
-    tro->SetNativeObject(native, false);
-    native.reset();
+    if (auto tro = GetRootObject(ctx, childJS)) {
+        if (auto native = tro->GetNativeObject()) {
+            tro->SetNativeObject(nullptr, true);
+            tro->SetNativeObject(native, false);
+            native.reset();
+        }
+    }
 
     return ctx.GetUndefined();
 }
@@ -482,13 +487,26 @@ napi_value NodeImpl::InsertChildAfter(NapiApi::FunctionContext<NapiApi::Object, 
 
     // make the js object keep a weak ref again (scene keeps the native object alive)
     // (or move ownership back from SceneJS? and remove dispose hook?)
-    auto tro = GetRootObject(ctx, childJS);
-    auto native = tro->GetNativeObject();
-    tro->SetNativeObject(nullptr, true);
-    tro->SetNativeObject(native, false);
-    native.reset();
+    if (auto tro = GetRootObject(ctx, childJS)) {
+        if (auto native = tro->GetNativeObject()) {
+            tro->SetNativeObject(nullptr, true);
+            tro->SetNativeObject(native, false);
+            native.reset();
+        }
+    }
 
     return ctx.GetUndefined();
+}
+
+void NodeImpl::ResetNativeObj(NapiApi::FunctionContext<>& ctx, NapiApi::Object& obj)
+{
+    if (auto tro = GetRootObject(ctx, obj)) {
+        if (auto native = tro->GetNativeObject()) {
+            tro->SetNativeObject(nullptr, false);
+            tro->SetNativeObject(native, true);
+            native.reset();
+        }
+    }
 }
 
 napi_value NodeImpl::RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
@@ -507,17 +525,17 @@ napi_value NodeImpl::RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     // make the js object keep a strong ref.
     // (or give SceneJS ownership? and add dispose hook?)
-    auto tro = GetRootObject(ctx, childJS);
-    auto native = tro->GetNativeObject();
-    tro->SetNativeObject(nullptr, false);
-    tro->SetNativeObject(native, true);
-    native.reset();
+    if (auto tro = GetRootObject(ctx, childJS)) {
+        if (auto native = tro->GetNativeObject()) {
+            tro->SetNativeObject(nullptr, false);
+            tro->SetNativeObject(native, true);
+            native.reset();
+        }
+    }
 
     auto metaobj = GetThisNativeObject(ctx);
     if (auto container = interface_cast<META_NS::IContainer>(metaobj)) {
         ExecSyncTask([container, childNode]() {
-            // should we return a reference to removed child?
-            // should we DESTROY it?
             container->Remove(childNode);
             childNode->Visible()->SetValue(false);
             return META_NS::IAny::Ptr {};
@@ -529,22 +547,27 @@ napi_value NodeImpl::RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 napi_value NodeImpl::ClearChildren(NapiApi::FunctionContext<>& ctx)
 {
     auto metaobj = GetThisNativeObject(ctx);
+    BASE_NS::vector<SCENE_NS::INode::Ptr> removedNodes;
     if (auto container = interface_cast<META_NS::IContainer>(metaobj)) {
-        ExecSyncTask([container]() {
-            // hmm..  should the nodes be destroyed? are they still accessible somehow?
-            // should we return an array of removed children?
-
-            // for now they do get destroyed...
+        ExecSyncTask([container, &removedNodes]() {
             auto tmp = container->GetAll();
             for (auto t : tmp) {
-                if (auto* node = interface_cast<SCENE_NS::INode>(t)) {
+                if (auto node = interface_pointer_cast<SCENE_NS::INode>(t)) {
+                    if (SkipNode(node)) {
+                        continue;
+                    }
+                    container->Remove(node);
                     node->Visible()->SetValue(false);
+                    removedNodes.emplace_back(BASE_NS::move(node));
                 }
             }
-            container->RemoveAll();
-
             return META_NS::IAny::Ptr {};
         });
+        for (auto node : removedNodes) {
+            if (auto cached = FetchJsObj(node)) {
+                ResetNativeObj(ctx, cached);
+            }
+        }
     }
     return ctx.GetUndefined();
 }

@@ -185,8 +185,9 @@ class AnimImpl
 
     void SetProgress(float progress)
     {
-        animationStateTime_->SetValue(
-            Base::Math::clamp(progress, 0.0f, 1.0f) * GetValue(TotalDuration()).ToSecondsFloat());
+        progress = Base::Math::clamp(progress, 0.0f, 1.0f);
+        animationStateTime_->SetValue(progress * GetValue(TotalDuration()).ToSecondsFloat());
+        META_ACCESS_PROPERTY(Progress)->SetValue(progress);
     }
 
     // void AddKey(IEcsTrackAnimation::Ptr track, float time) override {}
