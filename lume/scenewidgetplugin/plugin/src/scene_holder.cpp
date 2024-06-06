@@ -703,7 +703,7 @@ void SceneHolder::SetMainCamera(const Entity& entity)
 
     if (!mainCamera_) {
         if (EntityUtil::IsValid(entity)) {
-            CORE_LOG_W("%s: was not able to set camera for: %llu", __func__, entity.id);
+            CORE_LOG_W("%s: was not able to set camera for: %" PRIx64 " ", __func__, entity.id);
         }
         return;
     }
