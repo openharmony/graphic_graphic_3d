@@ -386,8 +386,7 @@ ohos_source_set("lume_render_src") {
   }
   external_deps = [
     "c_utils:utils",
-    "graphic_2d:EGL",
-    "graphic_2d:GLESv3",
+    "graphic_2d:libgl",
   ]
 
   if (RENDER_BUILD_VULKAN) {
