@@ -87,8 +87,6 @@ public:
      */
     META_PROPERTY(bool, Asynchronous)
 
-    META_PROPERTY(META_NS::TimeSpan, RefreshInterval)
-
     /**
      * @brief Access to all user-created materials in the scene.
      * @return Pointer to the property.

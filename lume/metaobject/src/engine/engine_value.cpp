@@ -31,15 +31,18 @@ AnyReturnValue EngineValue::Sync(EngineSyncDirection dir)
         return AnyReturn::INVALID_ARGUMENT;
     }
     if (dir == EngineSyncDirection::TO_ENGINE || (dir == EngineSyncDirection::AUTO && valueChanged_)) {
+        if (valueChanged_) {
         valueChanged_ = false;
         return access_->SyncToEngine(*value_, params_) ? AnyReturn::NOTHING_TO_DO : AnyReturn::FAIL;
+        }
+        return AnyReturn::NOTHING_TO_DO;
     }
     return access_->SyncFromEngine(params_, *value_);
 }
 AnyReturnValue EngineValue::SetValue(const IAny& value)
 {
     AnyReturnValue res = value_->CopyFrom(value);
-    valueChanged_ = static_cast<bool>(res);
+    valueChanged_ |= static_cast<bool>(res);
     if (params_.pushValueToEngineDirectly) {
         if (valueChanged_) {
             if (!params_.handle) {

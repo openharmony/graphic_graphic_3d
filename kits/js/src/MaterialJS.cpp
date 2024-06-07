@@ -59,10 +59,10 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
 
 void* BaseMaterial::GetInstanceImpl(uint32_t id)
 {
-    if (id == SceneResourceImpl::ID) {
-        return (SceneResourceImpl*)this;
+    if (id == BaseMaterial::ID) {
+        return (BaseMaterial*)this;
     }
-    return nullptr;
+    return SceneResourceImpl::GetInstanceImpl(id);
 }
 void BaseMaterial::DisposeNative(TrueRootObject* tro)
 {
@@ -174,6 +174,7 @@ void ShaderMaterialJS::DisposeNative()
     } else {
         SetNativeObject(nullptr, false);
     }
+    shader_.Reset();
 
     BaseMaterial::DisposeNative(this);
 }
@@ -186,7 +187,10 @@ void ShaderMaterialJS::SetColorShader(NapiApi::FunctionContext<NapiApi::Object>&
 {
     NapiApi::Object shaderJS = ctx.Arg<0>();
     auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject());
-
+    if (!material) {
+        shader_.Reset();
+        return;
+    }
     // handle the case where a "bound shader" is attached too.
     auto shader = GetNativeMeta<SCENE_NS::IShader>(shaderJS);
     if (shader == nullptr) {
@@ -228,7 +232,10 @@ void ShaderMaterialJS::SetColorShader(NapiApi::FunctionContext<NapiApi::Object>&
 napi_value ShaderMaterialJS::GetColorShader(NapiApi::FunctionContext<>& ctx)
 {
     auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject());
-
+    if (!material) {
+        shader_.Reset();
+        return ctx.GetNull();
+    }
     if (shader_.IsEmpty()) {
         // no shader set yet..
         // see if we have one on the native side.

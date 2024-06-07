@@ -14,7 +14,6 @@
  */
 
 #include "SceneJS.h"
-
 #include "LightJS.h"
 #include "MaterialJS.h"
 static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
@@ -44,6 +43,9 @@ static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" 
 
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
+
+static META_NS::ITaskQueue::Ptr releaseThread;
+static constexpr BASE_NS::Uid JS_RELEASE_THREAD { "3784fa96-b25b-4e9c-bbf1-e897d36f73af" };
 
 void SceneJS::Init(napi_env env, napi_value exports)
 {
@@ -105,7 +107,7 @@ public:
     napi_value result { nullptr };
     virtual bool finally(napi_env env) = 0;
     template<typename A>
-    A flip(A& a)
+    A Flip(A& a)
     {
         A tmp = a;
         a = nullptr;
@@ -113,20 +115,30 @@ public:
     }
     void CallIt()
     {
-        // called from engine thread
-        if (auto tf = flip(termfun)) {
-            napi_call_threadsafe_function(tf, nullptr, napi_threadsafe_function_call_mode::napi_tsfn_blocking);
-            napi_release_threadsafe_function(tf, napi_threadsafe_function_release_mode::napi_tsfn_release);
+        // should be called from engine thread only.
+        // use an extra task in engine to trigger this
+        // to woraround an issue wherer CallIt is called IN an eventhandler.
+        // as there seems to be cases where (uncommon, have no repro. but has happend)
+        // napi_release_function waits for threadsafe function completion
+        // and the "js function" is waiting for the enghen thread (which is blocked releasing the function)
+        if (auto tf = Flip(termfun)) {
+            META_NS::GetTaskQueueRegistry()
+                .GetTaskQueue(JS_RELEASE_THREAD)
+                ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>(BASE_NS::move([tf]() {
+                    napi_call_threadsafe_function(tf, nullptr, napi_threadsafe_function_call_mode::napi_tsfn_blocking);
+                    napi_release_threadsafe_function(tf, napi_threadsafe_function_release_mode::napi_tsfn_release);
+                    return false;
+                })));
         }
     }
     // callable from js thread
     void Fail(napi_env env)
     {
         napi_status status;
-        if (auto df = flip(deferred)) {
+        if (auto df = Flip(deferred)) {
             status = napi_reject_deferred(env, df, result);
         }
-        if (auto tf = flip(termfun)) {
+        if (auto tf = Flip(termfun)) {
             // if called from java thread. then release it here...
             napi_release_threadsafe_function(tf, napi_threadsafe_function_release_mode::napi_tsfn_release);
         }
@@ -135,10 +147,10 @@ public:
     {
         napi_status status;
         // return success
-        if (auto df = flip(deferred)) {
+        if (auto df = Flip(deferred)) {
             status = napi_resolve_deferred(env, df, result);
         }
-        if (auto tf = flip(termfun)) {
+        if (auto tf = Flip(termfun)) {
             // if called from java thread. then release it here...
             napi_release_threadsafe_function(tf, napi_threadsafe_function_release_mode::napi_tsfn_release);
         }
@@ -245,6 +257,14 @@ napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
             break;
         }
         uri[t] = '/';
+    }
+
+    auto &tr = META_NS::GetTaskQueueRegistry();
+    releaseThread = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_RELEASE_THREAD);
+    if (!releaseThread) {
+        auto &obr = META_NS::GetObjectRegistry();
+        releaseThread = obr.Create<META_NS::ITaskQueue>(META_NS::ClassId::ThreadedTaskQueue);
+        tr.RegisterTaskQueue(releaseThread, JS_RELEASE_THREAD);
     }
 
     struct AsyncState : public AsyncStateBase {

@@ -18,11 +18,11 @@
 
 #include <ComponentTools/component_query.h>
 #include <scene_plugin/interface/intf_asset_manager.h>
+#include <scene_plugin/interface/intf_bitmap.h>
 #include <scene_plugin/interface/intf_ecs_scene.h>
 #include <scene_plugin/interface/intf_entity_collection.h>
 #include <scene_plugin/interface/intf_nodes.h>
 #include <scene_plugin/interface/intf_scene.h>
-#include <scene_plugin/interface/intf_bitmap.h>
 
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/camera_component.h>
@@ -119,10 +119,10 @@ public:
     void Load(const BASE_NS::string& uri);
 
     void SetRenderSize(uint32_t width, uint32_t height, uint64_t cameraHandle);
-    void SetRefreshInterval(META_NS::TimeSpan interval);
     void SetSystemGraphUri(const BASE_NS::string& uri);
 
-    void SetCameraTarget(const SCENE_NS::ICamera::Ptr& camera,  BASE_NS::Math::UVec2 size, RENDER_NS::RenderHandleReference ref);
+    void SetCameraTarget(
+        const SCENE_NS::ICamera::Ptr& camera,  BASE_NS::Math::UVec2 size, RENDER_NS::RenderHandleReference ref);
 
     void SetInitializeCallback(ISceneInitialized::Ptr callback, WeakPtr self);
     void SetSceneLoadedCallback(ISceneLoaded::Ptr callback, WeakPtr self);
@@ -390,7 +390,7 @@ public:
         {
             return Ptr { new CameraData(entity) };
         }
-        CameraData(const CORE_NS::Entity& cameraEntity) : entity(cameraEntity) {}
+        explicit CameraData(const CORE_NS::Entity& cameraEntity) : entity(cameraEntity) {}
         CORE_NS::Entity entity;
         bool ownsColorImage = true;
         RENDER_NS::RenderHandleReference colorImage;
@@ -490,7 +490,6 @@ public:
     BASE_NS::vector<CORE_NS::Entity> RenderCameras();
 
 private:
-    bool UpdateScene();
     void RemoveUriComponentsFromMeshes();
 
     bool InitializeScene();
@@ -514,8 +513,6 @@ private:
     bool IsMultiMeshChild(const CORE3D_NS::ISceneNode* child);
 
     CORE_NS::Entity FindCachedRelatedEntity(const CORE_NS::Entity& entity);
-
-    void ScheduleUpdates();
 
     BASE_NS::vector<CameraData::Ptr> cameras_;
     CameraData::Ptr mainCamera_ {};
@@ -601,8 +598,6 @@ private:
     uint64_t firstTime_ { ~0u };
     uint64_t previousFrameTime_ { ~0u };
     uint64_t deltaTime_ { 1 };
-
-    META_NS::IPollingTaskQueue::Ptr updateSceneTaskQueue_;
 };
 
 static constexpr BASE_NS::string_view MULTI_MESH_CHILD_PREFIX("multi_mesh_child");

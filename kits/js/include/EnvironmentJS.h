@@ -88,6 +88,5 @@ private:
     BASE_NS::unique_ptr<Vec4Proxy> environmentFactor_;
 
     // weak reference to the owning scene.
-    NapiApi::WeakRef scene_;
 };
 #endif // OHOS_RENDER_3D_ENVIRONMENTJS_H

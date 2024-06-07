@@ -33,22 +33,17 @@ void GeometryJS::DisposeNative()
 {
     // do nothing for now..
     CORE_LOG_F("GeometryJS::DisposeNative");
-    if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
+    if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
         // reset the native object refs
         SetNativeObject(nullptr, false);
         SetNativeObject(nullptr, true);
 
-        ExecSyncTask([cam = BASE_NS::move(camera)]() mutable {
-            auto camnode = interface_pointer_cast<SCENE_NS::INode>(cam);
-            if (camnode == nullptr) {
-                return META_NS::IAny::Ptr {};
-            }
-            auto scene = camnode->GetScene();
+        ExecSyncTask([nod = BASE_NS::move(node)]() mutable {
+            auto scene = nod->GetScene();
             if (scene == nullptr) {
                 return META_NS::IAny::Ptr {};
             }
-            scene->DeactivateCamera(cam);
-            scene->ReleaseNode(camnode);
+            scene->ReleaseNode(nod);
             return META_NS::IAny::Ptr {};
         });
     }
@@ -60,7 +55,7 @@ void GeometryJS::Init(napi_env env, napi_value exports)
     NodeImpl::GetPropertyDescs(node_props);
 
     using namespace NapiApi;
-    node_props.push_back(GetSetProperty<Object, GeometryJS, &GeometryJS::GetMesh, &GeometryJS::SetMesh>("mesh"));
+    node_props.push_back(GetProperty<Object, GeometryJS, &GeometryJS::GetMesh>("mesh"));
 
     napi_value func;
     auto status = napi_define_class(env, "Geometry", NAPI_AUTO_LENGTH, BaseObject::ctor<GeometryJS>(), nullptr,
@@ -76,19 +71,13 @@ GeometryJS::GeometryJS(napi_env e, napi_callback_info i) : BaseObject<GeometryJS
     LOG_F("GeometryJS ++ ");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     // java script call.. with arguments
-    NapiApi::Object scene = fromJs.Arg<0>();
     if (!fromJs) {
         // okay internal create. we will receive the object after.
         return;
     }
-    scene_ = scene;
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        CORE_LOG_F("INVALID SCENE!");
-    }
-
+    scene_ = fromJs.Arg<0>().valueOrDefault();
     // Creating new object...  (so we must have scene etc)
-    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene);
-
+    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
     if (scn == nullptr) {
         CORE_LOG_F("Invalid scene for GeometryJS!");
         return;
@@ -121,15 +110,9 @@ napi_value GeometryJS::GetMesh(NapiApi::FunctionContext<>& ctx)
         // always return the same js object.
         return cached;
     }
-    auto uid = mesh->GetClassId();
-    auto name = mesh->GetClassName();
     // create new js object for the native node.
     NapiApi::Object argJS(ctx);
     napi_value args[] = { scene_.GetValue(), argJS };
 
     return CreateFromNativeInstance(ctx, mesh, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
-}
-
-void GeometryJS::SetMesh(NapiApi::FunctionContext<NapiApi::Object>& ctx)
-{
 }

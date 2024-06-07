@@ -23,7 +23,7 @@
 class NodeImpl : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 2;
-    enum NodeType { NODE = 0, GEOMETRY = 1, CAMERA = 2, LIGHT = 3 };
+    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4 };
 
     static void RegisterEnums(NapiApi::Object exports);
 
@@ -68,6 +68,7 @@ protected:
     napi_value InsertChildAfter(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
     napi_value AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    void ResetNativeObj(NapiApi::FunctionContext<>& ctx, NapiApi::Object& obj);
 
 private:
     NodeType type_;

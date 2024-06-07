@@ -42,6 +42,10 @@ public:
 protected:
     TrueRootObject();
     virtual ~TrueRootObject() = default;
+    static void destroy(TrueRootObject* object)
+    {
+        delete object;
+    }
 
 private:
     META_NS::IObject::Ptr obj_;
@@ -50,31 +54,20 @@ private:
 
 template<class FinalObject>
 class BaseObject : public TrueRootObject {
-public:
-    napi_ref r;
-
 protected:
     bool disposed_ { false };
-    virtual ~BaseObject() = default;
+    virtual ~BaseObject() {};
     BaseObject(napi_env env, napi_callback_info info) : TrueRootObject()
     {
         napi_value thisVar = nullptr;
         napi_get_cb_info(env, info, nullptr, nullptr, &thisVar, nullptr);
 
         auto DTOR = [](napi_env env, void* nativeObject, void* finalize) {
-            BaseObject* ptr = static_cast<BaseObject*>(nativeObject);
-            napi_value res;
-            napi_get_reference_value(env, ptr->r, &res);
-            if (res) {
-                // okay.. destroy the wrapper  (hmm. res is always null.)
-                void* obj = nullptr;
-                napi_remove_wrap(env, res, &obj);
-            }
-            napi_delete_reference(env, ptr->r);
+            TrueRootObject* ptr = static_cast<TrueRootObject*>(nativeObject);
             ptr->Finalize(env);
-            delete ptr;
+            TrueRootObject::destroy(ptr);
         };
-        napi_wrap(env, thisVar, reinterpret_cast<void*>((TrueRootObject*)this), DTOR, nullptr, &(r));
+        napi_wrap(env, thisVar, reinterpret_cast<void*>((TrueRootObject*)this), DTOR, nullptr, nullptr);
     }
     template<typename Object>
     static inline napi_callback ctor()

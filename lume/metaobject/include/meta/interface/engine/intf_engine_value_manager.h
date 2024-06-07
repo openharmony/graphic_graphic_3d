@@ -17,6 +17,7 @@
 #define META_ENGINE_INTERFACE_ENGINE_VALUE_MANAGER_H
 
 #include <meta/interface/engine/intf_engine_value.h>
+#include <meta/interface/intf_task_queue.h>
 #include <meta/interface/property/array_property.h>
 #include <meta/interface/property/property.h>
 
@@ -37,7 +38,7 @@ struct EngineValueOptions {
 class IEngineValueManager : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IEngineValueManager)
 public:
-    virtual void SetNotificationThread(const BASE_NS::Uid& queueId) = 0;
+    virtual void SetNotificationQueue(const ITaskQueue::WeakPtr&) = 0;
 
     virtual bool Sync(EngineSyncDirection) = 0;
 
@@ -47,6 +48,7 @@ public:
     virtual bool ConstructValues(IValue::Ptr value, EngineValueOptions) = 0;
     // Add single engine value from EnginePropertyParams
     virtual bool ConstructValue(EnginePropertyParams property, EngineValueOptions) = 0;
+    virtual bool ConstructValue(CORE_NS::IPropertyHandle* handle, BASE_NS::string_view path, EngineValueOptions) = 0;
 
     virtual bool RemoveValue(BASE_NS::string_view name) = 0;
     virtual void RemoveAll() = 0;

@@ -31,6 +31,5 @@ public:
 private:
     void DisposeNative() override;
     napi_value GetMesh(NapiApi::FunctionContext<>& ctx);
-    void SetMesh(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 };
 #endif // OHOS_RENDER_3D_GEOMETRY_JS_H
