@@ -29,8 +29,9 @@ public:
     virtual bool LoadPluginsAndInit() = 0;
     virtual std::shared_ptr<TextureLayer> CreateTextureLayer() = 0;
     virtual void OnWindowChange(const WindowChangeInfo& windowChangeInfo) = 0;
-    virtual void RenderFrame() = 0;
+    virtual void RenderFrame(bool needsSyncPaint = false) = 0;
     virtual void Deinit() = 0;
+    virtual bool NeedsRepaint() = 0;
     virtual ~ISceneAdapter() = default;
 };
 

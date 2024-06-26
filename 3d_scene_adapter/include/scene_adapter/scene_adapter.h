@@ -66,8 +66,9 @@ public:
     bool LoadPluginsAndInit() override;
     std::shared_ptr<TextureLayer> CreateTextureLayer() override;
     void OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
-    void RenderFrame() override;
+    void RenderFrame(bool needsSyncPaint = false) override;
     void Deinit() override {};
+    bool NeedsRepaint() override;
     virtual void SetSceneObj(META_NS::IObject::Ptr pt);
 
     ~SceneAdapter() override;
@@ -89,7 +90,7 @@ private:
     SCENE_NS::IBitmap::Ptr bitmap_;
     uint32_t key_;
     META_NS::ITaskQueue::Token renderTask {};
-    bool useAsyncRender = true;
+    bool needsRepaint_ = true;
     META_NS::ITaskQueueTask::Ptr singleFrameAsync;
     META_NS::ITaskQueueWaitableTask::Ptr singleFrameSync;
 };
