@@ -411,6 +411,7 @@ void SceneAdapter::DeinitRenderThread()
 
 void SceneAdapter::RenderFunction()
 {
+    WIDGET_SCOPED_TRACE("SceneAdapter::RenderFunction");
     auto &obr = META_NS::GetObjectRegistry();
     auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc;
@@ -432,19 +433,23 @@ void SceneAdapter::RenderFunction()
     UnlockCompositor();
 }
 
-void SceneAdapter::RenderFrame()
+void SceneAdapter::RenderFrame(bool needsSyncPaint)
 {
-    WIDGET_SCOPED_TRACE("SceneAdapterImpl::RenderFrame");
     if (renderTask) {
         engineThread->CancelTask(renderTask);
         renderTask = nullptr;
     }
 
-    if (useAsyncRender) {
+    if (!needsSyncPaint) {
         renderTask = engineThread->AddTask(singleFrameAsync);
     } else {
         engineThread->AddWaitableTask(singleFrameSync)->Wait();
     }
+}
+
+bool SceneAdapter::NeedsRepaint()
+{
+    return needsRepaint_;
 }
 
 void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj, RENDER_NS::RenderHandleReference swapchain)
