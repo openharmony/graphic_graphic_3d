@@ -21,5 +21,5 @@ lume_binary_complile("lume_binary_assets_compile") {
   dest_gen_path = "$target_gen_dir"
 }
 group("binary_compile_asset") {
-  deps = [":lume_binary_assets_compile"]
+  deps = [ ":lume_binary_assets_compile" ]
 }
