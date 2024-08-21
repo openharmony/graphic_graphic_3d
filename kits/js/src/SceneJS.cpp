@@ -188,7 +188,10 @@ BASE_NS::string FetchResourceOrUri(napi_env e, napi_value arg)
     napi_valuetype type;
     napi_typeof(e, arg, &type);
     if (type == napi_string) {
-        return NapiApi::Value<BASE_NS::string>(e, arg);
+        BASE_NS::string uri = NapiApi::Value<BASE_NS::string>(e, arg);
+        // set default format as system resource
+        uri.insert(0, "file://");
+        return uri;
     }
     if (type == napi_object) {
         NapiApi::Object resource(e, arg);
@@ -219,10 +222,11 @@ BASE_NS::string FetchResourceOrUri(NapiApi::FunctionContext<>& ctx)
         // actually not supported anymore.
         uri = uriContext.Arg<0>();
         // check if there is a protocol
-        auto t = uri.find_first_of("://");
+        auto t = uri.find("://");
         if (t == BASE_NS::string::npos) {
             // no proto . so use default
-            uri.insert(0, "OhosRawFile:///");
+            // set default format as system resource
+            uri.insert(0, "file://");
         }
     } else if (resourceContext) {
         // get it from resource then
