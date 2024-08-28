@@ -66,6 +66,7 @@ private:
     int32_t width_ = 0u;
     int32_t height_ = 0u;
     int32_t key_ = INT32_MAX;
+    uint32_t transform_ = 0U;
 
     std::shared_ptr<Rosen::RSNode> rsNode_ = nullptr;
     std::shared_ptr<Rosen::RSNode> parent_ = nullptr;
@@ -97,10 +98,39 @@ void TextureLayerImpl::RemoveChild()
     }
 }
 
+GraphicTransformType RotationToTransform(uint32_t rotation)
+{
+    GraphicTransformType transform = GraphicTransformType::GRAPHIC_ROTATE_BUTT;
+    switch (rotation) {
+        case 0:
+            transform = GraphicTransformType::GRAPHIC_ROTATE_NONE;
+            break;
+        case 90:
+            transform = GraphicTransformType::GRAPHIC_ROTATE_90;
+            break;
+        case 180:
+            transform = GraphicTransformType::GRAPHIC_ROTATE_180;
+            break;
+        case 270:
+            transform = GraphicTransformType::GRAPHIC_ROTATE_270;
+            break;
+        default:
+            transform = GraphicTransformType::GRAPHIC_ROTATE_NONE;
+            break;
+    }
+    return transform;
+}
+
 void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
 {
-    struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model") +
-        std::to_string(key_)};
+    std::string bundleName = GraphicsManager::GetInstance().GetHapInfo().bundleName_;
+    struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig;
+    if (bundleName.find("totemweather") != std::string::npos) {
+        surfaceNodeConfig = {.SurfaceNodeName = std::string("SceneViewer Model totemweather") + std::to_string(key_)};
+    } else {
+        surfaceNodeConfig = {.SurfaceNodeName = std::string("SceneViewer Model") + std::to_string(key_)};
+    }
+
     rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false);
     if (!rsNode_) {
         WIDGET_LOGE("Create rs node fail");
@@ -129,6 +159,10 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
         WIDGET_LOGE("Get producer surface fail");
         return nullptr;
     }
+
+    auto transform = RotationToTransform(transform_);
+    producerSurface_->SetTransformHint(transform);
+
     auto ret = SurfaceUtils::GetInstance()->Add(producerSurface_->GetUniqueId(), producerSurface_);
     if (ret != SurfaceError::SURFACE_ERROR_OK) {
         WIDGET_LOGE("add surface error");
@@ -191,6 +225,7 @@ TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChang
     surface_ = windowChangeInfo.surfaceType;
     offsetX_ = (int)windowChangeInfo.offsetX;
     offsetY_ = (int)windowChangeInfo.offsetY;
+    transform_ = windowChangeInfo.transformType;
 
     image_.textureInfo_.width_ = static_cast<uint32_t>(windowChangeInfo.width);
     image_.textureInfo_.height_ = static_cast<uint32_t>(windowChangeInfo.height);
