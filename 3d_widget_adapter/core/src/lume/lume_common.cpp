@@ -899,6 +899,25 @@ void LumeCommon::LoadSystemGraph(BASE_NS::string sysGraph)
         WIDGET_LOGE("load system graph %s error %s", sysGraph.c_str(), result.error.c_str());
     }
 
+    // multi ecs needs unique DataStore name, otherwise only one RenderSystem created
+    std::string tmpPrefix = "EngineInstance:" + std::to_string(key_);
+    BASE_NS::string dataStorePrefix = tmpPrefix.c_str();
+
+    if (auto renderPreprocessorSystem = CORE_NS::GetSystem<CORE3D_NS::IRenderPreprocessorSystem>(ecs)) {
+        CORE3D_NS::IRenderPreprocessorSystem::Properties rsProperties;
+        rsProperties.dataStoreScene = dataStorePrefix + "RenderDataStoreDefaultScene";
+        rsProperties.dataStoreCamera = dataStorePrefix + "RenderDataStoreDefaultCamera";
+        rsProperties.dataStoreLight = dataStorePrefix + "RenderDataStoreDefaultLight";
+        rsProperties.dataStoreMaterial = dataStorePrefix + "RenderDataStoreDefaultMaterial";
+        rsProperties.dataStoreMorph = dataStorePrefix + "RenderDataStoreMorph";
+        rsProperties.dataStorePrefix = dataStorePrefix;
+
+        if (auto scopedHandle = CORE_NS::ScopedHandle<CORE3D_NS::IRenderPreprocessorSystem::Properties>(
+                renderPreprocessorSystem->GetProperties())) {
+            *scopedHandle = rsProperties;
+        }
+    }
+
     ecs.Initialize();
     transformManager_ = CORE_NS::GetManager<CORE3D_NS::ITransformComponentManager>(ecs);
     cameraManager_ = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(ecs);
