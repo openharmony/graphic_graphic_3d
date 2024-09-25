@@ -112,7 +112,6 @@ ohos_source_set("scene_adapter_source") {
     "ability_runtime:app_context",
     "ability_runtime:data_ability_helper",
     "ability_runtime:napi_base_context",
-    "ability_runtime:napi_common",
     "bundle_framework:appexecfwk_base",
     "bundle_framework:appexecfwk_core",
     "c_utils:utils",
