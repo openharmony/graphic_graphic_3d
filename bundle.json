@@ -33,10 +33,10 @@
           "napi",
           "ability_runtime",
           "bundle_framework",
-          "egl"
+          "egl",
+          "skia"
         ],
         "third_party": [
-          "skia",
           "libpng",
           "libjpeg-turbo",
           "zlib",
