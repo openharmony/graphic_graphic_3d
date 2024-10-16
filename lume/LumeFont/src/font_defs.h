@@ -132,29 +132,29 @@ inline uint16_t lshift_u16(uint16_t val, uint8_t bits)
 
 inline uint8_t GetStrength(uint64_t glyphKey)
 {
-    return rshift_u64(glyphKey, 48) & UINT8_MAX;
+    return rshift_u64(glyphKey, NUM_48) & UINT8_MAX;
 }
 
 inline uint8_t GetSkewX(uint64_t glyphKey)
 {
-    return rshift_u64(glyphKey, 56) & UINT8_MAX;
+    return rshift_u64(glyphKey, NUM_56) & UINT8_MAX;
 }
 
 inline int32_t IntToFp26(int32_t val)
 {
     // convert to 26.6 fractional pixels values used by freetype library
-    return lshift_i32(val, 6);
+    return lshift_i32(val, NUM_6);
 }
 
 inline int32_t Fp26ToInt(int32_t val)
 {
     // convert from 26.6 fractional pixels values used by freetype library
-    return rshift_i32(val, 6);
+    return rshift_i32(val, NUM_6);
 }
 // font size in pixel
 inline uint64_t MakeGlyphKey(float size, uint32_t idx)
 {
-    return (static_cast<uint64_t>(size) << 32) | idx;
+    return (static_cast<uint64_t>(size) << NUM_32) | idx;
 }
 
 constexpr float FLOAT_DIV = 64.f;
