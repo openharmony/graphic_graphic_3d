@@ -405,20 +405,6 @@ int FontManager::UpdateAtlas(FontDefs::Glyph& glyph, const FT_Bitmap& bitmap, bo
             uint32_t colPos = 0;
             for (uint32_t col = 0; col < atlas.columns.size(); ++col) {
                 auto& hdr = atlas.columns[col];
-
-                if (hdr.colWidth >= width && hdr.heightLeft >= height) {
-                    if (hdr.colWidth == width) { // Exact match
-                        AddGlyphToColumn(glyph, i, hdr, bitmap, colPos);
-                        return ATLAS_OK;
-                    }
-                    uint32_t wDiff = hdr.colWidth - width;
-                    if (wDiff < minDiff) {
-                        minDiff = wDiff;
-                        bestFitAtlas = i;
-                        bestFitColumn = col;
-                        bestFitColumnPos = colPos;
-                    }
-                }
                 colPos += hdr.colWidth;
             }
         }
@@ -430,20 +416,6 @@ int FontManager::UpdateAtlas(FontDefs::Glyph& glyph, const FT_Bitmap& bitmap, bo
         auto& hdr = atlas.columns[bestFitColumn];
         AddGlyphToColumn(glyph, bestFitAtlas, hdr, bitmap, bestFitColumnPos);
         return ATLAS_OK;
-    }
-
-    // No matching column is found try to create one ...
-    for (uint32_t i = 0; i < atlasTextures_.size(); ++i) {
-        auto& atlas = atlasTextures_[i];
-        if (inColor == atlas.inColor && atlas.widthLeft >= width) {
-            uint32_t colPos = FontDefs::ATLAS_SIZE - atlas.widthLeft;
-            atlas.widthLeft -= width;
-            auto& hdr = atlas.columns.emplace_back();
-            hdr.colWidth = static_cast<uint16_t>(width);
-            hdr.heightLeft = FontDefs::ATLAS_SIZE;
-            AddGlyphToColumn(glyph, i, hdr, bitmap, colPos);
-            return ATLAS_OK;
-        }
     }
 
     // Need to create new atlas
@@ -476,43 +448,8 @@ void FontManager::UploadPending()
     allColumnWidths.reserve(atlasTextures_.size());
     uint32_t totalSize = 0U;
     for (auto& atlas : atlasTextures_) {
-        // sort so that columns can be identified
-        std::sort(atlas.pending.begin(), atlas.pending.end(), [](const PendingGlyph& lhs, const PendingGlyph& rhs) {
-            if (lhs.posX < rhs.posX) {
-                return true;
-            }
-            if (lhs.posX > rhs.posX) {
-                return false;
-            }
-            if (lhs.posY < rhs.posY) {
-                return true;
-            }
-            if (lhs.posY > rhs.posY) {
-                return false;
-            }
-            return false;
-        });
-
         auto& columnWidths = allColumnWidths.emplace_back();
         columnWidths.reserve(atlas.pending.size());
-
-        auto first = atlas.pending.begin();
-        auto last = atlas.pending.end();
-        for (; first != last;) {
-            // find the first glyph in the column
-            first = std::lower_bound(first, last, *(last - 1),
-                [](const PendingGlyph& value, const PendingGlyph& element) { return value.posX < element.posX; });
-            // check the maximum width of the column
-            const auto width = std::accumulate(first, last, uint16_t(0u),
-                [](const uint16_t a, const PendingGlyph& b) { return std::max(a, b.width); });
-            const auto height = static_cast<uint16_t>(((last - 1)->posY + (last - 1)->height) - first->posY);
-            const auto bufferSize = static_cast<uint32_t>(width * height * (atlas.inColor ? 4u : 1u));
-            totalSize += bufferSize;
-            columnWidths.push_back({ static_cast<uint32_t>(std::distance(atlas.pending.begin(), first)),
-                static_cast<uint32_t>(std::distance(first, last)), width, height, bufferSize });
-            last = first;
-            first = atlas.pending.begin();
-        }
     }
     if (!totalSize) {
         return;
@@ -537,61 +474,6 @@ void FontManager::UploadPending()
     }
     auto buffer = array_view(ptr, totalSize);
     std::fill(buffer.begin(), buffer.end(), uint8_t(0u));
-
-    auto staging = static_cast<IRenderDataStoreDefaultStaging*>(
-        renderContext_.GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING));
-
-    auto allColumnWidthsIter = allColumnWidths.cbegin();
-    uint32_t columnOffset = 0U;
-    for (auto& atlas : atlasTextures_) {
-        const auto bytesPerPixel = (atlas.inColor ? 4u : 1u);
-        for (auto& columnWidths : *allColumnWidthsIter) {
-            // copy each glyph in this column into the staging buffer
-            auto first = atlas.pending.begin() + columnWidths.index;
-            auto last = first + columnWidths.count;
-            std::for_each(first, last,
-                [buffer = buffer.data() + columnOffset, width = columnWidths.width, bytesPerPixel,
-
-                    firstPosY = first->posY](const PendingGlyph& glyph) mutable {
-                    if (glyph.width == width) {
-                        std::copy(glyph.data.begin().ptr(), glyph.data.end().ptr(),
-                            buffer + (width * bytesPerPixel * (glyph.posY - firstPosY)));
-                    } else {
-                        auto src = glyph.data.data();
-                        auto dst = buffer + (width * bytesPerPixel * (glyph.posY - firstPosY));
-                        const auto srcPitch = glyph.width * bytesPerPixel;
-                        const auto dstPitch = width * bytesPerPixel;
-                        for (auto i = 0u; i < glyph.height; ++i) {
-                            auto srcFirst = src + (i * srcPitch);
-                            auto srcLast = src + ((i + 1) * srcPitch);
-                            std::copy(srcFirst, srcLast, dst + (i * dstPitch));
-                        }
-                    }
-                });
-
-            // request to copy the column into the atlas texture
-            const BufferImageCopy bufferImageCopy {
-                columnOffset,        // bufferOffset
-                columnWidths.width,  // bufferRowLength
-                columnWidths.height, // bufferImageHeight
-                {
-                    CORE_IMAGE_ASPECT_COLOR_BIT,               // imageAspectFlags
-                    0,                                         // mipLevel
-                    0,                                         // baseArrayLayer
-                    1u,                                        // layerCount
-                },                                             // imageSubresource
-                { first->posX, first->posY, 0 },               // imageOffset
-                { columnWidths.width, columnWidths.height, 1 } // imageExtend
-            };
-            staging->CopyBufferToImage(bufferHandle, atlas.handle, bufferImageCopy);
-
-            columnOffset += columnWidths.byteSize;
-        }
-        ++allColumnWidthsIter;
-        atlas.pending.clear();
-    }
-
-    gpuResMan.UnmapBuffer(bufferHandle);
 }
 
 void FontManager::AddGlyphToColumn(
