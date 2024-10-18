@@ -30,14 +30,14 @@
 
 ECS_SERIALIZER_BEGIN_NAMESPACE()
 
-void UpdateAnimationTrackTargets(CORE_NS::IEcs& ecs, CORE_NS::Entity animationEntity, CORE_NS::Entity rootNode)
+void UpdateAnimationTrackTargets(IEcs& ecs, Entity animationEntity, Entity rootNode)
 {
-    auto& nameManager = CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(ecs);
-    auto animationManager = CORE_NS::GetManager<CORE3D_NS::IAnimationComponentManager>(ecs);
-    auto animationTrackManager = CORE_NS::GetManager<CORE3D_NS::IAnimationTrackComponentManager>(ecs);
+    auto& nameManager = GetManager<CORE3D_NS::INameComponentManager>(ecs);
+    auto animationManager = GetManager<CORE3D_NS::IAnimationComponentManager>(ecs);
+    auto animationTrackManager = GetManager<CORE3D_NS::IAnimationTrackComponentManager>(ecs);
     auto& entityManager = ecs.GetEntityManager();
 
-    auto* nodeSystem = CORE_NS::GetSystem<CORE3D_NS::INodeSystem>(ecs);
+    auto* nodeSystem = GetSystem<CORE3D_NS::INodeSystem>(ecs);
     CORE_ASSERT(nodeSystem);
     if (!nodeSystem) {
         return;
@@ -48,13 +48,13 @@ void UpdateAnimationTrackTargets(CORE_NS::IEcs& ecs, CORE_NS::Entity animationEn
         return;
     }
 
-    if (const CORE_NS::ScopedHandle<const CORE3D_NS::AnimationComponent> animationData =
+    if (const ScopedHandle<const CORE3D_NS::AnimationComponent> animationData =
             animationManager->Read(animationEntity);
         animationData) {
-        BASE_NS::vector<CORE_NS::Entity> targetEntities;
+        vector<Entity> targetEntities;
         targetEntities.reserve(animationData->tracks.size());
         std::transform(animationData->tracks.begin(), animationData->tracks.end(), std::back_inserter(targetEntities),
-            [&manager = nameManager, &node](const CORE_NS::Entity& trackEntity) {
+            [&manager = nameManager, &node](const Entity& trackEntity) {
                 if (auto nameHandle = manager.Read(trackEntity); nameHandle) {
                     if (nameHandle->name.empty()) {
                         return node->GetEntity();
@@ -64,7 +64,7 @@ void UpdateAnimationTrackTargets(CORE_NS::IEcs& ecs, CORE_NS::Entity animationEn
                         }
                     }
                 }
-                return CORE_NS::Entity {};
+                return Entity {};
             });
         if (animationData->tracks.size() == targetEntities.size()) {
             auto targetIt = targetEntities.begin();
@@ -72,7 +72,7 @@ void UpdateAnimationTrackTargets(CORE_NS::IEcs& ecs, CORE_NS::Entity animationEn
                 if (auto track = animationTrackManager->Write(trackEntity); track) {
                     if (track->target) {
                         CORE_LOG_D("AnimationTrack %s already targetted",
-                            BASE_NS::to_hex(static_cast<const CORE_NS::Entity&>(track->target).id).data());
+                            to_hex(static_cast<const Entity&>(track->target).id).data());
                     }
                     track->target = entityManager.GetReferenceCounted(*targetIt);
                 }

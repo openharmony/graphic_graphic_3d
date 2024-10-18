@@ -28,41 +28,36 @@ using namespace RENDER_NS;
 using namespace CORE3D_NS;
 using namespace UTIL_NS;
 
-// #define VERBOSE_LOGGING
-
 ECS_SERIALIZER_BEGIN_NAMESPACE()
 
 class EcsAssetManager : public IEcsAssetManager {
 public:
-    EcsAssetManager(CORE3D_NS::IGraphicsContext& graphicsContext);
+    explicite EcsAssetManager(CORE3D_NS::IGraphicsContext& graphicsContext);
     virtual ~EcsAssetManager();
 
-    //
-    // From IEcsAssetManager
-    //
-    ExtensionType GetExtensionType(BASE_NS::string_view ext) const override;
+    ExtensionType GetExtensionType(string_view ext) const override;
 
     IEcsAssetLoader::Ptr CreateEcsAssetLoader(
-        IEntityCollection& ec, BASE_NS::string_view src, BASE_NS::string_view contextUri) override;
+        IEntityCollection& ec, string_view src, string_view contextUri) override;
 
-    bool LoadAsset(IEntityCollection& ec, BASE_NS::string_view uri, BASE_NS::string_view contextUri) override;
+    bool LoadAsset(IEntityCollection& ec, string_view uri, string_view contextUri) override;
     bool SaveJsonEntityCollection(
-        const IEntityCollection& ec, BASE_NS::string_view uri, BASE_NS::string_view contextUri) const override;
+        const IEntityCollection& ec, string_view uri, string_view contextUri) const override;
 
-    IEntityCollection* LoadAssetToCache(CORE_NS::IEcs& ecs, BASE_NS::string_view cacheUri, BASE_NS::string_view uri,
-        BASE_NS::string_view contextUri, bool active, bool forceReload) override;
+    IEntityCollection* LoadAssetToCache(IEcs& ecs, string_view cacheUri, string_view uri,
+        string_view contextUri, bool forceReload) override;
 
-    bool IsCachedCollection(BASE_NS::string_view uri, BASE_NS::string_view contextUri) const override;
+    bool IsCachedCollection(string_view uri, string_view contextUri) const override;
     IEntityCollection* CreateCachedCollection(
-        CORE_NS::IEcs& ecs, BASE_NS::string_view uri, BASE_NS::string_view contextUri) override;
-    IEntityCollection* GetCachedCollection(BASE_NS::string_view uri, BASE_NS::string_view contextUri) const override;
-    void RemoveFromCache(BASE_NS::string_view uri, BASE_NS::string_view contextUri) override;
+        IEcs& ecs, string_view uri, string_view contextUri) override;
+    IEntityCollection* GetCachedCollection(string_view uri, string_view contextUri) const override;
+    void RemoveFromCache(string_view uri, string_view contextUri) override;
     void ClearCache() override;
 
     void RefreshAsset(IEntityCollection& ec, bool active) override;
 
     IEntityCollection* InstantiateCollection(
-        IEntityCollection& ec, BASE_NS::string_view uri, BASE_NS::string_view contextUri) override;
+        IEntityCollection& ec, string_view uri, string_view contextUri) override;
 
     IEcsSerializer& GetEcsSerializer() override;
     const IEcsSerializer& GetEcsSerializer() const override;
@@ -71,7 +66,7 @@ public:
     // From IEcsSerializer::IListener
     //
     IEntityCollection* GetExternalCollection(
-        CORE_NS::IEcs& ecs, BASE_NS::string_view uri, BASE_NS::string_view contextUri) override;
+        IEcs& ecs, string_view uri, string_view contextUri) override;
 
 protected:
     void Destroy() override;
@@ -83,7 +78,7 @@ private:
 
     // Mapping from uri to a collection of entities. The entities live in the ECS but we need to keep track of some kind
     // of internal ownership of each cached entity.
-    BASE_NS::unordered_map<BASE_NS::string, IEntityCollection::Ptr> cacheCollections_;
+    unordered_map<string, IEntityCollection::Ptr> cacheCollections_;
 };
 
 EcsAssetManager::EcsAssetManager(IGraphicsContext& graphicsContext)
@@ -98,8 +93,6 @@ EcsAssetManager::~EcsAssetManager() {}
 
 EcsAssetManager::ExtensionType EcsAssetManager::GetExtensionType(string_view ext) const
 {
-    // TODO: Ignore case.
-    // TODO: Better type recognition
     if (ext == "collection") {
         return ExtensionType::COLLECTION;
     } else if (ext == "scene") {
@@ -162,7 +155,7 @@ bool EcsAssetManager::SaveJsonEntityCollection(
 }
 
 IEntityCollection* EcsAssetManager::LoadAssetToCache(
-    IEcs& ecs, string_view cacheUri, string_view uri, string_view contextUri, bool active, bool forceReload)
+    IEcs& ecs, string_view cacheUri, string_view uri, string_view contextUri, bool forceReload)
 {
     // Check if this collection was already loaded.
     const auto resolvedUri = PathUtil::ResolveUri(contextUri, uri);
@@ -174,9 +167,6 @@ IEntityCollection* EcsAssetManager::LoadAssetToCache(
             return it->second.get();
         }
     }
-
-    // Not yet loaded (or forcing reload) -> load the entity collection.
-
     // Need to first remove the possible cached collection because otherwise gltf importer will not reload the resources
     // like meshes if they have the same names.
     cacheCollections_.erase(cacheId);
@@ -184,9 +174,6 @@ IEntityCollection* EcsAssetManager::LoadAssetToCache(
     auto ec = CreateEntityCollection(ecs, cacheUri, contextUri);
     if (LoadAsset(*ec, resolvedUri, contextUri)) {
         // Something was loaded. Set all loaded entities as inactive if requested.
-        if (!active) {
-            ec->SetActive(false);
-        }
         // Add loaded collection to cache map.
         return (cacheCollections_[cacheId] = move(ec)).get();
     } else {
@@ -203,7 +190,7 @@ bool EcsAssetManager::IsCachedCollection(string_view uri, string_view contextUri
 }
 
 IEntityCollection* EcsAssetManager::CreateCachedCollection(
-    IEcs& ecs, BASE_NS::string_view uri, BASE_NS::string_view contextUri)
+    IEcs& ecs, string_view uri, string_view contextUri)
 {
     auto ec = CreateEntityCollection(ecs, uri, contextUri);
     ec->SetActive(false);

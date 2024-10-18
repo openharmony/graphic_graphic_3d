@@ -28,18 +28,18 @@
 
 ECS_SERIALIZER_BEGIN_NAMESPACE()
 
-void CloneComponent(CORE_NS::Entity srcEntity, const CORE_NS::IComponentManager& srcManager,
-    CORE_NS::IEcs& dstEcs, CORE_NS::Entity dstEntity)
+void CloneComponent(Entity srcEntity, const IComponentManager& srcManager,
+    IEcs& dstEcs, Entity dstEntity)
 {
     auto* dstManager = dstEcs.GetComponentManager(srcManager.GetUid());
     if (dstManager) {
         // Get copy destiantion property handle.
         auto componentId = dstManager->GetComponentId(dstEntity);
-        if (componentId == CORE_NS::IComponentManager::INVALID_COMPONENT_ID) {
+        if (componentId == IComponentManager::INVALID_COMPONENT_ID) {
             dstManager->Create(dstEntity);
             componentId = dstManager->GetComponentId(dstEntity);
         }
-        BASE_ASSERT(componentId != CORE_NS::IComponentManager::INVALID_COMPONENT_ID);
+        BASE_ASSERT(componentId != IComponentManager::INVALID_COMPONENT_ID);
         const auto* srcHandle = srcManager.GetData(srcEntity);
         if (srcHandle) {
             dstManager->SetData(dstEntity, *srcHandle);
@@ -48,37 +48,37 @@ void CloneComponent(CORE_NS::Entity srcEntity, const CORE_NS::IComponentManager&
 }
 
 inline void CloneComponents(
-    CORE_NS::IEcs& srcEcs, CORE_NS::Entity srcEntity, CORE_NS::IEcs& dstEcs, CORE_NS::Entity dstEntity)
+    IEcs& srcEcs, Entity srcEntity, IEcs& dstEcs, Entity dstEntity)
 {
-    BASE_NS::vector<CORE_NS::IComponentManager*> managers;
+    vector<IComponentManager*> managers;
     srcEcs.GetComponents(srcEntity, managers);
     for (auto* srcManager : managers) {
         CloneComponent(srcEntity, *srcManager, dstEcs, dstEntity);
     }
 }
 
-inline CORE_NS::Entity CloneEntity(CORE_NS::IEcs& srcEcs, CORE_NS::Entity src, CORE_NS::IEcs& dstEcs)
+inline Entity CloneEntity(IEcs& srcEcs, Entity src, IEcs& dstEcs)
 {
-    CORE_NS::Entity dst = dstEcs.GetEntityManager().Create();
+    Entity dst = dstEcs.GetEntityManager().Create();
     CloneComponents(srcEcs, src, dstEcs, dst);
     return dst;
 }
 
-inline CORE_NS::EntityReference CloneEntityReference(CORE_NS::IEcs& srcEcs, CORE_NS::Entity src, CORE_NS::IEcs& dstEcs)
+inline EntityReference CloneEntityReference(IEcs& srcEcs, Entity src, IEcs& dstEcs)
 {
-    CORE_NS::EntityReference dst = dstEcs.GetEntityManager().CreateReferenceCounted();
+    EntityReference dst = dstEcs.GetEntityManager().CreateReferenceCounted();
     CloneComponents(srcEcs, src, dstEcs, dst);
     return dst;
 }
 
-void GatherEntityReferences(BASE_NS::vector<CORE_NS::Entity*>& entities,
-    BASE_NS::vector<CORE_NS::EntityReference*>& entityReferences, const CORE_NS::Property& property,
+void GatherEntityReferences(vector<Entity*>& entities,
+    vector<EntityReference*>& entityReferences, const Property& property,
     uintptr_t offset = 0)
 {
-    if (property.type == CORE_NS::PropertyType::ENTITY_T) {
-        entities.emplace_back(reinterpret_cast<CORE_NS::Entity*>(offset));
-    } else if (property.type == CORE_NS::PropertyType::ENTITY_REFERENCE_T) {
-        entityReferences.emplace_back(reinterpret_cast<CORE_NS::EntityReference*>(offset));
+    if (property.type == PropertyType::ENTITY_T) {
+        entities.emplace_back(reinterpret_cast<Entity*>(offset));
+    } else if (property.type == PropertyType::ENTITY_REFERENCE_T) {
+        entityReferences.emplace_back(reinterpret_cast<EntityReference*>(offset));
     } else if (property.metaData.containerMethods) {
         auto& containerProperty = property.metaData.containerMethods->property;
         if (property.type.isArray) {
@@ -108,50 +108,38 @@ void GatherEntityReferences(BASE_NS::vector<CORE_NS::Entity*>& entities,
 }
 
 void RewriteEntityReferences(
-    CORE_NS::IEcs& ecs, CORE_NS::Entity entity, BASE_NS::unordered_map<CORE_NS::Entity, CORE_NS::Entity>& oldToNew)
+    IEcs& ecs, Entity entity, unordered_map<Entity, Entity>& oldToNew)
 {
     auto managers = ecs.GetComponentManagers();
     for (auto cm : managers) {
-        if (auto id = cm->GetComponentId(entity); id != CORE_NS::IComponentManager::INVALID_COMPONENT_ID) {
-            auto* data = cm->GetData(id);
-            if (data) {
-                // Find all entity references from this component.
-                BASE_NS::vector<CORE_NS::Entity*> entities;
-                BASE_NS::vector<CORE_NS::EntityReference*> entityRefs;
-                uintptr_t offset = (uintptr_t)data->RLock();
-                if (offset) {
-                    for (const auto& property : data->Owner()->MetaData()) {
-                        GatherEntityReferences(entities, entityRefs, property, offset + property.offset);
-                    }
-
-                    // Rewrite old entity values with new ones. Assuming that the memory locations are the same as in
-                    // the RLock. NOTE: Keeping the read access open and we must not change any container sizes.
-                    if (!entities.empty() || !entityRefs.empty()) {
-                        data->WLock();
-                        for (CORE_NS::Entity* current : entities) {
-                            if (const auto it = oldToNew.find(*current); it != oldToNew.end()) {
-                                *current = it->second;
-                            }
-                        }
-                        for (CORE_NS::EntityReference* current : entityRefs) {
-                            if (const auto it = oldToNew.find(*current); it != oldToNew.end()) {
-                                *current = ecs.GetEntityManager().GetReferenceCounted(it->second);
-                            }
-                        }
-                        data->WUnlock();
-                    }
+        auto* data = cm->GetData(id);
+        if (data) {
+            // Find all entity references from this component.
+            vector<Entity*> entities;
+            vector<EntityReference*> entityRefs;
+            uintptr_t offset = (uintptr_t)data->RLock();
+            if (offset) {
+                for (const auto& property : data->Owner()->MetaData()) {
+                    GatherEntityReferences(entities, entityRefs, property, offset + property.offset);
                 }
 
-                data->RUnlock();
+                // Rewrite old entity values with new ones. Assuming that the memory locations are the same as in
+                // the RLock. NOTE: Keeping the read access open and we must not change any container sizes.
+                if (!entities.empty()) {
+                    data->WLock();
+                    data->WUnlock();
+                }
             }
+
+            data->RUnlock();
         }
     }
 }
 
-inline BASE_NS::vector<CORE_NS::Entity> CloneEntities(
-    CORE_NS::IEcs& srcEcs, BASE_NS::array_view<const CORE_NS::Entity> src, CORE_NS::IEcs& dstEcs)
+inline vector<Entity> CloneEntities(
+    IEcs& srcEcs, array_view<const Entity> src, IEcs& dstEcs)
 {
-    BASE_NS::vector<CORE_NS::Entity> clonedEntities;
+    vector<Entity> clonedEntities;
     clonedEntities.reserve(src.size());
     for (auto srcEntity : src) {
         clonedEntities.emplace_back(CloneEntity(srcEcs, srcEntity, dstEcs));
@@ -159,10 +147,10 @@ inline BASE_NS::vector<CORE_NS::Entity> CloneEntities(
     return clonedEntities;
 }
 
-inline BASE_NS::vector<CORE_NS::EntityReference> CloneEntityReferences(
-    CORE_NS::IEcs& srcEcs, BASE_NS::array_view<const CORE_NS::EntityReference> src, CORE_NS::IEcs& dstEcs)
+inline vector<EntityReference> CloneEntityReferences(
+    IEcs& srcEcs, array_view<const EntityReference> src, IEcs& dstEcs)
 {
-    BASE_NS::vector<CORE_NS::EntityReference> clonedEntities;
+    vector<EntityReference> clonedEntities;
     clonedEntities.reserve(src.size());
     for (const auto& srcEntity : src) {
         clonedEntities.emplace_back(CloneEntityReference(srcEcs, srcEntity, dstEcs));
@@ -170,17 +158,12 @@ inline BASE_NS::vector<CORE_NS::EntityReference> CloneEntityReferences(
     return clonedEntities;
 }
 
-BASE_NS::vector<CORE_NS::EntityReference> CloneEntitiesUpdateRefs(
-    CORE_NS::IEcs& srcEcs, BASE_NS::array_view<const CORE_NS::EntityReference> src, CORE_NS::IEcs& dstEcs)
+inline vector<EntityReference> CloneEntitiesUpdateRefs(
+    IEcs& srcEcs, array_view<const EntityReference> src, IEcs& dstEcs)
 {
-    BASE_NS::unordered_map<CORE_NS::Entity, CORE_NS::Entity> oldToNew;
-
-    BASE_NS::vector<CORE_NS::EntityReference> clonedEntities;
+    unordered_map<Entity, Entity> oldToNew;
+    vector<EntityReference> clonedEntities;
     clonedEntities.reserve(src.size());
-    for (const auto& srcEntity : src) {
-        clonedEntities.emplace_back(CloneEntityReference(srcEcs, srcEntity, dstEcs));
-        oldToNew[srcEntity] = clonedEntities.back();
-    }
 
     for (const auto& entity : clonedEntities) {
         RewriteEntityReferences(dstEcs, entity, oldToNew);

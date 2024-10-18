@@ -41,20 +41,20 @@ public:
         bool success { true };
 
         /** In case of a loading error, contains the description of the error. */
-        BASE_NS::string error;
+        string error;
     };
 
     /** Returns the entity collection used by this loader. */
     virtual IEntityCollection& GetEntityCollection() const = 0;
 
     /** Returns the src for this loader that is used to resolve the final loading uri. */
-    virtual BASE_NS::string GetSrc() const = 0;
+    virtual string GetSrc() const = 0;
 
     /** Returns the context uri for this loader. The src value is resolved using this context to get the actual uri. */
-    virtual BASE_NS::string GetContextUri() const = 0;
+    virtual string GetContextUri() const = 0;
 
     /** Returns the resolved uri that is used for loading. */
-    virtual BASE_NS::string GetUri() const = 0;
+    virtual string GetUri() const = 0;
 
     /** Add a listener that gets callbacks about loading events. */
     virtual void AddListener(IListener& listener) = 0;
@@ -92,7 +92,7 @@ public:
             ptr->Destroy();
         }
     };
-    using Ptr = BASE_NS::unique_ptr<IEcsAssetLoader, Deleter>;
+    using Ptr = unique_ptr<IEcsAssetLoader, Deleter>;
 
 protected:
     IEcsAssetLoader() = default;

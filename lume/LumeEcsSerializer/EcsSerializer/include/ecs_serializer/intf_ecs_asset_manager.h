@@ -32,34 +32,34 @@ public:
     // For now detecting content by extension in the uri.
     enum ExtensionType { NOT_SUPPORTED, COLLECTION, SCENE, PREFAB, ANIMATION, MATERIAL, GLTF, GLB, PNG, JPG, KTX };
 
-    virtual ExtensionType GetExtensionType(BASE_NS::string_view ext) const = 0;
+    virtual ExtensionType GetExtensionType(string_view ext) const = 0;
 
     /** Create an asset file loader for loading 3D scene assets.
      *  @param ecs ECS instance that will be used for loading and resource creation.
      *  @return asset loader instance.
      */
     virtual IEcsAssetLoader::Ptr CreateEcsAssetLoader(
-        IEntityCollection& ec, BASE_NS::string_view src, BASE_NS::string_view contextUri) = 0;
+        IEntityCollection& ec, string_view src, string_view contextUri) = 0;
 
-    virtual bool LoadAsset(IEntityCollection& ec, BASE_NS::string_view uri, BASE_NS::string_view contextUri) = 0;
+    virtual bool LoadAsset(IEntityCollection& ec, string_view uri, string_view contextUri) = 0;
 
     virtual bool SaveJsonEntityCollection(
-        const IEntityCollection& ec, BASE_NS::string_view uri, BASE_NS::string_view contextUri) const = 0;
+        const IEntityCollection& ec, string_view uri, string_view contextUri) const = 0;
 
-    virtual IEntityCollection* LoadAssetToCache(CORE_NS::IEcs& ecs, BASE_NS::string_view cacheUri,
-        BASE_NS::string_view uri, BASE_NS::string_view contextUri, bool active, bool forceReload) = 0;
+    virtual IEntityCollection* LoadAssetToCache(IEcs& ecs, string_view cacheUri,
+        string_view uri, string_view contextUri, bool active, bool forceReload) = 0;
 
-    virtual bool IsCachedCollection(BASE_NS::string_view uri, BASE_NS::string_view contextUri) const = 0;
+    virtual bool IsCachedCollection(string_view uri, string_view contextUri) const = 0;
     virtual IEntityCollection* CreateCachedCollection(
-        CORE_NS::IEcs& ecs, BASE_NS::string_view uri, BASE_NS::string_view contextUri) = 0;
-    virtual IEntityCollection* GetCachedCollection(BASE_NS::string_view uri, BASE_NS::string_view contextUri) const = 0;
-    virtual void RemoveFromCache(BASE_NS::string_view uri, BASE_NS::string_view contextUri) = 0;
+        IEcs& ecs, string_view uri, string_view contextUri) = 0;
+    virtual IEntityCollection* GetCachedCollection(string_view uri, string_view contextUri) const = 0;
+    virtual void RemoveFromCache(string_view uri, string_view contextUri) = 0;
     virtual void ClearCache() = 0;
 
     virtual void RefreshAsset(IEntityCollection& ec, bool active) = 0;
 
     virtual IEntityCollection* InstantiateCollection(
-        IEntityCollection& ec, BASE_NS::string_view uri, BASE_NS::string_view contextUri) = 0;
+        IEntityCollection& ec, string_view uri, string_view contextUri) = 0;
 
     virtual IEcsSerializer& GetEcsSerializer() = 0;
     virtual const IEcsSerializer& GetEcsSerializer() const = 0;
@@ -71,7 +71,7 @@ public:
             ptr->Destroy();
         }
     };
-    using Ptr = BASE_NS::unique_ptr<IEcsAssetManager, Deleter>;
+    using Ptr = unique_ptr<IEcsAssetManager, Deleter>;
 
 protected:
     IEcsAssetManager() = default;

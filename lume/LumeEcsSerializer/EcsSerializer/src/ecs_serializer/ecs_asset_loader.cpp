@@ -146,14 +146,8 @@ public:
         return nullptr;
     }
 
-    //
-    // From IEcsAssetLoader::Listener
-    //
     void OnLoadFinished(const IEcsAssetLoader& loader) override
     {
-        // This will be called when a dependency has finished loading.
-
-        // Hide cached data.
         loader.GetEntityCollection().SetActive(false);
 
         auto* dep = GetNextDependency();
@@ -166,9 +160,6 @@ public:
         }
     }
 
-    //
-    // From CORE_NS::IGLTF2Importer::Listener
-    //
     void OnImportStarted() override {}
     void OnImportFinished() override
     {
@@ -192,8 +183,6 @@ public:
             return true;
         }
 
-        // NOTE: Currently actually only one import will be active at a time so we don't need to worry about the time
-        // budget.
         bool done = true;
 
         for (auto& dep : dependencies_) {
@@ -254,32 +243,12 @@ private:
         }
 
         const auto resolvedUri = GetUri();
-
         const auto resolvedFile = PathUtil::ResolveUri(contextUri_, src_, false);
         const auto ext = PathUtil::GetExtension(resolvedFile);
         const auto type = assetManager_.GetExtensionType(ext);
-        // TODO: Separate different loaders and make it possible to register more.
         switch (type) {
             case IEcsAssetManager::ExtensionType::COLLECTION: {
                 ec_.SetType("entitycollection");
-                auto result = LoadJsonEntityCollection();
-                if (result.compatibilityInfo.versionMajor == 0 && result.compatibilityInfo.versionMinor == 0) {
-                    MigrateAnimation(ec_);
-                }
-                break;
-            }
-
-            case IEcsAssetManager::ExtensionType::SCENE: {
-                ec_.SetType("scene");
-                auto result = LoadJsonEntityCollection();
-                if (result.compatibilityInfo.versionMajor == 0 && result.compatibilityInfo.versionMinor == 0) {
-                    MigrateAnimation(ec_);
-                }
-                break;
-            }
-
-            case IEcsAssetManager::ExtensionType::PREFAB: {
-                ec_.SetType("prefab");
                 auto result = LoadJsonEntityCollection();
                 if (result.compatibilityInfo.versionMajor == 0 && result.compatibilityInfo.versionMinor == 0) {
                     MigrateAnimation(ec_);
@@ -293,12 +262,6 @@ private:
                 if (result.compatibilityInfo.versionMajor == 0 && result.compatibilityInfo.versionMinor == 0) {
                     MigrateAnimation(ec_);
                 }
-                break;
-            }
-
-            case IEcsAssetManager::ExtensionType::MATERIAL: {
-                ec_.SetType("material");
-                LoadJsonEntityCollection();
                 break;
             }
 
@@ -357,9 +320,6 @@ private:
     {
         // Create a dummy root entity as a placeholder for a missing asset.
         auto dummyEntity = ecs_.GetEntityManager().CreateReferenceCounted();
-        // Note: adding a node component for now so it will be displayed in the hierarchy pane.
-        // This is wrong as the failed asset might not be a 3D node in reality. this could be removed after combining
-        // the Entity pane functionlity to the hierarchy pane and when there is better handling for missing references.
         auto* nodeComponentManager = GetManager<INodeComponentManager>(ecs_);
         CORE_ASSERT(nodeComponentManager);
         if (nodeComponentManager) {
@@ -385,42 +345,38 @@ private:
         string textIn;
         auto& fileManager = renderContext_.GetEngine().GetFileManager();
         if (IoUtil::LoadTextFile(fileManager, resolvedFile, textIn)) {
-            // TODO: Check file version here.
-
             auto json = json::parse(textIn.data());
-            if (!json) {
-                CORE_LOG_E("Parsing json failed: '%s':\n%s", resolvedUri.c_str(), textIn.c_str());
-            } else {
-                if (!dependencies_.empty()) {
-                    // There were dependencies loaded earlier and now we want to load the actual asset.
-                    // No dependencies to load. Just load the entity collection itself and this loading is done.
-                    auto result = assetManager_.GetEcsSerializer().ReadEntityCollection(ec_, json, resolvedUri);
-                    done_ = true;
-                    return result;
-                }
 
-                vector<IEcsSerializer::ExternalCollection> dependencies;
-                assetManager_.GetEcsSerializer().GatherExternalCollections(json, resolvedUri, dependencies);
-
-                for (const auto& dep : dependencies) {
-                    if (!assetManager_.IsCachedCollection(dep.src, dep.contextUri)) {
-                        auto* cacheEc = assetManager_.CreateCachedCollection(ec_.GetEcs(), dep.src, dep.contextUri);
-                        dependencies_.emplace_back(
-                            assetManager_.CreateEcsAssetLoader(*cacheEc, dep.src, dep.contextUri));
-                        dependencies_.back()->AddListener(*this);
-                    }
-                }
-
-                if (GetNextDependency() == nullptr) {
-                    // No dependencies to load. Just load the entity collection itself and this loading is done.
-                    auto result = assetManager_.GetEcsSerializer().ReadEntityCollection(ec_, json, resolvedUri);
-                    done_ = true;
-                    return result;
-                }
-
-                // There are dependencies that need to be parsed in a next step.
-                return {};
+            if (!dependencies_.empty()) {
+                // There were dependencies loaded earlier and now we want to load the actual asset.
+                // No dependencies to load. Just load the entity collection itself and this loading is done.
+                auto result = assetManager_.GetEcsSerializer().ReadEntityCollection(ec_, json, resolvedUri);
+                done_ = true;
+                return result;
             }
+
+            vector<IEcsSerializer::ExternalCollection> dependencies;
+            assetManager_.GetEcsSerializer().GatherExternalCollections(json, resolvedUri, dependencies);
+
+            for (const auto& dep : dependencies) {
+                if (!assetManager_.IsCachedCollection(dep.src, dep.contextUri)) {
+                    auto* cacheEc = assetManager_.CreateCachedCollection(ec_.GetEcs(), dep.src, dep.contextUri);
+                    dependencies_.emplace_back(
+                        assetManager_.CreateEcsAssetLoader(*cacheEc, dep.src, dep.contextUri));
+                    dependencies_.back()->AddListener(*this);
+                }
+            }
+
+            if (GetNextDependency() == nullptr) {
+                // No dependencies to load. Just load the entity collection itself and this loading is done.
+                auto result = assetManager_.GetEcsSerializer().ReadEntityCollection(ec_, json, resolvedUri);
+                done_ = true;
+                return result;
+            }
+
+            // There are dependencies that need to be parsed in a next step.
+            return {};
+            
         }
 
         CreateDummyEntity();
@@ -499,9 +455,7 @@ private:
     void GltfImportFinished()
     {
         auto* nodeSystem = GetSystem<INodeSystem>(ecs_);
-        CORE_ASSERT(nodeSystem);
         auto* nodeComponentManager = GetManager<INodeComponentManager>(ecs_);
-        CORE_ASSERT(nodeComponentManager);
         if (!nodeSystem || !nodeComponentManager) {
             result_ = { false, {} };
             done_ = true;
@@ -514,63 +468,18 @@ private:
 
         if (importer_) {
             const auto& gltfImportResult = importer_->GetResult();
-            if (!gltfImportResult.success) {
-                CORE_LOG_E("Importing of '%s' failed: %s", GetUri().c_str(), gltfImportResult.error.c_str());
-                CreateDummyEntity();
-                result_ = { false, "glTF import failed." };
-                done_ = true;
-                return;
-
-            } else if (cancelled_) {
-                CORE_LOG_V("Importing of '%s' cancelled", GetUri().c_str());
-                CreateDummyEntity();
-                result_ = { false, "glTF import cancelled." };
-                done_ = true;
-                return;
-            }
-
-            // Loading and importing of glTF was done successfully. Fill the collection with all the gltf entities.
             const auto originalRootEntity = ImportSceneFromGltf({});
             auto* originalRootNode = nodeSystem->GetNode(originalRootEntity);
-
-            // It's possible to only add some specific node from the gltf.
             auto* loadNode = originalRootNode;
-            if (!entityPath.empty()) {
-                loadNode = originalRootNode->LookupNodeByPath(entityPath);
-                if (!loadNode || loadNode->GetEntity() == Entity {}) {
-                    CORE_LOG_E("Entity '%s' not found from '%s'", entityPath.c_str(), GetUri().c_str());
-                }
-            }
-
-            if (!loadNode || loadNode->GetEntity() == Entity {}) {
-                CreateDummyEntity();
-                result_ = { false, "Ivalid uri" };
-                done_ = true;
-                return;
-            }
-
             Entity entity = loadNode->GetEntity();
-            if (entity != Entity {}) {
-                EntityReference ref = ecs_.GetEntityManager().GetReferenceCounted(entity);
-                ec_.AddEntity(ref);
-                ec_.SetId("/", ref);
 
-                loadNode->SetParent(nodeSystem->GetRootNode());
-                for (auto* child : loadNode->GetChildren()) {
-                    AddNodeToCollectionRecursive(ec_, *child, "/");
-                }
-            }
-
-            // TODO: a little backwards to first create everything and then delete the extra.
             if (entity != originalRootEntity) {
                 auto* oldRoot = nodeSystem->GetNode(originalRootEntity);
-                CORE_ASSERT(oldRoot);
                 if (oldRoot) {
                     nodeSystem->DestroyNode(*oldRoot);
                 }
             }
 
-            // Add all resources in separate sub-collections. Not just 3D nodes.
             {
                 const auto& importResult = importer_->GetResult();
                 ec_.AddSubCollection("images", {}).AddEntities(importResult.data.images);
@@ -579,7 +488,6 @@ private:
                 ec_.AddSubCollection("skins", {}).AddEntities(importResult.data.skins);
                 ec_.AddSubCollection("animations", {}).AddEntities(importResult.data.animations);
 
-                // TODO: don't list duplicates
                 vector<EntityReference> animationTracks;
                 auto* acm = GetManager<IAnimationComponentManager>(ecs_);
                 if (acm) {
@@ -595,7 +503,6 @@ private:
                 ec_.AddSubCollection("animationTracks", {}).AddEntities(animationTracks);
             }
 
-            // Load finished successfully.
             done_ = true;
         }
     }
@@ -651,10 +558,10 @@ private:
     RENDER_NS::IRenderContext& renderContext_;
     CORE3D_NS::IGraphicsContext& graphicsContext_;
 
-    CORE_NS::IEcs& ecs_;
+    IEcs& ecs_;
     IEntityCollection& ec_;
-    BASE_NS::string src_;
-    BASE_NS::string contextUri_;
+    string src_;
+    string contextUri_;
 
     IEcsAssetLoader::Result result_ {};
 

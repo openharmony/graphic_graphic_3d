@@ -34,7 +34,7 @@ public:
             ptr->Destroy();
         }
     };
-    using Ptr = BASE_NS::unique_ptr<IEntityCollection, Deleter>;
+    using Ptr = unique_ptr<IEntityCollection, Deleter>;
 
     class IListener {
     public:
@@ -48,49 +48,49 @@ public:
     virtual void RemoveListener(IListener& listener) = 0;
 
     // A list of property paths in a component to be serialized.
-    using PropertyList = BASE_NS::vector<BASE_NS::string>;
+    using PropertyList = vector<string>;
 
-    virtual CORE_NS::IEcs& GetEcs() const = 0;
-    virtual BASE_NS::string GetUri() const = 0;
-    virtual BASE_NS::string GetContextUri() const = 0;
+    virtual IEcs& GetEcs() const = 0;
+    virtual string GetUri() const = 0;
+    virtual string GetContextUri() const = 0;
 
-    virtual BASE_NS::string GetSrc() const = 0;
-    virtual void SetSrc(BASE_NS::string_view src) = 0;
+    virtual string GetSrc() const = 0;
+    virtual void SetSrc(string_view src) = 0;
 
-    virtual BASE_NS::string GetType() const = 0;
-    virtual void SetType(BASE_NS::string_view type) = 0;
+    virtual string GetType() const = 0;
+    virtual void SetType(string_view type) = 0;
 
     // Entities.
     virtual size_t GetEntityCount() const = 0;
-    virtual CORE_NS::EntityReference GetEntity(size_t collectionIndex) const = 0;
-    virtual CORE_NS::EntityReference GetEntity(BASE_NS::string_view localContextId) const = 0;
-    virtual BASE_NS::array_view<const CORE_NS::EntityReference> GetEntities() const = 0;
-    virtual void AddEntity(CORE_NS::EntityReference entitity) = 0;
-    virtual void AddEntities(BASE_NS::array_view<const CORE_NS::EntityReference> entities) = 0;
-    virtual bool RemoveEntity(CORE_NS::EntityReference entitity) = 0;
-    virtual void RemoveEntities(BASE_NS::array_view<const CORE_NS::EntityReference> entities) = 0;
-    virtual void SetId(BASE_NS::string_view id, CORE_NS::EntityReference entity) = 0;
-    virtual BASE_NS::string_view GetId(CORE_NS::Entity entity) const = 0;
+    virtual EntityReference GetEntity(size_t collectionIndex) const = 0;
+    virtual EntityReference GetEntity(string_view localContextId) const = 0;
+    virtual array_view<const EntityReference> GetEntities() const = 0;
+    virtual void AddEntity(EntityReference entitity) = 0;
+    virtual void AddEntities(array_view<const EntityReference> entities) = 0;
+    virtual bool RemoveEntity(EntityReference entitity) = 0;
+    virtual void RemoveEntities(array_view<const EntityReference> entities) = 0;
+    virtual void SetId(string_view id, EntityReference entity) = 0;
+    virtual string_view GetId(Entity entity) const = 0;
 
     // Subcollections.
     virtual size_t GetSubCollectionCount() const = 0;
     virtual IEntityCollection* GetSubCollection(size_t index) = 0;
     virtual const IEntityCollection* GetSubCollection(size_t index) const = 0;
-    virtual int32_t GetSubCollectionIndex(BASE_NS::string_view uri) const = 0;
-    virtual int32_t GetSubCollectionIndexByRoot(CORE_NS::Entity entity) const = 0;
-    virtual IEntityCollection& AddSubCollection(BASE_NS::string_view uri, BASE_NS::string_view contextUri) = 0;
-    virtual IEntityCollection& AddSubCollectionClone(IEntityCollection& collection, BASE_NS::string_view uri) = 0;
+    virtual int32_t GetSubCollectionIndex(string_view uri) const = 0;
+    virtual int32_t GetSubCollectionIndexByRoot(Entity entity) const = 0;
+    virtual IEntityCollection& AddSubCollection(string_view uri, string_view contextUri) = 0;
+    virtual IEntityCollection& AddSubCollectionClone(IEntityCollection& collection, string_view uri) = 0;
     virtual void RemoveSubCollection(size_t index) = 0;
 
     // All entities recursively.
     virtual size_t GetEntityCountRecursive(bool includeDestroyed) const = 0;
     virtual void GetEntitiesRecursive(
-        bool includeDestroyed, BASE_NS::vector<CORE_NS::EntityReference>& entitiesOut) const = 0;
+        bool includeDestroyed, vector<EntityReference>& entitiesOut) const = 0;
 
-    virtual bool Contains(CORE_NS::Entity entity) const = 0;
-    virtual bool IsExternal(CORE_NS::Entity entity) const = 0;
-    virtual bool isSubCollectionRoot(CORE_NS::Entity entity) const = 0;
-    virtual CORE_NS::EntityReference GetReference(CORE_NS::Entity entity) const = 0;
+    virtual bool Contains(Entity entity) const = 0;
+    virtual bool IsExternal(Entity entity) const = 0;
+    virtual bool isSubCollectionRoot(Entity entity) const = 0;
+    virtual EntityReference GetReference(Entity entity) const = 0;
 
     virtual void SetActive(bool active) = 0;
     virtual bool IsActive() const = 0;
@@ -106,19 +106,19 @@ public:
 
     virtual void CopyContents(IEntityCollection& srcCollection) = 0;
 
-    virtual BASE_NS::vector<CORE_NS::EntityReference> CopyContentsWithSerialization(
+    virtual vector<EntityReference> CopyContentsWithSerialization(
         IEntityCollection& srcCollection) = 0;
-    virtual BASE_NS::vector<CORE_NS::EntityReference> CopyContentsWithSerialization(
-        IEntityCollection& srcCollection, BASE_NS::array_view<const CORE_NS::EntityReference> entities) = 0;
+    virtual vector<EntityReference> CopyContentsWithSerialization(
+        IEntityCollection& srcCollection, array_view<const EntityReference> entities) = 0;
 
     // Serialization state.
-    virtual bool MarkComponentSerialized(CORE_NS::Entity entity, BASE_NS::Uid component, bool serialize) = 0;
-    virtual bool MarkAllPropertiesSerialized(CORE_NS::Entity entity, BASE_NS::Uid component) = 0;
+    virtual bool MarkComponentSerialized(Entity entity, Uid component, bool serialize) = 0;
+    virtual bool MarkAllPropertiesSerialized(Entity entity, Uid component) = 0;
     virtual bool MarkPropertySerialized(
-        CORE_NS::Entity entity, BASE_NS::Uid component, BASE_NS::string_view propertyPath, bool serialize) = 0;
+        Entity entity, Uid component, string_view propertyPath, bool serialize) = 0;
     virtual bool IsPropertySerialized(
-        CORE_NS::Entity entity, BASE_NS::Uid component, BASE_NS::string_view propertyPath) = 0;
-    virtual const PropertyList* GetSerializedProperties(CORE_NS::Entity entity, BASE_NS::Uid component) const = 0;
+        Entity entity, Uid component, string_view propertyPath) = 0;
+    virtual const PropertyList* GetSerializedProperties(Entity entity, Uid component) const = 0;
 
 protected:
     IEntityCollection() = default;

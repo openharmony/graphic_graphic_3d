@@ -36,20 +36,20 @@ public:
     static const uint32_t VERSION_MINOR { 0u };
 
     struct EntityInfo {
-        CORE_NS::Entity entity;
-        BASE_NS::string srcUri;
-        BASE_NS::string contextUri;
+        Entity entity;
+        string srcUri;
+        string contextUri;
     };
 
     struct ExternalCollection {
-        BASE_NS::string src;
-        BASE_NS::string contextUri;
+        string src;
+        string contextUri;
     };
 
     class IListener {
     public:
         virtual IEntityCollection* GetExternalCollection(
-            CORE_NS::IEcs& ecs, BASE_NS::string_view uri, BASE_NS::string_view contextUri) = 0;
+            IEcs& ecs, string_view uri, string_view contextUri) = 0;
 
     protected:
         virtual ~IListener() = default;
@@ -57,10 +57,10 @@ public:
 
     class IPropertySerializer {
     public:
-        virtual bool ToJson(const IEntityCollection& ec, const CORE_NS::Property& property, uintptr_t offset,
-            CORE_NS::json::standalone_value& jsonOut) const = 0;
-        virtual bool FromJson(const IEntityCollection& ec, const CORE_NS::json::value& jsonIn,
-            const CORE_NS::Property& property, uintptr_t offset) const = 0;
+        virtual bool ToJson(const IEntityCollection& ec, const Property& property, uintptr_t offset,
+            json::standalone_value& jsonOut) const = 0;
+        virtual bool FromJson(const IEntityCollection& ec, const json::value& jsonIn,
+            const Property& property, uintptr_t offset) const = 0;
 
     protected:
         virtual ~IPropertySerializer() = default;
@@ -69,29 +69,29 @@ public:
     virtual void SetListener(IListener* listener) = 0;
 
     virtual void SetDefaultSerializers() = 0;
-    virtual void SetSerializer(const CORE_NS::PropertyTypeDecl& type, IPropertySerializer& serializer) = 0;
+    virtual void SetSerializer(const PropertyTypeDecl& type, IPropertySerializer& serializer) = 0;
 
-    virtual bool WriteEntityCollection(const IEntityCollection& ec, CORE_NS::json::standalone_value& jsonOut) const = 0;
+    virtual bool WriteEntityCollection(const IEntityCollection& ec, json::standalone_value& jsonOut) const = 0;
     virtual bool WriteComponents(
-        const IEntityCollection& ec, CORE_NS::Entity entity, CORE_NS::json::standalone_value& jsonOut) const = 0;
-    virtual bool WriteComponent(const IEntityCollection& ec, CORE_NS::Entity entity,
-        const CORE_NS::IComponentManager& cm, CORE_NS::IComponentManager::ComponentId id,
-        CORE_NS::json::standalone_value& jsonOut) const = 0;
-    virtual bool WriteProperty(const IEntityCollection& ec, const CORE_NS::Property& property, uintptr_t offset,
-        CORE_NS::json::standalone_value& jsonOut) const = 0;
+        const IEntityCollection& ec, Entity entity, json::standalone_value& jsonOut) const = 0;
+    virtual bool WriteComponent(const IEntityCollection& ec, Entity entity,
+        const IComponentManager& cm, IComponentManager::ComponentId id,
+        json::standalone_value& jsonOut) const = 0;
+    virtual bool WriteProperty(const IEntityCollection& ec, const Property& property, uintptr_t offset,
+        json::standalone_value& jsonOut) const = 0;
 
-    virtual bool GatherExternalCollections(const CORE_NS::json::value& jsonIn, BASE_NS::string_view contextUri,
-        BASE_NS::vector<ExternalCollection>& externalCollectionsOut) const = 0;
+    virtual bool GatherExternalCollections(const json::value& jsonIn, string_view contextUri,
+        vector<ExternalCollection>& externalCollectionsOut) const = 0;
 
     virtual UTIL_NS::IoUtil::SerializationResult ReadEntityCollection(
-        IEntityCollection& ec, const CORE_NS::json::value& jsonIn, BASE_NS::string_view contextUri) const = 0;
-    virtual bool ReadComponents(IEntityCollection& ec, const CORE_NS::json::value& jsonIn) const = 0;
-    virtual bool ReadComponent(IEntityCollection& ec, const CORE_NS::json::value& jsonIn, CORE_NS::Entity entity,
-        CORE_NS::IComponentManager& component) const = 0;
-    virtual bool ReadProperty(IEntityCollection& ec, const CORE_NS::json::value& jsonIn,
-        const CORE_NS::Property& property, uintptr_t offset) const = 0;
+        IEntityCollection& ec, const json::value& jsonIn, string_view contextUri) const = 0;
+    virtual bool ReadComponents(IEntityCollection& ec, const json::value& jsonIn) const = 0;
+    virtual bool ReadComponent(IEntityCollection& ec, const json::value& jsonIn, Entity entity,
+        IComponentManager& component) const = 0;
+    virtual bool ReadProperty(IEntityCollection& ec, const json::value& jsonIn,
+        const Property& property, uintptr_t offset) const = 0;
 
-    virtual RENDER_NS::RenderHandleReference LoadImageResource(BASE_NS::string_view uri) const = 0;
+    virtual RENDER_NS::RenderHandleReference LoadImageResource(string_view uri) const = 0;
 
     struct Deleter {
         constexpr Deleter() noexcept = default;
@@ -100,7 +100,7 @@ public:
             ptr->Destroy();
         }
     };
-    using Ptr = BASE_NS::unique_ptr<IEcsSerializer, Deleter>;
+    using Ptr = unique_ptr<IEcsSerializer, Deleter>;
 
 protected:
     IEcsSerializer() = default;
