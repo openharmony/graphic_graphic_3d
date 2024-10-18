@@ -89,7 +89,7 @@ void MigrateAnimation(IEntityCollection& collection)
         for (const auto& entity : entities) {
             if (auto handle = aocm->Write(entity); handle) {
                 handle->type = conversions[i].newVersion.typeHash;
-                break;  
+                break;
             }
         }
     }
