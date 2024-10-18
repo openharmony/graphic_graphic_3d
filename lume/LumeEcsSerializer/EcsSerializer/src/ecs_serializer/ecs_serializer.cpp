@@ -818,7 +818,6 @@ IoUtil::SerializationResult EcsSerializer::ReadEntityCollection(
             } else {
                 ec.AddSubCollection(id, {});
             }
-            
         }
     }
 

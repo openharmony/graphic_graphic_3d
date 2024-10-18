@@ -181,7 +181,6 @@ template<>
 inline CORE_NS::json::standalone_value ToJson<::Math::Vec2>(::Math::Vec2 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
-    json.array_.reserve(2);
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
     return json;
@@ -190,7 +189,6 @@ template<>
 inline CORE_NS::json::standalone_value ToJson<::Math::UVec2>(::Math::UVec2 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
-    json.array_.reserve(2);
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
     return json;
@@ -200,7 +198,6 @@ template<>
 inline CORE_NS::json::standalone_value ToJson<::Math::Vec3>(::Math::Vec3 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
-    json.array_.reserve(3);
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.z));
@@ -210,7 +207,6 @@ template<>
 inline CORE_NS::json::standalone_value ToJson<::Math::UVec3>(::Math::UVec3 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
-    json.array_.reserve(3);
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.z));
@@ -221,7 +217,6 @@ template<>
 inline CORE_NS::json::standalone_value ToJson<::Math::Vec4>(::Math::Vec4 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
-    json.array_.reserve(4);
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.z));
@@ -232,7 +227,6 @@ template<>
 inline CORE_NS::json::standalone_value ToJson<::Math::UVec4>(::Math::UVec4 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
-    json.array_.reserve(4);
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.z));
@@ -244,7 +238,6 @@ template<>
 inline CORE_NS::json::standalone_value ToJson<::Math::Quat>(::Math::Quat value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
-    json.array_.reserve(4);
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
     json.array_.emplace_back(CORE_NS::json::standalone_value(value.z));

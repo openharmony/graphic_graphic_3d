@@ -86,7 +86,7 @@ bool LoadCoreLibrary(::string_view libraryFile)
         if (!g_EngineLibrary) {
             printf("failed to load engine %s", dlerror());
             return false;
-        }      
+        }    
     }
 #endif // CORE_DYNAMIC
 #endif // __APPLE__
