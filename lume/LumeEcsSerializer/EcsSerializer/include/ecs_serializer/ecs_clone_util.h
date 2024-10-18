@@ -118,19 +118,12 @@ void RewriteEntityReferences(
             vector<Entity*> entities;
             vector<EntityReference*> entityRefs;
             uintptr_t offset = (uintptr_t)data->RLock();
-            if (offset) {
-                for (const auto& property : data->Owner()->MetaData()) {
-                    GatherEntityReferences(entities, entityRefs, property, offset + property.offset);
-                }
-
-                // Rewrite old entity values with new ones. Assuming that the memory locations are the same as in
-                // the RLock. NOTE: Keeping the read access open and we must not change any container sizes.
-                if (!entities.empty()) {
-                    data->WLock();
-                    data->WUnlock();
-                }
+            // Rewrite old entity values with new ones. Assuming that the memory locations are the same as in
+            // the RLock. NOTE: Keeping the read access open and we must not change any container sizes.
+            if (!entities.empty()) {
+                data->WLock();
+                data->WUnlock();
             }
-
             data->RUnlock();
         }
     }

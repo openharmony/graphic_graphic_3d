@@ -87,15 +87,9 @@ void MigrateAnimation(IEntityCollection& collection)
         vector<EntityReference> entities;
         collection.GetEntitiesRecursive(false, entities);
         for (const auto& entity : entities) {
-            if (aocm->HasComponent(entity)) {
-                if (auto handle = aocm->Write(entity); handle) {
-                    for (size_t i = 0; i < NUMBER_OF_CONVERSIONS; ++i) {
-                        if (handle->type == conversions[i].oldVersion.typeHash) {
-                            handle->type = conversions[i].newVersion.typeHash;
-                            break;
-                        }
-                    }
-                }
+            if (auto handle = aocm->Write(entity); handle) {
+                handle->type = conversions[i].newVersion.typeHash;
+                break;  
             }
         }
     }

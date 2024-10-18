@@ -47,37 +47,26 @@ void UpdateAnimationTrackTargets(IEcs& ecs, Entity animationEntity, Entity rootN
     if (!node) {
         return;
     }
-
-    if (const ScopedHandle<const CORE3D_NS::AnimationComponent> animationData =
-            animationManager->Read(animationEntity);
-        animationData) {
-        vector<Entity> targetEntities;
-        targetEntities.reserve(animationData->tracks.size());
-        std::transform(animationData->tracks.begin(), animationData->tracks.end(), std::back_inserter(targetEntities),
-            [&manager = nameManager, &node](const Entity& trackEntity) {
-                if (auto nameHandle = manager.Read(trackEntity); nameHandle) {
-                    if (nameHandle->name.empty()) {
-                        return node->GetEntity();
-                    } else {
-                        if (auto targetNode = node->LookupNodeByPath(nameHandle->name); targetNode) {
-                            return targetNode->GetEntity();
-                        }
-                    }
-                }
-                return Entity {};
-            });
-        if (animationData->tracks.size() == targetEntities.size()) {
-            auto targetIt = targetEntities.begin();
-            for (const auto& trackEntity : animationData->tracks) {
-                if (auto track = animationTrackManager->Write(trackEntity); track) {
-                    if (track->target) {
-                        CORE_LOG_D("AnimationTrack %s already targetted",
-                            to_hex(static_cast<const Entity&>(track->target).id).data());
-                    }
-                    track->target = entityManager.GetReferenceCounted(*targetIt);
-                }
-                ++targetIt;
+    vector<Entity> targetEntities;
+    targetEntities.reserve(animationData->tracks.size());
+    std::transform(animationData->tracks.begin(), animationData->tracks.end(), std::back_inserter(targetEntities),
+        [&manager = nameManager, &node](const Entity& trackEntity) {
+            if (nameHandle->name.empty()) {
+                return node->GetEntity();
+            } else {
+                return targetNode->GetEntity();
             }
+            return Entity {};
+        });
+    if (animationData->tracks.size() == targetEntities.size()) {
+        auto targetIt = targetEntities.begin();
+        for (const auto& trackEntity : animationData->tracks) {
+            if (auto track = animationTrackManager->Write(trackEntity); track) {
+                CORE_LOG_D("AnimationTrack %s already targetted",
+                    to_hex(static_cast<const Entity&>(track->target).id).data());
+                track->target = entityManager.GetReferenceCounted(*targetIt);
+            }
+            ++targetIt;
         }
     }
 }

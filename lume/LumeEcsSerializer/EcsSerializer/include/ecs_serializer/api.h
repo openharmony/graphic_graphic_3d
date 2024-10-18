@@ -26,10 +26,6 @@ ECS_SERIALIZER_BEGIN_NAMESPACE()
 IEntityCollection::Ptr CreateEntityCollection(
     IEcs& ecs, string_view uri, string_view contextUri);
 
-IEcsSerializer::Ptr CreateEcsSerializer(RENDER_NS::IRenderContext& renderContext);
-
-IEcsAssetManager::Ptr CreateEcsAssetManager(CORE3D_NS::IGraphicsContext& graphicsContext);
-
 ECS_SERIALIZER_END_NAMESPACE()
 
 #endif // API_ECS_SERIALIZER_API_H

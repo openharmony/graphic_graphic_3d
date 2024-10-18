@@ -373,10 +373,8 @@ private:
                 done_ = true;
                 return result;
             }
-
             // There are dependencies that need to be parsed in a next step.
             return {};
-            
         }
 
         CreateDummyEntity();
@@ -472,14 +470,10 @@ private:
             auto* originalRootNode = nodeSystem->GetNode(originalRootEntity);
             auto* loadNode = originalRootNode;
             Entity entity = loadNode->GetEntity();
-
             if (entity != originalRootEntity) {
                 auto* oldRoot = nodeSystem->GetNode(originalRootEntity);
-                if (oldRoot) {
-                    nodeSystem->DestroyNode(*oldRoot);
-                }
+                nodeSystem->DestroyNode(*oldRoot);
             }
-
             {
                 const auto& importResult = importer_->GetResult();
                 ec_.AddSubCollection("images", {}).AddEntities(importResult.data.images);
@@ -490,19 +484,14 @@ private:
 
                 vector<EntityReference> animationTracks;
                 auto* acm = GetManager<IAnimationComponentManager>(ecs_);
-                if (acm) {
-                    for (auto& current : importResult.data.animations) {
-                        if (auto handle = acm->Read(current); handle) {
-                            const auto& tracks = handle->tracks;
-                            for (auto& entityRef : tracks) {
-                                animationTracks.emplace_back(entityRef);
-                            }
-                        }
+                for (auto& current : importResult.data.animations) {
+                    const auto& tracks = handle->tracks;
+                    for (auto& entityRef : tracks) {
+                        animationTracks.emplace_back(entityRef);
                     }
                 }
                 ec_.AddSubCollection("animationTracks", {}).AddEntities(animationTracks);
             }
-
             done_ = true;
         }
     }
