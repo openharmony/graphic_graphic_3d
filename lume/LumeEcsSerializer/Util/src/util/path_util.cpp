@@ -68,11 +68,6 @@ string NormalizePath(string_view path)
 
 string GetParentPath(string_view path)
 {
-    if (path.size() > 1 && path[path.size() - 1] == '/' && path[path.size() - 2] != '/') {
-        // Allow (ignore) trailing '/' for folders.
-        path = path.substr(0, path.size() - 1);
-    }
-
     const size_t separatorPos = path.rfind('/');
     if (separatorPos == string::npos) {
         return "";

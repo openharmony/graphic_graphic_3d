@@ -115,25 +115,23 @@ bool CreateDirectories(CORE_NS::IFileManager& fileManager, string_view pathUri)
     // Verify that the target path exists. (and create missing ones)
     // Remove protocol.
     auto pos = pathUri.find("://") + 3;
-    for (;;) {
-        size_t end = pathUri.find('/', pos);
-        auto part = pathUri.substr(0, end);
+    size_t end = pathUri.find('/', pos);
+    auto part = pathUri.substr(0, end);
 
-        // The last "part" should be a file name, so terminate there.
-        if (end == string_view::npos) {
-            break;
-        }
-
-        auto entry = fileManager.GetEntry(part);
-        if (entry.type == entry.UNKNOWN) {
-            fileManager.CreateDirectory(part);
-        } else if (entry.type == entry.DIRECTORY) {
-        } else if (entry.type == entry.FILE) {
-            // Invalid path..
-            return false;
-        }
-        pos = end + 1;
+    // The last "part" should be a file name, so terminate there.
+    if (end == string_view::npos) {
+        break;
     }
+
+    auto entry = fileManager.GetEntry(part);
+    if (entry.type == entry.UNKNOWN) {
+        fileManager.CreateDirectory(part);
+    } else if (entry.type == entry.DIRECTORY) {
+    } else if (entry.type == entry.FILE) {
+        // Invalid path..
+        return false;
+    }
+    pos = end + 1;
     return true;
 }
 
