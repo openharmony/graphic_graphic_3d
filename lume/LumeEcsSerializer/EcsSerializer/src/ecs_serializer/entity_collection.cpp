@@ -121,7 +121,6 @@ private:
     void ClonePrivate(EntityCollection& dst) const;
     void DoCloneRecursive(EntityCollection& dst) const;
 
-    // TODO: Create a better data structure for this information.
     // Components to be serialized in an entity.
     using ComponentMap = BASE_NS::unordered_map<BASE_NS::Uid, PropertyList>;
     BASE_NS::unordered_map<CORE_NS::Entity, ComponentMap> serializationInfo_;
@@ -244,7 +243,6 @@ void EntityCollection::AddEntities(array_view<const EntityReference> entities)
     entities_.reserve(entities_.size() + entities.size());
     for (auto entity : entities) {
         if (entity != Entity {}) {
-            // TODO: make sure that the same entity is not added twice.
             entities_.emplace_back(entity);
         } else {
             CORE_LOG_W("Trying to add empty entity to a collection '%s'", uri_.c_str());
@@ -267,7 +265,6 @@ bool EntityCollection::RemoveEntity(EntityReference entity)
                 }
             }
 
-            // TODO:  If this collection is overriding another "template" collection, when removing entities, we
             // need to remember that and the information about deletion needs to be serialized. Maybe check if
             // (src_.empty()). However this also needs to work with undo
 
@@ -370,7 +367,6 @@ IEntityCollection& EntityCollection::AddSubCollection(string_view uri, string_vi
 
 IEntityCollection& EntityCollection::AddSubCollectionClone(IEntityCollection& collection, string_view uri)
 {
-    // TODO: use just the public api
     collections_.emplace_back(EntityCollection::Ptr { new EntityCollection(ecs_, uri, collection.GetContextUri()) });
     auto& ec = *collections_.back();
     static_cast<EntityCollection&>(collection).ClonePrivate(ec);
@@ -564,21 +560,18 @@ void EntityCollection::Clear()
     namedEntities_.clear();
     entities_.clear();
     collections_.clear();
-
     MarkModified(true);
 }
 
 void EntityCollection::CopyContents(IEntityCollection& srcCollection)
 {
-    // TODO: use just the public api
     static_cast<EntityCollection&>(srcCollection).ClonePrivate(*this);
     MarkModified(true);
 }
 
 namespace {
 void CopyFrom(IEntityCollection& srcCollection, array_view<const EntityReference> srcEntities,
-    IEntityCollection& dstCollection, unordered_map<Entity, Entity>& oldToNew, vector<EntityReference>& clonedOut,
-    bool copyCollections)
+    IEntityCollection& dstCollection)
 {
     BASE_NS::unordered_map<IEntityCollection*, bool> copiedCollections;
 
@@ -634,17 +627,13 @@ void CopySerializationInfo(IEntityCollection& srcCollection, IEntityCollection& 
 {
     // Copy all serialization info for copied entites from their original entities
     // Note that the root collections contain all the serialization info.
-    for (auto& cm : srcCollection.GetEcs().GetComponentManagers()) {
-        for (auto& entityOut : entitiesOut) {
-            auto srcEntity = GetOldEntity(oldToNew, entityOut);
-            if (CORE_NS::EntityUtil::IsValid(srcEntity)) {
-                auto* properties = srcCollection.GetSerializedProperties(srcEntity, cm->GetUid());
-                if (properties) {
-                    dstCollection.MarkComponentSerialized(entityOut, cm->GetUid(), true);
-                    for (auto property : *properties) {
-                        dstCollection.MarkPropertySerialized(entityOut, cm->GetUid(), property, true);
-                    }
-                }
+    auto srcEntity = GetOldEntity(oldToNew, entityOut);
+    if (CORE_NS::EntityUtil::IsValid(srcEntity)) {
+        auto* properties = srcCollection.GetSerializedProperties(srcEntity, cm->GetUid());
+        if (properties) {
+            dstCollection.MarkComponentSerialized(entityOut, cm->GetUid(), true);
+            for (auto property : *properties) {
+                dstCollection.MarkPropertySerialized(entityOut, cm->GetUid(), property, true);
             }
         }
     }

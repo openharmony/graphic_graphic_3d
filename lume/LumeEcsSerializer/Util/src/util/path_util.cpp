@@ -19,8 +19,6 @@
 
 using namespace BASE_NS;
 
-UTIL_BEGIN_NAMESPACE()
-
 namespace PathUtil {
 
 string NormalizePath(string_view path)
@@ -34,9 +32,6 @@ string NormalizePath(string_view path)
     }
     while (!path.empty()) {
         if (path[0] == '/') {
-            if (res.empty()) {
-                res.push_back('/');
-            }
             path = path.substr(1);
             continue;
         }
@@ -49,14 +44,9 @@ string NormalizePath(string_view path)
             if ((!res.empty()) && (res.back() == '/')) {
                 res.resize(res.size() - 1);
             }
-            // chop_last_segment(res);
             if (auto p = res.find_last_of('/'); string::npos != p) {
                 res.resize(p);
             } else {
-                if (res.empty()) {
-                    // trying to back out of root. (ie. invalid path)
-                    return "";
-                }
                 res.clear();
             }
             if (pos == string::npos) {
@@ -72,9 +62,6 @@ string NormalizePath(string_view path)
             res.push_back('/');
         }
         path = path.substr(pos);
-    }
-    if (res[0] != '/') {
-        res.insert(0, "/");
     }
     return res;
 }
@@ -239,5 +226,3 @@ string ResolveUri(string_view contextUri, string_view uri, bool allowQueryString
 }
 
 } // namespace PathUtil
-
-UTIL_END_NAMESPACE()

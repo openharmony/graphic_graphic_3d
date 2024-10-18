@@ -107,8 +107,6 @@ void append(BASE_NS::string& out, const double floatingPoint)
     // "At most bufsz - 1 characters are written." string has size() characters + 1 for null so use size() +
     // 1 as the total size. If resize() failed string size() hasn't changed, buffer will point to the null
     // character and bufsz will be 1 i.e. only the null character will be written.
-    snprintf_s(
-        out.data() + oldSize, newSize + 1 - oldSize, static_cast<size_t>(size), FLOATING_FORMAT_STR, floatingPoint);
 }
 
 template<typename T>

@@ -18,7 +18,4 @@
 
 #define UTIL_NS Util
 
-#define UTIL_BEGIN_NAMESPACE() namespace UTIL_NS {
-#define UTIL_END_NAMESPACE() }
-
 #endif // API_UTIL_NAMESPACE_H

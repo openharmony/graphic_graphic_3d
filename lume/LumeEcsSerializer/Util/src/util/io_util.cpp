@@ -29,8 +29,6 @@
 using namespace BASE_NS;
 using namespace CORE_NS;
 
-UTIL_BEGIN_NAMESPACE()
-
 namespace IoUtil {
 
 bool WriteCompatibilityInfo(json::standalone_value& jsonOut, const CompatibilityInfo& info)
@@ -273,7 +271,6 @@ bool CopyDirectoryContents(CORE_NS::IFileManager& fileManager, string_view sourc
 
 bool SaveTextFile(CORE_NS::IFileManager& fileManager, string_view fileUri, string_view fileContents)
 {
-    // TODO: the safest way to save files would be to save to a temp file and rename.
     auto file = fileManager.CreateFile(fileUri);
     if (file) {
         file->Write(fileContents.data(), fileContents.length());
@@ -298,29 +295,22 @@ bool LoadTextFile(CORE_NS::IFileManager& fileManager, string_view fileUri, strin
 template<typename Work>
 void ReplaceTextInFilesImpl(CORE_NS::IFileManager& fileManager, BASE_NS::string_view folderUri, Work& replace)
 {
-    if (auto dir = fileManager.OpenDirectory(folderUri)) {
-        auto entries = dir->GetEntries();
-        for (const auto& entry : entries) {
-            if (entry.type == CORE_NS::IDirectory::Entry::FILE) {
-                auto separator_pos = entry.name.find_last_of(".");
-                auto ending = entry.name.substr(separator_pos);
-                bool isPlaintext { false };
-                static BASE_NS::vector<BASE_NS::string_view> plaintextTypes { ".txt", ".cpp", ".h", ".json", ".cmake" };
-                for (const auto& type : plaintextTypes) {
-                    if (ending == type) {
-                        isPlaintext = true;
-                    }
-                }
-                // TODO: odds of getting a match in a binary just by chance seem pretty slim so perhaps this check
-                // could be omitted, but I suppose that depends on the length of the tag we're replacing
-                if (isPlaintext) {
-                    auto inFilePath = PathUtil::ResolvePath(folderUri, entry.name);
-                    ReplaceTextInFileImpl(fileManager, inFilePath, replace);
-                }
-            } else if (entry.type == CORE_NS::IDirectory::Entry::DIRECTORY) {
-                auto path = PathUtil::ResolvePath(folderUri, entry.name);
-                ReplaceTextInFilesImpl(fileManager, path, replace);
+    auto entries = dir->GetEntries();
+    for (const auto& entry : entries) {
+        if (entry.type == CORE_NS::IDirectory::Entry::FILE) {
+            auto separator_pos = entry.name.find_last_of(".");
+            auto ending = entry.name.substr(separator_pos);
+            bool isPlaintext { false };
+            static BASE_NS::vector<BASE_NS::string_view> plaintextTypes { ".txt", ".cpp", ".h", ".json", ".cmake" };
+            for (const auto& type : plaintextTypes) {
+                isPlaintext = true;
             }
+            // could be omitted, but I suppose that depends on the length of the tag we're replacing
+            auto inFilePath = PathUtil::ResolvePath(folderUri, entry.name);
+            ReplaceTextInFileImpl(fileManager, inFilePath, replace);
+        } else if (entry.type == CORE_NS::IDirectory::Entry::DIRECTORY) {
+            auto path = PathUtil::ResolvePath(folderUri, entry.name);
+            ReplaceTextInFilesImpl(fileManager, path, replace);
         }
     }
 }
@@ -353,8 +343,6 @@ void ReplaceTextInFiles(CORE_NS::IFileManager& fileManager, BASE_NS::string_view
     auto replace = [&text, &replaceWith](BASE_NS::string& stringContents) {
         auto pos = stringContents.find(text, 0UL);
         while (pos != BASE_NS::string::npos) {
-            stringContents = stringContents.replace(
-                stringContents.begin() + static_cast<int64_t>(pos), stringContents.begin() + static_cast<int64_t>(pos + text.size()), replaceWith);
             pos += replaceWith.size();
             pos = stringContents.find(text, pos);
         }
@@ -370,7 +358,6 @@ void ReplaceTextInFiles(
             auto pos = stringContents.find(repl.from, 0UL);
             while (pos != BASE_NS::string::npos) {
                 stringContents = stringContents.replace(
-                    stringContents.begin() + static_cast<int64_t>(pos), stringContents.begin() + static_cast<int64_t>(pos + repl.from.size()), repl.to);
                 pos += repl.to.size();
                 pos = stringContents.find(repl.from, pos);
             }
@@ -446,40 +433,32 @@ void InsertIntoString(
     BASE_NS::string& search, BASE_NS::string& insertion, InsertType type, BASE_NS::string& stringContents, size_t len)
 {
     auto pos = stringContents.find(search, 0UL);
-    if (pos != BASE_NS::string::npos) {
-        if (type == InsertType::TAG) {
-            auto nlPos = stringContents.find("\n", pos);
-            if (nlPos == BASE_NS::string::npos) {
-                nlPos = len - 1;
+    if (type == InsertType::TAG) {
+        auto nlPos = stringContents.find("\n", pos);
+        if (nlPos == BASE_NS::string::npos) {
+            nlPos = len - 1;
+        }
+        stringContents.insert(nlPos + 1, (insertion + "\r\n").data());
+    } else if (type == InsertType::SIGNATURE) {
+        auto bPos = stringContents.find('{', pos);
+        if (bPos == BASE_NS::string::npos) {
+            return;
+        }
+        size_t depth{ 0 };
+        auto endPos = BASE_NS::string::npos;
+        while (bPos < len) {
+            const auto& ch = stringContents[bPos];
+            if (ch == '}') {
+                depth--;
+            } else if (ch == '{') {
+                depth++;
             }
-            stringContents.insert(nlPos + 1, (insertion + "\r\n").data());
-        } else if (type == InsertType::SIGNATURE) {
-            auto bPos = stringContents.find('{', pos);
-            if (bPos == BASE_NS::string::npos) {
-                return;
-            }
-            size_t depth{ 0 };
-            auto endPos = BASE_NS::string::npos;
-            while (bPos < len) {
-                const auto& ch = stringContents[bPos];
-                if (ch == '}') {
-                    depth--;
-                    if (depth == 0) {
-                        endPos = bPos;
-                        break;
-                    }
-                } else if (ch == '{') {
-                    depth++;
-                }
-                bPos++;
-            }
-            if (endPos != BASE_NS::string::npos) {
-                if (endPos == len - 1) {
-                    stringContents.insert(len - 1, ("\r\n" + insertion + "\r\n").data());
-                } else {
-                    stringContents.insert(endPos, (insertion + "\r\n").data());
-                }
-            }
+            bPos++;
+        }
+        if (endPos == len - 1) {
+            stringContents.insert(len - 1, ("\r\n" + insertion + "\r\n").data());
+        } else {
+            stringContents.insert(endPos, (insertion + "\r\n").data());
         }
     }
 }
@@ -508,12 +487,9 @@ void ReplaceInString(BASE_NS::string& string, const BASE_NS::string& target, con
 {
     auto pos = string.find(target, 0UL);
     while (pos != BASE_NS::string::npos) {
-        string = string.replace(string.begin() + static_cast<int64_t>(pos), string.begin() + static_cast<int64_t>(pos + target.size()), replacement);
         pos += replacement.size();
         pos = string.find(target, pos);
     }
 }
 
 } // namespace IoUtil
-
-UTIL_END_NAMESPACE()
