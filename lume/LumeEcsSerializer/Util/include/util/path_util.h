@@ -25,15 +25,15 @@
 UTIL_BEGIN_NAMESPACE()
 namespace PathUtil {
 
-BASE_NS::string NormalizePath(BASE_NS::string_view path);
-BASE_NS::string GetParentPath(BASE_NS::string_view path);
-BASE_NS::string ResolvePath(BASE_NS::string_view parent, BASE_NS::string_view uri, bool allowQueryString = true);
-BASE_NS::string GetRelativePath(BASE_NS::string_view path, BASE_NS::string_view relativeTo);
-BASE_NS::string GetFilename(BASE_NS::string_view path);
-BASE_NS::string GetExtension(BASE_NS::string_view path);
-BASE_NS::string GetBaseName(BASE_NS::string_view path);
-BASE_NS::unordered_map<BASE_NS::string, BASE_NS::string> GetUriParameters(BASE_NS::string_view uri);
-BASE_NS::string ResolveUri(BASE_NS::string_view contextUri, BASE_NS::string_view uri, bool allowQueryString = true);
+::string NormalizePath(::string_view path);
+::string GetParentPath(::string_view path);
+::string ResolvePath(::string_view parent, ::string_view uri, bool allowQueryString = true);
+::string GetRelativePath(::string_view path, ::string_view relativeTo);
+::string GetFilename(::string_view path);
+::string GetExtension(::string_view path);
+::string GetBaseName(::string_view path);
+::unordered_map<::string, ::string> GetUriParameters(::string_view uri);
+::string ResolveUri(::string_view contextUri, ::string_view uri, bool allowQueryString = true);
 
 } // namespace PathUtil
 UTIL_END_NAMESPACE()

@@ -39,23 +39,19 @@
 
 #include "ecs_serializer/intf_ecs_serializer.h"
 
-using namespace BASE_NS;
+using namespace ;
 using namespace CORE_NS;
 using namespace RENDER_NS;
 using namespace CORE3D_NS;
 using namespace UTIL_NS;
 
-// #define VERBOSE_LOGGING
-
 ECS_SERIALIZER_BEGIN_NAMESPACE()
 
 class EcsSerializer : public IEcsSerializer {
 public:
-    EcsSerializer(RENDER_NS::IRenderContext& renderContext);
+    explicit EcsSerializer(RENDER_NS::IRenderContext& renderContext);
 
-    //
     // From IEcsSerializer
-    //
     void SetListener(IListener* listener) override;
 
     void SetDefaultSerializers() override;
@@ -69,18 +65,18 @@ public:
     bool WriteProperty(const IEntityCollection& ec, const CORE_NS::Property& property, uintptr_t offset,
         CORE_NS::json::standalone_value& jsonOut) const override;
 
-    bool GatherExternalCollections(const CORE_NS::json::value& jsonIn, BASE_NS::string_view contextUri,
-        BASE_NS::vector<ExternalCollection>& externalCollectionsOut) const override;
+    bool GatherExternalCollections(const CORE_NS::json::value& jsonIn, ::string_view contextUri,
+        ::vector<ExternalCollection>& externalCollectionsOut) const override;
 
     IoUtil::SerializationResult ReadEntityCollection(
-        IEntityCollection& ec, const CORE_NS::json::value& jsonIn, BASE_NS::string_view contextUri) const override;
+        IEntityCollection& ec, const CORE_NS::json::value& jsonIn, ::string_view contextUri) const override;
     bool ReadComponents(IEntityCollection& ec, const CORE_NS::json::value& jsonIn) const override;
     bool ReadComponent(IEntityCollection& ec, const CORE_NS::json::value& jsonIn, CORE_NS::Entity entity,
         CORE_NS::IComponentManager& component) const override;
     bool ReadProperty(IEntityCollection& ec, const CORE_NS::json::value& jsonIn, const CORE_NS::Property& property,
         uintptr_t offset) const override;
 
-    RENDER_NS::RenderHandleReference LoadImageResource(BASE_NS::string_view uri) const override;
+    RENDER_NS::RenderHandleReference LoadImageResource(::string_view uri) const override;
 
 protected:
     void Destroy() override;
@@ -92,9 +88,7 @@ private:
         const IEntityCollection& ec, const CORE_NS::json::value&, const CORE_NS::Property&, uintptr_t)>;
     IPropertySerializer& Add(PropertyToJsonFunc toJson, PropertyFromJsonFunc fromJson);
 
-    //
     // A little wrapper class to create a serializer with functions for writing and readig a value.
-    //
     class SimpleJsonSerializer : public IPropertySerializer {
     public:
         bool ToJson(const IEntityCollection& ec, const CORE_NS::Property& property, uintptr_t offset,
@@ -109,14 +103,12 @@ private:
         const PropertyToJsonFunc PropertyToJson;
         const PropertyFromJsonFunc PropertyFromJson;
     };
-    BASE_NS::vector<BASE_NS::unique_ptr<SimpleJsonSerializer>> ownedSerializers_;
+    ::vector<::unique_ptr<SimpleJsonSerializer>> ownedSerializers_;
 
     RENDER_NS::IRenderContext& renderContext_;
 
-    //
     // Mapping from each property type to a apecific serializer.
-    //
-    using SerializerMap = BASE_NS::unordered_map<CORE_NS::PropertyTypeDecl, IPropertySerializer*>;
+    using SerializerMap = ::unordered_map<CORE_NS::PropertyTypeDecl, IPropertySerializer*>;
     SerializerMap typetoSerializerMap_;
 
     IListener* listener_ {};
@@ -130,9 +122,7 @@ Type& GetPropertyValue(uintptr_t ptr)
 }
 } // namespace
 
-//
 // EcsSerializer::SimpleJsonSerializer
-//
 bool EcsSerializer::SimpleJsonSerializer::ToJson(
     const IEntityCollection& ec, const Property& property, uintptr_t offset, json::standalone_value& jsonOut) const
 {
@@ -149,9 +139,7 @@ EcsSerializer::SimpleJsonSerializer::SimpleJsonSerializer(PropertyToJsonFunc toJ
     : PropertyToJson(toJson), PropertyFromJson(fromJson)
 {}
 
-//
 // EcsSerializer
-//
 EcsSerializer::EcsSerializer(RENDER_NS::IRenderContext& renderContext) : renderContext_(renderContext) {}
 
 EcsSerializer::IPropertySerializer& EcsSerializer::Add(PropertyToJsonFunc toJson, PropertyFromJsonFunc fromJson)
@@ -398,9 +386,7 @@ bool EntityReferenceFromJson(const IEcsSerializer& ecsSerializer, IRenderContext
 
 void EcsSerializer::SetDefaultSerializers()
 {
-    //
     // Basic types (for types that nlohman knows how to serialize).
-    //
 
     SetSerializer(PropertyType::FLOAT_T, Add(PropertyToJson<float>, PropertyFromJson<float>));
     SetSerializer(PropertyType::DOUBLE_T, Add(PropertyToJson<double>, PropertyFromJson<double>));
@@ -428,10 +414,6 @@ void EcsSerializer::SetDefaultSerializers()
     SetSerializer(PropertyType::UID_T, Add(PropertyToJson<Uid>, PropertyFromJson<Uid>));
 
     SetSerializer(PropertyType::STRING_T, Add(PropertyToJson<string>, PropertyFromJson<string>));
-
-    //
-    // Others
-    //
 
     SetSerializer(PropertyType::CHAR_ARRAY_T,
         Add(
@@ -703,7 +685,7 @@ bool EcsSerializer::WriteProperty(
             // Special handling for byte arrays. Save as a base64 encoded string.
             if (property.type == PropertyType::UINT8_ARRAY_T) {
                 array_view<const uint8_t> bytes { (const uint8_t*)offset, property.size };
-                jsonOut = BASE_NS::Base64Encode(bytes);
+                jsonOut = ::Base64Encode(bytes);
                 return true;
             }
 
@@ -732,7 +714,7 @@ bool EcsSerializer::WriteProperty(
                 } else {
                     auto data = container.get(offset, 0);
                     array_view<const uint8_t> bytes { reinterpret_cast<const uint8_t*>(data), count };
-                    jsonOut = BASE_NS::Base64Encode(bytes);
+                    jsonOut = ::Base64Encode(bytes);
                 }
                 return true;
             }
@@ -811,90 +793,33 @@ IoUtil::SerializationResult EcsSerializer::ReadEntityCollection(
     };
 
     auto result = IoUtil::CheckCompatibility(jsonIn, validVersions);
-    if (result.compatibilityInfo.type == "entity_collection") {
-        CORE_LOG_W("Deprecated compatibility info found \"%s\": '%s'", result.compatibilityInfo.type.c_str(),
-            string(contextUri).c_str());
-    }
 
     const auto* srcJson = jsonIn.find("src");
     string srcUri;
-    if (srcJson && FromJson(*srcJson, srcUri)) {
-#ifdef VERBOSE_LOGGING
-        CORE_LOG_D("External Collection: uri='%s' context='%s'", srcUri.c_str(), string(contextUri).c_str());
-#endif
-        auto* externalCollection = listener_->GetExternalCollection(ec.GetEcs(), srcUri, contextUri);
-        if (externalCollection) {
-            ec.CopyContents(*externalCollection);
-        }
-    }
 
     const auto* collectionsJson = jsonIn.find("collections");
     if (collectionsJson && collectionsJson->is_array()) {
         for (const auto& collectionJson : collectionsJson->array_) {
-            if (collectionJson.is_object()) {
-                string id;
-                const auto* idJson = collectionJson.find("id");
-                if (idJson) {
-                    FromJson(*idJson, id);
-                }
-
-                const auto* collectionSrcJson = collectionJson.find("src");
-                if (collectionSrcJson && collectionSrcJson->is_string()) {
-                    string collectionSrcUri;
-                    FromJson(*collectionSrcJson, collectionSrcUri);
-
-                    // Instantiate the collection pointed by src.
-#ifdef VERBOSE_LOGGING
-                    CORE_LOG_D("External Collection: uri='%s' context='%s'", collectionSrcUri.c_str(),
-                        string(contextUri).c_str());
-#endif
-                    auto* externalCollection =
-                        listener_->GetExternalCollection(ec.GetEcs(), collectionSrcUri, contextUri);
-                    if (externalCollection) {
-                        ec.AddSubCollectionClone(*externalCollection, id).SetSrc(collectionSrcUri);
-                        ;
-                    } else {
-                        CORE_LOG_E("Loading collection failed: '%s'", collectionSrcUri.c_str());
-                        // Just adding an empty collection as a placeholder.
-                        ec.AddSubCollection(id, collectionSrcUri).SetSrc(collectionSrcUri);
-                    }
-                } else {
-                    ec.AddSubCollection(id, {});
-                }
-            }
-        }
-    }
-
-    const auto* entitiesJson = jsonIn.find("entities");
-    if (entitiesJson && entitiesJson->is_array()) {
-        auto& em = ec.GetEcs().GetEntityManager();
-
-        // First create all entities so they can be referenced by components.
-        for (const auto& entityJson : entitiesJson->array_) {
-            // Create a new entity.
-            EntityReference entity = em.CreateReferenceCounted();
-            ec.AddEntity(entity);
-
-            // Add with an id if one is defined.
-            const auto* idJson = entityJson.find("id");
             string id;
-            if (idJson && FromJson(*idJson, id)) {
-                ec.SetId(id, entity);
+            const auto* idJson = collectionJson.find("id");
+            FromJson(*idJson, id);
+            const auto* collectionSrcJson = collectionJson.find("src");
+            if (collectionSrcJson && collectionSrcJson->is_string()) {
+                string collectionSrcUri;
+                FromJson(*collectionSrcJson, collectionSrcUri);
+
+                // Instantiate the collection pointed by src.
+#ifdef VERBOSE_LOGGING
+                CORE_LOG_D("External Collection: uri='%s' context='%s'", collectionSrcUri.c_str(),
+                    string(contextUri).c_str());
+#endif
+                auto* externalCollection =
+                    listener_->GetExternalCollection(ec.GetEcs(), collectionSrcUri, contextUri);
+            } else {
+                ec.AddSubCollection(id, {});
             }
+            
         }
-    }
-
-    const auto* ecJson = jsonIn.find("entity-components");
-    if (ecJson && ecJson->is_array()) {
-        // Then load entity contents (i.e. components).
-        for (size_t i = 0; i < ecJson->array_.size(); ++i) {
-            ReadComponents(ec, ecJson->array_.at(i));
-        }
-    }
-
-    if (!ec.IsActive()) {
-        // If the ec is not active also make the newly loaded entities not active.
-        ec.SetActive(false);
     }
 
     // NOTE: Always returns success, even if parts of the load failed.
@@ -942,11 +867,11 @@ namespace {
 void EnsureDynamicArraySize(IPropertyHandle* propertyHandle, string_view propertyPath)
 {
     const auto separatorPosition = propertyPath.find('[');
-    if (separatorPosition == BASE_NS::string::npos) {
+    if (separatorPosition == ::string::npos) {
         return;
     }
     const auto separatorEndPosition = propertyPath.find(']', separatorPosition);
-    if (separatorEndPosition == BASE_NS::string::npos) {
+    if (separatorEndPosition == ::string::npos) {
         return;
     }
 
@@ -1069,7 +994,7 @@ bool EcsSerializer::ReadProperty(
         // Special handling for byte data encoded as base64.
         if (jsonIn.is_string()) {
             // A base64 encoded string containing raw array data
-            auto bytes = BASE_NS::Base64Decode(jsonIn.string_);
+            auto bytes = ::Base64Decode(jsonIn.string_);
 
             // Only valid for byte data.
             if (property.type == PropertyType::UINT8_ARRAY_T) {
@@ -1170,7 +1095,7 @@ bool EcsSerializer::ReadProperty(
     return false;
 }
 
-RENDER_NS::RenderHandleReference EcsSerializer::LoadImageResource(BASE_NS::string_view uri) const
+RENDER_NS::RenderHandleReference EcsSerializer::LoadImageResource(::string_view uri) const
 {
     // Get rid of a possible query string in the uri.
     const auto fileUri = PathUtil::ResolveUri({}, uri, false);

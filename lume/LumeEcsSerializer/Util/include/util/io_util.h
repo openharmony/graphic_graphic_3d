@@ -27,8 +27,6 @@
 
 #include <util/namespace.h>
 
-UTIL_BEGIN_NAMESPACE()
-
 namespace IoUtil {
 
 enum class Status : uint32_t {
@@ -40,7 +38,7 @@ enum class Status : uint32_t {
 struct CompatibilityInfo {
     uint32_t versionMajor{ 0 };
     uint32_t versionMinor{ 0 };
-    BASE_NS::string type;
+    ::string type;
 };
 
 struct CompatibilityRange {
@@ -50,13 +48,13 @@ struct CompatibilityRange {
     uint32_t versionMajorMax{ IGNORE_VERSION };
     uint32_t versionMinorMin{ IGNORE_VERSION };
     uint32_t versionMinorMax{ IGNORE_VERSION };
-    BASE_NS::string type{};
+    ::string type{};
 };
 
 struct SerializationResult {
     Status status{ Status::SUCCESS };
     CompatibilityInfo compatibilityInfo{};
-    BASE_NS::string error{};
+    ::string error{};
 
     operator bool()
     {
@@ -66,42 +64,42 @@ struct SerializationResult {
 
 bool WriteCompatibilityInfo(CORE_NS::json::standalone_value& jsonOut, const CompatibilityInfo& info);
 SerializationResult CheckCompatibility(
-    const CORE_NS::json::value& json, BASE_NS::array_view<CompatibilityRange const> validVersions);
+    const CORE_NS::json::value& json, ::array_view<CompatibilityRange const> validVersions);
 
-bool FileExists(CORE_NS::IFileManager& fileManager, BASE_NS::string_view folder, BASE_NS::string_view file);
+bool FileExists(CORE_NS::IFileManager& fileManager, ::string_view folder, ::string_view file);
 
-bool CreateDirectories(CORE_NS::IFileManager& fileManager, BASE_NS::string_view pathUri);
-bool DeleteDirectory(CORE_NS::IFileManager& fileManager, BASE_NS::string_view directoryUri);
+bool CreateDirectories(CORE_NS::IFileManager& fileManager, ::string_view pathUri);
+bool DeleteDirectory(CORE_NS::IFileManager& fileManager, ::string_view directoryUri);
 
-bool Copy(CORE_NS::IFileManager& fileManager, BASE_NS::string_view sourceUri, BASE_NS::string_view destinationUri);
-bool Move(CORE_NS::IFileManager& fileManager, BASE_NS::string_view sourceUri, BASE_NS::string_view destinationUri);
-bool CopyFile(CORE_NS::IFileManager& fileManager, BASE_NS::string_view sourceUri, BASE_NS::string_view destinationUri);
+bool Copy(CORE_NS::IFileManager& fileManager, ::string_view sourceUri, ::string_view destinationUri);
+bool Move(CORE_NS::IFileManager& fileManager, ::string_view sourceUri, ::string_view destinationUri);
+bool CopyFile(CORE_NS::IFileManager& fileManager, ::string_view sourceUri, ::string_view destinationUri);
 bool CopyDirectoryContents(
-    CORE_NS::IFileManager& fileManager, BASE_NS::string_view sourceUri, BASE_NS::string_view destinationUri);
+    CORE_NS::IFileManager& fileManager, ::string_view sourceUri, ::string_view destinationUri);
 
-bool SaveTextFile(CORE_NS::IFileManager& fileManager, BASE_NS::string_view fileUri, BASE_NS::string_view fileContents);
-bool LoadTextFile(CORE_NS::IFileManager& fileManager, BASE_NS::string_view fileUri, BASE_NS::string& fileContentsOut);
+bool SaveTextFile(CORE_NS::IFileManager& fileManager, ::string_view fileUri, ::string_view fileContents);
+bool LoadTextFile(CORE_NS::IFileManager& fileManager, ::string_view fileUri, ::string& fileContentsOut);
 
 // Copy files from fromUri dir to toUri dir, renaming the files to filename (excluding the filetype suffix)
 // e.g. template.h, template.cpp -> filename.h, filename.cpp
-bool CopyAndRenameFiles(CORE_NS::IFileManager& fileManager, BASE_NS::string_view fromUri, BASE_NS::string_view toUri,
-    BASE_NS::string_view filename);
+bool CopyAndRenameFiles(CORE_NS::IFileManager& fileManager, ::string_view fromUri, ::string_view toUri,
+    ::string_view filename);
 
 // Replace all instances of text dir's files with replaceWith, recursively
 // only affects .h .cpp .txt and .json files
-void ReplaceTextInFiles(CORE_NS::IFileManager& fileManager, BASE_NS::string_view dir, BASE_NS::string_view text,
-    BASE_NS::string_view replaceWith);
+void ReplaceTextInFiles(CORE_NS::IFileManager& fileManager, ::string_view dir, ::string_view text,
+    ::string_view replaceWith);
 
 struct Replacement {
-    BASE_NS::string from;
-    BASE_NS::string to;
+    ::string from;
+    ::string to;
 };
 // A version of ReplaceTextInFiles that does multiple replacements while the file is open
 void ReplaceTextInFiles(
-    CORE_NS::IFileManager& fileManager, BASE_NS::string_view folderUri, BASE_NS::vector<Replacement> replacements);
+    CORE_NS::IFileManager& fileManager, ::string_view folderUri, ::vector<Replacement> replacements);
 
 void ReplaceTextInFile(
-    CORE_NS::IFileManager& fileManager, BASE_NS::string_view uri, BASE_NS::vector<Replacement> replacements);
+    CORE_NS::IFileManager& fileManager, ::string_view uri, ::vector<Replacement> replacements);
 
 enum class InsertType : char {
     TAG,      // Finds the first instance of the tag string in the file and inserts a newline and insertion after it
@@ -109,15 +107,15 @@ enum class InsertType : char {
     // and inserts a new line and the insertion string before the matching closing '}'
 };
 struct Insertion {
-    BASE_NS::string searchStr;
-    BASE_NS::string insertStr;
+    ::string searchStr;
+    ::string insertStr;
     InsertType type;
 };
 void InsertInFile(
-    CORE_NS::IFileManager& fileManager, BASE_NS::string_view fileUri, BASE_NS::vector<Insertion> insertions);
-void InsertInFile(CORE_NS::IFileManager& fileManager, BASE_NS::string_view fileUri, BASE_NS::string search,
-    BASE_NS::string insertion, InsertType type);
-void ReplaceInString(BASE_NS::string& string, const BASE_NS::string& target, const BASE_NS::string& replacement);
+    CORE_NS::IFileManager& fileManager, ::string_view fileUri, ::vector<Insertion> insertions);
+void InsertInFile(CORE_NS::IFileManager& fileManager, ::string_view fileUri, ::string search,
+    ::string insertion, InsertType type);
+void ReplaceInString(::string& string, const ::string& target, const ::string& replacement);
 
 } // namespace IoUtil
 

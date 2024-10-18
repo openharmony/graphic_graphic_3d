@@ -31,14 +31,14 @@
 
 UTIL_BEGIN_NAMESPACE()
 
-inline BASE_NS::string JsonUnescape(BASE_NS::string_view str)
+inline ::string JsonUnescape(::string_view str)
 {
     return CORE_NS::json::unescape(str);
 }
 
 template<class T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
 inline bool SafeGetJsonValue(
-    const CORE_NS::json::value& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
+    const CORE_NS::json::value& jsonData, const ::string_view element, ::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
         if (pos->is_number()) {
@@ -54,9 +54,9 @@ inline bool SafeGetJsonValue(
     return false;
 }
 
-template<class T, std::enable_if_t<std::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
+template<class T, std::enable_if_t<std::is_convertible_v<T, ::string_view>, bool> = true>
 inline bool SafeGetJsonValue(
-    const CORE_NS::json::value& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
+    const CORE_NS::json::value& jsonData, const ::string_view element, ::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
         if (pos->is_string()) {
@@ -79,7 +79,7 @@ inline bool FromJson(const CORE_NS::json::value& jsonIn, T& output)
     return false;
 }
 
-template<class T, std::enable_if_t<std::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
+template<class T, std::enable_if_t<std::is_convertible_v<T, ::string_view>, bool> = true>
 inline bool FromJson(const CORE_NS::json::value& jsonIn, T& output)
 {
     if (jsonIn.is_string()) {
@@ -98,7 +98,7 @@ inline bool FromJson(const CORE_NS::json::value& jsonIn, bool& output)
     return false;
 }
 
-inline bool FromJson(const CORE_NS::json::value& jsonIn, BASE_NS::Uid& output)
+inline bool FromJson(const CORE_NS::json::value& jsonIn, ::Uid& output)
 {
     constexpr size_t UID_LENGTH = 36;
     if (jsonIn.is_string() && jsonIn.string_.size() == UID_LENGTH) {
@@ -123,37 +123,37 @@ inline bool FromJsonArray(const CORE_NS::json::value& jsonIn, T* output, size_t 
     return false;
 }
 
-inline bool FromJson(const CORE_NS::json::value& jsonIn, BASE_NS::Math::Vec2& output)
+inline bool FromJson(const CORE_NS::json::value& jsonIn, ::Math::Vec2& output)
 {
     return FromJsonArray(jsonIn, output.data, 2);
 }
 
-inline bool FromJson(const CORE_NS::json::value& jsonIn, BASE_NS::Math::Vec3& output)
+inline bool FromJson(const CORE_NS::json::value& jsonIn, ::Math::Vec3& output)
 {
     return FromJsonArray(jsonIn, output.data, 3);
 }
 
-inline bool FromJson(const CORE_NS::json::value& jsonIn, BASE_NS::Math::Vec4& output)
+inline bool FromJson(const CORE_NS::json::value& jsonIn, ::Math::Vec4& output)
 {
     return FromJsonArray(jsonIn, output.data, 4);
 }
 
-inline bool FromJson(const CORE_NS::json::value& jsonIn, BASE_NS::Math::UVec2& output)
+inline bool FromJson(const CORE_NS::json::value& jsonIn, ::Math::UVec2& output)
 {
     return FromJsonArray(jsonIn, output.data, 2);
 }
 
-inline bool FromJson(const CORE_NS::json::value& jsonIn, BASE_NS::Math::UVec3& output)
+inline bool FromJson(const CORE_NS::json::value& jsonIn, ::Math::UVec3& output)
 {
     return FromJsonArray(jsonIn, output.data, 3);
 }
 
-inline bool FromJson(const CORE_NS::json::value& jsonIn, BASE_NS::Math::UVec4& output)
+inline bool FromJson(const CORE_NS::json::value& jsonIn, ::Math::UVec4& output)
 {
     return FromJsonArray(jsonIn, output.data, 4);
 }
 
-inline bool FromJson(const CORE_NS::json::value& jsonIn, BASE_NS::Math::Quat& output)
+inline bool FromJson(const CORE_NS::json::value& jsonIn, ::Math::Quat& output)
 {
     return FromJsonArray(jsonIn, output.data, 4);
 }
@@ -166,19 +166,19 @@ inline CORE_NS::json::standalone_value ToJson(T value)
 
 // FIXME: how to make more generic?, Does not understand fixed_string
 template<>
-inline CORE_NS::json::standalone_value ToJson(BASE_NS::string_view value)
+inline CORE_NS::json::standalone_value ToJson(::string_view value)
 {
-    return CORE_NS::json::standalone_value(BASE_NS::string{ value });
+    return CORE_NS::json::standalone_value(::string{ value });
 }
 
 template<>
-inline CORE_NS::json::standalone_value ToJson(BASE_NS::string value)
+inline CORE_NS::json::standalone_value ToJson(::string value)
 {
     return CORE_NS::json::standalone_value(value);
 }
 
 template<>
-inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::Vec2>(BASE_NS::Math::Vec2 value)
+inline CORE_NS::json::standalone_value ToJson<::Math::Vec2>(::Math::Vec2 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
     json.array_.reserve(2);
@@ -187,7 +187,7 @@ inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::Vec2>(BASE_NS::Math
     return json;
 }
 template<>
-inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::UVec2>(BASE_NS::Math::UVec2 value)
+inline CORE_NS::json::standalone_value ToJson<::Math::UVec2>(::Math::UVec2 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
     json.array_.reserve(2);
@@ -197,7 +197,7 @@ inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::UVec2>(BASE_NS::Mat
 }
 
 template<>
-inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::Vec3>(BASE_NS::Math::Vec3 value)
+inline CORE_NS::json::standalone_value ToJson<::Math::Vec3>(::Math::Vec3 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
     json.array_.reserve(3);
@@ -207,7 +207,7 @@ inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::Vec3>(BASE_NS::Math
     return json;
 }
 template<>
-inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::UVec3>(BASE_NS::Math::UVec3 value)
+inline CORE_NS::json::standalone_value ToJson<::Math::UVec3>(::Math::UVec3 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
     json.array_.reserve(3);
@@ -218,7 +218,7 @@ inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::UVec3>(BASE_NS::Mat
 }
 
 template<>
-inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::Vec4>(BASE_NS::Math::Vec4 value)
+inline CORE_NS::json::standalone_value ToJson<::Math::Vec4>(::Math::Vec4 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
     json.array_.reserve(4);
@@ -229,19 +229,7 @@ inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::Vec4>(BASE_NS::Math
     return json;
 }
 template<>
-inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::UVec4>(BASE_NS::Math::UVec4 value)
-{
-    CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
-    json.array_.reserve(4);
-    json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
-    json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
-    json.array_.emplace_back(CORE_NS::json::standalone_value(value.z));
-    json.array_.emplace_back(CORE_NS::json::standalone_value(value.w));
-    return json;
-}
-
-template<>
-inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::Quat>(BASE_NS::Math::Quat value)
+inline CORE_NS::json::standalone_value ToJson<::Math::UVec4>(::Math::UVec4 value)
 {
     CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
     json.array_.reserve(4);
@@ -253,9 +241,21 @@ inline CORE_NS::json::standalone_value ToJson<BASE_NS::Math::Quat>(BASE_NS::Math
 }
 
 template<>
-inline CORE_NS::json::standalone_value ToJson<BASE_NS::Uid>(BASE_NS::Uid value)
+inline CORE_NS::json::standalone_value ToJson<::Math::Quat>(::Math::Quat value)
 {
-    return ToJson(BASE_NS::string_view{ to_string(value) });
+    CORE_NS::json::standalone_value json = CORE_NS::json::standalone_value::array();
+    json.array_.reserve(4);
+    json.array_.emplace_back(CORE_NS::json::standalone_value(value.x));
+    json.array_.emplace_back(CORE_NS::json::standalone_value(value.y));
+    json.array_.emplace_back(CORE_NS::json::standalone_value(value.z));
+    json.array_.emplace_back(CORE_NS::json::standalone_value(value.w));
+    return json;
+}
+
+template<>
+inline CORE_NS::json::standalone_value ToJson<::Uid>(::Uid value)
+{
+    return ToJson(::string_view{ to_string(value) });
 }
 
 UTIL_END_NAMESPACE()
