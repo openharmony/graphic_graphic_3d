@@ -42,7 +42,7 @@ public:
     //
     ExtensionType GetExtensionType(BASE_NS::string_view ext) const override;
 
-    IEcsAssetLoader::Ptr createEcsAssetLoader(
+    IEcsAssetLoader::Ptr CreateEcsAssetLoader(
         IEntityCollection& ec, BASE_NS::string_view src, BASE_NS::string_view contextUri) override;
 
     bool LoadAsset(IEntityCollection& ec, BASE_NS::string_view uri, BASE_NS::string_view contextUri) override;
@@ -88,7 +88,7 @@ private:
 
 EcsAssetManager::EcsAssetManager(IGraphicsContext& graphicsContext)
     : renderContext_(graphicsContext.GetRenderContext()), graphicsContext_(graphicsContext),
-      ecsSerializer_(createEcsSerializer(renderContext_))
+      ecsSerializer_(CreateEcsSerializer(renderContext_))
 {
     ecsSerializer_->SetDefaultSerializers();
     ecsSerializer_->SetListener(this);
@@ -125,15 +125,15 @@ EcsAssetManager::ExtensionType EcsAssetManager::GetExtensionType(string_view ext
     }
 }
 
-IEcsAssetLoader::Ptr EcsAssetManager::createEcsAssetLoader(
+IEcsAssetLoader::Ptr EcsAssetManager::CreateEcsAssetLoader(
     IEntityCollection& ec, string_view src, string_view contextUri)
 {
-    return ::ECS_SERIALIZER_NS::createEcsAssetLoader(*this, graphicsContext_, ec, src, contextUri);
+    return ::ECS_SERIALIZER_NS::CreateEcsAssetLoader(*this, graphicsContext_, ec, src, contextUri);
 }
 
 bool EcsAssetManager::LoadAsset(IEntityCollection& ec, string_view uri, string_view contextUri)
 {
-    auto assetLoader = createEcsAssetLoader(ec, uri, contextUri);
+    auto assetLoader = CreateEcsAssetLoader(ec, uri, contextUri);
     if (assetLoader) {
         //  Use syncronous asset loading.
         assetLoader->LoadAsset();
@@ -181,7 +181,7 @@ IEntityCollection* EcsAssetManager::LoadAssetToCache(
     // like meshes if they have the same names.
     cacheCollections_.erase(cacheId);
 
-    auto ec = createEntityCollection(ecs, cacheUri, contextUri);
+    auto ec = CreateEntityCollection(ecs, cacheUri, contextUri);
     if (LoadAsset(*ec, resolvedUri, contextUri)) {
         // Something was loaded. Set all loaded entities as inactive if requested.
         if (!active) {
@@ -205,7 +205,7 @@ bool EcsAssetManager::IsCachedCollection(string_view uri, string_view contextUri
 IEntityCollection* EcsAssetManager::CreateCachedCollection(
     IEcs& ecs, BASE_NS::string_view uri, BASE_NS::string_view contextUri)
 {
-    auto ec = createEntityCollection(ecs, uri, contextUri);
+    auto ec = CreateEntityCollection(ecs, uri, contextUri);
     ec->SetActive(false);
 
     const auto resolvedUri = PathUtil::ResolveUri(contextUri, uri);
@@ -300,7 +300,7 @@ void EcsAssetManager::Destroy()
     delete this;
 }
 
-IEcsAssetManager::Ptr createEcsAssetManager(CORE3D_NS::IGraphicsContext& graphicsContext)
+IEcsAssetManager::Ptr CreateEcsAssetManager(CORE3D_NS::IGraphicsContext& graphicsContext)
 {
     return IEcsAssetManager::Ptr { new EcsAssetManager(graphicsContext) };
 }

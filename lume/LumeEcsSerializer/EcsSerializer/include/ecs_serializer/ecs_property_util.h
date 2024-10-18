@@ -31,7 +31,7 @@ inline bool IsPropertyContainer(const CORE_NS::Property& property)
     return property.type == PROPERTYTYPE(CORE_NS::IPropertyHandle*);
 }
 
-inline CORE_NS::IPropertyHandle* ResolveContainerProperty(const CORE_NS::IPropertyHandle& handle,
+CORE_NS::IPropertyHandle* ResolveContainerProperty(const CORE_NS::IPropertyHandle& handle,
     const BASE_NS::string& propertyPath, BASE_NS::string& path, BASE_NS::string& name)
 {
     // Extract property path.

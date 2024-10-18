@@ -23,14 +23,14 @@
 
 ECS_SERIALIZER_BEGIN_NAMESPACE()
 
-IEntityCollection::Ptr createEntityCollection(
+IEntityCollection::Ptr CreateEntityCollection(
     CORE_NS::IEcs& ecs, BASE_NS::string_view uri, BASE_NS::string_view contextUri);
 
-IEcsSerializer::Ptr createEcsSerializer(RENDER_NS::IRenderContext& renderContext);
+IEcsSerializer::Ptr CreateEcsSerializer(RENDER_NS::IRenderContext& renderContext);
 
-IEcsAssetManager::Ptr createEcsAssetManager(CORE3D_NS::IGraphicsContext& graphicsContext);
+IEcsAssetManager::Ptr CreateEcsAssetManager(CORE3D_NS::IGraphicsContext& graphicsContext);
 
-IEcsAssetLoader::Ptr createEcsAssetLoader(IEcsAssetManager& assetManager, CORE3D_NS::IGraphicsContext& graphicsContext,
+IEcsAssetLoader::Ptr CreateEcsAssetLoader(IEcsAssetManager& assetManager, CORE3D_NS::IGraphicsContext& graphicsContext,
     IEntityCollection& ec, BASE_NS::string_view src, BASE_NS::string_view contextUri);
 
 ECS_SERIALIZER_END_NAMESPACE()

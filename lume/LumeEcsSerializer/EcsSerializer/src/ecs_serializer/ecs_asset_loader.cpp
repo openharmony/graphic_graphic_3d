@@ -406,7 +406,7 @@ private:
                     if (!assetManager_.IsCachedCollection(dep.src, dep.contextUri)) {
                         auto* cacheEc = assetManager_.CreateCachedCollection(ec_.GetEcs(), dep.src, dep.contextUri);
                         dependencies_.emplace_back(
-                            assetManager_.createEcsAssetLoader(*cacheEc, dep.src, dep.contextUri));
+                            assetManager_.CreateEcsAssetLoader(*cacheEc, dep.src, dep.contextUri));
                         dependencies_.back()->AddListener(*this);
                     }
                 }
@@ -670,7 +670,7 @@ private:
     vector<IEcsAssetLoader::IListener*> listeners_;
 };
 
-IEcsAssetLoader::Ptr createEcsAssetLoader(IEcsAssetManager& assetManager, IGraphicsContext& graphicsContext,
+IEcsAssetLoader::Ptr CreateEcsAssetLoader(IEcsAssetManager& assetManager, IGraphicsContext& graphicsContext,
     IEntityCollection& ec, string_view src, string_view contextUri)
 {
     return IEcsAssetLoader::Ptr { new EcsAssetLoader(assetManager, graphicsContext, ec, src, contextUri) };

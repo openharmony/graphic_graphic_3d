@@ -38,7 +38,7 @@ public:
      *  @param ecs ECS instance that will be used for loading and resource creation.
      *  @return asset loader instance.
      */
-    virtual IEcsAssetLoader::Ptr createEcsAssetLoader(
+    virtual IEcsAssetLoader::Ptr CreateEcsAssetLoader(
         IEntityCollection& ec, BASE_NS::string_view src, BASE_NS::string_view contextUri) = 0;
 
     virtual bool LoadAsset(IEntityCollection& ec, BASE_NS::string_view uri, BASE_NS::string_view contextUri) = 0;

@@ -32,7 +32,7 @@ ECS_SERIALIZER_BEGIN_NAMESPACE()
 
 void UpdateAnimationTrackTargets(CORE_NS::IEcs& ecs, CORE_NS::Entity animationEntity, CORE_NS::Entity rootNode)
 {
-    auto& nameManager = *CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(ecs);
+    auto& nameManager = CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(ecs);
     auto animationManager = CORE_NS::GetManager<CORE3D_NS::IAnimationComponentManager>(ecs);
     auto animationTrackManager = CORE_NS::GetManager<CORE3D_NS::IAnimationTrackComponentManager>(ecs);
     auto& entityManager = ecs.GetEntityManager();

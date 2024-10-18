@@ -28,7 +28,7 @@
 
 ECS_SERIALIZER_BEGIN_NAMESPACE()
 
-inline void CloneComponent(CORE_NS::Entity srcEntity, const CORE_NS::IComponentManager& srcManager,
+void CloneComponent(CORE_NS::Entity srcEntity, const CORE_NS::IComponentManager& srcManager,
     CORE_NS::IEcs& dstEcs, CORE_NS::Entity dstEntity)
 {
     auto* dstManager = dstEcs.GetComponentManager(srcManager.GetUid());
@@ -71,7 +71,7 @@ inline CORE_NS::EntityReference CloneEntityReference(CORE_NS::IEcs& srcEcs, CORE
     return dst;
 }
 
-inline void GatherEntityReferences(BASE_NS::vector<CORE_NS::Entity*>& entities,
+void GatherEntityReferences(BASE_NS::vector<CORE_NS::Entity*>& entities,
     BASE_NS::vector<CORE_NS::EntityReference*>& entityReferences, const CORE_NS::Property& property,
     uintptr_t offset = 0)
 {
@@ -107,11 +107,9 @@ inline void GatherEntityReferences(BASE_NS::vector<CORE_NS::Entity*>& entities,
     }
 }
 
-inline void RewriteEntityReferences(
+void RewriteEntityReferences(
     CORE_NS::IEcs& ecs, CORE_NS::Entity entity, BASE_NS::unordered_map<CORE_NS::Entity, CORE_NS::Entity>& oldToNew)
 {
-    // Go through the entity properties and update any entity references to point to the ones pointed by the oldToNew
-    // map.
     auto managers = ecs.GetComponentManagers();
     for (auto cm : managers) {
         if (auto id = cm->GetComponentId(entity); id != CORE_NS::IComponentManager::INVALID_COMPONENT_ID) {
@@ -172,7 +170,7 @@ inline BASE_NS::vector<CORE_NS::EntityReference> CloneEntityReferences(
     return clonedEntities;
 }
 
-inline BASE_NS::vector<CORE_NS::EntityReference> CloneEntitiesUpdateRefs(
+BASE_NS::vector<CORE_NS::EntityReference> CloneEntitiesUpdateRefs(
     CORE_NS::IEcs& srcEcs, BASE_NS::array_view<const CORE_NS::EntityReference> src, CORE_NS::IEcs& dstEcs)
 {
     BASE_NS::unordered_map<CORE_NS::Entity, CORE_NS::Entity> oldToNew;
