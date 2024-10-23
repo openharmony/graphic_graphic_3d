@@ -135,8 +135,7 @@ ohos_source_set("widget_adapter_source") {
   public_configs = [ ":widget_adapter_config" ]
 
   if (defined(use_new_skia) && use_new_skia) {
-    #external_deps = [ "skia:skia_canvaskit" ]
-    deps = [ "//third_party/skia:skia_ohos" ]
+    external_deps = [ "skia:skia_canvaskit" ]
   } else {
     #external_deps = [ "flutter:ace_skia_ohos" ]
     deps = [ "$ace_flutter_engine_root/skia:ace_skia_ohos" ]
@@ -157,7 +156,7 @@ ohos_source_set("widget_adapter_source") {
       "core/include/lume/ohos",
     ]
 
-    external_deps = [ "vulkan-headers:vulkan_headers" ]
+    external_deps += [ "vulkan-headers:vulkan_headers" ]
     external_deps += [
       "c_utils:utils",
       "graphic_2d:EGL",
