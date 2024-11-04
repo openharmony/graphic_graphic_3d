@@ -202,7 +202,7 @@ void TextureLayerImpl::ConfigWindow(float offsetX, float offsetY, float width, f
 TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
     bool recreateWindow, SurfaceType surfaceType)
 {
-    DestroyRenderTarget();
+    // no DestroyRenderTarget will not cause memory leak / render issue
     surface_ = surfaceType;
     offsetX_ = offsetX;
     offsetY_ = offsetY;
@@ -221,7 +221,7 @@ TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float
 
 TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
 {
-    DestroyRenderTarget();
+    // no DestroyRenderTarget will not cause memory leak / render issue
     surface_ = windowChangeInfo.surfaceType;
     offsetX_ = (int)windowChangeInfo.offsetX;
     offsetY_ = (int)windowChangeInfo.offsetY;
