@@ -285,16 +285,11 @@ bool LoadTextFile(CORE_NS::IFileManager& fileManager, string_view fileUri, strin
     if (!file) {
         return false;
     }
-    try {
-        const size_t length = file->GetLength();
-        fileContentsOut.resize(length);
-        bool fileLog = file->Read(fileContentsOut.data(), length) == length;
-        file->Close();
-        return fileLog;
-    } catch (...) {
-        file->Close();
-        return false;
-    }
+    const size_t length = file->GetLength();
+    fileContentsOut.resize(length);
+    bool fileLog = file->Read(fileContentsOut.data(), length) == length;
+    file->Close();
+    return fileLog;
 }
 
 template<typename Work>
