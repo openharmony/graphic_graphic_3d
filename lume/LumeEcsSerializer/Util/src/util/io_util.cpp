@@ -282,12 +282,14 @@ bool SaveTextFile(CORE_NS::IFileManager& fileManager, string_view fileUri, strin
 bool LoadTextFile(CORE_NS::IFileManager& fileManager, string_view fileUri, string& fileContentsOut)
 {
     auto file = fileManager.OpenFile(fileUri);
-    if (file) {
-        const size_t length = file->GetLength();
-        fileContentsOut.resize(length);
-        return file->Read(fileContentsOut.data(), length) == length;
+    if (!file) {
+        return false;
     }
-    return false;
+    const size_t length = file->GetLength();
+    fileContentsOut.resize(length);
+    bool fileLog = file->Read(fileContentsOut.data(), length) == length;
+    file->Close();
+    return fileLog;
 }
 
 template<typename Work>

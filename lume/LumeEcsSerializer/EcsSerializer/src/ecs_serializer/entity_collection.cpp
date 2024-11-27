@@ -528,8 +528,8 @@ void EntityCollection::MarkModified(bool modified)
 {
     if (isMarkedModified_ != modified) {
         if (uri_ == "project://assets/prefabs/boxes.prefab") {
-            CORE_LOG_D("Modified uri=%s, src=%s, active=%i, address=%p, modified=%i", uri_.c_str(), src_.c_str(),
-                isActive_, (void*)this, modified);
+            CORE_LOG_D("Modified uri=%s, src=%s, active=%i, modified=%i", uri_.c_str(), src_.c_str(),
+                isActive_, modified);
         }
 
         isMarkedModified_ = modified;
