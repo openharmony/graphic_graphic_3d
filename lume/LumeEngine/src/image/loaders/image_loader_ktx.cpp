@@ -71,34 +71,6 @@ uint32_t ReadU32FlipEndian(const uint8_t** data)
     return value;
 }
 
-#ifdef CORE_READ_KTX_HEADER_STRING
-// NOTE: Returns null if the value is not a valid null terminated string.
-//       (i.e. maxBytes was reached before a null was found)
-string_view ReadStringZ(const uint8_t** data, size_t maxBytes, size_t* bytesReadOut)
-{
-    CORE_ASSERT(data);
-    CORE_ASSERT(*data);
-    CORE_ASSERT(bytesReadOut);
-
-    *bytesReadOut = 0;
-
-    if (maxBytes == 0) {
-        return {};
-    }
-
-    const auto start = *data;
-    const auto end = start + maxBytes;
-
-    if (auto const pos = std::find(start, end, 0); pos != end) {
-        *data = pos + 1;
-        *bytesReadOut = static_cast<size_t>(std::distance(start, pos + 1));
-        return { reinterpret_cast<const char*>(start), *bytesReadOut };
-    }
-
-    return {};
-}
-#endif
-
 // 12 byte ktx identifier.
 constexpr const size_t KTX_IDENTIFIER_LENGTH = 12;
 constexpr const char KTX_IDENTIFIER_REFERENCE[KTX_IDENTIFIER_LENGTH] = { '\xAB', 'K', 'T', 'X', ' ', '1', '1', '\xBB',
@@ -566,38 +538,8 @@ private:
 
     static void ReadKeyValueData(const KtxHeader& ktxHeader, const uint8_t** data)
     {
-#ifndef CORE_READ_KTX_HEADER_STRING
         // Skip reading the key-value data for now.
         *data += ktxHeader.bytesOfKeyValueData;
-#else
-        const bool isEndianFlipped = (ktxHeader.endianness == KTX_FILE_ENDIANNESS_FLIPPED);
-        const auto myReadU32 = isEndianFlipped ? ReadU32FlipEndian : ReadU32;
-
-        // Read KTX key-value data.
-        size_t keyValueDataRead = 0;
-        while (keyValueDataRead < ktxHeader.bytesOfKeyValueData) {
-            uint32_t keyAndValueByteSize = myReadU32(data);
-            keyValueDataRead += sizeof(uint32_t);
-
-            size_t keyBytesRead;
-            const auto key = ReadStringZ(data, keyAndValueByteSize, &keyBytesRead);
-            keyValueDataRead += keyBytesRead;
-
-            size_t valueBytesRead;
-            const auto value = ReadStringZ(data, keyAndValueByteSize - keyBytesRead, &valueBytesRead);
-            keyValueDataRead += valueBytesRead;
-
-            if (!key.empty() && !value.empty()) {
-                // NOTE: The key-value data is not used for anything. Just printing to log.
-                CORE_LOG_V("KTX metadata: '%s' : '%s'", key.data(), value.data());
-            }
-
-            // Pad to a multiple of 4 bytes.
-            const size_t padding = (~keyAndValueByteSize + 1) & (4u - 1u);
-            keyValueDataRead += padding;
-            *data += padding;
-        }
-#endif
     }
 
     // Saving the whole image file data in one big chunk. This way we don't
