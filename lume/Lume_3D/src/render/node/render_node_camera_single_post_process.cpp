@@ -590,6 +590,7 @@ void RenderNodeCameraSinglePostProcess::InitCreateBinders()
     }
     if ((!RenderHandleUtil::IsValid(shader_)) || (!RenderHandleUtil::IsValid(psoHandle_))) {
         valid_ = false;
+        CORE_LOG_E("RN:%s needs a valid shader handle", renderNodeContextMgr_->GetName().data());
     }
 }
 

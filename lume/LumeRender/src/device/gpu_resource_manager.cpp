@@ -1770,14 +1770,16 @@ void GpuResourceManager::LockFrameStagingData()
             }
         }
     }
-
-    // create image scaling targets and set handles
-    perFrameStagingScalingImages_.resize(perFrameStagingData_.scalingImageData.scalingImages.size());
-    for (size_t idx = 0; idx < perFrameStagingData_.scalingImageData.scalingImages.size(); ++idx) {
-        auto& scalingImageRef = perFrameStagingData_.scalingImageData.scalingImages[idx];
-        perFrameStagingScalingImages_[idx] = Create(
-            GetStagingScalingImageDesc(scalingImageRef.format, scalingImageRef.maxWidth, scalingImageRef.maxHeight));
-        scalingImageRef.handle = perFrameStagingScalingImages_[idx];
+    {
+        auto const clientLock = std::lock_guard(imageStore_.clientMutex);
+        // create image scaling targets and set handles
+        perFrameStagingScalingImages_.resize(perFrameStagingData_.scalingImageData.scalingImages.size());
+        for (size_t idx = 0; idx < perFrameStagingData_.scalingImageData.scalingImages.size(); ++idx) {
+            auto& scalingImageRef = perFrameStagingData_.scalingImageData.scalingImages[idx];
+            perFrameStagingScalingImages_[idx] = Create(GetStagingScalingImageDesc(
+                scalingImageRef.format, scalingImageRef.maxWidth, scalingImageRef.maxHeight));
+            scalingImageRef.handle = perFrameStagingScalingImages_[idx];
+        }
     }
 }
 

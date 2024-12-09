@@ -89,7 +89,7 @@ void AppendValues(
         }
     } else if (type == "ivec4") {
         if ((offset + ALIGNMENT_OF_VEC4) <= maxByteSize) {
-            Math::UVec4* val = reinterpret_cast<Math::UVec4*>(data + offset);
+            Math::IVec4* val = reinterpret_cast<Math::IVec4*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC4, ALIGNMENT_OF_VEC4);
         }
@@ -107,7 +107,7 @@ void AppendValues(
         }
     } else if (type == "ivec3") {
         if ((offset + ALIGNMENT_OF_VEC3) <= maxByteSize) {
-            Math::UVec3* val = reinterpret_cast<Math::UVec3*>(data + offset);
+            Math::IVec3* val = reinterpret_cast<Math::IVec3*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC3, ALIGNMENT_OF_VEC3);
         }
@@ -125,7 +125,7 @@ void AppendValues(
         }
     } else if (type == "ivec2") {
         if ((offset + ALIGNMENT_OF_VEC2) <= maxByteSize) {
-            Math::UVec2* val = reinterpret_cast<Math::UVec2*>(data + offset);
+            Math::IVec2* val = reinterpret_cast<Math::IVec2*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC2, ALIGNMENT_OF_VEC2);
         }

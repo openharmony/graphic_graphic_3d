@@ -504,7 +504,10 @@ void PatchGpuResourceQueueTransfers(array_view<const RenderNodeContextData> fram
     array_view<const RenderGraph::GpuQueueTransferState> currNodeGpuResourceTransfers)
 {
     for (const auto& transferRef : currNodeGpuResourceTransfers) {
-        PLUGIN_ASSERT(transferRef.acquireNodeIdx < (uint32_t)frameRenderNodeContextData.size());
+        if (transferRef.acquireNodeIdx >= frameRenderNodeContextData.size()) {
+            PLUGIN_LOG_E("acquireNodeIdx is incorrect");
+            continue;
+        }
 
         auto& acquireNodeRef = frameRenderNodeContextData[transferRef.acquireNodeIdx];
         const GpuQueue acquireGpuQueue = acquireNodeRef.renderCommandList->GetGpuQueue();

@@ -28,6 +28,7 @@
 #include <core/io/intf_directory.h>
 #include <core/io/intf_file.h>
 #include <core/namespace.h>
+#include <core/log.h>
 
 #include "file_manager.h"
 #include "path_tools.h"
@@ -47,6 +48,10 @@ ProxyFilesystem::ProxyFilesystem(FileManager& fileManager, const string_view des
 
 void ProxyFilesystem::AppendSearchPath(string_view path)
 {
+    if (path.empty()) {
+        CORE_LOG_E("%s, path is empty", __func__);
+        return;
+    }
     if (path.back() == '/') {
         path.remove_suffix(1);
     }
@@ -55,6 +60,10 @@ void ProxyFilesystem::AppendSearchPath(string_view path)
 
 void ProxyFilesystem::PrependSearchPath(string_view path)
 {
+    if (path.empty()) {
+        CORE_LOG_E("%s, path is empty", __func__);
+        return;
+    }
     if (path.back() == '/') {
         path.remove_suffix(1);
     }
@@ -63,6 +72,10 @@ void ProxyFilesystem::PrependSearchPath(string_view path)
 
 void ProxyFilesystem::RemoveSearchPath(string_view destination)
 {
+    if (destination.empty()) {
+        CORE_LOG_E("%s, destination is empty", __func__);
+        return;
+    }
     if (destination.back() == '/') {
         destination.remove_suffix(1);
     }

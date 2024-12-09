@@ -594,6 +594,10 @@ PluginToken RegisterInterfaces3D(IPluginRegister& pluginRegistry)
 
 void UnregisterInterfaces3D(PluginToken token)
 {
+    if (!token) {
+        CORE_LOG_E("token is null");
+        return;
+    }
     IPluginRegister* pluginRegistry = static_cast<IPluginRegister*>(token);
 
     UnregisterTypes(GetPluginRegister());

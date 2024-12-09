@@ -16,6 +16,7 @@
 #ifndef CORE_ENGINE_H
 #define CORE_ENGINE_H
 
+#include <atomic>
 #include <cstdint>
 
 #include <base/containers/array_view.h>
@@ -102,7 +103,7 @@ private:
     IFileManager::Ptr fileManager_;
 
     BASE_NS::unique_ptr<class ImageLoaderManager> imageManager_;
-    uint32_t refCount_ { 0 };
+    std::atomic_int32_t refCount_ { 0 };
 
     BASE_NS::vector<BASE_NS::pair<PluginToken, const IEnginePlugin*>> plugins_;
     BASE_NS::vector<const InterfaceTypeInfo*> interfaceTypeInfos_;

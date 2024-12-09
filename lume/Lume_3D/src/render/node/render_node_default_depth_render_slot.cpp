@@ -231,7 +231,9 @@ void RenderNodeDefaultDepthRenderSlot::RenderSubmeshes(IRenderCommandList& cmdLi
         // vertex buffers and draw
         if (currSubmesh.vertexBufferCount > 0) {
             VertexBuffer vbs[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
-            for (uint32_t vbIdx = 0; vbIdx < currSubmesh.vertexBufferCount; ++vbIdx) {
+            const auto count = Math::min(currSubmesh.vertexBufferCount,
+                RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
+            for (uint32_t vbIdx = 0; vbIdx < count; ++vbIdx) {
                 vbs[vbIdx] = ConvertVertexBuffer(currSubmesh.vertexBuffers[vbIdx]);
             }
             cmdList.BindVertexBuffers({ vbs, currSubmesh.vertexBufferCount });
@@ -351,10 +353,8 @@ void RenderNodeDefaultDepthRenderSlot::CreateDefaultShaderData()
             allShaderData_.slotHasShaders = true;
             const ShaderSpecializationConstantView& sscv =
                 shaderMgr.GetReflectionSpecialization(allShaderData_.defaultShaderHandle);
-            allShaderData_.defaultSpecilizationConstants.resize(sscv.constants.size());
-            for (uint32_t idx = 0; idx < (uint32_t)allShaderData_.defaultSpecilizationConstants.size(); ++idx) {
-                allShaderData_.defaultSpecilizationConstants[idx] = sscv.constants[idx];
-            }
+            allShaderData_.defaultSpecilizationConstants.clear();
+            allShaderData_.defaultSpecilizationConstants.append(sscv.constants.cbegin(), sscv.constants.cend());
             specializationData_.maxSpecializationCount =
                 Math::min(static_cast<uint32_t>(allShaderData_.defaultSpecilizationConstants.size()),
                     SpecializationData::MAX_FLAG_COUNT);

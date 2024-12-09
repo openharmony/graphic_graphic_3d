@@ -16,6 +16,7 @@
 #ifndef CORE__IO__FILEMANAGER_H
 #define CORE__IO__FILEMANAGER_H
 
+#include <atomic>
 #include <cstdint>
 
 #include <base/containers/string.h>
@@ -82,7 +83,7 @@ private:
 
     BASE_NS::unordered_map<BASE_NS::string, ProxyFilesystem*> proxyFilesystems_;
 
-    uint32_t refCount_ { 0 };
+    std::atomic_int32_t refCount_ { 0 };
 };
 CORE_END_NAMESPACE()
 

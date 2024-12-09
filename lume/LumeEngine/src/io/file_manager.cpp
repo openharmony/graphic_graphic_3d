@@ -112,12 +112,13 @@ IInterface* FileManager::GetInterface(const Uid& uid)
 
 void FileManager::Ref()
 {
-    refCount_++;
+    refCount_.fetch_add(1, std::memory_order_relaxed);
 }
 
 void FileManager::Unref()
 {
-    if (--refCount_ == 0) {
+    if (refCount_.fetch_sub(1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         delete this;
     }
 }

@@ -511,7 +511,8 @@ void ConvertLoadResultToFloat(GLTF2::GLTFLoadDataResult& data, float scale = 0.f
 template<typename T>
 void Validate(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount)
 {
-    auto source = array_view((T const*)indices.data.data(), indices.elementCount);
+    const auto elementCount = Math::min(indices.elementCount, indices.data.size_in_bytes() / sizeof(T));
+    auto source = array_view(static_cast<const T*>(static_cast<const void*>(indices.data.data())), elementCount);
     if (std::any_of(source.begin(), source.end(), [vertexCount](const auto& value) { return value >= vertexCount; })) {
         indices.success = false;
         indices.error += "Indices out-of-range.\n";

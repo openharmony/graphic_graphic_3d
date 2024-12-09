@@ -284,6 +284,10 @@ void RenderPreprocessorSystem::CalculateSceneBounds()
 
 void RenderPreprocessorSystem::GatherSortData()
 {
+    if (!renderMeshManager_ || jointMatricesManager_ || !skinManager_) {
+        CORE_LOG_E("something wrong about component manager");
+        return;
+    }
     const auto& results = renderableQuery_.GetResults();
     const auto renderMeshes = static_cast<IComponentManager::ComponentId>(results.size());
     meshComponents_.clear();
@@ -300,34 +304,57 @@ void RenderPreprocessorSystem::GatherSortData()
                                                                : layerManager_->Get(row.components[LC]).layerMask;
         if (effectivelyEnabled && (layerMask != LayerConstants::NONE_LAYER_MASK)) {
             auto renderMeshHandle = renderMeshManager_->Read(row.components[RMC]);
+            if (!renderMeshHandle) {
+                continue;
+            }
             // gather the submesh world aabbs
-            if (const auto meshData = meshManager_->Read(renderMeshHandle->mesh); meshData) {
-                // TODO render system doesn't necessarily have to read the render mesh components. preprocessor
-                // could offer two lists of mesh+world, one containing the render mesh batch style meshes and second
-                // containing regular meshes
-                const auto renderMeshEntity = renderMeshManager_->GetEntity(row.components[RMC]);
-                auto& data = renderMeshAabbs_[renderMeshEntity];
-                auto& meshAabb = data.meshAabb;
-                meshAabb = {};
-                auto& aabbs = data.submeshAabbs;
-                aabbs.clear();
+            const auto meshData = meshManager_->Read(renderMeshHandle->mesh);
+            if (!meshData) {
+                continue;
+            }
+            // TODO render system doesn't necessarily have to read the render mesh components. preprocessor
+            // could offer two lists of mesh+world, one containing the render mesh batch style meshes and second
+            // containing regular meshes
+            const auto renderMeshEntity = renderMeshManager_->GetEntity(row.components[RMC]);
+            auto& data = renderMeshAabbs_[renderMeshEntity];
+            auto& meshAabb = data.meshAabb;
+            meshAabb = {};
+            auto& aabbs = data.submeshAabbs;
+            aabbs.clear();
 
-                // check MaterialComponent::DISABLE_BIT and discard those, check
-                // MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT and don't include them in scene bounding.
-                disabled.clear();
-                disabled.resize(meshData->submeshes.size());
-                shadowCaster.clear();
-                shadowCaster.resize(meshData->submeshes.size());
-                auto submeshIdx = 0U;
-                bool allowInstancing = true;
-                for (const auto& submesh : meshData->submeshes) {
-                    if (EntityUtil::IsValid(submesh.material)) {
+            // check MaterialComponent::DISABLE_BIT and discard those, check
+            // MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT and don't include them in scene bounding.
+            disabled.clear();
+            disabled.resize(meshData->submeshes.size());
+            shadowCaster.clear();
+            shadowCaster.resize(meshData->submeshes.size());
+            auto submeshIdx = 0U;
+            bool allowInstancing = true;
+            for (const auto& submesh : meshData->submeshes) {
+                if (EntityUtil::IsValid(submesh.material)) {
+                    if (auto pos = std::lower_bound(materialProperties_.cbegin(), materialProperties_.cend(),
+                            submesh.material,
+                            [](const MaterialProperties& element, const Entity& value) {
+                                return element.material.id < value.id;
+                            });
+                        (pos != materialProperties_.cend()) && (pos->material == submesh.material)) {
+                        disabled[submeshIdx] = pos->disabled;
+                        allowInstancing = allowInstancing && pos->allowInstancing;
+                        shadowCaster[submeshIdx] = pos->shadowCaster;
+                    }
+                } else {
+                    // assuming MaterialComponent::materialLightingFlags default value includes
+                    // SHADOW_CASTER_BIT
+                    shadowCaster[submeshIdx] = true;
+                }
+                for (const auto additionalMaterial : submesh.additionalMaterials) {
+                    if (EntityUtil::IsValid(additionalMaterial)) {
                         if (auto pos = std::lower_bound(materialProperties_.cbegin(), materialProperties_.cend(),
-                                submesh.material,
+                                additionalMaterial,
                                 [](const MaterialProperties& element, const Entity& value) {
                                     return element.material.id < value.id;
                                 });
-                            (pos != materialProperties_.cend()) && (pos->material == submesh.material)) {
+                            (pos != materialProperties_.cend()) && (pos->material == additionalMaterial)) {
                             disabled[submeshIdx] = pos->disabled;
                             allowInstancing = allowInstancing && pos->allowInstancing;
                             shadowCaster[submeshIdx] = pos->shadowCaster;
@@ -337,33 +364,17 @@ void RenderPreprocessorSystem::GatherSortData()
                         // SHADOW_CASTER_BIT
                         shadowCaster[submeshIdx] = true;
                     }
-                    for (const auto additionalMaterial : submesh.additionalMaterials) {
-                        if (EntityUtil::IsValid(additionalMaterial)) {
-                            if (auto pos = std::lower_bound(materialProperties_.cbegin(), materialProperties_.cend(),
-                                    additionalMaterial,
-                                    [](const MaterialProperties& element, const Entity& value) {
-                                        return element.material.id < value.id;
-                                    });
-                                (pos != materialProperties_.cend()) && (pos->material == additionalMaterial)) {
-                                disabled[submeshIdx] = pos->disabled;
-                                allowInstancing = allowInstancing && pos->allowInstancing;
-                                shadowCaster[submeshIdx] = pos->shadowCaster;
-                            }
-                        } else {
-                            // assuming MaterialComponent::materialLightingFlags default value includes
-                            // SHADOW_CASTER_BIT
-                            shadowCaster[submeshIdx] = true;
-                        }
-                    }
-                    ++submeshIdx;
                 }
+                ++submeshIdx;
+            }
 
-                if (std::any_of(disabled.cbegin(), disabled.cend(), [](const bool disabled) { return !disabled; })) {
-                    bool hasJoints = row.IsValidComponentId(JMC);
-                    if (hasJoints) {
-                        // TODO this needs to happen only when joint matrices have changed
-                        auto jointMatricesHandle = jointMatricesManager_->Read(row.components[JMC]);
-                        hasJoints = (jointMatricesHandle->count > 0U);
+            if (std::any_of(disabled.cbegin(), disabled.cend(), [](const bool disabled) { return !disabled; })) {
+                bool hasJoints = row.IsValidComponentId(JMC);
+                if (hasJoints) {
+                    // TODO this needs to happen only when joint matrices have changed
+                    if (auto jointMatricesHandle = jointMatricesManager_->Read(row.components[JMC]);
+                        jointMatricesHandle) {
+                        hasJoints = jointMatricesHandle->count > 0U;
                         if (hasJoints) {
                             aabbs.push_back(
                                 Aabb { jointMatricesHandle->jointsAabbMin, jointMatricesHandle->jointsAabbMax });
@@ -371,29 +382,35 @@ void RenderPreprocessorSystem::GatherSortData()
                             meshAabb.max = Math::max(meshAabb.max, jointMatricesHandle->jointsAabbMax);
                         }
                     }
-                    if (!hasJoints) {
-                        submeshIdx = 0U;
-                        const auto& world = worldMatrixManager_->Read(row.components[WMC])->matrix;
-                        for (const auto& submesh : meshData->submeshes) {
-                            // TODO this needs to happen only when world matrix, or mesh component have changed
-                            if (disabled[submeshIdx]) {
-                                aabbs.push_back({});
-                            } else {
-                                const MinAndMax mam = picking_->GetWorldAABB(world, submesh.aabbMin, submesh.aabbMax);
-                                aabbs.push_back({ mam.minAABB, mam.maxAABB });
-                                if (shadowCaster[submeshIdx]) {
-                                    meshAabb.min = Math::min(meshAabb.min, mam.minAABB);
-                                    meshAabb.max = Math::max(meshAabb.max, mam.maxAABB);
-                                }
-                            }
-                            ++submeshIdx;
-                        }
-                    }
-
-                    auto skin = (row.IsValidComponentId(SC)) ? skinManager_->Read(row.components[SC])->skin : Entity {};
-                    meshComponents_.push_back({ row.components[RMC], renderMeshHandle->mesh,
-                        renderMeshHandle->renderMeshBatch, skin, allowInstancing });
                 }
+                if (!hasJoints) {
+                    submeshIdx = 0U;
+                    const auto& world = worldMatrixManager_->Read(row.components[WMC])->matrix;
+                    for (const auto& submesh : meshData->submeshes) {
+                        // TODO this needs to happen only when world matrix, or mesh component have changed
+                        if (disabled[submeshIdx]) {
+                            aabbs.push_back({});
+                        } else {
+                            const MinAndMax mam = picking_->GetWorldAABB(world, submesh.aabbMin, submesh.aabbMax);
+                            aabbs.push_back({ mam.minAABB, mam.maxAABB });
+                            if (shadowCaster[submeshIdx]) {
+                                meshAabb.min = Math::min(meshAabb.min, mam.minAABB);
+                                meshAabb.max = Math::max(meshAabb.max, mam.maxAABB);
+                            }
+                        }
+                        ++submeshIdx;
+                    }
+                }
+
+                Entity skin;
+                if (row.IsValidComponentId(SC)) {
+                    auto skinHandle = skinManager_->Read(row.components[SC]);
+                    if (skinHandle) {
+                        skin = skinHandle->skin;
+                    }
+                }
+                meshComponents_.push_back({ row.components[RMC], renderMeshHandle->mesh,
+                    renderMeshHandle->renderMeshBatch, skin, allowInstancing });
             }
         }
     }
