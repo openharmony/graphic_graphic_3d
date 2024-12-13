@@ -40,9 +40,10 @@ namespace {
 bool ParseIndex(const string_view name, const uintptr_t baseOffset, const Property& property,
     array_view<const Property>& properties, size_t& pos, PropertyData::PropertyOffset& ret)
 {
-    // there needs to be at least three characters to be a valid array index. the propery must also be an
+    // there needs to be at least three characters (e.g. [0]) to be a valid array index. the propery must also be an
     // array.
-    if (((name.size() - pos) < 3U) || !property.metaData.containerMethods) { // 3: min length e.g. [0]
+    static constexpr size_t minLength = 3U;
+    if ((pos >= name.size()) || ((name.size() - pos) < minLength) || !property.metaData.containerMethods) {
         ret = {};
         return false;
     }
@@ -154,8 +155,10 @@ PropertyData::PropertyData()
 
 bool PropertyData::WLock(IPropertyHandle& handle) // no-copy direct-access (Locks the datahandle);
 {
-    CORE_ASSERT(dataHandle_ == nullptr);
-    CORE_ASSERT(dataHandleW_ == nullptr);
+    if (dataHandle_ || dataHandleW_) {
+        CORE_LOG_E("dataHandle_ or dataHandleW_ is null");
+        return false;
+    }
     dataHandleW_ = &handle;
     dataHandle_ = dataHandleW_;
     owner_ = dataHandleW_->Owner();
@@ -194,8 +197,10 @@ bool PropertyData::WUnlock(const IPropertyHandle& handle) // (releases the datah
 
 bool PropertyData::RLock(const IPropertyHandle& handle) // no-copy direct-access (Locks the datahandle);
 {
-    CORE_ASSERT(dataHandle_ == nullptr);
-    CORE_ASSERT(dataHandleW_ == nullptr);
+    if (dataHandle_ || dataHandleW_) {
+        CORE_LOG_E("dataHandle_ or dataHandleW_ is null");
+        return false;
+    }
     dataHandleW_ = nullptr;
     dataHandle_ = &handle;
     owner_ = dataHandle_->Owner();

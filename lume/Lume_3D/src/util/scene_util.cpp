@@ -694,8 +694,8 @@ void SceneUtil::ShareSkin(IEcs& ecs, Entity targetEntity, Entity sourceEntity) c
         }
     }
     auto dstJointsComponent = jointsManager->Write(targetEntity);
-    std::copy(dstToSrcJointMapping.data(), dstToSrcJointMapping.data() + dstToSrcJointMapping.size(),
-        dstJointsComponent->jointEntities);
+    const auto jointCount = Math::min(dstToSrcJointMapping.size(), countof(dstJointsComponent->jointEntities));
+    std::copy(dstToSrcJointMapping.data(), dstToSrcJointMapping.data() + jointCount, dstJointsComponent->jointEntities);
 }
 
 void SceneUtil::RegisterSceneLoader(const ISceneLoader::Ptr& loader)

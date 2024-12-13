@@ -53,7 +53,7 @@ std::ios_base::openmode OpenFileAccessMode(IFile::Mode mode)
 {
     switch (mode) {
         case IFile::Mode::INVALID:
-            CORE_ASSERT_MSG(false, "Invalid file access mode.");
+            CORE_LOG_D("Invalid file access mode.");
             return {};
         case IFile::Mode::READ_ONLY:
             return std::ios_base::binary | std::ios_base::in;
@@ -69,7 +69,7 @@ std::ios_base::openmode CreateFileAccessMode(IFile::Mode mode)
     switch (mode) {
         case IFile::Mode::INVALID:
         case IFile::Mode::READ_ONLY:
-            CORE_ASSERT_MSG(false, "Invalid create file access mode.");
+            CORE_LOG_D("Invalid create file access mode.");
             return {};
         case IFile::Mode::READ_WRITE:
             return std::ios_base::binary | std::ios_base::out | std::ios_base::in | std::ios_base::trunc;

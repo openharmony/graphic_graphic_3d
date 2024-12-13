@@ -750,8 +750,9 @@ void RenderCommandList::PushConstantData(
             // the max amount of visible data is copied
             const size_t minData = Math::min(static_cast<size_t>(pushConstant.byteSize), data.size_bytes());
             const bool res = CloneData(rc->data, pushConstant.byteSize, data.data(), minData);
-            PLUGIN_UNUSED(res);
-            PLUGIN_ASSERT(res);
+            if (!res) {
+                PLUGIN_LOG_E("clone data failed");
+            }
 
             renderCommands_.push_back(RenderCommandWithType { RenderCommandType::PUSH_CONSTANT, rc });
         }

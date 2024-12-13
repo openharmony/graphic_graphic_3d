@@ -106,6 +106,10 @@ void LogStats(VmaAllocator aAllocator)
     if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
+        if (!pdm) {
+            PLUGIN_LOG_E("pdm is null");
+            return;
+        }
 
         VmaBudget budgets[VK_MAX_MEMORY_HEAPS] {};
         vmaGetHeapBudgets(aAllocator, budgets);

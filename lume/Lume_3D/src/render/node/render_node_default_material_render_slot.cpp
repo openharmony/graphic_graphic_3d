@@ -392,7 +392,9 @@ void RenderNodeDefaultMaterialRenderSlot::RenderSubmeshes(IRenderCommandList& cm
         // vertex buffers and draw
         if (currSubmesh.vertexBufferCount > 0) {
             VertexBuffer vbs[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
-            for (uint32_t vbIdx = 0; vbIdx < currSubmesh.vertexBufferCount; ++vbIdx) {
+            const auto count = Math::min(currSubmesh.vertexBufferCount,
+                RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
+            for (uint32_t vbIdx = 0; vbIdx < count; ++vbIdx) {
                 vbs[vbIdx] = ConvertVertexBuffer(currSubmesh.vertexBuffers[vbIdx]);
             }
             cmdList.BindVertexBuffers({ vbs, currSubmesh.vertexBufferCount });

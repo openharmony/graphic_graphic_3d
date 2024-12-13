@@ -36,8 +36,8 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 RenderDataStoreDefaultGpuResourceDataCopy::RenderDataStoreDefaultGpuResourceDataCopy(
     IRenderContext& renderContext, const string_view name)
-    : device_(renderContext.GetDevice()), gpuResourceMgr_((GpuResourceManager&)device_.GetGpuResourceManager()),
-      name_(name)
+    : device_(renderContext.GetDevice()),
+      gpuResourceMgr_(static_cast<GpuResourceManager&>(device_.GetGpuResourceManager())), name_(name)
 {}
 
 void RenderDataStoreDefaultGpuResourceDataCopy::PostRenderBackend()

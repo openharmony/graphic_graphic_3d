@@ -209,7 +209,7 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, vector<RenderHand
             SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
             {},
         };
-        GpuResourceManager& gpuResourceMgrImpl = (GpuResourceManager&)gpuResourceMgr;
+        GpuResourceManager& gpuResourceMgrImpl = static_cast<GpuResourceManager&>(gpuResourceMgr);
         // create as a swapchain image to get correct handle flags for fast check-up for additional processing
         defaultGpuResources.push_back(gpuResourceMgrImpl.CreateSwapchainImage(
             {}, DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER, desc));

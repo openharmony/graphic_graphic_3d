@@ -394,7 +394,7 @@ VkBool32 VKAPI_PTR DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT
     VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData)
 {
-    if (pCallbackData && pCallbackData->pMessage) {
+    if (pCallbackData && pCallbackData->pMessageIdName && pCallbackData->pMessage) {
         if ((VkDebugUtilsMessageSeverityFlagsEXT)messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
             PLUGIN_LOG_E("%s: %s", pCallbackData->pMessageIdName, pCallbackData->pMessage);
         } else if ((VkDebugUtilsMessageSeverityFlagsEXT)messageSeverity &

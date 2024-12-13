@@ -29,7 +29,7 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 VkSamplerYcbcrConversion CreateYcbcrConversion(const DeviceVk& deviceVk, const GpuSamplerDesc& desc)
 {
-    const DevicePlatformDataVk& devicePlat = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
+    const DevicePlatformDataVk& devicePlat = static_cast<const DevicePlatformDataVk&>(deviceVk.GetPlatformData());
     VkSamplerYcbcrConversion samplerYcbcrConversion = VK_NULL_HANDLE;
     const VkDevice vkDevice = devicePlat.device;
     // NOTE: should be queried from image (hwbuffer)

@@ -47,15 +47,14 @@ using BASE_NS::vector;
 string OhosFilesystem::ValidatePath(const string_view pathIn) const
 {
     auto path = NormalizePath(pathIn);
-    if (!path.empty()) {
+    if (!path.empty() && (path.back() == '/')) {
         // remove suffix -> '/'
-        string temp;
-        if (path.back() == '/') {
-            size_t len = path.length();
-            temp = path.substr(0, len - 1);
-        }
-        // remove the '/' slash, which is not used in ResourceMgr
-        return string(temp.substr(1));
+        size_t len = path.length();
+        path.resize(len - 1U);
+    }
+    // remove the '/' slash, which is not used in ResourceMgr
+    if (!path.empty() && path.front() == '/') {
+        path.erase(path.cbegin());
     }
     return path;
 }

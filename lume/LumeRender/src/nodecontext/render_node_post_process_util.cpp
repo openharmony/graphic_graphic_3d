@@ -381,7 +381,7 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
     if (postProcessNeeded && (!sameInputOutput)) {
         ppIdx++;
     }
-    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_FXAA_BIT) {
+    if (fxaaEnabled) {
         ppIdx++;
     }
     if (motionBlurEnabled) {

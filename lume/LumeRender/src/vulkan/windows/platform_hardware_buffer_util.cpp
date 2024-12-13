@@ -33,7 +33,7 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
     VkImageCreateInfo imageCreateInfo = GetHwBufferImageCreateInfo(desc);
     const bool useExternalFormat = (imageCreateInfo.format == VK_FORMAT_UNDEFINED);
 
-    const DevicePlatformDataVk& platData = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
+    const DevicePlatformDataVk& platData = static_cast<const DevicePlatformDataVk&>(deviceVk.GetPlatformData());
     VkDevice device = platData.device;
     VALIDATE_VK_RESULT(vkCreateImage(device, // device
         &imageCreateInfo,                    // pCreateInfo

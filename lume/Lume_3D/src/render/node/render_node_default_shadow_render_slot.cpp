@@ -368,7 +368,9 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
         // vertex buffers and draw
         if (currSubmesh.vertexBufferCount > 0) {
             VertexBuffer vbs[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
-            for (uint32_t vbIdx = 0; vbIdx < currSubmesh.vertexBufferCount; ++vbIdx) {
+            const auto count = Math::min(currSubmesh.vertexBufferCount,
+                RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
+            for (uint32_t vbIdx = 0; vbIdx < count; ++vbIdx) {
                 vbs[vbIdx] = ConvertVertexBuffer(currSubmesh.vertexBuffers[vbIdx]);
             }
             cmdList.BindVertexBuffers({ vbs, currSubmesh.vertexBufferCount });
@@ -522,7 +524,6 @@ RenderHandle RenderNodeDefaultShadowRenderSlot::GetSubmeshPso(const ShaderStateD
         // specialization for not found hash
         constexpr size_t maxSpecializationFlagCount { 8u };
         uint32_t specializationFlags[maxSpecializationFlagCount];
-        CORE_ASSERT(allShaderData_.defaultSpecilizationConstants.size() <= maxSpecializationFlagCount);
         const size_t maxSpecializations =
             Math::min(maxSpecializationFlagCount, allShaderData_.defaultSpecilizationConstants.size());
         for (size_t idx = 0; idx < maxSpecializations; ++idx) {

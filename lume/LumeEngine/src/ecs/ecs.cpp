@@ -424,7 +424,7 @@ void Ecs::ProcessComponentEvents(
 void Ecs::ProcessEvents()
 {
     if (processingEvents_) {
-        CORE_ASSERT_MSG(false, "Calling ProcessEvents() from an event callback is not allowed");
+        CORE_LOG_W("Calling ProcessEvents() from an event callback is not allowed");
         return;
     }
     processingEvents_ = true;
@@ -611,7 +611,7 @@ void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typ
                 const auto managerInfo = static_cast<const ComponentManagerTypeInfo*>(info);
                 // BaseManager expects that the component list is empty when it's destroyed. might be also
                 // nice to notify all the listeners that the components are being destroyed.
-                if (const auto pos = managers_.find(managerInfo->uid); pos != managers_.end()) {
+                if (const auto pos = managers_.find(managerInfo->uid); (pos != managers_.end()) && (pos->second)) {
                     auto* manager = pos->second;
 
                     // remove all the components.

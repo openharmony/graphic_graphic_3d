@@ -50,7 +50,7 @@ public:
             /** Looks up a component of given type, but never filters out the entity from the base set. */
             OPTIONAL
         };
-        const IComponentManager& target;
+        IComponentManager& target;
         Method method { REQUIRE };
     };
 

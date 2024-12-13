@@ -32,6 +32,7 @@
 #include <3d/ecs/components/node_component.h>
 #include <3d/ecs/components/transform_component.h>
 #include <3d/ecs/systems/intf_node_system.h>
+#include <base/math/mathf.h>
 #include <base/math/quaternion_util.h>
 #include <base/math/spline.h>
 #include <base/util/uid_util.h>
@@ -73,7 +74,9 @@ public:
 
     void operator()() override
     {
-        const auto results = array_view(static_cast<const uint32_t*>(system_.trackOrder_.data()) + offset_, count_);
+        const auto offset = Math::min(offset_, system_.trackOrder_.size());
+        const auto count = Math::min(count_, system_.trackOrder_.size() - offset);
+        const auto results = array_view(static_cast<const uint32_t*>(system_.trackOrder_.data()) + offset, count);
         system_.InitializeTrackValues(results);
     }
 
@@ -93,7 +96,9 @@ public:
 
     void operator()() override
     {
-        const auto results = array_view(static_cast<const uint32_t*>(system_.trackOrder_.data()) + offset_, count_);
+        const auto offset = Math::min(offset_, system_.trackOrder_.size());
+        const auto count = Math::min(count_, system_.trackOrder_.size() - offset);
+        const auto results = array_view(static_cast<const uint32_t*>(system_.trackOrder_.data()) + offset, count);
         system_.Calculate(results);
         system_.AnimateTracks(results);
     }

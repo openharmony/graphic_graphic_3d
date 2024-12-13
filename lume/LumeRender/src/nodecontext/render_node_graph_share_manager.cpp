@@ -371,14 +371,15 @@ RenderHandle RenderNodeGraphShareManager::GetNamedPrevRenderNodeGraphOutput(cons
     return RenderHandle {};
 }
 
-void RenderNodeGraphShareManager::RegisterRenderNodeOutputs(const array_view<const RenderHandle> outputs)
+void RenderNodeGraphShareManager::RegisterRenderNodeOutputs(array_view<const RenderHandle> outputs)
 {
-#if (RENDER_VALIDATION_ENABLED == 1)
     if (outputs.size() > RenderNodeGraphShareDataManager::MAX_RENDER_NODE_GRAPH_RES_COUNT) {
+#if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_W("RENDER_VALIDATION: render node tries to register %u outputs (max count: %u)",
             static_cast<uint32_t>(outputs.size()), RenderNodeGraphShareDataManager::MAX_RENDER_NODE_GRAPH_RES_COUNT);
-    }
 #endif
+        outputs = array_view(outputs.data(), RenderNodeGraphShareDataManager::MAX_RENDER_NODE_GRAPH_RES_COUNT);
+    }
     for (const auto& ref : outputs) {
         renderNodeGraphShareDataMgr_.RegisterRenderNodeOutput(renderNodeIdx_, {}, ref);
     }

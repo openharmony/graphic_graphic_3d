@@ -249,6 +249,9 @@ void FromJson(const json::value& jsonData, JsonContext<GraphicsState::ColorBlend
     if (const json::value* colorAttachmentsIt = jsonData.find("colorAttachments"); colorAttachmentsIt) {
         vector<JsonContext<GraphicsState::ColorBlendState::Attachment>> colorContexts;
         FromJson(*colorAttachmentsIt, colorContexts);
+        if (colorContexts.size() > BASE_NS::countof(context.data.colorAttachments)) {
+            colorContexts.resize(BASE_NS::countof(context.data.colorAttachments));
+        }
         context.data.colorAttachmentCount = 0;
         for (auto& colorContext : colorContexts) {
             context.data.colorAttachments[context.data.colorAttachmentCount] = colorContext.data;

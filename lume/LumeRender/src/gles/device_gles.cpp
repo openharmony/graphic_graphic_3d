@@ -1791,7 +1791,7 @@ uint32_t DeviceGLES::CreateVertexArray()
 void DeviceGLES::DeleteVertexArray(uint32_t vao)
 {
     PLUGIN_ASSERT(!vaoStates_.empty());
-    if (vao > 0) {
+    if (vao > 0 && vao < vaoStates_.size()) {
         UnBindVertexArray(vao);
         auto& state = vaoStates_[vao - 1];
         glDeleteVertexArrays(1, &state.vao);

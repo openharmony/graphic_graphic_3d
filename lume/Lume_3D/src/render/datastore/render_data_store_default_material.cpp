@@ -439,7 +439,7 @@ uint32_t RenderDataStoreDefaultMaterial::AddMaterialCustomResources(
     uint32_t customResIndex = RenderSceneDataConstants::INVALID_INDEX;
     auto searchId = HashMaterialId(id, static_cast<uint32_t>(1U));
     if (auto iter = materialIdToIndices_.find(searchId); iter != materialIdToIndices_.end()) {
-        if (iter->second.materialCustomResourceIndex <= static_cast<uint32_t>(customResourceData_.size())) {
+        if (iter->second.materialCustomResourceIndex < static_cast<uint32_t>(customResourceData_.size())) {
             customResIndex = iter->second.materialCustomResourceIndex;
         } else {
             if (!bindings.empty()) {

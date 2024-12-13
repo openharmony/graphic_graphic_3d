@@ -39,7 +39,9 @@ void SequentialTaskQueue::Execute()
 {
     // A function that executes tasks one by one.
     for (auto& entry : tasks_) {
-        (*entry.task)();
+        if (entry.task) {
+            (*entry.task)();
+        }
     }
 }
 
