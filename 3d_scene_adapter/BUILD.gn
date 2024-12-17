@@ -120,7 +120,8 @@ ohos_source_set("scene_adapter_source") {
     "hilog:libhilog",
     "hitrace:hitrace_meter",
     "init:libbegetutil",
-    "napi:ace_napi",
+    "ipc:ipc_single",
+    "napi:ace_napi"
   ]
 
   defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]

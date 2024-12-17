@@ -25,6 +25,7 @@
           "graphic_surface",
           "hitrace",
           "init",
+          "ipc",
           "resource_management",
           "vulkan-headers",
           "libpng",

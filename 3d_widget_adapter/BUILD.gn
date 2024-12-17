@@ -166,6 +166,7 @@ ohos_source_set("widget_adapter_source") {
       "hilog:libhilog",
       "hitrace:hitrace_meter",
       "init:libbegetutil",
+      "ipc:ipc_single"
     ]
 
     defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
