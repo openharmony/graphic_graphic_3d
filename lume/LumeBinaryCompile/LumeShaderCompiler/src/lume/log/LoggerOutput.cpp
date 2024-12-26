@@ -47,10 +47,9 @@ namespace
 {
 
 //Gets the filename part from the path.
-std::string getFilename(const std::string &aPath)
+std::string GetFilename(const std::string &aPath)
 {
-    for (int i = static_cast<int>(aPath.size()) - 1; i >= 0 ; --i)
-    {
+    for (int i = static_cast<int>(aPath.size()) - 1; i >= 0 ; --i) {
         unsigned int index = static_cast<size_t>(i);
         if (aPath[index] == '\\' || aPath[index] == '/') {
             return aPath.substr(index + 1);
@@ -142,21 +141,19 @@ public:
 #endif
     }
 
-    void setColor(std::ostream &outputStream, ColorCode aColorCode)
+    void SetColor(std::ostream &outputStream, ColorCode aColorCode)
     {
         if (!mUseColor) {
             return;
         }
 
         const char* colorString = getColorString(aColorCode);
-        if (colorString == mCurrentColorString)
-        {
+        if (colorString == mCurrentColorString) {
             return;
         }
 
         mCurrentColorString = colorString;
-        if (colorString)
-        {
+        if (colorString) {
             outputStream << colorString;
         }
     }
@@ -174,30 +171,30 @@ public:
 
         if (aFilename)
         {
-            const std::string filenameLink = " (" + getFilename(aFilename) + ":" + std::to_string(aLinenumber) + ")";
+            const std::string filenameLink = " (" + GetFilename(aFilename) + ":" + std::to_string(aLinenumber) + ")";
             outputStream << std::right << std::setw(30) << filenameLink;
         }
         outputStream << ": ";
 
         if (aLogLevel >= ILogger::LogLevel::Error)
         {
-            setColor(outputStream, ColorCode::RED);
+            SetColor(outputStream, ColorCode::RED);
         }
         else if (aLogLevel == ILogger::LogLevel::Warning)
         {
-            setColor(outputStream, ColorCode::YELLOW);
+            SetColor(outputStream, ColorCode::YELLOW);
         }
         else if (aLogLevel <= ILogger::LogLevel::Debug)
         {
-            setColor(outputStream, ColorCode::BLACK_BRIGHT);
+            SetColor(outputStream, ColorCode::BLACK_BRIGHT);
         }
         else
         {
-            setColor(outputStream, ColorCode::RESET);
+            SetColor(outputStream, ColorCode::RESET);
         }
 
         outputStream << aMessage;
-        setColor(outputStream, ColorCode::RESET);
+        SetColor(outputStream, ColorCode::RESET);
         outputStream << std::endl;
     }
 
@@ -324,7 +321,7 @@ public:
         if (aFilename)
         {
             std::stringstream outputStream;
-            outputStream << "(" << getFilename(aFilename) << ":" << aLinenumber << "): ";
+            outputStream << "(" << GetFilename(aFilename) << ":" << aLinenumber << "): ";
             outputStream << aMessage;
             __android_log_write(logPriority, "lume", outputStream.str().c_str());
         }

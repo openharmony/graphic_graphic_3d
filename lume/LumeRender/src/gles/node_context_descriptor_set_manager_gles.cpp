@@ -88,7 +88,7 @@ RenderHandle NodeContextDescriptorSetManagerGLES::CreateDescriptorSet(
         newSet.images.resize(imageCount);
         newSet.samplers.resize(samplerCount);
 
-        const uint32_t arrayIndex = (uint32_t)cpuDescriptorSets.size();
+        const uint32_t arrayIndex = static_cast<uint32_t>(cpuDescriptorSets.size());
         cpuDescriptorSets.push_back(move(newSet));
         auto& currCpuDescriptorSet = cpuDescriptorSets[arrayIndex];
         currCpuDescriptorSet.dynamicOffsetDescriptors.resize(dynamicOffsetCount);

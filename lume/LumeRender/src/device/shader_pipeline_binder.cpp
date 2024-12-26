@@ -55,10 +55,10 @@ void UpdateCustomPropertyMetadata(const json::value& customProperties, ShaderPip
                 // process custom properties i.e. local factors
                 for (const auto& propRef : customProps->array_) {
                     if (const auto setProp = propRef.find(DESCRIPTOR_SET); setProp && setProp->is_number()) {
-                        cpd.set = (uint32_t)setProp->unsigned_;
+                        cpd.set = static_cast<uint32_t>(setProp->unsigned_);
                     }
                     if (const auto setProp = propRef.find(DESCRIPTOR_SET_BINDING); setProp && setProp->is_number()) {
-                        cpd.binding = (uint32_t)setProp->unsigned_;
+                        cpd.binding = static_cast<uint32_t>(setProp->unsigned_);
                     }
                     if (const auto customData = propRef.find(CUSTOM_PROPERTY_DATA); customData) {
                         // reserve the property count
@@ -133,10 +133,10 @@ void UpdateBindingPropertyMetadata(const json::value& customProperties, CustomPr
                                     } else if (dataObject.key == "type" && dataObject.value.is_string()) {
                                         type = dataObject.value.string_;
                                     } else if (dataObject.key == DESCRIPTOR_SET && dataObject.value.is_number()) {
-                                        set = (uint32_t)dataObject.value.unsigned_;
+                                        set = static_cast<uint32_t>(dataObject.value.unsigned_);
                                     } else if (dataObject.key == DESCRIPTOR_SET_BINDING &&
                                                dataObject.value.is_number()) {
-                                        binding = (uint32_t)dataObject.value.unsigned_;
+                                        binding = static_cast<uint32_t>(dataObject.value.unsigned_);
                                     }
                                 }
                                 set = Math::min(set, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);

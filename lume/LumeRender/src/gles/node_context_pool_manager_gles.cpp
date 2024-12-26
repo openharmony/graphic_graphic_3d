@@ -100,9 +100,9 @@ uint64_t HashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourc
         HashRange(
             rpHash, subpass.colorAttachmentIndices, subpass.colorAttachmentIndices + subpass.colorAttachmentCount);
         if (subpass.depthAttachmentCount) {
-            HashCombine(rpHash, (uint64_t)subpass.depthAttachmentIndex);
+            HashCombine(rpHash, static_cast<uint64_t>(subpass.depthAttachmentIndex));
         }
-        HashCombine(rpHash, (uint64_t)subpass.viewMask);
+        HashCombine(rpHash, static_cast<uint64_t>(subpass.viewMask));
     }
     return rpHash;
 }
@@ -390,7 +390,7 @@ uint64_t HashAttachments(const RenderPassSubpassDesc& sb)
     uint64_t subHash = 0;
     HashRange(subHash, sb.colorAttachmentIndices, sb.colorAttachmentIndices + sb.colorAttachmentCount);
     if (sb.depthAttachmentCount) {
-        HashCombine(subHash, (uint64_t)sb.depthAttachmentIndex);
+        HashCombine(subHash, static_cast<uint64_t>(sb.depthAttachmentIndex));
     }
     return subHash;
 }
@@ -778,13 +778,13 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
     if (auto const pos = std::find_if(framebufferCache_.framebuffers.begin(), framebufferCache_.framebuffers.end(),
             [](auto const& framebuffer) { return framebuffer.fbos.empty(); });
         pos != framebufferCache_.framebuffers.end()) {
-        arrayIndex = (uint32_t)std::distance(framebufferCache_.framebuffers.begin(), pos);
+        arrayIndex = static_cast<uint32_t>(std::distance(framebufferCache_.framebuffers.begin(), pos));
         *pos = move(fb);
         framebufferCache_.frameBufferFrameUseIndex[arrayIndex] = device_.GetFrameCount();
     } else {
         framebufferCache_.framebuffers.push_back(move(fb));
         framebufferCache_.frameBufferFrameUseIndex.push_back(device_.GetFrameCount());
-        arrayIndex = (uint32_t)framebufferCache_.framebuffers.size() - 1;
+        arrayIndex = static_cast<uint32_t>(framebufferCache_.framebuffers.size()) - 1;
     }
     framebufferCache_.renderPassHashToIndex[rpHash] = arrayIndex;
     return RenderHandleUtil::CreateEngineResourceHandle(RenderHandleType::UNDEFINED, arrayIndex, 0);

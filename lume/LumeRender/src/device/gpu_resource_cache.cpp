@@ -223,8 +223,8 @@ uint64_t GpuResourceCache::HashCacheGpuImageDesc(const CacheGpuImageDesc& desc) 
                                          (desc.componentMapping.b << 20) | (desc.componentMapping.a << 16) |
                                          (desc.mipCount << 8u) | desc.layerCount;
     const uint64_t formatSamplesHash =
-        (((uint64_t)desc.format) << 32) | (((uint64_t)desc.sampleCountFlags) & 0xFFFFffff);
-    uint64_t hash = (((uint64_t)mipLayerSwizzleHash) << 32u) | sizeHash;
+        ((static_cast<uint64_t>(desc.format)) << 32) | ((static_cast<uint64_t>(desc.sampleCountFlags)) & 0xFFFFffff);
+    uint64_t hash = (static_cast<uint64_t>(mipLayerSwizzleHash) << 32u) | sizeHash;
     HashCombine(hash, formatSamplesHash);
     return hash;
 }

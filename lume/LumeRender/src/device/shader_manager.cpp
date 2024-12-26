@@ -1245,8 +1245,9 @@ RenderHandleReference ShaderManager::CreateVertexInputDeclaration(const VertexIn
     if (arrayIndex < static_cast<uint32_t>(shaderVid_.data.size())) {
         const VertexInputDeclarationView& vertexInputDeclarationView = createInfo.vertexInputDeclarationView;
         VertexInputDeclarationData& ref = shaderVid_.data[arrayIndex];
-        ref.bindingDescriptionCount = (uint32_t)vertexInputDeclarationView.bindingDescriptions.size();
-        ref.attributeDescriptionCount = (uint32_t)vertexInputDeclarationView.attributeDescriptions.size();
+        ref.bindingDescriptionCount = static_cast<uint32_t>(vertexInputDeclarationView.bindingDescriptions.size());
+        ref.attributeDescriptionCount =
+            static_cast<uint32_t>(vertexInputDeclarationView.attributeDescriptions.size());
 
         PLUGIN_ASSERT(ref.bindingDescriptionCount <= PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
         PLUGIN_ASSERT(ref.attributeDescriptionCount <= PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);

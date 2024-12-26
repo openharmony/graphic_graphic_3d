@@ -745,7 +745,7 @@ IMeshBuilder::Submesh CreatePrimitiveImportInfo(const GLTFImportResult& importRe
         info.indexType = GetPrimitiveIndexType(primitive);
     }
 
-    info.morphTargetCount = (uint32_t)primitive.targets.size();
+    info.morphTargetCount = static_cast<uint32_t>(primitive.targets.size());
 
     return info;
 }
@@ -2154,7 +2154,7 @@ Entity CreateEnvironmentComponent(IGpuResourceManager& gpuResourceManager, const
             if (lightIndex < gltfResourceData.specularRadianceCubemaps.size() &&
                 EntityUtil::IsValid(gltfResourceData.specularRadianceCubemaps[lightIndex])) {
                 envHandle->radianceCubemap = gltfResourceData.specularRadianceCubemaps[lightIndex];
-                envHandle->radianceCubemapMipCount = (uint32_t)light->specularImages.size();
+                envHandle->radianceCubemapMipCount = static_cast<uint32_t>(light->specularImages.size());
             }
 
             if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light->specularCubeImage); imageEntity) {
@@ -2208,7 +2208,7 @@ ImageData PrepareImageData(const ImageLoadResultVector& imageLoadResults, const 
             const auto& loadedBufferImageCopy = imageLoadResult.image->GetBufferImageCopies()[0];
 
             BufferImageCopy& bufferCopy = data.copyInfo[mipIndex];
-            bufferCopy.bufferOffset = (uint32_t)byteOffset;
+            bufferCopy.bufferOffset = static_cast<uint32_t>(byteOffset);
             bufferCopy.bufferRowLength = loadedBufferImageCopy.bufferRowLength;
             bufferCopy.bufferImageHeight = loadedBufferImageCopy.bufferImageHeight;
             bufferCopy.imageOffset.width = 0;
@@ -2218,7 +2218,7 @@ ImageData PrepareImageData(const ImageLoadResultVector& imageLoadResults, const 
             bufferCopy.imageExtent.height = loadedImageDesc.height;
             bufferCopy.imageExtent.depth = loadedImageDesc.depth;
             bufferCopy.imageSubresource.imageAspectFlags = CORE_IMAGE_ASPECT_COLOR_BIT;
-            bufferCopy.imageSubresource.mipLevel = (uint32_t)mipIndex;
+            bufferCopy.imageSubresource.mipLevel = static_cast<uint32_t>(mipIndex);
             bufferCopy.imageSubresource.baseArrayLayer = 0;
             bufferCopy.imageSubresource.layerCount = imageDesc.layerCount;
         }

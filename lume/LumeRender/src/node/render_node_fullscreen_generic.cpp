@@ -170,7 +170,8 @@ RenderHandle RenderNodeFullscreenGeneric::GetPsoHandle()
                 const auto* spec = reinterpret_cast<const ShaderSpecializationRenderPod*>(dataView.data());
                 bool valuesChanged = false;
                 const uint32_t specializationCount = Math::min(
-                    Math::min(spec->specializationConstantCount, (uint32_t)shaderSpecializationData_.constants.size()),
+                    Math::min(spec->specializationConstantCount,
+                        static_cast<uint32_t>(shaderSpecializationData_.constants.size())),
                     ShaderSpecializationRenderPod::MAX_SPECIALIZATION_CONSTANT_COUNT);
                 for (uint32_t idx = 0; idx < specializationCount; ++idx) {
                     const auto& ref = shaderSpecializationData_.constants[idx];

@@ -264,7 +264,7 @@ void DescriptorSetBinder::BindBuffer(
                 bindingMask_ |= (1 << binding);
             } else {
                 PLUGIN_LOG_E("invalid binding for buffer descriptor (binding: %u, descriptorType: %u)", binding,
-                    (uint32_t)descriptorType);
+                    static_cast<uint32_t>(descriptorType));
             }
         }
     }
@@ -369,7 +369,7 @@ void DescriptorSetBinder::BindImage(
                 bindingMask_ |= (1 << binding);
             } else {
                 PLUGIN_LOG_E("invalid binding for image descriptor (binding: %u, descriptorType: %u)", binding,
-                    (uint32_t)descriptorType);
+                    static_cast<uint32_t>(descriptorType));
             }
         }
     }
@@ -463,7 +463,7 @@ void DescriptorSetBinder::BindSampler(
                 bindingMask_ |= (1 << binding);
             } else {
                 PLUGIN_LOG_E("invalid binding for sampler descriptor (binding: %u, descriptorType: %u)", binding,
-                    (uint32_t)descriptorType);
+                    static_cast<uint32_t>(descriptorType));
             }
         }
     }
@@ -727,7 +727,7 @@ void PipelineDescriptorSetBinder::PrintPipelineDescriptorSetLayoutBindingValidat
 
 uint32_t PipelineDescriptorSetBinder::GetDescriptorSetCount() const
 {
-    return (uint32_t)descriptorSetBinders_.size();
+    return static_cast<uint32_t>(descriptorSetBinders_.size());
 }
 
 array_view<const uint32_t> PipelineDescriptorSetBinder::GetSetIndices() const

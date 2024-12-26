@@ -77,7 +77,8 @@ void DebugPrintCommandListCommand(const RenderCommandWithType& rc, GpuResourceMa
                     PLUGIN_LOG_I("    attachment idx: %u name: %s", idx, aMgr.GetName(handle).c_str());
                 }
                 PLUGIN_LOG_I("    subpass count: %u, subpass start idx: %u",
-                    (uint32_t)beginRenderPass.renderPassDesc.subpassCount, beginRenderPass.subpassStartIndex);
+                    static_cast<uint32_t>(beginRenderPass.renderPassDesc.subpassCount),
+                    beginRenderPass.subpassStartIndex);
             }
             break;
         }
@@ -232,7 +233,7 @@ void PatchRenderPassFinalLayout(const RenderHandle handle, const ImageLayout ima
 
 void UpdateMultiRenderCommandListRenderPasses(RenderGraph::MultiRenderPassStore& store)
 {
-    const uint32_t renderPassCount = (uint32_t)store.renderPasses.size();
+    const uint32_t renderPassCount = static_cast<uint32_t>(store.renderPasses.size());
     PLUGIN_ASSERT(renderPassCount > 1);
 
     RenderCommandBeginRenderPass* firstRenderPass = store.renderPasses[0];
@@ -504,13 +505,13 @@ void PatchGpuResourceQueueTransfers(array_view<const RenderNodeContextData> fram
     array_view<const RenderGraph::GpuQueueTransferState> currNodeGpuResourceTransfers)
 {
     for (const auto& transferRef : currNodeGpuResourceTransfers) {
-        PLUGIN_ASSERT(transferRef.acquireNodeIdx < (uint32_t)frameRenderNodeContextData.size());
+        PLUGIN_ASSERT(transferRef.acquireNodeIdx < static_cast<uint32_t>(frameRenderNodeContextData.size()));
 
         auto& acquireNodeRef = frameRenderNodeContextData[transferRef.acquireNodeIdx];
         const GpuQueue acquireGpuQueue = acquireNodeRef.renderCommandList->GetGpuQueue();
         GpuQueue releaseGpuQueue = acquireGpuQueue;
 
-        if (transferRef.releaseNodeIdx < (uint32_t)frameRenderNodeContextData.size()) {
+        if (transferRef.releaseNodeIdx < static_cast<uint32_t>(frameRenderNodeContextData.size())) {
             auto& releaseNodeRef = frameRenderNodeContextData[transferRef.releaseNodeIdx];
             releaseGpuQueue = releaseNodeRef.renderCommandList->GetGpuQueue();
         }
@@ -519,7 +520,7 @@ void PatchGpuResourceQueueTransfers(array_view<const RenderNodeContextData> fram
             acquireGpuQueue, transferRef.optionalReleaseImageLayout, transferRef.optionalAcquireImageLayout);
 
         // release ownership (NOTE: not done for previous frame)
-        if (transferRef.releaseNodeIdx < (uint32_t)frameRenderNodeContextData.size()) {
+        if (transferRef.releaseNodeIdx < static_cast<uint32_t>(frameRenderNodeContextData.size())) {
             auto& releaseNodeRef = frameRenderNodeContextData[transferRef.releaseNodeIdx];
             const uint32_t rcIndex = releaseNodeRef.renderCommandList->GetRenderCommandCount() - 1;
             const RenderCommandWithType& cmdRef = releaseNodeRef.renderCommandList->GetRenderCommands()[rcIndex];
@@ -644,7 +645,9 @@ void RenderGraph::ProcessRenderNodeGraphNodeStores(
             continue;
         }
 
-        for (uint32_t nodeIdx = 0; nodeIdx < (uint32_t)graphStore->renderNodeContextData.size(); ++nodeIdx) {
+        for (uint32_t nodeIdx = 0;
+            nodeIdx < static_cast<uint32_t>(graphStore->renderNodeContextData.size());
+            ++nodeIdx) {
             auto& ref = graphStore->renderNodeContextData[nodeIdx];
             ref.submitInfo.waitForSwapchainAcquireSignal = false; // reset
             stateCache.usesSwapchainImage = false;                // reset
@@ -660,7 +663,8 @@ void RenderGraph::ProcessRenderNodeGraphNodeStores(
                 PLUGIN_LOG_E("invalid multi render node render pass subpass stitching");
                 // NOTE: add more error handling and invalidate render command lists
             }
-            stateCache.multiRenderPassStore.supportOpen = ref.renderCommandList->HasMultiRenderCommandListSubpasses();
+            stateCache.multiRenderPassStore.supportOpen =
+                ref.renderCommandList->HasMultiRenderCommandListSubpasses();
             array_view<const RenderCommandWithType> cmdListRef = ref.renderCommandList->GetRenderCommands();
             // go through commands that affect or need transitions and barriers
             ProcessRenderNodeCommands(cmdListRef, nodeIdx, ref, stateCache);
@@ -685,7 +689,7 @@ void RenderGraph::ProcessRenderNodeGraphNodeStores(
 void RenderGraph::ProcessRenderNodeCommands(array_view<const RenderCommandWithType>& cmdListRef,
     const uint32_t& nodeIdx, RenderNodeContextData& ref, StateCache& stateCache)
 {
-    for (uint32_t listIdx = 0; listIdx < (uint32_t)cmdListRef.size(); ++listIdx) {
+    for (uint32_t listIdx = 0; listIdx < static_cast<uint32_t>(cmdListRef.size()); ++listIdx) {
         auto& cmdRef = cmdListRef[listIdx];
 
 #if (RENDER_DEV_ENABLED == 1)
@@ -1012,7 +1016,8 @@ void RenderGraph::RenderCommand(const uint32_t renderNodeIndex, const uint32_t c
 {
     const bool hasRenderPassDependency = stateCache.multiRenderPassStore.supportOpen;
     if (hasRenderPassDependency) {
-        const bool finalSubpass = (rc.subpassCount == (uint32_t)stateCache.multiRenderPassStore.renderPasses.size());
+        const bool finalSubpass =
+            (rc.subpassCount == static_cast<uint32_t>(stateCache.multiRenderPassStore.renderPasses.size()));
         if (finalSubpass) {
             if (rc.subpassStartIndex != (rc.subpassCount - 1)) {
                 PLUGIN_LOG_E("RenderGraph: error in multi render node render pass subpass ending");
@@ -1208,8 +1213,8 @@ void RenderGraph::HandleVertexInputBufferBarriers(ParameterCache& params, const 
 {
     for (uint32_t idx = 0; idx < params.vertexInputBarrierCount; ++idx) {
         const uint32_t barrierIndex = barrierIndexBegin + idx;
-        PLUGIN_ASSERT(barrierIndex < (uint32_t)vertexInputBufferBarrierListRef.size());
-        if (barrierIndex < (uint32_t)vertexInputBufferBarrierListRef.size()) {
+        PLUGIN_ASSERT(barrierIndex < static_cast<uint32_t>(vertexInputBufferBarrierListRef.size()));
+        if (barrierIndex < static_cast<uint32_t>(vertexInputBufferBarrierListRef.size())) {
             const VertexBuffer& vbInput = vertexInputBufferBarrierListRef[barrierIndex];
             const GpuResourceState resourceState { CORE_SHADER_STAGE_VERTEX_BIT,
                 CORE_ACCESS_INDEX_READ_BIT | CORE_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
@@ -1225,8 +1230,8 @@ void RenderGraph::HandleRenderpassIndirectBufferBarriers(ParameterCache& params,
 {
     for (uint32_t idx = 0; idx < params.indirectBufferBarrierCount; ++idx) {
         const uint32_t barrierIndex = barrierIndexBegin + idx;
-        PLUGIN_ASSERT(barrierIndex < (uint32_t)indirectBufferBarrierListRef.size());
-        if (barrierIndex < (uint32_t)indirectBufferBarrierListRef.size()) {
+        PLUGIN_ASSERT(barrierIndex < static_cast<uint32_t>(indirectBufferBarrierListRef.size()));
+        if (barrierIndex < static_cast<uint32_t>(indirectBufferBarrierListRef.size())) {
             const VertexBuffer& ib = indirectBufferBarrierListRef[barrierIndex];
             const bool needsArgsBarrier =
                 CheckForBarrierNeed(params.handledCustomBarriers, params.customBarrierCount, ib.bufferHandle);

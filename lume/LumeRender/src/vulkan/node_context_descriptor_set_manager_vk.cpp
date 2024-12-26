@@ -144,7 +144,7 @@ void NodeContextDescriptorSetManagerVk::ResetAndReserve(const DescriptorCounts& 
                 nullptr,                                       // pNext
                 descriptorPoolCreateFlags,                     // flags
                 maxSets_ * bufferingCount_,                    // maxSets
-                (uint32_t)descriptorPoolSizes_.size(),         // poolSizeCount
+                static_cast<uint32_t>(descriptorPoolSizes_.size()),         // poolSizeCount
                 descriptorPoolSizes_.data(),                   // pPoolSizes
             };
 
@@ -238,7 +238,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
             nullptr,                                       // pNext
             descriptorPoolCreateFlags,                     // flags
             descriptorSetCount,                            // maxSets
-            (uint32_t)descriptorPoolSizes.size(),          // poolSizeCount
+            static_cast<uint32_t>(descriptorPoolSizes.size()),          // poolSizeCount
             descriptorPoolSizes.data(),                    // pPoolSizes
         };
 
@@ -412,7 +412,7 @@ RenderHandle NodeContextDescriptorSetManagerVk::CreateDescriptorSet(
         newSet.images.resize(descSetData.descriptorCounts.imageCount);
         newSet.samplers.resize(descSetData.descriptorCounts.samplerCount);
 
-        const uint32_t arrayIndex = (uint32_t)cpuDescriptorSets.size();
+        const uint32_t arrayIndex = static_cast<uint32_t>(cpuDescriptorSets.size());
         cpuDescriptorSets.push_back(move(newSet));
 
         auto& currCpuDescriptorSet = cpuDescriptorSets[arrayIndex];
@@ -620,7 +620,7 @@ const LowLevelDescriptorCountsVk& NodeContextDescriptorSetManagerVk::GetLowLevel
     const uint32_t descSetIdx = (oneFrameDescBit == ONE_FRAME_DESC_SET_BIT) ? DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME
                                                                             : DESCRIPTOR_SET_INDEX_TYPE_STATIC;
     const auto& descriptorPool = descriptorPool_[descSetIdx];
-    if (arrayIndex < (uint32_t)descriptorPool.descriptorSets.size()) {
+    if (arrayIndex < static_cast<uint32_t>(descriptorPool.descriptorSets.size())) {
         return descriptorPool.descriptorSets[arrayIndex].descriptorCounts;
     } else {
         PLUGIN_LOG_E("invalid handle in descriptor set management");
@@ -637,7 +637,7 @@ const LowLevelDescriptorSetVk* NodeContextDescriptorSetManagerVk::GetDescriptorS
     const auto& cpuDescriptorSets = cpuDescriptorSets_[descSetIdx];
     const auto& descriptorPool = descriptorPool_[descSetIdx];
     const LowLevelDescriptorSetVk* set = nullptr;
-    if (arrayIndex < (uint32_t)cpuDescriptorSets.size()) {
+    if (arrayIndex < static_cast<uint32_t>(cpuDescriptorSets.size())) {
         if (arrayIndex < descriptorPool.descriptorSets.size()) {
             // additional set is only used there are platform buffer bindings and additional set created
             const bool useAdditionalSet =
@@ -669,10 +669,12 @@ const LowLevelDescriptorSetVk* NodeContextDescriptorSetManagerVk::GetDescriptorS
                 PLUGIN_LOG_ONCE_E(debugName_.c_str() + to_string(handle.id) + "_dsnu2",
                     "RENDER_VALIDATION: descriptor set has not been updated prior to binding");
                 PLUGIN_LOG_ONCE_E(debugName_.c_str() + to_string(handle.id) + "_dsnu3",
-                    "RENDER_VALIDATION: gpu descriptor set created? %u, descriptor set node: %s, set: %u, "
+                    "RENDER_VALIDATION: gpu descriptor set created? %u,
+                    descriptor set node: %s, set: %u, "
                     "buffer count: %u, "
                     "image count: %u, sampler count: %u",
-                    (uint32_t)cpuDescriptorSets[arrayIndex].gpuDescriptorSetCreated, debugName_.c_str(), descSetIdx,
+                    static_cast<uint32_t>(cpuDescriptorSets[arrayIndex].gpuDescriptorSetCreated),
+                    debugName_.c_str(), descSetIdx,
                     descriptorPool.descriptorSets[arrayIndex].descriptorCounts.bufferCount,
                     descriptorPool.descriptorSets[arrayIndex].descriptorCounts.imageCount,
                     descriptorPool.descriptorSets[arrayIndex].descriptorCounts.samplerCount);
@@ -698,7 +700,7 @@ void NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const Rende
     auto& cpuDescriptorSets = cpuDescriptorSets_[descSetIdx];
     auto& descriptorPool = descriptorPool_[descSetIdx];
     const uint32_t bufferingCount = (oneFrameDescBit == ONE_FRAME_DESC_SET_BIT) ? 1u : bufferingCount_;
-    if (arrayIndex < (uint32_t)cpuDescriptorSets.size()) {
+    if (arrayIndex < static_cast<uint32_t>(cpuDescriptorSets.size())) {
         CpuDescriptorSet& refCpuSet = cpuDescriptorSets[arrayIndex];
 
         // with platform buffer bindings descriptor set creation needs to be checked

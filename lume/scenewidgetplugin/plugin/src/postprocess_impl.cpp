@@ -49,18 +49,18 @@ class PostProcessImpl
     bool IsBitSet(META_NS::Property<uint32_t> property, uint32_t bit)
     {
         auto value = property->GetValue();
-	return static_cast<bool>(value& bit);
+        return static_cast<bool>(value& bit);
     }
 
     void SetBit(META_NS::Property<uint32_t> property, uint32_t bit, bool set)
     {
         auto value = property->GetValue();
-	if (set) {
-	    value |= bit;
-	} else {
-	    value &= ~bit;
-	}
-	property->SetValue(value);
+        if (set) {
+            value |= bit;
+        } else {
+            value &= ~bit;
+        }
+        property->SetValue(value);
     }
 
     META_NS::PropertyChangedEventHandler handler_[11];
@@ -123,20 +123,23 @@ class PostProcessImpl
 
         if (auto meta = GetSelf<META_NS::IMetadata>()) {
             for (auto& prop : meta->GetAllProperties()) {
-		auto name = prop->GetName();
+                auto name = prop->GetName();
+
                 if (auto iptr = interface_cast<IPostProcessEffectPrivate>(GetPointer(prop))) {
                     META_NS::PropertyLock p(prop);
                     p->OnChanged()->AddHandler(
-                            META_NS::MakeCallback<META_NS::IOnChanged>([this, weak = BASE_NS::weak_ptr(prop)]() {
-                        if (auto intPtr = weak.lock()) {
+                        META_NS::MakeCallback<META_NS::IOnChanged>(
+                            [this, weak = BASE_NS::weak_ptr(prop)]() {
+                                if (auto intPtr = weak.lock()) {
                                     if (auto valueObject =
                                             interface_cast<IPostProcessEffectPrivate>(GetPointer(intPtr))) {
-                                // prefer values from toolkit
-                                valueObject->Bind(ecsObject_, sh_, false);
+                                        // prefer values from toolkit
+                                        valueObject->Bind(ecsObject_, sh_, false);
                                     }
-                        }
+                                }
                             }),
-                            reinterpret_cast<uint64_t>(this));
+                        reinterpret_cast<uint64_t>(this)
+                    );
                 }
             }
         }
@@ -200,53 +203,54 @@ class PostProcessImpl
 
         propHandler_.SetUseEcsDefaults(preferEcsValues);
 	
-	auto meta = interface_pointer_cast<META_NS::IMetadata>(ecsObject_);
-	if (!meta) {
-	    return;
-	}
+        auto meta = interface_pointer_cast<META_NS::IMetadata>(ecsObject_);
+        if (!meta) {
+            return;
+        }
 
-	auto postState = meta->GetPropertyByName(PP_ENABLE_FLAGS);
-	if (!postState) {
-	    return;
-	}
+        auto postState = meta->GetPropertyByName(PP_ENABLE_FLAGS);
+        if (!postState) {
+            return;
+        }
         using namespace META_NS;
         using namespace CORE3D_NS;
 
-	auto func = [](PostProcessImpl* me, IProperty::Ptr fxState, IProperty::Ptr postprocessState, uint32_t bit) {
-	    bool enabled = false;
-	    if (fxState) {
-	        fxState->GetValue().GetValue<bool>(enabled);
-	    }
-	    auto val = me->currentEnabled;
-	    if (enabled) {
-	        val |= bit;
-	    } else {
-	        val &= ~bit;
-	    }
-	    if (val != me->currentEnabled) {
+        auto func = [](PostProcessImpl* me, IProperty::Ptr fxState, IProperty::Ptr postprocessState, uint32_t bit) {
+            bool enabled = false;
+            if (fxState) {
+                fxState->GetValue().GetValue<bool>(enabled);
+            }
+            auto val = me->currentEnabled;
+            if (enabled) {
+                val |= bit;
+            } else {
+                val &= ~bit;
+            }
+            if (val != me->currentEnabled) {
                 me->currentEnabled = val;
-		META_NS::Property<uint32_t> pps(postprocessState);
-		pps->SetValue(me->currentEnabled);
-	    }
-	};
+                META_NS::Property<uint32_t> pps(postprocessState);
+                pps->SetValue(me->currentEnabled);
+            }
+        };
 #define ADD_HANDLER(Fx, Bit) \
     { \
         auto prop = Fx()->GetValue()->Enabled().GetProperty(); \
-	handler_[idx++].Subscribe(prop, MakeCallback<IOnChanged>(func, this, prop, postState, (uint32_t)Bit)); \
-	func(this, prop, postState, (uint32_t)Bit); \
+        handler_[idx++].Subscribe(prop, \
+            MakeCallback<IOnChanged>(func, this, prop, postState, static_cast<uint32_t>(Bit))); \
+        func(this, prop, postState, static_cast<uint32_t>(Bit)); \
     }
         uint32_t idx = 0;
-	ADD_HANDLER(Bloom, PostProcessComponent::BLOOM_BIT);
-	ADD_HANDLER(Blur, PostProcessComponent::BLUR_BIT);
-	ADD_HANDLER(ColorConversion, PostProcessComponent::COLOR_CONVERSION_BIT);
-	ADD_HANDLER(ColorFringe, PostProcessComponent::COLOR_FRINGE_BIT);
-	ADD_HANDLER(DepthOfField, PostProcessComponent::DOF_BIT);
-	ADD_HANDLER(Dither, PostProcessComponent::DITHER_BIT);
-	ADD_HANDLER(Fxaa, PostProcessComponent::FXAA_BIT);
-	ADD_HANDLER(MotionBlur, PostProcessComponent::MOTION_BLUR_BIT);
-	ADD_HANDLER(Taa, PostProcessComponent::TAA_BIT);
-	ADD_HANDLER(Tonemap, PostProcessComponent::TONEMAP_BIT);
-	ADD_HANDLER(Vignette, PostProcessComponent::VIGNETTE_BIT);
+        ADD_HANDLER(Bloom, PostProcessComponent::BLOOM_BIT);
+        ADD_HANDLER(Blur, PostProcessComponent::BLUR_BIT);
+        ADD_HANDLER(ColorConversion, PostProcessComponent::COLOR_CONVERSION_BIT);
+        ADD_HANDLER(ColorFringe, PostProcessComponent::COLOR_FRINGE_BIT);
+        ADD_HANDLER(DepthOfField, PostProcessComponent::DOF_BIT);
+        ADD_HANDLER(Dither, PostProcessComponent::DITHER_BIT);
+        ADD_HANDLER(Fxaa, PostProcessComponent::FXAA_BIT);
+        ADD_HANDLER(MotionBlur, PostProcessComponent::MOTION_BLUR_BIT);
+        ADD_HANDLER(Taa, PostProcessComponent::TAA_BIT);
+        ADD_HANDLER(Tonemap, PostProcessComponent::TONEMAP_BIT);
+        ADD_HANDLER(Vignette, PostProcessComponent::VIGNETTE_BIT);
     }
 
     BASE_NS::vector<SCENE_NS::IProxyObject::PropertyPair> ListBoundProperties() const override

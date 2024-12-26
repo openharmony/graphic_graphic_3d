@@ -200,9 +200,9 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, // sType
         nullptr,                                                   // pNext
         pipelineVertexInputStateCreateFlags,                       // flags
-        (uint32_t)vertexInputBindingDescriptions.size(),           // vertexBindingDescriptionCount
+        static_cast<uint32_t>(vertexInputBindingDescriptions.size()),           // vertexBindingDescriptionCount
         vertexInputBindingDescriptions.data(),                     // pVertexBindingDescriptions
-        (uint32_t)vertexInputAttributeDescriptions.size(),         // vertexAttributeDescriptionCount
+        static_cast<uint32_t>(vertexInputAttributeDescriptions.size()),         // vertexAttributeDescriptionCount
         vertexInputAttributeDescriptions.data(),                   // pVertexAttributeDescriptions
     };
 

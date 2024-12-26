@@ -22,7 +22,7 @@
 
 namespace lume
 {
-
+constexpr int LOG_BUFFER_SIZE = 1024;
 const char* Logger::getLogLevelName(LogLevel aLogLevel, bool aShortName)
 {
     // Note: these must match the LogLevel enum.
@@ -58,18 +58,24 @@ Logger::Logger(bool aDefaultOutputs)
 
 Logger::~Logger() = default;
 
-void Logger::vlog(LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aFormat, va_list aArgs)
+void Logger::VLog(LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aFormat, va_list aArgs)
 {
     LUME_ASSERT_MSG(aLogLevel != LogLevel::None, "'None' is not a valid log level for writing to the log.");
 
-    if (mLogLevel > aLogLevel) { return; }
-
-    char buffer[1024];
-    vsnprintf(buffer, 1024, aFormat, aArgs);
-    buffer[1023] = '\0';
-
-    for (auto &output : mOutputs)
-    {
+    if (mLogLevel > aLogLevel) {
+        return;
+    }
+    char buffer[LOG_BUFFER_SIZE];
+#if defined(__STDC_LIB_EXT1__) || defined(__STDC_WANT_SECURE_LIB__)
+    int ret = vsnprintf_s(buffer, sizeof(buffer), aFormat, aArgs);
+    va_end(aArgs);
+    if (ret < 0) {
+        return;
+    }
+#else
+    vsnprintf(buffer, sizeof(buffer), aFormat, aArgs);
+#endif
+    for (auto &output : mOutputs) {
         output->write(aLogLevel, aFilename, aLinenumber, buffer);
     }
 }
@@ -78,7 +84,7 @@ FORMAT_FUNC(5, 6) void Logger::log(LogLevel aLogLevel, const char *aFilename, in
 {
     va_list vl;
     va_start(vl, aFormat);
-    vlog(aLogLevel, aFilename, aLinenumber, aFormat, vl);
+    VLog(aLogLevel, aFilename, aLinenumber, aFormat, vl);
     va_end(vl);
 }
 
@@ -92,9 +98,15 @@ FORMAT_FUNC(6, 7) bool Logger::logAssert(const char *aFilename, int aLinenumber,
     va_list vl;
     va_start(vl, aFormat);
 
-    char buffer[1024];
-    vsnprintf(buffer, 1024, aFormat, vl);
-    buffer[1023] = '\0';
+    char buffer[LOG_BUFFER_SIZE];
+#if defined(__STDC_LIB_EXT1__) || defined(__STDC_WANT_SECURE_LIB__)
+    const int numWritten = vsnprintf_s(buffer, sizeof(buffer), aFormat, vl);
+    if (numWritten < 0) {
+        buffer[0] = '\0';
+    }
+#else
+    vsnprintf(buffer, sizeof(buffer), aFormat, vl);
+#endif
 
     va_end(vl);
 
@@ -125,21 +137,21 @@ void Logger::addOutput(std::unique_ptr<IOutput> aOutput)
 
 namespace
 {
-Logger sLoggerInstance(true); // Global logger instance.
+Logger g_sLoggerInstance(true); // Global logger instance.
 
 std::set<std::string> sRegisteredOnce; // Global set of ids used by the LUME_ONCE macro.
-std::mutex sOnceMutex;
+std::mutex g_sOnceMutex;
 } // empty namespace
 
 ILogger &getLogger()
 {
-    return sLoggerInstance;
+    return g_sLoggerInstance;
 }
 
 
-bool checkOnce(const char *aId)
+bool CheckOnce(const char *aId)
 {
-    std::lock_guard<std::mutex> guard(sOnceMutex);
+    std::lock_guard<std::mutex> guard(g_sOnceMutex);
 
     size_t size = sRegisteredOnce.size();
     sRegisteredOnce.insert(std::string(aId));
@@ -148,9 +160,9 @@ bool checkOnce(const char *aId)
     return size != sRegisteredOnce.size();
 }
 
-void checkOnceReset()
+void CheckOnceReset()
 {
-    std::lock_guard<std::mutex> guard(sOnceMutex);
+    std::lock_guard<std::mutex> guard(g_sOnceMutex);
     sRegisteredOnce.clear();
 }
 

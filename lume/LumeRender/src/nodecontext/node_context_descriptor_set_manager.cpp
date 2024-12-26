@@ -90,7 +90,7 @@ bool CopyAndProcessBuffers(const DescriptorSetLayoutBindingResources& src, const
             dst.hasDynamicBarrierResources = true;
         }
         if (NodeContextDescriptorSetManager::IsDynamicDescriptor(dstRef.binding.descriptorType)) {
-            PLUGIN_ASSERT(dynamicOffsetIndex < (uint32_t)dst.dynamicOffsetDescriptors.size());
+            PLUGIN_ASSERT(dynamicOffsetIndex < static_cast<uint32_t>(dst.dynamicOffsetDescriptors.size()));
             dst.dynamicOffsetDescriptors[dynamicOffsetIndex++] = dstRef.resource.handle;
         }
     }
@@ -369,7 +369,7 @@ bool NodeContextDescriptorSetManager::UpdateCpuDescriptorSetImpl(const uint32_t 
     vector<CpuDescriptorSet>& cpuDescriptorSets)
 {
     bool valid = true;
-    if (index < (uint32_t)cpuDescriptorSets.size()) {
+    if (index < static_cast<uint32_t>(cpuDescriptorSets.size())) {
         auto& refCpuSet = cpuDescriptorSets[index];
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (refCpuSet.bindings.size() != bindingResources.bindings.size()) {
@@ -445,7 +445,7 @@ DynamicOffsetDescriptors NodeContextDescriptorSetManager::GetDynamicOffsetDescri
 bool NodeContextDescriptorSetManager::HasDynamicBarrierResourcesImpl(
     const uint32_t index, const vector<CpuDescriptorSet>& cpuDescriptorSet) const
 {
-    if (index < (uint32_t)cpuDescriptorSet.size()) {
+    if (index < static_cast<uint32_t>(cpuDescriptorSet.size())) {
         return cpuDescriptorSet[index].hasDynamicBarrierResources;
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -458,7 +458,7 @@ bool NodeContextDescriptorSetManager::HasDynamicBarrierResourcesImpl(
 bool NodeContextDescriptorSetManager::HasPlatformBufferBindingsImpl(
     const uint32_t index, const vector<CpuDescriptorSet>& cpuDescriptorSet) const
 {
-    if (index < (uint32_t)cpuDescriptorSet.size()) {
+    if (index < static_cast<uint32_t>(cpuDescriptorSet.size())) {
         return cpuDescriptorSet[index].hasPlatformConversionBindings;
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -471,8 +471,8 @@ bool NodeContextDescriptorSetManager::HasPlatformBufferBindingsImpl(
 uint32_t NodeContextDescriptorSetManager::GetDynamicOffsetDescriptorCountImpl(
     const uint32_t index, const vector<CpuDescriptorSet>& cpuDescriptorSet) const
 {
-    if (index < (uint32_t)cpuDescriptorSet.size()) {
-        return (uint32_t)cpuDescriptorSet[index].dynamicOffsetDescriptors.size();
+    if (index < static_cast<uint32_t>(cpuDescriptorSet.size())) {
+        return static_cast<uint32_t>(cpuDescriptorSet[index].dynamicOffsetDescriptors.size());
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_E("RENDER_VALIDATION: invalid handle to GetDynamicOffsetDescriptorCount");

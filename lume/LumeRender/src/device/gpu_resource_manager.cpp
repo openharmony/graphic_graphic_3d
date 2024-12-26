@@ -583,7 +583,7 @@ RenderHandleReference GpuResourceManager::Create(const RenderHandleReference& re
     const RenderHandleType type = RenderHandleUtil::GetHandleType(rawHandle);
     if (valid && (type != RenderHandleType::GPU_BUFFER)) {
         PLUGIN_LOG_E("RENDER_VALIDATION: trying to replace a non GPU buffer handle (type: %u) with GpuBufferDesc",
-            (uint32_t)type);
+            static_cast<uint32_t>(type));
     }
 #endif
     GpuBufferDesc validDesc = GetValidGpuBufferDesc(desc);
@@ -627,12 +627,12 @@ RenderHandleReference GpuResourceManager::Create(
         const auto lock = std::lock_guard(store.clientMutex);
 
         sad = CreateBuffer(name, {}, validDesc);
-        const uint32_t minByteSize = std::min(validDesc.byteSize, (uint32_t)data.size_bytes());
+        const uint32_t minByteSize = std::min(validDesc.byteSize, static_cast<uint32_t>(data.size_bytes()));
 
         auto const stagingLock = std::lock_guard(stagingMutex_);
 
         stagingOperations_.bufferCopies.push_back(BufferCopy { 0, 0, minByteSize });
-        const uint32_t beginIndex = (uint32_t)stagingOperations_.bufferCopies.size() - 1;
+        const uint32_t beginIndex = static_cast<uint32_t>(stagingOperations_.bufferCopies.size()) - 1;
         vector<uint8_t> copiedData(data.cbegin().ptr(), data.cbegin().ptr() + minByteSize);
 
         // add staging vector index handle to resource handle in pending allocations
@@ -736,7 +736,8 @@ RenderHandleReference GpuResourceManager::Create(const RenderHandleReference& re
     const RenderHandleType type = RenderHandleUtil::GetHandleType(rawHandle);
     if (valid && (type != RenderHandleType::GPU_IMAGE)) {
         PLUGIN_LOG_E(
-            "RENDER_VALIDATION: trying to replace a non GPU image handle (type: %u) with GpuImageDesc", (uint32_t)type);
+            "RENDER_VALIDATION: trying to replace a non GPU image handle (type: %u) with GpuImageDesc",
+            static_cast<uint32_t>(type));
     }
 #endif
     PerManagerStore& store = imageStore_;
@@ -773,8 +774,8 @@ void GpuResourceManager::RemapGpuImageHandle(
         const uint32_t clientArrayIndex = RenderHandleUtil::GetIndexPart(clientHandle);
         const uint32_t clientResourceArrayIndex = RenderHandleUtil::GetIndexPart(clientHandleGpuResource);
         validClientHandles =
-            validClientHandles && ((clientArrayIndex < (uint32_t)store.clientHandles.size()) &&
-                                      (clientResourceArrayIndex < (uint32_t)store.clientHandles.size()));
+            validClientHandles && ((clientArrayIndex < static_cast<uint32_t>(store.clientHandles.size())) &&
+                                      (clientResourceArrayIndex < static_cast<uint32_t>(store.clientHandles.size())));
         if (validClientHandles) {
             store.descriptions[clientArrayIndex] = store.descriptions[clientResourceArrayIndex];
             store.pendingData.remaps.push_back(RemapDescription { clientHandle, clientHandleGpuResource });
@@ -859,8 +860,8 @@ RenderHandleReference GpuResourceManager::Create(const string_view name, const G
             allocRef.optionalStagingCopyType = StagingCopyStruct::CopyType::BUFFER_TO_IMAGE;
 
             const uint32_t stagingBufferByteSize = static_cast<uint32_t>(data.size_bytes());
-            const uint32_t count = (uint32_t)bufferImageCopies.size();
-            const uint32_t beginIndex = (uint32_t)stagingOperations_.bufferImageCopies.size() - count;
+            const uint32_t count = static_cast<uint32_t>(bufferImageCopies.size());
+            const uint32_t beginIndex = static_cast<uint32_t>(stagingOperations_.bufferImageCopies.size()) - count;
 
             vector<uint8_t> copiedData(data.cbegin().ptr(), data.cend().ptr());
             stagingOperations_.bufferToImage.push_back(
@@ -1009,7 +1010,7 @@ RenderHandleReference GpuResourceManager::Create(
     const RenderHandleType type = RenderHandleUtil::GetHandleType(rawHandle);
     if (valid && (type != RenderHandleType::GPU_SAMPLER)) {
         PLUGIN_LOG_E("RENDER_VALIDATION: trying to replace a non GPU sampler handle (type: %u) with GpuSamplerDesc",
-            (uint32_t)type);
+            static_cast<uint32_t>(type));
     }
 #endif
     PerManagerStore& store = samplerStore_;
@@ -1068,8 +1069,7 @@ RenderHandleReference GpuResourceManager::Create(
     if (valid &&
         ((type != RenderHandleType::GPU_BUFFER) || (!RenderHandleUtil::IsGpuAccelerationStructure(rawHandle)))) {
         PLUGIN_LOG_E("RENDER_VALIDATION: trying to replace a non GPU acceleration structure handle (type: %u) with "
-                     "GpuAccelerationStructureDesc",
-            (uint32_t)type);
+                     "GpuAccelerationStructureDesc", static_cast<uint32_t>(type));
     }
 #endif
     PerManagerStore& store = bufferStore_;
@@ -1263,7 +1263,7 @@ void GpuResourceManager::DestroyImmediate(PerManagerStore& store, const RenderHa
 {
     if (RenderHandleUtil::IsValid(handle)) { // found, Destroy immediate
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
-        if (arrayIndex < (uint32_t)store.gpuHandles.size()) {
+        if (arrayIndex < static_cast<uint32_t>(store.gpuHandles.size())) {
             store.mgr->DestroyImmediate(arrayIndex);
             store.clientHandles[arrayIndex] = {};
             store.additionalData[arrayIndex] = {};
@@ -1362,7 +1362,7 @@ GpuBufferDesc GpuResourceManager::GetBufferDescriptor(const RenderHandle& handle
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         const PerManagerStore& store = bufferStore_;
         auto const clientLock = std::shared_lock(store.clientMutex);
-        if (arrayIndex < (uint32_t)store.descriptions.size()) {
+        if (arrayIndex < static_cast<uint32_t>(store.descriptions.size())) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
                 RenderHandleUtil::GetGenerationIndexPart(handle)) {
@@ -1391,7 +1391,7 @@ GpuImageDesc GpuResourceManager::GetImageDescriptor(const RenderHandle& handle) 
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         const PerManagerStore& store = imageStore_;
         auto const clientLock = std::shared_lock(store.clientMutex);
-        if (arrayIndex < (uint32_t)store.descriptions.size()) {
+        if (arrayIndex < static_cast<uint32_t>(store.descriptions.size())) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
                 RenderHandleUtil::GetGenerationIndexPart(handle)) {
@@ -1420,7 +1420,7 @@ GpuSamplerDesc GpuResourceManager::GetSamplerDescriptor(const RenderHandle& hand
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         const PerManagerStore& store = samplerStore_;
         auto const clientLock = std::shared_lock(store.clientMutex);
-        if (arrayIndex < (uint32_t)store.descriptions.size()) {
+        if (arrayIndex < static_cast<uint32_t>(store.descriptions.size())) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
                 RenderHandleUtil::GetGenerationIndexPart(handle)) {
@@ -1449,7 +1449,7 @@ GpuAccelerationStructureDesc GpuResourceManager::GetAccelerationStructureDescrip
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         const PerManagerStore& store = bufferStore_;
         auto const clientLock = std::shared_lock(store.clientMutex);
-        if (arrayIndex < (uint32_t)store.descriptions.size()) {
+        if (arrayIndex < static_cast<uint32_t>(store.descriptions.size())) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
                 RenderHandleUtil::GetGenerationIndexPart(handle)) {
@@ -1597,7 +1597,7 @@ void GpuResourceManager::HandlePendingRemappings(
 
             const bool validGpuHandle = RenderHandleUtil::IsValid(gpuHandle);
             const uint32_t remapArrayIndex = RenderHandleUtil::GetIndexPart(shallowRemap.shallowClientHandle);
-            if (validGpuHandle && (remapArrayIndex < (uint32_t)gpuHandles.size())) {
+            if (validGpuHandle && (remapArrayIndex < static_cast<uint32_t>(gpuHandles.size()))) {
                 gpuHandles[remapArrayIndex] = gpuHandle;
             } else {
                 PLUGIN_LOG_E("gpuimage handle remapping failed; client handle not found");
@@ -1649,7 +1649,7 @@ void GpuResourceManager::HandlePendingAllocationsImpl(const bool isFrameEnd)
                 continue;
             }
 
-            PLUGIN_ASSERT(arrayIndex < (uint32_t)store.gpuHandles.size());
+            PLUGIN_ASSERT(arrayIndex < static_cast<uint32_t>(store.gpuHandles.size()));
             // first allocation, then dealloc, with dealloc we need to check for deferred destruction
             if (allocation.allocType == AllocType::ALLOC) {
                 // NOTE: this is essential to get correct, this maps render pass etc. hashing
@@ -1961,8 +1961,9 @@ void GpuResourceManager::WaitForIdleAndDestroyGpuResources()
             }
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        PLUGIN_LOG_D("WFIADGR: d: %u r (type:%u)", dc, uint32_t(store.handleType));
-        PLUGIN_LOG_D("WFIADGR: pa cl: %u (t:%u)", (uint32_t)pd.allocations.size() - dc, uint32_t(store.handleType));
+        PLUGIN_LOG_D("WFIADGR: d: %u r (type:%u)", dc, static_cast<uint32_t>(store.handleType));
+        PLUGIN_LOG_D("WFIADGR: pa cl: %u (t:%u)", static_cast<uint32_t>(pd.allocations.size()) - dc,
+            static_cast<uint32_t>(store.handleType));
 #endif
 
         // inside mutex (calls device)
@@ -1995,7 +1996,7 @@ EngineResourceHandle GpuResourceManager::GetGpuHandle(
     const PerManagerStore& store, const RenderHandle& clientHandle) const
 {
     const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(clientHandle);
-    if (arrayIndex < (uint32_t)store.gpuHandles.size()) {
+    if (arrayIndex < static_cast<uint32_t>(store.gpuHandles.size())) {
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (RenderHandleUtil::GetGenerationIndexPart(store.clientHandles[arrayIndex].GetHandle()) !=
             RenderHandleUtil::GetGenerationIndexPart(clientHandle)) {
@@ -2133,7 +2134,7 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(
 
     // there cannot be both (valid name and a valid replaced handle)
     const uint32_t replaceArrayIndex = RenderHandleUtil::GetIndexPart(info.replacedHandle);
-    bool hasReplaceHandle = (replaceArrayIndex < (uint32_t)store.clientHandles.size());
+    bool hasReplaceHandle = (replaceArrayIndex < static_cast<uint32_t>(store.clientHandles.size()));
     const uint32_t hasNameId = (!info.name.empty()) ? 1u : 0u;
     if (hasReplaceHandle) {
         data.handle = store.clientHandles[replaceArrayIndex];
@@ -2178,7 +2179,7 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(
     const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(data.handle.GetHandle());
     PLUGIN_ASSERT(store.clientHandles.size() == store.descriptions.size());
     PLUGIN_ASSERT(store.clientHandles.size() == store.additionalData.size());
-    if (arrayIndex >= (uint32_t)store.clientHandles.size()) {
+    if (arrayIndex >= static_cast<uint32_t>(store.clientHandles.size())) {
         store.clientHandles.push_back(data.handle);
         store.additionalData.push_back({});
         store.descriptions.push_back(info.descriptor);

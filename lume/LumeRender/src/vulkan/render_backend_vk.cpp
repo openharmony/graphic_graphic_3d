@@ -477,7 +477,7 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
         VkPipelineStageFlags waitSemaphorePipelineStageFlags[maxWaitSemaphoreCount];
         for (uint32_t waitIdx = 0; waitIdx < renderContextRef.submitDepencies.waitSemaphoreCount; ++waitIdx) {
             const uint32_t waitCmdBufferIdx = renderContextRef.submitDepencies.waitSemaphoreNodeIndices[waitIdx];
-            PLUGIN_ASSERT(waitIdx < (uint32_t)commandBufferSubmitter_.commandBuffers.size());
+            PLUGIN_ASSERT(waitIdx < static_cast<uint32_t>(commandBufferSubmitter_.commandBuffers.size()));
 
             VkSemaphore waitSemaphore = commandBufferSubmitter_.commandBuffers[waitCmdBufferIdx].semaphore;
             if (waitSemaphore != VK_NULL_HANDLE) {
@@ -654,7 +654,8 @@ void RenderBackendVk::RenderProcessCommandLists(
         queue_->Clear();
     } else {
         AcquirePresentationInfo(renderCommandFrameData, backBufferConfig);
-        for (uint32_t cmdBufferIdx = 0; cmdBufferIdx < (uint32_t)renderCommandFrameData.renderCommandContexts.size();) {
+        for (uint32_t cmdBufferIdx = 0;
+            cmdBufferIdx < static_cast<uint32_t>(renderCommandFrameData.renderCommandContexts.size());) {
             // NOTE: idx increase
             const RenderCommandContext& ref = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
             const MultiRenderPassCommandListData& mrpData = ref.renderCommandList->GetMultiRenderCommandListData();
@@ -943,7 +944,8 @@ void RenderBackendVk::RenderSingleCommandList(RenderCommandContext& renderComman
         PLUGIN_ASSERT(ref.rc);
 #if (RENDER_DEBUG_COMMAND_MARKERS_ENABLED == 1)
         if (deviceVk_.GetDebugFunctionUtilities().vkCmdBeginDebugUtilsLabelEXT) {
-            const uint32_t index = (uint32_t)ref.type < countof(COMMAND_NAMES) ? (uint32_t)ref.type : 0;
+            const uint32_t index = static_cast<uint32_t>(ref.type) < countof(COMMAND_NAMES) ?
+                static_cast<uint32_t>(ref.type) : 0;
             const VkDebugUtilsLabelEXT label {
                 VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, // sType
                 nullptr,                                 // pNext
@@ -1737,7 +1739,7 @@ void RenderBackendVk::RenderCommand(const RenderCommandBarrierPoint& renderCmd, 
     // in situations with batched render passes there can be many
     // NOTE: all barrier lists could be patched to single vk command if needed
     // NOTE: Memory and pipeline barriers should be allowed in the front-end side
-    const uint32_t barrierListCount = (uint32_t)barrierPointBarriers->barrierListCount;
+    const uint32_t barrierListCount = static_cast<uint32_t>(barrierPointBarriers->barrierListCount);
     const RenderBarrierList::BarrierPointBarrierList* nextBarrierList = barrierPointBarriers->firstBarrierList;
 #if (RENDER_VALIDATION_ENABLED == 1)
     uint32_t fullBarrierCount = 0u;
@@ -1749,7 +1751,7 @@ void RenderBackendVk::RenderCommand(const RenderCommandBarrierPoint& renderCmd, 
         }
         const RenderBarrierList::BarrierPointBarrierList& barrierListRef = *nextBarrierList;
         nextBarrierList = barrierListRef.nextBarrierPointBarrierList; // advance to next
-        const uint32_t barrierCount = (uint32_t)barrierListRef.count;
+        const uint32_t barrierCount = static_cast<uint32_t>(barrierListRef.count);
 
         uint32_t bufferBarrierIdx = 0;
         uint32_t imageBarrierIdx = 0;
@@ -1929,11 +1931,11 @@ void RenderBackendVk::UpdateCommandListDescriptorSets(
 #if (RENDER_VALIDATION_ENABLED == 1)
             // get descriptor counts
             const LowLevelDescriptorCountsVk& descriptorCounts = ctxDescMgr.GetLowLevelDescriptorCounts(descHandle);
-            if ((uint32_t)bindingResources.bindings.size() > descriptorCounts.writeDescriptorCount) {
+            if (static_cast<uint32_t>(bindingResources.bindings.size()) > descriptorCounts.writeDescriptorCount) {
                 PLUGIN_LOG_E("RENDER_VALIDATION: update descriptor set bindings exceed descriptor set bindings");
             }
 #endif
-            if ((uint32_t)bindingResources.bindings.size() >
+            if (static_cast<uint32_t>(bindingResources.bindings.size()) >
                 PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
                 PLUGIN_ASSERT(false);
                 continue;
@@ -2659,7 +2661,7 @@ void RenderBackendVk::StartFrameTimers(RenderCommandFrameData& renderCommandFram
             constexpr GpuQueryDesc desc { QueryType::CORE_QUERY_TYPE_TIMESTAMP, 0 };
             perfDataSet.gpuHandle = gpuQueryMgr_->Create(debugName, CreateGpuQueryVk(device_, desc));
             constexpr uint32_t singleQueryByteSize = sizeof(uint64_t) * TIME_STAMP_PER_GPU_QUERY;
-            perfDataSet.gpuBufferOffset = (uint32_t)timers_.size() * singleQueryByteSize;
+            perfDataSet.gpuBufferOffset = static_cast<uint32_t>(timers_.size()) * singleQueryByteSize;
 #else
             timers_.insert({ debugName, {} });
 #endif

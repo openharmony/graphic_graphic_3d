@@ -43,7 +43,7 @@ void* AllocateBarrierListMemory(RenderBarrierList::LinearAllocatorStruct& alloca
         const size_t alignment = allocator.allocators[allocator.currentIndex]->GetAlignment();
 
         allocator.allocators.push_back(make_unique<LinearAllocator>(byteSize, alignment));
-        allocator.currentIndex = (uint32_t)(allocator.allocators.size() - 1);
+        allocator.currentIndex = static_cast<uint32_t>(allocator.allocators.size() - 1);
 
         rc = allocator.allocators[allocator.currentIndex]->Allocate(byteSize);
         PLUGIN_ASSERT_MSG(rc, "render barrier list allocation : out of memory");
@@ -119,7 +119,7 @@ void RenderBarrierList::AddBarriersToBarrierPoint(
                 barrierPointIndextoIndex_[barrierPointIndex] = barrierIndex;
             }
 
-            const uint32_t barrierCount = (uint32_t)barriers.size();
+            const uint32_t barrierCount = static_cast<uint32_t>(barriers.size());
             BarrierPointBarriers& ref = barrierPointBarriers_[barrierIndex];
             ref.fullCommandBarrierCount += barrierCount;
             ref.barrierListCount += 1u;

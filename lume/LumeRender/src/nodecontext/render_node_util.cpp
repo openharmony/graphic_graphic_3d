@@ -268,7 +268,7 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
     RenderPass rp;
     RenderPassDesc& rpDesc = rp.renderPassDesc;
 
-    const uint32_t attachmentCount = (uint32_t)renderPass.attachments.size();
+    const uint32_t attachmentCount = static_cast<uint32_t>(renderPass.attachments.size());
     PLUGIN_ASSERT(attachmentCount <= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
     uint32_t width = ~0u;
     uint32_t height = ~0u;
@@ -296,9 +296,9 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
             // update the one subpass described in render node graph
             auto& spDesc = rp.subpassDesc;
 
-            spDesc.inputAttachmentCount = (uint32_t)renderPass.inputAttachmentIndices.size();
-            spDesc.colorAttachmentCount = (uint32_t)renderPass.colorAttachmentIndices.size();
-            spDesc.resolveAttachmentCount = (uint32_t)renderPass.resolveAttachmentIndices.size();
+            spDesc.inputAttachmentCount = static_cast<uint32_t>(renderPass.inputAttachmentIndices.size());
+            spDesc.colorAttachmentCount = static_cast<uint32_t>(renderPass.colorAttachmentIndices.size());
+            spDesc.resolveAttachmentCount = static_cast<uint32_t>(renderPass.resolveAttachmentIndices.size());
 
             spDesc.depthAttachmentCount = (renderPass.depthAttachmentIndex != ~0u) ? 1u : 0u;
             spDesc.depthAttachmentIndex = (spDesc.depthAttachmentCount > 0) ? renderPass.depthAttachmentIndex : ~0u;

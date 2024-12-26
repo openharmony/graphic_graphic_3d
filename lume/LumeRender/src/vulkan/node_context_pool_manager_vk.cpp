@@ -357,7 +357,7 @@ void NodeContextPoolManagerVk::BeginBackendFrame()
     }
 #endif
 
-    bufferingIndex_ = (bufferingIndex_ + 1) % (uint32_t)commandPools_.size();
+    bufferingIndex_ = (bufferingIndex_ + 1) % static_cast<uint32_t>(commandPools_.size());
 
     constexpr uint64_t additionalFrameCount { 2u };
     const auto minAge = device_.GetCommandBufferingCount() + additionalFrameCount;

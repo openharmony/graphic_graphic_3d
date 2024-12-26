@@ -68,7 +68,7 @@ void RenderDataStorePod::DestroyPod(const string_view typeName, const string_vie
 
     if (const auto iter = nameToDataOffset_.find(name); iter != nameToDataOffset_.end()) {
         const auto offsetToData = iter->second;
-        PLUGIN_ASSERT(offsetToData.index + offsetToData.byteSize <= (uint32_t)dataStore_.size());
+        PLUGIN_ASSERT(offsetToData.index + offsetToData.byteSize <= static_cast<uint32_t>(dataStore_.size()));
         const auto first = dataStore_.cbegin() + static_cast<int32_t>(offsetToData.index);
         const auto last = first + static_cast<int32_t>(offsetToData.byteSize);
         dataStore_.erase(first, last);
@@ -100,7 +100,7 @@ void RenderDataStorePod::Set(const string_view name, const array_view<const uint
     if (iter != nameToDataOffset_.cend()) {
         const uint32_t index = iter->second.index;
         const uint32_t byteSize = iter->second.byteSize;
-        PLUGIN_ASSERT(index + byteSize <= (uint32_t)dataStore_.size());
+        PLUGIN_ASSERT(index + byteSize <= static_cast<uint32_t>(dataStore_.size()));
         PLUGIN_ASSERT(srcData.size() <= byteSize);
 
         const uint32_t maxByteSize = std::min(byteSize, static_cast<uint32_t>(srcData.size()));
@@ -123,7 +123,7 @@ array_view<const uint8_t> RenderDataStorePod::Get(const string_view name) const
     if (iter != nameToDataOffset_.cend()) {
         const uint32_t index = iter->second.index;
         const uint32_t byteSize = iter->second.byteSize;
-        PLUGIN_ASSERT(index + byteSize <= (uint32_t)dataStore_.size());
+        PLUGIN_ASSERT(index + byteSize <= static_cast<uint32_t>(dataStore_.size()));
 
         const uint8_t* data = &dataStore_[index];
         view = array_view<const uint8_t>(data, byteSize);

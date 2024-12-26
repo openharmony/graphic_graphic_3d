@@ -82,7 +82,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GpuBufferDesc& desc)
             RENDER_NS::EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER);
 
     uint64_t seed = importantEngineCreationFlags;
-    HashCombine(seed, (uint64_t)desc.usageFlags, (uint64_t)desc.memoryPropertyFlags);
+    HashCombine(seed, static_cast<uint64_t>(desc.usageFlags), static_cast<uint64_t>(desc.memoryPropertyFlags));
     return seed;
 }
 
@@ -94,7 +94,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GpuImageDesc& desc)
         (desc.usageFlags & RENDER_NS::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
     uint64_t seed = importantImageUsageFlags;
-    HashCombine(seed, (uint64_t)desc.imageType, (uint64_t)desc.memoryPropertyFlags);
+    HashCombine(seed, static_cast<uint64_t>(desc.imageType), static_cast<uint64_t>(desc.memoryPropertyFlags));
     return seed;
 }
 
@@ -264,7 +264,7 @@ void PlatformGpuMemoryAllocator::CreateBuffer(const VkBufferCreateInfo& bufferCr
 
 #if (RENDER_PERF_ENABLED == 1)
     if (allocation) {
-        memoryDebugStruct_.buffer += (uint64_t)allocation->GetSize();
+        memoryDebugStruct_.buffer += static_cast<uint64_t>(allocation->GetSize());
         LogStats(allocator_);
     }
 #endif
@@ -275,7 +275,7 @@ void PlatformGpuMemoryAllocator::DestroyBuffer(VkBuffer buffer, VmaAllocation al
 #if (RENDER_PERF_ENABLED == 1)
     uint64_t byteSize = 0;
     if (allocation) {
-        byteSize = (uint64_t)allocation->GetSize();
+        byteSize = static_cast<uint64_t>(allocation->GetSize());
     }
 #endif
 
@@ -316,7 +316,7 @@ void PlatformGpuMemoryAllocator::CreateImage(const VkImageCreateInfo& imageCreat
 
 #if (RENDER_PERF_ENABLED == 1)
     if (allocation) {
-        memoryDebugStruct_.image += (uint64_t)allocation->GetSize();
+        memoryDebugStruct_.image += static_cast<uint64_t>(allocation->GetSize());
         LogStats(allocator_);
     }
 #endif
@@ -327,7 +327,7 @@ void PlatformGpuMemoryAllocator::DestroyImage(VkImage image, VmaAllocation alloc
 #if (RENDER_PERF_ENABLED == 1)
     uint64_t byteSize = 0;
     if (allocation) {
-        byteSize = (uint64_t)allocation->GetSize();
+        byteSize = static_cast<uint64_t>(allocation->GetSize());
     }
 #endif
 
@@ -347,7 +347,7 @@ uint32_t PlatformGpuMemoryAllocator::GetMemoryTypeProperties(const uint32_t memo
 {
     VkMemoryPropertyFlags memPropertyFlags = 0;
     vmaGetMemoryTypeProperties(allocator_, memoryType, &memPropertyFlags);
-    return (uint32_t)memPropertyFlags;
+    return static_cast<uint32_t>(memPropertyFlags);
 }
 
 void PlatformGpuMemoryAllocator::FlushAllocation(
@@ -367,7 +367,7 @@ VmaPool PlatformGpuMemoryAllocator::GetBufferPool(const GpuBufferDesc& desc) con
     VmaPool result = VK_NULL_HANDLE;
     const uint64_t hash = BASE_NS::hash(desc);
     if (const auto iter = hashToGpuBufferPoolIndex_.find(hash); iter != hashToGpuBufferPoolIndex_.cend()) {
-        PLUGIN_ASSERT(iter->second < (uint32_t)customGpuBufferPools_.size());
+        PLUGIN_ASSERT(iter->second < static_cast<uint32_t>(customGpuBufferPools_.size()));
         result = customGpuBufferPools_[iter->second];
     }
     return result;
@@ -378,7 +378,7 @@ VmaPool PlatformGpuMemoryAllocator::GetImagePool(const GpuImageDesc& desc) const
     VmaPool result = VK_NULL_HANDLE;
     const uint64_t hash = BASE_NS::hash(desc);
     if (const auto iter = hashToGpuImagePoolIndex_.find(hash); iter != hashToGpuImagePoolIndex_.cend()) {
-        PLUGIN_ASSERT(iter->second < (uint32_t)customGpuImagePools_.size());
+        PLUGIN_ASSERT(iter->second < static_cast<uint32_t>(customGpuImagePools_.size()));
         result = customGpuImagePools_[iter->second];
     }
     return result;
@@ -440,7 +440,7 @@ void PlatformGpuMemoryAllocator::CreatePoolForBuffers(const GpuMemoryAllocatorCu
             &pool));                                 // pPool
 
         customGpuBufferPools_.push_back(pool);
-        hashToGpuBufferPoolIndex_[hash] = (uint32_t)customGpuBufferPools_.size() - 1;
+        hashToGpuBufferPoolIndex_[hash] = static_cast<uint32_t>(customGpuBufferPools_.size()) - 1;
 #if (RENDER_PERF_ENABLED == 1)
         customGpuBufferPoolNames_.push_back(customPool.name);
 #endif
@@ -491,7 +491,7 @@ void PlatformGpuMemoryAllocator::CreatePoolForImages(const GpuMemoryAllocatorCus
             &pool));                                 // pPool
 
         customGpuImagePools_.push_back(pool);
-        hashToGpuImagePoolIndex_[hash] = (uint32_t)customGpuImagePools_.size() - 1;
+        hashToGpuImagePoolIndex_[hash] = static_cast<uint32_t>(customGpuImagePools_.size()) - 1;
 #if (RENDER_PERF_ENABLED == 1)
         customGpuImagePoolNames_.push_back(customPool.name);
 #endif
@@ -503,7 +503,7 @@ string PlatformGpuMemoryAllocator::GetBufferPoolDebugName(const GpuBufferDesc& d
 {
     const size_t hash = BASE_NS::hash(desc);
     if (const auto iter = hashToGpuBufferPoolIndex_.find(hash); iter != hashToGpuBufferPoolIndex_.cend()) {
-        PLUGIN_ASSERT(iter->second < (uint32_t)customGpuBufferPools_.size());
+        PLUGIN_ASSERT(iter->second < static_cast<uint32_t>(customGpuBufferPools_.size()));
         return customGpuBufferPoolNames_[iter->second];
     }
     return {};
@@ -512,7 +512,7 @@ string PlatformGpuMemoryAllocator::GetImagePoolDebugName(const GpuImageDesc& des
 {
     const size_t hash = BASE_NS::hash(desc);
     if (const auto iter = hashToGpuImagePoolIndex_.find(hash); iter != hashToGpuImagePoolIndex_.cend()) {
-        PLUGIN_ASSERT(iter->second < (uint32_t)customGpuImagePools_.size());
+        PLUGIN_ASSERT(iter->second < static_cast<uint32_t>(customGpuImagePools_.size()));
         return customGpuImagePoolNames_[iter->second];
     }
     return {};

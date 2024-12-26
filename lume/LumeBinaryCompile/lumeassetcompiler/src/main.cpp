@@ -16,6 +16,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -31,17 +32,17 @@
 #include <mach-o/fat.h>
 #endif
 
-struct fs_entry {
+struct FsEntry {
     char fname[256];
     uint64_t offset;
     uint64_t size;
 };
 
-std::vector<fs_entry> directory;
-std::vector<uint8_t> bin;
-std::vector<std::string_view> valid_exts;
+std::vector<FsEntry> g_directory;
+std::vector<uint8_t> g_bin;
+std::vector<std::string_view> g_validExts;
 
-void append_file(const std::string& filename, const std::string& storename)
+void AppendFile(const std::string& filename, const std::string& storename)
 {
     std::string_view ext;
     auto pos = filename.find_last_of(".");
@@ -50,7 +51,7 @@ void append_file(const std::string& filename, const std::string& storename)
         ext = std::string_view(filename).substr(pos);
     }
     bool valid = false;
-    for (const auto& e : valid_exts) {
+    for (const auto& e : g_validExts) {
         if (ext.compare(e) == 0) {
             valid = true;
             break;
@@ -60,42 +61,42 @@ void append_file(const std::string& filename, const std::string& storename)
         printf("Skipped %s\n", storename.c_str());
         return;
     }
-    if (storename.size() > 255) {
+    if (storename.size() > (sizeof(FsEntry::fname) - 1u)) {
         printf("Filename too long [%s]\n", storename.c_str());
         exit(-1);
     }
-    fs_entry tmp{};
-    strcpy(tmp.fname, storename.c_str());
+    FsEntry tmp{};
+    tmp.fname[storename.copy(tmp.fname, sizeof(tmp.fname) - 1u)] = '\0';
 #if _WIN32
     struct _stat64 fileStat;
-    if (-1 == _stat64(filename.c_str(), &fileStat)) {
+    if (_stat64(filename.c_str(), &fileStat) == -1) {
 #else
     struct stat fileStat;
-    if (-1 == stat(filename.c_str(), &fileStat)) {
+    if (stat(filename.c_str(), &fileStat) == -1) {
 #endif
         printf("File [%s] not found\n", tmp.fname);
         exit(-1);
     }
     tmp.size = fileStat.st_size;
-    auto padding = (8 - (bin.size() & 7)) & 7;
-    tmp.offset = bin.size() + padding;
-    directory.push_back(tmp);
+    auto padding = (8 - (g_bin.size() & 7)) & 7;
+    tmp.offset = g_bin.size() + padding;
+    g_directory.push_back(tmp);
     FILE* f = fopen(filename.c_str(), "rb");
-    if (f == NULL) {
+    if (f == nullptr) {
         printf("Could not open %s.\n", filename.c_str());
         exit(-1);
     }
-    bin.resize((size_t)(bin.size() + padding + tmp.size));
-    fread(bin.data() + tmp.offset, 1, (size_t)tmp.size, f);
+    g_bin.resize(static_cast<size_t>(g_bin.size() + padding + tmp.size));
+    fread(g_bin.data() + tmp.offset, 1, static_cast<size_t>(tmp.size), f);
     fclose(f);
     printf("Stored: %s [%" PRIu64 " , %" PRIu64 "]\n", tmp.fname, tmp.offset, tmp.size);
 }
 
-void add_directory(const std::string& path, const std::string& outpath)
+void AddDirectory(const std::string& path, const std::string& outpath)
 {
     struct dirent* pDirent = nullptr;
     DIR* pDir = opendir(path.c_str());
-    if (pDir == NULL) {
+    if (pDir == nullptr) {
         printf("Cannot open directory '%s'\n", path.c_str());
         exit(1);
     }
@@ -117,7 +118,7 @@ void add_directory(const std::string& path, const std::string& outpath)
     auto alphaSort = [](dirent* x, dirent* y) { return std::string(x->d_name) < std::string(y->d_name); };
     auto dirSet = std::set<dirent*, decltype(alphaSort)>(alphaSort);
 
-    while ((pDirent = readdir(pDir)) != NULL) {
+    while ((pDirent = readdir(pDir)) != nullptr) {
         // This structure may be statically allocated
         dirSet.insert(pDirent);
     }
@@ -127,10 +128,10 @@ void add_directory(const std::string& path, const std::string& outpath)
             if (d->d_name[0] == '.') {
                 continue;
             }
-            add_directory(p + d->d_name, op + d->d_name);
+            AddDirectory(p + d->d_name, op + d->d_name);
             continue;
         }
-        append_file(p + d->d_name, op + d->d_name);
+        AppendFile(p + d->d_name, op + d->d_name);
     }
 
     closedir(pDir);
@@ -157,12 +158,12 @@ void add_directory(const std::string& path, const std::string& outpath)
  *   }
  */
 
-std::string gDataName = "BinaryDataForReadOnlyFileSystem";
-std::string gSizeName = "SizeOfDataForReadOnlyFileSystem";
+std::string g_dataName = "BinaryDataForReadOnlyFileSystem";
+std::string g_sizeName = "SizeOfDataForReadOnlyFileSystem";
 
-void write_obj(const std::string& fname, const std::string& secname, size_t size_of_data, const void* data, bool x64)
+void WriteObj(const std::string& fname, const std::string& secname, size_t sizeOfData, const void* data, bool x64)
 {
-    size_t size_of_section = sizeof(uint64_t) + size_of_data;
+    size_t sizeOfSection = sizeof(uint64_t) + sizeOfData;
 #pragma pack(push, 1)
     // Using headers and defines from winnt.h
     struct ObjFile {
@@ -173,10 +174,11 @@ void write_obj(const std::string& fname, const std::string& secname, size_t size
 #pragma pack(pop)
 
     // fill coff header.
-    if (!x64)
+    if (!x64) {
         obj.coffHead.Machine = IMAGE_FILE_MACHINE_I386;
-    else
+    } else {
         obj.coffHead.Machine = IMAGE_FILE_MACHINE_AMD64;
+    }
     obj.coffHead.NumberOfSections = sizeof(obj.sections) / sizeof(IMAGE_SECTION_HEADER);
     obj.coffHead.TimeDateStamp = 0; // duh.
     obj.coffHead.PointerToSymbolTable = offsetof(decltype(obj), symtab);
@@ -187,61 +189,58 @@ void write_obj(const std::string& fname, const std::string& secname, size_t size
     // create stringtable
     char stringtable[256]{ 0 };
     char* dst = stringtable;
-    auto add_string = [&dst, &stringtable](std::string_view a) -> Elf32_Word {
+    auto addString = [&dst, &stringtable](std::string_view a) -> Elf32_Word {
         const auto offset = dst - stringtable;
         dst += a.copy(dst, 256u - offset);
         *dst++ = '\0';
         return static_cast<uint32_t>(offset + 4);
     };
-
-    // obj.symtab[0].N.Name.Long = add_string("?BinaryDataForReadOnlyFileSystem@@3PAUfs_entry@@A");//
-    // ?BinaryDataForReadOnlyFileSystem@@3PADA"); obj.symtab[1].N.Name.Long =
-    // add_string("?SizeOfDataForReadOnlyFileSystem@@3KA");
     if (!x64) {
         // in win32 the symbols have extra "_" ?
         std::string t = "_";
-        t += gDataName;
+        t += g_dataName;
         std::string t2 = "_";
-        t2 += gSizeName;
-        obj.symtab[1].N.Name.Long = add_string(t.c_str() /*"BinaryDataForReadOnlyFileSystem"*/);
-        obj.symtab[0].N.Name.Long = add_string(t2.c_str() /*"SizeOfDataForReadOnlyFileSystem"*/);
+        t2 += g_sizeName;
+        obj.symtab[1].N.Name.Long = addString(t.c_str() /*"BinaryDataForReadOnlyFileSystem"*/);
+        obj.symtab[0].N.Name.Long = addString(t2.c_str() /*"SizeOfDataForReadOnlyFileSystem"*/);
     } else {
-        obj.symtab[1].N.Name.Long = add_string(gDataName.c_str() /*"BinaryDataForReadOnlyFileSystem"*/);
-        obj.symtab[0].N.Name.Long = add_string(gSizeName.c_str() /*"SizeOfDataForReadOnlyFileSystem"*/);
+        obj.symtab[1].N.Name.Long = addString(g_dataName.c_str() /*"BinaryDataForReadOnlyFileSystem"*/);
+        obj.symtab[0].N.Name.Long = addString(g_sizeName.c_str() /*"SizeOfDataForReadOnlyFileSystem"*/);
     }
-    uint32_t stringTableSize = (uint32_t)((dst - stringtable) + 4);
+    uint32_t stringTableSize = static_cast<uint32_t>((dst - stringtable) + 4);
 
     // fill the section.
-    memcpy(&obj.sections[0].Name[0], secname.c_str(), secname.size());
+    std::copy(secname.c_str(), secname.c_str() + secname.size(), &obj.sections[0].Name[0]);
+    obj.sections[0].Name[secname.size()] = '\0';
     obj.sections[0].Misc.VirtualSize = 0;
     obj.sections[0].VirtualAddress = 0;
-    obj.sections[0].SizeOfRawData = (uint32_t)size_of_section; // sizeof the data on disk.
+    obj.sections[0].SizeOfRawData = static_cast<uint32_t>(sizeOfSection); // sizeof the data on disk.
     obj.sections[0].PointerToRawData =
-        ((sizeof(obj) + stringTableSize + 3) / 4) * 4; // DWORD align the data directly after the headers..
+        ((sizeof(obj) + stringTableSize + 3u) / 4u) * 4u; // DWORD align the data directly after the headers..
     obj.sections[0].PointerToLinenumbers = 0;
     obj.sections[0].NumberOfRelocations = 0;
     obj.sections[0].NumberOfLinenumbers = 0;
     obj.sections[0].Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ;
     // fill symbols
-    obj.symtab[1].Value = (uint32_t)sizeof(uint64_t);
+    obj.symtab[1].Value = static_cast<uint32_t>(sizeof(uint64_t));
     obj.symtab[1].SectionNumber = 1; // first section.. (one based)
     obj.symtab[1].Type = IMAGE_SYM_TYPE_CHAR | (IMAGE_SYM_DTYPE_ARRAY << 8);
     obj.symtab[1].StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
     obj.symtab[1].NumberOfAuxSymbols = 0;
 
-    obj.symtab[0].Value = (uint32_t)0;
+    obj.symtab[0].Value = static_cast<uint32_t>(0u);
     obj.symtab[0].SectionNumber = 1; // first section.. (one based)
     // obj.symtab[0].Type = IMAGE_SYM_TYPE_UINT;  //(just use IMAGE_SYM_TYPE_NULL like mstools?)
     obj.symtab[0].StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
     obj.symtab[0].NumberOfAuxSymbols = 0;
 
     FILE* d = fopen(fname.c_str(), "wb");
-    if (d == NULL) {
+    if (d == nullptr) {
         printf("Could not open %s.\n", fname.c_str());
         exit(-1);
     }
     // write headers
-    fwrite(&obj, sizeof(obj), 1, d);
+    fwrite(&obj, sizeof(obj), 1u, d);
     // write string table
     fwrite(&stringTableSize, 1, sizeof(stringTableSize), d);
     fwrite(stringtable, 1, stringTableSize - 4, d);
@@ -249,17 +248,17 @@ void write_obj(const std::string& fname, const std::string& secname, size_t size
     size_t p = ftell(d);
     uint32_t pad = 0;
     size_t padcount = obj.sections[0].PointerToRawData - p;
-    fwrite(&pad, padcount, 1, d);
-    fwrite(data, size_of_section, 1, d);
+    fwrite(&pad, padcount, 1u, d);
+    fwrite(data, sizeOfSection, 1u, d);
     fclose(d);
-#undef add_string
+#undef addString
 }
 
 template<class type>
-void write_elf(
-    type o, uint8_t arch, const std::string& fname, const std::string& secname, size_t size_of_data, const void* data)
+void WriteElf(
+    type o, uint8_t arch, const std::string& fname, const std::string& secname, size_t sizeOfData, const void* data)
 {
-    size_t size_of_section = size_of_data + sizeof(uint64_t);
+    size_t sizeOfSection = sizeOfData + sizeof(uint64_t);
     char stringtable[256];
     o.head.e_type = ET_REL;
     o.head.e_machine = arch; // machine id..
@@ -274,7 +273,7 @@ void write_elf(
     char* dst = stringtable;
     *dst = 0;
     dst++;
-    auto add_string = [&dst, &stringtable](std::string_view a) -> Elf32_Word {
+    auto addString = [&dst, &stringtable](std::string_view a) -> Elf32_Word {
         const auto offset = dst - stringtable;
         dst += a.copy(dst, 256u - offset);
         *dst++ = '\0';
@@ -282,20 +281,20 @@ void write_elf(
     };
 
     // create symbols
-    o.symbs[2].st_name = add_string(gDataName); // ?BinaryDataForReadOnlyFileSystem@@3PADA");
+    o.symbs[2].st_name = addString(g_dataName); // ?BinaryDataForReadOnlyFileSystem@@3PADA");
     o.symbs[2].st_value = sizeof(uint64_t);
-    o.symbs[2].st_size = static_cast<Elf32_Word>(size_of_data);
+    o.symbs[2].st_size = static_cast<Elf32_Word>(sizeOfData);
     o.symbs[2].st_info = o.symbs[1].st_info = ELF_ST_INFO(STB_GLOBAL, STT_OBJECT);
     o.symbs[2].st_other = o.symbs[1].st_other = STV_HIDDEN;
     o.symbs[2].st_shndx = o.symbs[1].st_shndx = 3;
 
-    o.symbs[1].st_name = add_string(gSizeName);
+    o.symbs[1].st_name = addString(g_sizeName);
     o.symbs[1].st_value = 0;
     o.symbs[1].st_size = sizeof(uint64_t);
 
-    o.sections[2].sh_name = add_string(".symtab");
+    o.sections[2].sh_name = addString(".symtab");
     o.sections[2].sh_type = SHT_SYMTAB;
-    o.sections[2].sh_offset = offsetof(decltype(o), symbs); // sizeof(o) + size_of_section + stringtable_size;
+    o.sections[2].sh_offset = offsetof(decltype(o), symbs); // sizeof(o) + sizeOfSection + stringtable_size;
     o.sections[2].sh_addralign = 8;
     o.sections[2].sh_size = sizeof(o.symbs);
     o.sections[2].sh_entsize = sizeof(o.symbs[0]);
@@ -304,34 +303,32 @@ void write_elf(
 
     std::string tmp = ".rodata.";
     tmp += secname;
-    const char* sec;
-    sec = tmp.c_str();
     /*sec = ".rodata.rofs"*/
-    o.sections[3].sh_name = add_string(sec);
+    o.sections[3].sh_name = addString(tmp);
     o.sections[3].sh_type = SHT_PROGBITS;
     o.sections[3].sh_flags = SHF_ALLOC | SHF_MERGE;
     o.sections[3].sh_offset = sizeof(o);
     o.sections[3].sh_addralign = 8;
-    o.sections[3].sh_size = static_cast<Elf32_Word>(size_of_section);
+    o.sections[3].sh_size = static_cast<Elf32_Word>(sizeOfSection);
 
-    o.sections[1].sh_name = add_string(".strtab");
+    o.sections[1].sh_name = addString(".strtab");
     o.sections[1].sh_type = SHT_STRTAB;
-    o.sections[1].sh_offset = static_cast<Elf32_Off>(sizeof(o) + size_of_section);
+    o.sections[1].sh_offset = static_cast<Elf32_Off>(sizeof(o) + sizeOfSection);
     o.sections[1].sh_addralign = 1;
     o.sections[1].sh_size = static_cast<Elf32_Word>(dst - stringtable);
 
     FILE* e = fopen(fname.c_str(), "wb");
-    if (e == NULL) {
+    if (e == nullptr) {
         printf("Could not open %s.\n", fname.c_str());
         exit(-1);
     }
     fwrite(&o, sizeof(o), 1, e);
-    fwrite(data, size_of_section, 1, e);
-    fwrite(stringtable, (size_t)o.sections[1].sh_size, 1, e);
+    fwrite(data, sizeOfSection, 1, e);
+    fwrite(stringtable, static_cast<size_t>(o.sections[1].sh_size), 1, e);
     fclose(e);
 }
 
-void write_macho(const std::string& fname, const std::string& secname, size_t size_of_data_, const void* data)
+void WriteMacho(const std::string& fname, const std::string& secname, size_t sizeOfData, const void* data)
 {
 #ifdef __APPLE__
     // Write fat header for X64_64 and ARM64 object
@@ -344,14 +341,14 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
             htonl(CPU_TYPE_X86_64),
             htonl(CPU_SUBTYPE_X86_64_ALL),
             0,
-            0, // size of data TBD
+            0, // size of data
             htonl(3)
         },
         {
             htonl(CPU_TYPE_ARM64),
             htonl(CPU_SUBTYPE_ARM64_ALL),
             0, // offset,
-            0, // size of data TBD
+            0, // size of data
             htonl(3)
         },
     };
@@ -359,7 +356,7 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
     size_t fpos = 0; // "file" offsets are actually relative to the architecture header
     archs[0].offset = htonl(sizeof(fathdr) + sizeof(archs));
 
-    size_t size_of_section = size_of_data_ + sizeof(uint64_t);
+    size_t sizeOfSection = sizeOfData + sizeof(uint64_t);
 
     struct mach_header_64 x64_header = {
         MH_MAGIC_64,
@@ -388,9 +385,9 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
         sizeof(data_seg) + sizeof(section_64),
         "", // for object files name is empty
         0, // vmaddress
-        (size_of_section + 7) & ~7, // vmsize aligned to 8 bytes
-        0, // fileoffset = TBD
-        size_of_section, // filesize = TBD
+        (sizeOfSection + 7) & ~7, // vmsize aligned to 8 bytes
+        0, // fileoffset
+        sizeOfSection, // filesize
         VM_PROT_READ, // maxprot
         VM_PROT_READ, // initprot
         1, // nsects
@@ -401,8 +398,8 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
         "__const",
         "__DATA",
         0, // addr
-        size_of_section, // vmsize aligned to 8 bytes
-        0, // offset = TBD
+        sizeOfSection, // vmsize aligned to 8 bytes
+        0, // offset
         3, // alignment = 2^3 = 8 bytes
         0, // reloff
         0, // nreloc
@@ -412,18 +409,18 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
     };
 
     std::string dataName = "_";
-    dataName += gDataName;
+    dataName += g_dataName;
     std::string sizeName = "_";
-    sizeName += gSizeName;
+    sizeName += g_sizeName;
 
     uint32_t string_size = dataName.size() + sizeName.size() + 3; // prepending plus two terminating nulls
 
     struct symtab_command symtab = {
         LC_SYMTAB,
         sizeof(symtab),
-        0, // symoff = TBD
+        0, // symoff
         2, // nsyms
-        0, // stroff = TBD
+        0, // stroff
         string_size, // strsize
     };
 
@@ -431,7 +428,7 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
 
     data_seg.fileoff = static_cast<uint32_t>(fpos);
     data_sect.offset = static_cast<uint32_t>(fpos);
-    fpos += size_of_section;
+    fpos += sizeOfSection;
 
     size_t sectionAligned = (fpos + 7) & ~7;
     uint32_t sectionAlign = sectionAligned - fpos;
@@ -480,8 +477,8 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
     fwrite(&data_seg, sizeof(data_seg), 1, e);
     fwrite(&data_sect, sizeof(data_sect), 1, e);
     fwrite(&symtab, sizeof(symtab), 1, e);
-    fwrite(data, size_of_section, 1, e);
-    for(int i = 0; i < sectionAlign; i++) {
+    fwrite(data, sizeOfSection, 1, e);
+    for (int i = 0; i < sectionAlign; i++) {
         fputc(0, e); // alignment byte to begin string table 8 byte boundary
     }
     fwrite(&syms, sizeof(syms), 1, e);
@@ -489,7 +486,7 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
     fwrite(sizeName.c_str(), sizeName.size() + 1, 1, e);
     fwrite(dataName.c_str(), dataName.size() + 1, 1, e);
 
-    for(int i = 0; i < align; i++) {
+    for (int i = 0; i < align; i++) {
         fputc(0, e); // alignment byte to begin arm64 architecture at 8 byte boundary
     }
 
@@ -497,8 +494,8 @@ void write_macho(const std::string& fname, const std::string& secname, size_t si
     fwrite(&data_seg, sizeof(data_seg), 1, e);
     fwrite(&data_sect, sizeof(data_sect), 1, e);
     fwrite(&symtab, sizeof(symtab), 1, e);
-    fwrite(data, size_of_section, 1, e);
-    for(int i = 0; i < sectionAlign; i++) {
+    fwrite(data, sizeOfSection, 1, e);
+    for (int i = 0; i < sectionAlign; i++) {
         fputc(0, e); // alignment byte to begin string table 8 byte boundary
     }
     fwrite(&syms, sizeof(syms), 1, e);
@@ -588,7 +585,7 @@ int main(int argc, char* argv[])
                 while (!exts.empty()) {
                     auto pos = exts.find(';');
                     pos = std::min(pos, exts.size());
-                    valid_exts.push_back(exts.substr(0, pos));
+                    g_validExts.push_back(exts.substr(0, pos));
                     exts.remove_prefix(std::min(pos + 1, exts.size()));
                 }
                 baseArg++;
@@ -621,8 +618,8 @@ int main(int argc, char* argv[])
         }
     }
     if (argc >= baseArg + 5) {
-        gDataName = argv[baseArg + 3];
-        gSizeName = argv[baseArg + 4];
+        g_dataName = argv[baseArg + 3];
+        g_sizeName = argv[baseArg + 4];
     }
     if (argc == baseArg + 6) {
         secName = obj32Name = obj64Name = o32Name = o64Name = x32Name = x64Name = macName = argv[baseArg + 5];
@@ -634,31 +631,30 @@ int main(int argc, char* argv[])
         x64Name += "_x64.o";
         macName += "_mac.o";
     }
-    add_directory(inPath, roPath);
+    AddDirectory(inPath, roPath);
 
     // fix offsets
-    size_t base_offset = sizeof(fs_entry) * (directory.size() + 1);
-    for (auto& d : directory) {
-        d.offset += base_offset;
+    size_t baseOffset = sizeof(FsEntry) * (g_directory.size() + 1);
+    for (auto& d : g_directory) {
+        d.offset += baseOffset;
     }
 
     // add terminator
-    directory.push_back({ { 0 }, 0, 0 });
+    g_directory.push_back({ { 0 }, 0, 0 });
 
-    const size_t size_of_dir = (sizeof(fs_entry) * directory.size());
-    const size_t size_of_data = bin.size() + size_of_dir;
-    uint8_t* data = new uint8_t[size_of_data + sizeof(uint64_t)];
-    *(uint64_t*)(data) = size_of_data;
-    memcpy(data + sizeof(uint64_t), directory.data(), size_of_dir);
-    memcpy(data + sizeof(uint64_t) + size_of_dir, bin.data(), bin.size());
-
+    const size_t sizeOfDir = (sizeof(FsEntry) * g_directory.size());
+    const size_t sizeOfData = g_bin.size() + sizeOfDir;
+    auto data = std::make_unique<uint8_t[]>(sizeOfData + sizeof(uint64_t));
+    *reinterpret_cast<uint64_t*>(data.get()) = sizeOfData;
+    std::copy(g_directory.cbegin(), g_directory.cend(), reinterpret_cast<FsEntry*>(data.get() + sizeof(uint64_t)));
+    std::copy(g_bin.cbegin(), g_bin.cend(), data.get() + sizeof(uint64_t) + sizeOfDir);
     // Build obj
     if (buildWindows) {
         if (buildX86) {
-            write_obj(obj32Name, secName, size_of_data, data, false);
+            WriteObj(obj32Name, secName, sizeOfData, data.get(), false);
         }
         if (buildX64) {
-            write_obj(obj64Name, secName, size_of_data, data, true);
+            WriteObj(obj64Name, secName, sizeOfData, data.get(), true);
         }
     }
     // Create .elf (.o)
@@ -674,20 +670,20 @@ int main(int argc, char* argv[])
             Elf64_Sym symbs[3]{};
         } o64;
         if (buildV7) {
-            write_elf(o32, EM_ARM, o32Name, secName, size_of_data, data);
+            WriteElf(o32, EM_ARM, o32Name, secName, sizeOfData, data.get());
         }
         if (buildV8) {
-            write_elf(o64, EM_AARCH64, o64Name, secName, size_of_data, data);
+            WriteElf(o64, EM_AARCH64, o64Name, secName, sizeOfData, data.get());
         }
         if (buildX86) {
-            write_elf(o32, EM_386, x32Name, secName, size_of_data, data);
+            WriteElf(o32, EM_386, x32Name, secName, sizeOfData, data.get());
         }
         if (buildX64) {
-            write_elf(o64, EM_X86_64, x64Name, secName, size_of_data, data);
+            WriteElf(o64, EM_X86_64, x64Name, secName, sizeOfData, data.get());
         }
     }
     // Create mach-o (.o)
     if (buildMac) {
-        write_macho(macName, secName, size_of_data, data);
+        WriteMacho(macName, secName, sizeOfData, data.get());
     }
 }

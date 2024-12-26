@@ -44,12 +44,12 @@ uint32_t GetId(const Entity& e)
 
 uint32_t GetGeneration(const Entity& e)
 {
-    return (e.id >> 32l) & 0xFFFFFFFF;
+    return (e.id >> 32L) & 0xFFFFFFFF;
 }
 
 Entity MakeEntityId(uint32_t g, uint32_t i)
 {
-    return { (static_cast<uint64_t>(g) << 32l) | i };
+    return { (static_cast<uint64_t>(g) << 32L) | i }; // 32: signed long
 }
 
 class EntityReferenceCounter final : public IEntityReferenceCounter {
