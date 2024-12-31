@@ -290,11 +290,12 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
             const float distSq = Math::Distance2(submesh.worldCenter, camWorldPos);
             uint64_t sortKey = Math::min(maxUDepth, static_cast<uint64_t>(distSq * depthUintCoeff));
             if (renderSlotInfo.sortType == RenderSlotSortType::BY_MATERIAL) {
-                sortKey |= (((uint64_t)submeshMatData.renderSortHash & sRenderMask) << sRenderShift);
+                sortKey |= ((static_cast<uint64_t>(submeshMatData.renderSortHash) & sRenderMask) << sRenderShift);
             } else {
-                sortKey = (sortKey << sDepthShift) | ((uint64_t)slotSubmeshMatData[idx].renderSortHash & sRenderMask);
+                sortKey = (sortKey << sDepthShift) |
+                    (static_cast<uint64_t>(slotSubmeshMatData[idx].renderSortHash) & sRenderMask);
             }
-            refSubmeshIndices.push_back(SlotSubmeshIndex { (uint32_t)submeshIndex,
+            refSubmeshIndices.push_back(SlotSubmeshIndex { static_cast<uint32_t>(submeshIndex),
                 submeshMatData.combinedRenderSortLayer, sortKey, submeshMatData.renderSortHash,
                 submeshMatData.shader.GetHandle(), submeshMatData.gfxState.GetHandle() });
         }

@@ -840,7 +840,8 @@ vector<QueueProperties> DeviceVk::CheckExternalConfig(const BackendExtraVk* back
             true,                 // explicitFlags
             false,                // canPresent
         });
-        PLUGIN_LOG_I("trying to enable gpu multi-queue, with queue count: %u", (uint32_t)queueProperties.size());
+        PLUGIN_LOG_I("trying to enable gpu multi-queue, with queue count: %u",
+            static_cast<uint32_t>(queueProperties.size()));
     }
 
     if (extra.instance != VK_NULL_HANDLE) {
@@ -1045,8 +1046,8 @@ PlatformGpuMemoryAllocator* DeviceVk::GetPlatformGpuMemoryAllocator()
 GpuQueue DeviceVk::GetValidGpuQueue(const GpuQueue& gpuQueue) const
 {
     const auto getSpecificQueue = [](const uint32_t queueIndex, const GpuQueue::QueueType queueType,
-                                      const vector<LowLevelGpuQueueVk>& specificQueues, const GpuQueue& defaultQueue) {
-        const uint32_t queueCount = (uint32_t)specificQueues.size();
+                                     const vector<LowLevelGpuQueueVk>& specificQueues, const GpuQueue& defaultQueue) {
+        const uint32_t queueCount = static_cast<uint32_t>(specificQueues.size());
         if (queueIndex < queueCount) {
             return GpuQueue { queueType, queueIndex };
         } else if (queueCount > 0) {
@@ -1128,7 +1129,7 @@ LowLevelGpuQueueVk DeviceVk::GetGpuQueue(const GpuQueue& gpuQueue) const
     // 3. returns the default queue
     const auto getSpecificQueue = [](const uint32_t queueIndex, const vector<LowLevelGpuQueueVk>& specificQueues,
                                       const LowLevelGpuQueueVk& defaultQueue) {
-        const uint32_t queueCount = (uint32_t)specificQueues.size();
+        const uint32_t queueCount = static_cast<uint32_t>(specificQueues.size());
         if (queueIndex < queueCount) {
             return specificQueues[queueIndex];
         } else if (queueCount > 0) {

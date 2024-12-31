@@ -1041,16 +1041,16 @@ bool EGLState::GetSurfaceInformation(
     eglGetConfigAttrib(display, config, EGL_DEPTH_SIZE, &depth_size);
     eglGetConfigAttrib(display, config, EGL_STENCIL_SIZE, &stencil_size);
 
-    res.configId = (uint32_t)configId;
-    res.alpha_size = (uint32_t)alpha_size;
-    res.blue_size = (uint32_t)blue_size;
-    res.depth_size = (uint32_t)depth_size;
-    res.green_size = (uint32_t)green_size;
-    res.height = (uint32_t)height;
-    res.red_size = (uint32_t)red_size;
-    res.samples = (uint32_t)samples;
-    res.stencil_size = (uint32_t)stencil_size;
-    res.width = (uint32_t)width;
+    res.configId = static_cast<uint32_t>(configId);
+    res.alpha_size = static_cast<uint32_t>(alpha_size);
+    res.blue_size = static_cast<uint32_t>(blue_size);
+    res.depth_size = static_cast<uint32_t>(depth_size);
+    res.green_size = static_cast<uint32_t>(green_size);
+    res.height = static_cast<uint32_t>(height);
+    res.red_size = static_cast<uint32_t>(red_size);
+    res.samples = static_cast<uint32_t>(samples);
+    res.stencil_size = static_cast<uint32_t>(stencil_size);
+    res.width = static_cast<uint32_t>(width);
 
     EGLint colorspace = 0;
     EGLint COLOR_SPACE = 0;

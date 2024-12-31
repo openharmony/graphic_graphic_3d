@@ -114,7 +114,7 @@ void ExtentRenderMaterialFlagsForComplexity(const RenderMaterialType materialTyp
 inline constexpr uint32_t HashSubmeshMaterials(const RenderMaterialType materialType,
     const RenderMaterialFlags materialFlags, const RenderSubmeshFlags submeshFlags)
 {
-    return (((uint32_t)materialType << MATERIAL_TYPE_SHIFT) & MATERIAL_TYPE_MASK) |
+    return ((static_cast<uint32_t>(materialType) << MATERIAL_TYPE_SHIFT) & MATERIAL_TYPE_MASK) |
            ((materialFlags << MATERIAL_FLAGS_SHIFT) & MATERIAL_FLAGS_MASK) | (submeshFlags & SUBMESH_FLAGS_MASK);
 }
 
@@ -134,7 +134,7 @@ void* AllocateMatrixMemory(RenderDataStoreDefaultMaterial::LinearAllocatorStruct
         return data;
     } else { // current allocator is out of memory
         allocator.allocators.push_back(make_unique<LinearAllocator>(byteSize, MEMORY_ALIGNMENT));
-        allocator.currentIndex = (uint32_t)(allocator.allocators.size() - 1);
+        allocator.currentIndex = static_cast<uint32_t>(allocator.allocators.size() - 1);
         data = allocator.allocators[allocator.currentIndex]->Allocate(byteSize);
         CORE_ASSERT_MSG(data, "render data store default material allocation : out of memory");
         return data;

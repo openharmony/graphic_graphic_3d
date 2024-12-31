@@ -69,9 +69,9 @@ VertexInputDeclarationLoader::LoadResult LoadState(
         PLUGIN_ASSERT(attributes.size() <= PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
 
         vertexInputDeclarationData_.bindingDescriptionCount =
-            std::min((uint32_t)bindings.size(), PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
+            std::min(static_cast<uint32_t>(bindings.size()), PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
         vertexInputDeclarationData_.attributeDescriptionCount =
-            std::min((uint32_t)attributes.size(), PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
+            std::min(static_cast<uint32_t>(attributes.size()), PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
 
         for (uint32_t idx = 0; idx < vertexInputDeclarationData_.bindingDescriptionCount; ++idx) {
             vertexInputDeclarationData_.bindingDescriptions[idx] = bindings[idx];

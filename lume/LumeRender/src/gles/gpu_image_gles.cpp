@@ -62,9 +62,9 @@ GpuImagePlatformDataGL ConvertFormat(const DeviceGLES::ImageFormat& fmt)
 constexpr uint32_t ConvertSampleCountFlags(SampleCountFlags flags)
 {
     uint32_t sampleCount = 1;
-    if ((uint32_t)flags != 1) {
+    if (static_cast<uint32_t>(flags) != 1) {
         // MSAA
-        sampleCount = (uint32_t)flags;
+        sampleCount = static_cast<uint32_t>(flags);
     }
     return sampleCount;
 }

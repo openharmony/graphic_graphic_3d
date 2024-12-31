@@ -63,7 +63,7 @@ RenderFrameSyncVk::~RenderFrameSyncVk()
 
 void RenderFrameSyncVk::BeginFrame()
 {
-    bufferingIndex_ = (bufferingIndex_ + 1) % (uint32_t)frameFences_.size();
+    bufferingIndex_ = (bufferingIndex_ + 1) % static_cast<uint32_t>(frameFences_.size());
 }
 
 void RenderFrameSyncVk::WaitForFrameFence()

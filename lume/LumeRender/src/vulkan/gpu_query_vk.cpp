@@ -65,7 +65,7 @@ GpuQueryVk::~GpuQueryVk()
 
 void GpuQueryVk::NextQueryIndex()
 {
-    queryIndex_ = (queryIndex_ + 1) % ((uint32_t)plats_.size());
+    queryIndex_ = (queryIndex_ + 1) % (static_cast<uint32_t>(plats_.size()));
 }
 
 const GpuQueryDesc& GpuQueryVk::GetDesc() const

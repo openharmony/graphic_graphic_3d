@@ -21,8 +21,8 @@
 
 // NOTE: LUME_ONCE is meant e.g. to prevent excessive flooding in the logs with repeating errors.
 // i.e. It's not meant for normal working code.
-#define LUME_ONCE(uniqueId, runOnce) { if (lume::checkOnce(uniqueId)) { runOnce; } }
-#define LUME_ONCE_RESET lume::checkOnceReset
+#define LUME_ONCE(uniqueId, runOnce) { if (lume::CheckOnce(uniqueId)) { runOnce; } }
+#define LUME_ONCE_RESET lume::CheckOnceReset
 
 #define LUME_UNUSED(x) (void)(x)
 #define LUME_STATIC_ASSERT(expression) static_assert(expression)
@@ -129,7 +129,8 @@ public:
     void operator=(ILogger const&) = delete;
     
 
-    virtual void vlog(LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aFormat, va_list aArgs) = 0;
+    virtual void VLog(LogLevel aLogLevel,
+        const char *aFilename, int aLinenumber, const char *aFormat, va_list aArgs) = 0;
     virtual FORMAT_FUNC(5, 6) void log(LogLevel aLogLevel, const char *aFilename, int aLinenumber, FORMAT_ATTRIBUTE const char *aFormat, ...) = 0;
     virtual FORMAT_FUNC(6, 7) bool logAssert(const char *aFilename, int aLinenumber, bool expression, const char *expressionString, FORMAT_ATTRIBUTE const char *aFormat, ...) = 0;
 
@@ -146,8 +147,8 @@ std::unique_ptr<ILogger::IOutput> createLoggerDebugOutput();
 std::unique_ptr<ILogger::IOutput> createLoggerFileOutput(const char *aFilename);
 
 
-bool checkOnce(const char *aId);
-void checkOnceReset();
+bool CheckOnce(const char *aId);
+void CheckOnceReset();
 
 
 } // lume

@@ -395,9 +395,9 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
         renderPassCreateFlags,                     // flags
         attachmentCount,                           // attachmentCount
         attachmentDescriptions,                    // pAttachments
-        (uint32_t)subpassDescriptions.size(),      // subpassCount
+        static_cast<uint32_t>(subpassDescriptions.size()),      // subpassCount
         subpassDescriptions.data(),                // pSubpasses
-        (uint32_t)subpassDependencies.size(),      // dependencyCount
+        static_cast<uint32_t>(subpassDependencies.size()),      // dependencyCount
         subpassDependencies.data(),                // pDependencies
     };
 
@@ -622,9 +622,9 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
         renderPassCreateFlags,                           // flags
         attachmentCount,                                 // attachmentCount
         attachmentDescriptions,                          // pAttachments
-        (uint32_t)subpassDescriptions.size(),            // subpassCount
+        static_cast<uint32_t>(subpassDescriptions.size()),            // subpassCount
         subpassDescriptions.data(),                      // pSubpasses
-        (uint32_t)subpassDependencies.size(),            // dependencyCount
+        static_cast<uint32_t>(subpassDependencies.size()),            // dependencyCount
         subpassDependencies.data(),                      // pDependencies
         0u,                                              // correlatedViewMaskCount
         nullptr,                                         // pCorrelatedViewMasks

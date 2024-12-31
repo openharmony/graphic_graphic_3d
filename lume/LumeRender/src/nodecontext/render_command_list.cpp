@@ -407,7 +407,7 @@ bool RenderCommandList::HasValidRenderCommands() const
 
 uint32_t RenderCommandList::GetRenderCommandCount() const
 {
-    return (uint32_t)renderCommands_.size();
+    return static_cast<uint32_t>(renderCommands_.size());
 }
 
 GpuQueue RenderCommandList::GetGpuQueue() const
@@ -487,7 +487,7 @@ void RenderCommandList::AddBarrierPoint(const RenderCommandType renderCommandTyp
                 }
             }
             data->descriptorSetHandleCount =
-                (uint32_t)descriptorSetHandlesForBarriers_.size() - descriptorSetBeginIndex;
+                static_cast<uint32_t>(descriptorSetHandlesForBarriers_.size()) - descriptorSetBeginIndex;
         }
 
         const bool handleCustomBarriers =
@@ -786,7 +786,7 @@ void RenderCommandList::BindVertexBuffers(const array_view<const VertexBuffer> v
             VertexBuffer dynamicBarrierVertexBuffers[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
             uint32_t dynamicBarrierVertexBufferCount = 0;
             const uint32_t vertexBufferCount =
-                Math::min(PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT, (uint32_t)vertexBuffers.size());
+                Math::min(PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT, static_cast<uint32_t>(vertexBuffers.size()));
             data->vertexBufferCount = vertexBufferCount;
             RenderHandle previousVbHandle; // often all vertex buffers are withing the same buffer with offsets
             for (size_t idx = 0; idx < vertexBufferCount; ++idx) {
@@ -876,7 +876,7 @@ void RenderCommandList::BeginRenderPass(
 
         if (auto* data = AllocateRenderCommand<RenderCommandBeginRenderPass>(allocator_); data) {
             // NOTE: hashed in the backend
-            PLUGIN_ASSERT(renderPassDesc.subpassCount == (uint32_t)subpassDescs.size());
+            PLUGIN_ASSERT(renderPassDesc.subpassCount == static_cast<uint32_t>(subpassDescs.size()));
 
             data->beginType = RenderPassBeginType::RENDER_PASS_BEGIN;
             data->renderPassDesc = renderPassDesc;
@@ -1633,7 +1633,8 @@ void RenderCommandList::BindDescriptorSet(const uint32_t set, const BindDescript
 void RenderCommandList::BindDescriptorSets(const uint32_t firstSet, const array_view<const RenderHandle> handles)
 {
     BindDescriptorSetData bdsd[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
-    const uint32_t count = Math::min((uint32_t)handles.size(), PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
+    const uint32_t count =
+        Math::min(static_cast<uint32_t>(handles.size()), PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
     for (uint32_t idx = 0U; idx < count; ++idx) {
         bdsd[idx].handle = handles[idx];
     }

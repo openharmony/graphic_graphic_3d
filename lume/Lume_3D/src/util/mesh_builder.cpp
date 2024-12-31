@@ -457,7 +457,7 @@ GpuBufferDesc GetVertexBufferDesc(size_t byteSize, BufferUsageFlags additionalFl
         desc.engineCreationFlags |= CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
     }
     desc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    desc.byteSize = (uint32_t)byteSize;
+    desc.byteSize = static_cast<uint32_t>(byteSize);
 
     return desc;
 }
@@ -475,7 +475,7 @@ constexpr GpuBufferDesc GetIndexBufferDesc(size_t indexCount, BufferUsageFlags a
     indexBufferDesc.usageFlags |= additionalFlags;
     indexBufferDesc.engineCreationFlags = 0;
     indexBufferDesc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    indexBufferDesc.byteSize = sizeof(T) * (uint32_t)indexCount;
+    indexBufferDesc.byteSize = sizeof(T) * static_cast<uint32_t>(indexCount);
 
     return indexBufferDesc;
 }
@@ -489,7 +489,7 @@ constexpr GpuBufferDesc GetMorphTargetBufferDesc(size_t byteSize, BufferUsageFla
     desc.usageFlags |= additionalFlags;
     desc.engineCreationFlags = 0; // read-only
     desc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    desc.byteSize = (uint32_t)byteSize;
+    desc.byteSize = static_cast<uint32_t>(byteSize);
 
     return desc;
 }
@@ -1009,7 +1009,7 @@ void MeshBuilder::Allocate()
     bufferSizes.jointBuffer = Align(bufferSizes.jointBuffer, BUFFER_ALIGN);
     bufferSizes.morphVertexData = Align(bufferSizes.morphVertexData, BUFFER_ALIGN);
 
-    indexCount_ = (uint32_t)bufferSizes.indexBuffer / sizeof(uint32_t);
+    indexCount_ = static_cast<uint32_t>(bufferSizes.indexBuffer) / sizeof(uint32_t);
 
     uint32_t vertexBufferSizeInBytes = 0;
 
@@ -1060,9 +1060,9 @@ MeshBuilder::BufferSizesInBytes MeshBuilder::CalculateSizes()
                 static_cast<uint32_t>(Align(bindingDesc.stride * submesh.info.vertexCount, BUFFER_ALIGN));
         }
 
-        submesh.indexBufferOffset = (uint32_t)Align(bufferSizes.indexBuffer, BUFFER_ALIGN);
-        submesh.jointBufferOffset = (uint32_t)Align(bufferSizes.jointBuffer, BUFFER_ALIGN);
-        submesh.morphTargetBufferOffset = (uint32_t)Align(bufferSizes.morphVertexData, BUFFER_ALIGN);
+        submesh.indexBufferOffset = static_cast<uint32_t>(Align(bufferSizes.indexBuffer, BUFFER_ALIGN));
+        submesh.jointBufferOffset = static_cast<uint32_t>(Align(bufferSizes.jointBuffer, BUFFER_ALIGN));
+        submesh.morphTargetBufferOffset = static_cast<uint32_t>(Align(bufferSizes.morphVertexData, BUFFER_ALIGN));
 
         if (submesh.info.indexType == CORE_INDEX_TYPE_UINT16) {
             bufferSizes.indexBuffer = submesh.indexBufferOffset + (submesh.info.indexCount * sizeof(uint16_t));
@@ -1083,10 +1083,11 @@ MeshBuilder::BufferSizesInBytes MeshBuilder::CalculateSizes()
             // vertexCount * uint32_t * morphTargetCount, index/indexOffset to sparse target data
             // vertexCount * MorphInputData, base data
             // vertexCount * MorphInputData * morphTargetCount, target data
-            const uint32_t indexSize = (uint32_t)Align(
-                submesh.info.vertexCount * submesh.info.morphTargetCount * sizeof(uint32_t), BUFFER_ALIGN);
-            const uint32_t targetSize = (uint32_t)Align(
-                submesh.info.vertexCount * sizeof(MorphInputData) * (submesh.info.morphTargetCount + 1u), BUFFER_ALIGN);
+            const uint32_t indexSize = static_cast<uint32_t>(Align(
+                submesh.info.vertexCount * submesh.info.morphTargetCount * sizeof(uint32_t), BUFFER_ALIGN));
+            const uint32_t targetSize =
+                static_cast<uint32_t>(Align(submesh.info.vertexCount *
+                sizeof(MorphInputData) * (submesh.info.morphTargetCount + 1u), BUFFER_ALIGN));
             bufferSizes.morphVertexData = submesh.morphTargetBufferOffset + indexSize + targetSize;
         }
 
@@ -1242,8 +1243,8 @@ void MeshBuilder::SetJointData(
                     indexAttributeDesc->binding, vertexInputDeclaration_.bindingDescriptions);
                 bindingDesc) {
                 auto& jointIndexAcc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_JOI];
-                jointIndexAcc.offset = (uint32_t)Align(submesh.jointBufferOffset, BUFFER_ALIGN);
-                jointIndexAcc.byteSize = (uint32_t)bindingDesc->stride * submesh.info.vertexCount;
+                jointIndexAcc.offset = static_cast<uint32_t>(Align(submesh.jointBufferOffset, BUFFER_ALIGN));
+                jointIndexAcc.byteSize = static_cast<uint32_t>(bindingDesc->stride) * submesh.info.vertexCount;
 
                 OutputBuffer dstData { indexAttributeDesc->format, bindingDesc->stride,
                     { buffer + jointIndexAcc.offset, jointIndexAcc.byteSize } };
@@ -1260,8 +1261,9 @@ void MeshBuilder::SetJointData(
                 // Process joint weights.
                 auto& jointWeightAcc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_JOW];
                 // index aligned offset + index bytesize -> aligned to offset
-                jointWeightAcc.offset = (uint32_t)Align(jointIndexAcc.offset + jointIndexAcc.byteSize, BUFFER_ALIGN);
-                jointWeightAcc.byteSize = (uint32_t)bindingDesc->stride * submesh.info.vertexCount;
+                jointWeightAcc.offset =
+                    static_cast<uint32_t>(Align(jointIndexAcc.offset + jointIndexAcc.byteSize, BUFFER_ALIGN));
+                jointWeightAcc.byteSize = static_cast<uint32_t>(bindingDesc->stride) * submesh.info.vertexCount;
 
                 OutputBuffer dstData { weightAttributeDesc->format, bindingDesc->stride,
                     { buffer + jointWeightAcc.offset, jointWeightAcc.byteSize } };

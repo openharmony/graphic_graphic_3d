@@ -267,7 +267,7 @@ void RenderPreprocessorSystem::CalculateSceneBounds()
             if ((Math::abs(radDifference) > granularity) || (posDifference > granularity)) {
                 // Calculate how many steps we need to change and in to which direction.
                 const float radAmount = ceil((boundingSphereRadius - boundingSphere_.radius) / granularity);
-                const int32_t posAmount = (int32_t)ceil(posDifference / granularity);
+                const int32_t posAmount = static_cast<int32_t>(ceil(posDifference / granularity));
                 if ((radAmount != 0.f) || (posAmount != 0)) {
                     // Update size and position of the bounds.
                     boundingSphere_.center = boundingSpherePosition;

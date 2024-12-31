@@ -329,9 +329,9 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
         0, // flags
 #endif
         &applicationInfo,            // pApplicationInfo
-        (uint32_t)layers.size(),     // enabledLayerCount
+        static_cast<uint32_t>(layers.size()),     // enabledLayerCount
         layers.data(),               // ppEnabledLayerNames
-        (uint32_t)extensions.size(), // enabledExtensionCount
+        static_cast<uint32_t>(extensions.size()), // enabledExtensionCount
         extensions.data(),           // ppEnabledExtensionNames
     };
 
@@ -589,11 +589,11 @@ DeviceWrapper CreateFunctionsVk::CreateDevice(VkInstance instance, VkPhysicalDev
         VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,                  // sType;
         physicalDeviceFeatures2,                               // pNext;
         0,                                                     // flags;
-        (uint32_t)queueCreateInfos.size(),                     // queueCreateInfoCount;
+        static_cast<uint32_t>(queueCreateInfos.size()),        // queueCreateInfoCount;
         queueCreateInfos.data(),                               // pQueueCreateInfos;
-        uint32_t(layers.size()),                               // enabledLayerCount;
+        static_cast<uint32_t>(layers.size()),                               // enabledLayerCount;
         layers.data(),                                         // ppEnabledLayerNames;
-        uint32_t(extensions.size()),                           // enabledExtensionCount;
+        static_cast<uint32_t>(extensions.size()),                           // enabledExtensionCount;
         extensions.data(),                                     // ppEnabledExtensionNames;
         physicalDeviceFeatures2 ? nullptr : &featuresToEnable, // pEnabledFeatures
     };

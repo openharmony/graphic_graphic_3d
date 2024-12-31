@@ -363,6 +363,6 @@ uint32_t SwapchainGLES::GetNextImage() const
 
 uint64_t SwapchainGLES::GetSurfaceHandle() const
 {
-    return (uint64_t)(plat_.surface);
+    return static_cast<uint64_t>(plat_.surface);
 }
 RENDER_END_NAMESPACE()

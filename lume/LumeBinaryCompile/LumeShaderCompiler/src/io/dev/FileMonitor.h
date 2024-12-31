@@ -33,13 +33,13 @@ public:
         @param aPath Path to directory that is being monitored, such as 'x:/images/' or './images'.
         @return True if path is succesfully added to watch list, otherwise false.
     */
-    bool addPath(const std::string &aPath);
+    bool AddPath(const std::string &aPath);
 
     /** Removes path from watch list, the monitor will no longer watch files in this directory or it's subtree.
         @param aPath Path to directory to be no longer monitored.
         @return True if the watch is successfully removed, otherwise false.
     */
-    bool removePath(const std::string &aPath);
+    bool RemovePath(const std::string &aPath);
 
     /** Scans for file modifications since last call to this function.
         @param aAdded List of files that were added.
@@ -57,11 +57,11 @@ private:
         time_t timestamp;
     };
 
-    bool addFile(const std::string &aPath);
-    bool removeFile(const std::string &aPath);
+    bool AddFile(const std::string &aPath);
+    bool RemoveFile(const std::string &aPath);
 
-    bool isWatchingDirectory(const std::string &aPath);
-    bool isWatchingSubDirectory(const std::string &aPath);
+    bool IsWatchingDirectory(const std::string &aPath);
+    bool IsWatchingSubDirectory(const std::string &aPath);
 
     std::vector<std::string> mDirectories;
     std::map<std::string, FileInfo> mFiles;

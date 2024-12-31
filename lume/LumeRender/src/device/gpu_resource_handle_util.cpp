@@ -39,10 +39,12 @@ RenderHandle CreateGpuResourceHandle(const RenderHandleType type, const RenderHa
     }
 #endif
 
-    return { (((uint64_t)infoFlags << RES_HANDLE_ADDITIONAL_INFO_SHIFT) & RES_HANDLE_ADDITIONAL_INFO_MASK) |
-             (((uint64_t)generationIndex << RES_HANDLE_GENERATION_SHIFT) & RES_HANDLE_GENERATION_MASK) |
-             ((uint64_t)((index << RES_HANDLE_ID_SHIFT) & RES_HANDLE_ID_MASK)) |
-             ((uint64_t)(type)&RENDER_HANDLE_TYPE_MASK) };
+    return { ((static_cast<uint64_t>(infoFlags) << RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+             RES_HANDLE_ADDITIONAL_INFO_MASK) |
+             ((static_cast<uint64_t>(generationIndex) << RES_HANDLE_GENERATION_SHIFT) &
+             RES_HANDLE_GENERATION_MASK) |
+             (static_cast<uint64_t>((index << RES_HANDLE_ID_SHIFT) & RES_HANDLE_ID_MASK)) |
+             (static_cast<uint64_t>(type) & RENDER_HANDLE_TYPE_MASK) };
 }
 
 RenderHandle CreateGpuResourceHandle(const RenderHandleType type, const RenderHandleInfoFlags infoFlags,
@@ -53,11 +55,12 @@ RenderHandle CreateGpuResourceHandle(const RenderHandleType type, const RenderHa
         PLUGIN_LOG_E("index (%u), exceeds max index (%u)", index, static_cast<uint32_t>(HANDLE_ID_SIZE));
     }
 #endif
-    return { (((uint64_t)hasNameId << RES_HANDLE_HAS_NAME_SHIFT) & RES_HANDLE_HAS_NAME_MASK) |
-             (((uint64_t)infoFlags << RES_HANDLE_ADDITIONAL_INFO_SHIFT) & RES_HANDLE_ADDITIONAL_INFO_MASK) |
-             (((uint64_t)generationIndex << RES_HANDLE_GENERATION_SHIFT) & RES_HANDLE_GENERATION_MASK) |
-             ((uint64_t)((index << RES_HANDLE_ID_SHIFT) & RES_HANDLE_ID_MASK)) |
-             ((uint64_t)(type)&RENDER_HANDLE_TYPE_MASK) };
+    return { ((static_cast<uint64_t>(hasNameId) << RES_HANDLE_HAS_NAME_SHIFT) & RES_HANDLE_HAS_NAME_MASK) |
+             ((static_cast<uint64_t>(infoFlags) << RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+             RES_HANDLE_ADDITIONAL_INFO_MASK) |
+             ((static_cast<uint64_t>(generationIndex) << RES_HANDLE_GENERATION_SHIFT) & RES_HANDLE_GENERATION_MASK) |
+             (static_cast<uint64_t>((index << RES_HANDLE_ID_SHIFT) & RES_HANDLE_ID_MASK)) |
+             (static_cast<uint64_t>(type) & RENDER_HANDLE_TYPE_MASK) };
 }
 
 RenderHandle CreateHandle(const RenderHandleType type, const uint32_t index)
@@ -72,16 +75,17 @@ RenderHandle CreateHandle(const RenderHandleType type, const uint32_t index, con
         PLUGIN_LOG_E("index (%u), exceeds max index (%u)", index, static_cast<uint32_t>(HANDLE_ID_SIZE));
     }
 #endif
-    return { (((uint64_t)generationIndex << RES_HANDLE_GENERATION_SHIFT) & RES_HANDLE_GENERATION_MASK) |
-             ((uint64_t)((index << RES_HANDLE_ID_SHIFT) & RES_HANDLE_ID_MASK)) |
-             ((uint64_t)(type)&RENDER_HANDLE_TYPE_MASK) };
+    return { ((static_cast<uint64_t>(generationIndex) << RES_HANDLE_GENERATION_SHIFT) & RES_HANDLE_GENERATION_MASK) |
+             (static_cast<uint64_t>((index << RES_HANDLE_ID_SHIFT) & RES_HANDLE_ID_MASK)) |
+             (static_cast<uint64_t>(type) & RENDER_HANDLE_TYPE_MASK) };
 }
 
 RenderHandle CreateHandle(
     const RenderHandleType type, const uint32_t index, const uint32_t generationIndex, const uint32_t additionalData)
 {
     RenderHandle handle = CreateHandle(type, index, generationIndex);
-    handle.id |= (((uint64_t)additionalData << RES_HANDLE_ADDITIONAL_INFO_SHIFT) & RES_HANDLE_ADDITIONAL_INFO_MASK);
+    handle.id |= ((static_cast<uint64_t>(additionalData) << RES_HANDLE_ADDITIONAL_INFO_SHIFT) &
+        RES_HANDLE_ADDITIONAL_INFO_MASK);
     return handle;
 }
 
@@ -93,9 +97,9 @@ EngineResourceHandle CreateEngineResourceHandle(
         PLUGIN_LOG_E("index (%u), exceeds max index (%u)", index, static_cast<uint32_t>(HANDLE_ID_SIZE));
     }
 #endif
-    return { (((uint64_t)generationIndex << RES_HANDLE_GENERATION_SHIFT) & RES_HANDLE_GENERATION_MASK) |
-             ((uint64_t)((index << RES_HANDLE_ID_SHIFT) & RES_HANDLE_ID_MASK)) |
-             ((uint64_t)(type)&RENDER_HANDLE_TYPE_MASK) };
+    return { ((static_cast<uint64_t>(generationIndex) << RES_HANDLE_GENERATION_SHIFT) & RES_HANDLE_GENERATION_MASK) |
+             (static_cast<uint64_t>((index << RES_HANDLE_ID_SHIFT) & RES_HANDLE_ID_MASK)) |
+             (static_cast<uint64_t>(type) & RENDER_HANDLE_TYPE_MASK) };
 }
 } // namespace RenderHandleUtil
 RENDER_END_NAMESPACE()

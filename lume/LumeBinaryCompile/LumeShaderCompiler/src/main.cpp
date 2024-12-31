@@ -960,10 +960,10 @@ std::vector<uint32_t> compileShaderToSpirvBinary(
     glslang::TIntermediate* intermediate = program.getIntermediate(stage);
     glslang::GlslangToSpv(*intermediate, spirv, &logger, &spv_options);
 
-    const uint32_t shaderc_generator_word = 13; // From SPIR-V XML Registry
-    const uint32_t generator_word_index = 2;    // SPIR-V 2.3: Physical layout
-    assert(spirv.size() > generator_word_index);
-    spirv[generator_word_index] = (spirv[generator_word_index] & 0xffff) | (shaderc_generator_word << 16);
+    const uint32_t shadercGeneratorWord = 13; // From SPIR-V XML Registry
+    const uint32_t generatorWordIndex = 2;    // SPIR-V 2.3: Physical layout
+    assert(spirv.size() > generatorWordIndex);
+    spirv[generatorWordIndex] = (spirv[generatorWordIndex] & 0xffff) | (shadercGeneratorWord << 16u);
     return spirv;
 }
 
@@ -1252,7 +1252,7 @@ std::vector<uint8_t> reflectSpvBinary(const std::vector<uint32_t>& aBinary, Shad
 
     std::vector<uint8_t> reflection;
     reflection.reserve(512u);
-    constexpr uint8_t TAG[] = { 'r', 'f', 'l', 0 }; // last one is version
+    static constexpr uint8_t tag[] = { 'r', 'f', 'l', 0 }; // last one is version
     uint16_t type = 0;
     uint16_t offsetPushConstants = 0;
     uint16_t offsetSpecializationConstants = 0;
@@ -1261,7 +1261,7 @@ std::vector<uint8_t> reflectSpvBinary(const std::vector<uint32_t>& aBinary, Shad
     uint16_t offsetLocalSize = 0;
     // tag
     {
-        reflection.insert(reflection.end(), std::begin(TAG), std::end(TAG));
+        reflection.insert(reflection.end(), std::begin(tag), std::end(tag));
     }
     // shader type
     {
@@ -1348,7 +1348,7 @@ std::vector<uint8_t> reflectSpvBinary(const std::vector<uint32_t>& aBinary, Shad
     }
     // update offsets to real values
     {
-        auto ptr = reflection.data() + (sizeof(TAG) + sizeof(type));
+        auto ptr = reflection.data() + (sizeof(tag) + sizeof(type));
         *ptr++ = offsetPushConstants & 0xff;
         *ptr++ = (offsetPushConstants >> 8) & 0xff;
         *ptr++ = offsetSpecializationConstants & 0xff;
@@ -1433,9 +1433,9 @@ void CollectRes(
     Gles::CoreCompiler& compiler, const spirv_cross::ShaderResources& res, ShaderModulePlatformDataGLES& plat_)
 {
     // collect names for later linkage
-    static constexpr uint32_t DefaultBinding = 11;
-    Collect(compiler, res.storage_buffers, DefaultBinding + 1);
-    Collect(compiler, res.storage_images, DefaultBinding + 1);
+    static constexpr uint32_t defaultBinding = 11;
+    Collect(compiler, res.storage_buffers, defaultBinding + 1);
+    Collect(compiler, res.storage_images, defaultBinding + 1);
     Collect(compiler, res.uniform_buffers, 0); // 0 == remove binding decorations (let's the compiler decide)
     Collect(compiler, res.subpass_inputs, 0);  // 0 == remove binding decorations (let's the compiler decide)
 
@@ -1548,7 +1548,7 @@ bool writeToFile(const array_view<T>& data, std::filesystem::path aDestinationFi
 {
     std::ofstream outputStream(aDestinationFile, std::ios::out | std::ios::binary);
     if (outputStream.is_open()) {
-        outputStream.write((const char*)data.data(), data.size() * sizeof(T));
+        outputStream.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(T));
         outputStream.close();
         return true;
     } else {
@@ -1742,14 +1742,11 @@ bool runAllCompilationStages(std::string_view inputFilename, CompilationSettings
 
 void show_usage()
 {
-    std::cout << "LumeShaderCompiler - Supported shader types: vertex (.vert), fragment (.frag), compute (.comp)"
-              << std::endl
-              << std::endl;
-    std::cout << "How to use: \n"
+    std::cout << "LumeShaderCompiler - Supported shader types: vertex (.vert), fragment (.frag), compute (.comp)\n\n"
+                 "How to use: \n"
                  "LumeShaderCompiler.exe --source <source path> (sets destination path to same as source)\n"
                  "LumeShaderCompiler.exe --source <source path> --destination <destination path>\n"
-                 "LumeShaderCompiler.exe --monitor (monitors changes in the source files)"
-              << std::endl;
+                 "LumeShaderCompiler.exe --monitor (monitors changes in the source files)\n";
 }
 
 std::vector<std::string> filterByExtension(
@@ -1879,7 +1876,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    fileMonitor.addPath(shaderSourcesPath.string());
+    fileMonitor.AddPath(shaderSourcesPath.string());
     std::vector<std::string> fileList = [&]() {
         std::vector<std::string> list;
         if (!sourceFile.empty()) {

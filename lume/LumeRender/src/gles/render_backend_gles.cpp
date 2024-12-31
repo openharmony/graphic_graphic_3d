@@ -935,7 +935,8 @@ void RenderBackendGLES::RenderSingleCommandList(const RenderCommandContext& rend
         PLUGIN_ASSERT(ref.rc);
         if (commandListValid_) {
 #if RENDER_DEBUG_COMMAND_MARKERS_ENABLED
-            glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, (const GLchar*)COMMAND_NAMES[(uint32_t)ref.type]);
+            glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1,
+                (const GLchar*)COMMAND_NAMES[static_cast<uint32_t>(ref.type)]);
 #endif
             (this->*(COMMAND_HANDLERS[static_cast<uint32_t>(ref.type)]))(ref);
 #if RENDER_DEBUG_COMMAND_MARKERS_ENABLED

@@ -380,7 +380,7 @@ const ComputePipelineStateObject* NodeContextPsoManager::GetComputePso(
 {
     PLUGIN_ASSERT(RenderHandleUtil::GetHandleType(handle) == RenderHandleType::COMPUTE_PSO);
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
-    PLUGIN_ASSERT_MSG(index < (uint32_t)computePipelineStateCache_.psoCreationData.size(),
+    PLUGIN_ASSERT_MSG(index < static_cast<uint32_t>(computePipelineStateCache_.psoCreationData.size()),
         "Check that IRenderNode::InitNode clears cached handles.");
 
     auto& cache = computePipelineStateCache_;
@@ -406,7 +406,7 @@ const GraphicsPipelineStateObject* NodeContextPsoManager::GetGraphicsPso(const R
 {
     PLUGIN_ASSERT(RenderHandleUtil::GetHandleType(handle) == RenderHandleType::GRAPHICS_PSO);
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
-    PLUGIN_ASSERT_MSG(index < (uint32_t)graphicsPipelineStateCache_.psoCreationData.size(),
+    PLUGIN_ASSERT_MSG(index < static_cast<uint32_t>(graphicsPipelineStateCache_.psoCreationData.size()),
         "Check that IRenderNode::InitNode clears cached handles.");
 
     auto& cache = graphicsPipelineStateCache_;

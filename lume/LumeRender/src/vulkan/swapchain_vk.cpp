@@ -158,12 +158,12 @@ VkPresentModeKHR GetPresentMode(const VkPhysicalDevice physicalDevice, const VkS
 
     PLUGIN_LOG_I("Available swapchain present modes:");
     for (auto const presentMode : presentModes) {
-        if ((uint32_t)presentMode < strArraySize) {
+        if (static_cast<uint32_t>(presentMode) < strArraySize) {
             PLUGIN_LOG_I("  %s", presentModeStrings[presentMode].data());
         }
     }
     PLUGIN_LOG_I("Selected swapchain present modes:");
-    if ((uint32_t)swapchainPresentMode < strArraySize) {
+    if (static_cast<uint32_t>(swapchainPresentMode) < strArraySize) {
         PLUGIN_LOG_I("  %s", presentModeStrings[swapchainPresentMode].data());
     }
 #else

@@ -43,7 +43,7 @@ void RenderFrameSyncGLES::BeginFrame()
 {
     PLUGIN_ASSERT(frameFences_[bufferingIndex_].aFence == nullptr);
     frameFences_[bufferingIndex_].aFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    bufferingIndex_ = (bufferingIndex_ + 1) % (uint32_t)frameFences_.size();
+    bufferingIndex_ = (bufferingIndex_ + 1) % static_cast<uint32_t>(frameFences_.size());
 }
 
 void RenderFrameSyncGLES::WaitForFrameFence()

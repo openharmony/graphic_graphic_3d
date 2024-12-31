@@ -89,10 +89,10 @@ inline Color MakeColorFromSRGB(const uint32_t color)
 constexpr uint32_t FromColorToLinear(Color color)
 {
     color *= 255.f;
-    uint32_t b = ((uint32_t)color.z & UINT8_MAX) << COLOR_SHIFT_0;
-    uint32_t g = ((uint32_t)color.y & UINT8_MAX) << COLOR_SHIFT_8;
-    uint32_t r = ((uint32_t)color.x & UINT8_MAX) << COLOR_SHIFT_16;
-    uint32_t a = ((uint32_t)color.w & UINT8_MAX) << COLOR_SHIFT_24;
+    uint32_t b = (static_cast<uint32_t>(color.z) & UINT8_MAX) << COLOR_SHIFT_0;
+    uint32_t g = (static_cast<uint32_t>(color.y) & UINT8_MAX) << COLOR_SHIFT_8;
+    uint32_t r = (static_cast<uint32_t>(color.x) & UINT8_MAX) << COLOR_SHIFT_16;
+    uint32_t a = (static_cast<uint32_t>(color.w) & UINT8_MAX) << COLOR_SHIFT_24;
 
     return a | r | g | b;
 }
@@ -103,10 +103,10 @@ constexpr uint32_t FromColorToLinear(Color color)
 inline uint32_t FromColorToSRGB(Color color)
 {
     // rounding should be handled in some smart way to get actual min and max values too
-    uint32_t b = ((uint32_t)(LinearToSRGBConv(color.z) * 255.f) & UINT8_MAX) << COLOR_SHIFT_0;
-    uint32_t g = ((uint32_t)(LinearToSRGBConv(color.y) * 255.f) & UINT8_MAX) << COLOR_SHIFT_8;
-    uint32_t r = ((uint32_t)(LinearToSRGBConv(color.x) * 255.f) & UINT8_MAX) << COLOR_SHIFT_16;
-    uint32_t a = ((uint32_t)(color.w * 255.f) & UINT8_MAX) << COLOR_SHIFT_24;
+    uint32_t b = (static_cast<uint32_t>(LinearToSRGBConv(color.z) * 255.f) & UINT8_MAX) << COLOR_SHIFT_0;
+    uint32_t g = (static_cast<uint32_t>(LinearToSRGBConv(color.y) * 255.f) & UINT8_MAX) << COLOR_SHIFT_8;
+    uint32_t r = (static_cast<uint32_t>(LinearToSRGBConv(color.x) * 255.f) & UINT8_MAX) << COLOR_SHIFT_16;
+    uint32_t a = (static_cast<uint32_t>(color.w * 255.f) & UINT8_MAX) << COLOR_SHIFT_24;
 
     return a | r | g | b;
 }
@@ -117,10 +117,10 @@ inline uint32_t FromColorToSRGB(Color color)
 constexpr uint32_t FromColorRGBAToLinear(Color color)
 {
     color *= 255.f;
-    uint32_t r = ((uint32_t)color.x & UINT8_MAX) << COLOR_SHIFT_0;
-    uint32_t b = ((uint32_t)color.z & UINT8_MAX) << COLOR_SHIFT_16;
-    uint32_t g = ((uint32_t)color.y & UINT8_MAX) << COLOR_SHIFT_8;
-    uint32_t a = ((uint32_t)color.w & UINT8_MAX) << COLOR_SHIFT_24;
+    uint32_t r = (static_cast<uint32_t>(color.x) & UINT8_MAX) << COLOR_SHIFT_0;
+    uint32_t b = (static_cast<uint32_t>(color.z) & UINT8_MAX) << COLOR_SHIFT_16;
+    uint32_t g = (static_cast<uint32_t>(color.y) & UINT8_MAX) << COLOR_SHIFT_8;
+    uint32_t a = (static_cast<uint32_t>(color.w) & UINT8_MAX) << COLOR_SHIFT_24;
 
     return a | b | g | r;
 }
@@ -130,10 +130,10 @@ constexpr uint32_t FromColorRGBAToLinear(Color color)
  */
 inline uint32_t FromColorRGBAToSRGB(Color color)
 {
-    uint32_t r = ((uint32_t)(LinearToSRGBConv(color.x) * 255.0f) & UINT8_MAX) << COLOR_SHIFT_0;
-    uint32_t b = ((uint32_t)(LinearToSRGBConv(color.z) * 255.0f) & UINT8_MAX) << COLOR_SHIFT_16;
-    uint32_t g = ((uint32_t)(LinearToSRGBConv(color.y) * 255.0f) & UINT8_MAX) << COLOR_SHIFT_8;
-    uint32_t a = ((uint32_t)(color.w * 255.0f) & UINT8_MAX) << COLOR_SHIFT_24;
+    uint32_t r = (static_cast<uint32_t>(LinearToSRGBConv(color.x) * 255.0f) & UINT8_MAX) << COLOR_SHIFT_0;
+    uint32_t b = (static_cast<uint32_t>(LinearToSRGBConv(color.z) * 255.0f) & UINT8_MAX) << COLOR_SHIFT_16;
+    uint32_t g = (static_cast<uint32_t>(LinearToSRGBConv(color.y) * 255.0f) & UINT8_MAX) << COLOR_SHIFT_8;
+    uint32_t a = (static_cast<uint32_t>(color.w * 255.0f) & UINT8_MAX) << COLOR_SHIFT_24;
 
     return a | b | g | r;
 }

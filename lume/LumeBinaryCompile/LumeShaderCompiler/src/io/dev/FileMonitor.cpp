@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <cstring>
 
 #ifdef _WIN32
 #if __has_include(<filesystem>)
@@ -35,7 +36,7 @@ namespace ige {
 
 namespace {
 
-void formatPath(std::string& aPath, bool isDirectory)
+void FormatPath(std::string& aPath, bool isDirectory)
 {
     size_t length = aPath.length();
 
@@ -44,12 +45,13 @@ void formatPath(std::string& aPath, bool isDirectory)
 
     // Ensure there is last separator in place.
     if (aPath.length() > 0 && isDirectory) {
-        if (aPath[length - 1] != '/')
+        if (aPath[length - 1] != '/') {
             aPath += '/';
+        }
     }
 }
 
-std::string resolveAbsolutePath(const std::string& aPath, bool isDirectory)
+std::string ResolveAbsolutePath(const std::string& aPath, bool isDirectory)
 {
     std::string absolutePath;
 
@@ -88,13 +90,13 @@ std::string resolveAbsolutePath(const std::string& aPath, bool isDirectory)
         }
     }
 #else
-    char resolvedPath[PATH_MAX];
+    char resolvedPath[PATH_MAX + 1] = { 0 };
     if (realpath(aPath.c_str(), resolvedPath) != nullptr) {
         absolutePath = resolvedPath;
     }
 #endif
 
-    formatPath(absolutePath, isDirectory);
+    FormatPath(absolutePath, isDirectory);
 
     return absolutePath;
 }
@@ -150,7 +152,7 @@ void recursivelyCollectAllFiles(const std::string& aPath, std::vector<std::strin
 
     // Collect files.
     for (const auto& filename : files) {
-        std::string absoluteFilename = resolveAbsolutePath(aPath + filename, false);
+        std::string absoluteFilename = ResolveAbsolutePath(aPath + filename, false);
         if (!absoluteFilename.empty()) {
             aFiles.push_back(absoluteFilename);
         }
@@ -159,7 +161,7 @@ void recursivelyCollectAllFiles(const std::string& aPath, std::vector<std::strin
     // Process recursively.
     for (const auto& directoryName : directories) {
         if (directoryName != "." && directoryName != "..") {
-            std::string absoluteDirectory = resolveAbsolutePath(aPath + directoryName, true);
+            std::string absoluteDirectory = ResolveAbsolutePath(aPath + directoryName, true);
             if (!absoluteDirectory.empty()) {
                 recursivelyCollectAllFiles(absoluteDirectory, aFiles);
             }
@@ -170,36 +172,30 @@ void recursivelyCollectAllFiles(const std::string& aPath, std::vector<std::strin
 } // namespace
 
 FileMonitor::FileMonitor() {}
-
 FileMonitor::~FileMonitor() {}
-
-bool FileMonitor::addPath(const std::string& aPath)
+bool FileMonitor::AddPath(const std::string& aPath)
 {
-    std::string absolutePath = resolveAbsolutePath(aPath, true);
-
-    if (absolutePath.empty() || isWatchingDirectory(absolutePath) || isWatchingSubDirectory(absolutePath)) {
+    std::string absolutePath = ResolveAbsolutePath(aPath, true);
+    if (absolutePath.empty() || IsWatchingDirectory(absolutePath) || IsWatchingSubDirectory(absolutePath)) {
         // Already exists or unable to resolve.
         return false;
     }
-
     std::vector<std::string> files;
     recursivelyCollectAllFiles(absolutePath, files);
 
     // Add all files to watch list.
     for (const auto& ref : files) {
-        addFile(ref);
+        AddFile(ref);
     }
-
     // Store directory to watch list.
     mDirectories.push_back(absolutePath);
 
     return true;
 }
 
-bool FileMonitor::removePath(const std::string& aPath)
+bool FileMonitor::RemovePath(const std::string& aPath)
 {
-    std::string absolutePath = resolveAbsolutePath(aPath, true);
-
+    std::string absolutePath = ResolveAbsolutePath(aPath, true);
     std::vector<std::string>::iterator iterator = std::find(mDirectories.begin(), mDirectories.end(), absolutePath);
     if (iterator != mDirectories.end()) {
         // Collect all tracked files within this directory.
@@ -209,9 +205,8 @@ bool FileMonitor::removePath(const std::string& aPath)
         // Stop tracking of removed files.
         for (const auto& ref : files) {
             // Remove from tracked list.
-            removeFile(ref);
+            RemoveFile(ref);
         }
-
         // Remove directory from watch list.
         mDirectories.erase(iterator);
         return true;
@@ -220,9 +215,9 @@ bool FileMonitor::removePath(const std::string& aPath)
     return false;
 }
 
-bool FileMonitor::addFile(const std::string& aPath)
+bool FileMonitor::AddFile(const std::string& aPath)
 {
-    std::string absolutePath = resolveAbsolutePath(aPath, false);
+    std::string absolutePath = ResolveAbsolutePath(aPath, false);
     if (absolutePath.empty() || mFiles.find(absolutePath) != mFiles.end()) {
         // Already exists or unable to resolve.
         return false;
@@ -242,7 +237,7 @@ bool FileMonitor::addFile(const std::string& aPath)
     return true;
 }
 
-bool FileMonitor::removeFile(const std::string& aPath)
+bool FileMonitor::RemoveFile(const std::string& aPath)
 {
     std::map<std::string, FileInfo>::iterator iterator = mFiles.find(aPath);
     if (iterator != mFiles.end()) {
@@ -253,7 +248,7 @@ bool FileMonitor::removeFile(const std::string& aPath)
     return false;
 }
 
-bool FileMonitor::isWatchingDirectory(const std::string& aPath)
+bool FileMonitor::IsWatchingDirectory(const std::string& aPath)
 {
     for (const auto& ref : mDirectories) {
         if (aPath.find(ref) != std::string::npos) {
@@ -265,7 +260,7 @@ bool FileMonitor::isWatchingDirectory(const std::string& aPath)
     return false;
 }
 
-bool FileMonitor::isWatchingSubDirectory(const std::string& aPath)
+bool FileMonitor::IsWatchingSubDirectory(const std::string& aPath)
 {
     for (const auto& ref : mDirectories) {
         if (ref.find(aPath) != std::string::npos) {
@@ -318,13 +313,13 @@ void FileMonitor::scanModifications(
     // Stop tracking of removed files.
     for (const auto& ref : aRemoved) {
         // Remove from tracked list.
-        removeFile(ref);
+        RemoveFile(ref);
     }
 
     // Start tracking of new files.
     for (const auto& ref : aAdded) {
         // Add to tracking list.
-        addFile(ref);
+        AddFile(ref);
     }
 }
 

@@ -89,14 +89,14 @@ public:
     constexpr array_view(value_type (&arr)[N]) noexcept : begin_(arr), size_(N), end_(arr + N)
     {}
     template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, U>::value>>
-    constexpr array_view(const array_view<U>& other) noexcept
+    explicit constexpr array_view(const array_view<U>& other) noexcept
         : begin_(other.begin_), size_(other.size_), end_(other.end_)
     {}
     template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, typename U::value_type>::value>>
-    constexpr array_view(U& container) noexcept : array_view(container.data(), container.size())
+    explicit constexpr array_view(U& container) noexcept : array_view(container.data(), container.size())
     {}
     template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, typename U::value_type>::value>>
-    constexpr array_view(const U& container) noexcept : array_view(container.data(), container.size())
+    explicit constexpr array_view(const U& container) noexcept : array_view(container.data(), container.size())
     {}
     ~array_view() = default;
     constexpr size_type size() const noexcept

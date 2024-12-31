@@ -34,7 +34,7 @@ public:
     Logger(bool aDefaultOutputs);
     virtual ~Logger();
 
-    void vlog(LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aFormat, va_list aArgs) override;
+    void VLog(LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aFormat, va_list aArgs) override;
     FORMAT_FUNC(5, 6) void log(LogLevel aLogLevel, const char *aFilename, int aLinenumber, FORMAT_ATTRIBUTE const char *aFormat, ...) override;
 
     FORMAT_FUNC(6, 7) bool logAssert(const char *aFilename, int aLinenumber, bool expression, const char *expressionString, FORMAT_ATTRIBUTE const char *aFormat, ...) override;
