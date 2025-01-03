@@ -339,7 +339,6 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
         const auto& textureInfo = textureLayer_->GetTextureInfo();
         auto& device = engineInstance_.renderContext_->GetDevice();
         RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
-            // reinterpret_cast<uint64_t>(eglSurface_),
             0U,
             RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
             RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |

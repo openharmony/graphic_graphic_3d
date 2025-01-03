@@ -1,0 +1,232 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("lume_scenewidget_config1") {
+  include_dirs = [
+    "include",
+    "src",
+    "${LUME_META_PATH}/include",
+    "${LUME_CORE_PATH}/ecshelper",
+  ]
+
+  defines = [
+    "__OHOS_PLATFORM__",
+    "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE3D_SHARED_LIBRARY=1",
+    "CORE3D_VALIDATION_ENABLED=0",
+    "CORE3D_TESTS_ENABLED=0",
+    "CORE3D_DEV_ENABLED=${CORE_DEV_ENABLED}",
+    "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }",
+  ]
+  cflags = [
+    "-Wno-unused-function",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-logical-op-parentheses",
+    "-Wno-unused-local-typedef",
+    "-fvisibility=hidden",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-Wno-ignored-qualifiers",
+  ]
+  cflags_cc = [
+    "-std=c++17",
+    "-Wno-overloaded-virtual",
+    "-Wno-thread-safety-attributes",
+    "-Wno-missing-braces",
+  ]
+}
+
+ohos_source_set("lume_scenewidget_src1") {
+  configs = [
+    ":lume_scenewidget_config1",
+    "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_SERIALIZER_PATH}:ecs_serializer_api",
+    "${LUME_CORE_PATH}:lume_default",
+  ]
+
+  sources = [
+    "include/scene/base/namespace.h",
+    "include/scene/base/types.h",
+    "include/scene/ext/component_fwd.h",
+    "include/scene/ext/component_util.h",
+    "include/scene/ext/ecs_lazy_property_fwd.h",
+    "include/scene/ext/intf_component.h",
+    "include/scene/ext/intf_component_factory.h",
+    "include/scene/ext/intf_converting_value.h",
+    "include/scene/ext/intf_create_entity.h",
+    "include/scene/ext/intf_ecs_context.h",
+    "include/scene/ext/intf_ecs_event_listener.h",
+    "include/scene/ext/intf_ecs_object.h",
+    "include/scene/ext/intf_ecs_object_access.h",
+    "include/scene/ext/intf_engine_property_init.h",
+    "include/scene/ext/intf_internal_camera.h",
+    "include/scene/ext/intf_internal_scene.h",
+    "include/scene/ext/intf_render_resource.h",
+    "include/scene/ext/named_scene_object.h",
+    "include/scene/ext/scene_property.h",
+    "include/scene/ext/util.h",
+    "include/scene/interface/component_util.h",
+    "include/scene/interface/intf_bitmap.h",
+    "include/scene/interface/intf_camera.h",
+    "include/scene/interface/intf_create_mesh.h",
+    "include/scene/interface/intf_environment.h",
+    "include/scene/interface/intf_layer.h",
+    "include/scene/interface/intf_light.h",
+    "include/scene/interface/intf_material.h",
+    "include/scene/interface/intf_mesh.h",
+    "include/scene/interface/intf_node.h",
+    "include/scene/interface/intf_postprocess.h",
+    "include/scene/interface/intf_raycast.h",
+    "include/scene/interface/intf_render_configuration.h",
+    "include/scene/interface/intf_render_target.h",
+    "include/scene/interface/intf_scene.h",
+    "include/scene/interface/intf_scene_manager.h",
+    "include/scene/interface/intf_shader.h",
+    "include/scene/interface/intf_text.h",
+    "include/scene/interface/intf_texture.h",
+    "include/scene/interface/intf_transform.h",
+    "include/scene/interface/postprocess/intf_bloom.h",
+    "include/scene/interface/postprocess/intf_postprocess_effect.h",
+    "include/scene/interface/postprocess/intf_tonemap.h",
+    "src/asset/asset_object.cpp",
+    "src/asset/asset_object.h",
+    "src/bitmap.cpp",
+    "src/bitmap.h",
+    "src/component/animation_component.cpp",
+    "src/component/animation_component.h",
+    "src/component/camera_component.cpp",
+    "src/component/camera_component.h",
+    "src/component/enviroment_component.h",
+    "src/component/environment_component.cpp",
+    "src/component/generic_component.cpp",
+    "src/component/generic_component.h",
+    "src/component/layer_component.cpp",
+    "src/component/layer_component.h",
+    "src/component/light_component.cpp",
+    "src/component/light_component.h",
+    "src/component/material_component.cpp",
+    "src/component/material_component.h",
+    "src/component/mesh_component.cpp",
+    "src/component/mesh_component.h",
+    "src/component/node_component.cpp",
+    "src/component/node_component.h",
+    "src/component/postprocess_component.cpp",
+    "src/component/postprocess_component.h",
+    "src/component/text_component.cpp",
+    "src/component/text_component.h",
+    "src/component/transform_component.cpp",
+    "src/component/transform_component.h",
+    "src/component_factory.h",
+    "src/converting_value.h",
+    "src/core/camera.cpp",
+    "src/core/camera.h",
+    "src/core/ecs.cpp",
+    "src/core/ecs.h",
+    "src/core/ecs_listener.cpp",
+    "src/core/ecs_listener.h",
+    "src/core/ecs_object.cpp",
+    "src/core/ecs_object.h",
+    "src/core/internal_raycast.h",
+    "src/core/internal_scene.cpp",
+    "src/core/internal_scene.h",
+    "src/ecs_animation.cpp",
+    "src/ecs_animation.h",
+    "src/entity_converting_value.h",
+    "src/environment.cpp",
+    "src/environment.h",
+    "src/mesh/material.cpp",
+    "src/mesh/material.h",
+    "src/mesh/mesh.cpp",
+    "src/mesh/mesh.h",
+    "src/mesh/mesh_creator.cpp",
+    "src/mesh/mesh_creator.h",
+    "src/mesh/mesh_resource.h",
+    "src/mesh/shader.cpp",
+    "src/mesh/shader.h",
+    "src/mesh/submesh.cpp",
+    "src/mesh/submesh.h",
+    "src/mesh/texture.cpp",
+    "src/mesh/texture.h",
+    "src/node/camera_node.cpp",
+    "src/node/camera_node.h",
+    "src/node/light_node.cpp",
+    "src/node/light_node.h",
+    "src/node/mesh_node.cpp",
+    "src/node/node.cpp",
+    "src/node/node.h",
+    "src/node/text_node.cpp",
+    "src/node/text_node.h",
+    "src/nodel/mesh_node.h",
+    "src/plugin.cpp",
+    "src/postprocess/bloom.h",
+    "src/postprocess/postprocess.cpp",
+    "src/postprocess/postprocess.h",
+    "src/postprocess/tonemap.h",
+    "src/register_engine_access.cpp",
+    "src/render_configuration.cpp",
+    "src/render_configuration.h",
+    "src/scene.cpp",
+    "src/scene.h",
+    "src/scene_manager.cpp",
+    "src/scene_manager.h",
+    "src/util.h",
+  ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+    "${LUME_META_PATH}/include",
+  ]
+
+  deps = [
+    "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
+    "${LUME_META_PATH}:libPluginMetaObject",
+  ]
+  external_deps = [ "c_utils:utils" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+#ohos_static_library("libSceneWidget") {
+#  public_deps = [
+#    ":lume_scenewidget_src1",
+#  ]
+#  part_name = "graphic_3d"
+#  subsystem_name = "graphic"
+#}
+
+ohos_shared_library("libPluginSceneWidget") {
+  deps = [
+    ":lume_scenewidget_src1",
+    "${LUME_SERIALIZER_PATH}:EcsSerializer",
+  ]
+  relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

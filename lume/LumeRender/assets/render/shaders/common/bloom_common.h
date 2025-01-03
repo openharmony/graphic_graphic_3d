@@ -42,9 +42,10 @@ vec3 bloomCombine(vec3 baseColor, vec3 bloomColor, vec4 bloomParameters)
  */
 vec3 bloomDownscaleWeighted9(vec2 uv, vec2 invTexSize, texture2D tex, sampler sampl)
 {
-    vec3 colSample = textureLod(sampler2D(tex, sampl), uv + vec2(-0.96875, 0.96875) * invTexSize, 0).xyz;
+    vec3 colSample =
+        textureLod(sampler2D(tex, sampl), uv + vec2(-0.96875, 0.96875) * invTexSize, 0).xyz; // 0.96875 para
     float weight = 1.0 / (1.0 + CalcLuma(colSample));
-    vec3 color = colSample * (8.0 / 128.0) * weight;
+    vec3 color = colSample * (8.0 / 128.0) * weight; // 8.0, 128.0 param
     float fullWeight = weight;
 
     colSample = textureLod(sampler2D(tex, sampl), uv + vec2(0.00000, 0.93750) * invTexSize, 0).xyz; // 0.00000, 0.93750: param
@@ -104,7 +105,8 @@ vec3 bloomDownscaleWeighted9(vec2 uv, vec2 invTexSize, texture2D tex, sampler sa
 
 vec3 bloomDownscale9(vec2 uv, vec2 invTexSize, texture2D tex, sampler sampl)
 {
-    vec3 color = textureLod(sampler2D(tex, sampl), uv + vec2(-invTexSize.x, invTexSize.y), 0).rgb * (8.0 / 128.0);
+    vec3 color = textureLod(sampler2D(tex, sampl), uv + vec2(-invTexSize.x, invTexSize.y), 0).rgb *
+        (8.0 / 128.0); // 8.0,128.0 : param
     color += textureLod(sampler2D(tex, sampl),
         uv + vec2(0.0, invTexSize.y), 0).rgb * (16.0 / 128.0); // 16.0, 128.0 : param
     color += textureLod(sampler2D(tex, sampl), uv + invTexSize, 0).rgb * (8.0 / 128.0); // 8.0, 128.0: param
@@ -125,13 +127,13 @@ vec3 bloomDownscaleWeighted(vec2 uv, vec2 invTexSize, texture2D tex, sampler sam
 {
 #if (CORE_ENABLE_HEAVY_SAMPLES == 1)
     // first, 9 samples (calculate coefficients)
-    const float diagCoeff = (1.0f / 32.0f);
-    const float stepCoeff = (2.0f / 32.0f);
-    const float centerCoeff = (4.0f / 32.0f);
+    const float diagCoeff = (1.0f / 32.0f); // 32.0 param
+    const float stepCoeff = (2.0f / 32.0f); //2.0, 32. 0 param
+    const float centerCoeff = (4.0f / 32.0f); // 4.0, 32.0 param
 
     const vec2 ts = invTexSize;
 
-    float fullWeight = 0.00001;
+    float fullWeight = 0.00001; // 0.00001 weight
     //
     vec3 colSample = textureLod(sampler2D(tex, sampl), vec2(uv.x - ts.x, uv.y - ts.y), 0).xyz;
     float weight = 1.0 / (1 + CalcLuma(colSample));
@@ -181,7 +183,7 @@ vec3 bloomDownscaleWeighted(vec2 uv, vec2 invTexSize, texture2D tex, sampler sam
     fullWeight += weight;
 
     // then center square
-    const vec2 ths = ts * 0.5;
+    const vec2 ths = ts * 0.5; // 0.5 : half
 
     colSample = textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y - ths.y), 0).xyz;
     weight = 1.0 / (1 + CalcLuma(colSample));
@@ -209,43 +211,43 @@ vec3 bloomDownscaleWeighted(vec2 uv, vec2 invTexSize, texture2D tex, sampler sam
     // 5 x 0.5
     // which results to 4.0 coefficient
 
-    color *= (13.0 / fullWeight);
+    color *= (13.0 / fullWeight); // 12.0 : param
 
 #else
 
-    const vec2 ths = invTexSize * 0.5;
+    const vec2 ths = invTexSize * 0.5; // 0.5 : half
 
-    float fullWeight = 0.00001;
+    float fullWeight = 0.00001; // 0.00001 : param
 
     // center
     vec3 colSample = textureLod(sampler2D(tex, sampl), uv, 0).xyz;
     float weight = 1.0 / (1 + CalcLuma(colSample));
-    vec3 color = colSample * 0.5 * weight;
+    vec3 color = colSample * 0.5 * weight; // 0.5 : half
     fullWeight += weight;
 
     // corners
     // 1.0 / 8.0 = 0.125
     colSample = textureLod(sampler2D(tex, sampl), uv - ths, 0).xyz;
     weight = 1.0 / (1 + CalcLuma(colSample));
-    color += colSample * 0.125 * weight;
+    color += colSample * 0.125 * weight; // 0.125 : param
     fullWeight += weight;
 
     colSample = textureLod(sampler2D(tex, sampl), vec2(uv.x + ths.x, uv.y - ths.y), 0).xyz;
     weight = 1.0 / (1 + CalcLuma(colSample));
-    color += colSample * 0.125 * weight;
+    color += colSample * 0.125 * weight; // 0.125 : half
     fullWeight += weight;
 
     colSample = textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y + ths.y), 0).xyz;
     weight = 1.0 / (1 + CalcLuma(colSample));
-    color += colSample * 0.125 * weight;
+    color += colSample * 0.125 * weight; // 0.125 : half
     fullWeight += weight;
 
     colSample = textureLod(sampler2D(tex, sampl), uv + ths, 0).xyz;
     weight = 1.0 / (1 + CalcLuma(colSample));
-    color += colSample * 0.125 * weight;
+    color += colSample * 0.125 * weight; // 0.125 : half
     fullWeight += weight;
 
-    color *= (5.0 / fullWeight);
+    color *= (5.0 / fullWeight); // 5.0 : param
 #endif
 
     return color;
@@ -255,9 +257,9 @@ vec3 bloomDownscale(vec2 uv, vec2 invTexSize, texture2D tex, sampler sampl)
 {
 #if (CORE_ENABLE_HEAVY_SAMPLES == 1)
     // first, 9 samples (calculate coefficients)
-    const float diagCoeff = (1.0f / 32.0f);
-    const float stepCoeff = (2.0f / 32.0f);
-    const float centerCoeff = (4.0f / 32.0f);
+    const float diagCoeff = (1.0f / 32.0f); // 32.0 : param
+    const float stepCoeff = (2.0f / 32.0f); // 2.0, 32.0 : param
+    const float centerCoeff = (4.0f / 32.0f); // 4.0, 32.0 : param
 
     const vec2 ts = invTexSize;
 
@@ -274,7 +276,7 @@ vec3 bloomDownscale(vec2 uv, vec2 invTexSize, texture2D tex, sampler sampl)
     color += textureLod(sampler2D(tex, sampl), vec2(uv.x + ts.x, uv.y + ts.y), 0).xyz * diagCoeff;
 
     // then center square
-    const vec2 ths = ts * 0.5;
+    const vec2 ths = ts * 0.5; // 0.5 : half
 
     color += textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y - ths.y), 0).xyz * centerCoeff;
     color += textureLod(sampler2D(tex, sampl), vec2(uv.x + ths.x, uv.y - ths.y), 0).xyz * centerCoeff;
@@ -283,16 +285,16 @@ vec3 bloomDownscale(vec2 uv, vec2 invTexSize, texture2D tex, sampler sampl)
 
 #else
 
-    const vec2 ths = invTexSize * 0.5;
+    const vec2 ths = invTexSize * 0.5; // 0.5 : half
 
     // center
-    vec3 color = textureLod(sampler2D(tex, sampl), uv, 0).xyz * 0.5;
+    vec3 color = textureLod(sampler2D(tex, sampl), uv, 0).xyz * 0.5; // 0.5 : half
     // corners
     // 1.0 / 8.0 = 0.125
-    color = textureLod(sampler2D(tex, sampl), uv - ths, 0).xyz * 0.125 + color;
-    color = textureLod(sampler2D(tex, sampl), vec2(uv.x + ths.x, uv.y - ths.y), 0).xyz * 0.125 + color;
-    color = textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y + ths.y), 0).xyz * 0.125 + color;
-    color = textureLod(sampler2D(tex, sampl), uv + ths, 0).xyz * 0.125 + color;
+    color = textureLod(sampler2D(tex, sampl), uv - ths, 0).xyz * 0.125 + color; // 0.125 : param
+    color = textureLod(sampler2D(tex, sampl), vec2(uv.x + ths.x, uv.y - ths.y), 0).xyz * 0.125 + color; // 0.125:param
+    color = textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y + ths.y), 0).xyz * 0.125 + color; // 0.125:param
+    color = textureLod(sampler2D(tex, sampl), uv + ths, 0).xyz * 0.125 + color; // 0.125 : param
 
 #endif
 
@@ -304,19 +306,19 @@ Upscale samples.
 */
 vec3 bloomUpscale(vec2 uv, vec2 invTexSize, texture2D tex, sampler sampl)
 {
-    const vec2 ts = invTexSize * 2.0;
+    const vec2 ts = invTexSize * 2.0; // 2.0 : param
 
     // center
-    vec3 color = textureLod(sampler2D(tex, sampl), uv, 0).xyz * (1.0 / 2.0);
+    vec3 color = textureLod(sampler2D(tex, sampl), uv, 0).xyz * (1.0 / 2.0); // 2.0 param
     // corners
     color = textureLod(sampler2D(tex, sampl), uv - ts, 0).xyz
-        * (1.0 / 8.0) + color;
+        * (1.0 / 8.0) + color; // 8.0 : param
     color = textureLod(sampler2D(tex, sampl), uv + vec2(ts.x, -ts.y), 0).xyz
-        * (1.0 / 8.0) + color;
+        * (1.0 / 8.0) + color; // 8.0 : param
     color = textureLod(sampler2D(tex, sampl), uv + vec2(-ts.x, ts.y), 0).xyz
-        * (1.0 / 8.0) + color;
+        * (1.0 / 8.0) + color; // 8.0 : param
     color = textureLod(sampler2D(tex, sampl), uv + ts, 0).xyz
-        * (1.0 / 8.0) + color;
+        * (1.0 / 8.0) + color; // 8.0 : param
 
     return color;
 }
