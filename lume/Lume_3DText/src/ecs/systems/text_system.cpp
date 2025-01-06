@@ -88,12 +88,12 @@ MeshData GenerateMeshData(FONT_NS::IFont& font, BASE_NS::string_view text)
         data.uvs.push_back(info.tl);
 
         data.indices.push_back(i0);
-        data.indices.push_back(i0 + 2U);
-        data.indices.push_back(i0 + 3U);
+        data.indices.push_back(i0 + 2U); // 2U index
+        data.indices.push_back(i0 + 3U); // 3U index
 
         data.indices.push_back(i0);
         data.indices.push_back(i0 + 1U);
-        data.indices.push_back(i0 + 2U);
+        data.indices.push_back(i0 + 2U); // 2U index
     }
     // +z facing normal for each vertex
     data.normals.append(data.positions.size(), { 0.f, 0.f, 1.f });
@@ -199,7 +199,7 @@ void GenerateSideFaces(const float depth, const float posX, const Font::GlyphInf
             data.normals.push_back(-normal);
             data.normals.push_back(-normal);
 
-            const size_t sideVertOffset = data.positions.size() - 4;
+            const size_t sideVertOffset = data.positions.size() - 4; // 4 : offset
 
             // side face indices
             data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2)); // 2: index
@@ -295,7 +295,7 @@ struct TextSystem::TextData {
     BASE_NS::string fontFamily;
     BASE_NS::string fontStyle;
     float fontSize;
-    float font3DThickness { 10.0f };
+    float font3DThickness { 10.0f }; // 10.0 : param
     TextComponent::FontMethod fontMethod { TextComponent::FontMethod::RASTER };
     FONT_NS::IFont::Ptr font;
     CORE_NS::EntityReference mesh;
