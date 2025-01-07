@@ -194,40 +194,47 @@ template<class T>
 struct remove_reference {
     using type = T;
 };
+
 template<class T>
 struct remove_reference<T&> {
     using type = T;
 };
+
 template<class T>
 struct remove_reference<T&&> {
     using type = T;
 };
+
 template<class T>
 using remove_reference_t = typename remove_reference<T>::type;
+
 template<class T>
-constexpr remove_reference_t<T>&& move(T&& _Arg) noexcept
+constexpr remove_reference_t<T>&& move(T&& obj) noexcept
 {
     static_assert(!is_const<typename remove_reference<T>::type>::value, "move of const object is invalid.");
-    return (static_cast<remove_reference_t<T>&&>(_Arg));
+    return (static_cast<remove_reference_t<T>&&>(obj));
 }
+
 template<class T>
-constexpr T&& forward(remove_reference_t<T>& _Arg) noexcept
+constexpr T&& forward(remove_reference_t<T>& obj) noexcept
 {
-    return (static_cast<T&&>(_Arg));
+    return (static_cast<T&&>(obj));
 }
+
 template<class T>
-constexpr T&& forward(remove_reference_t<T>&& _Arg) noexcept
+constexpr T&& forward(remove_reference_t<T>&& obj) noexcept
 {
     static_assert(!is_lvalue_reference_v<T>, "bad forward call");
-    return (static_cast<T&&>(_Arg));
+    return (static_cast<T&&>(obj));
 }
 
 using nullptr_t = decltype(nullptr);
+
 template<class T, class U = T>
-constexpr T exchange(T& obj, U&& new_value)
+constexpr T exchange(T& obj, U&& newValue)
 {
     T old_value = move(obj);
-    obj = forward<U>(new_value);
+    obj = forward<U>(newValue);
     return old_value;
 }
 

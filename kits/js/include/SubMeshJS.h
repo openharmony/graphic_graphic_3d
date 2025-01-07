@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_SUBMESH_JS_H
-#define OHOS_RENDER_3D_SUBMESH_JS_H
+#ifndef SUBMESH_JS_H
+#define SUBMESH_JS_H
 #include <meta/interface/intf_object.h>
 
 #include "BaseObjectJS.h"
@@ -26,10 +26,11 @@ public:
     static void Init(napi_env env, napi_value exports);
     SubMeshJS(napi_env, napi_callback_info);
     ~SubMeshJS() override;
-    virtual void* GetInstanceImpl(uint32_t id) override;
+    virtual void* GetInstanceImpl(uint32_t) override;
 
 private:
-    void DisposeNative() override;
+    napi_value Dispose(NapiApi::FunctionContext<>& ctx);
+    void DisposeNative(void*) override;
     napi_value GetName(NapiApi::FunctionContext<>& ctx);
     void SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx);
     napi_value GetAABB(NapiApi::FunctionContext<>& ctx);
@@ -38,6 +39,6 @@ private:
     void SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     BASE_NS::unique_ptr<Vec3Proxy> aabbMin_, aabbMax_;
-    NapiApi::StrongRef scene_;
+    NapiApi::WeakRef scene_;
 };
-#endif // OHOS_RENDER_3D_SUBMESH_JS_H
+#endif

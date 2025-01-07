@@ -19,8 +19,8 @@
 // vulkan_core must be before vk_mem_alloc
 // clang-format off
 #include <vulkan/vulkan_core.h>
-#ifdef __OHOS_PLATFORM__
-#include "../../../../../../../third_party/skia/third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
+#ifdef PATH_TO_VMA
+#include PATH_TO_VMA
 #else
 #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 #endif
@@ -81,9 +81,9 @@ public:
     void* MapMemory(VmaAllocation allocation);
     void UnmapMemory(VmaAllocation allocation);
 
-    void FlushAllocation(const VmaAllocation& allocation, const VkDeviceSize offset, const VkDeviceSize byteSize);
-    void InvalidateAllocation(const VmaAllocation& allocation, const VkDeviceSize offset, const VkDeviceSize byteSize);
-    uint32_t GetMemoryTypeProperties(const uint32_t memoryType);
+    void FlushAllocation(const VmaAllocation& allocation, VkDeviceSize offset, VkDeviceSize byteSize);
+    void InvalidateAllocation(const VmaAllocation& allocation, VkDeviceSize offset, VkDeviceSize byteSize);
+    uint32_t GetMemoryTypeProperties(uint32_t memoryType);
 
     VmaPool GetBufferPool(const GpuBufferDesc& desc) const;
     VmaPool GetImagePool(const GpuImageDesc& desc) const;

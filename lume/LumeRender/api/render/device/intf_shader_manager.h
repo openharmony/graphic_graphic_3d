@@ -119,12 +119,15 @@ public:
         /* Optional category id */
         uint32_t categoryId { ~0u };
     };
-
     struct PipelineLayoutCreateInfo {
         /* Path, used as a name */
         BASE_NS::string_view path;
         /* Reference to pipeline layout */
         const PipelineLayout& pipelineLayout;
+        /* Render slot id */
+        uint32_t renderSlotId { ~0U };
+        /* Render slot id */
+        bool renderSlotDefault { false };
     };
     struct GraphicsStateCreateInfo {
         /* Path, used as a name */
@@ -143,12 +146,18 @@ public:
         BASE_NS::string_view baseVariant;
         /* Forced graphics state flags */
         GraphicsStateFlags stateFlags { 0u };
+        /* Render slot default */
+        bool renderSlotDefault { false };
     };
     struct VertexInputDeclarationCreateInfo {
         /* Path, used as a name */
         BASE_NS::string_view path;
         /* Reference to vertex input declaration view */
-        const VertexInputDeclarationView& vertexInputDeclarationView;
+        const VertexInputDeclarationView vertexInputDeclarationView;
+        /* Render slot id */
+        uint32_t renderSlotId { ~0U };
+        /* Render slot default */
+        bool renderSlotDefault { false };
     };
     /* Id Description which can be fetched for handle */
     struct IdDesc {
@@ -173,6 +182,10 @@ public:
         RENDER_NS::RenderHandleReference shader;
         /** Graphics state handle */
         RENDER_NS::RenderHandleReference graphicsState;
+        /** Pipeline layout handle */
+        RENDER_NS::RenderHandleReference pipelineLayout;
+        /** Vertex input declaration */
+        RENDER_NS::RenderHandleReference vertexInputDeclaration;
     };
 
     /* Shader files loading */
@@ -185,6 +198,109 @@ public:
         BASE_NS::string_view pipelineLayoutPath;
         /* Vertex input declarations path */
         BASE_NS::string_view vertexInputDeclarationPath;
+    };
+
+    struct ShaderStateLoaderVariantData {
+        BASE_NS::string renderSlot;
+        BASE_NS::string variantName;
+
+        BASE_NS::string baseShaderState;
+        BASE_NS::string baseVariantName;
+
+        GraphicsStateFlags stateFlags { 0U };
+        bool renderSlotDefaultState { false };
+    };
+
+    /** Describes a single shader variant. */
+    struct ShaderVariant {
+        bool renderSlotDefaultShader { false };
+        BASE_NS::string variantName;
+        BASE_NS::string displayName;
+
+        struct ShaderSpvInfo {
+            BASE_NS::string shaderSpvPath;
+            ShaderStageFlags shaderType;
+        };
+        BASE_NS::vector<ShaderSpvInfo> shaders;
+
+        BASE_NS::string vertexInputDeclaration;
+        BASE_NS::string pipelineLayout;
+        GraphicsState graphicsState;
+
+        BASE_NS::string renderSlot;
+        BASE_NS::string shaderFileStr;
+        BASE_NS::string materialMetadata;
+
+        GraphicsStateFlags stateFlags { 0U };
+
+        /** Own base shader uri */
+        BASE_NS::string ownBaseShader;
+        /** Separate base shader with other shader uri */
+        BASE_NS::string addBaseShader;
+    };
+
+    struct ShaderOutWriteResult {
+        /* error message, if any exists */
+        BASE_NS::string error;
+        bool success { false };
+        /* the shader as json string */
+        BASE_NS::string result;
+    };
+    struct ShaderGraphicsStateSaveInfo {
+        /* states, outputs one file with stateName as file name */
+        BASE_NS::string stateName;
+        /* states */
+        BASE_NS::vector<GraphicsState> states;
+        /* state variants */
+        BASE_NS::vector<ShaderStateLoaderVariantData> stateVariants;
+    };
+
+    struct ShaderVertexInputDeclarationsSaveInfo {
+        /* vertex input declarations, outputs vid file */
+        BASE_NS::string vidName;
+        /* vertex input declaration view */
+        VertexInputDeclarationView vid;
+    };
+
+    struct ShaderPipelineLayoutSaveInfo {
+        /* pipeline layouts, outputs single layout file */
+        BASE_NS::string layoutName;
+        /* pipeline layout */
+        PipelineLayout layout;
+    };
+
+    struct ShaderVariantsSaveInfo {
+        /* shader variants, outputs one file with shaderName as file name */
+        BASE_NS::string shaderName;
+        /* category if any */
+        BASE_NS::string category;
+        /* shaders */
+        BASE_NS::vector<ShaderVariant> shaders;
+    };
+
+    /** Shader data for typically needed shader data in render nodes
+     */
+    struct ShaderData {
+        /** Shader handle */
+        RenderHandle shader;
+        /** Pipeline layout handle */
+        RenderHandle pipelineLayout;
+        /** Pipeline layout data */
+        PipelineLayout pipelineLayoutData;
+    };
+    /** Graphics shader data for typically needed shader data in render nodes
+     */
+    struct GraphicsShaderData {
+        /** Shader handle */
+        RenderHandle shader;
+        /** Graphics state handle */
+        RenderHandle graphicsState;
+        /** Pipeline layout handle */
+        RenderHandle pipelineLayout;
+        /** vertex input layout handle */
+        RenderHandle vertexInputDeclaration;
+        /** Pipeline layout data */
+        PipelineLayout pipelineLayoutData;
     };
 
     /** Get render handle reference of raw handle.
@@ -201,12 +317,13 @@ public:
 
     /** Create a compute shader with a variant name. Prefer loading shaders from json files.
      *  @param createInfo A create info with valid parameters.
-     *  @param baseShaderPath A base shader path/name to which the added variant is for.
+     *  @param additionalBaseShaderPath An additional base shader path/name from where the variant will be found as
+     * well.
      *  @param variantName A variant name.
      *  @return Returns compute shader gpu resource handle.
      */
     virtual RenderHandleReference CreateComputeShader(const ComputeShaderCreateInfo& createInfo,
-        const BASE_NS::string_view baseShaderPath, const BASE_NS::string_view variantName) = 0;
+        const BASE_NS::string_view additionalBaseShaderPath, const BASE_NS::string_view variantName) = 0;
 
     /** Create a shader. Prefer loading shaders from json files.
      *  @param createInfo A create info with valid parameters.
@@ -216,12 +333,13 @@ public:
 
     /** Create a shader. Prefer loading shaders from json files.
      *  @param createInfo A create info with valid parameters.
-     *  @param baseShaderPath A base shader path/name to which the added variant is for.
+     *  @param additionalBaseShaderPath An additional base shader path/name from where the variant will be found as
+     * well.
      *  @param variantName A variant name.
      *  @return Returns shader gpu resource handle.
      */
     virtual RenderHandleReference CreateShader(const ShaderCreateInfo& createInfo,
-        const BASE_NS::string_view baseShaderPath, const BASE_NS::string_view variantName) = 0;
+        const BASE_NS::string_view additionalBaseShaderPath, const BASE_NS::string_view variantName) = 0;
 
     /** Create a pipeline layout. Prefer loading pipeline layouts from json files.
      *  @param createInfo A pipeline layout create info.
@@ -258,12 +376,9 @@ public:
     virtual uint32_t CreateRenderSlotId(const BASE_NS::string_view name) = 0;
 
     /** Set render slot default data.
-     *  @param renderSlotId Render slot id.
-     *  @param shaderHandle Render slot default shader handle. (Does not replace if not valid)
-     *  @param stateHandle Render slot default graphics state handle. (Does not replace if not valid)
+     *  @param renderSlotData Render slot data.
      */
-    virtual void SetRenderSlotData(const uint32_t renderSlotId, const RenderHandleReference& shaderHandle,
-        const RenderHandleReference& stateHandle) = 0;
+    virtual void SetRenderSlotData(const RenderSlotData& renderSlotData) = 0;
 
     /** Get shader handle.
      *  @param path Path/Name of the shader.
@@ -455,6 +570,31 @@ public:
      *  @param uri A uri to a valid shader data json file.
      */
     virtual void LoadShaderFile(const BASE_NS::string_view uri) = 0;
+
+    /** Save graphics state
+     *  @param saveInfo Struct containing all the required info to build json
+     *  @return Returrn ShaderOutWriteResult which contains result
+     */
+    virtual ShaderOutWriteResult SaveShaderGraphicsState(const ShaderGraphicsStateSaveInfo& saveInfo) = 0;
+
+    /** Save vertex input declaration
+     *  @param saveInfo Struct containing all the required info to build json
+     *  @return Returrn ShaderOutWriteResult which contains result
+     */
+    virtual ShaderOutWriteResult SaveShaderVertexInputDeclaration(
+        const ShaderVertexInputDeclarationsSaveInfo& saveInfo) = 0;
+
+    /** Save pipeline layout
+     *  @param saveInfo Struct containing all the required info to build json
+     *  @return Returrn ShaderOutWriteResult which contains result
+     */
+    virtual ShaderOutWriteResult SaveShaderPipelineLayout(const ShaderPipelineLayoutSaveInfo& saveInfo) = 0;
+
+    /** Save pipeline layout
+     *  @param saveInfo Struct containing all the required info to build json
+     *  @return Returrn ShaderOutWriteResult which contains result
+     */
+    virtual ShaderOutWriteResult SaveShaderVariants(const ShaderVariantsSaveInfo& saveInfo) = 0;
 
     /** Unload shader files.
      * Looks for json files under paths for shaders, shader states, vertex input declarations, and pipeline
@@ -787,6 +927,30 @@ public:
      *  @return Returns forced graphics state flags.
      */
     virtual GraphicsStateFlags GetForcedGraphicsStateFlags(const uint32_t renderSlotId) const = 0;
+
+    /** Get typical shader data fetched with the shader.
+     * @name name Name of the shader.
+     * @return shader data.
+     */
+    virtual IShaderManager::ShaderData GetShaderDataByShaderName(const BASE_NS::string_view name) const = 0;
+
+    /** Get typical shader data fetched with the shader.
+     * @name handle Handle of the shader.
+     * @return shader data.
+     */
+    virtual IShaderManager::ShaderData GetShaderDataByShaderHandle(const RenderHandle handle) const = 0;
+
+    /** Get typical graphics shader data fetched with the shader.
+     * @name handle Handle of the shader.
+     * @return graphics shader data.
+     */
+    virtual IShaderManager::GraphicsShaderData GetGraphicsShaderDataByShaderHandle(const RenderHandle handle) const = 0;
+
+    /** Get IdDesc for a RenderHandle.
+     * @param handle A handle to a valid render handle.
+     * @return Returns IdDesc for a given handle.
+     */
+    virtual IShaderManager::IdDesc GetIdDesc(const RenderHandle& handle) const = 0;
 
 protected:
     IRenderNodeShaderManager() = default;

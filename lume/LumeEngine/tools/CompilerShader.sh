@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2024 Huawei Device Co., Ltd.
+# Copyright (c) 2024 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -38,11 +38,16 @@ compile_shader()
         rm -rf $DEST_GEN_PATH
         echo "Clean Output"
     fi
-    TEST_TOOL_PATH=$TOOL_PATH/../LumeBinaryCompile/LumeShaderCompiler
+    TEST_TOOL_PATH=$TOOL_PATH
     mkdir -p $DEST_GEN_PATH
     chmod -R 775 $DEST_GEN_PATH
 
     cp -r ${ASSETS_PATH}/* $DEST_GEN_PATH
+
+    if [ ! -f "$TEST_TOOL_PATH"/LumeShaderCompiler ]; then
+         echo "lume engine shader compiler not exist"
+    fi
+
     if [ -z "$RENDER_INCLUDE_PATH" ];
     then
         $TEST_TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $PROJECT_ROOT/LumeRender/api/

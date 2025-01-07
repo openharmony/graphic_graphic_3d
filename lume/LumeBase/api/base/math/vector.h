@@ -18,7 +18,11 @@
 
 #include <cstddef>
 #include <cstdint>
-
+#if defined(BASE_SIMD) && defined(_M_X64)
+#include <immintrin.h>
+#elif defined(_M_ARM64) || defined(__ARM_ARCH_ISA_A64)
+#include <arm_neon.h>
+#endif
 #include <base/math/mathf.h>
 #include <base/namespace.h>
 
@@ -187,6 +191,8 @@ public:
 // Assert that Vec2 is the same as 2 floats
 static_assert(sizeof(Vec2) == 2 * sizeof(float));
 
+static constexpr Vec2 ZERO_VEC2(0.0f, 0.0f);
+
 /** @ingroup group_math_vector */
 /** Vector3 presentation */
 class Vec3 final {
@@ -273,6 +279,11 @@ public:
             float w;
         };
         float data[4];
+#if defined(BASE_SIMD) && defined(_M_X64)
+        __m128 vec4;
+#elif defined(_M_ARM64) || defined(__ARM_ARCH_ISA_A64)
+        float32x4_t vec4;
+#endif
     };
     /** Subscript operator */
     constexpr float& operator[](size_t index);
@@ -1004,6 +1015,8 @@ constexpr const float& Vec4::operator[](size_t index) const
     return data[index];
 }
 
+static constexpr Vec3 ZERO_VEC3(0.0f, 0.0f, 0.0f);
+
 // Constructors
 inline constexpr Vec4::Vec4() noexcept : data {} {}
 inline constexpr Vec4::Vec4(float xParameter, float yParameter, float zParameter, float wParameter) noexcept
@@ -1123,6 +1136,8 @@ constexpr bool Vec4::operator!=(const Vec4& rhs) const
     // Returns true in the presence of NaN values
     return !(*this == rhs);
 }
+
+static constexpr Vec4 ZERO_VEC4(0.0f, 0.0f, 0.0f, 0.0f);
 
 #include <base/math/disable_warning_4201_footer.h>
 } // namespace Math

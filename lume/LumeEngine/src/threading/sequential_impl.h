@@ -26,7 +26,7 @@ CORE_BEGIN_NAMESPACE()
 // Wrapper for SequentialTaskQueue exposing a subset of the functionality.
 class SequentialImpl final : public ISequentialTaskQueue {
 public:
-    ~SequentialImpl();
+    ~SequentialImpl() override;
     explicit SequentialImpl(const IThreadPool::Ptr& threads);
 
     void Submit(uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task) override;

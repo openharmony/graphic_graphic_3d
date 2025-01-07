@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_BACK_BUFFER_H
-#define RENDER_RENDER__NODE__RENDER_NODE_BACK_BUFFER_H
+#ifndef RENDER_NODE_RENDER_NODE_BACK_BUFFER_H
+#define RENDER_NODE_RENDER_NODE_BACK_BUFFER_H
 
 #include <base/containers/string.h>
 #include <base/util/uid.h>
@@ -44,7 +44,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "f1dc030b-1081-4ca5-a195-1d8bfc1a036c" };
-    static constexpr char const* TYPE_NAME = "RenderNodeBackBuffer";
+    static constexpr const char* TYPE_NAME = "RenderNodeBackBuffer";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -54,7 +54,7 @@ private:
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     void CheckForPsoSpecilization(const PostProcessConfiguration& postProcessConfiguration);
-    PostProcessConfiguration GetPostProcessConfiguration(const IRenderNodeRenderDataStoreManager& dataStoreMgr);
+    PostProcessConfiguration GetPostProcessConfiguration(const IRenderNodeRenderDataStoreManager& dataStoreMgr) const;
     RenderHandle UpdateColorAttachmentSize();
     void ParseRenderNodeInputs();
 
@@ -91,4 +91,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_BACK_BUFFER_H
+#endif // RENDER_NODE_RENDER_NODE_BACK_BUFFER_H

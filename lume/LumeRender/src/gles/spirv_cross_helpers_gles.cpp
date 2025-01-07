@@ -17,7 +17,6 @@
 
 #include <cmath>
 
-#include "gles/device_gles.h"
 #include "gles/gl_functions.h"
 #include "util/log.h"
 
@@ -147,7 +146,7 @@ string Specialize(ShaderStageFlags mask, const string_view shaderTemplate,
         return string(shaderTemplate);
     }
     // Create defines..
-    const uintptr_t base = (uintptr_t)data.data.data();
+    const auto base = (uintptr_t)data.data.data();
     string defines;
     defines.reserve(256);
     for (const auto& spc : data.constants) {

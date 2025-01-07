@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DM_LIGHTING_COMMON_H
-#define SHADERS__COMMON__3D_DM_LIGHTING_COMMON_H
+#ifndef SHADERS_COMMON_3D_DM_LIGHTING_COMMON_H
+#define SHADERS_COMMON_3D_DM_LIGHTING_COMMON_H
 
 #include "3d/shaders/common/3d_dm_brdf_common.h"
 #include "3d/shaders/common/3d_dm_indirect_lighting_common.h"
@@ -56,6 +56,7 @@ struct ShadingDataInplace {
     vec3 diffuseColor;
     uint materialFlags;
     uvec2 layers;
+    uint cameraIdx;
 };
 
 struct ClearcoatShadingVariables {
@@ -122,7 +123,7 @@ void AppendIndirectClearcoat(in ClearcoatShadingVariables ccsv, in CORE_RELAXEDP
 
     GetFinalCorrectedRoughness(ccsv.ccNormal, ccsv.ccAlpha2);
 
-    float ccRadianceFactor = EnvBRDFApproxNonmetal(ccsv.ccAlpha2, ccNoV);
+    float ccRadianceFactor = EnvBRDFApproxNonmetal(ccsv.ccAlpha2, ccNoV) * ccsv.cc;
     float ccAttenuation = 1.0 - ccRadianceFactor;
 
     // energy compensation
@@ -690,10 +691,11 @@ vec3 CalculateLight(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, float N
     float subsurface = mix(backScatter, 1.0, forwardScatter) * (1.0 - ssssv.thickness);
     calculatedColor += ssssv.scatterColor * (subsurface * dLambert());
 
-    // TODO: apply attenuation to the transmitted light, i.e. uLightData.lights[currLightIdx].attenuation
     return (calculatedColor * uLightData.lights[currLightIdx].color.rgb);
 }
 
+// NOTE: deprecated
+// use the ShadingDataInplace version
 vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, const uint materialFlags)
 {
     const vec3 materialDiffuseBRDF = sd.diffuseColor * diffuseCoeff();
@@ -784,4 +786,189 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
     return color;
 }
 
-#endif // SHADERS__COMMON__3D_DM_LIGHTING_COMMON_H
+// NOTE: Use these methods
+
+vec3 CalculateLightInplace(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, float NoL, ShadingDataInplace sd,
+    ClearcoatShadingVariables ccsv, SheenShadingVariables ssv)
+{
+    const vec3 H = normalize(L + sd.V);
+    const float VoH = clamp(dot(sd.V, H), 0.0, 1.0);
+    const float NoH = clamp(dot(sd.N, H), 0.0, 1.0);
+
+    float extAttenuation = 1.0;
+    vec3 calculatedColor = vec3(0.0);
+    if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_SHEEN_BIT) == CORE_MATERIAL_SHEEN_BIT) {
+        const float sheenD = dCharlie(ssv.sheenRoughness, NoH);
+        const float sheenV = vAshikhmin(sd.NoV, NoL);
+        const vec3 sheenSpec = ssv.sheenColor * (sheenD * sheenV); // F = 1.0
+
+        extAttenuation *= (1.0 - (ssv.sheenColorMax * ssv.sheenBRDFApprox));
+        calculatedColor += (sheenSpec * NoL);
+    }
+    if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_CLEARCOAT_BIT) == CORE_MATERIAL_CLEARCOAT_BIT) {
+        const float ccNoL = clamp(dot(ccsv.ccNormal, L), CORE3D_PBR_LIGHTING_EPSILON, 1.0);
+        const float ccNoH = clamp(dot(ccsv.ccNormal, H), CORE3D_PBR_LIGHTING_EPSILON, 1.0);
+        const float ccLoH = clamp(dot(L, H), CORE3D_PBR_LIGHTING_EPSILON, 1.0);
+        const float ccNoV = clamp(dot(ccsv.ccNormal, sd.V), CORE3D_PBR_LIGHTING_EPSILON, 1.0);
+        const float ccf0 = 0.04;
+
+        const float ccD = dGGX(ccsv.ccAlpha2, ccNoH);
+        const float ccG = vKelemen(ccLoH);
+        const float ccF = fSchlickSingle(ccf0, ccNoV) * ccsv.cc; // NOTE: cc in ccF
+        const float ccSpec = ccF * ccD * ccG;
+
+        extAttenuation *= (1.0 - ccF);
+        calculatedColor += vec3(ccSpec * ccNoL);
+    }
+    const float D = dGGX(sd.alpha2, NoH);
+    const float G = vGGXWithCombinedDenominator(sd.alpha2, sd.NoV, NoL);
+    const vec3 F = fSchlick(sd.f0, VoH);
+    const vec3 specContrib = F * (D * G);
+
+    // KHR_materials_specular: "In the diffuse component we have to account for the fact that F is now an RGB value.",
+    // but it already was? const vec3 diffuseContrib = (1.0 - max(F.x, (max(F.y, F.z)))) * materialDiffuseBRDF;
+    const vec3 diffuseContrib = (1.0 - F.xyz) * materialDiffuseBRDF;
+    calculatedColor += (diffuseContrib + specContrib * extAttenuation) * extAttenuation * NoL;
+    calculatedColor *= uLightData.lights[currLightIdx].color.xyz;
+    return calculatedColor;
+}
+
+bool CheckLightLayerMask(uint currLightIdx, uvec2 layers)
+{
+    // Check that the light is enabled for this specific object.
+    const uvec2 lightLayerMask = uLightData.lights[currLightIdx].indices.wz;
+    // If any of the layer bits match the light layer mask -> return true (i.e. use this light).
+    return (layers & lightLayerMask) != uvec2(0, 0);
+}
+
+vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables ccsv, SheenShadingVariables ssv)
+{
+#if (CORE_DEFAULT_ENABLE_LIGHT_CLUSTERING == 1)
+    const uint clusterIdx = PointToClusterIdx(sd.pos.xyz, uCameras[sd.cameraIdx].view, uCameras[sd.cameraIdx].proj,
+        uGeneralData.viewportSizeInvViewportSize.xy);
+    const DefaultMaterialLightClusterData cluster = uLightClusterData[clusterIdx];
+#endif
+
+    const vec3 materialDiffuseBRDF = sd.diffuseColor * diffuseCoeff();
+    vec3 color = vec3(0.0);
+    const uint directionalLightCount = uLightData.directionalLightCount;
+    const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
+    const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
+
+    // directional lights
+    for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
+        const uint currLightIdx = directionalLightBeginIndex + lightIdx;
+
+        if (!CheckLightLayerMask(currLightIdx, sd.layers)) {
+            continue;
+        }
+
+        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
+        const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
+        // NOTE: could check for NoL > 0.0 and NoV > 0.0
+        CORE_RELAXEDP float shadowCoeff = 1.0;
+        if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_SHADOW_RECEIVER_BIT) == CORE_MATERIAL_SHADOW_RECEIVER_BIT) {
+            const uvec4 lightFlags = uLightData.lights[currLightIdx].flags;
+            if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
+                const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
+                const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+                if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
+                    shadowCoeff = CalcVsmShadow(
+                        uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                } else {
+                    shadowCoeff = CalcPcfShadow(
+                        uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                }
+            }
+        }
+        color += CalculateLightInplace(currLightIdx, materialDiffuseBRDF, L, NoL, sd, ccsv, ssv) * shadowCoeff;
+    }
+
+    // spotlights
+    if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SPOT_ENABLED_BIT) == CORE_LIGHTING_SPOT_ENABLED_BIT) {
+        const uint spotLightCount = uLightData.spotLightCount;
+        const uint spotLightLightBeginIndex = uLightData.spotLightBeginIndex;
+
+#if (CORE_DEFAULT_ENABLE_LIGHT_CLUSTERING == 1)
+        for (uint cLightIdx = 0; cLightIdx < cluster.count; cLightIdx++) {
+            const uint lightIdx = cluster.lightIndices[cLightIdx];
+#else
+        for (uint spotIdx = 0; spotIdx < spotLightCount; ++spotIdx) {
+            const uint lightIdx = spotLightLightBeginIndex + spotIdx;
+#endif
+
+            if (lightIdx >= spotLightLightBeginIndex && lightIdx < spotLightLightBeginIndex + spotLightCount) {
+                if (!CheckLightLayerMask(lightIdx, sd.layers)) {
+                    continue;
+                }
+
+                const vec3 pointToLight = uLightData.lights[lightIdx].pos.xyz - sd.pos.xyz;
+                const float dist = length(pointToLight);
+                const vec3 L = pointToLight / dist;
+                const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
+                // NOTE: could check for NoL > 0.0 and NoV > 0.0
+                CORE_RELAXEDP float shadowCoeff = 1.0;
+                if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_SHADOW_RECEIVER_BIT) == CORE_MATERIAL_SHADOW_RECEIVER_BIT) {
+                    const uvec4 lightFlags = uLightData.lights[lightIdx].flags;
+                    if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
+                        const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
+                        const vec4 shadowFactors = uLightData.lights[lightIdx].shadowFactors;
+                        if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) ==
+                            CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
+                            shadowCoeff = CalcVsmShadow(
+                                uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                        } else {
+                            shadowCoeff = CalcPcfShadow(
+                                uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                        }
+                    }
+                }
+
+                const float lightAngleScale = uLightData.lights[lightIdx].spotLightParams.x;
+                const float lightAngleOffset = uLightData.lights[lightIdx].spotLightParams.y;
+                // See: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_lights_punctual
+                const float cd = dot(uLightData.lights[lightIdx].dir.xyz, -L);
+                const float angularAttenuation = clamp(cd * lightAngleScale + lightAngleOffset, 0.0, 1.0);
+
+                const float range = uLightData.lights[lightIdx].dir.w;
+                const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
+                color += CalculateLightInplace(lightIdx, materialDiffuseBRDF, L, NoL, sd, ccsv, ssv) *
+                         (angularAttenuation * angularAttenuation * attenuation) * shadowCoeff;
+            }
+        }
+    }
+
+    // point lights
+    if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_POINT_ENABLED_BIT) == CORE_LIGHTING_POINT_ENABLED_BIT) {
+        const uint pointLightCount = uLightData.pointLightCount;
+        const uint pointLightBeginIndex = uLightData.pointLightBeginIndex;
+
+#if (CORE_DEFAULT_ENABLE_LIGHT_CLUSTERING == 1)
+        for (uint cLightIdx = 0; cLightIdx < cluster.count; cLightIdx++) {
+            const uint lightIdx = cluster.lightIndices[cLightIdx];
+#else
+        for (uint pointIdx = 0; pointIdx < pointLightCount; ++pointIdx) {
+            const uint lightIdx = pointLightBeginIndex + pointIdx;
+#endif
+
+            if (lightIdx >= pointLightBeginIndex && lightIdx < pointLightBeginIndex + pointLightCount) {
+                if (!CheckLightLayerMask(lightIdx, sd.layers)) {
+                    continue;
+                }
+
+                const vec3 pointToLight = uLightData.lights[lightIdx].pos.xyz - sd.pos.xyz;
+                const float dist = length(pointToLight);
+                const vec3 L = pointToLight / dist;
+                const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
+                const float range = uLightData.lights[lightIdx].dir.w;
+                const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
+                // NOTE: could check for NoL > 0.0 and NoV > 0.0
+                color += CalculateLightInplace(lightIdx, materialDiffuseBRDF, L, NoL, sd, ccsv, ssv) * attenuation;
+            }
+        }
+    }
+
+    return color;
+}
+
+#endif // SHADERS_COMMON_3D_DM_LIGHTING_COMMON_H

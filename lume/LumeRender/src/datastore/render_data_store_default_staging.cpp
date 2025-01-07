@@ -19,8 +19,6 @@
 
 #include <render/datastore/intf_render_data_store_default_staging.h>
 #include <render/device/gpu_resource_desc.h>
-#include <render/device/intf_device.h>
-#include <render/device/intf_gpu_resource_manager.h>
 #include <render/intf_render_context.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
@@ -34,8 +32,6 @@ RENDER_BEGIN_NAMESPACE()
 RenderDataStoreDefaultStaging::RenderDataStoreDefaultStaging(IRenderContext& renderContext, const string_view name)
     : gpuResourceMgr_(renderContext.GetDevice().GetGpuResourceManager()), name_(name)
 {}
-
-RenderDataStoreDefaultStaging::~RenderDataStoreDefaultStaging() {}
 
 void RenderDataStoreDefaultStaging::PreRender()
 {
@@ -60,6 +56,24 @@ void RenderDataStoreDefaultStaging::Clear()
     // The data cannot be automatically cleared here
 }
 
+void RenderDataStoreDefaultStaging::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStoreDefaultStaging::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStoreDefaultStaging::GetRefCount()
+{
+    return refcnt_;
+}
+
 void RenderDataStoreDefaultStaging::CopyImageToBuffer(const RenderHandleReference& srcHandle,
     const RenderHandleReference& dstHandle, const BufferImageCopy& bufferImageCopy, const ResourceCopyInfo copyInfo)
 {
@@ -68,7 +82,7 @@ void RenderDataStoreDefaultStaging::CopyImageToBuffer(const RenderHandleReferenc
 
         auto& staging =
             (copyInfo == ResourceCopyInfo::BEGIN_FRAME) ? stagingConsumeData_.beginFrame : stagingConsumeData_.endFrame;
-        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
+        const auto beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
         staging.bufferImageCopies.push_back(bufferImageCopy);
 
         staging.imageToBuffer.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_SRC_TO_DST_COPY,
@@ -84,7 +98,7 @@ void RenderDataStoreDefaultStaging::CopyImageToImage(const RenderHandleReference
 
         auto& staging =
             (copyInfo == ResourceCopyInfo::BEGIN_FRAME) ? stagingConsumeData_.beginFrame : stagingConsumeData_.endFrame;
-        const uint32_t beginIndex = static_cast<uint32_t>(staging.imageCopies.size());
+        const auto beginIndex = static_cast<uint32_t>(staging.imageCopies.size());
         staging.imageCopies.push_back(imageCopy);
 
         staging.imageToImage.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_SRC_TO_DST_COPY,
@@ -100,7 +114,7 @@ void RenderDataStoreDefaultStaging::CopyBufferToBuffer(const RenderHandleReferen
 
         auto& staging =
             (copyInfo == ResourceCopyInfo::BEGIN_FRAME) ? stagingConsumeData_.beginFrame : stagingConsumeData_.endFrame;
-        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferCopies.size());
+        const auto beginIndex = static_cast<uint32_t>(staging.bufferCopies.size());
         staging.bufferCopies.push_back(bufferCopy);
 
         staging.bufferToBuffer.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY,
@@ -116,7 +130,7 @@ void RenderDataStoreDefaultStaging::CopyBufferToImage(const RenderHandleReferenc
 
         auto& staging =
             (copyInfo == ResourceCopyInfo::BEGIN_FRAME) ? stagingConsumeData_.beginFrame : stagingConsumeData_.endFrame;
-        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
+        const auto beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
         staging.bufferImageCopies.push_back(bufferImageCopy);
 
         staging.bufferToImage.push_back(StagingCopyStruct { StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY,
@@ -148,7 +162,7 @@ void RenderDataStoreDefaultStaging::CopyDataToBuffer(
         stagingGpuBuffers_.push_back(stagingBufferHandle);
 
         auto& staging = stagingConsumeData_.beginFrame;
-        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferCopies.size());
+        const auto beginIndex = static_cast<uint32_t>(staging.bufferCopies.size());
         staging.bufferCopies.push_back(BufferCopy { 0, 0, static_cast<uint32_t>(dat.size_bytes()) });
 
         vector<uint8_t> copiedData(dat.cbegin().ptr(), dat.cend().ptr());
@@ -192,7 +206,7 @@ void RenderDataStoreDefaultStaging::CopyDataToImage(const array_view<const uint8
         stagingGpuBuffers_.push_back(stagingBufferHandle);
 
         auto& staging = stagingConsumeData_.beginFrame;
-        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
+        const auto beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
         staging.bufferImageCopies.push_back(bufferImageCopy);
 
         vector<uint8_t> copiedData(dat.cbegin().ptr(), dat.cend().ptr());
@@ -208,7 +222,7 @@ void RenderDataStoreDefaultStaging::CopyBufferToImage(const RenderHandleReferenc
         std::lock_guard<std::mutex> lock(mutex_);
 
         auto& staging = stagingConsumeData_.beginFrame;
-        const uint32_t beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
+        const auto beginIndex = static_cast<uint32_t>(staging.bufferImageCopies.size());
         staging.bufferImageCopies.insert(
             staging.bufferImageCopies.end(), bufferImageCopies.begin(), bufferImageCopies.end());
 
@@ -308,13 +322,8 @@ uint32_t RenderDataStoreDefaultStaging::GetImageClearByteSize() const
 }
 
 // for plugin / factory interface
-IRenderDataStore* RenderDataStoreDefaultStaging::Create(IRenderContext& renderContext, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultStaging::Create(IRenderContext& renderContext, const char* name)
 {
-    return new RenderDataStoreDefaultStaging(renderContext, name);
-}
-
-void RenderDataStoreDefaultStaging::Destroy(IRenderDataStore* instance)
-{
-    delete static_cast<RenderDataStoreDefaultStaging*>(instance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultStaging(renderContext, name));
 }
 RENDER_END_NAMESPACE()

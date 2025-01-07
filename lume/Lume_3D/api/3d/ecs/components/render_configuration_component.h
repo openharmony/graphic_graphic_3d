@@ -69,11 +69,11 @@ BEGIN_COMPONENT(IRenderConfigurationComponentManager, RenderConfigurationCompone
     /** Entity containing an environment component that is used by default when rendering. Controls indirect and
      * environment lighting options.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, environment, "Environment", 0, )
+    DEFINE_PROPERTY(CORE_NS::Entity, environment, "Environment", 0,)
 
     /** Entity containing a fog component that is used by default when rendering.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, fog, "Fog", 0, )
+    DEFINE_PROPERTY(CORE_NS::Entity, fog, "Fog", 0,)
 
     /** Shadow type for the (ECS) scene.
      */
@@ -98,13 +98,13 @@ BEGIN_COMPONENT(IRenderConfigurationComponentManager, RenderConfigurationCompone
     /** Custom scene render node graph file. (Can be patched with some scene specific ids)
      * Replaces the built-in scene render node graph when processing custom render node graphs with ECS (RenderSystem).
      */
-    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Scene Render Node Graph File", 0, )
+    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Scene Render Node Graph File", 0,)
 
     /** Custom post scene render node graph file. (Can be patched with some scene specific ids)
      * Is added as a final render node graph from ECS (RenderSystem) when processing render node graphs.
      */
     DEFINE_PROPERTY(
-        BASE_NS::string, customPostSceneRenderNodeGraphFile, "Custom Post Scene Render Node Graph File", 0, )
+        BASE_NS::string, customPostSceneRenderNodeGraphFile, "Custom Post Scene Render Node Graph File", 0,)
 
 END_COMPONENT(
     IRenderConfigurationComponentManager, RenderConfigurationComponent, "7e655b3d-3cad-40b9-8179-c749be17f60b")

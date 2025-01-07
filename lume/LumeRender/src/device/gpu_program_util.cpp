@@ -17,8 +17,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <iterator>
-#include <numeric>
 
 #include <render/device/pipeline_layout_desc.h>
 #include <render/namespace.h>
@@ -29,13 +27,6 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace GpuProgramUtil {
-namespace {
-struct VertexAttributeInfo {
-    uint32_t byteSize { 0 };
-    VertexInputDeclaration::VertexInputAttributeDescription description;
-};
-} // namespace
-
 bool AddBindings(const DescriptorSetLayout& inDescriptorSetLayout, DescriptorSetLayout& outDescriptorSetLayout)
 {
     const auto& inBindings = inDescriptorSetLayout.bindings;
@@ -44,9 +35,8 @@ bool AddBindings(const DescriptorSetLayout& inDescriptorSetLayout, DescriptorSet
         outBindings.reserve(inBindings.size());
     }
     bool validCombination = true;
-    for (size_t idx = 0; idx < inDescriptorSetLayout.bindings.size(); ++idx) {
+    for (const auto& inBinding : inDescriptorSetLayout.bindings) {
         bool bindingAlreadyFound = false;
-        const auto& inBinding = inDescriptorSetLayout.bindings[idx];
         const uint32_t currBindingIndex = inBinding.binding;
         for (auto& outRef : outBindings) {
             if (currBindingIndex == outRef.binding) {

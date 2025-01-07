@@ -16,6 +16,8 @@
 #ifndef API_CORE_OS_COMMON_PLATFORM_CREATE_INFO_H
 #define API_CORE_OS_COMMON_PLATFORM_CREATE_INFO_H
 
+#include <platform/common/core/os/extensions_create_info.h>
+
 #include <base/containers/string.h>
 #include <base/namespace.h>
 #include <core/namespace.h>
@@ -30,6 +32,8 @@ struct PlatformCreateInfo {
     BASE_NS::string appRootPath = "./";
     /** Application plugin path */
     BASE_NS::string appPluginPath = "./";
+    /** Extra extensions */
+    const PlatformCreateExtensionInfo* extensions = nullptr;
 };
 CORE_END_NAMESPACE()
 

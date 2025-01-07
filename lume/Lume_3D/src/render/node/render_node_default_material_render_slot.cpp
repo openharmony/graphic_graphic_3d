@@ -41,6 +41,7 @@
 #include <render/nodecontext/intf_render_node_util.h>
 #include <render/resource_handle.h>
 
+#include "render/default_constants.h"
 #include "render/render_node_scene_util.h"
 
 #if (CORE3D_DEV_ENABLED == 1)
@@ -64,13 +65,17 @@ constexpr DynamicStateEnum DYNAMIC_STATES_FSR[] = { CORE_DYNAMIC_STATE_ENUM_VIEW
 
 constexpr uint32_t UBO_BIND_OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
 
-static constexpr uint64_t LIGHTING_FLAGS_SHIFT { 32u };
-static constexpr uint64_t LIGHTING_FLAGS_MASK { 0xF00000000u };
-static constexpr uint64_t POST_PROCESS_FLAGS_SHIFT { 36u };
-static constexpr uint64_t POST_PROCESS_FLAGS_MASK { 0xF000000000u };
-static constexpr uint64_t CAMERA_FLAGS_SHIFT { 40u };
-static constexpr uint64_t CAMERA_FLAGS_MASK { 0xF0000000000u };
-static constexpr uint64_t RENDER_HASH_FLAGS_MASK { 0xFFFFffffu };
+static constexpr uint64_t LIGHTING_FLAGS_SHIFT { 32ULL };
+static constexpr uint64_t LIGHTING_FLAGS_MASK { 0xF00000000ULL };
+static constexpr uint64_t POST_PROCESS_FLAGS_SHIFT { 36ULL };
+static constexpr uint64_t POST_PROCESS_FLAGS_MASK { 0xF000000000ULL };
+static constexpr uint64_t CAMERA_FLAGS_SHIFT { 40ULL };
+static constexpr uint64_t CAMERA_FLAGS_MASK { 0xF0000000000ULL };
+static constexpr uint64_t RENDER_HASH_FLAGS_MASK { 0xFFFFffffULL };
+static constexpr uint64_t PRIMITIVE_TOPOLOGY_SHIFT { 44ULL };
+// CORE_PRIMITIVE_TOPOLOGY_PATCH_LIST = 10
+// CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM is ignored in hashing
+static constexpr uint64_t PRIMITIVE_TOPOLOGY_MASK { 0xF00000000000ULL };
 
 // our light weight straight to screen post processes are only interested in these
 static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffu };
@@ -78,74 +83,33 @@ static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffu };
 static constexpr uint32_t FIXED_CUSTOM_SET3 { 3u };
 static constexpr uint32_t CUSTOM_SET_DESCRIPTOR_SET_COUNT { 4u };
 
-void GetDefaultMaterialGpuResources(const IRenderNodeGpuResourceManager& gpuResourceMgr,
-    RenderNodeDefaultMaterialRenderSlot::MaterialHandleStruct& defaultMat)
+inline void GetMultiViewCameraIndices(
+    const IRenderDataStoreDefaultCamera& rds, const RenderCamera& cam, vector<uint32_t>& mvIndices)
 {
-    defaultMat.resources[MaterialComponent::TextureIndex::BASE_COLOR].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_BASE_COLOR);
-    defaultMat.resources[MaterialComponent::TextureIndex::NORMAL].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_NORMAL);
-    defaultMat.resources[MaterialComponent::TextureIndex::MATERIAL].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_MATERIAL);
-    defaultMat.resources[MaterialComponent::TextureIndex::EMISSIVE].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_EMISSIVE);
-    defaultMat.resources[MaterialComponent::TextureIndex::AO].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_AO);
-
-    defaultMat.resources[MaterialComponent::TextureIndex::CLEARCOAT].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT);
-    defaultMat.resources[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT_ROUGHNESS);
-    defaultMat.resources[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT_NORMAL);
-
-    defaultMat.resources[MaterialComponent::TextureIndex::SHEEN].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_SHEEN);
-
-    defaultMat.resources[MaterialComponent::TextureIndex::TRANSMISSION].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_TRANSMISSION);
-
-    defaultMat.resources[MaterialComponent::TextureIndex::SPECULAR].handle =
-        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_SPECULAR);
-
-    const RenderHandle samplerHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT");
-    for (uint32_t idx = 0; idx < countof(defaultMat.resources); ++idx) {
-        defaultMat.resources[idx].samplerHandle = samplerHandle;
+    CORE_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
+    const uint32_t inputCount =
+        Math::min(cam.multiViewCameraCount, RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT);
+    mvIndices.clear();
+    mvIndices.reserve(inputCount);
+    for (uint32_t idx = 0U; idx < inputCount; ++idx) {
+        const uint64_t id = cam.multiViewCameraIds[idx];
+        if (id != RenderSceneDataConstants::INVALID_ID) {
+            mvIndices.push_back(Math::min(rds.GetCameraIndex(id), CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - 1U));
+        }
     }
-}
-
-RenderNodeDefaultMaterialRenderSlot::ShadowBuffers GetShadowBufferNodeData(
-    IRenderNodeGpuResourceManager& gpuResourceMgr, const string_view sceneName)
-{
-    RenderNodeDefaultMaterialRenderSlot::ShadowBuffers sb;
-    sb.vsmSamplerHandle =
-        gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_VSM_SHADOW_SAMPLER);
-    sb.pcfSamplerHandle =
-        gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_PCF_SHADOW_SAMPLER);
-
-    sb.depthHandle =
-        gpuResourceMgr.GetImageHandle(sceneName + DefaultMaterialLightingConstants::SHADOW_DEPTH_BUFFER_NAME);
-    sb.vsmColorHandle =
-        gpuResourceMgr.GetImageHandle(sceneName + DefaultMaterialLightingConstants::SHADOW_VSM_COLOR_BUFFER_NAME);
-    if (!RenderHandleUtil::IsValid(sb.depthHandle)) {
-        sb.depthHandle = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE_WHITE");
-    }
-    if (!RenderHandleUtil::IsValid(sb.vsmColorHandle)) {
-        sb.vsmColorHandle = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE");
-    }
-
-    return sb;
 }
 
 inline uint64_t HashShaderDataAndSubmesh(const uint64_t shaderDataHash, const uint32_t renderHash,
     const IRenderDataStoreDefaultLight::LightingFlags lightingFlags, const RenderCamera::ShaderFlags& cameraShaderFlags,
-    const PostProcessConfiguration::PostProcessEnableFlags postProcessFlags)
+    const PostProcessConfiguration::PostProcessEnableFlags postProcessFlags, const GraphicsState::InputAssembly& ia)
 {
     const uint32_t ppEnabled = (postProcessFlags > 0);
+    const uint64_t iaHash = uint32_t(ia.enablePrimitiveRestart) | (ia.primitiveTopology << 1U);
     uint64_t hash = ((uint64_t)renderHash & RENDER_HASH_FLAGS_MASK) |
                     (((uint64_t)lightingFlags << LIGHTING_FLAGS_SHIFT) & LIGHTING_FLAGS_MASK) |
                     (((uint64_t)ppEnabled << POST_PROCESS_FLAGS_SHIFT) & POST_PROCESS_FLAGS_MASK) |
-                    (((uint64_t)cameraShaderFlags << CAMERA_FLAGS_SHIFT) & CAMERA_FLAGS_MASK);
+                    (((uint64_t)cameraShaderFlags << CAMERA_FLAGS_SHIFT) & CAMERA_FLAGS_MASK) |
+                    (((uint64_t)iaHash << PRIMITIVE_TOPOLOGY_SHIFT) & PRIMITIVE_TOPOLOGY_MASK);
     HashCombine(hash, shaderDataHash);
     return hash;
 }
@@ -161,19 +125,77 @@ inline bool IsInverseWinding(const RenderSubmeshFlags submeshFlags, const Render
     return isNegative;
 }
 
-void UpdateCurrentMaterialHandles(const RenderSubmesh& currSubmesh,
-    const RenderNodeDefaultMaterialRenderSlot::MaterialHandleStruct& defaultMat,
-    const RenderDataDefaultMaterial::MaterialHandles& currSubmeshHandles,
-    RenderNodeDefaultMaterialRenderSlot::MaterialHandleStruct& currMaterialHandles)
+void BindVertextBufferAndDraw(IRenderCommandList& cmdList, const RenderSubmesh& currSubmesh)
 {
-    for (uint32_t idx = 0; idx < countof(currSubmeshHandles.images); ++idx) {
-        const auto& defaultRes = defaultMat.resources[idx];
-        const auto& srcImage = currSubmeshHandles.images[idx].GetHandle();
-        const auto& srcSampler = currSubmeshHandles.samplers[idx].GetHandle();
-        auto& dst = currMaterialHandles.resources[idx];
-        dst.handle = RenderHandleUtil::IsValid(srcImage) ? srcImage : defaultRes.handle;
-        dst.samplerHandle = RenderHandleUtil::IsValid(srcSampler) ? srcSampler : defaultRes.samplerHandle;
+    // vertex buffers and draw
+    if (currSubmesh.buffers.vertexBufferCount > 0U) {
+        cmdList.BindVertexBuffers({ currSubmesh.buffers.vertexBuffers, currSubmesh.buffers.vertexBufferCount });
     }
+    const auto& dc = currSubmesh.drawCommand;
+    const VertexBuffer& iArgs = currSubmesh.buffers.indirectArgsBuffer;
+    const bool indirectDraw = RenderHandleUtil::IsValid(iArgs.bufferHandle);
+    if ((currSubmesh.buffers.indexBuffer.byteSize > 0U) &&
+        RenderHandleUtil::IsValid(currSubmesh.buffers.indexBuffer.bufferHandle)) {
+        cmdList.BindIndexBuffer(currSubmesh.buffers.indexBuffer);
+        if (indirectDraw) {
+            cmdList.DrawIndexedIndirect(
+                iArgs.bufferHandle, iArgs.bufferOffset, dc.drawCountIndirect, dc.strideIndirect);
+        } else {
+            cmdList.DrawIndexed(dc.indexCount, dc.instanceCount, 0, 0, 0);
+        }
+    } else {
+        if (indirectDraw) {
+            cmdList.DrawIndirect(iArgs.bufferHandle, iArgs.bufferOffset, dc.drawCountIndirect, dc.strideIndirect);
+        } else {
+            cmdList.Draw(dc.vertexCount, dc.instanceCount, 0, 0);
+        }
+    }
+}
+
+RenderDataDefaultMaterial::SubmeshMaterialFlags GetSubmeshMaterialFlags(
+    const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
+    const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const bool instanced, const bool hasShadows)
+{
+    // create a new copy and modify if needed (force instancing on and off)
+    RenderDataDefaultMaterial::SubmeshMaterialFlags materialFlags = submeshMaterialFlags;
+    if (!hasShadows) { // remove shadow if not in scene
+        materialFlags.renderMaterialFlags &= (~RenderMaterialFlagBits::RENDER_MATERIAL_SHADOW_RECEIVER_BIT);
+        materialFlags.renderHash = dataStoreMaterial.GenerateRenderHash(materialFlags);
+    }
+    return materialFlags;
+}
+
+RenderNodeDefaultMaterialRenderSlot::FrameGlobalDescriptorSets GetFrameGlobalDescriptorSets(
+    IRenderNodeContextManager* rncm, const SceneRenderDataStores& stores, const string& cameraName)
+{
+    RenderNodeDefaultMaterialRenderSlot::FrameGlobalDescriptorSets fgds;
+    if (rncm) {
+        // re-fetch global descriptor sets every frame
+        const INodeContextDescriptorSetManager& dsMgr = rncm->GetDescriptorSetManager();
+        const string_view us = stores.dataStoreNameScene;
+        fgds.set0 = dsMgr.GetGlobalDescriptorSet(
+            us + DefaultMaterialMaterialConstants::MATERIAL_SET0_GLOBAL_DESCRIPTOR_SET_PREFIX_NAME + cameraName);
+        fgds.set1 = dsMgr.GetGlobalDescriptorSet(
+            us + DefaultMaterialMaterialConstants::MATERIAL_SET1_GLOBAL_DESCRIPTOR_SET_NAME);
+        fgds.set2 = dsMgr.GetGlobalDescriptorSets(
+            us + DefaultMaterialMaterialConstants::MATERIAL_RESOURCES_GLOBAL_DESCRIPTOR_SET_NAME);
+        fgds.set2Default = dsMgr.GetGlobalDescriptorSet(
+            us + DefaultMaterialMaterialConstants::MATERIAL_DEFAULT_RESOURCE_GLOBAL_DESCRIPTOR_SET_NAME);
+#if (CORE3D_VALIDATION_ENABLED == 1)
+        if (fgds.set2.empty()) {
+            CORE_LOG_ONCE_W("core3d_global_descriptor_set_render_slot_issues",
+                "CORE3D_VALIDATION: Global descriptor set for default material env not found");
+        }
+#endif
+        fgds.valid = RenderHandleUtil::IsValid(fgds.set0) && RenderHandleUtil::IsValid(fgds.set1) &&
+                     RenderHandleUtil::IsValid(fgds.set2Default);
+        if (!fgds.valid) {
+            CORE_LOG_ONCE_E("core3d_global_descriptor_set_rs_all_issues",
+                "Global descriptor set 0/1/2 for default material not "
+                "found (RenderNodeDefaultCameraController needed)");
+        }
+    }
+    return fgds;
 }
 } // namespace
 
@@ -189,7 +211,6 @@ void RenderNodeDefaultMaterialRenderSlot::InitNode(IRenderNodeContextManager& re
     // reset
     currentScene_ = {};
     allShaderData_ = {};
-    objectCounts_ = {};
 
     if ((jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DIRECT_POST_PROCESS_BIT) &&
         jsonInputs_.renderDataStore.dataStoreName.empty()) {
@@ -206,33 +227,11 @@ void RenderNodeDefaultMaterialRenderSlot::InitNode(IRenderNodeContextManager& re
     defaultSamplers_.nearestHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_NEAREST_CLAMP");
     defaultSamplers_.linearMipHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP");
     defaultColorPrePassHandle_ = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE");
-
-    GetSceneUniformBuffers(stores_.dataStoreNameScene);
-
-    shadowBuffers_ = GetShadowBufferNodeData(gpuResourceMgr, stores_.dataStoreNameScene);
-
-    GetDefaultMaterialGpuResources(gpuResourceMgr, defaultMaterialStruct_);
 }
 
 void RenderNodeDefaultMaterialRenderSlot::PreExecuteFrame()
 {
     // re-create needed gpu resources
-    const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-    const IRenderDataStoreDefaultMaterial* dataStoreMaterial = static_cast<IRenderDataStoreDefaultMaterial*>(
-        renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameMaterial));
-    // we need to have all buffers created (reason to have at least 1u)
-    if (dataStoreMaterial) {
-        const auto dsOc = dataStoreMaterial->GetSlotObjectCounts(jsonInputs_.renderSlotId);
-        const ObjectCounts oc {
-            Math::max(dsOc.meshCount, 1u),
-            Math::max(dsOc.submeshCount, 1u),
-            Math::max(dsOc.skinCount, 1u),
-            Math::max(dsOc.materialCount, 1u),
-        };
-        ProcessBuffersAndDescriptors(oc);
-    } else if (objectCounts_.maxSlotMeshCount == 0) {
-        ProcessBuffersAndDescriptors({ 1u, 1u, 1u, 1u });
-    }
 }
 
 void RenderNodeDefaultMaterialRenderSlot::ExecuteFrame(IRenderCommandList& cmdList)
@@ -253,6 +252,13 @@ void RenderNodeDefaultMaterialRenderSlot::ExecuteFrame(IRenderCommandList& cmdLi
     } else {
         CORE_LOG_E("invalid render data stores in RenderNodeDefaultMaterialRenderSlot");
     }
+
+#if (CORE3D_VALIDATION_ENABLED == 1)
+    RENDER_DEBUG_MARKER_COL_SCOPE(
+        cmdList, "3DMaterial" + jsonInputs_.renderSlotName, DefaultDebugConstants::DEFAULT_DEBUG_COLOR);
+#else
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "3DMaterial", DefaultDebugConstants::DEFAULT_DEBUG_COLOR);
+#endif
 
     cmdList.BeginRenderPass(renderPass_.renderPassDesc, renderPass_.subpassStartIndex, renderPass_.subpassDesc);
 
@@ -278,8 +284,11 @@ void RenderNodeDefaultMaterialRenderSlot::ExecuteFrame(IRenderCommandList& cmdLi
 void RenderNodeDefaultMaterialRenderSlot::RenderSubmeshes(IRenderCommandList& cmdList,
     const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const IRenderDataStoreDefaultCamera& dataStoreCamera)
 {
-    const size_t submeshCount = sortedSlotSubmeshes_.size();
-    CORE_ASSERT(submeshCount <= objectCounts_.maxSlotSubmeshCount);
+    // re-fetch global descriptor sets every frame
+    const FrameGlobalDescriptorSets fgds = GetFrameGlobalDescriptorSets(renderNodeContextMgr_, stores_, cameraName_);
+    if (!fgds.valid) {
+        return; // cannot continue
+    }
 
     // dynamic state
     cmdList.SetDynamicStateViewport(currentScene_.viewportDesc);
@@ -290,209 +299,111 @@ void RenderNodeDefaultMaterialRenderSlot::RenderSubmeshes(IRenderCommandList& cm
                             CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
     }
 
-    // set 0, update camera, general data, and lighting
-    // set 1, update mesh matrices, material data, and skinning data (uses dynamic offset)
-    UpdateSet01(cmdList);
-
     // first two sets are only bound for the first submesh (inside for loop)
     // no bindless, we need to update images per object
-    RenderHandle boundPsoHandle = {};
-    uint64_t boundShaderHash = 0;
+    PipelineInfo pipelineInfo;
     uint32_t currMaterialIndex = ~0u;
-    MaterialHandleStruct currentMaterialHandles;
     bool initialBindDone = false; // cannot be checked from the idx
-    bool boundCustomSetNeed = false;
 
-    const auto& materialHandles = dataStoreMaterial.GetMaterialHandles();
     const auto& submeshMaterialFlags = dataStoreMaterial.GetSubmeshMaterialFlags();
     const auto& submeshes = dataStoreMaterial.GetSubmeshes();
     const auto& customResourceHandles = dataStoreMaterial.GetCustomResourceHandles();
     const uint64_t camLayerMask = currentScene_.camera.layerMask;
-    for (size_t idx = 0; idx < submeshCount; ++idx) {
-        const auto& ssp = sortedSlotSubmeshes_[idx];
+
+    for (const auto& ssp : sortedSlotSubmeshes_) {
         const uint32_t submeshIndex = ssp.submeshIndex;
         const auto& currSubmesh = submeshes[submeshIndex];
-        const auto& currSubmeshMatHandles = materialHandles[currSubmesh.materialIndex];
-        const RenderSubmeshFlags submeshFlags = currSubmesh.submeshFlags | jsonInputs_.nodeSubmeshExtraFlags;
-        auto currMaterialFlags = submeshMaterialFlags[submeshIndex];
-
         // sorted slot submeshes should already have removed layers if default sorting was used
-        if (((camLayerMask & currSubmesh.layerMask) == 0) ||
+        if (((camLayerMask & currSubmesh.layers.layerMask) == 0U) ||
             ((jsonInputs_.nodeFlags & RENDER_SCENE_DISCARD_MATERIAL_BIT) &&
-                (currMaterialFlags.extraMaterialRenderingFlags &
+                (submeshMaterialFlags[submeshIndex].extraMaterialRenderingFlags &
                     RenderExtraRenderingFlagBits::RENDER_EXTRA_RENDERING_DISCARD_BIT))) {
             continue;
         }
+        const auto materialSubmeshFlags = GetSubmeshMaterialFlags(submeshMaterialFlags[submeshIndex], dataStoreMaterial,
+            (currSubmesh.drawCommand.instanceCount > 1U), currentScene_.hasShadow);
+        const RenderSubmeshFlags submeshFlags = currSubmesh.submeshFlags | jsonInputs_.nodeSubmeshExtraFlags;
 
-        uint32_t renderHash = currMaterialFlags.renderHash;
-        if (!currentScene_.hasShadow) { // remove shadow if not in scene
-            currMaterialFlags.renderMaterialFlags =
-                currMaterialFlags.renderMaterialFlags & (~RenderMaterialFlagBits::RENDER_MATERIAL_SHADOW_RECEIVER_BIT);
-            renderHash = dataStoreMaterial.GenerateRenderHash(currMaterialFlags);
-        }
-        // get shader and graphics state and start hashing
-        ShaderStateData ssd { ssp.shaderHandle, ssp.gfxStateHandle, 0 };
-        ssd.hash = (ssd.shader.id << 32U) | (ssd.gfxState.id & 0xFFFFffff);
-        // current shader state is fetched for build-in and custom shaders (decision is made later)
-        ssd.hash = HashShaderDataAndSubmesh(ssd.hash, renderHash, currentScene_.lightingFlags,
-            currentScene_.cameraShaderFlags, currentRenderPPConfiguration_.flags.x);
-        if (ssd.hash != boundShaderHash) {
-            const PsoAndInfo psoAndInfo = GetSubmeshPso(
-                ssd, currMaterialFlags, submeshFlags, currentScene_.lightingFlags, currentScene_.cameraShaderFlags);
-            if (psoAndInfo.pso.id != boundPsoHandle.id) {
-                boundShaderHash = ssd.hash;
-                boundPsoHandle = psoAndInfo.pso;
-                cmdList.BindPipeline(boundPsoHandle);
-                boundCustomSetNeed = psoAndInfo.set3;
-            }
-        }
+        BindPipeline(cmdList, ssp, materialSubmeshFlags, submeshFlags, currSubmesh.buffers.inputAssembly, pipelineInfo);
 
         // bind first set only the first time
         if (!initialBindDone) {
-            RenderHandle setResourceHandles[2u] { allDescriptorSets_.set01[0u]->GetDescriptorSetHandle(),
-                allDescriptorSets_.set01[1u]->GetDescriptorSetHandle() };
-            cmdList.BindDescriptorSets(0, { setResourceHandles, 2u });
+            cmdList.BindDescriptorSet(0, fgds.set0);
         }
 
-        // set 1 (mesh matrix, skin matrices, material, material user data)
-        const uint32_t currMeshMatrixOffset = currSubmesh.meshIndex * UBO_BIND_OFFSET_ALIGNMENT;
-        const uint32_t currMaterialOffset = currSubmesh.materialIndex * UBO_BIND_OFFSET_ALIGNMENT;
-        const uint32_t currMaterialTransformOffset = currSubmesh.materialIndex * UBO_BIND_OFFSET_ALIGNMENT;
-        const uint32_t currUserMaterialOffset = currSubmesh.materialIndex * UBO_BIND_OFFSET_ALIGNMENT;
-        uint32_t currJointMatrixOffset = 0u;
-        if (submeshFlags & RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT) {
-            currJointMatrixOffset =
-                currSubmesh.skinJointIndex * static_cast<uint32_t>(sizeof(DefaultMaterialSkinStruct));
-        }
-        const uint32_t dynamicOffsets[] = { currMeshMatrixOffset, currJointMatrixOffset, currMaterialOffset,
-            currMaterialTransformOffset, currUserMaterialOffset };
-        // set to bind, handle to resource, offsets for dynamic descs
-        cmdList.BindDescriptorSet(1u, allDescriptorSets_.set01[1u]->GetDescriptorSetHandle(), dynamicOffsets);
-
-        // update material descriptor set
-        if ((!initialBindDone) || (currMaterialIndex != currSubmesh.materialIndex)) {
-            // the data changes, when the material changes, so we need to rebind the material data
-            UpdateCurrentMaterialHandles(
-                currSubmesh, defaultMaterialStruct_, currSubmeshMatHandles, currentMaterialHandles);
-            UpdateAndBindSet2(cmdList, currentMaterialHandles, static_cast<uint32_t>(idx));
-            currMaterialIndex = currSubmesh.materialIndex;
-        }
-
+        currMaterialIndex = BindSet1And2(cmdList, currSubmesh, submeshFlags, initialBindDone, fgds, currMaterialIndex);
         initialBindDone = true;
 
         // custom set 3 resources
-        if (boundCustomSetNeed) {
+        if (pipelineInfo.boundCustomSetNeed) {
             // if we do not have custom resources, and if we have binding issues we skip
-            if ((!(currSubmesh.customResourcesIndex < static_cast<uint32_t>(customResourceHandles.size()))) ||
-                (!UpdateAndBindSet3(cmdList, customResourceHandles[currSubmesh.customResourcesIndex]))) {
+            if ((currSubmesh.indices.materialIndex >= static_cast<uint32_t>(customResourceHandles.size())) ||
+                (customResourceHandles[currSubmesh.indices.materialIndex].resourceHandleCount == 0U) ||
+                !UpdateAndBindSet3(cmdList, customResourceHandles[currSubmesh.indices.materialIndex])) {
+#if (CORE3D_VALIDATION_ENABLED == 1)
+                CORE_LOG_ONCE_W("material_render_slot_custom_set3_issue",
+                    "invalid bindings with custom shader descriptor set 3 (render node: %s)",
+                    renderNodeContextMgr_->GetName().data());
+#endif
                 continue; // we prevent drawing
             }
         }
 
-        // vertex buffers and draw
-        if (currSubmesh.vertexBufferCount > 0) {
-            VertexBuffer vbs[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
-            const auto count = Math::min(currSubmesh.vertexBufferCount,
-                RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
-            for (uint32_t vbIdx = 0; vbIdx < count; ++vbIdx) {
-                vbs[vbIdx] = ConvertVertexBuffer(currSubmesh.vertexBuffers[vbIdx]);
-            }
-            cmdList.BindVertexBuffers({ vbs, currSubmesh.vertexBufferCount });
-        }
-        const auto& dc = currSubmesh.drawCommand;
-        const RenderVertexBuffer& iArgs = currSubmesh.indirectArgsBuffer;
-        const bool indirectDraw = iArgs.bufferHandle ? true : false;
-        if (currSubmesh.indexBuffer.byteSize > 0U) {
-            cmdList.BindIndexBuffer(ConvertIndexBuffer(currSubmesh.indexBuffer));
-            if (indirectDraw) {
-                cmdList.DrawIndexedIndirect(iArgs.bufferHandle.GetHandle(), iArgs.bufferOffset, 1u, 0u);
-            } else {
-                cmdList.DrawIndexed(dc.indexCount, dc.instanceCount, 0, 0, 0);
-            }
-        } else {
-            if (indirectDraw) {
-                cmdList.DrawIndirect(iArgs.bufferHandle.GetHandle(), iArgs.bufferOffset, 1u, 0u);
-            } else {
-                cmdList.Draw(dc.vertexCount, dc.instanceCount, 0, 0);
-            }
+        BindVertextBufferAndDraw(cmdList, currSubmesh);
+    }
+}
+
+void RenderNodeDefaultMaterialRenderSlot::BindPipeline(IRenderCommandList& cmdList, const SlotSubmeshIndex& ssp,
+    const RenderDataDefaultMaterial::SubmeshMaterialFlags& renderSubmeshMaterialFlags,
+    const RenderSubmeshFlags submeshFlags, const GraphicsState::InputAssembly& inputAssembly,
+    PipelineInfo& pipelineInfo)
+{
+    ShaderStateData ssd { ssp.shaderHandle, ssp.gfxStateHandle, 0 };
+    ssd.hash = (ssd.shader.id << 32U) | (ssd.gfxState.id & 0xFFFFffff);
+    // current shader state is fetched for build-in and custom shaders (decision is made later)
+    ssd.hash = HashShaderDataAndSubmesh(ssd.hash, renderSubmeshMaterialFlags.renderHash, currentScene_.lightingFlags,
+        currentScene_.cameraShaderFlags, currentRenderPPConfiguration_.flags.x, inputAssembly);
+    if (ssd.hash != pipelineInfo.boundShaderHash) {
+        const PsoAndInfo psoAndInfo = GetSubmeshPso(ssd, inputAssembly, renderSubmeshMaterialFlags, submeshFlags,
+            currentScene_.lightingFlags, currentScene_.cameraShaderFlags);
+        if (psoAndInfo.pso != pipelineInfo.boundPsoHandle) {
+            pipelineInfo.boundShaderHash = ssd.hash;
+            pipelineInfo.boundPsoHandle = psoAndInfo.pso;
+            cmdList.BindPipeline(pipelineInfo.boundPsoHandle);
+            pipelineInfo.boundCustomSetNeed = psoAndInfo.set3;
         }
     }
 }
 
-void RenderNodeDefaultMaterialRenderSlot::UpdateSet01(IRenderCommandList& cmdList)
+uint32_t RenderNodeDefaultMaterialRenderSlot::BindSet1And2(IRenderCommandList& cmdList,
+    const RenderSubmesh& currSubmesh, const RenderSubmeshFlags submeshFlags, const bool initialBindDone,
+    const FrameGlobalDescriptorSets& fgds, uint32_t currMaterialIndex)
+
 {
-    auto& binder0 = *allDescriptorSets_.set01[0u];
-    auto& binder1 = *allDescriptorSets_.set01[1u];
-    {
-        auto& binder = binder0;
-        uint32_t bindingIndex = 0;
-        binder.BindBuffer(bindingIndex++, sceneBuffers_.camera, 0u);
-        binder.BindBuffer(bindingIndex++, cameraBuffers_.generalData, 0u);
+    // set 1 (mesh matrix, skin matrices, material, material user data)
+    const uint32_t currMatOffset = currSubmesh.indices.materialFrameOffset * UBO_BIND_OFFSET_ALIGNMENT;
+    const uint32_t dynamicOffsets[] = { currSubmesh.indices.meshIndex * UBO_BIND_OFFSET_ALIGNMENT,
+        (submeshFlags & RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT)
+            ? currSubmesh.indices.skinJointIndex * static_cast<uint32_t>(sizeof(DefaultMaterialSkinStruct))
+            : 0U,
+        currMatOffset, currMatOffset, currMatOffset };
+    // set to bind, handle to resource, offsets for dynamic descs
+    IRenderCommandList::BindDescriptorSetData bindSets[2U] {};
+    uint32_t bindSetCount = 0U;
+    bindSets[bindSetCount++] = { fgds.set1, dynamicOffsets };
 
-        const RenderHandle radianceCubemap = currentScene_.cameraEnvRadianceHandle;
-        const RenderHandle colorPrePass = RenderHandleUtil::IsValid(currentScene_.prePassColorTarget)
-                                              ? currentScene_.prePassColorTarget
-                                              : defaultColorPrePassHandle_;
-
-        binder.BindBuffer(
-            bindingIndex++, { cameraBuffers_.environment, 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
-        binder.BindBuffer(bindingIndex++, { cameraBuffers_.fog, 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
-        binder.BindBuffer(bindingIndex++, { cameraBuffers_.light, 0u, PipelineStateConstants ::GPU_BUFFER_WHOLE_SIZE });
-        binder.BindBuffer(
-            bindingIndex++, { cameraBuffers_.postProcess, 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
-        binder.BindBuffer(
-            bindingIndex++, { cameraBuffers_.lightCluster, 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
-        // use immutable samplers for all set 0 samplers
-        BindableImage bi;
-        bi.handle = colorPrePass;
-        bi.samplerHandle = defaultSamplers_.linearMipHandle;
-        binder.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
-        bi.handle = shadowBuffers_.vsmColorHandle;
-        bi.samplerHandle = shadowBuffers_.vsmSamplerHandle;
-        binder.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
-        bi.handle = shadowBuffers_.depthHandle;
-        bi.samplerHandle = shadowBuffers_.pcfSamplerHandle;
-        binder.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
-        bi.handle = radianceCubemap;
-        bi.samplerHandle = defaultSamplers_.cubemapHandle;
-        binder.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
-    }
-    {
-        auto& binder = binder1;
-        // NOTE: should be PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE or current size
-        constexpr uint32_t skinSize = sizeof(DefaultMaterialSkinStruct);
-        uint32_t bindingIdx = 0u;
-        binder.BindBuffer(bindingIdx++, sceneBuffers_.mesh, 0u, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
-        binder.BindBuffer(bindingIdx++, sceneBuffers_.skinJoint, 0u, skinSize);
-        binder.BindBuffer(bindingIdx++, sceneBuffers_.material, 0, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
-        binder.BindBuffer(
-            bindingIdx++, sceneBuffers_.materialTransform, 0, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
-        binder.BindBuffer(
-            bindingIdx++, sceneBuffers_.materialCustom, 0, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+    // update material descriptor set
+    if ((!initialBindDone) || (currMaterialIndex != currSubmesh.indices.materialIndex)) {
+        currMaterialIndex = currSubmesh.indices.materialIndex;
+        // safety check for global material sets
+        const RenderHandle set2Handle =
+            (currMaterialIndex < fgds.set2.size()) ? fgds.set2[currMaterialIndex] : fgds.set2Default;
+        bindSets[bindSetCount++] = { set2Handle, {} };
     }
 
-    const RenderHandle handles[] { binder0.GetDescriptorSetHandle(), binder1.GetDescriptorSetHandle() };
-    const DescriptorSetLayoutBindingResources resources[] { binder0.GetDescriptorSetLayoutBindingResources(),
-        binder1.GetDescriptorSetLayoutBindingResources() };
-    cmdList.UpdateDescriptorSets(handles, resources);
-}
-
-void RenderNodeDefaultMaterialRenderSlot::UpdateAndBindSet2(
-    IRenderCommandList& cmdList, const MaterialHandleStruct& materialHandles, const uint32_t objIdx)
-{
-    auto& binder = *allDescriptorSets_.sets2[objIdx];
-    uint32_t bindingIdx = 0u;
-
-    // base color is bound separately to support e.g. gles automatic OES shader modification
-    binder.BindImage(bindingIdx++, materialHandles.resources[MaterialComponent::TextureIndex::BASE_COLOR]);
-
-    CORE_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
-    // skip baseColor as it's bound already
-    constexpr size_t theCount = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT - 1;
-    binder.BindImages(bindingIdx++, array_view(materialHandles.resources + 1, theCount));
-
-    cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-    cmdList.BindDescriptorSet(2u, binder.GetDescriptorSetHandle()); // set to bind
+    // bind sets 1 and possibly 2
+    cmdList.BindDescriptorSets(1U, { bindSets, bindSetCount });
+    return currMaterialIndex;
 }
 
 bool RenderNodeDefaultMaterialRenderSlot::UpdateAndBindSet3(
@@ -502,59 +413,58 @@ bool RenderNodeDefaultMaterialRenderSlot::UpdateAndBindSet3(
     INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
 
-    RenderHandle currPlHandle =
-        shaderMgr.GetPipelineLayoutHandleByShaderHandle(customResourceData.shaderHandle.GetHandle());
+    // with default pipeline layout with default bindings
+    RenderHandle currPlHandle = allShaderData_.defaultPlSet3
+                                    ? allShaderData_.defaultPlHandle
+                                    : shaderMgr.GetPipelineLayoutHandleByShaderHandle(customResourceData.shaderHandle);
+    if (!RenderHandleUtil::IsValid(currPlHandle)) {
+        currPlHandle = shaderMgr.GetReflectionPipelineLayoutHandle(customResourceData.shaderHandle);
+    }
     const PipelineLayout& plRef = shaderMgr.GetPipelineLayout(currPlHandle);
-    if (plRef.descriptorSetCount < CUSTOM_SET_DESCRIPTOR_SET_COUNT) {
+    if (plRef.descriptorSetLayouts[FIXED_CUSTOM_SET3].bindings.empty()) {
         return false; // early out
     }
+    static_assert(FIXED_CUSTOM_SET3 <
+                  BASE_NS::extent_v<decltype(BASE_NS::remove_reference_t<decltype(plRef)>::descriptorSetLayouts)>);
     const auto& descBindings = plRef.descriptorSetLayouts[FIXED_CUSTOM_SET3].bindings;
     const RenderHandle descSetHandle = descriptorSetMgr.CreateOneFrameDescriptorSet(descBindings);
-    bool valid = false;
-    if (RenderHandleUtil::IsValid(descSetHandle) && (descBindings.size() == customResourceData.resourceHandleCount)) {
-        IDescriptorSetBinder::Ptr binderPtr = descriptorSetMgr.CreateDescriptorSetBinder(descSetHandle, descBindings);
-        if (binderPtr) {
-            auto& binder = *binderPtr;
-            for (uint32_t idx = 0; idx < customResourceData.resourceHandleCount; ++idx) {
-                CORE_ASSERT(idx < descBindings.size());
-                const RenderHandle& currRes = customResourceData.resourceHandles[idx].GetHandle();
-                if (gpuResourceMgr.IsGpuBuffer(currRes)) {
-                    binder.BindBuffer(idx, currRes, 0);
-                } else if (gpuResourceMgr.IsGpuImage(currRes)) {
-                    if (descBindings[idx].descriptorType ==
-                        DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-                        binder.BindImage(idx, currRes, defaultSamplers_.linearMipHandle);
-                    } else {
-                        binder.BindImage(idx, currRes);
-                    }
-                } else if (gpuResourceMgr.IsGpuSampler(currRes)) {
-                    binder.BindSampler(idx, currRes);
-                }
+    if (!RenderHandleUtil::IsValid(descSetHandle) || (descBindings.size() != customResourceData.resourceHandleCount)) {
+        return false;
+    }
+    IDescriptorSetBinder::Ptr binderPtr = descriptorSetMgr.CreateDescriptorSetBinder(descSetHandle, descBindings);
+    if (!binderPtr) {
+        return false;
+    }
+    auto& binder = *binderPtr;
+    for (uint32_t idx = 0; idx < customResourceData.resourceHandleCount; ++idx) {
+        CORE_ASSERT(idx < descBindings.size());
+        const RenderHandle& currRes = customResourceData.resourceHandles[idx];
+        if (gpuResourceMgr.IsGpuBuffer(currRes)) {
+            binder.BindBuffer(idx, currRes, 0);
+        } else if (gpuResourceMgr.IsGpuImage(currRes)) {
+            if (descBindings[idx].descriptorType == DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                binder.BindImage(idx, currRes, defaultSamplers_.linearMipHandle);
+            } else {
+                binder.BindImage(idx, currRes);
             }
-
-            // user generated setup, we check for validity of all bindings in the descriptor set
-            if (binder.GetDescriptorSetLayoutBindingValidity()) {
-                cmdList.UpdateDescriptorSet(
-                    binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-                cmdList.BindDescriptorSet(FIXED_CUSTOM_SET3, binder.GetDescriptorSetHandle());
-                valid = true;
-            }
+        } else if (gpuResourceMgr.IsGpuSampler(currRes)) {
+            binder.BindSampler(idx, currRes);
         }
     }
-    if (!valid) {
-#if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_ONCE_W("material_render_slot_custom_set3_issue",
-            "invalid bindings with custom shader descriptor set 3 (render node: %s)",
-            renderNodeContextMgr_->GetName().data());
-#endif
+
+    // user generated setup, we check for validity of all bindings in the descriptor set
+    if (!binder.GetDescriptorSetLayoutBindingValidity()) {
+        return false;
     }
-    return valid;
+    cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
+    cmdList.BindDescriptorSet(FIXED_CUSTOM_SET3, binder.GetDescriptorSetHandle());
+    return true;
 }
 
 RenderNodeDefaultMaterialRenderSlot::PsoAndInfo RenderNodeDefaultMaterialRenderSlot::GetSubmeshPso(
-    const ShaderStateData& ssd, const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
-    const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
-    const RenderCamera::ShaderFlags cameraShaderFlags)
+    const ShaderStateData& ssd, const GraphicsState::InputAssembly& ia,
+    const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags, const RenderSubmeshFlags submeshFlags,
+    const IRenderDataStoreDefaultLight::LightingFlags lightingFlags, const RenderCamera::ShaderFlags cameraShaderFlags)
 {
     if (const auto dataIter = allShaderData_.shaderIdToData.find(ssd.hash);
         dataIter != allShaderData_.shaderIdToData.cend()) {
@@ -562,7 +472,7 @@ RenderNodeDefaultMaterialRenderSlot::PsoAndInfo RenderNodeDefaultMaterialRenderS
         return { ref.psoHandle, ref.needsCustomSetBindings };
     }
 
-    return CreateNewPso(ssd, submeshMaterialFlags, submeshFlags, lightingFlags, cameraShaderFlags);
+    return CreateNewPso(ssd, ia, submeshMaterialFlags, submeshFlags, lightingFlags, cameraShaderFlags);
 }
 
 void RenderNodeDefaultMaterialRenderSlot::UpdatePostProcessConfiguration()
@@ -572,7 +482,7 @@ void RenderNodeDefaultMaterialRenderSlot::UpdatePostProcessConfiguration()
             auto const& dsMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
             if (const IRenderDataStore* ds = dsMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName); ds) {
                 if (jsonInputs_.renderDataStore.typeName == POST_PROCESS_DATA_STORE_TYPE_NAME) {
-                    auto const dataStore = static_cast<IRenderDataStorePod const*>(ds);
+                    auto const dataStore = static_cast<const IRenderDataStorePod*>(ds);
                     auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
                     if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
                         const PostProcessConfiguration* data = (const PostProcessConfiguration*)dataView.data();
@@ -615,6 +525,7 @@ void RenderNodeDefaultMaterialRenderSlot::UpdateCurrentScene(const IRenderDataSt
         // store current frame camera
         currentScene_.camera = cameras[cameraIdx];
     }
+
     const auto camHandles = RenderNodeSceneUtil::GetSceneCameraImageHandles(
         *renderNodeContextMgr_, stores_.dataStoreNameScene, currentScene_.camera.name, currentScene_.camera);
     currentScene_.cameraEnvRadianceHandle = camHandles.radianceCubemap;
@@ -644,6 +555,7 @@ void RenderNodeDefaultMaterialRenderSlot::UpdateCurrentScene(const IRenderDataSt
     if (jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DISABLE_FOG_BIT) {
         currentScene_.cameraShaderFlags &= (~RenderCamera::ShaderFlagBits::CAMERA_SHADER_FOG_BIT);
     }
+    GetMultiViewCameraIndices(dataStoreCamera, currentScene_.camera, currentScene_.mvCameraIndices);
     // add multi-view flags if needed
     if (renderPass_.subpassDesc.viewMask > 1U) {
         ResetRenderSlotData(jsonInputs_.shaderRenderSlotMultiviewId, true);
@@ -657,67 +569,78 @@ void RenderNodeDefaultMaterialRenderSlot::CreateDefaultShaderData()
     allShaderData_ = {};
 
     const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+
+    // get the default material shader and default shader state
+    const IShaderManager::RenderSlotData shaderRsd = shaderMgr.GetRenderSlotData(jsonInputs_.shaderRenderSlotId);
+    allShaderData_.defaultShaderHandle = shaderRsd.shader.GetHandle();
+    allShaderData_.defaultStateHandle = shaderRsd.graphicsState.GetHandle();
+    // get the pl and vid defaults
     allShaderData_.defaultPlHandle =
-        shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_FORWARD);
+        (shaderRsd.pipelineLayout)
+            ? shaderRsd.pipelineLayout.GetHandle()
+            : shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_FORWARD);
     allShaderData_.defaultPipelineLayout = shaderMgr.GetPipelineLayout(allShaderData_.defaultPlHandle);
-    allShaderData_.defaultVidHandle =
-        shaderMgr.GetVertexInputDeclarationHandle(DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD);
+    allShaderData_.defaultTmpPipelineLayout = allShaderData_.defaultPipelineLayout;
+    allShaderData_.defaultVidHandle = (shaderRsd.vertexInputDeclaration)
+                                          ? shaderRsd.vertexInputDeclaration.GetHandle()
+                                          : shaderMgr.GetVertexInputDeclarationHandle(
+                                              DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD);
+    if (!allShaderData_.defaultPipelineLayout.descriptorSetLayouts[FIXED_CUSTOM_SET3].bindings.empty()) {
+        allShaderData_.defaultPlSet3 = true;
+    }
 
-    {
-        // get the default material shader and default shader state
-        const IShaderManager::RenderSlotData shaderRsd = shaderMgr.GetRenderSlotData(jsonInputs_.shaderRenderSlotId);
-        allShaderData_.defaultShaderHandle = shaderRsd.shader.GetHandle();
-        allShaderData_.defaultStateHandle = shaderRsd.graphicsState.GetHandle();
-        if (shaderMgr.IsShader(allShaderData_.defaultShaderHandle)) {
-            allShaderData_.slotHasShaders = true;
-            const ShaderSpecializationConstantView& sscv =
-                shaderMgr.GetReflectionSpecialization(allShaderData_.defaultShaderHandle);
-            allShaderData_.defaultSpecilizationConstants.resize(sscv.constants.size());
-            for (uint32_t idx = 0; idx < (uint32_t)allShaderData_.defaultSpecilizationConstants.size(); ++idx) {
-                allShaderData_.defaultSpecilizationConstants[idx] = sscv.constants[idx];
-            }
-            specializationData_.maxSpecializationCount =
-                Math::min(static_cast<uint32_t>(allShaderData_.defaultSpecilizationConstants.size()),
-                    SpecializationData::MAX_FLAG_COUNT);
+    if (shaderMgr.IsShader(allShaderData_.defaultShaderHandle)) {
+        allShaderData_.slotHasShaders = true;
+        const ShaderSpecializationConstantView& sscv =
+            shaderMgr.GetReflectionSpecialization(allShaderData_.defaultShaderHandle);
+        allShaderData_.defaultSpecilizationConstants.resize(sscv.constants.size());
+        for (uint32_t idx = 0; idx < (uint32_t)allShaderData_.defaultSpecilizationConstants.size(); ++idx) {
+            allShaderData_.defaultSpecilizationConstants[idx] = sscv.constants[idx];
+        }
+        specializationData_.maxSpecializationCount =
+            Math::min(static_cast<uint32_t>(allShaderData_.defaultSpecilizationConstants.size()),
+                SpecializationData::MAX_FLAG_COUNT);
+    } else {
+        CORE_LOG_I("RenderNode: %s, no default shaders for render slot id %u", renderNodeContextMgr_->GetName().data(),
+            jsonInputs_.shaderRenderSlotId);
+    }
+    if (jsonInputs_.shaderRenderSlotId != jsonInputs_.stateRenderSlotId) {
+        const IShaderManager::RenderSlotData stateRsd = shaderMgr.GetRenderSlotData(jsonInputs_.stateRenderSlotId);
+        if (stateRsd.graphicsState) {
+            allShaderData_.defaultStateHandle = stateRsd.graphicsState.GetHandle();
         } else {
-            CORE_LOG_I("RenderNode: %s, no default shaders for render slot id %u",
-                renderNodeContextMgr_->GetName().data(), jsonInputs_.shaderRenderSlotId);
-        }
-        if (jsonInputs_.shaderRenderSlotId != jsonInputs_.stateRenderSlotId) {
-            const IShaderManager::RenderSlotData stateRsd = shaderMgr.GetRenderSlotData(jsonInputs_.stateRenderSlotId);
-            if (stateRsd.graphicsState) {
-                allShaderData_.defaultStateHandle = stateRsd.graphicsState.GetHandle();
-            } else {
-                CORE_LOG_I("RenderNode: %s, no default state for render slot id %u",
-                    renderNodeContextMgr_->GetName().data(), jsonInputs_.stateRenderSlotId);
-            }
+            CORE_LOG_I("RenderNode: %s, no default state for render slot id %u",
+                renderNodeContextMgr_->GetName().data(), jsonInputs_.stateRenderSlotId);
         }
     }
 }
 
-void RenderNodeDefaultMaterialRenderSlot::GetSceneUniformBuffers(const string_view us)
+namespace {
+// updates graphics state based on params
+inline GraphicsState GetNewGraphicsState(const IRenderNodeShaderManager& shaderMgr, const RenderHandle& handle,
+    const bool inverseWinding, const bool customInputAssembly, const GraphicsState::InputAssembly& ia)
 {
-    sceneBuffers_ = RenderNodeSceneUtil::GetSceneBufferHandles(*renderNodeContextMgr_, stores_.dataStoreNameScene);
-
-    string camName;
-    if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
-        camName = to_string(jsonInputs_.customCameraId);
-    } else if (!(jsonInputs_.customCameraName.empty())) {
-        camName = jsonInputs_.customCameraName;
+    // we create a new graphics state based on current
+    GraphicsState gfxState = shaderMgr.GetGraphicsState(handle);
+    // update state
+    if (inverseWinding) {
+        gfxState.rasterizationState.frontFace = FrontFace::CORE_FRONT_FACE_CLOCKWISE;
     }
-    cameraBuffers_ =
-        RenderNodeSceneUtil::GetSceneCameraBufferHandles(*renderNodeContextMgr_, stores_.dataStoreNameScene, camName);
+    if (customInputAssembly) {
+        gfxState.inputAssembly = ia;
+    }
+    return gfxState;
 }
+} // namespace
 
 RenderNodeDefaultMaterialRenderSlot::PsoAndInfo RenderNodeDefaultMaterialRenderSlot::CreateNewPso(
-    const ShaderStateData& ssd, const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
-    const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
-    const RenderCamera::ShaderFlags cameraShaderFlags)
+    const ShaderStateData& ssd, const GraphicsState::InputAssembly& ia,
+    const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMatFlags, const RenderSubmeshFlags submeshFlags,
+    const IRenderDataStoreDefaultLight::LightingFlags lightingFlags, const RenderCamera::ShaderFlags camShaderFlags)
 {
     const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
     // NOTE: The easiest route would be to input shader and graphics state to material component
     RenderHandle currShader;
-    RenderHandle currPl;
     RenderHandle currVid;
     RenderHandle currState;
     // first try to find matching shader
@@ -738,7 +661,6 @@ RenderNodeDefaultMaterialRenderSlot::PsoAndInfo RenderNodeDefaultMaterialRenderS
             }
         }
         currVid = shaderMgr.GetVertexInputDeclarationHandleByShaderHandle(currShader);
-        currPl = shaderMgr.GetPipelineLayoutHandleByShaderHandle(currShader);
     }
     if (RenderHandleUtil::GetHandleType(ssd.gfxState) == RenderHandleType::GRAPHICS_STATE) {
         const RenderHandle slotState = shaderMgr.GetGraphicsStateHandle(ssd.gfxState, jsonInputs_.stateRenderSlotId);
@@ -747,44 +669,41 @@ RenderNodeDefaultMaterialRenderSlot::PsoAndInfo RenderNodeDefaultMaterialRenderS
         }
     }
 
-    // NOTE: the pipeline layout compatibility should be checked
+    bool needsCustomSet = false;
+    const PipelineLayout& pl = GetEvaluatedPipelineLayout(currShader, needsCustomSet);
 
     // fallback to defaults if needed
     currShader = RenderHandleUtil::IsValid(currShader) ? currShader : allShaderData_.defaultShaderHandle;
-    currPl = RenderHandleUtil::IsValid(currPl) ? currPl : allShaderData_.defaultPlHandle;
     currVid = RenderHandleUtil::IsValid(currVid) ? currVid : allShaderData_.defaultVidHandle;
     currState = RenderHandleUtil::IsValid(currState) ? currState : allShaderData_.defaultStateHandle;
 
     auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
     RenderHandle psoHandle;
-    if (IsInverseWinding(submeshFlags, jsonInputs_.nodeFlags, currentScene_.camera.flags)) {
-        // we create a new graphics state with inverse winding
-        GraphicsState gfxState = shaderMgr.GetGraphicsState(currState);
-        gfxState.rasterizationState.frontFace = FrontFace::CORE_FRONT_FACE_CLOCKWISE;
-        const auto spec =
-            GetShaderSpecializationView(gfxState, submeshMaterialFlags, submeshFlags, lightingFlags, cameraShaderFlags);
-        psoHandle = psoMgr.GetGraphicsPsoHandle(currShader, gfxState, shaderMgr.GetPipelineLayout(currPl),
-            shaderMgr.GetVertexInputDeclarationView(currVid), spec, GetDynamicStates());
+    const bool inverseWinding = IsInverseWinding(submeshFlags, jsonInputs_.nodeFlags, currentScene_.camera.flags);
+    const bool customIa = (ia.primitiveTopology != CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM) || (ia.enablePrimitiveRestart);
+    const VertexInputDeclarationView vid = shaderMgr.GetVertexInputDeclarationView(currVid);
+    if (inverseWinding || customIa) {
+        const GraphicsState state = GetNewGraphicsState(shaderMgr, currState, inverseWinding, customIa, ia);
+        const auto spec = GetShaderSpecView(state, submeshMatFlags, submeshFlags, lightingFlags, camShaderFlags);
+        psoHandle = psoMgr.GetGraphicsPsoHandle(currShader, state, pl, vid, spec, GetDynamicStates());
     } else {
-        const GraphicsState& gfxState = shaderMgr.GetGraphicsState(currState);
-        const auto spec =
-            GetShaderSpecializationView(gfxState, submeshMaterialFlags, submeshFlags, lightingFlags, cameraShaderFlags);
-        psoHandle = psoMgr.GetGraphicsPsoHandle(currShader, currState, currPl, currVid, spec, GetDynamicStates());
+        // graphics state in default mode
+        const GraphicsState& state = shaderMgr.GetGraphicsState(currState);
+        const auto spec = GetShaderSpecView(state, submeshMatFlags, submeshFlags, lightingFlags, camShaderFlags);
+        psoHandle = psoMgr.GetGraphicsPsoHandle(currShader, state, pl, vid, spec, GetDynamicStates());
     }
-    const bool needsCustomSet =
-        shaderMgr.GetPipelineLayout(currPl).descriptorSetCount == CUSTOM_SET_DESCRIPTOR_SET_COUNT;
 
     allShaderData_.perShaderData.push_back(PerShaderData { currShader, psoHandle, currState, needsCustomSet });
     allShaderData_.shaderIdToData[ssd.hash] = (uint32_t)allShaderData_.perShaderData.size() - 1;
     return { psoHandle, needsCustomSet };
 }
 
-ShaderSpecializationConstantDataView RenderNodeDefaultMaterialRenderSlot::GetShaderSpecializationView(
-    const RENDER_NS::GraphicsState& gfxState,
-    const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags, const RenderSubmeshFlags submeshFlags,
-    const IRenderDataStoreDefaultLight::LightingFlags lightingFlags, const RenderCamera::ShaderFlags cameraShaderFlags)
+ShaderSpecializationConstantDataView RenderNodeDefaultMaterialRenderSlot::GetShaderSpecView(
+    const RENDER_NS::GraphicsState& gfxState, const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMatFlags,
+    const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
+    const RenderCamera::ShaderFlags camShaderFlags)
 {
-    RenderMaterialFlags combinedMaterialFlags = submeshMaterialFlags.renderMaterialFlags;
+    RenderMaterialFlags combinedMaterialFlags = submeshMatFlags.renderMaterialFlags;
     if (gfxState.colorBlendState.colorAttachmentCount > 0) {
         // enable opaque flag if blending is not enabled with the first color attachment
         combinedMaterialFlags |= (gfxState.colorBlendState.colorAttachments[0].enableBlend)
@@ -797,22 +716,22 @@ ShaderSpecializationConstantDataView RenderNodeDefaultMaterialRenderSlot::GetSha
 
         // NOTE: vertex and fragment have different specializations for the zero index
         if (ref.shaderStage == ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT) {
-            if (ref.id == 0u) {
+            if (ref.id == CORE_DM_CONSTANT_ID_SUBMESH_FLAGS) {
                 specializationData_.flags[constantId] = submeshFlags;
-            } else if (ref.id == 1u) {
+            } else if (ref.id == CORE_DM_CONSTANT_ID_MATERIAL_FLAGS) {
                 specializationData_.flags[constantId] = combinedMaterialFlags;
             }
         } else if (ref.shaderStage == ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT) {
-            if (ref.id == 0u) {
-                specializationData_.flags[constantId] = static_cast<uint32_t>(submeshMaterialFlags.materialType);
-            } else if (ref.id == 1u) {
+            if (ref.id == CORE_DM_CONSTANT_ID_MATERIAL_TYPE) {
+                specializationData_.flags[constantId] = static_cast<uint32_t>(submeshMatFlags.materialType);
+            } else if (ref.id == CORE_DM_CONSTANT_ID_MATERIAL_FLAGS) {
                 specializationData_.flags[constantId] = combinedMaterialFlags;
-            } else if (ref.id == 2u) {
+            } else if (ref.id == CORE_DM_CONSTANT_ID_LIGHTING_FLAGS) {
                 specializationData_.flags[constantId] = lightingFlags;
-            } else if (ref.id == 3u) {
+            } else if (ref.id == CORE_DM_CONSTANT_ID_POST_PROCESS_FLAGS) {
                 specializationData_.flags[constantId] = currentRenderPPConfiguration_.flags.x;
-            } else if (ref.id == 4u) {
-                specializationData_.flags[constantId] = cameraShaderFlags;
+            } else if (ref.id == CORE_DM_CONSTANT_ID_CAMERA_FLAGS) {
+                specializationData_.flags[constantId] = camShaderFlags;
             }
         }
     }
@@ -821,73 +740,15 @@ ShaderSpecializationConstantDataView RenderNodeDefaultMaterialRenderSlot::GetSha
         { specializationData_.flags, specializationData_.maxSpecializationCount } };
 }
 
-void RenderNodeDefaultMaterialRenderSlot::ProcessBuffersAndDescriptors(const ObjectCounts& objectCounts)
-{
-    constexpr uint32_t overEstimate { 16u };
-    bool updateDescriptorSets = false;
-    if (objectCounts_.maxSlotMeshCount < objectCounts.maxSlotMeshCount) {
-        updateDescriptorSets = true;
-        objectCounts_.maxSlotMeshCount = objectCounts.maxSlotMeshCount + (objectCounts.maxSlotMeshCount / overEstimate);
-    }
-    if (objectCounts_.maxSlotSkinCount < objectCounts.maxSlotSkinCount) {
-        updateDescriptorSets = true;
-        objectCounts_.maxSlotSkinCount = objectCounts.maxSlotSkinCount + (objectCounts.maxSlotSkinCount / overEstimate);
-    }
-    if (objectCounts_.maxSlotSubmeshCount < objectCounts.maxSlotSubmeshCount) {
-        updateDescriptorSets = true;
-        objectCounts_.maxSlotSubmeshCount =
-            objectCounts.maxSlotSubmeshCount + (objectCounts.maxSlotSubmeshCount / overEstimate);
-    }
-
-    if (updateDescriptorSets) {
-        ResetAndUpdateDescriptorSets();
-    }
-}
-
-void RenderNodeDefaultMaterialRenderSlot::ResetAndUpdateDescriptorSets()
-{
-    INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
-    // known and calculated (could run through descriptorsets and calculate automatically as well)
-    const DescriptorCounts dc { {
-        // camera + general data + post process + 3 light buffers + (mat + mat user data) * objectCount
-        { CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 6u },
-        // light cluster
-        { CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u },
-        // mesh and material data
-        { CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 5u },
-        // set0 (4) + per submesh material images
-        { CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            4u + objectCounts_.maxSlotSubmeshCount * RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT },
-    } };
-    descriptorSetMgr.ResetAndReserve(dc);
-
-    for (uint32_t setIdx = 0; setIdx < AllDescriptorSets::SINGLE_SET_COUNT; ++setIdx) {
-        const RenderHandle descriptorSetHandle =
-            descriptorSetMgr.CreateDescriptorSet(setIdx, allShaderData_.defaultPipelineLayout);
-        allDescriptorSets_.set01[setIdx] = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetHandle, allShaderData_.defaultPipelineLayout.descriptorSetLayouts[setIdx].bindings);
-    }
-    {
-        const uint32_t set = 2u;
-        allDescriptorSets_.sets2.clear();
-        allDescriptorSets_.sets2.resize(objectCounts_.maxSlotSubmeshCount);
-        for (uint32_t idx = 0; idx < objectCounts_.maxSlotSubmeshCount; ++idx) {
-            const RenderHandle descriptorSetHandle =
-                descriptorSetMgr.CreateDescriptorSet(set, allShaderData_.defaultPipelineLayout);
-            allDescriptorSets_.sets2[idx] = descriptorSetMgr.CreateDescriptorSetBinder(
-                descriptorSetHandle, allShaderData_.defaultPipelineLayout.descriptorSetLayouts[set].bindings);
-        }
-    }
-}
-
 void RenderNodeDefaultMaterialRenderSlot::ProcessSlotSubmeshes(
     const IRenderDataStoreDefaultCamera& dataStoreCamera, const IRenderDataStoreDefaultMaterial& dataStoreMaterial)
 {
     // currentScene has been updated prior, has the correct camera (scene camera or custom camera)
     const IRenderNodeSceneUtil::RenderSlotInfo rsi { jsonInputs_.renderSlotId, jsonInputs_.sortType,
         jsonInputs_.cullType, jsonInputs_.nodeMaterialDiscardFlags };
-    RenderNodeSceneUtil::GetRenderSlotSubmeshes(
-        dataStoreCamera, dataStoreMaterial, currentScene_.cameraIdx, rsi, sortedSlotSubmeshes_);
+
+    RenderNodeSceneUtil::GetRenderSlotSubmeshes(dataStoreCamera, dataStoreMaterial, currentScene_.cameraIdx,
+        currentScene_.mvCameraIndices, rsi, sortedSlotSubmeshes_);
 }
 
 array_view<const DynamicStateEnum> RenderNodeDefaultMaterialRenderSlot::GetDynamicStates() const
@@ -927,8 +788,8 @@ void RenderNodeDefaultMaterialRenderSlot::ParseRenderNodeInputs()
     }
 
     const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-    const string renderSlot = parserUtil.GetStringValue(jsonVal, "renderSlot");
-    jsonInputs_.renderSlotId = shaderMgr.GetRenderSlotId(renderSlot);
+    jsonInputs_.renderSlotName = parserUtil.GetStringValue(jsonVal, "renderSlot");
+    jsonInputs_.renderSlotId = shaderMgr.GetRenderSlotId(jsonInputs_.renderSlotName);
     jsonInputs_.shaderRenderSlotId = jsonInputs_.renderSlotId;
     jsonInputs_.stateRenderSlotId = jsonInputs_.renderSlotId;
     const string shaderRenderSlot = parserUtil.GetStringValue(jsonVal, "shaderRenderSlot");
@@ -961,6 +822,12 @@ void RenderNodeDefaultMaterialRenderSlot::ParseRenderNodeInputs()
         fsrEnabled_ = true;
     }
     jsonInputs_.hasChangeableRenderPassHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.renderPass);
+
+    if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
+        cameraName_ = to_string(jsonInputs_.customCameraId);
+    } else if (!(jsonInputs_.customCameraName.empty())) {
+        cameraName_ = jsonInputs_.customCameraName;
+    }
 }
 
 void RenderNodeDefaultMaterialRenderSlot::ResetRenderSlotData(const uint32_t shaderRenderSlotId, const bool multiView)
@@ -986,6 +853,64 @@ void RenderNodeDefaultMaterialRenderSlot::EvaluateFogBits()
         if ((jsonInputs_.renderSlotId == opaqueSlotId) || (jsonInputs_.renderSlotId == translucentSlotId)) {
             jsonInputs_.nodeFlags |= RenderSceneFlagBits::RENDER_SCENE_ENABLE_FOG_BIT;
         }
+    }
+}
+
+const PipelineLayout& RenderNodeDefaultMaterialRenderSlot::GetEvaluatedPipelineLayout(
+    const RenderHandle& currShader, bool& needsCustomSet)
+{
+    // the inputs need to be in certain "state"
+    // currShader is valid if there's custom shader
+
+    const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+    // clear custom tmp pipeline layouts
+    auto& tmpPl = allShaderData_.defaultTmpPipelineLayout;
+
+    auto UpdateCustomPl = [](const DescriptorSetLayout& dsl, PipelineLayout& tmpPl) {
+        if (!dsl.bindings.empty()) {
+            tmpPl.descriptorSetLayouts[FIXED_CUSTOM_SET3] = dsl;
+            tmpPl.descriptorSetCount = CUSTOM_SET_DESCRIPTOR_SET_COUNT;
+            return true;
+        } else {
+            return false;
+        }
+    };
+
+    const bool def3NoShader = ((!RenderHandleUtil::IsValid(currShader)) && (allShaderData_.defaultPlSet3));
+    if (RenderHandleUtil::IsValid(currShader) || def3NoShader) {
+        const RenderHandle shader = def3NoShader ? allShaderData_.defaultShaderHandle : currShader;
+        RenderHandle reflPl;
+        RenderHandle currPl = shaderMgr.GetPipelineLayoutHandleByShaderHandle(shader);
+        if (RenderHandleUtil::IsValid(currPl)) {
+            const auto& plSet = shaderMgr.GetPipelineLayout(currPl).descriptorSetLayouts[FIXED_CUSTOM_SET3];
+            needsCustomSet = UpdateCustomPl(plSet, tmpPl);
+        }
+        if ((!needsCustomSet) && (!RenderHandleUtil::IsValid(currPl))) {
+            reflPl = shaderMgr.GetReflectionPipelineLayoutHandle(shader);
+            const auto& plSet = shaderMgr.GetPipelineLayout(reflPl).descriptorSetLayouts[FIXED_CUSTOM_SET3];
+            needsCustomSet = UpdateCustomPl(plSet, tmpPl);
+        }
+#if (CORE3D_VALIDATION_ENABLED == 1)
+        {
+            if (!RenderHandleUtil::IsValid(reflPl)) {
+                reflPl = shaderMgr.GetReflectionPipelineLayoutHandle(shader);
+            }
+            const IShaderManager::CompatibilityFlags flags =
+                shaderMgr.GetCompatibilityFlags(allShaderData_.defaultPlHandle, reflPl);
+            if (flags == 0) {
+                const auto idDesc = shaderMgr.GetIdDesc(shader);
+                CORE_LOG_W("Compatibility issue with 3D default material shaders (name: %s, path: %s)",
+                    idDesc.displayName.c_str(), idDesc.path.c_str());
+            }
+        }
+#endif
+    }
+
+    // return modified custom pipeline layout or the default
+    if (needsCustomSet) {
+        return allShaderData_.defaultTmpPipelineLayout;
+    } else {
+        return allShaderData_.defaultPipelineLayout;
     }
 }
 

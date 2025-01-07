@@ -109,6 +109,7 @@
                 "subpassIndex": 0,
                 "subpassCount": 3,
                 "subpass": {
+                    "subpassFlags": "merge_bit",
                     "depthAttachmentIndex": 0,
                     "colorAttachmentIndices": [ 1, 2 ]
                 }
@@ -142,6 +143,7 @@
                 "subpassIndex": 1,
                 "subpassCount": 3,
                 "subpass": {
+                    "subpassFlags": "merge_bit",
                     "depthAttachmentIndex": 0,
                     "colorAttachmentIndices": [ 1, 2 ]
                 }
@@ -182,6 +184,7 @@
                 "subpassIndex": 2,
                 "subpassCount": 3,
                 "subpass": {
+                    "subpassFlags": "merge_bit",
                     "depthAttachmentIndex": 0,
                     "colorAttachmentIndices": [ 1, 2 ]
                 }

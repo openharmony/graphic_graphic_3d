@@ -63,7 +63,8 @@ void main(void)
     const vec4 projPos = uCameras[cameraIdx].viewProj * worldPos;
     CORE_VERTEX_OUT(projPos);
 
-    outIndices = GetPackFlatIndices(cameraIdx, gl_InstanceIndex);
+    const uint instanceIdx = GetInstanceIndex();
+    outIndices = GetPackFlatIndices(cameraIdx, instanceIdx);
 
     outPos.xyz = worldPos.xyz;
     outPrevPosI = vec4(0.0, 0.0, 0.0, 0.0);

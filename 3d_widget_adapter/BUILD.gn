@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Huawei Device Co., Ltd.
+# Copyright (c) 2024 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,7 +23,8 @@ declare_args() {
 
 config("lume3d_config") {
   visibility = [ ":*" ]
-
+  defines =
+      [ "USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN=$USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN" ]
   include_dirs = [
     "${LUME_BASE_PATH}/api",
     "${LUME_CORE_PATH}/api",
@@ -34,7 +35,12 @@ config("lume3d_config") {
   if (current_os == "ohos") {
     include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
   }
-
+  if (USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN) {
+    include_dirs += [
+      "${LUME_PNG_PATH}/api",
+      "${LUME_JPG_PATH}/api",
+    ]
+  }
   configs = []
 
   cflags = [
@@ -70,7 +76,7 @@ config("lume3d_config") {
     "-DRENDER_HAS_GL_BACKEND=0",
     "-DRENDER_HAS_GLES_BACKEND = 1",
     "-DRENDER_HAS_VULKAN_BACKEND = 1",
-    "-DVK_USE_PLATFORM_ANDROID_KHR = 1",
+    "-DVK_USE_PLATFORM_OHOS = 1",
     "-DCORE_LOG_NO_DEBUG=0",
     "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
     "-DCORE_LOG_TO_CONSOLE",
@@ -105,11 +111,21 @@ config("widget_adapter_config") {
 }
 
 ohos_source_set("widget_adapter_source") {
+  defines = [
+    "CORE_HAS_GLES_BACKEND=1",
+    "CORE_HAS_VULKAN_BACKEND=1",
+  ]
+
+  if (defined(global_parts_info.graphic_graphics_3d_ext)) {
+    defines += [ "_OPEN_BASIS_=1" ]
+  }
+
   sources = [
     "core/src/engine_factory.cpp",
     "core/src/lume/custom/lume_custom_render.cpp",
     "core/src/lume/custom/shader_input_buffer.cpp",
     "core/src/lume/lume_common.cpp",
+    "core/src/lume_render_config.cpp",
     "src/graphics_manager_common.cpp",
     "src/graphics_task.cpp",
     "src/offscreen_context_helper.cpp",
@@ -122,10 +138,12 @@ ohos_source_set("widget_adapter_source") {
     "//foundation/graphic/graphic_2d/rosen/modules/",
   ]
 
-  defines = [
-    "CORE_HAS_GLES_BACKEND=1",
-    "CORE_HAS_VULKAN_BACKEND=1",
-  ]
+  if (defined(global_parts_info.graphic_graphics_3d_ext)) {
+    include_dirs += [
+      "../mbasis_vfx_plugin/api/",
+      "../mbasis_vfx_plugin/app/product/include",
+    ]
+  }
 
   configs = [
     ":widget_adapter_config",
@@ -135,10 +153,11 @@ ohos_source_set("widget_adapter_source") {
   public_configs = [ ":widget_adapter_config" ]
 
   if (defined(use_new_skia) && use_new_skia) {
+    deps = []
     external_deps = [ "skia:skia_canvaskit" ]
   } else {
-    #external_deps = [ "flutter:ace_skia_ohos" ]
     deps = [ "$ace_flutter_engine_root/skia:ace_skia_ohos" ]
+    external_deps = []
   }
   if (defined(use_rosen_drawing) && use_rosen_drawing) {
     defines += [ "USE_ROSEN_DRAWING" ]
@@ -156,17 +175,29 @@ ohos_source_set("widget_adapter_source") {
       "core/include/lume/ohos",
     ]
 
-    external_deps += [ "vulkan-headers:vulkan_headers" ]
     external_deps += [
+      "graphic_surface:surface",
+      "vulkan-headers:vulkan_headers",
+    ]
+
+    external_deps += [
+      "ability_runtime:ability_manager",
+      "ability_runtime:app_context",
+      "ability_runtime:data_ability_helper",
+      "ability_runtime:napi_base_context",
+      "ability_runtime:napi_common",
+      "bundle_framework:appexecfwk_base",
+      "bundle_framework:appexecfwk_core",
       "c_utils:utils",
       "graphic_2d:EGL",
       "graphic_2d:GLESv3",
       "graphic_2d:librender_service_client",
-      "graphic_surface:surface",
       "hilog:libhilog",
       "hitrace:hitrace_meter",
       "init:libbegetutil",
-      "ipc:ipc_single"
+      "ipc:ipc_single",
+      "napi:ace_napi",
+      "qos_manager:qos",
     ]
 
     defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
@@ -174,18 +205,43 @@ ohos_source_set("widget_adapter_source") {
     if (target_cpu == "arm") {
       defines += [
         "PLATFORM_CORE_ROOT_PATH=/system/lib/",
+        "PLATFORM_CORE_PLUGIN_PATH=/system/lib/graphics3d/",
         "PLATFORM_APP_ROOT_PATH=/system/lib/",
-        "PLATFORM_APP_PLUGIN_PATH=/system/lib/",
+        "PLATFORM_APP_PLUGIN_PATH=/system/lib/graphics3d",
       ]
     }
 
     if (target_cpu == "arm64") {
       defines += [
         "PLATFORM_CORE_ROOT_PATH=/system/lib64/",
+        "PLATFORM_CORE_PLUGIN_PATH=/system/lib64/graphics3d/",
         "PLATFORM_APP_ROOT_PATH=/system/lib64/",
-        "PLATFORM_APP_PLUGIN_PATH=/system/lib64/",
+        "PLATFORM_APP_PLUGIN_PATH=/system/lib64/graphics3d/",
       ]
     }
+  }
+
+  if (current_os == "android") {
+    sources += [
+      "core/src/lume/android/lume.cpp",
+      "src/android/graphics_manager.cpp",
+      "src/android/skia_texture.cpp",
+      "src/android/texture_layer.cpp",
+    ]
+
+    include_dirs += [
+      "core/include/android",
+      "core/include/lume/android",
+    ]
+
+    aosp_deps = [
+      "shared_library:libEGL",
+      "shared_library:libGLESv2",
+      "shared_library:libandroid",
+    ]
+
+    deps += [ "$ace_flutter_engine_root:third_party_flutter_engine_android" ]
+    defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}" ]
   }
 
   part_name = "graphic_3d"
@@ -205,6 +261,11 @@ ohos_shared_library("lib3dWidgetAdapter") {
     ":widget_adapter_source",
     "../3d_scene_adapter:scene_adapter_static",
   ]
+
+  if (defined(global_parts_info.graphic_graphics_3d_ext)) {
+    deps += [ "../mbasis_vfx_plugin/app:3d_particles_app" ]
+  }
+  external_deps = [ "hilog:libhilog" ]
 
   public_deps = []
 

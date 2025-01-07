@@ -15,14 +15,10 @@
 
 #include "shader_state_loader.h"
 
-#include <cctype>
-#include <locale>
-
 #include <base/containers/string.h>
 #include <core/io/intf_file_manager.h>
 #include <core/namespace.h>
 
-#include "json_util.h"
 #include "shader_state_loader_util.h"
 #include "util/log.h"
 
@@ -74,7 +70,7 @@ string_view ShaderStateLoader::GetUri() const
     return uri_;
 }
 
-array_view<const ShaderStateLoaderVariantData> ShaderStateLoader::GetGraphicsStateVariantData() const
+array_view<const IShaderManager::ShaderStateLoaderVariantData> ShaderStateLoader::GetGraphicsStateVariantData() const
 {
     return graphicsStateVariantData_;
 }

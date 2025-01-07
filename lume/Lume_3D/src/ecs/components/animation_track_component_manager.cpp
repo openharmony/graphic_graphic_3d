@@ -19,17 +19,14 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 using CORE3D_NS::AnimationTrackComponent;
 DECLARE_PROPERTY_TYPE(AnimationTrackComponent::Interpolation);
 
-BEGIN_ENUM(AnimationInterpolationMetaData, AnimationTrackComponent::Interpolation)
-DECL_ENUM(AnimationTrackComponent::Interpolation, STEP, "Step")
-DECL_ENUM(AnimationTrackComponent::Interpolation, LINEAR, "Linear")
-DECL_ENUM(AnimationTrackComponent::Interpolation, SPLINE, "Spline")
-END_ENUM(AnimationInterpolationMetaData, AnimationTrackComponent::Interpolation)
+ENUM_TYPE_METADATA(AnimationTrackComponent::Interpolation, ENUM_VALUE(STEP, "Step"), ENUM_VALUE(LINEAR, "Linear"),
+    ENUM_VALUE(SPLINE, "Spline"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -43,35 +40,34 @@ using CORE_NS::Property;
 
 class AnimationTrackComponentManager final
     : public BaseManager<AnimationTrackComponent, IAnimationTrackComponentManager> {
-    BEGIN_PROPERTY(AnimationTrackComponent, ComponentMetadata)
+    BEGIN_PROPERTY(AnimationTrackComponent, componentMetaData_)
 #include <3d/ecs/components/animation_track_component.h>
     END_PROPERTY();
-    const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit AnimationTrackComponentManager(IEcs& ecs)
         : BaseManager<AnimationTrackComponent, IAnimationTrackComponentManager>(
-              ecs, CORE_NS::GetName<AnimationTrackComponent>())
+              ecs, CORE_NS::GetName<AnimationTrackComponent>(), 0U)
     {}
 
     ~AnimationTrackComponentManager() = default;
 
     size_t PropertyCount() const override
     {
-        return ComponentMetaData.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < ComponentMetaData.size()) {
-            return &ComponentMetaData[index];
+        if (index < BASE_NS::countof(componentMetaData_)) {
+            return &componentMetaData_[index];
         }
         return nullptr;
     }
 
     array_view<const Property> MetaData() const override
     {
-        return ComponentMetaData;
+        return componentMetaData_;
     }
 };
 

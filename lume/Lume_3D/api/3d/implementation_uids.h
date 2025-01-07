@@ -20,7 +20,7 @@
 #include <base/util/uid.h>
 
 CORE3D_BEGIN_NAMESPACE()
-static constexpr BASE_NS::Uid UID_3D_PLUGIN { "5832b35d-b28e-4343-8ad6-1c4e6f610473" };
+static constexpr BASE_NS::Uid UID_3D_PLUGIN { "8f86db7c-74e4-4da4-a327-4525e270fdb9" };
 
 static constexpr BASE_NS::Uid UID_GRAPHICS_CONTEXT { "437cbd33-b012-417c-b647-a0863f51829f" };
 static constexpr BASE_NS::Uid UID_MESH_BUILDER { "7ece9671-6238-45b3-881b-fdf583181d5e" };

@@ -32,8 +32,7 @@ CORE_BEGIN_NAMESPACE()
 class FrustumUtil final : public IFrustumUtil {
 public:
     Frustum CreateFrustum(const BASE_NS::Math::Mat4X4& matrix) const override;
-    bool SphereFrustumCollision(
-        const Frustum& frustum, const BASE_NS::Math::Vec3 pos, const float radius) const override;
+    bool SphereFrustumCollision(const Frustum& frustum, BASE_NS::Math::Vec3 pos, float radius) const override;
 
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
     IInterface* GetInterface(const BASE_NS::Uid& uid) override;

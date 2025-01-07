@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -146,7 +146,7 @@ public:
 
     /** Clear image. Might be usable in the first frame if image is partially updated after that
      * Often should not be used every frame.
-     * NOTE: some backends like OpenGLES might not support fully converted texture format clears.
+     * NOTE: some backends like OpenGLES might not support fully converted texture format clears
      * Prefer using shader clears if typical zero clears etc. are not desired
      * @param handle Color image handle
      * @param color Clear color value

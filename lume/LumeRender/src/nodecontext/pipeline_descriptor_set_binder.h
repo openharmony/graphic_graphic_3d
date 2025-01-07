@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__PIPELINE_DESCRIPTOR_SET_BINDER_H
-#define RENDER_RENDER__PIPELINE_DESCRIPTOR_SET_BINDER_H
+#ifndef RENDER_NODECONTEXT_PIPELINE_DESCRIPTOR_SET_BINDER_H
+#define RENDER_NODECONTEXT_PIPELINE_DESCRIPTOR_SET_BINDER_H
 
 #include <cstdint>
 
@@ -39,7 +39,7 @@ constexpr RenderHandleType GetRenderHandleType(const DescriptorType dt)
                (dt == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
         return RenderHandleType::GPU_IMAGE;
     } else if (((dt >= CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) &&
-                (dt <= CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) ||
+                   (dt <= CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) ||
                (dt == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE)) {
         return RenderHandleType::GPU_BUFFER;
     }
@@ -87,11 +87,10 @@ constexpr AccessFlags GetAccessFlags(const DescriptorType dt)
  */
 class DescriptorSetBinder final : public IDescriptorSetBinder {
 public:
-    DescriptorSetBinder(const RenderHandle handle,
-        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
-    explicit DescriptorSetBinder(
-        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
-    ~DescriptorSetBinder() = default;
+    DescriptorSetBinder(
+        RenderHandle handle, BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
+    explicit DescriptorSetBinder(BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
+    ~DescriptorSetBinder() override = default;
 
     void ClearBindings() override;
     RenderHandle GetDescriptorSetHandle() const override;
@@ -101,39 +100,35 @@ public:
     void PrintDescriptorSetLayoutBindingValidation() const override;
 
     // all must call this
-    void BindBuffer(
-        const uint32_t binding, const BindableBuffer& resource, const AdditionalDescriptorFlags flags) override;
-    void BindBuffer(const uint32_t binding, const BindableBuffer& resource) override;
-    void BindBuffer(const uint32_t binding, const RenderHandle handle, const uint32_t byteOffset) override;
-    void BindBuffer(
-        const uint32_t binding, const RenderHandle handle, const uint32_t byteOffset, const uint32_t byteSize) override;
+    void BindBuffer(uint32_t binding, const BindableBuffer& resource, AdditionalDescriptorFlags flags) override;
+    void BindBuffer(uint32_t binding, const BindableBuffer& resource) override;
+    void BindBuffer(uint32_t binding, RenderHandle handle, uint32_t byteOffset) override;
+    void BindBuffer(uint32_t binding, RenderHandle handle, uint32_t byteOffset, uint32_t byteSize) override;
     // for descriptor array binding
-    void BindBuffers(const uint32_t binding, const BASE_NS::array_view<const BindableBuffer> resources) override;
+    void BindBuffers(uint32_t binding, BASE_NS::array_view<const BindableBuffer> resources) override;
 
     // all must call this
-    void BindImage(
-        const uint32_t binding, const BindableImage& resource, const AdditionalDescriptorFlags flags) override;
-    void BindImage(const uint32_t binding, const BindableImage& resource) override;
-    void BindImage(const uint32_t binding, const RenderHandle handle) override;
-    void BindImage(const uint32_t binding, const RenderHandle handle, const RenderHandle samplerHandle) override;
+    void BindImage(uint32_t binding, const BindableImage& resource, AdditionalDescriptorFlags flags) override;
+    void BindImage(uint32_t binding, const BindableImage& resource) override;
+    void BindImage(uint32_t binding, RenderHandle handle) override;
+    void BindImage(uint32_t binding, RenderHandle handle, RenderHandle samplerHandle) override;
     // for descriptor array binding
-    void BindImages(const uint32_t binding, const BASE_NS::array_view<const BindableImage> resources) override;
+    void BindImages(uint32_t binding, BASE_NS::array_view<const BindableImage> resources) override;
 
     // all must call this
-    void BindSampler(
-        const uint32_t binding, const BindableSampler& resource, const AdditionalDescriptorFlags flags) override;
-    void BindSampler(const uint32_t binding, const BindableSampler& resource) override;
-    void BindSampler(const uint32_t binding, const RenderHandle handle) override;
+    void BindSampler(uint32_t binding, const BindableSampler& resource, AdditionalDescriptorFlags flags) override;
+    void BindSampler(uint32_t binding, const BindableSampler& resource) override;
+    void BindSampler(uint32_t binding, RenderHandle handle) override;
     // for descriptor array binding
-    void BindSamplers(const uint32_t binding, const BASE_NS::array_view<const BindableSampler> resources) override;
+    void BindSamplers(uint32_t binding, BASE_NS::array_view<const BindableSampler> resources) override;
 
 protected:
     void Destroy() override;
 
 private:
-    void Init(const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
-    void InitFillBindings(const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings,
-        const uint32_t bufferCount, const uint32_t imageCount, const uint32_t samplerCount);
+    void Init(BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
+    void InitFillBindings(BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings,
+        uint32_t bufferCount, uint32_t imageCount, uint32_t samplerCount);
 
     RenderHandle handle_;
     BASE_NS::vector<DescriptorSetLayoutBindingResource> bindings_;
@@ -156,17 +151,16 @@ private:
  */
 class PipelineDescriptorSetBinder final : public IPipelineDescriptorSetBinder {
 public:
+    PipelineDescriptorSetBinder(const PipelineLayout& pipelineLayout, BASE_NS::array_view<const RenderHandle> handles,
+        BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings);
     PipelineDescriptorSetBinder(const PipelineLayout& pipelineLayout,
-        const BASE_NS::array_view<const RenderHandle> handles,
-        const BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings);
-    PipelineDescriptorSetBinder(const PipelineLayout& pipelineLayout,
-        const BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings);
+        BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings);
     ~PipelineDescriptorSetBinder() = default;
 
     void ClearBindings() override;
 
-    RenderHandle GetDescriptorSetHandle(const uint32_t set) const override;
-    DescriptorSetLayoutBindingResources GetDescriptorSetLayoutBindingResources(const uint32_t set) const override;
+    RenderHandle GetDescriptorSetHandle(uint32_t set) const override;
+    DescriptorSetLayoutBindingResources GetDescriptorSetLayoutBindingResources(uint32_t set) const override;
     bool GetPipelineDescriptorSetLayoutBindingValidity() const override;
 
     uint32_t GetDescriptorSetCount() const override;
@@ -174,26 +168,22 @@ public:
     BASE_NS::array_view<const RenderHandle> GetDescriptorSetHandles() const override;
 
     uint32_t GetFirstSet() const override;
-    BASE_NS::array_view<const RenderHandle> GetDescriptorSetHandles(
-        const uint32_t beginSet, const uint32_t count) const override;
+    BASE_NS::array_view<const RenderHandle> GetDescriptorSetHandles(uint32_t beginSet, uint32_t count) const override;
 
-    void BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource,
-        const AdditionalDescriptorFlags flags) override;
-    void BindBuffer(const uint32_t set, const uint32_t binding, const BindableBuffer& resource) override;
-    void BindBuffers(
-        const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const BindableBuffer> resources) override;
+    void BindBuffer(
+        uint32_t set, uint32_t binding, const BindableBuffer& resource, AdditionalDescriptorFlags flags) override;
+    void BindBuffer(uint32_t set, uint32_t binding, const BindableBuffer& resource) override;
+    void BindBuffers(uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableBuffer> resources) override;
 
-    void BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource,
-        const AdditionalDescriptorFlags flags) override;
-    void BindImage(const uint32_t set, const uint32_t binding, const BindableImage& resource) override;
-    void BindImages(
-        const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const BindableImage> resources) override;
+    void BindImage(
+        uint32_t set, uint32_t binding, const BindableImage& resource, AdditionalDescriptorFlags flags) override;
+    void BindImage(uint32_t set, uint32_t binding, const BindableImage& resource) override;
+    void BindImages(uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableImage> resources) override;
 
-    void BindSampler(const uint32_t set, const uint32_t binding, const BindableSampler& resource,
-        const AdditionalDescriptorFlags flags) override;
-    void BindSampler(const uint32_t set, const uint32_t binding, const BindableSampler& resource) override;
-    void BindSamplers(const uint32_t set, const uint32_t binding,
-        const BASE_NS::array_view<const BindableSampler> resources) override;
+    void BindSampler(
+        uint32_t set, uint32_t binding, const BindableSampler& resource, AdditionalDescriptorFlags flags) override;
+    void BindSampler(uint32_t set, uint32_t binding, const BindableSampler& resource) override;
+    void BindSamplers(uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableSampler> resources) override;
 
     void PrintPipelineDescriptorSetLayoutBindingValidation() const override;
 
@@ -202,8 +192,8 @@ protected:
 
 private:
     // binder can be created without valid handles
-    void Init(const PipelineLayout& pipelineLayout, const BASE_NS::array_view<const RenderHandle> handles,
-        const BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings, bool validHandles);
+    void Init(const PipelineLayout& pipelineLayout, BASE_NS::array_view<const RenderHandle> handles,
+        BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings, bool validHandles);
 
     // set -> actual vector index
     uint32_t setToBinderIndex_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { ~0u, ~0u, ~0u, ~0u };
@@ -215,4 +205,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__PIPELINE_DESCRIPTOR_SET_BINDER_H
+#endif // RENDER_NODECONTEXT_PIPELINE_DESCRIPTOR_SET_BINDER_H

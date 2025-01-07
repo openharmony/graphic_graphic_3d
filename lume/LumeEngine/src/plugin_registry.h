@@ -42,12 +42,12 @@ CORE_BEGIN_NAMESPACE()
 class PluginRegistry final : public IPluginRegister, public IClassRegister, public IClassFactory {
 public:
     PluginRegistry();
-    ~PluginRegistry();
+    ~PluginRegistry() override;
 
     // IPluginRegister
     BASE_NS::array_view<const IPlugin* const> GetPlugins() const override;
-    bool LoadPlugins(const BASE_NS::array_view<const BASE_NS::Uid> pluginUids) override;
-    void UnloadPlugins(const BASE_NS::array_view<const BASE_NS::Uid> pluginUids) override;
+    bool LoadPlugins(BASE_NS::array_view<const BASE_NS::Uid> pluginUids) override;
+    void UnloadPlugins(BASE_NS::array_view<const BASE_NS::Uid> pluginUids) override;
     IClassRegister& GetClassRegister() const override;
     void RegisterTypeInfo(const ITypeInfo& type) override;
     void UnregisterTypeInfo(const ITypeInfo& type) override;
@@ -71,8 +71,10 @@ public:
     void Ref() override;
     void Unref() override;
 
-    void RegisterPluginPath(const BASE_NS::string_view path) override;
+    void RegisterPluginPath(BASE_NS::string_view path) override;
     IFileManager& GetFileManager() override;
+
+    void HandlePerfTracePlugin(const PlatformCreateInfo& platformCreateInfo);
 
 protected:
     static BASE_NS::vector<InterfaceTypeInfo> RegisterGlobalInterfaces(PluginRegistry& registry);
@@ -105,6 +107,8 @@ protected:
     TaskQueueFactory taskQueueFactory_;
 #if (CORE_PERF_ENABLED == 1)
     PerformanceDataManagerFactory perfManFactory_;
+    BASE_NS::Uid perfTracePlugin_;
+    uint64_t perfLoggerId_ {};
 #endif
     BASE_NS::vector<InterfaceTypeInfo> ownInterfaceInfos_;
     FileManager fileManager_;

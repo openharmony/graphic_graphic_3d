@@ -73,6 +73,7 @@
 #include <render/intf_render_context.h>
 
 #include "gltf/gltf2_util.h"
+#include "util/log.h"
 #include "util/mesh_util.h"
 #include "util/string_util.h"
 #include "util/uri_lookup.h"
@@ -86,6 +87,33 @@ namespace {
 // How many threads the GLTF2Importer will use to run tasks.
 constexpr const uint32_t IMPORTER_THREADS = 2u;
 
+// Helper class for running lambda as a ThreadPool task.
+template<typename Fn>
+class FunctionTask final : public IThreadPool::ITask {
+public:
+    explicit FunctionTask(Fn&& func) : func_(BASE_NS::move(func)) {};
+
+    void operator()() override
+    {
+        func_();
+    }
+
+protected:
+    void Destroy() override
+    {
+        delete this;
+    }
+
+private:
+    Fn func_;
+};
+
+template<typename Fn>
+inline IThreadPool::ITask::Ptr CreateFunctionTask(Fn&& func)
+{
+    return IThreadPool::ITask::Ptr { new FunctionTask<Fn>(BASE_NS::move(func)) };
+}
+
 template<class T>
 size_t FindIndex(const vector<unique_ptr<T>>& container, T const* item)
 {
@@ -97,158 +125,94 @@ size_t FindIndex(const vector<unique_ptr<T>>& container, T const* item)
     return GLTF2::GLTF_INVALID_INDEX;
 }
 
-Format Convert(GLTF2::ComponentType componentType, size_t componentCount, bool normalized)
+constexpr auto MAX_COMPONENTS = 4U;
+constexpr Format BYTE_FORMATS[2U][MAX_COMPONENTS] = {
+    { BASE_FORMAT_R8_SINT, BASE_FORMAT_R8G8_SINT, BASE_FORMAT_R8G8B8_SINT, BASE_FORMAT_R8G8B8A8_SINT },
+    { BASE_FORMAT_R8_SNORM, BASE_FORMAT_R8G8_SNORM, BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R8G8B8A8_SNORM },
+};
+constexpr Format UNSIGNED_BYTE_FORMATS[2U][MAX_COMPONENTS] = {
+    { BASE_FORMAT_R8_UINT, BASE_FORMAT_R8G8_UINT, BASE_FORMAT_R8G8B8_UINT, BASE_FORMAT_R8G8B8A8_UINT },
+    { BASE_FORMAT_R8_UNORM, BASE_FORMAT_R8G8_UNORM, BASE_FORMAT_R8G8B8_UNORM, BASE_FORMAT_R8G8B8A8_UNORM },
+};
+
+constexpr Format SHORT_FORMATS[2U][MAX_COMPONENTS] = {
+    { BASE_FORMAT_R16_SINT, BASE_FORMAT_R16G16_SINT, BASE_FORMAT_R16G16B16_SINT, BASE_FORMAT_R16G16B16A16_SINT },
+    { BASE_FORMAT_R16_SNORM, BASE_FORMAT_R16G16_SNORM, BASE_FORMAT_R16G16B16_SNORM, BASE_FORMAT_R16G16B16A16_SNORM },
+};
+constexpr Format UNSIGNED_SHORT_FORMATS[2U][MAX_COMPONENTS] = {
+    { BASE_FORMAT_R16_UINT, BASE_FORMAT_R16G16_UINT, BASE_FORMAT_R16G16B16_UINT, BASE_FORMAT_R16G16B16A16_UINT },
+    { BASE_FORMAT_R16_UNORM, BASE_FORMAT_R16G16_UNORM, BASE_FORMAT_R16G16B16_UNORM, BASE_FORMAT_R16G16B16A16_UNORM },
+};
+
+constexpr Format INT_FORMATS[MAX_COMPONENTS] = { BASE_FORMAT_R32_SINT, BASE_FORMAT_R32G32_SINT,
+    BASE_FORMAT_R32G32B32_SINT, BASE_FORMAT_R32G32B32A32_SINT };
+constexpr Format UNSIGNED_INT_FORMATS[MAX_COMPONENTS] = { BASE_FORMAT_R32_UINT, BASE_FORMAT_R32G32_UINT,
+    BASE_FORMAT_R32G32B32_UINT, BASE_FORMAT_R32G32B32A32_UINT };
+
+constexpr Format FLOAT_FORMATS[MAX_COMPONENTS] = { BASE_FORMAT_R32_SFLOAT, BASE_FORMAT_R32G32_SFLOAT,
+    BASE_FORMAT_R32G32B32_SFLOAT, BASE_FORMAT_R32G32B32A32_SFLOAT };
+
+constexpr Format Convert(GLTF2::ComponentType componentType, size_t componentCount, bool normalized)
 {
-    switch (componentType) {
-        case GLTF2::ComponentType::INVALID:
-            break;
+    if (componentCount <= MAX_COMPONENTS) {
+        switch (componentType) {
+            case GLTF2::ComponentType::INVALID:
+                break;
 
-        case GLTF2::ComponentType::BYTE:
-            if (normalized) {
-                switch (componentCount) {
-                    case 1:
-                        return BASE_FORMAT_R8_SNORM;
-                    case 2:
-                        return BASE_FORMAT_R8G8_SNORM;
-                    case 3:
-                        return BASE_FORMAT_R8G8B8_SNORM;
-                    case 4:
-                        return BASE_FORMAT_R8G8B8A8_SNORM;
-                }
-            } else {
-                switch (componentCount) {
-                    case 1:
-                        return BASE_FORMAT_R8_SINT;
-                    case 2:
-                        return BASE_FORMAT_R8G8_SINT;
-                    case 3:
-                        return BASE_FORMAT_R8G8B8_SINT;
-                    case 4:
-                        return BASE_FORMAT_R8G8B8A8_SINT;
-                }
-            }
-            break;
+            case GLTF2::ComponentType::BYTE:
+                return BYTE_FORMATS[normalized ? 1U : 0U][componentCount - 1];
 
-        case GLTF2::ComponentType::UNSIGNED_BYTE:
-            if (normalized) {
-                switch (componentCount) {
-                    case 1:
-                        return BASE_FORMAT_R8_UNORM;
-                    case 2:
-                        return BASE_FORMAT_R8G8_UNORM;
-                    case 3:
-                        return BASE_FORMAT_R8G8B8_UNORM;
-                    case 4:
-                        return BASE_FORMAT_R8G8B8A8_UNORM;
-                }
-            } else {
-                switch (componentCount) {
-                    case 1:
-                        return BASE_FORMAT_R8_UINT;
-                    case 2:
-                        return BASE_FORMAT_R8G8_UINT;
-                    case 3:
-                        return BASE_FORMAT_R8G8B8_UINT;
-                    case 4:
-                        return BASE_FORMAT_R8G8B8A8_UINT;
-                }
-            }
-            break;
+            case GLTF2::ComponentType::UNSIGNED_BYTE:
+                return UNSIGNED_BYTE_FORMATS[normalized ? 1U : 0U][componentCount - 1];
 
-        case GLTF2::ComponentType::SHORT:
-            if (normalized) {
-                switch (componentCount) {
-                    case 1:
-                        return BASE_FORMAT_R16_SNORM;
-                    case 2:
-                        return BASE_FORMAT_R16G16_SNORM;
-                    case 3:
-                        return BASE_FORMAT_R16G16B16_SNORM;
-                    case 4:
-                        return BASE_FORMAT_R16G16B16A16_SNORM;
-                }
-            } else {
-                switch (componentCount) {
-                    case 1:
-                        return BASE_FORMAT_R16_SINT;
-                    case 2:
-                        return BASE_FORMAT_R16G16_SINT;
-                    case 3:
-                        return BASE_FORMAT_R16G16B16_SINT;
-                    case 4:
-                        return BASE_FORMAT_R16G16B16A16_SINT;
-                }
-            }
-            break;
+            case GLTF2::ComponentType::SHORT:
+                return SHORT_FORMATS[normalized ? 1U : 0U][componentCount - 1];
 
-        case GLTF2::ComponentType::UNSIGNED_SHORT:
-            if (normalized) {
-                switch (componentCount) {
-                    case 1:
-                        return BASE_FORMAT_R16_UNORM;
-                    case 2:
-                        return BASE_FORMAT_R16G16_UNORM;
-                    case 3:
-                        return BASE_FORMAT_R16G16B16_UNORM;
-                    case 4:
-                        return BASE_FORMAT_R16G16B16A16_UNORM;
-                }
-            } else {
-                switch (componentCount) {
-                    case 1:
-                        return BASE_FORMAT_R16_UINT;
-                    case 2:
-                        return BASE_FORMAT_R16G16_UINT;
-                    case 3:
-                        return BASE_FORMAT_R16G16B16_UINT;
-                    case 4:
-                        return BASE_FORMAT_R16G16B16A16_UINT;
-                }
-            }
-            break;
+            case GLTF2::ComponentType::UNSIGNED_SHORT:
+                return UNSIGNED_SHORT_FORMATS[normalized ? 1U : 0U][componentCount - 1];
 
-        case GLTF2::ComponentType::INT:
-            switch (componentCount) {
-                case 1:
-                    return BASE_FORMAT_R32_SINT;
-                case 2:
-                    return BASE_FORMAT_R32G32_SINT;
-                case 3:
-                    return BASE_FORMAT_R32G32B32_SINT;
-                case 4:
-                    return BASE_FORMAT_R32G32B32A32_SINT;
-            }
-            break;
+            case GLTF2::ComponentType::INT:
+                return INT_FORMATS[componentCount - 1];
 
-        case GLTF2::ComponentType::UNSIGNED_INT:
-            switch (componentCount) {
-                case 1:
-                    return BASE_FORMAT_R32_UINT;
-                case 2: // 2 : type
-                    return BASE_FORMAT_R32G32_UINT;
-                case 3: // 3 :type
-                    return BASE_FORMAT_R32G32B32_UINT;
-                case 4: // 4 ： type
-                    return BASE_FORMAT_R32G32B32A32_UINT;
-            }
-            break;
+            case GLTF2::ComponentType::UNSIGNED_INT:
+                return UNSIGNED_INT_FORMATS[componentCount - 1];
 
-        case GLTF2::ComponentType::FLOAT:
-            switch (componentCount) {
-                case 1:
-                    return BASE_FORMAT_R32_SFLOAT;
-                case 2: // 2 ： type
-                    return BASE_FORMAT_R32G32_SFLOAT;
-                case 3: // 3 ： type
-                    return BASE_FORMAT_R32G32B32_SFLOAT;
-                case 4: // 4 : type
-                    return BASE_FORMAT_R32G32B32A32_SFLOAT;
-            }
-            break;
-        default :
-            break;
+            case GLTF2::ComponentType::FLOAT:
+                return FLOAT_FORMATS[componentCount - 1];
+        }
     }
     return BASE_FORMAT_UNDEFINED;
+}
+
+constexpr GraphicsState::InputAssembly ConvertGltf2InputAssembly(const GLTF2::RenderMode renderMode)
+{
+    GraphicsState::InputAssembly ia;
+    switch (renderMode) {
+        case GLTF2::RenderMode::POINTS:
+            ia.primitiveTopology = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_POINT_LIST;
+            break;
+        case GLTF2::RenderMode::LINES:
+            ia.primitiveTopology = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            break;
+        case GLTF2::RenderMode::LINE_STRIP:
+            ia.primitiveTopology = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+            break;
+        case GLTF2::RenderMode::TRIANGLES:
+            ia.primitiveTopology = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            break;
+        case GLTF2::RenderMode::TRIANGLE_STRIP:
+            ia.primitiveTopology = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+            break;
+        case GLTF2::RenderMode::TRIANGLE_FAN:
+            ia.primitiveTopology = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+            break;
+        default:
+            // PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY
+            // would need to be handled with line_strip with some additions
+            ia.primitiveTopology = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+            break;
+    }
+    return ia;
 }
 
 void ConvertNormalizedDataToFloat(GLTF2::GLTFLoadDataResult const& result, float* destination,
@@ -384,7 +348,7 @@ void ConvertDataToBool(GLTF2::GLTFLoadDataResult const& result, bool* destinatio
         for (size_t j = 0; j < result.componentCount; ++j) {
             switch (result.componentType) {
                 case GLTF2::ComponentType::BYTE:
-                    *destination = reinterpret_cast<const int8_t*>(source) != 0;
+                    *destination = reinterpret_cast<const int8_t*>(source)[j] != 0;
                     break;
 
                 case GLTF2::ComponentType::UNSIGNED_BYTE:
@@ -392,15 +356,15 @@ void ConvertDataToBool(GLTF2::GLTFLoadDataResult const& result, bool* destinatio
                     break;
 
                 case GLTF2::ComponentType::SHORT:
-                    *destination = (reinterpret_cast<const int16_t*>(source))[j] != 0;
+                    *destination = reinterpret_cast<const int16_t*>(source)[j] != 0;
                     break;
 
                 case GLTF2::ComponentType::UNSIGNED_SHORT:
-                    *destination = (reinterpret_cast<const uint16_t*>(source))[j] != 0u;
+                    *destination = reinterpret_cast<const uint16_t*>(source)[j] != 0u;
                     break;
 
                 case GLTF2::ComponentType::FLOAT: {
-                    *destination = (reinterpret_cast<const float*>(reinterpret_cast<uintptr_t>(source)))[j] != 0.f;
+                    *destination = reinterpret_cast<const float*>(reinterpret_cast<uintptr_t>(source))[j] != 0.f;
                     break;
                 }
 
@@ -615,7 +579,7 @@ void ProcessMorphTargetData(const IMeshBuilder::Submesh& importInfo, size_t targ
     CORE_ASSERT(loadDataResult.elementCount == importInfo.vertexCount);
 #endif
     if (finalDataResult.componentCount > 0U) {
-        finalDataResult.data.insert(finalDataResult.data.end(), loadDataResult.data.begin(), loadDataResult.data.end());
+        finalDataResult.data.append(loadDataResult.data.begin(), loadDataResult.data.end());
         for (size_t i = 0; i < finalDataResult.min.size(); i++) {
             finalDataResult.min[i] = std::min(finalDataResult.min[i], loadDataResult.min[i]);
         }
@@ -747,6 +711,11 @@ IMeshBuilder::Submesh CreatePrimitiveImportInfo(const GLTFImportResult& importRe
     }
 
     info.morphTargetCount = (uint32_t)primitive.targets.size();
+
+    // setting values only for the ones which do not use default
+    if (primitive.mode != GLTF2::DEFAULT_RENDER_MODE) {
+        info.inputAssembly = ConvertGltf2InputAssembly(primitive.mode);
+    }
 
     return info;
 }
@@ -945,7 +914,7 @@ bool BuildSkinIbmComponent(GLTF2::Skin const& skin, SkinIbmComponent& skinIbm)
             useIdentityMatrix = false;
             auto ibls = array_view(
                 reinterpret_cast<Math::Mat4X4 const*>(loadDataResult.data.data()), loadDataResult.elementCount);
-            skinIbm.matrices.insert(skinIbm.matrices.end(), ibls.begin(), ibls.end());
+            skinIbm.matrices.append(ibls.begin(), ibls.end());
         }
     }
     if (failed) {
@@ -953,7 +922,7 @@ bool BuildSkinIbmComponent(GLTF2::Skin const& skin, SkinIbmComponent& skinIbm)
     }
 
     if (useIdentityMatrix) {
-        skinIbm.matrices.insert(skinIbm.matrices.end(), skin.joints.size(), Math::IDENTITY_4X4);
+        skinIbm.matrices.append(skin.joints.size(), Math::IDENTITY_4X4);
     }
 
     return true;
@@ -1118,7 +1087,8 @@ inline void TransmissionFlags(
 }
 #endif
 
-uint32_t ResolveImageLoadFlags(GLTF2::Image const& image, GLTF2::Data const& data)
+uint32_t ResolveImageLoadFlags(
+    GLTF2::Image const& image, GLTF2::Data const& data, const ColorSpaceFlags colorSpaceFlags)
 {
     // Resolve whether image should be imported as SRGB or LINEAR.
     uint32_t result = 0;
@@ -1154,6 +1124,13 @@ uint32_t ResolveImageLoadFlags(GLTF2::Image const& image, GLTF2::Data const& dat
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_TRANSMISSION)
         TransmissionFlags(*material, image, result, usage);
 #endif
+        // possible color space conversions
+        if (colorSpaceFlags & ColorSpaceFlagBits::COLOR_SPACE_SRGB_AS_LINEAR_BIT) {
+            // remove srgb
+            result &= (~IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_SRGB_BIT);
+            // add forcing of linear
+            result |= IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT;
+        }
     }
 
     // In case the texture is only used in occlusion channel, we can convert it to grayscale R8.
@@ -1196,65 +1173,9 @@ inline EntityReference ResolveSampler(
     return textureInfo.texture ? ResolveSampler(*textureInfo.texture, data, importResult) : EntityReference {};
 }
 
-EntityReference ResolveDefaultSampler(IEcs& ecs, GLTF2::Material const& material,
-    IGpuResourceManager const& gpuResourceManager, GLTF2::Data const& data, GLTFImportResult const& importResult)
-{
-    if (material.type == GLTF2::Material::Type::MetallicRoughness) {
-        if (auto base = ResolveSampler(material.metallicRoughness.baseColorTexture, data, importResult); base) {
-            return base;
-        } else if (auto mat = ResolveSampler(material.metallicRoughness.metallicRoughnessTexture, data, importResult);
-                   mat) {
-            return mat;
-        }
-    } else if (material.type == GLTF2::Material::Type::SpecularGlossiness) {
-#if defined(GLTF2_EXTENSION_KHR_MATERIALS_PBRSPECULARGLOSSINESS)
-        if (auto diff = ResolveSampler(material.specularGlossiness.diffuseTexture, data, importResult); diff) {
-            return diff;
-        } else if (auto spec =
-                       ResolveSampler(material.specularGlossiness.specularGlossinessTexture, data, importResult);
-                   spec) {
-            return spec;
-        }
-#else
-        return gpuResourceManager.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT");
-#endif
-    } else if (material.type == GLTF2::Material::Type::Unlit) {
-        if (auto spl = ResolveSampler(material.metallicRoughness.baseColorTexture, data, importResult); spl) {
-            return spl;
-        }
-    }
-    if (auto nor = ResolveSampler(material.normalTexture.textureInfo, data, importResult); nor) {
-        return nor;
-    } else if (auto emis = ResolveSampler(material.emissiveTexture, data, importResult); emis) {
-        return emis;
-    } else if (auto ao = ResolveSampler(material.occlusionTexture.textureInfo, data, importResult); ao) {
-        return ao;
-    }
-
-    // No sampler found, use default.
-    auto uriManager = GetManager<IUriComponentManager>(ecs);
-    auto gpuHandleManager = GetManager<IRenderHandleComponentManager>(ecs);
-    constexpr string_view samplerUri = "engine://CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT";
-    Entity samplerEntity = LookupResourceByUri(samplerUri, *uriManager, *gpuHandleManager);
-    if (!EntityUtil::IsValid(samplerEntity)) {
-        samplerEntity = ecs.GetEntityManager().Create();
-
-        uriManager->Create(samplerEntity);
-        uriManager->Write(samplerEntity)->uri = samplerUri;
-
-        gpuHandleManager->Create(samplerEntity);
-        constexpr auto start = samplerUri.rfind('/') + 1;
-        constexpr auto samplerName = samplerUri.substr(start);
-        // the imported resources don't own this resource
-        gpuHandleManager->Write(samplerEntity)->reference = gpuResourceManager.GetSamplerHandle(samplerName);
-    }
-
-    return ecs.GetEntityManager().GetReferenceCounted(samplerEntity);
-}
-
 // Textures
 IImageLoaderManager::LoadResult GatherImageData(GLTF2::Image& image, GLTF2::Data const& data, IFileManager& fileManager,
-    IImageLoaderManager& imageManager, uint32_t loadFlags = 0)
+    IImageLoaderManager& imageManager, uint32_t loadFlags, ColorSpaceFlags colorSpaceFlags)
 {
     vector<uint8_t> raw;
 
@@ -1262,8 +1183,7 @@ IImageLoaderManager::LoadResult GatherImageData(GLTF2::Image& image, GLTF2::Data
 
     if (bufferView && image.type != GLTF2::MimeType::INVALID) {
         if (bufferView->data) {
-            raw.reserve(image.bufferView->byteLength);
-            raw.insert(raw.end(), image.bufferView->data, bufferView->data + bufferView->byteLength);
+            raw.append(image.bufferView->data, bufferView->data + bufferView->byteLength);
         }
     } else if (image.uri.size()) {
         auto extension = GetImageExtension(image.type);
@@ -1285,7 +1205,7 @@ IImageLoaderManager::LoadResult GatherImageData(GLTF2::Image& image, GLTF2::Data
     }
 
     // Resolve image usage and determine flags.
-    const uint32_t flags = ResolveImageLoadFlags(image, data) | loadFlags;
+    const uint32_t flags = ResolveImageLoadFlags(image, data, colorSpaceFlags) | loadFlags;
 
     array_view<const uint8_t> rawdata { raw };
     return imageManager.LoadImage(rawdata, flags);
@@ -1293,23 +1213,27 @@ IImageLoaderManager::LoadResult GatherImageData(GLTF2::Image& image, GLTF2::Data
 
 void ResolveReferencedImages(GLTF2::Data const& data, vector<bool>& imageLoadingRequred)
 {
-    for (size_t i = 0; i < data.textures.size(); ++i) {
-        const GLTF2::Texture& texture = *(data.textures[i]);
-        const size_t index = FindIndex(data.images, texture.image);
-        if (index != GLTF2::GLTF_INVALID_INDEX) {
+    // loader shouldn't add nullptrs to Data::textures or Texture::image, but checking still
+    for (const auto& texture : data.textures) {
+        if (!texture) {
+            continue;
+        }
+        const size_t index = FindIndex(data.images, texture->image);
+        if ((index != GLTF2::GLTF_INVALID_INDEX) && (texture->image)) {
             imageLoadingRequred[index] = true;
         }
     }
 
 #if defined(GLTF2_EXTENSION_EXT_LIGHTS_IMAGE_BASED)
     // Find image references from image based lights.
-    for (size_t i = 0; i < data.imageBasedLights.size(); ++i) {
-        const auto& light = *data.imageBasedLights[i];
-        if (light.skymapImage != GLTF2::GLTF_INVALID_INDEX && light.skymapImage < data.images.size()) {
-            imageLoadingRequred[light.skymapImage] = true;
+    for (const auto& light : data.imageBasedLights) {
+        if (light && (light->skymapImage != GLTF2::GLTF_INVALID_INDEX) && (light->skymapImage < data.images.size()) &&
+            (data.images[light->skymapImage])) {
+            imageLoadingRequred[light->skymapImage] = true;
         }
-        if (light.specularCubeImage != GLTF2::GLTF_INVALID_INDEX && light.specularCubeImage < data.images.size()) {
-            imageLoadingRequred[light.specularCubeImage] = true;
+        if (light && (light->specularCubeImage != GLTF2::GLTF_INVALID_INDEX) &&
+            (light->specularCubeImage < data.images.size()) && (data.images[light->specularCubeImage])) {
+            imageLoadingRequred[light->specularCubeImage] = true;
         }
     }
 #endif
@@ -1384,8 +1308,7 @@ bool BuildAnimationInput(GLTF2::Data const& data, IFileManager& fileManager, GLT
         inputComponent.timestamps.reserve(animationInputDataResult.elementCount);
         const float* timeStamps =
             reinterpret_cast<const float*>(reinterpret_cast<uintptr_t>(animationInputDataResult.data.data()));
-        inputComponent.timestamps.insert(
-            inputComponent.timestamps.end(), timeStamps, timeStamps + animationInputDataResult.elementCount);
+        inputComponent.timestamps.append(timeStamps, timeStamps + animationInputDataResult.elementCount);
     }
 
     return animationInputDataResult.success;
@@ -1399,7 +1322,7 @@ void AppendAnimationOutputData(uint64_t outputTypeHash, const GLTF2::GLTFLoadDat
     vector<ReadType> positions;
     CopyFrames(animationOutputDataResult, positions);
     const auto dataView = array_view(reinterpret_cast<const uint8_t*>(positions.data()), positions.size_in_bytes());
-    outputComponent.data.insert(outputComponent.data.end(), dataView.begin(), dataView.end());
+    outputComponent.data.append(dataView.cbegin(), dataView.cend());
 }
 
 bool BuildAnimationOutput(GLTF2::Data const& data, IFileManager& fileManager, GLTFImportResult& result,
@@ -1435,7 +1358,7 @@ bool BuildAnimationOutput(GLTF2::Data const& data, IFileManager& fileManager, GL
 
             case GLTF2::AnimationPath::INVALID:
             default:
-                CORE_LOG_W("Animation.channel.path type %u not implemented", path);
+                CORE_LOG_W("Animation.channel.path type %d not implemented", static_cast<int>(path));
                 break;
         }
     }
@@ -1467,11 +1390,16 @@ void FillTextureParams(const GLTF2::TextureInfo& textureInfo, const GLTFImportRe
     }
 }
 
-RenderHandleReference ImportTexture(
-    IImageContainer::Ptr image, IRenderDataStoreDefaultStaging& staging, IGpuResourceManager& gpuResourceManager)
+RenderHandleReference ImportTexture(const string_view uri, IImageContainer::Ptr image,
+    IRenderDataStoreDefaultStaging& staging, IGpuResourceManager& gpuResourceManager)
 {
     RenderHandleReference imageHandle;
     if (!image) {
+        return imageHandle;
+    }
+    // return if image created already with the uri
+    imageHandle = gpuResourceManager.GetImageHandle(uri);
+    if (imageHandle) {
         return imageHandle;
     }
 
@@ -1481,7 +1409,7 @@ RenderHandleReference ImportTexture(
 
     // Create image according to the image container's description. (expects that conversion handles everything)
     const GpuImageDesc gpuImageDesc = gpuResourceManager.CreateGpuImageDesc(imageDesc);
-    imageHandle = gpuResourceManager.Create(gpuImageDesc);
+    imageHandle = gpuResourceManager.Create(uri, gpuImageDesc);
 
     if (imageHandle) {
         // Create buffer for uploading image data
@@ -1687,11 +1615,14 @@ void SelectShaders(MaterialComponent& desc, const GLTF2::Material& gltfMaterial,
     }
 }
 
-void ImportMaterial(GLTFImportResult const& importResult, GLTF2::Data const& data, GLTF2::Material const& gltfMaterial,
+bool ImportMaterial(GLTFImportResult const& importResult, GLTF2::Data const& data, GLTF2::Material const& gltfMaterial,
     const Entity materialEntity, IMaterialComponentManager& materialManager,
     IGpuResourceManager const& gpuResourceManager, const GLTF2::GLTF2Importer::DefaultMaterialShaderData& dmShaderData)
 {
     auto materialHandle = materialManager.Write(materialEntity);
+    if (!materialHandle) {
+        return false;
+    }
     auto& desc = *materialHandle;
     auto& ecs = materialManager.GetEcs();
     auto& em = ecs.GetEntityManager();
@@ -1702,9 +1633,6 @@ void ImportMaterial(GLTFImportResult const& importResult, GLTF2::Data const& dat
     } else if (gltfMaterial.type == GLTF2::Material::Type::Unlit) {
         FillUnlit(desc, importResult, data, gltfMaterial, em);
     }
-
-    desc.textures[MaterialComponent::TextureIndex::BASE_COLOR].sampler =
-        ResolveDefaultSampler(ecs, gltfMaterial, gpuResourceManager, data, importResult);
 
     // Normal texture.
     FillTextureParams(
@@ -1738,6 +1666,7 @@ void ImportMaterial(GLTFImportResult const& importResult, GLTF2::Data const& dat
     }
 
     SelectShaders(desc, gltfMaterial, dmShaderData);
+    return true;
 }
 
 void ConvertToCoreFilter(GLTF2::FilterMode mode, Filter& outFilter, Filter& outMipmapMode)
@@ -2041,8 +1970,7 @@ void CreateSkinComponents(const GLTF2::Data& data, const GLTFResourceData& gltfR
 
             vector<Entity> joints;
             if (auto jointsHandle = skinJointsManager->Read(gltfResourceData.skins[skinIndex]); jointsHandle) {
-                joints.insert(
-                    joints.end(), jointsHandle->jointEntities, jointsHandle->jointEntities + jointsHandle->count);
+                joints.append(jointsHandle->jointEntities, jointsHandle->jointEntities + jointsHandle->count);
             } else {
                 joints.reserve(node->skin->joints.size());
                 std::transform(node->skin->joints.begin(), node->skin->joints.end(), std::back_inserter(joints),
@@ -2060,56 +1988,53 @@ void CreateMorphComponents(const GLTF2::Data& data, const GLTFResourceData& gltf
     IMorphComponentManager& mm, const unordered_map<size_t, Entity>& sceneEntities, const Entity sceneEntity)
 {
     for (auto const& node : data.nodes) {
-        size_t const meshIndex = FindIndex(data.meshes, node->mesh);
-        if (meshIndex != GLTF2::GLTF_INVALID_INDEX && meshIndex < gltfResourceData.meshes.size()) {
-            if (!node->mesh->primitives.empty()) {
-                size_t const nodeIndex = FindIndex(data.nodes, node.get());
-                Entity const entity = FindEntity(sceneEntities, nodeIndex);
-                if (!EntityUtil::IsValid(entity)) {
-                    // node was not part of current scene
-                    continue;
-                }
-                const size_t weightCount = node->mesh->primitives[0].targets.size();
-                // Assert that all primitives have the same targets. (the spec is a bit confusing here or i just
-                // can't read.)
-                for (const auto& primitive : node->mesh->primitives) {
-                    CORE_UNUSED(primitive);
-                    CORE_ASSERT(primitive.targets.size() == weightCount);
-                }
-
-                if (weightCount > 0) {
-                    // We have targets, so prepare the morph system/component.
-                    vector<string> names;
-                    names.reserve(weightCount);
-                    std::transform(node->mesh->primitives[0].targets.begin(), node->mesh->primitives[0].targets.end(),
-                        std::back_inserter(names), [](const GLTF2::MorphTarget& target) { return target.name; });
-
-                    // Apparently the node/mesh weight list is a concatenation of all primitives targets weights....
-                    vector<float> weights;
-                    weights.reserve(weightCount);
-                    if (!node->weights.empty()) {
-                        // Use instance weight (if there is one)
-                        weights.insert(weights.end(), node->weights.begin(),
-                            node->weights.begin() + static_cast<decltype(node->weights)::difference_type>(weightCount));
-                    } else if (!node->mesh->weights.empty()) {
-                        // Use mesh weight (if there is one)
-                        weights.insert(weights.end(), node->mesh->weights.begin(),
-                            node->mesh->weights.begin() +
-                                static_cast<decltype(node->weights)::difference_type>(weightCount));
-                    } else {
-                        // Default to zero weight.
-                        weights.insert(weights.end(), weightCount, 0.f);
-                    }
-
-                    if (weights.size() > 0) {
-                        MorphComponent component;
-                        component.morphWeights = move(weights);
-                        component.morphNames = move(names);
-                        mm.Set(entity, component);
-                    }
-                }
-            }
+        if (!node->mesh || node->mesh->primitives.empty() || node->mesh->primitives[0].targets.empty()) {
+            continue;
         }
+        const size_t meshIndex = FindIndex(data.meshes, node->mesh);
+        if ((meshIndex == GLTF2::GLTF_INVALID_INDEX) || (meshIndex >= gltfResourceData.meshes.size())) {
+            continue;
+        }
+        const size_t nodeIndex = FindIndex(data.nodes, node.get());
+        const Entity entity = FindEntity(sceneEntities, nodeIndex);
+        if (!EntityUtil::IsValid(entity)) {
+            // node was not part of current scene
+            continue;
+        }
+        const size_t weightCount = node->mesh->primitives[0].targets.size();
+        // Assert that all primitives have the same targets. (the spec is a bit confusing here or i just
+        // can't read.)
+        for (const auto& primitive : node->mesh->primitives) {
+            CORE_UNUSED(primitive);
+            CORE_ASSERT(primitive.targets.size() == weightCount);
+        }
+
+        // We have targets, so prepare the morph system/component.
+        vector<string> names;
+        names.reserve(weightCount);
+        std::transform(node->mesh->primitives[0].targets.cbegin(), node->mesh->primitives[0].targets.cend(),
+            std::back_inserter(names), [](const GLTF2::MorphTarget& target) { return target.name; });
+
+        // Apparently the node/mesh weight list is a concatenation of all primitives targets weights....
+        vector<float> weights;
+        weights.reserve(weightCount);
+        if (!node->weights.empty()) {
+            // Use instance weight (if there is one)
+            weights.append(node->weights.cbegin(),
+                node->weights.cbegin() + static_cast<decltype(node->weights)::difference_type>(weightCount));
+        } else if (!node->mesh->weights.empty()) {
+            // Use mesh weight (if there is one)
+            weights.append(node->mesh->weights.cbegin(),
+                node->mesh->weights.cbegin() + static_cast<decltype(node->weights)::difference_type>(weightCount));
+        } else {
+            // Default to zero weight.
+            weights.append(weightCount, 0.f);
+        }
+
+        mm.Create(entity);
+        auto handle = mm.Write(entity);
+        handle->morphNames = BASE_NS::move(names);
+        handle->morphWeights = BASE_NS::move(weights);
     }
 }
 
@@ -2127,57 +2052,57 @@ Entity CreateEnvironmentComponent(IGpuResourceManager& gpuResourceManager, const
 {
     Entity environmentEntity;
 #if defined(GLTF2_EXTENSION_EXT_LIGHTS_IMAGE_BASED)
-    if (lightIndex != GLTF2::GLTF_INVALID_INDEX && lightIndex < data.imageBasedLights.size()) {
-        // Create the component to the sceneEntity for convinience.
-        environmentEntity = sceneEntity;
-        IEnvironmentComponentManager& envManager = *(GetManager<IEnvironmentComponentManager>(ecs));
-        envManager.Create(environmentEntity);
-        if (auto envHandle = envManager.Write(environmentEntity); envHandle) {
-            GLTF2::ImageBasedLight* light = data.imageBasedLights[lightIndex].get();
-            envHandle->indirectDiffuseFactor.w = light->intensity;
-            envHandle->indirectSpecularFactor.w = light->intensity;
-            envHandle->envMapFactor.w = light->intensity;
+    if (lightIndex == GLTF2::GLTF_INVALID_INDEX || lightIndex >= data.imageBasedLights.size()) {
+        return environmentEntity;
+    }
+    // Create the component to the sceneEntity for convinience.
+    environmentEntity = sceneEntity;
+    IEnvironmentComponentManager& envManager = *(GetManager<IEnvironmentComponentManager>(ecs));
+    envManager.Create(environmentEntity);
+    auto envHandle = envManager.Write(environmentEntity);
 
-            envHandle->environmentRotation = light->rotation;
+    GLTF2::ImageBasedLight* light = data.imageBasedLights[lightIndex].get();
+    envHandle->indirectDiffuseFactor.w = light->intensity;
+    envHandle->indirectSpecularFactor.w = light->intensity;
+    envHandle->envMapFactor.w = light->intensity;
 
-            // Either we have full set of coefficients or there are no coefficients at all.
-            CORE_ASSERT(light->irradianceCoefficients.size() == 0u || light->irradianceCoefficients.size() == 9u);
+    envHandle->environmentRotation = light->rotation;
 
-            std::transform(light->irradianceCoefficients.begin(), light->irradianceCoefficients.end(),
-                envHandle->irradianceCoefficients, [](const GLTF2::ImageBasedLight::LightingCoeff& coeff) {
-                    // Each coefficient needs to have three components.
-                    CORE_ASSERT(coeff.size() == 3u);
+    // Either we have full set of coefficients or there are no coefficients at all.
+    CORE_ASSERT(light->irradianceCoefficients.size() == 0u || light->irradianceCoefficients.size() == 9u);
 
-                    // Values are expected to be prescaled with 1.0 / PI for Lambertian diffuse
-                    return Math::Vec3(coeff[0u], coeff[1u], coeff[2u]);
-                });
+    std::transform(light->irradianceCoefficients.begin(), light->irradianceCoefficients.end(),
+        envHandle->irradianceCoefficients, [](const GLTF2::ImageBasedLight::LightingCoeff& coeff) {
+            // Each coefficient needs to have three components.
+            CORE_ASSERT(coeff.size() == 3u);
 
-            if (lightIndex < gltfResourceData.specularRadianceCubemaps.size() &&
-                EntityUtil::IsValid(gltfResourceData.specularRadianceCubemaps[lightIndex])) {
-                envHandle->radianceCubemap = gltfResourceData.specularRadianceCubemaps[lightIndex];
-                envHandle->radianceCubemapMipCount = (uint32_t)light->specularImages.size();
-            }
+            // Values are expected to be prescaled with 1.0 / PI for Lambertian diffuse
+            return Math::Vec3(coeff[0u], coeff[1u], coeff[2u]);
+        });
 
-            if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light->specularCubeImage); imageEntity) {
-                envHandle->radianceCubemap = imageEntity;
-            }
+    if (lightIndex < gltfResourceData.specularRadianceCubemaps.size() &&
+        EntityUtil::IsValid(gltfResourceData.specularRadianceCubemaps[lightIndex])) {
+        envHandle->radianceCubemap = gltfResourceData.specularRadianceCubemaps[lightIndex];
+        envHandle->radianceCubemapMipCount = (uint32_t)light->specularImages.size();
+    }
 
-            envHandle->envMapLodLevel = light->skymapImageLodLevel;
+    if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light->specularCubeImage); imageEntity) {
+        envHandle->radianceCubemap = imageEntity;
+    }
 
-            if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light->skymapImage); imageEntity) {
-                envHandle->envMap = imageEntity;
-                IRenderHandleComponentManager& gpuHandleManager = *(GetManager<IRenderHandleComponentManager>(ecs));
-                if (const auto& envMapHandle = gpuHandleManager.Read(imageEntity)->reference; envMapHandle) {
-                    const GpuImageDesc imageDesc = gpuResourceManager.GetImageDescriptor(envMapHandle);
-                    if (imageDesc.imageViewType == CORE_IMAGE_VIEW_TYPE_CUBE) {
-                        envHandle->background = EnvironmentComponent::Background::CUBEMAP;
-                    } else {
-                        envHandle->background = EnvironmentComponent::Background::EQUIRECTANGULAR;
-                    }
-                }
-            }
+    envHandle->envMapLodLevel = light->skymapImageLodLevel;
+
+    if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light->skymapImage); imageEntity) {
+        envHandle->envMap = imageEntity;
+        IRenderHandleComponentManager& gpuHandleManager = *(GetManager<IRenderHandleComponentManager>(ecs));
+        if (const auto& envMapHandle = gpuHandleManager.Read(imageEntity)->reference; envMapHandle) {
+            const ImageViewType imageViewType = gpuResourceManager.GetImageDescriptor(envMapHandle).imageViewType;
+            envHandle->background = (imageViewType == CORE_IMAGE_VIEW_TYPE_CUBE)
+                                        ? EnvironmentComponent::Background::CUBEMAP
+                                        : EnvironmentComponent::Background::EQUIRECTANGULAR;
         }
     }
+
 #endif
     return environmentEntity;
 }
@@ -2205,6 +2130,9 @@ ImageData PrepareImageData(const ImageLoadResultVector& imageLoadResults, const 
     for (size_t mipIndex = 0; mipIndex < availableMipLayerCount; ++mipIndex) {
         {
             const auto& imageLoadResult = imageLoadResults[(mipIndex * 6u)];
+            if (!imageLoadResult.image) {
+                continue;
+            }
             const auto& loadedImageDesc = imageLoadResult.image->GetImageDesc();
             const auto& loadedBufferImageCopy = imageLoadResult.image->GetBufferImageCopies()[0];
 
@@ -2229,8 +2157,7 @@ ImageData PrepareImageData(const ImageLoadResultVector& imageLoadResults, const 
             const auto& cubeFaceBufferImageCopy = cubeFaceLoadResult.image->GetBufferImageCopies()[0];
 
             const auto& loadedImageData = cubeFaceLoadResult.image->GetData();
-            data.data.insert(
-                data.data.end(), loadedImageData.begin() + cubeFaceBufferImageCopy.bufferOffset, loadedImageData.end());
+            data.data.append(loadedImageData.begin() + cubeFaceBufferImageCopy.bufferOffset, loadedImageData.end());
 
             byteOffset += loadedImageData.size() - cubeFaceBufferImageCopy.bufferOffset;
         }
@@ -2241,6 +2168,10 @@ ImageData PrepareImageData(const ImageLoadResultVector& imageLoadResults, const 
 RenderHandleReference CreateCubemapFromImages(
     uint32_t imageSize, const ImageLoadResultVector& imageLoadResults, IGpuResourceManager& gpuResourceManager)
 {
+    if (!imageLoadResults[0].image) {
+        return {};
+    }
+
     // Calculate number of mipmaps needed.
     uint32_t mipsize = imageSize;
     uint32_t totalMipCount = 0;
@@ -2296,10 +2227,9 @@ auto FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
     uri += "_DBL";
     resourceEntity = LookupResourceByUri(uri, uriManager, renderHandleMgr);
     shaderData.gfxStateDoubleSided = em.GetReferenceCounted(resourceEntity);
-
-    if (!(EntityUtil::IsValid(shaderData.shader) && EntityUtil::IsValid(shaderData.shader) &&
-            EntityUtil::IsValid(shaderData.shader))) {
-        CORE_LOG_W("GLTF2 importer cannot find default shader data.");
+    if (!(EntityUtil::IsValid(shaderData.shader) && EntityUtil::IsValid(shaderData.gfxState) &&
+            EntityUtil::IsValid(shaderData.gfxStateDoubleSided))) {
+        CORE_LOG_ONCE_W(renderSlot, "GLTF2 importer cannot find default shader data.");
     }
 }
 } // namespace
@@ -2307,6 +2237,9 @@ auto FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
 Entity ImportScene(IDevice& device, size_t sceneIndex, const GLTF2::Data& data,
     const GLTFResourceData& gltfResourceData, IEcs& ecs, Entity rootEntity, GltfSceneImportFlags flags)
 {
+    if (sceneIndex >= data.scenes.size()) {
+        return {};
+    }
     // Create entity for this scene.
     const Entity sceneEntity = ecs.GetEntityManager().Create();
 
@@ -2487,8 +2420,9 @@ struct GLTF2Importer::AnimationTaskData {
                     if (track.channel.node) {
                         // Name the track with the path to the target node. Scene import can then find the
                         // target entity.
-                        importer->nameManager_.Create(animationTrackEntity);
-                        importer->nameManager_.Write(animationTrackEntity)->name = ResolveNodePath(*track.channel.node);
+                        importer->nameManager_->Create(animationTrackEntity);
+                        importer->nameManager_->Write(animationTrackEntity)->name =
+                            ResolveNodePath(*track.channel.node);
                     }
 
                     SelectComponentProperty(track.channel.path, *trackHandle);
@@ -2506,12 +2440,12 @@ struct GLTF2Importer::AnimationTaskData {
         }
         animationHandle->duration = maxLength;
         if (!uri.empty()) {
-            importer->uriManager_.Create(animationEntity);
-            importer->uriManager_.Write(animationEntity)->uri = move(uri);
+            importer->uriManager_->Create(animationEntity);
+            importer->uriManager_->Write(animationEntity)->uri = move(uri);
         }
         if (!name.empty()) {
-            importer->nameManager_.Create(animationEntity);
-            importer->nameManager_.Write(animationEntity)->name = name;
+            importer->nameManager_->Create(animationEntity);
+            importer->nameManager_->Write(animationEntity)->name = name;
         }
         importer->result_.data.animations[index] = move(animationEntity);
         return true;
@@ -2554,22 +2488,29 @@ struct GLTF2Importer::AnimationTaskData {
 GLTF2Importer::GLTF2Importer(IEngine& engine, IRenderContext& renderContext, IEcs& ecs, IThreadPool& pool)
     : engine_(engine), renderContext_(renderContext), device_(renderContext.GetDevice()),
       gpuResourceManager_(device_.GetGpuResourceManager()), ecs_(&ecs),
-      gpuHandleManager_(*GetManager<IRenderHandleComponentManager>(*ecs_)),
-      materialManager_(*GetManager<IMaterialComponentManager>(*ecs_)),
-      meshManager_(*GetManager<IMeshComponentManager>(*ecs_)), nameManager_(*GetManager<INameComponentManager>(*ecs_)),
-      uriManager_(*GetManager<IUriComponentManager>(*ecs_)), threadPool_(&pool)
+      renderHandleManager_(GetManager<IRenderHandleComponentManager>(*ecs_)),
+      materialManager_(GetManager<IMaterialComponentManager>(*ecs_)),
+      meshManager_(GetManager<IMeshComponentManager>(*ecs_)), nameManager_(GetManager<INameComponentManager>(*ecs_)),
+      uriManager_(GetManager<IUriComponentManager>(*ecs_)), threadPool_(&pool)
 {
+    if (IGraphicsContext* graphicsContext_ =
+            GetInstance<IGraphicsContext>(*(renderContext_.GetInterface<IClassRegister>()), UID_GRAPHICS_CONTEXT);
+        graphicsContext_) {
+        colorSpaceFlags_ = graphicsContext_->GetColorSpaceFlags();
+    }
+
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     mainThreadQueue_ = factory->CreateDispatcherTaskQueue({});
-
-    // fetch default shaders and graphics states
-    auto& entityMgr = ecs_->GetEntityManager();
-    FillShaderData(entityMgr, uriManager_, gpuHandleManager_,
-        DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE, dmShaderData_.opaque);
-    FillShaderData(entityMgr, uriManager_, gpuHandleManager_,
-        DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT, dmShaderData_.blend);
-    FillShaderData(entityMgr, uriManager_, gpuHandleManager_, DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH,
-        dmShaderData_.depth);
+    if (renderHandleManager_ && uriManager_) {
+        // fetch default shaders and graphics states
+        auto& entityMgr = ecs_->GetEntityManager();
+        FillShaderData(entityMgr, *uriManager_, *renderHandleManager_,
+            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE, dmShaderData_.opaque);
+        FillShaderData(entityMgr, *uriManager_, *renderHandleManager_,
+            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT, dmShaderData_.blend);
+        FillShaderData(entityMgr, *uriManager_, *renderHandleManager_,
+            DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH, dmShaderData_.depth);
+    }
 }
 
 GLTF2Importer::GLTF2Importer(IEngine& engine, IRenderContext& renderContext, IEcs& ecs)
@@ -2587,14 +2528,25 @@ void GLTF2Importer::ImportGLTF(const IGLTFData& data, GltfResourceImportFlags fl
     Cancel();
     cancelled_ = false;
 
+    if (!renderHandleManager_ || !materialManager_ || !meshManager_ || !nameManager_ || !uriManager_) {
+        result_.success = false;
+        result_.error += "Missing required component managers.";
+        return;
+    }
     data_ = (const GLTF2::Data*)&data;
     if (!data_) {
-        CORE_LOG_E("invalid IGLTFData to ImportGLTF");
+        result_.success = false;
+        result_.error += "Invalid IGLTFData to ImportGLTF.";
         return;
     }
 
     flags_ = flags;
-
+    for (auto& pendingGatherTasks : pendingGatherTasks_) {
+        pendingGatherTasks = 0U;
+    }
+    for (auto& finishedGatherTasks : finishedGatherTasks_) {
+        finishedGatherTasks.clear();
+    }
     result_.data.samplers.clear();
     result_.data.images.clear();
     result_.data.textures.clear();
@@ -2614,9 +2566,8 @@ void GLTF2Importer::ImportGLTF(const IGLTFData& data, GltfResourceImportFlags fl
 
     // Run until completed.
     while (!Execute(0)) {
-        if (pendingGatherTasks_) {
-            std::unique_lock lock(gatherTasksLock_);
-            condition_.wait(lock, [this]() { return pendingGatherTasks_ == finishedGatherTasks_.size(); });
+        if (gatherResults_[static_cast<uint32_t>(phase_)]) {
+            gatherResults_[static_cast<uint32_t>(phase_)]->Wait();
         }
     }
 }
@@ -2626,9 +2577,16 @@ void GLTF2Importer::ImportGLTFAsync(const IGLTFData& data, GltfResourceImportFla
     Cancel();
     cancelled_ = false;
 
+    if (!renderHandleManager_ || !materialManager_ || !meshManager_ || !nameManager_ || !uriManager_) {
+        result_.success = false;
+        result_.error += "Missing required component managers.";
+        return;
+    }
+
     data_ = (const GLTF2::Data*)&data;
     if (!data_) {
-        CORE_LOG_E("invalid IGLTFData to ImportGLTFAsync");
+        result_.success = false;
+        result_.error += "Invalid IGLTFData to ImportGLTFAsync.";
         return;
     }
 
@@ -2660,10 +2618,11 @@ void GLTF2Importer::Cancel()
 {
     if (!IsCompleted()) {
         cancelled_ = true;
-
         // Wait all ongoing threads to complete.
-        for (size_t i = 0; i < gatherTaskResults_.size(); ++i) {
-            gatherTaskResults_[i]->Wait();
+        for (auto& result : gatherResults_) {
+            if (result) {
+                result->Wait();
+            }
         }
 
         StartPhase(ImportPhase::FINISHED);
@@ -2685,6 +2644,35 @@ const GltfMeshData& GLTF2Importer::GetMeshData() const
     return meshData_;
 }
 
+bool GLTF2Importer::IsValid() const
+{
+    return uriManager_ && renderHandleManager_ && materialManager_ && meshManager_ && nameManager_ && uriManager_;
+}
+
+void GLTF2Importer::LaunchGatherTasks(size_t firstTask, ImportPhase phase)
+{
+    auto first = tasks_.begin() + static_cast<ptrdiff_t>(firstTask);
+    const auto end = tasks_.end();
+    const auto taskCount = static_cast<size_t>(std::distance(first, end));
+    vector<const IThreadPool::ITask*> tasks;
+    tasks.reserve(taskCount);
+    while (first != end) {
+        auto& task = **first;
+        if (task.phase == phase) {
+            task.state = ImporterTask::State::Gather;
+            auto threadTask = IThreadPool::ITask::Ptr { new GatherThreadTask(*this, task) };
+            tasks.push_back(threadTask.get());
+            threadPool_->PushNoWait(BASE_NS::move(threadTask), BASE_NS::array_view(&bufferTask_, 1U));
+        }
+        ++first;
+    }
+    // Add a task which waits for all the gather tasks for this cateory.
+    if (!tasks.empty()) {
+        gatherResults_[static_cast<uint32_t>(phase)] =
+            threadPool_->Push(IThreadPool::ITask::Ptr { CreateFunctionTask([]() {}) }, tasks);
+    }
+}
+
 void GLTF2Importer::Prepare()
 {
     // Build tasks.
@@ -2695,8 +2683,10 @@ void GLTF2Importer::Prepare()
     }
 
     if (flags_ & CORE_GLTF_IMPORT_RESOURCE_IMAGE) {
+        const auto firstTask = tasks_.size();
         PrepareImageTasks();
         PrepareImageBasedLightTasks();
+        LaunchGatherTasks(firstTask, ImportPhase::IMAGES);
     }
 
     if (flags_ & CORE_GLTF_IMPORT_RESOURCE_MATERIAL) {
@@ -2704,15 +2694,21 @@ void GLTF2Importer::Prepare()
     }
 
     if (flags_ & CORE_GLTF_IMPORT_RESOURCE_ANIMATION) {
+        const auto firstTask = tasks_.size();
         PrepareAnimationTasks();
+        LaunchGatherTasks(firstTask, ImportPhase::ANIMATION_SAMPLERS);
     }
 
     if (flags_ & CORE_GLTF_IMPORT_RESOURCE_SKIN) {
+        const auto firstTask = tasks_.size();
         PrepareSkinTasks();
+        LaunchGatherTasks(firstTask, ImportPhase::SKINS);
     }
 
     if (flags_ & CORE_GLTF_IMPORT_RESOURCE_MESH) {
+        const auto firstTask = tasks_.size();
         PrepareMeshTasks();
+        LaunchGatherTasks(firstTask, ImportPhase::MESHES);
     }
 
     if (listener_) {
@@ -2733,9 +2729,8 @@ bool GLTF2Importer::ProgressTask(ImporterTask& task)
         // Task not started, proceed to gather phase.
         task.state = ImporterTask::State::Gather;
         if (task.gather) {
-            pendingGatherTasks_++;
-            gatherTaskResults_.push_back(
-                threadPool_->Push(IThreadPool::ITask::Ptr { new GatherThreadTask(*this, task) }));
+            // All gather task should be launched during Prepare() to fully utilize the thread pool.
+            CORE_ASSERT(false);
             return false;
         }
     }
@@ -2759,33 +2754,28 @@ bool GLTF2Importer::ProgressTask(ImporterTask& task)
 
 void GLTF2Importer::Gather(ImporterTask& task)
 {
-    CORE_CPU_PERF_BEGIN(gather, "glTF", task.name, "Gather");
+    {
+        CORE_CPU_PERF_SCOPE("CORE3D", "Gather", task.name, CORE3D_PROFILER_DEFAULT_COLOR);
 
-    if (cancelled_ || !task.gather()) {
-        task.success = false;
+        if (cancelled_ || !task.gather()) {
+            task.success = false;
+        }
     }
-
-    CORE_CPU_PERF_END(gather);
 
     {
         // Mark task completed.
         std::lock_guard lock(gatherTasksLock_);
-        finishedGatherTasks_.push_back(task.id);
-        if (pendingGatherTasks_ == finishedGatherTasks_.size()) {
-            condition_.notify_one();
-        }
+        finishedGatherTasks_[static_cast<uint32_t>(task.phase)].push_back(task.id);
     }
 }
 
 void GLTF2Importer::Import(ImporterTask& task)
 {
-    CORE_CPU_PERF_BEGIN(import, "glTF", task.name, "Import");
+    CORE_CPU_PERF_SCOPE("CORE3D", "Import", task.name, CORE3D_PROFILER_DEFAULT_COLOR);
 
     if (cancelled_ || !task.import()) {
         task.success = false;
     }
-
-    CORE_CPU_PERF_END(import);
 }
 
 void GLTF2Importer::CompleteTask(ImporterTask& task)
@@ -2806,10 +2796,8 @@ void GLTF2Importer::CompleteTask(ImporterTask& task)
 void GLTF2Importer::StartPhase(ImportPhase phase)
 {
     phase_ = phase;
-    pendingGatherTasks_ = 0;
     pendingImportTasks_ = 0;
     completedTasks_ = 0;
-    gatherTaskResults_.clear();
 
     if (phase == ImportPhase::FINISHED) {
         if ((flags_ & CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS) && !meshBuilders_.empty()) {
@@ -2900,7 +2888,9 @@ void GLTF2Importer::StartPhase(ImportPhase phase)
         }
 
         // This will turn queued tasks to running ones.
-        ProgressTask(*task);
+        if (task->state == ImporterTask::State::Queued) {
+            ProgressTask(*task);
+        }
     }
 }
 
@@ -2950,7 +2940,8 @@ bool GLTF2Importer::Execute(uint32_t timeBudget)
     }
 
     // All tasks done for this phase?
-    if (pendingGatherTasks_ == 0 && pendingImportTasks_ == 0) {
+    if ((!gatherResults_[static_cast<uint32_t>(phase_)] || gatherResults_[static_cast<uint32_t>(phase_)]->IsDone()) &&
+        pendingImportTasks_ == 0) {
         // Proceed to next phase.
         StartPhase((ImportPhase)(phase_ + 1));
     }
@@ -2983,13 +2974,15 @@ void GLTF2Importer::HandleImportTasks()
 
 void GLTF2Importer::HandleGatherTasks()
 {
-    vector<uint64_t> finishedGatherTasks;
+    auto& result = gatherResults_[static_cast<uint32_t>(phase_)];
+    if (!result || !result->IsDone()) {
+        return;
+    }
 
+    vector<uint64_t> finishedGatherTasks;
     {
         std::lock_guard lock(gatherTasksLock_);
-        if (pendingGatherTasks_ == finishedGatherTasks_.size()) {
-            std::swap(finishedGatherTasks, finishedGatherTasks_);
-        }
+        std::swap(finishedGatherTasks, finishedGatherTasks_[static_cast<uint32_t>(phase_)]);
     }
 
     if (finishedGatherTasks.size() > 0) {
@@ -3007,24 +3000,31 @@ void GLTF2Importer::HandleGatherTasks()
                 }
             }
         }
-
-        pendingGatherTasks_ -= finishedGatherTasks.size();
     }
 }
 
 void GLTF2Importer::PrepareBufferTasks()
 {
     // Buffers task.
+    const auto firstTask = static_cast<ptrdiff_t>(tasks_.size());
     auto task = make_unique<ImporterTask>();
     task->name = "Load buffers";
     task->phase = ImportPhase::BUFFERS;
     task->gather = [this]() -> bool {
-        BufferLoadResult result = LoadBuffers(*data_, engine_.GetFileManager());
+        BufferLoadResult result = LoadBuffers(data_, engine_.GetFileManager());
         result_.success = result_.success && result.success;
         result_.error += result.error;
         return result_.success;
     };
-    QueueTask(move(task));
+    QueueTask(BASE_NS::move(task));
+
+    // We're loading all the buffers in one gather. This is probably fine as typical glTF files have just one binary
+    // blob.
+    (*(tasks_.begin() + firstTask))->state = ImporterTask::State::Gather;
+    auto threadTask = IThreadPool::ITask::Ptr { new GatherThreadTask(*this, *(*(tasks_.begin() + firstTask))) };
+    bufferTask_ = threadTask.get();
+    ++pendingGatherTasks_[static_cast<uint32_t>(ImportPhase::BUFFERS)];
+    gatherResults_[static_cast<uint32_t>(ImportPhase::BUFFERS)] = threadPool_->Push(BASE_NS::move(threadTask));
 }
 
 void GLTF2Importer::PrepareSamplerTasks()
@@ -3034,23 +3034,26 @@ void GLTF2Importer::PrepareSamplerTasks()
         task->name = "Import sampler";
         task->phase = ImportPhase::SAMPLERS;
         task->import = [this, i]() -> bool {
+            EntityReference entity;
             auto const& sampler = data_->samplers[i];
-            string const name = data_->defaultResources + "_sampler_" + to_string(i);
+            if ((sampler->magFilter != FilterMode::LINEAR) || (sampler->minFilter != FilterMode::LINEAR) ||
+                (sampler->wrapS != WrapMode::REPEAT) || (sampler->wrapT != WrapMode::REPEAT)) {
+                GpuSamplerDesc desc;
+                ConvertToCoreFilter(sampler->magFilter, desc.magFilter);
+                ConvertToCoreFilter(sampler->minFilter, desc.minFilter, desc.mipMapMode);
 
-            GpuSamplerDesc desc;
-            ConvertToCoreFilter(sampler->magFilter, desc.magFilter);
-            ConvertToCoreFilter(sampler->minFilter, desc.minFilter, desc.mipMapMode);
+                desc.minLod = 0.0f;
+                desc.maxLod = 32.0f;
 
-            desc.minLod = 0.0f;
-            desc.maxLod = 32.0f;
+                desc.addressModeU = ConvertToCoreWrapMode(sampler->wrapS);
+                desc.addressModeV = ConvertToCoreWrapMode(sampler->wrapT);
+                desc.addressModeW = desc.addressModeU;
 
-            desc.addressModeU = ConvertToCoreWrapMode(sampler->wrapS);
-            desc.addressModeV = ConvertToCoreWrapMode(sampler->wrapT);
-            desc.addressModeW = desc.addressModeU;
-
-            EntityReference entity = ecs_->GetEntityManager().CreateReferenceCounted();
-            gpuHandleManager_.Create(entity);
-            gpuHandleManager_.Write(entity)->reference = gpuResourceManager_.Create(name, desc);
+                entity = ecs_->GetEntityManager().CreateReferenceCounted();
+                renderHandleManager_->Create(entity);
+                string const name = data_->defaultResources + "_sampler_" + to_string(i);
+                renderHandleManager_->Write(entity)->reference = gpuResourceManager_.GetOrCreate(name, desc);
+            }
             result_.data.samplers.push_back(move(entity));
 
             return true;
@@ -3067,26 +3070,27 @@ void GLTF2Importer::QueueImage(size_t i, string&& uri, string&& name)
         size_t index;
         string uri;
         string name;
-        IRenderDataStoreDefaultStaging* staging;
+        refcnt_ptr<IRenderDataStoreDefaultStaging> staging;
         RenderHandleReference imageHandle;
     };
 
     constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 
-    auto staging = static_cast<IRenderDataStoreDefaultStaging*>(
+    auto staging = refcnt_ptr<IRenderDataStoreDefaultStaging>(
         renderContext_.GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING.data()));
     // Does not exist, which means it needs to be imported.
     auto task = make_unique<GatheredDataTask<ImageTaskData>>();
     task->data = ImageTaskData { this, i, move(uri), move(name), staging, {} };
     task->name = "Import image";
     task->phase = ImportPhase::IMAGES;
-    task->gather = [t = task.get()]() -> bool {
+    task->gather = [t = task.get(), colorSpaceFlags = colorSpaceFlags_]() -> bool {
         GLTF2Importer* importer = t->data.importer;
         auto const& image = importer->data_->images[t->data.index];
-        IImageLoaderManager::LoadResult result = GatherImageData(
-            *image, *importer->data_, importer->engine_.GetFileManager(), importer->engine_.GetImageLoaderManager());
+        IImageLoaderManager::LoadResult result = GatherImageData(*image, *importer->data_,
+            importer->engine_.GetFileManager(), importer->engine_.GetImageLoaderManager(), 0U, colorSpaceFlags);
         if (result.success) {
-            t->data.imageHandle = ImportTexture(move(result.image), *t->data.staging, importer->gpuResourceManager_);
+            t->data.imageHandle =
+                ImportTexture(t->data.uri, move(result.image), *t->data.staging, importer->gpuResourceManager_);
         } else {
             CORE_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), result.error);
             importer->result_.error += result.error;
@@ -3100,15 +3104,15 @@ void GLTF2Importer::QueueImage(size_t i, string&& uri, string&& name)
         if (t->data.imageHandle) {
             GLTF2Importer* importer = t->data.importer;
             auto imageEntity = importer->ecs_->GetEntityManager().CreateReferenceCounted();
-            importer->gpuHandleManager_.Create(imageEntity);
-            importer->gpuHandleManager_.Write(imageEntity)->reference = move(t->data.imageHandle);
+            importer->renderHandleManager_->Create(imageEntity);
+            importer->renderHandleManager_->Write(imageEntity)->reference = move(t->data.imageHandle);
             if (!t->data.uri.empty()) {
-                importer->uriManager_.Create(imageEntity);
-                importer->uriManager_.Write(imageEntity)->uri = move(t->data.uri);
+                importer->uriManager_->Create(imageEntity);
+                importer->uriManager_->Write(imageEntity)->uri = move(t->data.uri);
             }
             if (!t->data.name.empty()) {
-                importer->nameManager_.Create(imageEntity);
-                importer->nameManager_.Write(imageEntity)->name = move(t->data.name);
+                importer->nameManager_->Create(imageEntity);
+                importer->nameManager_->Write(imageEntity)->name = move(t->data.name);
             }
 
             importer->result_.data.images[t->data.index] = move(imageEntity);
@@ -3156,7 +3160,7 @@ void GLTF2Importer::PrepareImageTasks()
         }
 
         // See if this resource already exists.
-        Entity imageEntity = LookupResourceByUri(uri, uriManager_, gpuHandleManager_);
+        Entity imageEntity = LookupResourceByUri(uri, *uriManager_, *renderHandleManager_);
         if (EntityUtil::IsValid(imageEntity)) {
             // Already exists.
             result_.data.images[i] = ecs_->GetEntityManager().GetReferenceCounted(imageEntity);
@@ -3211,15 +3215,24 @@ void GLTF2Importer::PrepareImageBasedLightTasks()
             for (const auto& mipLevel : light->specularImages) {
                 // For all cube faces.
                 for (const auto& cubeFace : mipLevel) {
+                    if (cubeFace >= data_->images.size()) {
+                        success = false;
+                        break;
+                    }
                     // Get image for this cube face.
                     auto& image = data_->images[cubeFace];
-
+                    if (!image) {
+                        success = false;
+                        break;
+                    }
                     // Load image.
-                    auto loadResult = GatherImageData(*image, *data_, engine_.GetFileManager(),
-                        engine_.GetImageLoaderManager(), IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT);
+                    auto loadResult =
+                        GatherImageData(*image, *data_, engine_.GetFileManager(), engine_.GetImageLoaderManager(),
+                            IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT, colorSpaceFlags_);
                     if (!loadResult.success) {
                         success = false;
                         CORE_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), loadResult.error);
+                        break;
                     }
 
                     mipLevels.push_back(move(loadResult));
@@ -3235,8 +3248,8 @@ void GLTF2Importer::PrepareImageBasedLightTasks()
             // Import specular cubemap image if needed.
             if (t->data) {
                 EntityReference imageEntity = ecs_->GetEntityManager().CreateReferenceCounted();
-                gpuHandleManager_.Create(imageEntity);
-                gpuHandleManager_.Write(imageEntity)->reference = move(t->data);
+                renderHandleManager_->Create(imageEntity);
+                renderHandleManager_->Write(imageEntity)->reference = move(t->data);
                 result_.data.specularRadianceCubemaps[lightIndex] = move(imageEntity);
             }
 
@@ -3250,42 +3263,59 @@ void GLTF2Importer::PrepareImageBasedLightTasks()
 
 void GLTF2Importer::PrepareMaterialTasks()
 {
-    result_.data.materials.resize(data_->materials.size(), {});
+    // Create EntityReferences for materials already at this stage. This allows assigning materials to meshes before
+    // they are ready.
+    const auto materialCount = data_->materials.size();
+    result_.data.materials.reserve(materialCount);
+
+    for (size_t i = 0; i < materialCount; ++i) {
+        string uri;
+        static constexpr string_view materialsPath = "/materials/";
+        uri.reserve(data_->filepath.size() + data_->defaultResources.size() + materialsPath.size() + 2U);
+        uri += data_->filepath;
+        uri += '/';
+        uri += data_->defaultResources;
+        uri += materialsPath;
+        uri += to_string(i);
+        auto materialEntity = LookupResourceByUri(uri, *uriManager_, *materialManager_);
+        if (EntityUtil::IsValid(materialEntity)) {
+            CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+        } else {
+            materialEntity = ecs_->GetEntityManager().Create();
+            if (!uri.empty()) {
+                uriManager_->Create(materialEntity);
+                uriManager_->Write(materialEntity)->uri = BASE_NS::move(uri);
+            }
+        }
+
+        result_.data.materials.push_back(ecs_->GetEntityManager().GetReferenceCounted(materialEntity));
+    }
 
     auto task = make_unique<ImporterTask>();
     task->name = "Import material";
     task->phase = ImportPhase::MATERIALS;
     task->import = [this]() -> bool {
+        bool success = true;
         for (size_t i = 0; i < data_->materials.size(); ++i) {
-            const string uri = data_->filepath + "/" + data_->defaultResources + "/materials/" + to_string(i);
-            const string_view name = data_->materials[i]->name;
-
-            auto materialEntity = LookupResourceByUri(uri, uriManager_, materialManager_);
-            if (EntityUtil::IsValid(materialEntity)) {
-                CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
-            } else {
-                // Does not exist, so needs to be imported.
-                const auto& gltfMaterial = *data_->materials[i];
-                if (gltfMaterial.type != GLTF2::Material::Type::TextureSheetAnimation) {
-                    materialEntity = ecs_->GetEntityManager().Create();
-                    materialManager_.Create(materialEntity);
-                    if (!uri.empty()) {
-                        uriManager_.Create(materialEntity);
-                        uriManager_.Write(materialEntity)->uri = uri;
-                    }
-                    if (!name.empty()) {
-                        nameManager_.Create(materialEntity);
-                        nameManager_.Write(materialEntity)->name = name;
-                    }
-
-                    ImportMaterial(result_, *data_, gltfMaterial, materialEntity, materialManager_, gpuResourceManager_,
-                        dmShaderData_);
-                }
+            const Entity materialEntity = result_.data.materials[i];
+            if (const auto materialComponentId = materialManager_->GetComponentId(materialEntity);
+                materialComponentId != IComponentManager::INVALID_COMPONENT_ID) {
+                // Material was already created
+                continue;
             }
-            result_.data.materials[i] = ecs_->GetEntityManager().GetReferenceCounted(materialEntity);
+            // Does not exist, so needs to be imported.
+            const auto& gltfMaterial = *data_->materials[i];
+            if (!gltfMaterial.name.empty()) {
+                nameManager_->Create(materialEntity);
+                nameManager_->Write(materialEntity)->name = gltfMaterial.name;
+            }
+            materialManager_->Create(materialEntity);
+            success = ImportMaterial(result_, *data_, gltfMaterial, materialEntity, *materialManager_,
+                                     gpuResourceManager_, dmShaderData_) &&
+                      success;
         }
 
-        return true;
+        return success;
     };
 
     QueueTask(move(task));
@@ -3303,7 +3333,7 @@ void GLTF2Importer::PrepareMeshTasks()
         const string_view name = data_->meshes[i]->name;
 
         // See if this resource already exists.
-        const auto meshEntity = LookupResourceByUri(uri, uriManager_, meshManager_);
+        const auto meshEntity = LookupResourceByUri(uri, *uriManager_, *meshManager_);
         if (EntityUtil::IsValid(meshEntity)) {
             // Already exists.
             result_.data.meshes[i] = ecs_->GetEntityManager().GetReferenceCounted(meshEntity);
@@ -3318,30 +3348,30 @@ void GLTF2Importer::PrepareMeshTasks()
             const GLTF2::Mesh& mesh = *(data_->meshes[i]);
 
             // Gather mesh data.
-            t->data = GatherMeshData(mesh, result_, flags_, materialManager_, device_, engine_);
+            t->data = GatherMeshData(mesh, result_, flags_, *materialManager_, device_, engine_);
             return t->data.success;
         };
 
         task->import = [this, i, uri = move(uri), name, t = task.get()]() mutable -> bool {
-            if (t->data.success) {
-                // Import mesh.
-                auto meshEntity = ImportMesh(*ecs_, t->data);
-                if (EntityUtil::IsValid(meshEntity)) {
-                    if (!uri.empty()) {
-                        uriManager_.Create(meshEntity);
-                        uriManager_.Write(meshEntity)->uri = move(uri);
-                    }
-                    if (!name.empty()) {
-                        nameManager_.Create(meshEntity);
-                        nameManager_.Write(meshEntity)->name = name;
-                    }
-
-                    result_.data.meshes[i] = ecs_->GetEntityManager().GetReferenceCounted(meshEntity);
-                    return true;
-                }
+            if (!t->data.success) {
+                return false;
+            }
+            // Import mesh.
+            auto meshEntity = ImportMesh(*ecs_, t->data);
+            if (!EntityUtil::IsValid(meshEntity)) {
+                return false;
+            }
+            if (!uri.empty()) {
+                uriManager_->Create(meshEntity);
+                uriManager_->Write(meshEntity)->uri = move(uri);
+            }
+            if (!name.empty()) {
+                nameManager_->Create(meshEntity);
+                nameManager_->Write(meshEntity)->name = name;
             }
 
-            return false;
+            result_.data.meshes[i] = ecs_->GetEntityManager().GetReferenceCounted(meshEntity);
+            return true;
         };
 
         task->finished = [this, i, t = task.get()]() {
@@ -3418,7 +3448,9 @@ void GLTF2Importer::PrepareAnimationTasks()
     auto animationInputManager = GetManager<IAnimationInputComponentManager>(*ecs_);
     auto animationOutputManager = GetManager<IAnimationOutputComponentManager>(*ecs_);
     auto animationTrackManager = GetManager<IAnimationTrackComponentManager>(*ecs_);
-
+    if (!animationManager || !animationInputManager || !animationOutputManager || !animationTrackManager) {
+        return;
+    }
     result_.data.animations.resize(data_->animations.size(), {});
 
     unordered_map<Accessor*, GatheredDataTask<ComponentTaskData<AnimationInputComponent>>*> inputs;
@@ -3428,7 +3460,7 @@ void GLTF2Importer::PrepareAnimationTasks()
         const string_view name = data_->animations[i]->name;
 
         // See if this resource already exists.
-        const auto animationEntity = LookupResourceByUri(uri, uriManager_, *animationManager);
+        const auto animationEntity = LookupResourceByUri(uri, *uriManager_, *animationManager);
         if (EntityUtil::IsValid(animationEntity)) {
             result_.data.animations[i] = ecs_->GetEntityManager().GetReferenceCounted(animationEntity);
             CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
@@ -3456,54 +3488,56 @@ void GLTF2Importer::PrepareAnimationTasks()
 
 void GLTF2Importer::PrepareSkinTasks()
 {
+    auto* skinIbmManager = GetManager<ISkinIbmComponentManager>(*ecs_);
+    if (!skinIbmManager) {
+        return;
+    }
     result_.data.skins.resize(data_->skins.size(), {});
-    if (auto* skinIbmManager = GetManager<ISkinIbmComponentManager>(*ecs_); skinIbmManager) {
-        for (size_t i = 0; i < data_->skins.size(); i++) {
-            string name = data_->defaultResources + "/skins/" + to_string(i);
-            string uri = data_->filepath + '/' + name;
 
-            // See if this resource already exists.
-            const Entity skinIbmEntity = LookupResourceByUri(uri, uriManager_, *skinIbmManager);
-            if (EntityUtil::IsValid(skinIbmEntity)) {
-                // Already exists.
-                result_.data.skins[i] = ecs_->GetEntityManager().GetReferenceCounted(skinIbmEntity);
-                CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
-                continue;
-            }
+    for (size_t i = 0; i < data_->skins.size(); i++) {
+        string name = data_->defaultResources + "/skins/" + to_string(i);
+        string uri = data_->filepath + '/' + name;
 
-            auto task = make_unique<GatheredDataTask<SkinIbmComponent>>();
-            task->name = "Import skin";
-            task->phase = ImportPhase::SKINS;
-            task->gather = [this, i, t = task.get()]() -> bool {
-                return BuildSkinIbmComponent(*(data_->skins[i]), t->data);
-            };
+        // See if this resource already exists.
+        const Entity skinIbmEntity = LookupResourceByUri(uri, *uriManager_, *skinIbmManager);
+        if (EntityUtil::IsValid(skinIbmEntity)) {
+            // Already exists.
+            result_.data.skins[i] = ecs_->GetEntityManager().GetReferenceCounted(skinIbmEntity);
+            CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+            continue;
+        }
 
-            task->import = [this, i, uri = move(uri), name = move(name), t = task.get(),
-                               skinIbmManager]() mutable -> bool {
-                if (!t->data.matrices.empty()) {
-                    auto skinIbmEntity = ecs_->GetEntityManager().CreateReferenceCounted();
+        auto task = make_unique<GatheredDataTask<SkinIbmComponent>>();
+        task->name = "Import skin";
+        task->phase = ImportPhase::SKINS;
+        task->gather = [this, i, t = task.get()]() -> bool {
+            return BuildSkinIbmComponent(*(data_->skins[i]), t->data);
+        };
 
-                    skinIbmManager->Create(skinIbmEntity);
-                    {
-                        auto skinIbmHandle = skinIbmManager->Write(skinIbmEntity);
-                        *skinIbmHandle = move(t->data);
-                    }
+        task->import = [this, i, uri = move(uri), name = move(name), t = task.get(), skinIbmManager]() mutable -> bool {
+            if (!t->data.matrices.empty()) {
+                auto skinIbmEntity = ecs_->GetEntityManager().CreateReferenceCounted();
 
-                    uriManager_.Create(skinIbmEntity);
-                    uriManager_.Write(skinIbmEntity)->uri = move(uri);
-                    nameManager_.Create(skinIbmEntity);
-                    nameManager_.Write(skinIbmEntity)->name = move(name);
-                    result_.data.skins[i] = move(skinIbmEntity);
-                    return true;
+                skinIbmManager->Create(skinIbmEntity);
+                {
+                    auto skinIbmHandle = skinIbmManager->Write(skinIbmEntity);
+                    *skinIbmHandle = move(t->data);
                 }
 
-                return false;
-            };
+                uriManager_->Create(skinIbmEntity);
+                uriManager_->Write(skinIbmEntity)->uri = move(uri);
+                nameManager_->Create(skinIbmEntity);
+                nameManager_->Write(skinIbmEntity)->name = move(name);
+                result_.data.skins[i] = move(skinIbmEntity);
+                return true;
+            }
 
-            task->finished = [t = task.get()]() { t->data = {}; };
+            return false;
+        };
 
-            QueueTask(move(task));
-        }
+        task->finished = [t = task.get()]() { t->data = {}; };
+
+        QueueTask(move(task));
     }
 }
 

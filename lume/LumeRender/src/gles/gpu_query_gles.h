@@ -32,7 +32,7 @@ struct GpuQueryPlatformDataGLES : public GpuQueryPlatformData {
 class GpuQueryGLES final : public GpuQuery {
 public:
     GpuQueryGLES(Device& device, const GpuQueryDesc& desc);
-    ~GpuQueryGLES();
+    ~GpuQueryGLES() override;
 
     void NextQueryIndex() override;
 

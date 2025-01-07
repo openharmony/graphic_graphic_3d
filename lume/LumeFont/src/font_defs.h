@@ -20,6 +20,7 @@
 
 #include <base/containers/unordered_map.h>
 #include <base/math/matrix.h>
+#include <core/log.h>
 #include <font/namespace.h>
 
 FONT_BEGIN_NAMESPACE()
@@ -79,80 +80,81 @@ struct Glyph {
 
 using GlyphCache = BASE_NS::unordered_map<uint32_t, FontDefs::Glyph>;
 
-constexpr uint32_t ATLAS_SIZE = 2048;
+constexpr uint32_t ATLAS_SIZE = 2048; // 2048 : param
 
 constexpr int ATLAS_ERROR = -1;
 constexpr int ATLAS_OK = 0;
 constexpr int ATLAS_RESET = 1;
 
 constexpr uint8_t BORDER_WIDTH = 1u;
-constexpr uint8_t BORDER_WIDTH_X2 = 2u * BORDER_WIDTH;
+constexpr uint8_t BORDER_WIDTH_X2 = 2u * BORDER_WIDTH; // 2 : param
 
-constexpr const int GLYPH_FIT_THRESHOLD = 4;
+constexpr const int GLYPH_FIT_THRESHOLD = 4; // 4 : thd
 
-inline uint64_t RshiftU64(uint64_t val, uint8_t bits)
+inline uint64_t rshift_u64(uint64_t val, uint8_t bits)
 {
     return val >> bits;
 }
 
-inline uint64_t LshiftU64(uint64_t val, uint8_t bits)
+inline uint64_t lshift_u64(uint64_t val, uint8_t bits)
 {
     return val << bits;
 }
 
-inline uint32_t RshiftU32(uint32_t val, uint8_t bits)
+inline uint32_t rshift_u32(uint32_t val, uint8_t bits)
 {
     return val >> bits;
 }
 
-inline uint32_t LshiftU32(uint32_t val, uint8_t bits)
+inline uint32_t lshift_u32(uint32_t val, uint8_t bits)
 {
     return val << bits;
 }
 
-inline int32_t RshiftI32(int32_t val, uint8_t bits)
+inline int32_t rshift_i32(int32_t val, uint8_t bits)
 {
     return val >> bits;
 }
 
-inline int32_t LshiftI32(int32_t val, uint8_t bits)
+inline int32_t lshift_i32(int32_t val, uint8_t bits)
 {
     return val << bits;
 }
 
-inline uint16_t LshiftU16(uint16_t val, uint8_t bits)
+inline uint16_t lshift_u16(uint16_t val, uint8_t bits)
 {
     return uint16_t(val << bits);
 }
 
 inline uint8_t GetStrength(uint64_t glyphKey)
 {
-    return RshiftU64(glyphKey, 48) & UINT8_MAX; // 48: shift length
+    return rshift_u64(glyphKey, 48) & UINT8_MAX; // 48 : param
 }
 
 inline uint8_t GetSkewX(uint64_t glyphKey)
 {
-    return RshiftU64(glyphKey, 56) & UINT8_MAX; // 56: shift length
+    return rshift_u64(glyphKey, 56) & UINT8_MAX; // 56 : param
 }
 
 inline int32_t IntToFp26(int32_t val)
 {
     // convert to 26.6 fractional pixels values used by freetype library
-    return LshiftI32(val, 6);
+    return lshift_i32(val, 6); // 6 : param
 }
 
 inline int32_t Fp26ToInt(int32_t val)
 {
     // convert from 26.6 fractional pixels values used by freetype library
-    return RshiftI32(val, 6);
+    return rshift_i32(val, 6); // 6 : param
 }
 // font size in pixel
 inline uint64_t MakeGlyphKey(float size, uint32_t idx)
 {
-    return (static_cast<uint64_t>(size) << 32) | idx; // 32: shift length
+    return (static_cast<uint64_t>(size) << 32) | idx; // 32 : param
 }
 
-constexpr float FLOAT_DIV = 64.f;
+// FT_Pos is a 26.6 fixed point value, 2^6 = 64
+constexpr float FLOAT_DIV = 64.f; // 64.f ；param
 
 inline int32_t FloatToFTPos(float x)
 {
@@ -162,6 +164,29 @@ inline int32_t FloatToFTPos(float x)
 inline float FTPosToFloat(int32_t x)
 {
     return static_cast<float>(x) / FLOAT_DIV;
+}
+
+// 13.3 fixed point value, 2^3 = 8
+// valid range is -4096.0...4,095.875
+constexpr float FLOAT16_DIV = 8.f; // 8.0 : param
+
+inline float Int16ToFloat(int16_t x)
+{
+    return static_cast<float>(x) / FLOAT16_DIV;
+}
+
+inline int16_t FTPosToInt16(int32_t x)
+{
+#if defined(CORE2D_VALIDATION_ENABLED) && (CORE2D_VALIDATION_ENABLED)
+    CORE_ASSERT((x >= (INT16_MIN * static_cast<int32_t>(FLOAT16_DIV))) &&
+                (x <= (INT16_MAX * static_cast<int32_t>(FLOAT16_DIV))));
+#endif
+    return static_cast<int16_t>(x / static_cast<int32_t>(FLOAT_DIV / FLOAT16_DIV));
+}
+
+inline int32_t Int16ToFTPos(int16_t x)
+{
+    return static_cast<int32_t>(static_cast<int32_t>(x) * static_cast<int32_t>(FLOAT_DIV / FLOAT16_DIV));
 }
 } // namespace FontDefs
 

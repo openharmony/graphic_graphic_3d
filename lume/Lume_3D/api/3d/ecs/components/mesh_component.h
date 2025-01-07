@@ -24,6 +24,7 @@
 #include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_component_manager.h>
 #include <render/device/gpu_resource_desc.h>
+#include <render/device/pipeline_state_desc.h>
 
 CORE3D_BEGIN_NAMESPACE()
 /** \addtogroup group_mesh_meshdesc
@@ -107,7 +108,7 @@ BEGIN_COMPONENT(IMeshComponentManager, MeshComponent)
         };
 
         /** Instance count */
-        uint32_t instanceCount { 1u };
+        uint32_t instanceCount { 1U };
 
         /** Vertex data buffers */
         BufferAccess bufferAccess[BUFFER_COUNT];
@@ -119,11 +120,23 @@ BEGIN_COMPONENT(IMeshComponentManager, MeshComponent)
         BufferAccess morphTargetBuffer;
 
         /** Vertex count */
-        uint32_t vertexCount { 0 };
+        uint32_t vertexCount { 0U };
         /** Index count */
-        uint32_t indexCount { 0 };
+        uint32_t indexCount { 0U };
         /** Morph target count */
-        uint32_t morphTargetCount { 0 };
+        uint32_t morphTargetCount { 0U };
+
+        /** Indirect draw count (default to one, as with normal instance count) */
+        uint32_t drawCountIndirect { 1U };
+        /** Indirect draw stride */
+        uint32_t strideIndirect { 0U };
+
+        /** First index in draw */
+        uint32_t firstIndex { 0U };
+        /** First vertex offset in draw */
+        uint32_t vertexOffset { 0U };
+        /** First instance in draw */
+        uint32_t firstInstance { 0U };
 
         /** AABB min */
         BASE_NS::Math::Vec3 aabbMin { 0.0f, 0.0f, 0.0f };
@@ -150,6 +163,13 @@ BEGIN_COMPONENT(IMeshComponentManager, MeshComponent)
         uint8_t renderSortLayer { DEFAULT_RENDER_SORT_LAYER_ID };
         /** Sort layer order to describe fine order within sort layer. Valid order 0 - 255 */
         uint8_t renderSortLayerOrder { 0u };
+
+        /** Optional input assembly
+         * If not set the input assembly is used from the graphics state usually defined with the shader or separate
+         * graphics state.
+         */
+        RENDER_NS::GraphicsState::InputAssembly inputAssembly { false,
+            RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM };
     };
 #endif
 

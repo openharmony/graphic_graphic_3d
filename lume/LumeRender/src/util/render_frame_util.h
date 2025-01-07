@@ -40,7 +40,7 @@ public:
     bool HasGpuSignals() const;
     BASE_NS::array_view<BASE_NS::unique_ptr<GpuSemaphore>> GetGpuSemaphores();
 
-    void CopyToCpu(const RenderHandleReference& handle, const CopyFlags flags) override;
+    void CopyToCpu(const RenderHandleReference& handle, CopyFlags flags) override;
     BASE_NS::array_view<IRenderFrameUtil::FrameCopyData> GetFrameCopyData() override;
     const FrameCopyData& GetFrameCopyData(const RenderHandleReference& handle) override;
 

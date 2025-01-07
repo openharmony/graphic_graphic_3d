@@ -95,9 +95,9 @@ public:
 
     /** Render frame status.
      * Provides information of frame counts when different parts are processed.
-     * 1. If using: SEPARATE_RENDER_FRAME_PRESENT
+     * 1. If using: CREATE_INFO_SEPARATE_RENDER_FRAME_PRESENT_BIT
      * -> frontEndIndex and backEndIndex change before RenderFramePresent()
-     * 2. If using SEPARATE_RENDER_FRAME_BACKEND
+     * 2. If using CREATE_INFO_SEPARATE_RENDER_FRAME_BACKEND_BIT
      * -> frontEndIndex changes before RenderFrameBackend()
      * 3. Default
      * -> all indices change when RenderFrame() is fully processed

@@ -12,10 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "Vec4Proxy.h"
-Vec4Proxy::Vec4Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec4> prop) : PropertyProxy(prop)
+Vec4Proxy::Vec4Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec4> prop) : ObjectPropertyProxy(prop)
 {
-    name_ = prop->GetName();
     // Construct a "Lume::Vec4" instance
     Create(env, "Vec4");
     // hook to the objects members (set custom get/set)
@@ -27,6 +27,7 @@ Vec4Proxy::Vec4Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec4> prop) 
 }
 Vec4Proxy::~Vec4Proxy()
 {
+    Reset();
 }
 void Vec4Proxy::UpdateLocalValues()
 {
@@ -40,40 +41,41 @@ void Vec4Proxy::UpdateRemoteValues()
 }
 void Vec4Proxy::SetValue(const BASE_NS::Math::Vec4& v)
 {
-    // currently executed in engine thread, hence the locks.
-    duh.Lock();
+    Lock();
     if (value != v) {
         value = v;
         ScheduleUpdate();
     }
-    duh.Unlock();
+    Unlock();
 }
-void Vec4Proxy::SetValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
+void Vec4Proxy::SetMemberValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
 {
     // should be executed in the javascript thread.
     NapiApi::FunctionContext<float> info(cb.GetEnv(), cb.GetInfo());
-    float val = info.Arg<0>();
-    duh.Lock();
-    if ((memb == "x") && (val != value.x)) {
-        value.x = val;
-        ScheduleUpdate();
-    } else if ((memb == "y") && (val != value.y)) {
-        value.y = val;
-        ScheduleUpdate();
-    } else if ((memb == "z") && (val != value.z)) {
-        value.z = val;
-        ScheduleUpdate();
-    } else if ((memb == "w") && (val != value.w)) {
-        value.w = val;
-        ScheduleUpdate();
+    if (info) {
+        float val = info.Arg<0>();
+        Lock();
+        if ((memb == "x") && (val != value.x)) {
+            value.x = val;
+            ScheduleUpdate();
+        } else if ((memb == "y") && (val != value.y)) {
+            value.y = val;
+            ScheduleUpdate();
+        } else if ((memb == "z") && (val != value.z)) {
+            value.z = val;
+            ScheduleUpdate();
+        } else if ((memb == "w") && (val != value.w)) {
+            value.w = val;
+            ScheduleUpdate();
+        }
+        Unlock();
     }
-    duh.Unlock();
 }
-napi_value Vec4Proxy::GetValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
+napi_value Vec4Proxy::GetMemberValue(const NapiApi::Env cb, BASE_NS::string_view memb)
 {
     // should be executed in the javascript thread.
     float res;
-    duh.Lock();
+    Lock();
     if (memb == "x") {
         res = value.x;
     } else if (memb == "y") {
@@ -84,25 +86,20 @@ napi_value Vec4Proxy::GetValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_v
         res = value.w;
     } else {
         // invalid member?
-        duh.Unlock();
-        return {};
+        Unlock();
+        return cb.GetUndefined();
     }
-    duh.Unlock();
-    napi_value value;
-    napi_status status = napi_create_double(cb.GetEnv(), res, &value);
-    return value;
+    Unlock();
+    return cb.GetNumber(res);
 }
 
-bool Vec4Proxy::SetValue(NapiApi::Object obj)
+void Vec4Proxy::SetValue(NapiApi::Object obj)
 {
     auto x = obj.Get<float>("x");
     auto y = obj.Get<float>("y");
     auto z = obj.Get<float>("z");
     auto w = obj.Get<float>("w");
     if (x.IsValid() && y.IsValid() && z.IsValid() && w.IsValid()) {
-        BASE_NS::Math::Vec4 v { x, y, z, w };
-        SetValue(v);
-        return true;
+        SetValue({ x, y, z, w });
     }
-    return false;
 }

@@ -15,7 +15,6 @@
 
 #include "shader_module_vk.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
@@ -35,7 +34,7 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 VkShaderModule CreateShaderModule(const VkDevice device, array_view<const uint8_t> data)
 {
-    PLUGIN_ASSERT(data.size() > 0);
+    PLUGIN_ASSERT(!data.empty());
     VkShaderModule shaderModule { VK_NULL_HANDLE };
 
     constexpr VkShaderModuleCreateFlags shaderModuleCreateFlags { 0 };
@@ -59,7 +58,7 @@ VkShaderModule CreateShaderModule(const VkDevice device, array_view<const uint8_
 ShaderModuleVk::ShaderModuleVk(Device& device, const ShaderModuleCreateInfo& createInfo)
     : device_(device), shaderStageFlags_(createInfo.shaderStageFlags)
 {
-    PLUGIN_ASSERT(createInfo.spvData.size() > 0);
+    PLUGIN_ASSERT(!createInfo.spvData.empty());
     PLUGIN_ASSERT(createInfo.shaderStageFlags & (ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT |
                                                     ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT |
                                                     ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT));

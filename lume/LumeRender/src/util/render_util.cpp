@@ -21,8 +21,6 @@
 #include <render/intf_render_context.h>
 #include <render/nodecontext/intf_render_node_graph_manager.h>
 
-#include "device/gpu_resource_manager.h"
-
 RENDER_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 

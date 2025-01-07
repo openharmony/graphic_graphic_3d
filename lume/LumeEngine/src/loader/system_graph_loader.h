@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__LOADER__SYSTEM_GRAPH_LOADER_H
-#define CORE__LOADER__SYSTEM_GRAPH_LOADER_H
+#ifndef CORE_LOADER_SYSTEM_GRAPH_LOADER_H
+#define CORE_LOADER_SYSTEM_GRAPH_LOADER_H
 
 #include <base/containers/string_view.h>
 #include <base/namespace.h>
@@ -50,4 +50,4 @@ public:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE__LOADER__SYSTEM_GRAPH_LOADER_H
+#endif // CORE_LOADER_SYSTEM_GRAPH_LOADER_H

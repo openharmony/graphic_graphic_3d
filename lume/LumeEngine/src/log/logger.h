@@ -33,7 +33,7 @@ BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 class IInterface;
-class Logger : public ILogger {
+class Logger final : public ILogger {
 public:
     static BASE_NS::string_view GetLogLevelName(LogLevel logLevel, bool shortName);
 
@@ -58,7 +58,8 @@ public:
     LogLevel GetLogLevel() const override;
     void SetLogLevel(LogLevel logLevel) override;
 
-    void AddOutput(IOutput::Ptr output) final;
+    uint64_t AddOutput(IOutput::Ptr output) override;
+    void RemoveOutput(uint64_t id) override;
     void CheckOnceReset() override;
 
     // IInterface

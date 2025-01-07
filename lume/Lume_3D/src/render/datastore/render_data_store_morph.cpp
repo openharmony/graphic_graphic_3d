@@ -42,6 +42,24 @@ void RenderDataStoreMorph::Clear()
     submeshes_.clear();
 }
 
+void RenderDataStoreMorph::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStoreMorph::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStoreMorph::GetRefCount()
+{
+    return refcnt_;
+}
+
 void RenderDataStoreMorph::AddSubmesh(const RenderDataMorph::Submesh& submesh)
 {
     submeshes_.push_back(submesh);
@@ -53,13 +71,8 @@ array_view<const RenderDataMorph::Submesh> RenderDataStoreMorph::GetSubmeshes() 
 }
 
 // for plugin / factory interface
-RENDER_NS::IRenderDataStore* RenderDataStoreMorph::Create(RENDER_NS::IRenderContext&, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreMorph::Create(RENDER_NS::IRenderContext&, char const* name)
 {
-    return new RenderDataStoreMorph(name);
-}
-
-void RenderDataStoreMorph::Destroy(IRenderDataStore* instance)
-{
-    delete static_cast<RenderDataStoreMorph*>(instance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStoreMorph(name));
 }
 CORE3D_END_NAMESPACE()

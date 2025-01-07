@@ -15,9 +15,7 @@
 
 #include "render_staging.h"
 
-#include <algorithm>
 #include <cinttypes>
-#include <cstring>
 
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
@@ -222,8 +220,8 @@ void CopyBuffersToImages(const IRenderNodeGpuResourceManager& gpuResourceMgr, IR
     }
 }
 
-void CopyImagesToBuffersImpl(const IRenderNodeGpuResourceManager& gpuResourceMgr, IRenderCommandList& cmdList,
-    const vector<StagingCopyStruct>& imageToBuffer, const vector<BufferImageCopy>& bufferImageCopies)
+void CopyImagesToBuffersImpl(IRenderCommandList& cmdList, const vector<StagingCopyStruct>& imageToBuffer,
+    const vector<BufferImageCopy>& bufferImageCopies)
 {
     for (const auto& ref : imageToBuffer) {
         if (ref.invalidOperation) {
@@ -238,8 +236,8 @@ void CopyImagesToBuffersImpl(const IRenderNodeGpuResourceManager& gpuResourceMgr
     }
 }
 
-void CopyImagesToImagesImpl(const IRenderNodeGpuResourceManager& gpuResourceMgr, IRenderCommandList& cmdList,
-    const vector<StagingCopyStruct>& imageToImage, const vector<ImageCopy>& imageCopies)
+void CopyImagesToImagesImpl(
+    IRenderCommandList& cmdList, const vector<StagingCopyStruct>& imageToImage, const vector<ImageCopy>& imageCopies)
 {
     for (const auto& ref : imageToImage) {
         if (ref.invalidOperation) {
@@ -288,7 +286,7 @@ void RenderStaging::CopyHostToStaging(
     const IRenderNodeGpuResourceManager& gpuResourceMgr, const StagingConsumeStruct& stagingData)
 {
     auto const copyUserDataToStagingBuffer = [](auto& gpuResourceMgr, auto const& ref) {
-        uint8_t* data = static_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ref.srcHandle.GetHandle()));
+        auto* data = static_cast<uint8_t*>(gpuResourceMgr.MapBufferMemory(ref.srcHandle.GetHandle()));
         if (!data) {
             PLUGIN_LOG_E("staging: srcHandle %" PRIu64 " dstHandle %" PRIu64, ref.srcHandle.GetHandle().id,
                 ref.dstHandle.GetHandle().id);
@@ -311,12 +309,15 @@ void RenderStaging::CopyHostToStaging(
         }
         if ((srcPtr) && (srcSize > 0)) {
             PLUGIN_ASSERT(bufferDesc.byteSize >= srcSize);
+            data += ref.stagingBufferByteOffset; // offset to staging buffer
             if (!CloneData(data, bufferDesc.byteSize, srcPtr, srcSize)) {
                 PLUGIN_LOG_E("Copying of staging data failed");
             }
         }
         gpuResourceMgr.UnmapBuffer(ref.srcHandle.GetHandle());
     };
+
+    PLUGIN_ASSERT(!RenderHandleUtil::IsValid(stagingData.stagingBuffer));
 
     for (const auto& ref : stagingData.bufferToImage) {
         if ((!ref.invalidOperation) && (ref.dataType != StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY)) {
@@ -326,6 +327,52 @@ void RenderStaging::CopyHostToStaging(
     for (const auto& ref : stagingData.bufferToBuffer) {
         if ((!ref.invalidOperation) && (ref.dataType != StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY)) {
             copyUserDataToStagingBuffer(gpuResourceMgr, ref);
+        }
+    }
+}
+
+void RenderStaging::CopyHostToStaging(const StagingConsumeStruct& stagingData, const StagingMappedBuffer& smb)
+{
+    auto const copyUserDataToStagingBuffer = [](const auto& ref, const auto& smb) {
+        uint8_t* dataPtr = smb.mappedData;
+        if (!dataPtr) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            PLUGIN_LOG_E("staging: srcHandle %" PRIu64 " dstHandle %" PRIu64, ref.srcHandle.GetHandle().id,
+                ref.dstHandle.GetHandle().id);
+#endif
+            return;
+        }
+        const void* srcPtr = nullptr;
+        size_t srcSize = 0;
+        // should be removed already
+        PLUGIN_ASSERT(ref.dataType != StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY);
+        if (ref.dataType == StagingCopyStruct::DataType::DATA_TYPE_VECTOR) {
+            srcPtr = ref.stagingData.data();
+            srcSize = ref.stagingData.size();
+        } else if (ref.dataType == StagingCopyStruct::DataType::DATA_TYPE_IMAGE_CONTAINER) {
+            PLUGIN_ASSERT(ref.imageContainerPtr);
+            if (ref.imageContainerPtr) {
+                srcPtr = ref.imageContainerPtr->GetData().data();
+                srcSize = ref.imageContainerPtr->GetData().size_bytes();
+            }
+        }
+        if ((srcPtr) && (srcSize > 0)) {
+            const auto* dataEndPtr = smb.mappedData + smb.byteSize;
+            dataPtr = dataPtr + ref.stagingBufferByteOffset; // offset to staging buffer
+            if (!CloneData(dataPtr, size_t(dataEndPtr - dataPtr), srcPtr, srcSize)) {
+                PLUGIN_LOG_E("Copying of staging data failed");
+            }
+        }
+    };
+
+    for (const auto& ref : stagingData.bufferToImage) {
+        if ((!ref.invalidOperation) && (ref.dataType != StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY)) {
+            copyUserDataToStagingBuffer(ref, smb);
+        }
+    }
+    for (const auto& ref : stagingData.bufferToBuffer) {
+        if ((!ref.invalidOperation) && (ref.dataType != StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY)) {
+            copyUserDataToStagingBuffer(ref, smb);
         }
     }
 }
@@ -391,8 +438,7 @@ void RenderStaging::CopyStagingToImages(IRenderCommandList& cmdList,
     cmdList.AddCustomBarrierPoint();
 }
 
-void RenderStaging::CopyImagesToBuffers(IRenderCommandList& cmdList,
-    const IRenderNodeGpuResourceManager& gpuResourceMgr, const StagingConsumeStruct& stagingData,
+void RenderStaging::CopyImagesToBuffers(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
     // explicit input barriers
@@ -417,8 +463,8 @@ void RenderStaging::CopyImagesToBuffers(IRenderCommandList& cmdList,
 
     // Not supported through gpu resource manager staging
     PLUGIN_ASSERT(stagingData.imageToBuffer.empty());
-    CopyImagesToBuffersImpl(gpuResourceMgr, cmdList, renderDataStoreStagingData.imageToBuffer,
-        renderDataStoreStagingData.bufferImageCopies);
+    CopyImagesToBuffersImpl(
+        cmdList, renderDataStoreStagingData.imageToBuffer, renderDataStoreStagingData.bufferImageCopies);
 
     // explicit output barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
@@ -444,8 +490,8 @@ void RenderStaging::CopyImagesToBuffers(IRenderCommandList& cmdList,
     cmdList.AddCustomBarrierPoint();
 }
 
-void RenderStaging::CopyImagesToImages(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
-    const StagingConsumeStruct& stagingData, const StagingConsumeStruct& renderDataStoreStagingData)
+void RenderStaging::CopyImagesToImages(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
+    const StagingConsumeStruct& renderDataStoreStagingData)
 {
     // explicit input barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
@@ -477,8 +523,7 @@ void RenderStaging::CopyImagesToImages(IRenderCommandList& cmdList, const IRende
 
     // Not supported through gpu resource manager staging
     PLUGIN_ASSERT(stagingData.imageToImage.empty());
-    CopyImagesToImagesImpl(
-        gpuResourceMgr, cmdList, renderDataStoreStagingData.imageToImage, renderDataStoreStagingData.imageCopies);
+    CopyImagesToImagesImpl(cmdList, renderDataStoreStagingData.imageToImage, renderDataStoreStagingData.imageCopies);
 
     // explicit output barriers
     cmdList.BeginDisableAutomaticBarrierPoints();

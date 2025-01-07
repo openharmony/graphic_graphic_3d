@@ -21,11 +21,11 @@
 CORE_BEGIN_NAMESPACE()
 class TaskQueueFactory final : public ITaskQueueFactory {
 public:
-    ~TaskQueueFactory() = default;
+    ~TaskQueueFactory() override = default;
 
     uint32_t GetNumberOfCores() const override;
 
-    IThreadPool::Ptr CreateThreadPool(const uint32_t threadCountconst) const override;
+    IThreadPool::Ptr CreateThreadPool(uint32_t threadCountconst) const override;
 
     IDispatcherTaskQueue::Ptr CreateDispatcherTaskQueue(const IThreadPool::Ptr& threadPool) const override;
     IParallelTaskQueue::Ptr CreateParallelTaskQueue(const IThreadPool::Ptr& threadPool) const override;

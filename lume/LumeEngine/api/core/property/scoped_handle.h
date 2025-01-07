@@ -47,18 +47,36 @@ public:
         }
     }
 
+    explicit ScopedHandle(IPropertyHandle& handle) : handle_(&handle)
+    {
+        if constexpr (readOnly_) {
+            data_ = static_cast<Type*>(handle.RLock());
+        } else {
+            data_ = static_cast<Type*>(handle.WLock());
+        }
+    }
+
     explicit ScopedHandle(const IPropertyHandle* handle)
     {
         static_assert(readOnly_, "const IPropertyHandle can be used with <const Type>.");
         if (handle) {
             if constexpr (readOnly_) {
                 handle_ = handle;
-                data_ = static_cast<Type*>(handle_->RLock());
+                data_ = static_cast<Type*>(handle->RLock());
             }
         }
     }
 
-    ScopedHandle(ScopedHandle&& other)
+    explicit ScopedHandle(const IPropertyHandle& handle)
+    {
+        static_assert(readOnly_, "const IPropertyHandle can be used with <const Type>.");
+        if constexpr (readOnly_) {
+            handle_ = &handle;
+            data_ = static_cast<Type*>(handle.RLock());
+        }
+    }
+
+    ScopedHandle(ScopedHandle&& other) noexcept
         : handle_(BASE_NS::exchange(other.handle_, nullptr)), data_(BASE_NS::exchange(other.data_, nullptr))
     {}
 
@@ -106,9 +124,16 @@ public:
     }
 
 private:
-    template<typename T>
+    template<typename T, typename PropertyHandle>
     friend ScopedHandle<T> MakeScopedHandle(
-        IPropertyHandle& handle, BASE_NS::string_view propertyName, const PropertyTypeDecl& propertyType);
+        PropertyHandle& handle, BASE_NS::string_view propertyName, const PropertyTypeDecl& propertyType);
+
+    template<typename T, typename PropertyHandle>
+    friend ScopedHandle<T> MakeScopedHandle(PropertyHandle& handle, uintptr_t offset);
+
+    template<typename T, typename PropertyHandle>
+    friend ScopedHandle<T> MakeScopedHandle(PropertyHandle* handle, uintptr_t offset);
+
     BASE_NS::conditional_t<readOnly_, const IPropertyHandle*, IPropertyHandle*> handle_ { nullptr };
     Type* data_ { nullptr };
 };

@@ -17,15 +17,10 @@
 
 #include <cstdint>
 
-#include <render/device/gpu_resource_desc.h>
-#include <render/device/intf_device.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/intf_render_context.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
-
-#include "device/gpu_resource_manager.h"
-#include "util/log.h"
 
 using namespace BASE_NS;
 
@@ -35,7 +30,7 @@ RenderDataStoreDefaultAccelerationStructureStaging::RenderDataStoreDefaultAccele
     : gpuResourceMgr_(renderContext.GetDevice().GetGpuResourceManager()), name_(name)
 {}
 
-RenderDataStoreDefaultAccelerationStructureStaging::~RenderDataStoreDefaultAccelerationStructureStaging() {}
+RenderDataStoreDefaultAccelerationStructureStaging::~RenderDataStoreDefaultAccelerationStructureStaging() = default;
 
 void RenderDataStoreDefaultAccelerationStructureStaging::PreRender()
 {
@@ -54,6 +49,24 @@ void RenderDataStoreDefaultAccelerationStructureStaging::PostRender() {}
 void RenderDataStoreDefaultAccelerationStructureStaging::Clear()
 {
     // The data cannot be automatically cleared here
+}
+
+void RenderDataStoreDefaultAccelerationStructureStaging::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStoreDefaultAccelerationStructureStaging::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStoreDefaultAccelerationStructureStaging::GetRefCount()
+{
+    return refcnt_;
 }
 
 void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStructure(
@@ -178,14 +191,9 @@ RenderDataStoreDefaultAccelerationStructureStaging::ConsumeStagingInstanceData()
 }
 
 // for plugin / factory interface
-IRenderDataStore* RenderDataStoreDefaultAccelerationStructureStaging::Create(
-    IRenderContext& renderContext, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultAccelerationStructureStaging::Create(
+    IRenderContext& renderContext, const char* name)
 {
-    return new RenderDataStoreDefaultAccelerationStructureStaging(renderContext, name);
-}
-
-void RenderDataStoreDefaultAccelerationStructureStaging::Destroy(IRenderDataStore* instance)
-{
-    delete static_cast<RenderDataStoreDefaultAccelerationStructureStaging*>(instance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultAccelerationStructureStaging(renderContext, name));
 }
 RENDER_END_NAMESPACE()

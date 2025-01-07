@@ -21,29 +21,26 @@
         "components": [
           "c_utils",
           "hilog",
+          "ace_engine",
           "graphic_2d",
           "graphic_surface",
           "hitrace",
           "init",
-          "ipc",
+	  "ipc",
+          "bounds_checking_function",
           "resource_management",
-          "vulkan-headers",
-          "libpng",
-          "zlib",
-          "libjpeg-turbo",
           "napi",
           "ability_runtime",
           "bundle_framework",
-          "egl",
-          "skia"
-        ],
-        "third_party": [
+          "qos_manager",
           "libpng",
           "libjpeg-turbo",
-          "zlib",
-          "vulkan-headers",
           "vulkan-loader",
-          "egl"
+          "vulkan-headers",
+          "skia",
+          "freetype"
+        ],
+        "third_party": [
         ]
       },
       "build": {
@@ -53,12 +50,18 @@
           "//foundation/graphic/graphic_3d/lume/LumeRender:libPluginAGPRender",
           "//foundation/graphic/graphic_3d/lume/Lume_3D/DLL:libPluginAGP3D",
           "//foundation/graphic/graphic_3d/lume/Lume_3D:libAGP3D",
+          "//foundation/graphic/graphic_3d/lume/LumePng:libPluginAGPPng",
+          "//foundation/graphic/graphic_3d/lume/LumeJpg:libPluginAGPJpg",
           "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
           "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/LumeShaderCompiler:binary_compile_shader",
           "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/lumeassetcompiler:binary_compile_asset",
-          "//foundation/graphic/graphic_3d/lume/metaobject:libPluginMetaObject",
-          "//foundation/graphic/graphic_3d/lume/scenewidgetplugin:libPluginSceneWidget",
-          "//foundation/graphic/graphic_3d/kits/js:libscene"
+          "//foundation/graphic/graphic_3d/lume/LumeEngine/ecshelper:libAGPEcshelper",
+          "//foundation/graphic/graphic_3d/lume/LumeMeta:libPluginMetaObject",
+          "//foundation/graphic/graphic_3d/lume/LumeEcsSerializer:EcsSerializer",
+          "//foundation/graphic/graphic_3d/lume/LumeScene:libPluginSceneWidget",
+          "//foundation/graphic/graphic_3d/kits/js:libscene",
+          "//foundation/graphic/graphic_3d/lume/LumeFont:libPluginFont",
+          "//foundation/graphic/graphic_3d/lume/Lume_3DText:libPluginAGP3DText"
         ],
         "inner_kits": [
           {
@@ -121,11 +124,25 @@
           {
             "name": "//foundation/graphic/graphic_3d/3d_scene_adapter:sceneAdapterInterface",
             "header": {
-              "header_files": [
-                "scene_adapter/scene_adapter.h",
-                "scene_adapter/scene_bridge.h"
-              ],
-              "header_base": "//foundation/graphic/graphic_3d/3d_scene_adapter/include"
+            "header_files": [
+               "scene_adpater/scene_adapter.h",
+               "scene_adpater/scene_bridge.h"
+             ],
+             "header_base": "//foundation/graphic/graphic_3d/3d_scene_adapter/include"
+            }
+          },
+          {
+            "name": "//foundation/graphic/graphic_3d/lume/LumeEngine:lume_component_help_src",
+            "header": {
+            "header_files": [
+              "ecshelper/ComponentTools/base_manager.h",
+              "ecshelper/ComponentTools/component_query.h",
+              "ecshelper/PropertyTools/property_api_impl.h",
+              "ecshelper/PropertyTools/property_data.h",
+              "ecshelper/PropertyTools/property_macros.h",
+              "ecshelper/PropertyTools/property_value.h"
+             ],
+             "header_base": "//foundation/graphic/graphic_3d/lume/LumeEngine"
             }
           }
         ],

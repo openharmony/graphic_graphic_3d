@@ -26,7 +26,7 @@ CORE_BEGIN_NAMESPACE()
 // Wrapper for DispatcherTaskQueue exposing a subset of the functionality.
 class DispatcherImpl final : public IDispatcherTaskQueue {
 public:
-    ~DispatcherImpl();
+    ~DispatcherImpl() override;
     explicit DispatcherImpl(const IThreadPool::Ptr& threads);
 
     BASE_NS::vector<uint64_t> CollectFinishedTasks() override;

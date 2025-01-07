@@ -43,22 +43,21 @@ class NodeContextPsoManager;
 class NodeContextPoolManager;
 class RenderBarrierList;
 class RenderCommandList;
-struct RenderCommandContext;
-struct LowLevelCommandBuffer;
-struct LowlevelFramebufferGL;
 class ComputePipelineStateObjectGLES;
 class GraphicsPipelineStateObjectGLES;
-struct NodeGraphBackBufferConfiguration;
-struct OES_Bind;
-namespace Gles {
-struct CombinedSamplerInfo;
-struct PushConstantReflection;
-struct BindMaps;
-struct Bind;
-} // namespace Gles
+struct Binder;
 struct GpuBufferPlatformDataGL;
 struct GpuSamplerPlatformDataGL;
 struct GpuImagePlatformDataGL;
+struct LowlevelFramebufferGL;
+struct NodeGraphBackBufferConfiguration;
+struct OES_Bind;
+struct RenderCommandContext;
+struct DescriptorSetLayoutBindingResourcesHandler;
+namespace Gles {
+struct PushConstantReflection;
+struct Bind;
+} // namespace Gles
 /**
 RenderBackGLES.
 OpenGLES 3.2+ render backend.
@@ -67,7 +66,7 @@ OpenGLES 3.2+ render backend.
 class RenderBackendGLES final : public RenderBackend {
 public:
     RenderBackendGLES(Device& device, GpuResourceManager& gpuResourceManager);
-    ~RenderBackendGLES();
+    ~RenderBackendGLES() override;
 
     void Render(RenderCommandFrameData& renderCommandFrameData,
         const RenderBackendBackBufferConfiguration& backBufferConfig) override;
@@ -75,7 +74,7 @@ public:
 
 private:
     void RenderSingleCommandList(const RenderCommandContext& renderCommandCtx);
-    void RenderProcessEndCommandLists(
+    static void RenderProcessEndCommandLists(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
 
     void RenderCommandDraw(const RenderCommandWithType&);
@@ -108,31 +107,48 @@ private:
     void RenderCommandFragmentShadingRate(const RenderCommandWithType& renderCmd);
     void RenderCommandExecuteBackendFramePosition(const RenderCommandWithType&);
     void RenderCommandWriteTimestamp(const RenderCommandWithType&);
+    void RenderCommandBeginDebugMarker(const RenderCommandWithType&);
+    void RenderCommandEndDebugMarker(const RenderCommandWithType&);
     void RenderCommandUndefined(const RenderCommandWithType&);
     typedef void (RenderBackendGLES::*RenderCommandHandler)(const RenderCommandWithType&);
     // Following array must match in order of RenderCommandType
     // Count of render command types
     static constexpr uint32_t RENDER_COMMAND_COUNT = (static_cast<uint32_t>(RenderCommandType::COUNT));
     static constexpr RenderCommandHandler COMMAND_HANDLERS[RENDER_COMMAND_COUNT] = {
-        &RenderBackendGLES::RenderCommandUndefined, &RenderBackendGLES::RenderCommandDraw,
-        &RenderBackendGLES::RenderCommandDrawIndirect, &RenderBackendGLES::RenderCommandDispatch,
-        &RenderBackendGLES::RenderCommandDispatchIndirect, &RenderBackendGLES::RenderCommandBindPipeline,
-        &RenderBackendGLES::RenderCommandBeginRenderPass, &RenderBackendGLES::RenderCommandNextSubpass,
-        &RenderBackendGLES::RenderCommandEndRenderPass, &RenderBackendGLES::RenderCommandBindVertexBuffers,
-        &RenderBackendGLES::RenderCommandBindIndexBuffer, &RenderBackendGLES::RenderCommandCopyBuffer,
-        &RenderBackendGLES::RenderCommandCopyBufferImage, &RenderBackendGLES::RenderCommandCopyImage,
-        &RenderBackendGLES::RenderCommandBlitImage, &RenderBackendGLES::RenderCommandBarrierPoint,
-        &RenderBackendGLES::RenderCommandBindDescriptorSets, &RenderBackendGLES::RenderCommandPushConstant,
+        &RenderBackendGLES::RenderCommandUndefined,
+        &RenderBackendGLES::RenderCommandDraw,
+        &RenderBackendGLES::RenderCommandDrawIndirect,
+        &RenderBackendGLES::RenderCommandDispatch,
+        &RenderBackendGLES::RenderCommandDispatchIndirect,
+        &RenderBackendGLES::RenderCommandBindPipeline,
+        &RenderBackendGLES::RenderCommandBeginRenderPass,
+        &RenderBackendGLES::RenderCommandNextSubpass,
+        &RenderBackendGLES::RenderCommandEndRenderPass,
+        &RenderBackendGLES::RenderCommandBindVertexBuffers,
+        &RenderBackendGLES::RenderCommandBindIndexBuffer,
+        &RenderBackendGLES::RenderCommandCopyBuffer,
+        &RenderBackendGLES::RenderCommandCopyBufferImage,
+        &RenderBackendGLES::RenderCommandCopyImage,
+        &RenderBackendGLES::RenderCommandBlitImage,
+        &RenderBackendGLES::RenderCommandBarrierPoint,
+        &RenderBackendGLES::RenderCommandBindDescriptorSets,
+        &RenderBackendGLES::RenderCommandPushConstant,
         &RenderBackendGLES::RenderCommandUndefined, /* RenderCommandBuildAccelerationStructure */
-        &RenderBackendGLES::RenderCommandClearColorImage, &RenderBackendGLES::RenderCommandDynamicStateViewport,
-        &RenderBackendGLES::RenderCommandDynamicStateScissor, &RenderBackendGLES::RenderCommandDynamicStateLineWidth,
+        &RenderBackendGLES::RenderCommandClearColorImage,
+        &RenderBackendGLES::RenderCommandDynamicStateViewport,
+        &RenderBackendGLES::RenderCommandDynamicStateScissor,
+        &RenderBackendGLES::RenderCommandDynamicStateLineWidth,
         &RenderBackendGLES::RenderCommandDynamicStateDepthBias,
         &RenderBackendGLES::RenderCommandDynamicStateBlendConstants,
-        &RenderBackendGLES::RenderCommandDynamicStateDepthBounds, &RenderBackendGLES::RenderCommandDynamicStateStencil,
+        &RenderBackendGLES::RenderCommandDynamicStateDepthBounds,
+        &RenderBackendGLES::RenderCommandDynamicStateStencil,
         &RenderBackendGLES::RenderCommandFragmentShadingRate,
-        &RenderBackendGLES::RenderCommandExecuteBackendFramePosition, &RenderBackendGLES::RenderCommandWriteTimestamp,
+        &RenderBackendGLES::RenderCommandExecuteBackendFramePosition,
+        &RenderBackendGLES::RenderCommandWriteTimestamp,
         &RenderBackendGLES::RenderCommandUndefined, /* RenderCommandGpuQueueTransferRelease */
-        &RenderBackendGLES::RenderCommandUndefined  /* RenderCommandGpuQueueTransferAcquire */
+        &RenderBackendGLES::RenderCommandUndefined, /* RenderCommandGpuQueueTransferAcquire */
+        &RenderBackendGLES::RenderCommandBeginDebugMarker,
+        &RenderBackendGLES::RenderCommandEndDebugMarker,
     };
     void PrimeCache(const GraphicsState& graphicsState); // Forces the graphics state..
     void PrimeDepthStencilState(const GraphicsState& graphicsState);
@@ -141,7 +157,7 @@ private:
     void SetViewport(const RenderPassDesc::RenderArea& ra, const ViewportDesc& vd);
     void SetScissor(const RenderPassDesc::RenderArea& ra, const ScissorDesc& sd);
 
-    void HandleColorAttachments(const BASE_NS::array_view<const RenderPassDesc::AttachmentDesc*> colorAttachments);
+    void HandleColorAttachments(BASE_NS::array_view<const RenderPassDesc::AttachmentDesc*> colorAttachments);
     void HandleDepthAttachment(const RenderPassDesc::AttachmentDesc& depthAttachment);
 
     void ClearScissorInit(const RenderPassDesc::RenderArea& aArea);
@@ -185,6 +201,7 @@ private:
         uint32_t instanceCount;
     };
     PerfCounters perfCounters_;
+    PerfCounters framePerfCounters_;
 
     bool validGpuQueries_;
     BASE_NS::unique_ptr<GpuQueryManager> gpuQueryMgr_;
@@ -244,7 +261,7 @@ private:
     void BindVertexInputs(
         const VertexInputDeclarationData& decldata, const BASE_NS::array_view<const int32_t>& vertexInputs);
     void ProcessBindings(const struct RenderCommandBindDescriptorSets& renderCmd,
-        const DescriptorSetLayoutBindingResources& data, uint32_t set);
+        const DescriptorSetLayoutBindingResourcesHandler& data, uint32_t set);
     void ScanPasses(const RenderPassDesc& rpd);
     int32_t InvalidateColor(BASE_NS::array_view<uint32_t> invalidateAttachment, const RenderPassDesc& rpd,
         const RenderPassSubpassDesc& currentSubPass);
@@ -256,10 +273,11 @@ private:
     void UpdateStencilState(const GraphicsState& graphicsState);
     void UpdateDepthStencilState(const GraphicsState& graphicsState);
     void UpdateRasterizationState(const GraphicsState& graphicsState);
+    const BASE_NS::array_view<Binder>* BindPipeline();
     void BindResources();
     enum StencilSetFlags { SETOP = 1, SETCOMPAREMASK = 2, SETCOMPAREOP = 4, SETREFERENCE = 8, SETWRITEMASK = 16 };
-    void SetStencilState(const uint32_t frontFlags, const GraphicsState::StencilOpState& front,
-        const uint32_t backFlags, const GraphicsState::StencilOpState& back);
+    void SetStencilState(uint32_t frontFlags, const GraphicsState::StencilOpState& front, uint32_t backFlags,
+        const GraphicsState::StencilOpState& back);
     const ComputePipelineStateObjectGLES* boundComputePipeline_ = nullptr;
     const GraphicsPipelineStateObjectGLES* boundGraphicsPipeline_ = nullptr;
     RenderHandle currentPsoHandle_;

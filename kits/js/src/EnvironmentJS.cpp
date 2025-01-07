@@ -18,11 +18,8 @@
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/property/property_events.h>
-#include <scene_plugin/api/camera.h> // for the classid..
-#include <scene_plugin/api/node_uid.h>
-#include <scene_plugin/interface/intf_ecs_scene.h>
-#include <scene_plugin/interface/intf_node.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <scene/interface/intf_node.h>
+#include <scene/interface/intf_scene.h>
 
 #include <render/intf_render_context.h>
 
@@ -64,12 +61,11 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
 
     NapiApi::Object exp(env, exports);
 
-    napi_value eType; 
-    napi_value v;
+    napi_value eType, v;
     napi_create_object(env, &eType);
 #define DECL_ENUM(enu, x)                                      \
     napi_create_uint32(env, EnvironmentBackgroundType::x, &v); \
-    napi_set_named_property(env, enu, #x, v)
+    napi_set_named_property(env, enu, #x, v);
 
     DECL_ENUM(eType, BACKGROUND_NONE);
     DECL_ENUM(eType, BACKGROUND_IMAGE);
@@ -79,26 +75,21 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
     exp.Set("EnvironmentBackgroundType", eType);
 }
 
-napi_value EnvironmentJS::Dispose(NapiApi::FunctionContext<>& ctx)
+void EnvironmentJS::DisposeNative(void* scene)
 {
-    LOG_F("EnvironmentJS::Dispose");
-    DisposeNative();
-    return {};
-}
-void EnvironmentJS::DisposeNative()
-{
-    if (!disposed_) {
-        CORE_LOG_F("EnvironmentJS::DisposeNative");
-        disposed_ = true;
-        NapiApi::Object obj = scene_.GetObject();
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            SceneJS* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->ReleaseStrongDispose((uintptr_t)&scene_);
-            }
+    if (scene == nullptr) {
+        if (!disposed_) {
+            LOG_F("EnvironmentJS::DisposeNative but argument NULL");
         }
-
+        return;
+    }
+    if (!disposed_) {
+        LOG_V("EnvironmentJS::DisposeNative");
+        disposed_ = true;
+        SceneJS* sceneJS { static_cast<SceneJS*>(scene) };
+        if (sceneJS) {
+            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+        }
         diffuseFactor_.reset();
         specularFactor_.reset();
         environmentFactor_.reset();
@@ -106,25 +97,24 @@ void EnvironmentJS::DisposeNative()
             // reset the native object refs
             SetNativeObject(nullptr, false);
             SetNativeObject(nullptr, true);
-            diffuseFactor_.reset();
-            specularFactor_.reset();
-            environmentFactor_.reset();
 
-            NapiApi::Object sceneJS = scene_.GetObject();
-            if (sceneJS) {
+            // if we still have javascript scene reference, detach from it.
+            // (if not, then scene has died and we are detaching already)
+            NapiApi::Object sceneJs = scene_.GetObject();
+            if (sceneJs) {
                 napi_value null;
-                napi_get_null(sceneJS.GetEnv(), &null);
-                sceneJS.Set("environment", null);
-
-                scene_.Reset();
-                auto* tro = sceneJS.Native<TrueRootObject>();
-                IScene::Ptr scene = interface_pointer_cast<IScene>(tro->GetNativeObject());
-                ExecSyncTask([s = BASE_NS::move(scene), e = BASE_NS::move(env)]() {
-                    auto en = interface_pointer_cast<SCENE_NS::INode>(e);
-                    s->ReleaseNode(en);
-                    en.reset();
-                    return META_NS::IAny::Ptr {};
-                });
+                napi_get_null(sceneJs.GetEnv(), &null);
+                sceneJs.Set("environment", null);
+            }
+            IScene::Ptr s = interface_pointer_cast<IScene>(sceneJS->GetNativeObject());
+            if (s) {
+                env->EnvironmentImage()->SetValue(nullptr);
+                env->RadianceImage()->SetValue(nullptr);
+                auto en = interface_pointer_cast<SCENE_NS::INode>(env);
+                s->ReleaseNode(en);
+                en.reset();
+                env.reset();
+                s.reset();
             }
         }
     }
@@ -132,22 +122,21 @@ void EnvironmentJS::DisposeNative()
 }
 void* EnvironmentJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == EnvironmentJS::ID) {
+    if (id == EnvironmentJS::ID)
         return this;
-    }
     return SceneResourceImpl::GetInstanceImpl(id);
 }
 void EnvironmentJS::Finalize(napi_env env)
 {
     // hmm.. do i need to do something BEFORE the object gets deleted..
-    DisposeNative();
+    DisposeNative(nullptr);
     BaseObject<EnvironmentJS>::Finalize(env);
 }
 
 EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
     : BaseObject<EnvironmentJS>(e, i), SceneResourceImpl(SceneResourceImpl::ENVIRONMENT)
 {
-    LOG_F("EnvironmentJS ++");
+    LOG_V("EnvironmentJS ++");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     if (!fromJs) {
         // no arguments. so internal create.
@@ -155,15 +144,19 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
         return;
     }
 
-    scene_ = { fromJs, fromJs.Arg<0>() };
+    scene_ = fromJs.Arg<0>().valueOrDefault();
     if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        CORE_LOG_F("INVALID SCENE!");
+        LOG_F("INVALID SCENE!");
     }
 
-    NapiApi::Object meJs(e, fromJs.This());
+    NapiApi::Object meJs(fromJs.This());
     auto* tro = scene_.GetObject().Native<TrueRootObject>();
-    auto* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-    sceneJS->StrongDisposeHook((uintptr_t)&scene_, meJs);
+    if (tro) {
+        auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+        if (sceneJS) {
+            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+        }
+    }
 
     IScene::Ptr scene = interface_pointer_cast<IScene>(tro->GetNativeObject());
 
@@ -176,26 +169,22 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
     BASE_NS::string nameS = name;
     if (nameS.empty()) {
         // create "unique" name
-        nameS = BASE_NS::to_string((uint64_t)this);
+        nameS = BASE_NS::to_string(reinterpret_cast<uint64_t>(this));
     }
     IEnvironment::Ptr env = GetNativeMeta<IEnvironment>(meJs);
     // Construct native object (if needed)
 
     if (!env) {
-        ExecSyncTask([&env, scene, nameS]() {
-            BASE_NS::string_view n = nameS; /*nodepath actually*/
-            env = scene->CreateNode<SCENE_NS::IEnvironment>(nameS);
-            return META_NS::IAny::Ptr {};
-        });
+        BASE_NS::string_view n = nameS; /*nodepath actually*/
+        env = scene->CreateObject<SCENE_NS::IEnvironment>(SCENE_NS::ClassId::Environment).GetResult();
     }
 
     // process constructor args
-    // weak ref, due to being owned by the scene.
-    SetNativeObject(interface_pointer_cast<META_NS::IObject>(env), false);
+    SetNativeObject(interface_pointer_cast<META_NS::IObject>(env), true);
     StoreJsObj(interface_pointer_cast<META_NS::IObject>(env), meJs);
     env.reset();
 
-    if (name) {
+    if (name.IsDefined()) {
         // set the name of the object. if we were given one
         meJs.Set("name", name);
     }
@@ -203,8 +192,8 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
 
 EnvironmentJS::~EnvironmentJS()
 {
-    LOG_F("EnvironmentJS --");
-    DisposeNative();
+    LOG_V("EnvironmentJS --");
+    DisposeNative(nullptr);
     if (!GetNativeObject()) {
         return;
     }
@@ -212,138 +201,145 @@ EnvironmentJS::~EnvironmentJS()
 
 napi_value EnvironmentJS::GetBackgroundType(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     uint32_t typeI = 0;
     if (auto env = interface_cast<IEnvironment>(GetNativeObject())) {
-        ExecSyncTask([env, &typeI]() {
-            typeI = env->Background()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        typeI = uint32_t(env->Background()->GetValue());
     }
-    return NapiApi::Value(ctx, (uint32_t)typeI);
+    return ctx.GetNumber(static_cast<uint32_t>(typeI));
 }
 
 void EnvironmentJS::SetBackgroundType(NapiApi::FunctionContext<uint32_t>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
+
     if (auto env = interface_cast<IEnvironment>(GetNativeObject())) {
         uint32_t typeI = ctx.Arg<0>();
         auto typeE = static_cast<EnvironmentBackgroundType>(typeI);
-        IEnvironment::BackgroundType type;
+        EnvBackgroundType type;
         switch (typeE) {
             case EnvironmentBackgroundType::BACKGROUND_NONE:
-                type = IEnvironment::BackgroundType::NONE;
+                type = EnvBackgroundType::NONE;
                 break;
             case EnvironmentBackgroundType::BACKGROUND_IMAGE:
-                type = IEnvironment::BackgroundType::IMAGE;
+                type = EnvBackgroundType::IMAGE;
                 break;
             case EnvironmentBackgroundType::BACKGROUND_CUBEMAP:
-                type = IEnvironment::BackgroundType::CUBEMAP;
+                type = EnvBackgroundType::CUBEMAP;
                 break;
             case EnvironmentBackgroundType::BACKGROUND_EQUIRECTANGULAR:
-                type = IEnvironment::BackgroundType::EQUIRECTANGULAR;
+                type = EnvBackgroundType::EQUIRECTANGULAR;
                 break;
             default:
-                type = IEnvironment::BackgroundType::NONE;
+                type = EnvBackgroundType::NONE;
                 break;
         }
-        ExecSyncTask([env, &type]() {
-            env->Background()->SetValue(type);
-            return META_NS::IAny::Ptr {};
-        });
+        env->Background()->SetValue(type);
     }
 }
 napi_value EnvironmentJS::GetEnvironmentImage(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
-        SCENE_NS::IBitmap::Ptr image;
-        ExecSyncTask([environment, &image]() {
-            image = environment->EnvironmentImage()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        SCENE_NS::IBitmap::Ptr image = environment->EnvironmentImage()->GetValue();
         auto obj = interface_pointer_cast<META_NS::IObject>(image);
 
         if (auto cached = FetchJsObj(obj)) {
-            return cached;
+            return cached.ToNapiValue();
         }
 
-        napi_value args[] = { scene_.GetValue(), NapiApi::Object(ctx) };
-        return CreateFromNativeInstance(ctx, obj, false, BASE_NS::countof(args), args);
+        napi_value args[] = { scene_.GetValue(), NapiApi::Object(ctx.GetEnv()).ToNapiValue() };
+        return CreateFromNativeInstance(ctx.Env(), obj, false, BASE_NS::countof(args), args).ToNapiValue();
     }
     return ctx.GetNull();
 }
 
 void EnvironmentJS::SetEnvironmentImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     NapiApi::Object imageJS = ctx.Arg<0>();
     SCENE_NS::IBitmap::Ptr image;
     if (auto nat = imageJS.Native<TrueRootObject>()) {
         image = interface_pointer_cast<SCENE_NS::IBitmap>(nat->GetNativeObject());
     }
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
-        ExecSyncTask([environment, image]() {
-            environment->EnvironmentImage()->SetValue(image);
-            return META_NS::IAny::Ptr {};
-        });
+        environment->EnvironmentImage()->SetValue(image);
     }
 }
 
 napi_value EnvironmentJS::GetRadianceImage(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
-        SCENE_NS::IBitmap::Ptr image;
-        ExecSyncTask([environment, &image]() {
-            image = environment->RadianceImage()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        SCENE_NS::IBitmap::Ptr image = environment->RadianceImage()->GetValue();
         auto obj = interface_pointer_cast<META_NS::IObject>(image);
 
         if (auto cached = FetchJsObj(obj)) {
-            return cached;
+            return cached.ToNapiValue();
         }
 
-        napi_value args[] = { scene_.GetValue(), NapiApi::Object(ctx) };
-        return CreateFromNativeInstance(ctx, obj, false, BASE_NS::countof(args), args);
+        napi_value args[] = { scene_.GetValue(), NapiApi::Object(ctx.GetEnv()).ToNapiValue() };
+        return CreateFromNativeInstance(ctx.GetEnv(), obj, false, BASE_NS::countof(args), args).ToNapiValue();
     }
     return ctx.GetNull();
 }
 
 void EnvironmentJS::SetRadianceImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
+
     NapiApi::Object imageJS = ctx.Arg<0>();
     SCENE_NS::IBitmap::Ptr image;
     if (auto nat = imageJS.Native<TrueRootObject>()) {
         image = interface_pointer_cast<SCENE_NS::IBitmap>(nat->GetNativeObject());
     }
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
-        ExecSyncTask([environment, image]() {
-            environment->RadianceImage()->SetValue(image);
-            return META_NS::IAny::Ptr {};
-        });
+        environment->RadianceImage()->SetValue(image);
     }
 }
 napi_value EnvironmentJS::GetIrradianceCoefficients(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     BASE_NS::vector<BASE_NS::Math::Vec3> coeffs;
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
-        ExecSyncTask([environment, &coeffs]() {
-            coeffs = environment->IrradianceCoefficients()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        coeffs = environment->IrradianceCoefficients()->GetValue();
     }
-    NapiApi::Array res(ctx, 9); // array size 9
+    NapiApi::Env env(ctx.Env());
+    NapiApi::Array res(env, 9); // 9: parm
     size_t index = 0;
     for (auto& v : coeffs) {
-        NapiApi::Object vec(ctx);
-        vec.Set("x", NapiApi::Value<float>(ctx, v.x));
-        vec.Set("y", NapiApi::Value<float>(ctx, v.y));
-        vec.Set("z", NapiApi::Value<float>(ctx, v.z));
+        NapiApi::Object vec(env);
+        vec.Set("x", NapiApi::Value<float>(env, v.x));
+        vec.Set("y", NapiApi::Value<float>(env, v.y));
+        vec.Set("z", NapiApi::Value<float>(env, v.z));
         res.Set(index++, vec);
     }
     return res;
 }
 void EnvironmentJS::SetIrradianceCoefficients(NapiApi::FunctionContext<NapiApi::Array>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
+
     NapiApi::Array coeffJS = ctx.Arg<0>();
-    if (coeffJS.Count() != 9) { // array size 9
+    if (coeffJS.Count() != 9) { // 9: size
         // not enough elements in array
         return;
     }
@@ -365,84 +361,100 @@ void EnvironmentJS::SetIrradianceCoefficients(NapiApi::FunctionContext<NapiApi::
     }
 
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
-        ExecSyncTask([environment, &coeffs]() {
-            environment->IrradianceCoefficients()->SetValue(coeffs);
-            return META_NS::IAny::Ptr {};
-        });
+        environment->IrradianceCoefficients()->SetValue(coeffs);
     }
 }
 
 napi_value EnvironmentJS::GetIndirectDiffuseFactor(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
     if (!node) {
         return ctx.GetUndefined();
     }
     if (diffuseFactor_ == nullptr) {
-        diffuseFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx, node->IndirectDiffuseFactor());
+        diffuseFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx.Env(), node->IndirectDiffuseFactor());
     }
-    return *diffuseFactor_;
+    return diffuseFactor_->Value();
 }
 
 void EnvironmentJS::SetIndirectDiffuseFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
     if (!node) {
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
     if (diffuseFactor_ == nullptr) {
-        diffuseFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx, node->IndirectDiffuseFactor());
+        diffuseFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx.Env(), node->IndirectDiffuseFactor());
     }
     diffuseFactor_->SetValue(obj);
 }
 
 napi_value EnvironmentJS::GetIndirectSpecularFactor(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
     if (!node) {
         return ctx.GetUndefined();
     }
     if (specularFactor_ == nullptr) {
-        specularFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx, node->IndirectSpecularFactor());
+        specularFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx.Env(), node->IndirectSpecularFactor());
     }
-    return *specularFactor_;
+    return specularFactor_->Value();
 }
 
 void EnvironmentJS::SetIndirectSpecularFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
     if (!node) {
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
     if (specularFactor_ == nullptr) {
-        specularFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx, node->IndirectSpecularFactor());
+        specularFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx.Env(), node->IndirectSpecularFactor());
     }
     specularFactor_->SetValue(obj);
 }
 
 napi_value EnvironmentJS::GetEnvironmentMapFactor(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
     if (!node) {
         return ctx.GetUndefined();
     }
     if (environmentFactor_ == nullptr) {
-        environmentFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx, node->EnvMapFactor());
+        environmentFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx.Env(), node->EnvMapFactor());
     }
-    return *environmentFactor_;
+    return environmentFactor_->Value();
 }
 
 void EnvironmentJS::SetEnvironmentMapFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
     if (!node) {
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
     if (environmentFactor_ == nullptr) {
-        environmentFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx, node->EnvMapFactor());
+        environmentFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx.Env(), node->EnvMapFactor());
     }
     environmentFactor_->SetValue(obj);
 }

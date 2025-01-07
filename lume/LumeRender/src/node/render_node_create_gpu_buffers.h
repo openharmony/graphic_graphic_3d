@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_CREATE_GPU_BUFFERS_H
-#define RENDER_RENDER__NODE__RENDER_NODE_CREATE_GPU_BUFFERS_H
+#ifndef RENDER_NODE_RENDER_NODE_CREATE_GPU_BUFFERS_H
+#define RENDER_NODE_RENDER_NODE_CREATE_GPU_BUFFERS_H
 
 #include <base/containers/string.h>
 #include <base/containers/vector.h>
@@ -46,7 +46,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "7c5b99c1-7b2f-4c9f-af9a-80cbf24efbbf" };
-    static constexpr char const* TYPE_NAME = "RenderNodeCreateGpuBuffers";
+    static constexpr const char* TYPE_NAME = "RenderNodeCreateGpuBuffers";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -74,4 +74,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_RENDER__NODE__RENDER_NODE_CREATE_GPU_BUFFERS_H
+#endif // RENDER_NODE_RENDER_NODE_CREATE_GPU_BUFFERS_H

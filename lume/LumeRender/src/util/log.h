@@ -187,7 +187,7 @@ inline FORMAT_FUNC(5, 6) bool PluginLogAssert(const BASE_NS::string_view filenam
     return expression;
 }
 
-inline void PluginCheckOnceReset(const BASE_NS::string_view id)
+inline void PluginCheckOnceReset(const BASE_NS::string_view /* id */)
 {
     // reset log once flag
     if (CORE_NS::ILogger* logger = GetPluginLogger(); logger) {

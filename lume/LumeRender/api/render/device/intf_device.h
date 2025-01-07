@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -54,7 +54,9 @@ struct SwapchainCreateInfo {
     /** Surface handle */
     uint64_t surfaceHandle { 0 };
     /** Swapchain flags */
-    SwapchainFlags swapchainFlags { SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT };
+    SwapchainFlags swapchainFlags { SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
+                                    SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT |
+                                    SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT };
     /** Needed image usage flags for swapchain color image. Checked against supported */
     ImageUsageFlags imageUsageFlags { ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT };
 
@@ -142,7 +144,7 @@ struct BackendConfig {};
 
 /** @ingroup group_idevice
  * IDevice interface for accessing device.
- * Not internally synchronized and therefore Create And Destroy -menthods
+ * Not internally synchronized and therefore Create And Destroy -methods
  * need to be called from the rendering thread.
  * NOTE: Even though CreateSwapchainHandle returns a reference counted image handle,
  * one needs to explicitly destroy the swapchain with DestroySwapchain(handle)

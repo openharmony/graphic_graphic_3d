@@ -58,6 +58,7 @@ public:
     GraphicsContext& operator=(const GraphicsContext&) = delete;
 
     void Init() override;
+    void Init(const CreateInfo& createInfo) override;
 
     RENDER_NS::IRenderContext& GetRenderContext() const override;
 
@@ -71,6 +72,8 @@ public:
     IGltf2& GetGltf() const override;
 
     IRenderUtil& GetRenderUtil() const override;
+
+    BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const override;
 
     // IInterface
     const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
@@ -98,6 +101,7 @@ private:
     BASE_NS::vector<BASE_NS::pair<CORE_NS::PluginToken, const I3DPlugin*>> plugins_;
     BASE_NS::vector<const CORE_NS::InterfaceTypeInfo*> interfaceTypeInfos_;
 
+    CreateInfo createInfo_;
     BASE_NS::unique_ptr<SceneUtil> sceneUtil_;
     BASE_NS::unique_ptr<MeshUtil> meshUtil_;
     BASE_NS::unique_ptr<Gltf2> gltf2_;

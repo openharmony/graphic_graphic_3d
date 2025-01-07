@@ -26,7 +26,7 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 // clang-format off
-CORE_JSON_SERIALIZE_ENUM(PrimitiveTopology,
+RENDER_JSON_SERIALIZE_ENUM(PrimitiveTopology,
     {
         { CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, nullptr }, // default
         { CORE_PRIMITIVE_TOPOLOGY_POINT_LIST, "point_list" },
@@ -42,14 +42,14 @@ CORE_JSON_SERIALIZE_ENUM(PrimitiveTopology,
         { CORE_PRIMITIVE_TOPOLOGY_PATCH_LIST, "patch_list" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(PolygonMode,
+RENDER_JSON_SERIALIZE_ENUM(PolygonMode,
     {
         { CORE_POLYGON_MODE_FILL, "fill" },
         { CORE_POLYGON_MODE_LINE, "line" },
         { CORE_POLYGON_MODE_POINT, "point" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(CullModeFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(CullModeFlagBits,
     {
         { (CullModeFlagBits)0, nullptr },
         { CORE_CULL_MODE_NONE, "none" },
@@ -58,13 +58,13 @@ CORE_JSON_SERIALIZE_ENUM(CullModeFlagBits,
         { CORE_CULL_MODE_FRONT_AND_BACK, "front_and_back" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(FrontFace,
+RENDER_JSON_SERIALIZE_ENUM(FrontFace,
     {
         { CORE_FRONT_FACE_COUNTER_CLOCKWISE, "counter_clockwise" },
         { CORE_FRONT_FACE_CLOCKWISE, "clockwise" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(CompareOp,
+RENDER_JSON_SERIALIZE_ENUM(CompareOp,
     {
         { CORE_COMPARE_OP_NEVER, "never" },
         { CORE_COMPARE_OP_LESS, "less" },
@@ -76,7 +76,7 @@ CORE_JSON_SERIALIZE_ENUM(CompareOp,
         { CORE_COMPARE_OP_ALWAYS, "always" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(StencilOp,
+RENDER_JSON_SERIALIZE_ENUM(StencilOp,
     {
         { CORE_STENCIL_OP_KEEP, "keep" },
         { CORE_STENCIL_OP_ZERO, "zero" },
@@ -88,7 +88,7 @@ CORE_JSON_SERIALIZE_ENUM(StencilOp,
         { CORE_STENCIL_OP_DECREMENT_AND_WRAP, "decrement_and_wrap" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(BlendFactor,
+RENDER_JSON_SERIALIZE_ENUM(BlendFactor,
     {
         { CORE_BLEND_FACTOR_ZERO, "zero" },
         { CORE_BLEND_FACTOR_ONE, "one" },
@@ -111,7 +111,7 @@ CORE_JSON_SERIALIZE_ENUM(BlendFactor,
         { CORE_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA, "one_minus_src1_alpha" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(BlendOp,
+RENDER_JSON_SERIALIZE_ENUM(BlendOp,
     {
         { CORE_BLEND_OP_ADD, "add" },
         { CORE_BLEND_OP_SUBTRACT, "subtract" },
@@ -120,7 +120,7 @@ CORE_JSON_SERIALIZE_ENUM(BlendOp,
         { CORE_BLEND_OP_MAX, "max" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(ColorComponentFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(ColorComponentFlagBits,
     {
         { (ColorComponentFlagBits)0, nullptr },
         { CORE_COLOR_COMPONENT_R_BIT, "r_bit" },
@@ -129,7 +129,7 @@ CORE_JSON_SERIALIZE_ENUM(ColorComponentFlagBits,
         { CORE_COLOR_COMPONENT_A_BIT, "a_bit" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(GraphicsStateFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(GraphicsStateFlagBits,
     {
         { (GraphicsStateFlagBits)0, nullptr },
         { CORE_GRAPHICS_STATE_INPUT_ASSEMBLY_BIT, "input_assembly_bit" },
@@ -138,7 +138,7 @@ CORE_JSON_SERIALIZE_ENUM(GraphicsStateFlagBits,
         { CORE_GRAPHICS_STATE_COLOR_BLEND_STATE_BIT, "color_blend_state_bit" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(LogicOp,
+RENDER_JSON_SERIALIZE_ENUM(LogicOp,
     {
         { CORE_LOGIC_OP_CLEAR, "clear" },
         { CORE_LOGIC_OP_AND, "and" },
@@ -330,25 +330,27 @@ ShaderStateResult LoadStates(const json::value& jsonData)
         const auto& allStates = iter->array_;
         ssr.states.states.reserve(allStates.size());
         for (auto const& state : allStates) {
-            ShaderStateLoaderVariantData variant;
+            IShaderManager::ShaderStateLoaderVariantData variant;
             SafeGetJsonValue(state, "variantName", ssr.res.error, variant.variantName);
             if (variant.variantName.empty()) {
                 ssr.res.error += "graphics state variant name needs to be given\n";
             }
-            if (ssr.res.error.empty()) {
-                if (const json::value* graphicsStateIt = state.find("state"); graphicsStateIt) {
-                    ParseSingleState(*graphicsStateIt, ssr);
-                    if (ssr.res.error.empty()) {
-                        SafeGetJsonValue(state, "baseShaderState", ssr.res.error, variant.baseShaderState);
-                        SafeGetJsonValue(state, "baseVariantName", ssr.res.error, variant.baseVariantName);
-                        SafeGetJsonValue(state, "slot", ssr.res.error, variant.renderSlot);
-                        SafeGetJsonValue(state, "renderSlot", ssr.res.error, variant.renderSlot);
-                        SafeGetJsonValue(
-                            state, "renderSlotDefaultShaderState", ssr.res.error, variant.renderSlotDefaultState);
-                        SafeGetJsonBitfield<GraphicsStateFlagBits>(
-                            state, "stateFlags", ssr.res.error, variant.stateFlags);
-                        ssr.states.variantData.push_back(move(variant));
-                    }
+            // if we get any errors, we break and don't write anymore variants
+            if (!ssr.res.error.empty()) {
+                break;
+            }
+
+            if (const json::value* graphicsStateIt = state.find("state"); graphicsStateIt) {
+                ParseSingleState(*graphicsStateIt, ssr);
+                if (ssr.res.error.empty()) {
+                    SafeGetJsonValue(state, "baseShaderState", ssr.res.error, variant.baseShaderState);
+                    SafeGetJsonValue(state, "baseVariantName", ssr.res.error, variant.baseVariantName);
+                    SafeGetJsonValue(state, "slot", ssr.res.error, variant.renderSlot);
+                    SafeGetJsonValue(state, "renderSlot", ssr.res.error, variant.renderSlot);
+                    SafeGetJsonValue(
+                        state, "renderSlotDefaultShaderState", ssr.res.error, variant.renderSlotDefaultState);
+                    SafeGetJsonBitfield<GraphicsStateFlagBits>(state, "stateFlags", ssr.res.error, variant.stateFlags);
+                    ssr.states.variantData.push_back(move(variant));
                 }
             }
         }

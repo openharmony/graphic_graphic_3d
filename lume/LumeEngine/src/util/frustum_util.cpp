@@ -15,8 +15,6 @@
 
 #include "frustum_util.h"
 
-#include <cstdint>
-
 #include <base/containers/string_view.h>
 #include <base/math/matrix.h>
 #include <base/math/vector.h>
@@ -36,39 +34,39 @@ Frustum FrustumUtil::CreateFrustum(const Mat4X4& matrix) const
     Frustum frustum;
 
     auto& planes = frustum.planes;
-    planes[Frustum::PLANE_LEFT].x = matrix[0].w + matrix[0].x;
-    planes[Frustum::PLANE_LEFT].y = matrix[1].w + matrix[1].x;
-    planes[Frustum::PLANE_LEFT].z = matrix[2].w + matrix[2].x;
-    planes[Frustum::PLANE_LEFT].w = matrix[3].w + matrix[3].x;
+    planes[Frustum::PLANE_LEFT].x = matrix[0U].w + matrix[0U].x;
+    planes[Frustum::PLANE_LEFT].y = matrix[1U].w + matrix[1U].x;
+    planes[Frustum::PLANE_LEFT].z = matrix[2U].w + matrix[2U].x;
+    planes[Frustum::PLANE_LEFT].w = matrix[3U].w + matrix[3U].x;
 
-    planes[Frustum::PLANE_RIGHT].x = matrix[0].w - matrix[0].x;
-    planes[Frustum::PLANE_RIGHT].y = matrix[1].w - matrix[1].x;
-    planes[Frustum::PLANE_RIGHT].z = matrix[2].w - matrix[2].x;
-    planes[Frustum::PLANE_RIGHT].w = matrix[3].w - matrix[3].x;
+    planes[Frustum::PLANE_RIGHT].x = matrix[0U].w - matrix[0U].x;
+    planes[Frustum::PLANE_RIGHT].y = matrix[1U].w - matrix[1U].x;
+    planes[Frustum::PLANE_RIGHT].z = matrix[2U].w - matrix[2U].x;
+    planes[Frustum::PLANE_RIGHT].w = matrix[3U].w - matrix[3U].x;
 
-    planes[Frustum::PLANE_BOTTOM].x = matrix[0].w - matrix[0].y;
-    planes[Frustum::PLANE_BOTTOM].y = matrix[1].w - matrix[1].y;
-    planes[Frustum::PLANE_BOTTOM].z = matrix[2].w - matrix[2].y;
-    planes[Frustum::PLANE_BOTTOM].w = matrix[3].w - matrix[3].y;
+    planes[Frustum::PLANE_BOTTOM].x = matrix[0U].w - matrix[0U].y;
+    planes[Frustum::PLANE_BOTTOM].y = matrix[1U].w - matrix[1U].y;
+    planes[Frustum::PLANE_BOTTOM].z = matrix[2U].w - matrix[2U].y;
+    planes[Frustum::PLANE_BOTTOM].w = matrix[3U].w - matrix[3U].y;
 
-    planes[Frustum::PLANE_TOP].x = matrix[0].w + matrix[0].y;
-    planes[Frustum::PLANE_TOP].y = matrix[1].w + matrix[1].y;
-    planes[Frustum::PLANE_TOP].z = matrix[2].w + matrix[2].y;
-    planes[Frustum::PLANE_TOP].w = matrix[3].w + matrix[3].y;
+    planes[Frustum::PLANE_TOP].x = matrix[0U].w + matrix[0U].y;
+    planes[Frustum::PLANE_TOP].y = matrix[1U].w + matrix[1U].y;
+    planes[Frustum::PLANE_TOP].z = matrix[2U].w + matrix[2U].y;
+    planes[Frustum::PLANE_TOP].w = matrix[3U].w + matrix[3U].y;
 
-    planes[Frustum::PLANE_NEAR].x = matrix[0].w + matrix[0].z;
-    planes[Frustum::PLANE_NEAR].y = matrix[1].w + matrix[1].z;
-    planes[Frustum::PLANE_NEAR].z = matrix[2].w + matrix[2].z;
-    planes[Frustum::PLANE_NEAR].w = matrix[3].w + matrix[3].z;
+    planes[Frustum::PLANE_NEAR].x = matrix[0U].w + matrix[0U].z;
+    planes[Frustum::PLANE_NEAR].y = matrix[1U].w + matrix[1U].z;
+    planes[Frustum::PLANE_NEAR].z = matrix[2U].w + matrix[2U].z;
+    planes[Frustum::PLANE_NEAR].w = matrix[3U].w + matrix[3U].z;
 
-    planes[Frustum::PLANE_FAR].x = matrix[0].w - matrix[0].z;
-    planes[Frustum::PLANE_FAR].y = matrix[1].w - matrix[1].z;
-    planes[Frustum::PLANE_FAR].z = matrix[2].w - matrix[2].z;
-    planes[Frustum::PLANE_FAR].w = matrix[3].w - matrix[3].z;
+    planes[Frustum::PLANE_FAR].x = matrix[0U].w - matrix[0U].z;
+    planes[Frustum::PLANE_FAR].y = matrix[1U].w - matrix[1U].z;
+    planes[Frustum::PLANE_FAR].z = matrix[2U].w - matrix[2U].z;
+    planes[Frustum::PLANE_FAR].w = matrix[3U].w - matrix[3U].z;
 
-    for (uint32_t idx = 0; idx < Frustum::PLANE_COUNT; ++idx) {
-        const float rcpLength = 1.0f / Magnitude(Vec3(planes[idx]));
-        planes[idx] *= rcpLength;
+    for (auto& plane : planes) {
+        const float rcpLength = 1.0f / Magnitude(Vec3(plane));
+        plane *= rcpLength;
     }
     return frustum;
 }

@@ -19,7 +19,6 @@
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
-#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
 #include <core/io/intf_directory.h>
@@ -40,26 +39,27 @@ IDirectory::Entry MemoryFilesystem::GetEntry(const string_view path)
     }
     return {};
 }
-IFile::Ptr MemoryFilesystem::OpenFile(const string_view path)
+
+IFile::Ptr MemoryFilesystem::OpenFile(const string_view path, const IFile::Mode mode)
 {
     if (auto const pos = memoryFiles_.find(path); pos != memoryFiles_.end()) {
         auto storage = pos->second.lock();
         if (storage) {
-            return IFile::Ptr { new MemoryFile(BASE_NS::move(storage)) };
+            return IFile::Ptr { new MemoryFile(BASE_NS::move(storage), mode) };
         }
     }
-    return IFile::Ptr();
+    return {};
 }
 
 IFile::Ptr MemoryFilesystem::CreateFile(const string_view path)
 {
     if (auto const pos = memoryFiles_.find(path); pos != memoryFiles_.end()) {
-        return IFile::Ptr { new MemoryFile(pos->second.lock()) };
+        return IFile::Ptr { new MemoryFile(pos->second.lock(), IFile::Mode::READ_WRITE) };
     }
     auto storage = std::make_shared<MemoryFileStorage>();
     memoryFiles_[path] = storage;
 
-    return IFile::Ptr { new MemoryFile(BASE_NS::move(storage)) };
+    return IFile::Ptr { new MemoryFile(BASE_NS::move(storage), IFile::Mode::READ_WRITE) };
 }
 
 bool MemoryFilesystem::DeleteFile(const string_view path)
@@ -67,17 +67,27 @@ bool MemoryFilesystem::DeleteFile(const string_view path)
     return memoryFiles_.erase(path) != 0u;
 }
 
+bool MemoryFilesystem::FileExists(const string_view path) const
+{
+    return memoryFiles_.contains(path);
+}
+
 IDirectory::Ptr MemoryFilesystem::OpenDirectory(const string_view /* path */)
 {
-    return IDirectory::Ptr();
+    return {};
 }
 
 IDirectory::Ptr MemoryFilesystem::CreateDirectory(const string_view /* path */)
 {
-    return IDirectory::Ptr();
+    return {};
 }
 
 bool MemoryFilesystem::DeleteDirectory(const string_view /* path */)
+{
+    return false;
+}
+
+bool MemoryFilesystem::DirectoryExists(const string_view /* path */) const
 {
     return false;
 }

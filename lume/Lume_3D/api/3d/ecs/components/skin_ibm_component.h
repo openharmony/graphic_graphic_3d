@@ -29,7 +29,7 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(ISkinIbmComponentManager, SkinIbmComponent)
 
-    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::Math::Mat4X4>, matrices, "Inverse Bind Matrices", 0, )
+    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::Math::Mat4X4>, matrices, "Inverse Bind Matrices", 0,)
 
 END_COMPONENT(ISkinIbmComponentManager, SkinIbmComponent, "f62fc6d6-de51-42f6-86fd-bed8ce5f3d03")
 #if !defined(IMPLEMENT_MANAGER)

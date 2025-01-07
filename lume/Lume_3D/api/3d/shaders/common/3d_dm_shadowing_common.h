@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DM_SHADOWING_COMMON_H
-#define SHADERS__COMMON__3D_DM_SHADOWING_COMMON_H
+#ifndef SHADERS_COMMON_3D_DM_SHADOWING_COMMON_H
+#define SHADERS_COMMON_3D_DM_SHADOWING_COMMON_H
 
 #include "render/shaders/common/render_compatibility_common.h"
 
@@ -270,4 +270,4 @@ float CalcVsmShadowSimpleSample(
     return light;
 }
 
-#endif // SHADERS__COMMON__3D_DM_SHADOWING_COMMON_H
+#endif // SHADERS_COMMON_3D_DM_SHADOWING_COMMON_H

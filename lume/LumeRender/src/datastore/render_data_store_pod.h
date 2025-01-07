@@ -16,10 +16,12 @@
 #ifndef RENDER_DATA_STORE_RENDER_DATA_STORE_POD_H
 #define RENDER_DATA_STORE_RENDER_DATA_STORE_POD_H
 
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 
 #include <base/containers/array_view.h>
+#include <base/containers/refcnt_ptr.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
@@ -35,35 +37,19 @@ RenderDataStorePod implementation.
 */
 class RenderDataStorePod final : public IRenderDataStorePod {
 public:
-    explicit RenderDataStorePod(const BASE_NS::string_view name);
+    explicit RenderDataStorePod(BASE_NS::string_view name);
     ~RenderDataStorePod() override = default;
 
-    void CommitFrameData() override {};
-    void PreRender() override {};
-    void PostRender() override {};
-    void PreRenderBackend() override {};
-    void PostRenderBackend() override {};
-    void Clear() override {};
+    // IRenderDataStore
+    void PreRender() override {}
+    void PostRender() override {}
+    void PreRenderBackend() override {}
+    void PostRenderBackend() override {}
+    void Clear() override {}
     uint32_t GetFlags() const override
     {
         return 0;
-    };
-
-    void CreatePod(const BASE_NS::string_view typeName, const BASE_NS::string_view name,
-        const BASE_NS::array_view<const uint8_t> data) override;
-    void DestroyPod(const BASE_NS::string_view typeName, const BASE_NS::string_view name) override;
-
-    void Set(const BASE_NS::string_view name, const BASE_NS::array_view<const uint8_t> data) override;
-    BASE_NS::array_view<const uint8_t> Get(const BASE_NS::string_view name) const override;
-
-    BASE_NS::array_view<const BASE_NS::string> GetPodNames(const BASE_NS::string_view typeName) const override;
-
-    // for plugin / factory interface
-    static constexpr const char* const TYPE_NAME = "RenderDataStorePod";
-
-    static IRenderDataStore* Create(IRenderContext& renderContext, char const* name);
-    static void Destroy(IRenderDataStore* instance);
-
+    }
     BASE_NS::string_view GetTypeName() const override
     {
         return TYPE_NAME;
@@ -78,6 +64,25 @@ public:
     {
         return UID;
     }
+
+    void Ref() override;
+    void Unref() override;
+    int32_t GetRefCount() override;
+
+    // IRenderDataStorePod
+    void CreatePod(
+        BASE_NS::string_view typeName, BASE_NS::string_view name, BASE_NS::array_view<const uint8_t> data) override;
+    void DestroyPod(BASE_NS::string_view typeName, BASE_NS::string_view name) override;
+
+    void Set(BASE_NS::string_view name, BASE_NS::array_view<const uint8_t> data) override;
+    BASE_NS::array_view<const uint8_t> Get(BASE_NS::string_view name) const override;
+
+    BASE_NS::array_view<const BASE_NS::string> GetPodNames(BASE_NS::string_view typeName) const override;
+
+    // for plugin / factory interface
+    static constexpr const char* const TYPE_NAME = "RenderDataStorePod";
+
+    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(IRenderContext& renderContext, const char* name);
 
 private:
     const BASE_NS::string name_;
@@ -94,6 +99,8 @@ private:
     BASE_NS::unordered_map<BASE_NS::string, BASE_NS::vector<BASE_NS::string>> typeNameToPodNames_;
 
     mutable std::mutex mutex_;
+
+    std::atomic_int32_t refcnt_ { 0 };
 };
 RENDER_END_NAMESPACE()
 

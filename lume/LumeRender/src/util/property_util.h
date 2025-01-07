@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef UTIL__PROPERTY_UTIL_H
-#define UTIL__PROPERTY_UTIL_H
+#ifndef RENDER_UTIL_PROPERTY_UTIL_H
+#define RENDER_UTIL_PROPERTY_UTIL_H
 
 #include <base/containers/string.h>
 #include <base/containers/vector.h>
@@ -45,9 +45,9 @@ public:
     ~CustomPropertyPodContainer() override = default;
 
     CustomPropertyPodContainer(const CustomPropertyPodContainer& other) = delete;
-    CustomPropertyPodContainer(CustomPropertyPodContainer&& other) noexcept;
+    CustomPropertyPodContainer(CustomPropertyPodContainer&& other) noexcept = delete;
     CustomPropertyPodContainer& operator=(const CustomPropertyPodContainer& other) = delete;
-    CustomPropertyPodContainer& operator=(CustomPropertyPodContainer&& other) noexcept;
+    CustomPropertyPodContainer& operator=(CustomPropertyPodContainer&& other) noexcept = delete;
 
     // IPropertyHandle
     const CORE_NS::IPropertyApi* Owner() const override;
@@ -71,14 +71,13 @@ public:
     // Reserve before adding any properties
     void ReservePropertyCount(size_t propertyCount);
 
-    void AddOffsetProperty(const BASE_NS::string_view propertyName, const BASE_NS::string_view displayName,
-        const uintptr_t offset, const CORE_NS::PropertyTypeDecl& typeDecl);
-    void AddOffsetProperty(const BASE_NS::string_view propertyName, const BASE_NS::string_view displayName,
-        const uintptr_t offset, const CORE_NS::PropertyTypeDecl& typeDecl,
-        const BASE_NS::array_view<const uint8_t> data);
-    bool SetValue(const BASE_NS::string_view propertyName, const BASE_NS::array_view<uint8_t> data);
-    bool SetValue(const size_t byteOffset, const BASE_NS::array_view<uint8_t> data);
-    BASE_NS::array_view<const uint8_t> GetValue(const BASE_NS::string_view name) const;
+    void AddOffsetProperty(BASE_NS::string_view propertyName, BASE_NS::string_view displayName, uintptr_t offset,
+        const CORE_NS::PropertyTypeDecl& typeDecl);
+    void AddOffsetProperty(BASE_NS::string_view propertyName, BASE_NS::string_view displayName, uintptr_t offset,
+        const CORE_NS::PropertyTypeDecl& typeDecl, BASE_NS::array_view<const uint8_t> data);
+    bool SetValue(BASE_NS::string_view propertyName, BASE_NS::array_view<uint8_t> data);
+    bool SetValue(size_t byteOffset, BASE_NS::array_view<uint8_t> data);
+    BASE_NS::array_view<const uint8_t> GetValue(BASE_NS::string_view name) const;
     // byte size of the data container
     size_t GetByteSize() const;
     BASE_NS::array_view<const uint8_t> GetData() const;
@@ -115,10 +114,10 @@ public:
     CustomPropertyPodHelper() = default;
     ~CustomPropertyPodHelper() = default;
 
-    static CORE_NS::PropertyTypeDecl GetPropertyTypeDeclaration(const BASE_NS::string_view type);
+    static CORE_NS::PropertyTypeDecl GetPropertyTypeDeclaration(BASE_NS::string_view type);
     static size_t GetPropertyTypeAlignment(const CORE_NS::PropertyTypeDecl& propertyType);
     static void SetCustomPropertyBlobValue(const CORE_NS::PropertyTypeDecl& propertyType,
-        const CORE_NS::json::value* value, CustomPropertyPodContainer& customProperties, const size_t offset);
+        const CORE_NS::json::value* value, CustomPropertyPodContainer& customProperties, size_t offset);
 };
 
 /*
@@ -143,9 +142,9 @@ public:
     ~CustomPropertyBindingContainer() override;
 
     CustomPropertyBindingContainer(const CustomPropertyBindingContainer& other) = delete;
-    CustomPropertyBindingContainer(CustomPropertyBindingContainer&& other) noexcept;
+    CustomPropertyBindingContainer(CustomPropertyBindingContainer&& other) noexcept = delete;
     CustomPropertyBindingContainer& operator=(const CustomPropertyBindingContainer& other) = delete;
-    CustomPropertyBindingContainer& operator=(CustomPropertyBindingContainer&& other) noexcept;
+    CustomPropertyBindingContainer& operator=(CustomPropertyBindingContainer&& other) noexcept = delete;
 
     // IPropertyHandle
     const CORE_NS::IPropertyApi* Owner() const override;
@@ -167,8 +166,8 @@ public:
     // Reserve before adding any properties
     void ReservePropertyCount(size_t propertyCount);
 
-    void AddOffsetProperty(const BASE_NS::string_view propertyName, const BASE_NS::string_view displayName,
-        const uintptr_t offset, const CORE_NS::PropertyTypeDecl& typeDecl);
+    void AddOffsetProperty(BASE_NS::string_view propertyName, BASE_NS::string_view displayName, uintptr_t offset,
+        const CORE_NS::PropertyTypeDecl& typeDecl);
     // byte size of the data container
     size_t GetByteSize() const;
 
@@ -219,9 +218,9 @@ public:
     CustomPropertyBindingHelper() = default;
     ~CustomPropertyBindingHelper() = default;
 
-    static CORE_NS::PropertyTypeDecl GetPropertyTypeDeclaration(const BASE_NS::string_view type);
+    static CORE_NS::PropertyTypeDecl GetPropertyTypeDeclaration(BASE_NS::string_view type);
     static size_t GetPropertyTypeAlignment(const CORE_NS::PropertyTypeDecl& propertyType);
 };
 RENDER_END_NAMESPACE()
 
-#endif // UTIL__PROPERTY_UTIL_H
+#endif // RENDER_UTIL_PROPERTY_UTIL_H

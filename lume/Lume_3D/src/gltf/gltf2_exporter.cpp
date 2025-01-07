@@ -188,16 +188,16 @@ namespace GLTF2 {
 ExportResult::~ExportResult() = default;
 
 namespace {
-constexpr auto const DEFAULT_BASECOLOR_FACTOR = Math::Vec4(1.f, 1.f, 1.f, 1.f);
-constexpr auto const DEFAULT_DIFFUSE_FACTOR = Math::Vec4(1.f, 1.f, 1.f, 1.f);
-constexpr auto const DEFAULT_SPECULAR_FACTOR = Math::Vec3(1.f, 1.f, 1.f);
-constexpr auto const DEFAULT_EMISSIVE_FACTOR = Math::Vec3(0.f, 0.f, 0.f);
+constexpr const auto DEFAULT_BASECOLOR_FACTOR = Math::Vec4(1.f, 1.f, 1.f, 1.f);
+constexpr const auto DEFAULT_DIFFUSE_FACTOR = Math::Vec4(1.f, 1.f, 1.f, 1.f);
+constexpr const auto DEFAULT_SPECULAR_FACTOR = Math::Vec3(1.f, 1.f, 1.f);
+constexpr const auto DEFAULT_EMISSIVE_FACTOR = Math::Vec3(0.f, 0.f, 0.f);
 
-constexpr auto const DEFAULT_TRANSLATION = Math::Vec3(0.f, 0.f, 0.f);
-constexpr auto const DEFAULT_SCALE = Math::Vec3(1.f, 1.f, 1.f);
-constexpr auto const DEFAULT_ROTATION = Math::Quat(0.f, 0.f, 0.f, 1.f);
+constexpr const auto DEFAULT_TRANSLATION = Math::Vec3(0.f, 0.f, 0.f);
+constexpr const auto DEFAULT_SCALE = Math::Vec3(1.f, 1.f, 1.f);
+constexpr const auto DEFAULT_ROTATION = Math::Quat(0.f, 0.f, 0.f, 1.f);
 
-constexpr auto const IDENTITY_MATRIX =
+constexpr const auto IDENTITY_MATRIX =
     Math::Mat4X4(1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f);
 
 /* Entity which have skin, camera, and/or light attached are stored here for further procesing. */
@@ -222,8 +222,8 @@ inline bool operator<(const RenderHandleReference& lhs, const RenderHandleRefere
 template<typename T>
 int FindObjectIndex(vector<unique_ptr<T>> const& array, T const& object)
 {
-    auto const comparePointers = [ptr = &object](auto const& aUniqueObject) { return aUniqueObject.get() == ptr; };
-    if (auto const pos = std::find_if(array.begin(), array.end(), comparePointers); pos != array.end()) {
+    const auto comparePointers = [ptr = &object](const auto& aUniqueObject) { return aUniqueObject.get() == ptr; };
+    if (const auto pos = std::find_if(array.begin(), array.end(), comparePointers); pos != array.end()) {
         return static_cast<int>(std::distance(array.begin(), pos));
     }
 
@@ -234,7 +234,7 @@ int FindObjectIndex(vector<unique_ptr<T>> const& array, T const& object)
 template<typename T>
 uint32_t FindHandleIndex(vector<T> const& handles, T handle)
 {
-    if (auto const handlePos = std::find(handles.begin(), handles.end(), handle); handlePos != handles.end()) {
+    if (const auto handlePos = std::find(handles.begin(), handles.end(), handle); handlePos != handles.end()) {
         return static_cast<uint32_t>(std::distance(handles.begin(), handlePos));
     }
     return ~0u;
@@ -244,7 +244,7 @@ uint32_t FindHandleIndex(vector<T> const& handles, T handle)
 template<typename T>
 uint32_t FindOrAddIndex(vector<T>& handles, const T& handle)
 {
-    if (auto const handlePos =
+    if (const auto handlePos =
             std::find_if(handles.begin(), handles.end(), [handle](const auto& rhs) { return handle == rhs; });
         handlePos != handles.end()) {
         return static_cast<uint32_t>(std::distance(handles.begin(), handlePos));
@@ -266,18 +266,18 @@ public:
      * written to the buffer. */
     BufferView* StoreBufferView(const BufferView& bufferView, uint32_t dataAlignment)
     {
-        auto const bufferViewHash = BASE_NS::Hash(
+        const auto bufferViewHash = BASE_NS::Hash(
             bufferView.buffer, bufferView.byteLength, bufferView.byteOffset, bufferView.byteStride, bufferView.target);
-        auto const bufferViewIndex = FindOrAddIndex(bufferViewHashes_, bufferViewHash);
+        const auto bufferViewIndex = FindOrAddIndex(bufferViewHashes_, bufferViewHash);
         if ((bufferViewIndex + 1) > usedBufferViews_.size()) {
             usedBufferViews_.resize(bufferViewIndex + 1);
             usedBufferViews_[bufferViewIndex] = make_unique<BufferView>(bufferView);
             usedBufferViews_[bufferViewIndex]->buffer = &buffer_;
             if (dataAlignment) {
-                auto const pad = buffer_.data.size() % dataAlignment;
-                buffer_.data.insert(buffer_.data.end(), pad, 0);
+                const auto pad = buffer_.data.size() % dataAlignment;
+                buffer_.data.append(pad, 0);
                 usedBufferViews_[bufferViewIndex]->byteOffset = buffer_.data.size();
-                buffer_.data.insert(buffer_.data.end(), bufferView.data, bufferView.data + bufferView.byteLength);
+                buffer_.data.append(bufferView.data, bufferView.data + bufferView.byteLength);
             }
         }
         return usedBufferViews_[bufferViewIndex].get();
@@ -290,12 +290,12 @@ public:
         if (accessor.bufferView) {
             bufferView = StoreBufferView(*accessor.bufferView, GetComponentByteSize(accessor.componentType));
         }
-        auto const accessorHash = BASE_NS::Hash(bufferView, accessor.componentType, accessor.count, accessor.type,
+        const auto accessorHash = BASE_NS::Hash(bufferView, accessor.componentType, accessor.count, accessor.type,
             accessor.byteOffset, accessor.normalized, accessor.sparse.count, accessor.sparse.indices.bufferView,
             accessor.sparse.indices.byteOffset, accessor.sparse.indices.componentType,
             accessor.sparse.values.bufferView, accessor.sparse.values.byteOffset);
 
-        auto const accessorIndex = FindOrAddIndex(accessorHashes_, accessorHash);
+        const auto accessorIndex = FindOrAddIndex(accessorHashes_, accessorHash);
         if ((accessorIndex + 1) > usedAccessors_.size()) {
             usedAccessors_.resize(accessorIndex + 1);
             usedAccessors_[accessorIndex] = make_unique<Accessor>(accessor);
@@ -338,8 +338,8 @@ public:
     // Helper which returns the index of the "texture", i.e. sampler and image index pair.
     auto GetTextureIndex(uint32_t samplerIndex, uint32_t imageIndex)
     {
-        auto const textureHash = BASE_NS::Hash(samplerIndex, imageIndex);
-        auto const textureIndex = FindOrAddIndex(textureHashes_, textureHash);
+        const auto textureHash = BASE_NS::Hash(samplerIndex, imageIndex);
+        const auto textureIndex = FindOrAddIndex(textureHashes_, textureHash);
         if ((textureIndex + 1) >= usedTextures_.size()) {
             usedTextures_.resize(textureIndex + 1);
             usedTextures_[textureIndex] = { samplerIndex, imageIndex };
@@ -369,7 +369,7 @@ public:
         samplerArray.reserve(usedSamplers_.size());
         for (const auto& gpuSamplerHandle : usedSamplers_) {
             auto& exportSampler = samplerArray.emplace_back(make_unique<Sampler>());
-            auto const& samplerDesc =
+            const auto& samplerDesc =
                 gpuResourceManager.GetSamplerDescriptor(gpuResourceManager.Get(gpuSamplerHandle.GetHandle()));
             exportSampler->magFilter = GetFilterMode(samplerDesc.magFilter);
             exportSampler->minFilter = GetFilterMode(samplerDesc.minFilter, samplerDesc.mipMapMode);
@@ -389,7 +389,7 @@ public:
         for (const auto& gpuImageHandle : usedImages_) {
             auto& exportImage = imageArray.emplace_back(make_unique<Image>());
             // sorted for find performance
-            if (auto const pos = std::lower_bound(resourceEnties.begin(), resourceEnties.end(), gpuImageHandle,
+            if (const auto pos = std::lower_bound(resourceEnties.begin(), resourceEnties.end(), gpuImageHandle,
                     [](ResourceEntity const& info, const RenderHandleReference& gpuImageHandle) {
                         return info.handle < gpuImageHandle;
                     });
@@ -408,7 +408,7 @@ public:
     {
         vector<unique_ptr<Texture>> textureArray;
         textureArray.reserve(usedTextures_.size());
-        for (auto const& samplerImage : usedTextures_) {
+        for (const auto& samplerImage : usedTextures_) {
             auto& exportTexture = textureArray.emplace_back(make_unique<Texture>());
             if (samplerImage.first < samplers.size()) {
                 exportTexture->sampler = samplers[samplerImage.first].get();
@@ -432,7 +432,7 @@ private:
 std::pair<Data*, size_t> ResolveGltfAndResourceIndex(
     string_view uri, IFileManager& fileManager, unordered_map<string, IGLTFData::Ptr>& originalGltfs)
 {
-    auto const resolveGltfAndResourceIndex =
+    const auto resolveGltfAndResourceIndex =
         [](string_view originalUri, string_view extension, IFileManager& fileManager,
             unordered_map<string, IGLTFData::Ptr>& originalGltfs) -> std::pair<Data*, size_t> {
         const auto gltfPos = originalUri.find(extension);
@@ -444,7 +444,7 @@ std::pair<Data*, size_t> ResolveGltfAndResourceIndex(
         uri.remove_suffix(uri.size() - gltfPos - extension.size());
 
         size_t resourceIndex = GLTF_INVALID_INDEX;
-        if (auto const result = std::from_chars(
+        if (const auto result = std::from_chars(
                 resourceIndexString.data(), resourceIndexString.data() + resourceIndexString.size(), resourceIndex);
             result.ec != std::errc()) {
             return { nullptr, GLTF_INVALID_INDEX };
@@ -479,13 +479,13 @@ std::pair<Data*, size_t> ResolveGltfAndResourceIndex(
 void ExportGltfCameras(const IEcs& ecs, const Entities& entities, ExportResult& result)
 {
     if (!entities.withCamera.empty() && entities.withCamera.size() == result.data->cameras.size()) {
-        if (auto const cameraManager = GetManager<ICameraComponentManager>(ecs); cameraManager) {
+        if (const auto cameraManager = GetManager<ICameraComponentManager>(ecs); cameraManager) {
             auto cameraIterator = result.data->cameras.begin();
 
-            for (auto const cameraEntity : entities.withCamera) {
+            for (const auto cameraEntity : entities.withCamera) {
                 auto& exportCamera = *cameraIterator++;
 
-                auto const cameraComponent = cameraManager->Get(cameraEntity);
+                const auto cameraComponent = cameraManager->Get(cameraEntity);
                 switch (cameraComponent.projection) {
                     case CameraComponent::Projection::ORTHOGRAPHIC: {
                         exportCamera->type = CameraType::ORTHOGRAPHIC;
@@ -524,13 +524,13 @@ void ExportGltfLight(const IEcs& ecs, const Entities& entities, ExportResult& re
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
 
     if (!entities.withLight.empty() && entities.withLight.size() == result.data->lights.size()) {
-        if (auto const lightManager = GetManager<ILightComponentManager>(ecs); lightManager) {
+        if (const auto lightManager = GetManager<ILightComponentManager>(ecs); lightManager) {
             auto lightIterator = result.data->lights.begin();
 
-            for (auto const lightEntity : entities.withLight) {
+            for (const auto lightEntity : entities.withLight) {
                 auto& exportLight = *lightIterator++;
 
-                auto const lightComponent = lightManager->Get(lightEntity);
+                const auto lightComponent = lightManager->Get(lightEntity);
                 switch (lightComponent.type) {
                     default:
                         CORE_LOG_E("cannot export light %u", static_cast<uint32_t>(lightComponent.type));
@@ -652,41 +652,46 @@ Node* FindSkeletonRoot(array_view<GLTF2::Node*> joints)
 void ExportGltfSkins(const IEcs& ecs, const Entities& entities, const vector<unique_ptr<Node>>& nodeArray,
     ExportResult& result, BufferHelper& bufferHelper)
 {
-    if (!entities.withSkin.empty() && entities.withSkin.size() == result.data->skins.size()) {
-        if (auto const skinManager = GetManager<ISkinComponentManager>(ecs); skinManager) {
-            auto const skinIbmManager = GetManager<ISkinIbmComponentManager>(ecs);
-            auto const skinJointsManager = GetManager<ISkinJointsComponentManager>(ecs);
+    if (entities.withSkin.empty() || (entities.withSkin.size() != result.data->skins.size())) {
+        return;
+    }
+    const auto* skinManager = GetManager<ISkinComponentManager>(ecs);
+    const auto* skinIbmManager = GetManager<ISkinIbmComponentManager>(ecs);
+    const auto* skinJointsManager = GetManager<ISkinJointsComponentManager>(ecs);
+    if (!skinManager || !skinIbmManager || !skinJointsManager) {
+        return;
+    }
 
-            auto skinIterator = result.data->skins.begin();
+    auto skinIterator = result.data->skins.begin();
+    for (const auto& skinnedEntity : entities.withSkin) {
+        auto& exportSkin = *skinIterator++;
+        const auto skinComponent = skinManager->Get(skinnedEntity);
+        if (!EntityUtil::IsValid(skinComponent.skin)) {
+            continue;
+        }
+        // store IBMs in the buffer handled by BufferHelper
+        if (const auto ibmHandle = skinIbmManager->Read(skinComponent.skin); ibmHandle) {
+            exportSkin->inverseBindMatrices = StoreInverseBindMatrices(ibmHandle->matrices, bufferHelper);
+        }
 
-            for (auto const skinnedEntity : entities.withSkin) {
-                auto& exportSkin = *skinIterator++;
-                auto const skinComponent = skinManager->Get(skinnedEntity);
-                if (EntityUtil::IsValid(skinComponent.skin)) {
-                    // store IBMs in the buffer handled by BufferHelper
-                    if (const auto ibmHandle = skinIbmManager->Read(skinComponent.skin); ibmHandle) {
-                        exportSkin->inverseBindMatrices = StoreInverseBindMatrices(ibmHandle->matrices, bufferHelper);
-                    }
+        // find the skeleton root node
+        exportSkin->skeleton = FindSkeletonRoot(exportSkin->joints);
+        if (!exportSkin->skeleton) {
+            CORE_LOG_D("Couldn't find common root for skinned entity %s", to_hex(skinnedEntity.id).data());
+        }
 
-                    // gather all the joint nodes
-                    if (auto const skinJointsHandle = skinJointsManager->Read(skinnedEntity); skinJointsHandle) {
-                        exportSkin->joints.reserve(skinJointsHandle->count);
-                        for (auto jointEntity : array_view(skinJointsHandle->jointEntities, skinJointsHandle->count)) {
-                            if (auto const jointIndex = FindHandleIndex(entities.nodes, jointEntity);
-                                jointIndex < nodeArray.size()) {
-                                exportSkin->joints.push_back(nodeArray[jointIndex].get());
-                            } else {
-                                CORE_LOG_D("joint node not exported");
-                            }
-                        }
-                    }
-
-                    // find the skeleton root node
-                    exportSkin->skeleton = FindSkeletonRoot(exportSkin->joints);
-                    if (!exportSkin->skeleton) {
-                        CORE_LOG_D("Couldn't find common root for skinned entity %s", to_hex(skinnedEntity.id).data());
-                    }
-                }
+        // gather all the joint nodes
+        const auto skinJointsHandle = skinJointsManager->Read(skinnedEntity);
+        if (!skinJointsHandle) {
+            continue;
+        }
+        exportSkin->joints.reserve(skinJointsHandle->count);
+        for (const auto& jointEntity : array_view(skinJointsHandle->jointEntities, skinJointsHandle->count)) {
+            const auto jointIndex = FindHandleIndex(entities.nodes, jointEntity);
+            if (jointIndex < nodeArray.size()) {
+                exportSkin->joints.push_back(nodeArray[jointIndex].get());
+            } else {
+                CORE_LOG_D("joint node not exported");
             }
         }
     }
@@ -698,7 +703,7 @@ Node* GetAnimationTarget(const INodeSystem& nodeSystem, const INameComponentMana
 {
     Node* target = nullptr;
     if (auto animatedNode = nodeSystem.GetNode(trackComponent.target); animatedNode) {
-        if (auto const nodeIndex = FindHandleIndex(entities.nodes, static_cast<Entity>(trackComponent.target));
+        if (const auto nodeIndex = FindHandleIndex(entities.nodes, static_cast<Entity>(trackComponent.target));
             nodeIndex < nodes.size()) {
             target = nodes[nodeIndex].get();
         }
@@ -741,7 +746,7 @@ Accessor* AnimationInput(
                     inputAccessor->count);
             auto inputMin = std::numeric_limits<float>::max();
             auto inputMax = std::numeric_limits<float>::lowest();
-            for (auto const value : input) {
+            for (const auto value : input) {
                 inputMin = std::min(value, inputMin);
                 inputMax = std::max(value, inputMax);
             }
@@ -809,10 +814,9 @@ void CleanupAnimation(Animation& exportAnimation)
 {
     // Remove all tracks that don't have a node, sampler or sampler is missing input or output.
     exportAnimation.tracks.erase(std::find_if(exportAnimation.tracks.begin(), exportAnimation.tracks.end(),
-                                    [](const AnimationTrack& track) {
-                                        return !track.channel.node || !track.sampler || !track.sampler->input ||
-                                               !track.sampler->output;
-                                    }),
+        [](const AnimationTrack& track) {
+            return !track.channel.node || !track.sampler || !track.sampler->input || !track.sampler->output;
+        }),
         exportAnimation.tracks.end());
 
     // Remove all samplers missing input or output.
@@ -830,52 +834,58 @@ uint64_t Hash(const AnimationTrackComponent& trackComponent)
 
 void ExportGltfAnimations(const IEcs& ecs, const Entities& entities, ExportResult& result, BufferHelper& bufferHelper)
 {
-    auto const nodeSystem = GetSystem<INodeSystem>(ecs);
-    auto const animationSystem = GetSystem<IAnimationSystem>(ecs);
-    auto const animationManager = GetManager<IAnimationComponentManager>(ecs);
-    auto const animationInputManager = GetManager<IAnimationInputComponentManager>(ecs);
-    auto const animationOutputManager = GetManager<IAnimationOutputComponentManager>(ecs);
-    auto const animationTrackManager = GetManager<IAnimationTrackComponentManager>(ecs);
-    auto const nameManager = GetManager<INameComponentManager>(ecs);
-    if (nodeSystem && animationSystem && animationManager && animationInputManager && animationOutputManager &&
-        animationTrackManager && nameManager) {
-        auto const animationCount = animationManager->GetComponentCount();
-        auto& animationArray = result.data->animations;
-        animationArray.reserve(animationCount);
-
-        for (IComponentManager::ComponentId i = 0U; i < animationCount; ++i) {
-            auto& exportAnimation = animationArray.emplace_back(make_unique<Animation>());
-            if (auto nameHandle = nameManager->Read(animationManager->GetEntity(i)); nameHandle) {
-                exportAnimation->name = nameHandle->name;
+    const auto nodeSystem = GetSystem<INodeSystem>(ecs);
+    const auto animationSystem = GetSystem<IAnimationSystem>(ecs);
+    const auto animationManager = GetManager<IAnimationComponentManager>(ecs);
+    const auto animationInputManager = GetManager<IAnimationInputComponentManager>(ecs);
+    const auto animationOutputManager = GetManager<IAnimationOutputComponentManager>(ecs);
+    const auto animationTrackManager = GetManager<IAnimationTrackComponentManager>(ecs);
+    const auto nameManager = GetManager<INameComponentManager>(ecs);
+    if (!nodeSystem || !animationSystem || !animationManager || !animationInputManager || !animationOutputManager ||
+        !animationTrackManager || !nameManager) {
+        return;
+    }
+    const auto animationCount = animationManager->GetComponentCount();
+    auto& animationArray = result.data->animations;
+    animationArray.reserve(animationCount);
+    auto exportTracks = [&](const array_view<const EntityReference> tracks, vector<uint64_t>& samplerHashes,
+                            Animation& exportAnimation) {
+        for (const auto& trackEntity : tracks) {
+            const auto trackHandle = animationTrackManager->Read(trackEntity);
+            if (!trackHandle) {
+                continue;
             }
-
-            // animation.samplers can be shared between channels. Identify samplers by hashing input, output and
-            // interpolationMode.
-            vector<uint64_t> samplerHashes;
-
-            if (const auto animationHandle = animationManager->Read(i); animationHandle) {
-                for (auto const& trackEntity : animationHandle->tracks) {
-                    if (const auto trackHandle = animationTrackManager->Read(trackEntity); trackHandle) {
-                        auto const samplerIndex = FindOrAddIndex(samplerHashes, Hash(*trackHandle));
-                        if ((samplerIndex + 1) >= exportAnimation->samplers.size()) {
-                            exportAnimation->samplers.resize(samplerIndex + 1);
-                            exportAnimation->samplers[samplerIndex] = CreateAnimationSampler(
-                                *trackHandle, *animationInputManager, *animationOutputManager, bufferHelper);
-                        }
-                        const auto target = GetAnimationTarget(
-                            *nodeSystem, *nameManager, entities, result.data->nodes, trackEntity, *trackHandle);
-                        exportAnimation->tracks.push_back(AnimationTrack { { target, GetAnimationPath(*trackHandle) },
-                            exportAnimation->samplers[samplerIndex].get() });
-                    }
-                }
+            const auto samplerIndex = FindOrAddIndex(samplerHashes, Hash(*trackHandle));
+            if ((samplerIndex + 1) >= exportAnimation.samplers.size()) {
+                exportAnimation.samplers.resize(samplerIndex + 1);
+                exportAnimation.samplers[samplerIndex] =
+                    CreateAnimationSampler(*trackHandle, *animationInputManager, *animationOutputManager, bufferHelper);
             }
+            const auto target =
+                GetAnimationTarget(*nodeSystem, *nameManager, entities, result.data->nodes, trackEntity, *trackHandle);
+            exportAnimation.tracks.push_back(AnimationTrack {
+                { target, GetAnimationPath(*trackHandle) }, exportAnimation.samplers[samplerIndex].get() });
+        }
+    };
+    for (IComponentManager::ComponentId i = 0U; i < animationCount; ++i) {
+        auto& exportAnimation = animationArray.emplace_back(make_unique<Animation>());
+        if (auto nameHandle = nameManager->Read(animationManager->GetEntity(i)); nameHandle) {
+            exportAnimation->name = nameHandle->name;
+        }
 
-            CleanupAnimation(*exportAnimation);
+        // animation.samplers can be shared between channels. Identify samplers by hashing input, output and
+        // interpolationMode.
+        vector<uint64_t> samplerHashes;
 
-            // Pop the animation if it's empty.
-            if (exportAnimation->samplers.empty() || exportAnimation->tracks.empty()) {
-                animationArray.pop_back();
-            }
+        if (const auto animationHandle = animationManager->Read(i); animationHandle) {
+            exportTracks(animationHandle->tracks, samplerHashes, *exportAnimation);
+        }
+
+        CleanupAnimation(*exportAnimation);
+
+        // Pop the animation if it's empty.
+        if (exportAnimation->samplers.empty() || exportAnimation->tracks.empty()) {
+            animationArray.pop_back();
         }
     }
 }
@@ -891,15 +901,15 @@ struct MeshPrimitiveGenerator {
         if (original.indices) {
             copy.indices = buffer.StoreAccessor(*original.indices);
         }
-        for (auto const& attrib : original.attributes) {
+        for (const auto& attrib : original.attributes) {
             copy.attributes.push_back(Attribute { attrib.attribute, buffer.StoreAccessor(*attrib.accessor) });
         }
         if (materialManager.HasComponent(submesh.material)) {
             copy.materialIndex = FindOrAddIndex(usedMaterials, submesh.material);
         }
-        for (auto const& target : original.targets) {
+        for (const auto& target : original.targets) {
             MorphTarget morphTarget { target.name, {} };
-            for (auto const& attribute : target.target) {
+            for (const auto& attribute : target.target) {
                 morphTarget.target.push_back(
                     Attribute { attribute.attribute, buffer.StoreAccessor(*attribute.accessor) });
             }
@@ -910,6 +920,15 @@ struct MeshPrimitiveGenerator {
     }
 };
 
+void ResetInvalidMeshes(array_view<const unique_ptr<Node>> nodes, const Mesh* invalidMesh)
+{
+    for (const auto& node : nodes) {
+        if (node->mesh == invalidMesh) {
+            node->mesh = nullptr;
+        }
+    }
+}
+
 vector<Entity> ExportGltfMeshes(const IMeshComponentManager& meshManager, const INameComponentManager& nameManager,
     const IUriComponentManager& uriManager, const IMaterialComponentManager& materialManager, IFileManager& fileManager,
     const vector<Entity>& usedMeshes, ExportResult& result, BufferHelper& buffer,
@@ -917,48 +936,44 @@ vector<Entity> ExportGltfMeshes(const IMeshComponentManager& meshManager, const 
 {
     vector<Entity> usedMaterials;
     CORE_ASSERT(usedMeshes.size() == result.data->meshes.size());
-    if (!usedMeshes.empty() && usedMeshes.size() == result.data->meshes.size()) {
-        auto meshIterator = result.data->meshes.begin();
-
-        // Create GLTF2::Meshes from mesh entities
-        for (auto const meshEntity : usedMeshes) {
-            auto& exportMesh = *meshIterator++;
-
-            if (auto const uriId = uriManager.GetComponentId(meshEntity);
-                uriId != IComponentManager::INVALID_COMPONENT_ID) {
-                auto const uc = uriManager.Get(uriId);
-                // mesh data is copied from the original glTF pointer by UriComponent
-                if (const auto [originalGltf, meshIndex] =
-                        ResolveGltfAndResourceIndex(uc.uri, fileManager, originalGltfs);
-                    originalGltf && meshIndex < originalGltf->meshes.size()) {
-                    auto const meshData = meshManager.GetData(meshEntity);
-                    auto const& mesh = *static_cast<const MeshComponent*>(meshData->RLock());
-
-                    auto const& submeshes = mesh.submeshes;
-                    auto const& originalPrimitives = originalGltf->meshes[meshIndex]->primitives;
-                    std::transform(submeshes.begin(), submeshes.end(), originalPrimitives.begin(),
-                        std::back_inserter(exportMesh->primitives),
-                        MeshPrimitiveGenerator { materialManager, buffer, usedMaterials });
-
-                    if (const auto nameId = nameManager.GetComponentId(meshEntity);
-                        nameId != IComponentManager::INVALID_COMPONENT_ID) {
-                        exportMesh->name = nameManager.Get(nameId).name;
-                    }
-                    // NOTE: exportMesh->weights
-                } else {
-                    // couldn't find original glTF.
-                    for (const auto& node : result.data->nodes) {
-                        if (node->mesh == exportMesh.get()) {
-                            node->mesh = nullptr;
-                        }
-                    }
-                    exportMesh.reset();
-                }
-            }
-        }
-        result.data->meshes.erase(
-            std::remove(result.data->meshes.begin(), result.data->meshes.end(), nullptr), result.data->meshes.end());
+    if (usedMeshes.empty() || usedMeshes.size() != result.data->meshes.size()) {
+        return usedMaterials;
     }
+    auto meshIterator = result.data->meshes.begin();
+
+    // Create GLTF2::Meshes from mesh entities
+    for (const auto& meshEntity : usedMeshes) {
+        auto& exportMesh = *meshIterator++;
+
+        const auto uriId = uriManager.GetComponentId(meshEntity);
+        if (uriId == IComponentManager::INVALID_COMPONENT_ID) {
+            continue;
+        }
+        const auto uri = uriManager.Read(uriId)->uri;
+        // mesh data is copied from the original glTF pointer by UriComponent
+        if (const auto [originalGltf, meshIndex] = ResolveGltfAndResourceIndex(uri, fileManager, originalGltfs);
+            originalGltf && meshIndex < originalGltf->meshes.size()) {
+            const auto meshHandle = meshManager.Read(meshEntity);
+
+            const auto& submeshes = meshHandle->submeshes;
+            const auto& originalPrimitives = originalGltf->meshes[meshIndex]->primitives;
+            std::transform(submeshes.cbegin(), submeshes.cend(), originalPrimitives.cbegin(),
+                std::back_inserter(exportMesh->primitives),
+                MeshPrimitiveGenerator { materialManager, buffer, usedMaterials });
+
+            if (const auto nameHandle = nameManager.Read(meshEntity)) {
+                exportMesh->name = nameHandle->name;
+            }
+            // NOTE: exportMesh->weights
+        } else {
+            // couldn't find original glTF.
+            ResetInvalidMeshes(result.data->nodes, exportMesh.get());
+            exportMesh.reset();
+        }
+    }
+    result.data->meshes.erase(
+        std::remove(result.data->meshes.begin(), result.data->meshes.end(), nullptr), result.data->meshes.end());
+
     return usedMaterials;
 }
 
@@ -971,12 +986,12 @@ inline uint32_t GetTextureIndex(const MaterialComponent& materialDesc,
         image = handle->reference;
     }
     if (image) {
-        auto const imageIndex = textureHelper.GetImageIndex(image);
+        const auto imageIndex = textureHelper.GetImageIndex(image);
         RenderHandleReference sampler;
         if (auto handle = gpuHandleManager.Read(materialDesc.textures[textureIndex].sampler); handle) {
             sampler = handle->reference;
         }
-        auto const samplerIndex = (sampler) ? textureHelper.GetSamplerIndex(sampler) : 0xFFFFffff;
+        const auto samplerIndex = (sampler) ? textureHelper.GetSamplerIndex(sampler) : 0xFFFFffff;
         return textureHelper.GetTextureIndex(samplerIndex, imageIndex);
     }
     return GLTF_INVALID_INDEX;
@@ -1108,35 +1123,31 @@ void ExportGltfMaterialUnlit(Material& exportMaterial, const MaterialComponent& 
 void UpdateShaderStateToGltfMaterial(const IDevice* device, Material& exportMaterial,
     const MaterialComponent& materialDesc, const IRenderHandleComponentManager& gpuHandleManager)
 {
-    if ((materialDesc.materialShader.shader || materialDesc.materialShader.graphicsState) && device) {
-        const IShaderManager& shaderMgr = device->GetShaderManager();
-        if (materialDesc.materialShader.graphicsState) {
-            const auto handle = gpuHandleManager.GetRenderHandleReference(materialDesc.materialShader.graphicsState);
-            if (handle.GetHandleType() == RenderHandleType::GRAPHICS_STATE && handle) {
-                const GraphicsState gfxState = shaderMgr.GetGraphicsState(handle);
-                if (gfxState.rasterizationState.cullModeFlags == CullModeFlagBits::CORE_CULL_MODE_NONE) {
-                    exportMaterial.doubleSided = true;
-                }
-                if (gfxState.colorBlendState.colorAttachmentCount > 0) {
-                    if (gfxState.colorBlendState.colorAttachments[0].enableBlend) {
-                        exportMaterial.alphaMode = AlphaMode::BLEND;
-                    }
-                }
-            }
-        } else if (materialDesc.materialShader.shader) {
-            const auto handle = gpuHandleManager.GetRenderHandleReference(materialDesc.materialShader.shader);
-            if (handle.GetHandleType() == RenderHandleType::SHADER_STATE_OBJECT && handle) {
-                const RenderHandleReference gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(handle);
-                const GraphicsState gfxState = shaderMgr.GetGraphicsState(gfxHandle);
-                if (gfxState.rasterizationState.cullModeFlags == CullModeFlagBits::CORE_CULL_MODE_NONE) {
-                    exportMaterial.doubleSided = true;
-                }
-                if (gfxState.colorBlendState.colorAttachmentCount > 0) {
-                    if (gfxState.colorBlendState.colorAttachments[0].enableBlend) {
-                        exportMaterial.alphaMode = AlphaMode::BLEND;
-                    }
-                }
-            }
+    if ((!materialDesc.materialShader.shader && !materialDesc.materialShader.graphicsState) || !device) {
+        return;
+    }
+    auto update = [](const IShaderManager& shaderMgr, const RenderHandleReference& gfxHandle,
+                      Material& exportMaterial) {
+        const GraphicsState gfxState = shaderMgr.GetGraphicsState(gfxHandle);
+        exportMaterial.doubleSided =
+            (gfxState.rasterizationState.cullModeFlags == CullModeFlagBits::CORE_CULL_MODE_NONE);
+
+        if ((gfxState.colorBlendState.colorAttachmentCount > 0) &&
+            (gfxState.colorBlendState.colorAttachments[0].enableBlend)) {
+            exportMaterial.alphaMode = AlphaMode::BLEND;
+        }
+    };
+    const IShaderManager& shaderMgr = device->GetShaderManager();
+    if (materialDesc.materialShader.graphicsState) {
+        const auto handle = gpuHandleManager.GetRenderHandleReference(materialDesc.materialShader.graphicsState);
+        if (handle.GetHandleType() == RenderHandleType::GRAPHICS_STATE && handle) {
+            update(shaderMgr, handle, exportMaterial);
+        }
+    } else if (materialDesc.materialShader.shader) {
+        const auto handle = gpuHandleManager.GetRenderHandleReference(materialDesc.materialShader.shader);
+        if (handle.GetHandleType() == RenderHandleType::SHADER_STATE_OBJECT && handle) {
+            const RenderHandleReference gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(handle);
+            update(shaderMgr, gfxHandle, exportMaterial);
         }
     }
 }
@@ -1217,7 +1228,7 @@ void ExportGltfMaterials(const IEngine& engine, const IMaterialComponentManager&
         materialArray.reserve(usedMaterials.size());
 
         // Create Materials and gather used samplers and images.
-        for (auto const materialEntity : usedMaterials) {
+        for (const auto materialEntity : usedMaterials) {
             string_view name;
             if (const auto nameHandle = nameManager.Read(materialEntity); nameHandle) {
                 name = nameHandle->name;
@@ -1277,7 +1288,7 @@ void ExportImageData(IFileManager& fileManager, ExportResult& result, BufferHelp
             } else if (auto imageFile = fileManager.OpenFile(image->uri); imageFile) {
                 auto uri = string_view(image->uri);
                 // Leave only the file extension.
-                if (auto const ext = uri.rfind('.'); ext != string_view::npos) {
+                if (const auto ext = uri.rfind('.'); ext != string_view::npos) {
                     uri.remove_prefix(ext + 1);
                 }
 
@@ -1298,7 +1309,7 @@ void ExportImageData(IFileManager& fileManager, ExportResult& result, BufferHelp
                     // Read the image directly to the data buffer.
                     const size_t imageSize = static_cast<const size_t>(imageFile->GetLength());
                     auto& dataBuffer = bufferHelper.GetBuffer().data;
-                    auto const imageOffset = dataBuffer.size();
+                    const auto imageOffset = dataBuffer.size();
 
                     dataBuffer.resize(imageOffset + imageSize);
 
@@ -1343,10 +1354,10 @@ json::value ExportAccessorSparse(const Data& data, const Accessor& accessor)
     return jsonSparse;
 }
 
-json::value ExportAccessors(Data const& data)
+void ExportAccessors(json::value& jsonGltf, const Data& data)
 {
     json::value jsonAccessors = json::value::array {};
-    for (auto const& accessor : data.accessors) {
+    for (const auto& accessor : data.accessors) {
         json::value jsonAccessor = json::value::object {};
         if (accessor->bufferView) {
             jsonAccessor["bufferView"] = FindObjectIndex(data.bufferViews, *accessor->bufferView);
@@ -1378,17 +1389,17 @@ json::value ExportAccessors(Data const& data)
 
         jsonAccessors.array_.push_back(move(jsonAccessor));
     }
-    return jsonAccessors;
+    jsonGltf["accessors"] = BASE_NS::move(jsonAccessors);
 }
 
-json::value ExportAnimations(Data const& data)
+void ExportAnimations(json::value& jsonGltf, const Data& data)
 {
     json::value jsonAnimations = json::value::array {};
-    for (auto const& animation : data.animations) {
+    for (const auto& animation : data.animations) {
         json::value jsonAnimation = json::value::object {};
         {
             json::value jsonSamplers = json::value::array {};
-            for (auto const& sampler : animation->samplers) {
+            for (const auto& sampler : animation->samplers) {
                 json::value jsonSampler = json::value::object {};
                 jsonSampler["input"] = FindObjectIndex(data.accessors, *sampler->input);
                 if (sampler->interpolation != AnimationInterpolation::LINEAR) {
@@ -1401,12 +1412,12 @@ json::value ExportAnimations(Data const& data)
         }
         {
             json::value jsonChannels = json::value::array {};
-            for (auto const& track : animation->tracks) {
+            for (const auto& track : animation->tracks) {
                 json::value jsonChannel = json::value::object {};
                 jsonChannel["sampler"] = FindObjectIndex(animation->samplers, *track.sampler);
                 {
                     json::value jsonTarget = json::value::object {};
-                    if (auto const nodeIndex = FindObjectIndex(data.nodes, *track.channel.node); 0 <= nodeIndex) {
+                    if (const auto nodeIndex = FindObjectIndex(data.nodes, *track.channel.node); 0 <= nodeIndex) {
                         jsonTarget["node"] = nodeIndex;
                     }
                     jsonTarget["path"] = GetAnimationPath(track.channel.path);
@@ -1421,13 +1432,13 @@ json::value ExportAnimations(Data const& data)
         }
         jsonAnimations.array_.push_back(move(jsonAnimation));
     }
-    return jsonAnimations;
+    jsonGltf["animations"] = BASE_NS::move(jsonAnimations);
 }
 
-json::value ExportBuffers(Data const& data, vector<string>& strings)
+void ExportBuffers(json::value& jsonGltf, const Data& data)
 {
     json::value jsonBuffers = json::value::array {};
-    for (auto const& buffer : data.buffers) {
+    for (const auto& buffer : data.buffers) {
         json::value jsonBuffer = json::value::object {};
         if (!buffer->uri.empty()) {
             jsonBuffer["uri"] = string_view(buffer->uri);
@@ -1440,13 +1451,13 @@ json::value ExportBuffers(Data const& data, vector<string>& strings)
 #endif
         jsonBuffers.array_.push_back(move(jsonBuffer));
     }
-    return jsonBuffers;
+    jsonGltf["buffers"] = BASE_NS::move(jsonBuffers);
 }
 
-json::value ExportBufferViews(Data const& data)
+void ExportBufferViews(json::value& jsonGltf, const Data& data)
 {
     json::value jsonBufferViews = json::value::array {};
-    for (auto const& bufferView : data.bufferViews) {
+    for (const auto& bufferView : data.bufferViews) {
         json::value jsonBufferView = json::value::object {};
         jsonBufferView["buffer"] = FindObjectIndex(data.buffers, *bufferView->buffer);
         if (bufferView->byteOffset) {
@@ -1466,14 +1477,14 @@ json::value ExportBufferViews(Data const& data)
 #endif
         jsonBufferViews.array_.push_back(move(jsonBufferView));
     }
-    return jsonBufferViews;
+    jsonGltf["bufferViews"] = BASE_NS::move(jsonBufferViews);
 }
 
-json::value ExportCameras(Data const& data)
+void ExportCameras(json::value& jsonGltf, const Data& data)
 {
     json::value jsonCameras = json::value::array {};
 
-    for (auto const& camera : data.cameras) {
+    for (const auto& camera : data.cameras) {
         json::value jsonCamera = json::value::object {};
         jsonCamera["type"] = json::value { GetCameraType(camera->type) };
 
@@ -1503,13 +1514,13 @@ json::value ExportCameras(Data const& data)
         jsonCameras.array_.push_back(move(jsonCamera));
     }
 
-    return jsonCameras;
+    jsonGltf["cameras"] = BASE_NS::move(jsonCameras);
 }
 
-json::value ExportImages(Data const& data)
+void ExportImages(json::value& jsonGltf, const Data& data)
 {
     json::value jsonImages = json::value::array {};
-    for (auto const& image : data.images) {
+    for (const auto& image : data.images) {
         json::value jsonImage = json::value::object {};
 
         if (!image->uri.empty()) {
@@ -1525,7 +1536,7 @@ json::value ExportImages(Data const& data)
 #endif
         jsonImages.array_.push_back(move(jsonImage));
     }
-    return jsonImages;
+    jsonGltf["images"] = BASE_NS::move(jsonImages);
 }
 
 json::value ExportTextureInfo(TextureInfo const& textureInfo)
@@ -1700,7 +1711,6 @@ json::value ExportMaterialExtensions(
         jsonExtensions["KHR_materials_unlit"] = json::value::object {};
         AppendUnique(jsonExtensionsUsed, "KHR_materials_unlit");
 #endif
-    } else if (material.type == Material::Type::TextureSheetAnimation) {
     }
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_CLEARCOAT)
     if (auto clearcoat = ExportClearcoat(material.clearcoat); !clearcoat.empty()) {
@@ -1747,10 +1757,11 @@ json::value ExportMaterialExtras(const Material& material)
     return jsonExtras;
 }
 
-json::value ExportMaterials(Data const& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
+void ExportMaterials(
+    json::value& jsonGltf, const Data& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
     json::value jsonMaterials = json::value::array {};
-    for (auto const& material : data.materials) {
+    for (const auto& material : data.materials) {
         json::value jsonMaterial = json::value::object {};
         if (!material->name.empty()) {
             jsonMaterial["name"] = string_view(material->name);
@@ -1799,7 +1810,7 @@ json::value ExportMaterials(Data const& data, json::value& jsonExtensionsUsed, j
         }
         jsonMaterials.array_.push_back(move(jsonMaterial));
     }
-    return jsonMaterials;
+    jsonGltf["materials"] = BASE_NS::move(jsonMaterials);
 }
 
 json::value ExportMeshPrimitive(
@@ -1808,7 +1819,7 @@ json::value ExportMeshPrimitive(
     json::value jsonPrimitive = json::value::object {};
     {
         json::value jsonAttributes = json::value::object {};
-        for (auto const& attribute : primitive.attributes) {
+        for (const auto& attribute : primitive.attributes) {
             auto type = GetAttributeType(attribute.attribute);
             jsonAttributes[type] = FindObjectIndex(accessors, *attribute.accessor);
         }
@@ -1825,9 +1836,9 @@ json::value ExportMeshPrimitive(
     }
     if (!primitive.targets.empty()) {
         json::value jsonTargets = json::value::array {};
-        for (auto const& target : primitive.targets) {
+        for (const auto& target : primitive.targets) {
             json::value jsonTarget = json::value::object {};
-            for (auto const& attribute : target.target) {
+            for (const auto& attribute : target.target) {
                 auto type = GetAttributeType(attribute.attribute);
                 jsonTarget[type] = FindObjectIndex(accessors, *attribute.accessor);
             }
@@ -1841,16 +1852,16 @@ json::value ExportMeshPrimitive(
     return jsonPrimitive;
 }
 
-json::value ExportMeshes(Data const& data)
+void ExportMeshes(json::value& jsonGltf, const Data& data)
 {
     json::value jsonMeshes = json::value::array {};
-    for (auto const& mesh : data.meshes) {
+    for (const auto& mesh : data.meshes) {
         json::value jsonMesh = json::value::object {};
         json::value jsonExtras = json::value::object {};
         {
             json::value jsonPrimitives = json::value::array {};
             json::value jsonTargetNames = json::value::array {};
-            for (auto const& primitive : mesh->primitives) {
+            for (const auto& primitive : mesh->primitives) {
                 jsonPrimitives.array_.push_back(ExportMeshPrimitive(primitive, data.accessors, jsonTargetNames));
             }
             jsonMesh["primitives"] = move(jsonPrimitives);
@@ -1869,11 +1880,11 @@ json::value ExportMeshes(Data const& data)
         }
         jsonMeshes.array_.push_back(move(jsonMesh));
     }
-    return jsonMeshes;
+    jsonGltf["meshes"] = BASE_NS::move(jsonMeshes);
 }
 
 json::value ExportNodeExtensions(
-    Data const& data, const Node& node, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
+    const Data& data, const Node& node, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
     json::value jsonExtensions = json::value::object {};
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
@@ -1887,11 +1898,12 @@ json::value ExportNodeExtensions(
     return jsonExtensions;
 }
 
-json::value ExportNodes(Data const& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
+void ExportNodes(
+    json::value& jsonGltf, const Data& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
     json::value jsonNodes = json::value::array {};
 
-    for (auto const& node : data.nodes) {
+    for (const auto& node : data.nodes) {
         json::value jsonNodeObject = json::value::object {};
 
         if (node->camera) {
@@ -1942,13 +1954,13 @@ json::value ExportNodes(Data const& data, json::value& jsonExtensionsUsed, json:
         jsonNodes.array_.push_back(move(jsonNodeObject));
     }
 
-    return jsonNodes;
+    jsonGltf["nodes"] = BASE_NS::move(jsonNodes);
 }
 
-json::value ExportSamplers(Data const& data)
+void ExportSamplers(json::value& jsonGltf, const Data& data)
 {
     json::value jsonSamplers = json::value::array {};
-    for (auto const& sampler : data.samplers) {
+    for (const auto& sampler : data.samplers) {
         json::value jsonSampler = json::value::object {};
         if (sampler->magFilter != FilterMode::LINEAR) {
             jsonSampler["magFilter"] = static_cast<int>(sampler->magFilter);
@@ -1969,13 +1981,13 @@ json::value ExportSamplers(Data const& data)
 #endif
         jsonSamplers.array_.push_back(move(jsonSampler));
     }
-    return jsonSamplers;
+    jsonGltf["samplers"] = BASE_NS::move(jsonSamplers);
 }
 
-json::value ExportScenes(Data const& data)
+void ExportScenes(json::value& jsonGltf, const Data& data)
 {
     json::value jsonScenes = json::value::array {};
-    for (auto const& scene : data.scenes) {
+    for (const auto& scene : data.scenes) {
         json::value jsonScene = json::value::object {};
 
         if (!scene->name.empty()) {
@@ -1983,7 +1995,7 @@ json::value ExportScenes(Data const& data)
         }
 
         json::value jsonNodes = json::value::array {};
-        for (auto const node : scene->nodes) {
+        for (const auto node : scene->nodes) {
             jsonNodes.array_.push_back(FindObjectIndex(data.nodes, *node));
         }
         jsonScene["nodes"] = move(jsonNodes);
@@ -2001,13 +2013,14 @@ json::value ExportScenes(Data const& data)
 #endif
         jsonScenes.array_.push_back(move(jsonScene));
     }
-    return jsonScenes;
+    jsonGltf["scenes"] = BASE_NS::move(jsonScenes);
+    jsonGltf["scene"] = 0;
 }
 
-json::value ExportSkins(Data const& data)
+void ExportSkins(json::value& jsonGltf, const Data& data)
 {
     json::value jsonSkins = json::value::array {};
-    for (auto const& skin : data.skins) {
+    for (const auto& skin : data.skins) {
         json::value jsonSkin = json::value::object {};
         if (skin->inverseBindMatrices) {
             jsonSkin["inverseBindMatrices"] = FindObjectIndex(data.accessors, *skin->inverseBindMatrices);
@@ -2016,7 +2029,7 @@ json::value ExportSkins(Data const& data)
             jsonSkin["skeleton"] = FindObjectIndex(data.nodes, *skin->skeleton);
         }
         json::value jsonJoints = json::value::array {};
-        for (auto const joint : skin->joints) {
+        for (const auto joint : skin->joints) {
             jsonJoints.array_.push_back(FindObjectIndex(data.nodes, *joint));
         }
         jsonSkin["joints"] = move(jsonJoints);
@@ -2025,13 +2038,14 @@ json::value ExportSkins(Data const& data)
         }
         jsonSkins.array_.push_back(move(jsonSkin));
     }
-    return jsonSkins;
+    jsonGltf["skins"] = BASE_NS::move(jsonSkins);
 }
 
-json::value ExportTextures(Data const& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
+void ExportTextures(
+    json::value& jsonGltf, const Data& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
     json::value jsonTextures = json::value::array {};
-    for (auto const& texture : data.textures) {
+    for (const auto& texture : data.textures) {
         json::value jsonTexture = json::value::object {};
         if (texture->sampler) {
             jsonTexture["sampler"] = FindObjectIndex(data.samplers, *texture->sampler);
@@ -2080,15 +2094,15 @@ json::value ExportTextures(Data const& data, json::value& jsonExtensionsUsed, js
 #endif
         jsonTextures.array_.push_back(move(jsonTexture));
     }
-    return jsonTextures;
+    jsonGltf["textures"] = BASE_NS::move(jsonTextures);
 }
 
-json::value ExportKHRLights(Data const& data)
+json::value ExportKHRLights(const Data& data)
 {
     json::value jsonLightArray = json::value::array {};
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
 
-    for (auto const& light : data.lights) {
+    for (const auto& light : data.lights) {
         if (light->type == LightType::AMBIENT || light->type == LightType::INVALID) {
             continue;
         }
@@ -2127,7 +2141,8 @@ json::value ExportKHRLights(Data const& data)
     return jsonLights;
 }
 
-json::value ExportExtensions(Data const& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
+void ExportExtensions(
+    json::value& jsonGltf, const Data& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
     json::value jsonExtensions = json::value::object {};
 
@@ -2139,92 +2154,51 @@ json::value ExportExtensions(Data const& data, json::value& jsonExtensionsUsed, 
         }
     }
 #endif
-    return jsonExtensions;
+    if (!jsonExtensions.empty()) {
+        jsonGltf["extensions"] = BASE_NS::move(jsonExtensions);
+    }
 }
 
-json::value ExportAsset(string_view versionString, vector<string>& strings)
+void ExportAsset(json::value& jsonGltf, string_view versionString, vector<string>& strings)
 {
     auto jsonAsset = json::value { json::value::object {} };
     jsonAsset["version"] = string_view("2.0");
     strings.push_back("CoreEngine " + versionString);
     jsonAsset["generator"] = string_view(strings.back());
-    return jsonAsset;
+    jsonGltf["asset"] = BASE_NS::move(jsonAsset);
 }
 
 /* Returns a JSON string generated from given GLTF2::Data. The above Export* helpers are used to convert different
  * parts of the data into JSON objects. */
-auto ExportGLTFData(Data const& data, string_view versionString)
+auto ExportGLTFData(const Data& data, string_view versionString)
 {
     vector<string> strings;
     auto jsonGltf = json::value { json::value::object {} };
 
     auto jsonExtensionsUsed = json::value { json::value::array {} };
     auto jsonExtensionsRequired = json::value { json::value::array {} };
-    jsonGltf["asset"] = ExportAsset(versionString, strings);
 
-    if (!data.animations.empty()) {
-        jsonGltf["animations"] = ExportAnimations(data);
-    }
-
-    if (!data.cameras.empty()) {
-        jsonGltf["cameras"] = ExportCameras(data);
-    }
-
-    if (!data.images.empty()) {
-        jsonGltf["images"] = ExportImages(data);
-    }
-
-    if (!data.materials.empty()) {
-        jsonGltf["materials"] = ExportMaterials(data, jsonExtensionsUsed, jsonExtensionsRequired);
-    }
-
-    if (!data.meshes.empty()) {
-        jsonGltf["meshes"] = ExportMeshes(data);
-    }
-
-    if (!data.nodes.empty()) {
-        jsonGltf["nodes"] = ExportNodes(data, jsonExtensionsUsed, jsonExtensionsRequired);
-    }
-
-    if (!data.samplers.empty()) {
-        jsonGltf["samplers"] = ExportSamplers(data);
-    }
-
-    if (!data.scenes.empty()) {
-        jsonGltf["scenes"] = ExportScenes(data);
-        jsonGltf["scene"] = 0;
-    }
-
-    if (!data.skins.empty()) {
-        jsonGltf["skins"] = ExportSkins(data);
-    }
-
-    if (!data.textures.empty()) {
-        jsonGltf["textures"] = ExportTextures(data, jsonExtensionsUsed, jsonExtensionsRequired);
-    }
-
-    if (auto jsonExtensions = ExportExtensions(data, jsonExtensionsUsed, jsonExtensionsRequired);
-        !jsonExtensions.empty()) {
-        jsonGltf["extensions"] = move(jsonExtensions);
-    }
-
-    if (!data.accessors.empty()) {
-        jsonGltf["accessors"] = ExportAccessors(data);
-    }
-
-    if (!data.bufferViews.empty()) {
-        jsonGltf["bufferViews"] = ExportBufferViews(data);
-    }
-
-    if (!data.buffers.empty()) {
-        jsonGltf["buffers"] = ExportBuffers(data, strings);
-    }
+    ExportAsset(jsonGltf, versionString, strings);
+    ExportAccessors(jsonGltf, data);
+    ExportAnimations(jsonGltf, data);
+    ExportBuffers(jsonGltf, data);
+    ExportBufferViews(jsonGltf, data);
+    ExportCameras(jsonGltf, data);
+    ExportImages(jsonGltf, data);
+    ExportMaterials(jsonGltf, data, jsonExtensionsUsed, jsonExtensionsRequired);
+    ExportMeshes(jsonGltf, data);
+    ExportNodes(jsonGltf, data, jsonExtensionsUsed, jsonExtensionsRequired);
+    ExportSamplers(jsonGltf, data);
+    ExportScenes(jsonGltf, data);
+    ExportSkins(jsonGltf, data);
+    ExportTextures(jsonGltf, data, jsonExtensionsUsed, jsonExtensionsRequired);
+    ExportExtensions(jsonGltf, data, jsonExtensionsUsed, jsonExtensionsRequired);
 
     if (!jsonExtensionsUsed.empty()) {
-        jsonGltf["extensionsUsed"] = move(jsonExtensionsUsed);
+        jsonGltf["extensionsUsed"] = BASE_NS::move(jsonExtensionsUsed);
     }
     if (!jsonExtensionsRequired.empty()) {
-        jsonGltf["extensionsRequired"] = move(jsonExtensionsRequired);
+        jsonGltf["extensionsRequired"] = BASE_NS::move(jsonExtensionsRequired);
     }
 
     return to_string(jsonGltf);
@@ -2232,52 +2206,52 @@ auto ExportGLTFData(Data const& data, string_view versionString)
 } // namespace
 
 /* Writes the GLTF2::Data as a GLB file. */
-void SaveGLB(Data const& data, IFile& file, string_view versionString)
+void SaveGLB(const Data& data, IFile& file, string_view versionString)
 {
     auto jsonString = ExportGLTFData(data, versionString);
     if (jsonString.empty()) {
         return;
     }
-    if (auto const pad = (jsonString.size() % 4); pad) {
+    if (const auto pad = (jsonString.size() % 4); pad) {
         jsonString.append(4 - pad, ' ');
     }
 
-    auto const jsonSize = static_cast<uint32_t>(jsonString.size());
-    auto const binarySize = [](auto const& aBuffers) {
+    const auto jsonSize = static_cast<uint32_t>(jsonString.size());
+    const auto binarySize = [](const auto& aBuffers) {
         size_t totalSize = 0;
-        for (auto const& buffer : aBuffers) {
+        for (const auto& buffer : aBuffers) {
             totalSize += buffer->data.size();
         }
         return static_cast<uint32_t>(totalSize);
     }(data.buffers);
 
-    auto const header = GLBHeader { GLTF_MAGIC, 2,
+    const auto header = GLBHeader { GLTF_MAGIC, 2,
         static_cast<uint32_t>(sizeof(GLBHeader) + sizeof(GLBChunk) + jsonSize + sizeof(GLBChunk) + binarySize) };
     file.Write(&header, sizeof(header));
 
-    auto const jsonChunk = GLBChunk { jsonSize, static_cast<uint32_t>(ChunkType::JSON) };
+    const auto jsonChunk = GLBChunk { jsonSize, static_cast<uint32_t>(ChunkType::JSON) };
     file.Write(&jsonChunk, sizeof(jsonChunk));
 
     file.Write(jsonString.data(), jsonSize);
 
-    auto const binaryChunk = GLBChunk { binarySize, static_cast<uint32_t>(ChunkType::BIN) };
+    const auto binaryChunk = GLBChunk { binarySize, static_cast<uint32_t>(ChunkType::BIN) };
     file.Write(&binaryChunk, sizeof(binaryChunk));
 
     file.Write(data.buffers.front()->data.data(), binarySize);
 }
 
 /* Writes the GLTF2::Data as a glTF file. */
-void SaveGLTF(Data const& data, IFile& file, string_view versionString)
+void SaveGLTF(const Data& data, IFile& file, string_view versionString)
 {
-    auto const jsonString = ExportGLTFData(data, versionString);
+    const auto jsonString = ExportGLTFData(data, versionString);
     file.Write(jsonString.data(), jsonString.size());
 }
 
 /* Returns true if the scene node has a node component and it hasn't been excluded from export. */
 bool IsExportable(ISceneNode const& node, IEcs const& ecs)
 {
-    auto const nodeEntity = node.GetEntity();
-    if (auto const nodeManager = GetManager<INodeComponentManager>(ecs); nodeManager) {
+    const auto nodeEntity = node.GetEntity();
+    if (const auto nodeManager = GetManager<INodeComponentManager>(ecs); nodeManager) {
         return nodeManager->HasComponent(nodeEntity) && nodeManager->Get(nodeEntity).exported;
     }
     return false;
@@ -2302,18 +2276,18 @@ void CombineSkippedParentTransformations(
     TransformComponent& transformComponent, ISceneNode const& node, IEcs const& ecs, vector<Entity> const& nodeEntities)
 {
     auto parent = node.GetParent();
-    auto const transformManager = GetManager<ITransformComponentManager>(ecs);
+    const auto transformManager = GetManager<ITransformComponentManager>(ecs);
     while (parent) {
-        if (auto const parentIndex = FindHandleIndex(nodeEntities, parent->GetEntity());
+        if (const auto parentIndex = FindHandleIndex(nodeEntities, parent->GetEntity());
             parentIndex < nodeEntities.size()) {
             // found an exported node and no need to continue.
             parent = nullptr;
         } else {
             // apply the transformation of a node which wasn't exported.
             if (transformManager->HasComponent(parent->GetEntity())) {
-                auto const parentTransformComponent = transformManager->Get(parent->GetEntity());
+                const auto parentTransformComponent = transformManager->Get(parent->GetEntity());
 
-                auto const transformation =
+                const auto transformation =
                     Math::Trs(parentTransformComponent.position, parentTransformComponent.rotation,
                         parentTransformComponent.scale) *
                     Math::Trs(transformComponent.position, transformComponent.rotation, transformComponent.scale);
@@ -2340,10 +2314,10 @@ Node& GetNode(vector<unique_ptr<Node>>& nodeArray, size_t index)
 void AttachMesh(IEcs const& ecs, const Entity nodeEntity, Node& exportNode, decltype(Data::meshes)& meshArray,
     vector<Entity>& usedMeshes)
 {
-    if (auto const meshManager = GetManager<IRenderMeshComponentManager>(ecs);
+    if (const auto meshManager = GetManager<IRenderMeshComponentManager>(ecs);
         meshManager && meshManager->HasComponent(nodeEntity)) {
-        auto const meshHandle = meshManager->Get(nodeEntity).mesh;
-        if (auto const meshIndex = FindOrAddIndex(usedMeshes, meshHandle); meshIndex < meshArray.size()) {
+        const auto meshHandle = meshManager->Get(nodeEntity).mesh;
+        if (const auto meshIndex = FindOrAddIndex(usedMeshes, meshHandle); meshIndex < meshArray.size()) {
             exportNode.mesh = meshArray[meshIndex].get();
         } else {
             exportNode.mesh = meshArray.emplace_back(make_unique<Mesh>()).get();
@@ -2354,9 +2328,9 @@ void AttachMesh(IEcs const& ecs, const Entity nodeEntity, Node& exportNode, decl
 void AttachCamera(IEcs const& ecs, const Entity nodeEntity, Node& exportNode, decltype(Data::cameras)& cameraArray,
     Entities& entities)
 {
-    if (auto const cameraManager = GetManager<ICameraComponentManager>(ecs);
+    if (const auto cameraManager = GetManager<ICameraComponentManager>(ecs);
         cameraManager && cameraManager->HasComponent(nodeEntity)) {
-        if (auto const cameraIndex = FindOrAddIndex(entities.withCamera, nodeEntity);
+        if (const auto cameraIndex = FindOrAddIndex(entities.withCamera, nodeEntity);
             cameraIndex < cameraArray.size()) {
             exportNode.camera = cameraArray[cameraIndex].get();
         } else {
@@ -2369,9 +2343,9 @@ void AttachCamera(IEcs const& ecs, const Entity nodeEntity, Node& exportNode, de
 void AttachLight(
     IEcs const& ecs, const Entity nodeEntity, Node& exportNode, decltype(Data::lights)& lightArray, Entities& entities)
 {
-    if (auto const lightManager = GetManager<ILightComponentManager>(ecs);
+    if (const auto lightManager = GetManager<ILightComponentManager>(ecs);
         lightManager && lightManager->HasComponent(nodeEntity)) {
-        if (auto const lightIndex = FindOrAddIndex(entities.withLight, nodeEntity); lightIndex < lightArray.size()) {
+        if (const auto lightIndex = FindOrAddIndex(entities.withLight, nodeEntity); lightIndex < lightArray.size()) {
             exportNode.light = lightArray[lightIndex].get();
         } else {
             exportNode.light = lightArray.emplace_back(make_unique<KHRLight>()).get();
@@ -2384,7 +2358,7 @@ void AttachParent(const ISceneNode& node, const IEcs& ecs, Scene& scene, Node& e
     const vector<Entity>& nodeEntities, decltype(Data::nodes)& nodeArray)
 {
     if (const auto* parent = FindExportedParent(node, ecs); parent) {
-        if (auto const parentIndex = FindHandleIndex(nodeEntities, parent->GetEntity());
+        if (const auto parentIndex = FindHandleIndex(nodeEntities, parent->GetEntity());
             parentIndex < nodeArray.size()) {
             // Parent has been exported -> node has a parent and will be added to the parents list of children.
             exportNode.parent = nodeArray[parentIndex].get();
@@ -2406,9 +2380,9 @@ void AttachParent(const ISceneNode& node, const IEcs& ecs, Scene& scene, Node& e
 void AttachSkin(
     IEcs const& ecs, const Entity nodeEntity, Node& exportNode, decltype(Data::skins)& skinArray, Entities& entities)
 {
-    if (auto const skinManager = GetManager<ISkinComponentManager>(ecs);
+    if (const auto skinManager = GetManager<ISkinComponentManager>(ecs);
         skinManager && skinManager->HasComponent(nodeEntity)) {
-        if (auto const entityIndex = FindOrAddIndex(entities.withSkin, nodeEntity); entityIndex < skinArray.size()) {
+        if (const auto entityIndex = FindOrAddIndex(entities.withSkin, nodeEntity); entityIndex < skinArray.size()) {
             exportNode.skin = skinArray[entityIndex].get();
         } else {
             exportNode.skin = skinArray.emplace_back(make_unique<Skin>()).get();
@@ -2438,8 +2412,8 @@ void RecursivelyExportNode(ISceneNode const& node, IEcs const& ecs, Scene& scene
         return;
     }
 
-    auto const nodeEntity = node.GetEntity();
-    auto const nodeIndex = FindOrAddIndex(nodeEntities, nodeEntity);
+    const auto nodeEntity = node.GetEntity();
+    const auto nodeIndex = FindOrAddIndex(nodeEntities, nodeEntity);
     auto& exportNode = GetNode(data.nodes, nodeIndex);
 
     // name
@@ -2501,13 +2475,13 @@ ExportResult ExportGLTF(IEngine& engine, const IEcs& ecs)
     vector<Entity> usedMeshes;
 
     // Create Nodes and Scenes.
-    auto const nameManager = GetManager<INameComponentManager>(ecs);
-    auto const nodeManager = GetManager<INodeComponentManager>(ecs);
-    auto const nodeSystem = GetSystem<INodeSystem>(ecs);
+    const auto nameManager = GetManager<INameComponentManager>(ecs);
+    const auto nodeManager = GetManager<INodeComponentManager>(ecs);
+    const auto nodeSystem = GetSystem<INodeSystem>(ecs);
     if (nodeManager && nodeSystem) {
         auto& sceneArray = result.data->scenes;
 
-        auto const nodeCount = nodeManager->GetComponentCount();
+        const auto nodeCount = nodeManager->GetComponentCount();
         auto& nodeArray = result.data->nodes;
         nodeArray.reserve(nodeCount);
         entities.nodes.reserve(nodeCount);

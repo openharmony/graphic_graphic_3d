@@ -54,7 +54,8 @@ public:
     static void UpdateRenderPassFromCustomCamera(
         const RenderCamera& camera, const bool isNamedCamera, RENDER_NS::RenderPass& renderPass);
     static void GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
-        const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraId,
+        const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraIndex,
+        const BASE_NS::array_view<const uint32_t> addCameraIndices,
         const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo,
         BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices);
 
@@ -81,8 +82,13 @@ public:
     void UpdateRenderPassFromCustomCamera(
         const RenderCamera& camera, bool isNamedCamera, RENDER_NS::RenderPass& renderPass) override;
     void GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
-        const IRenderDataStoreDefaultMaterial& dataStoreMaterial, uint32_t cameraId,
+        const IRenderDataStoreDefaultMaterial& dataStoreMaterial, uint32_t cameraIndex,
         const RenderSlotInfo& renderSlotInfo, BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices) override;
+    void GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
+        const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraIndex,
+        const BASE_NS::array_view<const uint32_t> addCameraIndices,
+        const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo,
+        BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices) override;
 
     SceneBufferHandles GetSceneBufferHandles(
         RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName) override;

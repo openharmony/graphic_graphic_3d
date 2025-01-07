@@ -47,7 +47,7 @@ struct SwapchainPlatformDataVk final {
 class SwapchainVk final : public Swapchain {
 public:
     SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCreateInfo);
-    ~SwapchainVk();
+    ~SwapchainVk() override;
 
     const SwapchainPlatformDataVk& GetPlatformData() const;
     const GpuImageDesc& GetDesc() const override;

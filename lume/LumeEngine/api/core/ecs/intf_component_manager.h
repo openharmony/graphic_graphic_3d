@@ -47,6 +47,8 @@ enum ComponentManagerModifiedFlagBits {
     CORE_COMPONENT_MANAGER_COMPONENT_REMOVED_BIT = 0x00000002,
     /** Component updated bit */
     CORE_COMPONENT_MANAGER_COMPONENT_UPDATED_BIT = 0x00000004,
+    /** Component moved bit */
+    CORE_COMPONENT_MANAGER_COMPONENT_MOVED_BIT = 0x00000008,
     /** Modified flag bits max enumeration */
     CORE_COMPONENT_MANAGER_MODIFIED_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
 };
@@ -179,6 +181,10 @@ public:
      * @return Reference to owning ECS instance.
      */
     virtual IEcs& GetEcs() const = 0;
+
+    /** Get list of entities that have been moved (since last call).
+     */
+    virtual BASE_NS::vector<Entity> GetMovedComponents() = 0;
 
 protected:
     IComponentManager() = default;

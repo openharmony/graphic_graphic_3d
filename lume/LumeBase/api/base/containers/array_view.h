@@ -50,18 +50,21 @@ public:
     {
         BASE_ASSERT(end >= begin);
     }
-    constexpr array_view(pointer begin, size_type aSize) noexcept : begin_(begin), size_(aSize) {}
+    constexpr array_view(pointer begin, size_type size) noexcept : begin_(begin), size_(size) {}
     template<size_t N>
     constexpr array_view(value_type (&arr)[N]) noexcept : begin_(arr), size_(N)
     {}
-    template<class U, class = enable_if_t<is_same<remove_const_t<T>, U>::value>>
+    template<class U, class = enable_if_t<is_same_v<remove_const_t<T>, U>>>
     constexpr array_view(const array_view<U>& other) noexcept : begin_(other.begin_), size_(other.size_)
     {}
-    template<class U, class = enable_if_t<is_same<remove_const_t<T>, typename U::value_type>::value>>
+    template<class U, class = enable_if_t<is_same_v<remove_const_t<T>, typename U::value_type>>>
     constexpr array_view(U& container) noexcept : array_view(container.data(), container.size())
     {}
-    template<class U, class = enable_if_t<is_same<remove_const_t<T>, typename U::value_type>::value>>
+    template<class U, class = enable_if_t<is_same_v<remove_const_t<T>, typename U::value_type>>>
     constexpr array_view(const U& container) noexcept : array_view(container.data(), container.size())
+    {}
+    template<class U = T, class = enable_if_t<is_const_v<U>>>
+    constexpr array_view(std::initializer_list<T> container) noexcept : array_view(container.begin(), container.end())
     {}
     ~array_view() = default;
     constexpr size_type size() const noexcept

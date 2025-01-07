@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_TONEMAPJS_H
-#define OHOS_RENDER_3D_TONEMAPJS_H
+#ifndef TONEMAPJS_H
+#define TONEMAPJS_H
 #include "BaseObjectJS.h"
 
 class ToneMapJS : public BaseObject<ToneMapJS> {
@@ -34,13 +34,16 @@ public:
 private:
     void* GetInstanceImpl(uint32_t) override;
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
     // JS properties
+
+    // type?: TonemapType;
     napi_value GetType(NapiApi::FunctionContext<>& ctx);
     void SetType(NapiApi::FunctionContext<uint32_t>& ctx);
 
+    // exposure?: number;
     napi_value GetExposure(NapiApi::FunctionContext<>& ctx);
     void SetExposure(NapiApi::FunctionContext<float>& ctx);
 };
-#endif // OHOS_RENDER_3D_TONEMAPJS_H
+#endif

@@ -35,6 +35,7 @@ public:
     ~MeshBuilder() override = default;
 
     void Initialize(const RENDER_NS::VertexInputDeclarationView& vertexInputDeclaration, size_t submeshCount) override;
+    void Initialize(const Configuration& config) override;
 
     void AddSubmesh(const MeshBuilder::Submesh& submesh) override;
 
@@ -74,6 +75,7 @@ public:
     void CreateGpuResources(const GpuBufferCreateInfo& createInfo) override;
 
     CORE_NS::Entity CreateMesh(CORE_NS::IEcs& ecs) const override;
+    CORE_NS::Entity CreateMesh(CORE_NS::IEcs& ecs, CORE_NS::Entity meshEntity) const override;
 
     // IInterface
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
@@ -84,9 +86,6 @@ public:
 
     struct BufferHandles {
         RENDER_NS::RenderHandleReference vertexBuffer;
-        RENDER_NS::RenderHandleReference jointBuffer;
-        RENDER_NS::RenderHandleReference indexBuffer;
-        RENDER_NS::RenderHandleReference morphBuffer;
     };
 
     struct BufferEntities {
@@ -175,6 +174,7 @@ private:
     BufferHandles bufferHandles_;
     RENDER_NS::RenderHandleReference stagingBuffer_;
     uint8_t* stagingPtr_ = nullptr;
+    uint8_t* vertexPtr_ = nullptr;
 
     struct Bounds {
         BASE_NS::Math::Vec3 min;
@@ -186,6 +186,7 @@ private:
 
     mutable BASE_NS::vector<uint8_t> vertexData_;
     BASE_NS::vector<uint8_t> indexData_;
+    uint32_t flags_ = 0;
     uint32_t refCount_ = 0;
 };
 CORE3D_END_NAMESPACE()

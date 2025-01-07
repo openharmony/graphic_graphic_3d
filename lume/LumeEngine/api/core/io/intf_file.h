@@ -59,6 +59,15 @@ public:
      */
     virtual uint64_t Write(const void* buffer, uint64_t count) = 0;
 
+    /** Append a sequence of bytes to file.
+     *  @param buffer Buffer that contains the data to be written.
+     *  @param count Number of total bytes to write.
+     *  @param flushSize Write chunk size. (if flushSize is 0, the count will be used as chunk write size and flushing
+     * is off)
+     *  @return Total number of bytes written.
+     */
+    virtual uint64_t Append(const void* buffer, uint64_t count, uint64_t flushSize) = 0;
+
     /** Gets the total length of the file.
      *   @return Total length of the file in bytes.
      */

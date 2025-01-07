@@ -13,25 +13,27 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_VEC3_PROXY_H
-#define OHOS_RENDER_3D_VEC3_PROXY_H
+#ifndef VEC3_PROXY_H
+#define VEC3_PROXY_H
 #include <meta/interface/property/property.h>
 
 #include <base/math/vector.h>
 
 #include "PropertyProxy.h"
-class Vec3Proxy : public PropertyProxy {
-    BASE_NS::Math::Vec3 value;
-    void UpdateLocalValues() override;
-    void UpdateRemoteValues() override;
-
+class Vec3Proxy : public ObjectPropertyProxy {
 public:
     Vec3Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec3> prop);
     ~Vec3Proxy() override;
-    bool SetValue(NapiApi::Object obj) override;
-    void SetValue(const BASE_NS::Math::Vec3 &v);
-    void SetValue(NapiApi::FunctionContext<> &info, BASE_NS::string_view memb) override;
-    napi_value GetValue(NapiApi::FunctionContext<> &info, BASE_NS::string_view memb) override;
-};
+    void SetValue(NapiApi::Object obj) override;
 
-#endif // OHOS_RENDER_3D_VEC3_PROXY_H
+    static BASE_NS::Math::Vec3 ToNative(NapiApi::Object vec3, bool& success);
+    static NapiApi::Object ToNapiObject(BASE_NS::Math::Vec3 vec3, napi_env env);
+private:
+    void SetValue(const BASE_NS::Math::Vec3& v);
+    void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
+    napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
+    void UpdateLocalValues() override;
+    void UpdateRemoteValues() override;
+    BASE_NS::Math::Vec3 value;
+};
+#endif

@@ -13,21 +13,22 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_NODE_JS_H
-#define OHOS_RENDER_3D_NODE_JS_H
+#ifndef NODE_JS_H
+#define NODE_JS_H
 #include <meta/interface/intf_object.h>
 #include "BaseObjectJS.h"
 #include "NodeImpl.h"
 
-class NodeJS : public BaseObject<NodeJS>,NodeImpl {
+class NodeJS : public BaseObject<NodeJS>, NodeImpl {
 public:
     static constexpr uint32_t ID = 130;
     static void Init(napi_env env, napi_value exports);
-    NodeJS(napi_env,napi_callback_info);
+    NodeJS(napi_env, napi_callback_info);
     ~NodeJS()override;
-    void* GetInstanceImpl(uint32_t id) override;
+    void* GetInstanceImpl(uint32_t) override;
 
 private:
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
 };
-#endif // OHOS_RENDER_3D_NODE_JS_H
+
+#endif

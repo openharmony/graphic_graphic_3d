@@ -14,8 +14,12 @@
             "typeName": "NodeSystem"
         },
         {
+            "typeName": "TextSystem",
+            "optional": true
+        },
+        {
             "typeName": "SkinningSystem"
-        },        
+        },  
         {
             "typeName": "RenderPreprocessorSystem"
         },

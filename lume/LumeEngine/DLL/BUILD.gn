@@ -34,7 +34,7 @@ ohos_shared_library(LIB_ENGINE_CORE) {
     ":lume_engine_dynamic_src",
     "${LUME_CORE_PATH}:libAGPEngine",
   ]
-
+  external_deps = [ "hilog:libhilog" ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

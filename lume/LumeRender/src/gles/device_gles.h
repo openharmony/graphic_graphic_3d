@@ -139,7 +139,7 @@ public:
     BASE_NS::unique_ptr<RenderFrameSync> CreateRenderFrameSync() override;
 
     BASE_NS::unique_ptr<RenderBackend> CreateRenderBackend(
-        GpuResourceManager& gpuResourceMgr, const CORE_NS::IParallelTaskQueue::Ptr& queue) override;
+        GpuResourceManager& gpuResourceMgr, CORE_NS::ITaskQueue* queue) override;
 
     BASE_NS::unique_ptr<ShaderModule> CreateShaderModule(const ShaderModuleCreateInfo& data) override;
     BASE_NS::unique_ptr<ShaderModule> CreateComputeShaderModule(const ShaderModuleCreateInfo& data) override;
@@ -154,8 +154,8 @@ public:
         const GpuShaderProgram& gpuProgram, const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
         const ShaderSpecializationConstantDataView& specializationConstants,
-        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
-        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
+        BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, uint32_t subpassIndex,
         const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData) override;
 
     BASE_NS::unique_ptr<ComputePipelineStateObject> CreateComputePipelineStateObject(
@@ -164,7 +164,7 @@ public:
         const LowLevelPipelineLayoutData* pipelineLayoutData) override;
 
     BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphore() override;
-    BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(const uint64_t handle) override;
+    BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(uint64_t handle) override;
 
     void SetBackendConfig(const BackendConfig& config) override;
 
@@ -228,7 +228,8 @@ public:
         uint32_t image, uint32_t target, uint32_t levels, uint32_t internalformat, const BASE_NS::Math::UVec3& extent);
     void TexStorage2DMultisample(uint32_t image, uint32_t target, uint32_t samples, uint32_t internalformat,
         const BASE_NS::Math::UVec2& extent, bool fixedsamplelocations);
-
+    void TexStorage3DMultisample(uint32_t image, uint32_t target, uint32_t samples, uint32_t internalformat,
+        const BASE_NS::Math::UVec3& extent, bool fixedsamplelocations);
     void TexSubImage2D(uint32_t image, uint32_t target, uint32_t level, const BASE_NS::Math::UVec2& offset,
         const BASE_NS::Math::UVec2& extent, uint32_t format, uint32_t type, const void* pixels);
     void TexSubImage3D(uint32_t image, uint32_t target, uint32_t level, const BASE_NS::Math::UVec3& offset,
@@ -281,7 +282,8 @@ private:
 #endif
         TEXTURE_2D_MULTISAMPLE = 3,
         TEXTURE_2D_ARRAY = 4,
-        TEXTURE_3D = 5,
+        TEXTURE_2D_MULTISAMPLE_ARRAY = 5,
+        TEXTURE_3D = 6,
         MAX_TEXTURE_TARGET_ID
     };
 
@@ -302,6 +304,8 @@ private:
 
     BASE_NS::vector<BASE_NS::string_view> extensions_;
     BASE_NS::vector<ImageFormat> supportedFormats_;
+    bool supportsBinaryShaders_ { false };
+    bool supportsBinaryPrograms_ { false };
 
     enum { VERTEX_CACHE = 0, FRAGMENT_CACHE = 1, COMPUTE_CACHE = 2, MAX_CACHES };
     struct ShaderCache {
@@ -314,7 +318,7 @@ private:
         };
         BASE_NS::vector<Entry> cache;
     };
-    ShaderCache caches[MAX_CACHES];
+    ShaderCache shaders_[MAX_CACHES];
 
     const ShaderCache::Entry& CacheShader(int type, BASE_NS::string_view source);
     void ReleaseShader(uint32_t type, uint32_t shader);
@@ -346,7 +350,8 @@ private:
     EGLHelpers::EGLState eglState_;
     BackendConfigGLES backendConfig_ { {}, false };
 #endif
-    mutable std::mutex activeMutex_;
+    mutable std::recursive_mutex activeMutex_;
+    static thread_local bool isActiveInThread_;
     uint32_t isActive_ { 0 };
     bool isRenderbackendRunning_ { false };
     BASE_NS::unique_ptr<LowLevelDeviceGLES> lowLevelDevice_;
@@ -420,7 +425,7 @@ private:
 class LowLevelDeviceGLES final : public ILowLevelDeviceGLES {
 public:
     explicit LowLevelDeviceGLES(DeviceGLES& deviceGLES);
-    ~LowLevelDeviceGLES() = default;
+    ~LowLevelDeviceGLES() override = default;
 
     DeviceBackendType GetBackendType() const override;
 

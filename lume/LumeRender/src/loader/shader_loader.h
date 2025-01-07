@@ -30,6 +30,7 @@
 
 #include "device/shader_manager.h"
 #include "loader/shader_data_loader.h"
+#include "loader/shader_state_loader.h"
 
 CORE_BEGIN_NAMESPACE()
 class IFileManager;
@@ -38,7 +39,6 @@ RENDER_BEGIN_NAMESPACE()
 class PipelineLayoutLoader;
 class VertexInputDeclarationLoader;
 class ShaderStateLoader;
-struct ShaderStateLoaderVariantData;
 
 /** ShaderLoader.
  * A class that can be used to load all the shaders states from shaders:// and reload the shaders e.g. when the shader
@@ -57,12 +57,12 @@ public:
 
     /** Looks for json files with given paths, parses them, and loads the listed shaders. */
     void Load(const ShaderManager::ShaderFilePathDesc& desc);
+
     /** Looks for json files with given path, parses them, and loads the listed data. */
-    void LoadFile(BASE_NS::string_view uri, const bool forceReload);
+    void LoadFile(BASE_NS::string_view uri, bool forceReload);
 
 private:
-    void HandleShaderFile(
-        BASE_NS::string_view currentPath, const CORE_NS::IDirectory::Entry& entry, const bool forceReload);
+    void HandleShaderFile(BASE_NS::string_view currentPath, const CORE_NS::IDirectory::Entry& entry, bool forceReload);
     void HandleShaderStateFile(BASE_NS::string_view currentPath, const CORE_NS::IDirectory::Entry& entry);
     void HandlePipelineLayoutFile(BASE_NS::string_view currentPath, const CORE_NS::IDirectory::Entry& entry);
     void HandleVertexInputDeclarationFile(BASE_NS::string_view currentPath, const CORE_NS::IDirectory::Entry& entry);
@@ -73,13 +73,13 @@ private:
         ShaderModuleCreateInfo info;
     };
     ShaderFile LoadShaderFile(BASE_NS::string_view shader, ShaderStageFlags stageBits);
-    RenderHandleReference CreateComputeShader(const ShaderDataLoader& dataLoader, const bool forceReload);
-    RenderHandleReference CreateGraphicsShader(const ShaderDataLoader& dataLoader, const bool forceReload);
-    RenderHandleReference CreateShader(const ShaderDataLoader& dataLoader, const bool forceReload);
+    RenderHandleReference CreateComputeShader(const ShaderDataLoader& dataLoader, bool forceReload);
+    RenderHandleReference CreateGraphicsShader(const ShaderDataLoader& dataLoader, bool forceReload);
+    RenderHandleReference CreateShader(const ShaderDataLoader& dataLoader, bool forceReload);
 
     void LoadShaderStates(BASE_NS::string_view currentPath, const CORE_NS::IDirectory& directory);
     void CreateShaderStates(BASE_NS::string_view uri,
-        const BASE_NS::array_view<const ShaderStateLoaderVariantData>& variantData,
+        const BASE_NS::array_view<const IShaderManager::ShaderStateLoaderVariantData>& variantData,
         const BASE_NS::array_view<const GraphicsState>& states);
 
     void LoadVids(BASE_NS::string_view currentPath, const CORE_NS::IDirectory& directory);

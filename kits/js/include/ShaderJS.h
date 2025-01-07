@@ -13,21 +13,15 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_SHADER_JS_H
-#define OHOS_RENDER_3D_SHADER_JS_H
+#ifndef SHADER_JS_H
+#define SHADER_JS_H
+#include <scene/interface/intf_material.h>
 
-#include <scene_plugin/interface/intf_material.h>
+#include <base/containers/unordered_map.h>
 
 #include "BaseObjectJS.h"
 #include "PropertyProxy.h"
 #include "SceneResourceImpl.h"
-
-class Proxy {
-public:
-    Proxy() = default;
-    virtual ~Proxy() = default;
-    virtual void insertProp(BASE_NS::vector<napi_property_descriptor>& props) = 0;
-};
 
 class ShaderJS : BaseObject<ShaderJS>, SceneResourceImpl {
 public:
@@ -35,16 +29,16 @@ public:
     static void Init(napi_env env, napi_value exports);
     ShaderJS(napi_env, napi_callback_info);
     ~ShaderJS() override;
-    void* GetInstanceImpl(uint32_t id) override;
+    void* GetInstanceImpl(uint32_t) override;
 
 private:
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
     void BindToMaterial(NapiApi::Object meJs, NapiApi::Object);
+    void UnbindInputs();
 
-private:
     NapiApi::StrongRef inputs_;
-    BASE_NS::vector<BASE_NS::shared_ptr<Proxy>> proxies_;
+    BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<PropertyProxy>> proxies_;
 };
 
-#endif // OHOS_RENDER_3D_SHADER_JS_H
+#endif // _SHADER_JS_H

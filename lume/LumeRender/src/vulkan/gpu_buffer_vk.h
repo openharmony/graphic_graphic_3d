@@ -41,7 +41,7 @@ class GpuBufferVk final : public GpuBuffer {
 public:
     GpuBufferVk(Device& device, const GpuBufferDesc& desc);
     GpuBufferVk(Device& device, const GpuAccelerationStructureDesc& desc);
-    ~GpuBufferVk();
+    ~GpuBufferVk() override;
 
     const GpuBufferDesc& GetDesc() const override;
     const GpuBufferPlatformDataVk& GetPlatformData() const;
@@ -53,7 +53,7 @@ public:
     void Unmap() const override;
 
 private:
-    void AllocateMemory(const VkMemoryPropertyFlags requiredFlags, const VkMemoryPropertyFlags preferredFlags);
+    void AllocateMemory(VkMemoryPropertyFlags requiredFlags, VkMemoryPropertyFlags preferredFlags);
     void CreateBufferImpl();
 
     Device& device_;

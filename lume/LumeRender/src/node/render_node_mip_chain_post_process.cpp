@@ -138,7 +138,7 @@ void RenderNodeMipChainPostProcess::InitNode(IRenderNodeContextManager& renderNo
         // NOTE: hard-coded mip chain
         dc.counts.push_back({ CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, MAX_LOCAL_BINDER_COUNT });
         dc.counts.push_back({ CORE_DESCRIPTOR_TYPE_SAMPLER, MAX_LOCAL_BINDER_COUNT });
-        const DescriptorCounts copyDc = renderCopy_.GetDescriptorCounts();
+        const DescriptorCounts copyDc = renderCopy_.GetRenderDescriptorCounts();
         for (const auto& ref : copyDc.counts) {
             dc.counts.push_back(ref);
         }
@@ -163,7 +163,7 @@ void RenderNodeMipChainPostProcess::InitNode(IRenderNodeContextManager& renderNo
         }
     }
 
-    renderCopy_.Init(renderNodeContextMgr, {});
+    renderCopy_.Init(renderNodeContextMgr);
     RegisterOutputs(builtInVariables_.output);
 }
 
@@ -176,9 +176,7 @@ void RenderNodeMipChainPostProcess::PreExecuteFrame()
     UpdateImageData();
     ProcessPostProcessConfiguration();
     if (pipelineData_.graphics && GetRequiresPreCopy()) {
-        RenderCopy::CopyInfo copyInfo { GetBindableImage(builtInVariables_.input),
-            GetBindableImage(builtInVariables_.output), {} };
-        renderCopy_.PreExecute(*renderNodeContextMgr_, copyInfo);
+        renderCopy_.PreExecute();
     }
     RegisterOutputs(builtInVariables_.output);
 }
@@ -226,11 +224,11 @@ void RenderNodeMipChainPostProcess::ProcessPostProcessConfiguration()
         auto& dsMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
         if (const IRenderDataStore* ds = dsMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName)) {
             if (jsonInputs_.renderDataStore.typeName == RenderDataStorePostProcess::TYPE_NAME) {
-                auto* const dataStore = static_cast<IRenderDataStorePostProcess const*>(ds);
+                auto* const dataStore = static_cast<const IRenderDataStorePostProcess*>(ds);
                 ppLocalConfig_ = dataStore->Get(jsonInputs_.renderDataStore.configurationName, jsonInputs_.ppName);
             }
         }
-        if (const IRenderDataStorePod* ds =
+        if (const auto* ds =
                 static_cast<const IRenderDataStorePod*>(dsMgr.GetRenderDataStore(RENDER_DATA_STORE_POD_NAME))) {
             auto const dataView = ds->Get(jsonInputs_.renderDataStore.configurationName);
             if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
@@ -337,7 +335,9 @@ void RenderNodeMipChainPostProcess::RenderGraphics(IRenderCommandList& cmdList)
     renderPass.renderPassDesc.renderArea = { 0, 0, imageDesc.width, imageDesc.height };
     // check for first copy from another image
     if (builtInVariables_.input != builtInVariables_.output) {
-        renderCopy_.Execute(*renderNodeContextMgr_, cmdList);
+        IRenderNodeCopyUtil::CopyInfo copyInfo { GetBindableImage(builtInVariables_.input),
+            GetBindableImage(builtInVariables_.output), {} };
+        renderCopy_.Execute(cmdList, copyInfo);
     }
 
     if constexpr (USE_CUSTOM_BARRIERS) {
@@ -354,8 +354,8 @@ void RenderNodeMipChainPostProcess::RenderGraphics(IRenderCommandList& cmdList)
 
         const uint32_t width = std::max(1u, imageDesc.width >> renderPassMipLevel);
         const uint32_t height = std::max(1u, imageDesc.height >> renderPassMipLevel);
-        const float fWidth = static_cast<float>(width);
-        const float fHeight = static_cast<float>(height);
+        const auto fWidth = static_cast<float>(width);
+        const auto fHeight = static_cast<float>(height);
 
         renderPass.renderPassDesc.renderArea = { 0, 0, width, height };
         renderPass.renderPassDesc.attachments[0].mipLevel = renderPassMipLevel;

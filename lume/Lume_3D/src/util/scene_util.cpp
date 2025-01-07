@@ -15,7 +15,9 @@
 
 #include "util/scene_util.h"
 
+#include <algorithm>
 #include <cinttypes>
+#include <unordered_set>
 
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/animation_output_component.h>
@@ -28,6 +30,8 @@
 #include <3d/ecs/components/name_component.h>
 #include <3d/ecs/components/node_component.h>
 #include <3d/ecs/components/planar_reflection_component.h>
+#include <3d/ecs/components/post_process_component.h>
+#include <3d/ecs/components/reflection_probe_component.h>
 #include <3d/ecs/components/render_handle_component.h>
 #include <3d/ecs/components/render_mesh_component.h>
 #include <3d/ecs/components/skin_joints_component.h>
@@ -35,24 +39,35 @@
 #include <3d/ecs/components/uri_component.h>
 #include <3d/ecs/components/world_matrix_component.h>
 #include <3d/ecs/systems/intf_animation_system.h>
+#include <3d/ecs/systems/intf_node_system.h>
 #include <3d/intf_graphics_context.h>
 #include <3d/render/default_material_constants.h>
 #include <3d/util/intf_mesh_util.h>
 #include <base/containers/fixed_string.h>
+#include <base/containers/unordered_map.h>
+#include <base/containers/vector.h>
 #include <base/math/matrix_util.h>
+#include <base/math/quaternion_util.h>
+#include <base/util/algorithm.h>
+#include <base/util/uid_util.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/intf_engine.h>
 #include <core/log.h>
 #include <core/namespace.h>
+#include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
+#include <core/property/property_types.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/intf_render_context.h>
 
 #include "uri_lookup.h"
 #include "util/component_util_functions.h"
-#include "util/string_util.h"
+
+namespace {
+constexpr uint32_t REFLECTION_PROBE_DEFAULT_SIZE { 256U };
+}
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -118,25 +133,26 @@ SceneUtil::SceneUtil(IGraphicsContext& graphicsContext) : graphicsContext_(graph
 Entity SceneUtil::CreateCamera(
     IEcs& ecs, const Math::Vec3& position, const Math::Quat& rotation, float zNear, float zFar, float fovDegrees) const
 {
-    IEntityManager& em = ecs.GetEntityManager();
-    const Entity camera = em.Create();
-
     auto lmm = GetManager<ILocalMatrixComponentManager>(ecs);
-    lmm->Create(camera);
-
     auto wmm = GetManager<IWorldMatrixComponentManager>(ecs);
-    wmm->Create(camera);
-
     auto ncm = GetManager<INodeComponentManager>(ecs);
+    auto tcm = GetManager<ITransformComponentManager>(ecs);
+    auto ccm = GetManager<ICameraComponentManager>(ecs);
+    if (!lmm || !wmm || !ncm || !tcm || !ccm) {
+        return {};
+    }
+
+    Entity camera = ecs.GetEntityManager().Create();
+
+    lmm->Create(camera);
+    wmm->Create(camera);
     ncm->Create(camera);
 
-    auto tcm = GetManager<ITransformComponentManager>(ecs);
     TransformComponent tc;
     tc.position = position;
     tc.rotation = rotation;
     tcm->Set(camera, tc);
 
-    auto ccm = GetManager<ICameraComponentManager>(ecs);
     CameraComponent cc;
     cc.sceneFlags |= CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT;
     cc.projection = CameraComponent::Projection::PERSPECTIVE;
@@ -210,9 +226,14 @@ void SceneUtil::UpdateCameraViewport(
 void SceneUtil::CameraLookAt(
     IEcs& ecs, Entity entity, const Math::Vec3& eye, const Math::Vec3& target, const Math::Vec3& up)
 {
-    auto parentWorld = Math::Mat4X4(1.f);
+    auto ncm = GetManager<INodeComponentManager>(ecs);
+    auto tcm = GetManager<ITransformComponentManager>(ecs);
+    if (!ncm || !tcm) {
+        return;
+    }
 
-    auto getParent = [ncm = GetManager<INodeComponentManager>(ecs)](Entity entity) {
+    auto parentWorld = Math::Mat4X4(1.f);
+    auto getParent = [ncm](Entity entity) {
         if (auto nodeHandle = ncm->Read(entity)) {
             return nodeHandle->parent;
         }
@@ -220,7 +241,6 @@ void SceneUtil::CameraLookAt(
     };
 
     // walk up the hierachy to get an up-to-date world matrix.
-    auto tcm = GetManager<ITransformComponentManager>(ecs);
     for (Entity node = getParent(entity); EntityUtil::IsValid(node); node = getParent(node)) {
         if (auto parentTransformHandle = tcm->Read(node)) {
             parentWorld = Math::Trs(parentTransformHandle->position, parentTransformHandle->rotation,
@@ -250,32 +270,32 @@ void SceneUtil::CameraLookAt(
 Entity SceneUtil::CreateLight(
     IEcs& ecs, const LightComponent& lightComponent, const Math::Vec3& position, const Math::Quat& rotation) const
 {
-    IEntityManager& em = ecs.GetEntityManager();
-    const Entity light = em.Create();
-
     auto lmm = GetManager<ILocalMatrixComponentManager>(ecs);
-    lmm->Create(light);
-
     auto wmm = GetManager<IWorldMatrixComponentManager>(ecs);
-    wmm->Create(light);
-
     auto ncm = GetManager<INodeComponentManager>(ecs);
-    ncm->Create(light);
-
     auto nameM = GetManager<INameComponentManager>(ecs);
+    auto tcm = GetManager<ITransformComponentManager>(ecs);
+    auto lcm = GetManager<ILightComponentManager>(ecs);
+    if (!lmm || !wmm || !ncm || !nameM || !tcm || !lcm) {
+        return {};
+    }
+
+    Entity light = ecs.GetEntityManager().Create();
+
+    lmm->Create(light);
+    wmm->Create(light);
+    ncm->Create(light);
     nameM->Create(light);
     constexpr string_view lightName("Light");
     nameM->Write(light)->name = lightName;
 
-    auto tcm = GetManager<ITransformComponentManager>(ecs);
     TransformComponent tc;
     tc.position = position;
     tc.rotation = rotation;
     tcm->Set(light, tc);
 
-    auto lcm = GetManager<ILightComponentManager>(ecs);
     LightComponent lc = lightComponent;
-    lc.shadowEnabled = (lc.type == LightComponent::Type::POINT) ? false : lc.shadowEnabled;
+    lc.shadowEnabled = (lc.type != LightComponent::Type::POINT) && lc.shadowEnabled;
     lc.range = ComponentUtilFunctions::CalculateSafeLightRange(lc.range, lc.intensity);
     lcm->Set(light, lc);
 
@@ -317,12 +337,12 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
     IEcs& ecs, IGraphicsContext& graphicsContext, const Entity& nodeEntity)
 {
     SceneUtil::ReflectionPlane plane;
-    IRenderMeshComponentManager* renderMeshCM = GetManager<IRenderMeshComponentManager>(ecs);
-    IMeshComponentManager* meshCM = GetManager<IMeshComponentManager>(ecs);
-    IMaterialComponentManager* matCM = GetManager<IMaterialComponentManager>(ecs);
-    IRenderHandleComponentManager* gpuHandleCM = GetManager<IRenderHandleComponentManager>(ecs);
+    auto* renderMeshCM = GetManager<IRenderMeshComponentManager>(ecs);
+    auto* meshCM = GetManager<IMeshComponentManager>(ecs);
+    auto* matCM = GetManager<IMaterialComponentManager>(ecs);
+    auto* gpuHandleCM = GetManager<IRenderHandleComponentManager>(ecs);
 
-    INameComponentManager* nameCM = GetManager<INameComponentManager>(ecs);
+    auto* nameCM = GetManager<INameComponentManager>(ecs);
     if (!(renderMeshCM && meshCM && matCM && gpuHandleCM && nameCM)) {
         return plane;
     }
@@ -344,32 +364,33 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
         MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
             MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
 
-    if (const auto rmcHandle = renderMeshCM->Read(nodeEntity); rmcHandle) {
-        const RenderMeshComponent& rmc = *rmcHandle;
-        if (const auto meshHandle = meshCM->Read(rmc.mesh); meshHandle) {
-            const MeshComponent& meshComponent = *meshHandle;
-            if (!meshComponent.submeshes.empty()) {
-                if (auto matHandle = matCM->Write(meshComponent.submeshes[0].material); matHandle) {
-                    MaterialComponent& matComponent = *matHandle;
-                    auto* uriCM = GetManager<IUriComponentManager>(ecs);
-                    auto* renderHandleCM = GetManager<IRenderHandleComponentManager>(ecs);
-                    constexpr const string_view uri = "3dshaders://shader/core3d_dm_fw_reflection_plane.shader";
-                    auto shaderEntity = LookupResourceByUri(uri, *uriCM, *renderHandleCM);
-                    if (!EntityUtil::IsValid(shaderEntity)) {
-                        shaderEntity = ecs.GetEntityManager().Create();
-                        renderHandleCM->Create(shaderEntity);
-                        renderHandleCM->Write(shaderEntity)->reference = device.GetShaderManager().GetShaderHandle(uri);
-                        uriCM->Create(shaderEntity);
-                        uriCM->Write(shaderEntity)->uri = uri;
-                    }
-                    matComponent.materialShader.shader = ecs.GetEntityManager().GetReferenceCounted(shaderEntity);
-
-                    matComponent.textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].image =
-                        plane.colorTarget;
-                    matComponent.extraRenderingFlags = MaterialComponent::ExtraRenderingFlagBits::DISCARD_BIT;
-                }
-            }
+    const auto meshHandle = [&]() {
+        const auto rmcHandle = renderMeshCM->Read(nodeEntity);
+        if (!rmcHandle) {
+            return ScopedHandle<const MeshComponent> {};
         }
+        return meshCM->Read(rmcHandle->mesh);
+    }();
+    if (!meshHandle && meshHandle->submeshes.empty()) {
+        return plane;
+    }
+    if (auto matHandle = matCM->Write(meshHandle->submeshes[0].material); matHandle) {
+        MaterialComponent& matComponent = *matHandle;
+        auto* uriCM = GetManager<IUriComponentManager>(ecs);
+        auto* renderHandleCM = GetManager<IRenderHandleComponentManager>(ecs);
+        constexpr const string_view uri = "3dshaders://shader/core3d_dm_fw_reflection_plane.shader";
+        auto shaderEntity = LookupResourceByUri(uri, *uriCM, *renderHandleCM);
+        if (!EntityUtil::IsValid(shaderEntity)) {
+            shaderEntity = ecs.GetEntityManager().Create();
+            renderHandleCM->Create(shaderEntity);
+            renderHandleCM->Write(shaderEntity)->reference = device.GetShaderManager().GetShaderHandle(uri);
+            uriCM->Create(shaderEntity);
+            uriCM->Write(shaderEntity)->uri = uri;
+        }
+        matComponent.materialShader.shader = ecs.GetEntityManager().GetReferenceCounted(shaderEntity);
+
+        matComponent.textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].image = plane.colorTarget;
+        matComponent.extraRenderingFlags = MaterialComponent::ExtraRenderingFlagBits::DISCARD_BIT;
     }
 
     return plane;
@@ -390,6 +411,7 @@ void SceneUtil::CreateReflectionPlaneComponent(IEcs& ecs, const Entity& nodeEnti
     }
 }
 
+namespace {
 float CalculateScalingFactor(IEcs& ecs, Entity targetEntity, Entity sourceEntity)
 {
     float scale = 1.f;
@@ -439,8 +461,12 @@ vector<Entity> CreateJointMapping(
     IEcs& ecs, array_view<const Entity> dstJointEntities, array_view<const Entity> srcJointEntities)
 {
     vector<Entity> srcToDstJointMapping;
+    auto* nameManager = GetManager<INameComponentManager>(ecs);
+    if (!nameManager) {
+        return srcToDstJointMapping;
+    }
 
-    auto getName = [nameManager = GetManager<INameComponentManager>(ecs)](const Entity& jointEntity) -> string_view {
+    auto getName = [nameManager](const Entity& jointEntity) -> string_view {
         if (auto nameComponent = nameManager->Read(jointEntity); nameComponent) {
             return nameComponent->name;
         }
@@ -476,10 +502,13 @@ vector<Entity> UpdateTracks(IEcs& ecs, array_view<EntityReference> targetTracks,
     array_view<const Entity> srcToDstJointMapping, float scale)
 {
     vector<Entity> trackTargets;
-    trackTargets.reserve(sourceTracks.size());
-    auto& entityManager = ecs.GetEntityManager();
     auto animationTrackManager = GetManager<IAnimationTrackComponentManager>(ecs);
     auto animationOutputManager = GetManager<IAnimationOutputComponentManager>(ecs);
+    if (!animationTrackManager || !animationOutputManager) {
+        return trackTargets;
+    }
+    trackTargets.reserve(sourceTracks.size());
+    auto& entityManager = ecs.GetEntityManager();
     // update tracks to point to target skin's joints.
     std::transform(sourceTracks.begin(), sourceTracks.end(), targetTracks.begin(),
         [&entityManager, animationTrackManager, animationOutputManager, &srcJointEntities, &srcToDstJointMapping,
@@ -531,17 +560,24 @@ vector<Entity> UpdateTracks(IEcs& ecs, array_view<EntityReference> targetTracks,
         });
     return trackTargets;
 }
+} // namespace
 
 IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
     IEcs& ecs, Entity targetEntity, Entity sourceEntity, Entity animationEntity) const
 {
     auto jointsManager = GetManager<ISkinJointsComponentManager>(ecs);
+    auto animationManager = GetManager<IAnimationComponentManager>(ecs);
+    auto transformManager = GetManager<ITransformComponentManager>(ecs);
+    auto animationSystem = GetSystem<IAnimationSystem>(ecs);
+    if (!jointsManager || !animationManager || !transformManager || !animationSystem) {
+        return nullptr;
+    }
     auto dstJointsComponent = jointsManager->Read(targetEntity);
     auto srcJointsComponent = jointsManager->Read(sourceEntity);
     if (!dstJointsComponent || !srcJointsComponent) {
         return nullptr;
     }
-    if (!GetManager<IAnimationComponentManager>(ecs)->HasComponent(animationEntity)) {
+    if (!animationManager->HasComponent(animationEntity)) {
         return nullptr;
     }
 
@@ -556,7 +592,6 @@ IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
     // compensate difference in root joint positions.
     // synchronize initial pose by copying src joint rotations to dst joints.
     {
-        auto transformManager = GetManager<ITransformComponentManager>(ecs);
         auto srcIt = srcJointEntities.begin();
         for (const auto& dstE : srcToDstJointMapping) {
             auto srcTransform = transformManager->Read(*srcIt);
@@ -571,8 +606,7 @@ IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
 
     auto& entityManager = ecs.GetEntityManager();
     const auto dstAnimationEntity = entityManager.Create();
-    {
-        INameComponentManager* nameManager = GetManager<INameComponentManager>(ecs);
+    if (auto* nameManager = GetManager<INameComponentManager>(ecs)) {
         nameManager->Create(dstAnimationEntity);
         auto srcName = nameManager->Read(animationEntity);
         nameManager->Write(dstAnimationEntity)->name =
@@ -581,7 +615,6 @@ IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
 
     vector<Entity> trackTargets;
     {
-        auto animationManager = GetManager<IAnimationComponentManager>(ecs);
         animationManager->Create(dstAnimationEntity);
         auto dstAnimationComponent = animationManager->Write(dstAnimationEntity);
         auto srcAnimationComponent = animationManager->Read(animationEntity);
@@ -593,14 +626,14 @@ IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
         trackTargets = UpdateTracks(ecs, dstAnimationComponent->tracks, srcAnimationComponent->tracks, srcJointEntities,
             srcToDstJointMapping, scale);
     }
-    auto animationSystem = GetSystem<IAnimationSystem>(ecs);
+
     return animationSystem->CreatePlayback(dstAnimationEntity, trackTargets);
 }
 
 void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::MaterialShaderInfo& info,
     MaterialComponent::Shader& materialShader, MaterialComponent::Shader& depthShader) const
 {
-    IRenderHandleComponentManager* renderHandleMgr = GetManager<IRenderHandleComponentManager>(ecs);
+    auto* renderHandleMgr = GetManager<IRenderHandleComponentManager>(ecs);
     if (renderHandleMgr) {
         IEntityManager& entityMgr = ecs.GetEntityManager();
         const IShaderManager& shaderMgr = graphicsContext_.GetRenderContext().GetDevice().GetShaderManager();
@@ -640,7 +673,7 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
 void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::MaterialShaderInfo& info,
     const string_view renderSlot, MaterialComponent::Shader& shader) const
 {
-    IRenderHandleComponentManager* renderHandleMgr = GetManager<IRenderHandleComponentManager>(ecs);
+    auto* renderHandleMgr = GetManager<IRenderHandleComponentManager>(ecs);
     if (renderHandleMgr) {
         IEntityManager& entityMgr = ecs.GetEntityManager();
         const IShaderManager& shaderMgr = graphicsContext_.GetRenderContext().GetDevice().GetShaderManager();
@@ -670,9 +703,12 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
 
 void SceneUtil::ShareSkin(IEcs& ecs, Entity targetEntity, Entity sourceEntity) const
 {
-    vector<Entity> dstToSrcJointMapping;
-
     auto jointsManager = GetManager<ISkinJointsComponentManager>(ecs);
+    if (!jointsManager) {
+        CORE_LOG_E("Missing ISkinJointsComponentManager.");
+        return;
+    }
+    vector<Entity> dstToSrcJointMapping;
     {
         auto dstJointsComponent = jointsManager->Read(targetEntity);
         auto srcJointsComponent = jointsManager->Read(sourceEntity);
@@ -727,5 +763,390 @@ ISceneLoader::Ptr SceneUtil::GetSceneLoader(BASE_NS::string_view uri) const
         }
     }
     return {};
+}
+
+namespace {
+EntityReference CreateTargetGpuImageEnv(IGpuResourceManager& gpuResourceMgr, IEcs& ecs, const Math::UVec2& size)
+{
+    auto* renderHandleManager = GetManager<IRenderHandleComponentManager>(ecs);
+    if (!renderHandleManager) {
+        return {};
+    }
+    GpuImageDesc envDesc { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_CUBE, BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
+        CORE_IMAGE_TILING_OPTIMAL, CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
+        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, size.x, size.y, 1U, 1U, 6U, CORE_SAMPLE_COUNT_1_BIT,
+        ComponentMapping {} };
+    auto handle = gpuResourceMgr.Create(envDesc);
+    return GetOrCreateEntityReference(ecs.GetEntityManager(), *renderHandleManager, handle);
+}
+
+EntityReference CreateTargetGpuImageDepth(IGpuResourceManager& gpuResourceMgr, IEcs& ecs, const Math::UVec2& size)
+{
+    auto* renderHandleManager = GetManager<IRenderHandleComponentManager>(ecs);
+    if (!renderHandleManager) {
+        return {};
+    }
+    GpuImageDesc depthDesc { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_CUBE, BASE_FORMAT_D16_UNORM,
+        CORE_IMAGE_TILING_OPTIMAL,
+        CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,
+        CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, size.x, size.y, 1U, 1U, 6U,
+        CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
+    auto handle = gpuResourceMgr.Create(depthDesc);
+    return GetOrCreateEntityReference(ecs.GetEntityManager(), *renderHandleManager, handle);
+}
+
+CORE_NS::EntityReference CreateReflectionProbeCamera(
+    CORE_NS::IEcs& ecs, IGraphicsContext& graphicsContext, const BASE_NS::Math::Vec3& position)
+{
+    auto ccm = GetManager<ICameraComponentManager>(ecs);
+    auto ppcm = GetManager<IPostProcessComponentManager>(ecs);
+    auto tcm = GetManager<ITransformComponentManager>(ecs);
+    auto wmm = GetManager<IWorldMatrixComponentManager>(ecs);
+    auto lmm = GetManager<ILocalMatrixComponentManager>(ecs);
+    auto ncm = GetManager<INodeComponentManager>(ecs);
+    if (!ccm || !ppcm || !tcm || !wmm || !lmm || !ncm) {
+        return {};
+    }
+    EntityReference camera = ecs.GetEntityManager().CreateReferenceCounted();
+
+    CameraComponent cc;
+    auto& gpuResourceMgr = graphicsContext.GetRenderContext().GetDevice().GetGpuResourceManager();
+
+    auto envEntityRef =
+        CreateTargetGpuImageEnv(gpuResourceMgr, ecs, { REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE });
+    auto depthEntityRef = CreateTargetGpuImageDepth(
+        gpuResourceMgr, ecs, { REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE });
+    cc.customColorTargets.push_back(envEntityRef);
+    cc.customDepthTarget = depthEntityRef;
+    cc.pipelineFlags = CameraComponent::PipelineFlagBits::CUBEMAP_BIT |
+                       CameraComponent::PipelineFlagBits::CLEAR_COLOR_BIT |
+                       CameraComponent::PipelineFlagBits::CLEAR_DEPTH_BIT;
+    cc.renderingPipeline = CameraComponent::RenderingPipeline::LIGHT_FORWARD;
+    cc.sceneFlags |= CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT;
+    cc.projection = CameraComponent::Projection::PERSPECTIVE;
+    cc.postProcess = camera;
+    ccm->Set(camera, cc);
+
+    PostProcessComponent ppc;
+    ppc.enableFlags = 0;
+    ppcm->Set(camera, ppc);
+
+    TransformComponent tc;
+    tc.position = position;
+    tc.rotation = Math::Quat { 0.f, 0.f, 0.f, 1.f };
+    tcm->Set(camera, tc);
+
+    lmm->Create(camera);
+    wmm->Create(camera);
+    ncm->Create(camera);
+
+    return camera;
+}
+} // namespace
+
+CORE_NS::EntityReference SceneUtil::CreateReflectionProbe(CORE_NS::IEcs& ecs, const BASE_NS::Math::Vec3& position) const
+{
+    auto pcm = GetManager<IReflectionProbeComponentManager>(ecs);
+    if (!pcm) {
+        return {};
+    }
+
+    auto camera = CreateReflectionProbeCamera(ecs, graphicsContext_, position);
+    if (!camera) {
+        return {};
+    }
+
+    // cube cam should always have 90 degrees of fov
+    const float viewportAngle { 90.0f };
+    // orthographic multiplier, should not matter with perspective view but for clarity, setting with no scale.
+    const float distortionMultiplier { 0.5f };
+    UpdateCameraViewport(ecs, camera, { REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE }, true,
+        Math::DEG2RAD * viewportAngle, viewportAngle * distortionMultiplier);
+
+    EntityReference probe = ecs.GetEntityManager().CreateReferenceCounted();
+
+    ReflectionProbeComponent pc;
+    pc.probeCamera = camera;
+    pcm->Set(probe, pc);
+
+    return probe;
+}
+
+namespace {
+constexpr uint64_t TYPES[] = { CORE_NS::PropertyType::BOOL_T, CORE_NS::PropertyType::CHAR_T,
+    CORE_NS::PropertyType::INT8_T, CORE_NS::PropertyType::INT16_T, CORE_NS::PropertyType::INT32_T,
+    CORE_NS::PropertyType::INT64_T, CORE_NS::PropertyType::UINT8_T, CORE_NS::PropertyType::UINT16_T,
+    CORE_NS::PropertyType::UINT32_T, CORE_NS::PropertyType::UINT64_T,
+#ifdef __APPLE__
+    CORE_NS::PropertyType::SIZE_T,
+#endif
+    CORE_NS::PropertyType::FLOAT_T, CORE_NS::PropertyType::DOUBLE_T, CORE_NS::PropertyType::BOOL_ARRAY_T,
+    CORE_NS::PropertyType::CHAR_ARRAY_T, CORE_NS::PropertyType::INT8_ARRAY_T, CORE_NS::PropertyType::INT16_ARRAY_T,
+    CORE_NS::PropertyType::INT32_ARRAY_T, CORE_NS::PropertyType::INT64_ARRAY_T, CORE_NS::PropertyType::UINT8_ARRAY_T,
+    CORE_NS::PropertyType::UINT16_ARRAY_T, CORE_NS::PropertyType::UINT32_ARRAY_T, CORE_NS::PropertyType::UINT64_ARRAY_T,
+#ifdef __APPLE__
+    CORE_NS::PropertyType::SIZE_ARRAY_T,
+#endif
+    CORE_NS::PropertyType::FLOAT_ARRAY_T, CORE_NS::PropertyType::DOUBLE_ARRAY_T, CORE_NS::PropertyType::IVEC2_T,
+    CORE_NS::PropertyType::IVEC3_T, CORE_NS::PropertyType::IVEC4_T, CORE_NS::PropertyType::VEC2_T,
+    CORE_NS::PropertyType::VEC3_T, CORE_NS::PropertyType::VEC4_T, CORE_NS::PropertyType::UVEC2_T,
+    CORE_NS::PropertyType::UVEC3_T, CORE_NS::PropertyType::UVEC4_T, CORE_NS::PropertyType::QUAT_T,
+    CORE_NS::PropertyType::MAT3X3_T, CORE_NS::PropertyType::MAT4X4_T, CORE_NS::PropertyType::UID_T,
+    CORE_NS::PropertyType::STRING_T, CORE_NS::PropertyType::IVEC2_ARRAY_T, CORE_NS::PropertyType::IVEC3_ARRAY_T,
+    CORE_NS::PropertyType::IVEC4_ARRAY_T, CORE_NS::PropertyType::VEC2_ARRAY_T, CORE_NS::PropertyType::VEC3_ARRAY_T,
+    CORE_NS::PropertyType::VEC4_ARRAY_T, CORE_NS::PropertyType::UVEC2_ARRAY_T, CORE_NS::PropertyType::UVEC3_ARRAY_T,
+    CORE_NS::PropertyType::UVEC4_ARRAY_T, CORE_NS::PropertyType::QUAT_ARRAY_T, CORE_NS::PropertyType::MAT3X3_ARRAY_T,
+    CORE_NS::PropertyType::MAT4X4_ARRAY_T, CORE_NS::PropertyType::UID_ARRAY_T, CORE_NS::PropertyType::FLOAT_VECTOR_T,
+    CORE_NS::PropertyType::MAT4X4_VECTOR_T };
+
+template<typename EntityHandler, typename EntityReferenceHandler>
+void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHandler&& entityFunc,
+    EntityReferenceHandler&& entityRefFunc)
+{
+    if (property.type == CORE_NS::PropertyType::ENTITY_T) {
+        auto ptr = reinterpret_cast<CORE_NS::Entity*>(offset);
+        if (ptr && EntityUtil::IsValid(*ptr)) {
+            entityFunc(ptr);
+        }
+    } else if (property.type == CORE_NS::PropertyType::ENTITY_REFERENCE_T) {
+        auto ptr = reinterpret_cast<CORE_NS::EntityReference*>(offset);
+        if (ptr && EntityUtil::IsValid(*ptr)) {
+            entityRefFunc(ptr);
+        }
+    } else if (std::any_of(std::begin(TYPES), std::end(TYPES),
+        [&current = property.type](const uint64_t type) {
+            return type == current;
+	})) {
+        // One of the basic types so no further processing needed.
+    } else if (property.metaData.containerMethods) {
+        auto& containerProperty = property.metaData.containerMethods->property;
+        if (property.type.isArray) {
+            // Array of properties.
+            for (size_t i = 0; i < property.count; i++) {
+                uintptr_t ptr = offset + i * containerProperty.size;
+                FindEntities(containerProperty, ptr, BASE_NS::forward<EntityHandler>(entityFunc),
+                    BASE_NS::forward<EntityReferenceHandler>(entityRefFunc));
+            }
+        } else {
+            // This is a "non trivial container"
+            // (So it needs to read the data and not just the metadata to figure out the data structure).
+            const auto count = property.metaData.containerMethods->size(offset);
+            for (size_t i = 0; i < count; i++) {
+                uintptr_t ptr = property.metaData.containerMethods->get(offset, i);
+                FindEntities(containerProperty, ptr, BASE_NS::forward<EntityHandler>(entityFunc),
+                    BASE_NS::forward<EntityReferenceHandler>(entityRefFunc));
+            }
+        }
+    } else if (!property.metaData.memberProperties.empty()) {
+        // Custom type (struct). Process sub properties recursively.
+        for (size_t i = 0; i < property.count; i++) {
+            const auto ptr = offset;
+            offset += property.size / property.count;
+            for (const auto& child : property.metaData.memberProperties) {
+                FindEntities(child, ptr + child.offset, BASE_NS::forward<EntityHandler>(entityFunc),
+                    BASE_NS::forward<EntityReferenceHandler>(entityRefFunc));
+            }
+        }
+    }
+}
+
+vector<Entity> GatherEntities(const IEcs& source, const Entity sourceEntity)
+{
+    vector<Entity> entities;
+    if (!CORE_NS::EntityUtil::IsValid(sourceEntity)) {
+        return entities;
+    }
+    auto nodeSystem = GetSystem<INodeSystem>(source);
+    if (!nodeSystem) {
+        CORE_LOG_W("Missing INodeSystem");
+        return entities;
+    }
+    vector<IComponentManager*> managers;
+
+    vector<Entity> stack;
+    stack.push_back(sourceEntity);
+    while (!stack.empty()) {
+        const Entity entity = stack.back();
+        stack.pop_back();
+
+        if (auto pos = LowerBound(entities.cbegin(), entities.cend(), entity);
+            (pos != entities.cend()) && (*pos == entity)) {
+            continue;
+        } else {
+            entities.insert(pos, entity);
+        }
+        source.GetComponents(entity, managers);
+        for (const auto& srcManager : managers) {
+            if (srcManager->GetUid() == INodeComponentManager::UID) {
+                // for the hierarchy we need either ask the children via NodeSystem/SceneNode or construct the hierarchy
+                // based on parent Entity.
+                if (auto sceneNode = nodeSystem->GetNode(entity)) {
+                    auto children = sceneNode->GetChildren();
+                    stack.reserve(stack.size() + children.size());
+                    for (const auto child : children) {
+                        stack.push_back(child->GetEntity());
+                    }
+                }
+            } else if (auto* data = srcManager->GetData(entity)) {
+                // for other component types it's fine to go through all the properties.
+                if (const auto base = reinterpret_cast<uintptr_t>(data->RLock())) {
+                    for (const auto& property : data->Owner()->MetaData()) {
+                        FindEntities(
+                            property, base + property.offset,
+                            [&stack](const Entity* entity) { stack.push_back(*entity); },
+                            [&stack](const EntityReference* entity) { stack.push_back(*entity); });
+                    }
+                }
+                data->RUnlock();
+            }
+        }
+    }
+
+    return entities;
+}
+
+vector<Entity> GatherEntities(const IEcs& source)
+{
+    vector<Entity> entities;
+    auto& entityManager = source.GetEntityManager();
+    auto it = entityManager.Begin();
+    if (!it || it->Compare(entityManager.End())) {
+        return entities;
+    }
+    do {
+        entities.push_back(it->Get());
+    } while (it->Next());
+    return entities;
+}
+
+void UpdateEntities(
+    IComponentManager* manager, Entity entity, const BASE_NS::unordered_map<CORE_NS::Entity, CORE_NS::Entity>& oldToNew)
+{
+    auto* data = manager->GetData(entity);
+    if (!data) {
+        return;
+    }
+    const auto base = reinterpret_cast<uintptr_t>(data->RLock());
+    if (!base) {
+        data->RUnlock();
+        return;
+    }
+    // as multiple properties can point to the same value, use set to track which have been updates.
+    std::unordered_set<uintptr_t> updatedProperties;
+    auto& em = manager->GetEcs().GetEntityManager();
+    for (const auto& property : data->Owner()->MetaData()) {
+        FindEntities(
+            property, base + property.offset,
+            [oldToNew, data, &updatedProperties](Entity* entity) {
+                if (updatedProperties.count(reinterpret_cast<uintptr_t>(entity))) {
+                    return;
+                }
+                updatedProperties.insert(reinterpret_cast<uintptr_t>(entity));
+                if (const auto it = oldToNew.find(*entity); it != oldToNew.end()) {
+                    data->WLock();
+                    *entity = it->second;
+                    data->WUnlock();
+                } else {
+                    CORE_LOG_D("couldn't find %s", to_hex(entity->id).data());
+                }
+            },
+            [oldToNew, data, &updatedProperties, &em](EntityReference* entity) {
+                if (updatedProperties.count(reinterpret_cast<uintptr_t>(entity))) {
+                    return;
+                }
+                updatedProperties.insert(reinterpret_cast<uintptr_t>(entity));
+                if (const auto it = oldToNew.find(*entity); it != oldToNew.end()) {
+                    data->WLock();
+                    *entity = em.GetReferenceCounted(it->second);
+                    data->WUnlock();
+                } else {
+                    CORE_LOG_D("couldn't find %s", to_hex(static_cast<const Entity>(*entity).id).data());
+                }
+            });
+    }
+    data->RUnlock();
+}
+
+struct CloneResults {
+    vector<Entity> newEntities;
+    unordered_map<Entity, Entity> oldToNew;
+};
+
+CloneResults CloneEntities(IEcs& destination, const IEcs& source, vector<Entity> srcEntities)
+{
+    unordered_map<Entity, Entity> srcToDst;
+    vector<Entity> newEntities;
+    newEntities.reserve(srcEntities.size());
+    vector<IComponentManager*> managers;
+    while (!srcEntities.empty()) {
+        const Entity srcEntity = srcEntities.back();
+        srcEntities.pop_back();
+
+        const Entity dstEntity = destination.GetEntityManager().Create();
+        newEntities.push_back(dstEntity);
+        srcToDst[srcEntity] = dstEntity;
+
+        source.GetComponents(srcEntity, managers);
+        for (const auto& srcManager : managers) {
+            const auto* srcData = srcManager->GetData(srcEntity);
+            if (!srcData) {
+                continue;
+            }
+            auto* dstManager = destination.GetComponentManager(srcManager->GetUid());
+            if (!dstManager) {
+                CORE_LOG_W("ComponentManager %s missing from destination.", to_string(srcManager->GetUid()).data());
+                continue;
+            }
+            dstManager->Create(dstEntity);
+            dstManager->SetData(dstEntity, *srcData);
+        }
+    }
+
+    for (const auto& newEntity : newEntities) {
+        destination.GetComponents(newEntity, managers);
+        for (const auto& dstManager : managers) {
+            UpdateEntities(dstManager, newEntity, srcToDst);
+        }
+    }
+    return CloneResults { BASE_NS::move(newEntities), BASE_NS::move(srcToDst) };
+}
+} // namespace
+
+Entity SceneUtil::Clone(
+    IEcs& destination, const Entity parentEntity, const IEcs& source, const Entity sourceEntity) const
+{
+    if (&destination == &source) {
+        return {};
+    }
+    if (CORE_NS::EntityUtil::IsValid(parentEntity) && !destination.GetEntityManager().IsAlive(parentEntity)) {
+        return {};
+    }
+    if (!CORE_NS::EntityUtil::IsValid(sourceEntity) || !source.GetEntityManager().IsAlive(sourceEntity)) {
+        return {};
+    }
+    auto result = CloneEntities(destination, source, GatherEntities(source, sourceEntity));
+    Entity destinationEntity = result.oldToNew[sourceEntity];
+    auto* nodeManager = GetManager<INodeComponentManager>(destination);
+    if (nodeManager) {
+        auto handle = nodeManager->Write(destinationEntity);
+        if (handle) {
+            handle->parent = parentEntity;
+        }
+    } else {
+        CORE_LOG_W("Failed to reparent: missing INodeComponentManager");
+    }
+    return destinationEntity;
+}
+
+vector<Entity> SceneUtil::Clone(IEcs& destination, const IEcs& source) const
+{
+    if (&destination == &source) {
+        return {};
+    }
+
+    auto result = CloneEntities(destination, source, GatherEntities(source));
+    return result.newEntities;
 }
 CORE3D_END_NAMESPACE()

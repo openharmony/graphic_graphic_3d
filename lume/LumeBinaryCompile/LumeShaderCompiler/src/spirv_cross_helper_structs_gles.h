@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef GLES_SPIRV_CROSS_HELPER_STRUCTS_H
 #define GLES_SPIRV_CROSS_HELPER_STRUCTS_H
 
@@ -21,7 +22,7 @@
 #include "shader_type.h"
 
 /** Shader stage flag bits */
-enum class ShaderStageFlagBits {
+enum class ShaderStageFlagBits : unsigned int {
     /** Vertex bit */
     VERTEX_BIT = 0x00000001,
     /** Fragment bit */
@@ -60,21 +61,23 @@ struct ShaderStageFlags {
     ShaderStageFlagBits flags {};
 
     ShaderStageFlags() noexcept = default;
-    ShaderStageFlags(ShaderStageFlagBits bits) noexcept : flags(bits) {}
-    ShaderStageFlags(ShaderKind kind) noexcept
+    explicit ShaderStageFlags(ShaderStageFlagBits bits) noexcept : flags(bits) {}
+    explicit ShaderStageFlags(ShaderKind kind) noexcept
     {
         flags = ShaderKindToStageFlags(kind);
     }
 
     ShaderStageFlags operator&(ShaderStageFlagBits rhs) const noexcept
     {
-        return { static_cast<ShaderStageFlagBits>(static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) &
-                                                  static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs)) };
+        return ShaderStageFlags { static_cast<ShaderStageFlagBits>(
+            static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) &
+            static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs)) };
     }
 
     ShaderStageFlags operator~() const noexcept
     {
-        return { static_cast<ShaderStageFlagBits>(~static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags)) };
+        return ShaderStageFlags { static_cast<ShaderStageFlagBits>(
+            ~static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags)) };
     }
 
     ShaderStageFlags& operator&=(ShaderStageFlagBits rhs) noexcept
@@ -106,7 +109,7 @@ struct ShaderStageFlags {
 
     operator bool() const noexcept
     {
-        return static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) != 0;
+        return static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) != 0U;
     }
 };
 
@@ -169,7 +172,7 @@ struct ResourceLimits {
     static constexpr uint32_t MAX_SAMPLERS_IN_PROGRAM { MAX_SAMPLERS_IN_STAGE + MAX_SAMPLERS_IN_STAGE };
     static constexpr uint32_t MAX_IMAGES_IN_PROGRAM { MAX_IMAGES_IN_STAGE + MAX_IMAGES_IN_STAGE };
 };
-static constexpr int32_t INVALID_LOCATION = -1;
+constexpr const int32_t INVALID_LOCATION = -1;
 struct SpecConstantInfo {
     enum class Types { INVALID = 0, BOOL, UINT32, INT32, FLOAT };
     Types constantType = Types::INVALID;

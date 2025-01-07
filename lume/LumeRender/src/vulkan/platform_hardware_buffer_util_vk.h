@@ -42,10 +42,10 @@ struct HardwareBufferProperties {
 
 HardwareBufferProperties QueryHwBufferFormatProperties(const DeviceVk& deviceVk, uintptr_t hwBuffer);
 uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& physicalDeviceMemoryProperties,
-    const uint32_t memoryTypeBits, const VkMemoryPropertyFlags memoryPropertyFlags);
+    uint32_t memoryTypeBits, VkMemoryPropertyFlags memoryPropertyFlags);
 VkImageCreateInfo GetHwBufferImageCreateInfo(const GpuImageDesc& desc);
-VkMemoryRequirements GetImageMemoryRequirements(const DeviceVk& deviceVk, const VkImage image,
-    const VkImageAspectFlags imageAspectFlags, const bool useMemoryRequirements2);
+VkMemoryRequirements GetImageMemoryRequirements(
+    const DeviceVk& deviceVk, VkImage image, VkImageAspectFlags imageAspectFlags, bool useMemoryRequirements2);
 
 struct HardwareBufferImage {
     VkImage image;
@@ -55,8 +55,8 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
     const GpuImageDesc& desc, uintptr_t hwBuffer);
 void DestroyHwPlatformImage(const DeviceVk& deviceVk, VkImage image, VkDeviceMemory deviceMemory);
 
-void FillYcbcrConversionInfo(const DeviceVk& deviceVk, const HardwareBufferProperties& hwBufferProperties,
-    VkSamplerYcbcrConversionCreateInfo& ycbcrConversionCreateInfo);
+void FillYcbcrConversionInfo(
+    const HardwareBufferProperties& hwBufferProperties, VkSamplerYcbcrConversionCreateInfo& ycbcrConversionCreateInfo);
 } // namespace PlatformHardwareBufferUtil
 RENDER_END_NAMESPACE()
 

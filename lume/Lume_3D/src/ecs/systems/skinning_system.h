@@ -17,11 +17,11 @@
 #define CORE_ECS_SKINNINGSYSTEM_H
 
 #include <ComponentTools/component_query.h>
-#include <PropertyTools/property_api_impl.h>
 
 #include <3d/ecs/systems/intf_skinning_system.h>
 #include <base/math/matrix.h>
 #include <core/namespace.h>
+#include <core/property_tools/property_api_impl.h>
 #include <core/threading/intf_thread_pool.h>
 
 CORE3D_BEGIN_NAMESPACE()

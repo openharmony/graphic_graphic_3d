@@ -35,10 +35,10 @@ BEGIN_COMPONENT(IRenderMeshComponentManager, RenderMeshComponent)
     static constexpr uint32_t RENDER_MESH_CUSTOM_DATA_VEC4_COUNT { 2u };
 #endif
     /** Mesh entity. */
-    DEFINE_PROPERTY(CORE_NS::Entity, mesh, "Mesh", 0, )
+    DEFINE_PROPERTY(CORE_NS::Entity, mesh, "Mesh", 0,)
 
     /** Render mesh batch entity. */
-    DEFINE_PROPERTY(CORE_NS::Entity, renderMeshBatch, "Render Mesh Batch", 0, )
+    DEFINE_PROPERTY(CORE_NS::Entity, renderMeshBatch, "Render Mesh Batch", 0,)
 
     /** Additional per render mesh custom data for shader customization */
     DEFINE_ARRAY_PROPERTY(BASE_NS::Math::UVec4, RENDER_MESH_CUSTOM_DATA_VEC4_COUNT, customData,

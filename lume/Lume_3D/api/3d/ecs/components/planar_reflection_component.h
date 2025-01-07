@@ -50,11 +50,11 @@ BEGIN_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent)
 
     /** Reflection output render target.
      */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, colorRenderTarget, "Render Output Target", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, colorRenderTarget, "Render Output Target", 0,)
 
     /** Reflection pass depth render target.
      */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, depthRenderTarget, "Depth Output Target", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, depthRenderTarget, "Depth Output Target", 0,)
 
     /** Clip offset to reflection plane.
      */

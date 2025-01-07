@@ -15,16 +15,13 @@
 
 #include "platform_hardware_buffer_util_vk.h"
 
-#include <algorithm>
 #include <vulkan/vulkan_core.h>
 
-#include <base/math/mathf.h>
 #include <render/namespace.h>
 
 #include "device/device.h"
 #include "util/log.h"
 #include "vulkan/device_vk.h"
-#include "vulkan/validate_vk.h"
 
 RENDER_BEGIN_NAMESPACE()
 namespace PlatformHardwareBufferUtil {
@@ -130,8 +127,8 @@ void DestroyHwPlatformImage(const DeviceVk& deviceVk, VkImage image, VkDeviceMem
         nullptr);          // pAllocator
 }
 
-void FillYcbcrConversionInfo(const DeviceVk& deviceVk, const HardwareBufferProperties& hwBufferProperties,
-    VkSamplerYcbcrConversionCreateInfo& ycbcrConversionCreateInfo)
+void FillYcbcrConversionInfo(
+    const HardwareBufferProperties& hwBufferProperties, VkSamplerYcbcrConversionCreateInfo& ycbcrConversionCreateInfo)
 {
     constexpr VkComponentMapping componentMapping {
         VK_COMPONENT_SWIZZLE_IDENTITY, // r

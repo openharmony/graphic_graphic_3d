@@ -43,7 +43,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "6bf65ac3-6ede-4baa-a61a-2207085b235c" };
-    static constexpr char const* const TYPE_NAME = "RenderNodeDefaultShadowsBlur";
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultShadowsBlur";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();

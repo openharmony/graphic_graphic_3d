@@ -4,7 +4,6 @@
             "type" : "shader"
     },
     "category" : "3D/Material",
-    "baseShader" : "3dshaders://shader/core3d_dm_fw_sdf.shader",
     "materialMetadata" : [
         {
             "name" : "MaterialComponent",

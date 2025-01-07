@@ -56,7 +56,7 @@ protected:
 
 /** Get class instance from specified class registry */
 template<class T>
-auto GetInstance(IClassRegister& registry, const BASE_NS::Uid& uid)
+auto GetInstance(const IClassRegister& registry, const BASE_NS::Uid& uid)
 {
     IInterface* instance = static_cast<T*>(registry.GetInstance(uid));
     if (instance) {
@@ -67,9 +67,12 @@ auto GetInstance(IClassRegister& registry, const BASE_NS::Uid& uid)
 
 /** Get class instance from specified class registry */
 template<class T>
-auto GetInstance(const IClassRegister& registry, const BASE_NS::Uid& uid)
+auto GetInstance(const IClassRegister* registry, const BASE_NS::Uid& uid)
 {
-    return GetInstance<T>(const_cast<IClassRegister&>(registry), uid);
+    if (!registry) {
+        return static_cast<T*>(nullptr);
+    }
+    return GetInstance<T>(*registry, uid);
 }
 
 /** Get interface from global registry */

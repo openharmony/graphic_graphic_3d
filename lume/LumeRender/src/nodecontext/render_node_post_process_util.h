@@ -13,23 +13,26 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__RENDER_NODE_POST_PROCESS_UTIL_H
-#define RENDER_RENDER__RENDER_NODE_POST_PROCESS_UTIL_H
+#ifndef RENDER_NODECONTEXT_RENDER_NODE_POST_PROCESS_UTIL_H
+#define RENDER_NODECONTEXT_RENDER_NODE_POST_PROCESS_UTIL_H
 
 #include <cstdint>
 
 #include <base/containers/array_view.h>
 #include <render/datastore/render_data_store_render_pods.h>
+#include <render/device/intf_shader_manager.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_node_post_process_util.h>
+#include <render/nodecontext/intf_render_post_process.h>
+#include <render/nodecontext/intf_render_post_process_node.h>
 #include <render/render_data_structures.h>
 
 #include "node/render_bloom.h"
 #include "node/render_blur.h"
-#include "node/render_copy.h"
 #include "node/render_motion_blur.h"
+#include "nodecontext/render_node_copy_util.h"
 
 RENDER_BEGIN_NAMESPACE()
 struct RenderableList;
@@ -57,6 +60,7 @@ private:
     void ProcessPostProcessConfiguration();
     void InitCreateShaderResources();
     void InitCreateBinders();
+    void CreatePostProcessInterfaces();
 
     struct InputOutput {
         BindableImage input;
@@ -85,11 +89,8 @@ private:
     RenderNodeHandles::InputResources inputResources_;
 
     struct EffectData {
-        RenderHandle shader;
-        RenderHandle pl;
+        IShaderManager::ShaderData sd;
         RenderHandle pso;
-
-        PipelineLayout pipelineLayout;
     };
     EffectData fxaaData_;
     EffectData taaData_;
@@ -97,16 +98,24 @@ private:
     EffectData dofData_;
     EffectData copyData_;
     EffectData combineData_;
+    // additional optimized layer copy for GL(ES)
+    EffectData combineDataLayer_;
 
     RenderBloom renderBloom_;
     RenderBlur renderBlur_;
     RenderMotionBlur renderMotionBlur_;
-    RenderCopy renderCopy_;
+    RenderNodeCopyUtil renderCopy_;
     // additional layer copy
-    RenderCopy renderCopyLayer_;
+    RenderNodeCopyUtil renderCopyLayer_;
 
     RenderBlur renderNearBlur_;
     RenderBlur renderFarBlur_;
+
+    struct PostProcessInterfaces {
+        IRenderPostProcess::Ptr postProcess;
+        IRenderPostProcessNode::Ptr postProcessNode;
+    };
+    PostProcessInterfaces ppLensFlareInterface_;
 
     struct AdditionalImageData {
         RenderHandle black;
@@ -189,6 +198,7 @@ private:
         IDescriptorSetBinder::Ptr globalSet0[POST_PROCESS_UBO_INDICES::PP_COUNT_IDX];
 
         IDescriptorSetBinder::Ptr combineBinder;
+        IDescriptorSetBinder::Ptr combineLayerBinder;
         IDescriptorSetBinder::Ptr taaBinder;
         IDescriptorSetBinder::Ptr fxaaBinder;
         IDescriptorSetBinder::Ptr dofBlurBinder;
@@ -199,6 +209,8 @@ private:
     AllBinders binders_;
 
     DeviceBackendType deviceBackendType_ { DeviceBackendType::VULKAN };
+
+    bool glOptimizedLayerCopyEnabled_ { false };
 };
 
 class RenderNodePostProcessUtilImpl final : public IRenderNodePostProcessUtil {

@@ -43,24 +43,25 @@ public:
 
     void RegisterImageLoader(IImageLoader::Ptr imageLoader) override;
 
-    LoadResult LoadImage(const BASE_NS::string_view uri, uint32_t loadFlags) override;
+    LoadResult LoadImage(BASE_NS::string_view uri, uint32_t loadFlags) override;
     LoadResult LoadImage(IFile& file, uint32_t loadFlags) override;
     LoadResult LoadImage(BASE_NS::array_view<const uint8_t> imageFileBytes, uint32_t loadFlags) override;
 
-    LoadAnimatedResult LoadAnimatedImage(const BASE_NS::string_view uri, uint32_t loadFlags) override;
+    LoadAnimatedResult LoadAnimatedImage(BASE_NS::string_view uri, uint32_t loadFlags) override;
     LoadAnimatedResult LoadAnimatedImage(IFile& file, uint32_t loadFlags) override;
     LoadAnimatedResult LoadAnimatedImage(
         BASE_NS::array_view<const uint8_t> imageFileBytes, uint32_t loadFlags) override;
 
     BASE_NS::vector<ImageType> GetSupportedTypes() const override;
 
-    static LoadResult ResultFailure(const BASE_NS::string_view error);
+    static LoadResult ResultFailure(BASE_NS::string_view error);
     static LoadResult ResultSuccess(IImageContainer::Ptr image);
-    static LoadAnimatedResult ResultFailureAnimated(const BASE_NS::string_view error);
+    static LoadAnimatedResult ResultFailureAnimated(BASE_NS::string_view error);
     static LoadAnimatedResult ResultSuccessAnimated(IAnimatedImage::Ptr image);
 
 private:
     void OnTypeInfoEvent(EventType type, BASE_NS::array_view<const ITypeInfo* const> typeInfos) override;
+
     IFileManager& fileManager_;
     struct RegisteredImageLoader {
         BASE_NS::Uid uid;

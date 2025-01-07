@@ -42,6 +42,7 @@ BEGIN_COMPONENT(IPostProcessComponentManager, PostProcessComponent)
         TAA_BIT = (1 << 11),
         DOF_BIT = (1 << 12),
         MOTION_BLUR_BIT = (1 << 13),
+        LENS_FLARE_BIT = (1 << 14),
     };
     /** Container for post-processing flag bits */
     using Flags = uint32_t;
@@ -100,6 +101,11 @@ BEGIN_COMPONENT(IPostProcessComponentManager, PostProcessComponent)
      */
     DEFINE_PROPERTY(
         RENDER_NS::MotionBlurConfiguration, motionBlurConfiguration, "Motion Blur Configuration", 0, ARRAY_VALUE())
+
+    /** Lens flare configuration.
+     */
+    DEFINE_PROPERTY(
+        RENDER_NS::LensFlareConfiguration, lensFlareConfiguration, "Lens Flare Configuration", 0, ARRAY_VALUE())
 
 END_COMPONENT(IPostProcessComponentManager, PostProcessComponent, "a2c647e7-9c66-4565-af3b-3acc75b3718f")
 #if !defined(IMPLEMENT_MANAGER)

@@ -22,19 +22,9 @@
 #include "3d/shaders/common/3d_dm_inplace_fog_common.h"
 #include "3d/shaders/common/3d_dm_inplace_post_process.h"
 #include "3d/shaders/common/3d_dm_inplace_sampling_common.h"
-#include "common/inplace_lighting_common.h"
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outVelocityNormal;
-
-uint GetInstanceIndex()
-{
-    uint instanceIdx = 0U;
-    if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_GPU_INSTANCING_BIT) == CORE_MATERIAL_GPU_INSTANCING_BIT) {
-        instanceIdx = GetUnpackFlatIndicesInstanceIdx(inIndices);
-    }
-    return instanceIdx;
-}
 
 float GetLodForRadianceSample(const float roughness)
 {
@@ -46,7 +36,7 @@ ClearcoatShadingVariables GetUnpackedAndSampledClearcoat(const uint instanceIdx,
     const float cc = GetUnpackClearcoat(instanceIdx);
     const float ccRoughness = GetUnpackClearcoatRoughness(instanceIdx);
     ClearcoatShadingVariables ccsv;
-    ccsv.cc = GetClearcoatSample(inUv) * cc; // 0.0 - 1.0
+    ccsv.cc = clamp(GetClearcoatSample(inUv) * cc, 0.0, 1.0); // 0.0 - 1.0
     ccsv.ccNormal = ccNormal;
     ccsv.ccRoughness = GetClearcoatRoughnessSample(inUv, instanceIdx) * ccRoughness; // CORE_BRDF_MIN_ROUGHNESS - 1.0
     // geometric correction doesn't behave that well with clearcoat due to it being basically 0 roughness
@@ -99,7 +89,7 @@ vec3 GetTransmissionRadianceSample(const vec2 fragUv, const vec3 worldReflect, c
 
 vec4 unlitBasic()
 {
-    const uint instanceIdx = GetInstanceIndex();
+    const uint instanceIdx = GetMaterialInstanceIndex(inIndices);
     CORE_RELAXEDP vec4 baseColor = GetBaseColorSample(inUv, instanceIdx) * GetUnpackBaseColor(instanceIdx) * inColor;
     baseColor.a = clamp(baseColor.a, 0.0, 1.0);
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_ADDITIONAL_SHADER_DISCARD_BIT) ==
@@ -122,7 +112,7 @@ vec4 unlitBasic()
 
 vec4 unlitShadowAlpha()
 {
-    const uint instanceIdx = GetInstanceIndex();
+    const uint instanceIdx = GetMaterialInstanceIndex(inIndices);
     CORE_RELAXEDP vec4 baseColor = GetBaseColorSample(inUv, instanceIdx) * GetUnpackBaseColor(instanceIdx) * inColor;
     baseColor.a = clamp(baseColor.a, 0.0, 1.0);
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_ADDITIONAL_SHADER_DISCARD_BIT) ==
@@ -215,7 +205,7 @@ vec4 unlitShadowAlpha()
 
 vec4 pbrBasic()
 {
-    const uint instanceIdx = GetInstanceIndex();
+    const uint instanceIdx = GetMaterialInstanceIndex(inIndices);
     const CORE_RELAXEDP vec4 baseColor = GetUnpackBaseColorFinalValue(inColor, inUv, instanceIdx);
 
     const vec3 normNormal = normalize(inNormal.xyz);
@@ -278,12 +268,13 @@ vec4 pbrBasic()
     shadingData.diffuseColor = brdfData.diffuseColor;
     shadingData.materialFlags = CORE_MATERIAL_FLAGS;
     shadingData.layers = uMeshMatrix.mesh[instanceIdx].layers.xy;
+    shadingData.cameraIdx = cameraIdx;
     CORE_RELAXEDP const float roughness = brdfData.roughness;
 
     vec3 color = vec3(0.0); // brdfData.diffuseColor
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) ==
         CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) {
-        color = CalculateLightingInplace(shadingData, clearcoatSV, sheenSV);
+        color += CalculateLightingInplace(shadingData, clearcoatSV, sheenSV);
     }
 
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) ==

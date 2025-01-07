@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,9 +16,20 @@
 #ifndef WIDGET_ADAPTER_3D_LOG
 #define WIDGET_ADAPTER_3D_LOG
 #include <hilog/log.h>
-#define WIDGET_LOGE(fmt, ...) HiLogPrint(LOG_CORE, LOG_ERROR, 0xD003B00, "lume_widget", fmt, ##__VA_ARGS__);
-#define WIDGET_LOGW(fmt, ...) HiLogPrint(LOG_CORE, LOG_ERROR, 0xD003B00, "lume_widget", fmt, ##__VA_ARGS__);
-#define WIDGET_LOGI(fmt, ...) HiLogPrint(LOG_CORE, LOG_ERROR, 0xD003B00, "lume_widget", fmt, ##__VA_ARGS__);
-#define WIDGET_LOGD(fmt, ...) HiLogPrint(LOG_CORE, LOG_ERROR, 0xD003B00, "lume_widget", fmt, ##__VA_ARGS__);
+
+#ifdef LOG_DOMAIN
+#undef LOG_DOMAIN
+#endif
+#define LOG_DOMAIN 0xD00143D
+
+#ifdef LOG_TAG
+#undef LOG_TAG
+#endif
+#define LOG_TAG "lume_widget"
+
+#define WIDGET_LOGE(fmt, ...) HILOG_IMPL(LOG_CORE, LOG_ERROR, LOG_DOMAIN, LOG_TAG, fmt, ##__VA_ARGS__)
+#define WIDGET_LOGW(fmt, ...) HILOG_IMPL(LOG_CORE, LOG_WARN, LOG_DOMAIN, LOG_TAG, fmt, ##__VA_ARGS__)
+#define WIDGET_LOGI(fmt, ...) HILOG_IMPL(LOG_CORE, LOG_INFO, LOG_DOMAIN, LOG_TAG, fmt, ##__VA_ARGS__)
+#define WIDGET_LOGD(fmt, ...) HILOG_IMPL(LOG_CORE, LOG_DEBUG, LOG_DOMAIN, LOG_TAG, fmt, ##__VA_ARGS__)
 
 #endif // WIDGET_ADAPTER_3D_LOG

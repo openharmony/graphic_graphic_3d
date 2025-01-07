@@ -32,7 +32,6 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 class GpuResourceManager;
 struct RenderCommandBeginRenderPass;
-struct RenderPassAttachmentCompatibilityDesc;
 
 struct LowLevelCommandBufferVk {
     VkCommandBuffer commandBuffer { VK_NULL_HANDLE };
@@ -64,7 +63,7 @@ struct ContextRenderPassCacheVk {
 class NodeContextPoolManagerVk final : public NodeContextPoolManager {
 public:
     explicit NodeContextPoolManagerVk(Device& device, GpuResourceManager& gpuResourceManager, const GpuQueue& gpuQueue);
-    ~NodeContextPoolManagerVk();
+    ~NodeContextPoolManagerVk() override;
 
     void BeginFrame() override;
     void BeginBackendFrame() override;
@@ -88,7 +87,7 @@ private:
     ContextRenderPassCacheVk renderPassCompatibilityCache_;
     RenderPassCreatorVk renderPassCreator_;
 #if ((RENDER_VALIDATION_ENABLED == 1) || (RENDER_VULKAN_VALIDATION_ENABLED == 1))
-    void SetValidationDebugName(const BASE_NS::string_view debugName) override;
+    void SetValidationDebugName(BASE_NS::string_view debugName) override;
     BASE_NS::string debugName_;
     bool firstFrame_ { true };
 #endif

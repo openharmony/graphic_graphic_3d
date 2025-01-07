@@ -20,36 +20,19 @@ layout(location = 0) in vec2 inUv;
 
 layout(location = 0) out vec4 outColor;
 
-#define QUALITY_LOW 0
-#define QUALITY_MED 1
-#define QUALITY_HIGH 2
-
-#define MOTION_BLUR_EPSILON 0.0001
-
-vec4 GetFactor()
-{
-    return uLocalData.factors[0U];
-}
-
-bool IsVelocityZero(const vec2 velocity)
-{
-    return ((abs(velocity.x) < MOTION_BLUR_EPSILON) || (abs(velocity.y) < MOTION_BLUR_EPSILON));
-}
-
 float SqrMagnitude(const vec2 vec)
 {
     return vec.x * vec.x + vec.y * vec.y;
 }
 
 /*
- * basic motion blur
+ * basic motion blur tile max pass
  */
 void main(void)
 {
-    const vec4 factor = GetFactor();
+    const vec2 uv = inUv.xy;
     const uint sampleCount = 16;
 
-    const vec2 uv = inUv.xy;
     // bilinear sampling 4x4
     const vec2 stepSize = uPc.viewportSizeInvSize.zw / 4.0;
     vec2 velocities[sampleCount];

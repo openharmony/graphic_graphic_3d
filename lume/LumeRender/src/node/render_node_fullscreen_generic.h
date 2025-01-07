@@ -13,10 +13,11 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_FULLSCREEN_GENERIC_H
-#define RENDER_RENDER__NODE__RENDER_NODE_FULLSCREEN_GENERIC_H
+#ifndef RENDER_NODE_RENDER_NODE_FULLSCREEN_GENERIC_H
+#define RENDER_NODE_RENDER_NODE_FULLSCREEN_GENERIC_H
 
 #include <base/util/uid.h>
+#include <render/device/intf_shader_manager.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_node.h>
@@ -42,7 +43,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "ea17a490-c3b7-453a-851f-79a20e324159" };
-    static constexpr char const* TYPE_NAME = "RenderNodeFullscreenGeneric";
+    static constexpr const char* TYPE_NAME = "RenderNodeFullscreenGeneric";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -70,12 +71,8 @@ private:
     RenderNodeHandles::InputRenderPass inputRenderPass_;
     RenderNodeHandles::InputResources inputResources_;
     struct PipelineData {
-        RenderHandle shader;
-        RenderHandle graphicsState;
+        IShaderManager::GraphicsShaderData gsd;
         RenderHandle pso;
-        RenderHandle pipelineLayout;
-
-        PipelineLayout pipelineLayoutData;
     };
     PipelineData pipelineData_;
 

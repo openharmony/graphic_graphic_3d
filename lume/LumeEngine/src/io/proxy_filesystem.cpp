@@ -28,7 +28,6 @@
 #include <core/io/intf_directory.h>
 #include <core/io/intf_file.h>
 #include <core/namespace.h>
-#include <core/log.h>
 
 #include "file_manager.h"
 #include "path_tools.h"
@@ -49,7 +48,6 @@ ProxyFilesystem::ProxyFilesystem(FileManager& fileManager, const string_view des
 void ProxyFilesystem::AppendSearchPath(string_view path)
 {
     if (path.empty()) {
-        CORE_LOG_E("%s, path is empty", __func__);
         return;
     }
     if (path.back() == '/') {
@@ -61,7 +59,6 @@ void ProxyFilesystem::AppendSearchPath(string_view path)
 void ProxyFilesystem::PrependSearchPath(string_view path)
 {
     if (path.empty()) {
-        CORE_LOG_E("%s, path is empty", __func__);
         return;
     }
     if (path.back() == '/') {
@@ -73,7 +70,6 @@ void ProxyFilesystem::PrependSearchPath(string_view path)
 void ProxyFilesystem::RemoveSearchPath(string_view destination)
 {
     if (destination.empty()) {
-        CORE_LOG_E("%s, destination is empty", __func__);
         return;
     }
     if (destination.back() == '/') {
@@ -98,19 +94,20 @@ IDirectory::Entry ProxyFilesystem::GetEntry(const string_view path)
     }
     return {};
 }
-IFile::Ptr ProxyFilesystem::OpenFile(const string_view path)
+
+IFile::Ptr ProxyFilesystem::OpenFile(const string_view path, const IFile::Mode mode)
 {
     auto normalizedPath = NormalizePath(path);
     if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
-            auto file = fileManager_.OpenFile(destination + normalizedPath);
+            auto file = fileManager_.OpenFile(destination + normalizedPath, mode);
             if (file) {
                 return file;
             }
         }
     }
 
-    return IFile::Ptr();
+    return {};
 }
 
 IFile::Ptr ProxyFilesystem::CreateFile(const string_view path)
@@ -125,7 +122,7 @@ IFile::Ptr ProxyFilesystem::CreateFile(const string_view path)
         }
     }
 
-    return IFile::Ptr();
+    return {};
 }
 
 bool ProxyFilesystem::DeleteFile(const string_view path)
@@ -134,6 +131,20 @@ bool ProxyFilesystem::DeleteFile(const string_view path)
     if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
             if (fileManager_.DeleteFile(destination + normalizedPath)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool ProxyFilesystem::FileExists(const string_view path) const
+{
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
+        for (auto&& destination : destinations_) {
+            if (fileManager_.FileExists(destination + normalizedPath)) {
                 return true;
             }
         }
@@ -175,7 +186,7 @@ IDirectory::Ptr ProxyFilesystem::CreateDirectory(const string_view path)
         }
     }
 
-    return IDirectory::Ptr();
+    return {};
 }
 
 bool ProxyFilesystem::DeleteDirectory(const string_view path)
@@ -184,6 +195,20 @@ bool ProxyFilesystem::DeleteDirectory(const string_view path)
     if (!normalizedPath.empty()) {
         for (auto&& destination : destinations_) {
             if (fileManager_.DeleteDirectory(destination + normalizedPath)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool ProxyFilesystem::DirectoryExists(const string_view path) const
+{
+    auto normalizedPath = NormalizePath(path);
+    if (!normalizedPath.empty()) {
+        for (auto&& destination : destinations_) {
+            if (fileManager_.DirectoryExists(destination + normalizedPath)) {
                 return true;
             }
         }

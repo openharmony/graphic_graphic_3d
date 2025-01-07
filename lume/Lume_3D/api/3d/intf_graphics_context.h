@@ -18,6 +18,7 @@
 
 #include <3d/namespace.h>
 #include <base/containers/array_view.h>
+#include <base/util/color.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_interface.h>
 #include <render/namespace.h>
@@ -48,9 +49,27 @@ public:
 
     using Ptr = BASE_NS::refcnt_ptr<IGraphicsContext>;
 
+    /** Create info for 3D graphics context.
+     */
+    struct CreateInfo {
+        /** Create info flag bits to setup configuration flags */
+        enum CreateInfoFlagBits : uint32_t {};
+        /** Container for create info flag bits */
+        using CreateInfoFlags = uint32_t;
+
+        /** Creation flags */
+        CreateInfoFlags createFlags { 0 };
+        /** Color space flags (defaults to linear) */
+        BASE_NS::ColorSpaceFlags colorSpaceFlags { 0U };
+    };
+
     /** Initialize the context.
      */
     virtual void Init() = 0;
+
+    /** Initialize the context.
+     */
+    virtual void Init(const CreateInfo& createInfo) = 0;
 
     /** Get rendering context.
      * @return Reference to context.
@@ -82,6 +101,11 @@ public:
      * @return Reference to render util.
      */
     virtual IRenderUtil& GetRenderUtil() const = 0;
+
+    /** Get color space flags
+     * @return Color space flags given in Init.
+     */
+    virtual BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const = 0;
 
 protected:
     IGraphicsContext() = default;

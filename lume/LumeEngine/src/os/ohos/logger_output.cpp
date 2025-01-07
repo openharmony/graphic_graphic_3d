@@ -19,6 +19,8 @@
 #include <cstdarg>
 #include <ctime>
 #include <fstream>
+#define LOG_DOMAIN 0xD001402
+#define LOG_TAG "ohos_lume"
 #include <hilog/log.h>
 #include <iomanip>
 #include <iostream>
@@ -35,9 +37,9 @@ using BASE_NS::string_view;
 
 namespace {
 // Gets the filename part from the path.
-std::string_view GetFilename(std::string_view path)
+BASE_NS::string_view GetFilename(BASE_NS::string_view path)
 {
-    if (auto const pos = path.find_last_of("\\/"); pos != std::string_view::npos) {
+    if (auto const pos = path.find_last_of("\\/"); pos != BASE_NS::string_view::npos) {
         return path.substr(pos + 1);
     }
     return path;
@@ -60,45 +62,46 @@ public:
     void Write(
         ILogger::LogLevel logLevel, const string_view filename, int linenumber, const string_view message) override
     {
-        int logPriority;
+        ::LogLevel logPriority;
         switch (logLevel) {
             case ILogger::LogLevel::LOG_VERBOSE:
-                logPriority = LOG_LEVEL_MIN;
+                logPriority = ::LogLevel::LOG_LEVEL_MIN;
                 break;
 
             case ILogger::LogLevel::LOG_DEBUG:
-                logPriority = LOG_DEBUG;
+                logPriority = ::LogLevel::LOG_DEBUG;
                 break;
 
             case ILogger::LogLevel::LOG_INFO:
-                logPriority = LOG_INFO;
+                logPriority = ::LogLevel::LOG_INFO;
                 break;
 
             case ILogger::LogLevel::LOG_WARNING:
-                logPriority = LOG_WARN;
+                logPriority = ::LogLevel::LOG_WARN;
                 break;
 
             case ILogger::LogLevel::LOG_ERROR:
-                logPriority = LOG_ERROR;
+                logPriority = ::LogLevel::LOG_ERROR;
                 break;
 
             case ILogger::LogLevel::LOG_FATAL:
-                logPriority = LOG_FATAL;
+                logPriority = ::LogLevel::LOG_FATAL;
                 break;
 
             default:
-                logPriority = LOG_LEVEL_MIN;
+                logPriority = ::LogLevel::LOG_LEVEL_MIN;
                 break;
         }
-        unsigned int domain = 0xD003B00;
+
         if (!filename.empty()) {
             std::stringstream outputStream;
-            auto const filenameView = GetFilename({ filename.data(), filename.size() });
-            outputStream << '(' << filenameView << ':' << linenumber << "): ";
+            auto const filenameView = GetFilename(filename);
+            outputStream << '(' << std::string_view(filenameView.data(), filenameView.size()) << ':' << linenumber
+                         << "): ";
             outputStream << std::string_view(message.data(), message.size());
-            HiLogPrint(LOG_CORE, LOG_ERROR, domain, logTag_.data(), "%{public}s", outputStream.str().c_str());
+            HiLogPrint(LOG_CORE, logPriority, LOG_DOMAIN, LOG_TAG, "%{public}s", outputStream.str().c_str());
         } else {
-            HiLogPrint(LOG_CORE, LOG_ERROR, domain, logTag_.data(), "%{public}s", message.data());
+            HiLogPrint(LOG_CORE, logPriority, LOG_DOMAIN, LOG_TAG, "%{public}s", message.data());
         }
     }
 
@@ -107,9 +110,6 @@ protected:
     {
         delete this;
     }
-
-private:
-    static constexpr std::string_view logTag_ = "ohos_lume";
 };
 
 ILogger::IOutput::Ptr CreateLoggerConsoleOutput()

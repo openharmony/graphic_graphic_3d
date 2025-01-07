@@ -88,13 +88,23 @@ void FormatToVertexType(const VertexInputDeclaration::VertexInputAttributeDescri
         type = GL_UNSIGNED_INT;
         normalized = false;
         isFloat = false;
+    } else if (attributeRef.format == BASE_FORMAT_R8_UINT) {
+        count = 1;
+        type = GL_UNSIGNED_BYTE;
+        normalized = false;
+        isFloat = false;
+    } else if (attributeRef.format == BASE_FORMAT_R16_UINT) {
+        count = 1;
+        type = GL_UNSIGNED_SHORT;
+        normalized = false;
+        isFloat = false;
     } else if (attributeRef.format == BASE_FORMAT_R32_UINT) {
         count = 1;
         type = GL_UNSIGNED_INT;
         normalized = false;
         isFloat = false;
     } else {
-        PLUGIN_ASSERT_MSG(false, "Unhandled attribute format");
+        PLUGIN_ASSERT_MSG(false, "Unhandled attribute format: %d", attributeRef.format);
     }
 }
 
@@ -128,7 +138,7 @@ DynamicStateFlags GetDynamicStateFlags(const array_view<const DynamicStateEnum> 
                 flags |= CORE_DYNAMIC_STATE_STENCIL_WRITE_MASK;
                 break;
             case CORE_DYNAMIC_STATE_ENUM_STENCIL_REFERENCE:
-                flags |= CORE_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+                flags |= CORE_DYNAMIC_STATE_STENCIL_REFERENCE;
                 break;
             default:
                 break;
@@ -153,7 +163,7 @@ GraphicsPipelineStateObjectGLES::GraphicsPipelineStateObjectGLES(Device& device,
     const VertexInputDeclarationView& vertexInputDeclaration,
     const ShaderSpecializationConstantDataView& specializationConstants,
     const array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
-    const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex)
+    const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs)
     : GraphicsPipelineStateObject(), device_((DeviceGLES&)device)
 {
     plat_.graphicsState = graphicsState;
@@ -204,34 +214,35 @@ GpuShaderProgramGLES* GraphicsPipelineStateObjectGLES::GetOESProgram(array_view<
 void GraphicsPipelineStateObjectGLES::MakeVAO() noexcept
 {
     PLUGIN_ASSERT(device_.IsActive());
-    if (plat_.vao == 0) {
-        const auto& shaderdata = (const GpuShaderProgramPlatformDataGL&)plat_.graphicsShader->GetPlatformData();
-        PLUGIN_ASSERT(shaderdata.program != 0);
-        const uint32_t curVAO = device_.BoundVertexArray();
-        plat_.vao = device_.CreateVertexArray();
-        device_.BindVertexArray(plat_.vao);
-        const VertexInputDeclarationData& vertexInputDecl = plat_.vertexInputDeclaration;
-        for (size_t idx = 0; idx < vertexInputDecl.attributeDescriptionCount; ++idx) {
-            if (shaderdata.inputs[idx] != Gles::INVALID_LOCATION) {
-                const auto& attributeRef = vertexInputDecl.attributeDescriptions[idx];
-                GLuint count = 2;
-                GLenum type = GL_FLOAT;
-                GLboolean normalized = false;
-                bool isFloat = false;
-                FormatToVertexType(attributeRef, count, type, normalized, isFloat);
-                glEnableVertexAttribArray((GLuint)idx);
-                glVertexAttribBinding((GLuint)idx, attributeRef.binding);
-                if (isFloat) {
-                    glVertexAttribFormat((GLuint)idx, (GLint)count, type, normalized, (GLuint)attributeRef.offset);
-                } else {
-                    glVertexAttribIFormat((GLuint)idx, (GLint)count, type, (GLuint)attributeRef.offset);
-                }
-            } else {
-                glDisableVertexAttribArray((GLuint)idx);
-            }
-        }
-        device_.BindVertexArray(curVAO);
+    if (plat_.vao != 0) {
+        return; // early out
     }
+    const auto& shaderdata = (const GpuShaderProgramPlatformDataGL&)plat_.graphicsShader->GetPlatformData();
+    PLUGIN_ASSERT(shaderdata.program != 0);
+    const uint32_t curVAO = device_.BoundVertexArray();
+    plat_.vao = device_.CreateVertexArray();
+    device_.BindVertexArray(plat_.vao);
+    const VertexInputDeclarationData& vertexInputDecl = plat_.vertexInputDeclaration;
+    for (size_t idx = 0; idx < vertexInputDecl.attributeDescriptionCount; ++idx) {
+        if (shaderdata.inputs[idx] != Gles::INVALID_LOCATION) {
+            const auto& attributeRef = vertexInputDecl.attributeDescriptions[idx];
+            GLuint count = 2;
+            GLenum type = GL_FLOAT;
+            GLboolean normalized = false;
+            bool isFloat = false;
+            FormatToVertexType(attributeRef, count, type, normalized, isFloat);
+            glEnableVertexAttribArray((GLuint)idx);
+            glVertexAttribBinding((GLuint)idx, attributeRef.binding);
+            if (isFloat) {
+                glVertexAttribFormat((GLuint)idx, (GLint)count, type, normalized, (GLuint)attributeRef.offset);
+            } else {
+                glVertexAttribIFormat((GLuint)idx, (GLint)count, type, (GLuint)attributeRef.offset);
+            }
+        } else {
+            glDisableVertexAttribArray((GLuint)idx);
+        }
+    }
+    device_.BindVertexArray(curVAO);
 }
 
 GraphicsPipelineStateObjectGLES::~GraphicsPipelineStateObjectGLES()

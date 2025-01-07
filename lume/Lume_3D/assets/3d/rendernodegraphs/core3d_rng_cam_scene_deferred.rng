@@ -337,7 +337,7 @@
                         "nodeName": "CORE3D_RN_CAM_CTRL"
                     },
                     {
-                        "storeOp": "store",
+                        "storeOp": "dont_care",
                         "resourceLocation": "from_named_render_node_output",
                         "name": "velocity_normal",
                         "nodeName": "CORE3D_RN_CAM_CTRL"

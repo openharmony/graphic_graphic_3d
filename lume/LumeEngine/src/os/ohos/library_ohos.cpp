@@ -61,18 +61,6 @@ void LibraryOHOS::Destroy()
 
 ILibrary::Ptr ILibrary::Load(const string_view filePath)
 {
-#define TO_STRING(name) #name
-#define LIB_NAME(name) TO_STRING(name)
-
-    if (filePath.find(LIB_NAME(LIB_ENGINE_CORE)) == string_view::npos &&
-        filePath.find(LIB_NAME(LIB_RENDER)) == string_view::npos &&
-        filePath.find(LIB_NAME(LIB_CORE3D)) == string_view::npos &&
-        filePath.find("libMotPhysPlugin.z.so") == string_view::npos &&
-        filePath.find("libPluginMetaObject") == string_view::npos &&
-        filePath.find("libPluginSceneWidget") == string_view::npos) {
-        return ILibrary::Ptr {};
-    }
-
     return ILibrary::Ptr { new LibraryOHOS(filePath) };
 }
 

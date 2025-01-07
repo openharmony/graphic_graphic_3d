@@ -19,8 +19,6 @@
 
 #include <base/containers/array_view.h>
 #include <base/containers/iterator.h>
-#include <base/containers/string_view.h>
-#include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
@@ -59,12 +57,13 @@ public:
     Ecs& operator=(const Ecs&&) = delete;
 
     IEntityManager& GetEntityManager() override;
-    void GetComponents(Entity entity, vector<IComponentManager*>& result) override;
+    const IEntityManager& GetEntityManager() const override;
+    void GetComponents(Entity entity, vector<IComponentManager*>& result) const override;
     vector<ISystem*> GetSystems() const override;
     ISystem* GetSystem(const Uid& uid) const override;
     vector<IComponentManager*> GetComponentManagers() const override;
     IComponentManager* GetComponentManager(const Uid& uid) const override;
-    Entity CloneEntity(const Entity entity) override;
+    Entity CloneEntity(Entity entity) override;
     void ProcessEvents() override;
 
     void Initialize() override;
@@ -238,7 +237,7 @@ IComponentManager* Ecs::CreateComponentManager(const ComponentManagerTypeInfo& c
 {
     IComponentManager* manager = nullptr;
     if (componentManagerTypeInfo.createManager) {
-        manager = GetComponentManager(componentManagerTypeInfo.UID);
+        manager = GetComponentManager(componentManagerTypeInfo.uid);
         if (manager) {
             CORE_LOG_W("Duplicate component manager creation, returning existing instance");
         } else {
@@ -256,7 +255,7 @@ ISystem* Ecs::CreateSystem(const SystemTypeInfo& systemInfo)
 {
     ISystem* system = nullptr;
     if (systemInfo.createSystem) {
-        system = GetSystem(systemInfo.UID);
+        system = GetSystem(systemInfo.uid);
         if (system) {
             CORE_LOG_W("Duplicate system creation, returning existing instance");
         } else {
@@ -307,7 +306,12 @@ IEntityManager& Ecs::GetEntityManager()
     return entityManager_;
 }
 
-void Ecs::GetComponents(Entity entity, vector<IComponentManager*>& result)
+const IEntityManager& Ecs::GetEntityManager() const
+{
+    return entityManager_;
+}
+
+void Ecs::GetComponents(Entity entity, vector<IComponentManager*>& result) const
 {
     result.clear();
     result.reserve(managers_.size());
@@ -357,7 +361,7 @@ IComponentManager* Ecs::GetComponentManager(const Uid& uid) const
 Entity Ecs::CloneEntity(const Entity entity)
 {
     if (!EntityUtil::IsValid(entity)) {
-        return Entity();
+        return {};
     }
 
     const Entity clonedEntity = entityManager_.Create();
@@ -387,6 +391,9 @@ void Ecs::ProcessComponentEvents(
         case ComponentListener::EventType::DESTROYED:
             getter = &IComponentManager::GetRemovedComponents;
             break;
+        case ComponentListener::EventType::MOVED:
+            getter = &IComponentManager::GetMovedComponents;
+            break;
         default:
             return;
     }
@@ -397,8 +404,8 @@ void Ecs::ProcessComponentEvents(
                 std::remove_if(affectedEntities.begin(), affectedEntities.end(),
                     [removedEntities](const Entity& entity) {
                         const auto pos = std::lower_bound(removedEntities.cbegin(), removedEntities.cend(), entity,
-                            [](const Entity& entity, const Entity& removed) { return entity.id < removed.id; });
-                        return ((pos != removedEntities.cend()) && !(entity.id < pos->id));
+                            [](const Entity& entity, const Entity& removed) { return entity < removed; });
+                        return ((pos != removedEntities.cend()) && entity >= *pos);
                     }),
                 affectedEntities.cend());
         }
@@ -458,12 +465,12 @@ void Ecs::ProcessEvents()
     } while (deadEntities);
 
     if (!allRemovedEntities.empty()) {
-        std::sort(allRemovedEntities.begin(), allRemovedEntities.end(),
-            [](const Entity& lhs, const Entity& rhs) { return lhs.id < rhs.id; });
+        std::sort(allRemovedEntities.begin(), allRemovedEntities.end());
     }
 
     // Send component related events
     ProcessComponentEvents(ComponentListener::EventType::CREATED, allRemovedEntities);
+    ProcessComponentEvents(ComponentListener::EventType::MOVED, allRemovedEntities);
     ProcessComponentEvents(ComponentListener::EventType::MODIFIED, allRemovedEntities);
     ProcessComponentEvents(ComponentListener::EventType::DESTROYED, {});
 
@@ -493,10 +500,12 @@ void Ecs::Initialize()
     }
 }
 
+CORE_PROFILER_SYMBOL(escUpdate, "Update");
+
 bool Ecs::Update(uint64_t time, uint64_t delta)
 {
-    CORE_CPU_PERF_SCOPE("ECS", "Update", "Total_Cpu");
-
+    CORE_PROFILER_MARK_FRAME_START(escUpdate);
+    CORE_CPU_PERF_SCOPE("CORE", "Update", "Total_Cpu", CORE_PROFILER_DEFAULT_COLOR);
     bool frameRenderingQueued = false;
     if (GetRenderMode() == RENDER_ALWAYS || renderRequested_) {
         frameRenderingQueued = true;
@@ -505,7 +514,7 @@ bool Ecs::Update(uint64_t time, uint64_t delta)
     // Update all systems.
     delta = static_cast<uint64_t>(static_cast<float>(delta) * timeScale_);
     for (auto& s : systemOrder_) {
-        CORE_CPU_PERF_SCOPE("ECS", "SystemUpdate_Cpu", s->GetName());
+        CORE_CPU_PERF_SCOPE("CORE", "SystemUpdate", s->GetName(), CORE_PROFILER_DEFAULT_COLOR);
         if (s->Update(frameRenderingQueued, time, delta)) {
             frameRenderingQueued = true;
         }
@@ -519,6 +528,7 @@ bool Ecs::Update(uint64_t time, uint64_t delta)
     renderRequested_ = false;
     needRender_ = frameRenderingQueued;
 
+    CORE_PROFILER_MARK_FRAME_END(escUpdate);
     return frameRenderingQueued;
 }
 

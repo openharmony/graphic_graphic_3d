@@ -33,7 +33,7 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 // clang-format off
-CORE_JSON_SERIALIZE_ENUM(RenderSlotSortType,
+RENDER_JSON_SERIALIZE_ENUM(RenderSlotSortType,
     {
         { RenderSlotSortType::NONE, "none" },
         { RenderSlotSortType::FRONT_TO_BACK, "front_to_back" },
@@ -41,17 +41,17 @@ CORE_JSON_SERIALIZE_ENUM(RenderSlotSortType,
         { RenderSlotSortType::BY_MATERIAL, "by_material" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(RenderSlotCullType,
+RENDER_JSON_SERIALIZE_ENUM(RenderSlotCullType,
     {
         { RenderSlotCullType::NONE, "none" },
         { RenderSlotCullType::VIEW_FRUSTUM_CULL, "view_frustum_cull" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(GpuQueue::QueueType,
+RENDER_JSON_SERIALIZE_ENUM(GpuQueue::QueueType,
     { { GpuQueue::QueueType::UNDEFINED, nullptr }, { GpuQueue::QueueType::GRAPHICS, "graphics" },
         { GpuQueue::QueueType::COMPUTE, "compute" }, { GpuQueue::QueueType::TRANSFER, "transfer" } })
 
-CORE_JSON_SERIALIZE_ENUM(DescriptorType,
+RENDER_JSON_SERIALIZE_ENUM(DescriptorType,
     {
         { DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM, nullptr },
         { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, "sampler" },
@@ -67,20 +67,20 @@ CORE_JSON_SERIALIZE_ENUM(DescriptorType,
         { DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, "input_attachment" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(AttachmentLoadOp,
+RENDER_JSON_SERIALIZE_ENUM(AttachmentLoadOp,
     {
         { AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_LOAD, "load" },
         { AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR, "clear" },
         { AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE, "dont_care" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(AttachmentStoreOp,
+RENDER_JSON_SERIALIZE_ENUM(AttachmentStoreOp,
     {
         { AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE, "store" },
         { AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_DONT_CARE, "dont_care" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(ImageType,
+RENDER_JSON_SERIALIZE_ENUM(ImageType,
     {
         { ImageType::CORE_IMAGE_TYPE_2D, nullptr }, // default
         { ImageType::CORE_IMAGE_TYPE_1D, "1d" },
@@ -88,7 +88,7 @@ CORE_JSON_SERIALIZE_ENUM(ImageType,
         { ImageType::CORE_IMAGE_TYPE_3D, "3d" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(ImageViewType,
+RENDER_JSON_SERIALIZE_ENUM(ImageViewType,
     {
         { ImageViewType::CORE_IMAGE_VIEW_TYPE_2D, nullptr }, // default
         { ImageViewType::CORE_IMAGE_VIEW_TYPE_1D, "1d" }, { ImageViewType::CORE_IMAGE_VIEW_TYPE_2D, "2d" },
@@ -98,14 +98,14 @@ CORE_JSON_SERIALIZE_ENUM(ImageViewType,
         { ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE_ARRAY, "cube_array" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(ImageTiling,
+RENDER_JSON_SERIALIZE_ENUM(ImageTiling,
     {
         { ImageTiling::CORE_IMAGE_TILING_OPTIMAL, nullptr }, // default
         { ImageTiling::CORE_IMAGE_TILING_OPTIMAL, "optimal" },
         { ImageTiling::CORE_IMAGE_TILING_LINEAR, "linear" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(ImageUsageFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(ImageUsageFlagBits,
     {
         { (ImageUsageFlagBits)0, nullptr },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_SRC_BIT, "transfer_src" },
@@ -119,14 +119,14 @@ CORE_JSON_SERIALIZE_ENUM(ImageUsageFlagBits,
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT, "fragment_shading_rate_attachment" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(ImageCreateFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(ImageCreateFlagBits,
     {
         { (ImageCreateFlagBits)0, nullptr },
         { ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, "cube_compatible" },
         { ImageCreateFlagBits::CORE_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT, "2d_array_compatible" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(EngineImageCreationFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(EngineImageCreationFlagBits,
     {
         { (EngineImageCreationFlagBits)0, nullptr },
         { EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, "dynamic_barriers" },
@@ -135,7 +135,7 @@ CORE_JSON_SERIALIZE_ENUM(EngineImageCreationFlagBits,
         { EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_GENERATE_MIPS, "generate_mips" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(SampleCountFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(SampleCountFlagBits,
     {
         { (SampleCountFlagBits)0, nullptr },
         { SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, "1bit" },
@@ -147,7 +147,7 @@ CORE_JSON_SERIALIZE_ENUM(SampleCountFlagBits,
         { SampleCountFlagBits::CORE_SAMPLE_COUNT_64_BIT, "64bit" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(MemoryPropertyFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(MemoryPropertyFlagBits,
     {
         { (MemoryPropertyFlagBits)0, nullptr },
         { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "device_local" },
@@ -158,13 +158,13 @@ CORE_JSON_SERIALIZE_ENUM(MemoryPropertyFlagBits,
         { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_PROTECTED_BIT, "protected" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(EngineBufferCreationFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(EngineBufferCreationFlagBits,
     {
         { (EngineBufferCreationFlagBits)0, nullptr },
         { EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS, "dynamic_barriers" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(BufferUsageFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(BufferUsageFlagBits,
     {
         { (BufferUsageFlagBits)0, nullptr },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_SRC_BIT, "transfer_src" },
@@ -182,7 +182,7 @@ CORE_JSON_SERIALIZE_ENUM(BufferUsageFlagBits,
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT, "acceleration_structure_storage" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits,
     {
         { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::MAX_DEPENDENCY_FLAG_ENUM, nullptr },
         { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::FORMAT, "format" },
@@ -192,7 +192,7 @@ CORE_JSON_SERIALIZE_ENUM(RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::Dep
         { RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits::SAMPLES, "samples" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(RenderNodeGraphResourceLocationType,
+RENDER_JSON_SERIALIZE_ENUM(RenderNodeGraphResourceLocationType,
     {
         { RenderNodeGraphResourceLocationType::DEFAULT, "default" },
         { RenderNodeGraphResourceLocationType::FROM_RENDER_GRAPH_INPUT, "from_render_graph_input" },
@@ -202,7 +202,7 @@ CORE_JSON_SERIALIZE_ENUM(RenderNodeGraphResourceLocationType,
         { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_GRAPH_OUTPUT, "from_previous_render_node_graph_output" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(ResolveModeFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(ResolveModeFlagBits,
     {
         { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE, "none" },
         { ResolveModeFlagBits::CORE_RESOLVE_MODE_SAMPLE_ZERO_BIT, "sample_zero" },
@@ -211,10 +211,17 @@ CORE_JSON_SERIALIZE_ENUM(ResolveModeFlagBits,
         { ResolveModeFlagBits::CORE_RESOLVE_MODE_MAX_BIT, "max" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(SubpassContents,
+RENDER_JSON_SERIALIZE_ENUM(SubpassContents,
     {
         { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE, "inline" },
         { SubpassContents::CORE_SUBPASS_CONTENTS_SECONDARY_COMMAND_LISTS, "secondary_command_lists" },
+    })
+
+RENDER_JSON_SERIALIZE_ENUM(SubpassFlagBits,
+    {
+        { (SubpassFlagBits)0, nullptr },
+        { SubpassFlagBits::CORE_SUBPASS_MERGE_BIT, "merge" },
+        { SubpassFlagBits::CORE_SUBPASS_MERGE_BIT, "merge_bit" },
     })
 // clang-format on
 inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInputs::Resource>& context)
@@ -346,65 +353,121 @@ struct LoadResult {
     string error;
 };
 
+static constexpr size_t MAX_RNG_RENDER_PASS_SUBPASS_COUNT { 64 };
+
+void SafetyCheckRenderPassVectors(RenderNodeGraphInputs::InputRenderPass& renderPass)
+{
+    if (renderPass.attachments.size() > PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+        renderPass.attachments.resize(PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_W("Render node graph render pass attachment count exceeded");
+#endif
+    }
+    if (renderPass.colorAttachmentIndices.size() > PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+        renderPass.colorAttachmentIndices.resize(PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_W("Render node graph render pass color attachment count exceeded");
+#endif
+    }
+    if (renderPass.inputAttachmentIndices.size() > PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+        renderPass.inputAttachmentIndices.resize(PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_W("Render node graph render pass input attachment count exceeded");
+#endif
+    }
+    if (renderPass.resolveAttachmentIndices.size() > PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+        renderPass.resolveAttachmentIndices.resize(PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_W("Render node graph render pass resolve attachment count exceeded");
+#endif
+    }
+}
+
+void GetAttachmentIndices(const char* attachmentName, const json::value& subpass, vector<uint32_t>& attachmentVector)
+{
+    if (auto const iIter = subpass.find(attachmentName); iIter) {
+        if (iIter->is_array()) {
+            std::transform(iIter->array_.begin(), iIter->array_.end(), std::back_inserter(attachmentVector),
+                [](const json::value& value) {
+                    if (value.is_number()) {
+                        return value.template as_number<uint32_t>();
+                    }
+                    return 0u;
+                });
+        } else {
+            attachmentVector = { iIter->template as_number<uint32_t>() };
+        }
+    }
+}
+
 void ParseRenderpass(const string_view name, const json::value& node,
     RenderNodeGraphInputs::InputRenderPass& renderPass, LoadResult& result)
 {
-    if (auto const rp = node.find(name); rp) {
-        ParseArray<decltype(renderPass.attachments)::value_type>(*rp, "attachments", renderPass.attachments, result);
-        SafeGetJsonValue(*rp, "subpassIndex", result.error, renderPass.subpassIndex);
-        SafeGetJsonValue(*rp, "subpassCount", result.error, renderPass.subpassCount);
-        SafeGetJsonEnum(*rp, "subpassContents", result.error, renderPass.subpassContents);
+    auto const rp = node.find(name);
+    if (!rp) {
+        return; // early out
+    }
+    ParseArray<decltype(renderPass.attachments)::value_type>(*rp, "attachments", renderPass.attachments, result);
+    SafeGetJsonValue(*rp, "subpassIndex", result.error, renderPass.subpassIndex);
+    SafeGetJsonValue(*rp, "subpassCount", result.error, renderPass.subpassCount);
+    SafeGetJsonEnum(*rp, "subpassContents", result.error, renderPass.subpassContents);
+
+    if (renderPass.subpassCount > MAX_RNG_RENDER_PASS_SUBPASS_COUNT) {
+        renderPass.subpassCount = MAX_RNG_RENDER_PASS_SUBPASS_COUNT;
 #if (RENDER_VALIDATION_ENABLED == 1)
-        if (renderPass.subpassIndex >= renderPass.subpassCount) {
-            PLUGIN_LOG_E("RENDER_VALIDATION: render pass subpass index must be smaller than subpass index");
+        PLUGIN_LOG_E("RENDER_VALIDATION: render pass max subpass count exceeded");
+#endif
+    }
+    if (renderPass.subpassIndex >= renderPass.subpassCount) {
+        renderPass.subpassIndex = Math::min(renderPass.subpassIndex, renderPass.subpassCount - 1);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_E("RENDER_VALIDATION: render pass subpass index must be smaller than subpass index");
+#endif
+    }
+    if (auto const sp = rp->find("subpass"); sp) {
+        SafeGetJsonValue(*sp, "depthAttachmentIndex", result.error, renderPass.depthAttachmentIndex);
+        SafeGetJsonValue(*sp, "depthResolveAttachmentIndex", result.error, renderPass.depthResolveAttachmentIndex);
+        // deprecated
+        SafeGetJsonBitfield<ResolveModeFlagBits>(
+            *sp, "depthResolveModeFlagBit", result.error, renderPass.depthResolveModeFlags);
+        SafeGetJsonBitfield<ResolveModeFlagBits>(
+            *sp, "stencilResolveModeFlagBit", result.error, renderPass.stencilResolveModeFlags);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if ((renderPass.depthResolveModeFlags != 0) || (renderPass.stencilResolveModeFlags != 0)) {
+            PLUGIN_LOG_W("RENDER_VALIDATION: depthResolveModeFlagBit and stencilResolveModeFlagBit are deprecated, "
+                         "use depthResolveModeFlags and stencilResolveModeFlags");
         }
 #endif
-        if (auto const sp = rp->find("subpass"); sp) {
-            SafeGetJsonValue(*sp, "depthAttachmentIndex", result.error, renderPass.depthAttachmentIndex);
-            SafeGetJsonValue(*sp, "depthResolveAttachmentIndex", result.error, renderPass.depthResolveAttachmentIndex);
-            SafeGetJsonEnum(*sp, "depthResolveModeFlagBit", result.error, renderPass.depthResolveModeFlagBit);
-            SafeGetJsonEnum(*sp, "stencilResolveModeFlagBit", result.error, renderPass.stencilResolveModeFlagBit);
-            SafeGetJsonEnum(
-                *sp, "fragmentShadingRateAttachmentIndex", result.error, renderPass.fragmentShadingRateAttachmentIndex);
+
+        SafeGetJsonBitfield<ResolveModeFlagBits>(
+            *sp, "depthResolveModeFlags", result.error, renderPass.depthResolveModeFlags);
+        SafeGetJsonBitfield<ResolveModeFlagBits>(
+            *sp, "stencilResolveModeFlags", result.error, renderPass.stencilResolveModeFlags);
+        SafeGetJsonEnum(
+            *sp, "fragmentShadingRateAttachmentIndex", result.error, renderPass.fragmentShadingRateAttachmentIndex);
+        SafeGetJsonBitfield<SubpassFlagBits>(*sp, "subpassFlags", result.error, renderPass.subpassFlags);
 #if (RENDER_VALIDATION_ENABLED == 1)
-            if ((renderPass.depthResolveAttachmentIndex != ~0u) &&
-                ((renderPass.depthResolveModeFlagBit | renderPass.stencilResolveModeFlagBit) == 0)) {
-                PLUGIN_LOG_W("RENDER_VALIDATION: depth resolve mode flags not set for depth resolve image");
-            }
+        if ((renderPass.depthResolveAttachmentIndex != ~0u) &&
+            ((renderPass.depthResolveModeFlags | renderPass.stencilResolveModeFlags) == 0)) {
+            PLUGIN_LOG_W("RENDER_VALIDATION: depth resolve mode flags not set for depth resolve image");
+        }
 #endif
 
-            const auto getAttachmentIndices = [](const char* attachmentName, const auto& subpass,
-                                                  auto& attachmentVector) {
-                if (auto const iIter = subpass.find(attachmentName); iIter) {
-                    if (iIter->is_array()) {
-                        std::transform(iIter->array_.begin(), iIter->array_.end(), std::back_inserter(attachmentVector),
-                            [](const json::value& value) {
-                                if (value.is_number()) {
-                                    return value.template as_number<uint32_t>();
-                                }
-                                return 0u;
-                            });
-                    } else {
-                        attachmentVector = { iIter->template as_number<uint32_t>() };
-                    }
-                }
-            };
+        GetAttachmentIndices("inputAttachmentIndices", *sp, renderPass.inputAttachmentIndices);
+        GetAttachmentIndices("colorAttachmentIndices", *sp, renderPass.colorAttachmentIndices);
+        GetAttachmentIndices("resolveAttachmentIndices", *sp, renderPass.resolveAttachmentIndices);
 
-            getAttachmentIndices("inputAttachmentIndices", *sp, renderPass.inputAttachmentIndices);
-            getAttachmentIndices("colorAttachmentIndices", *sp, renderPass.colorAttachmentIndices);
-            getAttachmentIndices("resolveAttachmentIndices", *sp, renderPass.resolveAttachmentIndices);
+        SafetyCheckRenderPassVectors(renderPass);
 
-            if (auto const pos = sp->find("shadingRateTexelSize"); pos) {
-                if (pos->is_array() && pos->array_.size() == 2) { // 2 :size
-                    if (pos->array_[0].is_number() && pos->array_[1u].is_number()) {
-                        renderPass.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
-                        renderPass.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();
-                    }
-                }
+        if (auto const pos = sp->find("shadingRateTexelSize"); pos) {
+            if ((pos->is_array() && pos->array_.size() == 2) && // 2 : size
+                (pos->array_[0].is_number() && pos->array_[1u].is_number())) {
+                renderPass.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
+                renderPass.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();
             }
-
-            SafeGetJsonValue(*sp, "viewMask", result.error, renderPass.viewMask);
         }
+
+        SafeGetJsonValue(*sp, "viewMask", result.error, renderPass.viewMask);
     }
 }
 

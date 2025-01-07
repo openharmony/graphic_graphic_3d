@@ -16,8 +16,9 @@
         ],
         "vertexInputAttributeDescriptions" : [
             { "location" : 0, "binding" : 0, "format" : "r32g32b32_sfloat", "offset" : 0 },
-            { "location" : 1, "binding" : 5, "format" : "r8g8b8a8_uint",    "offset" : 0 },
-            { "location" : 2, "binding" : 6, "format" : "r8g8b8a8_unorm",   "offset" : 0 }
+            { "location" : 1, "binding" : 2, "format" : "r16g16_sfloat",    "offset" : 0 },
+            { "location" : 2, "binding" : 5, "format" : "r8g8b8a8_uint",    "offset" : 0 },
+            { "location" : 3, "binding" : 6, "format" : "r8g8b8a8_unorm",   "offset" : 0 }
         ]
     }
 }

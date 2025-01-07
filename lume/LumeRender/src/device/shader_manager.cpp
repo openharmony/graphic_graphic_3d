@@ -21,7 +21,6 @@
 
 #include <base/containers/array_view.h>
 #include <core/io/intf_file_manager.h>
-#include <render/device/gpu_resource_desc.h>
 #include <render/device/pipeline_layout_desc.h>
 #include <render/namespace.h>
 
@@ -32,8 +31,8 @@
 #include "device/shader_module.h"
 #include "device/shader_pipeline_binder.h"
 #include "loader/shader_loader.h"
-#include "resource_handle_impl.h"
 #include "util/log.h"
+#include "util/shader_saver.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -135,6 +134,51 @@ uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState& state)
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
+constexpr AdditionalDescriptorTypeFlags GetPackedDescriptorTypeFlags(
+    const ImageFlags imageFlags, const ImageDimension imageDimension)
+{
+    AdditionalDescriptorFlags flags = 0U;
+    if (imageDimension == ImageDimension::DIMENSION_1D) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_1D_BIT;
+    }
+    if (imageDimension == ImageDimension::DIMENSION_2D) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_2D_BIT;
+    }
+    if (imageDimension == ImageDimension::DIMENSION_3D) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_3D_BIT;
+    }
+    if (imageDimension == ImageDimension::DIMENSION_CUBE) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_CUBE_BIT;
+    }
+    if (imageDimension == ImageDimension::DIMENSION_RECT) {
+        flags |= 0U;
+    }
+    if (imageDimension == ImageDimension::DIMENSION_BUFFER) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_BUFFER_BIT;
+    }
+    if (imageDimension == ImageDimension::DIMENSION_SUBPASS) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_SUBPASS_BIT;
+    }
+
+    if (imageFlags == ImageFlags::IMAGE_DEPTH) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DEPTH_BIT;
+    }
+    if (imageFlags == ImageFlags::IMAGE_ARRAY) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_ARRAY_BIT;
+    }
+    if (imageFlags == ImageFlags::IMAGE_MULTISAMPLE) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_MULTISAMPLE_BIT;
+    }
+    if (imageFlags == ImageFlags::IMAGE_SAMPLED) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_SAMPLED_BIT;
+    }
+    if (imageFlags == ImageFlags::IMAGE_LOAD_STORE) {
+        flags |= AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_LOAD_STORE_BIT;
+    }
+
+    return flags;
+}
+
 constexpr inline bool IsUniformBuffer(const DescriptorType descriptorType)
 {
     return ((descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
@@ -154,10 +198,8 @@ ShaderManager::CompatibilityFlags GetPipelineLayoutCompatibilityFlags(
         const auto& lSet = lhs.descriptorSetLayouts[setIdx];
         const auto& rSet = rhs.descriptorSetLayouts[setIdx];
         if (lSet.set == rSet.set) {
-            for (uint32_t lIdx = 0; lIdx < lSet.bindings.size(); ++lIdx) {
-                const auto& lBind = lSet.bindings[lIdx];
-                for (uint32_t rIdx = 0; rIdx < rSet.bindings.size(); ++rIdx) {
-                    const auto& rBind = rSet.bindings[rIdx];
+            for (const auto& lBind : lSet.bindings) {
+                for (const auto& rBind : rSet.bindings) {
                     if (lBind.binding == rBind.binding) {
                         if ((lBind.descriptorCount != rBind.descriptorCount) ||
                             (lBind.descriptorType != rBind.descriptorType)) {
@@ -270,18 +312,6 @@ inline void GetGraphicsStatesBySlot(
     }
 }
 
-inline void GetGraphicsStatesBySlot(
-    const uint32_t renderSlotId, const ShaderManager::GraphicsStateData& gsd, vector<RenderHandle>& states)
-{
-    PLUGIN_ASSERT(gsd.data.size() == gsd.rhr.size());
-    for (size_t idx = 0; idx < gsd.data.size(); ++idx) {
-        const auto& ref = gsd.data[idx];
-        if (ref.renderSlotId == renderSlotId) {
-            states.push_back(gsd.rhr[idx].GetHandle());
-        }
-    }
-}
-
 inline RenderHandle GetHandle(const string_view path, const unordered_map<string, RenderHandle>& nameToClientHandle)
 {
     if (auto const pos = nameToClientHandle.find(path); pos != nameToClientHandle.end()) {
@@ -315,6 +345,26 @@ uint32_t GetBaseGraphicsStateVariantIndex(
         }
     }
     return baseVariantIndex;
+}
+
+inline uint8_t Read8U(const uint8_t*& ptr)
+{
+    uint8_t ret = *(ptr);
+    ptr += sizeof(ret);
+    return ret;
+}
+
+inline uint16_t Read16U(const uint8_t*& ptr)
+{
+    auto ret = static_cast<uint16_t>(*(ptr) | (*(ptr + 1) << 8U));
+    ptr += sizeof(ret);
+    return ret;
+}
+inline uint32_t Read32U(const uint8_t*& ptr)
+{
+    auto ret = static_cast<uint32_t>(*ptr | *(ptr + 1) << 8U | *(ptr + 2) << 16U | *(ptr + 3) << 24U);
+    ptr += sizeof(ret);
+    return ret;
 }
 } // namespace
 
@@ -363,9 +413,9 @@ uint32_t ShaderManager::CreateRenderSlotId(const string_view renderSlot)
     if (const auto iter = renderSlotIds_.nameToId.find(renderSlot); iter != renderSlotIds_.nameToId.cend()) {
         return iter->second;
     } else { // create new id
-        const uint32_t renderSlotId = static_cast<uint32_t>(renderSlotIds_.data.size());
+        const auto renderSlotId = static_cast<uint32_t>(renderSlotIds_.data.size());
         renderSlotIds_.nameToId[renderSlot] = renderSlotId;
-        renderSlotIds_.data.push_back(RenderSlotData { renderSlotId, {}, {} });
+        renderSlotIds_.data.push_back(RenderSlotData { renderSlotId, {}, {}, {}, {} });
         return renderSlotId;
     }
 }
@@ -394,32 +444,49 @@ string ShaderManager::GetCategoryName(const uint32_t categoryId) const
     return {};
 }
 
-void ShaderManager::SetRenderSlotData(
-    const uint32_t renderSlotId, const RenderHandleReference& shaderHandle, const RenderHandleReference& stateHandle)
+void ShaderManager::SetRenderSlotData(const RenderSlotData& renderSlotData)
 {
-    if (renderSlotId < static_cast<uint32_t>(renderSlotIds_.data.size())) {
+    const uint32_t rsId = renderSlotData.renderSlotId;
+    if (rsId < static_cast<uint32_t>(renderSlotIds_.data.size())) {
 #if (RENDER_VALIDATION_ENABLED == 1)
-        string renderSlotName = GetRenderSlotName(renderSlotId);
+        const string renderSlotName = GetRenderSlotName(rsId);
 #endif
-        if (IsAnyShaderFunc(shaderHandle.GetHandle())) {
+        if (IsAnyShaderFunc(renderSlotData.shader.GetHandle())) {
 #if (RENDER_VALIDATION_ENABLED == 1)
-            if (renderSlotIds_.data[renderSlotId].shader) {
-                renderSlotName = GetRenderSlotName(renderSlotId);
+            if (renderSlotIds_.data[rsId].shader) {
                 PLUGIN_LOG_W(
                     "RENDER_VALIDATION: Overwriting default shader for render slot (%s)", renderSlotName.c_str());
             }
 #endif
-            renderSlotIds_.data[renderSlotId].shader = shaderHandle;
+            renderSlotIds_.data[rsId].shader = renderSlotData.shader;
         }
-        if (RenderHandleUtil::GetHandleType(stateHandle.GetHandle()) == RenderHandleType::GRAPHICS_STATE) {
+        if (RenderHandleUtil::GetHandleType(renderSlotData.graphicsState.GetHandle()) ==
+            RenderHandleType::GRAPHICS_STATE) {
 #if (RENDER_VALIDATION_ENABLED == 1)
-            if (renderSlotIds_.data[renderSlotId].graphicsState) {
-                renderSlotName = renderSlotName.empty() ? GetRenderSlotName(renderSlotId) : renderSlotName;
+            if (renderSlotIds_.data[rsId].graphicsState) {
                 PLUGIN_LOG_W(
-                    "RENDER_VALIDATION: Overwriting default shader for render slot (%s)", renderSlotName.c_str());
+                    "RENDER_VALIDATION: Overwriting default gfx state for render slot (%s)", renderSlotName.c_str());
             }
 #endif
-            renderSlotIds_.data[renderSlotId].graphicsState = stateHandle;
+            renderSlotIds_.data[rsId].graphicsState = renderSlotData.graphicsState;
+        }
+        if (RenderHandleUtil::GetHandleType(renderSlotData.pipelineLayout.GetHandle()) ==
+            RenderHandleType::PIPELINE_LAYOUT) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            if (renderSlotIds_.data[rsId].pipelineLayout) {
+                PLUGIN_LOG_W("RENDER_VALIDATION: Overwriting default pl for render slot (%s)", renderSlotName.c_str());
+            }
+#endif
+            renderSlotIds_.data[rsId].pipelineLayout = renderSlotData.pipelineLayout;
+        }
+        if (RenderHandleUtil::GetHandleType(renderSlotData.vertexInputDeclaration.GetHandle()) ==
+            RenderHandleType::VERTEX_INPUT_DECLARATION) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            if (renderSlotIds_.data[rsId].vertexInputDeclaration) {
+                PLUGIN_LOG_W("RENDER_VALIDATION: Overwriting default vid for render slot (%s)", renderSlotName.c_str());
+            }
+#endif
+            renderSlotIds_.data[rsId].vertexInputDeclaration = renderSlotData.vertexInputDeclaration;
         }
     }
 }
@@ -433,7 +500,7 @@ uint32_t ShaderManager::CreateCategoryId(const string_view name)
     if (const auto iter = category_.nameToId.find(name); iter != category_.nameToId.cend()) {
         return iter->second;
     } else { // create new id
-        const uint32_t id = static_cast<uint32_t>(category_.data.size());
+        const auto id = static_cast<uint32_t>(category_.data.size());
         category_.nameToId[name] = id;
         category_.data.push_back(string(name));
         return id;
@@ -468,11 +535,11 @@ RenderHandle ShaderManager::CreateClientData(
         RenderHandleReference rhr =
             RenderHandleReference(clientHandle, IRenderReferenceCounter::Ptr(new ShaderReferenceCounter()));
         if (type == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) {
-            computeShaderMappings_.clientData.push_back({ move(rhr), {}, cdi.renderSlotIndex, cdi.pipelineLayoutIndex,
-                cdi.reflectionPipelineLayoutIndex, cdi.categoryIndex, frameIndex });
+            computeShaderMappings_.clientData.push_back({ move(rhr), {}, {}, cdi.renderSlotIndex,
+                cdi.pipelineLayoutIndex, cdi.reflectionPipelineLayoutIndex, cdi.categoryIndex, frameIndex });
             computeShaderMappings_.nameData.push_back({});
         } else {
-            shaderMappings_.clientData.push_back({ move(rhr), {}, cdi.renderSlotIndex, cdi.pipelineLayoutIndex,
+            shaderMappings_.clientData.push_back({ move(rhr), {}, {}, cdi.renderSlotIndex, cdi.pipelineLayoutIndex,
                 cdi.reflectionPipelineLayoutIndex, INVALID_SM_INDEX, INVALID_SM_INDEX, cdi.categoryIndex, frameIndex });
             shaderMappings_.nameData.push_back({});
         }
@@ -484,8 +551,57 @@ RenderHandle ShaderManager::CreateClientData(
     return clientHandle;
 }
 
-RenderHandleReference ShaderManager::Create(
-    const ComputeShaderCreateData& createInfo, const ShaderPathCreateData& pathCreateInfo)
+void ShaderManager::CreateBaseShaderPathsAndHashes(const uint32_t renderSlotId,
+    const ShaderPathCreateData& pathCreateInfo, const BaseShaderPathCreateData& baseShaderCreateInfo,
+    const RenderHandle clientHandle, RenderHandle& ownBaseShaderUri, RenderHandle& addBaseShaderUri)
+{
+    // no render slot -> no valid base shaders and variants based on render slots
+    if (renderSlotId == ~0U) {
+        return;
+    }
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (baseShaderCreateInfo.ownBaseShaderUri.empty() && (!baseShaderCreateInfo.addBaseShaderUri.empty())) {
+        PLUGIN_LOG_W(
+            "RENDER_VALIDATION: Shader variant (%s) cannot add additional base shader (%s) when it does not have "
+            "own base shader (%s)",
+            pathCreateInfo.variantName.data(), baseShaderCreateInfo.addBaseShaderUri.data(),
+            baseShaderCreateInfo.ownBaseShaderUri.data());
+    }
+#endif
+    if (!baseShaderCreateInfo.ownBaseShaderUri.empty()) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if (const auto bsIter = nameToClientHandle_.find(baseShaderCreateInfo.ownBaseShaderUri);
+            (bsIter != nameToClientHandle_.cend()) && RenderHandleUtil::IsValid(bsIter->second)) {
+            RenderHandle baseShaderHandle = bsIter->second;
+            const uint64_t hash = HashHandleAndSlot(baseShaderHandle, renderSlotId);
+            if (hashToShaderVariant_.contains(hash)) {
+                PLUGIN_LOG_W("RENDER_VALIDATION: Shader variant (%s) has already variant for the slot (%u), uri: %s",
+                    string(pathCreateInfo.variantName.data()).c_str(), renderSlotId,
+                    baseShaderCreateInfo.ownBaseShaderUri.data());
+            }
+        }
+#endif
+        auto AddBaseShaderSlotVariant = [&](const string_view bsUri, const RenderHandle handle) {
+            RenderHandle bsHandle {};
+            if (const auto bsIter = nameToClientHandle_.find(bsUri);
+                (bsIter != nameToClientHandle_.cend()) && RenderHandleUtil::IsValid(bsIter->second)) {
+                bsHandle = bsIter->second;
+                const uint64_t hash = HashHandleAndSlot(bsHandle, renderSlotId);
+                hashToShaderVariant_[hash] = handle;
+            } else {
+                PLUGIN_LOG_W("base shader (%s) NDF (%s)", bsUri.data(), string(pathCreateInfo.variantName).c_str());
+            }
+            return bsHandle;
+        };
+        ownBaseShaderUri = AddBaseShaderSlotVariant(baseShaderCreateInfo.ownBaseShaderUri, clientHandle);
+        if (!baseShaderCreateInfo.addBaseShaderUri.empty()) {
+            addBaseShaderUri = AddBaseShaderSlotVariant(baseShaderCreateInfo.addBaseShaderUri, clientHandle);
+        }
+    }
+}
+
+RenderHandleReference ShaderManager::Create(const ComputeShaderCreateData& createInfo,
+    const ShaderPathCreateData& pathCreateInfo, const BaseShaderPathCreateData& baseShaderCreateInfo)
 {
     PLUGIN_ASSERT(computeShaderMappings_.clientData.size() == computeShaderMappings_.nameData.size());
 
@@ -528,44 +644,47 @@ RenderHandleReference ShaderManager::Create(
         nameDataRef.variantName = pathCreateInfo.variantName;
         nameDataRef.displayName = pathCreateInfo.displayName;
         auto& clientDataRef = computeShaderMappings_.clientData[index];
-        // add base shader if given
-        if (!pathCreateInfo.baseShaderPath.empty()) {
-            if (const auto baseHandleIter = nameToClientHandle_.find(pathCreateInfo.baseShaderPath);
-                baseHandleIter != nameToClientHandle_.cend()) {
-                if (RenderHandleUtil::IsValid(baseHandleIter->second)) {
-                    clientDataRef.baseShaderHandle = baseHandleIter->second;
-                    const uint64_t hash = HashHandleAndSlot(clientDataRef.baseShaderHandle, createInfo.renderSlotId);
-                    hashToShaderVariant_[hash] = clientHandle;
-                }
-            } else {
-                PLUGIN_LOG_W("base shader (%s) not found for (%s)", pathCreateInfo.baseShaderPath.data(),
-                    createInfo.path.data());
-            }
-        }
+        CreateBaseShaderPathsAndHashes(createInfo.renderSlotId, pathCreateInfo, baseShaderCreateInfo, clientHandle,
+            clientDataRef.ownBaseShaderHandle, clientDataRef.addBaseShaderHandle);
         return clientDataRef.rhr;
-    } else {
-        return {};
     }
+    return {};
 }
 
-RenderHandleReference ShaderManager::Create(
-    const ShaderCreateData& createInfo, const ShaderPathCreateData& pathCreateInfo)
+RenderHandleReference ShaderManager::CreateShaderDataImpl(const ShaderCreateData& createInfo,
+    const ShaderPathCreateData& pathCreateInfo, const BaseShaderPathCreateData& baseShaderCreateInfo,
+    const RenderHandle clientHandle, const uint32_t index)
+{
+    auto& nameDataRef = shaderMappings_.nameData[index];
+    nameDataRef.path = createInfo.path;
+    nameDataRef.variantName = pathCreateInfo.variantName;
+    nameDataRef.displayName = pathCreateInfo.displayName;
+    auto& clientDataRef = shaderMappings_.clientData[index];
+    clientDataRef.graphicsStateIndex = createInfo.graphicsStateIndex;
+    clientDataRef.vertexInputDeclarationIndex = createInfo.vertexInputDeclarationIndex;
+
+    CreateBaseShaderPathsAndHashes(createInfo.renderSlotId, pathCreateInfo, baseShaderCreateInfo, clientHandle,
+        clientDataRef.ownBaseShaderHandle, clientDataRef.addBaseShaderHandle);
+
+    return clientDataRef.rhr;
+}
+
+RenderHandleReference ShaderManager::Create(const ShaderCreateData& createInfo,
+    const ShaderPathCreateData& pathCreateInfo, const BaseShaderPathCreateData& baseShaderCreateInfo)
 {
     PLUGIN_ASSERT(shaderMappings_.clientData.size() == shaderMappings_.nameData.size());
 
     const string fullName = createInfo.path + pathCreateInfo.variantName;
     // reflection pipeline layout
     uint32_t reflectionPlIndex = INVALID_SM_INDEX;
-    {
-        const ShaderModule* vs = GetShaderModule(createInfo.vertShaderModuleIndex);
-        const ShaderModule* fs = GetShaderModule(createInfo.fragShaderModuleIndex);
-        if (vs && fs) {
-            const PipelineLayout layouts[] { vs->GetPipelineLayout(), fs->GetPipelineLayout() };
-            PipelineLayout pl;
-            GpuProgramUtil::CombinePipelineLayouts({ layouts, 2u }, pl);
-            const RenderHandleReference plRhr = CreatePipelineLayout({ fullName, pl });
-            reflectionPlIndex = RenderHandleUtil::GetIndexPart(plRhr.GetHandle());
-        }
+    const ShaderModule* vs = GetShaderModule(createInfo.vertShaderModuleIndex);
+    const ShaderModule* fs = GetShaderModule(createInfo.fragShaderModuleIndex);
+    if (vs && fs) {
+        const PipelineLayout layouts[] { vs->GetPipelineLayout(), fs->GetPipelineLayout() };
+        PipelineLayout pl;
+        GpuProgramUtil::CombinePipelineLayouts({ layouts, 2u }, pl);
+        const RenderHandleReference plRhr = CreatePipelineLayout({ fullName, pl });
+        reflectionPlIndex = RenderHandleUtil::GetIndexPart(plRhr.GetHandle());
     }
 
     auto const clientHandle = CreateClientData(fullName, RenderHandleType::SHADER_STATE_OBJECT,
@@ -602,37 +721,9 @@ RenderHandleReference ShaderManager::Create(
 
     const uint32_t index = RenderHandleUtil::GetIndexPart(clientHandle);
     if (IsShaderFunc(clientHandle) && (index < static_cast<uint32_t>(shaderMappings_.clientData.size()))) {
-        auto& nameDataRef = shaderMappings_.nameData[index];
-        nameDataRef.path = createInfo.path;
-        nameDataRef.variantName = pathCreateInfo.variantName;
-        nameDataRef.displayName = pathCreateInfo.displayName;
-        auto& clientDataRef = shaderMappings_.clientData[index];
-        clientDataRef.graphicsStateIndex = createInfo.graphicsStateIndex;
-        clientDataRef.vertexInputDeclarationIndex = createInfo.vertexInputDeclarationIndex;
-        // add base shader if given
-#if (RENDER_VALIDATION_ENABLED == 1)
-        if ((!pathCreateInfo.variantName.empty()) && pathCreateInfo.baseShaderPath.empty()) {
-            PLUGIN_LOG_W("RENDER_VALIDATION: base shader path not give to variant (%s %s)", createInfo.path.data(),
-                pathCreateInfo.variantName.data());
-        }
-#endif
-        if (!pathCreateInfo.baseShaderPath.empty()) {
-            if (const auto baseHandleIter = nameToClientHandle_.find(pathCreateInfo.baseShaderPath);
-                baseHandleIter != nameToClientHandle_.cend()) {
-                if (RenderHandleUtil::IsValid(baseHandleIter->second)) {
-                    clientDataRef.baseShaderHandle = baseHandleIter->second;
-                    const uint64_t hash = HashHandleAndSlot(clientDataRef.baseShaderHandle, createInfo.renderSlotId);
-                    hashToShaderVariant_[hash] = clientHandle;
-                }
-            } else {
-                PLUGIN_LOG_W("base shader (%s) not found for (%s)", pathCreateInfo.baseShaderPath.data(),
-                    createInfo.path.data());
-            }
-        }
-        return clientDataRef.rhr;
-    } else {
-        return {};
+        return CreateShaderDataImpl(createInfo, pathCreateInfo, baseShaderCreateInfo, clientHandle, index);
     }
+    return {};
 }
 
 void ShaderManager::AddAdditionalNameForHandle(const RenderHandleReference& handle, const string_view name)
@@ -653,15 +744,15 @@ void ShaderManager::AddAdditionalNameForHandle(const RenderHandleReference& hand
     }
 }
 
-RenderHandleReference ShaderManager::CreateComputeShader(
-    const ComputeShaderCreateInfo& createInfo, const string_view baseShaderPath, const string_view variantName)
+RenderHandleReference ShaderManager::CreateComputeShader(const ComputeShaderCreateInfo& createInfo,
+    const string_view additionalBaseShaderPath, const string_view variantName)
 {
-    if (createInfo.shaderPaths.size() >= 1u) {
+    if (!createInfo.shaderPaths.empty()) {
         if (const uint32_t moduleIdx = GetShaderModuleIndex(createInfo.shaderPaths[0].path);
             moduleIdx != INVALID_SM_INDEX) {
             return Create(ComputeShaderCreateData { createInfo.path, createInfo.renderSlotId, createInfo.categoryId,
                               RenderHandleUtil::GetIndexPart(createInfo.pipelineLayout), moduleIdx, {}, {} },
-                { baseShaderPath, variantName, {} });
+                { variantName, {} }, { createInfo.path, additionalBaseShaderPath });
         } else {
             PLUGIN_LOG_E("ShaderManager: compute shader (%s) creation failed, compute shader path (%s) not found",
                 string(createInfo.path).c_str(), string(createInfo.shaderPaths[0].path).c_str());
@@ -679,7 +770,7 @@ RenderHandleReference ShaderManager::CreateComputeShader(const ComputeShaderCrea
 }
 
 RenderHandleReference ShaderManager::CreateShader(
-    const ShaderCreateInfo& createInfo, const string_view baseShaderPath, const string_view variantName)
+    const ShaderCreateInfo& createInfo, const string_view additionalBaseShaderPath, const string_view variantName)
 {
     if (createInfo.shaderPaths.size() >= 2u) {
         const uint32_t vertShaderModule = GetShaderModuleIndex(createInfo.shaderPaths[0u].path);
@@ -690,7 +781,7 @@ RenderHandleReference ShaderManager::CreateShader(
                               RenderHandleUtil::GetIndexPart(createInfo.pipelineLayout),
                               RenderHandleUtil::GetIndexPart(createInfo.graphicsState), vertShaderModule,
                               fragShaderModule, {}, {} },
-                { baseShaderPath, variantName, {} });
+                { variantName, {} }, { createInfo.path, additionalBaseShaderPath });
         } else {
             PLUGIN_LOG_E("ShaderManager: shader (%s) creation failed, shader path (vert:%s) (frag:%s) not found",
                 string(createInfo.path).c_str(), string(createInfo.shaderPaths[0u].path).c_str(),
@@ -747,8 +838,15 @@ void ShaderManager::HandlePendingAllocations()
     CompareForErase(ageLimit, deferredDestructions_.computePrograms);
     CompareForErase(ageLimit, deferredDestructions_.shaderPrograms);
 
-    std::swap(reloadedShadersForBackend_, reloadedShaders_);
-    reloadedShaders_.clear();
+    if (!reloadedShaders_.empty()) {
+        lastReloadedShadersFrameIndex_ = device_.GetFrameCount();
+        reloadedShadersForBackend_.push_back({});
+        auto& ref = reloadedShadersForBackend_.back();
+        ref.frameIndex = lastReloadedShadersFrameIndex_;
+        std::swap(ref.shadersForBackend, reloadedShaders_);
+
+        reloadedShaders_.clear();
+    }
 }
 
 void ShaderManager::HandlePendingShaders(Allocs& allocs)
@@ -870,41 +968,64 @@ RenderHandleReference ShaderManager::GetShaderHandle(const RenderHandle& handle,
     }
 
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
-    RenderHandle baseShaderHandle;
+    RenderHandle ownBaseShaderHandle;
+    RenderHandle addBaseShaderHandle;
     // check first for own validity and possible base shader handle
     if ((handleType == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) &&
         (index < static_cast<uint32_t>(computeShaderMappings_.clientData.size()))) {
         const auto& ref = computeShaderMappings_.clientData[index];
         if (ref.renderSlotId == renderSlotId) {
-            return ref.rhr;
+            return ref.rhr; // early out
         }
-        baseShaderHandle = ref.baseShaderHandle;
+        ownBaseShaderHandle = ref.ownBaseShaderHandle;
+        addBaseShaderHandle = ref.addBaseShaderHandle;
     } else if ((handleType == RenderHandleType::SHADER_STATE_OBJECT) &&
                (index < static_cast<uint32_t>(shaderMappings_.clientData.size()))) {
         const auto& ref = shaderMappings_.clientData[index];
         if (ref.renderSlotId == renderSlotId) {
-            return ref.rhr;
+            return ref.rhr; // early out
         }
-        baseShaderHandle = ref.baseShaderHandle;
+        ownBaseShaderHandle = ref.ownBaseShaderHandle;
+        addBaseShaderHandle = ref.addBaseShaderHandle;
     }
     // try to find a match through base shader variant
-    if (RenderHandleUtil::IsValid(baseShaderHandle)) {
+    auto GetBaseShaderMatchedSlotHandle = [](const auto& hashToShaderVariant, const auto& clData,
+                                              const RenderHandle baseShaderHandle, const uint32_t renderSlotId) {
+        PLUGIN_ASSERT(RenderHandleUtil::IsValid(baseShaderHandle));
+
+        RenderHandleReference rhr;
         const uint64_t hash = HashHandleAndSlot(baseShaderHandle, renderSlotId);
-        if (const auto iter = hashToShaderVariant_.find(hash); iter != hashToShaderVariant_.cend()) {
-            const RenderHandleType baseHandleType = RenderHandleUtil::GetHandleType(iter->second);
+        if (const auto iter = hashToShaderVariant.find(hash); iter != hashToShaderVariant.cend()) {
             const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(iter->second);
-            if ((baseHandleType == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) &&
-                (arrayIndex < computeShaderMappings_.clientData.size())) {
-                PLUGIN_ASSERT(computeShaderMappings_.clientData[arrayIndex].renderSlotId == renderSlotId);
-                return computeShaderMappings_.clientData[arrayIndex].rhr;
-            } else if ((baseHandleType == RenderHandleType::SHADER_STATE_OBJECT) &&
-                       (arrayIndex < shaderMappings_.clientData.size())) {
-                PLUGIN_ASSERT(shaderMappings_.clientData[arrayIndex].renderSlotId == renderSlotId);
-                return shaderMappings_.clientData[arrayIndex].rhr;
+            if (arrayIndex < clData.size() && (clData[arrayIndex].renderSlotId == renderSlotId)) {
+                rhr = clData[arrayIndex].rhr;
             }
         }
+        return rhr;
+    };
+
+    RenderHandleReference slotHandle {};
+    if (handleType == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) {
+        if (RenderHandleUtil::IsValid(ownBaseShaderHandle)) {
+            slotHandle = GetBaseShaderMatchedSlotHandle(
+                hashToShaderVariant_, computeShaderMappings_.clientData, ownBaseShaderHandle, renderSlotId);
+        }
+        if ((!slotHandle) && (RenderHandleUtil::IsValid(addBaseShaderHandle))) {
+            slotHandle = GetBaseShaderMatchedSlotHandle(
+                hashToShaderVariant_, computeShaderMappings_.clientData, addBaseShaderHandle, renderSlotId);
+        }
+    } else if (handleType == RenderHandleType::SHADER_STATE_OBJECT) {
+        if (RenderHandleUtil::IsValid(ownBaseShaderHandle)) {
+            slotHandle = GetBaseShaderMatchedSlotHandle(
+                hashToShaderVariant_, shaderMappings_.clientData, ownBaseShaderHandle, renderSlotId);
+        }
+        if ((!slotHandle) && (RenderHandleUtil::IsValid(addBaseShaderHandle))) {
+            slotHandle = GetBaseShaderMatchedSlotHandle(
+                hashToShaderVariant_, shaderMappings_.clientData, addBaseShaderHandle, renderSlotId);
+        }
     }
-    return {};
+
+    return slotHandle;
 }
 
 RenderHandleReference ShaderManager::GetShaderHandle(
@@ -933,6 +1054,7 @@ RenderHandleReference ShaderManager::CreateGraphicsState(
     const GraphicsStateCreateInfo& createInfo, const GraphicsStateVariantCreateInfo& variantCreateInfo)
 {
     PLUGIN_ASSERT(graphicsStates_.rhr.size() == graphicsStates_.graphicsStates.size());
+    PLUGIN_ASSERT(graphicsStates_.rhr.size() == graphicsStates_.data.size());
     const uint32_t renderSlotId = CreateRenderSlotId(variantCreateInfo.renderSlot);
     // NOTE: No collisions expected if path is used
     const string fullName = createInfo.path + variantCreateInfo.variant;
@@ -967,6 +1089,10 @@ RenderHandleReference ShaderManager::CreateGraphicsState(
         graphicsStates_.data.push_back({ hash, renderSlotId, baseVariantIndex, variantCreateInfo.stateFlags });
         graphicsStates_.hashToIndex[hash] = arrayIndex;
     }
+    if (variantCreateInfo.renderSlotDefault && (arrayIndex < graphicsStates_.rhr.size())) {
+        SetRenderSlotData({ renderSlotId, {}, graphicsStates_.rhr[arrayIndex], {}, {} });
+    }
+
     if (baseVariantIndex < graphicsStates_.rhr.size()) {
         const uint64_t variantHash = HashHandleAndSlot(graphicsStates_.rhr[baseVariantIndex].GetHandle(), renderSlotId);
         if (variantHash != INVALID_SM_INDEX) {
@@ -993,10 +1119,9 @@ RenderHandleReference ShaderManager::GetGraphicsStateHandle(const string_view pa
     if (const auto iter = graphicsStates_.nameToIndex.find(path); iter != graphicsStates_.nameToIndex.cend()) {
         PLUGIN_ASSERT(iter->second < graphicsStates_.rhr.size());
         return graphicsStates_.rhr[iter->second];
-    } else {
-        PLUGIN_LOG_W("ShaderManager: named graphics state not found: %s", string(path).c_str());
-        return {};
     }
+    PLUGIN_LOG_W("ShaderManager: named graphics state not found: %s", string(path).c_str());
+    return {};
 }
 
 RenderHandleReference ShaderManager::GetGraphicsStateHandle(const string_view path, const string_view variantName) const
@@ -1006,33 +1131,33 @@ RenderHandleReference ShaderManager::GetGraphicsStateHandle(const string_view pa
     if (const auto iter = graphicsStates_.nameToIndex.find(fullName); iter != graphicsStates_.nameToIndex.cend()) {
         PLUGIN_ASSERT(iter->second < graphicsStates_.rhr.size());
         return graphicsStates_.rhr[iter->second];
-    } else {
-        PLUGIN_LOG_W(
-            "ShaderManager: named graphics state not found (name: %s variant: %s)", path.data(), variantName.data());
-        return {};
     }
+    PLUGIN_LOG_W(
+        "ShaderManager: named graphics state not found (name: %s variant: %s)", path.data(), variantName.data());
+    return {};
 }
 
 RenderHandleReference ShaderManager::GetGraphicsStateHandle(
     const RenderHandle& handle, const uint32_t renderSlotId) const
 {
-    if (RenderHandleUtil::GetHandleType(handle) == RenderHandleType::GRAPHICS_STATE) {
-        const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
-        if (arrayIndex < static_cast<uint32_t>(graphicsStates_.data.size())) {
-            // check for own validity
-            const auto& data = graphicsStates_.data[arrayIndex];
-            if (renderSlotId == data.renderSlotId) {
-                return graphicsStates_.rhr[arrayIndex];
-            }
-            // check for base variant for hashing
-            if (data.baseVariantIndex < static_cast<uint32_t>(graphicsStates_.data.size())) {
-                const RenderHandle baseHandle = graphicsStates_.rhr[data.baseVariantIndex].GetHandle();
-                const uint64_t hash = HashHandleAndSlot(baseHandle, renderSlotId);
-                if (const auto iter = graphicsStates_.variantHashToIndex.find(hash);
-                    iter != graphicsStates_.variantHashToIndex.cend()) {
-                    PLUGIN_ASSERT(iter->second < static_cast<uint32_t>(graphicsStates_.rhr.size()));
-                    return graphicsStates_.rhr[iter->second];
-                }
+    PLUGIN_ASSERT(graphicsStates_.data.size() == graphicsStates_.rhr.size());
+
+    const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
+    if ((RenderHandleUtil::GetHandleType(handle) == RenderHandleType::GRAPHICS_STATE) &&
+        (arrayIndex < static_cast<uint32_t>(graphicsStates_.data.size()))) {
+        // check for own validity
+        const auto& data = graphicsStates_.data[arrayIndex];
+        if (renderSlotId == data.renderSlotId) {
+            return graphicsStates_.rhr[arrayIndex];
+        }
+        // check for base variant for hashing
+        if (data.baseVariantIndex < static_cast<uint32_t>(graphicsStates_.rhr.size())) {
+            const RenderHandle baseHandle = graphicsStates_.rhr[data.baseVariantIndex].GetHandle();
+            const uint64_t hash = HashHandleAndSlot(baseHandle, renderSlotId);
+            if (const auto iter = graphicsStates_.variantHashToIndex.find(hash);
+                iter != graphicsStates_.variantHashToIndex.cend()) {
+                PLUGIN_ASSERT(iter->second < static_cast<uint32_t>(graphicsStates_.rhr.size()));
+                return graphicsStates_.rhr[iter->second];
             }
         }
     }
@@ -1048,11 +1173,11 @@ RenderHandleReference ShaderManager::GetGraphicsStateHandle(
 RenderHandleReference ShaderManager::GetGraphicsStateHandleByHash(const uint64_t hash) const
 {
     if (const auto iter = graphicsStates_.hashToIndex.find(hash); iter != graphicsStates_.hashToIndex.cend()) {
-        PLUGIN_ASSERT(iter->second < graphicsStates_.rhr.size());
-        return graphicsStates_.rhr[iter->second];
-    } else {
-        return {};
+        if (iter->second < graphicsStates_.rhr.size()) {
+            return graphicsStates_.rhr[iter->second];
+        }
     }
+    return {};
 }
 
 RenderHandleReference ShaderManager::GetGraphicsStateHandleByShaderHandle(const RenderHandle& handle) const
@@ -1061,7 +1186,7 @@ RenderHandleReference ShaderManager::GetGraphicsStateHandleByShaderHandle(const 
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         if (arrayIndex < static_cast<uint32_t>(shaderMappings_.clientData.size())) {
             const uint32_t gsIndex = shaderMappings_.clientData[arrayIndex].graphicsStateIndex;
-            if (gsIndex < static_cast<uint32_t>(graphicsStates_.graphicsStates.size())) {
+            if (gsIndex < static_cast<uint32_t>(graphicsStates_.rhr.size())) {
                 return graphicsStates_.rhr[gsIndex];
             }
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -1097,14 +1222,13 @@ const GraphicsState& ShaderManager::GetGraphicsStateRef(const RenderHandle& hand
     if ((type == RenderHandleType::GRAPHICS_STATE) &&
         (arrayIndex < static_cast<uint32_t>(graphicsStates_.graphicsStates.size()))) {
         return graphicsStates_.graphicsStates[arrayIndex];
-    } else {
-#if (RENDER_VALIDATION_ENABLED == 1)
-        if (RenderHandleUtil::IsValid(handle) && (type != RenderHandleType::GRAPHICS_STATE)) {
-            PLUGIN_LOG_W("RENDER_VALIDATION: invalid handle type given to GetGraphicsState()");
-        }
-#endif
-        return defaultGraphicsState_;
     }
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (RenderHandleUtil::IsValid(handle) && (type != RenderHandleType::GRAPHICS_STATE)) {
+        PLUGIN_LOG_W("RENDER_VALIDATION: invalid handle type given to GetGraphicsState()");
+    }
+#endif
+    return defaultGraphicsState_;
 }
 
 const GraphicsState& ShaderManager::GetGraphicsStateRef(const RenderHandleReference& handle) const
@@ -1164,7 +1288,6 @@ RenderHandleReference ShaderManager::GetVertexInputDeclarationHandleByShaderHand
         if (arrayIndex < mappings.clientData.size()) {
             const uint32_t vidIndex = mappings.clientData[arrayIndex].vertexInputDeclarationIndex;
             if (vidIndex < shaderVid_.rhr.size()) {
-                PLUGIN_ASSERT(vidIndex < shaderVid_.rhr.size());
                 return shaderVid_.rhr[vidIndex];
             }
         }
@@ -1181,12 +1304,12 @@ RenderHandleReference ShaderManager::GetVertexInputDeclarationHandleByShaderHand
 RenderHandleReference ShaderManager::GetVertexInputDeclarationHandle(const string_view path) const
 {
     if (const auto iter = shaderVid_.nameToIndex.find(path); iter != shaderVid_.nameToIndex.cend()) {
-        PLUGIN_ASSERT(iter->second < shaderVid_.rhr.size());
-        return shaderVid_.rhr[iter->second];
-    } else {
-        PLUGIN_LOG_W("ShaderManager: vertex input declaration not found: %s", path.data());
-        return {};
+        if (iter->second < shaderVid_.rhr.size()) {
+            return shaderVid_.rhr[iter->second];
+        }
     }
+    PLUGIN_LOG_W("ShaderManager: vertex input declaration not found: %s", path.data());
+    return {};
 }
 
 VertexInputDeclarationView ShaderManager::GetVertexInputDeclarationView(const RenderHandle& handle) const
@@ -1202,14 +1325,13 @@ VertexInputDeclarationView ShaderManager::GetVertexInputDeclarationView(const Re
             array_view<const VertexInputDeclaration::VertexInputAttributeDescription>(
                 ref.attributeDescriptions, ref.attributeDescriptionCount),
         };
-    } else {
-#if (RENDER_VALIDATION_ENABLED == 1)
-        if (RenderHandleUtil::IsValid(handle) && (type != RenderHandleType::VERTEX_INPUT_DECLARATION)) {
-            PLUGIN_LOG_W("RENDER_VALIDATION: invalid handle type given to GetVertexInputDeclarationView()");
-        }
-#endif
-        return {};
     }
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (RenderHandleUtil::IsValid(handle) && (type != RenderHandleType::VERTEX_INPUT_DECLARATION)) {
+        PLUGIN_LOG_W("RENDER_VALIDATION: invalid handle type given to GetVertexInputDeclarationView()");
+    }
+#endif
+    return {};
 }
 
 VertexInputDeclarationView ShaderManager::GetVertexInputDeclarationView(const RenderHandleReference& handle) const
@@ -1257,6 +1379,11 @@ RenderHandleReference ShaderManager::CreateVertexInputDeclaration(const VertexIn
         for (uint32_t idx = 0; idx < ref.attributeDescriptionCount; ++idx) {
             ref.attributeDescriptions[idx] = vertexInputDeclarationView.attributeDescriptions[idx];
         }
+        if (createInfo.renderSlotDefault) {
+            SetRenderSlotData({ createInfo.renderSlotId, {}, {}, {}, shaderVid_.rhr[arrayIndex] });
+        }
+
+        PLUGIN_ASSERT(shaderVid_.data.size() == shaderVid_.rhr.size());
         return shaderVid_.rhr[arrayIndex];
     } else {
         return {};
@@ -1272,7 +1399,6 @@ RenderHandleReference ShaderManager::GetPipelineLayoutHandleByShaderHandle(const
         if (arrayIndex < mappings.clientData.size()) {
             const uint32_t plIndex = mappings.clientData[arrayIndex].pipelineLayoutIndex;
             if (plIndex < static_cast<uint32_t>(pl_.rhr.size())) {
-                PLUGIN_ASSERT(plIndex < static_cast<uint32_t>(pl_.rhr.size()));
                 return pl_.rhr[plIndex];
             }
         }
@@ -1281,7 +1407,6 @@ RenderHandleReference ShaderManager::GetPipelineLayoutHandleByShaderHandle(const
         if (arrayIndex < mappings.clientData.size()) {
             const uint32_t plIndex = mappings.clientData[arrayIndex].pipelineLayoutIndex;
             if (plIndex < static_cast<uint32_t>(pl_.rhr.size())) {
-                PLUGIN_ASSERT(plIndex < static_cast<uint32_t>(pl_.rhr.size()));
                 return pl_.rhr[plIndex];
             }
         }
@@ -1298,12 +1423,12 @@ RenderHandleReference ShaderManager::GetPipelineLayoutHandle(const string_view p
 {
     if (const auto iter = pl_.nameToIndex.find(path); iter != pl_.nameToIndex.cend()) {
         const uint32_t index = iter->second;
-        PLUGIN_ASSERT(index < static_cast<uint32_t>(pl_.rhr.size()));
-        return pl_.rhr[index];
-    } else {
-        PLUGIN_LOG_W("ShaderManager: pipeline layout not found: %s", path.data());
-        return {};
+        if (index < static_cast<uint32_t>(pl_.rhr.size())) {
+            return pl_.rhr[index];
+        }
     }
+    PLUGIN_LOG_W("ShaderManager: pipeline layout not found: %s", path.data());
+    return {};
 }
 
 PipelineLayout ShaderManager::GetPipelineLayout(const RenderHandle& handle) const
@@ -1347,7 +1472,7 @@ RenderHandleReference ShaderManager::GetReflectionPipelineLayoutHandle(const Ren
         }
     }
 
-    if (plIndex < pl_.data.size()) {
+    if (plIndex < pl_.rhr.size()) {
         return pl_.rhr[plIndex];
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -1473,8 +1598,9 @@ RenderHandleReference ShaderManager::CreatePipelineLayout(const PipelineLayoutCr
 {
     uint32_t arrayIndex = INVALID_SM_INDEX;
     if (auto nameIter = pl_.nameToIndex.find(createInfo.path); nameIter != pl_.nameToIndex.end()) {
-        PLUGIN_ASSERT(nameIter->second < pl_.rhr.size());
-        arrayIndex = static_cast<uint32_t>(nameIter->second);
+        if (nameIter->second < pl_.rhr.size()) {
+            arrayIndex = static_cast<uint32_t>(nameIter->second);
+        }
     }
 
     if (arrayIndex < static_cast<uint32_t>(pl_.data.size())) { // replace
@@ -1511,8 +1637,8 @@ RenderHandleReference ShaderManager::CreatePipelineLayout(const PipelineLayoutCr
             Math::min(PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE, pipelineLayout.pushConstant.byteSize);
         uint32_t descriptorSetBitmask = 0;
         // can be user generated pipeline layout (i.e. set index might be different than index)
-        for (uint32_t idx = 0; idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++idx) {
-            const uint32_t setIdx = pipelineLayout.descriptorSetLayouts[idx].set;
+        for (const auto& descriptorSetLayout : pipelineLayout.descriptorSetLayouts) {
+            const uint32_t setIdx = descriptorSetLayout.set;
             if (setIdx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
                 ref.descriptorSetLayouts[setIdx] = pipelineLayout.descriptorSetLayouts[setIdx];
                 descriptorSetBitmask |= (1 << setIdx);
@@ -1522,6 +1648,9 @@ RenderHandleReference ShaderManager::CreatePipelineLayout(const PipelineLayoutCr
         const RenderHandle handle =
             RenderHandleUtil::CreateHandle(RenderHandleType::PIPELINE_LAYOUT, arrayIndex, 0, descriptorSetBitmask);
         pl_.rhr[arrayIndex] = RenderHandleReference(handle, IRenderReferenceCounter::Ptr(new ShaderReferenceCounter()));
+        if (createInfo.renderSlotDefault) {
+            SetRenderSlotData({ createInfo.renderSlotId, {}, {}, pl_.rhr[arrayIndex], {} });
+        }
         return pl_.rhr[arrayIndex];
     } else {
         return {};
@@ -1583,7 +1712,7 @@ uint32_t ShaderManager::CreateShaderModule(const string_view path, const ShaderM
         modules[iter->second] = device_.CreateShaderModule(createInfo);
         return iter->second;
     } else {
-        const uint32_t idx = static_cast<uint32_t>(modules.size());
+        const auto idx = static_cast<uint32_t>(modules.size());
         if (!path.empty()) {
             nameToIdx[path] = idx;
         }
@@ -1639,6 +1768,28 @@ void ShaderManager::LoadShaderFile(const string_view uri)
 
 void ShaderManager::UnloadShaderFiles(const ShaderFilePathDesc& desc) {}
 
+IShaderManager::ShaderOutWriteResult ShaderManager::SaveShaderGraphicsState(const ShaderGraphicsStateSaveInfo& saveInfo)
+{
+    return SaveGraphicsState(saveInfo);
+}
+
+IShaderManager::ShaderOutWriteResult ShaderManager::SaveShaderVertexInputDeclaration(
+    const ShaderVertexInputDeclarationsSaveInfo& saveInfo)
+{
+    return SaveVextexInputDeclarations(saveInfo);
+}
+
+IShaderManager::ShaderOutWriteResult ShaderManager::SaveShaderPipelineLayout(
+    const ShaderPipelineLayoutSaveInfo& saveInfo)
+{
+    return SavePipelineLayouts(saveInfo);
+}
+
+IShaderManager::ShaderOutWriteResult ShaderManager::SaveShaderVariants(const ShaderVariantsSaveInfo& saveInfo)
+{
+    return SaveVariants(saveInfo);
+}
+
 void ShaderManager::ReloadShaderFile(const string_view uri)
 {
     if (shaderLoader_ && (!uri.empty())) {
@@ -1649,12 +1800,12 @@ void ShaderManager::ReloadShaderFile(const string_view uri)
     }
 }
 
-bool ShaderManager::HasReloadedShaderForBackend() const
+uint64_t ShaderManager::GetLastReloadedShaderFrameIndex() const
 {
-    return !reloadedShadersForBackend_.empty();
+    return lastReloadedShadersFrameIndex_;
 }
 
-BASE_NS::array_view<const RenderHandle> ShaderManager::GetReloadedShadersForBackend() const
+BASE_NS::array_view<const ShaderManager::FrameReloadedShaders> ShaderManager::GetReloadedShadersForBackend() const
 {
     return reloadedShadersForBackend_;
 }
@@ -1691,7 +1842,8 @@ void ShaderManager::DestroyShader(const RenderHandle handle)
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
     if (IsComputeShaderFunc(handle)) {
         auto& mappings = computeShaderMappings_;
-        if (index < static_cast<uint32_t>(mappings.clientData.size())) {
+        if ((index < static_cast<uint32_t>(mappings.clientData.size())) &&
+            (index < static_cast<uint32_t>(mappings.nameData.size()))) {
             mappings.clientData[index] = {};
             mappings.nameData[index] = {};
             eraseIndexData(nameToClientHandle_, handle);
@@ -1702,7 +1854,8 @@ void ShaderManager::DestroyShader(const RenderHandle handle)
         }
     } else if (IsShaderFunc(handle)) {
         auto& mappings = shaderMappings_;
-        if (index < static_cast<uint32_t>(mappings.clientData.size())) {
+        if ((index < static_cast<uint32_t>(mappings.clientData.size())) &&
+            (index < static_cast<uint32_t>(mappings.nameData.size()))) {
             mappings.clientData[index] = {};
             mappings.nameData[index] = {};
             eraseIndexData(nameToClientHandle_, handle);
@@ -1732,8 +1885,13 @@ void ShaderManager::Destroy(const RenderHandleReference& handle)
 
 void ShaderManager::DestroyGraphicsState(const RenderHandle handle)
 {
+    PLUGIN_ASSERT(graphicsStates_.data.size() == graphicsStates_.rhr.size());
+    PLUGIN_ASSERT(graphicsStates_.data.size() == graphicsStates_.graphicsStates.size());
+
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
-    if (index < static_cast<uint32_t>(graphicsStates_.rhr.size())) {
+    if ((index < static_cast<uint32_t>(graphicsStates_.rhr.size())) &&
+        (index < static_cast<uint32_t>(graphicsStates_.data.size())) &&
+        (index < static_cast<uint32_t>(graphicsStates_.graphicsStates.size()))) {
         graphicsStates_.rhr[index] = {};
         graphicsStates_.data[index] = {};
         graphicsStates_.graphicsStates[index] = {};
@@ -1753,8 +1911,10 @@ void ShaderManager::DestroyGraphicsState(const RenderHandle handle)
 
 void ShaderManager::DestroyPipelineLayout(const RenderHandle handle)
 {
+    PLUGIN_ASSERT(pl_.data.size() == pl_.rhr.size());
+
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
-    if (index < static_cast<uint32_t>(pl_.rhr.size())) {
+    if ((index < static_cast<uint32_t>(pl_.rhr.size())) && (index < static_cast<uint32_t>(pl_.data.size()))) {
         pl_.rhr[index] = {};
         pl_.data[index] = {};
 
@@ -1773,8 +1933,11 @@ void ShaderManager::DestroyPipelineLayout(const RenderHandle handle)
 
 void ShaderManager::DestroyVertexInputDeclaration(const RenderHandle handle)
 {
+    PLUGIN_ASSERT(shaderVid_.data.size() == shaderVid_.rhr.size());
+
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
-    if (index < static_cast<uint32_t>(shaderVid_.rhr.size())) {
+    if ((index < static_cast<uint32_t>(shaderVid_.rhr.size())) &&
+        (index < static_cast<uint32_t>(shaderVid_.data.size()))) {
         shaderVid_.rhr[index] = {};
         shaderVid_.data[index] = {};
 
@@ -1919,7 +2082,8 @@ IShaderManager::IdDesc ShaderManager::GetShaderIdDesc(const RenderHandle handle)
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
     IdDesc desc;
     if ((handleType == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) &&
-        (index < static_cast<uint32_t>(computeShaderMappings_.clientData.size()))) {
+        (index < static_cast<uint32_t>(computeShaderMappings_.clientData.size())) &&
+        (index < static_cast<uint32_t>(computeShaderMappings_.nameData.size()))) {
         const auto& cdRef = computeShaderMappings_.clientData[index];
         const auto& nameRef = computeShaderMappings_.nameData[index];
         desc.frameIndex = cdRef.frameIndex;
@@ -1929,7 +2093,8 @@ IShaderManager::IdDesc ShaderManager::GetShaderIdDesc(const RenderHandle handle)
         desc.path = nameRef.path;
         desc.variant = nameRef.variantName;
     } else if ((handleType == RenderHandleType::SHADER_STATE_OBJECT) &&
-               (index < static_cast<uint32_t>(shaderMappings_.clientData.size()))) {
+               (index < static_cast<uint32_t>(shaderMappings_.clientData.size())) &&
+               (index < static_cast<uint32_t>(shaderMappings_.nameData.size()))) {
         const auto& cdRef = shaderMappings_.clientData[index];
         const auto& nameRef = shaderMappings_.nameData[index];
         desc.frameIndex = cdRef.frameIndex;
@@ -2040,33 +2205,33 @@ ShaderManager::CompatibilityFlags ShaderManager::GetCompatibilityFlags(
     const RenderHandleType rType = RenderHandleUtil::GetHandleType(rhs);
     CompatibilityFlags flags = 0;
     // NOTE: only same types supported at the moment
-    if (lType == rType) {
-        if (lType == RenderHandleType::PIPELINE_LAYOUT) {
-            const PipelineLayout lpl = GetPipelineLayout(lhs);
-            const PipelineLayout rpl = GetPipelineLayout(rhs);
-            flags = GetPipelineLayoutCompatibilityFlags(lpl, rpl);
-        } else if ((lType == RenderHandleType::SHADER_STATE_OBJECT) ||
-                   (lType == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT)) {
-            // first check that given pipeline layout is valid to own reflection
-            const RenderHandle shaderPlHandle = GetPipelineLayoutHandleByShaderHandle(rhs).GetHandle();
-            if (RenderHandleUtil::IsValid(shaderPlHandle)) {
+    if (lType != rType) {
+        return flags;
+    }
+    if (lType == RenderHandleType::PIPELINE_LAYOUT) {
+        const PipelineLayout lpl = GetPipelineLayout(lhs);
+        const PipelineLayout rpl = GetPipelineLayout(rhs);
+        flags = GetPipelineLayoutCompatibilityFlags(lpl, rpl);
+    } else if ((lType == RenderHandleType::SHADER_STATE_OBJECT) ||
+               (lType == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT)) {
+        // first check that given pipeline layout is valid to own reflection
+        const RenderHandle shaderPlHandle = GetPipelineLayoutHandleByShaderHandle(rhs).GetHandle();
+        if (RenderHandleUtil::IsValid(shaderPlHandle)) {
+            const PipelineLayout rpl = GetReflectionPipelineLayoutRef(rhs);
+            if (rpl.descriptorSetCount > 0) {
                 const PipelineLayout shaderPl = GetPipelineLayout(shaderPlHandle);
-                const PipelineLayout rpl = GetReflectionPipelineLayoutRef(rhs);
-                if (rpl.descriptorSetCount > 0) {
-                    flags = GetPipelineLayoutCompatibilityFlags(rpl, shaderPl);
-                }
-            } else {
-                // some shaders do not specify actual pipeline layout, only shader reflection pipeline layout
-                flags = 1u;
+                flags = GetPipelineLayoutCompatibilityFlags(rpl, shaderPl);
             }
-            // then, compare to lhs with rhs reflection
-            if (flags != 0) {
-                const RenderHandle lShaderPlHandle = GetPipelineLayoutHandleByShaderHandle(lhs).GetHandle();
-                const PipelineLayout lpl = RenderHandleUtil::IsValid(lShaderPlHandle)
-                                               ? GetPipelineLayout(lShaderPlHandle)
-                                               : GetReflectionPipelineLayoutRef(lhs);
-                flags = GetPipelineLayoutCompatibilityFlags(lpl, GetReflectionPipelineLayoutRef(rhs));
-            }
+        } else {
+            // some shaders do not specify actual pipeline layout, only shader reflection pipeline layout
+            flags = 1u;
+        }
+        // then, compare to lhs with rhs reflection
+        if (flags != 0) {
+            const RenderHandle lShaderPlHandle = GetPipelineLayoutHandleByShaderHandle(lhs).GetHandle();
+            const PipelineLayout lpl = RenderHandleUtil::IsValid(lShaderPlHandle) ? GetPipelineLayout(lShaderPlHandle)
+                                                                                  : GetReflectionPipelineLayoutRef(lhs);
+            flags = GetPipelineLayoutCompatibilityFlags(lpl, GetReflectionPipelineLayoutRef(rhs));
         }
     }
     return flags;
@@ -2123,154 +2288,6 @@ void ShaderManager::SetFileManager(IFileManager& fileMgr)
 {
     fileMgr_ = &fileMgr;
     shaderLoader_ = make_unique<ShaderLoader>(*fileMgr_, *this, device_.GetBackendType());
-}
-
-constexpr uint8_t REFLECTION_TAG[] = { 'r', 'f', 'l', 0 };
-struct ReflectionHeader {
-    uint8_t tag[sizeof(REFLECTION_TAG)];
-    uint16_t type;
-    uint16_t offsetPushConstants;
-    uint16_t offsetSpecializationConstants;
-    uint16_t offsetDescriptorSets;
-    uint16_t offsetInputs;
-    uint16_t offsetLocalSize;
-};
-
-bool ShaderReflectionData::IsValid() const
-{
-    if (reflectionData.size() < sizeof(ReflectionHeader)) {
-        return false;
-    }
-    const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData.data());
-    return memcmp(header.tag, REFLECTION_TAG, sizeof(REFLECTION_TAG)) == 0;
-}
-
-ShaderStageFlags ShaderReflectionData::GetStageFlags() const
-{
-    ShaderStageFlags flags;
-    const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData.data());
-    flags = header.type;
-    return flags;
-}
-
-PipelineLayout ShaderReflectionData::GetPipelineLayout() const
-{
-    PipelineLayout pipelineLayout;
-    const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData.data());
-    if (header.offsetPushConstants && header.offsetPushConstants < reflectionData.size()) {
-        auto ptr = reflectionData.data() + header.offsetPushConstants;
-        const auto constants = *ptr;
-        if (constants) {
-            pipelineLayout.pushConstant.shaderStageFlags = header.type;
-            pipelineLayout.pushConstant.byteSize = static_cast<uint32_t>(*(ptr + 1) | (*(ptr + 2) << 8));
-        }
-    }
-    if (header.offsetDescriptorSets && header.offsetDescriptorSets < reflectionData.size()) {
-        auto ptr = reflectionData.data() + header.offsetDescriptorSets;
-        pipelineLayout.descriptorSetCount = static_cast<uint32_t>(*(ptr) | (*(ptr + 1) << 8));
-        ptr += 2;
-        for (auto i = 0u; i < pipelineLayout.descriptorSetCount; ++i) {
-            // write to correct set location
-            const uint32_t set = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8));
-            PLUGIN_ASSERT(set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
-            auto& layout = pipelineLayout.descriptorSetLayouts[set];
-            layout.set = set;
-            ptr += 2;
-            const auto bindings = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8));
-            ptr += 2;
-            for (auto j = 0u; j < bindings; ++j) {
-                DescriptorSetLayoutBinding binding;
-                binding.binding = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8));
-                ptr += 2;
-                binding.descriptorType = static_cast<DescriptorType>(*ptr | (*(ptr + 1) << 8));
-                if ((binding.descriptorType > DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) &&
-                    (binding.descriptorType ==
-                        (DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE & 0xffff))) {
-                    binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE;
-                }
-                ptr += 2;
-                binding.descriptorCount = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8));
-                ptr += 2;
-                binding.shaderStageFlags = header.type;
-                layout.bindings.push_back(binding);
-            }
-        }
-    }
-    return pipelineLayout;
-}
-
-vector<ShaderSpecialization::Constant> ShaderReflectionData::GetSpecializationConstants() const
-{
-    vector<ShaderSpecialization::Constant> constants;
-    const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData.data());
-    if (header.offsetSpecializationConstants && header.offsetSpecializationConstants < reflectionData.size()) {
-        auto ptr = reflectionData.data() + header.offsetSpecializationConstants;
-        const auto size = *ptr | *(ptr + 1) << 8 | *(ptr + 2) << 16 | *(ptr + 3) << 24;
-        ptr += 4;
-        for (auto i = 0; i < size; ++i) {
-            ShaderSpecialization::Constant constant;
-            constant.shaderStage = header.type;
-            constant.id = static_cast<uint32_t>(*ptr | *(ptr + 1) << 8 | *(ptr + 2) << 16 | *(ptr + 3) << 24);
-            ptr += 4;
-            constant.type = static_cast<ShaderSpecialization::Constant::Type>(
-                *ptr | *(ptr + 1) << 8 | *(ptr + 2) << 16 | *(ptr + 3) << 24);
-            ptr += 4;
-            constant.offset = 0;
-            constants.push_back(constant);
-        }
-    }
-    return constants;
-}
-
-vector<VertexInputDeclaration::VertexInputAttributeDescription> ShaderReflectionData::GetInputDescriptions() const
-{
-    vector<VertexInputDeclaration::VertexInputAttributeDescription> inputs;
-    const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData.data());
-    if (header.offsetInputs && header.offsetInputs < reflectionData.size()) {
-        auto ptr = reflectionData.data() + header.offsetInputs;
-        const auto size = *(ptr) | (*(ptr + 1) << 8);
-        ptr += 2;
-        for (auto i = 0; i < size; ++i) {
-            VertexInputDeclaration::VertexInputAttributeDescription desc;
-            desc.location = static_cast<uint32_t>(*(ptr) | (*(ptr + 1) << 8));
-            ptr += 2;
-            desc.binding = desc.location;
-            desc.format = static_cast<Format>(*(ptr) | (*(ptr + 1) << 8));
-            ptr += 2;
-            desc.offset = 0;
-            inputs.push_back(desc);
-        }
-    }
-    return inputs;
-}
-
-Math::UVec3 ShaderReflectionData::GetLocalSize() const
-{
-    Math::UVec3 sizes;
-    const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData.data());
-    if (header.offsetLocalSize && header.offsetLocalSize < reflectionData.size()) {
-        auto ptr = reflectionData.data() + header.offsetLocalSize;
-        sizes.x = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8) | (*(ptr + 2)) << 16 | (*(ptr + 3)) << 24);
-        ptr += 4;
-        sizes.y = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8) | (*(ptr + 2)) << 16 | (*(ptr + 3)) << 24);
-        ptr += 4;
-        sizes.z = static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8) | (*(ptr + 2)) << 16 | (*(ptr + 3)) << 24);
-    }
-    return sizes;
-}
-
-const uint8_t* ShaderReflectionData::GetPushConstants() const
-{
-    const uint8_t* ptr = nullptr;
-    const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData.data());
-    if (header.offsetPushConstants && header.offsetPushConstants < reflectionData.size()) {
-        const auto constants = *(reflectionData.data() + header.offsetPushConstants);
-        if (constants) {
-            // number of constants is uint8 and the size of the constant is uint16
-            ptr = reflectionData.data() + header.offsetPushConstants + sizeof(uint8_t) + sizeof(uint16_t);
-        }
-    }
-    return ptr;
 }
 
 RenderNodeShaderManager::RenderNodeShaderManager(const ShaderManager& shaderMgr) : shaderMgr_(shaderMgr) {}
@@ -2438,5 +2455,49 @@ GraphicsStateFlags RenderNodeShaderManager::GetForcedGraphicsStateFlags(const Re
 GraphicsStateFlags RenderNodeShaderManager::GetForcedGraphicsStateFlags(const uint32_t renderSlotId) const
 {
     return shaderMgr_.GetForcedGraphicsStateFlags(renderSlotId);
+}
+
+IShaderManager::ShaderData RenderNodeShaderManager::GetShaderDataByShaderName(const string_view name) const
+{
+    IShaderManager::ShaderData sd;
+    sd.shader = shaderMgr_.GetShaderHandle(name).GetHandle();
+    sd.pipelineLayout = shaderMgr_.GetPipelineLayoutHandleByShaderHandle(sd.shader).GetHandle();
+    if (!RenderHandleUtil::IsValid(sd.pipelineLayout)) {
+        sd.pipelineLayout = shaderMgr_.GetReflectionPipelineLayoutHandle(sd.shader).GetHandle();
+    }
+    sd.pipelineLayoutData = shaderMgr_.GetPipelineLayout(sd.pipelineLayout);
+    return sd;
+}
+
+IShaderManager::ShaderData RenderNodeShaderManager::GetShaderDataByShaderHandle(const RenderHandle handle) const
+{
+    IShaderManager::ShaderData sd;
+    sd.shader = handle;
+    sd.pipelineLayout = shaderMgr_.GetPipelineLayoutHandleByShaderHandle(sd.shader).GetHandle();
+    if (!RenderHandleUtil::IsValid(sd.pipelineLayout)) {
+        sd.pipelineLayout = shaderMgr_.GetReflectionPipelineLayoutHandle(sd.shader).GetHandle();
+    }
+    sd.pipelineLayoutData = shaderMgr_.GetPipelineLayout(sd.pipelineLayout);
+    return sd;
+}
+
+IShaderManager::GraphicsShaderData RenderNodeShaderManager::GetGraphicsShaderDataByShaderHandle(
+    const RenderHandle handle) const
+{
+    IShaderManager::GraphicsShaderData sd;
+    sd.shader = handle;
+    sd.graphicsState = shaderMgr_.GetGraphicsStateHandleByShaderHandle(sd.shader).GetHandle();
+    sd.vertexInputDeclaration = shaderMgr_.GetVertexInputDeclarationHandleByShaderHandle(sd.shader).GetHandle();
+    sd.pipelineLayout = shaderMgr_.GetPipelineLayoutHandleByShaderHandle(sd.shader).GetHandle();
+    if (!RenderHandleUtil::IsValid(sd.pipelineLayout)) {
+        sd.pipelineLayout = shaderMgr_.GetReflectionPipelineLayoutHandle(sd.shader).GetHandle();
+    }
+    sd.pipelineLayoutData = shaderMgr_.GetPipelineLayout(sd.pipelineLayout);
+    return sd;
+}
+
+IShaderManager::IdDesc RenderNodeShaderManager::GetIdDesc(const RenderHandle& handle) const
+{
+    return shaderMgr_.GetIdDesc(shaderMgr_.Get(handle));
 }
 RENDER_END_NAMESPACE()

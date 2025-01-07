@@ -78,7 +78,7 @@ void RenderNodeBloom::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
         CreatePostProcessDataUniformBuffer(renderNodeContextMgr_->GetGpuResourceManager(), postProcessUbo_);
 
     ProcessPostProcessConfiguration(renderNodeContextMgr_->GetRenderDataStoreManager());
-    renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(renderBloom_.GetDescriptorCounts());
+    renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(RenderBloom::GetDescriptorCounts());
     const RenderBloom::BloomInfo info { GetBindableImage(inputResources_.customInputImages[0]),
         GetBindableImage(inputResources_.customOutputImages[0]), postProcessUbo_.GetHandle(),
         ppConfig_.bloomConfiguration.useCompute };
@@ -125,7 +125,7 @@ void RenderNodeBloom::ProcessPostProcessConfiguration(const IRenderNodeRenderDat
         if (const IRenderDataStore* ds = dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName);
             ds) {
             if (jsonInputs_.renderDataStore.typeName == RenderDataStorePod::TYPE_NAME) {
-                auto const dataStore = static_cast<IRenderDataStorePod const*>(ds);
+                auto const dataStore = static_cast<const IRenderDataStorePod*>(ds);
                 auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
                 if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
                     ppConfig_ = *((const PostProcessConfiguration*)dataView.data());

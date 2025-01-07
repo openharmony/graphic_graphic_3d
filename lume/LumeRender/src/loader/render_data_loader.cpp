@@ -28,16 +28,6 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-namespace {
-bool HasExtension(string_view ext, const string_view fileUri)
-{
-    if (auto const pos = fileUri.rfind(ext); pos != string_view::npos) {
-        return ext.size() == (fileUri.length() - pos);
-    }
-    return false;
-}
-} // namespace
-
 RenderDataLoader::RenderDataLoader(IFileManager& fileManager) : fileManager_(fileManager) {}
 
 void RenderDataLoader::Load(const BASE_NS::string_view pathPrefix, IRenderDataStorePod& renderDataStorePod)
@@ -65,7 +55,7 @@ void RenderDataLoader::RecurseDirectory(const string_view currentPath, const IDi
             case IDirectory::Entry::Type::UNKNOWN:
                 break;
             case IDirectory::Entry::Type::FILE: {
-                if (HasExtension(".json", entry.name)) {
+                if (entry.name.ends_with(".json")) {
                     auto const file = currentPath + entry.name;
                     IRenderDataConfigurationLoader::LoadResult result;
                     if (configurationType == ConfigurationType::POST_PROCESS) {

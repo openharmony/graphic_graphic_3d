@@ -98,7 +98,7 @@ Math::Vec2 FontData::MeasureString(const string_view string)
 
         prevGlyphIndex = glyphIndex;
 
-        penX += glyph->hAdv;
+        penX += FontDefs::Int16ToFTPos(glyph->hAdv);
         if (maxDescent > glyph->yMin) {
             maxDescent = glyph->yMin;
         }
@@ -106,7 +106,7 @@ Math::Vec2 FontData::MeasureString(const string_view string)
             maxAscent = glyph->yMax;
         }
     }
-    return { FontDefs::FTPosToFloat(penX), FontDefs::FTPosToFloat(maxAscent - maxDescent) };
+    return { FontDefs::FTPosToFloat(penX), FontDefs::Int16ToFloat(maxAscent - maxDescent) };
 }
 
 FontMetrics FontData::GetMetrics()
@@ -134,10 +134,10 @@ FontMetrics FontData::GetMetrics()
     uint32_t xIndex = faceData->GetGlyphIndex('x');
     if (xIndex) {
         GlyphMetrics glyphMetrics = GetGlyphMetrics(xIndex);
-        fontMetrics.xHeight = glyphMetrics.top - glyphMetrics.bottom;
+        fontMetrics.x_height = glyphMetrics.top - glyphMetrics.bottom; // verify this value
     } else {
         // double check what to do if 'x' char is not found in face
-        fontMetrics.xHeight = -fontMetrics.ascent;
+        fontMetrics.x_height = -fontMetrics.ascent;
     }
 
     return fontMetrics;
@@ -149,14 +149,14 @@ GlyphMetrics FontData::GetGlyphMetrics(uint32_t glyphIndex)
 
     const FontDefs::Glyph* glyph = GetOrCreateCachedGlyph(glyphIndex);
     if (glyph) {
-        glyphMetrics.left = FontDefs::FTPosToFloat(glyph->xMin);
-        glyphMetrics.top = FontDefs::FTPosToFloat(glyph->yMax);
-        glyphMetrics.right = FontDefs::FTPosToFloat(glyph->xMax);
-        glyphMetrics.bottom = FontDefs::FTPosToFloat(glyph->yMin);
+        glyphMetrics.left = FontDefs::Int16ToFloat(glyph->xMin);
+        glyphMetrics.top = FontDefs::Int16ToFloat(glyph->yMax);
+        glyphMetrics.right = FontDefs::Int16ToFloat(glyph->xMax);
+        glyphMetrics.bottom = FontDefs::Int16ToFloat(glyph->yMin);
 
-        glyphMetrics.advance = FontDefs::FTPosToFloat(glyph->hAdv);
-        glyphMetrics.leftBearing = FontDefs::FTPosToFloat(glyph->hlsb);
-        glyphMetrics.topBearing = FontDefs::FTPosToFloat(glyph->htsb);
+        glyphMetrics.advance = FontDefs::Int16ToFloat(glyph->hAdv);
+        glyphMetrics.leftBearing = FontDefs::Int16ToFloat(glyph->hlsb);
+        glyphMetrics.topBearing = FontDefs::Int16ToFloat(glyph->htsb);
     }
     return glyphMetrics;
 }
@@ -179,17 +179,16 @@ BASE_NS::vector<GlyphContour> FontData::GetGlyphContours(uint32_t glyphIndex)
         return contours;
     }
 
-    int contourStart = 0;
+    short contourStart = 0U;
 
-    for (int ii = 0; ii < outline->n_contours; ii++) {
-        const int contourEnd = outline->contours[ii];
+    for (short ii = 0U; ii < outline->n_contours; ii++) {
+        const short contourEnd = outline->contours[ii];
         GlyphContour contour;
-        contour.points.reserve(contourEnd - contourStart);
+        contour.points.reserve(static_cast<size_t>(contourEnd - contourStart));
 
-        for (int jj = contourStart; jj <= contourEnd; jj++) {
-            const FT_Vector point = outline->points[jj];
-            const BASE_NS::Math::Vec2 pt = { FontDefs::FTPosToFloat(point.x), FontDefs::FTPosToFloat(point.y) };
-            contour.points.push_back(pt);
+        for (short jj = contourStart; jj <= contourEnd; jj++) {
+            const FT_Vector& point = outline->points[jj];
+            contour.points.emplace_back(FontDefs::FTPosToFloat(point.x), FontDefs::FTPosToFloat(point.y));
         }
         contours.push_back(BASE_NS::move(contour));
         contourStart = contourEnd + 1;
@@ -229,12 +228,10 @@ GlyphInfo FontData::GetGlyphInfo(uint32_t glyphIndex)
 const FontDefs::Glyph* FontData::GetOrCreateCachedGlyph(uint32_t glyphIndex)
 {
     std::shared_lock readerLock(mutex_);
-
     auto glyphPos = glyphCache_.find(glyphIndex);
     if (glyphPos != glyphCache_.end()) {
         return &glyphPos->second;
     }
-
     readerLock.unlock();
     return UpdateGlyph(glyphIndex);
 }

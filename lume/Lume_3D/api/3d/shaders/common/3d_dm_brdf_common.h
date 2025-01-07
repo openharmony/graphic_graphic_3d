@@ -13,14 +13,9 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DM_BRDF_COMMON_H
-#define SHADERS__COMMON__3D_DM_BRDF_COMMON_H
+#ifndef SHADERS_COMMON_3D_DM_BRDF_COMMON_H
+#define SHADERS_COMMON_3D_DM_BRDF_COMMON_H
 
-/*
-BRDF functions.
-Follows http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
-Some mobile optimizations from https://google.github.io/filament/Filament.html
-*/
 #define CORE_BRDF_PI 3.14159265359
 // Avoid divisions by 0 on devices that do not support denormals (from Filament documentation)
 #define CORE_BRDF_MIN_ROUGHNESS 0.089
@@ -37,7 +32,7 @@ float dLambert()
 // https://www.ea.com/frostbite/news/moving-frostbite-to-pb
 float EnvSpecularAo(float ao, float NoV, float roughness)
 {
-    return clamp(pow(NoV + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao, 0.0, 1.0);
+    return clamp(pow(NoV + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao, 0.0, 1.0); // 16.0: parm
 }
 
 float SpecularHorizonOcclusion(vec3 R, vec3 N)
@@ -52,13 +47,13 @@ float dAshikhmin(float roughness, float NoH)
     const float cos2h = NoH * NoH;
     const float sin2h = 1.0 - cos2h;
     const float sin4h = sin2h * sin2h;
-    return (sin4h + 4.0 * exp(-cos2h / (sin2h * r2))) / (CORE_BRDF_PI * (1.0 + 4.0 * r2) * sin4h);
+    return (sin4h + 4.0 * exp(-cos2h / (sin2h * r2))) / (CORE_BRDF_PI * (1.0 + 4.0 * r2) * sin4h); // 4.0: parm
 }
 
 // includes microfaced BRDF denominator and geometry term
 float vAshikhmin(float NoV, float NoL)
 {
-    return 1.0 / (4.0 * (NoL + NoV - NoL * NoL));
+    return 1.0 / (4.0 * (NoL + NoV - NoL * NoL)); // 4.0: parm
 }
 
 float dCharlie(float roughness, float NoH)
@@ -66,13 +61,14 @@ float dCharlie(float roughness, float NoH)
     const float invR = 1.0 / roughness;
     const float cos2h = NoH * NoH;
     const float sin2h = 1.0 - cos2h; // NOTE: should max to fp16
-    return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * CORE_BRDF_PI);
+    return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * CORE_BRDF_PI); // 2.0: parm 0.5: parm
 }
 
 // compensation for underlaying surface
 vec3 f0ClearcoatToSurface(const vec3 f0)
 {
     // approximation of ior with value of 1.5
+    // 0.526868: parm 0.529324: parm 0.0482256:parm
     return clamp(f0 * (f0 * 0.526868 + 0.529324) - 0.0482256, 0.0, 1.0);
 }
 
@@ -81,6 +77,7 @@ float EnvBRDFApproxSheen(float NoV, float alpha)
 {
     const float c = 1.0 - NoV;
     const float c3 = c * c * c;
+    // 0.6558446: parm 4.1652655: parm 7.9729136:parm 6.3351689: parm
     return 0.6558446 * c3 + 1.0 / (4.1652655 + exp(-7.9729136 * alpha + 6.3351689));
 }
 
@@ -117,8 +114,8 @@ float dGGXAnisotropic(float at, float ab, float NoH, float ToH, float BoH, float
     float a2 = at * ab;
     vec3 d = vec3(ab * ToH, at * BoH, a2 * NoH);
     float d2 = dot(d, d);
-    if (d2 == 0) {
-        return 0.0;
+    if (d2 == 0.0f) {
+        return 0.0; 
     }
     float w2 = a2 / d2;
     return a2 * w2 * w2 * (1.0 / CORE_BRDF_PI);
@@ -136,7 +133,7 @@ float vGGXWithCombinedDenominator(float alpha2, float NoV, float NoL)
 // Kelemen 2001
 float vKelemen(float LoH)
 {
-    return min(0.25 / (LoH * LoH), CORE_HDR_FLOAT_CLAMP_MAX_VALUE);
+    return min(0.25 / (LoH * LoH), CORE_HDR_FLOAT_CLAMP_MAX_VALUE); // 0.25: parm
 }
 
 float vGGXAnisotropic(
@@ -185,4 +182,4 @@ float diffuseCoeff()
     return dLambert();
 }
 
-#endif // SHADERS__COMMON__3D_DM_BRDF_COMMON_H
+#endif // SHADERS_COMMON_3D_DM_BRDF_COMMON_H

@@ -39,16 +39,16 @@ vector<uint8_t> Read(const uint8_t* src, uint32_t componentByteSize, uint32_t co
     vector<uint8_t> result;
 
     if (elementSize > 0u) {
-        const size_t sourceSize = componentCount * componentByteSize * count;
+        const size_t sourceSize = size_t(componentCount) * componentByteSize * count;
         result.reserve(sourceSize);
 
         if (elementSize == byteStride || byteStride == 0u) {
-            result.insert(result.end(), src, src + sourceSize);
+            result.append(src, src + sourceSize);
         } else {
             const uint8_t* source = src;
 
             for (size_t i = 0u; i < count; ++i) {
-                result.insert(result.end(), source, source + elementSize);
+                result.append(source, source + elementSize);
                 source += byteStride;
             }
         }
@@ -78,9 +78,9 @@ vector<uint8_t> Read(Accessor const& accessor)
     size_t readBytes = 0u;
 
     if (elementSize == byteStride || byteStride == 0u) {
-        readBytes = accessor.count * elementSize;
+        readBytes = size_t(accessor.count) * elementSize;
     } else {
-        readBytes = (accessor.count - 1) * byteStride + elementSize;
+        readBytes = size_t(accessor.count - 1U) * byteStride + elementSize;
     }
 
     if (bufferRemaining < readBytes) {
@@ -93,9 +93,9 @@ vector<uint8_t> Read(Accessor const& accessor)
 
 template<class T>
 void CopySparseElements(
-    ByteBuffer& destination, ByteBuffer& source, ByteBuffer& indices, uint32_t elementSize, size_t count)
+    ByteBuffer& destination, const ByteBuffer& source, const ByteBuffer& indices, uint32_t elementSize, size_t count)
 {
-    T* indicesPtr = reinterpret_cast<T*>(indices.data());
+    const T* indicesPtr = reinterpret_cast<const T*>(indices.data());
     auto const end = ptrdiff_t(destination.data() + destination.size());
     for (size_t i = 0u; i < count; ++i) {
         const uint8_t* sourcePtr = source.data() + (i * elementSize);
@@ -112,8 +112,7 @@ void CopySparseElements(
 BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& fileManager)
 {
     if (IsDataURI(buffer.uri)) {
-        string_view type;
-        if (!DecodeDataURI(buffer.data, buffer.uri, 0u, false, type)) {
+        if (!DecodeDataURI(buffer.data, buffer.uri, buffer.byteLength, true)) {
             return BufferLoadResult { false, "Failed to decode data uri: " + buffer.uri + '\n' };
         }
     } else {
@@ -170,6 +169,12 @@ BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& file
 
 void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
 {
+    if (accessor.count < accessor.sparse.count) {
+        result.error += "invalid accessor.sparse.count\n";
+        result.success = false;
+        return;
+    }
+
     auto const& sparseIndicesBufferView = accessor.sparse.indices.bufferView;
     vector<uint8_t> sparseIndicesData;
     if (sparseIndicesBufferView->buffer) {
@@ -178,7 +183,7 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
         auto const componentCount = 1u;
         auto const componentByteSize = GetComponentByteSize(accessor.sparse.indices.componentType);
         auto const elementSize = componentCount * componentByteSize;
-        auto const byteStride = accessor.bufferView->byteStride;
+        auto const byteStride = sparseIndicesBufferView->byteStride;
         auto const count = accessor.sparse.count;
 
         sparseIndicesData = Read(src, componentByteSize, componentCount, elementSize, byteStride, count);
@@ -188,11 +193,11 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
     if (sparseValuesBufferView->buffer) {
         vector<uint8_t> sourceData;
 
-        const uint8_t* src = sparseValuesBufferView->data + accessor.sparse.indices.byteOffset;
+        const uint8_t* src = sparseValuesBufferView->data + accessor.sparse.values.byteOffset;
         auto const componentCount = GetComponentsCount(accessor.type);
         auto const componentByteSize = GetComponentByteSize(accessor.componentType);
         auto const elementSize = componentCount * componentByteSize;
-        auto const byteStride = accessor.bufferView->byteStride;
+        auto const byteStride = sparseValuesBufferView->byteStride;
         auto const count = accessor.sparse.count;
 
         sourceData = Read(src, componentByteSize, componentCount, elementSize, byteStride, count);
@@ -252,13 +257,11 @@ bool GetAttributeType(const string_view dataType, AttributeBase& out)
     const char* data = dataType.data();
     const unsigned int size = static_cast<unsigned int>(dataType.size());
 
-    AttributeBase attribute;
-    attribute.type = AttributeType::INVALID;
-    attribute.index = 0u;
     if (data == nullptr) {
         return false;
     }
 
+    AttributeBase attribute { AttributeType::INVALID, 0U };
     /*
     POSITION, NORMAL, TANGENT, TEXCOORD_0, TEXCOORD_1, COLOR_0, JOINTS_0, and WEIGHTS_0
     */
@@ -268,28 +271,28 @@ bool GetAttributeType(const string_view dataType, AttributeBase& out)
         attribute.type = AttributeType::NORMAL;
     } else if (dataType == "TANGENT") {
         attribute.type = AttributeType::TANGENT;
-    } else if (dataType.find("TEXCOORD_") == 0u) {
+    } else if (dataType.starts_with("TEXCOORD_")) {
         attribute.type = AttributeType::TEXCOORD;
         attribute.index = 0u;
 
         if (size > 9u) {
             attribute.index = (unsigned int)(data[9u] - '0'); // NOTE: check if size is over 10 => index more than 9
         }
-    } else if (dataType.find("COLOR_") == 0u) {
+    } else if (dataType.starts_with("COLOR_")) {
         attribute.type = AttributeType::COLOR;
         attribute.index = 0u;
 
         if (size > 6u) {
             attribute.index = (unsigned int)(data[6u] - '0'); // NOTE: check if size is over 7 => index more than 9
         }
-    } else if (dataType.find("JOINTS_") == 0u) {
+    } else if (dataType.starts_with("JOINTS_")) {
         attribute.type = AttributeType::JOINTS;
         attribute.index = 0u;
 
         if (size > 7u) {
             attribute.index = (unsigned int)(data[7u] - '0'); // NOTE: check if size is over 8 => index more than 9
         }
-    } else if (dataType.find("WEIGHTS_") == 0u) {
+    } else if (dataType.starts_with("WEIGHTS_")) {
         attribute.type = AttributeType::WEIGHTS;
         attribute.index = 0u;
 
@@ -380,30 +383,6 @@ bool GetAlphaMode(const string_view dataType, AlphaMode& out)
     return result;
 }
 
-bool GetBlendMode(const string_view dataType, BlendMode& out)
-{
-    out = BlendMode::REPLACE;
-
-    bool result = true;
-
-    if (dataType == "transparentColor") {
-        out = BlendMode::TRANSPARENT_COLOR;
-    } else if (dataType == "transparentAlpha") {
-        out = BlendMode::TRANSPARENT_ALPHA;
-    } else if (dataType == "add") {
-        out = BlendMode::ADD;
-    } else if (dataType == "modulate") {
-        out = BlendMode::MODULATE;
-    } else if (dataType == "replace") {
-        out = BlendMode::REPLACE;
-    } else if (dataType == "none") {
-        out = BlendMode::NONE;
-    } else {
-        result = false;
-    }
-    return result;
-}
-
 bool GetAnimationInterpolation(string_view interpolation, AnimationInterpolation& out)
 {
     // Default type is linear, this is not required attribute.
@@ -442,12 +421,12 @@ bool GetAnimationPath(string_view path, AnimationPath& out)
 }
 
 namespace {
-constexpr const char* ATTRIBUTE_TYPES[] = { "NORMAL", "POSITION", "TANGENT" };
-constexpr const char* TEXCOORD_ATTRIBUTES[] = { "TEXCOORD_0", "TEXCOORD_1", "TEXCOORD_2", "TEXCOORD_3", "TEXCOORD_4" };
-constexpr const char* COLOR_ATTRIBUTES[] = { "COLOR_0", "COLOR_1", "COLOR_2", "COLOR_3", "COLOR_4" };
-constexpr const char* JOINTS_ATTRIBUTES[] = { "JOINTS_0", "JOINTS_1", "JOINTS_2", "JOINTS_3", "JOINTS_4" };
-constexpr const char* WEIGHTS_ATTRIBUTES[] = { "WEIGHTS_0", "WEIGHTS_1", "WEIGHTS_2", "WEIGHTS_3", "WEIGHTS_4" };
-constexpr const char* ATTRIBUTE_INVALID = "INVALID";
+constexpr string_view ATTRIBUTE_TYPES[] = { "NORMAL", "POSITION", "TANGENT" };
+constexpr string_view TEXCOORD_ATTRIBUTES[] = { "TEXCOORD_0", "TEXCOORD_1", "TEXCOORD_2", "TEXCOORD_3", "TEXCOORD_4" };
+constexpr string_view COLOR_ATTRIBUTES[] = { "COLOR_0", "COLOR_1", "COLOR_2", "COLOR_3", "COLOR_4" };
+constexpr string_view JOINTS_ATTRIBUTES[] = { "JOINTS_0", "JOINTS_1", "JOINTS_2", "JOINTS_3", "JOINTS_4" };
+constexpr string_view WEIGHTS_ATTRIBUTES[] = { "WEIGHTS_0", "WEIGHTS_1", "WEIGHTS_2", "WEIGHTS_3", "WEIGHTS_4" };
+constexpr string_view ATTRIBUTE_INVALID = "INVALID";
 } // namespace
 
 string_view GetAttributeType(AttributeBase dataType)
@@ -585,25 +564,6 @@ string_view GetAlphaMode(AlphaMode aMode)
     }
 }
 
-string_view GetBlendMode(BlendMode data)
-{
-    switch (data) {
-        case BlendMode::TRANSPARENT_ALPHA:
-            return "transparentAlpha";
-        case BlendMode::TRANSPARENT_COLOR:
-            return "transparentColor";
-        case BlendMode::ADD:
-            return "add";
-        case BlendMode::MODULATE:
-            return "modulate";
-
-        case BlendMode::NONE:
-        case BlendMode::REPLACE:
-        default:
-            return "replace";
-    }
-}
-
 string_view GetAnimationInterpolation(AnimationInterpolation interpolation)
 {
     switch (interpolation) {
@@ -626,7 +586,7 @@ string_view GetAnimationPath(AnimationPath path)
         default:
             [[fallthrough]];
         case AnimationPath::INVALID:
-            CORE_LOG_W("invalid animation path %d", path);
+            CORE_LOG_W("invalid animation path %d", static_cast<int>(path));
             return "translation";
         case AnimationPath::TRANSLATION:
             return "translation";
@@ -803,14 +763,14 @@ string_view ValidatePrimitiveAttribute(
     AttributeType attribute, DataType accessorType, ComponentType accessorComponentType)
 {
     const auto attributeIndex = static_cast<size_t>(attribute);
-    if (attributeIndex <= countof(ATTRIBUTE_VALIDATION)) {
+    if (attributeIndex < countof(ATTRIBUTE_VALIDATION)) {
         auto& validation = ATTRIBUTE_VALIDATION[attributeIndex];
         if (std::none_of(validation.dataTypes.begin(), validation.dataTypes.end(),
-                [accessorType](const DataType& validType) { return validType == accessorType; })) {
+            [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
         } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
-                        [accessorComponentType](
-                            const ComponentType& validType) { return validType == accessorComponentType; })) {
+            [accessorComponentType](
+                const ComponentType& validType) { return validType == accessorComponentType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].componentTypeError;
         }
     } else {
@@ -867,14 +827,14 @@ string_view ValidatePrimitiveAttributeQuatization(
     AttributeType attribute, DataType accessorType, ComponentType accessorComponentType)
 {
     const auto attributeIndex = static_cast<size_t>(attribute);
-    if (attributeIndex <= countof(ATTRIBUTE_VALIDATION_Q)) {
+    if (attributeIndex < countof(ATTRIBUTE_VALIDATION_Q)) {
         auto& validation = ATTRIBUTE_VALIDATION_Q[attributeIndex];
         if (std::none_of(validation.dataTypes.begin(), validation.dataTypes.end(),
                 [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
         } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
-                        [accessorComponentType](
-                            const ComponentType& validType) { return validType == accessorComponentType; })) {
+            [accessorComponentType](
+               const ComponentType& validType) { return validType == accessorComponentType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].componentTypeError;
         }
     } else {
@@ -987,14 +947,12 @@ string_view ParseDataUri(const string_view in, size_t& offsetToData)
     return mediaType.substr(0u, pos); // NOTE: return media-type without any of the parameters.
 }
 
-bool DecodeDataURI(vector<uint8_t>& out, string_view in, size_t reqBytes, bool checkSize, string_view& outMimeType)
+bool DecodeDataURI(vector<uint8_t>& out, string_view in, size_t reqBytes, bool checkSize)
 {
-    size_t offsetToData = 0u;
+    size_t offsetToData = 0U;
     out.clear();
     if (auto const mimeType = ParseDataUri(in, offsetToData); mimeType.empty()) {
         return false;
-    } else {
-        outMimeType = mimeType;
     }
     in.remove_prefix(offsetToData);
     out = BASE_NS::Base64Decode(in);
@@ -1004,7 +962,7 @@ bool DecodeDataURI(vector<uint8_t>& out, string_view in, size_t reqBytes, bool c
     }
 
     if (checkSize) {
-        if (out.size() != reqBytes) {
+        if (out.size() < reqBytes) {
             return false;
         }
     }
@@ -1013,7 +971,7 @@ bool DecodeDataURI(vector<uint8_t>& out, string_view in, size_t reqBytes, bool c
 
 bool IsDataURI(const string_view in)
 {
-    size_t offsetToData;
+    size_t offsetToData = 0U;
     if (auto const mimeType = ParseDataUri(in, offsetToData); !mimeType.empty()) {
         if (mimeType == "application/octet-stream") {
             return true;
@@ -1066,14 +1024,18 @@ GLTFLoadDataResult& GLTFLoadDataResult::operator=(GLTFLoadDataResult&& other) no
 }
 
 // Populate GLTF buffers with data.
-BufferLoadResult LoadBuffers(const Data& data, IFileManager& fileManager)
+BufferLoadResult LoadBuffers(const Data* data, IFileManager& fileManager)
 {
     BufferLoadResult result;
+    if (!data) {
+        result.success = false;
+        result.error = "Not Data";
+        return result;
+    }
     // Load data to all buffers.
-    for (size_t i = 0u; i < data.buffers.size(); ++i) {
-        Buffer* buffer = data.buffers[i].get();
-        if (buffer->data.empty()) {
-            result = LoadBuffer(data, *buffer, fileManager);
+    for (const auto& buffer : data->buffers) {
+        if (buffer && buffer->data.empty()) {
+            result = LoadBuffer(*data, *buffer, fileManager);
             if (!result.success) {
                 return result;
             }
@@ -1081,9 +1043,10 @@ BufferLoadResult LoadBuffers(const Data& data, IFileManager& fileManager)
     }
 
     // Set up bufferview data pointers.
-    for (size_t i = 0u; i < data.bufferViews.size(); ++i) {
-        BufferView* view = data.bufferViews[i].get();
-        view->data = &(view->buffer->data[view->byteOffset]);
+    for (const auto& view : data->bufferViews) {
+        if (view && view->buffer && (view->byteOffset < view->buffer->data.size())) {
+            view->data = &(view->buffer->data[view->byteOffset]);
+        }
     }
 
     return result;
@@ -1092,28 +1055,22 @@ BufferLoadResult LoadBuffers(const Data& data, IFileManager& fileManager)
 UriLoadResult LoadUri(const string_view uri, const string_view expectedMimeType, const string_view filePath,
     IFileManager& fileManager, string_view& outExtension, vector<uint8_t>& outData)
 {
-    size_t offsetToData;
+    size_t offsetToData = 0U;
     if (auto const mimeType = ParseDataUri(uri, offsetToData); !mimeType.empty()) {
         bool isValidMimeType = true;
-        const auto pos = mimeType.find_first_of('/');
-        if (pos != string_view::npos) {
-            auto const type = mimeType.substr(0u, pos);
-
+        if (const auto pos = mimeType.find_first_of('/'); pos != string_view::npos) {
             if (!expectedMimeType.empty()) {
-                if (type != expectedMimeType) {
-                    isValidMimeType = false;
-                }
+                isValidMimeType = mimeType.compare(0u, pos, expectedMimeType) == 0U;
             }
             outExtension = mimeType.substr(pos + 1u);
         }
-        if (isValidMimeType) {
-            string_view outMimeType;
-            DecodeDataURI(outData, uri, 0u, false, outMimeType);
-            if (outData.empty()) {
-                return URI_LOAD_FAILED_TO_DECODE_BASE64;
-            }
-        } else {
+        if (!isValidMimeType) {
             return URI_LOAD_FAILED_INVALID_MIME_TYPE;
+        }
+        string_view outMimeType;
+        DecodeDataURI(outData, uri, 0u, false);
+        if (outData.empty()) {
+            return URI_LOAD_FAILED_TO_DECODE_BASE64;
         }
     } else {
         string_view baseName, extension;
@@ -1146,19 +1103,19 @@ GLTFLoadDataResult LoadData(Accessor const& accessor)
     result.min = accessor.min;
     result.max = accessor.max;
 
-    if (bufferView) {
-        if (bufferView->buffer) {
-            vector<uint8_t> fileData = Read(accessor);
-            if (fileData.empty()) {
-                result.error = "Failed to load attribute data.\n";
-                result.success = false;
-            }
+    if (bufferView && bufferView->buffer) {
+        vector<uint8_t> fileData = Read(accessor);
+        if (fileData.empty()) {
+            result.error = "Failed to load attribute data.\n";
+            result.success = false;
+        }
 
-            result.data.swap(fileData);
-        }
-        if (accessor.sparse.count) {
-            LoadSparseAccessor(accessor, result);
-        }
+        result.data.swap(fileData);
+    } else {
+        result.data.resize(result.elementSize * result.elementCount);
+    }
+    if (accessor.sparse.count) {
+        LoadSparseAccessor(accessor, result);
     }
 
     return result;
@@ -1169,7 +1126,7 @@ Data::Data(IFileManager& fileManager) : fileManager_(fileManager) {}
 
 bool Data::LoadBuffers()
 {
-    BufferLoadResult result = GLTF2::LoadBuffers(*this, fileManager_);
+    BufferLoadResult result = GLTF2::LoadBuffers(this, fileManager_);
     return result.success;
 }
 

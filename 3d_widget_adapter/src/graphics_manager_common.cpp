@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,13 +15,43 @@
 
 #include "graphics_manager_common.h"
 
+#include "ability.h"
+#include "data_ability_helper.h"
+#include "napi_base_context.h"
+
 #include "3d_widget_adapter_log.h"
 #include "engine_factory.h"
 #include "i_engine.h"
 #include "platform_data.h"
 #include "widget_trace.h"
+#include "widget_qos.h"
 
 namespace OHOS::Render3D {
+HapInfo CreateBundleName(const std::string& hapPath)
+{
+    std::shared_ptr<AbilityRuntime::ApplicationContext> context =
+        AbilityRuntime::ApplicationContext::GetApplicationContext();
+    if (!context) {
+        WIDGET_LOGE("Failed to get application context.");
+        return {};
+    }
+    auto resourceManager = context->GetResourceManager();
+    if (!resourceManager) {
+        WIDGET_LOGE("Failed to get resource manager.");
+        return {};
+    }
+    HapInfo hapInfo;
+    hapInfo.bundleName_ = resourceManager->bundleInfo.first;
+    hapInfo.moduleName_ = resourceManager->bundleInfo.second;
+    hapInfo.resourceManager_ = context->CreateModuleResourceManager(hapInfo.bundleName_, hapInfo.moduleName_);
+    hapInfo.hapPath_ = hapPath;
+    WIDGET_LOGD("bundle %s, module %s, hapPath %s",
+        hapInfo.bundleName_.c_str(),
+        hapInfo.moduleName_.c_str(),
+        hapInfo.hapPath_.c_str());
+    return hapInfo;
+}
+
 GraphicsManagerCommon::~GraphicsManagerCommon()
 {
     // should never be called
@@ -98,6 +128,11 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
     const HapInfo& hapInfo)
 {
     WIDGET_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
+    Widget3DQosScoped qos("GraphicsManagerCommon::GetEngine");
+    if (viewTextures_.size() > 1u) {
+        WIDGET_LOGD("view is not unique and view size is %zu", viewTextures_.size());
+    }
+
     auto backend = backends_.find(key);
     if (backend == backends_.end() || backend->second == RenderBackend::UNDEFINE) {
         WIDGET_LOGE("Get engine before register");
@@ -109,23 +144,27 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
         return nullptr;
     }
 
+    hapInfo_ = CreateBundleName(hapInfo.hapPath_);
+
     // gles context
     if (engine_ == nullptr) {
-        auto context = offScreenContextHelper_.CreateOffScreenContext(EGL_NO_CONTEXT);
         engine_ = EngineFactory::CreateEngine(type);
         WIDGET_LOGD("create proto engine");
         if (!LoadEngineLib()) {
+            engine_.reset();
             WIDGET_LOGE("load engine lib fail");
             return nullptr;
         }
 
-        if (!InitEngine(context, GetPlatformData(hapInfo))) {
+        if (!InitEngine(EGL_NO_CONTEXT, GetPlatformData(hapInfo_))) {
             WIDGET_LOGE("init engine fail");
+            engine_.reset();
             return nullptr;
         }
+    } else {
+        WIDGET_LOGD("engine is initialized");
     }
 
-    hapInfo_ = hapInfo;
     auto client = EngineFactory::CreateEngine(type);
     client->Clone(engine_.get());
     return client;
@@ -134,9 +173,11 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
 std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineType type, int32_t key)
 {
     WIDGET_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
+    Widget3DQosScoped qos("GraphicsManagerCommon::GetEngine");
     if (viewTextures_.size() > 1u) {
         WIDGET_LOGD("view is not unique and view size is %zu", viewTextures_.size());
     }
+
     auto backend = backends_.find(key);
     if (backend == backends_.end() || backend->second == RenderBackend::UNDEFINE) {
         WIDGET_LOGE("Get engine before register");
@@ -150,19 +191,18 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
 
     // gles context
     if (engine_ == nullptr) {
-        auto context = offScreenContextHelper_.CreateOffScreenContext(EGL_NO_CONTEXT);
         engine_ = EngineFactory::CreateEngine(type);
         WIDGET_LOGD("create proto engine");
         if (!LoadEngineLib()) {
             WIDGET_LOGE("load engine lib fail");
+            engine_.reset();
             return nullptr;
         }
 
-        if (!InitEngine(context, GetPlatformData())) {
+        if (!InitEngine(EGL_NO_CONTEXT, GetPlatformData())) {
             WIDGET_LOGE("init engine fail");
+            engine_.reset();
             return nullptr;
-        } else {
-            WIDGET_LOGD("engine is initialized");
         }
     } else {
         WIDGET_LOGD("engine is initialized");
@@ -206,7 +246,6 @@ void GraphicsManagerCommon::UnRegister(int32_t key)
         WIDGET_LOGE("view reset proto engine");
         DeInitEngine();
         engine_.reset();
-        offScreenContextHelper_.DestroyOffScreenContext();
     }
     // need graphics task exit!!!
 }

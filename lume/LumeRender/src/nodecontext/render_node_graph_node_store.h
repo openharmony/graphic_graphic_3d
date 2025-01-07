@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__RENDER_NODE_GRAPH_NODE_STORE_H
-#define RENDER_RENDER__RENDER_NODE_GRAPH_NODE_STORE_H
+#ifndef RENDER_NODECONTEXT_RENDER_NODE_GRAPH_NODE_STORE_H
+#define RENDER_NODECONTEXT_RENDER_NODE_GRAPH_NODE_STORE_H
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>

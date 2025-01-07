@@ -34,7 +34,7 @@ struct GpuSamplerDesc;
 class GpuSamplerGLES final : public GpuSampler {
 public:
     GpuSamplerGLES(Device& device, const GpuSamplerDesc& desc);
-    ~GpuSamplerGLES();
+    ~GpuSamplerGLES() override;
 
     const GpuSamplerDesc& GetDesc() const override;
     const GpuSamplerPlatformDataGL& GetPlatformData() const;

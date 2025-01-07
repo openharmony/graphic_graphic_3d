@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,27 +19,22 @@
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/light_component.h>
+#include <3d/ecs/components/render_configuration_component.h>
+#include <3d/ecs/components/post_process_component.h>
+#include <3d/ecs/components/transform_component.h>
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/name_component.h>
 #include <3d/ecs/components/node_component.h>
-#include <3d/ecs/components/post_process_component.h>
-#include <3d/ecs/components/render_configuration_component.h>
 #include <3d/ecs/components/render_handle_component.h>
 #include <3d/ecs/components/render_mesh_component.h>
-#include <3d/ecs/components/transform_component.h>
 #include <3d/ecs/components/uri_component.h>
-#include <3d/ecs/systems/intf_animation_system.h>
 #include <3d/ecs/systems/intf_morphing_system.h>
 #include <3d/ecs/systems/intf_node_system.h>
 #include <3d/ecs/systems/intf_render_system.h>
-
-#include <3d/implementation_uids.h>
+#include <3d/ecs/systems/intf_animation_system.h>
 #include <3d/gltf/gltf.h>
 #include <3d/intf_graphics_context.h>
-
-#include <3d/util/intf_mesh_util.h>
-#include <3d/util/intf_picking.h>
-#include <3d/util/intf_scene_util.h>
+#include <3d/implementation_uids.h>
 
 #include <base/containers/string_view.h>
 #include <base/math/mathf.h>
@@ -57,9 +52,16 @@
 #include <render/intf_plugin.h>
 #include <render/intf_render_context.h>
 #include <render/device/intf_device.h>
+#include <render/implementation_uids.h>
 
 #include "custom/lume_custom_render.h"
 #include "i_engine.h"
+
+#if _OPEN_BASIS_
+#include "implementation_uids.h"
+#include "product_basis.h"
+#include "product_content_basis.h"
+#endif
 
 namespace OHOS::Render3D {
 struct GltfImportInfo {
@@ -245,6 +247,7 @@ protected:
     CORE3D_NS::IRenderHandleComponentManager* gpuHandleManager_ { nullptr };
     CORE3D_NS::INodeSystem* nodeSystem_ { nullptr };
     CORE3D_NS::IRenderMeshComponentManager* renderMeshManager_ { nullptr };
+    // RENDER_NS::RenderHandleReference swapchainHandle_;
 
     // Shader
     std::shared_ptr<LumeCustomRender> customRender_;
@@ -264,8 +267,11 @@ protected:
     bool needsRedraw_ = false;
     bool needsFrameCallback_ = false;
     void* nativeWindow_ = nullptr;
-    bool activateWeatherPhys_ = false;
-
+    bool activateProductBasis_ = false;
+    bool activateProductContentBasis_ = false;
+    bool useMultiSwapChain_ = false;
+    bool loadedScene_ = false;
+    bool hasShaderInput_ = false;
     EGLSurface eglSurface_ = EGL_NO_SURFACE;
     TextureInfo textureInfo_;
 };

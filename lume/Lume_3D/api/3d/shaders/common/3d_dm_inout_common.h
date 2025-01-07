@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DEFAULT_MATERIAL_INOUT_COMMON_H
-#define SHADERS__COMMON__3D_DEFAULT_MATERIAL_INOUT_COMMON_H
+#ifndef SHADERS_COMMON_3D_DEFAULT_MATERIAL_INOUT_COMMON_H
+#define SHADERS_COMMON_3D_DEFAULT_MATERIAL_INOUT_COMMON_H
 
 #include "render/shaders/common/render_compatibility_common.h"
 
@@ -53,12 +53,23 @@ layout(location = 6) in flat uint inIndices; // packed camera and instance index
 
 #if (CORE3D_DM_DEPTH_VERT_INPUT == 1)
 layout(location = 0) in vec3 inPosition;
-layout(location = 1) in uvec4 inIndex;
-layout(location = 2) in CORE_RELAXEDP vec4 inWeight;
+layout(location = 1) in vec2 inUv0;
+layout(location = 2) in uvec4 inIndex;
+layout(location = 3) in CORE_RELAXEDP vec4 inWeight;
+#endif
+
+#if (CORE3D_DM_DEPTH_ALPHA_VERT_OUTPUT == 1)
+layout(location = 0) out vec2 outUv; // .xy = 0
+layout(location = 1) out flat uint outIndices;
+#endif
+
+#if (CORE3D_DM_DEPTH_ALPHA_FRAG_INPUT == 1)
+layout(location = 0) in vec2 inUv; // .xy = 0
+layout(location = 1) in flat uint inIndices;
 #endif
 
 #else
 
 #endif
 
-#endif // SHADERS__COMMON__3D_DEFAULT_MATERIAL_INOUT_COMMON_H
+#endif // SHADERS_COMMON_3D_DEFAULT_MATERIAL_INOUT_COMMON_H

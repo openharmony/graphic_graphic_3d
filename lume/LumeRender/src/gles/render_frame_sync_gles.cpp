@@ -33,7 +33,7 @@ RenderFrameSyncGLES::RenderFrameSyncGLES(Device& device) : RenderFrameSync()
 RenderFrameSyncGLES::~RenderFrameSyncGLES()
 {
     for (auto& ref : frameFences_) {
-        GLsync fence = (GLsync)ref.aFence;
+        auto fence = (GLsync)ref.aFence;
         if (fence) {
             glDeleteSync(fence);
         }
@@ -49,7 +49,7 @@ void RenderFrameSyncGLES::BeginFrame()
 void RenderFrameSyncGLES::WaitForFrameFence()
 {
     if (frameFences_[bufferingIndex_].aFence) {
-        GLsync fence = (GLsync)(frameFences_[bufferingIndex_].aFence);
+        auto fence = (GLsync)(frameFences_[bufferingIndex_].aFence);
         const GLenum result = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, UINT64_MAX);
         if ((result != GL_ALREADY_SIGNALED) && (result != GL_CONDITION_SATISFIED)) {
             PLUGIN_LOG_E("glClientWaitSync returned %x", result);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,6 +21,7 @@
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
+#include <base/util/color.h>
 #include <core/image/intf_image_container.h>
 #include <render/device/gpu_resource_desc.h>
 #include <render/device/pipeline_state_desc.h>
@@ -55,11 +56,25 @@ public:
     IGpuResourceManager(const IGpuResourceManager&) = delete;
     IGpuResourceManager& operator=(const IGpuResourceManager&) = delete;
 
-    /** Get render handle reference of raw handle.
+    /** Get render handle reference of raw handle. Up-to-date with generation.
      *  @param handle Raw render handle
-     *  @return Returns A render handle reference for the handle.
+     *  @return Returns A up-to-date (with generation) render handle reference for the handle.
      */
     virtual RenderHandleReference Get(const RenderHandle& handle) const = 0;
+
+    /** Get render handle of raw handle. Up-to-date with generation.
+     *  @param handle Raw render handle
+     *  @return Returns A up-to-date (with generation) render handle for the handle.
+     */
+    virtual RenderHandle GetRawHandle(const RenderHandle& handle) const = 0;
+
+    /** Get or create a GpuBuffer with unique buffer name.
+     * Keeps the data locked. Can be used to create resource only if it's not created already with unique name / uri.
+     *  @param name Name of buffer
+     *  @param desc Descriptor
+     *  @return Returns A valid resource handle to existing or new if the creation was successfull.
+     */
+    virtual RenderHandleReference GetOrCreate(const BASE_NS::string_view name, const GpuBufferDesc& desc) = 0;
 
     /** Create a GpuBuffer with unique buffer name.
      *  @param name Name of buffer
@@ -96,6 +111,14 @@ public:
      *  @return Returns A valid resource handle if the creation was successfull.
      */
     virtual RenderHandleReference Create(const GpuBufferDesc& desc) = 0;
+
+    /** Get or create a GpuImage with unique image name.
+     * Keeps the data locked. Can be used to create resource only if it's not created already with unique name / uri.
+     *  @param name Name of image
+     *  @param desc Descriptor
+     *  @return Returns A valid resource handle to existing or to a new if the creation was successfull.
+     */
+    virtual RenderHandleReference GetOrCreate(const BASE_NS::string_view name, const GpuImageDesc& desc) = 0;
 
     /** Create a GpuImage with unique image name.
      *  @param name Name of image
@@ -180,6 +203,14 @@ public:
     virtual RenderHandleReference CreateView(const BASE_NS::string_view name, const GpuImageDesc& desc,
         const BackendSpecificImageDesc& backendSpecificData) = 0;
 
+    /** Get or create a GpuSample with unique sampler name.
+     * Keeps the data locked. Can be used to create resource only if it's not created already with unique name / uri.
+     *  @param name Name of image
+     *  @param desc Descriptor
+     *  @return Returns A valid resource handle to existing or to a new if the creation was successfull.
+     */
+    virtual RenderHandleReference GetOrCreate(const BASE_NS::string_view name, const GpuSamplerDesc& desc) = 0;
+
     /** Create a GpuSampler with unique image name.
      *  @param name Name of image
      *  @param desc Descriptor
@@ -206,7 +237,7 @@ public:
      */
     virtual RenderHandleReference Create(const GpuAccelerationStructureDesc& desc) = 0;
 
-    /** Create uniquely named GpuAccelerationStructure. If name is found, the handle is replaced
+    /** Create uniquely named GpuAccelerationStructure. If name is found, the handle is replaced.
      *  A GPU buffer handle is returned with additional acceleration structure.
      *  @param name Unique name for the acceleration structure
      *  @param desc Descriptor
@@ -240,6 +271,24 @@ public:
      *  @return Returns A valid resource handle if the named resource is available.
      */
     virtual RenderHandleReference GetSamplerHandle(const BASE_NS::string_view name) const = 0;
+
+    /** See if there is already a buffer with the name. The names are unique and often URI.
+     * @param name Name of the buffer (often URI).
+     * @return True if named buffer is found.
+     */
+    virtual bool HasBuffer(BASE_NS::string_view name) const = 0;
+
+    /** See if there is already a image with the name. The names are unique and often URI.
+     * @param name Name of the image (often URI).
+     * @return True if named image is found.
+     */
+    virtual bool HasImage(BASE_NS::string_view name) const = 0;
+
+    /** See if there is already a sampler with the name. The names are unique and often URI.
+     * @param name Name of the sampler (often URI).
+     * @return True if named sampler is found.
+     */
+    virtual bool HasSampler(BASE_NS::string_view name) const = 0;
 
     /** Get buffer descriptor
      *  @param handle Handle to resource
@@ -338,25 +387,25 @@ public:
     /** Returns all valid GPU buffer render handles.
      * @return vector of handles.
      */
-    virtual BASE_NS::vector<RenderHandleReference> GetGpuBufferHandles() const = 0;
+    virtual BASE_NS::vector<RenderHandleReference> GetBufferHandles() const = 0;
     /** Returns all valid GPU image render handles.
      * @return vector of handles.
      */
-    virtual BASE_NS::vector<RenderHandleReference> GetGpuImageHandles() const = 0;
+    virtual BASE_NS::vector<RenderHandleReference> GetImageHandles() const = 0;
     /** Returns all valid GPU sampler render handles.
      * @return vector of handles.
      */
-    virtual BASE_NS::vector<RenderHandleReference> GetGpuSamplerHandles() const = 0;
+    virtual BASE_NS::vector<RenderHandleReference> GetSamplerHandles() const = 0;
 
     /** Force default GPU buffer creation usage flags. Used as bitwise OR with given descs.
      * NOTE: Reduced performance expected
-     * Use only in situtation when necessary and not in real products.
+     * Use only in situtation when necessary and not in real products
      * @param bufferUsageFlags Default buffer usage flags. With zero no flags (default)
      */
     virtual void SetDefaultGpuBufferCreationFlags(const BufferUsageFlags usageFlags) = 0;
     /** Force default GPU image creation usage flags. Used as bitwise OR with given descs.
      * NOTE: Reduced performance expected
-     * Use only in situtation when necessary and not in real products.
+     * Use only in situtation when necessary and not in real products
      * @param bufferUsageFlags Default buffer usage flags. With zero no flags (default)
      */
     virtual void SetDefaultGpuImageCreationFlags(const ImageUsageFlags usageFlags) = 0;
@@ -378,6 +427,27 @@ public:
      */
     virtual ImageAspectFlags GetImageAspectFlags(const BASE_NS::Format format) const = 0;
 
+    /** Get color space flags. RenderContext::GetColorSpaceFlags.
+     * @return Color space flags.
+     */
+    virtual BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const = 0;
+
+    /** Get color space flags related suggested format. Typically selects a format with or without sRGB.
+     * One needs to input the color space flags due to different plugins might be in different color spaces.
+     * Obviously some image data needs always linear formats and this method should not be used for those.
+     * @param format Format.
+     * @param colorSpaceFlags color space flags.
+     * @return Color space suggested format.
+     */
+    virtual BASE_NS::Format GetColorSpaceFormat(
+        const BASE_NS::Format format, const BASE_NS::ColorSpaceFlags colorSpaceFlags) const = 0;
+
+    /** Get surface transform flags.
+     * @param handle Handle of the surface.
+     * @return Surface transform flags for given surface handle. If not surface a zero flags are returned.
+     */
+    virtual SurfaceTransformFlags GetSurfaceTransformFlags(const RenderHandleReference& handle) const = 0;
+
 protected:
     IGpuResourceManager() = default;
     virtual ~IGpuResourceManager() = default;
@@ -395,11 +465,17 @@ protected:
  */
 class IRenderNodeGpuResourceManager {
 public:
-    /** Get render handle reference of raw handle.
+    /** Get render handle reference of raw handle. Up-to-date with generation.
      *  @param handle Raw render handle
-     *  @return Returns A render handle reference for the handle.
+     *  @return Returns A up-to-date (with generation) render handle reference for the handle.
      */
     virtual RenderHandleReference Get(const RenderHandle& handle) const = 0;
+
+    /** Get render handle of raw handle. Up-to-date with generation.
+     *  @param handle Raw render handle
+     *  @return Returns A up-to-date (with generation) render handle.
+     */
+    virtual RenderHandle GetRawHandle(const RenderHandle& handle) const = 0;
 
     /** Create a GpuBuffer.
      *  @param desc Descriptor
@@ -549,7 +625,7 @@ public:
     /** Checks if resource is a GPU sampler */
     virtual bool IsGpuSampler(const RenderHandle& handle) const = 0;
     /** Checks if resource is a GPU acceleration structure. If is GPU acceleration structure, it is GPU buffer as
-     * well. */
+     * well.*/
     virtual bool IsGpuAccelerationStructure(const RenderHandle& handle) const = 0;
     /** Image has been created to be used as a swapchain image. Fast check based on handle.
      * Due to possible remapping with built-in CORE_DEFAULT_BACKBUFFER might not be an actual swapchain.
@@ -568,6 +644,19 @@ public:
      */
     virtual BASE_NS::string GetName(const RenderHandle& handle) const = 0;
 
+    /** Returns all valid GPU buffer render handles.
+     * @return vector of handles.
+     */
+    virtual BASE_NS::vector<RenderHandle> GetBufferHandles() const = 0;
+    /** Returns all valid GPU image render handles.
+     * @return vector of handles.
+     */
+    virtual BASE_NS::vector<RenderHandle> GetImageHandles() const = 0;
+    /** Returns all valid GPU sampler render handles.
+     * @return vector of handles.
+     */
+    virtual BASE_NS::vector<RenderHandle> GetSamplerHandles() const = 0;
+
     /** Get gpu resource cache.
      * @return Reference to GPU resource cache interface.
      */
@@ -584,6 +673,54 @@ public:
      * @return Image aspect flags for given format.
      */
     virtual ImageAspectFlags GetImageAspectFlags(const BASE_NS::Format format) const = 0;
+
+    /** Get color space flags. RenderContext::GetColorSpaceFlags.
+     * @return Color space flags.
+     */
+    virtual BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const = 0;
+
+    /** Get color space flags related suggested format. Typically selects a format with or without sRGB.
+     * Obviously some image data needs always linear formats and this method should not be used for those.
+     * @param format Format.
+     * @return Color space suggested format.
+     */
+    virtual BASE_NS::Format GetColorSpaceFormat(
+        const BASE_NS::Format format, const BASE_NS::ColorSpaceFlags colorSpaceFlags) const = 0;
+
+    /** Get surface transform flags.
+     * @param handle Handle of the surface.
+     * @return Surface transform flags for given surface handle. If not surface a zero flags are returned.
+     */
+    virtual SurfaceTransformFlags GetSurfaceTransformFlags(const RenderHandle& handle) const = 0;
+
+    /** Render time automatic mapped GPU buffer data */
+    struct MappedGpuBufferData {
+        /** Handle for binding the data to shader (cannot be mapped) */
+        RenderHandle handle;
+        /** Binding byte offset */
+        uint32_t bindingByteOffset { 0U };
+
+        /** Byte size of data for writing and binding */
+        uint32_t byteSize { 0U };
+        /** Pointer to write byte size amount of data */
+        uint8_t* data { nullptr };
+    };
+
+    /** Reserve render time UBO buffer data section in PreExecuteFrame().
+     * Returns handle, which can be acquired later for mapping and binding.
+     * The returned handle is not valid handle for rendering.
+     * @param byteSize Size of the allocation (ask for the maximum amount).
+     * @return handle Valid only for AcquireGpuBuffer method in ExecuteFrame()
+     */
+    virtual RenderHandle ReserveGpuBuffer(uint32_t byteSize) = 0;
+
+    /** Acquire reserved UBO buffer section during ExecuteFrame().
+     * Returns a valid GpuBuffer handle, pointer, and offsets for writing and binding
+     * Do not separately call MapBuffer(). The data is already mapped.
+     * @param handle Reserved handle during PreExecuteFrame().
+     * @return Mappable GPU buffer data.
+     */
+    virtual MappedGpuBufferData AcquireGpubuffer(RenderHandle handle) = 0;
 
 protected:
     IRenderNodeGpuResourceManager() = default;

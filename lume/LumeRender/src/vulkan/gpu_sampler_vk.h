@@ -30,7 +30,7 @@ class Device;
 class GpuSamplerVk final : public GpuSampler {
 public:
     GpuSamplerVk(Device& device, const GpuSamplerDesc& desc);
-    ~GpuSamplerVk();
+    ~GpuSamplerVk() override;
 
     const GpuSamplerDesc& GetDesc() const override;
     const GpuSamplerPlatformDataVk& GetPlatformData() const;

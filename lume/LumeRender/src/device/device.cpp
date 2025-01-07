@@ -16,8 +16,10 @@
 #include "device.h"
 
 #include <algorithm>
-#include <cinttypes>
 #include <cstdint>
+#if (RENDER_VALIDATION_ENABLED == 1)
+#include <cinttypes>
+#endif
 
 #include <base/containers/array_view.h>
 #include <base/containers/fixed_string.h>
@@ -39,6 +41,7 @@
 #include "device/gpu_resource_manager.h"
 #include "device/shader_manager.h"
 #include "device/swapchain.h"
+#include "nodecontext/node_context_descriptor_set_manager.h"
 #include "render_context.h"
 #include "util/log.h"
 #include "util/string_util.h"
@@ -62,8 +65,9 @@ PLUGIN_STATIC_ASSERT(BASE_NS::Format::BASE_FORMAT_ASTC_12x12_SRGB_BLOCK == 184u)
 PLUGIN_STATIC_ASSERT(BASE_NS::Format::BASE_FORMAT_G8B8G8R8_422_UNORM == 1000156000u);
 
 namespace {
-static constexpr uint32_t MIN_BUFFERING_COUNT { 2 };
-static constexpr uint32_t MAX_BUFFERING_COUNT { 4 };
+constexpr uint32_t MIN_BUFFERING_COUNT { 2U };
+// definitely a bit high number, prefer e.g. 3.
+constexpr uint32_t MAX_BUFFERING_COUNT { 6U };
 
 constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_UNDEFINED,
@@ -472,8 +476,74 @@ constexpr const Format FALLBACK_FORMATS[] = {
 constexpr const auto LINEAR_FORMAT_COUNT = BASE_NS::Format::BASE_FORMAT_ASTC_12x12_SRGB_BLOCK + 1u;
 PLUGIN_STATIC_ASSERT(BASE_NS::countof(FALLBACK_FORMATS) == LINEAR_FORMAT_COUNT);
 
-void CreateDepthBuffer(const DeviceBackendType backendType, const Swapchain& swapchain,
-    GpuResourceManager& gpuResourceManager, Device::InternalSwapchainData& swapchainData)
+void FillColorSpaceSrgbAsLinearFormats(unordered_map<Format, Format>& formats)
+{
+    formats[BASE_FORMAT_R8_SRGB] = BASE_FORMAT_R8_UNORM;
+    formats[BASE_FORMAT_R8G8_SRGB] = BASE_FORMAT_R8G8_UNORM;
+    formats[BASE_FORMAT_R8G8B8_SRGB] = BASE_FORMAT_R8G8B8_UNORM;
+    formats[BASE_FORMAT_B8G8R8_SRGB] = BASE_FORMAT_B8G8R8_UNORM;
+    formats[BASE_FORMAT_R8G8B8A8_SRGB] = BASE_FORMAT_R8G8B8A8_UNORM;
+    formats[BASE_FORMAT_B8G8R8A8_SRGB] = BASE_FORMAT_B8G8R8A8_UNORM;
+    formats[BASE_FORMAT_A8B8G8R8_SRGB_PACK32] = BASE_FORMAT_A8B8G8R8_UNORM_PACK32;
+    formats[BASE_FORMAT_BC1_RGB_SRGB_BLOCK] = BASE_FORMAT_BC1_RGB_UNORM_BLOCK;
+    formats[BASE_FORMAT_BC1_RGBA_SRGB_BLOCK] = BASE_FORMAT_BC1_RGBA_UNORM_BLOCK;
+    formats[BASE_FORMAT_BC2_SRGB_BLOCK] = BASE_FORMAT_BC2_UNORM_BLOCK;
+    formats[BASE_FORMAT_BC3_SRGB_BLOCK] = BASE_FORMAT_BC3_UNORM_BLOCK;
+    formats[BASE_FORMAT_BC7_SRGB_BLOCK] = BASE_FORMAT_BC7_UNORM_BLOCK;
+    formats[BASE_FORMAT_ETC2_R8G8B8_SRGB_BLOCK] = BASE_FORMAT_ETC2_R8G8B8_UNORM_BLOCK;
+    formats[BASE_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK] = BASE_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK;
+    formats[BASE_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK] = BASE_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_4x4_SRGB_BLOCK] = BASE_FORMAT_ASTC_4x4_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_5x4_SRGB_BLOCK] = BASE_FORMAT_ASTC_5x4_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_5x5_SRGB_BLOCK] = BASE_FORMAT_ASTC_5x5_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_6x5_SRGB_BLOCK] = BASE_FORMAT_ASTC_6x5_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_6x6_SRGB_BLOCK] = BASE_FORMAT_ASTC_6x6_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_8x5_SRGB_BLOCK] = BASE_FORMAT_ASTC_8x5_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_8x6_SRGB_BLOCK] = BASE_FORMAT_ASTC_8x6_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_8x8_SRGB_BLOCK] = BASE_FORMAT_ASTC_8x8_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_10x5_SRGB_BLOCK] = BASE_FORMAT_ASTC_10x5_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_10x6_SRGB_BLOCK] = BASE_FORMAT_ASTC_10x6_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_10x8_SRGB_BLOCK] = BASE_FORMAT_ASTC_10x8_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_10x10_SRGB_BLOCK] = BASE_FORMAT_ASTC_10x10_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_12x10_SRGB_BLOCK] = BASE_FORMAT_ASTC_12x10_UNORM_BLOCK;
+    formats[BASE_FORMAT_ASTC_12x12_SRGB_BLOCK] = BASE_FORMAT_ASTC_12x12_UNORM_BLOCK;
+}
+
+void FillColorSpaceLinearFormats(unordered_map<Format, Format>& formats)
+{
+    formats[BASE_FORMAT_R8_UNORM] = BASE_FORMAT_R8_SRGB;
+    formats[BASE_FORMAT_R8G8_UNORM] = BASE_FORMAT_R8G8_SRGB;
+    formats[BASE_FORMAT_R8G8B8_UNORM] = BASE_FORMAT_R8G8B8_SRGB;
+    formats[BASE_FORMAT_B8G8R8_UNORM] = BASE_FORMAT_B8G8R8_SRGB;
+    formats[BASE_FORMAT_R8G8B8A8_UNORM] = BASE_FORMAT_R8G8B8A8_SRGB;
+    formats[BASE_FORMAT_B8G8R8A8_UNORM] = BASE_FORMAT_B8G8R8A8_SRGB;
+    formats[BASE_FORMAT_A8B8G8R8_UNORM_PACK32] = BASE_FORMAT_A8B8G8R8_SRGB_PACK32;
+    formats[BASE_FORMAT_BC1_RGB_UNORM_BLOCK] = BASE_FORMAT_BC1_RGB_SRGB_BLOCK;
+    formats[BASE_FORMAT_BC1_RGBA_UNORM_BLOCK] = BASE_FORMAT_BC1_RGBA_SRGB_BLOCK;
+    formats[BASE_FORMAT_BC2_UNORM_BLOCK] = BASE_FORMAT_BC2_SRGB_BLOCK;
+    formats[BASE_FORMAT_BC3_UNORM_BLOCK] = BASE_FORMAT_BC3_SRGB_BLOCK;
+    formats[BASE_FORMAT_BC7_UNORM_BLOCK] = BASE_FORMAT_BC7_SRGB_BLOCK;
+    formats[BASE_FORMAT_ETC2_R8G8B8_UNORM_BLOCK] = BASE_FORMAT_ETC2_R8G8B8_SRGB_BLOCK;
+    formats[BASE_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK] = BASE_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK;
+    formats[BASE_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK] = BASE_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_4x4_UNORM_BLOCK] = BASE_FORMAT_ASTC_4x4_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_5x4_UNORM_BLOCK] = BASE_FORMAT_ASTC_5x4_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_5x5_UNORM_BLOCK] = BASE_FORMAT_ASTC_5x5_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_6x5_UNORM_BLOCK] = BASE_FORMAT_ASTC_6x5_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_6x6_UNORM_BLOCK] = BASE_FORMAT_ASTC_6x6_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_8x5_UNORM_BLOCK] = BASE_FORMAT_ASTC_8x5_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_8x6_UNORM_BLOCK] = BASE_FORMAT_ASTC_8x6_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_8x8_UNORM_BLOCK] = BASE_FORMAT_ASTC_8x8_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_10x5_UNORM_BLOCK] = BASE_FORMAT_ASTC_10x5_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_10x6_UNORM_BLOCK] = BASE_FORMAT_ASTC_10x6_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_10x8_UNORM_BLOCK] = BASE_FORMAT_ASTC_10x8_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_10x10_UNORM_BLOCK] = BASE_FORMAT_ASTC_10x10_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_12x10_UNORM_BLOCK] = BASE_FORMAT_ASTC_12x10_SRGB_BLOCK;
+    formats[BASE_FORMAT_ASTC_12x12_UNORM_BLOCK] = BASE_FORMAT_ASTC_12x12_SRGB_BLOCK;
+}
+
+void CreateDepthBuffer(
+    const Swapchain& swapchain, GpuResourceManager& gpuResourceManager, Device::InternalSwapchainData& swapchainData)
 {
 #if (RENDER_VALIDATION_ENABLED == 1)
     PLUGIN_LOG_I("RENDER_VALIDATION: Default swapchain depth buffer created.");
@@ -483,7 +553,8 @@ void CreateDepthBuffer(const DeviceBackendType backendType, const Swapchain& swa
 }
 } // namespace
 
-Device::Device(RenderContext& renderContext, const DeviceCreateInfo& deviceCreateInfo) : renderContext_(renderContext)
+Device::Device(RenderContext& renderContext, const DeviceCreateInfo& deviceCreateInfo)
+    : renderContext_(renderContext), deviceConfiguration_(deviceCreateInfo.deviceConfiguration)
 {
     if ((deviceConfiguration_.bufferingCount < MIN_BUFFERING_COUNT) ||
         (deviceConfiguration_.bufferingCount > MAX_BUFFERING_COUNT)) {
@@ -491,6 +562,8 @@ Device::Device(RenderContext& renderContext, const DeviceCreateInfo& deviceCreat
             std::clamp(deviceConfiguration_.bufferingCount, MIN_BUFFERING_COUNT, MAX_BUFFERING_COUNT);
         PLUGIN_LOG_D("buffering count clamped to: %u", deviceConfiguration_.bufferingCount);
     }
+    FillColorSpaceLinearFormats(colorSpaceLinearFormats_);
+    FillColorSpaceSrgbAsLinearFormats(colorSpaceSrgbAsLinearFormats_);
 }
 
 RenderHandleReference Device::CreateSwapchainImpl(
@@ -500,7 +573,7 @@ RenderHandleReference Device::CreateSwapchainImpl(
     // NOTE: with optimal implementation shouldn't be needed here
     WaitForIdle();
 
-    uint32_t swapchainIdx = static_cast<uint32_t>(swapchains_.size());
+    auto swapchainIdx = static_cast<uint32_t>(swapchains_.size());
     bool replace = false;
     // check if the handle needs to be replaced
     RenderHandleReference finalReplaceHandle = replacedHandle;
@@ -599,7 +672,7 @@ RenderHandleReference Device::CreateSwapchainImpl(
     // configure automatically backbuffer as swapchain
     {
         IRenderDataStoreManager& rdsm = renderContext_.GetRenderDataStoreManager();
-        auto dataStorePod = static_cast<IRenderDataStorePod*>(rdsm.GetRenderDataStore(RenderDataStorePod::TYPE_NAME));
+        refcnt_ptr<IRenderDataStorePod> dataStorePod = rdsm.GetRenderDataStore(RenderDataStorePod::TYPE_NAME);
         if (dataStorePod) {
             auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
             PLUGIN_ASSERT(dataView.size_bytes() == sizeof(NodeGraphBackBufferConfiguration));
@@ -613,7 +686,7 @@ RenderHandleReference Device::CreateSwapchainImpl(
     }
     if ((defaultSwapchainHandle_.GetHandle() == swapchainData.remappableSwapchainImage.GetHandle()) &&
         (swapchainCreateInfo.swapchainFlags & SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT)) {
-        CreateDepthBuffer(GetBackendType(), *swapchainData.swapchain, *gpuResourceMgr_, swapchainData);
+        CreateDepthBuffer(*swapchainData.swapchain, *gpuResourceMgr_, swapchainData);
     }
 #if (RENDER_VALIDATION_ENABLED == 1)
     if ((defaultSwapchainHandle_.GetHandle() != swapchainData.remappableSwapchainImage.GetHandle()) &&
@@ -670,8 +743,8 @@ void Device::DestroySwapchainImpl(const RenderHandleReference& handle)
                 // remove swapchain configuration from the backbuffer
                 if ((handle.GetHandle() == defaultSwapchainHandle_.GetHandle()) || (!handle)) {
                     IRenderDataStoreManager& rdsm = renderContext_.GetRenderDataStoreManager();
-                    auto dataStorePod =
-                        static_cast<IRenderDataStorePod*>(rdsm.GetRenderDataStore(RenderDataStorePod::TYPE_NAME));
+                    refcnt_ptr<IRenderDataStorePod> dataStorePod =
+                        rdsm.GetRenderDataStore(RenderDataStorePod::TYPE_NAME);
                     if (dataStorePod) {
                         auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
                         PLUGIN_ASSERT(dataView.size_bytes() == sizeof(NodeGraphBackBufferConfiguration));
@@ -710,7 +783,7 @@ void Device::DestroySwapchain(const RenderHandleReference& handle)
 
 SurfaceTransformFlags Device::GetSurfaceTransformFlags(const RenderHandle& handle) const
 {
-    // NOTE: we lock data hear to check for the transforms flags
+    // NOTE: Would need additional locks
     // the flags should be stored, and the data should not be locked for every frame access
     if (RenderHandleUtil::IsSwapchain(handle)) {
         for (const auto& swapchain : swapchains_) {
@@ -721,7 +794,7 @@ SurfaceTransformFlags Device::GetSurfaceTransformFlags(const RenderHandle& handl
             }
         }
     }
-    return 0u;
+    return 0U;
 }
 
 void Device::FrameStart()
@@ -739,7 +812,8 @@ void Device::SetDeviceStatus(const bool status)
 bool Device::GetDeviceStatus() const
 {
     return deviceStatus_.load();
-};
+}
+
 uint64_t Device::GetFrameCount() const
 {
     return frameCount_;
@@ -843,6 +917,11 @@ IShaderManager& Device::GetShaderManager() const
     return *shaderMgr_;
 }
 
+DescriptorSetManager& Device::GetDescriptorSetManager() const
+{
+    return *globalDescriptorSetMgr_;
+}
+
 void Device::SetBackendConfig(const BackendConfig& config) {}
 
 Format Device::GetFormatOrFallback(const Format inputFormat) const
@@ -867,6 +946,22 @@ Format Device::GetFormatOrFallback(const Format inputFormat) const
                 static_cast<uint32_t>(inputFormat), static_cast<uint32_t>(format));
         }
 #endif
+    }
+    return format;
+}
+
+ColorSpaceFlags Device::GetColorSpaceFlags() const
+{
+    return renderContext_.GetColorSpaceFlags();
+}
+
+Format Device::GetColorSpaceFormat(const Format inputFormat, const ColorSpaceFlags flags) const
+{
+    Format format = inputFormat;
+    const auto& formats = (flags & ColorSpaceFlagBits::COLOR_SPACE_SRGB_AS_LINEAR_BIT) ? colorSpaceSrgbAsLinearFormats_
+                                                                                       : colorSpaceLinearFormats_;
+    if (auto iter = formats.find(format); iter != formats.cend()) {
+        format = iter->second;
     }
     return format;
 }

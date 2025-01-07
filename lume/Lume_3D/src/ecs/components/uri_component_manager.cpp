@@ -19,7 +19,7 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE3D_BEGIN_NAMESPACE()
 using BASE_NS::array_view;
@@ -31,10 +31,9 @@ using CORE_NS::IEcs;
 using CORE_NS::Property;
 
 class UriComponentManager final : public BaseManager<UriComponent, IUriComponentManager> {
-    BEGIN_PROPERTY(UriComponent, ComponentMetadata)
+    BEGIN_PROPERTY(UriComponent, componentMetaData_)
 #include <3d/ecs/components/uri_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit UriComponentManager(IEcs& ecs)
@@ -45,12 +44,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

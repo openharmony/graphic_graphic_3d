@@ -34,22 +34,21 @@ Caches gpu resource for use and can be obtained for re-use.
 class GpuResourceCache final : public IGpuResourceCache {
 public:
     explicit GpuResourceCache(RENDER_NS::GpuResourceManager& gpuResourceMgr);
-    ~GpuResourceCache();
+    ~GpuResourceCache() override;
 
     GpuResourceCache(const GpuResourceCache&) = delete;
     GpuResourceCache& operator=(const GpuResourceCache&) = delete;
 
     RenderHandleReference ReserveGpuImage(const CacheGpuImageDesc& desc) override;
     BASE_NS::vector<RenderHandleReference> ReserveGpuImages(
-        const BASE_NS::array_view<const CacheGpuImageDesc> descs) override;
+        BASE_NS::array_view<const CacheGpuImageDesc> descs) override;
     CacheGpuImageDesc GetCacheGpuImageDesc(const RenderHandleReference& gpuImageHandle) const override;
 
-    CacheGpuImagePair ReserveGpuImagePair(
-        const CacheGpuImageDesc& desc, const SampleCountFlags sampleCountFlags) override;
+    CacheGpuImagePair ReserveGpuImagePair(const CacheGpuImageDesc& desc, SampleCountFlags sampleCountFlags) override;
 
-    uint64_t HashCacheGpuImageDesc(const CacheGpuImageDesc& desc) const;
+    static uint64_t HashCacheGpuImageDesc(const CacheGpuImageDesc& desc);
 
-    void BeginFrame(const uint64_t frameCount);
+    void BeginFrame(uint64_t frameCount);
 
     struct ImageData {
         RenderHandleReference handle;

@@ -39,7 +39,7 @@ public:
     EGLState() = default;
     ~EGLState() = default;
     bool CreateContext(DeviceCreateInfo const& createInfo);
-    bool IsValid();
+    bool IsValid() const;
 
     void GlInitialize();
     void DestroyContext();
@@ -55,7 +55,7 @@ public:
     uint32_t MinorVersion() const;
 
     bool HasExtension(BASE_NS::string_view) const;
-    uintptr_t CreateSurface(uintptr_t window, uintptr_t instance) const noexcept;
+    uintptr_t CreateSurface(uintptr_t window, uintptr_t instance, bool isSrgb) const noexcept;
     void DestroySurface(uintptr_t surface) const noexcept;
     bool GetSurfaceInformation(
         const DevicePlatformDataGLES& plat, EGLSurface surface, GlesImplementation::SurfaceInfo& res) const;
@@ -67,6 +67,8 @@ protected:
     bool hasConfiglessExt_ { false };
     bool hasSurfacelessExt_ { false };
     void HandleExtensions();
+    void FillSurfaceInfo(EGLDisplay display, EGLSurface surface, EGLint configId, EGLConfig config,
+        GlesImplementation::SurfaceInfo& res) const;
     BASE_NS::string cextensions_;                          // list of client extensions (null terminated strings)
     BASE_NS::vector<BASE_NS::string_view> cextensionList_; // pointers to cextensions_
     BASE_NS::string dextensions_;                          // list of display extensions (null terminated strings)

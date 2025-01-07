@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__IO__STD_DIRECTORY_H
-#define CORE__IO__STD_DIRECTORY_H
+#ifndef CORE_IO_STD_DIRECTORY_H
+#define CORE_IO_STD_DIRECTORY_H
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
@@ -34,6 +34,7 @@ public:
 
     static IDirectory::Ptr Create(BASE_NS::string_view path);
     static IDirectory::Ptr Open(BASE_NS::string_view path);
+    static bool DirectoryExists(BASE_NS::string_view path);
     void Close() override;
 
     BASE_NS::vector<Entry> GetEntries() const override;
@@ -56,4 +57,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE__IO__STD_DIRECTORY_H
+#endif // CORE_IO_STD_DIRECTORY_H

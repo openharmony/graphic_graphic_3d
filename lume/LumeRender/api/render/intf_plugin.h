@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <base/containers/array_view.h>
+#include <base/containers/refcnt_ptr.h>
 #include <base/util/compile_time_hashes.h>
 #include <base/util/uid.h>
 #include <core/plugin/intf_plugin.h>
@@ -34,19 +35,17 @@ class IRenderNode;
  */
 /** Information needed from the plugin for managing RenderDataStores. */
 struct RenderDataStoreTypeInfo : public CORE_NS::ITypeInfo {
-    static constexpr BASE_NS::Uid UID { "79dd23ac-db4f-476e-85cd-a285a3aa4fb0" };
+    static constexpr BASE_NS::Uid UID { "946e0b9c-5619-46a9-a087-cd0b34807179" };
 
-    using CreateRenderDataStoreFn = IRenderDataStore* (*)(IRenderContext& renderContext, char const* instanceName);
-    using DestroyRenderDataStoreFn = void (*)(IRenderDataStore* instance);
+    using CreateRenderDataStoreFn = BASE_NS::refcnt_ptr<IRenderDataStore> (*)(
+        IRenderContext& renderContext, const char* instanceName);
 
     /** Unique ID of the rander data store. */
     const BASE_NS::Uid uid;
     /** Name used during data store creation to identify the type of the data store. */
-    char const* const typeName { "" };
+    const char* const typeName { "" };
     /** Pointer to function which is used to create data store instances. */
     const CreateRenderDataStoreFn createDataStore;
-    /** Pointer to function which is used to destory data store instances. */
-    const DestroyRenderDataStoreFn destroyDataStore;
 };
 
 /** Information needed from the plugin for managing RenderNodes. */
@@ -62,7 +61,7 @@ struct RenderNodeTypeInfo : public CORE_NS::ITypeInfo {
     /** Unique ID of the rander node. */
     const BASE_NS::Uid uid;
     /** Name used during node creation to identify the type of the node. */
-    char const* const typeName { "" };
+    const char* const typeName { "" };
     /** Pointer to function which is used to create node instances. */
     const CreateRenderNodeFn createNode;
     /** Pointer to function which is used to destroy node instances. */

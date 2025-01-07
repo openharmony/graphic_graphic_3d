@@ -51,11 +51,6 @@ public:
     void Execute() override;
 
 private:
-    struct TaskState;
-    class Task;
-
-    void QueueTasks(BASE_NS::vector<size_t>& waiting, TaskState& taskState);
-
     BASE_NS::vector<TaskQueue::Entry> tasks_;
 };
 CORE_END_NAMESPACE()

@@ -41,7 +41,7 @@
         },
         {
             "typeName": "RenderNodeDefaultMaterialRenderSlot",
-            "nodeName": "CORE3D_RN_CAM_CTRL",
+            "nodeName": "CORE3D_RN_CAM_DM_SO_CAMPP",
             "queue": {
                 "type": "graphics",
                 "index": 0
@@ -68,6 +68,7 @@
                 "subpassIndex": 0,
                 "subpassCount": 2,
                 "subpass": {
+                    "subpassFlags": "merge_bit",
                     "depthAttachmentIndex": 0,
                     "colorAttachmentIndices": [ 1 ]
                 }
@@ -98,6 +99,7 @@
                 "subpassIndex": 1,
                 "subpassCount": 2,
                 "subpass": {
+                    "subpassFlags": "merge_bit",
                     "depthAttachmentIndex": 0,
                     "colorAttachmentIndices": [ 1 ]
                 }

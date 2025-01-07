@@ -50,8 +50,8 @@ public:
 
     constexpr basic_string_view() noexcept = default;
     constexpr basic_string_view(const basic_string_view& other) noexcept = default;
-    constexpr basic_string_view(CharT const* const s, size_type count);
-    constexpr basic_string_view(CharT const* const s);
+    constexpr basic_string_view(const CharT* const s, size_type count);
+    constexpr basic_string_view(const CharT* const s);
 
     ~basic_string_view() = default;
 
@@ -122,9 +122,9 @@ public:
     constexpr int compare(size_type pos1, size_type count1, basic_string_view v) const;
     constexpr int compare(
         size_type pos1, size_type count1, basic_string_view v, size_type pos2, size_type count2) const;
-    constexpr int compare(CharT const* const s) const;
-    constexpr int compare(size_type pos1, size_type count1, CharT const* const s) const;
-    constexpr int compare(size_type pos1, size_type count1, CharT const* const s, size_type count2) const;
+    constexpr int compare(const CharT* const s) const;
+    constexpr int compare(size_type pos1, size_type count1, const CharT* const s) const;
+    constexpr int compare(size_type pos1, size_type count1, const CharT* const s, size_type count2) const;
     /** find substring in the view */
     constexpr size_type find(const CharT str, size_type pos = 0) const noexcept;
     constexpr size_type find(const basic_string_view& str, size_type pos = 0) const noexcept;
@@ -160,7 +160,7 @@ private:
 };
 
 template<class CharT>
-constexpr size_t constexpr_strlen(CharT const* const str) noexcept
+constexpr size_t constexpr_strlen(const CharT* const str) noexcept
 {
     if (!str) {
         return 0u;
@@ -173,11 +173,11 @@ constexpr size_t constexpr_strlen(CharT const* const str) noexcept
 }
 
 template<class CharT>
-constexpr basic_string_view<CharT>::basic_string_view(CharT const* const s, size_type count) : begin_(s), size_(count)
+constexpr basic_string_view<CharT>::basic_string_view(const CharT* const s, size_type count) : begin_(s), size_(count)
 {}
 
 template<class CharT>
-constexpr basic_string_view<CharT>::basic_string_view(CharT const* const s) : begin_(s), size_(constexpr_strlen(s))
+constexpr basic_string_view<CharT>::basic_string_view(const CharT* const s) : begin_(s), size_(constexpr_strlen(s))
 {}
 
 template<class CharT>
@@ -321,8 +321,8 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     if (pos > size_) {
         return {}; // should throw
     }
-    auto const left = size_ - pos;
-    auto const copy = (left < count) ? left : count;
+    const auto left = size_ - pos;
+    const auto copy = (left < count) ? left : count;
     const_pointer end = begin_ + pos + copy;
     const_pointer i = begin_ + pos;
     while (i < end) {
@@ -337,7 +337,7 @@ constexpr basic_string_view<CharT> basic_string_view<CharT>::substr(size_type po
     if (pos > size_) {
         return {}; // should throw
     }
-    if (auto const left = size_ - pos; left < count) {
+    if (const auto left = size_ - pos; left < count) {
         return { begin_ + pos, left };
     } else {
         return { begin_ + pos, count };
@@ -347,12 +347,12 @@ constexpr basic_string_view<CharT> basic_string_view<CharT>::substr(size_type po
 template<class CharT>
 constexpr int basic_string_view<CharT>::compare(basic_string_view v) const noexcept
 {
-    auto const size = (size_ < v.size_) ? size_ : v.size_;
-    auto const* ptr1 = begin_;
-    auto const* ptr2 = v.begin_;
-    auto const* end = begin_ + size;
+    const auto size = (size_ < v.size_) ? size_ : v.size_;
+    const auto* ptr1 = begin_;
+    const auto* ptr2 = v.begin_;
+    const auto* end = begin_ + size;
     while (ptr1 != end) {
-        auto const res = static_cast<int>(*ptr1++) - static_cast<int>(*ptr2++);
+        const auto res = static_cast<int>(*ptr1++) - static_cast<int>(*ptr2++);
         if (res) {
             return res;
         }
@@ -379,14 +379,14 @@ constexpr int basic_string_view<CharT>::compare(
 }
 
 template<class CharT>
-constexpr int basic_string_view<CharT>::compare(CharT const* const s) const
+constexpr int basic_string_view<CharT>::compare(const CharT* const s) const
 {
-    auto const size = size_;
-    auto const* ptr1 = begin_;
-    auto const* ptr2 = s;
-    auto const* end = begin_ + size;
+    const auto size = size_;
+    const auto* ptr1 = begin_;
+    const auto* ptr2 = s;
+    const auto* end = begin_ + size;
     while ((ptr1 != end) && *ptr2) {
-        auto const res = static_cast<int>(*ptr1++) - static_cast<int>(*ptr2++);
+        const auto res = static_cast<int>(*ptr1++) - static_cast<int>(*ptr2++);
         if (res) {
             return res;
         }
@@ -400,14 +400,14 @@ constexpr int basic_string_view<CharT>::compare(CharT const* const s) const
 }
 
 template<class CharT>
-constexpr int basic_string_view<CharT>::compare(size_type pos1, size_type count1, CharT const* const s) const
+constexpr int basic_string_view<CharT>::compare(size_type pos1, size_type count1, const CharT* const s) const
 {
     return substr(pos1, count1).compare(s);
 }
 
 template<class CharT>
 constexpr int basic_string_view<CharT>::compare(
-    size_type pos1, size_type count1, CharT const* const s, size_type count2) const
+    size_type pos1, size_type count1, const CharT* const s, size_type count2) const
 {
     return substr(pos1, count1).compare(basic_string_view(s, count2));
 }
@@ -582,42 +582,26 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     if (pos >= length() || (pos + str.length() > length())) {
         return string_view::npos;
     }
+    if (str.empty()) {
+        return pos;
+    }
 
     auto first1 = begin() + static_cast<difference_type>(pos);
-    const auto end1 = end();
+    const auto end1 = end() - (str.length() - 1U);
     const auto first2 = str.begin();
-    const auto end2 = str.end();
 
     while (first1 != end1) {
         // look for first character
         while (first1 != end1 && (*first1 != *first2)) {
             ++first1;
         }
-        if (first1 != end1) {
-            // continue comparing the next characters
-            auto next1 = first1;
-            ++next1;
-            if (next1 != end1) {
-                auto next2 = first2 + 1;
-                while (*next1 == *next2) {
-                    ++next2;
-                    if (next2 == end2) {
-                        // reached end of searched string - found it
-                        return static_cast<size_type>(first1 - begin());
-                    }
-                    ++next1;
-                    if (next1 == end1) {
-                        // reached end of string - no match
-                        return string_view::npos;
-                    }
-                }
-                // try again starting from the next
-                ++first1;
-            } else {
-                // reached end of string - no match
-                return string_view::npos;
-            }
+        if (first1 == end1) {
+            break;
         }
+        if (substr(first1 - begin(), str.size()).compare(str) == 0) {
+            return static_cast<size_type>(first1 - begin());
+        }
+        ++first1;
     }
     // reached end of string - no match
     return string_view::npos;
@@ -654,14 +638,16 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     if (pos < 0) {
         return string_view::npos;
     }
-    CharT const* s1 = data() + pos;
-    const auto todo = pos;
-    for (auto it = 0u; it <= todo; it++, pos--, s1--) {
+    const CharT* const s0 = data();
+    for (const CharT* s1 = s0 + pos;; s1--) {
         const auto diff = basic_string_view<CharT>(s1, len2).compare(str);
         if (diff == 0) {
-            return pos;
+            return static_cast<size_type>(s1 - s0);
         }
-    };
+        if (s1 == s0) {
+            break;
+        }
+    }
     return string_view::npos;
 }
 
@@ -676,9 +662,9 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     if (pos >= len) {
         return string_view::npos;
     }
-    CharT const* s1 = data() + pos;
-    CharT const* const s2 = str.data();
-    CharT const* const s3 = s2 + str.length();
+    const CharT* s1 = data() + pos;
+    const CharT* const s2 = str.data();
+    const CharT* const s3 = s2 + str.length();
     for (; pos < len; pos++, s1++) {
         for (auto s = s2; s != s3; s++) {
             if (*s == *s1) {
@@ -700,7 +686,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     if (pos >= len) {
         return string_view::npos;
     }
-    CharT const* s1 = data() + pos;
+    const CharT* s1 = data() + pos;
     for (; pos < len; pos++, s1++) {
         if (*s1 == ch) {
             return pos;
@@ -720,9 +706,9 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     if (pos >= len) {
         pos = len - 1;
     }
-    CharT const* s1 = data() + pos;
-    CharT const* const s2 = str.data();
-    CharT const* const s3 = s2 + str.length();
+    const CharT* s1 = data() + pos;
+    const CharT* const s2 = str.data();
+    const CharT* const s3 = s2 + str.length();
     for (;;) {
         for (auto s = s2; s != s3; s++) {
             if (*s == *s1) {
@@ -748,7 +734,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     if (pos >= len) {
         pos = len - 1;
     }
-    CharT const* s1 = data() + pos;
+    const CharT* s1 = data() + pos;
     for (;;) {
         if (*s1 == ch) {
             return pos;
@@ -780,9 +766,9 @@ constexpr bool basic_string_view<CharT>::starts_with(const CharT* s) const
     if (!s) {
         return true;
     }
-    auto const* ptr1 = begin_;
-    auto const* ptr2 = s;
-    auto const* end = begin_ + size_;
+    const auto* ptr1 = begin_;
+    const auto* ptr2 = s;
+    const auto* end = begin_ + size_;
     while ((ptr1 != end) && *ptr2) {
         if ((*ptr1++) != (*ptr2++)) {
             return false;
@@ -809,14 +795,21 @@ constexpr bool basic_string_view<CharT>::ends_with(const CharT* s) const
     return ends_with(basic_string_view(s));
 }
 
-template<typename T>
-uint64_t hash(const T& b);
-
 template<>
 inline uint64_t hash(const string_view& value)
 {
     return BASE_NS::FNV1aHash(value.data(), value.size());
 }
+
+namespace literals {
+inline namespace string_literals {
+/// User-defined literal to allow the following syntax to construct a string_view: "myLiteral"_sv
+[[nodiscard]] constexpr BASE_NS::string_view operator""_sv(const char* literal, const size_t length)
+{
+    return { literal, length };
+}
+} // namespace string_literals
+} // namespace literals
 BASE_END_NAMESPACE()
 
 #endif // API_BASE_CONTAINERS_STRING_VIEW_H

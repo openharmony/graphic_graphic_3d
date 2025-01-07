@@ -32,6 +32,7 @@ CORE_BEGIN_NAMESPACE()
 /** PerformanceDataManager for timings.
  * Internally synchronized.
  */
+class IPerformanceTrace;
 class IPerformanceDataManager : public IInterface {
 public:
     using Ptr = BASE_NS::refcnt_ptr<IPerformanceDataManager>;
@@ -111,6 +112,20 @@ public:
      */
     virtual BASE_NS::vector<PerformanceData> GetData() const = 0;
 
+    /***/
+    struct Event {
+        /***/
+        const char* name;
+        /** Funtion name. */
+        const char* function;
+        /** Source file. */
+        const char* file;
+        /** Line number in source file. */
+        uint32_t line;
+        /** Event color. 0xRRGGBB */
+        uint32_t color;
+    };
+
 protected:
     IPerformanceDataManager() = default;
     virtual ~IPerformanceDataManager() = default;
@@ -135,6 +150,8 @@ public:
      * @return Array of instances.
      */
     virtual BASE_NS::vector<IPerformanceDataManager*> GetAllCategories() const = 0;
+
+    virtual IPerformanceTrace* GetFirstPerformanceTrace() const = 0;
 };
 
 inline constexpr BASE_NS::string_view GetName(const IPerformanceDataManagerFactory*)

@@ -18,7 +18,7 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 using CORE3D_NS::AnimationComponent;
@@ -28,15 +28,10 @@ DECLARE_PROPERTY_TYPE(BASE_NS::vector<AnimationStateComponent::TrackState>);
 
 DECLARE_PROPERTY_TYPE(AnimationComponent::PlaybackState);
 
-BEGIN_ENUM(AnimationPlaybackStateMetaData, AnimationComponent::PlaybackState)
-DECL_ENUM(AnimationComponent::PlaybackState, STOP, "Stop")
-DECL_ENUM(AnimationComponent::PlaybackState, PLAY, "Play")
-DECL_ENUM(AnimationComponent::PlaybackState, PAUSE, "Pause")
-END_ENUM(AnimationPlaybackStateMetaData, AnimationComponent::PlaybackState)
+ENUM_TYPE_METADATA(
+    AnimationComponent::PlaybackState, ENUM_VALUE(STOP, "Stop"), ENUM_VALUE(PLAY, "Play"), ENUM_VALUE(PAUSE, "Pause"))
 
-BEGIN_ENUM(AnimationStateFlagBitsMetaData, AnimationStateComponent::FlagBits)
-DECL_ENUM(AnimationStateComponent::FlagBits, MANUAL_PROGRESS, "Update Playback Time Manually.")
-END_ENUM(AnimationStateFlagBitsMetaData, AnimationStateComponent::FlagBits)
+ENUM_TYPE_METADATA(AnimationStateComponent::FlagBits, ENUM_VALUE(MANUAL_PROGRESS, "Update Playback Time Manually."))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -50,10 +45,9 @@ using CORE_NS::Property;
 
 class AnimationStateComponentManager final
     : public BaseManager<AnimationStateComponent, IAnimationStateComponentManager> {
-    BEGIN_PROPERTY(AnimationStateComponent, ComponentMetadata)
+    BEGIN_PROPERTY(AnimationStateComponent, componentMetaData_)
 #include "3d/ecs/components/animation_state_component.h"
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit AnimationStateComponentManager(IEcs& ecs)
@@ -65,12 +59,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

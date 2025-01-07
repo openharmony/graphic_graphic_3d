@@ -29,9 +29,9 @@ class GpuSampler;
 class IDevice;
 namespace GpuResourceUtil {
 void CopyGpuBufferGLES(GpuBuffer& buffer, BASE_NS::ByteArray& byteArray);
-void DebugBufferNameGLES(const IDevice& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
-void DebugImageNameGLES(const IDevice& device, const GpuImage& image, const BASE_NS::string_view name);
-void DebugSamplerNameGLES(const IDevice& device, const GpuSampler& sampler, const BASE_NS::string_view name);
+void DebugBufferNameGLES([[maybe_unused]] const IDevice& device, const GpuBuffer& buffer, BASE_NS::string_view name);
+void DebugImageNameGLES([[maybe_unused]] const IDevice& device, const GpuImage& image, BASE_NS::string_view name);
+void DebugSamplerNameGLES([[maybe_unused]] const IDevice& device, const GpuSampler& sampler, BASE_NS::string_view name);
 } // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()
 

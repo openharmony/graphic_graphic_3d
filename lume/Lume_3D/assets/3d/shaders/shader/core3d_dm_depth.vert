@@ -5,7 +5,7 @@
 // includes
 
 #include "3d/shaders/common/3d_dm_structures_common.h"
-#include "3d/shaders/common/3d_dm_depth_vert_layout_common.h"
+#include "3d/shaders/common/3d_dm_depth_layout_common.h"
 #define CORE3D_DM_DEPTH_VERT_INPUT 1
 #include "3d/shaders/common/3d_dm_inout_common.h"
 

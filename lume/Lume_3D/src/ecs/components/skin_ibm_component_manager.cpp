@@ -19,7 +19,7 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE3D_BEGIN_NAMESPACE()
 using BASE_NS::array_view;
@@ -31,26 +31,25 @@ using CORE_NS::IEcs;
 using CORE_NS::Property;
 
 class SkinIbmComponentManager final : public BaseManager<SkinIbmComponent, ISkinIbmComponentManager> {
-    BEGIN_PROPERTY(SkinIbmComponent, ComponentMetadata)
+    BEGIN_PROPERTY(SkinIbmComponent, componentMetaData_)
 #include <3d/ecs/components/skin_ibm_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit SkinIbmComponentManager(IEcs& ecs)
-        : BaseManager<SkinIbmComponent, ISkinIbmComponentManager>(ecs, CORE_NS::GetName<SkinIbmComponent>())
+        : BaseManager<SkinIbmComponent, ISkinIbmComponentManager>(ecs, CORE_NS::GetName<SkinIbmComponent>(), 0U)
     {}
 
     ~SkinIbmComponentManager() = default;
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

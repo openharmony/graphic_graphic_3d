@@ -12,14 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "ShaderJS.h"
 
-#include <scene_plugin/api/material_uid.h>
-#include <scene_plugin/interface/intf_ecs_object.h>
-#include <scene_plugin/interface/intf_mesh.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <meta/api/util.h>
+#include <scene/ext/intf_internal_scene.h>
+#include <scene/interface/intf_mesh.h>
+#include <scene/interface/intf_scene.h>
 
-#include "MaterialJS.h"
 #include "SceneJS.h"
 #include "Vec2Proxy.h"
 #include "Vec3Proxy.h"
@@ -27,171 +27,6 @@
 
 using IntfPtr = META_NS::SharedPtrIInterface;
 using IntfWeakPtr = META_NS::WeakPtrIInterface;
-
-template<typename type>
-class TypeProxy : public Proxy {
-    META_NS::IProperty::Ptr prop_;
-    BASE_NS::string name_;
-
-public:
-    explicit TypeProxy(META_NS::IProperty::Ptr prop) : prop_(prop), name_(prop_->GetName()) {}
-    ~TypeProxy()
-    {
-        prop_.reset();
-    }
-
-    napi_value Get(NapiApi::FunctionContext<> ctx)
-    {
-        META_NS::Property<type> p(prop_);
-        return NapiApi::Value<type>(ctx, p->GetValue());
-    }
-    napi_value Set(NapiApi::FunctionContext<type> ctx)
-    {
-        type val = ctx.template Arg<0>();
-        META_NS::Property<type> p(prop_);
-        p->SetValue(val);
-        return ctx.GetUndefined();
-    }
-    void insertProp(BASE_NS::vector<napi_property_descriptor>& props)
-    {
-        props.push_back(napi_property_descriptor { name_.c_str(), nullptr, nullptr,
-            [](napi_env e, napi_callback_info i) -> napi_value {
-                NapiApi::FunctionContext<> info(e, i);
-                auto me_ = (TypeProxy<type>*)info.GetData();
-                return me_->Get(info);
-            },
-            [](napi_env e, napi_callback_info i) -> napi_value {
-                NapiApi::FunctionContext<type> info(e, i);
-                auto me_ = (TypeProxy<type>*)info.GetData();
-                return me_->Set(info);
-            },
-            nullptr, napi_default_jsproperty, (void*)this });
-    }
-};
-
-class BitmapProxy : public Proxy {
-    NapiApi::StrongRef scene_;
-    META_NS::IProperty::Ptr prop_;
-    BASE_NS::string name_;
-
-public:
-    BitmapProxy(NapiApi::Object scene, META_NS::IProperty::Ptr prop, BASE_NS::string_view prefix = "") : prop_(prop)
-    {
-        scene_ = scene;
-        if (!prefix.empty()) {
-            name_ = prefix;
-            name_ += "_";
-        }
-        name_ += prop->GetName();
-    }
-    ~BitmapProxy()
-    {
-        prop_.reset();
-    }
-
-    napi_value Get(NapiApi::FunctionContext<> ctx)
-    {
-        META_NS::Property<SCENE_NS::IBitmap::Ptr> p(prop_);
-        // return NapiApi::Value<type>(ctx, p->GetValue());
-        auto obj = p->GetValue();
-        if (auto cached = FetchJsObj(obj)) {
-            return cached;
-        }
-
-        if (obj) {
-            // okay.. there is a native bitmap set.. but no js wrapper yet.
-
-            // create the jsobject if we don't have one.
-            NapiApi::Object parms(ctx);
-            napi_value args[] = {
-                scene_.GetValue(), // scene..
-                parms              // params.
-            };
-            MakeNativeObjectParam(ctx, obj, BASE_NS::countof(args), args);
-
-            auto size = obj->Size()->GetValue();
-            auto uri = obj->Uri()->GetValue();
-            auto name = interface_cast<META_NS::INamed>(obj)->Name()->GetValue();
-            parms.Set("uri", uri);
-            NapiApi::Object imageJS(GetJSConstructor(ctx, "Image"), BASE_NS::countof(args), args);
-            return imageJS;
-        }
-        return ctx.GetNull();
-    }
-    napi_value Set(NapiApi::FunctionContext<NapiApi::Object> ctx)
-    {
-        NapiApi::Object val = ctx.Arg<0>();
-        auto bitmap = GetNativeMeta<SCENE_NS::IBitmap>(val);
-        if (bitmap) {
-            META_NS::Property<SCENE_NS::IBitmap::Ptr> p(prop_);
-            p->SetValue(bitmap);
-        }
-        return ctx.GetUndefined();
-    }
-    void insertProp(BASE_NS::vector<napi_property_descriptor>& props)
-    {
-        props.push_back(napi_property_descriptor { name_.c_str(), nullptr, nullptr,
-            [](napi_env e, napi_callback_info i) -> napi_value {
-                NapiApi::FunctionContext<> info(e, i);
-                auto me_ = (BitmapProxy*)info.GetData();
-                return me_->Get(info);
-            },
-            [](napi_env e, napi_callback_info i) -> napi_value {
-                NapiApi::FunctionContext<NapiApi::Object> info(e, i);
-                auto me_ = (BitmapProxy*)info.GetData();
-                return me_->Set(info);
-            },
-            nullptr, napi_default_jsproperty, (void*)this });
-    }
-};
-
-template<typename proxType>
-class PropProxy : public Proxy {
-    BASE_NS::shared_ptr<proxType> proxy_;
-    BASE_NS::string name_;
-
-public:
-    PropProxy(napi_env e, META_NS::IProperty::Ptr prop, BASE_NS::string_view prefix = "")
-    {
-        proxy_.reset(new proxType(e, prop));
-        if (!prefix.empty()) {
-            name_ = prefix;
-            name_ += "_";
-        }
-        name_ += prop->GetName();
-    }
-    ~PropProxy()
-    {
-        proxy_.reset();
-    }
-    napi_value Get(NapiApi::FunctionContext<> ctx)
-    {
-        return proxy_->Value();
-    }
-
-    napi_value Set(NapiApi::FunctionContext<NapiApi::Object> ctx)
-    {
-        NapiApi::Object val = ctx.Arg<0>();
-        proxy_->SetValue(val);
-        return ctx.GetUndefined();
-    }
-
-    void insertProp(BASE_NS::vector<napi_property_descriptor>& props)
-    {
-        props.push_back(napi_property_descriptor { name_.c_str(), nullptr, nullptr,
-            [](napi_env e, napi_callback_info i) -> napi_value {
-                NapiApi::FunctionContext<> info(e, i);
-                auto me_ = (PropProxy<proxType>*)info.GetData();
-                return me_->Get(info);
-            },
-            [](napi_env e, napi_callback_info i) -> napi_value {
-                NapiApi::FunctionContext<NapiApi::Object> info(e, i);
-                auto me_ = (PropProxy<proxType>*)info.GetData();
-                return me_->Set(info);
-            },
-            nullptr, napi_default_jsproperty, (void*)this });
-    }
-};
 
 void ShaderJS::Init(napi_env env, napi_value exports)
 {
@@ -205,7 +40,7 @@ void ShaderJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    napi_get_instance_data(env, reinterpret_cast<void**>(&mis));
     mis->StoreCtor("Shader", func);
 }
 
@@ -213,18 +48,22 @@ ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
     : BaseObject<ShaderJS>(e, i), SceneResourceImpl(SceneResourceImpl::SHADER)
 {
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
-    NapiApi::Object meJs(e, fromJs.This());
+    NapiApi::Object meJs(fromJs.This());
 
     NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene...
     NapiApi::Object args = fromJs.Arg<1>();  // other args
     scene_ = { scene };
     if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        CORE_LOG_F("INVALID SCENE!");
+        LOG_F("INVALID SCENE!");
     }
 
     auto* tro = scene.Native<TrueRootObject>();
-    auto* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-    sceneJS->DisposeHook((uintptr_t)&scene_, meJs);
+    if (tro) {
+        auto* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
+        if (sceneJS) {
+            sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+        }
+    }
 
     // check if we got the NativeObject as parameter. (meta object created when bound to material..)
     auto metaobj = GetNativeObjectParam<META_NS::IMetadata>(args);
@@ -241,7 +80,7 @@ ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
         // should be bound to a material..
         // so the shader should be stored as a parameter..
         SetNativeObject(interface_pointer_cast<META_NS::IObject>(metaobj), true);
-        shader = interface_pointer_cast<SCENE_NS::IShader>(metaobj->GetPropertyByName<IntfPtr>("shader")->GetValue());
+        shader = interface_pointer_cast<SCENE_NS::IShader>(metaobj->GetProperty<IntfPtr>("shader")->GetValue());
     }
 
     NapiApi::Object material = args.Get<NapiApi::Object>("Material"); // see if we SHOULD be bound to a material.
@@ -250,11 +89,11 @@ ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
     }
 
     BASE_NS::string name;
-    if (auto prm = args.Get<BASE_NS::string>("name")) {
+    if (auto prm = args.Get<BASE_NS::string>("name"); prm.IsDefined()) {
         name = prm;
     } else {
-        if (auto named = interface_cast<META_NS::INamed>(metaobj)) {
-            name = named->Name()->GetValue();
+        if (auto named = interface_cast<META_NS::IObject>(metaobj)) {
+            name = named->GetName();
         }
     }
     meJs.Set("name", name);
@@ -262,127 +101,138 @@ ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
 
 void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
 {
-    auto metaobj = GetNativeMeta<META_NS::IMetadata>(meJs);
-    auto shader = interface_pointer_cast<SCENE_NS::IShader>(
-        metaobj->GetPropertyByName<IntfPtr>("shader")->GetValue());
+    // unbind existing inputs.
+    UnbindInputs();
 
-    napi_env e = meJs.GetEnv();
     // inputs are actually owned (and used) by the material.
     // create the input object
-    NapiApi::Object inputs(e);
+    NapiApi::Object inputs(meJs.GetEnv());
 
+    napi_env e = inputs.GetEnv();
     auto* tro = material.Native<TrueRootObject>();
     auto mat = interface_pointer_cast<SCENE_NS::IMaterial>(tro->GetNativeObject());
 
     BASE_NS::vector<napi_property_descriptor> inputProps;
 
     META_NS::IMetadata::Ptr customProperties;
-    BASE_NS::vector<SCENE_NS::ITextureInfo::Ptr> Textures;
+    BASE_NS::vector<SCENE_NS::ITexture::Ptr> Textures = mat->Textures()->GetValue();
+    customProperties = mat->GetCustomProperties();
 
-    ExecSyncTask([mat, &customProperties, &Textures]() {
-        Textures = mat->Inputs()->GetValue();
-        customProperties = interface_pointer_cast<META_NS::IMetadata>(mat->CustomProperties()->GetValue());
-        return META_NS::IAny::Ptr {};
-    });
     if (!Textures.empty()) {
         int index = 0;
         for (auto t : Textures) {
             BASE_NS::string name;
-            auto nn = interface_cast<META_NS::INamed>(t);
+            auto nn = interface_cast<META_NS::IObject>(t);
             if (nn) {
-                name = nn->Name()->GetValue();
+                name = nn->GetName();
             } else {
                 name = "TextureInfo_" + BASE_NS::to_string(index);
             }
-            BASE_NS::shared_ptr<Proxy> proxt;
+            BASE_NS::shared_ptr<PropertyProxy> proxt;
             // factor
-            proxt = BASE_NS::shared_ptr { new PropProxy<Vec4Proxy>(e, t->Factor(), name) };
-            if (proxt) {
-                proxies_.push_back(proxt);
-                proxt->insertProp(inputProps);
-            }
-            proxt = BASE_NS::shared_ptr { new BitmapProxy(scene_.GetObject(), t->Image(), name) };
-            if (proxt) {
-                proxies_.push_back(proxt);
-                proxt->insertProp(inputProps);
+            if (proxt = BASE_NS::shared_ptr { new Vec4Proxy(e, t->Factor()) }) {
+                auto n = (name.empty() ? BASE_NS::string_view("") : name + BASE_NS::string_view("_")) +
+                         t->Factor()->GetName();
+
+                const auto& res = proxies_.insert_or_assign(n, proxt);
+                inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
             }
 
+            if (proxt = BASE_NS::shared_ptr { new BitmapProxy(scene_.GetObject(), inputs, t->Image()) }) {
+                auto n = (name.empty() ? BASE_NS::string_view("") : name + BASE_NS::string_view("_")) +
+                         t->Image()->GetName();
+                const auto& res = proxies_.insert_or_assign(n, proxt);
+                inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
+            }
             index++;
         }
     }
+    // default stuff
+    {
+        auto proxt = BASE_NS::shared_ptr { new TypeProxy<float>(inputs, mat->AlphaCutoff()) };
+        if (proxt) {
+            auto res = proxies_.insert_or_assign(mat->AlphaCutoff()->GetName(), proxt);
+            inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
+        }
+    }
     if (customProperties) {
-        for (auto t : customProperties->GetAllProperties()) {
-            auto name = t->GetName();
-            auto type = t->GetTypeId();
-            auto tst = type.ToString();
-            BASE_NS::shared_ptr<Proxy> proxt;
-            if (type == META_NS::UidFromType<float>()) {
-                proxt = BASE_NS::shared_ptr { new TypeProxy<float>(t) };
+        BASE_NS::shared_ptr<CORE_NS::IInterface> intsc;
+        if (auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+            if (auto ints = scene->GetInternalScene()) {
+                intsc = interface_pointer_cast<CORE_NS::IInterface>(ints);
             }
-            if (type == META_NS::UidFromType<int32_t>()) {
-                proxt = BASE_NS::shared_ptr { new TypeProxy<int32_t>(t) };
-            }
-            if (type == META_NS::UidFromType<uint32_t>()) {
-                proxt = BASE_NS::shared_ptr { new TypeProxy<uint32_t>(t) };
-            }
-            if (type == META_NS::UidFromType<BASE_NS::Math::Vec2>()) {
-                proxt = BASE_NS::shared_ptr { new PropProxy<Vec2Proxy>(e, t) };
-            }
-            if (type == META_NS::UidFromType<BASE_NS::Math::Vec3>()) {
-                proxt = BASE_NS::shared_ptr { new PropProxy<Vec3Proxy>(e, t) };
-            }
-            if (type == META_NS::UidFromType<BASE_NS::Math::Vec4>()) {
-                proxt = BASE_NS::shared_ptr { new PropProxy<Vec4Proxy>(e, t) };
-            }
-            if (proxt) {
-                proxies_.push_back(proxt);
-                proxt->insertProp(inputProps);
+        }
+        if (intsc) {
+            for (auto t : customProperties->GetProperties()) {
+                BASE_NS::shared_ptr<PropertyProxy> proxt = PropertyToProxy(scene_.GetObject(), inputs, t);
+                if (proxt) {
+                    proxt->SetExtra(intsc);
+                    auto res = proxies_.insert_or_assign(t->GetName(), proxt);
+                    inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
+                }
             }
         }
     }
     if (!inputProps.empty()) {
-        napi_define_properties(e, inputs, inputProps.size(), inputProps.data());
+        napi_define_properties(e, inputs.ToNapiValue(), inputProps.size(), inputProps.data());
     }
 
-    inputs_ = { e, inputs };
+    inputs_ = NapiApi::StrongRef(inputs);
     meJs.Set("inputs", inputs_.GetValue());
 }
 
 ShaderJS::~ShaderJS()
 {
-    DisposeNative();
+    DisposeNative(nullptr);
 }
 
 void* ShaderJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == ShaderJS::ID) {
+    if (id == ShaderJS::ID)
         return this;
-    }
     return SceneResourceImpl::GetInstanceImpl(id);
 }
-
-void ShaderJS::DisposeNative()
+void ShaderJS::UnbindInputs()
+{
+    /// destroy the input object.
+    if (!inputs_.IsEmpty()) {
+        NapiApi::Object inp = inputs_.GetObject();
+        while (!proxies_.empty()) {
+            auto it = proxies_.begin();
+            // removes hooks for meta property & jsproperty.
+            inp.DeleteProperty(it->first);
+            // destroy the proxy.
+            proxies_.erase(it);
+        }
+    }
+    inputs_.Reset();
+}
+void ShaderJS::DisposeNative(void* in)
 {
     if (!disposed_) {
         disposed_ = true;
+
+        UnbindInputs();
+
+        // release native object.
         SetNativeObject(nullptr, false);
         SetNativeObject(nullptr, true);
         NapiApi::Object obj = scene_.GetObject();
         if (obj) {
             auto* tro = obj.Native<TrueRootObject>();
-
             if (tro) {
-                SceneJS* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-                sceneJS->ReleaseDispose((uintptr_t)&scene_);
+                SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+                if (sceneJS) {
+                    sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+                }
             }
         }
-        proxies_.clear();
-        inputs_.Reset();
+
         scene_.Reset();
     }
 }
 void ShaderJS::Finalize(napi_env env)
 {
-    DisposeNative();
+    DisposeNative(nullptr);
     BaseObject<ShaderJS>::Finalize(env);
 }

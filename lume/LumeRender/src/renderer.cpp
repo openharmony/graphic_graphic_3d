@@ -17,14 +17,15 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cinttypes>
-#include <utility>
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
+#include <base/math/mathf.h>
+#if (RENDER_PERF_ENABLED == 1)
 #include <core/perf/intf_performance_data_manager.h>
+#endif
 #include <render/datastore/intf_render_data_store_default_staging.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/render_data_store_render_pods.h>
@@ -36,7 +37,7 @@
 
 #include "perf/cpu_perf_scope.h"
 
-#if (RENDER_DEV_ENABLED == 1)
+#if (RENDER_VALIDATION_ENABLED == 1)
 #include <cinttypes>
 #endif
 
@@ -49,7 +50,6 @@
 #include "device/gpu_resource_util.h"
 #include "device/render_frame_sync.h"
 #include "device/shader_manager.h"
-#include "nodecontext/node_context_descriptor_set_manager.h"
 #include "nodecontext/node_context_pso_manager.h"
 #include "nodecontext/render_node_context_manager.h"
 #include "nodecontext/render_node_graph_manager.h"
@@ -66,6 +66,8 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
+CORE_PROFILER_SYMBOL(FRAME_MARKER, "Render");
+
 const string_view RENDER_DATA_STORE_DEFAULT_STAGING { "RenderDataStoreDefaultStaging" };
 
 // Helper class for running lambda as a ThreadPool task.
@@ -110,8 +112,18 @@ struct RenderNodeExecutionParameters {
     ITaskQueue* queue;
     IRenderDataStoreManager& renderData;
     ShaderManager& shaderManager;
-    RenderingConfiguration& renderConfig;
 };
+
+inline uint32_t GetThreadPoolThreadCount(
+    const uint32_t numberOfHwCores, const RenderCreateInfo::ThreadPoolCreateInfo& tpci)
+{
+    auto threads = static_cast<uint32_t>(static_cast<float>(numberOfHwCores) * tpci.threadCountCoefficient);
+    threads = Math::min(threads, tpci.maxCount);
+    threads = Math::max(threads, tpci.minCount);
+    threads = Math::max(1U, threads); // 1 is minimum
+    PLUGIN_LOG_D("Renderer thread pool thread count: %u", threads);
+    return threads;
+}
 
 // Helper for Renderer::InitNodeGraph
 unordered_map<string, uint32_t> InitializeRenderNodeContextData(IRenderContext& renderContext,
@@ -142,11 +154,11 @@ unordered_map<string, uint32_t> InitializeRenderNodeContextData(IRenderContext& 
         auto& contextInitRef = contextInitDescs[nodeIdx];
         contextInitRef.requestedQueue = inputData.queue;
 
-        Device& device = (Device&)renderContext.GetDevice();
+        auto& device = (Device&)renderContext.GetDevice();
         contextInitRef.requestedQueue = device.GetValidGpuQueue(contextInitRef.requestedQueue);
 
-        ShaderManager& shaderMgr = (ShaderManager&)renderContext.GetDevice().GetShaderManager();
-        GpuResourceManager& gpuResourceMgr = (GpuResourceManager&)renderContext.GetDevice().GetGpuResourceManager();
+        auto& shaderMgr = (ShaderManager&)renderContext.GetDevice().GetShaderManager();
+        auto& gpuResourceMgr = (GpuResourceManager&)renderContext.GetDevice().GetGpuResourceManager();
         // ordering is important
         nodeContextData.nodeContextPsoMgr = make_unique<NodeContextPsoManager>(device, shaderMgr);
         nodeContextData.nodeContextDescriptorSetMgr = device.CreateNodeContextDescriptorSetManager();
@@ -213,7 +225,7 @@ void BeginRenderNodeGraph(RenderNodeGraphGlobalShareDataManager* rngGlobalShareD
         rngGlobalShareDataMgr->BeginFrame();
     }
     for (const RenderNodeGraphNodeStore* renderNodeDataStore : renderNodeGraphNodeStores) {
-        const uint32_t renderNodeCount = static_cast<uint32_t>(renderNodeDataStore->renderNodeContextData.size());
+        const auto renderNodeCount = static_cast<uint32_t>(renderNodeDataStore->renderNodeContextData.size());
         auto& rngShareData = renderNodeDataStore->renderNodeGraphShareData;
         renderNodeDataStore->renderNodeGraphShareDataMgr->BeginFrame(rngGlobalShareDataMgr, prevRngShareDataMgr,
             renderNodeCount, { rngShareData.inputs, rngShareData.inputCount },
@@ -243,7 +255,7 @@ inline void FillRngNodeStores(array_view<const RenderHandle> inputs, RenderNodeG
 // Helper for Renderer::RenderFrame
 inline bool WaitForFence(const Device& device, RenderFrameSync& renderFrameSync)
 {
-    RENDER_CPU_PERF_SCOPE("Renderer", "Renderer", "WaitForFrameFence_Cpu");
+    RENDER_CPU_PERF_SCOPE("RenderFrame", "WaitForFrameFence");
     renderFrameSync.WaitForFrameFence();
 
     return device.GetDeviceStatus();
@@ -253,20 +265,17 @@ inline bool WaitForFence(const Device& device, RenderFrameSync& renderFrameSync)
 inline void ProcessRenderNodeGraph(
     Device& device, RenderGraph& renderGraph, array_view<RenderNodeGraphNodeStore*> graphNodeStoreView)
 {
-    RENDER_CPU_PERF_SCOPE("Renderer", "Renderer", "RenderGraph_Cpu");
+    RENDER_CPU_PERF_SCOPE("RenderFrame", "RenderGraph");
     renderGraph.ProcessRenderNodeGraph(device.HasSwapchain(), graphNodeStoreView);
 }
 
 // Helper for Renderer::ExecuteRenderNodes
-void CreateGpuResourcesWithRenderNodes(const array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores,
-    IRenderDataStoreManager& renderData, ShaderManager& shaderMgr)
+void RenderNodePreExecution(const array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores)
 {
-    for (size_t graphIdx = 0; graphIdx < renderNodeGraphNodeStores.size(); ++graphIdx) {
-        PLUGIN_ASSERT(renderNodeGraphNodeStores[graphIdx]);
-
-        RenderNodeGraphNodeStore const& nodeStore = *renderNodeGraphNodeStores[graphIdx];
-        for (size_t nodeIdx = 0; nodeIdx < nodeStore.renderNodeData.size(); ++nodeIdx) {
-            IRenderNode& renderNode = *(nodeStore.renderNodeData[nodeIdx].node);
+    for (const RenderNodeGraphNodeStore* nodeStore : renderNodeGraphNodeStores) {
+        PLUGIN_ASSERT(nodeStore);
+        for (const auto& nodeIdx : nodeStore->renderNodeData) {
+            IRenderNode& renderNode = *(nodeIdx.node);
             renderNode.PreExecuteFrame();
         }
     }
@@ -293,7 +302,6 @@ void RenderNodeExecution(RenderNodeExecutionParameters& params)
                     RenderCommandList& renderCommandList = *renderNodeContextData.renderCommandList;
 
                     // Do not run render node if the flag is set
-                    const uint32_t flags = renderNode.GetExecuteFlags();
                     if ((renderNode.GetExecuteFlags() &
                             IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE) == 0) {
 #if (RENDER_PERF_ENABLED == 1)
@@ -301,6 +309,7 @@ void RenderNodeExecution(RenderNodeExecutionParameters& params)
                         timerRef.debugName = nodeStore.renderNodeData[nodeIdx].fullName;
                         params.queue->Submit(
                             taskId++, CreateFunctionTask([&timerRef, &renderNode, &renderCommandList]() {
+                                RENDER_CPU_PERF_SCOPE("ExecuteRenderNodes", timerRef.debugName);
                                 timerRef.timer.Begin();
 
                                 renderCommandList.BeforeRenderNodeExecuteFrame();
@@ -330,44 +339,45 @@ void RenderNodeExecution(RenderNodeExecutionParameters& params)
 void IterateRenderBackendNodeGraphNodeStores(const array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores,
     const bool multiQueueEnabled, RenderCommandFrameData& rcfd)
 {
-    for (size_t graphIdx = 0; graphIdx < renderNodeGraphNodeStores.size(); ++graphIdx) {
-        PLUGIN_ASSERT(renderNodeGraphNodeStores[graphIdx]);
-
-        RenderNodeGraphNodeStore const& nodeStore = *renderNodeGraphNodeStores[graphIdx];
-
-        unordered_map<uint32_t, uint32_t> nodeIdxToRenderCommandContextIdx;
-        const uint32_t multiQueuePatchBeginIdx = (uint32_t)rcfd.renderCommandContexts.size();
-        uint32_t multiQueuePatchCount = 0;
-        if (multiQueueEnabled) {
-            nodeIdxToRenderCommandContextIdx.reserve(nodeStore.renderNodeContextData.size());
+    for (const RenderNodeGraphNodeStore* nodeStore : renderNodeGraphNodeStores) {
+        PLUGIN_ASSERT(nodeStore);
+        if (!nodeStore) {
+            continue;
         }
 
-        for (size_t nodeIdx = 0; nodeIdx < nodeStore.renderNodeContextData.size(); ++nodeIdx) {
-            const auto& ref = nodeStore.renderNodeContextData[nodeIdx];
+        unordered_map<uint32_t, uint32_t> nodeIdxToRenderCommandContextIdx;
+        const auto multiQueuePatchBeginIdx = (uint32_t)rcfd.renderCommandContexts.size();
+        uint32_t multiQueuePatchCount = 0;
+        if (multiQueueEnabled) {
+            nodeIdxToRenderCommandContextIdx.reserve(nodeStore->renderNodeContextData.size());
+        }
+
+        for (size_t nodeIdx = 0; nodeIdx < nodeStore->renderNodeContextData.size(); ++nodeIdx) {
+            const auto& ref = nodeStore->renderNodeContextData[nodeIdx];
             PLUGIN_ASSERT((ref.renderCommandList != nullptr) && (ref.renderBarrierList != nullptr) &&
                           (ref.nodeContextPsoMgr != nullptr) && (ref.nodeContextPoolMgr != nullptr));
-            const bool valid = (ref.renderCommandList->HasValidRenderCommands()) ? true : false;
+            const bool valid = (ref.renderCommandList->HasValidRenderCommands());
             if (valid) {
                 if (multiQueueEnabled) {
                     nodeIdxToRenderCommandContextIdx[(uint32_t)nodeIdx] = (uint32_t)rcfd.renderCommandContexts.size();
                     multiQueuePatchCount++;
                 }
                 // get final backend node index of the first render node which uses the swapchain image
-                const uint32_t backendNodeIdx = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
+                const auto backendNodeIdx = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
                 if ((rcfd.firstSwapchainNodeIdx > backendNodeIdx) && (ref.submitInfo.waitForSwapchainAcquireSignal)) {
                     rcfd.firstSwapchainNodeIdx = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
                 }
                 rcfd.renderCommandContexts.push_back({ ref.renderBackendNode, ref.renderCommandList.get(),
                     ref.renderBarrierList.get(), ref.nodeContextPsoMgr.get(), ref.nodeContextDescriptorSetMgr.get(),
                     ref.nodeContextPoolMgr.get(), (uint32_t)nodeIdx, ref.submitInfo,
-                    nodeStore.renderNodeData[nodeIdx].fullName });
+                    nodeStore->renderNodeData[nodeIdx].fullName });
             }
         }
 
         if (multiQueueEnabled) { // patch correct render command context indices
             for (uint32_t idx = multiQueuePatchBeginIdx; idx < multiQueuePatchCount; ++idx) {
                 auto& ref = rcfd.renderCommandContexts[idx];
-                const auto& nodeContextRef = nodeStore.renderNodeContextData[ref.renderGraphRenderNodeIndex];
+                const auto& nodeContextRef = nodeStore->renderNodeContextData[ref.renderGraphRenderNodeIndex];
 
                 ref.submitDepencies.signalSemaphore = nodeContextRef.submitInfo.signalSemaphore;
                 ref.submitDepencies.waitSemaphoreCount = nodeContextRef.submitInfo.waitSemaphoreCount;
@@ -433,10 +443,6 @@ void CreateDefaultRenderNodeGraphs(const Device& device, RenderNodeGraphManager&
             rngMgr.Create(IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngd);
     }
 }
-
-constexpr uint32_t CHECK_RENDER_FLAGS { RenderCreateInfo::CreateInfoFlagBits::SEPARATE_RENDER_FRAME_BACKEND |
-                                        RenderCreateInfo::CreateInfoFlagBits::SEPARATE_RENDER_FRAME_PRESENT };
-
 } // namespace
 
 Renderer::Renderer(IRenderContext& context)
@@ -449,17 +455,21 @@ Renderer::Renderer(IRenderContext& context)
 
 {
     const RenderCreateInfo rci = ((const RenderContext&)renderContext_).GetCreateInfo();
-    if (rci.createFlags & RenderCreateInfo::CreateInfoFlagBits::SEPARATE_RENDER_FRAME_BACKEND) {
+    if (rci.createFlags & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_SEPARATE_RENDER_FRAME_BACKEND_BIT) {
         separatedRendering_.separateBackend = true;
     }
-    if (rci.createFlags & RenderCreateInfo::CreateInfoFlagBits::SEPARATE_RENDER_FRAME_PRESENT) {
+    if (rci.createFlags & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_SEPARATE_RENDER_FRAME_PRESENT_BIT) {
         separatedRendering_.separatePresent = true;
     }
 
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
-    threadPool_ = factory->CreateThreadPool(factory->GetNumberOfCores());
-    parallelQueue_ = factory->CreateParallelTaskQueue(threadPool_);
-    sequentialQueue_ = factory->CreateSequentialTaskQueue(threadPool_);
+    if (factory) {
+        const uint32_t threadCount = GetThreadPoolThreadCount(factory->GetNumberOfCores(), rci.threadPoolCreateInfo);
+        forceSequentialQueue_ = (threadCount <= 1U);
+        threadPool_ = factory->CreateThreadPool(threadCount);
+        parallelQueue_ = factory->CreateParallelTaskQueue(threadPool_);
+        sequentialQueue_ = factory->CreateSequentialTaskQueue(threadPool_);
+    }
 
     renderConfig_ = { device_.GetBackendType(), RenderingConfiguration::NdcOrigin::TOP_LEFT };
 #if ((RENDER_HAS_GL_BACKEND) || (RENDER_HAS_GLES_BACKEND)) && (RENDER_GL_FLIP_Y_SWAPCHAIN == 0)
@@ -470,18 +480,20 @@ Renderer::Renderer(IRenderContext& context)
     }
 #endif
 
-    renderGraph_ = make_unique<RenderGraph>(gpuResourceMgr_);
-    renderBackend_ = device_.CreateRenderBackend(gpuResourceMgr_, parallelQueue_);
+    renderGraph_ = make_unique<RenderGraph>(device_);
+    renderBackend_ = device_.CreateRenderBackend(gpuResourceMgr_, forceSequentialQueue_
+                                                                      ? static_cast<ITaskQueue*>(sequentialQueue_.get())
+                                                                      : static_cast<ITaskQueue*>(parallelQueue_.get()));
     renderFrameSync_ = device_.CreateRenderFrameSync();
     rngGlobalShareDataMgr_ = make_unique<RenderNodeGraphGlobalShareDataManager>();
 
     CreateDefaultRenderNodeGraphs(device_, renderNodeGraphMgr_, defaultStagingRng_, defaultEndFrameStagingRng_);
 
     dsStaging_ = static_cast<IRenderDataStoreDefaultStaging*>(
-        renderDataStoreMgr_.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING));
+        renderDataStoreMgr_.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING).get());
 }
 
-Renderer::~Renderer() {}
+Renderer::~Renderer() = default;
 
 void Renderer::InitNodeGraphs(const array_view<const RenderHandle> renderNodeGraphs)
 {
@@ -531,7 +543,7 @@ void Renderer::InitNodeGraphs(const array_view<const RenderHandle> renderNodeGra
             PLUGIN_ASSERT(renderNodeData.inputData);
             PLUGIN_ASSERT(renderNodeData.node);
 
-            RENDER_CPU_PERF_SCOPE("Renderer", "Renderer_InitNode_Cpu", renderNodeData.fullName);
+            RENDER_CPU_PERF_SCOPE("InitRenderNodes", renderNodeData.fullName);
             renderNodeData.node->InitNode(*(nodeContextData.renderNodeContextManager));
         }
     }
@@ -540,8 +552,7 @@ void Renderer::InitNodeGraphs(const array_view<const RenderHandle> renderNodeGra
 // Helper for Renderer::RenderFrame
 void Renderer::RemapBackBufferHandle(const IRenderDataStoreManager& renderData)
 {
-    const auto* dataStorePod =
-        static_cast<IRenderDataStorePod*>(renderData.GetRenderDataStore(RenderDataStorePod::TYPE_NAME));
+    const refcnt_ptr<IRenderDataStorePod> dataStorePod = renderData.GetRenderDataStore(RenderDataStorePod::TYPE_NAME);
     if (dataStorePod) {
         auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
         const auto bb = reinterpret_cast<const NodeGraphBackBufferConfiguration*>(dataView.data());
@@ -592,23 +603,20 @@ void Renderer::RenderFrameImpl(const array_view<const RenderHandle> renderNodeGr
         separatedRendering_.frontMtx.lock();
     }
 
+    RENDER_CPU_PERF_BEGIN(renderFront, "RenderFrame", "Frontend");
+
     Tick();
     frameTimes_.begin = GetTimeStampNow();
-    RENDER_CPU_PERF_SCOPE("Renderer", "Frame", "RenderFrame");
 
-    if (device_.GetDeviceStatus() == false) {
+    if (!device_.GetDeviceStatus()) {
         ProcessTimeStampEnd();
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_E("invalid_device_status_render_frame", "invalid device for rendering");
 #endif
         return;
     }
-    const IRenderDataStoreManager::RenderDataStoreFlags rdsFlags = renderDataStoreMgr_.GetRenderDataStoreFlags();
-    if (rdsFlags & IRenderDataStoreManager::DOUBLE_BUFFERED_RENDER_DATA_STORES) {
-#if (RENDER_VALIDATION_ENABLED == 1)
-        renderDataStoreMgr_.ValidateCommitFrameData();
-#endif
-    }
+    CORE_PROFILER_MARK_FRAME_START(FRAME_MARKER);
+
     renderDataStoreMgr_.CommitFrameData();
 
     device_.Activate();
@@ -619,6 +627,8 @@ void Renderer::RenderFrameImpl(const array_view<const RenderHandle> renderNodeGr
 
     // handle utils (needs to be called before render data store pre renders)
     renderUtil_.BeginFrame();
+    // global descriptor set manager
+    device_.GetDescriptorSetManager().BeginFrame();
 
     // remap the default back buffer (needs to be called before render data store pre renders)
     RemapBackBufferHandle(renderDataStoreMgr_);
@@ -634,6 +644,7 @@ void Renderer::RenderFrameImpl(const array_view<const RenderHandle> renderNodeGr
     PLUGIN_ASSERT(rngInputs.empty());
     PLUGIN_ASSERT(rngNodeStores.empty());
 
+    gpuResourceMgr_.SetState(GpuResourceManager::RenderTimeState::UNDEFINED);
     // update render node graphs with default staging
     FillRngInputs(renderNodeGraphs, rngInputs);
     const auto renderNodeGraphInputs = array_view(rngInputs.data(), rngInputs.size());
@@ -671,7 +682,7 @@ void Renderer::RenderFrameImpl(const array_view<const RenderHandle> renderNodeGr
     device_.Deactivate();
 
     const auto nodeStoresView = array_view<RenderNodeGraphNodeStore*>(rngNodeStores);
-    ExecuteRenderNodes(renderNodeGraphInputs, nodeStoresView);
+    ExecuteRenderNodes(nodeStoresView);
 
     // render graph process for all render nodes of all render graphs
     ProcessRenderNodeGraph(device_, *renderGraph_, nodeStoresView);
@@ -683,6 +694,7 @@ void Renderer::RenderFrameImpl(const array_view<const RenderHandle> renderNodeGr
     if (separatedRendering_.separateBackend || separatedRendering_.separatePresent) {
         separatedRendering_.frontMtx.unlock();
     }
+    RENDER_CPU_PERF_END(renderFront);
     if (!separatedRendering_.separateBackend) {
         RenderFrameBackendImpl();
     }
@@ -695,16 +707,21 @@ void Renderer::RenderFrameBackendImpl()
         separatedRendering_.backMtx.lock();
     }
 
+    RENDER_CPU_PERF_BEGIN(renderBack, "RenderFrame", "Backend");
+
     auto& rngInputs = renderFrameTimeData_.rngInputs;
     auto& rngNodeStores = renderFrameTimeData_.rngNodeStores;
 
+    gpuResourceMgr_.SetState(GpuResourceManager::RenderTimeState::RENDER_BACKEND);
     device_.SetLockResourceBackendAccess(true);
     renderDataStoreMgr_.PreRenderBackend();
 
     size_t allRenderNodeCount = 0;
     for (const auto* nodeStore : rngNodeStores) {
         PLUGIN_ASSERT(nodeStore);
-        allRenderNodeCount += nodeStore->renderNodeData.size();
+        if (nodeStore) {
+            allRenderNodeCount += nodeStore->renderNodeData.size();
+        }
     }
 
     RenderCommandFrameData rcfd;
@@ -726,13 +743,12 @@ void Renderer::RenderFrameBackendImpl()
     if (!config.swapchainData.empty()) {
         // NOTE: this is a backwards compatibility for a single (default) swapchain config data
         // should be removed
-        if (auto const dataStorePod = static_cast<IRenderDataStorePod const*>(
-                renderDataStoreMgr_.GetRenderDataStore(RenderDataStorePod::TYPE_NAME));
-            dataStorePod) {
+        if (const refcnt_ptr<IRenderDataStorePod> dataStorePod =
+                renderDataStoreMgr_.GetRenderDataStore(RenderDataStorePod::TYPE_NAME)) {
             auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
             if (dataView.size_bytes() == sizeof(NodeGraphBackBufferConfiguration)) {
                 // expects to be the first swapchain in the list
-                const NodeGraphBackBufferConfiguration* bb = (const NodeGraphBackBufferConfiguration*)dataView.data();
+                const auto* bb = (const NodeGraphBackBufferConfiguration*)dataView.data();
                 config.swapchainData[0U].config = *bb;
             }
         }
@@ -769,6 +785,7 @@ void Renderer::RenderFrameBackendImpl()
         separatedRendering_.frontMtx.unlock();
         separatedRendering_.backMtx.unlock();
     }
+    RENDER_CPU_PERF_END(renderBack);
     if (!separatedRendering_.separatePresent) {
         RenderFramePresentImpl();
     }
@@ -779,6 +796,8 @@ void Renderer::RenderFramePresentImpl()
     if (separatedRendering_.separatePresent) {
         separatedRendering_.backMtx.lock();
     }
+
+    RENDER_CPU_PERF_SCOPE("RenderFrame", "Presentation");
 
     if (renderFrameTimeData_.hasBackendWork) { // do not execute backend with zero work
         if (separatedRendering_.separatePresent) {
@@ -807,6 +826,7 @@ void Renderer::RenderFramePresentImpl()
     // RenderFramePresentImpl() needs to be called every frame even thought there isn't presenting
     device_.FrameEnd();
     ProcessTimeStampEnd();
+    CORE_PROFILER_MARK_FRAME_END(FRAME_MARKER);
 
     // set presentation index (before mutexes)
     renderStatus_.presentIndex = renderStatus_.backEndIndex;
@@ -869,11 +889,10 @@ uint64_t Renderer::RenderDeferredFrame()
     return renderStatus_.frontEndIndex;
 }
 
-void Renderer::ExecuteRenderNodes(const array_view<const RenderHandle> renderNodeGraphInputs,
-    const array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores)
+void Renderer::ExecuteRenderNodes(const array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores)
 {
 #if (RENDER_PERF_ENABLED == 1)
-    RENDER_CPU_PERF_BEGIN(fullExecuteCpuTimer, "Renderer", "Renderer", "ExecuteAllNodes_Cpu");
+    RENDER_CPU_PERF_BEGIN(fullExecuteCpuTimer, "RenderFrame", "ExecuteAllNodes");
 
     size_t allRenderNodeCount = 0;
     for (size_t graphIdx = 0; graphIdx < renderNodeGraphNodeStores.size(); ++graphIdx) {
@@ -884,14 +903,18 @@ void Renderer::ExecuteRenderNodes(const array_view<const RenderHandle> renderNod
 #endif
 
     ITaskQueue* queue = nullptr;
-    if (device_.AllowThreadedProcessing()) {
+    if ((!forceSequentialQueue_) && device_.AllowThreadedProcessing()) {
         queue = parallelQueue_.get();
     } else {
         queue = sequentialQueue_.get();
     }
+    if (!queue) {
+        return; // fatal
+    }
 
+    gpuResourceMgr_.SetState(GpuResourceManager::RenderTimeState::RENDER_PRE_EXECUTE);
     // single threaded gpu resource creation with render nodes
-    CreateGpuResourcesWithRenderNodes(renderNodeGraphNodeStores, renderDataStoreMgr_, shaderMgr_);
+    RenderNodePreExecution(renderNodeGraphNodeStores);
 
     // lock staging data for this frame
     // NOTE: should be done with double buffering earlier
@@ -899,12 +922,17 @@ void Renderer::ExecuteRenderNodes(const array_view<const RenderHandle> renderNod
     // final gpu resource allocation and deallocation before render node execute, and render graph
     device_.Activate();
     gpuResourceMgr_.HandlePendingAllocations();
+    gpuResourceMgr_.MapRenderTimeGpuBuffers();
     device_.Deactivate();
 
     // process render node graph render node share preparations
     for (auto& ref : renderNodeGraphNodeStores) {
         ref->renderNodeGraphShareDataMgr->PrepareExecuteFrame();
     }
+
+    // lock global descriptor set creation
+    device_.GetDescriptorSetManager().LockFrameCreation();
+    gpuResourceMgr_.SetState(GpuResourceManager::RenderTimeState::RENDER_EXECUTE);
 
     RenderNodeExecutionParameters params = {
         renderNodeGraphNodeStores,
@@ -914,7 +942,7 @@ void Renderer::ExecuteRenderNodes(const array_view<const RenderHandle> renderNod
         queue,
         renderDataStoreMgr_,
         shaderMgr_,
-        renderConfig_
+        // renderConfig_
     };
 
     // multi-threaded render node execution
@@ -922,6 +950,8 @@ void Renderer::ExecuteRenderNodes(const array_view<const RenderHandle> renderNod
 
     // Remove tasks.
     queue->Clear();
+
+    gpuResourceMgr_.UnmapRenderTimeGpuBuffers();
 
 #if (RENDER_PERF_ENABLED == 1)
     RENDER_CPU_PERF_END(fullExecuteCpuTimer);
@@ -970,7 +1000,7 @@ void Renderer::FillRngInputs(
     constexpr size_t defaultRenderNodeGraphCount = 2;
     rngInputs.reserve(renderNodeGraphInputList.size() + defaultRenderNodeGraphCount);
     rngInputs.push_back(defaultStagingRng_.GetHandle());
-    rngInputs.insert(rngInputs.end(), renderNodeGraphInputList.begin().ptr(), renderNodeGraphInputList.end().ptr());
+    rngInputs.append(renderNodeGraphInputList.begin().ptr(), renderNodeGraphInputList.end().ptr());
     rngInputs.push_back(defaultEndFrameStagingRng_.GetHandle());
 }
 

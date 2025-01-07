@@ -46,9 +46,8 @@ class Device;
 class GpuImageVk final : public GpuImage {
 public:
     GpuImageVk(Device& device, const GpuImageDesc& desc);
-    GpuImageVk(
-        Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData, const uintptr_t hwBuffer);
-    ~GpuImageVk();
+    GpuImageVk(Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData, uintptr_t hwBuffer);
+    ~GpuImageVk() override;
 
     const GpuImageDesc& GetDesc() const override;
     const GpuImagePlatformData& GetBasePlatformData() const override;
@@ -84,7 +83,7 @@ private:
 };
 
 namespace GpuImageUtilsVk {
-VkImageAspectFlags GetImageAspectFlagsFromFormat(const VkFormat format);
+VkImageAspectFlags GetImageAspectFlagsFromFormat(VkFormat format);
 } // namespace GpuImageUtilsVk
 RENDER_END_NAMESPACE()
 

@@ -28,6 +28,10 @@
 #include "log/logger.h"
 
 namespace LoggerUtils {
+namespace {
+constexpr int MS_WIDTH = 3;
+} // namespace
+
 BASE_NS::string_view GetFilename(BASE_NS::string_view path)
 {
     if (auto const pos = path.find_last_of("\\/"); pos != BASE_NS::string_view::npos) {
@@ -44,8 +48,7 @@ void PrintTimeStamp(std::ostream& outputStream)
                     std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
     outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.");
-    outputStream << std::right << std::setfill('0') << std::setw(3) // 3: alignment
-                 << ms.count() << std::setfill(' ');
+    outputStream << std::right << std::setfill('0') << std::setw(MS_WIDTH) << ms.count() << std::setfill(' ');
 }
 } // namespace LoggerUtils
 

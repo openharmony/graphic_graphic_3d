@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -41,5 +41,6 @@ protected:
 private:
     std::shared_ptr<TextureLayer> textureLayer_;
 };
+
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_TEXTURE_LAYER_H

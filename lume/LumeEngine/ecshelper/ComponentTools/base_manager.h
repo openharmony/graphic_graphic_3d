@@ -15,7 +15,9 @@
 #ifndef CORE__ECS_HELPER__COMPONENT_TOOLS__BASE_MANAGER_H
 #define CORE__ECS_HELPER__COMPONENT_TOOLS__BASE_MANAGER_H
 
+#ifndef NDEBUG
 #include <atomic>
+#endif
 #include <cstddef>
 #include <cstdint>
 
@@ -68,6 +70,7 @@ public:
     BASE_NS::vector<Entity> GetAddedComponents() override;
     BASE_NS::vector<Entity> GetRemovedComponents() override;
     BASE_NS::vector<Entity> GetUpdatedComponents() override;
+    BASE_NS::vector<Entity> GetMovedComponents() override;
     CORE_NS::ComponentManagerModifiedFlags GetModifiedFlags() const override;
     void ClearModifiedFlags() override;
     uint32_t GetGenerationCounter() const override;
@@ -99,6 +102,7 @@ public:
 
 protected:
     BaseManager(IEcs& ecs, BASE_NS::string_view) noexcept;
+    BaseManager(IEcs& ecs, BASE_NS::string_view, size_t preallocate) noexcept;
     virtual ~BaseManager();
     IEcs& ecs_;
     BASE_NS::string_view name_;
@@ -121,9 +125,10 @@ protected:
         void RUnlock() const override;
         void* WLock() override;
         void WUnlock() override;
-
+#ifndef NDEBUG
         mutable std::atomic_uint32_t rLocked_ { 0 };
         mutable bool wLocked_ { false };
+#endif
         bool dirty_ { false };
         BaseManager* manager_ { nullptr };
         uint32_t generation_ { 0 };
@@ -137,6 +142,7 @@ protected:
     BASE_NS::vector<Entity> added_;
     BASE_NS::vector<Entity> removed_;
     BASE_NS::vector<Entity> updated_;
+    BASE_NS::vector<Entity> moved_;
     uint64_t typeHash_;
 };
 CORE_END_NAMESPACE()

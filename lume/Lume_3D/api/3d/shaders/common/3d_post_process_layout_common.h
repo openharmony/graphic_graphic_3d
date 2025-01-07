@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_POST_PROCESS_FRAGMENT_LAYOUT_COMMON_H
-#define SHADERS__COMMON__3D_POST_PROCESS_FRAGMENT_LAYOUT_COMMON_H
+#ifndef SHADERS_COMMON_3D_POST_PROCESS_FRAGMENT_LAYOUT_COMMON_H
+#define SHADERS_COMMON_3D_POST_PROCESS_FRAGMENT_LAYOUT_COMMON_H
 
 #include "3d/shaders/common/3d_dm_structures_common.h"
 #include "render/shaders/common/render_compatibility_common.h"
@@ -57,7 +57,7 @@ layout(set = 0, binding = 7, std140) uniform uPostProcessStructData
 };
 layout(set = 0, binding = 8, std430) buffer uLightClusterIndexData
 {
-    uint uLightClusterData;
+    DefaultMaterialLightClusterData uLightClusterData[];
 };
 layout(set = 0, binding = 9) uniform CORE_RELAXEDP sampler2D uSampColorPrePass;
 layout(set = 0, binding = 10) uniform sampler2D uSampColorShadow;       // VSM or other
@@ -68,4 +68,4 @@ layout(set = 0, binding = 12) uniform samplerCube uSampRadiance;
 
 #endif
 
-#endif // SHADERS__COMMON__3D_POST_PROCESS_FRAGMENT_LAYOUT_COMMON_H
+#endif // SHADERS_COMMON_3D_POST_PROCESS_FRAGMENT_LAYOUT_COMMON_H

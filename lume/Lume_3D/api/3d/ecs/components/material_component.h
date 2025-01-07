@@ -153,17 +153,45 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
         GLOSSINESS,
     };
 
+    /** Texture transform. */
     struct TextureTransform {
+        /** Translation */
         BASE_NS::Math::Vec2 translation { 0.f, 0.f };
+        /** Rotation */
         float rotation { 0.f };
+        /** Scale */
         BASE_NS::Math::Vec2 scale { 1.f, 1.f };
     };
-
+    /** Texture info. */
     struct TextureInfo {
+        /** Image */
         CORE_NS::EntityReference image;
+        /** Sampler */
         CORE_NS::EntityReference sampler;
-        BASE_NS::Math::Vec4 factor;
+        /** Factor */
+        BASE_NS::Math::Vec4 factor { 1.f, 1.f, 1.f, 1.f };
+        /** Transforms */
         TextureTransform transform;
+    };
+
+    /** Default render sort layer id */
+    static constexpr uint32_t DEFAULT_RENDER_SORT_LAYER_ID = 32u;
+    /** Render time sorting
+     * Material based sorting
+     * Submesh based sorting will overpass this
+     */
+    struct RenderSort {
+        /** Render sort layer. Within a render slot a layer can define a sort layer order.
+         * There are 0-63 values available. Default id value is 32.
+         * 0 first, 63 last
+         * 1. Typical use case is to set render sort layer to objects which render with depth test without depth write.
+         * 2. Typical use case is to always render character and/or camera object first to cull large parts of the view.
+         * 3. Sort e.g. plane layers.
+         */
+        /** Sort layer used sorting submeshes in rendering in render slots. Valid ID values 0 - 63. */
+        uint8_t renderSortLayer { DEFAULT_RENDER_SORT_LAYER_ID };
+        /** Sort layer order to describe fine order within sort layer. Valid order 0 - 255 */
+        uint8_t renderSortLayerOrder { 0u };
     };
 
     /** Default material component shader */
@@ -201,14 +229,14 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      * NOTE: when material shader is updated the possible material metadata and custom properties are updated
      * NOTE: one needs to reload the shader file(s) with shader manager to get dynamic updated custom property data
      */
-    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0, )
+    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0,)
 
     /** Depth shader. Prefer using automatic selection (or editor selection) if no custom shaders.
      * Needs to match default material layouts and specializations (api/3d/shaders/common).
      * If no default slot given to shader default material shader slots are used automatically.
      * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
      */
-    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0, )
+    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0,)
 
     /** Extra material rendering flags define special rendering hints */
     DEFINE_BITFIELD_PROPERTY(ExtraRenderingFlags, extraRenderingFlags, "ExtraRenderingFlags",
@@ -279,12 +307,20 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
      */
     DEFINE_PROPERTY(
-        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
+        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0,)
 
     /** Per material additional user property data which is passed to shader UBO.
      * Max size is 256 bytes.
      */
     DEFINE_PROPERTY(CORE_NS::IPropertyHandle*, customProperties, "Custom Properties", 0, VALUE(nullptr))
+
+    /** Per material additional user bindings properties.
+     */
+    DEFINE_PROPERTY(CORE_NS::IPropertyHandle*, customBindingProperties, "Custom Binding Properties", 0, VALUE(nullptr))
+
+    /** Render sorting for layers (sorting priority)
+     */
+    DEFINE_PROPERTY(RenderSort, renderSort, "Render Sort Layers", 0,)
 
 END_COMPONENT(IMaterialComponentManager, MaterialComponent, "56430c14-cb12-4320-80d3-2bef4f86a041")
 #if !defined(IMPLEMENT_MANAGER)

@@ -12,25 +12,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef OHOS_RENDER_3D_COLOR_PROXY_H
-#define OHOS_RENDER_3D_COLOR_PROXY_H
+#ifndef COLOR_PROXY_H
+#define COLOR_PROXY_H
 #include <meta/interface/property/property.h>
-#include <scene_plugin/interface/compatibility.h>
+#include <base/util/color.h>
 
 #include "PropertyProxy.h"
-class ColorProxy : public PropertyProxy {
-    SCENE_NS::Color value;
+class ColorProxy : public ObjectPropertyProxy {
+public:
+    ColorProxy(napi_env env, META_NS::Property<BASE_NS::Color> prop);
+    ~ColorProxy() override;
+    void SetValue(NapiApi::Object obj) override;
+
+private:
+    void SetValue(const BASE_NS::Color& v);
+    void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
+    napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
+
+    BASE_NS::Color value;
     void UpdateLocalValues() override;
     void UpdateRemoteValues() override;
-
-public:
-    void SetValue(const SCENE_NS::Color& v);
-    ColorProxy(napi_env env, META_NS::Property<SCENE_NS::Color> prop);
-    ~ColorProxy() override;
-    bool SetValue(NapiApi::Object obj) override;
-    void SetValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
-    napi_value GetValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
 };
 
-#endif // OHOS_RENDER_3D_COLOR_PROXY_H
+#endif

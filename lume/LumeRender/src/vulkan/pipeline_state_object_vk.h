@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
+#include <base/containers/vector.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 
@@ -43,17 +44,41 @@ public:
         const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
         const ShaderSpecializationConstantDataView& specializationConstants,
-        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
-        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
+        const Base::array_view<const DynamicStateEnum> dynamicStates,
+        const Base::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
         const LowLevelRenderPassData& renderPassData, const LowLevelPipelineLayoutData& pipelineLayoutData);
-    ~GraphicsPipelineStateObjectVk();
+    ~GraphicsPipelineStateObjectVk() override;
 
     const PipelineStateObjectPlatformDataVk& GetPlatformData() const;
+
+    struct SpecializationData {
+        BASE_NS::vector<VkSpecializationMapEntry> vs;
+        BASE_NS::vector<VkSpecializationMapEntry> fs;
+
+        // data copied into this for additional modifications
+        struct ShaderSpecializationConstantData {
+            BASE_NS::vector<ShaderSpecialization::Constant> constants;
+            BASE_NS::vector<uint32_t> data;
+        };
+        ShaderSpecializationConstantData constantData;
+
+        SurfaceTransformFlags surfaceTransformFlags { 0U };
+
+        void Clear()
+        {
+            vs.clear();
+            fs.clear();
+            constantData.constants.clear();
+            constantData.data.clear();
+            surfaceTransformFlags = 0U;
+        }
+    };
 
 private:
     Device& device_;
 
     PipelineStateObjectPlatformDataVk plat_;
+    SpecializationData specializationData_;
 };
 
 class ComputePipelineStateObjectVk final : public ComputePipelineStateObject {
@@ -61,7 +86,7 @@ public:
     ComputePipelineStateObjectVk(Device& device, const GpuComputeProgram& gpuComputeProgram,
         const PipelineLayout& pipelineLayout, const ShaderSpecializationConstantDataView& specializationConstants,
         const LowLevelPipelineLayoutData& pipelineLayoutData);
-    ~ComputePipelineStateObjectVk();
+    ~ComputePipelineStateObjectVk() override;
 
     const PipelineStateObjectPlatformDataVk& GetPlatformData() const;
 

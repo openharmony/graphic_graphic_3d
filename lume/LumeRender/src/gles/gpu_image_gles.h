@@ -53,7 +53,7 @@ class GpuImageGLES final : public GpuImage {
 public:
     GpuImageGLES(Device& device, const GpuImageDesc& desc);
     GpuImageGLES(Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData);
-    ~GpuImageGLES();
+    ~GpuImageGLES() override;
 
     const GpuImageDesc& GetDesc() const override;
     const GpuImagePlatformData& GetBasePlatformData() const override;

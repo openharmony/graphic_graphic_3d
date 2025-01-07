@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,13 +33,6 @@ public:
     IRenderDataStore(const IRenderDataStore&) = delete;
     IRenderDataStore& operator=(const IRenderDataStore&) = delete;
 
-    /** Called automatically by the renderer when render data store manager CommitFrameData is called.
-     * This is called automatically every frame.
-     * Needs to be overwritten by the inherit classes.
-     * Here one could e.g. flip double buffers etc.
-     */
-    virtual void CommitFrameData() = 0;
-
     /** Called automatically by the engine (renderer) before render node front-end processing.
      * Needs to be overwritten by the inherit classes.
      * Here one could e.g. allocate GPU resources for current counts or do some specific management
@@ -48,7 +41,7 @@ public:
     virtual void PreRender() = 0;
 
     /** Called automatically by the engine (renderer) after rendering front-end has been completed.
-     * This happens before PreRenderBackend. For example, clear render data store data which has been processed in render
+     * This happens before PreRenderBackend. For example clear render data store data which has been processed in render
      * nodes. Needs to be overwritten by the inherit classes. Here one can place resets for buffers and data.
      */
     virtual void PostRender() = 0;
@@ -60,7 +53,7 @@ public:
      */
     virtual void PreRenderBackend() = 0;
 
-    /** Called automatically by the engine (renderer) after all rendering back-end processing (full rendering)
+    /** Called automatically by the engine (renderer) after back-end processing (full rendering).
      * Needs to be overwritten by the inherit classes.
      * Process only post full render here. (Clear data store content already in PostRender())
      */
@@ -93,6 +86,18 @@ public:
      * @return Type UID of the render data store.
      */
     virtual const BASE_NS::Uid& GetUid() const = 0;
+
+    /** Take a new reference of the object.
+     */
+    virtual void Ref() = 0;
+
+    /** Releases one reference of the object.
+     * No methods of the class shall be called after unref.
+     * The object could be destroyed, if last reference
+     */
+    virtual void Unref() = 0;
+
+    virtual int32_t GetRefCount() = 0;
 
 protected:
     IRenderDataStore() = default;

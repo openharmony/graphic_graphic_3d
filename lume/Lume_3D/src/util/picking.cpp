@@ -62,10 +62,7 @@ MinAndMax GetWorldAABB(const Math::Mat4X4& world, const Math::Vec3& aabbMin, con
         absWorld.base[i].z = Math::abs(world.base[i].z);
     }
 
-    Math::Vec3 extentsW;
-    extentsW.x = absWorld.x.x * extents.x + absWorld.y.x * extents.y + absWorld.z.x * extents.z;
-    extentsW.y = absWorld.x.y * extents.x + absWorld.y.y * extents.y + absWorld.z.y * extents.z;
-    extentsW.z = absWorld.x.z * extents.x + absWorld.y.z * extents.y + absWorld.z.z * extents.z;
+    const auto extentsW = absWorld * extents;
 
     return MinAndMax { centerW - extentsW, centerW + extentsW };
 }
@@ -251,8 +248,8 @@ RayCastResult HitTestNode(ISceneNode& node, const MeshComponent& mesh, const Mat
     return raycastResult;
 }
 
-Math::Vec3 ScreenToWorld(const CameraComponent& cameraComponent, const WorldMatrixComponent& cameraWorldMatrixComponent,
-    Math::Vec3 screenCoordinate)
+Math::Vec3 ScreenToWorld(
+    const CameraComponent& cameraComponent, const Math::Mat4X4& cameraWorldMatrix, Math::Vec3 screenCoordinate)
 {
     screenCoordinate.x = (screenCoordinate.x - 0.5f) * 2.f;
     screenCoordinate.y = (screenCoordinate.y - 0.5f) * 2.f;
@@ -261,7 +258,7 @@ Math::Vec3 ScreenToWorld(const CameraComponent& cameraComponent, const WorldMatr
     Math::Mat4X4 projToView =
         Math::Inverse(CameraMatrixUtil::CalculateProjectionMatrix(cameraComponent, isCameraNegative));
 
-    auto const& worldFromView = cameraWorldMatrixComponent.matrix;
+    auto const& worldFromView = cameraWorldMatrix;
     const auto viewCoordinate =
         (projToView * Math::Vec4(screenCoordinate.x, screenCoordinate.y, screenCoordinate.z, 1.f));
     auto worldCoordinate = worldFromView * viewCoordinate;
@@ -278,17 +275,41 @@ Ray RayFromCamera(const CameraComponent& cameraComponent, const WorldMatrixCompo
     Math::Vec2 screenCoordinate)
 {
     if (cameraComponent.projection == CORE3D_NS::CameraComponent::Projection::ORTHOGRAPHIC) {
-        const Math::Vec3 worldPos = CORE3D_NS::ScreenToWorld(
-            cameraComponent, cameraWorldMatrixComponent, Math::Vec3(screenCoordinate.x, screenCoordinate.y, 0.0f));
+        const Math::Vec3 worldPos = CORE3D_NS::ScreenToWorld(cameraComponent, cameraWorldMatrixComponent.matrix,
+            Math::Vec3(screenCoordinate.x, screenCoordinate.y, 0.0f));
         const auto direction = cameraWorldMatrixComponent.matrix * Math::Vec4(0.0f, 0.0f, -1.0f, 0.0f);
         return Ray { worldPos, direction };
     }
     // Ray origin is the camera world position.
     const Math::Vec3& rayOrigin = Math::Vec3(cameraWorldMatrixComponent.matrix.w);
     const Math::Vec3 targetPos = CORE3D_NS::ScreenToWorld(
-        cameraComponent, cameraWorldMatrixComponent, Math::Vec3(screenCoordinate.x, screenCoordinate.y, 1.0f));
+        cameraComponent, cameraWorldMatrixComponent.matrix, Math::Vec3(screenCoordinate.x, screenCoordinate.y, 1.0f));
     const Math::Vec3 direction = Math::Normalize(targetPos - rayOrigin);
     return Ray { rayOrigin, direction };
+}
+
+Math::Mat4X4 GetWorldMatrix(
+    const ITransformComponentManager& transformComponentManager, const INodeSystem& nodeSystem, Entity entity)
+{
+    Math::Mat4X4 local = Math::IDENTITY_4X4;
+    if (!EntityUtil::IsValid(entity)) {
+        return local;
+    }
+    if (const auto transformId = transformComponentManager.GetComponentId(entity);
+        transformId != IComponentManager::INVALID_COMPONENT_ID) {
+        const TransformComponent tc = transformComponentManager.Get(transformId);
+        local = Math::Trs(tc.position, tc.rotation, tc.scale);
+    }
+
+    auto node = nodeSystem.GetNode(entity);
+    if (!node) {
+        return local;
+    }
+    auto parent = node->GetParent();
+    if (!parent) {
+        return local;
+    }
+    return GetWorldMatrix(transformComponentManager, nodeSystem, parent->GetEntity()) * local;
 }
 } // namespace
 
@@ -304,13 +325,9 @@ Math::Vec3 Picking::ScreenToWorld(IEcs const& ecs, Entity cameraEntity, Math::Ve
         return {};
     }
 
-    auto worldMatrixComponentManager = GetManager<IWorldMatrixComponentManager>(ecs);
-    const auto worldMatrixId = worldMatrixComponentManager->GetComponentId(cameraEntity);
-    if (worldMatrixId == IComponentManager::INVALID_COMPONENT_ID) {
-        return {};
-    }
-    return CORE3D_NS::ScreenToWorld(
-        *cameraComponentManager->Read(cameraId), worldMatrixComponentManager->Get(worldMatrixId), screenCoordinate);
+    const Math::Mat4X4 worldMatrix =
+        GetWorldMatrix(*GetManager<ITransformComponentManager>(ecs), *GetSystem<INodeSystem>(ecs), cameraEntity);
+    return CORE3D_NS::ScreenToWorld(*cameraComponentManager->Read(cameraId), worldMatrix, screenCoordinate);
 }
 
 Math::Vec3 Picking::WorldToScreen(IEcs const& ecs, Entity cameraEntity, Math::Vec3 worldCoordinate) const
@@ -319,25 +336,20 @@ Math::Vec3 Picking::WorldToScreen(IEcs const& ecs, Entity cameraEntity, Math::Ve
         return {};
     }
 
+    const Math::Mat4X4 worldMatrix =
+        GetWorldMatrix(*GetManager<ITransformComponentManager>(ecs), *GetSystem<INodeSystem>(ecs), cameraEntity);
+    auto const worldToView = Math::Inverse(worldMatrix);
+    const auto viewCoordinate = worldToView * Math::Vec4(worldCoordinate.x, worldCoordinate.y, worldCoordinate.z, 1.f);
+
     auto cameraComponentManager = GetManager<ICameraComponentManager>(ecs);
     const auto cameraId = cameraComponentManager->GetComponentId(cameraEntity);
     if (cameraId == IComponentManager::INVALID_COMPONENT_ID) {
         return {};
     }
-
-    auto worldMatrixComponentManager = GetManager<IWorldMatrixComponentManager>(ecs);
-    const auto worldMatrixId = worldMatrixComponentManager->GetComponentId(cameraEntity);
-    if (worldMatrixId == IComponentManager::INVALID_COMPONENT_ID) {
-        return {};
-    }
-
     const CameraComponent cameraComponent = cameraComponentManager->Get(cameraId);
     bool isCameraNegative = false;
     Math::Mat4X4 viewToProj = CameraMatrixUtil::CalculateProjectionMatrix(cameraComponent, isCameraNegative);
 
-    const WorldMatrixComponent worldMatrixComponent = worldMatrixComponentManager->Get(worldMatrixId);
-    auto const worldToView = Math::Inverse(worldMatrixComponent.matrix);
-    const auto viewCoordinate = worldToView * Math::Vec4(worldCoordinate.x, worldCoordinate.y, worldCoordinate.z, 1.f);
     auto screenCoordinate = viewToProj * viewCoordinate;
 
     // Give sane results also when the point is behind the camera.
@@ -368,35 +380,32 @@ vector<RayCastResult> Picking::RayCast(const IEcs& ecs, const Math::Vec3& start,
     auto const invDir = DirectionVectorInverse(direction);
     for (IComponentManager::ComponentId i = 0; i < renderMeshComponentManager->GetComponentCount(); i++) {
         const Entity id = renderMeshComponentManager->GetEntity(i);
-        if (auto node = nodeSystem->GetNode(id); node) {
-            if (const auto jointMatrices = jointMatricesComponentManager->Read(id); jointMatrices) {
-                // Use the skinned aabb's.
-                const auto& jointMatricesComponent = *jointMatrices;
-                if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start,
-                        invDir, distance)) {
-                    const float centerDistance = Math::Magnitude(
-                        (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f - start);
-                    const Math::Vec3 hitPosition = start + direction * distance;
-                    result.push_back(RayCastResult { node, centerDistance, distance, hitPosition });
+        auto node = nodeSystem->GetNode(id);
+        if (!node) {
+            continue;
+        }
+        if (const auto jointMatrices = jointMatricesComponentManager->Read(id); jointMatrices) {
+            // Use the skinned aabb's.
+            const auto& jointMatricesComponent = *jointMatrices;
+            if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start, invDir,
+                distance)) {
+                const float centerDistance = Math::Magnitude(
+                    (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f - start);
+                const Math::Vec3 hitPosition = start + direction * distance;
+                result.push_back(RayCastResult { node, centerDistance, distance, hitPosition });
+            }
+        } else if (const auto worldMatrixId = worldMatrixComponentManager->GetComponentId(id);
+                   worldMatrixId != IComponentManager::INVALID_COMPONENT_ID) {
+            auto const renderMeshComponent = renderMeshComponentManager->Get(i);
+            if (const auto meshHandle = meshComponentManager.Read(renderMeshComponent.mesh); meshHandle) {
+                auto const worldMatrixComponent = worldMatrixComponentManager->Get(worldMatrixId);
+                const auto raycastResult = HitTestNode(*node, *meshHandle, worldMatrixComponent.matrix, start, invDir);
+                if (raycastResult.node) {
+                    result.push_back(raycastResult);
                 }
-                continue;
             } else {
-                if (const auto worldMatrixId = worldMatrixComponentManager->GetComponentId(id);
-                    worldMatrixId != IComponentManager::INVALID_COMPONENT_ID) {
-                    auto const renderMeshComponent = renderMeshComponentManager->Get(i);
-                    if (const auto meshHandle = meshComponentManager.Read(renderMeshComponent.mesh); meshHandle) {
-                        auto const worldMatrixComponent = worldMatrixComponentManager->Get(worldMatrixId);
-                        const auto raycastResult =
-                            HitTestNode(*node, *meshHandle, worldMatrixComponent.matrix, start, invDir);
-                        if (raycastResult.node) {
-                            result.push_back(raycastResult);
-                        }
-                    } else {
-                        CORE_LOG_W("no mesh resource for entity %" PRIx64 ", resource %" PRIx64, id.id,
-                            renderMeshComponent.mesh.id);
-                        continue;
-                    }
-                }
+                CORE_LOG_W(
+                    "no mesh resource for entity %" PRIx64 ", resource %" PRIx64, id.id, renderMeshComponent.mesh.id);
             }
         }
     }
@@ -429,7 +438,7 @@ vector<RayCastResult> Picking::RayCast(
                     // Use the skinned aabb's.
                     const auto& jointMatricesComponent = *jointMatrices;
                     if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start,
-                            invDir, distance)) {
+                        invDir, distance)) {
                         const float centerDistance = Math::Magnitude(
                             (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f -
                             start);
@@ -468,14 +477,14 @@ BASE_NS::vector<RayTriangleCastResult> Core3D::Picking::RayCast(const BASE_NS::M
 {
     vector<RayTriangleCastResult> result;
 
-    if (triangles.size() % 3 != 0) { // 3 ：param
+    if (triangles.size() % 3 != 0) { // 3: parm
         CORE_LOG_W("Number of triangles vertices not divisible by 3!");
         return result;
     }
 
     float distance = 0.f;
     Math::Vec2 uv;
-    for (size_t ii = 0; ii < triangles.size(); ii += 3) { // 3 ：param
+    for (size_t ii = 0; ii < triangles.size(); ii += 3) { // 3: index
         if (IntersectTriangle(&triangles[ii], start, direction, distance, uv)) {
             const Math::Vec3 hitPosition = start + direction * distance;
 

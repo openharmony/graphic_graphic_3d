@@ -38,6 +38,7 @@
 #include <render/nodecontext/intf_render_node_util.h>
 #include <render/resource_handle.h>
 
+#include "render/default_constants.h"
 #include "render/render_node_scene_util.h"
 
 #if (CORE3D_DEV_ENABLED == 1)
@@ -135,6 +136,8 @@ void RenderNodeDefaultDepthRenderSlot::ExecuteFrame(IRenderCommandList& cmdList)
         CORE_LOG_E("invalid render data stores in RenderNodeDefaultDepthRenderSlot");
     }
 
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "3DDepth", DefaultDebugConstants::DEFAULT_DEBUG_COLOR);
+
     cmdList.BeginRenderPass(renderPass_.renderPassDesc, renderPass_.subpassStartIndex, renderPass_.subpassDesc);
 
     if (validRenderDataStore) {
@@ -186,7 +189,7 @@ void RenderNodeDefaultDepthRenderSlot::RenderSubmeshes(IRenderCommandList& cmdLi
         auto currMaterialFlags = submeshMaterialFlags[submeshIndex];
 
         // sorted slot submeshes should already have removed layers if default sorting was used
-        if (((camLayerMask & currSubmesh.layerMask) == 0) ||
+        if (((camLayerMask & currSubmesh.layers.layerMask) == 0) ||
             ((jsonInputs_.nodeFlags & RENDER_SCENE_DISCARD_MATERIAL_BIT) &&
                 (currMaterialFlags.extraMaterialRenderingFlags &
                     RenderExtraRenderingFlagBits::RENDER_EXTRA_RENDERING_DISCARD_BIT))) {
@@ -216,11 +219,11 @@ void RenderNodeDefaultDepthRenderSlot::RenderSubmeshes(IRenderCommandList& cmdLi
         }
 
         // set 1 (mesh matrix, skin matrices, material, material user data)
-        const uint32_t currMeshMatrixOffset = currSubmesh.meshIndex * UBO_BIND_OFFSET_ALIGNMENT;
+        const uint32_t currMeshMatrixOffset = currSubmesh.indices.meshIndex * UBO_BIND_OFFSET_ALIGNMENT;
         uint32_t currJointMatrixOffset = 0u;
         if (submeshFlags & RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT) {
             currJointMatrixOffset =
-                currSubmesh.skinJointIndex * static_cast<uint32_t>(sizeof(DefaultMaterialSkinStruct));
+                currSubmesh.indices.skinJointIndex * static_cast<uint32_t>(sizeof(DefaultMaterialSkinStruct));
         }
         const uint32_t dynamicOffsets[] = { currMeshMatrixOffset, currJointMatrixOffset };
         // set to bind, handle to resource, offsets for dynamic descs
@@ -229,28 +232,24 @@ void RenderNodeDefaultDepthRenderSlot::RenderSubmeshes(IRenderCommandList& cmdLi
         initialBindDone = true;
 
         // vertex buffers and draw
-        if (currSubmesh.vertexBufferCount > 0) {
-            VertexBuffer vbs[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
-            const auto count = Math::min(currSubmesh.vertexBufferCount,
-                RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
-            for (uint32_t vbIdx = 0; vbIdx < count; ++vbIdx) {
-                vbs[vbIdx] = ConvertVertexBuffer(currSubmesh.vertexBuffers[vbIdx]);
-            }
-            cmdList.BindVertexBuffers({ vbs, currSubmesh.vertexBufferCount });
+        if (currSubmesh.buffers.vertexBufferCount > 0) {
+            cmdList.BindVertexBuffers({ currSubmesh.buffers.vertexBuffers, currSubmesh.buffers.vertexBufferCount });
         }
         const auto& dc = currSubmesh.drawCommand;
-        const RenderVertexBuffer& iArgs = currSubmesh.indirectArgsBuffer;
-        const bool indirectDraw = iArgs.bufferHandle ? true : false;
-        if (currSubmesh.indexBuffer.byteSize > 0U) {
-            cmdList.BindIndexBuffer(ConvertIndexBuffer(currSubmesh.indexBuffer));
+        const VertexBuffer& iArgs = currSubmesh.buffers.indirectArgsBuffer;
+        const bool indirectDraw = RenderHandleUtil::IsValid(iArgs.bufferHandle);
+        if ((currSubmesh.buffers.indexBuffer.byteSize > 0U) &&
+            RenderHandleUtil::IsValid(currSubmesh.buffers.indexBuffer.bufferHandle)) {
+            cmdList.BindIndexBuffer(currSubmesh.buffers.indexBuffer);
             if (indirectDraw) {
-                cmdList.DrawIndexedIndirect(iArgs.bufferHandle.GetHandle(), iArgs.bufferOffset, 1u, 0u);
+                cmdList.DrawIndexedIndirect(
+                    iArgs.bufferHandle, iArgs.bufferOffset, dc.drawCountIndirect, dc.strideIndirect);
             } else {
                 cmdList.DrawIndexed(dc.indexCount, dc.instanceCount, 0, 0, 0);
             }
         } else {
             if (indirectDraw) {
-                cmdList.DrawIndirect(iArgs.bufferHandle.GetHandle(), iArgs.bufferOffset, 1u, 0u);
+                cmdList.DrawIndirect(iArgs.bufferHandle, iArgs.bufferOffset, dc.drawCountIndirect, dc.strideIndirect);
             } else {
                 cmdList.Draw(dc.vertexCount, dc.instanceCount, 0, 0);
             }
@@ -563,7 +562,7 @@ void RenderNodeDefaultDepthRenderSlot::ProcessSlotSubmeshes(
     const IRenderNodeSceneUtil::RenderSlotInfo rsi { jsonInputs_.renderSlotId, jsonInputs_.sortType,
         jsonInputs_.cullType, jsonInputs_.nodeMaterialDiscardFlags };
     RenderNodeSceneUtil::GetRenderSlotSubmeshes(
-        dataStoreCamera, dataStoreMaterial, currentScene_.cameraIdx, rsi, sortedSlotSubmeshes_);
+        dataStoreCamera, dataStoreMaterial, currentScene_.cameraIdx, {}, rsi, sortedSlotSubmeshes_);
 }
 
 void RenderNodeDefaultDepthRenderSlot::ParseRenderNodeInputs()

@@ -33,6 +33,8 @@
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
 
+#include "render/default_constants.h"
+
 // shaders
 #include <render/shaders/common/render_blur_common.h>
 #include <render/shaders/common/render_post_process_structs_common.h>
@@ -128,6 +130,9 @@ void RenderNodeDefaultShadowsBlur::ExecuteFrame(IRenderCommandList& cmdList)
         if (shadowTypes_.shadowType != IRenderDataStoreDefaultLight::ShadowType::VSM) {
             return; // early out
         }
+
+        RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "3DShadowsBlur", DefaultDebugConstants::DEFAULT_DEBUG_COLOR);
+
         // NOTE: try separating/overlapping different shadows
         // first horizontal for all then vertical for all (-> less syncs)
         const IRenderDataStoreDefaultLight::LightCounts lightCounts = dataStoreLight->GetLightCounts();

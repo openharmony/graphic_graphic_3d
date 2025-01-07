@@ -16,18 +16,22 @@
 #include "plugin_registry.h"
 
 #include <algorithm>
+#include <platform/common/core/os/extensions_create_info.h>
 
+#include <base/util/errors.h>
 #include <base/util/uid_util.h>
 #include <core/ecs/intf_component_manager.h>
+#include <core/implementation_uids.h>
 #include <core/log.h>
 
 #include "image/loaders/image_loader_ktx.h"
 #include "image/loaders/image_loader_stb_image.h"
-#include "image/loaders/image_loader_libpng.h"
-#include "image/loaders/image_loader_libjpeg.h"
 #include "io/file_manager.h"
 #include "io/std_filesystem.h"
 #include "os/intf_library.h"
+#if (CORE_PERF_ENABLED == 1)
+#include "perf/performance_data_manager.h"
+#endif
 #include "static_plugin_decl.h"
 
 CORE_BEGIN_NAMESPACE()
@@ -72,20 +76,20 @@ __asm__(
     " .popsection\n");
 // clang-format on
 extern "C" {
-extern CORE_NS::IPlugin const* const g_staticPluginList;
-extern CORE_NS::IPlugin const* const g_staticPluginListData;
-extern CORE_NS::IPlugin const* const g_staticPluginListEnd;
-__attribute__((used)) CORE_NS::IPlugin const* const g_staticPluginListDataRef = g_staticPluginListData;
+extern const CORE_NS::IPlugin* const g_staticPluginList;
+extern const CORE_NS::IPlugin* const g_staticPluginListData;
+extern const CORE_NS::IPlugin* const g_staticPluginListEnd;
+__attribute__((used)) const CORE_NS::IPlugin* const g_staticPluginListDataRef = g_staticPluginListData;
 }
 #endif
 
 #else
 
 #if _MSC_VER
-static CORE_NS::IPlugin const* const* g_staticPluginList = nullptr;
+static const CORE_NS::IPlugin* const* g_staticPluginList = nullptr;
 static size_t g_staticPluginListCount = 0;
 #else
-__attribute__((visibility("hidden"))) static CORE_NS::IPlugin const* const* g_staticPluginList = nullptr;
+__attribute__((visibility("hidden"))) static const CORE_NS::IPlugin* const* g_staticPluginList = nullptr;
 __attribute__((visibility("hidden"))) static size_t g_staticPluginListCount = 0;
 #endif
 
@@ -164,6 +168,40 @@ void GatherDynamicPlugins(vector<LibPlugin>& plugins, IFileManager& fileManager)
     }
 }
 
+bool AddDependencies(vector<Uid>& toBeLoaded, array_view<const LibPlugin> availablePlugins,
+    array_view<const IPlugin* const> loadedPlugins, const Uid& uidToLoad)
+{
+    bool found = true;
+    // Only consider plugins which are not already loaded, and not yet in the loading list.
+    if (NoneOf(loadedPlugins, [&uidToLoad](const IPlugin* loaded) { return loaded->version.uid == uidToLoad; }) &&
+        NoneOf(toBeLoaded, [&uidToLoad](const Uid& willLoad) { return willLoad == uidToLoad; })) {
+        if (auto pos = FindIf(availablePlugins,
+            [&uidToLoad](const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uidToLoad; });
+            pos != availablePlugins.end()) {
+            found = AllOf(pos->plugin->pluginDependencies, [&](const Uid& dependency) {
+                return AddDependencies(toBeLoaded, availablePlugins, loadedPlugins, dependency);
+            });
+            if (found) {
+                toBeLoaded.push_back(uidToLoad);
+            } else {
+                CORE_LOG_E("Missing dependencies for: %s", to_string(uidToLoad).data());
+            }
+        } else {
+            CORE_LOG_E("Plugin not found: %s", to_string(uidToLoad).data());
+            found = false;
+        }
+    }
+    return found;
+}
+void LogMissingPlugins(const array_view<const Uid> requestedPlugins, const array_view<const LibPlugin> availablePlugins)
+{
+    CORE_LOG_E("Unable to load plugins:");
+    for (const auto& uid : requestedPlugins) {
+        if (NoneOf(availablePlugins, [uid](const auto& available) { return available.plugin->version.uid == uid; })) {
+            CORE_LOG_E("\t%s", to_string(uid).data());
+        }
+    }
+}
 void Notify(const array_view<IPluginRegister::ITypeInfoListener*> listeners,
     IPluginRegister::ITypeInfoListener::EventType type, array_view<const ITypeInfo* const> typeInfos)
 {
@@ -173,33 +211,21 @@ void Notify(const array_view<IPluginRegister::ITypeInfoListener*> listeners,
         }
     }
 }
-static constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo KTX_LOADER {
+
+constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo KTX_LOADER {
     { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
     nullptr,
     BASE_NS::Uid { "306357a4-d49c-4670-9746-5ccbba567dc9" },
     CreateImageLoaderKtx,
     KTX_IMAGE_TYPES,
 };
-static constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo STB_LOADER {
+
+constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo STB_LOADER {
     { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
     nullptr,
     BASE_NS::Uid { "a5049cb8-10bb-4047-b7f5-e9939d5bb3a5" },
     CreateImageLoaderStbImage,
     STB_IMAGE_TYPES,
-};
-static constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo PNG_LOADER {
-    { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
-    nullptr,
-    BASE_NS::Uid { "dacbcb8d-60d6-4337-8295-7af99b517c1d" },
-    CreateImageLoaderLibPNGImage,
-    PNG_IMAGE_TYPES,
-};
-static constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo JPEG_LOADER {
-    { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
-    nullptr,
-    BASE_NS::Uid { "c5fb2284-561f-4078-8a00-74b82f161964" },
-    CreateImageLoaderLibJPEGImage,
-    JPEG_IMAGE_TYPES,
 };
 } // namespace
 
@@ -250,10 +276,10 @@ vector<InterfaceTypeInfo> PluginRegistry::RegisterGlobalInterfaces(PluginRegistr
     for (const auto& info : interfaces) {
         registry.RegisterInterfaceType(info);
     }
+
     registry.RegisterTypeInfo(KTX_LOADER);
     registry.RegisterTypeInfo(STB_LOADER);
-    registry.RegisterTypeInfo(PNG_LOADER);
-    registry.RegisterTypeInfo(JPEG_LOADER);
+
     return interfaces;
 }
 
@@ -261,17 +287,21 @@ void PluginRegistry::UnregisterGlobalInterfaces()
 {
     UnregisterTypeInfo(STB_LOADER);
     UnregisterTypeInfo(KTX_LOADER);
-    UnregisterTypeInfo(PNG_LOADER);
-    UnregisterTypeInfo(JPEG_LOADER);
+
     for (const auto& info : ownInterfaceInfos_) {
         UnregisterInterfaceType(info);
     }
 }
 
+WARNING_SCOPE_START(W_THIS_USED_BASE_INITIALIZER_LIST)
 PluginRegistry::PluginRegistry()
+#if CORE_PERF_ENABLED
+    : perfManFactory_(*this)
+#endif // CORE_PERF_ENABLED
 {
     ownInterfaceInfos_ = RegisterGlobalInterfaces(*this);
 }
+WARNING_SCOPE_END()
 
 PluginRegistry::~PluginRegistry()
 {
@@ -298,36 +328,8 @@ bool PluginRegistry::LoadPlugins(const array_view<const Uid> pluginUids)
         vector<Uid> toLoad;
         toLoad.reserve(plugins.size());
 
-        auto addDependencies = [](auto&& addDependencies, vector<Uid>& toBeLoaded,
-                                   const vector<LibPlugin>& availablePlugins,
-                                   BASE_NS::vector<const IPlugin*>& loadedPlugins, const Uid& uidToLoad) -> bool {
-            bool found = true;
-            // Only consider plugins which are not already loaded, and not yet in the loading list.
-            if (NoneOf(
-                    loadedPlugins, [&uidToLoad](const IPlugin* loaded) { return loaded->version.uid == uidToLoad; }) &&
-                NoneOf(toBeLoaded, [&uidToLoad](const Uid& willLoad) { return willLoad == uidToLoad; })) {
-                if (auto pos = FindIf(availablePlugins,
-                        [&uidToLoad](
-                            const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uidToLoad; });
-                    pos != availablePlugins.end()) {
-                    found = AllOf(pos->plugin->pluginDependencies, [&](const Uid& dependency) {
-                        return addDependencies(
-                            addDependencies, toBeLoaded, availablePlugins, loadedPlugins, dependency);
-                    });
-                    if (found) {
-                        toBeLoaded.push_back(uidToLoad);
-                    } else {
-                        CORE_LOG_E("Missing dependencies for: %s", to_string(uidToLoad).data());
-                    }
-                } else {
-                    CORE_LOG_E("Plugin not found: %s", to_string(uidToLoad).data());
-                    found = false;
-                }
-            }
-            return found;
-        };
-        const bool found = AllOf(pluginUids,
-            [&](const Uid& uid) { return addDependencies(addDependencies, toLoad, plugins, plugins_, uid); });
+        const bool found =
+            AllOf(pluginUids, [&](const Uid& uid) { return AddDependencies(toLoad, plugins, plugins_, uid); });
 
         // Order the available plugins to match the to-be-loaded list and remove extras.
         auto begin = plugins.begin();
@@ -343,12 +345,7 @@ bool PluginRegistry::LoadPlugins(const array_view<const Uid> pluginUids)
         plugins.erase(begin, end);
 
         if (!found) {
-            CORE_LOG_E("Unable to load plugins:");
-            for (const auto& uid : pluginUids) {
-                if (NoneOf(plugins, [uid](const auto& available) { return available.plugin->version.uid == uid; })) {
-                    CORE_LOG_E("\t%s", to_string(uid).data());
-                }
-            }
+            LogMissingPlugins(pluginUids, plugins);
             return false;
         }
     }
@@ -374,6 +371,15 @@ bool PluginRegistry::LoadPlugins(const array_view<const Uid> pluginUids)
 void PluginRegistry::UnloadPlugins(const array_view<const Uid> pluginUids)
 {
     CORE_LOG_D("Unload plugins:");
+#if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
+    if (perfLoggerId_) {
+        if (pluginUids.empty() || std::any_of(pluginUids.cbegin(), pluginUids.cend(),
+            [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
+            logger_.RemoveOutput(perfLoggerId_);
+            perfLoggerId_ = 0U;
+        }
+    }
+#endif
     if (pluginUids.empty()) {
         while (!pluginDatas_.empty() && !plugins_.empty()) {
             UnregisterPlugin(*plugins_.back(), pluginDatas_.back().token);
@@ -447,6 +453,12 @@ void PluginRegistry::UnregisterTypeInfo(const ITypeInfo& type)
 
     const ITypeInfo* const infos[] = { &type };
     Notify(typeInfoListeners_, ITypeInfoListener::EventType::REMOVED, infos);
+
+#if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
+    if (type.typeUid == PerformanceTraceTypeInfo::UID) {
+        perfManFactory_.RemovePerformanceTrace(static_cast<const PerformanceTraceTypeInfo&>(type).uid);
+    }
+#endif
 }
 
 array_view<const ITypeInfo* const> PluginRegistry::GetTypeInfos(const Uid& typeUid) const
@@ -567,6 +579,74 @@ IFileManager& PluginRegistry::GetFileManager()
     return fileManager_;
 }
 
+// Internal members
+void PluginRegistry::HandlePerfTracePlugin(const PlatformCreateInfo& platformCreateInfo)
+{
+    const PlatformCreateExtensionInfo* traceSettings = nullptr;
+    for (const PlatformCreateExtensionInfo* extension = Platform::Extensions(platformCreateInfo); extension;
+         extension = extension->next) {
+        switch (extension->type) {
+            case PLATFORM_EXTENSION_TRACE_USER:
+                CORE_ASSERT(traceSettings == nullptr);
+                traceSettings = extension;
+                break;
+            case PLATFORM_EXTENSION_TRACE_EXTENSION:
+                CORE_ASSERT(traceSettings == nullptr);
+                traceSettings = extension;
+                break;
+        }
+    }
+
+    // attempt to initialize performance tracing before any other subsystems, performance tracing should come from
+    // an dynamic plugin so ideally the dynamic module is loaded automatically during loading of LumeEngine but
+    // before any other plugins are loaded so that other plugins.
+#if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
+    if (traceSettings) {
+        CORE_LOG_V("Tracing is enabled and application requested it");
+        if (traceSettings->type == PLATFORM_EXTENSION_TRACE_USER) {
+            // Provide a user applied performance tracer from the application
+            perfManFactory_.SetPerformanceTrace(
+                {},
+                IPerformanceTrace::Ptr { static_cast<const PlatformTraceInfoUsr*>(traceSettings)->tracer }
+            );
+        } else if (traceSettings->type == PLATFORM_EXTENSION_TRACE_EXTENSION) {
+            // This load plugin call isn't really that ideal, basically dlopen/LoadLibrary is called all plugins
+            // found. The order is undefined, so apotentional risks is that the modules could attempt to use
+            // tracing (i.e. memory allocation tracking) prior to tracing plugin being effectively loaded.
+            //
+            // others problem with loading plugins like this is that it might simply be undesireable to map
+            // /all/ plugins into memory space for example when two versions of same plugins exists,
+            // (hot-)reloading of modules
+            const PlatformTraceInfoExt* traceExtension = static_cast<const PlatformTraceInfoExt*>(traceSettings);
+            if (!LoadPlugins({ &traceExtension->plugin, 1U })) {
+                CORE_LOG_V("Failed to load %s", to_string(traceExtension->plugin).data());
+                return;
+            }
+            perfTracePlugin_ = traceExtension->plugin;
+            auto typeInfos = GetTypeInfos(PerformanceTraceTypeInfo::UID);
+            auto itt = std::find_if(typeInfos.cbegin(), typeInfos.cend(), [traceExtension](const ITypeInfo* const a) {
+                return static_cast<const PerformanceTraceTypeInfo* const>(a)->uid == traceExtension->type;
+            });
+            if (itt != typeInfos.end()) {
+                auto trace = static_cast<const PerformanceTraceTypeInfo* const>(*itt);
+                perfManFactory_.SetPerformanceTrace(trace->uid, trace->createLoader(trace->token));
+            } else {
+                CORE_ASSERT(false && "cannot find trace plugin");
+            }
+        }
+
+        // Capture console message and forward them to performance tracer
+        perfLoggerId_ = logger_.AddOutput(perfManFactory_.GetLogger());
+    } else {
+        CORE_LOG_V("Tracing is enabled and application didn't requested it");
+    }
+#else
+    if (traceSettings) {
+        CORE_LOG_V("Tracing is disabled but application still requested it");
+    }
+#endif
+}
+
 // Private members
 void PluginRegistry::RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, bool asDependency)
 {
@@ -621,11 +701,11 @@ CORE_PUBLIC void CreatePluginRegistry(const PlatformCreateInfo& platformCreateIn
     if (!once) {
         once = true;
         auto& registry = static_cast<PluginRegistry&>(GetPluginRegister());
-        // Create plugins:// protocol that points to plugin files.
-        // register path to system plugins
-        // Root path is the location where system plugins , non-rofs assets etc could be held.
+
         auto platform = Platform::Create(platformCreateInfo);
         platform->RegisterPluginLocations(registry);
+
+        registry.HandlePerfTracePlugin(platformCreateInfo);
     }
 }
 CORE_END_NAMESPACE()

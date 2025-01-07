@@ -34,7 +34,7 @@ struct GpuQueryPlatformDataVk : public GpuQueryPlatformData {
 class GpuQueryVk final : public GpuQuery {
 public:
     GpuQueryVk(Device& device, const GpuQueryDesc& desc);
-    ~GpuQueryVk();
+    ~GpuQueryVk() override;
 
     void NextQueryIndex() override;
 

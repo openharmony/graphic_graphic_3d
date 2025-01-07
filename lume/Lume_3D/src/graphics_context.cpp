@@ -25,6 +25,7 @@
 #include <core/intf_engine.h>
 #include <core/io/intf_file_manager.h>
 #include <core/log.h>
+#include <core/perf/cpu_perf_scope.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property/intf_property_handle.h>
@@ -56,6 +57,7 @@
 
 #include "gltf/gltf2.h"
 #include "render/render_node_scene_util.h"
+#include "util/log.h"
 #include "util/mesh_builder.h"
 #include "util/mesh_util.h"
 #include "util/picking.h"
@@ -95,10 +97,17 @@ static constexpr string_view POST_PROCESS_PATH { "3drenderdataconfigurations://p
 static constexpr string_view POST_PROCESS_DATA_STORE_NAME { "RenderDataStorePod" };
 static constexpr string_view POST_PROCESS_NAME { "PostProcess" };
 
+void LogCore3dBuildInfo()
+{
+#define CORE3D_TO_STRING_INTERNAL(x) #x
+#define CORE3D_TO_STRING(x) CORE3D_TO_STRING_INTERNAL(x)
+    CORE_LOG_I("CORE3D_VALIDATION_ENABLED=" CORE3D_TO_STRING(CORE3D_VALIDATION_ENABLED));
+    CORE_LOG_I("CORE3D_DEV_ENABLED=" CORE3D_TO_STRING(CORE3D_DEV_ENABLED));
+}
+
 void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& defaultGpuResources)
 {
     IGpuResourceManager& gpuResourceMgr = device.GetGpuResourceManager();
-
     // default material gpu images
     GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
         Format::BASE_FORMAT_R8G8B8A8_SRGB, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
@@ -106,7 +115,6 @@ void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& default
         MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 0, 2, 2, 1, 1, 1,
         SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
     constexpr uint32_t sizeOfUint32 = sizeof(uint32_t);
-
     desc.format = Format::BASE_FORMAT_R8G8B8A8_UNORM;
     {
         constexpr const uint32_t normalData[4u] = { 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f };
@@ -124,7 +132,6 @@ void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& default
         defaultGpuResources.push_back(
             gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_AO, desc, byteDataView));
     }
-
     // env cubemaps
     desc.imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE;
     desc.format = Format::BASE_FORMAT_R8G8B8A8_SRGB;
@@ -280,7 +287,9 @@ struct Agp3DPluginState {
 
 GraphicsContext::GraphicsContext(struct Agp3DPluginState& factory, IRenderContext& context)
     : factory_(factory), context_(context)
-{}
+{
+    LogCore3dBuildInfo();
+}
 
 GraphicsContext ::~GraphicsContext()
 {
@@ -296,14 +305,18 @@ GraphicsContext ::~GraphicsContext()
     }
 }
 
-void GraphicsContext::Init()
+void GraphicsContext::Init(const CreateInfo& createInfo)
 {
+    CORE_LOG_D("3D graphics context init.");
+    CORE_CPU_PERF_SCOPE("CORE3D", "GraphicsContext::Init", "", CORE3D_PROFILER_DEFAULT_COLOR);
+
     if (initialized_) {
         return;
     }
     auto& engine = context_.GetEngine();
 
-    meshUtil_ = make_unique<MeshUtil>(engine);
+    createInfo_ = createInfo;
+    meshUtil_ = make_unique<MeshUtil>(*engine.GetInterface<CORE_NS::IClassFactory>());
     gltf2_ = make_unique<Gltf2>(*this);
     sceneUtil_ = make_unique<SceneUtil>(*this);
     renderUtil_ = make_unique<RenderUtil>(*this);
@@ -318,6 +331,11 @@ void GraphicsContext::Init()
             plugins_.push_back({ token, plugin });
         }
     }
+}
+
+void GraphicsContext::Init()
+{
+    Init({});
 }
 
 IRenderContext& GraphicsContext::GetRenderContext() const
@@ -353,6 +371,11 @@ IGltf2& GraphicsContext::GetGltf() const
 IRenderUtil& GraphicsContext::GetRenderUtil() const
 {
     return *renderUtil_;
+}
+
+ColorSpaceFlags GraphicsContext::GetColorSpaceFlags() const
+{
+    return createInfo_.colorSpaceFlags;
 }
 
 const IInterface* GraphicsContext::GetInterface(const Uid& uid) const
@@ -491,6 +514,8 @@ void UnregisterTypes(IPluginRegister& pluginRegistry);
 namespace {
 PluginToken CreatePlugin3D(IRenderContext& context)
 {
+    CORE_CPU_PERF_SCOPE("CORE3D", "CreatePlugin3D", "", CORE3D_PROFILER_DEFAULT_COLOR);
+
     Agp3DPluginState* token = new Agp3DPluginState { context, {}, {}, {}, {}, {} };
     auto& registry = *context.GetInterface<IClassRegister>();
     for (const auto& info : token->interfaces) {
@@ -499,7 +524,7 @@ PluginToken CreatePlugin3D(IRenderContext& context)
 
     IFileManager& fileManager = context.GetEngine().GetFileManager();
 #if (CORE3D_EMBEDDED_ASSETS_ENABLED == 1)
-    // Create engine:// protocol that points to embedded asset files.
+    // Create rofs3D:// protocol that points to embedded asset files.
     fileManager.RegisterFilesystem("rofs3D", fileManager.CreateROFilesystem(BINARY_DATA_FOR_3D, SIZE_OF_DATA_FOR_3D));
 #endif
     for (uint32_t idx = 0; idx < countof(RENDER_DATA_PATHS); ++idx) {
@@ -511,7 +536,7 @@ PluginToken CreatePlugin3D(IRenderContext& context)
     {
         auto* renderDataConfigurationLoader = CORE_NS::GetInstance<IRenderDataConfigurationLoader>(
             *context.GetInterface<IClassRegister>(), UID_RENDER_DATA_CONFIGURATION_LOADER);
-        auto* dataStore = context.GetRenderDataStoreManager().GetRenderDataStore(POST_PROCESS_DATA_STORE_NAME);
+        auto dataStore = context.GetRenderDataStoreManager().GetRenderDataStore(POST_PROCESS_DATA_STORE_NAME);
         if (renderDataConfigurationLoader && dataStore) {
             auto& fileMgr = context.GetEngine().GetFileManager();
             constexpr string_view ppPath = POST_PROCESS_PATH;
@@ -522,7 +547,7 @@ PluginToken CreatePlugin3D(IRenderContext& context)
                             renderDataConfigurationLoader->LoadPostProcess(fileMgr, ppPath + entry.name);
                         if (loadedPP.loadResult.success) {
                             token->defaultPostProcesses.push_back(loadedPP.name);
-                            auto pod = static_cast<IRenderDataStorePod*>(dataStore);
+                            auto pod = static_cast<IRenderDataStorePod*>(dataStore.get());
                             pod->CreatePod(
                                 POST_PROCESS_NAME, loadedPP.name, arrayviewU8(loadedPP.postProcessConfiguration));
                         }
@@ -544,10 +569,10 @@ void DestroyPlugin3D(PluginToken token)
     {
         auto* renderDataConfigurationLoader = CORE_NS::GetInstance<IRenderDataConfigurationLoader>(
             *state->renderContext.GetInterface<IClassRegister>(), UID_RENDER_DATA_CONFIGURATION_LOADER);
-        auto* dataStore =
+        auto dataStore =
             state->renderContext.GetRenderDataStoreManager().GetRenderDataStore(POST_PROCESS_DATA_STORE_NAME);
         if (renderDataConfigurationLoader && dataStore) {
-            auto pod = static_cast<IRenderDataStorePod*>(dataStore);
+            auto pod = static_cast<IRenderDataStorePod*>(dataStore.get());
             for (const auto& ref : state->defaultPostProcesses) {
                 pod->DestroyPod(POST_PROCESS_NAME, ref);
             }
@@ -595,7 +620,6 @@ PluginToken RegisterInterfaces3D(IPluginRegister& pluginRegistry)
 void UnregisterInterfaces3D(PluginToken token)
 {
     if (!token) {
-        CORE_LOG_E("token is null");
         return;
     }
     IPluginRegister* pluginRegistry = static_cast<IPluginRegister*>(token);

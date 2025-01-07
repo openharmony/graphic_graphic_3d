@@ -34,7 +34,7 @@ RENDER_BEGIN_NAMESPACE()
 namespace GpuResourceUtil {
 void CopyGpuBufferVk(GpuBuffer& buffer, ByteArray& byteArray)
 {
-    GpuBufferVk& vkBuffer = (GpuBufferVk&)buffer;
+    auto& vkBuffer = (GpuBufferVk&)buffer;
     if (const void* resData = vkBuffer.MapMemory(); resData) {
         const GpuBufferDesc& desc = vkBuffer.GetDesc();
         CloneData(byteArray.GetData().data(), byteArray.GetData().size_bytes(), (const uint8_t*)resData, desc.byteSize);
@@ -73,7 +73,7 @@ void DebugImageNameVk(const IDevice& device, const GpuImage& image, const string
     const auto& devicePlat = static_cast<const DevicePlatformDataVk&>(device.GetPlatformData());
     const auto& funcPtrs = (static_cast<const DeviceVk&>(device)).GetDebugFunctionUtilities();
     if (funcPtrs.vkSetDebugUtilsObjectNameEXT) {
-        const GpuImagePlatformDataVk& plat = static_cast<const GpuImagePlatformDataVk&>(image.GetBasePlatformData());
+        const auto& plat = static_cast<const GpuImagePlatformDataVk&>(image.GetBasePlatformData());
         if (plat.image) {
             const VkDebugUtilsObjectNameInfoEXT img { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
                 VK_OBJECT_TYPE_IMAGE, VulkanHandleCast<uint64_t>(plat.image), name.data() };

@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__IO__DEV__FILEMONITOR_H
-#define CORE__IO__DEV__FILEMONITOR_H
+#ifndef CORE_IO_DEV__FILEMONITOR_H
+#define CORE_IO_DEV__FILEMONITOR_H
 
 #include <cstdint>
 
@@ -80,4 +80,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE__IO__DEV__FILEMONITOR_H
+#endif // CORE_IO_DEV__FILEMONITOR_H

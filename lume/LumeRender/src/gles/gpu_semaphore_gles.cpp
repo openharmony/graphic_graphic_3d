@@ -24,6 +24,7 @@
 RENDER_BEGIN_NAMESPACE()
 GpuSemaphoreGles::GpuSemaphoreGles(Device& device) : device_((DeviceGLES&)device)
 {
+    PLUGIN_UNUSED(device_);
     PLUGIN_ASSERT(device_.IsActive());
 }
 
@@ -42,7 +43,7 @@ GpuSemaphoreGles::~GpuSemaphoreGles()
 {
     if (ownsResources_ && plat_.sync) {
         PLUGIN_ASSERT(device_.IsActive());
-        GLsync sync = reinterpret_cast<GLsync>(plat_.sync);
+        auto sync = reinterpret_cast<GLsync>(plat_.sync);
         glDeleteSync(sync);
     }
     plat_.sync = 0;

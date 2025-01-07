@@ -13,12 +13,14 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_STAGING_H
-#define RENDER_RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_STAGING_H
+#ifndef RENDER_DATASTORE_RENDER_DATA_STORE_DEFAULT_STAGING_H
+#define RENDER_DATASTORE_RENDER_DATA_STORE_DEFAULT_STAGING_H
 
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 
+#include <base/containers/refcnt_ptr.h>
 #include <base/containers/vector.h>
 #include <base/util/uid.h>
 #include <render/datastore/intf_render_data_store_default_staging.h>
@@ -53,19 +55,39 @@ RenderDataStoreDefaultStaging implementation.
 class RenderDataStoreDefaultStaging final : public IRenderDataStoreDefaultStaging {
 public:
     RenderDataStoreDefaultStaging(IRenderContext& renderContext, const BASE_NS::string_view name);
-    ~RenderDataStoreDefaultStaging() override;
+    ~RenderDataStoreDefaultStaging() override = default;
 
-    void CommitFrameData() override {};
+    // IRenderDataStore
     void PreRender() override;
     void PostRender() override;
-    void PreRenderBackend() override {};
-    void PostRenderBackend() override {};
+    void PreRenderBackend() override {}
+    void PostRenderBackend() override {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
         return 0;
-    };
+    }
 
+    BASE_NS::string_view GetTypeName() const override
+    {
+        return TYPE_NAME;
+    }
+
+    BASE_NS::string_view GetName() const override
+    {
+        return name_;
+    }
+
+    const BASE_NS::Uid& GetUid() const override
+    {
+        return UID;
+    }
+
+    void Ref() override;
+    void Unref() override;
+    int32_t GetRefCount() override;
+
+    // IRenderDataStoreDefaultStaging
     void CopyDataToBuffer(const BASE_NS::array_view<const uint8_t>& data, const RenderHandleReference& dstHandle,
         const BufferCopy& bufferCopy) override;
     void CopyDataToBufferOnCpu(const BASE_NS::array_view<const uint8_t>& data, const RenderHandleReference& dstHandle,
@@ -112,23 +134,7 @@ public:
     // for plugin / factory interface
     static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultStaging";
 
-    static IRenderDataStore* Create(IRenderContext& renderContext, char const* name);
-    static void Destroy(IRenderDataStore* instance);
-
-    BASE_NS::string_view GetTypeName() const override
-    {
-        return TYPE_NAME;
-    }
-
-    BASE_NS::string_view GetName() const override
-    {
-        return name_;
-    }
-
-    const BASE_NS::Uid& GetUid() const override
-    {
-        return UID;
-    }
+    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(IRenderContext& renderContext, const char* name);
 
 private:
     IGpuResourceManager& gpuResourceMgr_;
@@ -150,6 +156,8 @@ private:
 
     BASE_NS::vector<RenderHandleReference> stagingGpuBuffers_;
     BASE_NS::vector<RenderHandleReference> frameStagingConsumeGpuBuffers_;
+
+    std::atomic_int32_t refcnt_ { 0 };
 };
 RENDER_END_NAMESPACE()
 

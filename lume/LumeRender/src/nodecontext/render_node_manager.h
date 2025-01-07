@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__RENDER_NODE_MANAGER_H
-#define RENDER_RENDER__RENDER_NODE_MANAGER_H
+#ifndef RENDER_NODECONTEXT_RENDER_NODE_MANAGER_H
+#define RENDER_NODECONTEXT_RENDER_NODE_MANAGER_H
 
 #include <base/containers/string.h>
 #include <base/containers/unique_ptr.h>
@@ -39,17 +39,17 @@ public:
     RenderNodeManager(const RenderNodeManager&) = delete;
     RenderNodeManager& operator=(const RenderNodeManager&) = delete;
 
-    IRenderNode* Create(char const* nodeType);
-    void Destroy(char const* nodeType, IRenderNode* aInstance);
+    IRenderNode* Create(const char* nodeType);
+    void Destroy(const char* nodeType, IRenderNode* aInstance);
 
     BASE_NS::unique_ptr<IRenderNode, RENDER_NS::RenderNodeTypeInfo::DestroyRenderNodeFn> CreateRenderNode(
-        char const* nodeType);
+        const char* nodeType);
 
     struct RenderNodeTypeInfoFlags {
         RENDER_NS::RenderNodeTypeInfo::PluginRenderNodeBackendFlags backendFlags { 0 };
         RENDER_NS::RenderNodeTypeInfo::PluginRenderNodeClassType classType { 0 };
     };
-    RenderNodeTypeInfoFlags GetRenderNodeTypeInfoFlags(char const* nodeType);
+    RenderNodeTypeInfoFlags GetRenderNodeTypeInfoFlags(const char* nodeType);
 
     void AddRenderNodeFactory(const RenderNodeTypeInfo& typeInfo);
     void RemoveRenderNodeFactory(const RenderNodeTypeInfo& typeInfo);

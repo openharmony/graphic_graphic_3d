@@ -7,7 +7,8 @@
             "thresholdHard": 1.0,
             "thresholdSoft": 2.0,
             "amountCoefficient": 0.1,
-            "dirtMaskCoefficient": 0.0
+            "dirtMaskCoefficient": 0.0,
+            "scatter": 1.0
         },
         "vignetteConfiguration": {
             "coefficient": 0.5,

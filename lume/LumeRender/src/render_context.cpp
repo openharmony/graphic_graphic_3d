@@ -15,7 +15,6 @@
 
 #include "render_context.h"
 
-#include <base/containers/fixed_string.h>
 #include <base/containers/vector.h>
 #include <core/intf_engine.h>
 #include <core/io/intf_file_manager.h>
@@ -31,6 +30,7 @@
 #include "datastore/render_data_store_manager.h"
 #include "datastore/render_data_store_pod.h"
 #include "datastore/render_data_store_post_process.h"
+#include "datastore/render_data_store_render_post_processes.h"
 #include "datastore/render_data_store_shader_passes.h"
 #include "default_engine_constants.h"
 #include "device/device.h"
@@ -41,6 +41,7 @@
 #include "nodecontext/render_node_graph_node_store.h"
 #include "nodecontext/render_node_manager.h"
 #include "nodecontext/render_node_post_process_util.h"
+#include "perf/cpu_perf_scope.h"
 #include "renderer.h"
 #include "util/render_util.h"
 
@@ -64,7 +65,7 @@ struct RegisterPathStrings {
     string_view protocol;
     string_view uri;
 };
-static constexpr RegisterPathStrings RENDER_DATA_PATHS[] = {
+constexpr RegisterPathStrings RENDER_DATA_PATHS[] = {
     { "rendershaders", "rofsRndr://shaders/" },
     { "rendershaderstates", "rofsRndr://shaderstates/" },
     { "rendervertexinputdeclarations", "rofsRndr://vertexinputdeclarations/" },
@@ -79,7 +80,6 @@ extern "C" const uint64_t SIZEOFDATAFORRENDER;
 extern "C" const void* const BINARYDATAFORRENDER[];
 #endif
 
-// This is defined in the CMake generated version.cpp
 void LogRenderBuildInfo()
 {
 #define RENDER_TO_STRING_INTERNAL(x) #x
@@ -87,6 +87,7 @@ void LogRenderBuildInfo()
 
     PLUGIN_LOG_I("RENDER_VALIDATION_ENABLED=" RENDER_TO_STRING(RENDER_VALIDATION_ENABLED));
     PLUGIN_LOG_I("RENDER_DEV_ENABLED=" RENDER_TO_STRING(RENDER_DEV_ENABLED));
+    PLUGIN_LOG_I("RENDER_PERF_ENABLED=" RENDER_TO_STRING(RENDER_PERF_ENABLED));
 }
 
 template<class RenderDataStoreType>
@@ -97,7 +98,6 @@ RenderDataStoreTypeInfo FillRenderDataStoreTypeInfo()
         RenderDataStoreType::UID,
         RenderDataStoreType::TYPE_NAME,
         RenderDataStoreType::Create,
-        RenderDataStoreType::Destroy,
     };
 }
 
@@ -111,24 +111,27 @@ void RegisterCoreRenderDataStores(RenderDataStoreManager& renderDataStoreManager
         FillRenderDataStoreTypeInfo<RenderDataStoreDefaultGpuResourceDataCopy>());
     renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStoreShaderPasses>());
     renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStorePostProcess>());
+    renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStoreRenderPostProcesses>());
 }
 
 template<typename DataStoreType>
-IRenderDataStore* CreateDataStore(IRenderDataStoreManager& renderDataStoreManager, const string_view name)
+refcnt_ptr<IRenderDataStore> CreateDataStore(IRenderDataStoreManager& renderDataStoreManager, const string_view name)
 {
-    IRenderDataStore* renderDataStore = renderDataStoreManager.Create(DataStoreType::UID, name.data());
+    refcnt_ptr<IRenderDataStore> renderDataStore = renderDataStoreManager.Create(DataStoreType::UID, name.data());
     PLUGIN_ASSERT(renderDataStore);
     return renderDataStore;
 }
 
-void CreateDefaultRenderDataStores(IRenderDataStoreManager& renderDataStoreManager, RenderDataLoader& renderDataLoader)
+vector<refcnt_ptr<IRenderDataStore>> CreateDefaultRenderDataStores(
+    IRenderDataStoreManager& renderDataStoreManager, RenderDataLoader& renderDataLoader)
 {
+    vector<refcnt_ptr<IRenderDataStore>> dataStores;
     // add pod store
     {
-        auto renderDataStorePod =
-            CreateDataStore<RenderDataStorePod>(renderDataStoreManager, RenderDataStorePod::TYPE_NAME);
+        auto& renderDataStorePod = dataStores.emplace_back(
+            CreateDataStore<RenderDataStorePod>(renderDataStoreManager, RenderDataStorePod::TYPE_NAME));
         if (renderDataStorePod) {
-            IRenderDataStorePod* renderDataStorePodTyped = static_cast<IRenderDataStorePod*>(renderDataStorePod);
+            auto* renderDataStorePodTyped = static_cast<IRenderDataStorePod*>(renderDataStorePod.get());
 
             NodeGraphBackBufferConfiguration backBufferConfig {};
             const auto len =
@@ -143,13 +146,17 @@ void CreateDefaultRenderDataStores(IRenderDataStoreManager& renderDataStoreManag
         }
     }
 
-    CreateDataStore<RenderDataStoreDefaultAccelerationStructureStaging>(
-        renderDataStoreManager, RenderDataStoreDefaultAccelerationStructureStaging::TYPE_NAME);
-    CreateDataStore<RenderDataStoreDefaultStaging>(renderDataStoreManager, RenderDataStoreDefaultStaging::TYPE_NAME);
-    CreateDataStore<RenderDataStoreDefaultGpuResourceDataCopy>(
-        renderDataStoreManager, RenderDataStoreDefaultGpuResourceDataCopy::TYPE_NAME);
-    CreateDataStore<RenderDataStoreShaderPasses>(renderDataStoreManager, RenderDataStoreShaderPasses::TYPE_NAME);
-    CreateDataStore<RenderDataStorePostProcess>(renderDataStoreManager, RenderDataStorePostProcess::TYPE_NAME);
+    dataStores.push_back(CreateDataStore<RenderDataStoreDefaultAccelerationStructureStaging>(
+        renderDataStoreManager, RenderDataStoreDefaultAccelerationStructureStaging::TYPE_NAME));
+    dataStores.push_back(CreateDataStore<RenderDataStoreDefaultStaging>(
+        renderDataStoreManager, RenderDataStoreDefaultStaging::TYPE_NAME));
+    dataStores.push_back(CreateDataStore<RenderDataStoreDefaultGpuResourceDataCopy>(
+        renderDataStoreManager, RenderDataStoreDefaultGpuResourceDataCopy::TYPE_NAME));
+    dataStores.push_back(
+        CreateDataStore<RenderDataStoreShaderPasses>(renderDataStoreManager, RenderDataStoreShaderPasses::TYPE_NAME));
+    dataStores.push_back(
+        CreateDataStore<RenderDataStorePostProcess>(renderDataStoreManager, RenderDataStorePostProcess::TYPE_NAME));
+    return dataStores;
 }
 
 void CreateDefaultBuffers(IGpuResourceManager& gpuResourceMgr, vector<RenderHandleReference>& defaultGpuResources)
@@ -159,13 +166,15 @@ void CreateDefaultBuffers(IGpuResourceManager& gpuResourceMgr, vector<RenderHand
                             CORE_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | CORE_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
                             CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT | CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                             CORE_BUFFER_USAGE_INDEX_BUFFER_BIT | CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                            CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT | CORE_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT |
-                            CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT,
+                            CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
             (CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT), 0u, 1024u }));
 }
 
 void CreateDefaultTextures(IGpuResourceManager& gpuResourceMgr, vector<RenderHandleReference>& defaultGpuResources)
 {
+    // NOTE: render context color space settings do not affect these
+    // Pure black and white are used
+
     GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
         Format::BASE_FORMAT_R8G8B8A8_UNORM, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
         ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -209,7 +218,7 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, vector<RenderHand
             SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
             {},
         };
-        GpuResourceManager& gpuResourceMgrImpl = static_cast<GpuResourceManager&>(gpuResourceMgr);
+        auto& gpuResourceMgrImpl = static_cast<GpuResourceManager&>(gpuResourceMgr);
         // create as a swapchain image to get correct handle flags for fast check-up for additional processing
         defaultGpuResources.push_back(gpuResourceMgrImpl.CreateSwapchainImage(
             {}, DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER, desc));
@@ -333,7 +342,7 @@ IRenderContext* RenderPluginState::CreateInstance(IEngine& engine)
     return context_.get();
 }
 
-IRenderContext* RenderPluginState::GetInstance()
+IRenderContext* RenderPluginState::GetInstance() const
 {
     return context_.get();
 }
@@ -356,8 +365,8 @@ RenderContext::RenderContext(RenderPluginState& pluginState, IEngine& engine)
 RenderContext::~RenderContext()
 {
     GetPluginRegister().RemoveListener(*this);
-
     if (device_) {
+        device_->Activate();
         device_->WaitForIdle();
     }
 
@@ -367,17 +376,8 @@ RenderContext::~RenderContext()
         }
     }
 
-    // NOTE: device needs to be active for render resources (e.g. with GLES)
-    if (device_) {
-        device_->Activate();
+    WritePipelineCacheInternal(false);
 
-        if (device_->GetDeviceConfiguration().configurationFlags & CORE_DEVICE_CONFIGURATION_PIPELINE_CACHE_BIT) {
-            vector<uint8_t> pipelineCache = device_->GetPipelineCache();
-            if (auto file = fileManager_->CreateFile(GetPipelineCacheUri(device_->GetBackendType())); file) {
-                file->Write(pipelineCache.data(), pipelineCache.size());
-            }
-        }
-    }
     defaultGpuResources_.clear();
     renderer_.reset();
     renderNodeGraphMgr_.reset();
@@ -391,11 +391,12 @@ RenderContext::~RenderContext()
 RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
 {
     PLUGIN_LOG_D("Render init.");
+    RENDER_CPU_PERF_SCOPE("RenderContext::Init", "");
 
     createInfo_ = createInfo;
     device_ = CreateDevice(createInfo_.deviceCreateInfo);
-    if (!device_) {
-        PLUGIN_LOG_E("device not created successfully, invalid render interface");
+    if ((!device_) || (!device_->GetDeviceStatus())) {
+        PLUGIN_LOG_E("Device not created successfully, invalid render interface.");
         return RenderResultCode::RENDER_ERROR;
     } else {
         device_->Activate();
@@ -411,7 +412,7 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
         }
 
         // set engine file manager with registered paths
-        ShaderManager& shaderMgr = (ShaderManager&)device_->GetShaderManager();
+        auto& shaderMgr = (ShaderManager&)device_->GetShaderManager();
         shaderMgr.SetFileManager(engine_.GetFileManager());
 
         {
@@ -433,7 +434,7 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
         }
 
         auto loader = RenderDataLoader(*fileManager_);
-        CreateDefaultRenderDataStores(*renderDataStoreMgr_, loader);
+        defaultRenderDataStores_ = CreateDefaultRenderDataStores(*renderDataStoreMgr_, loader);
 
         renderNodeGraphMgr_ = make_unique<RenderNodeGraphManager>(*device_, *fileManager_);
 
@@ -514,12 +515,12 @@ void RenderContext::RegisterDefaultPaths()
 {
     // Already handeled during plugin registration. If own filemanager instance is used then these are needed.
 #if (RENDER_EMBEDDED_ASSETS_ENABLED == 1)
-    // Create engine:// protocol that points to embedded engine asset files.
-    PLUGIN_LOG_D("Registered core asset path: 'rofsRndr://render/'");
+    // Create render:// protocol that points to embedded asset files.
+    PLUGIN_LOG_D("Registered render asset path: 'rofsRndr://render/'");
     fileManager_->RegisterPath("render", "rofsRndr://render/", false);
 #endif
-    for (uint32_t idx = 0; idx < countof(RENDER_DATA_PATHS); ++idx) {
-        fileManager_->RegisterPath(RENDER_DATA_PATHS[idx].protocol, RENDER_DATA_PATHS[idx].uri, false);
+    for (const auto& idx : RENDER_DATA_PATHS) {
+        fileManager_->RegisterPath(idx.protocol, idx.uri, false);
     }
 }
 
@@ -555,9 +556,39 @@ IEngine& RenderContext::GetEngine() const
     return engine_;
 }
 
+BASE_NS::ColorSpaceFlags RenderContext::GetColorSpaceFlags() const
+{
+    return createInfo_.colorSpaceFlags;
+}
+
 string_view RenderContext::GetVersion()
 {
     return {};
+}
+
+void RenderContext::WritePipelineCache() const
+{
+    // NOTE: device needs to be active for render resources (e.g. with GLES)
+    WritePipelineCacheInternal(true);
+}
+
+void RenderContext::WritePipelineCacheInternal(bool activate) const
+{
+    // NOTE: device needs to be active for render resources (e.g. with GLES)
+    if (device_ &&
+        (device_->GetDeviceConfiguration().configurationFlags & CORE_DEVICE_CONFIGURATION_PIPELINE_CACHE_BIT) &&
+        (fileManager_->GetEntry("cache://").type == CORE_NS::IDirectory::Entry::Type::DIRECTORY)) {
+        if (activate) {
+            device_->Activate();
+        }
+        vector<uint8_t> pipelineCache = device_->GetPipelineCache();
+        if (auto file = fileManager_->CreateFile(GetPipelineCacheUri(device_->GetBackendType())); file) {
+            file->Write(pipelineCache.data(), pipelineCache.size());
+        }
+        if (activate) {
+            device_->Deactivate();
+        }
+    }
 }
 
 RenderCreateInfo RenderContext::GetCreateInfo() const

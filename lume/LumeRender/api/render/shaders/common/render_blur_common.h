@@ -243,9 +243,9 @@ vec3 SoftDownscaleRGB(
 #if (CORE_BLUR_SOFT_HEAVY_SAMPLES == 1)
 
     // first, 9 samples (calculate coefficients)
-    const float diagCoeff = (1.0f / 32.0f);
-    const float stepCoeff = (2.0f / 32.0f);
-    const float centerCoeff = (4.0f / 32.0f);
+    const float diagCoeff = (1.0f / 32.0f); // 32.0 : param
+    const float stepCoeff = (2.0f / 32.0f); // 2.0, 32.0 : param
+    const float centerCoeff = (4.0f / 32.0f); // 4.0, 32.0 : param
 
     const vec2 ts = invTexSize;
 
@@ -262,7 +262,7 @@ vec3 SoftDownscaleRGB(
     color += textureLod(sampler2D(tex, sampl), vec2(uv.x + ts.x, uv.y + ts.y), 0).xyz * diagCoeff;
 
     // then center square
-    const vec2 ths = ts * 0.5;
+    const vec2 ths = ts * 0.5; // 0.5 half
 
     color += textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y - ths.y), 0).xyz * centerCoeff;
     color += textureLod(sampler2D(tex, sampl), vec2(uv.x + ths.x, uv.y - ths.y), 0).xyz * centerCoeff;
@@ -271,16 +271,15 @@ vec3 SoftDownscaleRGB(
 
 #else
 
-    const vec2 ths = invTexSize * 0.5;
+    const vec2 ths = invTexSize * 0.5; // 0.5 : half
 
     // center
-    vec3 color = textureLod(sampler2D(tex, sampl), uv + ths, 0).xyz * 0.5;
+    vec3 color = textureLod(sampler2D(tex, sampl), uv + ths, 0).xyz * 0.5; // 0.5 : half
     // corners
-    // 1.0 / 8.0 = 0.125
-    color = textureLod(sampler2D(tex, sampl), uv - ths, 0).xyz * 0.125 + color;
-    color = textureLod(sampler2D(tex, sampl), vec2(uv.x + ths.x, uv.y - ths.y), 0).xyz * 0.125 + color;
-    color = textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y + ths.y), 0).xyz * 0.125 + color;
-    color = textureLod(sampler2D(tex, sampl), uv + ths, 0).xyz * 0.125 + color;
+    color = textureLod(sampler2D(tex, sampl), uv - ths, 0).xyz * 0.125 + color; // 0.125 : param
+    color = textureLod(sampler2D(tex, sampl), vec2(uv.x + ths.x, uv.y - ths.y), 0).xyz * 0.125 + color; // 0.125:param
+    color = textureLod(sampler2D(tex, sampl), vec2(uv.x - ths.x, uv.y + ths.y), 0).xyz * 0.125 + color; // 0.125:param
+    color = textureLod(sampler2D(tex, sampl), uv + ths, 0).xyz * 0.125 + color; // 0.125:pram
 
 #endif
 
@@ -296,13 +295,13 @@ vec4 DownscaleRGBA(
 vec4 DownscaleRGBADof(
     texture2D tex, sampler sampl, const vec2 fragCoord, const vec2 uv, const vec2 dir, const vec2 invTexSize)
 {
-    const vec2 ths = invTexSize * 0.5; // 0.5: half
+    const vec2 ths = invTexSize * 0.5; // 0.5 : half
 
     vec4 color = vec4(0);
 
     // 1.0 / 8.0 = 0.125
-    float weights[5] = { 0.5, 0.125, 0.125, 0.125, 0.125 }; // 0.5: weight, 0.125: weight
-    vec4 samples[5] = {
+    float weights[5] = { 0.5, 0.125, 0.125, 0.125, 0.125 }; // 5 :size 0.125 : param
+    vec4 samples[5] = { // 5 : size
         // center
         textureLod(sampler2D(tex, sampl), uv, 0),
         // corners
@@ -312,11 +311,11 @@ vec4 DownscaleRGBADof(
         textureLod(sampler2D(tex, sampl), uv + ths, 0),
     };
     float weight = 0.0;
-    for (int i = 0; i < 5; ++i) { // 5: size
+    for (int i = 0; i < 5; ++i) { // 5 : size
         weight += samples[i].a;
     }
     if (weight > 0.0) {
-        for (int i = 0; i < 5; ++i) { // 5:size
+        for (int i = 0; i < 5; ++i) { // 5 : size
             color += samples[i] * weights[i];
         }
     } else {
@@ -329,28 +328,28 @@ vec4 DownscaleRGBADof(
 vec4 BlurRGBADof(
     texture2D tex, sampler sampl, const vec2 fragCoord, const vec2 uv, const vec2 dir, const vec2 invTexSize)
 {
-    const vec2 ths = invTexSize * 0.5; // 0.5:half
+    const vec2 ths = invTexSize * 0.5; // 0.5 : half
 
     CORE_RELAXEDP vec4 color = vec4(0);
 
-    CORE_RELAXEDP vec4 samples[1 + 2 * CORE_BLUR_FILTER_SIZE]; // 2: idx
+    CORE_RELAXEDP vec4 samples[1 + 2 * CORE_BLUR_FILTER_SIZE]; // 2 ：param
     samples[0] = textureLod(sampler2D(tex, sampl), uv, 0);
     float weight = samples[0].a;
     for (int idx = 1; idx < CORE_BLUR_FILTER_SIZE; ++idx) {
         vec2 currOffset = vec2(CORE_BLUR_OFFSETS[idx]) * dir.xy;
 
-        samples[idx * 2 - 1] = textureLod(sampler2D(tex, sampl), // 2 : idx
-            (vec2(fragCoord) + currOffset) * invTexSize, 0); // 2: index
-        weight += samples[idx * 2 - 1].a; // 2: size
-        samples[idx * 2] = textureLod(sampler2D(tex, sampl), (vec2(fragCoord) - currOffset) * invTexSize, 0); // 2:idx
-        weight += samples[idx * 2].a; // 2: size
+        samples[idx * 2 - 1] = // 2 : index
+	    textureLod(sampler2D(tex, sampl), (vec2(fragCoord) + currOffset) * invTexSize, 0);
+        weight += samples[idx * 2 - 1].a; // 2 : index
+        samples[idx * 2] = textureLod(sampler2D(tex, sampl), (vec2(fragCoord) - currOffset) * invTexSize, 0); // 2: idx
+        weight += samples[idx * 2].a; // 2 : idx
     }
     if (weight > 0.0) {
         weight = 1.0 / weight;
         color = samples[0] * CORE_BLUR_WEIGHTS[0] * weight;
         for (int idx = 1; idx < CORE_BLUR_FILTER_SIZE; ++idx) {
-            color += samples[idx * 2 - 1] * CORE_BLUR_WEIGHTS[idx] * weight; // 2: idx
-            color += samples[idx * 2] * CORE_BLUR_WEIGHTS[idx] * weight; // 2 : idex
+            color += samples[idx * 2 - 1] * CORE_BLUR_WEIGHTS[idx] * weight; // 2 : idx
+            color += samples[idx * 2] * CORE_BLUR_WEIGHTS[idx] * weight; // 2 : idx
         }
     } else {
         color = samples[0];
@@ -365,9 +364,9 @@ vec3 SoftDownscaleRGBLayer(
 #if (CORE_BLUR_SOFT_HEAVY_SAMPLES == 1)
 
     // first, 9 samples (calculate coefficients)
-    const float diagCoeff = (1.0f / 32.0f); // 32.0: param
-    const float stepCoeff = (2.0f / 32.0f); // 2.0: param, 32.0: param
-    const float centerCoeff = (4.0f / 32.0f); //4.0: param, 32.0: param
+    const float diagCoeff = (1.0f / 32.0f); // 32.0 : param
+    const float stepCoeff = (2.0f / 32.0f); // 2.0 , 32.0 : param
+    const float centerCoeff = (4.0f / 32.0f); // 4.0, 32.0 : param
 
     const vec2 ts = invTexSize;
 
@@ -384,7 +383,7 @@ vec3 SoftDownscaleRGBLayer(
     color += textureLod(sampler2DArray(tex, sampl), vec3(uv.x + ts.x, uv.y + ts.y, dirLayer.z), 0).xyz * diagCoeff;
 
     // then center square
-    const vec2 ths = ts * 0.5;
+    const vec2 ths = ts * 0.5; // half
 
     color += textureLod(sampler2DArray(tex, sampl), vec3(uv.x - ths.x, uv.y - ths.y, dirLayer.z), 0).xyz * centerCoeff;
     color += textureLod(sampler2DArray(tex, sampl), vec3(uv.x + ths.x, uv.y - ths.y, dirLayer.z), 0).xyz * centerCoeff;
@@ -393,16 +392,17 @@ vec3 SoftDownscaleRGBLayer(
 
 #else
 
-    const vec2 ths = invTexSize * 0.5;
+    const vec2 ths = invTexSize * 0.5; // 0.5 : half
 
     // center
-    vec3 color = textureLod(sampler2DArray(tex, sampl), vec3(uv + ths, dirLayer.z), 0).xyz * 0.5;
+    vec3 color = textureLod(sampler2DArray(tex, sampl), vec3(uv + ths, dirLayer.z), 0).xyz * 0.5; // 0.5 : half
     // corners
-    // 1.0 / 8.0 = 0.125
-    color = textureLod(sampler2DArray(tex, sampl), vec3(uv - ths, dirLayer.z), 0).xyz * 0.125 + color;
-    color = textureLod(sampler2DArray(tex, sampl), vec3(uv.x + ths.x, uv.y - ths.y, dirLayer.z), 0).xyz * 0.125 + color;
-    color = textureLod(sampler2DArray(tex, sampl), vec3(uv.x - ths.x, uv.y + ths.y, dirLayer.z), 0).xyz * 0.125 + color;
-    color = textureLod(sampler2DArray(tex, sampl), vec3(uv + ths, dirLayer.z), 0).xyz * 0.125 + color;
+    color = textureLod(sampler2DArray(tex, sampl), vec3(uv - ths, dirLayer.z), 0).xyz * 0.125 + color; // 0.125 : param
+    color = textureLod(sampler2DArray(tex, sampl), vec3(uv.x + ths.x, uv.y - ths.y, dirLayer.z), 0).xyz *
+        0.125 + color; // 0.125 : param
+    color = textureLod(sampler2DArray(tex, sampl), vec3(uv.x - ths.x, uv.y + ths.y, dirLayer.z), 0).xyz *
+        0.125 + color; // 0.125 : param
+    color = textureLod(sampler2DArray(tex, sampl), vec3(uv + ths, dirLayer.z), 0).xyz * 0.125 + color; // 0.125 : param
 
 #endif
 

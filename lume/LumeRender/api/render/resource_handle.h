@@ -36,7 +36,10 @@ struct RenderHandle {
 };
 /** @} */
 
-/** Render handle equals comparison */
+/** Render handle equals comparison
+ * NOTE: This is explicit id comparison and thus
+ * if the handle is replaced the generation counter is changed and this returns false.
+ */
 inline bool operator==(const RenderHandle& lhs, const RenderHandle& rhs) noexcept
 {
     return (lhs.id == rhs.id);
@@ -90,11 +93,23 @@ enum class RenderHandleType : uint8_t {
 namespace RenderHandleUtil {
 /** Render handle type mask */
 constexpr const uint64_t RENDER_HANDLE_TYPE_MASK { 0xf };
+/** Render handle generation mask */
+constexpr const uint64_t RENDER_HANDLE_GENERATION_MASK { 0xFF000000 };
+/** Render handle mask which shows that the handle needs always descriptor set update
+ * This might be related to backend updating the underlaying resource etc.
+ */
+constexpr const uint64_t RENDER_HANDLE_NEEDS_UPDATE_MASK { 0x0000034000000000 };
 
 /** Checks validity of a handle */
 inline constexpr bool IsValid(const RenderHandle handle)
 {
     return (handle.id != INVALID_RESOURCE_HANDLE);
+}
+
+/** Ignores generation counter and compares handles */
+inline constexpr bool IsTheSameWithoutGeneration(const RenderHandle lhs, const RenderHandle rhs)
+{
+    return (lhs.id & (~RENDER_HANDLE_GENERATION_MASK)) == (rhs.id & (~RENDER_HANDLE_GENERATION_MASK));
 }
 
 /** Returns handle type */
@@ -175,6 +190,11 @@ public:
      */
     inline int32_t GetRefCount() const noexcept;
 
+    /** Get render reference counter object.
+     * @return Get reference reference counter object ref count pointer.
+     */
+    inline IRenderReferenceCounter::Ptr GetCounter() const noexcept;
+
 private:
     RenderHandle handle_ {};
     IRenderReferenceCounter::Ptr counter_;
@@ -233,6 +253,11 @@ int32_t RenderHandleReference::GetRefCount() const noexcept
     } else {
         return 0u;
     }
+}
+
+IRenderReferenceCounter::Ptr RenderHandleReference::GetCounter() const noexcept
+{
+    return counter_;
 }
 RENDER_END_NAMESPACE()
 

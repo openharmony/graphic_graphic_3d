@@ -13,9 +13,10 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_NODE_IMPL_H
-#define OHOS_RENDER_3D_NODE_IMPL_H
+#ifndef NODE_IMPL_H
+#define NODE_IMPL_H
 #include <meta/interface/intf_object.h>
+#include <scene/interface/intf_node.h>
 
 #include "QuatProxy.h"
 #include "SceneResourceImpl.h"
@@ -23,7 +24,7 @@
 class NodeImpl : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 2;
-    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4 };
+    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, TEXT = 5 };
 
     static void RegisterEnums(NapiApi::Object exports);
 
@@ -34,6 +35,9 @@ protected:
 
     void* GetInstanceImpl(uint32_t id);
     napi_value GetNodeType(NapiApi::FunctionContext<>& fc);
+
+    napi_value GetNodeName(NapiApi::FunctionContext<>& fc);
+    void SetNodeName(NapiApi::FunctionContext<BASE_NS::string>& fc);
 
     napi_value GetPosition(NapiApi::FunctionContext<>& fc);
     void SetPosition(NapiApi::FunctionContext<NapiApi::Object>& fc);
@@ -48,6 +52,7 @@ protected:
     napi_value GetParent(NapiApi::FunctionContext<>& ctx);
 
     napi_value GetNodeByPath(NapiApi::FunctionContext<BASE_NS::string>& ctx);
+    napi_value GetComponent(NapiApi::FunctionContext<BASE_NS::string>& ctx);
 
     napi_value GetChildContainer(NapiApi::FunctionContext<>& fc); // returns a container object.
 
@@ -68,7 +73,6 @@ protected:
     napi_value InsertChildAfter(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
     napi_value AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-    void ResetNativeObj(NapiApi::FunctionContext<>& ctx, NapiApi::Object& obj);
 
 private:
     NodeType type_;
@@ -76,4 +80,4 @@ private:
     BASE_NS::unique_ptr<Vec3Proxy> sclProxy_ { nullptr };
     BASE_NS::unique_ptr<QuatProxy> rotProxy_ { nullptr };
 };
-#endif // OHOS_RENDER_3D_NODE_IMPL_H
+#endif

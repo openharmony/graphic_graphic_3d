@@ -15,16 +15,22 @@
 
 #ifndef CORE_OS_OHOS_PLATFORM_OHOS_H
 #define CORE_OS_OHOS_PLATFORM_OHOS_H
-
+#include <memory>
 #include <platform/ohos/core/os/intf_platform.h>
 
 #include <base/containers/string.h>
 #include <core/namespace.h>
 
+namespace OHOS::Global::Resource {
+class ResourceManager;
+}
+
 CORE_BEGIN_NAMESPACE()
 struct PlatformData {
     /** Core root path */
     BASE_NS::string coreRootPath = "./";
+    /** Core plugin path */
+    BASE_NS::string corePluginPath = "./";
     /** Application root path */
     BASE_NS::string appRootPath = "./";
     /** Application plugin path */
@@ -34,6 +40,7 @@ struct PlatformData {
     BASE_NS::string hapPath = "./";
     BASE_NS::string bundleName = "./";
     BASE_NS::string moduleName = "./";
+    std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager = nullptr;
 };
 
 /** Interface for platform-specific functions. */
@@ -43,7 +50,7 @@ public:
     ~PlatformOHOS() override;
 
     const PlatformData& GetPlatformData() const override;
-    BASE_NS::string RegisterDefaultPaths(IFileManager& fileManage) override;
+    BASE_NS::string RegisterDefaultPaths(IFileManager& fileManage) const override;
     void RegisterPluginLocations(IPluginRegister& registry) override;
 
 private:

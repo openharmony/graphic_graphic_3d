@@ -19,7 +19,6 @@
 #include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
 #include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
-#include <render/render_data_structures.h>
 #include <render/resource_handle.h>
 
 RENDER_BEGIN_NAMESPACE()

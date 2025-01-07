@@ -35,6 +35,7 @@
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/intf_performance_data_manager.h>
+#include <core/perf/intf_performance_trace.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::make_unique;
@@ -122,14 +123,16 @@ vector<IPerformanceDataManager::PerformanceData> GetTimingData(const Performance
 
 PerformanceDataManager::~PerformanceDataManager() = default;
 
-PerformanceDataManager::PerformanceDataManager(const string_view category) : category_(category) {}
+PerformanceDataManager::PerformanceDataManager(const string_view category, PerformanceDataManagerFactory& factory)
+    : category_(category), factory_(factory)
+{}
 
 string_view PerformanceDataManager::GetCategory() const
 {
     return category_;
 }
 
-using Clock = std::chrono::system_clock;
+using Clock = std::chrono::steady_clock;
 
 IPerformanceDataManager::TimerHandle PerformanceDataManager::BeginTimer()
 {
@@ -221,6 +224,33 @@ void PerformanceDataManager::Ref() {}
 
 void PerformanceDataManager::Unref() {}
 
+PerformanceDataManagerFactory::PerformanceDataManagerFactory(IPluginRegister& registry) {}
+
+void PerformanceDataManagerFactory::SetPerformanceTrace(
+    [[maybe_unused]] const Uid& uid,
+    [[maybe_unused]] IPerformanceTrace::Ptr&& trace)
+{
+#if (CORE_PERF_ENABLED == 1)
+    perfTraces_.push_back({ uid, BASE_NS::move(trace) });
+#endif
+}
+
+void PerformanceDataManagerFactory::RemovePerformanceTrace([[maybe_unused]] const BASE_NS::Uid& uid)
+{
+#if (CORE_PERF_ENABLED == 1)
+    perfTraces_.erase(std::remove_if(perfTraces_.begin(), perfTraces_.end(),
+        [uid](const RegisteredPerformanceTrace& info) { return info.uid == uid; }),
+        perfTraces_.cend());
+#endif
+}
+
+IPerformanceTrace* PerformanceDataManagerFactory::GetFirstPerformanceTrace() const
+{
+    return perfTraces_.size() > 0 ? perfTraces_.at(0).instance.get() : nullptr;
+}
+
+PerformanceDataManagerFactory::~PerformanceDataManagerFactory() = default;
+
 IPerformanceDataManager* PerformanceDataManagerFactory::Get([[maybe_unused]] const string_view category)
 {
 #if (CORE_PERF_ENABLED == 1)
@@ -228,7 +258,7 @@ IPerformanceDataManager* PerformanceDataManagerFactory::Get([[maybe_unused]] con
     if (auto pos = managers_.find(category); pos != managers_.end()) {
         return pos->second.get();
     }
-    auto inserted = managers_.insert({ category, make_unique<PerformanceDataManager>(category) });
+    auto inserted = managers_.insert({ category, make_unique<PerformanceDataManager>(category, *this) });
     return inserted.first->second.get();
 #else
     return {};
@@ -270,4 +300,23 @@ IInterface* PerformanceDataManagerFactory::GetInterface(const Uid& uid)
 void PerformanceDataManagerFactory::Ref() {}
 
 void PerformanceDataManagerFactory::Unref() {}
+
+ILogger::IOutput::Ptr PerformanceDataManagerFactory::GetLogger()
+{
+    return ILogger::IOutput::Ptr { new PerformanceTraceLogger(this) };
+}
+
+BASE_NS::array_view<const PerformanceDataManagerFactory::RegisteredPerformanceTrace>
+PerformanceDataManagerFactory::GetPerformanceTraces() const
+{
+    return BASE_NS::array_view(perfTraces_.data(), perfTraces_.size());
+}
+
+void PerformanceTraceLogger::Write(
+    ILogger::LogLevel logLevel, BASE_NS::string_view filename, int lineNumber, BASE_NS::string_view message)
+{
+    if (auto trace = factory_->GetFirstPerformanceTrace()) {
+        trace->Message(message.data(), message.size(), 0);
+    }
+}
 CORE_END_NAMESPACE()

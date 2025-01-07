@@ -1,0 +1,178 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("lume_3dtext_api") {
+  include_dirs = [ "api" ]
+  configs = [
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_FONT_PATH}:lume_font_api",
+  ]
+}
+config("lume_3dtext_config") {
+  defines = [
+    "__OHOS_PLATFORM__",
+    "USE_STB_IMAGE=1",
+    "TEXT3D_ENABLE_EXTRUDING=0",
+    "CORE_PLUGIN=1",
+    "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    "CORE_PERF_ENABLED=0",
+    "RENDER_HAS_VULKAN_BACKEND=1",
+    "RENDER_HAS_GLES_BACKEND=1",
+    "RENDER_HAS_GL_BACKEND=0",
+    "RENDER_PERF_ENABLED=0",
+    "RENDER_DEBUG_MARKERS_ENABLED=0",
+    "RENDER_HAS_EXPERIMENTAL=0",
+
+    #"CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    #"CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    #"CORE3D_SHARED_LIBRARY=1",
+    #"CORE3D_VALIDATION_ENABLED=0",
+    #"CORE3D_TESTS_ENABLED=0",
+    #"CORE3D_DEV_ENABLED=${CORE_DEV_ENABLED}",
+    #"CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
+    #"CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
+    #"CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }"
+  ]
+  cflags = [
+    "-Wno-unused-function",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-logical-op-parentheses",
+    "-Wno-unused-local-typedef",
+    "-fvisibility=hidden",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-Wno-ignored-qualifiers",
+  ]
+  cflags_cc = [
+    "-std=c++17",
+    "-Wno-overloaded-virtual",
+    "-Wno-thread-safety-attributes",
+    "-Wno-missing-braces",
+  ]
+}
+
+ohos_source_set("lume_3dtext_src") {
+  configs = [
+    ":lume_3dtext_api",
+    ":lume_3dtext_config",
+
+    #"${LUME_RENDER_PATH}:lume_render_api",
+    #"${LUME_CORE_PATH}:lume_base_api",
+    #"${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+
+    #"${LUME_SERIALIZER_PATH}:ecs_serializer_api",
+    #"${LUME_CORE_PATH}:lume_default"
+  ]
+
+  sources = [
+    "src/ecs/components/text_component_manager.cpp",
+    "src/ecs/systems/text_system.cpp",
+    "src/plugin/plugin.cpp",
+    "version.cpp",
+
+    #"src/ecs/systems/text_system.h",
+  ]
+
+  include_dirs = [
+    #"${LUME_BASE_PATH}/api",
+    #"${LUME_CORE_PATH}/api",
+    #"${LUME_RENDER_PATH}/api",
+    #"${LUME_CORE3D_PATH}/api",
+    #"${LUME_META_PATH}/include"
+    "src",
+  ]
+
+  deps = [
+    #"${LUME_SERIALIZER_PATH}:EcsSerializer",
+    #"${LUME_META_PATH}:libPluginMetaObject",
+    #"${LUME_CORE_PATH}/ecshelper:libAGPEcshelper"
+  ]
+  external_deps = [ "c_utils:utils" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+lume_compile_shader("lume_3dtext_compile_shader") {
+  script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
+  outputs = [ "$target_gen_dir" ]
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/LumeShaderCompiler"
+  dest_gen_path = "$target_gen_dir/assets"
+  asset_path = rebase_path("./assets/text_3d", root_build_dir)
+  shader_path = "${dest_gen_path}/shaders"
+  include_path = rebase_path("api", root_build_dir)
+  render_include_path = "${LUME_PATH}/${RENDER_DIR_NAME}/api/"
+  compileShader_deps =
+      [ "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile" ]
+}
+
+lume_rofs("lume_3dtext_rofs") {
+  base_name = "lume_3dtext"
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${base_name}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${base_name}_64.o"
+  }
+
+  outputs = "${target_gen_dir}/assets/${output_obj}"
+
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/lumeassetcompiler"
+  root = "/"
+  bin_name = "BINARY_DATA_FOR_TEXT3D"
+  size_name = "SIZE_OF_DATA_FOR_TEXT3D"
+  script = "${LUME_CORE_PATH}/tools/CompilerAsset.sh"
+  copy_path = "$target_gen_dir/assets"
+  compileShader_deps = [
+    ":lume_3dtext_compile_shader",
+    "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+  ]
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
+}
+
+source_set("lume_3dtext_rofs_obj") {
+  base_name = "lume_3dtext"
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${base_name}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${base_name}_64.o"
+  }
+
+  sources = [ "${target_gen_dir}/assets/${output_obj}" ]
+  deps = [ ":lume_3dtext_rofs" ]
+}
+
+ohos_shared_library("libPluginAGP3DText") {
+  deps = [
+    ":lume_3dtext_rofs_obj",
+    ":lume_3dtext_src",
+  ]
+  relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

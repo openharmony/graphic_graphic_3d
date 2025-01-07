@@ -28,11 +28,8 @@ using TEXT3D_NS::TextComponent;
 DECLARE_PROPERTY_TYPE(TextComponent::FontMethod);
 
 // Declare their metadata
-BEGIN_ENUM(TextComponentFontMethodMetaData, TextComponent::FontMethod)
-DECL_ENUM(TextComponent::FontMethod, RASTER, "Raster Fonts")
-DECL_ENUM(TextComponent::FontMethod, SDF, "SDF Fonts")
-DECL_ENUM(TextComponent::FontMethod, TEXT3D, "3D Fonts")
-END_ENUM(TextComponentFontMethodMetaData, TextComponent::FontMethod)
+ENUM_TYPE_METADATA(TextComponent::FontMethod, ENUM_VALUE(RASTER, "Raster Fonts"), ENUM_VALUE(SDF, "SDF Fonts"),
+    ENUM_VALUE(TEXT3D, "3D Fonts"))
 CORE_END_NAMESPACE()
 
 TEXT3D_BEGIN_NAMESPACE()

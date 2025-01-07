@@ -101,7 +101,7 @@ void RenderBarrierList::AddBarriersToBarrierPoint(
     const uint32_t barrierPointIndex, const vector<CommandBarrier>& barriers)
 {
     if (!barriers.empty()) {
-        BarrierPointBarrierList* structData = static_cast<BarrierPointBarrierList*>(
+        auto* structData = static_cast<BarrierPointBarrierList*>(
             AllocateBarrierListMemory(linearAllocator_, sizeof(BarrierPointBarrierList)));
         CommandBarrier* commandBarrierData = AllocateCommandBarriers(linearAllocator_, barriers.size());
         if (structData && commandBarrierData) {
@@ -119,7 +119,7 @@ void RenderBarrierList::AddBarriersToBarrierPoint(
                 barrierPointIndextoIndex_[barrierPointIndex] = barrierIndex;
             }
 
-            const uint32_t barrierCount = (uint32_t)barriers.size();
+            const auto barrierCount = (uint32_t)barriers.size();
             BarrierPointBarriers& ref = barrierPointBarriers_[barrierIndex];
             ref.fullCommandBarrierCount += barrierCount;
             ref.barrierListCount += 1u;

@@ -164,6 +164,7 @@ RenderNodeHandles::InputRenderPass RenderNodeUtil::CreateInputRenderPass(
         rp.subpassIndex = renderPass.subpassIndex;
         rp.subpassCount = renderPass.subpassCount;
         rp.subpassContents = renderPass.subpassContents;
+        rp.subpassFlags = renderPass.subpassFlags;
 
         rp.depthAttachmentIndex = renderPass.depthAttachmentIndex;
         rp.depthResolveAttachmentIndex = renderPass.depthResolveAttachmentIndex;
@@ -171,8 +172,8 @@ RenderNodeHandles::InputRenderPass RenderNodeUtil::CreateInputRenderPass(
         rp.colorAttachmentIndices = renderPass.colorAttachmentIndices;
         rp.resolveAttachmentIndices = renderPass.resolveAttachmentIndices;
         rp.fragmentShadingRateAttachmentIndex = renderPass.fragmentShadingRateAttachmentIndex;
-        rp.depthResolveModeFlagBit = renderPass.depthResolveModeFlagBit;
-        rp.stencilResolveModeFlagBit = renderPass.stencilResolveModeFlagBit;
+        rp.depthResolveModeFlags = renderPass.depthResolveModeFlags;
+        rp.stencilResolveModeFlags = renderPass.stencilResolveModeFlags;
         rp.shadingRateTexelSize = renderPass.shadingRateTexelSize;
         rp.viewMask = renderPass.viewMask;
     }
@@ -305,8 +306,8 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
             spDesc.depthResolveAttachmentCount = (renderPass.depthResolveAttachmentIndex != ~0u) ? 1u : 0u;
             spDesc.depthResolveAttachmentIndex =
                 (spDesc.depthResolveAttachmentCount > 0) ? renderPass.depthResolveAttachmentIndex : ~0u;
-            spDesc.depthResolveModeFlagBit = renderPass.depthResolveModeFlagBit;
-            spDesc.stencilResolveModeFlagBit = renderPass.stencilResolveModeFlagBit;
+            spDesc.depthResolveModeFlags = renderPass.depthResolveModeFlags;
+            spDesc.stencilResolveModeFlags = renderPass.stencilResolveModeFlags;
 
             spDesc.fragmentShadingRateAttachmentCount =
                 (renderPass.fragmentShadingRateAttachmentIndex != ~0u) ? 1u : 0u;
@@ -314,6 +315,8 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
                 (spDesc.fragmentShadingRateAttachmentCount > 0) ? renderPass.fragmentShadingRateAttachmentIndex : ~0u;
             spDesc.shadingRateTexelSize = renderPass.shadingRateTexelSize;
             spDesc.viewMask = renderPass.viewMask;
+
+            spDesc.subpassFlags = renderPass.subpassFlags;
 
             for (uint32_t idx = 0; idx < spDesc.inputAttachmentCount; ++idx) {
                 spDesc.inputAttachmentIndices[idx] = renderPass.inputAttachmentIndices[idx];

@@ -15,20 +15,22 @@
 
 #include "threading/task_queue_factory.h"
 
+#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <cstddef>
+#include <deque>
 #include <memory>
-#include <mutex>
-#include <queue>
 #include <thread>
 
 #include <base/containers/array_view.h>
 #include <base/containers/iterator.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
+#include <base/math/mathf.h>
 #include <base/util/uid.h>
 #include <core/log.h>
+#include <core/perf/cpu_perf_scope.h>
 #include <core/threading/intf_thread_pool.h>
 
 #include "threading/dispatcher_impl.h"
@@ -44,6 +46,7 @@ using BASE_NS::array_view;
 using BASE_NS::make_unique;
 using BASE_NS::move;
 using BASE_NS::unique_ptr;
+using BASE_NS::Math::max;
 
 namespace {
 #ifdef PLATFORM_HAS_JAVA
@@ -137,10 +140,13 @@ private:
 class ThreadPool final : public IThreadPool {
 public:
     explicit ThreadPool(size_t threadCount)
-        : threadCount_(threadCount), threads_(make_unique<ThreadContext[]>(threadCount))
+        : threadCount_(max(size_t(1), threadCount)), threads_(make_unique<ThreadContext[]>(threadCount_))
     {
         CORE_ASSERT(threads_);
 
+        if (threadCount == 0U) {
+            CORE_LOG_W("Threadpool minimum thread count is 1");
+        }
         // Create thread containers.
         auto threads = array_view<ThreadContext>(threads_.get(), threadCount_);
         for (ThreadContext& context : threads) {
@@ -154,15 +160,13 @@ public:
     ThreadPool& operator=(const ThreadPool&) = delete;
     ThreadPool& operator=(ThreadPool&&) = delete;
 
-    IResult::Ptr Push(ITask::Ptr function) override
+    IResult::Ptr Push(ITask::Ptr task) override
     {
         auto taskState = std::make_shared<TaskResult::State>();
         if (taskState) {
-            if (function) {
-                {
-                    std::lock_guard lock(mutex_);
-                    q_.Push(Task(move(function), taskState));
-                }
+            if (task) {
+                std::lock_guard lock(mutex_);
+                q_.push_back(std::make_shared<Task>(BASE_NS::move(task), taskState));
                 cv_.notify_one();
             } else {
                 // mark as done if the there was no function.
@@ -172,14 +176,66 @@ public:
         return IResult::Ptr { new TaskResult(BASE_NS::move(taskState)) };
     }
 
-    void PushNoWait(ITask::Ptr function) override
+    IResult::Ptr Push(ITask::Ptr task, BASE_NS::array_view<const ITask* const> dependencies) override
     {
-        if (function) {
+        if (dependencies.empty()) {
+            return Push(BASE_NS::move(task));
+        }
+        auto taskState = std::make_shared<TaskResult::State>();
+        if (taskState) {
+            if (task) {
+                BASE_NS::vector<std::weak_ptr<Task>> deps;
+                deps.reserve(dependencies.size());
+                {
+                    std::lock_guard lock(mutex_);
+                    for (const ITask* dep : dependencies) {
+                        if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
+                            [dep](const std::shared_ptr<Task>& task) { return task && (*task == dep); });
+                            pos != q_.cend()) {
+                            deps.push_back(*pos);
+                        }
+                    }
+                    q_.push_back(std::make_shared<Task>(BASE_NS::move(task), taskState, BASE_NS::move(deps)));
+                    cv_.notify_one();
+                }
+            } else {
+                // mark as done if the there was no function.
+                taskState->Done();
+            }
+        }
+        return IResult::Ptr { new TaskResult(BASE_NS::move(taskState)) };
+    }
+
+    void PushNoWait(ITask::Ptr task) override
+    {
+        if (task) {
+            std::lock_guard lock(mutex_);
+            q_.push_back(std::make_shared<Task>(BASE_NS::move(task)));
+            cv_.notify_one();
+        }
+    }
+
+    void PushNoWait(ITask::Ptr task, BASE_NS::array_view<const ITask* const> dependencies) override
+    {
+        if (dependencies.empty()) {
+            return PushNoWait(BASE_NS::move(task));
+        }
+
+        if (task) {
+            BASE_NS::vector<std::weak_ptr<Task>> deps;
+            deps.reserve(dependencies.size());
             {
                 std::lock_guard lock(mutex_);
-                q_.Push(Task(move(function)));
+                for (const ITask* dep : dependencies) {
+                    if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
+                        [dep](const std::shared_ptr<Task>& task) { return task && (*task == dep); });
+                        pos != q_.cend()) {
+                        deps.push_back(*pos);
+                    }
+                }
+                q_.push_back(std::make_shared<Task>(BASE_NS::move(task), BASE_NS::move(deps)));
+                cv_.notify_one();
             }
-            cv_.notify_one();
         }
     }
 
@@ -221,104 +277,108 @@ public:
 protected:
     ~ThreadPool() final
     {
-        Stop(true);
+        Stop();
     }
 
 private:
+    struct ThreadContext {
+        std::thread thread;
+    };
+
     // Helper which holds a pointer to a queued task function and the result state.
     struct Task {
         ITask::Ptr function_;
         std::shared_ptr<TaskResult::State> state_;
+        BASE_NS::vector<std::weak_ptr<Task>> dependencies_;
+        bool running_ { false };
 
         ~Task() = default;
         Task() = default;
-        explicit Task(ITask::Ptr&& function, std::shared_ptr<TaskResult::State> state)
-            : function_(move(function)), state_(CORE_NS::move(state))
+
+        Task(ITask::Ptr&& function, std::shared_ptr<TaskResult::State> state,
+            BASE_NS::vector<std::weak_ptr<Task>>&& dependencies)
+            : function_(BASE_NS::move(function)),
+              state_(BASE_NS::move(state)), dependencies_ { BASE_NS::move(dependencies) }
         {
             CORE_ASSERT(this->function_ && this->state_);
         }
-        explicit Task(ITask::Ptr&& function) : function_(move(function))
+
+        Task(ITask::Ptr&& function, std::shared_ptr<TaskResult::State> state)
+            : function_(BASE_NS::move(function)), state_(BASE_NS::move(state))
+        {
+            CORE_ASSERT(this->function_ && this->state_);
+        }
+
+        explicit Task(ITask::Ptr&& function) : function_(BASE_NS::move(function))
         {
             CORE_ASSERT(this->function_);
         }
+
+        Task(ITask::Ptr&& function, BASE_NS::vector<std::weak_ptr<Task>>&& dependencies)
+            : function_(BASE_NS::move(function)), dependencies_ { BASE_NS::move(dependencies) }
+        {
+            CORE_ASSERT(this->function_);
+        }
+
         Task(Task&&) = default;
         Task& operator=(Task&&) = default;
         Task(const Task&) = delete;
         Task& operator=(const Task&) = delete;
 
-        void operator()() const
+        inline void operator()() const
         {
             (*function_)();
             if (state_) {
                 state_->Done();
             }
         }
-    };
 
-    template<typename T>
-    class Queue {
-    public:
-        bool Push(T&& value)
+        inline bool operator==(const ITask* task) const
         {
-            q_.push(move(value));
-            return true;
+            return function_.get() == task;
         }
 
-        bool Pop(T& v)
+        // Task can run if it's not already running and there are no dependencies, or all the dependencies are ready.
+        inline bool CanRun() const
         {
-            if (q_.empty()) {
-                v = {};
-                return false;
+            return !running_ && (dependencies_.empty() ||
+                                    std::all_of(std::begin(dependencies_), std::end(dependencies_),
+                                        [](const std::weak_ptr<Task>& dependency) { return dependency.expired(); }));
+        }
+    };
+
+    // Looks for a task that can be executed.
+    std::shared_ptr<Task> FindRunnable()
+    {
+        if (q_.empty()) {
+            return {};
+        }
+        for (auto& task : q_) {
+            if (task && task->CanRun()) {
+                task->running_ = true;
+                return task;
             }
-            v = CORE_NS::move(q_.front());
-            q_.pop();
-            return true;
         }
-
-    private:
-        std::queue<T> q_;
-    };
-
-    struct ThreadContext {
-        std::thread thread;
-        bool exit { false };
-    };
+        return {};
+    }
 
     void Clear()
     {
-        Task f;
         std::lock_guard lock(mutex_);
-        while (q_.Pop(f)) {
-            // Intentionally empty.
-        }
+        q_.clear();
     }
 
     // At the moment Stop is called only from the destructor with waitForAllTasksToComplete=true.
     // If this doesn't change the class can be simplified a bit.
-    void Stop(bool waitForAllTasksToComplete)
+    void Stop()
     {
-        if (isStop_) {
+        // Wait all tasks to complete before returning.
+        if (isDone_) {
             return;
         }
-        if (waitForAllTasksToComplete) {
-            // Wait all tasks to complete before returning.
-            if (isDone_) {
-                return;
-            }
+        {
             std::lock_guard lock(mutex_);
             isDone_ = true;
-        } else {
-            isStop_ = true;
-
-            // Ask all the threads to stop and not process any more tasks.
-            auto threads = array_view(threads_.get(), threadCount_);
-            {
-                auto lock = std::lock_guard(mutex_);
-                for (auto& context : threads) {
-                    context.exit = true;
-                }
-            }
-            Clear();
         }
 
         // Trigger all waiting threads.
@@ -342,39 +402,54 @@ private:
         JavaThreadContext javaContext;
 #endif
 
-        // Get function to process.
-        Task func;
-        bool isPop = [this, &func]() {
-            std::lock_guard lock(mutex_);
-            return q_.Pop(func);
-        }();
-
         while (true) {
-            while (isPop) {
-                // Run task function.
-                func();
+            // Function to process.
+            std::shared_ptr<Task> task;
+            {
+                std::unique_lock lock(mutex_);
 
-                // If the thread is wanted to stop, return even if the queue is not empty yet.
-                std::lock_guard lock(mutex_);
-                if (context.exit) {
-                    return;
-                }
-
-                // Get next function.
-                isPop = q_.Pop(func);
+                // Try to wait for next task to process.
+                cv_.wait(lock, [this, &task]() {
+                    task = FindRunnable();
+                    return task || isDone_;
+                });
+            }
+            // If there was no task it means we are stopping and thread can exit.
+            if (!task) {
+                return;
             }
 
-            // The queue is empty here, wait for the next task.
-            std::unique_lock lock(mutex_);
+            while (task) {
+                // Run task function.
+                {
+                    CORE_CPU_PERF_SCOPE("CORE", "ThreadPoolTask", "", CORE_PROFILER_DEFAULT_COLOR);
+                    (*task)();
+                }
 
-            // Try to wait for next task to process.
-            cv_.wait(lock, [this, &func, &isPop, &context]() {
-                isPop = q_.Pop(func);
-                return isPop || isDone_ || context.exit;
-            });
+                std::lock_guard lock(mutex_);
+                // After running the task remove it from the queue. Any dependent tasks will see their weak_ptr expire
+                // idicating that the dependency has been completed.
+                if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
+                    [&task](const std::shared_ptr<Task>& queuedTask) { return queuedTask == task; });
+                    pos != q_.cend()) {
+                    q_.erase(pos);
+                }
+                task.reset();
 
-            if (!isPop) {
-                return;
+                // Get next function.
+                if (auto pos = std::find_if(std::begin(q_), std::end(q_),
+                    [](const std::shared_ptr<Task>& task) { return (task) && (task->CanRun()); });
+                    pos != std::end(q_)) {
+                    task = *pos;
+                    task->running_ = true;
+                    // Check if there are more runnable tasks and notify workers as needed.
+                    auto runnable = std::min(static_cast<ptrdiff_t>(threadCount_),
+                        std::count_if(pos + 1, std::end(q_),
+                            [](const std::shared_ptr<Task>& task) { return (task) && (task->CanRun()); }));
+                    while (runnable--) {
+                        cv_.notify_one();
+                    }
+                }
             }
         }
     }
@@ -382,9 +457,9 @@ private:
     size_t threadCount_ { 0 };
     unique_ptr<ThreadContext[]> threads_;
 
-    Queue<Task> q_;
+    std::deque<std::shared_ptr<Task>> q_;
+
     bool isDone_ { false };
-    bool isStop_ { false };
 
     std::mutex mutex_;
     std::condition_variable cv_;

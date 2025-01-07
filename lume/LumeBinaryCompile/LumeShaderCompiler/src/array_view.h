@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,7 +33,7 @@ public:
         using pointer = T*;
         using reference = T&;
 
-        Iterator(pointer ptr) : m_ptr(ptr) {}
+        explicit Iterator(pointer ptr) : m_ptr(ptr) {}
 
         reference operator*() const
         {
@@ -86,14 +86,14 @@ public:
     constexpr array_view(pointer aBegin, size_type aSize) noexcept : begin_(aBegin), size_(aSize), end_(aBegin + aSize)
     {}
     template<size_t N>
-    constexpr array_view(value_type (&arr)[N]) noexcept : begin_(arr), size_(N), end_(arr + N)
+    constexpr explicit array_view(value_type (&arr)[N]) noexcept : begin_(arr), size_(N), end_(arr + N)
     {}
     template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, U>::value>>
-    constexpr array_view(const array_view<U>& other) noexcept
+    constexpr explicit array_view(const array_view<U>& other) noexcept
         : begin_(other.begin_), size_(other.size_), end_(other.end_)
     {}
     template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, typename U::value_type>::value>>
-    constexpr array_view(U& container) noexcept : array_view(container.data(), container.size())
+    constexpr explicit array_view(U& container) noexcept : array_view(container.data(), container.size())
     {}
     template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, typename U::value_type>::value>>
     constexpr array_view(const U& container) noexcept : array_view(container.data(), container.size())

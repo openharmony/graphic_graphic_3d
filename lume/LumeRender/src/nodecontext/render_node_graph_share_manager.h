@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__RENDER_NODE_GRAPH_SHARE_MANAGER_H
-#define RENDER_RENDER__RENDER_NODE_GRAPH_SHARE_MANAGER_H
+#ifndef RENDER_NODECONTEXT_RENDER_NODE_GRAPH_SHARE_MANAGER_H
+#define RENDER_NODECONTEXT_RENDER_NODE_GRAPH_SHARE_MANAGER_H
 
 #include <cstdint>
 
@@ -33,7 +33,7 @@ struct RenderNodeGraphOutputResource;
 /**
  * Global storage for specific one frame GPU resources.
  */
-class RenderNodeGraphGlobalShareDataManager {
+class RenderNodeGraphGlobalShareDataManager final {
 public:
     RenderNodeGraphGlobalShareDataManager() = default;
     ~RenderNodeGraphGlobalShareDataManager() = default;

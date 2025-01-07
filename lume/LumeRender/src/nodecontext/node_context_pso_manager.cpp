@@ -39,11 +39,10 @@ uint64_t BASE_NS::hash(const RENDER_NS::ShaderSpecializationConstantDataView& sp
         const size_t minSize = BASE_NS::Math::min(specialization.constants.size(), specialization.data.size());
         for (size_t idx = 0; idx < minSize; ++idx) {
             const auto& currConstant = specialization.constants[idx];
-            uint64_t v = 0;
             const auto constantSize = RENDER_NS::GpuProgramUtil::SpecializationByteSize(currConstant.type);
             if ((currConstant.offset + constantSize) <= specialization.data.size_bytes()) {
-                uint8_t const* data = (uint8_t const*)specialization.data.data() + currConstant.offset;
-                size_t const bytes = sizeof(v) < constantSize ? sizeof(v) : constantSize;
+                const uint8_t* data = (const uint8_t*)specialization.data.data() + currConstant.offset;
+                const size_t bytes = sizeof(uint64_t) < constantSize ? sizeof(uint64_t) : constantSize;
                 HashCombine(seed, array_view(data, bytes));
             }
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -130,49 +129,59 @@ void NodeContextPsoManager::BeginBackendFrame()
         }
     }
 
+    ProcessReloadedShaders();
+}
+
+void NodeContextPsoManager::ProcessReloadedShaders()
+{
+    const uint64_t frameCount = device_.GetFrameCount();
     // check for shader manager reloaded shaders -> re-create psos
-    if (shaderMgr_.HasReloadedShaderForBackend()) {
+    const uint64_t shaderMgrReloadShaderIndex = shaderMgr_.GetLastReloadedShaderFrameIndex();
+    if ((shaderMgrReloadShaderIndex > lastReloadedShadersFrameIndex_) || (lastReloadedShadersFrameIndex_ == 0)) {
         const auto reloadedShaders = shaderMgr_.GetReloadedShadersForBackend();
-        if (!reloadedShaders.empty()) {
-            // find if using reloaded shader handles
-            {
-                auto& gpCache = computePipelineStateCache_;
-                for (size_t idx = 0U; idx < gpCache.psoCreationData.size(); ++idx) {
-                    const auto& ref = gpCache.psoCreationData[idx];
-                    for (const auto& refHandle : reloadedShaders) {
-                        if (ref.shaderHandle.id == refHandle.id) {
-                            // move pso and set as null
-                            gpCache.pendingPsoDestroys.push_back(
-                                { move(gpCache.pipelineStateObjects[idx]), frameCount });
-                            gpCache.pipelineStateObjects[idx] = nullptr;
-                            break;
+        for (const auto& shaderRef : reloadedShaders) {
+            if (shaderRef.frameIndex > lastReloadedShadersFrameIndex_) {
+                // find if using reloaded shader handles
+                {
+                    auto& gpCache = computePipelineStateCache_;
+                    for (size_t idx = 0U; idx < gpCache.psoCreationData.size(); ++idx) {
+                        const auto& ref = gpCache.psoCreationData[idx];
+                        for (const auto& refHandle : shaderRef.shadersForBackend) {
+                            if (ref.shaderHandle.id == refHandle.id) {
+                                // move pso and set as null
+                                gpCache.pendingPsoDestroys.push_back(
+                                    { move(gpCache.pipelineStateObjects[idx]), frameCount });
+                                gpCache.pipelineStateObjects[idx] = nullptr;
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            {
-                auto& gpCache = graphicsPipelineStateCache_;
-                auto& pso = gpCache.pipelineStateObjects;
-                for (auto iter = pso.begin(); iter != pso.end();) {
-                    bool erase = false;
-                    for (const auto& refHandle : reloadedShaders) {
-                        if (iter->second.shaderHandle.id == refHandle.id) {
-                            erase = true;
-                            break;
+                {
+                    auto& gpCache = graphicsPipelineStateCache_;
+                    auto& pso = gpCache.pipelineStateObjects;
+                    for (auto iter = pso.begin(); iter != pso.end();) {
+                        bool erase = false;
+                        for (const auto& refHandle : shaderRef.shadersForBackend) {
+                            if (iter->second.shaderHandle.id == refHandle.id) {
+                                erase = true;
+                                break;
+                            }
                         }
-                    }
-                    if (erase) {
-                        // move pso and erase
-                        graphicsPipelineStateCache_.pendingPsoDestroys.push_back(
-                            { move(iter->second.pso), frameCount });
-                        iter = pso.erase(iter);
-                    } else {
-                        ++iter;
+                        if (erase) {
+                            // move pso and erase
+                            gpCache.pendingPsoDestroys.push_back({ move(iter->second.pso), frameCount });
+                            iter = pso.erase(iter);
+                        } else {
+                            ++iter;
+                        }
                     }
                 }
             }
         }
     }
+    // this frame has been processed
+    lastReloadedShadersFrameIndex_ = frameCount;
 }
 
 RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shaderHandle,
@@ -196,7 +205,7 @@ RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shade
         PLUGIN_ASSERT(cache.psoCreationData.size() == cache.pipelineStateObjects.size());
 
         // reserve slot for new pso
-        const uint32_t index = static_cast<uint32_t>(cache.psoCreationData.size());
+        const auto index = static_cast<uint32_t>(cache.psoCreationData.size());
         cache.pipelineStateObjects.emplace_back(nullptr);
         // add pipeline layout descriptor set mask to pso handle for fast evaluation
         uint32_t descriptorSetBitmask = 0;
@@ -229,14 +238,14 @@ RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shade
 RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shaderHandle,
     const RenderHandle pipelineLayoutHandle, const ShaderSpecializationConstantDataView& shaderSpecialization)
 {
-    RenderHandle psoHandle;
-    if (RenderHandleUtil::GetHandleType(pipelineLayoutHandle) == RenderHandleType::PIPELINE_LAYOUT) {
-        const PipelineLayout& pl = shaderMgr_.GetPipelineLayoutRef(pipelineLayoutHandle);
-        psoHandle = GetComputePsoHandle(shaderHandle, pl, shaderSpecialization);
-    } else {
-        PLUGIN_LOG_E("NodeContextPsoManager: invalid pipeline layout handle given to GetComputePsoHandle()");
-    }
-    return psoHandle;
+    const PipelineLayout& pl = shaderMgr_.GetPipelineLayoutRef(pipelineLayoutHandle);
+    return GetComputePsoHandle(shaderHandle, pl, shaderSpecialization);
+}
+
+RenderHandle NodeContextPsoManager::GetComputePsoHandle(
+    const IShaderManager::ShaderData& shaderData, const ShaderSpecializationConstantDataView& shaderSpecialization)
+{
+    return GetComputePsoHandle(shaderData.shader, shaderData.pipelineLayoutData, shaderSpecialization);
 }
 
 RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle shader,
@@ -269,7 +278,7 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
     const auto iter = cache.hashToHandle.find(hash);
     const bool needsNewPso = (iter == cache.hashToHandle.cend());
     if (needsNewPso) {
-        const uint32_t index = static_cast<uint32_t>(cache.psoCreationData.size());
+        const auto index = static_cast<uint32_t>(cache.psoCreationData.size());
         // add pipeline layout descriptor set mask to pso handle for fast evaluation
         uint32_t descriptorSetBitmask = 0;
         for (uint32_t idx = 0; idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++idx) {
@@ -349,6 +358,15 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const RenderHandle shad
         shaderSpecialization, dynamicStates, &graphicsState);
 }
 
+RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const IShaderManager::GraphicsShaderData& shaderData,
+    const ShaderSpecializationConstantDataView& shaderSpecialization,
+    const BASE_NS::array_view<const DynamicStateEnum> dynamicStates)
+{
+    const VertexInputDeclarationView vidv = shaderMgr_.GetVertexInputDeclarationView(shaderData.vertexInputDeclaration);
+    return GetGraphicsPsoHandleImpl(shaderData.shader, shaderData.graphicsState, shaderData.pipelineLayoutData, vidv,
+        shaderSpecialization, dynamicStates, nullptr);
+}
+
 #if (RENDER_VALIDATION_ENABLED == 1)
 const PipelineLayout& NodeContextPsoManager::GetComputePsoPipelineLayout(const RenderHandle handle) const
 {
@@ -425,10 +443,10 @@ const GraphicsPipelineStateObject* NodeContextPsoManager::GetGraphicsPso(const R
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (subpassIndex >= renderPassSubpassDescs.size()) {
                 PLUGIN_LOG_ONCE_I("node_context_pso_subpass_index",
-                    "RENDER_VALIDATION: subpassIndex (%u) out-of-bounds (%zu)",
-                    subpassIndex, renderPassSubpassDescs.size());
+                    "RENDER_VALIDATION: subpassIndex (%u) out-of-bounds (%zu)", subpassIndex,
+                    renderPassSubpassDescs.size());
             } else if (graphicsState.colorBlendState.colorAttachmentCount !=
-                renderPassSubpassDescs[subpassIndex].colorAttachmentCount) {
+                       renderPassSubpassDescs[subpassIndex].colorAttachmentCount) {
                 PLUGIN_LOG_ONCE_I("node_context_pso_output_info",
                     "RENDER_VALIDATION: graphics state color attachment count (%u) does not match "
                     "render pass subpass color attachment count (%u). (Output not consumed info)",

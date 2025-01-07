@@ -17,9 +17,11 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
-#include <scene_plugin/api/light_uid.h>
-#include <scene_plugin/interface/intf_light.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <scene/interface/intf_light.h>
+#include <scene/interface/intf_scene.h>
+
+#include "SceneJS.h"
+
 using namespace NapiApi;
 BaseLight::BaseLight(LightType lt) : NodeImpl(NodeImpl::NodeType::LIGHT), lightType_(lt) {}
 void BaseLight::RegisterEnums(NapiApi::Object exports)
@@ -27,10 +29,10 @@ void BaseLight::RegisterEnums(NapiApi::Object exports)
     napi_value v;
     NapiApi::Object LightType(exports.GetEnv());
 
-#define DECL_ENUM(enu, x)                                     \
-    {                                                         \
-        napi_create_uint32(enu.GetEnv(), BaseLight::LightType::x, (&v)); \
-        enu.Set((#x), (v));                                 \
+#define DECL_ENUM(enu, x)                                              \
+    {                                                                  \
+        napi_create_uint32(enu.GetEnv(), BaseLight::LightType::x, &v); \
+        enu.Set(#x, v);                                                \
     }
     DECL_ENUM(LightType, DIRECTIONAL);
     DECL_ENUM(LightType, POINT);
@@ -49,16 +51,11 @@ void BaseLight::Create(napi_env e, napi_callback_info i)
     }
 
     // java script call.. with arguments
-    NapiApi::Object scene = fromJs.Arg<0>();
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        CORE_LOG_F("INVALID SCENE!");
-    }
-    scene_ = { scene };
-    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene);
-
+    scene_ = fromJs.Arg<0>().valueOrDefault();
+    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
     if (scn == nullptr) {
         // hmm..
-        CORE_LOG_F("Invalid scene for LightJS!");
+        LOG_F("Invalid scene for LightJS!");
         return;
     }
     // collect parameters
@@ -74,37 +71,46 @@ void BaseLight::Create(napi_env e, napi_callback_info i)
 
     BASE_NS::string nodePath;
 
-    if (path) {
+    if (path.IsDefined()) {
         // create using path
         nodePath = path.valueOrDefault("");
-    } else if (name) {
+    } else if (name.IsDefined()) {
         // use the name as path (creates under root)
         nodePath = name.valueOrDefault("");
-    } else {
-        // no name or path defined should this just fail?
     }
 
-    // Create actual camera object.
-    SCENE_NS::ILight::Ptr node;
-    ExecSyncTask([scn, nodePath, &node]() {
-        node = scn->CreateNode<SCENE_NS::ILight>(nodePath, true);
-        return META_NS::IAny::Ptr {};
-    });
+    // Create actual light object.
+    SCENE_NS::ILight::Ptr node = scn->CreateNode<SCENE_NS::ILight>(nodePath, SCENE_NS::ClassId::LightNode).GetResult();
 
     TrueRootObject* instance = GetThisRootObject(fromJs);
 
     instance->SetNativeObject(interface_pointer_cast<META_NS::IObject>(node), false);
     node.reset();
 
-    NapiApi::Object meJs(e, fromJs.This());
+    NapiApi::Object meJs(fromJs.This());
     StoreJsObj(instance->GetNativeObject(), meJs);
 
-    if (name) {
+    if (name.IsDefined()) {
         // set the name of the object. if we were given one
         meJs.Set("name", name);
     }
+
+    {
+        // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
+        NapiApi::Object scene = fromJs.Arg<0>();
+        auto* tro = scene.Native<TrueRootObject>();
+        if (tro) {
+            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+            if (sceneJS) {
+                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+            }
+        }
+    }
 }
-BaseLight::~BaseLight() {}
+BaseLight::~BaseLight()
+{
+    colorProxy_.reset();
+}
 void BaseLight::Init(const char* class_name, napi_env env, napi_value exports,
     BASE_NS::vector<napi_property_descriptor>& np, napi_callback ctor)
 {
@@ -128,150 +134,151 @@ void BaseLight::Finalize(napi_env env, TrueRootObject* tro)
 {
     tro->Finalize(env);
 }
-
 void* BaseLight::GetInstanceImpl(uint32_t id)
 {
-    if (id == BaseLight::ID) {
+    if (id == BaseLight::ID)
         return this;
-    }
     return NodeImpl::GetInstanceImpl(id);
 }
+
 void BaseLight::DisposeNative(TrueRootObject* tro)
 {
-    // do nothing for now..
-    LOG_F("BaseLight::DisposeNative");
+    LOG_V("BaseLight::DisposeNative");
+
+    NapiApi::Object obj = scene_.GetObject();
+    auto* stro = obj.Native<TrueRootObject>();
+    if (stro) {
+        SceneJS* sceneJS = static_cast<SceneJS*>(stro->GetInstanceImpl(SceneJS::ID));
+        if (sceneJS) {
+            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+        }
+    }
+
     colorProxy_.reset();
     if (auto light = interface_pointer_cast<SCENE_NS::ILight>(tro->GetNativeObject())) {
         // reset the native object refs
         tro->SetNativeObject(nullptr, false);
         tro->SetNativeObject(nullptr, true);
-
-        ExecSyncTask([light = BASE_NS::move(light)]() mutable {
-            auto node = interface_pointer_cast<SCENE_NS::INode>(light);
-            if (node == nullptr) {
-                return META_NS::IAny::Ptr {};
+        if (auto node = interface_pointer_cast<SCENE_NS::INode>(light)) {
+            if (auto scene = node->GetScene()) {
+                scene->ReleaseNode(node);
             }
-            auto scene = node->GetScene();
-            if (scene == nullptr) {
-                return META_NS::IAny::Ptr {};
-            }
-            scene->ReleaseNode(node);
-            return META_NS::IAny::Ptr {};
-        });
+        }
     }
     scene_.Reset();
 }
 napi_value BaseLight::GetlightType(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     uint32_t type = -1; // return -1 if the object does not exist anymore
     if (auto node = interface_cast<SCENE_NS::ILight>(GetThisNativeObject(ctx))) {
         type = lightType_;
     }
-    napi_value value;
-    napi_status status = napi_create_uint32(ctx, type, &value);
-    return value;
+    return ctx.GetNumber(type);
 }
 
 napi_value BaseLight::GetEnabled(NapiApi::FunctionContext<>& ctx)
 {
-    bool enable = true;
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    bool enable = false;
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (node) {
-        ExecSyncTask([node, &enable]() {
-            enable = node->Visible()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        enable = node->Enabled()->GetValue();
     }
-    napi_value value;
-    napi_status status = napi_get_boolean(ctx, enable, &value);
-    return value;
+    return ctx.GetBoolean(enable);
 }
-
 void BaseLight::SetEnabled(NapiApi::FunctionContext<bool>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     bool enabled = ctx.Arg<0>();
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (node) {
-        ExecSyncTask([node, enabled]() {
-            node->Visible()->SetValue(enabled);
-            return META_NS::IAny::Ptr {};
-        });
+        node->Enabled()->SetValue(enabled);
     }
 }
 
 napi_value BaseLight::GetColor(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     auto node = interface_pointer_cast<SCENE_NS::ILight>(GetThisNativeObject(ctx));
     if (!node) {
-        return {};
+        return ctx.GetUndefined();
     }
     if (colorProxy_ == nullptr) {
-        colorProxy_ = BASE_NS::make_unique<ColorProxy>(ctx, node->Color());
+        colorProxy_ = BASE_NS::make_unique<ColorProxy>(ctx.GetEnv(), node->Color());
     }
     return colorProxy_->Value();
 }
 void BaseLight::SetColor(NapiApi::FunctionContext<Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     auto node = interface_pointer_cast<SCENE_NS::ILight>(GetThisNativeObject(ctx));
     if (!node) {
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
     if (colorProxy_ == nullptr) {
-        colorProxy_ = BASE_NS::make_unique<ColorProxy>(ctx, node->Color());
+        colorProxy_ = BASE_NS::make_unique<ColorProxy>(ctx.GetEnv(), node->Color());
     }
     colorProxy_->SetValue(obj);
 }
 
 napi_value BaseLight::GetShadowEnabled(NapiApi::FunctionContext<>& ctx)
 {
-    bool enable = true;
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    bool enable = false;
     auto node = interface_pointer_cast<SCENE_NS::ILight>(GetThisNativeObject(ctx));
     if (node) {
-        ExecSyncTask([node, &enable]() {
-            enable = node->ShadowEnabled()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        enable = node->ShadowEnabled()->GetValue();
     }
-    napi_value value;
-    napi_status status = napi_get_boolean(ctx, enable, &value);
-    return value;
+    return ctx.GetBoolean(enable);
 }
 void BaseLight::SetShadowEnabled(NapiApi::FunctionContext<bool>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     bool enabled = ctx.Arg<0>();
     auto node = interface_pointer_cast<SCENE_NS::ILight>(GetThisNativeObject(ctx));
     if (node) {
-        ExecSyncTask([node, enabled]() {
-            node->ShadowEnabled()->SetValue(enabled);
-            return META_NS::IAny::Ptr {};
-        });
+        node->ShadowEnabled()->SetValue(enabled);
     }
 }
 
 napi_value BaseLight::GetIntensity(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     float intensity = 0.0f;
     auto node = interface_pointer_cast<SCENE_NS::ILight>(GetThisNativeObject(ctx));
     if (node) {
-        ExecSyncTask([node, &intensity]() {
-            intensity = node->Intensity()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        intensity = node->Intensity()->GetValue();
     }
-    napi_value value;
-    napi_status status = napi_create_double(ctx, intensity, &value);
-    return value;
+    return ctx.GetNumber(intensity);
 }
 void BaseLight::SetIntensity(NapiApi::FunctionContext<float>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     float intensity = ctx.Arg<0>();
     auto node = interface_pointer_cast<SCENE_NS::ILight>(GetThisNativeObject(ctx));
     if (node) {
-        ExecSyncTask([node, intensity]() {
-            node->Intensity()->SetValue(intensity);
-            return META_NS::IAny::Ptr {};
-        });
+        node->Intensity()->SetValue(intensity);
     }
 }
 
@@ -280,7 +287,7 @@ SpotLightJS::SpotLightJS(napi_env e, napi_callback_info i)
 {
     Create(e, i);
     if (auto light = interface_pointer_cast<SCENE_NS::ILight>(GetNativeObject())) {
-        light->Type()->SetValue(SCENE_NS::ILight::SCENE_LIGHT_SPOT);
+        light->Type()->SetValue(SCENE_NS::LightType::SPOT);
     }
 }
 void SpotLightJS::Init(napi_env env, napi_value exports)
@@ -292,12 +299,11 @@ void SpotLightJS::Init(napi_env env, napi_value exports)
 
 void* SpotLightJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == SpotLightJS::ID) {
+    if (id == SpotLightJS::ID)
         return this;
-    }
     return BaseLight::GetInstanceImpl(id);
 }
-void SpotLightJS::DisposeNative()
+void SpotLightJS::DisposeNative(void*)
 {
     BaseLight::DisposeNative(this);
 }
@@ -305,22 +311,22 @@ void SpotLightJS::Finalize(napi_env env)
 {
     BaseObject<SpotLightJS>::Finalize(env);
 }
+
 PointLightJS::PointLightJS(napi_env e, napi_callback_info i)
     : BaseObject<PointLightJS>(e, i), BaseLight(BaseLight::LightType::POINT)
 {
     Create(e, i);
     if (auto light = interface_pointer_cast<SCENE_NS::ILight>(GetNativeObject())) {
-        light->Type()->SetValue(SCENE_NS::ILight::SCENE_LIGHT_POINT);
+        light->Type()->SetValue(SCENE_NS::LightType::SPOT);
     }
 }
 void* PointLightJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == PointLightJS::ID) {
+    if (id == PointLightJS::ID)
         return this;
-    }
     return BaseLight::GetInstanceImpl(id);
 }
-void PointLightJS::DisposeNative()
+void PointLightJS::DisposeNative(void*)
 {
     BaseLight::DisposeNative(this);
 }
@@ -339,17 +345,16 @@ DirectionalLightJS::DirectionalLightJS(napi_env e, napi_callback_info i)
 {
     Create(e, i);
     if (auto light = interface_pointer_cast<SCENE_NS::ILight>(GetNativeObject())) {
-        light->Type()->SetValue(SCENE_NS::ILight::SCENE_LIGHT_DIRECTIONAL);
+        light->Type()->SetValue(SCENE_NS::LightType::DIRECTIONAL);
     }
 }
 void* DirectionalLightJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == DirectionalLightJS::ID) {
+    if (id == DirectionalLightJS::ID)
         return this;
-    }
     return BaseLight::GetInstanceImpl(id);
 }
-void DirectionalLightJS::DisposeNative()
+void DirectionalLightJS::DisposeNative(void*)
 {
     BaseLight::DisposeNative(this);
 }
@@ -369,29 +374,23 @@ void DirectionalLightJS::Init(napi_env env, napi_value exports)
 
 napi_value DirectionalLightJS::GetNear(NapiApi::FunctionContext<>& ctx)
 {
-    float fov = 0.0;
-    if (auto camera = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
-        ExecSyncTask([camera, &fov]() {
-            fov = 0.0;
-            if (camera) {
-                fov = camera->NearPlane()->GetValue();
-            }
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
-
-    napi_value value;
-    napi_status status = napi_create_double(ctx, fov, &value);
-    return value;
+    float near = 0.0;
+    if (auto light = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
+        near = light->NearPlane()->GetValue();
+    }
+    return ctx.GetNumber(near);
 }
 
 void DirectionalLightJS::SetNear(NapiApi::FunctionContext<float>& ctx)
 {
-    float fov = ctx.Arg<0>();
-    if (auto camera = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
-        ExecSyncTask([camera, fov]() {
-            camera->NearPlane()->SetValue(fov);
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return;
+    }
+    float near = ctx.Arg<0>();
+    if (auto light = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
+        light->NearPlane()->SetValue(near);
     }
 }

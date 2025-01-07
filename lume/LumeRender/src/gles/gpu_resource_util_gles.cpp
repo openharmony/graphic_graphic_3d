@@ -33,7 +33,7 @@ namespace GpuResourceUtil {
 
 void CopyGpuBufferGLES(GpuBuffer& buffer, ByteArray& byteArray)
 {
-    GpuBufferGLES& glesBuffer = (GpuBufferGLES&)buffer;
+    auto& glesBuffer = (GpuBufferGLES&)buffer;
     if (const void* resData = glesBuffer.MapMemory(); resData) {
         const GpuBufferDesc& desc = glesBuffer.GetDesc();
         CloneData(byteArray.GetData().data(), byteArray.GetData().size_bytes(), (const uint8_t*)resData, desc.byteSize);
@@ -41,16 +41,16 @@ void CopyGpuBufferGLES(GpuBuffer& buffer, ByteArray& byteArray)
     }
 }
 
-void DebugBufferNameGLES(const IDevice& device, const GpuBuffer& buffer, const string_view name)
+void DebugBufferNameGLES([[maybe_unused]] const IDevice& device, const GpuBuffer& buffer, const string_view name)
 {
     const GpuBufferPlatformDataGL& cplat = (static_cast<const GpuBufferGLES&>(buffer)).GetPlatformData();
-    GpuBufferPlatformDataGL& plat = const_cast<GpuBufferPlatformDataGL&>(cplat);
+    auto& plat = const_cast<GpuBufferPlatformDataGL&>(cplat);
     if (plat.buffer) {
         glObjectLabel(GL_BUFFER, plat.buffer, (GLsizei)name.length(), name.data());
     }
 }
 
-void DebugImageNameGLES(const IDevice& device, const GpuImage& image, const string_view name)
+void DebugImageNameGLES([[maybe_unused]] const IDevice& device, const GpuImage& image, const string_view name)
 {
     const GpuImagePlatformDataGL& plat = (static_cast<const GpuImageGLES&>(image)).GetPlatformData();
     if (plat.image) {
@@ -58,7 +58,7 @@ void DebugImageNameGLES(const IDevice& device, const GpuImage& image, const stri
     }
 }
 
-void DebugSamplerNameGLES(const IDevice& device, const GpuSampler& sampler, const string_view name)
+void DebugSamplerNameGLES([[maybe_unused]] const IDevice& device, const GpuSampler& sampler, const string_view name)
 {
     const GpuSamplerPlatformDataGL& plat = (static_cast<const GpuSamplerGLES&>(sampler)).GetPlatformData();
     if (plat.sampler) {

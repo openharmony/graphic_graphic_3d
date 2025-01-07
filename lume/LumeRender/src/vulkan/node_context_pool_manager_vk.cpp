@@ -25,7 +25,6 @@
 #include <render/namespace.h>
 
 #include "device/device.h"
-#include "device/gpu_image.h"
 #include "device/gpu_resource_handle_util.h"
 #include "device/gpu_resource_manager.h"
 #include "nodecontext/node_context_pool_manager.h"
@@ -78,7 +77,8 @@ inline void HashRenderPassCompatibility(uint64_t& hash, const RenderPassDesc& re
             renderPassCompatibilityDesc.attachments[idx];
         HashCombine(hash, static_cast<uint64_t>(atCompatibilityDesc.format),
             static_cast<uint64_t>(atCompatibilityDesc.sampleCountFlags));
-        // render pass needs have matching stage masks
+        // render pass needs have matching stage masks (creates often different hash at first frame)
+        // soft reset in render graph tries to prevent too many render passes
         HashCombine(hash, static_cast<uint64_t>(intputResourceStates.states[idx].pipelineStageFlags));
         if (subpasses.viewMask > 1U) {
             // with multi-view extension, renderpass updated for all mips
@@ -104,9 +104,19 @@ inline void HashFramebuffer(
 {
     for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
         const RenderPassDesc::AttachmentDesc& atDesc = renderPassDesc.attachments[idx];
-        // with generation index
-        const EngineResourceHandle gpuHandle = gpuResourceMgr.GetGpuHandle(renderPassDesc.attachmentHandles[idx]);
-        HashCombine(hash, gpuHandle.id, static_cast<uint64_t>(atDesc.layer), static_cast<uint64_t>(atDesc.mipLevel));
+        // generation counters and hashing with handles is not enough
+        // the reason is that e.g. shallow handles can point to to different GPU handles
+        // and have counter of zero in their index
+        // this can lead with handle re-use to situations where the gen counter is zero
+        // NOTE: we hash with our own gpuHandle and vulkan image (if vulkan image id would be re-used)
+        const RenderHandle clientHandle = renderPassDesc.attachmentHandles[idx];
+        const EngineResourceHandle gpuHandle = gpuResourceMgr.GetGpuHandle(clientHandle);
+        uint64_t imageId = clientHandle.id;
+        if (const GpuImageVk* image = gpuResourceMgr.GetImage<GpuImageVk>(clientHandle); image) {
+            imageId = VulkanHandleCast<uint64_t>(image->GetPlatformData().image);
+        }
+        HashCombine(
+            hash, gpuHandle.id, imageId, static_cast<uint64_t>(atDesc.layer), static_cast<uint64_t>(atDesc.mipLevel));
     }
 }
 
@@ -158,7 +168,7 @@ VkFramebuffer CreateFramebuffer(const GpuResourceManager& gpuResourceMgr, const 
     // the size is taken from the render pass data
     // there might e.g. fragment shading rate images whose size differ
     FBSize size { renderPassData.framebufferSize.width, renderPassData.framebufferSize.height, 1u };
-    VkImageView imageViews[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
+    VkImageView imageViews[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = {};
     uint32_t viewIndex = 0;
 
     bool validImageViews = true;
@@ -266,7 +276,7 @@ NodeContextPoolManagerVk::NodeContextPoolManagerVk(
     Device& device, GpuResourceManager& gpuResourceManager, const GpuQueue& gpuQueue)
     : NodeContextPoolManager(), device_ { device }, gpuResourceMgr_ { gpuResourceManager }, gpuQueue_(gpuQueue)
 {
-    const DeviceVk& deviceVk = static_cast<const DeviceVk&>(device_);
+    const auto& deviceVk = static_cast<const DeviceVk&>(device_);
     const VkDevice vkDevice = static_cast<const DevicePlatformDataVk&>(device_.GetPlatformData()).device;
 
     const LowLevelGpuQueueVk lowLevelGpuQueue = deviceVk.GetGpuQueue(gpuQueue);
@@ -394,7 +404,7 @@ void NodeContextPoolManagerVk::BeginBackendFrame()
 
 const ContextCommandPoolVk& NodeContextPoolManagerVk::GetContextCommandPool() const
 {
-#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
+#if (RENDER_VALIDATION_ENABLED == 1)
     PLUGIN_ASSERT(frameIndexFront_ == frameIndexBack_);
 #endif
     return commandPools_[bufferingIndex_];
@@ -402,7 +412,7 @@ const ContextCommandPoolVk& NodeContextPoolManagerVk::GetContextCommandPool() co
 
 const ContextCommandPoolVk& NodeContextPoolManagerVk::GetContextSecondaryCommandPool() const
 {
-#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
+#if (RENDER_VALIDATION_ENABLED == 1)
     PLUGIN_ASSERT(frameIndexFront_ == frameIndexBack_);
 #endif
     PLUGIN_ASSERT(bufferingIndex_ < static_cast<uint32_t>(commandSecondaryPools_.size()));
@@ -416,16 +426,15 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
     renderPassData.subpassIndex = beginRenderPass.subpassStartIndex;
 
     PLUGIN_ASSERT(renderPassData.subpassIndex < static_cast<uint32_t>(beginRenderPass.subpasses.size()));
-    const DeviceVk& deviceVk = (const DeviceVk&)device_;
+    const auto& deviceVk = (const DeviceVk&)device_;
     if (deviceVk.GetCommonDeviceExtensions().multiView) {
         renderPassData.viewMask = beginRenderPass.subpasses[renderPassData.subpassIndex].viewMask;
     }
 
     // collect render pass attachment compatibility info and default viewport/scissor
     for (uint32_t idx = 0; idx < beginRenderPass.renderPassDesc.attachmentCount; ++idx) {
-        if (const GpuImageVk* image =
-                gpuResourceMgr_.GetImage<const GpuImageVk>(beginRenderPass.renderPassDesc.attachmentHandles[idx]);
-            image) {
+        const RenderHandle imageHandle = beginRenderPass.renderPassDesc.attachmentHandles[idx];
+        if (const auto* image = gpuResourceMgr_.GetImage<const GpuImageVk>(imageHandle); image) {
             const auto& platData = image->GetPlatformData();
             renderPassData.renderPassCompatibilityDesc.attachments[idx] = { platData.format, platData.samples,
                 platData.aspectFlags };
@@ -441,6 +450,12 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
                     0.0f, 1.0f };
                 renderPassData.scissor = { { 0, 0 }, { maxFbWidth, maxFbHeight } };
                 renderPassData.framebufferSize = { maxFbWidth, maxFbHeight };
+
+                // currently swapchain check and rotation only supported for single target rotation
+                if (RenderHandleUtil::IsSwapchain(imageHandle)) {
+                    renderPassData.isSwapchain = true;
+                    renderPassData.surfaceTransformFlags = deviceVk.GetSurfaceTransformFlags(imageHandle);
+                }
             }
         }
     }

@@ -12,34 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include <napi_api.h>
 
-#include <base/containers/string.h>
-#include <base/containers/vector.h>
-#include <base/util/uid_util.h>
-#include <core/log.h>
 #include <core/os/platform_create_info.h>
 
-#include <meta/interface/intf_task_queue.h>
-#include <meta/interface/intf_task_queue_registry.h>
+#include <meta/interface/intf_object_context.h>
+#include <meta/interface/intf_object_registry.h>
 
-#include <scene_plugin/interface/intf_scene.h>
-
-#include "CameraJS.h"
-#include "EnvironmentJS.h"
-#include "GeometryJS.h"
-#include "ImageJS.h"
-#include "LightJS.h"
-#include "MaterialJS.h"
-#include "MeshJS.h"
-#include "NodeJS.h"
-#include "PostProcJS.h"
-#include "SceneJS.h"
-#include "ShaderJS.h"
-#include "SubMeshJS.h"
-#include "ToneMapJS.h"
-#include "AnimationJS.h"
+#include <scene/interface/intf_scene.h>
 
 #include "scene_adapter/scene_adapter.h"
 #include "3d_widget_adapter_log.h"
@@ -55,21 +35,46 @@ static napi_value Export(napi_env env, napi_value exports)
     auto sceneAdapter_ = std::make_shared<OHOS::Render3D::SceneAdapter>();
     sceneAdapter_->LoadPluginsAndInit();
 
-    napi_value Storage;
-    napi_create_object(env, &Storage);
+    NapiApi::MyInstanceState *mis;
+    napi_get_instance_data(env, (void **)&mis);
+    if (mis) {
+        // should not happen?
+        WIDGET_LOGW("scene.napi reloaded!");
+    } else {
+        // Create storage (js object that will contain constructors for "native" objects)
+        napi_value Storage;
+        napi_create_object(env, &Storage);
+        mis = new NapiApi::MyInstanceState(env, Storage);
+        auto status = napi_set_instance_data(
+            env,
+            mis,
+            [](napi_env env, void *finalize_data, void *finalize_hint) {
+                WIDGET_LOGD("scene.napi finalizer begin");
+                auto d = static_cast<NapiApi::MyInstanceState *>(finalize_data);
+                // Make sure that the render thread is gone.
+                OHOS::Render3D::SceneAdapter::DeinitRenderThread();
+                // check for leaked objects.
+                // note this might return false positives.
+                // (as it lists ALL object instances that exist, which might come from somewhere else. )
+                auto& obr = META_NS::GetObjectRegistry();
+                auto objs = obr.GetAllObjectInstances();
+                for (auto o : objs) {
+                    if (o.get() != interface_cast<META_NS::IObject>(obr.GetDefaultObjectContext())) {
+                        WIDGET_LOGE("leaking %s", BASE_NS::string(o->GetClassName()).c_str());
+                    }
+                }
+                // release plugin registry
+                OHOS::Render3D::SceneAdapter::ShutdownPluginRegistry();
+                delete d;
+            },
+            nullptr);
+        if (status != napi_ok) {
+            WIDGET_LOGE("napi_set_instance_data api fail!");
+            delete mis;
+        }
 
-    NapiApi::MyInstanceState* mis = new NapiApi::MyInstanceState(env, Storage);
-
-    auto status = napi_set_instance_data(
-        env,
-        mis,
-        [](napi_env env, void *finalize_data, void *finalize_hint) {
-            auto d = static_cast<NapiApi::MyInstanceState *>(finalize_data);
-            delete d;
-        },
-        nullptr);
-
-    RegisterClasses(env, exports);
+        RegisterClasses(env, exports);
+    }
 
     return exports;
 }

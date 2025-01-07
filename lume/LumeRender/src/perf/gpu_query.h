@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_PERF__GPU_QUERY_H
-#define RENDER_PERF__GPU_QUERY_H
+#ifndef RENDER_PERF_GPU_QUERY_H
+#define RENDER_PERF_GPU_QUERY_H
 
 #include <cstdint>
 
@@ -51,4 +51,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__PERF__GPU_QUERY_H
+#endif // RENDER_PERF_GPU_QUERY_H

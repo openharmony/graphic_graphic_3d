@@ -12,9 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef ANIMATION_JS_H
+#define ANIMATION_JS_H
 
-#ifndef OHOS_RENDER_3D_ANIMATION_JS_H
-#define OHOS_RENDER_3D_ANIMATION_JS_H
+#include <meta/interface/animation/modifiers/intf_speed.h>
 
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
@@ -48,7 +49,7 @@ protected:
         napi_status status;
         napi_value name;
         napi_create_string_latin1(env, n, NAPI_AUTO_LENGTH, &name);
-        status = napi_create_threadsafe_function(env, nullptr, nullptr, name, 1, 1, this, &ThreadSafeCallback::Final,
+        status = napi_create_threadsafe_function(env, nullptr, nullptr, name, 0, 1, this, &ThreadSafeCallback::Final,
             this, &ThreadSafeCallback::Call, &termfun);
     }
     static void Call(napi_env env, napi_value js_callback, void* context, void* inData)
@@ -79,6 +80,8 @@ public:
     virtual void* GetInstanceImpl(uint32_t id) override;
 
 private:
+    napi_value GetSpeed(NapiApi::FunctionContext<>& ctx);
+    void SetSpeed(NapiApi::FunctionContext<float>& ctx);
     napi_value GetEnabled(NapiApi::FunctionContext<>& ctx);
     void SetEnabled(NapiApi::FunctionContext<bool>& ctx);
     napi_value GetDuration(NapiApi::FunctionContext<>& ctx);
@@ -96,7 +99,7 @@ private:
     napi_value Stop(NapiApi::FunctionContext<>& ctx);
     napi_value Finish(NapiApi::FunctionContext<>& ctx);
 
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
 
     META_NS::IEvent::Token OnFinishedToken_ { 0 };
@@ -105,6 +108,6 @@ private:
     // we don't actually own these two, as lifetime is controlled by napi_threadsafe_function
     ThreadSafeCallback* OnStartedCB_ { nullptr };
     ThreadSafeCallback* OnFinishedCB_ { nullptr };
-    NapiApi::WeakRef scene_;
+    META_NS::AnimationModifiers::ISpeed::Ptr speedModifier_;
 };
-#endif // OHOS_RENDER_3D_ANIMATION_JS_H
+#endif

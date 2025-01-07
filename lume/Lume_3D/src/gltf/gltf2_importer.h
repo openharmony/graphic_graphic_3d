@@ -17,7 +17,6 @@
 #define CORE__GLTF__GLTF2_IMPORTER_H
 
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 
 #include <3d/gltf/gltf.h>
@@ -26,6 +25,7 @@
 #include <base/containers/string.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
+#include <base/util/color.h>
 #include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/namespace.h>
@@ -95,6 +95,8 @@ public:
 
     const GltfMeshData& GetMeshData() const override;
 
+    bool IsValid() const;
+
     struct DefaultMaterialShaderData {
         struct SingleShaderData {
             CORE_NS::EntityReference shader;
@@ -110,6 +112,8 @@ protected:
     void Destroy() override;
 
 private:
+    friend class Gltf2;
+
     struct ImporterTask;
     template<typename T>
     struct GatheredDataTask;
@@ -120,6 +124,7 @@ private:
     class ImportThreadTask;
     class GatherThreadTask;
 
+    void LaunchGatherTasks(size_t firstTask, ImportPhase phase);
     void Prepare();
     void PrepareBufferTasks();
     void PrepareSamplerTasks();
@@ -150,18 +155,22 @@ private:
     ImporterTask* FindTaskById(uint64_t id);
 
     ImportPhase phase_ { ImportPhase::BUFFERS };
+    GltfResourceImportFlags flags_ { CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL };
+
+    const CORE_NS::IThreadPool::ITask* bufferTask_ { nullptr };
     BASE_NS::vector<BASE_NS::unique_ptr<ImporterTask>> tasks_;
+    CORE_NS::IThreadPool::IResult::Ptr gatherResults_[static_cast<uint32_t>(ImportPhase::FINISHED)];
 
     CORE_NS::IEngine& engine_;
     RENDER_NS::IRenderContext& renderContext_;
     RENDER_NS::IDevice& device_;
     RENDER_NS::IGpuResourceManager& gpuResourceManager_;
     CORE_NS::IEcs::Ptr ecs_;
-    IRenderHandleComponentManager& gpuHandleManager_;
-    IMaterialComponentManager& materialManager_;
-    IMeshComponentManager& meshManager_;
-    INameComponentManager& nameManager_;
-    IUriComponentManager& uriManager_;
+    IRenderHandleComponentManager* renderHandleManager_;
+    IMaterialComponentManager* materialManager_;
+    IMeshComponentManager* meshManager_;
+    INameComponentManager* nameManager_;
+    IUriComponentManager* uriManager_;
 
     // assigned to material in import
     DefaultMaterialShaderData dmShaderData_;
@@ -172,22 +181,20 @@ private:
     CORE_NS::IDispatcherTaskQueue::Ptr mainThreadQueue_;
     Listener* listener_ { nullptr };
 
-    GltfResourceImportFlags flags_ { CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL };
     GLTFImportResult result_;
 
     std::mutex gatherTasksLock_;
-    std::condition_variable condition_;
-    BASE_NS::vector<uint64_t> finishedGatherTasks_;
-    BASE_NS::vector<CORE_NS::IThreadPool::IResult::Ptr> gatherTaskResults_;
+    BASE_NS::vector<uint64_t> finishedGatherTasks_[static_cast<uint32_t>(ImportPhase::FINISHED)];
 
-    size_t pendingGatherTasks_ { 0 };
+    size_t pendingGatherTasks_[static_cast<uint32_t>(ImportPhase::FINISHED)] {};
     size_t pendingImportTasks_ { 0 };
     size_t completedTasks_ { 0 };
 
-    std::atomic_bool cancelled_ { false };
-
     BASE_NS::vector<IMeshBuilder::Ptr> meshBuilders_;
     GltfMeshData meshData_;
+
+    BASE_NS::ColorSpaceFlags colorSpaceFlags_ { 0U };
+    std::atomic_bool cancelled_ { false };
 };
 
 class Gltf2SceneImporter final : public ISceneImporter, IGLTF2Importer::Listener {

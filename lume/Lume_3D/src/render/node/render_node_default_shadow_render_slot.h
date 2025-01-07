@@ -75,9 +75,14 @@ public:
         RENDER_NS::RenderHandle basicState;
     };
 
+    struct PsoCreationValue {
+        RENDER_NS::RenderHandle psoHandle;
+        bool hasImageData { false };
+    };
+
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "ce5b861e-09a0-4dfa-84f1-c1a9986f1fdf" };
-    static constexpr char const* const TYPE_NAME = "RenderNodeDefaultShadowRenderSlot";
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultShadowRenderSlot";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -86,18 +91,8 @@ public:
 private:
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
-    struct ObjectCounts {
-        uint32_t maxSlotMeshCount { 0u };
-        uint32_t maxSlotSubmeshCount { 0u };
-        uint32_t maxSlotSkinCount { 0u };
-        uint32_t maxSlotMaterialCount { 0u };
-    };
     struct UboHandles {
         RENDER_NS::RenderHandleReference generalData;
-
-        RENDER_NS::RenderHandle mesh;
-        RENDER_NS::RenderHandle skinJoint;
-        RENDER_NS::RenderHandle camera;
     };
 
     void ParseRenderNodeInputs();
@@ -105,20 +100,20 @@ private:
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial,
         const IRenderDataStoreDefaultLight::ShadowType shadowType, const RenderCamera& camera, const RenderLight& light,
         const uint32_t shadowPassIdx);
-    void UpdateSet01(RENDER_NS::IRenderCommandList& cmdList, const uint32_t shadowPassIdx);
+    void UpdateSet0(RENDER_NS::IRenderCommandList& cmdList, const uint32_t shadowPassIdx);
 
     void UpdateGeneralDataUniformBuffers(const IRenderDataStoreDefaultLight& dataStoreLight);
     void CreateDefaultShaderData();
-    RENDER_NS::RenderHandle CreateNewPso(const ShaderStateData& ssd,
+    PsoCreationValue CreateNewPso(const ShaderStateData& ssd,
         const RENDER_NS::ShaderSpecializationConstantDataView& specialization, const RenderSubmeshFlags submeshFlags);
     RENDER_NS::RenderPass CreateRenderPass(const ShadowBuffers& buffers);
     void ProcessSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t shadowCameraIdx);
-    void ProcessBuffersAndDescriptors(const ObjectCounts& objectCounts);
+    void ProcessBuffersAndDescriptors();
     void UpdateCurrentScene(
         const IRenderDataStoreDefaultScene& dataStoreScene, const IRenderDataStoreDefaultLight& dataStoreLight);
 
-    RENDER_NS::RenderHandle GetSubmeshPso(const ShaderStateData& ssd,
+    PsoCreationValue GetSubmeshPso(const ShaderStateData& ssd,
         const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
         const RenderSubmeshFlags submeshFlags);
 
@@ -144,11 +139,9 @@ private:
 
     SceneRenderDataStores stores_;
     ShadowBuffers shadowBuffers_;
-    ObjectCounts objectCounts_;
 
     struct AllDescriptorSets {
         RENDER_NS::IDescriptorSetBinder::Ptr set0[DefaultMaterialLightingConstants::MAX_SHADOW_COUNT];
-        RENDER_NS::IDescriptorSetBinder::Ptr set1[DefaultMaterialLightingConstants::MAX_SHADOW_COUNT];
     };
     AllDescriptorSets allDescriptorSets_;
 
@@ -159,6 +152,7 @@ private:
         RENDER_NS::RenderHandle shaderHandle;
         RENDER_NS::RenderHandle psoHandle;
         RENDER_NS::RenderHandle stateHandle;
+        bool hasSet2Images { false };
     };
     struct AllShaderData {
         BASE_NS::vector<PerShaderData> perShaderData;
@@ -170,10 +164,12 @@ private:
         RENDER_NS::RenderHandle defaultVidHandle;
         RENDER_NS::PipelineLayout defaultPipelineLayout;
         BASE_NS::vector<RENDER_NS::ShaderSpecialization::Constant> defaultSpecilizationConstants;
+        RENDER_NS::BindableImage defaultBaseColor;
     };
     AllShaderData allShaderData_;
 
     UboHandles uboHandles_;
+    SceneBufferHandles sceneBuffers_;
 
     RENDER_NS::RenderPass renderPass_;
     BASE_NS::vector<SlotSubmeshIndex> sortedSlotSubmeshes_;

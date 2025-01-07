@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,6 +34,8 @@
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property/intf_property_handle.h>
 
+#include <jpg/implementation_uids.h>
+
 #include <meta/interface/intf_meta_object_lib.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/intf_task_queue.h>
@@ -45,15 +47,19 @@
 #include <meta/api/make_callback.h>
 #include <meta/ext/object.h>
 
-#include <scene_plugin/namespace.h>
-#include <scene_plugin/interface/intf_scene.h>
-#include <scene_plugin/interface/intf_ecs_scene.h>
-#include <scene_plugin/interface/intf_mesh.h>
-#include <scene_plugin/interface/intf_material.h>
-#include <scene_plugin/api/scene_uid.h>
+#include <png/implementation_uids.h>
+#include <scene/base/namespace.h>
+#include <scene/interface/intf_scene.h>
+#include <scene/interface/intf_mesh.h>
+#include <scene/interface/intf_material.h>
+#include <scene/ext/intf_render_resource.h>
+#include <scene/interface/intf_camera.h>
+#include <scene/ext/intf_internal_scene.h>
 
 #include "ability.h"
+
 #include "data_ability_helper.h"
+
 #include "napi_base_context.h"
 
 #include <render/implementation_uids.h>
@@ -64,10 +70,13 @@
 #include "3d_widget_adapter_log.h"
 #include "widget_trace.h"
 #include "ohos/texture_layer.h"
+#include "lume_render_config.h"
 
 namespace OHOS::Render3D {
+
 HapInfo GetHapInfo()
 {
+    WIDGET_SCOPED_TRACE("SceneAdapter::GetHapInfo");
     std::shared_ptr<AbilityRuntime::ApplicationContext> context =
         AbilityRuntime::ApplicationContext::GetApplicationContext();
     if (!context) {
@@ -82,7 +91,7 @@ HapInfo GetHapInfo()
     HapInfo hapInfo;
     hapInfo.bundleName_ = resourceManager->bundleInfo.first;
     hapInfo.moduleName_ = resourceManager->bundleInfo.second;
-
+    hapInfo.resourceManager_ = context->CreateModuleResourceManager(hapInfo.bundleName_, hapInfo.moduleName_);
     // hapPath
     std::string hapPath = context->GetBundleCodeDir();
     hapInfo.hapPath_ = hapPath + "/" + hapInfo.moduleName_ + ".hap";
@@ -105,8 +114,11 @@ struct EngineInstance {
 
 static EngineInstance engineInstance_;
 static std::mutex mute;
+static HapInfo hapInfo_;
 META_NS::ITaskQueue::Ptr engineThread;
 META_NS::ITaskQueue::Ptr ioThread;
+META_NS::ITaskQueue::Ptr releaseThread;
+META_NS::ITaskQueue::Token renderTask {};
 
 void LockCompositor()
 {
@@ -121,6 +133,7 @@ void UnlockCompositor()
 static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
 static constexpr BASE_NS::Uid APP_THREAD { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
 static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
+static constexpr BASE_NS::Uid JS_RELEASE_THREAD { "3784fa96-b25b-4e9c-bbf1-e897d36f73af" };
 
 template<typename T>
 bool LoadFunc(T &fn, const char *fName, void* handle)
@@ -134,8 +147,7 @@ bool LoadFunc(T &fn, const char *fName, void* handle)
 }
 
 SceneAdapter::~SceneAdapter()
-{
-}
+{}
 
 SceneAdapter::SceneAdapter()
 {
@@ -181,15 +193,23 @@ bool SceneAdapter::LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreate
     if (!LoadEngineLib()) {
         return false;
     }
-    WIDGET_LOGD("load engine success!");
-    const BASE_NS::Uid DefaultPluginList[] { SCENE_NS::UID_SCENE_PLUGIN };
-
+    WIDGET_LOGI("load engine suceess!");
     CORE_NS::CreatePluginRegistry(platformCreateInfo);
-    if (!CORE_NS::GetPluginRegister().LoadPlugins(DefaultPluginList)) {
-        WIDGET_LOGE("fail to load scene widget plugin");
+
+    CORE_NS::GetLogger()->SetLogLevel(CORE_NS::ILogger::LogLevel::LOG_VERBOSE); // All logs for now.
+
+    const BASE_NS::Uid pluginList[] {
+#if defined(USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN) && USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN
+        JPGPlugin::UID_JPG_PLUGIN,
+        PNGPlugin::UID_PNG_PLUGIN,
+#endif
+        SCENE_NS::UID_SCENE_PLUGIN
+    };
+    if (!CORE_NS::GetPluginRegister().LoadPlugins(pluginList)) {
+        WIDGET_LOGE("fail to load plugins");
         return false;
     }
-    WIDGET_LOGD("load plugin success");
+    WIDGET_LOGI("load plugin success");
     return true;
 }
 
@@ -211,33 +231,44 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
         ioThread = obr.Create<META_NS::ITaskQueue>(META_NS::ClassId::ThreadedTaskQueue);
         tr.RegisterTaskQueue(ioThread, IO_QUEUE);
     }
+    releaseThread = tr.GetTaskQueue(JS_RELEASE_THREAD);
+    if (!releaseThread) {
+        auto &obr = META_NS::GetObjectRegistry();
+        releaseThread = obr.Create<META_NS::ITaskQueue>(META_NS::ClassId::ThreadedTaskQueue);
+        tr.RegisterTaskQueue(releaseThread, JS_RELEASE_THREAD);
+    }
 
+// auto engineInit = META_NS::MakeCallback<META_NS::ITaskQueueTask>([platformCreateInfo]() {
     auto engineInit = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([platformCreateInfo]() {
-        auto& obr = META_NS::GetObjectRegistry();
+        auto &obr = META_NS::GetObjectRegistry();
         // Initialize lumeengine/render etc
-        CORE_NS::EngineCreateInfo engineCreateInfo { platformCreateInfo, {}, {} };
+        CORE_NS::EngineCreateInfo engineCreateInfo{platformCreateInfo, {}, {}};
         if (auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY)) {
             engineInstance_.engine_.reset(factory->Create(engineCreateInfo).get());
+        } else {
+            WIDGET_LOGE("could not get engine factory");
+            return META_NS::IAny::Ptr {};
         }
-
         if (!engineInstance_.engine_) {
             WIDGET_LOGE("get engine fail");
             return META_NS::IAny::Ptr {};
         }
+        auto &fileManager = engineInstance_.engine_->GetFileManager();
+        const auto &platform = engineInstance_.engine_->GetPlatform();
+        platform.RegisterDefaultPaths(fileManager);
         engineInstance_.engine_->Init();
 
-        engineInstance_.renderContext_.reset(
-            CORE_NS::CreateInstance<RENDER_NS::IRenderContext>(*engineInstance_.engine_, RENDER_NS::UID_RENDER_CONTEXT)
-                .get());
+        engineInstance_.renderContext_.reset(CORE_NS::CreateInstance<RENDER_NS::IRenderContext>(
+            *engineInstance_.engine_->GetInterface<Core::IClassFactory>(), RENDER_NS::UID_RENDER_CONTEXT).get());
 
-        RENDER_NS::RenderCreateInfo renderCreateInfo;
-        // this context needs to be "not busy" (not selected current in any thread) for creation to succeed.
-        std::string backendProp = "gles";
+        RENDER_NS::RenderCreateInfo renderCreateInfo{};
+        RENDER_NS::BackendExtraGLES glExtra{};
+        Render::DeviceCreateInfo deviceCreateInfo{};
+
+        std::string backendProp = LumeRenderConfig::GetInstance().renderBackend_ == "force_vulkan" ? "vulkan" : "gles";
         if (backendProp == "vulkan") {
         } else {
-            Render::DeviceCreateInfo deviceCreateInfo;
-            RENDER_NS::BackendExtraGLES glExtra;
-            glExtra.depthBits = 24; // 24 : bit size
+            glExtra.depthBits = 24; // 24 : bits size
             glExtra.sharedContext = EGL_NO_CONTEXT;
             deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGLES;
             deviceCreateInfo.backendConfiguration = &glExtra;
@@ -256,6 +287,10 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
         // thats the javascript thread...
         auto appThread = engineThread;
         auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+        if (doc == nullptr) {
+            WIDGET_LOGE("nullptr from interface_cast");
+            return META_NS::IAny::Ptr {};
+        }
         auto flags = META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE;
 
         doc->AddProperty(META_NS::ConstructProperty<IntfPtr>("RenderContext", nullptr, flags));
@@ -263,25 +298,30 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
         doc->AddProperty(META_NS::ConstructProperty<IntfPtr>("AppQueue", nullptr, flags));
         doc->AddProperty(META_NS::ConstructArrayProperty<IntfWeakPtr>("Scenes", {}, flags));
 
-        doc->GetPropertyByName<META_NS::SharedPtrIInterface>("EngineQueue")->SetValue(engineThread);
-        doc->GetPropertyByName<META_NS::SharedPtrIInterface>("AppQueue")->SetValue(appThread);
-        doc->GetPropertyByName<META_NS::SharedPtrIInterface>("RenderContext")->SetValue(engineInstance_.renderContext_);
+        doc->GetProperty<META_NS::SharedPtrIInterface>("EngineQueue")->SetValue(engineThread);
+        doc->GetProperty<META_NS::SharedPtrIInterface>("AppQueue")->SetValue(appThread);
+        doc->GetProperty<META_NS::SharedPtrIInterface>("RenderContext")->SetValue(engineInstance_.renderContext_);
 
-        WIDGET_LOGD("register shader path");
+        WIDGET_LOGD("register shader paths");
         static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc { "shaders://" };
         engineInstance_.engine_->GetFileManager().RegisterPath("shaders", "OhosRawFile://shaders", false);
         engineInstance_.renderContext_->GetDevice().GetShaderManager().LoadShaderFiles(desc);
 
         engineInstance_.engine_->GetFileManager().RegisterPath("appshaders", "OhosRawFile://shaders", false);
+        engineInstance_.engine_->GetFileManager().RegisterPath("apppipelinelayouts",
+            "OhosRawFile:///pipelinelayouts/", true);
+        engineInstance_.engine_->GetFileManager().RegisterPath("fonts", "OhosRawFile:///fonts", true);
+
         static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc1 { "appshaders://" };
         engineInstance_.renderContext_->GetDevice().GetShaderManager().LoadShaderFiles(desc1);
 
-        WIDGET_LOGD("init engine success");
+        // "render" one frame. this is to initialize all the default resources etc.
+        // if we never render a single frame, we will get "false positive" leaks of gpu resources.
+        engineInstance_.renderContext_->GetRenderer().RenderFrame({});
+        WIDGET_LOGI("init engine success");
         return META_NS::IAny::Ptr {};
     });
-
     engineThread->AddWaitableTask(engineInit)->Wait();
-
     return true;
 }
 
@@ -293,7 +333,6 @@ void SceneAdapter::SetSceneObj(META_NS::IObject::Ptr pt)
 
 std::shared_ptr<TextureLayer> SceneAdapter::CreateTextureLayer()
 {
-    InitRenderThread();
     auto cb = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
         textureLayer_ = std::make_shared<TextureLayer>(key_);
         key_++;
@@ -305,35 +344,45 @@ std::shared_ptr<TextureLayer> SceneAdapter::CreateTextureLayer()
 
 bool SceneAdapter::LoadPluginsAndInit()
 {
-    WIDGET_LOGD("scene adapter loadPlugins");
-    hapInfo_ = GetHapInfo();
+    LockCompositor(); // an APP_FREEZE here, so add lock just in case, but suspect others' error
+    WIDGET_LOGI("scene adapter loadPlugins");
+
+    if (hapInfo_.hapPath_ == "") {
+        hapInfo_ = GetHapInfo();
+    }
 
     #define TO_STRING(name) #name
     #define PLATFORM_PATH_NAME(name) TO_STRING(name)
     CORE_NS::PlatformCreateInfo platformCreateInfo {
         PLATFORM_PATH_NAME(PLATFORM_CORE_ROOT_PATH),
+        PLATFORM_PATH_NAME(PLATFORM_CORE_PLUGIN_PATH),
         PLATFORM_PATH_NAME(PLATFORM_APP_ROOT_PATH),
         PLATFORM_PATH_NAME(PLATFORM_APP_PLUGIN_PATH),
         hapInfo_.hapPath_.c_str(),
         hapInfo_.bundleName_.c_str(),
-        hapInfo_.moduleName_.c_str()
+        hapInfo_.moduleName_.c_str(),
+        hapInfo_.resourceManager_
     };
     #undef TO_STRING
     #undef PLATFORM_PATH_NAME
     if (!LoadPlugins(platformCreateInfo)) {
+        UnlockCompositor();
         return false;
     }
 
     if (!InitEngine(platformCreateInfo)) {
+        UnlockCompositor();
         return false;
     }
 
+    CreateRenderFunction();
+    UnlockCompositor();
     return true;
 }
 
-void SceneAdapter::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
+void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
 {
-    WIDGET_LOGD("OnWindowchange");
+    WIDGET_LOGI("SceneAdapter::OnWindowchange");
     auto cb = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this, &windowChangeInfo]() {
         textureLayer_->OnWindowChange(windowChangeInfo);
         const auto& textureInfo = textureLayer_->GetTextureInfo();
@@ -357,7 +406,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
     META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddWaitableTask(cb)->Wait();
 }
 
-void SceneAdapter::InitRenderThread()
+void SceneAdapter::CreateRenderFunction()
 {
     // Task used for oneshot renders
     singleFrameAsync = META_NS::MakeCallback<META_NS::ITaskQueueTask>([this]() {
@@ -370,10 +419,9 @@ void SceneAdapter::InitRenderThread()
         return META_NS::IAny::Ptr {};
     });
 }
-// where to put this deinit
+
 void SceneAdapter::DeinitRenderThread()
 {
-    auto ioThread = META_NS::GetTaskQueueRegistry().GetTaskQueue(IO_QUEUE);
     if (renderTask) {
         engineThread->CancelTask(renderTask);
         renderTask = nullptr;
@@ -382,30 +430,48 @@ void SceneAdapter::DeinitRenderThread()
         // destroy all swapchains
         auto &obr = META_NS::GetObjectRegistry();
         auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
-
+        if (doc == nullptr) {
+            WIDGET_LOGE("nullptr from interface_cast");
+            return META_NS::IAny::Ptr {};
+        }
         // hmm.. this is somewhat uncool
         {
-            auto p1 = doc->GetPropertyByName<IntfPtr>("EngineQueue");
+            auto p1 = doc->GetProperty<IntfPtr>("EngineQueue");
             doc->RemoveProperty(p1);
-            auto p2 = doc->GetPropertyByName<IntfPtr>("AppQueue");
+            auto p2 = doc->GetProperty<IntfPtr>("AppQueue");
             doc->RemoveProperty(p2);
-            auto p3 = doc->GetPropertyByName<IntfPtr>("RenderContext");
+            auto p3 = doc->GetProperty<IntfPtr>("RenderContext");
             doc->RemoveProperty(p3);
         }
 
-        doc->GetArrayPropertyByName<IntfWeakPtr>("Scenes")->Reset();
+        doc->GetArrayProperty<IntfWeakPtr>("Scenes")->Reset();
         engineInstance_.renderContext_.reset();
         engineInstance_.engine_.reset();
 
         return META_NS::IAny::Ptr{};
     });
     engineThread->AddWaitableTask(engine_deinit)->Wait();
-    singleFrameAsync.reset();
     auto &tr = META_NS::GetTaskQueueRegistry();
     tr.UnregisterTaskQueue(ENGINE_THREAD);
     engineThread.reset();
     tr.UnregisterTaskQueue(IO_QUEUE);
     ioThread.reset();
+    tr.UnregisterTaskQueue(JS_RELEASE_THREAD);
+    releaseThread.reset();
+}
+
+void SceneAdapter::ShutdownPluginRegistry()
+{
+    if (engineInstance_.libHandle_ == nullptr) {
+        return;
+    }
+    dlclose(engineInstance_.libHandle_);
+    engineInstance_.libHandle_ = nullptr;
+
+    CORE_NS::GetPluginRegister = nullptr;
+    CORE_NS::CreatePluginRegistry = nullptr;
+    CORE_NS::IsDebugBuild = nullptr;
+    CORE_NS::GetVersion = nullptr;
 }
 
 void SceneAdapter::RenderFunction()
@@ -414,35 +480,45 @@ void SceneAdapter::RenderFunction()
     auto &obr = META_NS::GetObjectRegistry();
     auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc;
-    if (auto prp = doc->GetPropertyByName<IntfPtr>("RenderContext")) {
+    if (auto prp = doc->GetProperty<IntfPtr>("RenderContext")) {
         rc = interface_pointer_cast<RENDER_NS::IRenderContext>(prp->GetValue());
     }
     LockCompositor();
+    if (!sceneWidgetObj_) {
+        UnlockCompositor();
+        return;
+    }
     auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
     if (!bitmap_) {
-        auto cams = scene->GetCameras();
+        auto cams = scene->GetCameras().GetResult();
         if (!cams.empty()) {
             for (auto c : cams) {
                 AttachSwapchain(interface_pointer_cast<META_NS::IObject>(c), swapchainHandle_);
             }
         }
     }
-    scene->RenderCameras();
+    scene->GetInternalScene()->Update();
     rc->GetRenderer().RenderDeferredFrame();
     UnlockCompositor();
 }
 
 void SceneAdapter::RenderFrame(bool needsSyncPaint)
 {
+    if (!engineThread) {
+        WIDGET_LOGE("no engineThread for Render");
+        return;
+    }
     if (renderTask) {
         engineThread->CancelTask(renderTask);
         renderTask = nullptr;
     }
 
-    if (!needsSyncPaint) {
+    if (!needsSyncPaint && singleFrameAsync) {
         renderTask = engineThread->AddTask(singleFrameAsync);
-    } else {
+    } else if (singleFrameSync) {
         engineThread->AddWaitableTask(singleFrameSync)->Wait();
+    } else {
+        WIDGET_LOGE("No render function available.");
     }
 }
 
@@ -451,21 +527,53 @@ bool SceneAdapter::NeedsRepaint()
     return needsRepaint_;
 }
 
+void SceneAdapter::Deinit()
+{
+    if (!engineThread) {
+        return;
+    }
+    WIDGET_LOGI("SceneAdapter::Deinit");
+    auto func = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
+        if (bitmap_) {
+            auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+            if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
+                i->SetRenderHandle(scene->GetInternalScene(), swapchainHandle_);
+            }
+        }
+        if (swapchainHandle_) {
+            auto& device = engineInstance_.renderContext_->GetDevice();
+            device.DestroySwapchain(swapchainHandle_);
+        }
+        swapchainHandle_ = {};
+        return META_NS::IAny::Ptr {};
+    });
+    engineThread->AddWaitableTask(func)->Wait();
+
+    sceneWidgetObj_.reset();
+    singleFrameAsync.reset();
+    singleFrameSync.reset();
+    needsRepaint_ = false;
+}
+
 void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj, RENDER_NS::RenderHandleReference swapchain)
 {
-    WIDGET_LOGD("attach swapchain");
-    auto scene = interface_cast<SCENE_NS::INode>(cameraObj)->GetScene();
+    WIDGET_LOGI("attach swapchain");
+    auto node = interface_cast<SCENE_NS::INode>(cameraObj);
+    if (node == nullptr) {
+        WIDGET_LOGE("cast cameraObj failed in AttachSwapchain.");
+        return;
+    }
+    auto scene = node->GetScene();
     auto camera = interface_pointer_cast<SCENE_NS::ICamera>(cameraObj);
-    if (scene->IsCameraActive(camera)) {
-        auto externalBitmapUid = BASE_NS::Uid("77b38a92-8182-4562-bd3f-deab7b40cedc");
-        bitmap_ = META_NS::GetObjectRegistry().Create<SCENE_NS::IBitmap>(externalBitmapUid);
+    if (camera->IsActive()) {
+        bitmap_ = META_NS::GetObjectRegistry().Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap);
 
-        scene->SetBitmap(bitmap_, camera);
         const auto &info = textureLayer_->GetTextureInfo();
-
-        bitmap_->SetRenderHandle(swapchainHandle_,
-            { static_cast<uint32_t>(info.width_ * info.widthScale_),
-                static_cast<uint32_t>(info.height_ * info.heightScale_) });
+        if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
+            i->SetRenderHandle(scene->GetInternalScene(), swapchainHandle_);
+        }
+        camera->SetRenderTarget(bitmap_);
     }
 }
+
 } // namespace OHOS::Render3D

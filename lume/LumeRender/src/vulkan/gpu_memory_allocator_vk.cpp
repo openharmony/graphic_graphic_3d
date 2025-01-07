@@ -43,8 +43,8 @@
 #define VMA_NOT_NULL
 #endif
 #define VMA_IMPLEMENTATION
-#ifdef __OHOS_PLATFORM__
-#include "../../../../../../../third_party/skia/third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
+#ifdef PATH_TO_VMA
+#include PATH_TO_VMA
 #else
 #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 #endif
@@ -61,6 +61,7 @@
 
 #if (RENDER_PERF_ENABLED == 1)
 #include <core/implementation_uids.h>
+#include <core/perf/cpu_perf_scope.h>
 #include <core/perf/intf_performance_data_manager.h>
 #endif
 
@@ -101,13 +102,16 @@ uint64_t BASE_NS::hash(const RENDER_NS::GpuImageDesc& desc)
 RENDER_BEGIN_NAMESPACE()
 namespace {
 #if (RENDER_PERF_ENABLED == 1)
+CORE_PROFILER_SYMBOL(IMAGE_POOL, "image");
+CORE_PROFILER_SYMBOL(BUFFER_POOL, "buffer");
+CORE_PROFILER_SYMBOL(MEMORY_MAPPED_POOL, "mapped_memory");
+
 void LogStats(VmaAllocator aAllocator)
 {
     if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
         if (!pdm) {
-            PLUGIN_LOG_E("pdm is null");
             return;
         }
 
@@ -270,6 +274,7 @@ void PlatformGpuMemoryAllocator::CreateBuffer(const VkBufferCreateInfo& bufferCr
     if (allocation) {
         memoryDebugStruct_.buffer += (uint64_t)allocation->GetSize();
         LogStats(allocator_);
+        CORE_PROFILER_ALLOC_N(buffer, (uint64_t)allocation->GetSize(), BUFFER_POOL);
     }
 #endif
 }
@@ -280,6 +285,7 @@ void PlatformGpuMemoryAllocator::DestroyBuffer(VkBuffer buffer, VmaAllocation al
     uint64_t byteSize = 0;
     if (allocation) {
         byteSize = (uint64_t)allocation->GetSize();
+        assert(byteSize > 0);
     }
 #endif
 
@@ -291,6 +297,7 @@ void PlatformGpuMemoryAllocator::DestroyBuffer(VkBuffer buffer, VmaAllocation al
     if (allocation) {
         memoryDebugStruct_.buffer -= byteSize;
         LogStats(allocator_);
+        CORE_PROFILER_FREE_N(buffer, BUFFER_POOL);
     }
 #endif
 }
@@ -322,6 +329,7 @@ void PlatformGpuMemoryAllocator::CreateImage(const VkImageCreateInfo& imageCreat
     if (allocation) {
         memoryDebugStruct_.image += (uint64_t)allocation->GetSize();
         LogStats(allocator_);
+        CORE_PROFILER_ALLOC_N(image, (uint64_t)allocation->GetSize(), IMAGE_POOL);
     }
 #endif
 }
@@ -332,6 +340,7 @@ void PlatformGpuMemoryAllocator::DestroyImage(VkImage image, VmaAllocation alloc
     uint64_t byteSize = 0;
     if (allocation) {
         byteSize = (uint64_t)allocation->GetSize();
+        assert(byteSize > 0);
     }
 #endif
 
@@ -343,6 +352,7 @@ void PlatformGpuMemoryAllocator::DestroyImage(VkImage image, VmaAllocation alloc
     if (allocation) {
         memoryDebugStruct_.image -= byteSize;
         LogStats(allocator_);
+        CORE_PROFILER_FREE_N(image, IMAGE_POOL);
     }
 #endif
 }
@@ -392,12 +402,18 @@ void* PlatformGpuMemoryAllocator::MapMemory(VmaAllocation allocation)
 {
     void* data { nullptr };
     VALIDATE_VK_RESULT(vmaMapMemory(allocator_, allocation, &data));
+#if RENDER_PERF_ENABLED
+    CORE_PROFILER_ALLOC_N(data, (uint64_t)allocation->GetSize(), MEMORY_MAPPED_POOL);
+#endif
     return data;
 }
 
 void PlatformGpuMemoryAllocator::UnmapMemory(VmaAllocation allocation)
 {
     vmaUnmapMemory(allocator_, allocation);
+#if RENDER_PERF_ENABLED
+    CORE_PROFILER_FREE_N(allocation->GetMappedData(), MEMORY_MAPPED_POOL);
+#endif
 }
 
 void PlatformGpuMemoryAllocator::CreatePoolForBuffers(const GpuMemoryAllocatorCustomPool& customPool)

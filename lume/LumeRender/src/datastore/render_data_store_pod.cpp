@@ -28,6 +28,24 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 RenderDataStorePod::RenderDataStorePod(const string_view name) : name_(name) {}
 
+void RenderDataStorePod::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStorePod::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStorePod::GetRefCount()
+{
+    return refcnt_;
+}
+
 void RenderDataStorePod::CreatePod(
     const string_view tpName, const string_view name, const array_view<const uint8_t> srcData)
 {
@@ -137,7 +155,7 @@ array_view<const string> RenderDataStorePod::GetPodNames(const string_view tpNam
 
     const auto iter = typeNameToPodNames_.find(tpName);
     if (iter != typeNameToPodNames_.cend()) {
-        return array_view<const string>(iter->second.data(), iter->second.size());
+        return { iter->second.data(), iter->second.size() };
     } else {
         PLUGIN_LOG_I("render data store pod type (%s), not found", tpName.data());
         return {};
@@ -145,14 +163,8 @@ array_view<const string> RenderDataStorePod::GetPodNames(const string_view tpNam
 }
 
 // for plugin / factory interface
-IRenderDataStore* RenderDataStorePod::Create(IRenderContext&, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStorePod::Create(IRenderContext&, const char* name)
 {
-    // engine not used
-    return new RenderDataStorePod(name);
-}
-
-void RenderDataStorePod::Destroy(IRenderDataStore* aInstance)
-{
-    delete static_cast<RenderDataStorePod*>(aInstance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStorePod(name));
 }
 RENDER_END_NAMESPACE()

@@ -61,18 +61,29 @@ private:
         BASE_NS::Math::Vec4 jitter { 0.0f, 0.0f, 0.0f, 0.0f };
     };
 
+    void AddCameras(const IRenderDataStoreDefaultCamera* dsCamera, const IRenderDataStoreDefaultLight* dsLight,
+        const BASE_NS::array_view<const RenderCamera> cameras, uint8_t* const data, const uint32_t cameraOffset);
+    void AddEnvironments(const IRenderDataStoreDefaultCamera* dsCamera,
+        const BASE_NS::array_view<const RenderCamera::Environment> environments, uint8_t* const data);
     // get projection matrix with possible jittering
     JitterProjection GetProjectionMatrix(const RenderCamera& camera, const bool prevFrame) const;
     BASE_NS::Math::Mat4X4 GetShadowBiasMatrix(
         const IRenderDataStoreDefaultLight* dataStore, const RenderCamera& camera) const;
+    BASE_NS::Math::UVec4 GetMultiViewCameraIndices(
+        const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam, uint32_t cameraCount);
+    BASE_NS::Math::Mat4X4 ResolveViewMatrix(const RenderCamera& camera) const;
 
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
     CORE_NS::IFrustumUtil* frustumUtil_ { nullptr };
 
     SceneRenderDataStores stores_;
 
-    RENDER_NS::RenderHandleReference resHandle_;
-    uint32_t jitterIndex_ { 0u };
+    RENDER_NS::RenderHandleReference camHandle_;
+    RENDER_NS::RenderHandleReference envHandle_;
+    uint32_t jitterIndex_ { 0U };
+
+    BASE_NS::vector<RenderCamera> cubemapCameras_;
+    BASE_NS::vector<BASE_NS::Math::Mat4X4> cubemapMatrices_;
 };
 CORE3D_END_NAMESPACE()
 

@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <3d/render/render_data_defines_3d.h>
+#include <base/containers/array_view.h>
 #include <base/containers/vector.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/render_data_structures.h>
@@ -140,13 +141,27 @@ public:
     /** Clears the given slot submesh indices and resizes it based on the slot materials.
      * @param dataStoreCamera Current data store for cameras.
      * @param dataStoreMaterial Current data store for materials.
-     * @param cameraId ID of the camera in dataStoreCamera.
+     * @param cameraIndex Index of the camera in dataStoreCamera.
      * @param renderSlotInfo for render slot related submesh processing.
      * @param refSubmeshIndices Render slot submesh indices to update.
      */
     virtual void GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
-        const IRenderDataStoreDefaultMaterial& dataStoreMaterial, uint32_t cameraId,
+        const IRenderDataStoreDefaultMaterial& dataStoreMaterial, uint32_t cameraIndex,
         const RenderSlotInfo& renderSlotInfo, BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices) = 0;
+
+    /** Clears the given slot submesh indices and resizes it based on the slot materials.
+     * @param dataStoreCamera Current data store for cameras.
+     * @param dataStoreMaterial Current data store for materials.
+     * @param cameraIndex Index of the camera in dataStoreCamera.
+     * @param addCameraIndices Indices of the additional cameras used for visibility check with culling.
+     * @param renderSlotInfo for render slot related submesh processing.
+     * @param refSubmeshIndices Render slot submesh indices to update.
+     */
+    virtual void GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
+        const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraIndex,
+        const BASE_NS::array_view<const uint32_t> addCameraIndices,
+        const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo,
+        BASE_NS::vector<SlotSubmeshIndex>& refSubmeshIndices) = 0;
 
     /** Get scene uniform buffers.
      * @param sceneName Name of the current scene.

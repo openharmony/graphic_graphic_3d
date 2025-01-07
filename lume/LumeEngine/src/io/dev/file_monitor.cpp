@@ -15,6 +15,7 @@
 
 #include "io/dev/file_monitor.h"
 
+#include <algorithm>
 #include <cstddef>
 
 #include <base/containers/iterator.h>
@@ -119,24 +120,21 @@ bool FileMonitor::RemovePath(const string_view inPath)
 {
     string path;
     CleanPath(inPath, path);
-    auto iterator = directories_.cbegin();
-    for (; iterator != directories_.cend(); ++iterator) {
-        if (*iterator == path) {
-            // scan through tracked files, and remove the ones that start with "path"
-            for (auto it = files_.begin(); it != files_.end();) {
-                const auto pos = it->first.find(path);
-                if (pos == 0) {
-                    it = files_.erase(it);
-                } else {
-                    ++it;
-                }
-            }
-            // Remove directory from watch list.
-            directories_.erase(iterator);
-            return true;
+    const auto iterator = std::find(directories_.cbegin(), directories_.cend(), path);
+    if (iterator == directories_.cend()) {
+        return false;
+    }
+    // scan through tracked files, and remove the ones that start with "path"
+    for (auto it = files_.begin(); it != files_.end();) {
+        if (it->first.starts_with(path)) {
+            it = files_.erase(it);
+        } else {
+            ++it;
         }
     }
-    return false;
+    // Remove directory from watch list.
+    directories_.erase(iterator);
+    return true;
 }
 
 bool FileMonitor::IsWatchingDirectory(const string_view inPath)
@@ -167,7 +165,7 @@ bool FileMonitor::IsWatchingSubDirectory(const string_view inPath)
 
 void FileMonitor::ScanModifications(vector<string>& added, vector<string>& removed, vector<string>& modified)
 {
-    CORE_CPU_PERF_SCOPE("Other", "FileMonitor", "ScanModifications()");
+    CORE_CPU_PERF_SCOPE("CORE", "FileMonitor", "ScanModifications()", CORE_PROFILER_DEFAULT_COLOR);
     // Collect all files that are under monitoring.
     for (const auto& ref : directories_) {
         pathTmp_ = ref;

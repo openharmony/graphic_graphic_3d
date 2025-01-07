@@ -21,7 +21,6 @@
 #include <base/containers/array_view.h>
 #include <base/containers/iterator.h>
 #include <base/containers/unique_ptr.h>
-#include <base/containers/vector.h>
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/threading/intf_thread_pool.h>

@@ -51,6 +51,7 @@ Entity MakeEntityId(uint32_t g, uint32_t i)
 {
     return { (static_cast<uint64_t>(g) << 32l) | i };
 }
+} // namespace
 
 class EntityReferenceCounter final : public IEntityReferenceCounter {
 public:
@@ -62,7 +63,6 @@ public:
     EntityReferenceCounter(EntityReferenceCounter&&) = delete;
     EntityReferenceCounter& operator=(EntityReferenceCounter&&) = delete;
 
-protected:
     void Ref() noexcept override
     {
         refcnt_.fetch_add(1, std::memory_order_relaxed);
@@ -70,7 +70,7 @@ protected:
 
     void Unref() noexcept override
     {
-        if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 0) {
+        if (refcnt_.fetch_sub(1, std::memory_order_release) == 0) {
             std::atomic_thread_fence(std::memory_order_acquire);
             delete this;
         }
@@ -78,13 +78,12 @@ protected:
 
     int32_t GetRefCount() const noexcept override
     {
-        return refcnt_.load();
+        return refcnt_.load(std::memory_order_relaxed);
     }
 
 private:
     std::atomic<int32_t> refcnt_ { -1 };
 };
-} // namespace
 
 EntityManager::EntityManager() : EntityManager(64u) {}
 
@@ -146,7 +145,7 @@ EntityReference EntityManager::CreateReferenceCounted()
         const auto generation = 1U;
         const auto id = static_cast<uint32_t>(entities_.size());
         entities_.push_back(
-            { EntityState::State::ALIVE, generation, IEntityReferenceCounter::Ptr { new EntityReferenceCounter } });
+            { EntityState::State::ALIVE, generation, EntityReferenceCounter::Ptr { new EntityReferenceCounter } });
         result = MakeEntityId(generation, id);
     } else {
         const auto id = freeList_.back();
@@ -173,25 +172,29 @@ EntityReference EntityManager::CreateReferenceCounted()
 
 EntityReference EntityManager::GetReferenceCounted(const Entity entity)
 {
-    if (EntityUtil::IsValid(entity)) {
-        if (const uint32_t id = GetId(entity); id < entities_.size()) {
-            auto& e = entities_[id];
-            // make sure the given entity id has the same generation and that the entity isn't dead or free.
-            if ((e.generation == GetGeneration(entity)) &&
-                ((e.state == EntityState::State::ALIVE) || (e.state == EntityState::State::INACTIVE))) {
-                if (!e.counter) {
-                    // entity wasn't yet reference counted so add a counter
-                    e.counter.reset(new EntityReferenceCounter);
-                    return { entity, e.counter };
-                }
-                if (e.counter->GetRefCount() > 0) {
-                    // reference count is still valid
-                    return { entity, e.counter };
-                }
-                // reference count has expired, but we won't revive the entity.
-            }
-        }
+    if (!EntityUtil::IsValid(entity)) {
+        return {};
     }
+    const uint32_t id = GetId(entity);
+    if (id >= entities_.size()) {
+        return {};
+    }
+    auto& e = entities_[id];
+    // make sure the given entity id has the same generation and that the entity isn't dead or free.
+    if ((e.generation == GetGeneration(entity)) &&
+        ((e.state == EntityState::State::ALIVE) || (e.state == EntityState::State::INACTIVE))) {
+        if (!e.counter) {
+            // entity wasn't yet reference counted so add a counter
+            e.counter.reset(new EntityReferenceCounter);
+            return { entity, e.counter };
+        }
+        if (e.counter->GetRefCount() > 0) {
+            // reference count is still valid
+            return { entity, e.counter };
+        }
+        // reference count has expired, but we won't revive the entity.
+    }
+
     return {};
 }
 
@@ -290,29 +293,31 @@ vector<pair<Entity, IEntityManager::EventType>> EntityManager::GetEvents()
 
 void EntityManager::SetActive(const Entity entity, bool state)
 {
-    if (EntityUtil::IsValid(entity)) {
-        EntityState::State oldState;
-        EntityState::State newState;
-        EventType event;
-        if (state) {
-            oldState = EntityState::State::INACTIVE;
-            newState = EntityState::State::ALIVE;
-            event = EventType::ACTIVATED;
-        } else {
-            oldState = EntityState::State::ALIVE;
-            newState = EntityState::State::INACTIVE;
-            event = EventType::DEACTIVATED;
-        }
+    if (!EntityUtil::IsValid(entity)) {
+        return;
+    }
+    const uint32_t id = GetId(entity);
+    if (id >= entities_.size()) {
+        return;
+    }
+    EntityState::State oldState;
+    EntityState::State newState;
+    EventType event;
+    if (state) {
+        oldState = EntityState::State::INACTIVE;
+        newState = EntityState::State::ALIVE;
+        event = EventType::ACTIVATED;
+    } else {
+        oldState = EntityState::State::ALIVE;
+        newState = EntityState::State::INACTIVE;
+        event = EventType::DEACTIVATED;
+    }
 
-        uint32_t id = GetId(entity);
-        if (id < entities_.size()) {
-            if (entities_[id].generation == GetGeneration(entity)) {
-                if (entities_[id].state == oldState) {
-                    entities_[id].state = newState;
-                    eventList_.push_back({ entity, event });
-                    ++generationCounter_;
-                }
-            }
+    if (entities_[id].generation == GetGeneration(entity)) {
+        if (entities_[id].state == oldState) {
+            entities_[id].state = newState;
+            eventList_.push_back({ entity, event });
+            ++generationCounter_;
         }
     }
 }

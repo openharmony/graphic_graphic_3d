@@ -1,0 +1,138 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("lume_font_api") {
+  include_dirs = [ "api" ]
+
+  defines = []
+}
+
+config("lume_font_config") {
+  include_dirs = [ "src/" ]
+
+  defines = [ "CORE_PLUGIN=1" ]
+
+  ldflags = [
+    # "-Wl,--build-id",
+    "-Wl,--exclude-libs,ALL",
+    # "-Wl,--exclude-libs,libPluginDotfield",
+  ]
+
+  cflags = [
+    "-Wno-unused-function",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-logical-op-parentheses",
+    "-Wno-unused-local-typedef",
+    "-fvisibility=hidden",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-Wno-ignored-qualifiers",
+    "-fno-rtti",
+  ]
+  cflags_cc = [
+    "-std=c++17",
+    "-Wno-overloaded-virtual",
+    "-Wno-thread-safety-attributes",
+    "-Wno-missing-braces",
+  ]
+}
+
+ohos_source_set("lume_font_src") {
+  public_configs = [
+    ":lume_font_api",
+    ":lume_font_config",
+
+    # "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+
+    # "${LUME_CORE_PATH}:lume_component_help_config",
+    # "${LUME_CORE_PATH}:lume_default",
+  ]
+
+  sources = [
+    "src/face_data.cpp",
+    "src/face_data.h",
+    "src/font.cpp",
+    "src/font.h",
+    "src/font_buffer.cpp",
+    "src/font_buffer.h",
+    "src/font_data.cpp",
+    "src/font_data.h",
+    "src/font_defs.h",
+    "src/font_manager.cpp",
+    "src/font_manager.h",
+    "src/plugin/plugin.cpp",
+    "version.cpp",
+  ]
+
+  deps = [
+    "${LUME_CORE3D_PATH}/DLL:libPluginAGP3D",
+    "${LUME_CORE_PATH}/DLL:libAGPDLL",
+    "${LUME_RENDER_PATH}:libPluginAGPRender",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "freetype:freetype_static",
+  ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_static_library("libFont") {
+  public_deps = [ ":lume_font_src" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+config("lume_font_plugin_config") {
+  defines = [ "CORE_PLUGIN=1" ]
+}
+
+ohos_source_set("lume_font_src_plugin") {
+  sources = []
+
+  configs = [
+    ":lume_font_plugin_config",
+    ":lume_font_api",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default",
+  ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("libPluginFont") {
+  public_deps = [
+    ":libFont",
+    ":lume_font_src_plugin",
+  ]
+
+  relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

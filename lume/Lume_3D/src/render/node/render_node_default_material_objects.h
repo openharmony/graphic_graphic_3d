@@ -16,8 +16,11 @@
 #ifndef CORE__RENDER__NODE__RENDER_NODE_DEFAULT_MATERIAL_OBJECTS_H
 #define CORE__RENDER__NODE__RENDER_NODE_DEFAULT_MATERIAL_OBJECTS_H
 
+#include <3d/render/intf_render_data_store_default_material.h>
+#include <base/containers/vector.h>
 #include <base/util/uid.h>
 #include <core/namespace.h>
+#include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_node.h>
 #include <render/resource_handle.h>
 
@@ -41,11 +44,15 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "a25b27ea-a4ff-4b64-87c7-a7865cccfd92" };
-    static constexpr char const* const TYPE_NAME = "RenderNodeDefaultMaterialObjects";
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultMaterialObjects";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
     static void Destroy(IRenderNode* instance);
+
+    struct MaterialHandleStruct {
+        RENDER_NS::BindableImage resources[RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT];
+    };
 
 private:
     struct ObjectCounts {
@@ -53,6 +60,7 @@ private:
         uint32_t maxSubmeshCount { 0u };
         uint32_t maxSkinCount { 0u };
         uint32_t maxMaterialCount { 0u };
+        uint32_t maxUniqueMaterialCount { 0u };
     };
     struct UboHandles {
         RENDER_NS::RenderHandleReference mat;
@@ -61,18 +69,44 @@ private:
         RENDER_NS::RenderHandleReference mesh;
         RENDER_NS::RenderHandleReference submeshSkin;
     };
+    struct GlobalDescriptorSets {
+        BASE_NS::vector<RENDER_NS::RenderHandleReference> handles;
+        BASE_NS::vector<RENDER_NS::IDescriptorSetBinder::Ptr> descriptorSets;
+
+        // keeps track if we need changes
+        BASE_NS::vector<MaterialHandleStruct> materials;
+        // force update all new descriptor sets
+        bool forceUpdate { false };
+
+        // default material set 1 descriptor set
+        RENDER_NS::RenderHandleReference dmSet1;
+        RENDER_NS::IDescriptorSetBinder::Ptr dmSet1Binder;
+
+        // default material set 2 descriptor set
+        RENDER_NS::RenderHandleReference dmSet2;
+        RENDER_NS::IDescriptorSetBinder::Ptr dmSet2Binder;
+        bool dmSet2Ready { false };
+    };
 
     void UpdateBuffers(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
     void UpdateMeshBuffer(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
     void UpdateSkinBuffer(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
     void UpdateMaterialBuffers(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
+    void UpdateDescriptorSets(
+        RENDER_NS::IRenderCommandList& cmdList, const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
+
     void ProcessBuffers(const ObjectCounts& objectCounts);
+    void ProcessGlobalBinders();
 
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     SceneRenderDataStores stores_;
     ObjectCounts objectCounts_;
     UboHandles ubos_;
+
+    GlobalDescriptorSets globalDescs_;
+    RENDER_NS::PipelineLayout defaultMaterialPipelineLayout_;
+    MaterialHandleStruct defaultMaterialStruct_;
 };
 CORE3D_END_NAMESPACE()
 

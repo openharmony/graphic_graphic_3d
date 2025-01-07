@@ -55,7 +55,7 @@ struct GpuShaderProgramPlatformDataGL final {
 class GpuShaderProgramGLES final : public GpuShaderProgram {
 public:
     GpuShaderProgramGLES(Device& device, const GpuShaderProgramCreateData& createData);
-    ~GpuShaderProgramGLES();
+    ~GpuShaderProgramGLES() override;
 
     const GpuShaderProgramPlatformDataGL& GetPlatformData() const;
     const ShaderReflection& GetReflection() const override;
@@ -69,8 +69,8 @@ public:
 private:
     BASE_NS::unique_ptr<GpuShaderProgramGLES> Specialize(const ShaderSpecializationConstantDataView& specData,
         const BASE_NS::array_view<const OES_Bind>& oesBinds, uint32_t views) const;
-    void FilterInputs(GpuShaderProgramGLES& ret) const;
-    GpuShaderProgramGLES(Device& device);
+    static void FilterInputs(GpuShaderProgramGLES& ret);
+    explicit GpuShaderProgramGLES(Device& device);
     DeviceGLES& device_;
     GpuShaderProgramPlatformDataGL plat_;
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;
@@ -102,7 +102,7 @@ public:
         const ShaderSpecializationConstantDataView& specialization) const;
 
 private:
-    GpuComputeProgramGLES(Device& device);
+    explicit GpuComputeProgramGLES(Device& device);
     DeviceGLES& device_;
     GpuComputeProgramPlatformDataGL plat_;
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;

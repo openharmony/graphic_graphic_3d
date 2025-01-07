@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,62 +13,73 @@
  * limitations under the License.
  */
 
-#include "Logger.h"
-
-
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <fstream>
+#include <chrono>
 #include <cstdarg>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
-#include <chrono>
+#include <iostream>
+#include <sstream>
+#include <string>
 
-#ifdef __ANDROID__
-#include <android/log.h>
-#endif
+#include "Logger.h"
 
-#if _WIN32
+#if defined(_WIN32)
 #include <windows.h>
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
-
+#ifdef ERROR
+#undef ERROR
+#endif
 #else
 #include <unistd.h>
 #endif
 
+namespace lume {
 
-namespace lume
-{
+namespace {
+// Note: these must match the ColorCode enum.
+constexpr int COLOR_CODE_COUNT = 17;
+constexpr const char* COLOR_CODES[COLOR_CODE_COUNT] = {
+    "\x1B[30m",
+    "\x1B[31m",
+    "\x1B[32m",
+    "\x1B[33m",
+    "\x1B[34m",
+    "\x1B[35m",
+    "\x1B[36m",
+    "\x1B[37m",
+    "\x1B[30;1m",
+    "\x1B[31;1m",
+    "\x1B[32;1m",
+    "\x1B[33;1m",
+    "\x1B[34;1m",
+    "\x1B[35;1m",
+    "\x1B[36;1m",
+    "\x1B[37;1m",
+    "\x1B[0m",
+};
 
-namespace
+// Gets the filename part from the path.
+std::string GetFilename(const std::string& path)
 {
-
-//Gets the filename part from the path.
-std::string getFilename(const std::string &aPath)
-{
-    for (int i = static_cast<int>(aPath.size()) - 1; i >= 0 ; --i)
-    {
+    for (int i = static_cast<int>(path.size()) - 1; i >= 0; --i) {
         unsigned int index = static_cast<size_t>(i);
-        if (aPath[index] == '\\' || aPath[index] == '/') {
-            return aPath.substr(index + 1);
+        if (path[index] == '\\' || path[index] == '/') {
+            return path.substr(index + 1);
         }
     }
-    return aPath;
+    return path;
 }
 
-} // empty namespace
+} // namespace
 
+#if !defined(__PLATFORM_AD__)
 
-#if !defined(__ANDROID__)
-
-class StdOutput : public ILogger::IOutput
-{
+class StdOutput : public ILogger::IOutput {
 public:
-    enum class ColorCode
-    {
+    enum class ColorCode {
         BLACK = 0,
         RED,
         GREEN,
@@ -88,19 +99,8 @@ public:
         RESET,
     };
 
-    static const char* getColorString(ColorCode aColorCode)
+    static const char* GetColorString(ColorCode aColorCode)
     {
-        // Note: these must match the ColorCode enum.
-        constexpr int COLOR_CODE_COUNT = 17;
-        constexpr const char* COLOR_CODES[COLOR_CODE_COUNT] =
-        {
-            "\x1B[30m", "\x1B[31m", "\x1B[32m", "\x1B[33m",
-            "\x1B[34m", "\x1B[35m", "\x1B[36m", "\x1B[37m",
-            "\x1B[30;1m", "\x1B[31;1m", "\x1B[32;1m", "\x1B[33;1m",
-            "\x1B[34;1m", "\x1B[35;1m", "\x1B[36;1m", "\x1B[37;1m",
-            "\x1B[0m",
-        };
-
         int colorCode = static_cast<int>(aColorCode);
         LUME_ASSERT(colorCode >= 0 && colorCode < COLOR_CODE_COUNT);
         return COLOR_CODES[colorCode];
@@ -108,247 +108,173 @@ public:
 
     StdOutput() : mUseColor(false), mCurrentColorString(nullptr)
     {
-#if _WIN32
+#if defined(_WIN32)
         // Set console (for this program) to use utf-8.
-        SetConsoleOutputCP(65001);
+        constexpr UINT codePageUtf8 = 65001u;
+        SetConsoleOutputCP(codePageUtf8);
 #endif
 
         // Try to figure out if this output stream supports colors.
 #ifdef _WIN32
         const HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-        if (stdHandle)
-        {
+        if (stdHandle) {
             // Check if the output is being redirected.
             DWORD handleMode;
-            if (GetConsoleMode(stdHandle, &handleMode) != 0)
-            {
+            if (GetConsoleMode(stdHandle, &handleMode) != 0) {
                 // Try to enable the option needed that supports colors.
                 handleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
                 SetConsoleMode(stdHandle, handleMode);
 
                 GetConsoleMode(stdHandle, &handleMode);
-                if ((handleMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0)
-                {
+                if ((handleMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0) {
                     mUseColor = true;
                 }
             }
         }
 #else
-        if (isatty(fileno(stdout)))
-        {
+        if (isatty(fileno(stdout))) {
             // Using colors if the output is not being redirected.
             mUseColor = true;
         }
 #endif
     }
 
-    void setColor(std::ostream &outputStream, ColorCode aColorCode)
+    void SetColor(std::ostream& outputStream, ColorCode aColorCode)
     {
         if (!mUseColor) {
             return;
         }
 
-        const char* colorString = getColorString(aColorCode);
-        if (colorString == mCurrentColorString)
-        {
+        const char* colorString = GetColorString(aColorCode);
+        if (colorString == mCurrentColorString) {
             return;
         }
 
         mCurrentColorString = colorString;
-        if (colorString)
-        {
+        if (colorString) {
             outputStream << colorString;
         }
     }
 
-    void write(ILogger::LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aMessage) override
+    void Write(ILogger::LogLevel logLevel, const char* filename, int linenumber, const char* message) override
     {
-        auto &outputStream = std::cout;
+        auto& outputStream = std::cout;
 
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-            std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+                  std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+        static constexpr std::streamsize digitSize = 3;
+        outputStream << std::put_time(std::localtime(&time), "%H:%M:%S.") << std::setw(digitSize) << std::left
+                     << ms.count() << " " << Logger::GetLogLevelName(logLevel, true);
 
-        outputStream << std::put_time(std::localtime(&time), "%H:%M:%S.") << std::setw(3) << std::left << ms.count() << " " << Logger::getLogLevelName(aLogLevel, true);
-
-        if (aFilename)
-        {
-            const std::string filenameLink = " (" + getFilename(aFilename) + ":" + std::to_string(aLinenumber) + ")";
-            outputStream << std::right << std::setw(30) << filenameLink;
+        if (filename) {
+            static constexpr std::streamsize filenameSize = 30;
+            const std::string filenameLink = " (" + GetFilename(filename) + ':' + std::to_string(linenumber) + ')';
+            outputStream << std::right << std::setw(filenameSize) << filenameLink;
         }
         outputStream << ": ";
 
-        if (aLogLevel >= ILogger::LogLevel::Error)
-        {
-            setColor(outputStream, ColorCode::RED);
-        }
-        else if (aLogLevel == ILogger::LogLevel::Warning)
-        {
-            setColor(outputStream, ColorCode::YELLOW);
-        }
-        else if (aLogLevel <= ILogger::LogLevel::Debug)
-        {
-            setColor(outputStream, ColorCode::BLACK_BRIGHT);
-        }
-        else
-        {
-            setColor(outputStream, ColorCode::RESET);
+        if (logLevel >= ILogger::LogLevel::ERROR) {
+            SetColor(outputStream, ColorCode::RED);
+        } else if (logLevel == ILogger::LogLevel::WARNING) {
+            SetColor(outputStream, ColorCode::YELLOW);
+        } else if (logLevel <= ILogger::LogLevel::DEBUG) {
+            SetColor(outputStream, ColorCode::BLACK_BRIGHT);
+        } else {
+            SetColor(outputStream, ColorCode::RESET);
         }
 
-        outputStream << aMessage;
-        setColor(outputStream, ColorCode::RESET);
+        outputStream << message;
+        SetColor(outputStream, ColorCode::RESET);
         outputStream << std::endl;
     }
 
 private:
     bool mUseColor;
-    const char *mCurrentColorString;
-
+    const char* mCurrentColorString;
 };
 
-#endif // !defined(__ANDROID__)
-
+#endif // !defined(__PLATFORM_AD__)
 
 #if defined(_WIN32) && !defined(NDEBUG)
-class WindowsDebugOutput : public ILogger::IOutput
-{
+class WindowsDebugOutput : public ILogger::IOutput {
 public:
-    void write(ILogger::LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aMessage) override
+    void Write(ILogger::LogLevel logLevel, const char* filename, int linenumber, const char* message) override
     {
         std::stringstream outputStream;
 
-        if (aFilename)
-        {
-            outputStream << aFilename << "(" << aLinenumber << ") : ";
-        }
-        else
-        {
+        if (filename) {
+            outputStream << filename << "(" << linenumber << ") : ";
+        } else {
             outputStream << "lume : ";
         }
 
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-            std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+                  std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
-        outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.") << ms.count() << " " << Logger::getLogLevelName(aLogLevel, true);
-        outputStream << ": " << aMessage;
+        outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.") << ms.count() << " "
+                     << Logger::GetLogLevelName(logLevel, true);
+        outputStream << ": " << message;
         outputStream << '\n';
 
         // Convert from utf8 to windows wide unicode string.
-        std::string message = outputStream.str();
-        int wStringLength = ::MultiByteToWideChar(CP_UTF8, 0, message.c_str(), static_cast<int>(message.size()), nullptr, 0);
+        std::string output = outputStream.str();
+        int wStringLength =
+            ::MultiByteToWideChar(CP_UTF8, 0, output.c_str(), static_cast<int>(output.size()), nullptr, 0);
         std::wstring wString(static_cast<size_t>(wStringLength), 0);
-        ::MultiByteToWideChar(CP_UTF8, 0, message.c_str(), static_cast<int>(message.size()), &wString[0], wStringLength);
+        ::MultiByteToWideChar(CP_UTF8, 0, output.c_str(), static_cast<int>(output.size()), &wString[0], wStringLength);
 
         ::OutputDebugStringW(wString.c_str());
     }
 };
 #endif
 
-class FileOutput : public ILogger::IOutput
-{
+class FileOutput : public ILogger::IOutput {
 public:
-    explicit FileOutput(const std::string &aFilePath) : IOutput(), mOutputStream(aFilePath, std::ios::app) {}
+    explicit FileOutput(const std::string& aFilePath) : IOutput(), mOutputStream(aFilePath, std::ios::app) {}
 
     ~FileOutput() override = default;
 
-    void write(ILogger::LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aMessage) override
+    void Write(ILogger::LogLevel logLevel, const char* filename, int linenumber, const char* message) override
     {
-        if (mOutputStream.is_open())
-        {
-            auto &outputStream = mOutputStream;
+        if (mOutputStream.is_open()) {
+            auto& outputStream = mOutputStream;
 
             auto now = std::chrono::system_clock::now();
             auto time = std::chrono::system_clock::to_time_t(now);
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-                std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+                      std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
-            outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.") << ms.count() << " " << Logger::getLogLevelName(aLogLevel, false);
+            outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.") << ms.count() << " "
+                         << Logger::GetLogLevelName(logLevel, false);
 
-            if (aFilename)
-            {
-                outputStream << " (" << aFilename << ":" << aLinenumber << "): ";
-            }
-            else
-            {
+            if (filename) {
+                outputStream << " (" << filename << ":" << linenumber << "): ";
+            } else {
                 outputStream << ": ";
             }
 
-            outputStream << aMessage << std::endl;
+            outputStream << message << std::endl;
         }
     }
+
 private:
     std::ofstream mOutputStream;
 };
 
-#if defined(__ANDROID__)
-class LogcatOutput : public Logger::IOutput
+std::unique_ptr<ILogger::IOutput> CreateLoggerConsoleOutput()
 {
-public:
-    void write(ILogger::LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aMessage) override
-    {
-        int logPriority;
-        switch (aLogLevel)
-        {
-        case ILogger::LogLevel::Verbose:
-            logPriority = ANDROID_LOG_VERBOSE;
-            break;
-
-        case ILogger::LogLevel::Debug:
-            logPriority = ANDROID_LOG_DEBUG;
-            break;
-
-        case ILogger::LogLevel::Info:
-            logPriority = ANDROID_LOG_INFO;
-            break;
-
-        case ILogger::LogLevel::Warning:
-            logPriority = ANDROID_LOG_WARN;
-            break;
-
-        case ILogger::LogLevel::Error:
-            logPriority = ANDROID_LOG_ERROR;
-            break;
-
-        case ILogger::LogLevel::Fatal:
-            logPriority = ANDROID_LOG_FATAL;
-            break;
-
-        default:
-            logPriority = ANDROID_LOG_VERBOSE;
-            break;
-        }
-
-        if (aFilename)
-        {
-            std::stringstream outputStream;
-            outputStream << "(" << getFilename(aFilename) << ":" << aLinenumber << "): ";
-            outputStream << aMessage;
-            __android_log_write(logPriority, "lume", outputStream.str().c_str());
-        }
-        else
-        {
-            __android_log_write(logPriority, "lume", aMessage);
-        }
-    }
-};
-#endif
-
-
-
-std::unique_ptr<ILogger::IOutput> createLoggerConsoleOutput()
-{
-#ifdef __ANDROID__
+#ifdef __PLATFORM_AD__
     return std::make_unique<LogcatOutput>();
 #else
     return std::make_unique<StdOutput>();
 #endif
 }
 
-
-std::unique_ptr<ILogger::IOutput> createLoggerDebugOutput()
+std::unique_ptr<ILogger::IOutput> CreateLoggerDebugOutput()
 {
 #if defined(_WIN32) && !defined(NDEBUG)
     return std::make_unique<WindowsDebugOutput>();
@@ -357,10 +283,8 @@ std::unique_ptr<ILogger::IOutput> createLoggerDebugOutput()
 #endif
 }
 
-
-std::unique_ptr<ILogger::IOutput> createLoggerFileOutput(const char *aFilename)
+std::unique_ptr<ILogger::IOutput> CreateLoggerFileOutput(const char* filename)
 {
-    return std::make_unique<FileOutput>(aFilename);
+    return std::make_unique<FileOutput>(filename);
 }
-
-} // lume
+} // namespace lume

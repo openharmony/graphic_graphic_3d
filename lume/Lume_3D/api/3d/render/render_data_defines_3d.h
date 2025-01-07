@@ -61,8 +61,8 @@ static constexpr uint32_t MAX_ENV_CUSTOM_RESOURCE_COUNT { 4u };
  */
 static constexpr uint32_t MESH_CUSTOM_DATA_VEC4_COUNT { 2u };
 
-/** Max multi-view layer camera count. Max layers is 4 -> additional cameras 3 */
-static constexpr uint32_t MAX_MULTI_VIEW_LAYER_CAMERA_COUNT { 3u };
+/** Max multi-view layer camera count. Max layers is 8 -> additional cameras 7 */
+static constexpr uint32_t MAX_MULTI_VIEW_LAYER_CAMERA_COUNT { 7u };
 
 /** Invalid index with default material indices */
 static constexpr uint32_t INVALID_INDEX { ~0u };
@@ -80,11 +80,21 @@ static constexpr uint64_t DEFAULT_LAYER_MASK { 0x1 };
 /** Render draw command */
 struct RenderDrawCommand {
     /** Vertex count */
-    uint32_t vertexCount { 0 };
+    uint32_t vertexCount { 0U };
     /** Index count */
-    uint32_t indexCount { 0 };
+    uint32_t indexCount { 0U };
     /** Instance count */
-    uint32_t instanceCount { 1 };
+    uint32_t instanceCount { 1U };
+    /** Indirect draw count */
+    uint32_t drawCountIndirect { 0U };
+    /** Indirect draw stride */
+    uint32_t strideIndirect { 0U };
+    /** First index in draw */
+    uint32_t firstIndex { 0U };
+    /** First vertex offset in draw */
+    uint32_t vertexOffset { 0U };
+    /** First instance in draw */
+    uint32_t firstInstance { 0U };
 };
 
 /** Render vertex buffer */
@@ -147,6 +157,20 @@ struct RenderMeshData {
     BASE_NS::Math::UVec4 customData[RenderSceneDataConstants::MESH_CUSTOM_DATA_VEC4_COUNT] {};
 };
 
+/** Render frame material indices
+ */
+struct RenderFrameMaterialIndices {
+    /** Index to material data
+     * This data is unique and has the material handles and uniform data.
+     */
+    uint32_t index { RenderSceneDataConstants::INVALID_INDEX };
+    /** Offset to frame material data processing
+     * There might be duplicates of material uniform data for e.g. GPU instancing
+     * With this one can get the correct offset to rendering time material uniform data processing
+     */
+    uint32_t frameOffset { RenderSceneDataConstants::INVALID_INDEX };
+};
+
 /** The rendering material specialization flag bits
  */
 enum RenderMaterialFlagBits : uint32_t {
@@ -186,6 +210,11 @@ enum RenderMaterialFlagBits : uint32_t {
      * Spesializes the shader, and therefore needs to be setup
      */
     RENDER_MATERIAL_GPU_INSTANCING_BIT = (1 << 14),
+    /** Defines whether this material uses GPU instancing for material fetches.
+     * Many of the instanced materials share the material UBO data, so this would not be needed.
+     * Spesializes the shader, and therefore needs to be setup
+     */
+    RENDER_MATERIAL_GPU_INSTANCING_MATERIAL_BIT = (1 << 15),
 };
 /** Container for material flag bits */
 using RenderMaterialFlags = uint32_t;
@@ -240,37 +269,7 @@ enum RenderExtraRenderingFlagBits : uint32_t {
 /** Container for extra material rendering flag bits */
 using RenderExtraRenderingFlags = uint32_t;
 
-/** Render submesh */
-struct RenderSubmesh {
-    /** 64 bit id for render instance. Can be used for rendering time identification. RenderMeshComponent entity. */
-    uint64_t id { RenderSceneDataConstants::INVALID_ID };
-    /** 64 bit id for mesh instance. MeshComponent entity. */
-    uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
-    /** Submesh index. */
-    uint32_t subMeshIndex { 0 };
-
-    /** Layer mask. */
-    uint64_t layerMask { RenderSceneDataConstants::DEFAULT_LAYER_MASK };
-
-    /** Render sort layer id. Valid values are 0 - 63 */
-    uint8_t renderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
-    /** Render sort layer id. Valid values are 0 - 255 */
-    uint8_t renderSortLayerOrder { 0 };
-
-    /** A valid index to material. Get from AddMaterial() */
-    uint32_t materialIndex { RenderSceneDataConstants::INVALID_INDEX };
-    /** A valid index to mesh (matrix). Get from AddMeshData() */
-    uint32_t meshIndex { RenderSceneDataConstants::INVALID_INDEX };
-    /** A valid index to skin joint matrices if has skin. Get from AddSkinJointMatrices() */
-    uint32_t skinJointIndex { RenderSceneDataConstants::INVALID_INDEX };
-    /** A valid index to material custom resources if any. Get from AddMaterialCustomResources() */
-    uint32_t customResourcesIndex { RenderSceneDataConstants::INVALID_INDEX };
-
-    /** World center vector */
-    BASE_NS::Math::Vec3 worldCenter { 0.0f, 0.0f, 0.0f };
-    /** World radius */
-    float worldRadius { 0.0f };
-
+struct RenderSubmeshBuffersWithHandleReference {
     /** Index buffer */
     RenderIndexBuffer indexBuffer;
     /** Vertex buffers */
@@ -281,11 +280,119 @@ struct RenderSubmesh {
     /* Optional indirect args buffer for indirect draw. */
     RenderVertexBuffer indirectArgsBuffer;
 
+    /* Optional input assembly which overrides the graphics state one. */
+    RENDER_NS::GraphicsState::InputAssembly inputAssembly { false,
+        RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM };
+};
+
+struct RenderSubmeshBuffers {
+    /** Index buffer */
+    RENDER_NS::IndexBuffer indexBuffer;
+    /** Vertex buffers */
+    RENDER_NS::VertexBuffer vertexBuffers[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
+    /** Vertex buffer count */
+    uint32_t vertexBufferCount { 0 };
+
+    /* Optional indirect args buffer for indirect draw. */
+    RENDER_NS::VertexBuffer indirectArgsBuffer;
+
+    /* Optional input assembly which overrides the graphics state one. */
+    RENDER_NS::GraphicsState::InputAssembly inputAssembly { false,
+        RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM };
+};
+
+struct RenderSubmeshIndices {
+    /** 64 bit id for render instance. Can be used for rendering time identification. RenderMeshComponent entity. */
+    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    /** 64 bit id for mesh instance. MeshComponent entity. */
+    uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
+    /** Submesh index. */
+    uint32_t subMeshIndex { 0 };
+
+    /** A valid index to mesh (matrix). Get from AddMeshData() */
+    uint32_t meshIndex { RenderSceneDataConstants::INVALID_INDEX };
+    /** A valid index to skin joint matrices if has skin. Get from AddSkinJointMatrices() */
+    uint32_t skinJointIndex { RenderSceneDataConstants::INVALID_INDEX };
+
+    /** Material index to data store material data */
+    uint32_t materialIndex { RenderSceneDataConstants::INVALID_INDEX };
+    /** Material frame offset to processed data (i.e. uniform data offset index) */
+    uint32_t materialFrameOffset { RenderSceneDataConstants::INVALID_INDEX };
+};
+
+struct RenderSubmeshBounds {
+    /** World center vector */
+    BASE_NS::Math::Vec3 worldCenter { 0.0f, 0.0f, 0.0f };
+    /** World radius */
+    float worldRadius { 0.0f };
+};
+
+struct RenderSubmeshLayers {
+    /** Layer mask. */
+    uint64_t layerMask { RenderSceneDataConstants::DEFAULT_LAYER_MASK };
+
+    /** Mesh render sort layer id. Valid values are 0 - 63 */
+    uint8_t meshRenderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+    /** Mesh render sort layer id. Valid values are 0 - 255 */
+    uint8_t meshRenderSortLayerOrder { 0 };
+
+    /** Material render sort layer id. Valid values are 0 - 63
+     * Typically filled automatically by the data store based on selected material.
+     */
+    uint8_t materialRenderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+    /** Material render sort layer id. Valid values are 0 - 255 */
+    uint8_t materialRenderSortLayerOrder { 0 };
+};
+
+/** Render submesh with handle references */
+struct RenderSubmeshWithHandleReference {
+    /** Submesh flags */
+    RenderSubmeshFlags submeshFlags { 0U };
+
+    /** Additional rendering flags for this submesh material. Typically zero.
+     * Use case could be adding some specific flags for e.g. pso creation / specialization.
+     */
+    RenderMaterialFlags renderSubmeshMaterialFlags { 0U };
+
+    /** Indices */
+    RenderSubmeshIndices indices;
+
+    /** Sorting */
+    RenderSubmeshLayers layers;
+
+    /** Bounds */
+    RenderSubmeshBounds bounds;
+
     /** Draw command */
     RenderDrawCommand drawCommand;
 
+    /** buffers for rendering with handle references */
+    RenderSubmeshBuffersWithHandleReference buffers;
+};
+
+/** Render submesh */
+struct RenderSubmesh {
     /** Submesh flags */
     RenderSubmeshFlags submeshFlags { 0 };
+    /** Additional rendering flags for this submesh material. Typically zero.
+     * Use case could be adding some specific flags for e.g. pso creation / specialization.
+     */
+    RenderMaterialFlags renderSubmeshMaterialFlags { 0U };
+
+    /** Indices */
+    RenderSubmeshIndices indices;
+
+    /** Sorting */
+    RenderSubmeshLayers layers;
+
+    /** Bounds */
+    RenderSubmeshBounds bounds;
+
+    /** Draw command */
+    RenderDrawCommand drawCommand;
+
+    /** buffers for rendering */
+    RenderSubmeshBuffers buffers;
 };
 
 /** Render light */
@@ -368,10 +475,11 @@ struct RenderCamera {
         CAMERA_FLAG_CUSTOM_TARGETS_BIT = (1 << 13),
         /** Multi-view camera */
         CAMERA_FLAG_MULTI_VIEW_ONLY_BIT = (1 << 14),
-        /** Dynamic cubemap */
-        CAMERA_FLAG_DYNAMIC_CUBEMAP_BIT = (1 << 15),
+        /** Not in use (1 << 15) */
         /** Allow reflection */
         CAMERA_FLAG_ALLOW_REFLECTION_BIT = (1 << 16),
+        /** Automatic cubemap target camera */
+        CAMERA_FLAG_CUBEMAP_BIT = (1 << 17),
     };
     using Flags = uint32_t;
 
@@ -425,12 +533,21 @@ struct RenderCamera {
             /** Equirectangular */
             BG_TYPE_EQUIRECTANGULAR = 3,
         };
+        /** Environment flags */
+        enum EnvironmentFlagBits : uint32_t {
+            /** Main scene environment. From render configuration component */
+            ENVIRONMENT_FLAG_MAIN_BIT = (1 << 0),
+        };
+        using EnvironmentFlags = uint32_t;
 
         /** Unique id. */
         uint64_t id { RenderSceneDataConstants::INVALID_ID };
 
         /** Layer mask (camera render mask). All enabled by default */
         uint64_t layerMask { RenderSceneDataConstants::INVALID_ID };
+
+        /** Unique id. */
+        EnvironmentFlags flags { 0U };
 
         /** Radiance cubemap resource handle */
         RENDER_NS::RenderHandleReference radianceCubemap;
@@ -452,7 +569,7 @@ struct RenderCamera {
         BASE_NS::Math::Vec4 indirectSpecularFactor { 1.0f, 1.0f, 1.0f, 1.0f };
         /** Env map color factor (.rgb = tint, .a = intensity) */
         BASE_NS::Math::Vec4 envMapFactor { 1.0f, 1.0f, 1.0f, 1.0f };
-        /** Additional blend factor */
+        /** Additional blend factor for multiple cubemaps. .x blends 0-1, .y blends 1-2 ... */
         BASE_NS::Math::Vec4 blendFactor { 0.0f, 0.0f, 0.0f, 0.0f };
 
         /** Environment rotation */
@@ -465,6 +582,14 @@ struct RenderCamera {
         RENDER_NS::RenderHandleReference shader;
         /** invalid handles if not given */
         RENDER_NS::RenderHandleReference customResourceHandles[RenderSceneDataConstants::MAX_ENV_CUSTOM_RESOURCE_COUNT];
+
+        /** Blended environment count. */
+        uint32_t multiEnvCount { 0U };
+        /** 64bit environment id of environments. */
+        uint64_t multiEnvIds[DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT] {
+            RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID,
+            RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID
+        };
     };
 
     /** Fog setup */
@@ -542,6 +667,9 @@ struct RenderCamera {
     /** Camera cull type */
     CameraCullType cullType { CameraCullType::CAMERA_CULL_VIEW_FRUSTUM };
 
+    /** MSAA sample count */
+    RENDER_NS::SampleCountFlags msaaSampleCountFlags { RENDER_NS::SampleCountFlagBits::CORE_SAMPLE_COUNT_4_BIT };
+
     /** Default environment setup for camera */
     Environment environment;
 
@@ -580,19 +708,15 @@ struct RenderCamera {
     uint32_t multiViewCameraCount { 0U };
     /** 64bit camera id of multi-view layer cameras. */
     uint64_t multiViewCameraIds[RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT] {
-        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID
+        RenderSceneDataConstants::INVALID_ID,
+        RenderSceneDataConstants::INVALID_ID,
+        RenderSceneDataConstants::INVALID_ID,
+        RenderSceneDataConstants::INVALID_ID,
+        RenderSceneDataConstants::INVALID_ID,
     };
+    /** Hash of the multi-view camera IDs */
+    uint64_t multiViewCameraHash { 0U };
     uint64_t multiViewParentCameraId { RenderSceneDataConstants::INVALID_ID };
-
-    /** Environment count. */
-    uint32_t environmentCount { 0U };
-    /** 64bit environment id of environments. */
-    uint64_t environmentIds[DefaultMaterialCameraConstants::MAX_ENVIRONMENT_COUNT] {
-        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID,
-        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID,
-        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID,
-        RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID
-    };
 };
 
 /** Render scene */

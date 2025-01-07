@@ -218,7 +218,7 @@ inline FORMAT_FUNC(5, 6) bool LogAssert(const BASE_NS::string_view filename, int
     return expression;
 }
 
-inline void CheckOnceReset(const BASE_NS::string_view id)
+inline void CheckOnceReset()
 {
     // reset log once flag
     if (ILogger* logger = GetLogger(); logger) {

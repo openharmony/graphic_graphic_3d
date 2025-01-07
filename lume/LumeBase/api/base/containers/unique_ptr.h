@@ -27,7 +27,7 @@ struct default_delete {
     constexpr default_delete() noexcept = default;
 
     template<class U>
-    default_delete(const default_delete<U>& d) noexcept
+    default_delete(const default_delete<U>& /* d */) noexcept
     {}
 
     void operator()(T* ptr) const
@@ -49,7 +49,7 @@ struct default_delete<T[]> {
     constexpr default_delete() noexcept = default;
 
     template<class U>
-    default_delete(const default_delete<U[]>& d) noexcept
+    default_delete(const default_delete<U[]>& /* d */) noexcept
     {}
 
     void operator()(T* ptr) const
@@ -300,7 +300,7 @@ public:
         }
     }
 
-    void reset(nullptr_t p = nullptr) noexcept
+    void reset(nullptr_t /* p */ = nullptr) noexcept
     {
         reset(pointer());
     }

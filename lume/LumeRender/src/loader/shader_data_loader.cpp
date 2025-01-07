@@ -18,7 +18,6 @@
 #include <charconv>
 
 #include <base/containers/string.h>
-#include <base/util/uid_util.h>
 #include <core/io/intf_file_manager.h>
 #include <core/namespace.h>
 
@@ -49,18 +48,35 @@ void LoadState(const json::value& jsonData, GraphicsState& graphicsState, Graphi
     }
 }
 
-void LoadSingleShaderVariant(
-    const json::value& jsonData, ShaderDataLoader::ShaderVariant& data, ShaderDataLoader::LoadResult& result)
+void LoadSingleShaderVariant(const json::value& jsonData, const string& materialMetaData,
+    IShaderManager::ShaderVariant& data, ShaderDataLoader::LoadResult& result)
 {
     SafeGetJsonValue(jsonData, "renderSlotDefaultShader", result.error, data.renderSlotDefaultShader);
     SafeGetJsonValue(jsonData, "variantName", result.error, data.variantName);
     SafeGetJsonValue(jsonData, "displayName", result.error, data.displayName);
-    SafeGetJsonValue(jsonData, "vert", result.error, data.vertexShader);
-    SafeGetJsonValue(jsonData, "frag", result.error, data.fragmentShader);
-    SafeGetJsonValue(jsonData, "compute", result.error, data.computeShader);
-    if (data.computeShader.empty()) {
-        SafeGetJsonValue(jsonData, "comp", result.error, data.computeShader);
+    SafeGetJsonValue(jsonData, "baseShader", result.error, data.addBaseShader);
+
+    string vertexShader { "" };
+    string fragmentShader { "" };
+    string computeShader { "" };
+
+    SafeGetJsonValue(jsonData, "vert", result.error, vertexShader);
+    SafeGetJsonValue(jsonData, "frag", result.error, fragmentShader);
+    SafeGetJsonValue(jsonData, "compute", result.error, computeShader);
+    if (computeShader.empty()) {
+        SafeGetJsonValue(jsonData, "comp", result.error, computeShader);
     }
+
+    if (!vertexShader.empty()) {
+        data.shaders.push_back({ vertexShader, CORE_SHADER_STAGE_VERTEX_BIT });
+    }
+    if (!fragmentShader.empty()) {
+        data.shaders.push_back({ fragmentShader, CORE_SHADER_STAGE_FRAGMENT_BIT });
+    }
+    if (!computeShader.empty()) {
+        data.shaders.push_back({ computeShader, CORE_SHADER_STAGE_COMPUTE_BIT });
+    }
+
     {
         SafeGetJsonValue(jsonData, "slot", result.error, data.renderSlot);
         SafeGetJsonValue(jsonData, "renderSlot", result.error, data.renderSlot);
@@ -75,12 +91,14 @@ void LoadSingleShaderVariant(
         }
         if (const json::value* iter = jsonData.find("materialMetadata"); iter) {
             data.materialMetadata = json::to_string(*iter);
+        } else if (!materialMetaData.empty()) {
+            data.materialMetadata = materialMetaData;
         }
     }
 }
 
-ShaderDataLoader::LoadResult LoadFunc(const json::value& jsonData, string& baseShader, string& baseCategory,
-    vector<ShaderDataLoader::ShaderVariant>& shaderVariants)
+ShaderDataLoader::LoadResult LoadFunc(const string_view uri, const json::value& jsonData, string& baseCategory,
+    vector<IShaderManager::ShaderVariant>& shaderVariants)
 {
     ShaderDataLoader::LoadResult result;
     // compatibility check with early out
@@ -114,26 +132,39 @@ ShaderDataLoader::LoadResult LoadFunc(const json::value& jsonData, string& baseS
             PLUGIN_LOG_W("RENDER_VALIDATION: name (%s) not supported in shader json", name.c_str());
         }
     }
-#endif
     // base shader
-    SafeGetJsonValue(jsonData, "baseShader", result.error, baseShader);
+    {
+        string baseShader;
+        SafeGetJsonValue(jsonData, "baseShader", result.error, baseShader);
+        if (!(baseShader.empty())) {
+            PLUGIN_LOG_W("RENDER_VALIDATION: baseShader supported only for variants (%s)", baseShader.c_str());
+        }
+    }
+#endif
     // category
     SafeGetJsonValue(jsonData, "category", result.error, baseCategory);
+    // base materialMetaData
+    string materialMetaData;
+    if (const json::value* iter = jsonData.find("materialMetadata"); iter) {
+        materialMetaData = json::to_string(*iter);
+    }
 
     // check all variants or use (older) single variant style
     if (const json::value* iter = jsonData.find("shaders"); iter) {
         if (iter->is_array()) {
             for (const auto& variantRef : iter->array_) {
-                ShaderDataLoader::ShaderVariant sv;
-                LoadSingleShaderVariant(variantRef, sv, result);
+                IShaderManager::ShaderVariant sv;
+                // add own base shader
+                sv.ownBaseShader = uri;
+                LoadSingleShaderVariant(variantRef, materialMetaData, sv, result);
                 if (result.error.empty()) {
                     shaderVariants.push_back(move(sv));
                 }
             }
         }
     } else {
-        ShaderDataLoader::ShaderVariant sv;
-        LoadSingleShaderVariant(jsonData, sv, result);
+        IShaderManager::ShaderVariant sv;
+        LoadSingleShaderVariant(jsonData, materialMetaData, sv, result);
         if (result.error.empty()) {
             shaderVariants.push_back(move(sv));
         }
@@ -149,17 +180,12 @@ string_view ShaderDataLoader::GetUri() const
     return uri_;
 }
 
-string_view ShaderDataLoader::GetBaseShader() const
-{
-    return baseShader_;
-}
-
 BASE_NS::string_view ShaderDataLoader::GetBaseCategory() const
 {
     return baseCategory_;
 }
 
-array_view<const ShaderDataLoader::ShaderVariant> ShaderDataLoader::GetShaderVariants() const
+array_view<const IShaderManager::ShaderVariant> ShaderDataLoader::GetShaderVariants() const
 {
     return shaderVariants_;
 }
@@ -183,15 +209,15 @@ ShaderDataLoader::LoadResult ShaderDataLoader::Load(IFileManager& fileManager, c
         return LoadResult("Failed to read file.");
     }
 
-    return Load(move(raw));
+    return Load(uri, move(raw));
 }
 
-ShaderDataLoader::LoadResult ShaderDataLoader::Load(string&& jsonData)
+ShaderDataLoader::LoadResult ShaderDataLoader::Load(const string_view uri, string&& jsonData)
 {
     LoadResult result;
     const auto json = json::parse(jsonData.data());
     if (json) {
-        result = RENDER_NS::LoadFunc(json, baseShader_, baseCategory_, shaderVariants_);
+        result = RENDER_NS::LoadFunc(uri, json, baseCategory_, shaderVariants_);
     } else {
         result.success = false;
         result.error = "Invalid json file.";

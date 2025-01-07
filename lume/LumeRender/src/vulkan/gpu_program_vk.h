@@ -36,8 +36,8 @@ struct GpuShaderProgramPlatformDataVk final {
 
 class GpuShaderProgramVk final : public GpuShaderProgram {
 public:
-    GpuShaderProgramVk(Device& aDevice, const GpuShaderProgramCreateData& aCreateData);
-    ~GpuShaderProgramVk() = default;
+    explicit GpuShaderProgramVk(const GpuShaderProgramCreateData& aCreateData);
+    ~GpuShaderProgramVk() override = default;
 
     const GpuShaderProgramPlatformDataVk& GetPlatformData() const;
     const ShaderReflection& GetReflection() const override;
@@ -59,8 +59,8 @@ struct GpuComputeProgramPlatformDataVk final {
 
 class GpuComputeProgramVk final : public GpuComputeProgram {
 public:
-    GpuComputeProgramVk(Device& aDevice, const GpuComputeProgramCreateData& aCreateData);
-    ~GpuComputeProgramVk() = default;
+    explicit GpuComputeProgramVk(const GpuComputeProgramCreateData& aCreateData);
+    ~GpuComputeProgramVk() override = default;
 
     const GpuComputeProgramPlatformDataVk& GetPlatformData() const;
     const ComputeShaderReflection& GetReflection() const override;

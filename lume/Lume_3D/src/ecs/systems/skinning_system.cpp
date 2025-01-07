@@ -15,7 +15,6 @@
 
 #include "skinning_system.h"
 
-#include <PropertyTools/property_api_impl.inl>
 #include <algorithm>
 #include <charconv>
 #include <limits>
@@ -38,6 +37,7 @@
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_plugin_register.h>
+#include <core/property_tools/property_api_impl.inl>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 
@@ -61,39 +61,42 @@ void UpdateJointBounds(IPicking& pick, const array_view<const float>& jointBound
     const Math::Mat4X4& skinEntityWorld, JointMatricesComponent& jointMatrices)
 {
     const size_t jointBoundsDataSize = jointBoundsData.size();
-    const size_t boundsCount = jointBoundsDataSize / 6;
+    const size_t boundsCount = jointBoundsDataSize / 6U;
 
-    CORE_ASSERT(jointBoundsData.size() % 6 == 0); // 6: should be multiple of 6
+    CORE_ASSERT(jointBoundsData.size() % 6U == 0); // 6: should be multiple of 6
     CORE_ASSERT(jointMatrices.count >= boundsCount);
 
-    constexpr float maxFloat = std::numeric_limits<float>::max();
-    constexpr Math::Vec3 minDefault(maxFloat, maxFloat, maxFloat);
-    constexpr Math::Vec3 maxDefault(-maxFloat, -maxFloat, -maxFloat);
+    static constexpr float maxFloat = std::numeric_limits<float>::max();
+    static constexpr Math::Vec3 minDefault(maxFloat, maxFloat, maxFloat);
+    static constexpr Math::Vec3 maxDefault(-maxFloat, -maxFloat, -maxFloat);
 
     jointMatrices.jointsAabbMin = minDefault;
     jointMatrices.jointsAabbMax = maxDefault;
 
-    for (size_t j = 0; j < jointMatrices.count; j++) {
-        if (j < boundsCount) {
-            // Bounds that don't have any vertices will be filled with maxFloat.
-            const float* boundsData = &jointBoundsData[j * 6];
-            if (*boundsData != maxFloat) {
-                const Math::Vec3 min(boundsData);
-                const Math::Vec3 max(boundsData + 3);
-                const Math::Mat4X4& bbWorld = skinEntityWorld * jointMatrices.jointMatrices[j];
-                const auto mam = pick.GetWorldAABB(bbWorld, min, max);
-                // Only use bounding box if it's size is > ~zero.
-                if (Math::Distance2(mam.minAABB, mam.maxAABB) > Math::EPSILON) {
-                    jointMatrices.jointAabbMinArray[j] = mam.minAABB;
-                    jointMatrices.jointAabbMaxArray[j] = mam.maxAABB;
-                    // Update the combined min/max for all joints.
-                    jointMatrices.jointsAabbMin = Math::min(jointMatrices.jointsAabbMin, mam.minAABB);
-                    jointMatrices.jointsAabbMax = Math::max(jointMatrices.jointsAabbMax, mam.maxAABB);
-                    continue;
-                }
+    for (size_t j = 0; j < boundsCount; j++) {
+        // Bounds that don't have any vertices will be filled with maxFloat.
+        const float* boundsData = &jointBoundsData[j * 6U];
+        if (*boundsData != maxFloat) {
+            const Math::Vec3 min(boundsData);
+            const Math::Vec3 max(boundsData + 3);
+            const Math::Mat4X4& bbWorld = skinEntityWorld * jointMatrices.jointMatrices[j];
+            const auto mam = pick.GetWorldAABB(bbWorld, min, max);
+            // Only use bounding box if it's size is > ~zero.
+            if (Math::Distance2(mam.minAABB, mam.maxAABB) > Math::EPSILON) {
+                jointMatrices.jointAabbMinArray[j] = mam.minAABB;
+                jointMatrices.jointAabbMaxArray[j] = mam.maxAABB;
+                // Update the combined min/max for all joints.
+                jointMatrices.jointsAabbMin = Math::min(jointMatrices.jointsAabbMin, mam.minAABB);
+                jointMatrices.jointsAabbMax = Math::max(jointMatrices.jointsAabbMax, mam.maxAABB);
+                continue;
             }
         }
 
+        // This joint is not referenced by any vertex or the bounding box size is zero.
+        jointMatrices.jointAabbMinArray[j] = minDefault;
+        jointMatrices.jointAabbMaxArray[j] = maxDefault;
+    }
+    for (size_t j = boundsCount; j < jointMatrices.count; j++) {
         // This joint is not referenced by any vertex or the bounding box size is zero.
         jointMatrices.jointAabbMinArray[j] = minDefault;
         jointMatrices.jointAabbMaxArray[j] = maxDefault;
@@ -216,8 +219,7 @@ void SkinningSystem::UpdateJointTransformations(bool isEnabled, const array_view
                 if (const auto worldMatrixId = worldMatrixManager.GetComponentId(jointEntity);
                     worldMatrixId != IComponentManager::INVALID_COMPONENT_ID) {
                     auto const& jointGlobal = worldMatrixManager.Get(worldMatrixId).matrix;
-                    auto const jointMatrix = skinEntityWorldInverse * jointGlobal * ibm;
-                    return jointMatrix;
+                    return skinEntityWorldInverse * jointGlobal * ibm;
                 }
             }
 
@@ -237,6 +239,10 @@ void SkinningSystem::UpdateSkin(const ComponentQuery::ResultRow& row)
         isEnabled = nodeManager_.Get(skinComponent.skinRoot).effectivelyEnabled;
         skinEntityWorld = worldMatrixManager_.Get(worldMatrixId).matrix;
         skinEntityWorldInverse = Math::Inverse(skinEntityWorld);
+    }
+    if (const auto worldMatrixId = worldMatrixManager_.GetComponentId(row.entity);
+        worldMatrixId != IComponentManager::INVALID_COMPONENT_ID) {
+        skinEntityWorld = worldMatrixManager_.Get(worldMatrixId).matrix;
     }
 
     const auto skinIbmHandle = skinIbmManager_.Read(skinComponent.skin);
@@ -312,11 +318,14 @@ bool SkinningSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
     worldMatrixGeneration_ = worldMatrixManager_.GetGenerationCounter();
 
     const auto threadCount = threadPool_->GetNumberOfThreads();
+    if (threadCount == 0) {
+        return 0;
+    }
     const auto queryResults = componentQuery_.GetResults();
     const auto resultCount = queryResults.size();
     constexpr size_t minTaskSize = 8U;
-    const auto taskSize = Math::max(minTaskSize, resultCount / (threadCount == 0 ? 1 : threadCount));
-    const auto tasks = resultCount / (taskSize == 0 ? 1 : taskSize);
+    const auto taskSize = Math::max(minTaskSize, resultCount / threadCount);
+    const auto tasks = resultCount / taskSize;
 
     tasks_.clear();
     tasks_.reserve(tasks);
@@ -406,7 +415,7 @@ void SkinningSystem::CreateInstance(Entity const& skinIbmEntity, Entity const& e
     if (const auto jointsHandle = skinJointsManager_.Read(skinIbmEntity); jointsHandle) {
         const auto joints = array_view(jointsHandle->jointEntities, jointsHandle->count);
         if (!std::all_of(
-                joints.begin(), joints.end(), [](const Entity& entity) { return EntityUtil::IsValid(entity); })) {
+            joints.begin(), joints.end(), [](const Entity& entity) { return EntityUtil::IsValid(entity); })) {
             return;
         }
         if (const auto skinIbmHandle = skinIbmManager_.Read(skinIbmEntity); skinIbmHandle) {

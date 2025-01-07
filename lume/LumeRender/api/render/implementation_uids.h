@@ -24,6 +24,7 @@ static constexpr BASE_NS::Uid UID_RENDER_PLUGIN { "5d2370cf-21df-40fb-ab30-a30ad
 static constexpr BASE_NS::Uid UID_RENDER_CONTEXT { "b8b3eeeb-f34c-4238-9cef-6d202de28f36" };
 static constexpr BASE_NS::Uid UID_RENDER_DATA_CONFIGURATION_LOADER { "39069120-6594-40db-8dfd-2ff2d9502901" };
 static constexpr BASE_NS::Uid UID_RENDER_NODE_POST_PROCESS_UTIL { "0e0cc2df-463b-4dd7-88a0-012fa1b8cd04" };
+static constexpr BASE_NS::Uid UID_RENDER_NODE_COPY_UTIL { "cf855681-2446-42fc-bc6b-8c439871f8db" };
 RENDER_END_NAMESPACE()
 
 #endif // API_RENDER_IMPLEMENTATION_UIDS_H

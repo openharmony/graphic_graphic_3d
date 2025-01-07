@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_MOTION_BLUR_H
-#define RENDER_RENDER__NODE__RENDER_MOTION_BLUR_H
+#ifndef RENDER_NODE_RENDER_MOTION_BLUR_H
+#define RENDER_NODE_RENDER_MOTION_BLUR_H
 
 #include <base/containers/string.h>
 #include <base/containers/vector.h>
@@ -49,13 +49,12 @@ public:
     void Execute(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
         const MotionBlurInfo& blurInfo, const PostProcessConfiguration& ppConfig);
 
-    DescriptorCounts GetDescriptorCounts() const;
+    static DescriptorCounts GetDescriptorCounts();
 
 private:
-    void ExecuteTileVelocity(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
-        const MotionBlurInfo& blurInfo, const PostProcessConfiguration& ppConfig);
-    void UpdateDescriptorSet0(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
-        const MotionBlurInfo& blurInfo, const PostProcessConfiguration& ppConfig);
+    void ExecuteTileVelocity(
+        IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList, const MotionBlurInfo& blurInfo);
+    void UpdateDescriptorSet0(IRenderCommandList& cmdList, const MotionBlurInfo& blurInfo);
     RenderHandle GetTileVelocityForMotionBlur() const;
 
     struct RenderDataHandles {

@@ -19,16 +19,16 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
+using CORE3D_NS::RenderMeshBatchComponent;
+
 // Extend propertysystem with the enums
-DECLARE_PROPERTY_TYPE(CORE3D_NS::RenderMeshBatchComponent::BatchType);
+DECLARE_PROPERTY_TYPE(RenderMeshBatchComponent::BatchType);
 
 // Declare their metadata
-BEGIN_ENUM(BatchTypeMetaData, CORE3D_NS::RenderMeshBatchComponent::BatchType)
-DECL_ENUM(CORE3D_NS::RenderMeshBatchComponent::BatchType, GPU_INSTANCING, "GPU Instancing")
-END_ENUM(BatchTypeMetaData, CORE3D_NS::RenderMeshBatchComponent::BatchType)
+ENUM_TYPE_METADATA(RenderMeshBatchComponent::BatchType, ENUM_VALUE(GPU_INSTANCING, "GPU Instancing"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -42,27 +42,26 @@ using CORE_NS::Property;
 
 class RenderMeshBatchComponentManager final
     : public BaseManager<RenderMeshBatchComponent, IRenderMeshBatchComponentManager> {
-    BEGIN_PROPERTY(RenderMeshBatchComponent, ComponentMetadata)
+    BEGIN_PROPERTY(RenderMeshBatchComponent, componentMetaData_)
 #include <3d/ecs/components/render_mesh_batch_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit RenderMeshBatchComponentManager(IEcs& ecs)
         : BaseManager<RenderMeshBatchComponent, IRenderMeshBatchComponentManager>(
-              ecs, CORE_NS::GetName<RenderMeshBatchComponent>())
+              ecs, CORE_NS::GetName<RenderMeshBatchComponent>(), 0U)
     {}
 
     ~RenderMeshBatchComponentManager() = default;
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

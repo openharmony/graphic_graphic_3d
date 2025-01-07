@@ -10,8 +10,8 @@
 
 #include "render/shaders/common/render_post_process_layout_common.h"
 
-layout(set = 1, binding = 0, rgba16f/*r11f_g11f_b10f*/) uniform readonly image2D uRTex;
-layout(set = 1, binding = 0, rgba16f/*r11f_g11f_b10f*/) uniform writeonly image2D uWTex;
+layout(set = 1, binding = 0, rgba16f /*r11f_g11f_b10f*/) uniform readonly image2D uRTex;
+layout(set = 1, binding = 0, rgba16f /*r11f_g11f_b10f*/) uniform writeonly image2D uWTex;
 
 layout(set = 1, binding = 1) uniform texture2D uTex;
 layout(set = 1, binding = 2) uniform sampler uSampler;
@@ -31,7 +31,7 @@ void main()
 
     const ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
     const vec3 baseColor = imageLoad(uRTex, coords).xyz;
-    color = min((color + baseColor), CORE_BLOOM_CLAMP_MAX_VALUE);
+    const float scatter = uPc.factor.w;
+    color = min((baseColor + color * scatter), CORE_BLOOM_CLAMP_MAX_VALUE);
     imageStore(uWTex, coords, vec4(color, 1.0));
 }
-

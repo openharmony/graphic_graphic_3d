@@ -21,7 +21,7 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::vector;
@@ -31,55 +31,54 @@ DECLARE_PROPERTY_TYPE(MeshComponent::Submesh);
 DECLARE_PROPERTY_TYPE(MeshComponent::Submesh::BufferAccess);
 DECLARE_PROPERTY_TYPE(MeshComponent::Submesh::IndexBufferAccess);
 DECLARE_PROPERTY_TYPE(vector<MeshComponent::Submesh>);
+DECLARE_PROPERTY_TYPE(RENDER_NS::GraphicsState::InputAssembly);
+DECLARE_PROPERTY_TYPE(RENDER_NS::PrimitiveTopology);
+
+ENUM_TYPE_METADATA(RENDER_NS::PrimitiveTopology, ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_POINT_LIST, "Point List"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_LINE_LIST, "Line List"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_LINE_STRIP, "Line Strip"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, "Triangle Strip"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN, "Triangle Fan"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY, "Line List With Adjacency"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY, "Line Strip With Adjacency"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY, "Triangle List With Adjacency"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY, "Triangle Strip With Adjacency"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_PATCH_LIST, "Patch List"),
+    ENUM_VALUE(CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM, "Undefined"))
 
 DECLARE_PROPERTY_TYPE(RENDER_NS::IndexType);
-BEGIN_ENUM(IndexTypeMetaData, RENDER_NS::IndexType)
-DECL_ENUM(RENDER_NS::IndexType, CORE_INDEX_TYPE_UINT16, "16 Bit")
-DECL_ENUM(RENDER_NS::IndexType, CORE_INDEX_TYPE_UINT32, "32 Bit")
-END_ENUM(IndexTypeMetaData, RENDER_NS::IndexType)
 
-BEGIN_ENUM(SubmeshFlagBitsMetaData, MeshComponent::Submesh::FlagBits)
-DECL_ENUM(MeshComponent::Submesh::FlagBits, TANGENTS_BIT, "Tangents")
-DECL_ENUM(MeshComponent::Submesh::FlagBits, VERTEX_COLORS_BIT, "Vertex Colors")
-DECL_ENUM(MeshComponent::Submesh::FlagBits, SKIN_BIT, "Skin")
-DECL_ENUM(MeshComponent::Submesh::FlagBits, SECOND_TEXCOORD_BIT, "Second Texcoord")
-END_ENUM(SubmeshFlagBitsMetaData, MeshComponent::Submesh::FlagBits)
+ENUM_TYPE_METADATA(
+    RENDER_NS::IndexType, ENUM_VALUE(CORE_INDEX_TYPE_UINT16, "16 Bit"), ENUM_VALUE(CORE_INDEX_TYPE_UINT32, "32 Bit"))
 
-BEGIN_METADATA(BAMetaData, MeshComponent::Submesh::BufferAccess)
-DECL_PROPERTY2(MeshComponent::Submesh::BufferAccess, buffer, "Handle", 0)
-DECL_PROPERTY2(MeshComponent::Submesh::BufferAccess, offset, "Offset", 0)
-DECL_PROPERTY2(MeshComponent::Submesh::BufferAccess, byteSize, "Size In Bytes", 0)
-END_METADATA(BAMetaData, MeshComponent::Submesh::BufferAccess)
+ENUM_TYPE_METADATA(MeshComponent::Submesh::FlagBits, ENUM_VALUE(TANGENTS_BIT, "Tangents"),
+    ENUM_VALUE(VERTEX_COLORS_BIT, "Vertex Colors"), ENUM_VALUE(SKIN_BIT, "Skin"),
+    ENUM_VALUE(SECOND_TEXCOORD_BIT, "Second Texcoord"))
 
-BEGIN_METADATA(IBAMetaData, MeshComponent::Submesh::IndexBufferAccess)
-DECL_PROPERTY2(MeshComponent::Submesh::IndexBufferAccess, buffer, "Handle", 0)
-DECL_PROPERTY2(MeshComponent::Submesh::IndexBufferAccess, offset, "Offset", 0)
-DECL_PROPERTY2(MeshComponent::Submesh::IndexBufferAccess, byteSize, "Size In Bytes", 0)
-DECL_PROPERTY2(MeshComponent::Submesh::IndexBufferAccess, indexType, "Index Type", 0)
-END_METADATA(IBAMetaData, MeshComponent::Submesh::IndexBufferAccess)
+DATA_TYPE_METADATA(MeshComponent::Submesh::BufferAccess, MEMBER_PROPERTY(buffer, "Handle", 0),
+    MEMBER_PROPERTY(offset, "Offset", 0), MEMBER_PROPERTY(byteSize, "Size In Bytes", 0))
 
-BEGIN_METADATA(SMDMetaData, MeshComponent::Submesh)
+DATA_TYPE_METADATA(MeshComponent::Submesh::IndexBufferAccess, MEMBER_PROPERTY(buffer, "Handle", 0),
+    MEMBER_PROPERTY(offset, "Offset", 0), MEMBER_PROPERTY(byteSize, "Size In Bytes", 0),
+    MEMBER_PROPERTY(indexType, "Index Type", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::GraphicsState::InputAssembly,
+    MEMBER_PROPERTY(enablePrimitiveRestart, "Enable Primitive Restart", 0),
+    MEMBER_PROPERTY(primitiveTopology, "Primitive Topology", 0))
+
 /* Expose more properties? */
-DECL_PROPERTY2(MeshComponent::Submesh, instanceCount, "Instance Count", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, bufferAccess, "", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, indexBuffer, "Index Buffer", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, indirectArgsBuffer, "Indirect Buffer", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, morphTargetBuffer, "Morph Target Buffer", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, vertexCount, "Vertex Count", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, indexCount, "Index Count", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, morphTargetCount, "Morph Target Count", 0)
+DATA_TYPE_METADATA(MeshComponent::Submesh, MEMBER_PROPERTY(instanceCount, "Instance Count", 0),
+    MEMBER_PROPERTY(bufferAccess, "", 0), MEMBER_PROPERTY(indexBuffer, "Index Buffer", 0),
+    MEMBER_PROPERTY(indirectArgsBuffer, "Indirect Buffer", 0),
+    MEMBER_PROPERTY(morphTargetBuffer, "Morph Target Buffer", 0), MEMBER_PROPERTY(vertexCount, "Vertex Count", 0),
+    MEMBER_PROPERTY(indexCount, "Index Count", 0), MEMBER_PROPERTY(morphTargetCount, "Morph Target Count", 0),
+    MEMBER_PROPERTY(aabbMin, "Min AABB", 0), MEMBER_PROPERTY(aabbMax, "Max AABB", 0),
+    MEMBER_PROPERTY(material, "Material", 0), MEMBER_PROPERTY(additionalMaterials, "Additional Materials", 0),
+    BITFIELD_MEMBER_PROPERTY(flags, "Options", PropertyFlags::IS_BITFIELD, MeshComponent::Submesh::FlagBits),
+    MEMBER_PROPERTY(renderSortLayer, "Render Sort Layer", 0),
+    MEMBER_PROPERTY(renderSortLayerOrder, "Render Sort Layer Order", 0),
+    MEMBER_PROPERTY(inputAssembly, "Input Assembly (Optional)", 0))
 
-DECL_PROPERTY2(MeshComponent::Submesh, aabbMin, "Min AABB", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, aabbMax, "Max AABB", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, material, "Material", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, additionalMaterials, "Additional Materials", 0)
-DECL_BITFIELD_PROPERTY(
-    MeshComponent::Submesh, flags, "Options", PropertyFlags::IS_BITFIELD, MeshComponent::Submesh::FlagBits)
-DECL_PROPERTY2(MeshComponent::Submesh, renderSortLayer, "Sort Layer", 0)
-DECL_PROPERTY2(MeshComponent::Submesh, renderSortLayerOrder, "Sort Layer Order", 0)
-END_METADATA(SMDMetaData, MeshComponent::Submesh)
-
-DECLARE_CONTAINER_API(MPD, MeshComponent::Submesh);
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -92,10 +91,9 @@ using CORE_NS::IEcs;
 using CORE_NS::Property;
 
 class MeshComponentManager final : public BaseManager<MeshComponent, IMeshComponentManager> {
-    BEGIN_PROPERTY(MeshComponent, ComponentMetadata)
+    BEGIN_PROPERTY(MeshComponent, componentMetaData_)
 #include <3d/ecs/components/mesh_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit MeshComponentManager(IEcs& ecs)
@@ -106,12 +104,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

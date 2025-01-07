@@ -23,6 +23,7 @@
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <base/math/matrix.h>
+#include <core/ecs/intf_ecs.h>
 #include <core/namespace.h>
 
 #include "property/property_handle.h"
@@ -31,11 +32,10 @@ CORE3D_BEGIN_NAMESPACE()
 class INameComponentManager;
 class INodeComponentManager;
 class ILocalMatrixComponentManager;
-class IPreviousWorldMatrixComponentManager;
 class IWorldMatrixComponentManager;
 class ITransformComponentManager;
 
-class NodeSystem final : public INodeSystem {
+class NodeSystem final : public INodeSystem, CORE_NS::IEcs::ComponentListener {
 public:
     explicit NodeSystem(CORE_NS::IEcs& ecs);
     ~NodeSystem() override = default;
@@ -70,6 +70,11 @@ public:
     void AddListener(SceneNodeListener& listener) override;
     void RemoveListener(SceneNodeListener& listener) override;
 
+    // IEcs::ComponentListener
+    void OnComponentEvent(CORE_NS::IEcs::ComponentListener::EventType type,
+        const CORE_NS::IComponentManager& componentManager,
+        BASE_NS::array_view<const CORE_NS::Entity> entities) override;
+
 private:
     class NodeAccess;
     class SceneNode;
@@ -81,7 +86,7 @@ private:
     NodeInfo ProcessNode(SceneNode* node, const bool parentEnabled, const CORE_NS::ComponentQuery::ResultRow* row);
     void UpdateTransformations(ISceneNode& node, BASE_NS::Math::Mat4X4 const& matrix, bool enabled);
     void GatherNodeEntities(const ISceneNode& node, BASE_NS::vector<CORE_NS::Entity>& entities) const;
-    bool UpdatePreviousWorldMatrices();
+    void UpdatePreviousWorldMatrices();
 
     CORE_NS::IEcs& ecs_;
     bool active_ = true;
@@ -91,7 +96,6 @@ private:
     ITransformComponentManager& transformManager_;
     ILocalMatrixComponentManager& localMatrixManager_;
     IWorldMatrixComponentManager& worldMatrixManager_;
-    IPreviousWorldMatrixComponentManager& prevWorldMatrixManager_;
 
     BASE_NS::unique_ptr<NodeCache> cache_;
 
@@ -100,6 +104,9 @@ private:
     uint32_t localMatrixGeneration_ = 0;
     uint32_t worldMatrixGeneration_ = 0;
     uint32_t nodeGeneration_ = 0;
+
+    BASE_NS::vector<CORE_NS::Entity> modifiedEntities_;
+    BASE_NS::vector<State> stack_;
 };
 CORE3D_END_NAMESPACE()
 

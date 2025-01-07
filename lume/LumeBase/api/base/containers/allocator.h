@@ -35,8 +35,7 @@ inline bool CloneData(void* const dst, const size_t dstSize, const void* const s
 {
     if (dst && src && srcSize <= dstSize) {
         // Note: arguments for memcpy have been verified.
-        auto status = memcpy_s(dst, dstSize, src, srcSize);
-        if (status != 0) {
+        if (memcpy_s(dst, dstSize, src, srcSize) != 0) {
             return false;
         }
     } else {
@@ -49,8 +48,7 @@ inline bool MoveData(void* const dst, const size_t dstSize, const void* const sr
 {
     if (dst && src && srcSize <= dstSize) {
         // Note: arguments for memmove have been verified.
-        auto status = memmove_s(dst, dstSize, src, srcSize);
-        if (status != 0) {
+        if (memmove_s(dst, dstSize, src, srcSize) != 0) {
             return false;
         }
     } else {
@@ -68,8 +66,7 @@ inline bool ClearToValue(void* dst, size_t dstSize, uint8_t val, size_t count)
         count = dstSize;
     }
     // Note: arguments for memset have been verified.
-    auto status = memset_s(dst, dstSize, val, count);
-    if (status != 0) {
+    if (memset_s(dst, dstSize, val, count) != 0) {
         return false;
     }
     return true;
@@ -78,8 +75,8 @@ inline bool ClearToValue(void* dst, size_t dstSize, uint8_t val, size_t count)
 inline allocator& default_allocator()
 {
     static allocator DefaultAllocInstance { nullptr,
-        [](void* instance, allocator::size_type size) -> void* { return ::malloc(size); },
-        [](void* instance, void* aPtr) { ::free(aPtr); } };
+        [](void* /* instance */, allocator::size_type size) -> void* { return ::malloc(size); },
+        [](void* /* instance */, void* aPtr) { ::free(aPtr); } };
     return DefaultAllocInstance;
 }
 BASE_END_NAMESPACE()

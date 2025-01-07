@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -49,38 +49,65 @@ void LumeCustomRender::Initialize(const CustomRenderInput& input)
     graphicsContext_ = input.graphicsContext_;
     engine_ = input.engine_;
     renderContext_ = input.renderContext_;
+    useMultiSwapChain_ = input.useMultiSwapChain_;
 
     if (!ecs_ || !graphicsContext_ || !renderContext_ || !engine_) {
         WIDGET_LOGD("invalid input ecs %d, graphic context%d, render context %d, engine %d",
-            ecs_ != nullptr, graphicsContext_ != nullptr, renderContext_ != nullptr, engine_ != nullptr);
+            ecs_ != nullptr,
+            graphicsContext_ != nullptr,
+            renderContext_ != nullptr,
+            engine_ != nullptr);
         return;
     }
 
     PrepareResolutionInputBuffer();
     GetDefaultStaging();
-    OnSizeChange(input.width_, input.height_);
+    if (!useMultiSwapChain_) {
+        OnSizeChange(input.width_, input.height_);
+    }
+    width_ = input.width_;
+    height_ = input.height_;
 }
 
-void LumeCustomRender::RegistorShaderPath(const std::string& shaderPath)
+void LumeCustomRender::RegistorShaderPath(const std::string &shaderPath)
 {
     WIDGET_LOGD("lume custom render registor shader path");
-    engine_->GetFileManager().RegisterPath("shaders", shaderPath.c_str(), false);
-    static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc { "shaders://" };
+    std::string shaderPathDir;
+    {
+        auto tempPath = const_cast<std::string&>(shaderPath);
+        auto index = tempPath.find_last_of("/");
+        auto strSize = tempPath.size();
+        if (index != std::string::npos && index != (strSize - 1)) {
+            auto fileName = tempPath.substr(index + 1);
+            auto suffixIndex = fileName.find_last_of(".");
+            if (suffixIndex != std::string::npos) {
+                tempPath = tempPath.substr(0, index);
+                auto dirIndex = tempPath.find_last_of("/");
+                tempPath = (dirIndex != std::string::npos) ? tempPath.substr(0, dirIndex) : tempPath;
+            }
+        }
+        auto shaderPathDir = const_cast<const std::string &>(tempPath);
+    }
+
+    engine_->GetFileManager().RegisterPath("shaders", shaderPathDir.c_str(), false);
+    static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc{ "shaders://" };
     renderContext_->GetDevice().GetShaderManager().LoadShaderFiles(desc);
+    renderContext_->GetDevice().GetShaderManager().LoadShaderFile(shaderPath.c_str());
 }
 
-void LumeCustomRender::SetRenderOutput(const RENDER_NS::RenderHandleReference& output)
+void LumeCustomRender::SetRenderOutput(const RENDER_NS::RenderHandleReference &output)
 {
     if (output) {
-        RENDER_NS::IRenderNodeGraphManager& graphManager = renderContext_->GetRenderNodeGraphManager();
+        RENDER_NS::IRenderNodeGraphManager &graphManager = renderContext_->GetRenderNodeGraphManager();
         graphManager.SetRenderNodeGraphResources(GetRenderHandle(), {}, { &output, 1u });
     }
 }
 
 void LumeCustomRender::GetDefaultStaging()
 {
-    renderDataStoreDefaultStaging_ = reinterpret_cast<RENDER_NS::IRenderDataStoreDefaultStaging*>(
-        renderContext_->GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING));
+    renderDataStoreDefaultStaging_ = BASE_NS::refcnt_ptr<RENDER_NS::IRenderDataStoreDefaultStaging>(
+        static_cast<RENDER_NS::IRenderDataStoreDefaultStaging *>(
+            renderContext_->GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING).get()));
     if (renderDataStoreDefaultStaging_ == nullptr) {
         WIDGET_LOGE("Get default staging error");
     }
@@ -102,10 +129,10 @@ void LumeCustomRender::DestroyBuffer()
     resolutionBuffer_ = {};
 }
 
-void LumeCustomRender::UpdateShaderSpecialization(const std::vector<uint32_t>& values)
+void LumeCustomRender::UpdateShaderSpecialization(const std::vector<uint32_t> &values)
 {
-    RENDER_NS::IRenderDataStorePod* dataStore = static_cast<RENDER_NS::IRenderDataStorePod*>(
-        renderContext_->GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_POD));
+    auto dataStore = BASE_NS::refcnt_ptr<RENDER_NS::IRenderDataStorePod>(static_cast<RENDER_NS::IRenderDataStorePod *>(
+        renderContext_->GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_POD).get()));
     if (dataStore) {
         RENDER_NS::ShaderSpecializationRenderPod shaderSpecialization;
         auto count = std::min(static_cast<uint32_t>(values.size()),
@@ -120,24 +147,19 @@ void LumeCustomRender::UpdateShaderSpecialization(const std::vector<uint32_t>& v
 }
 
 void LumeCustomRender::DestroyDataStorePod()
-{
-}
+{}
 
-void  LumeCustomRender::LoadImages(const std::vector<std::string>& imageUris)
+void LumeCustomRender::LoadImages(const std::vector<std::string> &imageUris)
 {
-    for (auto& imageUri : imageUris) {
+    for (auto &imageUri : imageUris) {
         LoadImage(imageUri);
     }
-    const std::string& turboTexture = "OhosRawFile://assets/blue_ball_compressed.png";
-    if (imageUris.back().find("ball_compressed") != std::string::npos) {
-        LoadImage(turboTexture);
-    }
 }
 
-void LumeCustomRender::LoadImage(const std::string& imageUri)
+void LumeCustomRender::LoadImage(const std::string &imageUri)
 {
-    auto& imageManager = engine_->GetImageLoaderManager();
-    auto& gpuResourceMgr = renderContext_->GetDevice().GetGpuResourceManager();
+    auto &imageManager = engine_->GetImageLoaderManager();
+    auto &gpuResourceMgr = renderContext_->GetDevice().GetGpuResourceManager();
     auto handleManager = CORE_NS::GetManager<CORE3D_NS::IRenderHandleComponentManager>(*ecs_);
 
     auto result = imageManager.LoadImage(imageUri.c_str(), 0);
@@ -181,23 +203,24 @@ void LumeCustomRender::OnSizeChange(int32_t width, int32_t height)
         WIDGET_LOGE("width and height must be larger than zero");
         return;
     }
-    width_ = width;
-    height_ = height;
-    const float* buffer = resolutionBuffer_.Map(floatSize);
+    width_ = static_cast<uint32_t>(width);
+    height_ = static_cast<uint32_t>(height);
+    const float *buffer = resolutionBuffer_.Map(floatSize);
     if (!buffer) {
         WIDGET_LOGE("custom render resolution resolutionBuffer error!");
         return;
     }
 
     auto bSize = resolutionBuffer_.ByteSize();
-    if (!resolutionBufferHandle_) {
-        RENDER_NS::GpuBufferDesc bufferDesc {
+    if (!resolutionBufferHandle_ || useMultiSwapChain_) {
+        RENDER_NS::GpuBufferDesc bufferDesc{
             RENDER_NS::CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT | RENDER_NS::CORE_BUFFER_USAGE_TRANSFER_DST_BIT,
             RENDER_NS::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | RENDER_NS::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            RENDER_NS::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 0u };
+            RENDER_NS::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            0u};
         bufferDesc.byteSize = bSize;
         resolutionBufferHandle_ =
-            renderContext_->GetDevice().GetGpuResourceManager().Create(RESOLUTION_BUFFER, bufferDesc);
+            renderContext_->GetDevice().GetGpuResourceManager().Create(GetResolutionBufferName().c_str(), bufferDesc);
         WIDGET_LOGD("create resolution buffer handle");
     }
 
@@ -210,14 +233,14 @@ void LumeCustomRender::OnSizeChange(int32_t width, int32_t height)
     WIDGET_LOGD("update custom shader resolution %f X %f", fWidth, fHeight);
     resolutionBuffer_.Update(fWidth, 0U);
     resolutionBuffer_.Update(fHeight, 1U);
-    BASE_NS::array_view<const uint8_t> data(reinterpret_cast<const uint8_t*>(buffer), bSize);
-    const RENDER_NS::BufferCopy bufferCopy { 0, 0, bSize };
+    BASE_NS::array_view<const uint8_t> data(reinterpret_cast<const uint8_t *>(buffer), bSize);
+    const RENDER_NS::BufferCopy bufferCopy{ 0, 0, bSize };
     renderDataStoreDefaultStaging_->CopyDataToBufferOnCpu(data, resolutionBufferHandle_, bufferCopy);
 }
 
 BASE_NS::vector<RENDER_NS::RenderHandleReference> LumeCustomRender::GetRenderHandles()
 {
-    return { renderHandle_ };
+    return {renderHandle_};
 }
 
 const RENDER_NS::RenderHandleReference LumeCustomRender::GetRenderHandle()
@@ -225,17 +248,34 @@ const RENDER_NS::RenderHandleReference LumeCustomRender::GetRenderHandle()
     return renderHandle_;
 }
 
-void LumeCustomRender::LoadRenderNodeGraph(const std::string& rngUri,
-    const RENDER_NS::RenderHandleReference& output)
+std::string GetFileNameFromPath(const std::string &path)
 {
-    RENDER_NS::IRenderNodeGraphManager& graphManager = renderContext_->GetRenderNodeGraphManager();
-    auto* loader = &graphManager.GetRenderNodeGraphLoader();
+    size_t found = path.find_last_of("/\\");
+    size_t foundEnd = path.rfind(".rng");
+    if (found > 0U && foundEnd >= (found + 1U) && found != std::string::npos && foundEnd != std::string::npos) {
+        return path.substr(found + 1, foundEnd - found - 1);
+    }
+    return path;
+}
+
+void LumeCustomRender::LoadRenderNodeGraph(const std::string &rngUri, const RENDER_NS::RenderHandleReference &output)
+{
+    const std::string rngFileName = GetFileNameFromPath(rngUri);
+    // add multiswapchain name, inputbuffer name, resolutionbuffer name by file name.
+    if (useMultiSwapChain_) {
+        swapchainName_ = rngFileName.c_str();
+        inputBufferName_ = ("INPUT_BUFFER_" + rngFileName).c_str();
+        resolutionBufferName_ = ("RESOLUTION_BUFFER_" + rngFileName).c_str();
+        OnSizeChange(width_, height_);
+    }
+
+    RENDER_NS::IRenderNodeGraphManager &graphManager = renderContext_->GetRenderNodeGraphManager();
+    auto *loader = &graphManager.GetRenderNodeGraphLoader();
     auto graphUri = BASE_NS::string_view(rngUri.c_str());
 
     auto const result = loader->Load(graphUri);
     if (!result.error.empty()) {
-        WIDGET_LOGE("3D render node graph load fail: %s, uri %s", result.error.c_str(),
-            rngUri.c_str());
+        WIDGET_LOGE("3D render node graph load fail: %s, uri %s", result.error.c_str(), rngUri.c_str());
         return;
     }
 
@@ -248,7 +288,7 @@ void LumeCustomRender::UnloadRenderNodeGraph()
     renderHandle_ = {};
 }
 
-bool LumeCustomRender::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInputBuffer>& shaderInputBuffer)
+bool LumeCustomRender::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInputBuffer> &shaderInputBuffer)
 {
     if (!shaderInputBuffer || !shaderInputBuffer->IsValid()) {
         WIDGET_LOGE("3D shader input buffer update fail: invalid shaderInputBuffer");
@@ -264,17 +304,17 @@ bool LumeCustomRender::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInput
     auto bSize = shaderInputBuffer->ByteSize();
     if (bufferDesc_.byteSize != bSize) {
         bufferDesc_.byteSize = bSize;
-        shaderInputBufferHandle_ = renderContext_->GetDevice().GetGpuResourceManager().Create(INPUT_BUFFER,
-            bufferDesc_);
+        shaderInputBufferHandle_ =
+            renderContext_->GetDevice().GetGpuResourceManager().Create(GetInputBufferName().c_str(), bufferDesc_);
     }
 
-    const float* buffer = shaderInputBuffer->Map(fSize);
+    const float *buffer = shaderInputBuffer->Map(fSize);
     if (!buffer) {
         WIDGET_LOGE("3D shader input buffer update fail: map shaderInputBuffer error!");
         return false;
     }
 
-    BASE_NS::array_view<const uint8_t> data(reinterpret_cast<const uint8_t*>(buffer), bSize);
+    BASE_NS::array_view<const uint8_t> data(reinterpret_cast<const uint8_t *>(buffer), bSize);
     const RENDER_NS::BufferCopy bufferCopy{0, 0, bSize};
 
     renderDataStoreDefaultStaging_->CopyDataToBufferOnCpu(data, shaderInputBufferHandle_, bufferCopy);
@@ -282,7 +322,6 @@ bool LumeCustomRender::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInput
 }
 
 void LumeCustomRender::OnDrawFrame()
-{
-}
+{}
 
-} // namespace name
+}  // namespace OHOS::Render3D

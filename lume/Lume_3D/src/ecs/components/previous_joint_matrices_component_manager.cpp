@@ -18,7 +18,7 @@
 #include "ecs/components/previous_joint_matrices_component.h"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE3D_BEGIN_NAMESPACE()
 using BASE_NS::array_view;
@@ -31,35 +31,34 @@ using CORE_NS::Property;
 
 class PreviousJointMatricesComponentManager final
     : public BaseManager<PreviousJointMatricesComponent, IPreviousJointMatricesComponentManager> {
-    BEGIN_PROPERTY(PreviousJointMatricesComponent, ComponentMetadata)
+    BEGIN_PROPERTY(PreviousJointMatricesComponent, properties_)
 #include "ecs/components/previous_joint_matrices_component.h"
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit PreviousJointMatricesComponentManager(IEcs& ecs)
         : BaseManager<PreviousJointMatricesComponent, IPreviousJointMatricesComponentManager>(
-              ecs, CORE_NS::GetName<PreviousJointMatricesComponent>())
+              ecs, CORE_NS::GetName<PreviousJointMatricesComponent>(), 0U)
     {}
 
     ~PreviousJointMatricesComponentManager() = default;
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(properties_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
-            return &componentMetaData_[index];
+        if (index < BASE_NS::countof(properties_)) {
+            return &properties_[index];
         }
         return nullptr;
     }
 
     array_view<const Property> MetaData() const override
     {
-        return componentMetaData_;
+        return properties_;
     }
 };
 

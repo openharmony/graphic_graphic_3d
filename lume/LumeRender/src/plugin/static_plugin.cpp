@@ -55,14 +55,14 @@ constexpr string_view RENDERDATA_PATH = "rofsRndr://renderdataconfigurations/";
 
 PluginToken CreatePlugin(IEngine& engine)
 {
-    RenderPluginState* token = new RenderPluginState { engine, {} };
+    auto* token = new RenderPluginState { engine, {} };
     auto& registry = *engine.GetInterface<IClassRegister>();
 
     registry.RegisterInterfaceType(token->interfaceInfo_);
 
     IFileManager& fileManager = engine.GetFileManager();
 #if (RENDER_EMBEDDED_ASSETS_ENABLED == 1)
-    // Create engine:// protocol that points to embedded asset files.
+    // Create rofsRndr:// protocol that points to embedded asset files.
     fileManager.RegisterFilesystem(ROFS, fileManager.CreateROFilesystem(BINARYDATAFORRENDER, SIZEOFDATAFORRENDER));
     fileManager.RegisterPath(SHADERS, SHADER_PATH, false);
     fileManager.RegisterPath(VIDS, VID_PATH, false);
@@ -76,7 +76,7 @@ PluginToken CreatePlugin(IEngine& engine)
 
 void DestroyPlugin(PluginToken token)
 {
-    RenderPluginState* state = static_cast<RenderPluginState*>(token);
+    auto* state = static_cast<RenderPluginState*>(token);
     IFileManager& fileManager = state->engine_.GetFileManager();
 #if (RENDER_EMBEDDED_ASSETS_ENABLED == 1)
     fileManager.UnregisterPath(SHADERS, SHADER_PATH);
@@ -108,7 +108,7 @@ PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
 
 void UnregisterInterfaces(PluginToken token)
 {
-    IPluginRegister* pluginRegistry = static_cast<IPluginRegister*>(token);
+    auto* pluginRegistry = static_cast<IPluginRegister*>(token);
     pluginRegistry->UnregisterTypeInfo(ENGINE_PLUGIN);
 }
 RENDER_END_NAMESPACE()

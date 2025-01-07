@@ -148,7 +148,7 @@ public:
         return *this;
     }
 
-    constexpr basic_fixed_string& operator=(CharT const* const& a) noexcept
+    constexpr basic_fixed_string& operator=(const CharT* const& a) noexcept
     {
         initialize({ a, constexpr_strlen(a) });
         return *this;
@@ -161,7 +161,7 @@ public:
         return res;
     }
 
-    constexpr basic_fixed_string operator+(CharT const* const& a) const
+    constexpr basic_fixed_string operator+(const CharT* const& a) const
     {
         basic_fixed_string res(*this);
         res.append_impl({ a, constexpr_strlen(a) });
@@ -174,7 +174,7 @@ public:
         return *this;
     }
 
-    constexpr basic_fixed_string& operator+=(CharT const* const& a)
+    constexpr basic_fixed_string& operator+=(const CharT* const& a)
     {
         append_impl({ a, constexpr_strlen(a) });
         return *this;
@@ -186,7 +186,7 @@ public:
         return *this;
     }
 
-    constexpr CharT const* data() const
+    constexpr const CharT* data() const
     {
         return data_;
     }
@@ -196,7 +196,7 @@ public:
         return data_;
     }
 
-    constexpr CharT const* c_str() const
+    constexpr const CharT* c_str() const
     {
         return data_;
     }
@@ -266,7 +266,7 @@ public:
         return *this;
     }
 
-    constexpr basic_fixed_string& append(CharT const* const a)
+    constexpr basic_fixed_string& append(const CharT* const a)
     {
         append_impl({ a, constexpr_strlen(a) });
         return *this;

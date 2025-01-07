@@ -1,21 +1,16 @@
 /*
  * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
- *
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
-
- * * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations
- * under the License.
+ * limitations under the License.
  */
 
 #include "ohos_filesystem.h"
@@ -59,42 +54,49 @@ string OhosFilesystem::ValidatePath(const string_view pathIn) const
     return path;
 }
 
-IFile::Ptr OhosFilesystem::OpenFile(const BASE_NS::string_view path)
+IFile::Ptr OhosFilesystem::OpenFile(const BASE_NS::string_view path, const IFile::Mode mode)
 {
-    if (auto const pos = ohosFiles_.find(path); pos != ohosFiles_.end()) {
-        auto storage = pos->second.lock();
-        if (storage) {
+    if (mode == IFile::Mode::READ_ONLY) {
+        if (auto const pos = ohosFiles_.find(path); pos != ohosFiles_.end()) {
+            auto storage = pos->second.lock();
+            if (storage) {
+                auto file = BASE_NS::make_unique<OhosFile>(resManager_);
+                file->UpdateStorage(storage);
+                return IFile::Ptr { file.release() };
+            }
+        }
+        if (!path.empty()) {
             auto file = BASE_NS::make_unique<OhosFile>(resManager_);
-            file->UpdateStorage(storage);
+            auto storage = file->Open(path.data());
+            ohosFiles_[path] = std::move(storage);
             return IFile::Ptr { file.release() };
         }
     }
-    auto storage = std::make_shared<OhosFileStorage>(nullptr);
-    auto file = BASE_NS::make_unique<OhosFile>(resManager_);
-    if (!path.empty()) {
-        storage = file->Open(path.data());
-    }
-    if (storage == nullptr) {
-        return IFile::Ptr();
-    }
-    ohosFiles_[path] = std::move(storage);
-    return IFile::Ptr { file.release() };
+    return IFile::Ptr();
 }
 
-OhosFilesystem::OhosFilesystem(const BASE_NS::string_view hapPath, const BASE_NS::string_view bundleName,
-    const BASE_NS::string_view moduleName) : hapInfo_({ hapPath, bundleName, moduleName })
+OhosFilesystem::OhosFilesystem(
+    const BASE_NS::string_view hapPath, const BASE_NS::string_view bundleName, const BASE_NS::string_view moduleName,
+    std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager)
+    : hapInfo_({hapPath, bundleName, moduleName, resourceManager})
 {
     resManager_ = BASE_NS::refcnt_ptr<OhosResMgr>(new OhosResMgr(hapInfo_));
     resManager_->UpdateResManager(hapInfo_);
 }
 
-IDirectory::Entry OhosFilesystem::GetEntry(BASE_NS::string_view path)
+IDirectory::Entry OhosFilesystem::GetEntry(BASE_NS::string_view path) const
 {
     if (!path.empty()) {
         auto directory = BASE_NS::make_unique<OhosFileDirectory>(resManager_);
         return directory->GetEntry(path.data());
     }
     return {};
+}
+
+IDirectory::Entry OhosFilesystem::GetEntry(BASE_NS::string_view path)
+{
+    const auto& ofs = *this;
+    return ofs.GetEntry(path);
 }
 
 IFile::Ptr OhosFilesystem::CreateFile(BASE_NS::string_view path)
@@ -104,7 +106,13 @@ IFile::Ptr OhosFilesystem::CreateFile(BASE_NS::string_view path)
 
 bool OhosFilesystem::DeleteFile(BASE_NS::string_view path)
 {
-    return ohosFiles_.erase(path) != 0U;
+    // read only filesystem. can not delete files.
+    return false;
+}
+
+bool OhosFilesystem::FileExists(const string_view path) const
+{
+    return GetEntry(path).type == IDirectory::Entry::Type::FILE;
 }
 
 IDirectory::Ptr OhosFilesystem::OpenDirectory(BASE_NS::string_view pathIn)
@@ -124,11 +132,18 @@ IDirectory::Ptr OhosFilesystem::CreateDirectory(BASE_NS::string_view path)
 
 bool OhosFilesystem::DeleteDirectory(BASE_NS::string_view path)
 {
+    // read only filesystem. can not delete files.
     return false;
+}
+
+bool OhosFilesystem::DirectoryExists(const string_view path) const
+{
+    return GetEntry(path).type == IDirectory::Entry::Type::DIRECTORY;
 }
 
 bool OhosFilesystem::Rename(BASE_NS::string_view fromPath, BASE_NS::string_view toPath)
 {
+    // read only filesystem. can not rename files.
     return false;
 }
 

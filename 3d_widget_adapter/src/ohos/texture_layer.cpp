@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,13 @@
 
 #include "texture_layer.h"
 
+#include <include/gpu/GrBackendSurface.h>
+#ifndef NEW_SKIA
+#include <include/gpu/GrContext.h>
+#else
+#include <include/gpu/GrDirectContext.h>
+#endif
+#include <include/gpu/gl/GrGLInterface.h>
 #include <native_buffer.h>
 #include <render_service_base/include/pipeline/rs_recording_canvas.h>
 #include <render_service_base/include/property/rs_properties_def.h>
@@ -23,6 +30,7 @@
 #include <render_service_client/core/ui/rs_canvas_node.h>
 #include <render_service_client/core/ui/rs_root_node.h>
 #include <render_service_client/core/ui/rs_surface_node.h>
+
 #include <surface_buffer.h>
 #include <surface_utils.h>
 #include <window.h>
@@ -33,10 +41,14 @@
 #include "offscreen_context_helper.h"
 #include "widget_trace.h"
 
+struct OH_NativeBuffer;
+struct NativeWindowBuffer;
+
 namespace OHOS {
 namespace Render3D {
+
 struct TextureImage {
-    explicit TextureImage(const TextureInfo& textureInfo): textureInfo_(textureInfo) {}
+    explicit TextureImage(const TextureInfo& textureInfo) : textureInfo_(textureInfo) {}
     TextureImage() = default;
     TextureInfo textureInfo_;
 };
@@ -44,7 +56,7 @@ struct TextureImage {
 class TextureLayerImpl : public TextureLayer {
 public:
     explicit TextureLayerImpl(int32_t key);
-    virtual ~TextureLayerImpl();
+    ~TextureLayerImpl();
 
     void DestroyRenderTarget() override;
     TextureInfo GetTextureInfo() override;
@@ -56,15 +68,14 @@ public:
 
 private:
     void* CreateNativeWindow(uint32_t width, uint32_t height);
-    void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale,
-        bool recreateWindow);
+    void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow);
     void ConfigTexture(float width, float height);
     void RemoveChild();
 
     int32_t offsetX_ = 0u;
     int32_t offsetY_ = 0u;
-    int32_t width_ = 0u;
-    int32_t height_ = 0u;
+    uint32_t width_ = 0u;
+    uint32_t height_ = 0u;
     int32_t key_ = INT32_MAX;
     uint32_t transform_ = 0U;
 
@@ -102,16 +113,16 @@ GraphicTransformType RotationToTransform(uint32_t rotation)
 {
     GraphicTransformType transform = GraphicTransformType::GRAPHIC_ROTATE_BUTT;
     switch (rotation) {
-        case 0:
+        case 0: // rotation angle 0 degree
             transform = GraphicTransformType::GRAPHIC_ROTATE_NONE;
             break;
-        case 90:
+        case 90: // rotation angle 90 degree
             transform = GraphicTransformType::GRAPHIC_ROTATE_90;
             break;
-        case 180:
+        case 180: // rotation angle 180 degree
             transform = GraphicTransformType::GRAPHIC_ROTATE_180;
             break;
-        case 270:
+        case 270: // rotation angle 270 degree
             transform = GraphicTransformType::GRAPHIC_ROTATE_270;
             break;
         default:
@@ -126,9 +137,9 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
     std::string bundleName = GraphicsManager::GetInstance().GetHapInfo().bundleName_;
     struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig;
     if (bundleName.find("totemweather") != std::string::npos) {
-        surfaceNodeConfig = {.SurfaceNodeName = std::string("SceneViewer Model totemweather") + std::to_string(key_)};
+        surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model totemweather") + std::to_string(key_) };
     } else {
-        surfaceNodeConfig = {.SurfaceNodeName = std::string("SceneViewer Model") + std::to_string(key_)};
+        surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model") + std::to_string(key_) };
     }
 
     rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false);
@@ -145,12 +156,12 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
     if (surface_ == SurfaceType::SURFACE_TEXTURE) {
         surfaceNode->SetHardwareEnabled(false);
     }
-    std::string hapPath = GraphicsManager::GetInstance().GetHapInfo().hapPath_;
-    if (hapPath.find("SceneBoard_MetaBallsTurbo") != std::string::npos) {
+
+    if (bundleName.find("sceneboard") != std::string::npos) {
+        surfaceNode->SetHardwareEnabled(true); // SetHardwareEnabled as a flag enable gpu bilinear interpolation
+    } else if (bundleName.find("totemweather") != std::string::npos) {
         surfaceNode->SetHardwareEnabled(true);
-    } else if (hapPath.find("HwWeather") != std::string::npos) {
-        surfaceNode->SetHardwareEnabled(true);
-        uint32_t argbWhite = 0xFFFFFFFF; // set a white background color for dss
+        uint32_t argbWhite = 0xFFFFFFFF;  // set a white background color for dss
         surfaceNode->SetBackgroundColor(argbWhite);
     }
 
@@ -195,6 +206,10 @@ void TextureLayerImpl::ConfigWindow(float offsetX, float offsetY, float width, f
         NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
             SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale * widthScale),
             static_cast<uint32_t>(height * scale * heightScale));
+        if (rsNode_ == nullptr) {
+            WIDGET_LOGE("TextureLayer ConfigWindow rsNode_ is nullptr.");
+            return;
+        }
         rsNode_->SetBounds(offsetX, offsetY, width, height);
     }
 }
@@ -202,17 +217,16 @@ void TextureLayerImpl::ConfigWindow(float offsetX, float offsetY, float width, f
 TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
     bool recreateWindow, SurfaceType surfaceType)
 {
-    // no DestroyRenderTarget will not cause memory leak / render issue
+    DestroyRenderTarget();
     surface_ = surfaceType;
     offsetX_ = offsetX;
     offsetY_ = offsetY;
+
     image_.textureInfo_.width_ = static_cast<uint32_t>(width);
     image_.textureInfo_.height_ = static_cast<uint32_t>(height);
 
-    image_.textureInfo_.widthScale_ = scale;
-    image_.textureInfo_.heightScale_ = scale;
-
     ConfigWindow(offsetX, offsetY, width, height, scale, recreateWindow);
+
     WIDGET_LOGD("TextureLayer OnWindowChange offsetX %f, offsetY %f, width %d, height %d, float scale %f,"
         "recreateWindow %d window empty %d", offsetX, offsetY, image_.textureInfo_.width_, image_.textureInfo_.height_,
         scale, recreateWindow, image_.textureInfo_.nativeWindow_ == nullptr);
@@ -221,7 +235,7 @@ TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float
 
 TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
 {
-    // no DestroyRenderTarget will not cause memory leak / render issue
+    DestroyRenderTarget();
     surface_ = windowChangeInfo.surfaceType;
     offsetX_ = (int)windowChangeInfo.offsetX;
     offsetY_ = (int)windowChangeInfo.offsetY;
@@ -248,15 +262,16 @@ void TextureLayerImpl::DestroyRenderTarget()
     image_.textureInfo_ = {};
 }
 
-TextureLayerImpl::TextureLayerImpl(int32_t key): key_(key)
+TextureLayerImpl::TextureLayerImpl(int32_t key) : key_(key)
 {
 }
 
 TextureLayerImpl::~TextureLayerImpl()
 {
-    // explicity release resource before destructor
+    // explicit release resource before destructor
 }
 
+// old implement
 TextureInfo TextureLayer::GetTextureInfo()
 {
     return textureLayer_->GetTextureInfo();
@@ -264,7 +279,7 @@ TextureInfo TextureLayer::GetTextureInfo()
 
 void TextureLayer::SetParent(std::shared_ptr<Rosen::RSNode>& parent)
 {
-    return textureLayer_->SetParent(parent);
+    textureLayer_->SetParent(parent);
 }
 
 TextureInfo TextureLayer::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,

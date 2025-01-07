@@ -23,7 +23,7 @@
 
 BASE_BEGIN_NAMESPACE()
 // clang-format off
-CORE_JSON_SERIALIZE_ENUM(BASE_NS::Format,
+RENDER_JSON_SERIALIZE_ENUM(BASE_NS::Format,
     {
         { BASE_NS::Format::BASE_FORMAT_UNDEFINED, "undefined" },
         { BASE_NS::Format::BASE_FORMAT_R4G4_UNORM_PACK8, "r4g4_unorm_pack8" },

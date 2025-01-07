@@ -20,18 +20,17 @@
 #include "ecs/components/layer_flag_bits_metadata.h"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
+using CORE3D_NS::LightComponent;
+
 /** Extend propertysystem with the enums */
-DECLARE_PROPERTY_TYPE(CORE3D_NS::LightComponent::Type);
+DECLARE_PROPERTY_TYPE(LightComponent::Type);
 
 // Declare their metadata
-BEGIN_ENUM(LightTypeMetaData, CORE3D_NS::LightComponent::Type)
-DECL_ENUM(CORE3D_NS::LightComponent::Type, DIRECTIONAL, "Directional")
-DECL_ENUM(CORE3D_NS::LightComponent::Type, POINT, "Point")
-DECL_ENUM(CORE3D_NS::LightComponent::Type, SPOT, "Spot")
-END_ENUM(LightTypeMetaData, CORE3D_NS::LightComponent::Type)
+ENUM_TYPE_METADATA(
+    LightComponent::Type, ENUM_VALUE(DIRECTIONAL, "Directional"), ENUM_VALUE(POINT, "Point"), ENUM_VALUE(SPOT, "Spot"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -45,10 +44,9 @@ using CORE_NS::Property;
 using CORE_NS::PropertyFlags;
 
 class LightComponentManager final : public BaseManager<LightComponent, ILightComponentManager> {
-    BEGIN_PROPERTY(LightComponent, ComponentMetadata)
+    BEGIN_PROPERTY(LightComponent, componentMetaData_)
 #include <3d/ecs/components/light_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit LightComponentManager(IEcs& ecs)
@@ -59,12 +57,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

@@ -53,9 +53,9 @@ struct EngineTime {
 /** Engine interface.
     Engine needs to be created with IEngineFactory::Create.
 */
-class IEngine : public IClassFactory {
+class IEngine : public IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "760877f7-0baf-422b-a1a7-35834683ddd3" };
+    static constexpr BASE_NS::Uid UID { "738721c3-2f74-472e-b55e-94f83dd25110" };
 
     using Ptr = BASE_NS::refcnt_ptr<IEngine>;
 
@@ -120,7 +120,7 @@ inline constexpr BASE_NS::string_view GetName(const IEngine*)
 // factory inteface.
 class IEngineFactory : public IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "f2ce87a4-5a3d-4327-bc90-ff29efb398b0" };
+    static constexpr BASE_NS::Uid UID { "aab968d9-683e-42bf-be4d-6482a0b3d215" };
 
     using Ptr = BASE_NS::refcnt_ptr<IEngineFactory>;
 

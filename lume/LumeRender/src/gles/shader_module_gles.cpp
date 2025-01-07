@@ -20,7 +20,6 @@
 
 #include <base/containers/array_view.h>
 #include <base/containers/fixed_string.h>
-#include <base/containers/iterator.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
@@ -37,8 +36,8 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-template<typename SetType>
-void Collect(const uint32_t set, const DescriptorSetLayoutBinding& binding, SetType& sets)
+void Collect(const uint32_t set, const DescriptorSetLayoutBinding& binding,
+    BASE_NS::vector<ShaderModulePlatformDataGLES::Bind>& sets)
 {
     const auto name = "s" + to_string(set) + "_b" + to_string(binding.binding);
     sets.push_back({ static_cast<uint8_t>(set), static_cast<uint8_t>(binding.binding),
@@ -70,7 +69,7 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
                         Collect(set.set, binding, plat_.ciSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                        break;
+                        [[fallthrough]];
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -80,14 +79,14 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
                         Collect(set.set, binding, plat_.sbSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                        break;
+                        [[fallthrough]];
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
                         Collect(set.set, binding, plat_.siSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
-                        break;
+                        [[fallthrough]];
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM:
                         break;
                 }
@@ -118,8 +117,7 @@ void CreateSpecInfos(
 void SortSets(PipelineLayout& pipelineLayout)
 {
     pipelineLayout.descriptorSetCount = 0;
-    for (uint32_t idx = 0; idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++idx) {
-        DescriptorSetLayout& currSet = pipelineLayout.descriptorSetLayouts[idx];
+    for (auto& currSet : pipelineLayout.descriptorSetLayouts) {
         if (currSet.set != PipelineLayoutConstants::INVALID_INDEX) {
             pipelineLayout.descriptorSetCount++;
             std::sort(currSet.bindings.begin(), currSet.bindings.end(),
@@ -137,13 +135,13 @@ struct Reader {
 
     uint16_t GetUint16()
     {
-        const uint16_t value = static_cast<uint16_t>(*ptr | (*(ptr + 1) << 8));
+        const auto value = static_cast<uint16_t>(*ptr | (*(ptr + 1) << 8));
         ptr += sizeof(uint16_t);
         return value;
     }
     uint32_t GetUint32()
     {
-        const uint32_t value =
+        const auto value =
             static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8) | ((*(ptr + 2)) << 16) | ((*(ptr + 3)) << 24));
         ptr += sizeof(uint32_t);
         return value;

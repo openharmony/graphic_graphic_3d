@@ -12,18 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef OHOS_RENDER_3D_BASE_OBJECT_JS_H
-#define OHOS_RENDER_3D_BASE_OBJECT_JS_H
+#ifndef BASE_OBJECT_JS_H
+#define BASE_OBJECT_JS_H
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_object.h>
 #include <meta/interface/intf_task_queue_registry.h>
+#include <scene/interface/intf_scene.h>
 #include <napi_api.h>
 
 // tasks execute in the engine/render thread.
 static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
 
-// tasks execute in the javascript mainthread.
+// tasks execute in the javascript mainthread. *NOT IMPLEMENTED*
 static constexpr BASE_NS::Uid JS_THREAD { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
 
 class TrueRootObject {
@@ -32,20 +32,19 @@ public:
     // Optionally make the reference strong so that the lifetime is controlled by JS.
     // for example. scene is kept strongly, and objects owned by scene are weak.
 
-    void SetNativeObject(META_NS::IObject::Ptr real, bool Strong);
-    META_NS::IObject::Ptr GetNativeObject();
+    virtual void SetNativeObject(META_NS::IObject::Ptr real, bool Strong);
+    virtual META_NS::IObject::Ptr GetNativeObject();
     virtual void* GetInstanceImpl(uint32_t id) = 0;
 
     virtual void Finalize(napi_env env);
-    virtual void DisposeNative() = 0;
+    virtual void DisposeNative(void*) = 0;
+
+    virtual bool IsStrong() const;
 
 protected:
     TrueRootObject();
     virtual ~TrueRootObject() = default;
-    static void destroy(TrueRootObject* object)
-    {
-        delete object;
-    }
+    static void destroy(TrueRootObject* object);
 
 private:
     META_NS::IObject::Ptr obj_;
@@ -56,12 +55,11 @@ template<class FinalObject>
 class BaseObject : public TrueRootObject {
 protected:
     bool disposed_ { false };
-    virtual ~BaseObject() {};
+    virtual ~BaseObject() {}
     BaseObject(napi_env env, napi_callback_info info) : TrueRootObject()
     {
         napi_value thisVar = nullptr;
         napi_get_cb_info(env, info, nullptr, nullptr, &thisVar, nullptr);
-
         auto DTOR = [](napi_env env, void* nativeObject, void* finalize) {
             TrueRootObject* ptr = static_cast<TrueRootObject*>(nativeObject);
             ptr->Finalize(env);
@@ -85,21 +83,23 @@ protected:
     }
 };
 
-static inline TrueRootObject* GetRootObject(napi_env e, napi_value o)
+inline TrueRootObject* GetRootObject(NapiApi::Object o)
 {
     TrueRootObject* p { nullptr };
-    napi_unwrap(e, o, (void**)&p);
+    if (o) {
+        napi_unwrap(o.GetEnv(), o.ToNapiValue(), (void**)&p);
+    }
     return p;
 }
 
 template<typename... types>
-static inline TrueRootObject* GetThisRootObject(NapiApi::FunctionContext<types...>& ctx)
+inline TrueRootObject* GetThisRootObject(NapiApi::FunctionContext<types...>& ctx)
 {
-    return GetRootObject(ctx, ctx.This());
+    return GetRootObject(ctx.This());
 }
 
 template<typename FC>
-static inline auto GetThisNativeObject(FC& ctx)
+inline auto GetThisNativeObject(FC& ctx)
 {
     TrueRootObject* instance = GetThisRootObject(ctx);
     if (!instance) {
@@ -119,9 +119,7 @@ static inline napi_value TROGetter(napi_env env, napi_callback_info info)
             }
         };
     }
-    napi_value undefineVar;
-    napi_get_undefined(env, &undefineVar);
-    return undefineVar;
+    return fc.GetUndefined();
 }
 template<typename Type, typename Object, void (Object::*F)(NapiApi::FunctionContext<Type>&)>
 static inline napi_value TROSetter(napi_env env, napi_callback_info info)
@@ -134,9 +132,7 @@ static inline napi_value TROSetter(napi_env env, napi_callback_info info)
             }
         }
     }
-    napi_value undefineVar;
-    napi_get_undefined(env, &undefineVar);
-    return undefineVar;
+    return fc.GetUndefined();
 };
 
 template<typename Type, typename Object, void (Object::*F2)(NapiApi::FunctionContext<Type>&)>
@@ -178,9 +174,7 @@ napi_value TROMethod(napi_env env, napi_callback_info info)
             }
         }
     }
-    napi_value undefineVar;
-    napi_get_undefined(env, &undefineVar);
-    return undefineVar;
+    return fc.GetUndefined();
 }
 
 template<typename FC, typename Object, napi_value (Object::*F)(FC&)>
@@ -203,10 +197,12 @@ auto GetNativeMeta(NapiApi::Object obj)
     return typename type::Ptr {};
 }
 
+//  Create a javascript object that wraps specified IObject.
 //  uses the classid of obj to create correct wrapper.
 //  (if the wrapper already exists, returns a new reference to the wrapper)
-NapiApi::Object CreateFromNativeInstance(
-    napi_env env, const META_NS::IObject::Ptr& obj, bool strong, uint32_t argc, napi_value* argv);
+NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::Ptr& obj,
+    bool strong, uint32_t argc, napi_value* argv, BASE_NS::string_view pname = "_JSW");
+
 NapiApi::Object CreateJsObj(napi_env env, const BASE_NS::string_view jsName, META_NS::IObject::Ptr real, bool strong,
     uint32_t argc, napi_value* argv);
 
@@ -239,9 +235,7 @@ void MakeNativeObjectParam(napi_env env, const type& obj, uint32_t argc, napi_va
             *data = mobj;
             napi_create_external(
                 env, (void*)data,
-                [](napi_env env, void* data, void* finalize_hint) {
-                    delete (META_NS::IObject::WeakPtr*)data;
-                }, nullptr,
+                [](napi_env env, void* data, void* finalize_hint) { delete (META_NS::IObject::WeakPtr*)data; }, nullptr,
                 &res);
             NapiApi::Object arg(env, argv[1]);
             arg.Set("NativeObject", res);
@@ -253,13 +247,16 @@ auto GetNativeObjectParam(NapiApi::Object args)
 {
     typename type::Ptr ret;
     if (auto prm = args.Get("NativeObject")) {
-        META_NS::IObject::WeakPtr* ptr;
+        META_NS::IObject::WeakPtr* ptr { nullptr };
         napi_get_value_external(args.GetEnv(), prm, (void**)&ptr);
-        ret = interface_pointer_cast<type>(*ptr);
+        if (ptr) {
+            ret = interface_pointer_cast<type>(*ptr);
+        }
         napi_value null;
         napi_get_null(args.GetEnv(), &null);
         args.Set("NativeObject", null); // hope to release it now.
     }
     return ret;
 }
-#endif // OHOS_RENDER_3D_BASE_OBJECT_JS_H
+void DebugNativesHavingJS();
+#endif

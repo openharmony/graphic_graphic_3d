@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__LOADER__JSON_UTIL_H
-#define CORE__LOADER__JSON_UTIL_H
+#ifndef CORE_LOADER_JSON_UTIL_H
+#define CORE_LOADER_JSON_UTIL_H
 
 #include <algorithm>
 #include <cstdlib>

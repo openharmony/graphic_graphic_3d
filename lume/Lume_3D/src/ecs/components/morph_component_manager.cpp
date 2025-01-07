@@ -19,7 +19,7 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 DECLARE_PROPERTY_TYPE(BASE_NS::vector<BASE_NS::string>);
@@ -36,30 +36,33 @@ using CORE_NS::Property;
 using CORE_NS::PropertyFlags;
 
 class MorphComponentManager final : public BaseManager<MorphComponent, IMorphComponentManager> {
-    BEGIN_PROPERTY(MorphComponent, ComponentMetadata)
+    BEGIN_PROPERTY(MorphComponent, componentMetaData_)
 #include <3d/ecs/components/morph_component.h>
     END_PROPERTY();
-    const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit MorphComponentManager(IEcs& ecs)
-        : BaseManager<MorphComponent, IMorphComponentManager>(ecs, CORE_NS::GetName<MorphComponent>())
+        : BaseManager<MorphComponent, IMorphComponentManager>(ecs, CORE_NS::GetName<MorphComponent>(), 0U)
     {}
+
     ~MorphComponentManager() = default;
+
     size_t PropertyCount() const override
     {
-        return ComponentMetaData.size();
+        return BASE_NS::countof(componentMetaData_);
     }
+
     const Property* MetaData(size_t index) const override
     {
-        if (index < ComponentMetaData.size()) {
-            return &ComponentMetaData[index];
+        if (index < BASE_NS::countof(componentMetaData_)) {
+            return &componentMetaData_[index];
         }
         return nullptr;
     }
+
     array_view<const Property> MetaData() const override
     {
-        return ComponentMetaData;
+        return componentMetaData_;
     }
 };
 

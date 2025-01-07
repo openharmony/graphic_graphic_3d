@@ -55,7 +55,7 @@
 #define STBI_NEON
 #endif
 
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
@@ -89,6 +89,8 @@ using BASE_NS::Math::round;
 // NOTE: Reading the stb error code is NOT THREADSAFE.
 // Enable this if you really need to know the error message.
 constexpr const bool CORE_ENABLE_STB_NON_THREADSAFE_ERROR_MSG = false;
+// On desktop typical dimension limit for GPU images is 16k. On mobile even less.
+constexpr const int32_t MAX_DIMENSIONS = 16384;
 
 void FreeStbImageBytes(void* imageBytes)
 {
@@ -159,7 +161,7 @@ bool PremultiplyAlpha(
         }
     } else if (bytesPerChannel == 2u) {
         // Same for 16 bits per channel images.
-        uint16_t* img = reinterpret_cast<uint16_t*>(imageBytes);
+        auto* img = reinterpret_cast<uint16_t*>(imageBytes);
         for (uint32_t i = 0; i < pixelCount; i++) {
             uint32_t alpha = img[channelCount - 1];
             for (uint32_t j = 0; j < channelCount - 1; j++) {
@@ -191,12 +193,12 @@ public:
 
     array_view<const uint8_t> GetData() const override
     {
-        return array_view<const uint8_t>(static_cast<const uint8_t*>(imageBytes_.get()), imageBytesLength_);
+        return { static_cast<const uint8_t*>(imageBytes_.get()), imageBytesLength_ };
     }
 
     array_view<const SubImageDesc> GetBufferImageCopies() const override
     {
-        return array_view<const SubImageDesc>(&imageBuffer_, 1);
+        return { &imageBuffer_, 1 };
     }
 
     static constexpr Format ResolveFormat(uint32_t loadFlags, uint32_t componentCount, bool is16bpc)
@@ -377,6 +379,9 @@ public:
 #endif
         StbImagePtr imageBytes = nullptr;
         if (result) {
+            if ((info.width > MAX_DIMENSIONS) || (info.height > MAX_DIMENSIONS)) {
+                return ImageLoaderManager::ResultFailure("Image dimensions too big");
+            }
             if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
                 imageBytes = LoadFromMemory(imageFileBytes, loadFlags, info);
                 // Flip vertically if requested.
@@ -389,7 +394,7 @@ public:
         }
 
         if (!result || (((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) && !imageBytes)) {
-            if (CORE_ENABLE_STB_NON_THREADSAFE_ERROR_MSG) {
+            if constexpr (CORE_ENABLE_STB_NON_THREADSAFE_ERROR_MSG) {
                 const string errorString = string_view("Loading image failed: ") + string_view(stbi_failure_reason());
                 return ImageLoaderManager::ResultFailure(errorString);
             }
@@ -456,21 +461,21 @@ public:
         }
 
         // Check for PNG
-        if ((imageFileBytes.size() >= 8) && imageFileBytes[0] == 137 && imageFileBytes[1] == 80 &&
-            imageFileBytes[2] == 78 && imageFileBytes[3] == 71 && imageFileBytes[4] == 13 && imageFileBytes[5] == 10 &&
-            imageFileBytes[6] == 26 && imageFileBytes[7] == 10) { // 6:index 26: pixle data 7:index 10: pixle
+        if ((imageFileBytes.size() >= 8) && imageFileBytes[0] == 137 && imageFileBytes[1] == 80 && // 8,137,80 : param
+            imageFileBytes[2] == 78 && imageFileBytes[3] == 71 && imageFileBytes[4] == 13 && // 2,78,3,71,4,13 : param
+            imageFileBytes[5] == 10 && imageFileBytes[6] == 26 && imageFileBytes[7] == 10) { // 5,10,6,26,7,10 : param
             return true;
         }
 
         // Check for JPEG / JFIF / Exif / ICC_PROFILE tag
         if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
-            imageFileBytes[2] == 0xff && // 2:index
-            ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
-                 imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
-                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
-                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
-                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
-                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
+            imageFileBytes[2] == 0xff && // 2 : idx
+            ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' && // 3,6,7: idx
+                imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // 8,9 :idx JFIF
+                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' && // 3,6,7 : idx
+                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // 8,9 : idx Exif
+                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' && // 3,6,7 : idx
+                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // 8,9 : idx ICC_PROFILE
             return true;
         }
 
@@ -491,7 +496,7 @@ public:
 
     vector<IImageLoaderManager::ImageType> GetSupportedTypes() const override
     {
-        return vector<IImageLoaderManager::ImageType>(std::begin(STB_IMAGE_TYPES), std::end(STB_IMAGE_TYPES));
+        return { std::begin(STB_IMAGE_TYPES), std::end(STB_IMAGE_TYPES) };
     }
 
 protected:

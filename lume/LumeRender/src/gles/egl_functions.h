@@ -14,13 +14,14 @@
  */
 #ifndef EGL_FUNCTIONS_H
 #define EGL_FUNCTIONS_H
+
 #if RENDER_HAS_GLES_BACKEND
 #ifndef declare
 // clang-format off
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 // clang-format on
-#define declare(a, b) extern a b;
+#define declare(a, b) extern "C" { extern a b; }
 #endif
 
 #ifdef EGL_ANDROID_get_native_client_buffer
@@ -34,4 +35,4 @@ declare(PFNEGLDESTROYIMAGEKHRPROC, eglDestroyImageKHR);
 
 #endif // RENDER_HAS_GLES_BACKEND
 #undef declare
-#endif  // EGL_FUNCTIONS_H
+#endif // EGL_FUNCTIONS_H

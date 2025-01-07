@@ -12,19 +12,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "SceneResourceImpl.h"
 
-#include <scene_plugin/interface/intf_mesh.h>
-#include <scene_plugin/interface/intf_node.h>
-
 #include "BaseObjectJS.h"
+#include "SceneJS.h"
+
 SceneResourceImpl::SceneResourceImpl(SceneResourceType type) : type_(type)
 {
-    LOG_F("SceneResourceImpl ++");
+    LOG_V("SceneResourceImpl ++");
 }
 SceneResourceImpl::~SceneResourceImpl()
 {
-    LOG_F("SceneResourceImpl --");
+    LOG_V("SceneResourceImpl --");
 }
 
 void SceneResourceImpl::RegisterEnums(NapiApi::Object exports)
@@ -32,10 +32,10 @@ void SceneResourceImpl::RegisterEnums(NapiApi::Object exports)
     napi_value v;
     NapiApi::Object SceneResourceType(exports.GetEnv());
 
-#define DECL_ENUM(enu, x)                                     \
-    {                                                         \
+#define DECL_ENUM(enu, x)                                           \
+    {                                                               \
         napi_create_uint32(enu.GetEnv(), SceneResourceType::x, &v); \
-        enu.Set(#x, v);                                 \
+        enu.Set(#x, v);                                             \
     }
     DECL_ENUM(SceneResourceType, UNKNOWN);
     DECL_ENUM(SceneResourceType, NODE);
@@ -64,61 +64,101 @@ void SceneResourceImpl::GetPropertyDescs(BASE_NS::vector<napi_property_descripto
 
 void* SceneResourceImpl::GetInstanceImpl(uint32_t id)
 {
-    if (id == SceneResourceImpl::ID) {
+    if (id == SceneResourceImpl::ID)
         return this;
-    }
     return nullptr;
+}
+bool SceneResourceImpl::validateSceneRef()
+{
+    if (scene_.GetObject()) {
+        // scene reference still valid.
+        // so resource should still be valid.
+        return true;
+    }
+    // scene reference lost, so the resource should be disposed
+    LOG_V("Scene reference lost.");
+    return false;
 }
 
 napi_value SceneResourceImpl::Dispose(NapiApi::FunctionContext<>& ctx)
 {
     // Dispose of the native object. (makes the js object invalid)
     if (TrueRootObject* instance = GetThisRootObject(ctx)) {
-        instance->DisposeNative();
+        // see if we have "scenejs" as ext (prefer one given as argument)
+        napi_status stat;
+        SceneJS* ptr { nullptr };
+        NapiApi::FunctionContext<NapiApi::Object> args(ctx);
+        if (args) {
+            if (NapiApi::Object obj = args.Arg<0>()) {
+                if (napi_value ext = obj.Get("SceneJS")) {
+                    stat = napi_get_value_external(ctx.GetEnv(), ext, (void**)&ptr);
+                }
+            }
+        }
+        if (!ptr) {
+            NapiApi::Object obj = scene_.GetObject();
+            if (obj) {
+                auto* tro = obj.Native<TrueRootObject>();
+                if (tro) {
+                    ptr = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+                }
+            }
+        }
+        instance->DisposeNative(ptr);
     }
+    scene_.Reset();
     uri_.Reset();
     return ctx.GetUndefined();
 }
 
 napi_value SceneResourceImpl::GetObjectType(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     uint32_t type = -1; // return -1 if the resource does not exist anymore
     if (GetThisNativeObject(ctx)) {
         type = type_;
     }
-    napi_value value;
-    napi_status status = napi_create_uint32(ctx, type, &value);
-    return value;
+    return ctx.GetNumber(type);
 }
 
 napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
 {
-    BASE_NS::string name;
-    if (auto node = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
-        ExecSyncTask([node, &name]() {
-            name = node->Name()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
-    napi_value value;
-    napi_status status = napi_create_string_utf8(ctx, name.c_str(), name.length(), &value);
-    return value;
+
+    BASE_NS::string name;
+    if (auto node = interface_pointer_cast<META_NS::IObject>(GetThisNativeObject(ctx))) {
+        name = node->GetName();
+    }
+    return ctx.GetString(name);
 }
 void SceneResourceImpl::SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx)
 {
-    if (auto node = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
-        BASE_NS::string name = ctx.Arg<0>();
-        ExecSyncTask([node, name]() {
-            node->Name()->SetValue(name);
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return;
+    }
+    BASE_NS::string name = ctx.Arg<0>();
+    if (auto named = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
+        named->Name()->SetValue(name);
+    } else {
+        LOG_E("renaming resource not implemented, trying to name (%d) to '%s'", type_, name.c_str());
     }
 }
-void SceneResourceImpl::SetUri(const NapiApi::StrongRef& uri)
+void SceneResourceImpl::SetUri(NapiApi::StrongRef uri)
 {
-    uri_ = uri;
+    if (!validateSceneRef()) {
+        return;
+    }
+    uri_ = BASE_NS::move(uri);
 }
 napi_value SceneResourceImpl::GetUri(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     return uri_.GetValue();
 }

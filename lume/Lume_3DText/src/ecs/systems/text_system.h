@@ -41,7 +41,7 @@ struct TextComponent;
 
 class TextSystem final : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "4de00235-c9cd-44d0-94ef-2ef9bbffa088" };
+    static constexpr BASE_NS::Uid UID { "ba7602a6-03f6-4934-ac21-e7b8e609af4d" };
 
     explicit TextSystem(CORE_NS::IEcs& ecs);
     ~TextSystem() override;

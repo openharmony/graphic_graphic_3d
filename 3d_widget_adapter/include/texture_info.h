@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,13 +32,13 @@ struct TextureInfo {
 };
 
 struct WindowChangeInfo {
-    float offsetX = 0.0f;
-    float offsetY = 0.0f;
-    float width = 0.0f;
-    float height = 0.0f;
-    float scale = 1.0f;
-    float widthScale = 1.0f;
-    float heightScale = 1.0f;
+    float offsetX = 0.0;
+    float offsetY = 0.0;
+    float width = 0.0;
+    float height = 0.0;
+    float scale = 1.0;
+    float widthScale = 1.0;
+    float heightScale = 1.0;
     bool recreateWindow = true;
     SurfaceType surfaceType = SurfaceType::SURFACE_TEXTURE;
     uint32_t transformType = 0; // TransformHint

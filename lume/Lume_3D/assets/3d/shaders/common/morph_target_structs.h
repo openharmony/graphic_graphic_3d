@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__MORPHTARGET_STRUCTURES_COMMON_H
-#define SHADERS__COMMON__MORPHTARGET_STRUCTURES_COMMON_H
+#ifndef SHADERS_COMMON_MORPHTARGET_STRUCTURES_COMMON_H
+#define SHADERS_COMMON_MORPHTARGET_STRUCTURES_COMMON_H
 
 #include "render/shaders/common/render_compatibility_common.h"
 

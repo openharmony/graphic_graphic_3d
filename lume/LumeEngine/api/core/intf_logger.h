@@ -118,8 +118,11 @@ public:
     /** Set log level */
     virtual void SetLogLevel(LogLevel logLevel) = 0;
 
-    /** Add output (for custom loggers) */
-    virtual void AddOutput(IOutput::Ptr output) = 0;
+    /** Add output (for custom loggers). Returns an id that can be used to remove the outputter. */
+    virtual uint64_t AddOutput(IOutput::Ptr output) = 0;
+
+    /** Remove output using an id that was receved when adding the outputter. */
+    virtual void RemoveOutput(uint64_t id) = 0;
 
     /** resets all "logOnce" handles. allowing the messages to be logged again */
     virtual void CheckOnceReset() = 0;

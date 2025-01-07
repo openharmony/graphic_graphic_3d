@@ -20,16 +20,14 @@
 #include "ecs/components/layer_flag_bits_metadata.h"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 using CORE3D_NS::PlanarReflectionComponent;
 
 // Extend propertysystem with the enums
-BEGIN_ENUM(PlanarReflectionFlagBitsMetaData, PlanarReflectionComponent::FlagBits)
-DECL_ENUM(PlanarReflectionComponent::FlagBits, ACTIVE_RENDER_BIT, "Active Render")
-DECL_ENUM(PlanarReflectionComponent::FlagBits, MSAA_BIT, "MSAA")
-END_ENUM(PlanarReflectionFlagBitsMetaData, PlanarReflectionComponent::FlagBits)
+ENUM_TYPE_METADATA(
+    PlanarReflectionComponent::FlagBits, ENUM_VALUE(ACTIVE_RENDER_BIT, "Active Render"), ENUM_VALUE(MSAA_BIT, "MSAA"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -44,10 +42,9 @@ using CORE_NS::PropertyFlags;
 
 class PlanarReflectionComponentManager final
     : public BaseManager<PlanarReflectionComponent, IPlanarReflectionComponentManager> {
-    BEGIN_PROPERTY(PlanarReflectionComponent, ComponentMetadata)
+    BEGIN_PROPERTY(PlanarReflectionComponent, componentMetaData_)
 #include <3d/ecs/components/planar_reflection_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit PlanarReflectionComponentManager(IEcs& ecs)
@@ -60,12 +57,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

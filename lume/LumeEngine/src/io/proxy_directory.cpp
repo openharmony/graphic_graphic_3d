@@ -25,7 +25,7 @@
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
-#include <base/util/compile_time_hashes.h>
+#include <base/util/hash.h>
 #include <core/io/intf_directory.h>
 #include <core/namespace.h>
 

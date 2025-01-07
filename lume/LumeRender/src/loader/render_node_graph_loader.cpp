@@ -15,9 +15,7 @@
 
 #include "render_node_graph_loader.h"
 
-#include <cctype>
 #include <charconv>
-#include <cstring>
 
 #include <base/containers/fixed_string.h>
 #include <base/containers/vector.h>
@@ -28,7 +26,6 @@
 #include <render/nodecontext/intf_render_node_graph_manager.h>
 #include <render/render_data_structures.h>
 
-#include "json_format_serialization.h"
 #include "json_util.h"
 #include "util/log.h"
 
@@ -36,16 +33,18 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-CORE_JSON_SERIALIZE_ENUM(GpuQueue::QueueType,
+RENDER_JSON_SERIALIZE_ENUM(GpuQueue::QueueType,
     { { GpuQueue::QueueType::UNDEFINED, nullptr }, { GpuQueue::QueueType::GRAPHICS, "graphics" },
         { GpuQueue::QueueType::COMPUTE, "compute" }, { GpuQueue::QueueType::TRANSFER, "transfer" } })
 
 namespace {
 constexpr size_t VERSION_SIZE { 5u };
 constexpr uint32_t VERSION_MAJOR { 22u };
+constexpr size_t MAX_OUTPUT_RESOURCE_COUNT { 32u };
+constexpr size_t MAX_RNG_RENDER_NODE_COUNT { 256u };
 
 void ParseQueueWaitSignals(
-    const json::value& node, RenderNodeDesc& data, IRenderNodeGraphLoader::LoadResult& nodeResult)
+    const json::value& node, RenderNodeDesc& data, [[maybe_unused]] IRenderNodeGraphLoader::LoadResult& nodeResult)
 {
     if (auto const queueSignals = node.find("gpuQueueWaitSignals"); queueSignals) {
         if (auto const typeNames = queueSignals->find("typeNames"); typeNames) {
@@ -136,6 +135,90 @@ void CompatibilityCheck(const json::value& json, RenderNodeGraphLoader::LoadResu
         result.success = false;
     }
 }
+
+vector<RenderNodeDesc> GetRenderNodeDescs(const json::value& json, string& error)
+{
+    vector<RenderNodeDesc> nodeDescriptors;
+    if (const auto nodes = json.find("nodes"); nodes) {
+        if (nodes->is_array()) {
+            nodeDescriptors.reserve(nodes->array_.size());
+            for (auto const& node : nodes->array_) {
+                RenderNodeDesc data;
+                RenderNodeGraphLoader::LoadResult nodeResult = ParseRenderNode(node, data);
+                if (nodeResult.error.empty()) {
+                    nodeDescriptors.push_back(move(data));
+                } else {
+                    error += nodeResult.error;
+                }
+            }
+        } else {
+            error += "\"nodes\" must to be an array.";
+        }
+    }
+    if (nodeDescriptors.size() > MAX_RNG_RENDER_NODE_COUNT) {
+        nodeDescriptors.resize(MAX_RNG_RENDER_NODE_COUNT);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_W("Render node graph max render node count exceeded");
+#endif
+    }
+    return nodeDescriptors;
+}
+
+vector<RenderNodeGraphOutputResource> GetRenderNodeOutputResources(const json::value& json, string& error)
+{
+    vector<RenderNodeGraphOutputResource> outputResources;
+    if (const auto nodes = json.find("renderNodeGraphOutputResources"); nodes) {
+        outputResources.reserve(nodes->array_.size());
+        for (auto const& node : nodes->array_) {
+            RenderNodeGraphOutputResource data;
+            RenderNodeGraphLoader::LoadResult nodeResult = ParseOutputResources(node, data);
+            if (nodeResult.error.empty()) {
+                outputResources.push_back(move(data));
+            } else {
+                error += nodeResult.error;
+            }
+        }
+    }
+    if (outputResources.size() > MAX_OUTPUT_RESOURCE_COUNT) {
+        outputResources.resize(MAX_OUTPUT_RESOURCE_COUNT);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_W("Render node graph max output resource count exceeded");
+#endif
+    }
+    return outputResources;
+}
+
+IRenderNodeGraphLoader::LoadResult LoadFromNullTerminated(const string_view uri, const string_view jsonString)
+{
+    if (const auto json = json::parse(jsonString.data()); json) {
+        IRenderNodeGraphLoader::LoadResult finalResult;
+        CompatibilityCheck(json, finalResult);
+        if (!finalResult.success) {
+            return finalResult; // compatibility check failed
+        }
+
+        string renderNodeGraphName;
+        string renderNodeGraphDataStoreName;
+        SafeGetJsonValue(json, "renderNodeGraphName", finalResult.error, renderNodeGraphName);
+        SafeGetJsonValue(json, "renderNodeGraphDataStoreName", finalResult.error, renderNodeGraphDataStoreName);
+
+        vector<RenderNodeDesc> nodeDescriptors = GetRenderNodeDescs(json, finalResult.error);
+        vector<RenderNodeGraphOutputResource> outputResources = GetRenderNodeOutputResources(json, finalResult.error);
+
+        finalResult.success = finalResult.error.empty();
+        if (finalResult.error.empty()) {
+            finalResult.desc.renderNodeGraphName = renderNodeGraphName;
+            finalResult.desc.renderNodeGraphDataStoreName = renderNodeGraphDataStoreName;
+            finalResult.desc.renderNodeGraphUri = uri;
+            finalResult.desc.nodes = move(nodeDescriptors);
+            finalResult.desc.outputResources = move(outputResources);
+        }
+
+        return finalResult;
+    } else {
+        return IRenderNodeGraphLoader::LoadResult("Invalid render node graph json file.");
+    }
+}
 } // namespace
 
 RenderNodeGraphLoader::RenderNodeGraphLoader(IFileManager& fileManager) : fileManager_(fileManager) {}
@@ -156,71 +239,13 @@ RenderNodeGraphLoader::LoadResult RenderNodeGraphLoader::Load(const string_view 
         return LoadResult("Failed to read file.");
     }
 
-    return LoadString(uri, raw);
+    return LoadFromNullTerminated(uri, raw);
 }
 
 RenderNodeGraphLoader::LoadResult RenderNodeGraphLoader::LoadString(const string_view jsonString)
 {
-    return LoadString("", jsonString);
-}
-
-RenderNodeGraphLoader::LoadResult RenderNodeGraphLoader::LoadString(const string_view uri, const string_view jsonString)
-{
-    if (const auto json = json::parse(jsonString.data()); json) {
-        LoadResult finalResult;
-        CompatibilityCheck(json, finalResult);
-        if (!finalResult.success) {
-            return finalResult; // compatibility check failed
-        }
-
-        string renderNodeGraphName;
-        string renderNodeGraphDataStoreName;
-        SafeGetJsonValue(json, "renderNodeGraphName", finalResult.error, renderNodeGraphName);
-        SafeGetJsonValue(json, "renderNodeGraphDataStoreName", finalResult.error, renderNodeGraphDataStoreName);
-
-        vector<RenderNodeDesc> nodeDescriptors;
-        if (const auto nodes = json.find("nodes"); nodes) {
-            if (nodes->is_array()) {
-                nodeDescriptors.reserve(nodes->array_.size());
-                for (auto const& node : nodes->array_) {
-                    RenderNodeDesc data;
-                    LoadResult nodeResult = ParseRenderNode(node, data);
-                    if (nodeResult.error.empty()) {
-                        nodeDescriptors.push_back(move(data));
-                    } else {
-                        finalResult.error += nodeResult.error;
-                    }
-                }
-            } else {
-                finalResult.error += "\"nodes\" must to be an array.";
-            }
-        }
-        vector<RenderNodeGraphOutputResource> outputResources;
-        if (const auto nodes = json.find("renderNodeGraphOutputResources"); nodes) {
-            outputResources.reserve(nodes->array_.size());
-            for (auto const& node : nodes->array_) {
-                RenderNodeGraphOutputResource data;
-                LoadResult nodeResult = ParseOutputResources(node, data);
-                if (nodeResult.error.empty()) {
-                    outputResources.push_back(move(data));
-                } else {
-                    finalResult.error += nodeResult.error;
-                }
-            }
-        }
-
-        finalResult.success = finalResult.error.empty();
-        if (finalResult.error.empty()) {
-            finalResult.desc.renderNodeGraphName = renderNodeGraphName;
-            finalResult.desc.renderNodeGraphDataStoreName = renderNodeGraphDataStoreName;
-            finalResult.desc.renderNodeGraphUri = uri;
-            finalResult.desc.nodes = move(nodeDescriptors);
-            finalResult.desc.outputResources = move(outputResources);
-        }
-
-        return finalResult;
-    } else {
-        return LoadResult("Invalid render node graph json file.");
-    }
+    // make sure the input is zero terminated before parsing.
+    const auto asString = string(jsonString);
+    return LoadFromNullTerminated("", asString);
 }
 RENDER_END_NAMESPACE()

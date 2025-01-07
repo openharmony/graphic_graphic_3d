@@ -88,11 +88,6 @@ BEGIN_COMPONENT(IEnvironmentComponentManager, EnvironmentComponent)
     DEFINE_PROPERTY(
         BASE_NS::Math::Quat, environmentRotation, "IBL Environment Rotation", 0, ARRAY_VALUE(0.f, 0.f, 0.f, 1.f))
 
-    /** Additional blend factor for multiple environments.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec4, blendFactor, "Additional Blend Factor for Multiple Environments", 0,
-        ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
-
     /** Shader. Prefer using automatic selection if no custom shaders.
      * Needs to match default material env layouts and specializations (api/3d/shaders/common).
      */
@@ -102,7 +97,17 @@ BEGIN_COMPONENT(IEnvironmentComponentManager, EnvironmentComponent)
      * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
      */
     DEFINE_PROPERTY(
-        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
+        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0,)
+
+    /** Reflection probe that is used in probing the scenery.
+     * Create one using scene util's CreateReflectionProbe for example and attach it to this slot.
+     * When this slot is not empty, the render system automatically picks it in to use.
+     */
+    DEFINE_PROPERTY(CORE_NS::EntityReference, reflectionProbe, "Reflection Probe", 0,)
+
+    /** Entity containing dynamic environment blender component, from where environments are pushed to camera buffers
+     * and can be blended. Controls indirect and environment lighting. If empty, no blending will happen. */
+    DEFINE_PROPERTY(CORE_NS::EntityReference, blendEnvironments, "Blend Environments", 0,)
 
 END_COMPONENT(IEnvironmentComponentManager, EnvironmentComponent, "a603b2e8-27f0-4c03-9538-70eaef88e3d3")
 #if !defined(IMPLEMENT_MANAGER)

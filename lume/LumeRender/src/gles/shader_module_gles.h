@@ -54,7 +54,7 @@ struct ShaderModulePlatformDataGLES : ShaderModulePlatformData {
 class ShaderModuleGLES final : public ShaderModule {
 public:
     ShaderModuleGLES(Device&, const ShaderModuleCreateInfo&);
-    ~ShaderModuleGLES();
+    ~ShaderModuleGLES() override;
 
     ShaderStageFlags GetShaderStageFlags() const override;
 

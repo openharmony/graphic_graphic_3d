@@ -27,13 +27,36 @@ constexpr const uint8_t COLOR_SHIFT_8 = 8;
 constexpr const uint8_t COLOR_SHIFT_16 = 16;
 constexpr const uint8_t COLOR_SHIFT_24 = 24;
 
-constexpr const bool MAKE_COLOR_AS_LINEAR = true;
-
 /** Color values are in linear space (non premultiplied value)
  * Linear color space (non-srgb values)
  * Prefer using 32-bit color (uint32_t) in sRGB format
  */
 using Color = Math::Vec4;
+
+/** Color conversion types
+ */
+enum ColorConversionType {
+    /** No conversion and should be used as default */
+    COLOR_CONVERSION_TYPE_NONE = 0,
+    /** sRGB to linear conversion */
+    COLOR_CONVERSION_TYPE_SRGB_TO_LINEAR = 1,
+    /** Linear to sRGB conversion */
+    COLOR_CONVERSION_TYPE_LINEAR_TO_SRGB = 2,
+};
+
+/** Color space flag bits
+ * Defaults are linear
+ */
+enum ColorSpaceFlagBits {
+    /** Add hint to treat typical sRGB data as linear with input data and with final output (swapchain)
+     * This value should be retrieved from the engine and use with all (or some of) the plugins
+     * NOTE: mainly affects the input formats where data is written into (and typically results as non-srgb formats),
+     * and swapchain formats.
+     */
+    COLOR_SPACE_SRGB_AS_LINEAR_BIT = 0x00000001,
+};
+/** Container for color space flag bits */
+using ColorSpaceFlags = uint32_t;
 
 inline float SRGBToLinearConv(const float srgb)
 {
@@ -138,13 +161,23 @@ inline uint32_t FromColorRGBAToSRGB(Color color)
     return a | b | g | r;
 }
 
-inline uint32_t FromColorRGBA(const Color color)
+inline uint32_t FromColorRGBA(const Color color, const ColorSpaceFlags flags)
 {
-    if (MAKE_COLOR_AS_LINEAR) {
+    if (flags == 0U) {
         return FromColorRGBAToLinear(color);
     } else {
         return FromColorRGBAToSRGB(color);
     }
+}
+
+inline constexpr uint32_t PackPremultiplyColorUnorm(Color color)
+{
+    // premultiply colors by alpha and scale the components from 0..1 to 0..255 and pack them in a 32 bit value RGBA
+    // where R is the lowest byte and A the highest.
+    return (((uint32_t(BASE_NS::Math::clamp01(color.w) * 255.0f) & 0xFF) << 24u) |
+            ((uint32_t(BASE_NS::Math::clamp01(color.w * color.z) * 255.0f) & 0xFF) << 16u) |
+            ((uint32_t(BASE_NS::Math::clamp01(color.w * color.y) * 255.0f) & 0xFF) << 8u) |
+            ((uint32_t(BASE_NS::Math::clamp01(color.w * color.x) * 255.0f) & 0xFF)));
 }
 
 static const Color BLACK_COLOR = MakeColorFromLinear(0xFF000000);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,11 +26,20 @@ public:
     static GraphicsManager& GetInstance();
     PlatformData GetPlatformData(const HapInfo& hapInfo) const override;
     PlatformData GetPlatformData() const override;
+    bool GetUseBasisEngine()
+    {
+        return useBasisEngine_; // get useBasisEngine_ of GraphicsManager, which is global singleton
+    }
+    void SetUseBasisEngine(bool useBasisEngine)
+    {
+        useBasisEngine_ = useBasisEngine; // set useBasisEngine_ of GraphicsManager, which is global singleton
+    }
 private:
     GraphicsManager(const GraphicsManager&) = delete;
     GraphicsManager& operator=(const GraphicsManager&) = delete;
     GraphicsManager() = default;
     virtual ~GraphicsManager();
+    bool useBasisEngine_ = false; // set to true by ProductBasis if in rain or snow scene, which uses physics engine
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_GRAPHICS_MANAGER_H

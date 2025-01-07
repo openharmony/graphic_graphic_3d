@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H
-#define SHADERS__COMMON__3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H
+#ifndef SHADERS_COMMON_3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H
+#define SHADERS_COMMON_3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H
 
 #include "render/shaders/common/render_compatibility_common.h"
 #include "render/shaders/common/render_packing_common.h"
@@ -108,6 +108,8 @@
 // basic (1 << 12)
 // complex (1 << 13)
 #define CORE_MATERIAL_GPU_INSTANCING_BIT (1 << 14)
+// use instancing for materials in fragment shader
+#define CORE_MATERIAL_GPU_INSTANCING_MATERIAL_BIT (1 << 15)
 
 // needs to match api/core/render/intf_render_data_store_default_light LightingFlagBits
 #define CORE_LIGHTING_SHADOW_TYPE_VSM_BIT (1 << 0)
@@ -149,6 +151,7 @@
 #define CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET 128u
 
 #define CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT 64
+#define CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT 15
 #define CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT 16
 #define CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT 8
 
@@ -164,6 +167,25 @@
 #define CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_NEAR 4
 #define CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_FAR 5
 #define CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT 6
+
+#define LIGHT_CLUSTERS_X 16
+#define LIGHT_CLUSTERS_Y 9
+#define LIGHT_CLUSTERS_Z 24
+#define CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT LIGHT_CLUSTERS_X* LIGHT_CLUSTERS_Y* LIGHT_CLUSTERS_Z
+#define LIGHT_CLUSTER_TGS 64
+#define CORE_DEFAULT_ENABLE_LIGHT_CLUSTERING 0
+
+#define CORE_MULTI_VIEW_VIEW_INDEX_SHIFT 16U
+#define CORE_MULTI_VIEW_VIEW_INDEX_MASK 0xffffU
+#define CORE_MULTI_VIEW_VIEW_INDEX_MODULO 4U
+
+#define CORE_DM_CONSTANT_ID_MATERIAL_TYPE 0
+#define CORE_DM_CONSTANT_ID_MATERIAL_FLAGS 1
+#define CORE_DM_CONSTANT_ID_LIGHTING_FLAGS 2
+#define CORE_DM_CONSTANT_ID_POST_PROCESS_FLAGS 3
+#define CORE_DM_CONSTANT_ID_CAMERA_FLAGS 4
+#define CORE_DM_CONSTANT_ID_ENV_TYPE 5
+#define CORE_DM_CONSTANT_ID_SUBMESH_FLAGS 6
 
 #else
 
@@ -213,6 +235,7 @@ constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT { 256u };
 constexpr uint32_t CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET { 128u };
 
 constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT { 64u };
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT { 15u };
 constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT { 16u };
 constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT { 8u };
 
@@ -228,6 +251,24 @@ constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_TOP { 3 };
 constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_NEAR { 4 };
 constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_FAR { 5 };
 constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT { 6 };
+
+constexpr uint32_t LIGHT_CLUSTERS_X { 16u };
+constexpr uint32_t LIGHT_CLUSTERS_Y { 9u };
+constexpr uint32_t LIGHT_CLUSTERS_Z { 24u };
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT { LIGHT_CLUSTERS_X * LIGHT_CLUSTERS_Y * LIGHT_CLUSTERS_Z };
+constexpr uint32_t LIGHT_CLUSTER_TGS { 64u };
+
+constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_SHIFT { 16U };
+constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_MASK { 0xffffU };
+constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_MODULO { 4U };
+
+constexpr uint32_t CORE_DM_CONSTANT_ID_MATERIAL_TYPE { 0 };
+constexpr uint32_t CORE_DM_CONSTANT_ID_MATERIAL_FLAGS { 1 };
+constexpr uint32_t CORE_DM_CONSTANT_ID_LIGHTING_FLAGS { 2 };
+constexpr uint32_t CORE_DM_CONSTANT_ID_POST_PROCESS_FLAGS { 3 };
+constexpr uint32_t CORE_DM_CONSTANT_ID_CAMERA_FLAGS { 4 };
+constexpr uint32_t CORE_DM_CONSTANT_ID_ENV_TYPE { 5 };
+constexpr uint32_t CORE_DM_CONSTANT_ID_SUBMESH_FLAGS { 6 };
 
 #endif
 
@@ -317,6 +358,13 @@ struct DefaultMaterialLightStruct {
     DefaultMaterialSingleLightStruct lights[CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT];
 };
 
+// contains the per-cluster data: the number of lights within this cluster
+// and the indices to the lights in this cluster.
+struct DefaultMaterialLightClusterData {
+    uint count;
+    uint lightIndices[CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT];
+};
+
 struct DefaultMaterialSkinStruct {
     // previous frame matrices in offset CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET
     mat4 jointMatrices[CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT];
@@ -354,8 +402,8 @@ struct DefaultMaterialEnvironmentStruct {
     // spherical harmonics for indirect diffuse environment lighting (3 bands)
     vec4 shIndirectCoefficients[CORE_DEFAULT_MATERIAL_MAX_SH_VEC3_VALUE_COUNT];
 
-    // padding
-    vec4 pad0;
+    // .x = count, .yzw = multi env indices
+    uvec4 multiEnvIndices;
 };
 
 struct DefaultMaterialFogStruct {
@@ -402,6 +450,7 @@ struct DefaultCameraMatrixStruct {
     // .xy = unique id (64-bit), .zw = layer mask (64 bit)
     uvec4 indices;
     // .x multi-view camera additional layer count, .yzw 3 multi-view camera indices
+    // yzw are packed, use unpack functions
     uvec4 multiViewIndices;
 
     vec4 frustumPlanes[CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT];
@@ -437,18 +486,18 @@ struct DefaultMaterialUnpackedPostProcessStruct {
 
 uint GetPackFlatIndices(const uint cameraIdx, const uint instanceIdx)
 {
-    return ((instanceIdx << 16) | (cameraIdx & 0xffff)); // 16 : bit size
+    return ((instanceIdx << 16) | (cameraIdx & 0xffff)); // 16 : left shift
 }
 
 void GetUnpackFlatIndices(in uint indices, out uint cameraIdx, out uint instanceIdx)
 {
     cameraIdx = indices & 0xffff;
-    instanceIdx = indices >> 16;
+    instanceIdx = indices >> 16; // 16 : right shift
 }
 
 uint GetUnpackFlatIndicesInstanceIdx(in uint indices)
 {
-    return (indices >> 16);
+    return (indices >> 16); // 16 : right shift
 }
 
 uint GetUnpackFlatIndicesCameraIdx(in uint indices)
@@ -459,6 +508,16 @@ uint GetUnpackFlatIndicesCameraIdx(in uint indices)
 uint GetUnpackCameraIndex(const DefaultMaterialGeneralDataStruct dmgds)
 {
     return dmgds.indices.x;
+}
+
+uint GetMaterialInstanceIndex(const uint materialFLags, const uint indices)
+{
+    uint instanceIdx = 0U;
+    if (((materialFLags & CORE_MATERIAL_GPU_INSTANCING_BIT) == CORE_MATERIAL_GPU_INSTANCING_BIT) &&
+        ((materialFLags & CORE_MATERIAL_GPU_INSTANCING_MATERIAL_BIT) == CORE_MATERIAL_GPU_INSTANCING_MATERIAL_BIT)) {
+        instanceIdx = GetUnpackFlatIndicesInstanceIdx(indices);
+    }
+    return instanceIdx;
 }
 
 DefaultMaterialUnpackedSceneTimingStruct GetUnpackSceneTiming(const DefaultMaterialGeneralDataStruct dmgds)
@@ -489,6 +548,21 @@ DefaultMaterialUnpackedTexTransformStruct GetUnpackTextureTransform(const uvec4 
     dm.rotateScale = UnpackVec4Half2x16(packedTexTransform.xy);
     dm.translate = UnpackVec4Half2x16(packedTexTransform.zw).xy;
     return dm;
+}
+
+uint GetUnpackCameraMultiViewIndex(
+    const uint inputCameraIndex, const uint glViewIndex, const uint viewCount, const uvec4 multiViewIndices)
+{
+    uint cameraIdx = inputCameraIndex;
+    // NOTE: when gl_ViewIndex is 0 the "main" camera is used and no multi-view indexing
+    if ((viewCount > 0u) && (glViewIndex <= viewCount) && (glViewIndex > 0u)) {
+        // additional index packed to uints
+        const uint viewIndexShift = (glViewIndex >= 4U) ? CORE_MULTI_VIEW_VIEW_INDEX_SHIFT : 0U; // 4 : idx
+        const uint finalViewIndex = glViewIndex % 4U; // 4 idx
+        cameraIdx = multiViewIndices[finalViewIndex];
+        cameraIdx = (cameraIdx >> viewIndexShift) & CORE_MULTI_VIEW_VIEW_INDEX_MASK;
+    }
+    return cameraIdx;
 }
 
 // DEPRECATED base methods with struct inputs
@@ -628,4 +702,4 @@ uint GetUnpackTexCoordInfo(const DefaultMaterialTransformMaterialStruct dmms)
 
 #endif
 
-#endif // SHADERS__COMMON__3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H
+#endif // SHADERS_COMMON_3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H

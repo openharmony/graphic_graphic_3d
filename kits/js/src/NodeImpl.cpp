@@ -20,11 +20,13 @@
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <napi_api.h>
-#include <scene_plugin/api/camera_uid.h>
-#include <scene_plugin/api/light_uid.h>
-#include <scene_plugin/api/node_uid.h>
-#include <scene_plugin/api/scene.h>
-#include <scene_plugin/interface/intf_node.h>
+#include <scene/interface/intf_scene.h>
+#include <scene/ext/component_util.h>
+#include <scene/interface/component_util.h>
+#include <scene/interface/intf_layer.h>
+#include <scene/interface/intf_light.h>
+
+#include <3d/ecs/components/layer_component.h>
 
 #include "BaseObjectJS.h"
 void NodeImpl::RegisterEnums(NapiApi::Object exports)
@@ -40,32 +42,43 @@ void NodeImpl::RegisterEnums(NapiApi::Object exports)
     DECL_ENUM(NodeType, GEOMETRY);
     DECL_ENUM(NodeType, CAMERA);
     DECL_ENUM(NodeType, LIGHT);
+    DECL_ENUM(NodeType, TEXT);
 #undef DECL_ENUM
     exports.Set("NodeType", NodeType);
 }
 NodeImpl::NodeImpl(NodeType type) : SceneResourceImpl(SceneResourceImpl::NODE), type_(type)
 {
-    LOG_F("NodeImpl ++");
+    LOG_V("NodeImpl ++");
 }
 NodeImpl::~NodeImpl()
 {
-    LOG_F("NodeImpl --");
+    LOG_V("NodeImpl --");
+    posProxy_.reset();
+    sclProxy_.reset();
+    rotProxy_.reset();
 }
-
 void* NodeImpl::GetInstanceImpl(uint32_t id)
 {
-    if (id == NodeImpl::ID) {
+    if (id == NodeImpl::ID)
         return this;
-    }
     return SceneResourceImpl::GetInstanceImpl(id);
 }
-
 void NodeImpl::GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props)
 {
     using namespace NapiApi;
     // META_NS::IContainer;
 
     SceneResourceImpl::GetPropertyDescs(props);
+
+    // override "name" from sceneresource
+    for (auto it = props.begin(); it != props.end(); it++) {
+        if (BASE_NS::string_view("name").compare(it->utf8name) == 0) {
+            props.erase(it);
+            break;
+        }
+    }
+    props.push_back(
+        TROGetSetProperty<BASE_NS::string, NodeImpl, &NodeImpl::GetNodeName, &NodeImpl::SetNodeName>("name"));
 
     // node
 
@@ -83,6 +96,8 @@ void NodeImpl::GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props
     props.push_back(MakeTROMethod<FunctionContext<>, NodeImpl, &NodeImpl::Dispose>("destroy"));
     props.push_back(
         MakeTROMethod<FunctionContext<BASE_NS::string>, NodeImpl, &NodeImpl::GetNodeByPath>("getNodeByPath"));
+    props.push_back(
+        MakeTROMethod<FunctionContext<BASE_NS::string>, NodeImpl, &NodeImpl::GetComponent>("getComponent"));
 
     // layermask methods.
     props.push_back(MakeTROMethod<FunctionContext<uint32_t>, NodeImpl, &NodeImpl::GetLayerMaskEnabled>("getEnabled"));
@@ -104,332 +119,399 @@ napi_value NodeImpl::Dispose(NapiApi::FunctionContext<>& ctx)
     posProxy_.reset();
     sclProxy_.reset();
     rotProxy_.reset();
-    if (TrueRootObject* instance = GetThisRootObject(ctx)) {
-        instance->DisposeNative();
-    }
+    SceneResourceImpl::Dispose(ctx);
     scene_.Reset();
     return ctx.GetUndefined();
 }
 napi_value NodeImpl::GetLayerMaskEnabled(NapiApi::FunctionContext<uint32_t>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     uint32_t bit = ctx.Arg<0>();
-    bool enabled = false;
+    bool enabled = true;
     if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx))) {
         uint64_t mask = 1ull << bit;
-    ExecSyncTask([node, mask, &enabled]() {
-            enabled = node->LayerMask()->GetValue() & mask;
-        return META_NS::IAny::Ptr {};
-        });
+        if (auto comp = SCENE_NS::GetComponent<SCENE_NS::ILayer>(node)) {
+            enabled = comp->LayerMask()->GetValue() & mask;
+        }
     }
     return ctx.GetBoolean(enabled);
 }
 napi_value NodeImpl::SetLayerMaskEnabled(NapiApi::FunctionContext<uint32_t, bool>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     uint32_t bit = ctx.Arg<0>();
     bool enabled = ctx.Arg<1>();
     if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx))) {
-    uint64_t mask = 1ull << bit;
-    ExecSyncTask([node, enabled, mask]() {
+        if (!SCENE_NS::GetComponent<SCENE_NS::ILayer>(node)) {
+            SCENE_NS::AddComponent<CORE3D_NS::ILayerComponentManager>(node);
+        }
+        if (auto layer = SCENE_NS::GetComponent<SCENE_NS::ILayer>(node)) {
+            uint64_t mask = 1ull << bit;
             if (enabled) {
-                node->LayerMask()->SetValue(node->LayerMask()->GetValue() | mask);
+                layer->LayerMask()->SetValue(layer->LayerMask()->GetValue() | mask);
             } else {
-                node->LayerMask()->SetValue(node->LayerMask()->GetValue() & ~mask);
+                layer->LayerMask()->SetValue(layer->LayerMask()->GetValue() & ~mask);
             }
-                return META_NS::IAny::Ptr {};
-        });
+        }
     }
     return ctx.GetUndefined();
 }
 
 napi_value NodeImpl::GetNodeType(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     uint32_t type = -1; // return -1 if the object does not exist anymore
     if (auto node = interface_cast<SCENE_NS::INode>(GetThisNativeObject(ctx))) {
         type = type_;
     }
-    napi_value value;
-    napi_status status = napi_create_uint32(ctx, type, &value);
-    return value;
+    return ctx.GetNumber(type);
 }
 
 napi_value NodeImpl::GetLayerMask(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     if (auto node = interface_cast<SCENE_NS::INode>(GetThisNativeObject(ctx))) {
-        return ctx.This();
+        return ctx.This().ToNapiValue();
     }
     return ctx.GetUndefined();
 }
 
+napi_value NodeImpl::GetNodeName(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
+    BASE_NS::string name;
+    auto native = GetThisNativeObject(ctx);
+    auto object = interface_pointer_cast<META_NS::IObject>(native);
+    auto node = interface_pointer_cast<SCENE_NS::INode>(native);
+    if (!object || !node) {
+        LOG_E("NodeImpl not a node! %p %p %p", native.get(), object.get(), node.get());
+        return ctx.GetUndefined();
+    }
+    name = object->GetName();
+
+    // LEGACY COMPATIBILITY start
+    auto parent = node->GetParent().GetResult();
+    if (!parent) {
+        //parentless node, "root"
+        if (name.empty()) {
+            // no name, and no parent.
+            // so return the legacy default name
+            name = "rootNode_";
+        }
+    }
+    // LEGACY COMPATIBILITY end
+
+    return ctx.GetString(name);
+}
+void NodeImpl::SetNodeName(NapiApi::FunctionContext<BASE_NS::string>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+    BASE_NS::string name = ctx.Arg<0>();
+    if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx))) {
+        node->SetName(name).Wait();
+    } else {
+        LOG_W("renaming resource not implemented, trying to name (%d) to '%s'", type_, name.c_str());
+    }
+}
+
 napi_value NodeImpl::GetPath(NapiApi::FunctionContext<>& ctx)
 {
-    auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
-    BASE_NS::string path;
-    if (node) {
-        ExecSyncTask([node, &path]() {
-            if (interface_cast<META_NS::IContainable>(node)->GetParent()) {
-                path = node->Path()->GetValue();
-            }
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
-    napi_value value;
-    napi_status status = napi_create_string_utf8(ctx, path.c_str(), path.length(), &value);
-    return value;
+
+    auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
+    if (!node) {
+        // node does not exist anymore?
+        return ctx.GetUndefined();
+    }
+
+    auto parent = node->GetParent().GetResult();
+    if (!parent) {
+        // parentless nodes are "root", and root nodes path is ofcourse empty.
+        return ctx.GetString("");
+    }
+    BASE_NS::string path = node->GetPath().GetResult();
+
+    // LEGACY COMPATIBILITY start
+    // get root from scene..
+    NapiApi::Object obj = scene_.GetObject();
+    NapiApi::Object root = obj.Get<NapiApi::Object>("root");
+    // get the name of the root..
+    BASE_NS::string rootName = root.Get<BASE_NS::string>("name");
+
+    // remove node name from path.
+    path = path.substr(0, path.find_last_of('/') + 1);
+    // make sure root node name is there.. (hack)
+
+    // see if root name is in the path.
+    auto pos = path.find(rootName);
+    if (pos == BASE_NS::string::npos) {
+        // rootname missing from path.
+        path.insert(1, rootName.c_str());
+    }
+    // LEGACY COMPATIBILITY end
+    return ctx.GetString(path);
 }
 
 napi_value NodeImpl::GetVisible(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     bool visible = false;
     if (node) {
-        ExecSyncTask([node, &visible]() {
-            visible = node->Visible()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        visible = node->Enabled()->GetValue();
     }
-    napi_value value;
-    napi_status status = napi_get_boolean(ctx, visible, &value);
-    return value;
+    return ctx.GetBoolean(visible);
 }
 void NodeImpl::SetVisible(NapiApi::FunctionContext<bool>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (node) {
         bool visible = ctx.Arg<0>();
-        ExecSyncTask([node, visible]() {
-            node->Visible()->SetValue(visible);
-            return META_NS::IAny::Ptr {};
-        });
+        node->Enabled()->SetValue(visible);
     }
 }
 
 napi_value NodeImpl::GetPosition(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (!node) {
         return ctx.GetUndefined();
     }
     if (posProxy_ == nullptr) {
-        posProxy_ = BASE_NS::make_unique<Vec3Proxy>(ctx, node->Position());
+        posProxy_ = BASE_NS::make_unique<Vec3Proxy>(ctx.Env(), node->Position());
     }
-    return posProxy_ ? posProxy_->Value() : NapiApi::Value<NapiApi::Object>();
+    return posProxy_->Value();
 }
 
 void NodeImpl::SetPosition(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (!node) {
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
     if (posProxy_ == nullptr) {
-        posProxy_ = BASE_NS::make_unique<Vec3Proxy>(ctx, node->Position());
+        posProxy_ = BASE_NS::make_unique<Vec3Proxy>(ctx.Env(), node->Position());
     }
     posProxy_->SetValue(obj);
 }
 
 napi_value NodeImpl::GetScale(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (!node) {
         return ctx.GetUndefined();
     }
     if (sclProxy_ == nullptr) {
-        sclProxy_ = BASE_NS::make_unique<Vec3Proxy>(ctx, node->Scale());
+        sclProxy_ = BASE_NS::make_unique<Vec3Proxy>(ctx.Env(), node->Scale());
     }
-    return sclProxy_ ? sclProxy_->Value() : NapiApi::Value<NapiApi::Object>();
+    return sclProxy_->Value();
 }
 
 void NodeImpl::SetScale(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (!node) {
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
     if (sclProxy_ == nullptr) {
-        sclProxy_ = BASE_NS::make_unique<Vec3Proxy>(ctx, node->Scale());
+        sclProxy_ = BASE_NS::make_unique<Vec3Proxy>(ctx.Env(), node->Scale());
     }
     sclProxy_->SetValue(obj);
 }
 
 napi_value NodeImpl::GetRotation(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (!node) {
         return ctx.GetUndefined();
     }
     if (rotProxy_ == nullptr) {
-        rotProxy_ = BASE_NS::make_unique<QuatProxy>(ctx, node->Rotation());
+        rotProxy_ = BASE_NS::make_unique<QuatProxy>(ctx.Env(), node->Rotation());
     }
-    return rotProxy_ ? rotProxy_->Value() : NapiApi::Value<NapiApi::Object>();
+    return rotProxy_->Value();
 }
 
 void NodeImpl::SetRotation(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (!node) {
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
     if (rotProxy_ == nullptr) {
-        rotProxy_ = BASE_NS::make_unique<QuatProxy>(ctx, node->Rotation());
+        rotProxy_ = BASE_NS::make_unique<QuatProxy>(ctx.Env(), node->Rotation());
     }
     rotProxy_->SetValue(obj);
 }
 
 napi_value NodeImpl::GetParent(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
     if (!node) {
         return ctx.GetNull();
     }
-    META_NS::IObject::Ptr root;
-    if (auto containable = interface_cast<META_NS::IContainable>(node)) {
-        ExecSyncTask([containable, &root]() {
-            root = interface_pointer_cast<META_NS::IObject>(containable->GetParent());
-            return META_NS::IAny::Ptr {};
-        });
-    }
 
-    if (!root) {
-        // no parent.
+    auto parent = node->GetParent().GetResult();
+    if (!parent) {
+        // no parent. (root node)
         return ctx.GetNull();
     }
 
-    if (auto cached = FetchJsObj(root)) {
+    if (auto cached = FetchJsObj(parent)) {
         // always return the same js object.
-        return cached;
+        return cached.ToNapiValue();
     }
     if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        CORE_LOG_F("INVALID SCENE!");
+        LOG_F("INVALID SCENE!");
     }
 
     // create new js object for the native node.
-    NapiApi::Object argJS(ctx);
-    napi_value args[] = { scene_.GetValue(), argJS };
+    NapiApi::Env env(ctx.GetEnv());
+    NapiApi::Object argJS(env);
+    napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
 
-    return CreateFromNativeInstance(ctx, root, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
+    return CreateFromNativeInstance(env, interface_pointer_cast<META_NS::IObject>(parent),
+        false /*these are owned by the scene*/, BASE_NS::countof(args), args).ToNapiValue();
 }
 
 napi_value NodeImpl::GetChildContainer(NapiApi::FunctionContext<>& ctx)
 {
-    // make sure the child list is up to date.
-    auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx));
-    if (node) {
-        ExecSyncTask([node]() {
-            node->BuildChildren(SCENE_NS::INode::BuildBehavior::NODE_BUILD_ONLY_DIRECT_CHILDREN);
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
 
     // Node implements Container<Node>
-    return ctx.This();
+    return ctx.This().ToNapiValue();
 }
 
-// container implementation
-bool SkipNode(SCENE_NS::INode::Ptr node)
-{
-    auto o = interface_cast<META_NS::IObject>(node);
-    auto classid = o->GetClassId();
-    // white list of nodes that are actual nodes..
-    if ((classid == SCENE_NS::ClassId::Camera) || (classid == SCENE_NS::ClassId::Light) ||
-        (classid == SCENE_NS::ClassId::Node)) {
-        return false;
-    }
-    return true;
-}
 napi_value NodeImpl::GetChild(NapiApi::FunctionContext<uint32_t>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     uint32_t index = ctx.Arg<0>();
     META_NS::IObject::Ptr child;
-    auto metaobj = GetThisNativeObject(ctx);
-    if (auto container = interface_cast<META_NS::IContainer>(metaobj)) {
-        ExecSyncTask([container, index, &child]() {
-            auto data = container->GetAll<SCENE_NS::INode>();
-            int count = 0;
-            for (auto d : data) {
-                // Skip nodes that are not real "nodes"
-                if (SkipNode(d)) {
-                    continue;
-                }
-                if (count == index) {
-                    child = interface_pointer_cast<META_NS::IObject>(d);
-                    break;
-                }
-                count++;
-            }
-            return META_NS::IAny::Ptr {};
-        });
+    if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx))) {
+        auto children = node->GetChildren().GetResult();
+        if (index < children.size()) {
+            child = interface_pointer_cast<META_NS::IObject>(children[index]);
+        }
     }
     if (!child) {
         // return null
-        napi_value value;
-        napi_get_null(ctx, &value);
-        return value;
+        return ctx.GetNull();
     }
     auto cached = FetchJsObj(child);
     if (!cached) {
         // was not cached yet, so recreate.
-        NapiApi::Object argJS(ctx);
+        NapiApi::Env env(ctx.GetEnv());
+        NapiApi::Object argJS(env);
         auto scn = scene_.GetObject();
         if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-            CORE_LOG_F("INVALID SCENE!");
+            LOG_F("INVALID SCENE!");
         }
 
-        napi_value args[] = { scene_.GetValue(), argJS };
+        napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
 
         cached =
-            CreateFromNativeInstance(ctx, child, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
+            CreateFromNativeInstance(env, child, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
     }
-    return cached;
+    return cached.ToNapiValue();
 }
 
 napi_value NodeImpl::GetCount(NapiApi::FunctionContext<>& ctx)
 {
-    uint32_t count = 0;
-    auto metaobj = GetThisNativeObject(ctx);
-    if (auto container = interface_cast<META_NS::IContainer>(metaobj)) {
-        ExecSyncTask([container, &count]() {
-            auto data = container->GetAll<SCENE_NS::INode>();
-            for (auto d : data) {
-                // Skip nodes that are not real "nodes"
-                if (SkipNode(d)) {
-                    continue;
-                }
-                count++;
-            }
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
-    napi_value value;
-    napi_status nstatus = napi_create_uint32(ctx, count, &value);
-    return value;
+
+    uint32_t count = 0;
+    if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetThisNativeObject(ctx))) {
+        count = node->GetChildren().GetResult().size();
+    }
+    return ctx.GetNumber(count);
 }
 napi_value NodeImpl::AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    NapiApi::Object childJS = ctx.Arg<0>();
-    if ((napi_value)childJS == nullptr) {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    auto arg0 = ctx.Arg<0>();
+    if (arg0.IsUndefinedOrNull()) {
         // okay. Invalid arg error?
         return ctx.GetUndefined();
     }
+
+    NapiApi::Object childJS = arg0;
+
     auto childNode = GetNativeMeta<SCENE_NS::INode>(childJS);
     if (!childNode) {
         return ctx.GetUndefined();
     }
 
     auto metaobj = GetThisNativeObject(ctx);
-    if (auto container = interface_cast<META_NS::IContainer>(metaobj)) {
-        ExecSyncTask([container, childNode]() {
-            container->Add(childNode);
-            childNode->Visible()->SetValue(true);
-            return META_NS::IAny::Ptr {};
-        });
+    if (auto parent = interface_cast<SCENE_NS::INode>(metaobj)) {
+        parent->AddChild(childNode);
+        childNode->Enabled()->SetValue(true);
     }
 
     // make the js object keep a weak ref again (scene keeps the native object alive)
     // (or move ownership back from SceneJS? and remove dispose hook?)
-    if (auto tro = GetRootObject(ctx, childJS)) {
+    if (auto tro = GetRootObject(childJS)) {
         if (auto native = tro->GetNativeObject()) {
             tro->SetNativeObject(nullptr, true);
             tro->SetNativeObject(native, false);
@@ -441,83 +523,71 @@ napi_value NodeImpl::AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 }
 napi_value NodeImpl::InsertChildAfter(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx)
 {
-    NapiApi::Object childJS = ctx.Arg<0>();
-    NapiApi::Object siblingJS = ctx.Arg<1>();
-
-    if ((napi_value)childJS == nullptr) {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    auto arg0 = ctx.Arg<0>();
+    if (arg0.IsUndefinedOrNull()) {
         // okay. Invalid arg error?
         return ctx.GetUndefined();
     }
+
+    NapiApi::Object childJS = arg0;
     auto childNode = GetNativeMeta<SCENE_NS::INode>(childJS);
     if (!childNode) {
         return ctx.GetUndefined();
     }
+
+    auto arg1 = ctx.Arg<1>();
     SCENE_NS::INode::Ptr siblingNode;
-    if (siblingJS) {
+    if (arg1.IsDefinedAndNotNull()) {
+        NapiApi::Object siblingJS = arg1;
         siblingNode = GetNativeMeta<SCENE_NS::INode>(siblingJS);
     }
 
     auto metaobj = GetThisNativeObject(ctx);
-    if (auto container = interface_cast<META_NS::IContainer>(metaobj)) {
-        ExecSyncTask([container, childNode, siblingNode]() {
-            if (siblingNode) {
-                auto data = container->GetAll<SCENE_NS::INode>();
-                int64_t index = 0;
-                for (auto d : data) {
-                    index++;
-                    if (d == siblingNode) {
-                        // insert "after" the hit
-                        container->Insert(index, childNode);
-                        childNode->Visible()->SetValue(true);
-                        return META_NS::IAny::Ptr {};
-                    }
+    if (auto parent = interface_cast<SCENE_NS::INode>(metaobj)) {
+        size_t index = 0;
+        if (siblingNode) {
+            auto data = parent->GetChildren().GetResult();
+            for (auto d : data) {
+                index++;
+                if (d == siblingNode) {
+                    break;
                 }
-                // did not find the sibling.. do nothing? add first? add last?
-                // for now add last..
-                container->Add(childNode);
-                childNode->Visible()->SetValue(true);
-                return META_NS::IAny::Ptr {};
             }
-            // insert as first..
-            container->Insert(0, childNode);
-            childNode->Visible()->SetValue(true);
-            return META_NS::IAny::Ptr {};
-        });
+        }
+        parent->AddChild(childNode, index).GetResult();
+        childNode->Enabled()->SetValue(true);
     }
 
     // make the js object keep a weak ref again (scene keeps the native object alive)
     // (or move ownership back from SceneJS? and remove dispose hook?)
-    if (auto tro = GetRootObject(ctx, childJS)) {
+    if (auto tro = GetRootObject(childJS)) {
         if (auto native = tro->GetNativeObject()) {
             tro->SetNativeObject(nullptr, true);
             tro->SetNativeObject(native, false);
             native.reset();
         }
     }
-
     return ctx.GetUndefined();
-}
-
-void NodeImpl::ResetNativeObj(NapiApi::FunctionContext<>& ctx, NapiApi::Object& obj)
-{
-    if (auto tro = GetRootObject(ctx, obj)) {
-        if (auto native = tro->GetNativeObject()) {
-            tro->SetNativeObject(nullptr, false);
-            tro->SetNativeObject(native, true);
-            native.reset();
-        }
-    }
 }
 
 napi_value NodeImpl::RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     // okay. just detach from parent. (make parent invalid)
     // and disable it.
-    NapiApi::Object childJS = ctx.Arg<0>();
-    if ((napi_value)childJS == nullptr) {
+    auto arg0 = ctx.Arg<0>();
+    if (arg0.IsUndefinedOrNull()) {
         // okay. Invalid arg error?
         return ctx.GetUndefined();
     }
+    NapiApi::Object childJS = arg0;
+
     auto childNode = GetNativeMeta<SCENE_NS::INode>(childJS);
     if (!childNode) {
         return ctx.GetUndefined();
@@ -525,7 +595,7 @@ napi_value NodeImpl::RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     // make the js object keep a strong ref.
     // (or give SceneJS ownership? and add dispose hook?)
-    if (auto tro = GetRootObject(ctx, childJS)) {
+    if (auto tro = GetRootObject(childJS)) {
         if (auto native = tro->GetNativeObject()) {
             tro->SetNativeObject(nullptr, false);
             tro->SetNativeObject(native, true);
@@ -534,66 +604,49 @@ napi_value NodeImpl::RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
 
     auto metaobj = GetThisNativeObject(ctx);
-    if (auto container = interface_cast<META_NS::IContainer>(metaobj)) {
-        ExecSyncTask([container, childNode]() {
-            container->Remove(childNode);
-            childNode->Visible()->SetValue(false);
-            return META_NS::IAny::Ptr {};
-        });
+    if (auto parent = interface_cast<SCENE_NS::INode>(metaobj)) {
+        parent->RemoveChild(childNode).GetResult();
+        childNode->Enabled()->SetValue(false);
     }
     return ctx.GetUndefined();
 }
 
 napi_value NodeImpl::ClearChildren(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     auto metaobj = GetThisNativeObject(ctx);
     BASE_NS::vector<SCENE_NS::INode::Ptr> removedNodes;
-    if (auto container = interface_cast<META_NS::IContainer>(metaobj)) {
-        ExecSyncTask([container, &removedNodes]() {
-            auto tmp = container->GetAll();
-            for (auto t : tmp) {
-                if (auto node = interface_pointer_cast<SCENE_NS::INode>(t)) {
-                    if (SkipNode(node)) {
-                        continue;
-                    }
-                    container->Remove(node);
-                    node->Visible()->SetValue(false);
-                    removedNodes.emplace_back(BASE_NS::move(node));
-                }
-            }
-            return META_NS::IAny::Ptr {};
-        });
+    if (auto parent = interface_cast<SCENE_NS::INode>(metaobj)) {
+        for (auto node : parent->GetChildren().GetResult()) {
+            parent->RemoveChild(node).GetResult();
+            node->Enabled()->SetValue(false);
+            removedNodes.emplace_back(BASE_NS::move(node));
+        }
+
         for (auto node : removedNodes) {
             if (auto cached = FetchJsObj(node)) {
-                ResetNativeObj(ctx, cached);
+                if (auto tro = GetRootObject(cached)) {
+                    if (auto native = tro->GetNativeObject()) {
+                        tro->SetNativeObject(nullptr, false);
+                        tro->SetNativeObject(native, true);
+                        native.reset();
+                    }
+                }
             }
         }
     }
     return ctx.GetUndefined();
 }
 
-SCENE_NS::INode::Ptr recurse_children(const SCENE_NS::INode::Ptr startNode, BASE_NS::string_view path)
-{
-    SCENE_NS::INode::Ptr node = startNode;
-    while (node != nullptr) {
-        node->BuildChildren(SCENE_NS::INode::BuildBehavior::NODE_BUILD_ONLY_DIRECT_CHILDREN);
-        // see if
-        if (auto container = interface_cast<META_NS::IContainer>(node)) {
-            auto pos = path.find('/', 0);
-            BASE_NS::string_view step = path.substr(0, pos);
-            node = interface_pointer_cast<SCENE_NS::INode>(container->FindByName(step));
-            if (node) {
-                if (pos == BASE_NS::string_view::npos) {
-                    return node;
-                }
-                path = path.substr(pos + 1);
-            }
-        }
-    }
-    return {};
-}
 napi_value NodeImpl::GetNodeByPath(NapiApi::FunctionContext<BASE_NS::string>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     BASE_NS::string path = ctx.Arg<0>();
     auto meta = GetThisNativeObject(ctx);
     if (!meta) {
@@ -602,11 +655,8 @@ napi_value NodeImpl::GetNodeByPath(NapiApi::FunctionContext<BASE_NS::string>& ct
 
     META_NS::IObject::Ptr child;
     if (auto node = interface_pointer_cast<SCENE_NS::INode>(meta)) {
-        ExecSyncTask([node, &child, path]() {
-            // make sure the child objects exist
-            child = interface_pointer_cast<META_NS::IObject>(recurse_children(node, path));
-            return META_NS::IAny::Ptr {};
-        });
+        BASE_NS::string childPath = node->GetPath().GetResult() + "/" + path;
+        child = node->GetScene()->FindNode<META_NS::IObject>(childPath).GetResult();
     }
 
     if (!child) {
@@ -616,16 +666,51 @@ napi_value NodeImpl::GetNodeByPath(NapiApi::FunctionContext<BASE_NS::string>& ct
 
     if (auto cached = FetchJsObj(child)) {
         // always return the same js object.
-        return cached;
+        return cached.ToNapiValue();
     }
 
     if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        CORE_LOG_F("INVALID SCENE!");
+        LOG_F("INVALID SCENE!");
     }
 
     // create new js object for the native node.
-    NapiApi::Object argJS(ctx);
-    napi_value args[] = { scene_.GetValue(), argJS };
+    NapiApi::Env env(ctx.GetEnv());
+    NapiApi::Object argJS(env);
+    napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
 
-    return CreateFromNativeInstance(ctx, child, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
+    return CreateFromNativeInstance(env, child, false /*these are owned by the scene*/, BASE_NS::countof(args), args)
+        .ToNapiValue();
+}
+napi_value NodeImpl::GetComponent(NapiApi::FunctionContext<BASE_NS::string>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
+    BASE_NS::string name = ctx.Arg<0>();
+    auto meta = GetThisNativeObject(ctx);
+    if (!meta) {
+        return ctx.GetNull();
+    }
+
+    if (auto att = interface_pointer_cast<META_NS::IAttach>(meta)) {
+        if (auto cont = att->GetAttachmentContainer(false)) {
+            if (auto comp = cont->FindByName<SCENE_NS::IComponent>(name)) {
+                auto obj = interface_pointer_cast<META_NS::IObject>(comp);
+                if (auto cached = FetchJsObj(obj)) {
+                    return cached.ToNapiValue();
+                }
+
+                NapiApi::Env env(ctx.GetEnv());
+
+                NapiApi::Object argJS(env);
+                napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+                auto argc = BASE_NS::countof(args);
+                MakeNativeObjectParam(env, obj, argc, args);
+                auto result = CreateJsObj(env, "SceneComponent", obj, false, argc, args);
+                return StoreJsObj(obj, result).ToNapiValue();
+            }
+        }
+    }
+    return ctx.GetUndefined();
 }

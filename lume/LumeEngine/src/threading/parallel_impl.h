@@ -26,7 +26,7 @@ CORE_BEGIN_NAMESPACE()
 // Wrapper for ParallelTaskQueue exposing a subset of the functionality.
 class ParallelImpl final : public IParallelTaskQueue {
 public:
-    ~ParallelImpl();
+    ~ParallelImpl() override;
     explicit ParallelImpl(const IThreadPool::Ptr& threads);
 
     void Submit(uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task) override;

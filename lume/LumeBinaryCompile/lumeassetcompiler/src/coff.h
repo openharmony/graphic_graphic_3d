@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,12 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef __LUME_COFF__
-#define __LUME_COFF__
+#ifndef LUME_COFF_H
+#define LUME_COFF_H
 #include <cstdint>
 #define IMAGE_FILE_MACHINE_UNKNOWN 0
-#define IMAGE_FILE_MACHINE_I386 0x014c 
-#define IMAGE_FILE_MACHINE_AMD64 0x8664 
+#define IMAGE_FILE_MACHINE_I386 0x014c
+#define IMAGE_FILE_MACHINE_AMD64 0x8664
 #define IMAGE_SCN_CNT_INITIALIZED_DATA 0x40
 #define IMAGE_SCN_ALIGN_4BYTES 0x300000
 #define IMAGE_SCN_MEM_READ 0x40000000

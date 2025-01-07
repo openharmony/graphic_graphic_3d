@@ -71,6 +71,36 @@ uint32_t ReadU32FlipEndian(const uint8_t** data)
     return value;
 }
 
+#ifdef CORE_READ_KTX_HEADER_STRING
+// NOTE: Returns null if the value is not a valid null terminated string.
+//       (i.e. maxBytes was reached before a null was found)
+string_view ReadStringZ(const uint8_t** data, size_t maxBytes, size_t* bytesReadOut)
+{
+    CORE_ASSERT(data);
+    CORE_ASSERT(*data);
+    CORE_ASSERT(bytesReadOut);
+
+    *bytesReadOut = 0;
+
+    if (maxBytes == 0) {
+        return {};
+    }
+
+    const auto start = *data;
+    const auto end = start + maxBytes;
+
+    if (auto const pos = std::find(start, end, 0); pos != end) {
+        *data = pos + 1;
+        *bytesReadOut = static_cast<size_t>(std::distance(start, pos + 1));
+        return { reinterpret_cast<const char*>(start), *bytesReadOut };
+    }
+
+    return {};
+}
+#endif
+// On desktop typical dimension limit for GPU images is 16k. On mobile even less.
+constexpr const uint32_t MAX_DIMENSIONS = 16384U;
+
 // 12 byte ktx identifier.
 constexpr const size_t KTX_IDENTIFIER_LENGTH = 12;
 constexpr const char KTX_IDENTIFIER_REFERENCE[KTX_IDENTIFIER_LENGTH] = { '\xAB', 'K', 'T', 'X', ' ', '1', '1', '\xBB',
@@ -167,7 +197,7 @@ public:
 
     array_view<const uint8_t> GetData() const override
     {
-        return array_view<const uint8_t>(imageBytes_, imageBytesLength_);
+        return { imageBytes_, imageBytesLength_ };
     }
 
     array_view<const SubImageDesc> GetBufferImageCopies() const override
@@ -213,9 +243,8 @@ public:
         if (mipmapLevel > 0 && bytesPerBlock > 4u) {
             // We can assume that moving the data to the previous valid position
             // is ok as it will only overwrite the now unnecessary "lodsize" value.
-            const uint32_t validOffset =
-                static_cast<uint32_t>(currentImageElementOffset / bytesPerBlock * bytesPerBlock);
-            uint8_t* imageBytes = const_cast<uint8_t*>(image->imageBytes_);
+            const auto validOffset = static_cast<uint32_t>(currentImageElementOffset / bytesPerBlock * bytesPerBlock);
+            auto* imageBytes = const_cast<uint8_t*>(image->imageBytes_);
             if (memmove_s(imageBytes + validOffset, image->imageBytesLength_ - validOffset,
                     imageBytes + currentImageElementOffset, subelementLength) != EOK) {
                 CORE_LOG_E("memmove failed.");
@@ -405,7 +434,7 @@ public:
                     return ImageLoaderManager::ResultFailure("Invalid ktx data.");
                 }
 
-                const uint32_t currentImageElementOffset = static_cast<uint32_t>(data - image->imageBytes_);
+                const auto currentImageElementOffset = static_cast<uint32_t>(data - image->imageBytes_);
                 CORE_ASSERT_MSG(currentImageElementOffset % 4u == 0, "Offset must be aligned to 4 bytes");
                 ProcessMipmapLevel(image, imageBufferIndex, currentImageElementOffset, formatInfo, elementWidth,
                     elementHeight, mipmapLevel, ktx.numberOfFaces, arrayElementCount, elementDepth,
@@ -466,15 +495,32 @@ public:
             CORE_LOG_D("Ktx invalid endian marker.");
             return ImageLoaderManager::ResultFailure("Invalid ktx data.");
         }
-        if (ktxHeader.numberOfFaces != 1 && ktxHeader.numberOfFaces != 6u) { // 1 for regular, 6 for cubemaps
+        if (ktxHeader.numberOfFaces != 1U && ktxHeader.numberOfFaces != 6U) { // 1 for regular, 6 for cubemaps
             CORE_LOG_D("Ktx invalid numberOfFaces.");
             return ImageLoaderManager::ResultFailure("Invalid ktx data.");
         }
-        if (ktxHeader.pixelWidth == 0) {
+        if ((ktxHeader.pixelWidth == 0) || (ktxHeader.pixelDepth > 0 && ktxHeader.pixelHeight == 0)) {
             CORE_LOG_D("Ktx pixelWidth can't be 0.");
             return ImageLoaderManager::ResultFailure("Invalid ktx data.");
         }
-
+        if ((ktxHeader.pixelWidth > MAX_DIMENSIONS) || (ktxHeader.pixelHeight > MAX_DIMENSIONS) ||
+            (ktxHeader.pixelDepth > MAX_DIMENSIONS)) {
+            CORE_LOG_D("Ktx pixel dimensions too big.");
+            return ImageLoaderManager::ResultFailure("Invalid ktx data.");
+        }
+        if (ktxHeader.numberOfMipmapLevels) {
+            if (ktxHeader.numberOfMipmapLevels > 32U) { // 2^32 - 1, limit to
+                CORE_LOG_D("Ktx numberOfMipmapLevels suspiciously large.");
+                return ImageLoaderManager::ResultFailure("Invalid ktx data.");
+            }
+            const uint32_t maxSize =
+                std::max(std::max(ktxHeader.pixelWidth, ktxHeader.pixelHeight), ktxHeader.pixelDepth);
+            const auto maxMipSize = 1U << (ktxHeader.numberOfMipmapLevels - 1U);
+            if (maxSize < maxMipSize) {
+                CORE_LOG_D("Ktx numberOfMipmapLevels too big for dimensions.");
+                return ImageLoaderManager::ResultFailure("Invalid ktx data.");
+            }
+        }
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
             if (ktxHeader.bytesOfKeyValueData >
                 image->fileBytesLength_ - static_cast<uintptr_t>(data - image->fileBytes_.get())) {
@@ -538,8 +584,42 @@ private:
 
     static void ReadKeyValueData(const KtxHeader& ktxHeader, const uint8_t** data)
     {
+#ifndef CORE_READ_KTX_HEADER_STRING
         // Skip reading the key-value data for now.
         *data += ktxHeader.bytesOfKeyValueData;
+#else
+        const bool isEndianFlipped = (ktxHeader.endianness == KTX_FILE_ENDIANNESS_FLIPPED);
+        const auto myReadU32 = isEndianFlipped ? ReadU32FlipEndian : ReadU32;
+
+        // Read KTX key-value data.
+        size_t keyValueDataRead = 0;
+        while (keyValueDataRead < ktxHeader.bytesOfKeyValueData) {
+            const uint32_t keyAndValueByteSize = myReadU32(data);
+            keyValueDataRead += sizeof(uint32_t);
+            if ((keyValueDataRead + keyAndValueByteSize) >= ktxHeader.bytesOfKeyValueData) {
+                CORE_LOG_E("Invalid KTX metadata.");
+                return;
+            }
+
+            size_t keyBytesRead;
+            const auto key = ReadStringZ(data, keyAndValueByteSize, &keyBytesRead);
+            keyValueDataRead += keyBytesRead;
+
+            size_t valueBytesRead;
+            const auto value = ReadStringZ(data, keyAndValueByteSize - keyBytesRead, &valueBytesRead);
+            keyValueDataRead += valueBytesRead;
+
+            if (!key.empty() && !value.empty()) {
+                // NOTE: The key-value data is not used for anything. Just printing to log.
+                CORE_LOG_V("KTX metadata: '%s' : '%s'", key.data(), value.data());
+            }
+
+            // Pad to a multiple of 4 bytes.
+            const size_t padding = (~keyAndValueByteSize + 1) & (4u - 1u);
+            keyValueDataRead += padding;
+            *data += padding;
+        }
+#endif
     }
 
     // Saving the whole image file data in one big chunk. This way we don't
@@ -562,8 +642,7 @@ public:
     // Inherited via ImageManager::IImageLoader
     ImageLoaderManager::LoadResult Load(IFile& file, uint32_t loadFlags) const override
     {
-        size_t byteLength = static_cast<size_t>(file.GetLength());
-
+        auto byteLength = static_cast<size_t>(file.GetLength());
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) != 0) {
             // Only load header
             byteLength = KTX_HEADER_LENGTH;
@@ -612,7 +691,7 @@ public:
 
     vector<IImageLoaderManager::ImageType> GetSupportedTypes() const override
     {
-        return vector<IImageLoaderManager::ImageType>(std::begin(KTX_IMAGE_TYPES), std::end(KTX_IMAGE_TYPES));
+        return { std::begin(KTX_IMAGE_TYPES), std::end(KTX_IMAGE_TYPES) };
     }
 
 protected:

@@ -58,7 +58,7 @@ public:
         BASE_NS::vector<BASE_NS::unique_ptr<LinearAllocator>> allocators;
     };
 
-    explicit RenderBarrierList(const uint32_t reserveBarrierCountHint);
+    explicit RenderBarrierList(uint32_t reserveBarrierCountHint);
     ~RenderBarrierList() = default;
 
     RenderBarrierList(const RenderBarrierList&) = delete;
@@ -67,9 +67,9 @@ public:
     // reset buffers and data
     void BeginFrame();
 
-    void AddBarriersToBarrierPoint(const uint32_t barrierPointIndex, const BASE_NS::vector<CommandBarrier>& barriers);
-    bool HasBarriers(const uint32_t barrierPointIndex) const;
-    const BarrierPointBarriers* GetBarrierPointBarriers(const uint32_t barrierPointIndex) const;
+    void AddBarriersToBarrierPoint(uint32_t barrierPointIndex, const BASE_NS::vector<CommandBarrier>& barriers);
+    bool HasBarriers(uint32_t barrierPointIndex) const;
+    const BarrierPointBarriers* GetBarrierPointBarriers(uint32_t barrierPointIndex) const;
 
 private:
     BASE_NS::unordered_map<uint32_t, size_t> barrierPointIndextoIndex_;

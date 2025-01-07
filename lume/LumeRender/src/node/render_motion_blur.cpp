@@ -17,21 +17,17 @@
 
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
-#include <render/device/pipeline_layout_desc.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
-#include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_util.h>
-#include <render/shaders/common/render_blur_common.h>
 
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
 #include "render/shaders/common/render_post_process_structs_common.h"
-#include "util/log.h"
 
 using namespace BASE_NS;
 
@@ -172,14 +168,16 @@ void RenderMotionBlur::Execute(IRenderNodeContextManager& renderNodeContextMgr, 
         return;
     }
 
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderMotionBlur", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
+
     // Update global descriptor set 0 for both passes
-    UpdateDescriptorSet0(renderNodeContextMgr, cmdList, blurInfo, ppConfig);
+    UpdateDescriptorSet0(cmdList, blurInfo);
 
     const RenderHandle velocity = blurInfo.velocity;
     RenderHandle tileVelocity = blurInfo.velocity;
     if ((ppConfig.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::MEDIUM) ||
         (ppConfig.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::HIGH)) {
-        ExecuteTileVelocity(renderNodeContextMgr, cmdList, blurInfo, ppConfig);
+        ExecuteTileVelocity(renderNodeContextMgr, cmdList, blurInfo);
         const RenderHandle tv = GetTileVelocityForMotionBlur();
         tileVelocity = RenderHandleUtil::IsValid(tv) ? tv : velocity;
     }
@@ -220,8 +218,8 @@ void RenderMotionBlur::Execute(IRenderNodeContextManager& renderNodeContextMgr, 
     cmdList.BindDescriptorSets(0u, sets);
 
     if (renderData.pipelineLayout.pushConstant.byteSize > 0) {
-        const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
-        const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
+        const auto fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
+        const auto fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
         const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
         cmdList.PushConstantData(renderData_.pipelineLayout.pushConstant, arrayviewU8(pc));
     }
@@ -234,8 +232,8 @@ void RenderMotionBlur::Execute(IRenderNodeContextManager& renderNodeContextMgr, 
     cmdList.EndRenderPass();
 }
 
-void RenderMotionBlur::ExecuteTileVelocity(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
-    const MotionBlurInfo& blurInfo, const PostProcessConfiguration& ppConfig)
+void RenderMotionBlur::ExecuteTileVelocity(
+    IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList, const MotionBlurInfo& blurInfo)
 {
     if ((!RenderHandleUtil::IsGpuImage(blurInfo.output)) || (!tileVelocityImages_[0U])) {
         return;
@@ -258,8 +256,8 @@ void RenderMotionBlur::ExecuteTileVelocity(IRenderNodeContextManager& renderNode
     const ViewportDesc viewport = renderNodeContextMgr.GetRenderNodeUtil().CreateDefaultViewport(renderPass);
     const ScissorDesc scissor = renderNodeContextMgr.GetRenderNodeUtil().CreateDefaultScissor(renderPass);
 
-    const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
-    const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
+    const auto fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
+    const auto fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
     const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
 
     RenderHandle sets[2u] {};
@@ -362,8 +360,7 @@ void RenderMotionBlur::ExecuteTileVelocity(IRenderNodeContextManager& renderNode
     }
 }
 
-void RenderMotionBlur::UpdateDescriptorSet0(IRenderNodeContextManager& renderNodeContextMgr,
-    IRenderCommandList& cmdList, const MotionBlurInfo& blurInfo, const PostProcessConfiguration& ppConfig)
+void RenderMotionBlur::UpdateDescriptorSet0(IRenderCommandList& cmdList, const MotionBlurInfo& blurInfo)
 {
     const RenderHandle ubo = blurInfo.globalUbo;
     auto& binder = *globalSet0_;
@@ -380,7 +377,7 @@ RenderHandle RenderMotionBlur::GetTileVelocityForMotionBlur() const
                                               : tileVelocityImages_[1U].GetHandle();
 }
 
-DescriptorCounts RenderMotionBlur::GetDescriptorCounts() const
+DescriptorCounts RenderMotionBlur::GetDescriptorCounts()
 {
     // expected high max mip count
     return DescriptorCounts { {
@@ -388,5 +385,4 @@ DescriptorCounts RenderMotionBlur::GetDescriptorCounts() const
         { CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2u * MAX_PASS_COUNT },
     } };
 }
-
 RENDER_END_NAMESPACE()

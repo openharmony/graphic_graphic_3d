@@ -615,7 +615,7 @@ public:
 
             const auto newSize = oldSize + count;
             if (oldCapacity < newSize) {
-                oldCapacity += oldCapacity / 2;
+                oldCapacity += oldCapacity / 2U;
                 if (!allocate(newSize < oldCapacity ? oldCapacity : newSize)) {
                     return *this;
                 }
@@ -673,17 +673,17 @@ public:
         return substr(pos1, count1).compare(v.substr(pos2, count2));
     }
 
-    int compare(CharT const* const s) const
+    int compare(const CharT* const s) const
     {
         return string_view(*this).compare(s);
     }
 
-    int compare(size_type pos1, size_type count1, CharT const* const s) const
+    int compare(size_type pos1, size_type count1, const CharT* const s) const
     {
         return substr(pos1, count1).compare(s);
     }
 
-    int compare(size_type pos1, size_type count1, CharT const* const s, size_type count2) const
+    int compare(size_type pos1, size_type count1, const CharT* const s, size_type count2) const
     {
         return substr(pos1, count1).compare(basic_string_view(s, count2));
     }
@@ -840,7 +840,7 @@ protected:
     inline bool grow(const size_type minCapacity)
     {
         auto cap = capacity();
-        cap += cap / 2;
+        cap += cap / 2; // 2: parm
         return allocate(minCapacity < cap ? cap : minCapacity);
     }
 
@@ -1169,14 +1169,21 @@ inline bool operator>=(const CharT* const lhs, const basic_string<CharT>& rhs) n
     return lhs >= string_view(rhs);
 }
 
-template<typename T>
-uint64_t hash(const T&);
-
 template<>
 inline uint64_t hash(const string& value)
 {
     return BASE_NS::FNV1aHash(value.data(), value.size());
 }
+
+namespace literals {
+inline namespace string_literals {
+/// User-defined literal to allow the following syntax to construct a string: "myLiteral"_s
+[[nodiscard]] inline BASE_NS::string operator""_s(const char* literal, const size_t length)
+{
+    return { literal, length };
+}
+} // namespace string_literals
+} // namespace literals
 BASE_END_NAMESPACE()
 
 #endif // API_BASE_CONTAINERS_STRING_H

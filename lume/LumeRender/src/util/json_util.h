@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef UTIL__JSON_UTIL_H
-#define UTIL__JSON_UTIL_H
+#ifndef RENDER_UTIL_JSON_UTIL_H
+#define RENDER_UTIL_JSON_UTIL_H
 
 #include <algorithm>
 #include <cstdlib>
@@ -27,35 +27,6 @@
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
-template<class T, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>, bool> = true>
-inline bool SafeGetJsonValue(
-    const CORE_NS::json::value& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
-{
-    if (auto const pos = jsonData.find(element); pos) {
-        if (pos->is_number()) {
-            output = pos->as_number<T>();
-            return true;
-        } else {
-            error += element + ": expected number.\n";
-        }
-    }
-    return false;
-}
-
-template<class T, BASE_NS::enable_if_t<BASE_NS::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
-inline bool SafeGetJsonValue(
-    const CORE_NS::json::value& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
-{
-    if (auto const pos = jsonData.find(element); pos) {
-        if (pos->is_string()) {
-            output = T(pos->string_.data(), pos->string_.size());
-            return true;
-        } else {
-            error += element + ": expected string.\n";
-        }
-    }
-    return false;
-}
 
 template<typename T, BASE_NS::enable_if_t<BASE_NS::is_same_v<bool, T>, bool> = true>
 inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
@@ -138,4 +109,4 @@ inline void FromJson(const JsonType& jsonData, T& output)
     FromJson(jsonData, output.data);
 }
 RENDER_END_NAMESPACE()
-#endif // UTIL__JSON_UTIL_H
+#endif // RENDER_UTIL_JSON_UTIL_H

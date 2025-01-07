@@ -55,12 +55,10 @@ void GetWorldMatrix(out mat4 worldMatrix, out mat3 normalMatrix, out mat4 prevWo
 uint GetMultiViewCameraIndex()
 {
     const uint cameraIdx = GetUnpackCameraIndex(uGeneralData);
-    const uint count = uCameras[cameraIdx].multiViewIndices[0];
-    uint newCameraIdx = cameraIdx;
-    // NOTE: when gl_ViewIndex is 0 the "main" camera is used and no multi-view indexing
-    if ((count > 0) && (gl_ViewIndex <= count) && (gl_ViewIndex != 0)) {
-        newCameraIdx = uCameras[cameraIdx].multiViewIndices[gl_ViewIndex];
-    }
+    const uvec4 multiViewIndices = uCameras[cameraIdx].multiViewIndices;
+    const uint viewCount = multiViewIndices[0U] & CORE_MULTI_VIEW_VIEW_INDEX_MASK;
+    const uint glViewIndex = uint(gl_ViewIndex);
+    uint newCameraIdx = GetUnpackCameraMultiViewIndex(cameraIdx, glViewIndex, viewCount, multiViewIndices);
     return newCameraIdx;
 }
 
@@ -78,7 +76,8 @@ void main(void)
     const vec4 projPos = uCameras[cameraIdx].viewProj * worldPos;
     CORE_VERTEX_OUT(projPos);
 
-    outIndices = GetPackFlatIndices(cameraIdx, gl_InstanceIndex);
+    const uint instanceIdx = GetInstanceIndex();
+    outIndices = GetPackFlatIndices(cameraIdx, instanceIdx);
 
     outPos.xyz = worldPos.xyz;
     outPrevPosI = vec4(0.0, 0.0, 0.0, 0.0);

@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__CORE_RENDER_NODE_FACTORY_H
-#define RENDER_RENDER__NODE__CORE_RENDER_NODE_FACTORY_H
+#ifndef RENDER_NODE_CORE_RENDER_NODE_FACTORY_H
+#define RENDER_NODE_CORE_RENDER_NODE_FACTORY_H
 
 #include <render/namespace.h>
 

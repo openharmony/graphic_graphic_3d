@@ -22,7 +22,6 @@
 #include <base/util/compile_time_hashes.h>
 #include <render/namespace.h>
 
-#include "device/gpu_program_util.h"
 #include "device/gpu_resource_manager.h"
 #include "device/shader_manager.h"
 #include "device/shader_module.h"
@@ -52,6 +51,7 @@ namespace {
 // 32)
 constexpr const uint32_t TEMP_BIND_UNIT = 15;
 constexpr const string_view EXT_BUFFER_STORAGE = "GL_EXT_buffer_storage";
+constexpr const uint32_t CACHE_VERSION = 1U;
 #if RENDER_GL_DEBUG
 #define DUMP(a)                       \
     {                                 \
@@ -60,17 +60,10 @@ constexpr const string_view EXT_BUFFER_STORAGE = "GL_EXT_buffer_storage";
         PLUGIN_LOG_V(#a ": %d", val); \
     }
 
-#define DUMP_INDEX(a, index)                     \
-    {                                            \
-        GLint val;                               \
-        glGetIntegeri_v(a, index, &val);         \
-        PLUGIN_LOG_V(#a "[%d]: %d", index, val); \
-    }
-
-static bool (*filterErrorFunc)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
+bool (*filterErrorFunc)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
     const string_view message, const void* userParam) noexcept = nullptr;
 
-static auto SourceName(GLenum source)
+auto SourceName(GLenum source)
 {
     switch (source) {
         case GL_DEBUG_SOURCE_API:
@@ -92,7 +85,7 @@ static auto SourceName(GLenum source)
     return "UNKNOWN";
 }
 
-static auto TypeName(GLenum type)
+auto TypeName(GLenum type)
 {
     switch (type) {
         case GL_DEBUG_TYPE_ERROR:
@@ -120,7 +113,7 @@ static auto TypeName(GLenum type)
     return "UNKNOWN";
 }
 
-static auto SeverityName(GLenum severity)
+auto SeverityName(GLenum severity)
 {
     switch (severity) {
         case GL_DEBUG_SEVERITY_LOW:
@@ -141,8 +134,8 @@ static auto SeverityName(GLenum severity)
 #ifndef APIENTRY
 #define APIENTRY
 #endif
-static void APIENTRY OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
-    const GLchar* message, const void* userParam) noexcept
+void APIENTRY OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
+    const void* userParam) noexcept
 {
     if (type == GL_DEBUG_TYPE_PUSH_GROUP) {
         return;
@@ -172,8 +165,31 @@ static void APIENTRY OnGlError(GLenum source, GLenum type, GLuint id, GLenum sev
 }
 #else
 #define DUMP(a)
-#define DUMP_INDEX(a, index)
 #endif
+
+void DumpLimits()
+{
+#if RENDER_GL_DEBUG
+    DUMP(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS);
+    DUMP(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS);
+    DUMP(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS);
+    DUMP(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS);
+    DUMP(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS);
+    DUMP(GL_MAX_SHADER_STORAGE_BLOCK_SIZE);
+#endif
+}
+
+template<typename State>
+void RegisterDebugCallback(const State& eglState)
+{
+#if RENDER_GL_DEBUG
+    filterErrorFunc = (decltype(filterErrorFunc))eglState.ErrorFilter();
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(OnGlError, nullptr);
+    GLuint unusedIds = 0;
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unusedIds, true);
+#endif
+}
 
 struct FormatFeatures {
     GLenum internalFormat;
@@ -181,30 +197,30 @@ struct FormatFeatures {
 };
 
 // image store and atomic operations seem to go hand in hand
-static constexpr const FormatFeatureFlags ATOMIC_STORE =
+constexpr const FormatFeatureFlags ATOMIC_STORE =
     CORE_FORMAT_FEATURE_STORAGE_IMAGE_BIT | CORE_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
 // no writable texture buffers in gl?
-static constexpr const FormatFeatureFlags TEXEL_BUF = CORE_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
+constexpr const FormatFeatureFlags TEXEL_BUF = CORE_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
 // color renderable
-static constexpr const FormatFeatureFlags CR = CORE_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+constexpr const FormatFeatureFlags CR = CORE_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
 // texture filterable
-static constexpr const FormatFeatureFlags TF = CORE_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+constexpr const FormatFeatureFlags TF = CORE_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
 //  required texture formats. assume can be sampled, and transfered to/from
-static constexpr const FormatFeatureFlags TEX =
-    CORE_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | CORE_FORMAT_FEATURE_TRANSFER_SRC_BIT | CORE_FORMAT_FEATURE_TRANSFER_SRC_BIT;
+constexpr const FormatFeatureFlags TEX =
+    CORE_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | CORE_FORMAT_FEATURE_TRANSFER_DST_BIT | CORE_FORMAT_FEATURE_TRANSFER_SRC_BIT;
 // required depth format
-static constexpr const FormatFeatureFlags DS = CORE_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | TEX | TF;
+constexpr const FormatFeatureFlags DS = CORE_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | TEX | TF;
 
-static constexpr const FormatFeatureFlags TF_TEX = TF | TEX;
+constexpr const FormatFeatureFlags TF_TEX = TF | TEX;
 #if RENDER_HAS_GL_BACKEND
 static constexpr const FormatFeatureFlags CR_TEX = CR | TEX; // color renderable, texture format
 #endif
-static constexpr const FormatFeatureFlags CR_REND_TEX = CR | TEX; // color renderable, renderbuffer, texture format
+constexpr const FormatFeatureFlags CR_REND_TEX = CR | TEX; // color renderable, renderbuffer, texture format
 #if RENDER_HAS_GLES_BACKEND
-static constexpr const FormatFeatureFlags CR_TF_REND_TEX = CR | TF | TEX;
+constexpr const FormatFeatureFlags CR_TF_REND_TEX = CR | TF | TEX;
 #endif
 
-static constexpr const FormatFeatures IMAGE_FORMAT_FEATURES[] = {
+constexpr const FormatFeatures IMAGE_FORMAT_FEATURES[] = {
 #if RENDER_HAS_GL_BACKEND
     { GL_R8, CR_TEX | ATOMIC_STORE | TEXEL_BUF },
     { GL_R8_SNORM, CR_TEX | ATOMIC_STORE },
@@ -422,7 +438,7 @@ static constexpr const FormatFeatures IMAGE_FORMAT_FEATURES[] = {
 
 // GL_EXT_texture_sRGB_R8 extension
 #if (defined(GL_EXT_texture_sRGB_R8) && (GL_EXT_texture_sRGB_R8))
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB_R8[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB_R8[] = {
     { BASE_FORMAT_R8_SRGB, GL_RED, GL_SR8_EXT, GL_UNSIGNED_BYTE, 1, { false, 0, 0, 0 },
         { GL_RED, GL_ZERO, GL_ZERO, GL_ONE } },
 };
@@ -430,7 +446,7 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB_R8[] = {
 
 // GL_EXT_texture_sRGB_RG8 extension
 #if (defined(GL_EXT_texture_sRGB_RG8) && (GL_EXT_texture_sRGB_RG8))
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB_RG8[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB_RG8[] = {
     { BASE_FORMAT_R8G8_SRGB, GL_RG, GL_SRG8_EXT, GL_UNSIGNED_BYTE, 1, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_ZERO, GL_ONE } },
 };
@@ -438,7 +454,7 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB_RG8[] = {
 
 // GL_EXT_texture_sRGB extension
 #if defined(GL_EXT_texture_sRGB) && (GL_EXT_texture_sRGB)
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB[] = {
     { BASE_FORMAT_BC1_RGB_SRGB_BLOCK, GL_RGB, GL_COMPRESSED_SRGB_S3TC_DXT1_EXT, GL_UNSIGNED_BYTE, 0,
         { true, 4, 4, BLOCK_BITS_64 }, { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_BC1_RGBA_SRGB_BLOCK, GL_RGBA, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT, GL_UNSIGNED_BYTE, 0,
@@ -452,14 +468,14 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_SRGB[] = {
 
 // GL_EXT_texture_format_BGRA8888 extension
 #if defined(GL_EXT_texture_format_BGRA8888) && (GL_EXT_texture_format_BGRA8888)
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_BGRA[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_BGRA[] = {
     { BASE_FORMAT_B8G8R8A8_UNORM, GL_BGRA_EXT, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 4, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
 };
 #endif
 
 #if defined(GL_EXT_texture_norm16) && (GL_EXT_texture_norm16)
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_NORM16[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_NORM16[] = {
     { BASE_FORMAT_R16_UNORM, GL_RED, GL_R16_EXT, GL_UNSIGNED_SHORT, 2, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_R16G16_UNORM, GL_RG, GL_RG16_EXT, GL_UNSIGNED_SHORT, 4, { false, 0, 0, 0 },
@@ -481,7 +497,7 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_NORM16[] = {
 
 // GL_EXT_texture_compression_s3tc extension
 #if defined(GL_EXT_texture_compression_s3tc) && (GL_EXT_texture_compression_s3tc)
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_S3TC[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_S3TC[] = {
     { BASE_FORMAT_BC1_RGB_UNORM_BLOCK, GL_RGB, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, GL_UNSIGNED_BYTE, 0,
         { true, 4, 4, BLOCK_BITS_64 }, { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_BC1_RGBA_UNORM_BLOCK, GL_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, GL_UNSIGNED_BYTE, 0,
@@ -509,7 +525,7 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_BPTC[] = {
 
 // GL_EXT_texture_norm16 extension
 #if defined(GL_EXT_texture_compression_rgtc) && (GL_EXT_texture_compression_rgtc)
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_RGTC[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_RGTC[] = {
     { BASE_FORMAT_BC4_UNORM_BLOCK, GL_RED, GL_COMPRESSED_RED_RGTC1_EXT, GL_UNSIGNED_BYTE, 0,
         { true, 4, 4, BLOCK_BITS_64 }, { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     { BASE_FORMAT_BC4_SNORM_BLOCK, GL_RED, GL_COMPRESSED_SIGNED_RED_RGTC1_EXT, GL_UNSIGNED_BYTE, 0,
@@ -521,7 +537,7 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_EXT_RGTC[] = {
 };
 #endif
 
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_FALLBACK[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_FALLBACK[] = {
     { BASE_FORMAT_R4G4_UNORM_PACK8, GL_RG, GL_RGBA4, GL_UNSIGNED_BYTE, 1, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_ZERO, GL_ONE } },
     { BASE_FORMAT_B4G4R4A4_UNORM_PACK16, GL_RGBA, GL_RGBA4, GL_UNSIGNED_SHORT_4_4_4_4, 2, { false, 0, 0, 0 },
@@ -556,7 +572,7 @@ static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS_FALLBACK[] = {
 };
 
 // NOTE: verify this table. add missing formats.
-static constexpr DeviceGLES::ImageFormat IMAGE_FORMATS[] = {
+constexpr DeviceGLES::ImageFormat IMAGE_FORMATS[] = {
     { BASE_FORMAT_UNDEFINED, GL_NONE, GL_NONE, GL_NONE, 0, { false, 0, 0, 0 },
         { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA } },
     // These are required in GL and GLES
@@ -784,51 +800,83 @@ void FillExtensionFormats(const DeviceGLES& device, BASE_NS::vector<DeviceGLES::
 {
 #if (defined(GL_EXT_texture_sRGB_R8) && (GL_EXT_texture_sRGB_R8))
     if (device.HasExtension("GL_EXT_texture_sRGB_R8")) {
-        sf.insert(sf.end(), std::begin(IMAGE_FORMATS_EXT_SRGB_R8), std::end(IMAGE_FORMATS_EXT_SRGB_R8));
+        sf.append(std::begin(IMAGE_FORMATS_EXT_SRGB_R8), std::end(IMAGE_FORMATS_EXT_SRGB_R8));
     }
 #endif
 
 #if (defined(GL_EXT_texture_sRGB_RG8) && (GL_EXT_texture_sRGB_RG8))
     if (device.HasExtension("GL_EXT_texture_sRGB_RG8")) {
-        sf.insert(sf.end(), std::begin(IMAGE_FORMATS_EXT_SRGB_RG8), std::end(IMAGE_FORMATS_EXT_SRGB_RG8));
+        sf.append(std::begin(IMAGE_FORMATS_EXT_SRGB_RG8), std::end(IMAGE_FORMATS_EXT_SRGB_RG8));
     }
 #endif
 
 #if defined(GL_EXT_texture_sRGB) && (GL_EXT_texture_sRGB)
     if (device.HasExtension("GL_EXT_texture_sRGB")) {
-        sf.insert(sf.end(), std::begin(IMAGE_FORMATS_EXT_SRGB), std::end(IMAGE_FORMATS_EXT_SRGB));
+        sf.append(std::begin(IMAGE_FORMATS_EXT_SRGB), std::end(IMAGE_FORMATS_EXT_SRGB));
     }
 #endif
 
 #if defined(GL_EXT_texture_format_BGRA8888) && (GL_EXT_texture_format_BGRA8888)
     if (device.HasExtension("GL_EXT_texture_format_BGRA8888")) {
-        sf.insert(sf.end(), std::begin(IMAGE_FORMATS_EXT_BGRA), std::end(IMAGE_FORMATS_EXT_BGRA));
+        sf.append(std::begin(IMAGE_FORMATS_EXT_BGRA), std::end(IMAGE_FORMATS_EXT_BGRA));
     }
 #endif
 
 #if defined(GL_EXT_texture_norm16) && (GL_EXT_texture_norm16)
     if (device.HasExtension("GL_EXT_texture_norm16")) {
-        sf.insert(sf.end(), std::begin(IMAGE_FORMATS_EXT_NORM16), std::end(IMAGE_FORMATS_EXT_NORM16));
+        sf.append(std::begin(IMAGE_FORMATS_EXT_NORM16), std::end(IMAGE_FORMATS_EXT_NORM16));
     }
 #endif
 
 #if defined(GL_EXT_texture_compression_s3tc) && (GL_EXT_texture_compression_s3tc)
     if (device.HasExtension("GL_EXT_texture_compression_s3tc")) {
-        sf.insert(sf.end(), std::begin(IMAGE_FORMATS_EXT_S3TC), std::end(IMAGE_FORMATS_EXT_S3TC));
+        sf.append(std::begin(IMAGE_FORMATS_EXT_S3TC), std::end(IMAGE_FORMATS_EXT_S3TC));
     }
 #endif
 
 #if defined(GL_ARB_texture_compression_bptc) && (GL_ARB_texture_compression_bptc)
     if (device.HasExtension("GL_ARB_texture_compression_bptc")) {
-        sf.insert(sf.end(), std::begin(IMAGE_FORMATS_EXT_BPTC), std::end(IMAGE_FORMATS_EXT_BPTC));
+        sf.append(std::begin(IMAGE_FORMATS_EXT_BPTC), std::end(IMAGE_FORMATS_EXT_BPTC));
     }
 #endif
 
 #if defined(GL_EXT_texture_compression_rgtc) && (GL_EXT_texture_compression_rgtc)
     if (device.HasExtension("GL_EXT_texture_compression_rgtc")) {
-        sf.insert(sf.end(), std::begin(IMAGE_FORMATS_EXT_RGTC), std::end(IMAGE_FORMATS_EXT_RGTC));
+        sf.append(std::begin(IMAGE_FORMATS_EXT_RGTC), std::end(IMAGE_FORMATS_EXT_RGTC));
     }
 #endif
+}
+
+void FillSupportedFormats(const DeviceGLES& device, BASE_NS::vector<DeviceGLES::ImageFormat>& sf)
+{
+    // First dump required formats and then add based on supported extensions
+    sf.append(std::begin(IMAGE_FORMATS), std::end(IMAGE_FORMATS));
+
+    FillExtensionFormats(device, sf);
+
+    // Keep the list sorted for faster lookup
+    std::sort(sf.begin(), sf.end(), [](const DeviceGLES::ImageFormat& lhs, const DeviceGLES::ImageFormat& rhs) {
+        return lhs.coreFormat < rhs.coreFormat;
+    });
+}
+
+void FillExtensions(BASE_NS::vector<BASE_NS::string_view>& extensions)
+{
+    GLint n = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+    extensions.reserve(n + 1U);
+    for (GLuint i = 0U; i < static_cast<GLuint>(n); ++i) {
+        const auto ext = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
+        extensions.emplace_back(ext);
+    }
+    std::sort(
+        extensions.begin(), extensions.end(), [](const string_view& lhs, const string_view& rhs) { return lhs < rhs; });
+#ifndef NDEBUG
+    PLUGIN_LOG_V("GL_EXTENSIONs:");
+    for (const auto& ext : extensions) {
+        PLUGIN_LOG_V("\t%s", ext.data());
+    }
+#endif // !NDEBUG
 }
 } // namespace
 
@@ -996,6 +1044,8 @@ inline DeviceGLES::TextureTargetId DeviceGLES::TextureTargetToTargetId(uint32_t 
         return TextureTargetId::TEXTURE_2D_MULTISAMPLE;
     } else if (target == GL_TEXTURE_2D_ARRAY) {
         return TextureTargetId::TEXTURE_2D_ARRAY;
+    } else if (target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) {
+        return TextureTargetId::TEXTURE_2D_MULTISAMPLE_ARRAY;
     } else if (target == GL_TEXTURE_3D) {
         return TextureTargetId::TEXTURE_3D;
     }
@@ -1015,6 +1065,8 @@ inline uint32_t DeviceGLES::TextureTargetIdToTarget(DeviceGLES::TextureTargetId 
 #endif
     } else if (target == TextureTargetId::TEXTURE_2D_MULTISAMPLE) {
         return GL_TEXTURE_2D_MULTISAMPLE;
+    } else if (target == TextureTargetId::TEXTURE_2D_MULTISAMPLE_ARRAY) {
+        return GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
     } else if (target == TextureTargetId::TEXTURE_2D_ARRAY) {
         return GL_TEXTURE_2D_ARRAY;
     } else if (target == TextureTargetId::TEXTURE_3D) {
@@ -1024,6 +1076,7 @@ inline uint32_t DeviceGLES::TextureTargetIdToTarget(DeviceGLES::TextureTargetId 
     return 0;
 }
 
+thread_local bool DeviceGLES::isActiveInThread_ = false;
 void DeviceGLES::Activate(RenderHandle swapchain)
 {
     if (HasSwapchain()) {
@@ -1065,27 +1118,39 @@ DeviceGLES::DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& cre
         return;
     }
     eglState_.GlInitialize();
-#if RENDER_GL_DEBUG
-    filterErrorFunc = (decltype(filterErrorFunc))eglState_.ErrorFilter();
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    glDebugMessageCallback(OnGlError, NULL);
-    GLuint unusedIds = 0;
-    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unusedIds, true);
-#endif
+
+    RegisterDebugCallback(eglState_);
+
     PLUGIN_LOG_I("GL_VENDOR: %s", glGetString(GL_VENDOR));
     PLUGIN_LOG_I("GL_RENDERER: %s", glGetString(GL_RENDERER));
     PLUGIN_LOG_I("GL_VERSION: %s", glGetString(GL_VERSION));
     PLUGIN_LOG_I("GL_SHADING_LANGUAGE_VERSION: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-    GLint n = 0;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    extensions_.reserve(n + 1U);
-    for (GLuint i = 0U; i < static_cast<GLuint>(n); ++i) {
-        const auto ext = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
-        PLUGIN_LOG_V("  GL_EXTENSION: %s", ext);
-        extensions_.emplace_back(ext);
+    GLint value = 0;
+    glGetIntegerv(GL_NUM_SHADER_BINARY_FORMATS, &value);
+    PLUGIN_LOG_I("GL_NUM_SHADER_BINARY_FORMATS: %d", value);
+    if (value > 0) {
+        supportsBinaryShaders_ = true;
+#if defined(RENDER_GL_DEBUG) && (RENDER_GL_DEBUG)
+        vector<GLint> values(static_cast<size_t>(value), 0);
+        glGetIntegerv(GL_SHADER_BINARY_FORMATS, values.data());
+        for (const auto& format : values) {
+            PLUGIN_LOG_I("     SHADER_BINARY_FORMATS: %x", format);
+        }
+#endif
     }
-    std::sort(extensions_.begin(), extensions_.end(),
-        [](const string_view& lhs, const string_view& rhs) { return lhs < rhs; });
+    glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &value);
+    PLUGIN_LOG_I("GL_NUM_PROGRAM_BINARY_FORMATS: %d", value);
+    if (value > 0) {
+        supportsBinaryPrograms_ = true;
+#if defined(RENDER_GL_DEBUG) && (RENDER_GL_DEBUG)
+        vector<GLint> values(static_cast<size_t>(value), 0);
+        glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, values.data());
+        for (const auto& format : values) {
+            PLUGIN_LOG_I("     PROGRAM_BINARY_FORMATS: %x", format);
+        }
+#endif
+    }
+    FillExtensions(extensions_);
 
 #if RENDER_HAS_GL_BACKEND
     // Extension in OpenGL ES, but part of core in OpenGL.
@@ -1101,15 +1166,10 @@ DeviceGLES::DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& cre
     // So just enable it always, so that desktop GL works as vulkan and GLES.
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 #endif
-#if RENDER_GL_DEBUG
+
     // Dump interesting constants.
-    DUMP(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS);
-    DUMP(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS);
-    DUMP(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS);
-    DUMP(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS);
-    DUMP(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS);
-    DUMP(GL_MAX_SHADER_STORAGE_BLOCK_SIZE);
-#endif
+    DumpLimits();
+
     boundReadFbo_ = boundWriteFbo_ = 0;
     eglState_.RestoreContext();
 #ifdef RENDER_OPTIMIZE_FOR_INTEGRATED_GPU
@@ -1119,20 +1179,14 @@ DeviceGLES::DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& cre
 #endif
     SetDeviceStatus(true);
 
-    // First dump required formats and then add based on supported extensions
-    supportedFormats_.insert(supportedFormats_.end(), std::begin(IMAGE_FORMATS), std::end(IMAGE_FORMATS));
-
-    FillExtensionFormats(*this, supportedFormats_);
-
-    // Keep the list sorted for faster lookup
-    std::sort(supportedFormats_.begin(), supportedFormats_.end(),
-        [](const ImageFormat& lhs, const ImageFormat& rhs) { return lhs.coreFormat < rhs.coreFormat; });
+    FillSupportedFormats(*this, supportedFormats_);
 
     const GpuResourceManager::CreateInfo grmCreateInfo {
         GpuResourceManager::GPU_RESOURCE_MANAGER_OPTIMIZE_STAGING_MEMORY,
     };
     gpuResourceMgr_ = make_unique<GpuResourceManager>(*this, grmCreateInfo);
     shaderMgr_ = make_unique<ShaderManager>(*this);
+    globalDescriptorSetMgr_ = make_unique<DescriptorSetManagerGles>(*this);
 
     lowLevelDevice_ = make_unique<LowLevelDeviceGLES>(*this);
 }
@@ -1143,13 +1197,18 @@ DeviceGLES::~DeviceGLES()
         Activate(); // make sure we are active during teardown..
         WaitForIdle();
 
+        globalDescriptorSetMgr_.reset();
         // must release handles before taking down gpu resource manager.
         swapchains_.clear();
 
         gpuResourceMgr_.reset();
         shaderMgr_.reset();
-        eglState_.DestroyContext();
         Deactivate(); // make sure the previous context is still active..
+        {
+            // destroying the context should be the last thing we do
+            auto lock = std::lock_guard(activeMutex_);
+            eglState_.DestroyContext();
+        }
     }
 }
 
@@ -1234,38 +1293,37 @@ unique_ptr<Swapchain> DeviceGLES::CreateDeviceSwapchain(const SwapchainCreateInf
 void DeviceGLES::DestroyDeviceSwapchain()
 {
     PLUGIN_ASSERT(IsActive());
-    // TODO:
     // Drop to dummycontext (ie. 1x1 surface etc...)
     eglState_.SetContext(nullptr);
 }
 
 bool DeviceGLES::IsActive() const
 {
-    return isActive_ > 0;
+    return isActiveInThread_;
 }
 
 void DeviceGLES::Activate()
 {
     activeMutex_.lock();
-    PLUGIN_ASSERT_MSG(isActive_ == 0, "Activate called while already inactive");
     if (isActive_ == 0) {
         eglState_.SaveContext();
 
         constexpr RenderHandle defaultSwapchain {};
         Activate(defaultSwapchain);
+        isActiveInThread_ = true;
     }
     isActive_++;
 }
 
 void DeviceGLES::Deactivate()
 {
-    PLUGIN_ASSERT_MSG(isActive_ > 0, "Deactivate called while already inactive");
+    PLUGIN_ASSERT_MSG(isActiveInThread_, "Deactivate called while already inactive");
+    if (isActive_ == 1) {
+        eglState_.RestoreContext();
+        isActiveInThread_ = false;
+    }
     if (isActive_ > 0) {
         isActive_--;
-    }
-    if (isActive_ == 0) {
-        eglState_.RestoreContext();
-        isActive_ = false;
     }
     activeMutex_.unlock();
 }
@@ -1280,15 +1338,107 @@ uint32_t DeviceGLES::GetGpuQueueCount() const
     return 1;
 }
 
+struct CacheHeader {
+    uint32_t version;
+    uint32_t programs;
+    uint64_t revisionHash;
+    struct Program {
+        uint64_t vertHash;
+        uint64_t fragHash;
+        uint64_t compHash;
+        GLuint offset;
+        GLenum binaryFormat;
+    };
+};
 void DeviceGLES::InitializePipelineCache(array_view<const uint8_t> initialData)
 {
-    // NOTE: not implemented.
+    if (initialData.size() <= sizeof(CacheHeader)) {
+        return;
+    }
+    auto* header = reinterpret_cast<const CacheHeader*>(initialData.data());
+    if ((header->version != CACHE_VERSION) ||
+        (header->revisionHash != Hash(string_view(reinterpret_cast<const char*>(glGetString(GL_VENDOR))),
+                                      string_view(reinterpret_cast<const char*>(glGetString(GL_RENDERER))),
+                                      string_view(reinterpret_cast<const char*>(glGetString(GL_VERSION)))))) {
+        return;
+    }
+    if ((sizeof(CacheHeader) + header->programs * sizeof(CacheHeader::Program)) > initialData.size()) {
+        return;
+    }
+    auto programs = array_view(
+        reinterpret_cast<const CacheHeader::Program*>(initialData.data() + sizeof(CacheHeader)), header->programs);
+    auto binaryData = array_view(initialData.data() + (sizeof(CacheHeader) + programs.size_bytes()),
+        initialData.size() - (sizeof(CacheHeader) + programs.size_bytes()));
+    for (auto i = 0U; i < programs.size(); ++i) {
+        auto& program = programs[i];
+        GLsizei length;
+        if ((i + 1) < programs.size()) {
+            length = static_cast<GLsizei>(programs[i + 1].offset) - static_cast<GLsizei>(program.offset);
+        } else {
+            length = static_cast<GLsizei>(binaryData.size()) - static_cast<GLsizei>(program.offset);
+        }
+        if ((length < 0) || (program.offset + length) > binaryData.size()) {
+            continue;
+        }
+
+        const GLuint programObj = glCreateProgram();
+        glProgramBinary(programObj, program.binaryFormat, binaryData.data() + program.offset, length);
+        GLint result = GL_FALSE;
+        glGetProgramiv(programObj, GL_LINK_STATUS, &result);
+        if (result != GL_FALSE) {
+            auto& entry = programs_.emplace_back();
+            entry.program = programObj;
+            entry.hashVert = program.vertHash;
+            entry.hashFrag = program.fragHash;
+            entry.hashComp = program.compHash;
+        } else {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            GLint logLength = 0;
+            glGetProgramiv(programObj, GL_INFO_LOG_LENGTH, &logLength);
+            string messages;
+            messages.resize(static_cast<size_t>(logLength));
+            glGetProgramInfoLog(programObj, logLength, 0, messages.data());
+            PLUGIN_LOG_ONCE_E("gl_shader_linking_error_" + to_string(programObj),
+                "RENDER_VALIDATION: Shader linking error: %s", messages.c_str());
+#endif
+            glDeleteProgram(programObj);
+        }
+    }
 }
 
 vector<uint8_t> DeviceGLES::GetPipelineCache() const
 {
-    // NOTE: not implemented. could probably be done by gathering glGetProgramBinary results together.
-    return {};
+    vector<uint8_t> cacheData;
+    if (!supportsBinaryPrograms_) {
+        return cacheData;
+    }
+
+    CacheHeader header;
+    header.version = CACHE_VERSION;
+    header.revisionHash = Hash(string_view(reinterpret_cast<const char*>(glGetString(GL_VENDOR))),
+        string_view(reinterpret_cast<const char*>(glGetString(GL_RENDERER))),
+        string_view(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
+
+    vector<CacheHeader::Program> programs;
+    for (const auto& info : programs_) {
+        GLint programLength = 0;
+        glGetProgramiv(info.program, GL_PROGRAM_BINARY_LENGTH, &programLength);
+        if (!programLength) {
+            continue;
+        }
+        const auto offset = cacheData.size();
+        cacheData.resize(offset + programLength);
+        GLsizei length;
+        GLenum binaryFormat;
+        glGetProgramBinary(info.program, programLength, &length, &binaryFormat, cacheData.data() + offset);
+        programs.push_back({ info.hashVert, info.hashFrag, info.hashComp, static_cast<GLuint>(offset), binaryFormat });
+    }
+    header.programs = static_cast<uint32_t>(programs.size());
+    cacheData.insert(cacheData.cbegin(), sizeof(CacheHeader) + programs.size_in_bytes(), uint8_t(0U));
+    CloneData(cacheData.data(), cacheData.size(), &header, sizeof(CacheHeader));
+    CloneData(cacheData.data() + sizeof(CacheHeader), cacheData.size() - sizeof(CacheHeader), programs.data(),
+        programs.size_in_bytes());
+    return cacheData;
 }
 
 void DeviceGLES::WaitForIdle()
@@ -1337,11 +1487,11 @@ void DeviceGLES::ReleaseShader(uint32_t type, uint32_t shader)
 {
     vector<ShaderCache::Entry>* cache = nullptr;
     if (type == GL_FRAGMENT_SHADER) {
-        cache = &caches[DeviceGLES::FRAGMENT_CACHE].cache;
+        cache = &shaders_[DeviceGLES::FRAGMENT_CACHE].cache;
     } else if (type == GL_VERTEX_SHADER) {
-        cache = &caches[DeviceGLES::VERTEX_CACHE].cache;
+        cache = &shaders_[DeviceGLES::VERTEX_CACHE].cache;
     } else if (type == GL_COMPUTE_SHADER) {
-        cache = &caches[DeviceGLES::COMPUTE_CACHE].cache;
+        cache = &shaders_[DeviceGLES::COMPUTE_CACHE].cache;
     } else {
         return;
     }
@@ -1366,23 +1516,24 @@ void DeviceGLES::ReleaseProgram(uint32_t program)
     PLUGIN_ASSERT_MSG(isActive_, "Device not active when releasing shaders");
     for (auto it = programs_.begin(); it != programs_.end(); it++) {
         auto& t = *it;
-        if (t.program == program) {
-            t.refCount--;
-            if (t.refCount == 0) {
-                if (t.fragShader) {
-                    ReleaseShader(GL_FRAGMENT_SHADER, t.fragShader);
-                }
-                if (t.vertShader) {
-                    ReleaseShader(GL_VERTEX_SHADER, t.vertShader);
-                }
-                if (t.compShader) {
-                    ReleaseShader(GL_COMPUTE_SHADER, t.compShader);
-                }
-                glDeleteProgram(t.program);
-                programs_.erase(it);
-            }
-            return;
+        if (t.program != program) {
+            continue;
         }
+        t.refCount--;
+        if (t.refCount == 0) {
+            if (t.fragShader) {
+                ReleaseShader(GL_FRAGMENT_SHADER, t.fragShader);
+            }
+            if (t.vertShader) {
+                ReleaseShader(GL_VERTEX_SHADER, t.vertShader);
+            }
+            if (t.compShader) {
+                ReleaseShader(GL_COMPUTE_SHADER, t.compShader);
+            }
+            glDeleteProgram(t.program);
+            programs_.erase(it);
+        }
+        return;
     }
     PLUGIN_ASSERT_MSG(false, "Tried to release a non-existant program?");
 }
@@ -1394,18 +1545,18 @@ const DeviceGLES::ShaderCache::Entry& DeviceGLES::CacheShader(int type, const st
         static constexpr DeviceGLES::ShaderCache::Entry invalid {};
         return invalid;
     }
-    constexpr GLenum types[] = { GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_COMPUTE_SHADER };
+    static constexpr GLenum types[] = { GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_COMPUTE_SHADER };
     // NOTE: check other hash functions, also i guess verify (strcmp) on collision would be prudent.
     const uint64_t hash = FNV1aHash(source.data(), source.size());
     PLUGIN_ASSERT(hash != 0);
-    for (auto& t : caches[type].cache) {
+    for (auto& t : shaders_[type].cache) {
         if (t.hash == hash) {
-            caches[type].hit++;
+            shaders_[type].hit++;
             t.refCount++;
             return t;
         }
     }
-    caches[type].miss++;
+    shaders_[type].miss++;
     DeviceGLES::ShaderCache::Entry entry;
     entry.hash = hash;
     entry.shader = glCreateShader(types[type]);
@@ -1426,14 +1577,27 @@ const DeviceGLES::ShaderCache::Entry& DeviceGLES::CacheShader(int type, const st
         glDeleteShader(entry.shader);
         entry.shader = 0U;
     }
-    caches[type].cache.push_back(entry);
-    return caches[type].cache.back();
+    shaders_[type].cache.push_back(entry);
+    return shaders_[type].cache.back();
 }
 
 uint32_t DeviceGLES::CacheProgram(
     const string_view vertSource, const string_view fragSource, const string_view compSource)
 {
     PLUGIN_ASSERT_MSG(isActive_, "Device not active when building shaders");
+    const uint64_t vertHash = vertSource.empty() ? 0U : FNV1aHash(vertSource.data(), vertSource.size());
+    const uint64_t fragHash = fragSource.empty() ? 0U : FNV1aHash(fragSource.data(), fragSource.size());
+    const uint64_t compHash = compSource.empty() ? 0U : FNV1aHash(compSource.data(), compSource.size());
+    // Then check if we have the program already cached (ie. matching shaders linked)
+    for (ProgramCache& t : programs_) {
+        if ((t.hashVert != vertHash) || (t.hashFrag != fragHash) || (t.hashComp != compHash)) {
+            continue;
+        }
+        pCacheHit_++;
+        t.refCount++;
+        return t.program;
+    }
+
     // Hash and cache shader sources.
     const auto& vEntry = CacheShader(DeviceGLES::VERTEX_CACHE, vertSource);
     const auto& fEntry = CacheShader(DeviceGLES::FRAGMENT_CACHE, fragSource);
@@ -1450,6 +1614,9 @@ uint32_t DeviceGLES::CacheProgram(
     // Create new program
     pCacheMiss_++;
     const GLuint program = glCreateProgram();
+    if (supportsBinaryPrograms_) {
+        glProgramParameteri(program, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
+    }
 #if defined(CORE_USE_SEPARATE_SHADER_OBJECTS) && (CORE_USE_SEPARATE_SHADER_OBJECTS == 1)
     // enable separable programs.
     glProgramParameteri(program, GL_PROGRAM_SEPARABLE, GL_TRUE);
@@ -1465,15 +1632,24 @@ uint32_t DeviceGLES::CacheProgram(
         glAttachShader(program, cEntry.shader);
     }
     glLinkProgram(program);
+    if (vEntry.shader) {
+        glDetachShader(program, vEntry.shader);
+    }
+    if (fEntry.shader) {
+        glDetachShader(program, fEntry.shader);
+    }
+    if (cEntry.shader) {
+        glDetachShader(program, cEntry.shader);
+    }
     GLint result = GL_FALSE;
     glGetProgramiv(program, GL_LINK_STATUS, &result);
     if (result == GL_FALSE) {
+#if (RENDER_VALIDATION_ENABLED == 1)
         GLint logLength = 0;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
         string messages;
         messages.resize(static_cast<size_t>(logLength));
         glGetProgramInfoLog(program, logLength, 0, messages.data());
-#if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_E("gl_shader_linking_error_" + to_string(program),
             "RENDER_VALIDATION: Shader linking error: %s", messages.c_str());
 #endif
@@ -1694,6 +1870,16 @@ void DeviceGLES::TexStorage3D(
     BindTexture(TEMP_BIND_UNIT, target, image);
     glTexStorage3D((GLenum)target, (GLsizei)levels, (GLenum)internalformat, (GLsizei)extent.x, (GLsizei)extent.y,
         (GLsizei)extent.z);
+}
+
+void DeviceGLES::TexStorage3DMultisample(uint32_t image, uint32_t target, uint32_t samples, uint32_t internalformat,
+    const BASE_NS::Math::UVec3& extent, bool fixedsamplelocations)
+{
+    SetActiveTextureUnit(TEMP_BIND_UNIT);
+    BindTexture(TEMP_BIND_UNIT, target, image);
+    glTexStorage3DMultisample(static_cast<GLenum>(target), static_cast<GLsizei>(samples),
+        static_cast<GLenum>(internalformat), static_cast<GLsizei>(extent.x), static_cast<GLsizei>(extent.y),
+        static_cast<GLsizei>(extent.z), fixedsamplelocations);
 }
 
 void DeviceGLES::TexSubImage2D(uint32_t image, uint32_t target, uint32_t level, const Math::UVec2& offset,
@@ -2069,7 +2255,7 @@ unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(const GpuImageDesc& desc, co
 vector<unique_ptr<GpuImage>> DeviceGLES::CreateGpuImageViews(const Swapchain& platformSwapchain)
 {
     vector<unique_ptr<GpuImage>> gpuImages;
-    const SwapchainGLES& swapchain = (const SwapchainGLES&)platformSwapchain;
+    const SwapchainGLES& swapchain = static_cast<const SwapchainGLES&>(platformSwapchain);
     const GpuImageDesc& desc = swapchain.GetDesc();
     const auto& swapchainPlat = swapchain.GetPlatformData();
 
@@ -2096,7 +2282,7 @@ unique_ptr<RenderFrameSync> DeviceGLES::CreateRenderFrameSync()
 }
 
 unique_ptr<RenderBackend> DeviceGLES::CreateRenderBackend(
-    GpuResourceManager& gpuResourceMgr, const CORE_NS::IParallelTaskQueue::Ptr&)
+    GpuResourceManager& gpuResourceMgr, CORE_NS::ITaskQueue* const)
 {
     return make_unique<RenderBackendGLES>(*this, gpuResourceMgr);
 }
@@ -2123,7 +2309,7 @@ unique_ptr<GpuComputeProgram> DeviceGLES::CreateGpuComputeProgram(const GpuCompu
 
 unique_ptr<NodeContextDescriptorSetManager> DeviceGLES::CreateNodeContextDescriptorSetManager()
 {
-    return make_unique<NodeContextDescriptorSetManagerGLES>(*this);
+    return make_unique<NodeContextDescriptorSetManagerGles>(*this);
 }
 
 unique_ptr<NodeContextPoolManager> DeviceGLES::CreateNodeContextPoolManager(
@@ -2143,8 +2329,7 @@ unique_ptr<GraphicsPipelineStateObject> DeviceGLES::CreateGraphicsPipelineStateO
     PLUGIN_ASSERT(!renderPassData);
     PLUGIN_ASSERT(!pipelineLayoutData);
     auto pipeline = make_unique<GraphicsPipelineStateObjectGLES>(*this, gpuProgram, graphicsState, pipelineLayout,
-        vertexInputDeclaration, specializationConstants, dynamicStates, renderPassDesc, renderPassSubpassDescs,
-        subpassIndex);
+        vertexInputDeclaration, specializationConstants, dynamicStates, renderPassDesc, renderPassSubpassDescs);
     return unique_ptr<GraphicsPipelineStateObject> { pipeline->GetPlatformData().graphicsShader ? pipeline.release()
                                                                                                 : nullptr };
 }

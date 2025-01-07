@@ -23,17 +23,14 @@
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
-#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
 #include <base/util/uid.h>
 #include <core/io/intf_directory.h>
 #include <core/io/intf_file.h>
-#include <core/io/intf_file_manager.h>
 #include <core/io/intf_file_system.h>
 #include <core/log.h>
 #include <core/namespace.h>
-#include <core/plugin/intf_interface.h>
 
 #include "io/path_tools.h"
 #include "io/proxy_filesystem.h"
@@ -51,79 +48,56 @@ string FileManager::FixPath(string_view pathIn) const
 {
     string_view protocol;
     string_view path;
-    if (ParseUri(pathIn, protocol, path)) {
-        // Try to identify relative "file" uris, and convert them to absolute.
-        if (protocol == "file") {
-            if (path.empty()) {
-                // so it's the base path then? (empty relative path)
-                return protocol + "://" + basePath_;
-            }
-#if _WIN32
-            // Handle win32 specific drive letters.
-            if (IsRelative(path)) {
-                // might still be absolute (if it has drive letter)
-                if ((path.size() > 1) && (path[1] == ':')) {
-                    // seems to start with drive letter so, it must be absolute?
-                    if (path.size() == 2) { // 2: path size
-                        // has only drive letter? consider it as root of drive then
-                        return protocol + ":///" + path + "/";
-                    }
-                    return protocol + ":///" + path;
-                }
-                // no drive letter so it's really relative.
-                return protocol + "://" + NormalizePath(basePath_ + path);
-            }
-            // Even if it's "absolute" it might still be missing the drive letter.
-            if ((path.size() < 3) || (path[2] != ':')) { // 3: path size limit; 2: the third letter
-                // seems to be missing the drive letter.
-                return protocol + "://" + NormalizePath(basePath_.substr(0, 3) + path); // 3: substring size
-            }
-            if (path.size() == 3) { // 3: path size
-                // has only drive letter? consider it as root of drive then
-                return protocol + "://" + path + "/";
-            }
-            return protocol + "://" + NormalizePath(path);
-#else
-            if (IsRelative(path)) {
-                // normalize it with current path..
-                return protocol + "://" + NormalizePath(basePath_ + path);
-            }
-            return protocol + "://" + NormalizePath(path);
-#endif
-        }
+    // Try to identify relative "file" uris, and convert them to absolute.
+    if (!ParseUri(pathIn, protocol, path) || (protocol != "file")) {
+        return string(pathIn);
     }
-    return string(pathIn);
+    if (path.empty()) {
+        // so it's the base path then? (empty relative path)
+        return protocol + "://" + basePath_;
+    }
+#if _WIN32
+    // Handle win32 specific drive letters.
+    if (IsRelative(path)) {
+        // might still be absolute (if it has drive letter)
+        if ((path.size() > 1) && (path[1] == ':')) {
+            // seems to start with drive letter so, it must be absolute?
+            if (path.size() == 2) { // 2: path size
+                // has only drive letter? consider it as root of drive then
+                return protocol + ":///" + path + "/";
+            }
+            return protocol + ":///" + path;
+        }
+        // no drive letter so it's really relative.
+        return protocol + "://" + NormalizePath(basePath_ + path);
+    }
+    // Even if it's "absolute" it might still be missing the drive letter.
+    if ((path.size() < 3) || (path[2] != ':')) { // 3: path size limit; 2: the third letter
+        // seems to be missing the drive letter.
+        return protocol + "://" + NormalizePath(basePath_.substr(0, 3) + path); // 3: substring size
+    }
+    if (path.size() == 3) { // 3: path size
+        // has only drive letter? consider it as root of drive then
+        return protocol + "://" + path + "/";
+    }
+    return protocol + "://" + NormalizePath(path);
+#else
+    if (IsRelative(path)) {
+        // normalize it with current path..
+        return protocol + "://" + NormalizePath(basePath_ + path);
+    }
+    return protocol + "://" + NormalizePath(path);
+#endif
 }
 
 FileManager::FileManager() : basePath_(GetCurrentDirectory()) {}
 
-const IInterface* FileManager::GetInterface(const Uid& uid) const
-{
-    return const_cast<FileManager*>(this)->GetInterface(uid);
-}
-
-IInterface* FileManager::GetInterface(const Uid& uid)
-{
-    if ((uid == IInterface::UID) || (uid == IFileManager::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-void FileManager::Ref()
-{
-    refCount_.fetch_add(1, std::memory_order_relaxed);
-}
-
-void FileManager::Unref()
-{
-    if (refCount_.fetch_sub(1, std::memory_order_release) == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        delete this;
-    }
-}
-
 IFile::Ptr FileManager::OpenFile(const string_view uriIn)
+{
+    return OpenFile(uriIn, IFile::Mode::READ_ONLY);
+}
+
+IFile::Ptr FileManager::OpenFile(const string_view uriIn, IFile::Mode mode)
 {
     string_view protocol;
     string_view path;
@@ -131,14 +105,14 @@ IFile::Ptr FileManager::OpenFile(const string_view uriIn)
     if (ParseUri(uri, protocol, path)) {
         IFilesystem* filesystem = GetFilesystem(protocol);
         if (filesystem) {
-            return filesystem->OpenFile(path);
+            return filesystem->OpenFile(path, mode);
         }
         CORE_LOG_E("Failed to open file, no file system for uri: '%s'", string(uri).c_str());
     } else {
         CORE_LOG_E("Failed to open file, invalid uri: '%s'", string(uri).c_str());
     }
 
-    return IFile::Ptr();
+    return {};
 }
 
 IFile::Ptr FileManager::CreateFile(const string_view uriIn)
@@ -156,7 +130,7 @@ IFile::Ptr FileManager::CreateFile(const string_view uriIn)
         CORE_LOG_E("Failed to create file, invalid uri: '%s'", string(uri).c_str());
     }
 
-    return IFile::Ptr();
+    return {};
 }
 
 bool FileManager::DeleteFile(const string_view uriIn)
@@ -174,27 +148,42 @@ bool FileManager::DeleteFile(const string_view uriIn)
     return false;
 }
 
+bool FileManager::FileExists(const string_view uriIn) const
+{
+    string_view protocol;
+    string_view path;
+    auto uri = FixPath(uriIn);
+    if (ParseUri(uri, protocol, path)) {
+        IFilesystem* filesystem = GetFilesystem(protocol);
+        if (filesystem) {
+            return filesystem->FileExists(path);
+        }
+    }
+
+    return false;
+}
+
 bool FileManager::Rename(const string_view fromUri, const string_view toUri)
 {
     string_view fromProtocol;
     string_view fromPath;
     auto from = FixPath(fromUri);
-    if (ParseUri(from, fromProtocol, fromPath)) {
-        string_view toProtocol;
-        string_view toPath;
-        auto to = FixPath(toUri);
-        if (ParseUri(to, toProtocol, toPath)) {
-            if (fromProtocol == toProtocol) {
-                IFilesystem* filesystem = GetFilesystem(fromProtocol);
-                if (filesystem) {
-                    return filesystem->Rename(fromPath, toPath);
-                }
-            } else {
-                CORE_LOG_E("Rename requires both uris have same protocol");
-            }
-        }
+    if (!ParseUri(from, fromProtocol, fromPath)) {
+        return false;
     }
-
+    string_view toProtocol;
+    string_view toPath;
+    auto to = FixPath(toUri);
+    if (!ParseUri(to, toProtocol, toPath)) {
+        return false;
+    }
+    if (fromProtocol == toProtocol) {
+        if (IFilesystem* filesystem = GetFilesystem(fromProtocol)) {
+            return filesystem->Rename(fromPath, toPath);
+        }
+    } else {
+        CORE_LOG_E("Rename requires both uris have same protocol");
+    }
     return false;
 }
 
@@ -230,7 +219,7 @@ IDirectory::Ptr FileManager::OpenDirectory(const string_view uriIn)
         CORE_LOG_E("Failed to open directory, invalid uri: '%s'", string(uri).c_str());
     }
 
-    return IDirectory::Ptr();
+    return {};
 }
 
 IDirectory::Ptr FileManager::CreateDirectory(const string_view uriIn)
@@ -248,7 +237,7 @@ IDirectory::Ptr FileManager::CreateDirectory(const string_view uriIn)
         CORE_LOG_E("Failed to create directory, invalid uri: '%s'", string(uri).c_str());
     }
 
-    return IDirectory::Ptr();
+    return {};
 }
 
 bool FileManager::DeleteDirectory(const string_view uriIn)
@@ -266,19 +255,38 @@ bool FileManager::DeleteDirectory(const string_view uriIn)
     return false;
 }
 
-void FileManager::RegisterFilesystem(const string_view protocol, IFilesystem::Ptr filesystem)
+bool FileManager::DirectoryExists(const string_view uriIn) const
 {
-    CORE_ASSERT_MSG(filesystems_.find(protocol) == filesystems_.cend(), "File system already registered");
+    string_view protocol;
+    string_view path;
+    auto uri = FixPath(uriIn);
+    if (ParseUri(uri, protocol, path)) {
+        IFilesystem* filesystem = GetFilesystem(protocol);
+        if (filesystem) {
+            return filesystem->DirectoryExists(path);
+        }
+    }
 
+    return false;
+}
+
+bool FileManager::RegisterFilesystem(const string_view protocol, IFilesystem::Ptr filesystem)
+{
+    if (!filesystem) {
+        CORE_LOG_E("Can't register empty filesystem (%*.s)", static_cast<int>(protocol.size()), protocol.data());
+        return false;
+    }
+    if (filesystems_.contains(protocol)) {
+        CORE_LOG_E("Filesystem already registered (%*.s)", static_cast<int>(protocol.size()), protocol.data());
+        return false;
+    }
     filesystems_[protocol] = move(filesystem);
+    return true;
 }
 
 void FileManager::UnregisterFilesystem(const string_view protocol)
 {
-    const auto iterator = filesystems_.find(protocol);
-    if (iterator != filesystems_.end()) {
-        filesystems_.erase(iterator);
-    }
+    filesystems_.erase(protocol);
 }
 
 void FileManager::RegisterAssetPath(const string_view uriIn)
@@ -307,7 +315,7 @@ vector<string> FileManager::GetAbsolutePaths(const string_view uriIn) const
             for (auto& uriPath : uriPaths) {
                 if (uriPath.find("file://") == string::npos) {
                     auto tmp = GetAbsolutePaths(uriPath);
-                    ret.insert(ret.cend(), tmp.cbegin(), tmp.cend());
+                    ret.append(tmp.cbegin(), tmp.cend());
                 } else {
                     ret.push_back(move(uriPath));
                 }

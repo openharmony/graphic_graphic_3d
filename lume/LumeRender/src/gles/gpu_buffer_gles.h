@@ -40,7 +40,7 @@ struct GpuBufferPlatformDataGL final : public GpuBufferPlatformData {
 class GpuBufferGLES final : public GpuBuffer {
 public:
     GpuBufferGLES(Device& device, const GpuBufferDesc& desc);
-    ~GpuBufferGLES();
+    ~GpuBufferGLES() override;
 
     const GpuBufferDesc& GetDesc() const override;
     const GpuBufferPlatformDataGL& GetPlatformData() const;

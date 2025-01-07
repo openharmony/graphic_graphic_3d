@@ -40,9 +40,6 @@ layout(location = 0) out vec4 outColor;
 
 #define MOTION_BLUR_EPSILON 0.0001
 
-#define MOTION_BLUR_TILE_SIZE 8
-#define MOTION_BLUR_FLOAT_TILE_SIZE 8.0
-
 vec2 GetUnpackVelocity(const vec2 uv, const vec2 invSize)
 {
     return textureLod(uVelocity, uv, 0).xy * invSize;
@@ -63,38 +60,24 @@ bool IsVelocityZero(const vec2 velocity)
     return ((abs(velocity.x) < MOTION_BLUR_EPSILON) || (abs(velocity.y) < MOTION_BLUR_EPSILON));
 }
 
-float CompareCone(const float localVelLength, const float velLength)
+float CompareCone(const float dist, const float velocity)
 {
-    return clamp(1.0 - localVelLength / velLength, 0.0, 1.0);
+    return clamp(1.0 - dist / max(velocity, MOTION_BLUR_EPSILON), 0.0, 1.0);
 }
 
-float CompareCylinder(const float localVelLength, const float velLength)
+float CompareCylinder(const float dist, const float velocity)
 {
-    return 1.0 - smoothstep(0.95 * velLength, 1.05 * velLength, localVelLength);
+    return 1.0 - smoothstep(0.95 * velocity, 1.05 * velocity, dist);
 }
 
 float SoftDepthCompare(const float za, const float zb)
 {
-    const float softExtent = 0.01;
-    return clamp(1.0 - (za - zb) / softExtent, 0.0, 1.0);
+    return clamp(1.0 - (za - zb) / max(min(za, zb), MOTION_BLUR_EPSILON), 0.0, 1.0);
 }
 
-// mostly based on "A Reconstruction Filter for Plausible Motion Blur"
-float SampleWeight(const float baseDepth, const float sampleDepth, const float baseTileVelLength, const vec2 baseVel,
-    const vec2 sampleVel)
+float Rand(const vec2 co)
 {
-    const float f = SoftDepthCompare(baseDepth, sampleDepth);
-    const float b = SoftDepthCompare(sampleDepth, baseDepth);
-
-    const float xVelLength = length(baseVel);
-    const float yVelLength = length(sampleVel);
-    const float xyVelLength = length(baseVel - sampleVel);
-    const float yxVelLength = length(sampleVel - baseVel);
-
-    return (f * CompareCone(yxVelLength, baseTileVelLength)) + (b * CompareCone(xyVelLength, baseTileVelLength)) +
-           (CompareCylinder(yxVelLength, baseTileVelLength) * CompareCylinder(yxVelLength, baseTileVelLength) * 2.0);
-    //return (f * CompareCone(yxVelLength, yVelLength)) + (b * CompareCone(xyVelLength, xVelLength)) +
-    //       (CompareCylinder(yxVelLength, yVelLength) * CompareCylinder(yxVelLength, xVelLength) * 2.0);
+    return fract(sin(dot(co.xy, vec2(12.9898, 78.233)) * 43758.5453));
 }
 
 /*
@@ -104,85 +87,79 @@ void main(void)
 {
     const vec4 factor = GetFactor();
     const uint sharpness = uint(factor.x + 0.5);
+
+    // NOTE: the sample count doesn't seem to have much of any impact
+    //       on the performance, even on mobile.
+    const uint quality = uint(factor.y + 0.5);
     float fSampleCount = SAMPLE_COUNT_MEDIUM;
-    if (sharpness == SHARPNESS_LOW) {
-        fSampleCount = SAMPLE_COUNT_LOW;
-    } else if (sharpness == SHARPNESS_MED) {
-        fSampleCount = SAMPLE_COUNT_MEDIUM;
-    } else if (sharpness == SHARPNESS_HIGH) {
+    if (quality == QUALITY_HIGH) {
         fSampleCount = SAMPLE_COUNT_HIGH;
     }
-    const uint quality = uint(factor.y + 0.5);
 
-    const vec2 baseUv = inUv.xy;
-    vec2 velUv = baseUv;
-    const vec2 texIdx = baseUv * uPc.viewportSizeInvSize.xy;
-    const vec2 roundVal = round(texIdx);
-    const vec2 fracVal = fract(texIdx / MOTION_BLUR_FLOAT_TILE_SIZE);
-    const float dThreshold = 1.0 / MOTION_BLUR_FLOAT_TILE_SIZE;
-    const float uThreshold = 1.0 - dThreshold;
+    const vec2 X = inUv.xy;
 
     // blur scale defined in .shader new struct not defined here
     const float velocityCoefficient = factor.w;
-    vec2 baseTileVelocity = GetUnpackTileVelocity(velUv.xy, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
-    // scale for the largest velocity
-    // const float initialBaseTileVelLength = length(baseTileVelocity);
-    // if (initialBaseTileVelLength > 0.0) {
-    //    const float minScale = min(8.0, initialBaseTileVelLength);
-    //    baseTileVelocity = baseTileVelocity * (minScale / initialBaseTileVelLength);
-    //}
-    const vec2 baseVelocity = GetUnpackVelocity(velUv.xy, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
+    const vec2 maxNeighborVelocity = GetUnpackTileVelocity(X, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
 
-    const vec3 baseColor = texture(uInput, baseUv).xyz;
-    if (!IsVelocityZero(baseTileVelocity)) {
-        vec3 color = vec3(0.0);
-        float weightSum = fSampleCount;
+    const vec3 baseColor = texture(uInput, X).xyz;
+    if (!IsVelocityZero(maxNeighborVelocity))
+    {
         if (quality == QUALITY_LOW) {
+            vec3 color = vec3(0.0);
+            const vec2 baseVelocity = GetUnpackVelocity(X, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
+
             // only color sampling
             // weight of the sample is based on the offset
-            for (uint idx = 0; idx < uint(fSampleCount); ++idx) {
-                const vec2 offset = baseVelocity * (float(idx) / fSampleCount - 0.5);
-                color += textureLod(uInput, baseUv + offset, 0).xyz;
+            for (uint ii = 0; ii < uint(fSampleCount); ii++) {
+                const vec2 offset = baseVelocity * (float(ii) / fSampleCount - 0.5);
+                color += textureLod(uInput, X + offset, 0).xyz;
             }
-        } else if (quality == QUALITY_MED) {
-            const float baseTileVelLength = length(baseTileVelocity);
-            weightSum = 0.0;
-            // included depth sampling
-            // weight of the sample is based on if it's behind or in-front
-            const float baseDepth = textureLod(uDepth, baseUv, 0).x;
-            for (uint idx = 0; idx < uint(fSampleCount); ++idx) {
-                const vec2 offset = baseTileVelocity * (float(idx) / fSampleCount - 0.5);
-                const vec2 uv = baseUv + offset;
-                const float depth = textureLod(uDepth, uv, 0).x;
 
-                // const float weight = SampleWeight(baseDepth, depth, baseVelLength, length(offset));
-                const float weight = 1.0;
+            outColor = vec4(color / fSampleCount, 1.0);
+        } else {
+            // jittering improves ghosting but too much may add artifacts.
+            const float jitterMagnitude = 0.5;
+            const float jitter = (Rand(X) * 2.0 - 1.0) * jitterMagnitude;
+            
+            const vec2 xVelocity = GetUnpackVelocity(X, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
+            const float xVelocityLen = length(xVelocity);
+            const float xDepth = textureLod(uDepth, X, 0).x;
 
-                color += textureLod(uInput, uv, 0).xyz * weight;
-                weightSum += weight;
+            float weight = 1.0 / max(xVelocityLen, 0.5);
+            vec3 color = baseColor.rgb * weight;
+            
+            for (int ii = 0; ii < int(fSampleCount); ii++)
+            {
+                const float tt = mix(-1.0, 1.0, (float(ii) + jitter + 1.0) / (fSampleCount + 1.0));
+                const vec2 offset = maxNeighborVelocity * tt;
+                const vec2 Y = X + offset;
+                const vec2 yVelocity = GetUnpackVelocity(Y, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
+                const float yVelocityLen = length(yVelocity);
+                const float offsetLen = length(offset);
+                const float yDepth = textureLod(uDepth, Y, 0).x;
+
+                const float ff = SoftDepthCompare(xDepth, yDepth);
+                const float bb = SoftDepthCompare(yDepth, xDepth);
+
+                // hard cutoff for preventing background blur
+                // from bleeding into the foreground.
+                const float yInFrontOfX = yDepth > xDepth ? 0.0 : 1.0;
+
+                const float yWeight = 
+                    yInFrontOfX * ff * CompareCone(offsetLen, yVelocityLen) +
+                    bb * CompareCone(offsetLen, xVelocityLen) +
+                    (CompareCylinder(offsetLen, yVelocityLen) * CompareCylinder(offsetLen, xVelocityLen) * 2.0);
+                
+                weight += yWeight;
+                color += yWeight * textureLod(uInput, Y, 0).rgb;
             }
-        } else if (quality == QUALITY_HIGH) {
-            const float baseTileVelLength = length(baseTileVelocity);
-            weightSum = 0.0;
-            // included depth sampling
-            // weight of the sample is based on if it's behind or infront
-            const float baseDepth = textureLod(uDepth, baseUv, 0).x;
-            for (uint idx = 0; idx < uint(fSampleCount); ++idx) {
-                const vec2 offset = baseTileVelocity * (float(idx) / fSampleCount - 0.5);
-                const vec2 uv = baseUv + offset;
-                const float sampleDepth = textureLod(uDepth, uv, 0).x;
-                const vec2 sampleVel = GetUnpackVelocity(uv, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
 
-                const float weight = SampleWeight(baseDepth, sampleDepth, baseTileVelLength, baseVelocity, sampleVel);
-
-                color += textureLod(uInput, uv, 0).xyz * weight;
-                weightSum += weight;
-            }
+            outColor = vec4(color / weight, 1.0);
         }
-        weightSum = max(0.001, weightSum);
-        color = color / weightSum;
-        outColor = vec4(mix(baseColor, color, factor.z), 1.0);
-    } else {
+    }
+    else
+    {
         outColor = vec4(baseColor, 1.0);
     }
 }

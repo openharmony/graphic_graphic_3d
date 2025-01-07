@@ -17,9 +17,11 @@
 #define CORE__RENDER__NODE__RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_H
 
 #include <base/containers/string.h>
+#include <base/containers/unordered_map.h>
 #include <base/util/uid.h>
 #include <core/namespace.h>
 #include <render/datastore/render_data_store_render_pods.h>
+#include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_node.h>
 #include <render/resource_handle.h>
 
@@ -61,8 +63,6 @@ public:
         RENDER_NS::GpuImageDesc history;
         RENDER_NS::GpuImageDesc baseColor;
         RENDER_NS::GpuImageDesc material;
-
-        RENDER_NS::GpuImageDesc cubemap;
     };
 
     struct CreatedTargets {
@@ -84,8 +84,6 @@ public:
         RENDER_NS::RenderHandleReference baseColor;
         RENDER_NS::RenderHandleReference material;
 
-        RENDER_NS::RenderHandleReference cubemap;
-
         ImageDescs imageDescs;
     };
 
@@ -106,6 +104,14 @@ public:
         ImageDescs inputImageDescs;
 
         bool isMultiview { false };
+        RENDER_NS::SampleCountFlags sampleCountFlags { RENDER_NS::SampleCountFlagBits::CORE_SAMPLE_COUNT_4_BIT };
+    };
+    struct ShadowBuffers {
+        RENDER_NS::RenderHandle depthHandle;
+        RENDER_NS::RenderHandle vsmColorHandle;
+
+        RENDER_NS::RenderHandle pcfSamplerHandle;
+        RENDER_NS::RenderHandle vsmSamplerHandle;
     };
 
 private:
@@ -119,6 +125,7 @@ private:
     JsonInputs jsonInputs_;
 
     struct UboHandles {
+        RENDER_NS::RenderHandle cameraData;
         RENDER_NS::RenderHandleReference generalData;
         RENDER_NS::RenderHandleReference environment;
         RENDER_NS::RenderHandleReference postProcess;
@@ -127,8 +134,22 @@ private:
         RENDER_NS::RenderHandleReference light;
         RENDER_NS::RenderHandleReference lightCluster;
     };
+    struct DefaultSamplers {
+        RENDER_NS::RenderHandle cubemapHandle;
+
+        RENDER_NS::RenderHandle linearHandle;
+        RENDER_NS::RenderHandle nearestHandle;
+        RENDER_NS::RenderHandle linearMipHandle;
+    };
+    DefaultSamplers defaultSamplers_;
+    RENDER_NS::RenderHandle defaultColorPrePassHandle_;
+    ShadowBuffers shadowBuffers_;
+
     struct CurrentScene {
         RenderCamera camera;
+
+        RENDER_NS::RenderHandle cameraEnvRadianceHandle;
+        RENDER_NS::RenderHandle prePassColorTarget;
 
         uint32_t cameraIdx { 0 };
         BASE_NS::Math::Vec4 sceneTimingData { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -141,6 +162,22 @@ private:
         BASE_NS::string renderDataStoreName;
         BASE_NS::string postProcessConfigurationName;
     };
+    struct ClusterBinders {
+        RENDER_NS::IDescriptorSetBinder::Ptr clusterBuffersSet0;
+        RENDER_NS::PipelineLayout pl;
+
+        RENDER_NS::RenderHandle shaderHandleCluster;
+        RENDER_NS::PipelineLayout pipelineLayout;
+        Render::RenderHandle psoHandle;
+    };
+    ClusterBinders clusterBinders_;
+
+    struct GlobalDescriptorSets {
+        // default material set 0 descriptor set
+        RENDER_NS::RenderHandleReference dmSet0;
+        RENDER_NS::IDescriptorSetBinder::Ptr dmSet0Binder;
+    };
+    GlobalDescriptorSets globalDescs_;
 
     void SetDefaultGpuImageDescs();
     void ParseRenderNodeInputs();
@@ -158,6 +195,8 @@ private:
     void UpdatePostProcessUniformBuffer();
     void UpdateLightBuffer();
     void UpdatePostProcessConfiguration();
+    void ClusterLights(RENDER_NS::IRenderCommandList& cmdList);
+    void UpdateGlobalDescriptorSets(RENDER_NS::IRenderCommandList& cmdList);
 
     SceneRenderDataStores stores_;
     CameraResourceSetup camRes_;

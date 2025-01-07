@@ -15,11 +15,16 @@
 
 #include "std_filesystem.h"
 
+#if defined(__PLATFORM_OHOS__)
+#undef HAS_FILESYSTEM
+#else
 #if defined(__has_include)
 #if __has_include(<filesystem>)
 #include <filesystem>
+#define HAS_FILESYSTEM
 #endif
 #endif // defined(__has_include)
+#endif
 
 #if !defined(HAS_FILESYSTEM)
 #include <sys/stat.h>
@@ -27,11 +32,9 @@
 #endif
 
 #include <cstdint>
-#include <cstdio>
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
-#include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
@@ -57,6 +60,7 @@ std::filesystem::path U8Path(string_view str)
     return std::filesystem::u8path(str.begin().ptr(), str.end().ptr());
 }
 #endif
+
 } // namespace
 
 string StdFilesystem::ValidatePath(const string_view pathIn) const
@@ -85,13 +89,13 @@ string StdFilesystem::ValidatePath(const string_view pathIn) const
     return path;
 }
 
-IFile::Ptr StdFilesystem::OpenFile(const string_view pathIn)
+IFile::Ptr StdFilesystem::OpenFile(const string_view pathIn, const IFile::Mode mode)
 {
     auto path = ValidatePath(pathIn);
     if (!path.empty()) {
-        return StdFile::Open(path, IFile::Mode::READ_ONLY);
+        return StdFile::Open(path, mode);
     }
-    return IFile::Ptr();
+    return {};
 }
 
 IFile::Ptr StdFilesystem::CreateFile(const string_view pathIn)
@@ -101,7 +105,7 @@ IFile::Ptr StdFilesystem::CreateFile(const string_view pathIn)
         return StdFile::Create(path, IFile::Mode::READ_WRITE);
     }
 
-    return IFile::Ptr();
+    return {};
 }
 
 bool StdFilesystem::DeleteFile(const string_view pathIn)
@@ -118,6 +122,15 @@ bool StdFilesystem::DeleteFile(const string_view pathIn)
 #endif
 }
 
+bool StdFilesystem::FileExists(const string_view pathIn) const
+{
+    auto path = ValidatePath(pathIn);
+    if (path.empty()) {
+        return false;
+    }
+    return StdFile::FileExists(path);
+}
+
 IDirectory::Ptr StdFilesystem::OpenDirectory(const string_view pathIn)
 {
     auto path = ValidatePath(pathIn);
@@ -125,7 +138,7 @@ IDirectory::Ptr StdFilesystem::OpenDirectory(const string_view pathIn)
         return IDirectory::Ptr { StdDirectory::Open(path).release() };
     }
 
-    return IDirectory::Ptr();
+    return {};
 }
 
 IDirectory::Ptr StdFilesystem::CreateDirectory(const string_view pathIn)
@@ -135,7 +148,7 @@ IDirectory::Ptr StdFilesystem::CreateDirectory(const string_view pathIn)
         return IDirectory::Ptr { StdDirectory::Create(path).release() };
     }
 
-    return IDirectory::Ptr();
+    return {};
 }
 
 bool StdFilesystem::DeleteDirectory(const string_view pathIn)
@@ -150,6 +163,15 @@ bool StdFilesystem::DeleteDirectory(const string_view pathIn)
 #else
     return rmdir(string(path).c_str()) == 0;
 #endif
+}
+
+bool StdFilesystem::DirectoryExists(const string_view pathIn) const
+{
+    auto path = ValidatePath(pathIn);
+    if (path.empty()) {
+        return false;
+    }
+    return StdDirectory::DirectoryExists(path);
 }
 
 bool StdFilesystem::Rename(const string_view fromPath, const string_view toPath)

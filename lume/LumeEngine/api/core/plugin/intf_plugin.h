@@ -58,7 +58,7 @@ struct ComponentManagerTypeInfo : public ITypeInfo {
     /** Unique ID of the component manager. */
     const BASE_NS::Uid uid;
     /** Name used during component manager creation to identify the type of the component manager. */
-    char const* const typeName { "" };
+    const char* const typeName { "" };
     /** Pointer to function which is used to create component manager instances. */
     const CreateComponentManagerFn createManager;
     /** Pointer to function which is used to destroy component manager instances. */
@@ -76,7 +76,7 @@ struct SystemTypeInfo : public ITypeInfo {
     /** Unique ID of the system. */
     const BASE_NS::Uid uid;
     /** Name used during system creation to identify the type of the system. */
-    char const* const typeName { "" };
+    const char* const typeName { "" };
     /** Pointer to function which is used to create system instances. */
     const CreateSystemFn createSystem;
     /** Pointer to function which is used to destroy system instances. */
@@ -107,7 +107,7 @@ struct InterfaceTypeInfo {
     /** Unique ID of the interface implementation. */
     const BASE_NS::Uid uid;
     /** Name used during system creation to identify the type of the interface. */
-    char const* const typeName { "" };
+    const char* const typeName { "" };
     /** Pointer to function which is used to create interface instances bound to IClassFactory instance.
      * It is acceptable to return same pointer, but with a added reference count.
      */

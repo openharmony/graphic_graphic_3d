@@ -32,7 +32,9 @@ template<class T1, class T2>
 struct pair;
 BASE_END_NAMESPACE()
 
-CORE_BEGIN_NAMESPACE() class EntityManager final : public IEntityManager {
+CORE_BEGIN_NAMESPACE()
+class EntityReferenceCounter;
+class EntityManager final : public IEntityManager {
 public:
     EntityManager();
     explicit EntityManager(const size_t entityCount);
@@ -76,7 +78,7 @@ private:
             DEAD = 3,
         } state { 0 };
         uint32_t generation { 0 };
-        IEntityReferenceCounter::Ptr counter;
+        BASE_NS::refcnt_ptr<EntityReferenceCounter> counter;
     };
     BASE_NS::vector<EntityState> entities_;
     BASE_NS::vector<Entity> removedList_;

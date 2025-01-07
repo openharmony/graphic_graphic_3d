@@ -15,29 +15,28 @@ import("//foundation/graphic/graphic_2d/graphic_config.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 declare_args() {
+  CORE_LOG_ENABLED = false
   CORE_ROFS = "rofs"
-  CORE_EMBEDDED_ASSETS_ENABLED = true
 }
 
 config("lume_base_api") {
-  include_dirs = [
-    "${LUME_BASE_PATH}/api",
-    "//third_party/bounds_checking_function/include",
-  ]
-
+  include_dirs = [ "${LUME_BASE_PATH}/api" ]
+  configs = [ "//third_party/bounds_checking_function:libsec_public_config" ]
   defines = [
     "BASE_TESTS_ENABLED=0",
     "BASE_WARNINGS_AS_ERRORS=0",
   ]
 
-  if (BUILDTYPE == "Release") {
-    defines += [ "BASE_LOG_NO_DEBUG=0" ]
-  }
-  if (BUILDTYPE == "MinSizeRel") {
-    defines += [ "BASE_LOG_NO_DEBUG=0" ]
-  }
-  if (BUILDTYPE == "RelWithDebInfo") {
-    defines += [ "BASE_LOG_NO_DEBUG=0" ]
+  if (CORE_LOG_ENABLED) {
+    defines += [
+      "CORE_LOG_DISABLED=0",
+      "CORE_LOG_DEBUG=1",
+    ]
+  } else {
+    defines += [
+      "CORE_LOG_DISABLED=1",
+      "CORE_LOG_DEBUG=0",
+    ]
   }
 }
 
@@ -47,6 +46,12 @@ config("lume_engine_api") {
   if (LUME_OHOS_BUILD) {
     include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos/" ]
   }
+
+  #sources = [
+  #   "${LUME_CORE_PATH}/api/core/property_tools/property_api_impl.inl",
+  #  "${LUME_CORE_PATH}/api/core/property_tools/property_data.cpp",
+  #   "${LUME_CORE_PATH}/api/core/property_tools/core_metadata.inl",
+  # ]
 
   defines = [
     "CORE_BUILD_BASE=1",
@@ -79,11 +84,22 @@ config("lume_default") {
     "-fvisibility=hidden",
     "-ffunction-sections",
     "-fdata-sections",
+    "-fno-asynchronous-unwind-tables",
+    "-fno-unwind-tables",
+    "-fno-exceptions",
   ]
 
   cflags_cc = [
     "-std=c++17",
     "-Wno-thread-safety-attributes",
+    "-fvisibility=hidden",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-rtti",
+    "-fvisibility-inlines-hidden",
+    "-fno-asynchronous-unwind-tables",
+    "-fno-unwind-tables",
+    "-fno-exceptions",
   ]
 
   ldflags = [
@@ -133,11 +149,8 @@ config("lume_engine_config") {
     "CORE_PUBLIC=__attribute__((visibility(\"default\")))",
     "USE_STB_IMAGE=$USE_STB_IMAGE",
     "USE_LIB_PNG_JPEG=$USE_LIB_PNG_JPEG",
+    "CORE_EMBEDDED_ASSETS_ENABLED=1",
   ]
-
-  if (CORE_EMBEDDED_ASSETS_ENABLED) {
-    defines += [ "CORE_EMBEDDED_ASSETS_ENABLED=1" ]
-  }
 }
 
 ohos_source_set("lume_engine_src") {
@@ -152,12 +165,8 @@ ohos_source_set("lume_engine_src") {
     "src/image/image_loader_manager.cpp",
     "src/image/image_loader_manager.h",
     "src/image/loaders/gl_util.h",
-    "src/image/loaders/image_loader_common.cpp",
     "src/image/loaders/image_loader_ktx.cpp",
     "src/image/loaders/image_loader_ktx.h",
-    "src/image/loaders/image_loader_libjpeg.h",
-    "src/image/loaders/image_loader_libpng.h",
-    "src/image/loaders/image_loader_stb_image.h",
     "src/io/dev/file_monitor.cpp",
     "src/io/dev/file_monitor.h",
     "src/io/file_manager.cpp",
@@ -188,15 +197,13 @@ ohos_source_set("lume_engine_src") {
     "src/log/logger.h",
     "src/log/logger_output.cpp",
     "src/log/logger_output.h",
-    "src/os/ohos/ohos_file.cpp",
-    "src/os/ohos/ohos_file.h",
-    "src/os/ohos/ohos_filesystem.cpp",
-    "src/os/ohos/ohos_filesystem.h",
     "src/os/platform.h",
     "src/perf/performance_data_manager.cpp",
     "src/perf/performance_data_manager.h",
     "src/plugin_registry.cpp",
     "src/plugin_registry.h",
+    "src/resources/resource_manager.cpp",
+    "src/resources/resource_manager.h",
     "src/static_plugin_decl.h",
     "src/threading/dispatcher_impl.cpp",
     "src/threading/dispatcher_impl.h",
@@ -226,18 +233,16 @@ ohos_source_set("lume_engine_src") {
     sources += [
       "src/os/ohos/library_ohos.cpp",
       "src/os/ohos/logger_output.cpp",
+      "src/os/ohos/ohos_file.cpp",
+      "src/os/ohos/ohos_filesystem.cpp",
       "src/os/ohos/platform_ohos.cpp",
     ]
   }
 
   if (USE_STB_IMAGE) {
-    sources += [ "src/image/loaders/image_loader_stb_image.cpp" ]
-  }
-
-  if (USE_LIB_PNG_JPEG) {
     sources += [
-      "src/image/loaders/image_loader_libjpeg.cpp",
-      "src/image/loaders/image_loader_libpng.cpp",
+      "src/image/loaders/image_loader_stb_image.cpp",
+      "src/image/loaders/image_loader_stb_image.h",
     ]
   }
 
@@ -250,17 +255,8 @@ ohos_source_set("lume_engine_src") {
 
   external_deps = [
     "c_utils:utils",
-    "libpng:libpng",
     "resource_management:global_resmgr",
-    "zlib:shared_libz",
   ]
-  if (defined(ohos_lite)) {
-    external_deps += [ "libjpeg-turbo:libjpeg" ]
-  } else {
-    external_deps += [ "libjpeg-turbo:turbojpeg" ]
-  }
-
-  public_deps = []
 
   if (LUME_OHOS_BUILD) {
     external_deps += [ "hilog:libhilog" ]
@@ -281,7 +277,7 @@ lume_rofs("lume_engine_rofs") {
 
   outputs = "${target_gen_dir}/assets/${output_obj}"
 
-  tool_path = "$target_gen_dir"
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/lumeassetcompiler"
   root = "/"
   bin_name = "BINARYDATAFORCORE"
   size_name = "SIZEOFDATAFORCORE"
@@ -308,11 +304,10 @@ source_set("lume_engine_rofs_obj") {
 }
 
 ohos_static_library("libAGPEngine") {
-  deps = [ ":lume_engine_src" ]
-
-  if (CORE_EMBEDDED_ASSETS_ENABLED) {
-    deps += [ ":lume_engine_rofs_obj" ]
-  }
+  deps = [
+    ":lume_engine_rofs_obj",
+    ":lume_engine_src",
+  ]
 
   part_name = "graphic_3d"
   subsystem_name = "graphic"
@@ -332,16 +327,17 @@ ohos_source_set("lume_component_help_src") {
   ]
 
   sources = [
+    "api/core/property_tools/property_data.cpp",
     "ecshelper/ComponentTools/base_manager.h",
     "ecshelper/ComponentTools/base_manager.inl",
     "ecshelper/ComponentTools/component_query.cpp",
     "ecshelper/ComponentTools/component_query.h",
-    "ecshelper/PropertyTools/core_metadata.inl",
-    "ecshelper/PropertyTools/property_api_impl.h",
-    "ecshelper/PropertyTools/property_api_impl.inl",
-    "ecshelper/PropertyTools/property_data.cpp",
-    "ecshelper/PropertyTools/property_data.h",
-    "ecshelper/PropertyTools/property_macros.h",
-    "ecshelper/PropertyTools/property_value.h",
   ]
+}
+
+ohos_static_library("libComponentHelper") {
+  deps = [ ":lume_component_help_src" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }

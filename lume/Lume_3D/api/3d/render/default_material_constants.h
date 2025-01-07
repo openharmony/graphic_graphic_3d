@@ -69,6 +69,32 @@ struct DefaultMaterialMaterialConstants {
     static constexpr const BASE_NS::string_view MESH_DATA_BUFFER_NAME { "CORE3D_DM_MESH_DATA_BUFFER" };
     /** Skin buffer name */
     static constexpr const BASE_NS::string_view SKIN_DATA_BUFFER_NAME { "CORE3D_DM_SKIN_DATA_BUFFER" };
+
+    /** Material resources global descriptor set name, one need to combine with
+     * scene name + NAME
+     */
+    static constexpr const BASE_NS::string_view MATERIAL_SET1_GLOBAL_DESCRIPTOR_SET_NAME {
+        "CORE3D_DM_MATERIAL_SET1_GLOBAL_DESC_SET"
+    };
+    /** Material resources single global default material descriptor set, one need to combine with
+     * scene name + NAME
+     */
+    static constexpr const BASE_NS::string_view MATERIAL_DEFAULT_RESOURCE_GLOBAL_DESCRIPTOR_SET_NAME {
+        "CORE3D_DM_MATERIAL_DEFAULT_RESOURCE_GLOBAL_DESC_SET"
+    };
+    /** Material resources global descriptor set name, one need to combine with
+     * scene name + NAME
+     * Provides array list of many descriptor sets for materials
+     */
+    static constexpr const BASE_NS::string_view MATERIAL_RESOURCES_GLOBAL_DESCRIPTOR_SET_NAME {
+        "CORE3D_DM_MATERIAL_RESOURCES_GLOBAL_DESC_SET"
+    };
+    /** Default material global set 0 set prefix name, one need to combine with:
+     * scene name + PREFIX_NAME + camera name
+     */
+    static constexpr const BASE_NS::string_view MATERIAL_SET0_GLOBAL_DESCRIPTOR_SET_PREFIX_NAME {
+        "CORE3D_DM_MATERIAL_SET0_GLOBAL_DESC_SET"
+    };
 };
 
 /** Default material shader related constants. (Must be matched in relevant json and c-code files) */
@@ -115,14 +141,26 @@ struct DefaultMaterialShaderConstants {
     };
 };
 
+/** Default scene constants
+ * Scene constants -> prefix with unique scene render data store name when using
+ */
+struct DefaultMaterialSceneConstants {
+    /** Scene blend environment target prefix (often combined with scene name + prefix name + to_hex(environment id))
+     * For example: RenderDataStoreDefaultSceneCORE3D_RADIANCE_CUBEMAP_40000000D
+     */
+    static constexpr const BASE_NS::string_view ENVIRONMENT_RADIANCE_CUBEMAP_PREFIX_NAME { "CORE3D_RADIANCE_CUBEMAP_" };
+    /** Camera data buffer name (this is usable in the whole pipeline / scene) */
+    static constexpr const BASE_NS::string_view SCENE_ENVIRONMENT_DATA_BUFFER_NAME { "CORE3D_DM_ENV_DATA_BUF" };
+};
+
 /** Default camera constants
  * Scene constants -> prefix with unique scene render data store name when using
  */
 struct DefaultMaterialCameraConstants {
     /** Max camera count. This includes scene and shadow cameras.  */
     static constexpr const uint32_t MAX_CAMERA_COUNT { CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT };
-    /** Max environment count.  */
-    static constexpr const uint32_t MAX_ENVIRONMENT_COUNT { CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT };
+    /** Max camera multi-environment count.  */
+    static constexpr const uint32_t MAX_CAMERA_MULTI_ENVIRONMENT_COUNT { 4U };
 
     /** Camera data buffer name (this is usable in the whole pipeline / scene) */
     static constexpr const BASE_NS::string_view CAMERA_DATA_BUFFER_NAME { "CORE3D_DM_CAM_DATA_BUF" };
@@ -236,8 +274,6 @@ struct DefaultMaterialRenderNodeConstants {
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_BASE_COLOR { "base_color" };
     /** Render node default camera controller output name for deferred material */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_MATERIAL { "material" };
-    /** Render node default camera controller output name for camera dynamic radiance cubemap */
-    static constexpr const BASE_NS::string_view CORE_DM_CAMERA_RADIANCE_CUBEMAP { "radiance_cubemap" };
 
     /** Render node default camera controller output name for deferred custom buffers
      * Is a prefix for the final name.

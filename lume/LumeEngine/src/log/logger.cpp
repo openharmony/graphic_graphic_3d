@@ -15,17 +15,15 @@
 
 #include "logger.h"
 
+#include <algorithm>
 #include <cstdarg>
 #include <mutex>
 #include <securec.h>
-#include <set>
 
-#include <base/containers/iterator.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
-#include <base/containers/vector.h>
 #include <base/namespace.h>
 #include <base/util/uid.h>
 #include <core/intf_logger.h>
@@ -118,7 +116,7 @@ void Logger::VLog(
         buffer_.resize(static_cast<size_t>(sizeNeeded));
     }
 
-    int ret = vsnprintf_s(buffer_.data(), buffer_.size(), buffer_.size() - 1, format.data(), tmp);
+    const int ret = vsnprintf_s(buffer_.data(), buffer_.size(), buffer_.size() - 1, format.data(), tmp);
     va_end(tmp);
     if (ret < 0) {
         return;
@@ -213,12 +211,22 @@ void Logger::SetLogLevel(LogLevel logLevel)
     logLevel_ = logLevel;
 }
 
-void Logger::AddOutput(IOutput::Ptr output)
+uint64_t Logger::AddOutput(IOutput::Ptr output)
 {
     if (output) {
         std::lock_guard<std::mutex> guard(loggerMutex_);
         outputs_.push_back(move(output));
+        return reinterpret_cast<uint64_t>(outputs_.back().get());
     }
+    return 0;
+}
+
+void Logger::RemoveOutput(uint64_t id)
+{
+    std::lock_guard<std::mutex> guard(loggerMutex_);
+
+    outputs_.erase(std::remove_if(outputs_.begin(), outputs_.end(),
+        [id](const auto& output) { return reinterpret_cast<uint64_t>(output.get()) == id; }), outputs_.end());
 }
 
 const IInterface* Logger::GetInterface(const Uid& uid) const

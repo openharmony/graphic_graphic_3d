@@ -51,13 +51,13 @@ struct ContextFramebufferCacheGLES {
 class NodeContextPoolManagerGLES final : public NodeContextPoolManager {
 public:
     NodeContextPoolManagerGLES(Device& device, GpuResourceManager& gpuResourceManager);
-    ~NodeContextPoolManagerGLES();
+    ~NodeContextPoolManagerGLES() override;
 
     void BeginFrame() override;
     void BeginBackendFrame() override;
 
     EngineResourceHandle GetFramebufferHandle(const RenderCommandBeginRenderPass& beginRenderPass);
-    const LowlevelFramebufferGL* GetFramebuffer(const EngineResourceHandle handle) const;
+    const LowlevelFramebufferGL* GetFramebuffer(EngineResourceHandle handle) const;
 
     void FilterRenderPass(RenderCommandBeginRenderPass& beginRenderPass);
 #if ((RENDER_VALIDATION_ENABLED == 1) || (RENDER_VULKAN_VALIDATION_ENABLED == 1))

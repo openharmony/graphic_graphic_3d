@@ -17,7 +17,6 @@
 #define CORE_ECS_MORPHINGSYSTEM_H
 
 #include <ComponentTools/component_query.h>
-#include <PropertyTools/property_api_impl.h>
 
 #include <3d/ecs/components/morph_component.h>
 #include <3d/ecs/systems/intf_morphing_system.h>
@@ -27,6 +26,7 @@
 #include <base/containers/vector.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/namespace.h>
+#include <core/property_tools/property_api_impl.h>
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
@@ -73,7 +73,7 @@ private:
     bool active_;
     CORE_NS::IEcs& ecs_;
     RENDER_NS::IRenderContext* renderContext_ = nullptr;
-    IRenderDataStoreMorph* dataStore_;
+    BASE_NS::refcnt_ptr<IRenderDataStoreMorph> dataStore_;
     INodeComponentManager& nodeManager_;
     IMeshComponentManager& meshManager_;
     IMorphComponentManager& morphManager_;

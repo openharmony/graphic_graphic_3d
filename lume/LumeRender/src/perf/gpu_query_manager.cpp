@@ -17,7 +17,6 @@
 
 #include <cstdint>
 
-#include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <render/namespace.h>
 

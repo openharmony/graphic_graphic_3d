@@ -37,21 +37,21 @@ public:
 
 protected:
     friend class GpuResourceManager;
-    virtual void Resize(const size_t maxSize) = 0;
-    virtual void Destroy(const uint32_t index) = 0;
-    virtual void DestroyImmediate(const uint32_t index) = 0;
+    virtual void Resize(size_t maxSize) = 0;
+    virtual void Destroy(uint32_t index) = 0;
+    virtual void DestroyImmediate(uint32_t index) = 0;
 };
 
 template<typename ResourceType, typename CreateInfoType>
 class GpuResourceManagerTyped final : GpuResourceManagerBase {
 public:
     explicit GpuResourceManagerTyped(Device& device);
-    virtual ~GpuResourceManagerTyped() = default;
+    ~GpuResourceManagerTyped() override = default;
 
     GpuResourceManagerTyped(const GpuResourceManagerTyped&) = delete;
     GpuResourceManagerTyped& operator=(const GpuResourceManagerTyped&) = delete;
 
-    ResourceType* Get(const uint32_t index) const;
+    ResourceType* Get(uint32_t index) const;
 
 protected:
     friend class GpuResourceManager;
@@ -62,16 +62,16 @@ protected:
     void HandlePendingDeallocationsImmediate() override;
 
     // resize the resource vector
-    void Resize(const size_t maxSize) override;
+    void Resize(size_t maxSize) override;
     // deferred gpu resource destruction.
-    void Destroy(const uint32_t index) override;
+    void Destroy(uint32_t index) override;
     // forced immediate Destroy, prefer not to use this
-    void DestroyImmediate(const uint32_t index) override;
+    void DestroyImmediate(uint32_t index) override;
 
     // create new, send old to pending deallocations if replacing
     template<typename AdditionalInfoType>
-    void Create(const uint32_t index, const CreateInfoType& desc, BASE_NS::unique_ptr<ResourceType> optionalResource,
-        const bool useAdditionalDesc, const AdditionalInfoType& additonalDesc);
+    void Create(uint32_t index, const CreateInfoType& desc, BASE_NS::unique_ptr<ResourceType> optionalResource,
+        bool useAdditionalDesc, const AdditionalInfoType& additionalDesc);
 
     Device& device_;
 

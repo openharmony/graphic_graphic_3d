@@ -475,24 +475,28 @@ public:
     reference at(size_type index)
     {
         // If index out-of-range, undefined behaviour
+        assert(index < size());
         return data_[index];
     }
 
     const_reference at(size_type index) const
     {
         // If index out-of-range, undefined behaviour
+        assert(index < size());
         return data_[index];
     }
 
     reference operator[](size_type index)
     {
         // If index out-of-range, undefined behaviour
+        assert(index < size());
         return data_[index];
     }
 
     const_reference operator[](size_type index) const
     {
         // If index out-of-range, undefined behaviour
+        assert(index < size());
         return data_[index];
     }
 
@@ -688,7 +692,8 @@ public:
             return;
         }
         difference_type cnt = last - first;
-        pointer tmp = allocate_if_needed(static_cast<size_type>(size_ + cnt));
+        const auto newSize = static_cast<size_type>(size_ + cnt);
+        pointer tmp = allocate_if_needed(newSize);
         if (tmp != data_) {
             pointer begin = data_;
             size_type size = size_;
@@ -699,7 +704,7 @@ public:
             data_ = tmp;
         }
         init_copy(tmp + size_, first, last); // Copy the new objects
-        size_ += cnt;
+        size_ = newSize;
     }
 
     void append(const_pointer first, const_pointer last)
@@ -708,7 +713,8 @@ public:
             return;
         }
         difference_type cnt = last - first;
-        pointer tmp = allocate_if_needed(static_cast<size_type>(size_ + cnt));
+        const auto newSize = static_cast<size_type>(size_ + cnt);
+        pointer tmp = allocate_if_needed(newSize);
         if (tmp != data_) {
             pointer begin = data_;
             size_type size = size_;
@@ -719,14 +725,13 @@ public:
             data_ = tmp;
         }
         init_copy(tmp + size_, first, cnt); // Copy the new objects
-        size_ += cnt;
+        size_ = newSize;
     }
 
     iterator erase(const_iterator pos)
     {
         BASE_ASSERT(pos >= cbegin());
         BASE_ASSERT(pos <= cend());
-        // todo: validate.
         if (pos == cend()) {
             return end();
         }

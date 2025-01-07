@@ -29,18 +29,17 @@ RENDER_BEGIN_NAMESPACE()
 namespace GpuProgramUtil {
 uint32_t SpecializationByteSize(RENDER_NS::ShaderSpecialization::Constant::Type type);
 
-void AddSpecializationConstants(
-    const BASE_NS::array_view<const ShaderSpecialization::Constant> inSpecializationConstants,
+void AddSpecializationConstants(BASE_NS::array_view<const ShaderSpecialization::Constant> inSpecializationConstants,
     BASE_NS::vector<ShaderSpecialization::Constant>& outSpecializationConstants);
 // has sorting for constants
-void CombineSpecializationConstants(const BASE_NS::array_view<const ShaderSpecialization::Constant> inSc,
+void CombineSpecializationConstants(BASE_NS::array_view<const ShaderSpecialization::Constant> inSc,
     BASE_NS::vector<ShaderSpecialization::Constant>& outSc);
 
 // returns true if combination of descriptor sets is valid
 [[nodiscard]] bool AddBindings(
     const DescriptorSetLayout& inDescriptorSetLayout, DescriptorSetLayout& outDescriptorSetLayout);
 // has sorting for bindings and sets
-void CombinePipelineLayouts(const BASE_NS::array_view<const PipelineLayout> inPl, PipelineLayout& outPl);
+void CombinePipelineLayouts(BASE_NS::array_view<const PipelineLayout> inPl, PipelineLayout& outPl);
 
 uint32_t FormatByteSize(BASE_NS::Format format);
 } // namespace GpuProgramUtil

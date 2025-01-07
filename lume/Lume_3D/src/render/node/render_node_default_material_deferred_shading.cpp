@@ -41,6 +41,7 @@
 #include <render/nodecontext/intf_render_node_parser_util.h>
 #include <render/nodecontext/intf_render_node_util.h>
 
+#include "render/default_constants.h"
 #include "render/render_node_scene_util.h"
 
 namespace {
@@ -52,6 +53,8 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
+constexpr bool USE_IMMUTABLE_SAMPLERS { false };
+
 constexpr string_view RENDER_DATA_STORE_POD_NAME { "RenderDataStorePod" };
 constexpr string_view RENDER_DATA_STORE_POST_PROCESS_NAME { "RenderDataStorePostProcess" };
 constexpr uint32_t BUILT_IN_SETS_COUNT { 2u };
@@ -159,6 +162,8 @@ void RenderNodeDefaultMaterialDeferredShading::ExecuteFrame(IRenderCommandList& 
         renderNodeUtil.BindResourcesToBinder(inputResources_, *allDescriptorSets_.pipelineDescriptorSetBinder);
     }
 
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "3DDeferred", DefaultDebugConstants::DEFAULT_DEBUG_COLOR);
+
     cmdList.BeginRenderPass(renderPass_.renderPassDesc, renderPass_.subpassStartIndex, renderPass_.subpassDesc);
     if (validRenderDataStore) {
         RenderData(cmdList);
@@ -246,19 +251,23 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateSet01(IRenderCommandList& c
         binder0.BindBuffer(bindingIndex++, cameraBuffers_.lightCluster, 0u);
 
         // use immutable samplers for all set 0 samplers
+        AdditionalDescriptorFlags descFlags = 0U;
+        if constexpr (USE_IMMUTABLE_SAMPLERS) {
+            descFlags = CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT;
+        }
         BindableImage bi;
         bi.handle = colorPrePass;
         bi.samplerHandle = samplerHandles_.linearMip;
-        binder0.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
+        binder0.BindImage(bindingIndex++, bi, descFlags);
         bi.handle = shadowBuffers_.vsmColorHandle;
         bi.samplerHandle = shadowBuffers_.vsmSamplerHandle;
-        binder0.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
+        binder0.BindImage(bindingIndex++, bi, descFlags);
         bi.handle = shadowBuffers_.pcfDepthHandle;
         bi.samplerHandle = shadowBuffers_.pcfSamplerHandle;
-        binder0.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
+        binder0.BindImage(bindingIndex++, bi, descFlags);
         bi.handle = radianceCubemap;
         bi.samplerHandle = samplerHandles_.cubemap;
-        binder0.BindImage(bindingIndex++, bi, CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
+        binder0.BindImage(bindingIndex++, bi, descFlags);
     }
     {
         const auto& renderPassDesc = renderPass_.renderPassDesc;
@@ -354,36 +363,38 @@ RenderHandle RenderNodeDefaultMaterialDeferredShading::GetPsoHandle()
 {
     uint64_t hash = 0;
     BASE_NS::HashCombine(hash, currentScene_.lightingFlags);
-    if ((!RenderHandleUtil::IsValid(allShaderData_.psoHandle)) || (hash != allShaderData_.psoHash)) {
-        // only lighting flags can currently change dynamically
-        allShaderData_.psoHash = hash;
+    if (RenderHandleUtil::IsValid(allShaderData_.psoHandle) && (hash == allShaderData_.psoHash)) {
+        return allShaderData_.psoHandle;
+    }
 
-        constexpr size_t maxFlagCount { 16u };
-        uint32_t specializationFlags[maxFlagCount];
-        const size_t maxSpecializations = Math::min(maxFlagCount, allShaderData_.defaultSpecilizationConstants.size());
-        for (size_t idx = 0; idx < maxSpecializations; ++idx) {
-            const auto& ref = allShaderData_.defaultSpecilizationConstants[idx];
+    // only lighting flags can currently change dynamically
+    allShaderData_.psoHash = hash;
+
+    constexpr size_t maxFlagCount { 16u };
+    uint32_t specializationFlags[maxFlagCount];
+    const size_t maxSpecializations = Math::min(maxFlagCount, allShaderData_.defaultSpecilizationConstants.size());
+    for (size_t idx = 0; idx < maxSpecializations; ++idx) {
+        const auto& ref = allShaderData_.defaultSpecilizationConstants[idx];
+        if (ref.shaderStage == ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT) {
             const uint32_t constantId = ref.offset / sizeof(uint32_t);
-
-            if (ref.shaderStage == ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT) {
-                if (ref.id == 0u) {
-                    specializationFlags[constantId] = currentRenderPPConfiguration_.flags.x;
-                } else if (ref.id == 1u) {
-                    specializationFlags[constantId] = 0;
-                } else if (ref.id == 2u) {
-                    specializationFlags[constantId] = currentScene_.lightingFlags;
-                } else if (ref.id == 4u) {
-                    specializationFlags[constantId] = currentScene_.cameraShaderFlags;
-                }
+            if (ref.id == 0u) {
+                specializationFlags[constantId] = currentRenderPPConfiguration_.flags.x;
+            } else if (ref.id == CORE_DM_CONSTANT_ID_MATERIAL_FLAGS) {
+                specializationFlags[constantId] = 0;
+            } else if (ref.id == CORE_DM_CONSTANT_ID_LIGHTING_FLAGS) {
+                specializationFlags[constantId] = currentScene_.lightingFlags;
+            } else if (ref.id == CORE_DM_CONSTANT_ID_CAMERA_FLAGS) {
+                specializationFlags[constantId] = currentScene_.cameraShaderFlags;
             }
         }
-
-        const ShaderSpecializationConstantDataView specialization { allShaderData_.defaultSpecilizationConstants,
-            specializationFlags };
-        allShaderData_.psoHandle = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
-            allShaderData_.shaderHandle, allShaderData_.stateHandle, allShaderData_.plHandle, {}, specialization,
-            { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
     }
+
+    const ShaderSpecializationConstantDataView specialization { allShaderData_.defaultSpecilizationConstants,
+        specializationFlags };
+    allShaderData_.psoHandle = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(allShaderData_.shaderHandle,
+        allShaderData_.stateHandle, allShaderData_.plHandle, {}, specialization,
+        { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+
     return allShaderData_.psoHandle;
 }
 

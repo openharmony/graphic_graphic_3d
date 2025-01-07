@@ -56,7 +56,7 @@ inline bool operator<(const SlotSubmeshIndex& lhs, const SlotSubmeshIndex& rhs)
 
 inline bool operator>(const SlotSubmeshIndex& lhs, const SlotSubmeshIndex& rhs)
 {
-    if (lhs.sortLayerKey > rhs.sortLayerKey) {
+    if (lhs.sortLayerKey < rhs.sortLayerKey) {
         return true;
     } else if (lhs.sortLayerKey == rhs.sortLayerKey) {
         return (lhs.sortKey > rhs.sortKey);
@@ -147,12 +147,42 @@ void UpdateCustomCameraLoadStore(const RenderCamera& camera, RenderPass& renderP
 
 void UpdateCameraFlags(const RenderCamera& camera, RenderPass& renderPass)
 {
-    if (camera.multiViewCameraCount > 0U) {
-        // NOTE: does not over write viewmask if it has some special values
-        if (renderPass.subpassDesc.viewMask <= 1U) {
+    // NOTE: does not over write viewmask if it has some special values
+    if (renderPass.subpassDesc.viewMask <= 1U) {
+        if (camera.multiViewCameraCount > 0U) {
             const uint32_t layerCount = camera.multiViewCameraCount + 1U;
             renderPass.subpassDesc.viewMask = (1U << layerCount) - 1U;
+        } else if (camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT) {
+            renderPass.subpassDesc.viewMask = 0x3F; // all cubemap layers
         }
+    }
+}
+
+bool IsObjectCulled(IFrustumUtil& frustumUtil, const Frustum& camFrustum, const array_view<const Frustum> addFrustums,
+    const RenderSubmesh& submesh)
+{
+    bool notCulled =
+        frustumUtil.SphereFrustumCollision(camFrustum, submesh.bounds.worldCenter, submesh.bounds.worldRadius);
+    if (!notCulled) {
+        // if culled by main camera check additional cameras
+        for (const auto& fRef : addFrustums) {
+            notCulled =
+                frustumUtil.SphereFrustumCollision(fRef, submesh.bounds.worldCenter, submesh.bounds.worldRadius);
+            if (notCulled) {
+                break;
+            }
+        }
+    }
+    return !notCulled;
+}
+
+inline constexpr RenderSlotCullType GetRenderSlotBaseCullType(
+    const RenderSlotCullType cullType, const RenderCamera& camera)
+{
+    if (camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUBEMAP_BIT) {
+        return RenderSlotCullType::NONE;
+    } else {
+        return cullType;
     }
 }
 } // namespace
@@ -242,25 +272,48 @@ void RenderNodeSceneUtil::UpdateRenderPassFromCustomCamera(
 }
 
 void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
-    const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraId,
-    const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo, vector<SlotSubmeshIndex>& refSubmeshIndices)
+    const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraIndex,
+    const array_view<const uint32_t> addCameraIndices, const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo,
+    vector<SlotSubmeshIndex>& refSubmeshIndices)
 {
     // Get IFrustumUtil from global plugin registry.
     auto frustumUtil = GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
+    if (!frustumUtil) {
+        return;
+    }
 
     // 64 bit sorting key should have
     // material hash with:
     // shader, materialIndex, meshId, and depth
 
-    Math::Vec3 camWorldPos { 0.0f, 0.0f, 0.0f };
+    double camSortCoefficient = 1000.0;
+    Math::Mat4X4 camView { Math::IDENTITY_4X4 };
     uint64_t camLayerMask { RenderSceneDataConstants::INVALID_ID };
     Frustum camFrustum;
-    if (const auto& cameras = dataStoreCamera.GetCameras(); cameraId < static_cast<uint32_t>(cameras.size())) {
-        const Math::Mat4X4 viewInv = Math::Inverse(cameras[cameraId].matrices.view);
-        camWorldPos = Math::Vec3(viewInv[3u]); // take world position from matrix
-        camLayerMask = cameras[cameraId].layerMask;
-        if (renderSlotInfo.cullType == RenderSlotCullType::VIEW_FRUSTUM_CULL) {
-            camFrustum = frustumUtil->CreateFrustum(cameras[cameraId].matrices.proj * cameras[cameraId].matrices.view);
+    const auto& cameras = dataStoreCamera.GetCameras();
+    const uint32_t maxCameraCount = static_cast<uint32_t>(cameras.size());
+    RenderSlotCullType rsCullType = renderSlotInfo.cullType;
+    // process first camera
+    if (cameraIndex < maxCameraCount) {
+        camView = cameras[cameraIndex].matrices.view;
+        const float camZFar = Math::max(0.01f, cameras[cameraIndex].zFar);
+        // max uint coefficient for sorting
+        camSortCoefficient = double(4294967295.0) / double(camZFar); // 4294967295.0: max double value
+        camLayerMask = cameras[cameraIndex].layerMask;
+        rsCullType = GetRenderSlotBaseCullType(rsCullType, cameras[cameraIndex]);
+        if (rsCullType == RenderSlotCullType::VIEW_FRUSTUM_CULL) {
+            camFrustum =
+                frustumUtil->CreateFrustum(cameras[cameraIndex].matrices.proj * cameras[cameraIndex].matrices.view);
+        }
+    }
+    vector<Frustum> addFrustums;
+    if (rsCullType == RenderSlotCullType::VIEW_FRUSTUM_CULL) {
+        addFrustums.reserve(addCameraIndices.size());
+        for (const auto& indexRef : addCameraIndices) {
+            if (indexRef < maxCameraCount) {
+                addFrustums.push_back(
+                    frustumUtil->CreateFrustum(cameras[indexRef].matrices.proj * cameras[indexRef].matrices.view));
+            }
         }
     }
 
@@ -268,8 +321,6 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
     constexpr uint64_t sDepthShift = RenderDataStoreDefaultMaterial::SLOT_SORT_DEPTH_SHIFT;
     constexpr uint64_t sRenderMask = RenderDataStoreDefaultMaterial::SLOT_SORT_HASH_MASK;
     constexpr uint64_t sRenderShift = RenderDataStoreDefaultMaterial::SLOT_SORT_HASH_SHIFT;
-    // NOTE: might need to change to log value or similar
-    constexpr float depthUintCoeff { 1000.0f }; // one centimeter is one uint step
 
     // NOTE: material sort should be based on PSO not shader handle
     const auto& slotSubmeshIndices = dataStoreMaterial.GetSlotSubmeshIndices(renderSlotInfo.id);
@@ -281,22 +332,22 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
     for (size_t idx = 0; idx < slotSubmeshIndices.size(); ++idx) {
         const uint32_t submeshIndex = slotSubmeshIndices[idx];
         const auto& submesh = submeshes[submeshIndex];
-        const bool notCulled =
-            ((renderSlotInfo.cullType != RenderSlotCullType::VIEW_FRUSTUM_CULL) ||
-                frustumUtil->SphereFrustumCollision(camFrustum, submesh.worldCenter, submesh.worldRadius));
+        const bool notCulled = (rsCullType != RenderSlotCullType::VIEW_FRUSTUM_CULL) ||
+                               (!IsObjectCulled(*frustumUtil, camFrustum, addFrustums, submesh));
         const auto& submeshMatData = slotSubmeshMatData[idx];
         const bool discardedMat = (submeshMatData.renderMaterialFlags & renderSlotInfo.materialDiscardFlags);
-        if ((camLayerMask & submesh.layerMask) && notCulled && (!discardedMat)) {
-            const float distSq = Math::Distance2(submesh.worldCenter, camWorldPos);
-            uint64_t sortKey = Math::min(maxUDepth, static_cast<uint64_t>(distSq * depthUintCoeff));
+        if ((camLayerMask & submesh.layers.layerMask) && notCulled && (!discardedMat)) {
+            const Math::Vec4 pos = (camView * Math::Vec4(submesh.bounds.worldCenter, 1.0f));
+            const float zVal = Math::abs(pos.z);
+            uint64_t sortKey = Math::min(maxUDepth, static_cast<uint64_t>(double(zVal) * camSortCoefficient));
             if (renderSlotInfo.sortType == RenderSlotSortType::BY_MATERIAL) {
                 sortKey |= (((uint64_t)submeshMatData.renderSortHash & sRenderMask) << sRenderShift);
             } else {
                 sortKey = (sortKey << sDepthShift) | ((uint64_t)slotSubmeshMatData[idx].renderSortHash & sRenderMask);
             }
-            refSubmeshIndices.push_back(SlotSubmeshIndex { (uint32_t)submeshIndex,
-                submeshMatData.combinedRenderSortLayer, sortKey, submeshMatData.renderSortHash,
-                submeshMatData.shader.GetHandle(), submeshMatData.gfxState.GetHandle() });
+            refSubmeshIndices.push_back(
+                SlotSubmeshIndex { (uint32_t)submeshIndex, submeshMatData.combinedRenderSortLayer, sortKey,
+                    submeshMatData.renderSortHash, submeshMatData.shader, submeshMatData.gfxState });
         }
     }
 
@@ -392,12 +443,11 @@ SceneCameraImageHandles RenderNodeSceneUtil::GetSceneCameraImageHandles(
 {
     SceneCameraImageHandles handles;
     const auto& gpuMgr = renderNodeContextMgr.GetGpuResourceManager();
-    if (camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_DYNAMIC_CUBEMAP_BIT) {
-        handles.radianceCubemap = gpuMgr.GetImageHandle(
-            sceneName + DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME + "RADIANCE_CUBEMAP_" + cameraName);
-    }
-    if (!RenderHandleUtil::IsValid(handles.radianceCubemap)) {
-        handles.radianceCubemap = camera.environment.radianceCubemap.GetHandle();
+    handles.radianceCubemap = camera.environment.radianceCubemap.GetHandle();
+    if ((!RenderHandleUtil::IsValid(handles.radianceCubemap)) && (camera.environment.multiEnvCount > 0U)) {
+        handles.radianceCubemap =
+            gpuMgr.GetImageHandle(sceneName + DefaultMaterialSceneConstants::ENVIRONMENT_RADIANCE_CUBEMAP_PREFIX_NAME +
+                                  to_hex(camera.environment.id));
     }
     if (!RenderHandleUtil::IsValid(handles.radianceCubemap)) {
         handles.radianceCubemap =
@@ -438,7 +488,16 @@ void RenderNodeSceneUtilImpl::GetRenderSlotSubmeshes(const IRenderDataStoreDefau
     const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo, vector<SlotSubmeshIndex>& refSubmeshIndices)
 {
     return RenderNodeSceneUtil::GetRenderSlotSubmeshes(
-        dataStoreCamera, dataStoreMaterial, cameraId, renderSlotInfo, refSubmeshIndices);
+        dataStoreCamera, dataStoreMaterial, cameraId, {}, renderSlotInfo, refSubmeshIndices);
+}
+
+void RenderNodeSceneUtilImpl::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
+    const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const uint32_t cameraIndex,
+    const array_view<const uint32_t> addCameraIndices, const IRenderNodeSceneUtil::RenderSlotInfo& renderSlotInfo,
+    vector<SlotSubmeshIndex>& refSubmeshIndices)
+{
+    return RenderNodeSceneUtil::GetRenderSlotSubmeshes(
+        dataStoreCamera, dataStoreMaterial, cameraIndex, addCameraIndices, renderSlotInfo, refSubmeshIndices);
 }
 
 SceneBufferHandles RenderNodeSceneUtilImpl::GetSceneBufferHandles(

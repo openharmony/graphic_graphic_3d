@@ -20,6 +20,7 @@
 #include <3d/render/intf_render_data_store_default_light.h>
 #include <base/containers/allocator.h>
 #include <base/math/matrix_util.h>
+#include <base/math/quaternion_util.h>
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/util/intf_frustum_util.h>
@@ -52,6 +53,21 @@ constexpr BASE_NS::Math::Mat4X4 GetShadowBias(const uint32_t shadowIndex, const 
         0.0f, 1.0f };
 }
 
+constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
+// nine vectors which are used in spherical harmonics calculations
+constexpr BASE_NS::Math::Vec4 DEFAULT_SH_INDIRECT_COEFFICIENTS[9u] {
+    { 1.0f, 1.0f, 1.0f, 1.0f },
+    { 0.0f, 0.0f, 0.0f, 0.0f },
+    { 0.0f, 0.0f, 0.0f, 0.0f },
+    { 0.0f, 0.0f, 0.0f, 0.0f },
+    { 0.0f, 0.0f, 0.0f, 0.0f },
+    { 0.0f, 0.0f, 0.0f, 0.0f },
+    { 0.0f, 0.0f, 0.0f, 0.0f },
+    { 0.0f, 0.0f, 0.0f, 0.0f },
+    { 0.0f, 0.0f, 0.0f, 0.0f },
+};
+
+constexpr uint32_t CUBEMAP_EXTRA_CAMERA_COUNT { 5U };
 constexpr uint32_t HALTON_SAMPLE_COUNT { 16u };
 Math::Vec2 GetHaltonOffset(const uint32_t haltonIndex)
 {
@@ -77,23 +93,73 @@ Math::Vec2 GetHaltonOffset(const uint32_t haltonIndex)
     return halton16[haltonIndex];
 }
 
+void GenerateCubemapMatrices(vector<Math::Mat4X4>& matrices)
+{
+    if (matrices.empty()) {
+        matrices.resize(CUBEMAP_EXTRA_CAMERA_COUNT);
+        // x-
+        matrices[0U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * -90.0f), Math::Vec3(0.0f, 1.0f, 0.0f)));
+        matrices[0U] = Math::Scale(matrices[0U], { 1.f, 1.f, -1.f });
+        // +y
+        matrices[1U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * -90.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
+        matrices[1U] = Math::Scale(matrices[1U], { 1.f, 1.f, -1.f });
+        // -y
+        matrices[2U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * 90.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
+        matrices[2U] = Math::Scale(matrices[2U], { 1.f, 1.f, -1.f });
+        // +z
+        matrices[3U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * 180.0f), Math::Vec3(0.0f, 1.0f, 0.0f)));
+        matrices[3U] = Math::Scale(matrices[3U], { -1.f, 1.f, 1.f });
+        // -z
+        matrices[4U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * 0.0f), Math::Vec3(0.0f, 1.0f, 0.0f)));
+        matrices[4U] = Math::Scale(matrices[4U], { -1.f, 1.f, 1.f });
+    }
+}
+
 inline constexpr Math::UVec2 GetPacked64(const uint64_t value)
 {
     return { static_cast<uint32_t>(value >> 32) & 0xFFFFffff, static_cast<uint32_t>(value & 0xFFFFffff) };
 }
 
-inline constexpr Math::UVec4 GetMultiViewCameraIndices(
-    const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam)
+constexpr Math::UVec4 GetMultiViewCameraIndicesFunc(const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam)
 {
     Math::UVec4 mvIndices { 0U, 0U, 0U, 0U };
-    CORE_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 3U);
-    const uint32_t inputCount = cam.multiViewCameraCount;
+    CORE_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
+    const uint32_t inputCount =
+        Math::min(cam.multiViewCameraCount, RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT);
     for (uint32_t idx = 0U; idx < inputCount; ++idx) {
         const uint64_t id = cam.multiViewCameraIds[idx];
         if (id != RenderSceneDataConstants::INVALID_ID) {
             mvIndices[0U]++; // recalculates the count
-            mvIndices[mvIndices[0U]] = Math::min(rds->GetCameraIndex(id), CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - 1U);
+            const uint32_t index = mvIndices[0U];
+            const uint32_t viewIndexShift =
+                (index >= CORE_MULTI_VIEW_VIEW_INDEX_MODULO) ? CORE_MULTI_VIEW_VIEW_INDEX_SHIFT : 0U;
+            const uint32_t finalViewIndex = index % CORE_MULTI_VIEW_VIEW_INDEX_MODULO;
+            mvIndices[finalViewIndex] =
+                (Math::min(rds->GetCameraIndex(id), CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - 1U) &
+                    CORE_MULTI_VIEW_VIEW_INDEX_MASK)
+                << viewIndexShift;
         }
+    }
+    return mvIndices;
+}
+
+constexpr Math::UVec4 GetCubemapMultiViewCameraIndicesFunc(
+    const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam, const array_view<const uint32_t> cameraIndices)
+{
+    Math::UVec4 mvIndices { 0U, 0U, 0U, 0U };
+    CORE_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
+    constexpr uint32_t inputCount = CUBEMAP_EXTRA_CAMERA_COUNT;
+    mvIndices[0U] = inputCount; // multi-view camera count
+    // NOTE: keeps compatibility with the old code
+    for (uint32_t idx = 0U; idx < inputCount; ++idx) {
+        const uint32_t writeIndex = idx + 1U;
+        const uint32_t viewIndexShift =
+            (writeIndex >= CORE_MULTI_VIEW_VIEW_INDEX_MODULO) ? CORE_MULTI_VIEW_VIEW_INDEX_SHIFT : 0U;
+        const uint32_t finalViewIndex = writeIndex % CORE_MULTI_VIEW_VIEW_INDEX_MODULO;
+        const uint32_t camId = cameraIndices[idx];
+        mvIndices[finalViewIndex] |=
+            (Math::min(camId, CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - 1U) & CORE_MULTI_VIEW_VIEW_INDEX_MASK)
+            << viewIndexShift;
     }
     return mvIndices;
 }
@@ -109,30 +175,40 @@ void RenderNodeDefaultCameras::InitNode(IRenderNodeContextManager& renderNodeCon
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
-    const string bufferName =
-        stores_.dataStoreNameScene.c_str() + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME;
 
     CORE_STATIC_ASSERT((sizeof(DefaultCameraMatrixStruct) % CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT) == 0);
     auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
-    resHandle_ = gpuResourceMgr.Create(
-        bufferName, { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                        (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                        CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                        sizeof(DefaultCameraMatrixStruct) * CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT });
-    if (resHandle_) {
-        IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
-        const RenderHandle handle = resHandle_.GetHandle();
-        rngShareMgr.RegisterRenderNodeOutputs({ &handle, 1u });
+    {
+        const string bufferName =
+            stores_.dataStoreNameScene.c_str() + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME;
+        camHandle_ = gpuResourceMgr.Create(
+            bufferName, { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                            sizeof(DefaultCameraMatrixStruct) * CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT });
     }
+    {
+        const string bufferName =
+            stores_.dataStoreNameScene.c_str() + DefaultMaterialSceneConstants::SCENE_ENVIRONMENT_DATA_BUFFER_NAME;
+        envHandle_ = gpuResourceMgr.Create(
+            bufferName, { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                            sizeof(DefaultMaterialEnvironmentStruct) * CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT });
+    }
+
+    IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
+    const RenderHandle outputs[2U] { camHandle_.GetHandle(), envHandle_.GetHandle() };
+    rngShareMgr.RegisterRenderNodeOutputs(outputs);
 }
 
 void RenderNodeDefaultCameras::PreExecuteFrame()
 {
-    if (resHandle_) {
-        IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
-        const RenderHandle handle = resHandle_.GetHandle();
-        rngShareMgr.RegisterRenderNodeOutputs({ &handle, 1u });
-    }
+    IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
+    const RenderHandle outputs[2U] { camHandle_.GetHandle(), envHandle_.GetHandle() };
+    rngShareMgr.RegisterRenderNodeOutputs(outputs);
+    // reset
+    cubemapCameras_.clear();
 }
 
 void RenderNodeDefaultCameras::ExecuteFrame(IRenderCommandList& cmdList)
@@ -142,72 +218,135 @@ void RenderNodeDefaultCameras::ExecuteFrame(IRenderCommandList& cmdList)
         static_cast<IRenderDataStoreDefaultCamera*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameCamera));
     const IRenderDataStoreDefaultLight* dsLight =
         static_cast<IRenderDataStoreDefaultLight*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameLight));
-    if (dsCamera) {
-        const auto& cameras = dsCamera->GetCameras();
-        if (!cameras.empty()) {
-            const auto& gpuResMgr = renderNodeContextMgr_->GetGpuResourceManager();
-            if (uint8_t* data = reinterpret_cast<uint8_t*>(gpuResMgr.MapBuffer(resHandle_.GetHandle())); data) {
-                const uint32_t cameraCount =
-                    Math::min(CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT, static_cast<uint32_t>(cameras.size()));
-
-                for (uint32_t idx = 0; idx < cameraCount; ++idx) {
-                    const auto& currCamera = cameras[idx];
-                    const Math::UVec4 mvCameraIndices = GetMultiViewCameraIndices(dsCamera, currCamera);
-                    auto dat =
-                        reinterpret_cast<DefaultCameraMatrixStruct*>(data + sizeof(DefaultCameraMatrixStruct) * idx);
-
-                    const JitterProjection jp = GetProjectionMatrix(currCamera, false);
-                    const Math::Mat4X4 viewProj = jp.proj * currCamera.matrices.view;
-                    dat->view = currCamera.matrices.view;
-                    dat->proj = jp.proj;
-                    dat->viewProj = viewProj;
-
-                    dat->viewInv = Math::Inverse(currCamera.matrices.view);
-                    dat->projInv = Math::Inverse(jp.proj);
-                    dat->viewProjInv = Math::Inverse(viewProj);
-
-                    const JitterProjection jpPrevFrame = GetProjectionMatrix(currCamera, true);
-                    const Math::Mat4X4 viewProjPrevFrame = jpPrevFrame.proj * currCamera.matrices.viewPrevFrame;
-                    dat->viewPrevFrame = currCamera.matrices.viewPrevFrame;
-                    dat->projPrevFrame = jpPrevFrame.proj;
-                    dat->viewProjPrevFrame = viewProjPrevFrame;
-
-                    // possible shadow matrices
-                    const Math::Mat4X4 shadowBias = GetShadowBiasMatrix(dsLight, currCamera);
-                    const Math::Mat4X4 shadowViewProj = shadowBias * viewProj;
-                    dat->shadowViewProj = shadowViewProj;
-                    dat->shadowViewProjInv = Math::Inverse(shadowViewProj);
-
-                    // jitter data
-                    dat->jitter = jp.jitter;
-                    dat->jitterPrevFrame = jpPrevFrame.jitter;
-
-                    const Math::UVec2 packedId = GetPacked64(currCamera.id);
-                    const Math::UVec2 packedLayer = GetPacked64(currCamera.layerMask);
-                    dat->indices = { packedId.x, packedId.y, packedLayer.x, packedLayer.y };
-                    dat->multiViewIndices = mvCameraIndices;
-
-                    // frustum planes
-                    if (frustumUtil_) {
-                        // frustum planes created without jitter
-                        const Frustum frustum = frustumUtil_->CreateFrustum(jp.baseProj * currCamera.matrices.view);
-                        CloneData(dat->frustumPlanes, CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT * sizeof(Math::Vec4),
-                            frustum.planes, Frustum::PLANE_COUNT * sizeof(Math::Vec4));
-                    }
-
-                    // padding
-                    dat->counts = { currCamera.environmentCount, 0U, 0U, 0U };
-                    dat->pad0 = { 0U, 0U, 0U, 0U };
-                    dat->matPad0 = ZERO_MATRIX_4X4;
-                    dat->matPad1 = ZERO_MATRIX_4X4;
-                }
-
-                gpuResMgr.UnmapBuffer(resHandle_.GetHandle());
-            }
-        }
+    if (!dsCamera) {
+        return;
     }
+    const auto& cameras = dsCamera->GetCameras();
+    const auto& environments = dsCamera->GetEnvironments();
+    if (cameras.empty() && environments.empty()) {
+        return;
+    }
+    const auto& gpuResMgr = renderNodeContextMgr_->GetGpuResourceManager();
+    if (uint8_t* data = reinterpret_cast<uint8_t*>(gpuResMgr.MapBuffer(camHandle_.GetHandle())); data) {
+        const uint32_t originalCameraCount = static_cast<uint32_t>(cameras.size());
+        // add normal cameras to GPU
+        AddCameras(dsCamera, dsLight, cameras, data, 0U);
+        // add cubemap cameras to GPU
+        AddCameras(dsCamera, dsLight, cubemapCameras_, data, originalCameraCount);
 
+        gpuResMgr.UnmapBuffer(camHandle_.GetHandle());
+    }
     jitterIndex_ = (jitterIndex_ + 1) % HALTON_SAMPLE_COUNT;
+
+    if (uint8_t* data = reinterpret_cast<uint8_t*>(gpuResMgr.MapBuffer(envHandle_.GetHandle())); data) {
+        AddEnvironments(dsCamera, environments, data);
+
+        gpuResMgr.UnmapBuffer(envHandle_.GetHandle());
+    }
+}
+
+void RenderNodeDefaultCameras::AddCameras(const IRenderDataStoreDefaultCamera* dsCamera,
+    const IRenderDataStoreDefaultLight* dsLight, const array_view<const RenderCamera> cameras, uint8_t* const data,
+    const uint32_t cameraOffset)
+{
+    const uint32_t cameraCount = static_cast<uint32_t>(
+        Math::max(0, Math::min(static_cast<int32_t>(CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - cameraOffset),
+            static_cast<int32_t>(cameras.size()))));
+    for (uint32_t idx = 0; idx < cameraCount; ++idx) {
+        const auto& currCamera = cameras[idx];
+        // take into account the offset to GPU cameras
+        auto dat = reinterpret_cast<DefaultCameraMatrixStruct* const>(
+            data + sizeof(DefaultCameraMatrixStruct) * (idx + cameraOffset));
+
+        const auto view = ResolveViewMatrix(currCamera);
+        const JitterProjection jp = GetProjectionMatrix(currCamera, false);
+        const Math::Mat4X4 viewProj = jp.proj * view;
+        dat->view = view;
+        dat->proj = jp.proj;
+        dat->viewProj = viewProj;
+
+        dat->viewInv = Math::Inverse(view);
+        dat->projInv = Math::Inverse(jp.proj);
+        dat->viewProjInv = Math::Inverse(viewProj);
+
+        const JitterProjection jpPrevFrame = GetProjectionMatrix(currCamera, true);
+        const Math::Mat4X4 viewProjPrevFrame = jpPrevFrame.proj * currCamera.matrices.viewPrevFrame;
+        dat->viewPrevFrame = currCamera.matrices.viewPrevFrame;
+        dat->projPrevFrame = jpPrevFrame.proj;
+        dat->viewProjPrevFrame = viewProjPrevFrame;
+
+        // possible shadow matrices
+        const Math::Mat4X4 shadowViewProj = GetShadowBiasMatrix(dsLight, currCamera) * viewProj;
+        dat->shadowViewProj = shadowViewProj;
+        dat->shadowViewProjInv = Math::Inverse(shadowViewProj);
+
+        // jitter data
+        dat->jitter = jp.jitter;
+        dat->jitterPrevFrame = jpPrevFrame.jitter;
+
+        const Math::UVec2 packedId = GetPacked64(currCamera.id);
+        const Math::UVec2 packedLayer = GetPacked64(currCamera.layerMask);
+        dat->indices = { packedId.x, packedId.y, packedLayer.x, packedLayer.y };
+        dat->multiViewIndices = GetMultiViewCameraIndices(dsCamera, currCamera, cameraCount);
+
+        // frustum planes
+        if (frustumUtil_) {
+            // frustum planes created without jitter
+            const Frustum frustum = frustumUtil_->CreateFrustum(jp.baseProj * view);
+            CloneData(dat->frustumPlanes, CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT * sizeof(Math::Vec4), frustum.planes,
+                Frustum::PLANE_COUNT * sizeof(Math::Vec4));
+        }
+
+        // padding
+        dat->counts = { currCamera.environment.multiEnvCount, 0U, 0U, 0U };
+        dat->pad0 = { 0U, 0U, 0U, 0U };
+        dat->matPad0 = ZERO_MATRIX_4X4;
+        dat->matPad1 = ZERO_MATRIX_4X4;
+    }
+}
+
+BASE_NS::Math::UVec4 RenderNodeDefaultCameras::GetMultiViewCameraIndices(
+    const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam, const uint32_t cameraCount)
+{
+    // first check if cubemap
+    if (cam.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUBEMAP_BIT) {
+        // generate new indices and add cameras
+        const size_t currSize = cubemapCameras_.size();
+        cubemapCameras_.resize(currSize + CUBEMAP_EXTRA_CAMERA_COUNT);
+        GenerateCubemapMatrices(cubemapMatrices_);
+
+        const uint32_t startCameraIndex = cameraCount + static_cast<uint32_t>(currSize);
+        const uint32_t camIndices[CUBEMAP_EXTRA_CAMERA_COUNT] = {
+            startCameraIndex + 0U,
+            startCameraIndex + 1U,
+            startCameraIndex + 2U,
+            startCameraIndex + 3U,
+            startCameraIndex + 4U,
+        };
+        for (size_t idx = 0; idx < CUBEMAP_EXTRA_CAMERA_COUNT; ++idx) {
+            CORE_ASSERT(currSize + idx < cubemapCameras_.size());
+            CORE_ASSERT(idx < cubemapMatrices_.size());
+            auto& currCamera = cubemapCameras_[currSize + idx];
+            currCamera = cam;
+            currCamera.flags = 0U;
+            currCamera.matrices.view = cubemapMatrices_[idx] * currCamera.matrices.view;
+            currCamera.matrices.viewPrevFrame = currCamera.matrices.view;
+        }
+        return GetCubemapMultiViewCameraIndicesFunc(rds, cam, { camIndices, CUBEMAP_EXTRA_CAMERA_COUNT });
+    } else {
+        return GetMultiViewCameraIndicesFunc(rds, cam);
+    }
+}
+
+BASE_NS::Math::Mat4X4 RenderNodeDefaultCameras::ResolveViewMatrix(const RenderCamera& camera) const
+{
+    auto view = camera.matrices.view;
+    if (camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT) {
+        Math::Mat4X4 temporary = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * 90.0f), Math::Vec3(0.0f, 1.0f, 0.0f)));
+        temporary = Math::Scale(temporary, { 1.f, 1.f, -1.f });
+        view = temporary * view;
+    }
+    return view;
 }
 
 RenderNodeDefaultCameras::JitterProjection RenderNodeDefaultCameras::GetProjectionMatrix(
@@ -246,6 +385,83 @@ BASE_NS::Math::Mat4X4 RenderNodeDefaultCameras::GetShadowBiasMatrix(
         }
     }
     return SHADOW_BIAS_MATRIX;
+}
+
+namespace {
+Math::UVec4 GetMultiEnvironmentIndices(
+    const RenderCamera::Environment& env, const array_view<const RenderCamera::Environment> envs)
+{
+    if (env.multiEnvCount > 0U) {
+        Math::UVec4 multiEnvIndices = { 0U, 0U, 0U, 0U };
+        // the first value in multiEnvIndices is the count
+        // first index is the main environment, next indices are the blend environments
+        const uint32_t maxEnvCount = Math::min(env.multiEnvCount, 3U);
+        for (uint32_t idx = 0U; idx < maxEnvCount; ++idx) {
+            multiEnvIndices[0U]++;
+            uint32_t multiEnvIdx = 0U;
+            for (uint32_t envIdx = 0U; envIdx < static_cast<uint32_t>(envs.size()); ++envIdx) {
+                const auto& envRef = envs[envIdx];
+                if (envRef.id == env.multiEnvIds[idx]) {
+                    multiEnvIdx = envIdx;
+                }
+            }
+            CORE_ASSERT(idx + 1U <= 3U);
+            multiEnvIndices[idx + 1U] = multiEnvIdx;
+        }
+        return multiEnvIndices;
+    } else {
+        return { 0U, 0U, 0U, 0U };
+    }
+}
+} // namespace
+
+void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCamera* dsCamera,
+    const array_view<const RenderCamera::Environment> environments, uint8_t* const data)
+{
+    CORE_ASSERT(data);
+    const auto* dataEnd = data + sizeof(DefaultMaterialEnvironmentStruct) * CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT;
+
+    const uint32_t envCount = static_cast<uint32_t>(
+        Math::min(CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT, static_cast<uint32_t>(environments.size())));
+    for (uint32_t idx = 0; idx < envCount; ++idx) {
+        auto* dat = data + (sizeof(DefaultMaterialEnvironmentStruct) * idx);
+
+        const auto& currEnv = environments[idx];
+        const Math::UVec4 multiEnvIndices = GetMultiEnvironmentIndices(currEnv, environments);
+        const Math::UVec2 id = GetPacked64(currEnv.id);
+        const Math::UVec2 layer = GetPacked64(currEnv.layerMask);
+        const float radianceCubemapLodCoeff =
+            (currEnv.radianceCubemapMipCount != 0)
+                ? Math::min(CUBE_MAP_LOD_COEFF, static_cast<float>(currEnv.radianceCubemapMipCount))
+                : CUBE_MAP_LOD_COEFF;
+        DefaultMaterialEnvironmentStruct envStruct {
+            Math::Vec4((Math::Vec3(currEnv.indirectSpecularFactor) * currEnv.indirectSpecularFactor.w),
+                currEnv.indirectSpecularFactor.w),
+            Math::Vec4(Math::Vec3(currEnv.indirectDiffuseFactor) * currEnv.indirectDiffuseFactor.w,
+                currEnv.indirectDiffuseFactor.w),
+            Math::Vec4(Math::Vec3(currEnv.envMapFactor) * currEnv.envMapFactor.w, currEnv.envMapFactor.w),
+            Math::Vec4(radianceCubemapLodCoeff, currEnv.envMapLodLevel, 0.0f, 0.0f),
+            currEnv.blendFactor,
+            Math::Mat4Cast(currEnv.rotation),
+            Math::UVec4(id.x, id.y, layer.x, layer.y),
+            {},
+            multiEnvIndices,
+        };
+        constexpr size_t countOfSh = countof(envStruct.shIndirectCoefficients);
+        if (currEnv.radianceCubemap || (currEnv.multiEnvCount > 0U)) {
+            for (size_t jdx = 0; jdx < countOfSh; ++jdx) {
+                envStruct.shIndirectCoefficients[jdx] = currEnv.shIndirectCoefficients[jdx];
+            }
+        } else {
+            for (size_t jdx = 0; jdx < countOfSh; ++jdx) {
+                envStruct.shIndirectCoefficients[jdx] = DEFAULT_SH_INDIRECT_COEFFICIENTS[jdx];
+            }
+        }
+
+        if (!CloneData(dat, size_t(dataEnd - dat), &envStruct, sizeof(DefaultMaterialEnvironmentStruct))) {
+            CORE_LOG_E("environment ubo copying failed.");
+        }
+    }
 }
 
 // for plugin / factory interface

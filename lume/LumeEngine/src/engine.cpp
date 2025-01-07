@@ -27,8 +27,8 @@
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
-#include <base/containers/vector.h>
 #include <base/namespace.h>
+#include <base/util/errors.h>
 #include <base/util/uid.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/engine_info.h>
@@ -47,8 +47,6 @@
 #include <core/threading/intf_thread_pool.h>
 
 #include "image/image_loader_manager.h"
-#include "image/loaders/image_loader_ktx.h"
-#include "image/loaders/image_loader_stb_image.h"
 #include "os/platform.h"
 
 #if (CORE_PERF_ENABLED == 1)
@@ -84,11 +82,19 @@ void LogEngineBuildInfo()
 
     CORE_LOG_I("CORE_VALIDATION_ENABLED=" CORE_TO_STRING(CORE_VALIDATION_ENABLED));
     CORE_LOG_I("CORE_DEV_ENABLED=" CORE_TO_STRING(CORE_DEV_ENABLED));
+    CORE_LOG_I("CORE_PERF_ENABLED=" CORE_TO_STRING(CORE_PERF_ENABLED));
+}
+
+inline constexpr uint32_t GetThreadPoolThreadCount(const uint32_t numberOfHwCores)
+{
+    // reduce the thread count for default ECS thread pool
+    return numberOfHwCores / 2U;
 }
 } // namespace
 
+WARNING_SCOPE_START(W_THIS_USED_BASE_INITIALIZER_LIST)
 Engine::Engine(EngineCreateInfo const& createInfo)
-    : platform_(Platform::Create(createInfo.platformCreateInfo)), applicationContext_(createInfo.applicationContext)
+    : platform_(Platform::Create(createInfo.platformCreateInfo)), resourceManager_(*this)
 {
     LogEngineBuildInfo();
     auto factory = CORE_NS::GetInstance<IFileSystemApi>(UID_FILESYSTEM_API_FACTORY);
@@ -102,6 +108,7 @@ Engine::Engine(EngineCreateInfo const& createInfo)
 
     RegisterDefaultPaths();
 }
+WARNING_SCOPE_END()
 
 Engine::~Engine()
 {
@@ -127,7 +134,7 @@ IEcs::Ptr Engine::CreateEcs()
 {
     // construct a secondary ecs instance.
     if (auto threadFactory = CORE_NS::GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY); threadFactory) {
-        auto threadPool = threadFactory->CreateThreadPool(threadFactory->GetNumberOfCores());
+        auto threadPool = threadFactory->CreateThreadPool(GetThreadPoolThreadCount(threadFactory->GetNumberOfCores()));
         return IEcs::Ptr { IEcsInstance(*this, threadPool) };
     }
 
@@ -145,8 +152,6 @@ void Engine::Init()
 
     imageManager_ = make_unique<ImageLoaderManager>(*fileManager_);
 
-    // Pre-register some basic image formats.
-
     LoadPlugins();
 
     GetPluginRegister().AddListener(*this);
@@ -154,7 +159,6 @@ void Engine::Init()
 
 void Engine::RegisterDefaultPaths()
 {
-    platform_->RegisterDefaultPaths(*fileManager_);
 #if (CORE_EMBEDDED_ASSETS_ENABLED == 1)
     // Create engine:// protocol that points to embedded engine asset files.
     CORE_LOG_D("Registered core asset path: 'corerofs://core/'");
@@ -256,30 +260,6 @@ EngineTime Engine::GetEngineTime() const
     return { previousFrameTime_ - firstTime_, deltaTime_ };
 }
 
-const IInterface* Engine::GetInterface(const Uid& uid) const
-{
-    if ((uid == IEngine::UID) || (uid == IClassFactory::UID) || (uid == IInterface::UID)) {
-        return static_cast<const IEngine*>(this);
-    }
-    if (uid == IClassRegister::UID) {
-        return static_cast<const IClassRegister*>(this);
-    }
-
-    return nullptr;
-}
-
-IInterface* Engine::GetInterface(const Uid& uid)
-{
-    if ((uid == IEngine::UID) || (uid == IClassFactory::UID) || (uid == IInterface::UID)) {
-        return static_cast<IEngine*>(this);
-    }
-    if (uid == IClassRegister::UID) {
-        return static_cast<IClassRegister*>(this);
-    }
-
-    return nullptr;
-}
-
 void Engine::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     // keep interfaceTypeInfos_ sorted according to UIDs
@@ -336,6 +316,22 @@ IInterface::Ptr Engine::CreateInstance(const Uid& uid)
     return {};
 }
 
+const IInterface* Engine::GetInterface(const BASE_NS::Uid& uid) const
+{
+    if (auto ret = IInterfaceHelper::GetInterface(uid)) {
+        return ret;
+    }
+    return resourceManager_.GetInterface(uid);
+}
+
+IInterface* Engine::GetInterface(const BASE_NS::Uid& uid)
+{
+    if (auto ret = IInterfaceHelper::GetInterface(uid)) {
+        return ret;
+    }
+    return resourceManager_.GetInterface(uid);
+}
+
 void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typeInfos)
 {
     if (type == EventType::ADDED) {
@@ -353,18 +349,19 @@ void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> 
         }
     } else if (type == EventType::REMOVED) {
         for (const auto* info : typeInfos) {
-            if (info && info->typeUid == IEnginePlugin::UID) {
-                auto enginePlugin = static_cast<const IEnginePlugin*>(info);
-                if (auto pos = std::find_if(plugins_.cbegin(), plugins_.cend(),
-                        [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
-                            return pluginData.second == enginePlugin;
-                        });
-                    pos != plugins_.cend()) {
-                    if (enginePlugin->destroyPlugin) {
-                        enginePlugin->destroyPlugin(pos->first);
-                    }
-                    plugins_.erase(pos);
+            if (!info || info->typeUid != IEnginePlugin::UID) {
+                continue;
+            }
+            auto enginePlugin = static_cast<const IEnginePlugin*>(info);
+            if (auto pos = std::find_if(plugins_.cbegin(), plugins_.cend(),
+                [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
+                    return pluginData.second == enginePlugin;
+                });
+                pos != plugins_.cend()) {
+                if (enginePlugin->destroyPlugin) {
+                    enginePlugin->destroyPlugin(pos->first);
                 }
+                plugins_.erase(pos);
             }
         }
     }
@@ -389,18 +386,5 @@ IEngine::Ptr CreateEngine(EngineCreateInfo const& createInfo)
 const IPlatform& Engine::GetPlatform() const
 {
     return *platform_;
-}
-
-void Engine::Ref()
-{
-    refCount_.fetch_add(1, std::memory_order_relaxed);
-}
-
-void Engine::Unref()
-{
-    if (refCount_.fetch_sub(1, std::memory_order_release) == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        delete this;
-    }
 }
 CORE_END_NAMESPACE()

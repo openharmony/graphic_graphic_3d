@@ -51,22 +51,19 @@ public:
     bool GetBindingValidity() const override;
     RenderHandleReference GetShaderHandle() const override;
 
-    void Bind(const uint32_t set, const uint32_t binding, const RenderHandleReference& handle) override;
+    void Bind(uint32_t set, uint32_t binding, const RenderHandleReference& handle) override;
     // Not yet in the API
-    void SetUniformData(const uint32_t set, const uint32_t binding, const BASE_NS::array_view<const uint8_t> data);
-    void SetPushConstantData(const BASE_NS::array_view<const uint8_t> data) override;
+    void SetUniformData(uint32_t set, uint32_t binding, BASE_NS::array_view<const uint8_t> data);
+    void SetPushConstantData(BASE_NS::array_view<const uint8_t> data) override;
 
-    void BindBuffer(
-        const uint32_t set, const uint32_t binding, const BindableBufferWithHandleReference& resource) override;
-    void BindBuffers(const uint32_t set, const uint32_t binding,
+    void BindBuffer(uint32_t set, uint32_t binding, const BindableBufferWithHandleReference& resource) override;
+    void BindBuffers(uint32_t set, uint32_t binding,
         BASE_NS::array_view<const BindableBufferWithHandleReference> resources) override;
-    void BindImage(
-        const uint32_t set, const uint32_t binding, const BindableImageWithHandleReference& resource) override;
-    void BindImages(const uint32_t set, const uint32_t binding,
-        BASE_NS::array_view<const BindableImageWithHandleReference> resources) override;
-    void BindSampler(
-        const uint32_t set, const uint32_t binding, const BindableSamplerWithHandleReference& resource) override;
-    void BindSamplers(const uint32_t set, const uint32_t binding,
+    void BindImage(uint32_t set, uint32_t binding, const BindableImageWithHandleReference& resource) override;
+    void BindImages(
+        uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableImageWithHandleReference> resources) override;
+    void BindSampler(uint32_t set, uint32_t binding, const BindableSamplerWithHandleReference& resource) override;
+    void BindSamplers(uint32_t set, uint32_t binding,
         BASE_NS::array_view<const BindableSamplerWithHandleReference> resources) override;
 
     void BindVertexBuffers(BASE_NS::array_view<const VertexBufferWithHandleReference> vertexBuffers) override;
@@ -74,7 +71,7 @@ public:
     void SetDrawCommand(const DrawCommand& drawCommand) override;
     void SetDispatchCommand(const DispatchCommand& dispatchCommand) override;
 
-    DescriptorSetLayoutBindingResources GetDescriptorSetLayoutBindingResources(const uint32_t set) const override;
+    DescriptorSetLayoutBindingResources GetDescriptorSetLayoutBindingResources(uint32_t set) const override;
 
     BASE_NS::array_view<const uint8_t> GetPushConstantData() const override;
 

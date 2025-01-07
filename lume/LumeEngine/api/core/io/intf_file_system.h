@@ -38,8 +38,9 @@ public:
 
     /** Opens file from designated path
      *  @param path Path to file
+     *  @param mode Access mode
      */
-    virtual IFile::Ptr OpenFile(BASE_NS::string_view path) = 0;
+    virtual IFile::Ptr OpenFile(BASE_NS::string_view path, IFile::Mode mode) = 0;
 
     /** Creates file to given path
      *  @param path Path where file is created
@@ -50,6 +51,12 @@ public:
      *  @param path Path to file
      */
     virtual bool DeleteFile(BASE_NS::string_view path) = 0;
+
+    /** Check if file exists.
+     *  @param Path to file
+     *  @return True if the file exists, otherwise false.
+     */
+    virtual bool FileExists(BASE_NS::string_view path) const = 0;
 
     /** Opens directory
      *  @param path Path to directory for opening
@@ -65,6 +72,12 @@ public:
      *  @param path Path to directory
      */
     virtual bool DeleteDirectory(BASE_NS::string_view path) = 0;
+
+    /** Check if directory exists.
+     *  @param path Path to directory
+     *  @return True if directory exists, otherwise false.
+     */
+    virtual bool DirectoryExists(BASE_NS::string_view path) const = 0;
 
     /** Renames file or directory from given path to another path
      *  @param fromPath Path to file or directory to be renamed

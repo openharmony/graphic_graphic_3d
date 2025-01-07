@@ -22,12 +22,12 @@
 #include <core/log.h>
 #include <core/namespace.h>
 
-#include "util/string_util.h"
-
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__OHOS_PLATFORM__) || defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #elif defined(_WIN32)
 #include <direct.h>
+
+#include "util/string_util.h"
 #endif
 
 CORE_BEGIN_NAMESPACE()
@@ -73,22 +73,23 @@ string NormalizePath(string_view path)
             path = path.substr(1);
             continue;
         }
-        auto pos = path.find_first_of('/', 0);
-        if (const string_view sub = path.substr(0, pos); sub == "..") {
+        const auto pos = path.find_first_of('/', 0);
+        const string_view sub = path.substr(0, pos);
+        if (sub == "..") {
             if ((!res.empty()) && (res.back() == '/')) {
                 res.resize(res.size() - 1);
             }
+            if (res.empty()) {
+                // trying to back out of root. (i.e. invalid path)
+                return "";
+            }
 
-            if (auto p = res.find_last_of('/'); string::npos != p) {
+            if (const auto p = res.find_last_of('/'); p != string::npos) {
                 res.resize(p);
             } else {
-                if (res.empty()) {
-                    // trying to back out of root. (ie. invalid path)
-                    return "";
-                }
                 res.clear();
             }
-            if (pos == string::npos) {
+            if (pos == string_view::npos) {
                 res.push_back('/');
                 break;
             }
@@ -98,7 +99,8 @@ string NormalizePath(string_view path)
         } else {
             res.append(sub);
         }
-        if (pos == string::npos) {
+
+        if (pos == string_view::npos) {
             break;
         }
         res.push_back('/');
@@ -110,7 +112,7 @@ string NormalizePath(string_view path)
 string GetCurrentDirectory()
 {
     string basePath;
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__OHOS_PLATFORM__) || defined(__linux__) || defined(__APPLE__)
     // OSX and linux both implement the "null buf" extension which allocates the required amount of space.
     auto tmp = getcwd(nullptr, 0);
     if (tmp) {

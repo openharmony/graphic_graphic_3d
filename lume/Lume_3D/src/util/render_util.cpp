@@ -58,7 +58,7 @@ RenderNodeGraphDesc LoadRenderNodeGraph(IRenderNodeGraphLoader& rngLoader, const
     return lr.desc;
 }
 
-json::standalone_value GetPodPostProcess(const string_view name)
+inline json::standalone_value GetPodPostProcess(const string_view name)
 {
     auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
     renderDataStore["dataStoreName"] = "RenderDataStorePod";
@@ -67,7 +67,7 @@ json::standalone_value GetPodPostProcess(const string_view name)
     return renderDataStore;
 }
 
-json::standalone_value GetPostProcess(const string_view name)
+inline json::standalone_value GetPostProcess(const string_view name)
 {
     auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
     renderDataStore["dataStoreName"] = "RenderDataStorePostProcess";
@@ -173,59 +173,55 @@ void RenderUtil::InitRenderNodeGraphs()
 
 RenderNodeGraphDesc RenderUtil::SelectBaseDesc(const RenderCamera& renderCamera) const
 {
-    RenderNodeGraphDesc desc;
     if (!renderCamera.customRenderNodeGraphFile.empty()) {
         // custom render node graph file given which is patched
         IRenderNodeGraphLoader& rngl = context_.GetRenderNodeGraphManager().GetRenderNodeGraphLoader();
-        desc = LoadRenderNodeGraph(rngl, renderCamera.customRenderNodeGraphFile);
-    } else {
-        if (renderCamera.flags & RenderCamera::CAMERA_FLAG_REFLECTION_BIT) {
-            // check for msaa
-            desc = (renderCamera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) ? rngdReflCamMsaa_ : rngdReflCam_;
-        } else if (renderCamera.flags & RenderCamera::CAMERA_FLAG_OPAQUE_BIT) {
-            desc = rngdCamPrePass_;
-        } else {
-            if (renderCamera.renderPipelineType == RenderCamera::RenderPipelineType::DEFERRED) {
-                desc = rngdDeferred_;
-            } else {
-                if (renderCamera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) {
-                    // NOTE: check for optimal GL(ES) render node graph if backbuffer is multisampled
-                    const bool depthOutput =
-                        ((renderCamera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_OUTPUT_DEPTH_BIT) != 0U);
-                    if (renderCamera.renderPipelineType != RenderCamera::RenderPipelineType::LIGHT_FORWARD) {
-                        desc = depthOutput ? rngdCamHdrMsaaDepth_ : rngdCamHdrMsaa_;
-                    } else if ((backendType_ == DeviceBackendType::VULKAN) ||
-                               (renderCamera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUSTOM_TARGETS_BIT)) {
-                        desc = depthOutput ? rngdCamLwrpMsaaDepth_ : rngdCamLwrpMsaa_;
-                    } else {
-                        const auto& gpuResourceMgr = context_.GetDevice().GetGpuResourceManager();
-                        // NOTE: special handling on msaa swapchain with GLES
-                        // creates issues with multi-ECS cases and might need to be dropped
-                        // Prefer assigning swapchain image to camera in this case
-                        const RenderHandleReference imageHandle =
-                            gpuResourceMgr.GetImageHandle("CORE_DEFAULT_BACKBUFFER");
-                        const GpuImageDesc imageDesc = gpuResourceMgr.GetImageDescriptor(imageHandle);
-                        if ((renderCamera.flags & RenderCamera::CAMERA_FLAG_MAIN_BIT) &&
-                            (imageDesc.sampleCountFlags > 1) && (!depthOutput)) {
-#if (CORE3D_VALIDATION_ENABLED == 1)
-                            CORE_LOG_ONCE_I("3d_util_depth_gles_mixing" + to_string(renderCamera.id),
-                                "CORE3D_VALIDATION: GL(ES) Camera MSAA flags checked from CORE_DEFAULT_BACKBUFFER. "
-                                "Prefer assigning swapchain handle to camera.");
-#endif
-                            desc = rngdCamLwrpMsaaGles_;
-                        } else {
-                            desc = depthOutput ? rngdCamLwrpMsaaDepth_ : rngdCamLwrpMsaa_;
-                        }
-                    }
-                } else if (renderCamera.renderPipelineType != RenderCamera::RenderPipelineType::LIGHT_FORWARD) {
-                    desc = rngdCamHdr_;
-                } else {
-                    desc = rngdCamLwrp_;
-                }
-            }
-        }
+        return LoadRenderNodeGraph(rngl, renderCamera.customRenderNodeGraphFile);
     }
-    return desc;
+
+    if (renderCamera.flags & RenderCamera::CAMERA_FLAG_REFLECTION_BIT) {
+        // check for msaa
+        return (renderCamera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) ? rngdReflCamMsaa_ : rngdReflCam_;
+    }
+    if (renderCamera.flags & RenderCamera::CAMERA_FLAG_OPAQUE_BIT) {
+        return rngdCamPrePass_;
+    }
+    if (renderCamera.renderPipelineType == RenderCamera::RenderPipelineType::DEFERRED) {
+        return rngdDeferred_;
+    }
+    if (renderCamera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) {
+        // NOTE: check for optimal GL(ES) render node graph if backbuffer is multisampled
+        const bool depthOutput =
+            ((renderCamera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_OUTPUT_DEPTH_BIT) != 0U);
+        if (renderCamera.renderPipelineType != RenderCamera::RenderPipelineType::LIGHT_FORWARD) {
+            return depthOutput ? rngdCamHdrMsaaDepth_ : rngdCamHdrMsaa_;
+        }
+
+        if ((backendType_ == DeviceBackendType::VULKAN) ||
+            (renderCamera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUSTOM_TARGETS_BIT)) {
+            return depthOutput ? rngdCamLwrpMsaaDepth_ : rngdCamLwrpMsaa_;
+        }
+        const auto& gpuResourceMgr = context_.GetDevice().GetGpuResourceManager();
+        // NOTE: special handling on msaa swapchain with GLES
+        // creates issues with multi-ECS cases and might need to be dropped
+        // Prefer assigning swapchain image to camera in this case
+        const RenderHandleReference imageHandle = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_BACKBUFFER");
+        const GpuImageDesc imageDesc = gpuResourceMgr.GetImageDescriptor(imageHandle);
+        if ((renderCamera.flags & RenderCamera::CAMERA_FLAG_MAIN_BIT) && (imageDesc.sampleCountFlags > 1) &&
+            (!depthOutput)) {
+#if (CORE3D_VALIDATION_ENABLED == 1)
+            CORE_LOG_ONCE_I("3d_util_depth_gles_mixing" + to_string(renderCamera.id),
+                "CORE3D_VALIDATION: GL(ES) Camera MSAA flags checked from CORE_DEFAULT_BACKBUFFER. "
+                "Prefer assigning swapchain handle to camera.");
+#endif
+            return rngdCamLwrpMsaaGles_;
+        }
+        return depthOutput ? rngdCamLwrpMsaaDepth_ : rngdCamLwrpMsaa_;
+    }
+    if (renderCamera.renderPipelineType != RenderCamera::RenderPipelineType::LIGHT_FORWARD) {
+        return rngdCamHdr_;
+    }
+    return rngdCamLwrp_;
 }
 
 RenderNodeGraphDesc RenderUtil::GetBasePostProcessDesc(const RenderCamera& renderCamera) const

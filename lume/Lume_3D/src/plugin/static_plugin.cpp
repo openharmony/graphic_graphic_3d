@@ -19,6 +19,7 @@
 #include <3d/ecs/components/animation_state_component.h>
 #include <3d/ecs/components/animation_track_component.h>
 #include <3d/ecs/components/camera_component.h>
+#include <3d/ecs/components/dynamic_environment_blender_component.h>
 #include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/fog_component.h>
 #include <3d/ecs/components/joint_matrices_component.h>
@@ -26,7 +27,6 @@
 #include <3d/ecs/components/light_component.h>
 #include <3d/ecs/components/local_matrix_component.h>
 #include <3d/ecs/components/material_component.h>
-#include <3d/ecs/components/material_extension_component.h>
 #include <3d/ecs/components/mesh_component.h>
 #include <3d/ecs/components/morph_component.h>
 #include <3d/ecs/components/name_component.h>
@@ -35,6 +35,7 @@
 #include <3d/ecs/components/planar_reflection_component.h>
 #include <3d/ecs/components/post_process_component.h>
 #include <3d/ecs/components/post_process_configuration_component.h>
+#include <3d/ecs/components/reflection_probe_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 #include <3d/ecs/components/render_handle_component.h>
 #include <3d/ecs/components/render_mesh_batch_component.h>
@@ -58,7 +59,6 @@
 
 #include "ecs/components/initial_transform_component.h"
 #include "ecs/components/previous_joint_matrices_component.h"
-#include "ecs/components/previous_world_matrix_component.h"
 #include "ecs/systems/animation_system.h"
 #include "ecs/systems/local_matrix_system.h"
 #include "render/datastore/render_data_store_default_camera.h"
@@ -66,7 +66,6 @@
 #include "render/datastore/render_data_store_default_material.h"
 #include "render/datastore/render_data_store_default_scene.h"
 #include "render/datastore/render_data_store_morph.h"
-#include "render/node/render_node_camera_cubemap.h"
 #include "render/node/render_node_camera_single_post_process.h"
 #include "render/node/render_node_create_default_camera_gpu_images.h"
 #include "render/node/render_node_default_camera_controller.h"
@@ -74,6 +73,7 @@
 #include "render/node/render_node_default_cameras.h"
 #include "render/node/render_node_default_depth_render_slot.h"
 #include "render/node/render_node_default_env.h"
+#include "render/node/render_node_default_environment_blender.h"
 #include "render/node/render_node_default_lights.h"
 #include "render/node/render_node_default_material_deferred_shading.h"
 #include "render/node/render_node_default_material_objects.h"
@@ -133,7 +133,6 @@ MANAGER(MORPH_COMPONENT_TYPE_INFO, IMorphComponentManager);
 MANAGER(PLANAR_REFLECTION_COMPONENT_TYPE_INFO, IPlanarReflectionComponentManager);
 MANAGER(RSDZ_MODEL_ID_COMPONENT_TYPE_INFO, IRSDZModelIdComponentManager);
 MANAGER(MATERIAL_COMPONENT_TYPE_INFO, IMaterialComponentManager);
-MANAGER(MATERIAL_EXTENSION_COMPONENT_TYPE_INFO, IMaterialExtensionComponentManager);
 MANAGER(NAME_COMPONENT_TYPE_INFO, INameComponentManager);
 MANAGER(MESH_COMPONENT_TYPE_INFO, IMeshComponentManager);
 MANAGER(URI_COMPONENT_TYPE_INFO, IUriComponentManager);
@@ -149,8 +148,9 @@ MANAGER(POST_PROCESS_COMPONENT_TYPE_INFO, IPostProcessComponentManager);
 MANAGER(POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO, IPostProcessConfigurationComponentManager);
 MANAGER(LAYER_COMPONENT_TYPE_INFO, ILayerComponentManager);
 MANAGER(RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, IRenderMeshBatchComponentManager);
-MANAGER(PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO, IPreviousWorldMatrixComponentManager);
 MANAGER(PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO, IPreviousJointMatricesComponentManager);
+MANAGER(REFLECTION_PROBE_COMPONENT_TYPE_INFO, IReflectionProbeComponentManager);
+MANAGER(DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO, IDynamicEnvironmentBlenderComponentManager);
 
 namespace {
 // Local matrix system dependencies.
@@ -158,8 +158,7 @@ static constexpr Uid LOCAL_MATRIX_SYSTEM_RW_DEPS[] = { LOCAL_MATRIX_COMPONENT_TY
 static constexpr Uid LOCAL_MATRIX_SYSTEM_R_DEPS[] = { TRANSFORM_COMPONENT_TYPE_INFO.uid };
 
 // Node system dependencies.
-static constexpr Uid NODE_SYSTEM_RW_DEPS[] = { WORLD_MATRIX_COMPONENT_TYPE_INFO.uid, NODE_COMPONENT_TYPE_INFO.uid,
-    PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO.uid };
+static constexpr Uid NODE_SYSTEM_RW_DEPS[] = { WORLD_MATRIX_COMPONENT_TYPE_INFO.uid, NODE_COMPONENT_TYPE_INFO.uid };
 static constexpr Uid NODE_SYSTEM_R_DEPS[] = { NAME_COMPONENT_TYPE_INFO.uid, TRANSFORM_COMPONENT_TYPE_INFO.uid,
     LOCAL_MATRIX_COMPONENT_TYPE_INFO.uid, RSDZ_MODEL_ID_COMPONENT_TYPE_INFO.uid };
 
@@ -173,6 +172,7 @@ static constexpr Uid RENDER_PREPROCESSOR_SYSTEM_R_DEPS[] = {
     RENDER_MESH_COMPONENT_TYPE_INFO.uid,
     SKIN_COMPONENT_TYPE_INFO.uid,
     WORLD_MATRIX_COMPONENT_TYPE_INFO.uid,
+    RENDER_HANDLE_COMPONENT_TYPE_INFO.uid,
 };
 
 // Render system dependencies.
@@ -187,7 +187,6 @@ static constexpr Uid RENDER_SYSTEM_R_DEPS[] = {
     RENDER_CONFIGURATION_COMPONENT_TYPE_INFO.uid,
     CAMERA_COMPONENT_TYPE_INFO.uid,
     LIGHT_COMPONENT_TYPE_INFO.uid,
-    MATERIAL_EXTENSION_COMPONENT_TYPE_INFO.uid,
     MESH_COMPONENT_TYPE_INFO.uid,
     URI_COMPONENT_TYPE_INFO.uid,
     NAME_COMPONENT_TYPE_INFO.uid,
@@ -199,8 +198,9 @@ static constexpr Uid RENDER_SYSTEM_R_DEPS[] = {
     POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO.uid,
     LAYER_COMPONENT_TYPE_INFO.uid,
     RENDER_MESH_BATCH_COMPONENT_TYPE_INFO.uid,
-    PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO.uid,
     PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO.uid,
+    REFLECTION_PROBE_COMPONENT_TYPE_INFO.uid,
+    DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO.uid,
 };
 
 // Animation system dependencies.
@@ -247,13 +247,13 @@ static constexpr ComponentManagerTypeInfo CORE_COMPONENT_TYPE_INFOS[] = { CAMERA
     RENDER_MESH_COMPONENT_TYPE_INFO, TRANSFORM_COMPONENT_TYPE_INFO, RENDER_CONFIGURATION_COMPONENT_TYPE_INFO,
     SKIN_COMPONENT_TYPE_INFO, SKIN_JOINTS_COMPONENT_TYPE_INFO, JOINT_MATRICES_COMPONENT_TYPE_INFO,
     MORPH_COMPONENT_TYPE_INFO, PLANAR_REFLECTION_COMPONENT_TYPE_INFO, RSDZ_MODEL_ID_COMPONENT_TYPE_INFO,
-    MATERIAL_COMPONENT_TYPE_INFO, MATERIAL_EXTENSION_COMPONENT_TYPE_INFO, NAME_COMPONENT_TYPE_INFO,
-    MESH_COMPONENT_TYPE_INFO, URI_COMPONENT_TYPE_INFO, SKIN_IBM_COMPONENT_TYPE_INFO, ANIMATION_COMPONENT_TYPE_INFO,
-    ANIMATION_INPUT_COMPONENT_TYPE_INFO, ANIMATION_OUTPUT_COMPONENT_TYPE_INFO, ANIMATION_STATE_COMPONENT_TYPE_INFO,
-    ANIMATION_TRACK_COMPONENT_TYPE_INFO, ENVIRONMENT_COMPONENT_TYPE_INFO, FOG_COMPONENT_TYPE_INFO,
-    RENDER_HANDLE_COMPONENT_TYPE_INFO, POST_PROCESS_COMPONENT_TYPE_INFO, POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO,
-    LAYER_COMPONENT_TYPE_INFO, RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, PREV_WORLD_MATRIX_COMPONENT_TYPE_INFO,
-    PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO };
+    MATERIAL_COMPONENT_TYPE_INFO, NAME_COMPONENT_TYPE_INFO, MESH_COMPONENT_TYPE_INFO, URI_COMPONENT_TYPE_INFO,
+    SKIN_IBM_COMPONENT_TYPE_INFO, ANIMATION_COMPONENT_TYPE_INFO, ANIMATION_INPUT_COMPONENT_TYPE_INFO,
+    ANIMATION_OUTPUT_COMPONENT_TYPE_INFO, ANIMATION_STATE_COMPONENT_TYPE_INFO, ANIMATION_TRACK_COMPONENT_TYPE_INFO,
+    ENVIRONMENT_COMPONENT_TYPE_INFO, FOG_COMPONENT_TYPE_INFO, RENDER_HANDLE_COMPONENT_TYPE_INFO,
+    POST_PROCESS_COMPONENT_TYPE_INFO, POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO, LAYER_COMPONENT_TYPE_INFO,
+    RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO,
+    REFLECTION_PROBE_COMPONENT_TYPE_INFO, DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO };
 } // namespace
 
 SYSTEM(LOCAL_MATRIX_SYSTEM_TYPE_INFO, LocalMatrixSystem, LOCAL_MATRIX_SYSTEM_RW_DEPS, LOCAL_MATRIX_SYSTEM_R_DEPS);
@@ -275,37 +275,44 @@ static constexpr SystemTypeInfo CORE_SYSTEM_TYPE_INFOS[] = {
     MORPHING_SYSTEM_TYPE_INFO,
 };
 
-template<typename TypeInfo, typename RenderType>
-constexpr auto Fill()
+template<typename RenderType>
+constexpr auto FillRenderDataStoreTypeInfo()
 {
-    return TypeInfo { { TypeInfo::UID }, RenderType::UID, RenderType::TYPE_NAME, RenderType::Create,
+    return RenderDataStoreTypeInfo { { RenderDataStoreTypeInfo::UID }, RenderType::UID, RenderType::TYPE_NAME,
+        RenderType::Create };
+}
+
+template<typename RenderType>
+constexpr auto FillRenderNodeTypeInfo()
+{
+    return RenderNodeTypeInfo { { RenderNodeTypeInfo::UID }, RenderType::UID, RenderType::TYPE_NAME, RenderType::Create,
         RenderType::Destroy };
 }
 
 static constexpr RenderDataStoreTypeInfo CORE_RENDER_DATA_STORE_INFOS[] = {
-    Fill<RenderDataStoreTypeInfo, RenderDataStoreDefaultCamera>(),
-    Fill<RenderDataStoreTypeInfo, RenderDataStoreDefaultLight>(),
-    Fill<RenderDataStoreTypeInfo, RenderDataStoreDefaultMaterial>(),
-    Fill<RenderDataStoreTypeInfo, RenderDataStoreDefaultScene>(),
-    Fill<RenderDataStoreTypeInfo, RenderDataStoreMorph>(),
+    FillRenderDataStoreTypeInfo<RenderDataStoreDefaultCamera>(),
+    FillRenderDataStoreTypeInfo<RenderDataStoreDefaultLight>(),
+    FillRenderDataStoreTypeInfo<RenderDataStoreDefaultMaterial>(),
+    FillRenderDataStoreTypeInfo<RenderDataStoreDefaultScene>(),
+    FillRenderDataStoreTypeInfo<RenderDataStoreMorph>(),
 };
 
 static constexpr RenderNodeTypeInfo CORE_RENDER_NODE_TYPE_INFOS[] = {
-    Fill<RenderNodeTypeInfo, RenderNodeCreateDefaultCameraGpuImages>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultCameraController>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultCameraPostProcessController>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultCameras>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultDepthRenderSlot>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultEnv>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultLights>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultMaterialDeferredShading>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultMaterialObjects>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultMaterialRenderSlot>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultShadowRenderSlot>(),
-    Fill<RenderNodeTypeInfo, RenderNodeDefaultShadowsBlur>(),
-    Fill<RenderNodeTypeInfo, RenderNodeMorph>(),
-    Fill<RenderNodeTypeInfo, RenderNodeCameraSinglePostProcess>(),
-    Fill<RenderNodeTypeInfo, RenderNodeCameraCubemap>(),
+    FillRenderNodeTypeInfo<RenderNodeCreateDefaultCameraGpuImages>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultCameraController>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultCameraPostProcessController>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultCameras>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultDepthRenderSlot>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultEnv>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultLights>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultMaterialDeferredShading>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultMaterialObjects>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultMaterialRenderSlot>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultShadowRenderSlot>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultShadowsBlur>(),
+    FillRenderNodeTypeInfo<RenderNodeMorph>(),
+    FillRenderNodeTypeInfo<RenderNodeCameraSinglePostProcess>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultEnvironmentBlender>(),
 };
 } // namespace
 

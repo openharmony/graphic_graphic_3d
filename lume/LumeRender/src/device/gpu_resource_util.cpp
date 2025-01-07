@@ -21,7 +21,6 @@
 #include <render/resource_handle.h>
 
 #include "device/gpu_buffer.h"
-#include "device/gpu_resource_handle_util.h"
 #include "device/gpu_resource_manager.h"
 #include "util/log.h"
 #if RENDER_HAS_VULKAN_BACKEND

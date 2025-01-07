@@ -13,12 +13,13 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_SCENE_JS_H
-#define OHOS_RENDER_3D_SCENE_JS_H
+#ifndef SCENE_JS_H
+#define SCENE_JS_H
 #include <meta/api/threading/mutex.h>
 #include <meta/interface/intf_object.h>
-#include <scene_plugin/interface/intf_material.h> // for bitmap.
-#include <scene_plugin/interface/intf_mesh.h>
+#include <meta/interface/animation/intf_animation.h>
+#include <scene/interface/intf_bitmap.h>
+#include <scene/interface/intf_scene.h>
 
 #include <base/containers/unordered_map.h>
 #ifdef __SCENE_ADAPTER__
@@ -32,7 +33,7 @@ public:
 
     SceneJS(napi_env, napi_callback_info);
     ~SceneJS() override;
-    void* GetInstanceImpl(uint32_t id) override;
+    void* GetInstanceImpl(uint32_t) override;
 #ifdef __SCENE_ADAPTER__
     std::shared_ptr<OHOS::Render3D::ISceneAdapter> scene_ = nullptr;
 #endif
@@ -47,8 +48,10 @@ public:
     void ReleaseStrongDispose(uintptr_t token);
 
 private:
+    static void AddScene(META_NS::IObjectRegistry* obr, SCENE_NS::IScene::Ptr scene);
+    static void FlushScenes();
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
     // JS properties
     napi_value GetRoot(NapiApi::FunctionContext<>& ctx);
@@ -65,10 +68,14 @@ private:
     napi_value CreateCamera(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateLight(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx);
     napi_value CreateNode(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    napi_value CreateTextNode(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateEnvironment(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx);
+
+    napi_value ImportNode(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx);
+    napi_value ImportScene(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx);
 
     // static js method
     static napi_value Load(NapiApi::FunctionContext<>& ctx);
@@ -79,8 +86,9 @@ private:
     NapiApi::StrongRef environmentJS_;
     BASE_NS::unordered_map<uintptr_t, NapiApi::StrongRef> strongDisposables_;
     BASE_NS::unordered_map<uintptr_t, NapiApi::WeakRef> disposables_;
+    napi_env env_;
 
 public:
     NapiApi::Object CreateEnvironment(NapiApi::Object, NapiApi::Object);
 };
-#endif // OHOS_RENDER_3D_SCENE_JS_H
+#endif

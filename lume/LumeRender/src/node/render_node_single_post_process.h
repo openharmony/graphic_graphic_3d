@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_SINGLE_POST_PROCESS_H
-#define RENDER_RENDER__NODE__RENDER_NODE_SINGLE_POST_PROCESS_H
+#ifndef RENDER_NODE_RENDER_NODE_SINGLE_POST_PROCESS_H
+#define RENDER_NODE_RENDER_NODE_SINGLE_POST_PROCESS_H
 
 #include <base/util/uid.h>
 #include <render/datastore/intf_render_data_store_post_process.h>
@@ -28,7 +28,7 @@
 
 #include "node/render_bloom.h"
 #include "node/render_blur.h"
-#include "node/render_copy.h"
+#include "nodecontext/render_node_copy_util.h"
 #include "util/log.h"
 
 RENDER_BEGIN_NAMESPACE()
@@ -53,7 +53,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "f4495799-9db7-477f-9eaf-6fad26260304" };
-    static constexpr char const* TYPE_NAME = "CORE_RN_SINGLE_POST_PROCESS";
+    static constexpr const char* TYPE_NAME = "CORE_RN_SINGLE_POST_PROCESS";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -67,10 +67,9 @@ private:
     void UpdateGlobalPostProcessUbo();
     void UpdateImageData();
     void ProcessPostProcessConfiguration();
-    void RegisterOutputs(const RenderHandle output);
-    void BindDefaultResources(const uint32_t set, const DescriptorSetLayoutBindingResources& bindings);
+    void RegisterOutputs(RenderHandle output);
+    void BindDefaultResources(uint32_t set, const DescriptorSetLayoutBindingResources& bindings);
     void ExecuteSinglePostProcess(IRenderCommandList& cmdList);
-    void ExecuteCopy(IRenderCommandList& cmdList);
 
     enum class DefaultOutputImage : uint32_t {
         OUTPUT = 0,
@@ -129,7 +128,7 @@ private:
 
     RenderBloom renderBloom_;
     RenderBlur renderBlur_;
-    RenderCopy renderCopy_;
+    RenderNodeCopyUtil renderCopy_;
 
     PostProcessConfiguration ppGlobalConfig_;
     IRenderDataStorePostProcess::PostProcess ppLocalConfig_;
@@ -148,4 +147,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_SINGLE_POST_PROCESS_H
+#endif // RENDER_NODE_RENDER_NODE_SINGLE_POST_PROCESS_H

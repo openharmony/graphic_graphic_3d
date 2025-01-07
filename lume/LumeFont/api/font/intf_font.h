@@ -61,7 +61,7 @@ struct FontMetrics {
     float height;
     /** Line Gap, difference between line height and sum of ascender and descender */
     float leading;
-    float xHeight;
+    float x_height;
 };
 
 struct GlyphContour {

@@ -41,6 +41,7 @@
 #include <render/nodecontext/intf_render_node_parser_util.h>
 #include <render/nodecontext/intf_render_node_util.h>
 
+#include "render/default_constants.h"
 #include "render/render_node_scene_util.h"
 
 namespace {
@@ -60,42 +61,82 @@ constexpr DynamicStateEnum DYNAMIC_STATES_FSR[] = { CORE_DYNAMIC_STATE_ENUM_VIEW
     CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE };
 
 // our light weight straight to screen post processes are only interested in these
-static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffu };
+static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffU };
+static constexpr uint32_t FIXED_CUSTOM_SET3 { 3U };
+static constexpr uint32_t FIXED_CUSTOM_SET1 { 1U };
 
-static constexpr uint32_t CUSTOM_SET_DESCRIPTOR_SET_COUNT { 3u };
-static constexpr uint32_t FIXED_CUSTOM_SET2 { 2u };
+struct FrameGlobalDescriptorSets {
+    RenderHandle set0;
+    bool valid = false;
+};
+
+FrameGlobalDescriptorSets GetFrameGlobalDescriptorSets(
+    IRenderNodeContextManager* rncm, const SceneRenderDataStores& stores, const string& cameraName)
+{
+    FrameGlobalDescriptorSets fgds;
+    if (rncm) {
+        // re-fetch global descriptor sets every frame
+        const INodeContextDescriptorSetManager& dsMgr = rncm->GetDescriptorSetManager();
+        const string_view us = stores.dataStoreNameScene;
+        fgds.set0 = dsMgr.GetGlobalDescriptorSet(
+            us + DefaultMaterialMaterialConstants::MATERIAL_SET0_GLOBAL_DESCRIPTOR_SET_PREFIX_NAME + cameraName);
+        fgds.valid = RenderHandleUtil::IsValid(fgds.set0);
+        if (!fgds.valid) {
+            CORE_LOG_ONCE_E("core3d_global_descriptor_set_env_all_issues",
+                "Global descriptor set 0 for default material not "
+                "found (RenderNodeDefaultCameraController needed)");
+        }
+    }
+    return fgds;
+}
 
 struct InputEnvironmentDataHandles {
     RenderHandle cubeHandle;
+    RenderHandle cubeBlenderHandle;
     RenderHandle texHandle;
     float lodLevel { 0.0f };
 };
 
-InputEnvironmentDataHandles GetEnvironmentDataHandles(IRenderNodeGpuResourceManager& gpuResourceMgr,
-    const RenderNodeDefaultEnv::DefaultImages& defaultImages, const RenderCamera::Environment& renderEnvironment)
+InputEnvironmentDataHandles GetEnvironmentDataHandles(const IRenderDataStoreDefaultCamera& dsCamera,
+    IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderNodeDefaultEnv::DefaultImages& defaultImages,
+    const RenderCamera& cam)
 {
     InputEnvironmentDataHandles iedh;
     iedh.texHandle = defaultImages.texHandle;
     iedh.cubeHandle = defaultImages.cubeHandle;
+    iedh.cubeBlenderHandle = defaultImages.cubeHandle;
 
-    if (renderEnvironment.envMap) {
-        const RenderHandle handle = renderEnvironment.envMap.GetHandle();
+    const auto& env = cam.environment;
+    const bool dynCubemap = (env.multiEnvCount > 0U);
+    if (env.envMap || dynCubemap) {
+        const RenderHandle handle = env.envMap.GetHandle();
         const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(handle);
-        if ((renderEnvironment.backgroundType == RenderCamera::Environment::BG_TYPE_IMAGE) ||
-            (renderEnvironment.backgroundType == RenderCamera::Environment::BG_TYPE_EQUIRECTANGULAR)) {
+        if ((env.backgroundType == RenderCamera::Environment::BG_TYPE_IMAGE) ||
+            (env.backgroundType == RenderCamera::Environment::BG_TYPE_EQUIRECTANGULAR)) {
             if (desc.imageViewType == CORE_IMAGE_VIEW_TYPE_2D) {
                 iedh.texHandle = handle;
             } else {
-                CORE_LOG_E("invalid environment map, type does not match background type");
+                CORE_LOG_ONCE_E("inv_env_2d_bg_type", "invalid environment map, type does not match background type");
             }
-        } else if (renderEnvironment.backgroundType == RenderCamera::Environment::BG_TYPE_CUBEMAP) {
+        } else if (env.backgroundType == RenderCamera::Environment::BG_TYPE_CUBEMAP) {
+            bool valid = false;
             if (desc.imageViewType == CORE_IMAGE_VIEW_TYPE_CUBE) {
                 iedh.cubeHandle = handle;
-            } else {
-                CORE_LOG_E("invalid environment map, type does not match background type");
+                valid = true;
+            }
+            if (dynCubemap && (env.multiEnvCount >= 2U)) {
+                CORE_STATIC_ASSERT(DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT >= 2U);
+                const RenderCamera::Environment env1 = dsCamera.GetEnvironment(env.multiEnvIds[0U]);
+                const RenderCamera::Environment env2 = dsCamera.GetEnvironment(env.multiEnvIds[1U]);
+                iedh.cubeHandle = env1.envMap.GetHandle();
+                iedh.cubeBlenderHandle = env2.envMap.GetHandle();
+                valid = true;
+            }
+            if (!valid) {
+                CORE_LOG_ONCE_E("inv_env_cu_bg_type", "invalid environment map, type does not match background type");
             }
         }
-        iedh.lodLevel = renderEnvironment.envMapLodLevel;
+        iedh.lodLevel = env.envMapLodLevel;
     }
     return iedh;
 }
@@ -127,7 +168,6 @@ void RenderNodeDefaultEnv::InitNode(IRenderNodeContextManager& renderNodeContext
     defaultImages_.cubeHandle =
         gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_SKYBOX_CUBEMAP);
     rngRenderPass_ = renderNodeContextMgr.GetRenderNodeUtil().CreateRenderPass(inputRenderPass_);
-    GetSceneUniformBuffers(stores_.dataStoreNameScene);
 
     const auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     // default pipeline layout
@@ -136,7 +176,7 @@ void RenderNodeDefaultEnv::InitNode(IRenderNodeContextManager& renderNodeContext
             shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_ENV);
         defaultPipelineLayout_ = shaderMgr.GetPipelineLayout(plHandle);
     }
-    shaderHandle_ = shaderMgr.GetShaderHandle(DefaultMaterialShaderConstants::ENV_SHADER_NAME);
+    defaultShaderData_.shader = shaderMgr.GetShaderHandle(DefaultMaterialShaderConstants::ENV_SHADER_NAME);
 
     CreateDescriptorSets();
 }
@@ -160,20 +200,28 @@ void RenderNodeDefaultEnv::ExecuteFrame(IRenderCommandList& cmdList)
         UpdateCurrentScene(*dataStoreScene, *dataStoreCamera);
     }
 
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "3DEnv", DefaultDebugConstants::DEFAULT_DEBUG_COLOR);
+
     cmdList.BeginRenderPass(renderPass_.renderPassDesc, renderPass_.subpassStartIndex, renderPass_.subpassDesc);
 
     if (currentScene_.camera.environment.backgroundType != RenderCamera::Environment::BG_TYPE_NONE) {
         if (currentScene_.camera.layerMask & currentScene_.camera.environment.layerMask) {
             UpdatePostProcessConfiguration();
-            RenderData(cmdList);
+            RenderData(*dataStoreCamera, cmdList);
         }
     }
 
     cmdList.EndRenderPass();
 }
 
-void RenderNodeDefaultEnv::RenderData(IRenderCommandList& cmdList)
+void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCamera, IRenderCommandList& cmdList)
 {
+    // re-fetch global descriptor sets every frame
+    FrameGlobalDescriptorSets fgds = GetFrameGlobalDescriptorSets(renderNodeContextMgr_, stores_, cameraName_);
+    if (!fgds.valid) {
+        return;
+    }
+
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
 
     cmdList.SetDynamicStateViewport(currentScene_.viewportDesc);
@@ -185,53 +233,37 @@ void RenderNodeDefaultEnv::RenderData(IRenderCommandList& cmdList)
     }
 
     const RenderCamera::Environment& renderEnv = currentScene_.camera.environment;
-    const RenderHandle shaderHandle = renderEnv.shader ? renderEnv.shader.GetHandle() : shaderHandle_;
+    const RenderHandle shaderHandle = renderEnv.shader ? renderEnv.shader.GetHandle() : defaultShaderData_.shader;
     // check for pso changes
-    if ((renderEnv.backgroundType != currentBgType_) || (shaderHandle.id != shaderHandle_.id) ||
-        (currentCameraShaderFlags_ != currentScene_.cameraShaderFlags) || (!RenderHandleUtil::IsValid(psoHandle_))) {
+    if ((renderEnv.backgroundType != currentBgType_) || (currShaderData_.shader.id != shaderHandle.id) ||
+        (currentCameraShaderFlags_ != currentScene_.cameraShaderFlags) ||
+        (!RenderHandleUtil::IsValid(currShaderData_.pso))) {
         currentBgType_ = currentScene_.camera.environment.backgroundType;
         currentCameraShaderFlags_ = currentScene_.cameraShaderFlags;
-        psoHandle_ = GetPso(shaderHandle, currentBgType_, currentRenderPPConfiguration_);
+        currShaderData_ = GetPso(shaderHandle, currentBgType_, currentRenderPPConfiguration_);
     }
 
-    cmdList.BindPipeline(psoHandle_);
+    cmdList.BindPipeline(currShaderData_.pso);
+    cmdList.BindDescriptorSet(0U, fgds.set0);
 
-    {
-        // set 0, ubos
-        auto& binder0 = *allDescriptorSets_.set0;
-        {
-            uint32_t bindingIndex = 0;
-            binder0.BindBuffer(bindingIndex++, sceneBuffers_.camera, 0u);
-            binder0.BindBuffer(bindingIndex++, cameraBuffers_.generalData, 0u);
-            binder0.BindBuffer(bindingIndex++, cameraBuffers_.environment, 0u);
-            binder0.BindBuffer(bindingIndex++, cameraBuffers_.fog, 0u);
-            binder0.BindBuffer(bindingIndex++, cameraBuffers_.postProcess, 0u);
-        }
-
+    if ((!currShaderData_.customSet) && builtInSet3_) {
         const auto envDataHandles =
-            GetEnvironmentDataHandles(gpuResourceMgr, defaultImages_, currentScene_.camera.environment);
+            GetEnvironmentDataHandles(dsCamera, gpuResourceMgr, defaultImages_, currentScene_.camera);
         // set 1, bind combined image samplers
-        auto& binder1 = *allDescriptorSets_.set1;
+        auto& binder = *builtInSet3_;
         {
             uint32_t bindingIndex = 0;
-            binder1.BindImage(bindingIndex++, envDataHandles.texHandle, cubemapSampler);
-            binder1.BindImage(bindingIndex++, envDataHandles.cubeHandle, cubemapSampler);
+            binder.BindImage(bindingIndex++, envDataHandles.texHandle, cubemapSampler);
+            binder.BindImage(bindingIndex++, envDataHandles.cubeHandle, cubemapSampler);
+            binder.BindImage(bindingIndex++, envDataHandles.cubeBlenderHandle, cubemapSampler);
         }
-
-        const RenderHandle handles[] { binder0.GetDescriptorSetHandle(), binder1.GetDescriptorSetHandle() };
-        const DescriptorSetLayoutBindingResources resources[] { binder0.GetDescriptorSetLayoutBindingResources(),
-            binder1.GetDescriptorSetLayoutBindingResources() };
-        cmdList.UpdateDescriptorSets(handles, resources);
+        cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
+        cmdList.BindDescriptorSet(FIXED_CUSTOM_SET3, binder.GetDescriptorSetHandle());
     }
 
-    // bind build-in sets
-    const RenderHandle descSets[] = { allDescriptorSets_.set0->GetDescriptorSetHandle(),
-        allDescriptorSets_.set1->GetDescriptorSetHandle() };
-    cmdList.BindDescriptorSets(0u, descSets);
-
-    // custom set 2 resources
+    // custom set 3 resources
     bool validDraw = true;
-    if (customSet2_) {
+    if (currShaderData_.customSet) {
         validDraw = (renderEnv.customResourceHandles[0]) ? true : false;
         validDraw = validDraw && UpdateAndBindCustomSet(cmdList, renderEnv);
     }
@@ -244,6 +276,8 @@ void RenderNodeDefaultEnv::RenderData(IRenderCommandList& cmdList)
 bool RenderNodeDefaultEnv::UpdateAndBindCustomSet(
     IRenderCommandList& cmdList, const RenderCamera::Environment& renderEnv)
 {
+    CORE_ASSERT(currShaderData_.customSet);
+
     IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
@@ -252,10 +286,6 @@ bool RenderNodeDefaultEnv::UpdateAndBindCustomSet(
     if (!RenderHandleUtil::IsValid(currPlHandle)) {
         currPlHandle = shaderMgr.GetReflectionPipelineLayoutHandle(renderEnv.shader.GetHandle());
     }
-    const PipelineLayout& plRef = shaderMgr.GetPipelineLayout(currPlHandle);
-    const auto& descBindings = plRef.descriptorSetLayouts[FIXED_CUSTOM_SET2].bindings;
-    const RenderHandle descSetHandle = descriptorSetMgr.CreateOneFrameDescriptorSet(descBindings);
-    bool valid = false;
     uint32_t validResCount = 0;
     for (uint32_t idx = 0; idx < RenderSceneDataConstants::MAX_ENV_CUSTOM_RESOURCE_COUNT; ++idx) {
         if (renderEnv.customResourceHandles[idx]) {
@@ -265,40 +295,46 @@ bool RenderNodeDefaultEnv::UpdateAndBindCustomSet(
         }
     }
     const array_view<const RenderHandleReference> customResourceHandles(renderEnv.customResourceHandles, validResCount);
-    if (RenderHandleUtil::IsValid(descSetHandle) && (descBindings.size() == customResourceHandles.size())) {
-        IDescriptorSetBinder::Ptr binderPtr = descriptorSetMgr.CreateDescriptorSetBinder(descSetHandle, descBindings);
-        if (binderPtr) {
-            auto& binder = *binderPtr;
-            for (uint32_t idx = 0; idx < static_cast<uint32_t>(customResourceHandles.size()); ++idx) {
-                CORE_ASSERT(idx < descBindings.size());
-                const RenderHandle currRes = customResourceHandles[idx].GetHandle();
-                if (gpuResourceMgr.IsGpuBuffer(currRes)) {
-                    binder.BindBuffer(idx, currRes, 0);
-                } else if (gpuResourceMgr.IsGpuImage(currRes)) {
-                    if (descBindings[idx].descriptorType ==
-                        DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-                        binder.BindImage(idx, currRes, cubemapSampler);
-                    } else {
-                        binder.BindImage(idx, currRes);
-                    }
-                } else if (gpuResourceMgr.IsGpuSampler(currRes)) {
-                    binder.BindSampler(idx, currRes);
-                }
-            }
+    const PipelineLayout& plRef = shaderMgr.GetPipelineLayout(currPlHandle);
+    const auto& descBindings = plRef.descriptorSetLayouts[currShaderData_.customSetIndex].bindings;
+    const RenderHandle descSetHandle = descriptorSetMgr.CreateOneFrameDescriptorSet(descBindings);
+    if (!RenderHandleUtil::IsValid(descSetHandle) || (descBindings.size() != customResourceHandles.size())) {
+        return false;
+    }
+    IDescriptorSetBinder::Ptr binderPtr = descriptorSetMgr.CreateDescriptorSetBinder(descSetHandle, descBindings);
+    if (!binderPtr) {
+        return false;
+    }
+    bool valid = false;
 
-            // user generated setup, we check for validity of all bindings in the descriptor set
-            if (binder.GetDescriptorSetLayoutBindingValidity()) {
-                cmdList.UpdateDescriptorSet(
-                    binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-                cmdList.BindDescriptorSet(FIXED_CUSTOM_SET2, binder.GetDescriptorSetHandle());
-                valid = true;
+    auto& binder = *binderPtr;
+    for (uint32_t idx = 0; idx < static_cast<uint32_t>(customResourceHandles.size()); ++idx) {
+        CORE_ASSERT(idx < descBindings.size());
+        const RenderHandle currRes = customResourceHandles[idx].GetHandle();
+        if (gpuResourceMgr.IsGpuBuffer(currRes)) {
+            binder.BindBuffer(idx, currRes, 0);
+        } else if (gpuResourceMgr.IsGpuImage(currRes)) {
+            if (descBindings[idx].descriptorType == DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                binder.BindImage(idx, currRes, cubemapSampler);
+            } else {
+                binder.BindImage(idx, currRes);
             }
+        } else if (gpuResourceMgr.IsGpuSampler(currRes)) {
+            binder.BindSampler(idx, currRes);
         }
     }
+
+    // user generated setup, we check for validity of all bindings in the descriptor set
+    if (binder.GetDescriptorSetLayoutBindingValidity()) {
+        cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
+        cmdList.BindDescriptorSet(currShaderData_.customSetIndex, binder.GetDescriptorSetHandle());
+        valid = true;
+    }
+
     if (!valid) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
         CORE_LOG_ONCE_W("default_env_custom_res_issue",
-            "invalid bindings with custom shader descriptor set 2 (render node: %s)",
+            "invalid bindings with custom shader descriptor set 1 or 3 (render node: %s)",
             renderNodeContextMgr_->GetName().data());
 #endif
     }
@@ -355,35 +391,30 @@ void RenderNodeDefaultEnv::UpdateCurrentScene(
     ResetRenderSlotData(renderPass_.subpassDesc.viewMask > 1U);
 }
 
-RenderHandle RenderNodeDefaultEnv::GetPso(const RenderHandle shaderHandle,
+RenderNodeDefaultEnv::ShaderData RenderNodeDefaultEnv::GetPso(const RenderHandle shaderHandle,
     const RenderCamera::Environment::BackgroundType bgType,
     const RenderPostProcessConfiguration& renderPostProcessConfiguration)
 {
+    ShaderData sd;
     if (RenderHandleUtil::GetHandleType(shaderHandle) == RenderHandleType::SHADER_STATE_OBJECT) {
         const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
         const ShaderSpecializationConstantView sscv = shaderMgr.GetReflectionSpecialization(shaderHandle);
         vector<uint32_t> flags(sscv.constants.size());
-
-        constexpr uint32_t defaultEnvType = 0u;
-        constexpr uint32_t postProcessFlags = 3u;
-        constexpr uint32_t cameraFlags = 4u;
-
         for (const auto& ref : sscv.constants) {
             const uint32_t constantId = ref.offset / sizeof(uint32_t);
-
             if (ref.shaderStage == ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT) {
-                switch (ref.id) {
-                    case defaultEnvType:
-                        flags[constantId] = (uint32_t)bgType;
-                        break;
-                    case postProcessFlags:
-                        flags[constantId] = renderPostProcessConfiguration.flags.x;
-                        break;
-                    case cameraFlags:
-                        flags[constantId] = currentScene_.cameraShaderFlags;
-                        break;
-                    default:
-                        break;
+                if (ref.id == CORE_DM_CONSTANT_ID_MATERIAL_TYPE) {
+                    flags[constantId] = 0U;
+                } else if (ref.id == CORE_DM_CONSTANT_ID_MATERIAL_FLAGS) {
+                    flags[constantId] = 0U;
+                } else if (ref.id == CORE_DM_CONSTANT_ID_LIGHTING_FLAGS) {
+                    flags[constantId] = 0U;
+                } else if (ref.id == CORE_DM_CONSTANT_ID_POST_PROCESS_FLAGS) {
+                    flags[constantId] = currentRenderPPConfiguration_.flags.x;
+                } else if (ref.id == CORE_DM_CONSTANT_ID_CAMERA_FLAGS) {
+                    flags[constantId] = currentCameraShaderFlags_;
+                } else if (ref.id == CORE_DM_CONSTANT_ID_ENV_TYPE) {
+                    flags[constantId] = (uint32_t)bgType;
                 }
             }
         }
@@ -395,11 +426,22 @@ RenderHandle RenderNodeDefaultEnv::GetPso(const RenderHandle shaderHandle,
         }
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderHandle);
         // flag that we need additional custom resource bindings
-        customSet2_ = shaderMgr.GetPipelineLayout(plHandle).descriptorSetCount == CUSTOM_SET_DESCRIPTOR_SET_COUNT;
-        psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
+        if (shaderHandle != defaultShaderData_.shader) {
+            const auto& plData = shaderMgr.GetPipelineLayout(plHandle);
+            if (!plData.descriptorSetLayouts[FIXED_CUSTOM_SET3].bindings.empty()) {
+                sd.customSet = true;
+                sd.customSetIndex = FIXED_CUSTOM_SET3;
+            } else if (!plData.descriptorSetLayouts[FIXED_CUSTOM_SET1].bindings.empty()) {
+                // compatibility set for old engine version
+                sd.customSet = true;
+                sd.customSetIndex = FIXED_CUSTOM_SET1;
+            }
+        }
+        sd.pso = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
             shaderHandle, gfxHandle, plHandle, {}, specialization, GetDynamicStates());
+        sd.shader = shaderHandle;
     }
-    return psoHandle_;
+    return sd;
 }
 
 void RenderNodeDefaultEnv::CreateDescriptorSets()
@@ -411,18 +453,10 @@ void RenderNodeDefaultEnv::CreateDescriptorSets()
         const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(defaultPipelineLayout_);
         descriptorSetMgr.ResetAndReserve(dc);
     }
-
-    CORE_ASSERT(defaultPipelineLayout_.descriptorSetCount == 2u);
     {
-        const uint32_t set = 0u;
+        const uint32_t set = 3U;
         const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, defaultPipelineLayout_);
-        allDescriptorSets_.set0 = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetHandle, defaultPipelineLayout_.descriptorSetLayouts[set].bindings);
-    }
-    {
-        const uint32_t set = 1u;
-        const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, defaultPipelineLayout_);
-        allDescriptorSets_.set1 = descriptorSetMgr.CreateDescriptorSetBinder(
+        builtInSet3_ = descriptorSetMgr.CreateDescriptorSetBinder(
             descriptorSetHandle, defaultPipelineLayout_.descriptorSetLayouts[set].bindings);
     }
 }
@@ -434,7 +468,7 @@ void RenderNodeDefaultEnv::UpdatePostProcessConfiguration()
             auto const& dsMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
             if (const IRenderDataStore* ds = dsMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName); ds) {
                 if (jsonInputs_.renderDataStore.typeName == POST_PROCESS_DATA_STORE_TYPE_NAME) {
-                    auto const dataStore = static_cast<IRenderDataStorePod const*>(ds);
+                    auto const dataStore = static_cast<const IRenderDataStorePod*>(ds);
                     auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
                     if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
                         const PostProcessConfiguration* data = (const PostProcessConfiguration*)dataView.data();
@@ -447,20 +481,6 @@ void RenderNodeDefaultEnv::UpdatePostProcessConfiguration()
             }
         }
     }
-}
-
-void RenderNodeDefaultEnv::GetSceneUniformBuffers(const string_view us)
-{
-    sceneBuffers_ = RenderNodeSceneUtil::GetSceneBufferHandles(*renderNodeContextMgr_, stores_.dataStoreNameScene);
-
-    string camName;
-    if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
-        camName = to_string(jsonInputs_.customCameraId);
-    } else if (!(jsonInputs_.customCameraName.empty())) {
-        camName = jsonInputs_.customCameraName;
-    }
-    cameraBuffers_ =
-        RenderNodeSceneUtil::GetSceneCameraBufferHandles(*renderNodeContextMgr_, stores_.dataStoreNameScene, camName);
 }
 
 array_view<const DynamicStateEnum> RenderNodeDefaultEnv::GetDynamicStates() const
@@ -496,6 +516,12 @@ void RenderNodeDefaultEnv::ParseRenderNodeInputs()
         fsrEnabled_ = true;
     }
     jsonInputs_.hasChangeableRenderPassHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.renderPass);
+
+    if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
+        cameraName_ = to_string(jsonInputs_.customCameraId);
+    } else if (!(jsonInputs_.customCameraName.empty())) {
+        cameraName_ = jsonInputs_.customCameraName;
+    }
 }
 
 void RenderNodeDefaultEnv::ResetRenderSlotData(const bool enableMultiview)
@@ -504,10 +530,11 @@ void RenderNodeDefaultEnv::ResetRenderSlotData(const bool enableMultiview)
     if (enableMultiView_ != enableMultiview) {
         enableMultiView_ = enableMultiview;
         const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-        shaderHandle_ = enableMultiView_ ? shaderMgr.GetShaderHandle(
-                                               DefaultMaterialShaderConstants::ENV_SHADER_NAME, MULTIVIEW_VARIANT_NAME)
-                                         : shaderMgr.GetShaderHandle(DefaultMaterialShaderConstants::ENV_SHADER_NAME);
-        psoHandle_ = {};
+        defaultShaderData_ = {};
+        defaultShaderData_.shader =
+            enableMultiView_
+                ? shaderMgr.GetShaderHandle(DefaultMaterialShaderConstants::ENV_SHADER_NAME, MULTIVIEW_VARIANT_NAME)
+                : shaderMgr.GetShaderHandle(DefaultMaterialShaderConstants::ENV_SHADER_NAME);
     }
 }
 

@@ -20,7 +20,7 @@ class IPluginRegister;
 CORE_END_NAMESPACE()
 
 namespace {
-static CORE_NS::IPluginRegister* gPluginRegistry { nullptr };
+CORE_NS::IPluginRegister* gPluginRegistry { nullptr };
 } // namespace
 
 CORE_BEGIN_NAMESPACE()
