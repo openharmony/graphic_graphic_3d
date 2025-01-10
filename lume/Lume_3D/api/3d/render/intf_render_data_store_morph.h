@@ -38,7 +38,7 @@ struct RenderDataMorph {
     /** Submesh */
     struct Submesh {
         /** Vertex count */
-        uint32_t vertexCount;
+        uint32_t vertexCount { 0 };
 
         /** {0 = position, 1 = normal, 2 = tangent} */
         RenderVertexBuffer vertexBuffers[MAX_VERTEX_BUFFER_COUNT];

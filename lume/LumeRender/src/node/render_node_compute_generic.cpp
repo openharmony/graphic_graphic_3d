@@ -63,18 +63,18 @@ void RenderNodeComputeGeneric::InitNode(IRenderNodeContextManager& renderNodeCon
 
     auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     const auto& renderNodeUtil = renderNodeContextMgr.GetRenderNodeUtil();
-    if (RenderHandleUtil::GetHandleType(shader_) != RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) {
+    if (RenderHandleUtil::GetHandleType(pipelineData_.sd.shader) != RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) {
         PLUGIN_LOG_E("RenderNodeComputeGeneric needs a valid compute shader handle");
     }
-    pipelineLayout_ = renderNodeContextMgr.GetRenderNodeUtil().CreatePipelineLayout(shader_);
-    threadGroupSize_ = shaderMgr.GetReflectionThreadGroupSize(shader_);
+    pipelineData_.sd = shaderMgr.GetShaderDataByShaderHandle(pipelineData_.sd.shader);
+    threadGroupSize_ = shaderMgr.GetReflectionThreadGroupSize(pipelineData_.sd.shader);
 
     if (dispatchResources_.customInputBuffers.empty() && dispatchResources_.customInputImages.empty()) {
         PLUGIN_LOG_W("RenderNodeComputeGeneric: dispatchResources (GPU buffer or GPU image) needed");
     }
 
     if (useDataStoreShaderSpecialization_) {
-        const ShaderSpecializationConstantView sscv = shaderMgr.GetReflectionSpecialization(shader_);
+        const ShaderSpecializationConstantView sscv = shaderMgr.GetReflectionSpecialization(pipelineData_.sd.shader);
         shaderSpecializationData_.constants.resize(sscv.constants.size());
         shaderSpecializationData_.data.resize(sscv.constants.size());
         for (size_t idx = 0; idx < shaderSpecializationData_.constants.size(); ++idx) {
@@ -83,17 +83,19 @@ void RenderNodeComputeGeneric::InitNode(IRenderNodeContextManager& renderNodeCon
         }
         useDataStoreShaderSpecialization_ = !sscv.constants.empty();
     }
-    psoHandle_ = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(shader_, pipelineLayout_, {});
+    pipelineData_.pso = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(
+        pipelineData_.sd.shader, pipelineData_.sd.pipelineLayoutData, {});
 
     {
-        const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
+        const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(pipelineData_.sd.pipelineLayoutData);
         renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(dc);
     }
 
-    pipelineDescriptorSetBinder_ = renderNodeUtil.CreatePipelineDescriptorSetBinder(pipelineLayout_);
+    pipelineDescriptorSetBinder_ =
+        renderNodeUtil.CreatePipelineDescriptorSetBinder(pipelineData_.sd.pipelineLayoutData);
     renderNodeUtil.BindResourcesToBinder(inputResources_, *pipelineDescriptorSetBinder_);
 
-    useDataStorePushConstant_ = (pipelineLayout_.pushConstant.byteSize > 0) &&
+    useDataStorePushConstant_ = (pipelineData_.sd.pipelineLayoutData.pushConstant.byteSize > 0) &&
                                 (!jsonInputs_.renderDataStore.dataStoreName.empty()) &&
                                 (!jsonInputs_.renderDataStore.configurationName.empty());
 }
@@ -105,7 +107,7 @@ void RenderNodeComputeGeneric::PreExecuteFrame()
 
 void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
 {
-    if (!RenderHandleUtil::IsValid(shader_)) {
+    if (!RenderHandleUtil::IsValid(pipelineData_.sd.shader)) {
         return; // invalid shader
     }
 
@@ -154,12 +156,12 @@ void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     // push constants
     if (useDataStorePushConstant_) {
         const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-        const auto dataStore = static_cast<IRenderDataStorePod const*>(
+        const auto dataStore = static_cast<const IRenderDataStorePod*>(
             renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName.c_str()));
         if (dataStore) {
             const auto dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
             if (!dataView.empty()) {
-                cmdList.PushConstant(pipelineLayout_.pushConstant, dataView.data());
+                cmdList.PushConstant(pipelineData_.sd.pipelineLayoutData.pushConstant, dataView.data());
             }
         }
     }
@@ -178,52 +180,51 @@ void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
 
 RenderHandle RenderNodeComputeGeneric::GetPsoHandle(IRenderNodeContextManager& renderNodeContextMgr)
 {
-    if (useDataStoreShaderSpecialization_) {
-        const auto& renderDataStoreMgr = renderNodeContextMgr.GetRenderDataStoreManager();
-        const auto dataStore = static_cast<IRenderDataStorePod const*>(
-            renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStoreSpecialization.dataStoreName.c_str()));
-        if (dataStore) {
-            const auto dataView = dataStore->Get(jsonInputs_.renderDataStoreSpecialization.configurationName);
-            if (dataView.data() && (dataView.size_bytes() == sizeof(ShaderSpecializationRenderPod))) {
-                const auto* spec = reinterpret_cast<const ShaderSpecializationRenderPod*>(dataView.data());
-                bool valuesChanged = false;
-                const auto specializationCount = Math::min(
-                    ShaderSpecializationRenderPod::MAX_SPECIALIZATION_CONSTANT_COUNT,
-                    Math::min((uint32_t)shaderSpecializationData_.constants.size(), spec->specializationConstantCount));
-                const auto constantsView = array_view(shaderSpecializationData_.constants.data(), specializationCount);
-                for (const auto& ref : constantsView) {
-                    const uint32_t constantId = ref.offset / sizeof(uint32_t);
-                    const uint32_t specId = ref.id;
-                    if (specId < ShaderSpecializationRenderPod::MAX_SPECIALIZATION_CONSTANT_COUNT) {
-                        if (shaderSpecializationData_.data[constantId] != spec->specializationFlags[specId].value) {
-                            shaderSpecializationData_.data[constantId] = spec->specializationFlags[specId].value;
-                            valuesChanged = true;
-                        }
-                    }
-                }
-                if (valuesChanged) {
-                    const ShaderSpecializationConstantDataView specialization {
-                        constantsView,
-                        { shaderSpecializationData_.data.data(), specializationCount },
-                    };
-                    psoHandle_ = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(
-                        shader_, pipelineLayout_, specialization);
-                }
-            } else {
-#if (RENDER_VALIDATION_ENABLED == 1)
-                const string logName = "RenderNodeComputeGeneric_ShaderSpecialization" +
-                                       string(jsonInputs_.renderDataStoreSpecialization.configurationName);
-                PLUGIN_LOG_ONCE_E(logName.c_str(),
-                    "RENDER_VALIDATION: RenderNodeComputeGeneric shader specilization render data store size mismatch, "
-                    "name: %s, size:%u, podsize%u",
-                    jsonInputs_.renderDataStoreSpecialization.configurationName.c_str(),
-                    static_cast<uint32_t>(sizeof(ShaderSpecializationRenderPod)),
-                    static_cast<uint32_t>(dataView.size_bytes()));
-#endif
+    if (!useDataStoreShaderSpecialization_) {
+        return pipelineData_.pso; // early out
+    }
+    const auto& renderDataStoreMgr = renderNodeContextMgr.GetRenderDataStoreManager();
+    const auto dataStore = static_cast<const IRenderDataStorePod*>(
+        renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStoreSpecialization.dataStoreName.c_str()));
+    if (!dataStore) {
+        return pipelineData_.pso; // early out
+    }
+    const auto dataView = dataStore->Get(jsonInputs_.renderDataStoreSpecialization.configurationName);
+    if (dataView.data() && (dataView.size_bytes() == sizeof(ShaderSpecializationRenderPod))) {
+        const auto* spec = reinterpret_cast<const ShaderSpecializationRenderPod*>(dataView.data());
+        bool valuesChanged = false;
+        const auto specializationCount = Math::min(ShaderSpecializationRenderPod::MAX_SPECIALIZATION_CONSTANT_COUNT,
+            Math::min((uint32_t)shaderSpecializationData_.constants.size(), spec->specializationConstantCount));
+        const auto constantsView = array_view(shaderSpecializationData_.constants.data(), specializationCount);
+        for (const auto& ref : constantsView) {
+            const uint32_t constantId = ref.offset / sizeof(uint32_t);
+            const uint32_t specId = ref.id;
+            if ((specId < ShaderSpecializationRenderPod::MAX_SPECIALIZATION_CONSTANT_COUNT) &&
+                (shaderSpecializationData_.data[constantId] != spec->specializationFlags[specId].value)) {
+                shaderSpecializationData_.data[constantId] = spec->specializationFlags[specId].value;
+                valuesChanged = true;
             }
         }
+        if (valuesChanged) {
+            const ShaderSpecializationConstantDataView specialization {
+                constantsView,
+                { shaderSpecializationData_.data.data(), specializationCount },
+            };
+            pipelineData_.pso = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(
+                pipelineData_.sd.shader, pipelineData_.sd.pipelineLayout, specialization);
+        }
+    } else {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        const string logName = "RenderNodeComputeGeneric_ShaderSpecialization" +
+                               string(jsonInputs_.renderDataStoreSpecialization.configurationName);
+        PLUGIN_LOG_ONCE_E(logName.c_str(),
+            "RENDER_VALIDATION: RenderNodeComputeGeneric shader specilization render data store size mismatch, "
+            "name: %s, size:%u, podsize%u",
+            jsonInputs_.renderDataStoreSpecialization.configurationName.c_str(),
+            static_cast<uint32_t>(sizeof(ShaderSpecializationRenderPod)), static_cast<uint32_t>(dataView.size_bytes()));
+#endif
     }
-    return psoHandle_;
+    return pipelineData_.pso;
 }
 
 void RenderNodeComputeGeneric::ParseRenderNodeInputs()
@@ -238,7 +239,7 @@ void RenderNodeComputeGeneric::ParseRenderNodeInputs()
 
     const auto shaderName = parserUtil.GetStringValue(jsonVal, "shader");
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-    shader_ = shaderMgr.GetShaderHandle(shaderName);
+    pipelineData_.sd.shader = shaderMgr.GetShaderHandle(shaderName);
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);

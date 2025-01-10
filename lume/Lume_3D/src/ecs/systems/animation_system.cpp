@@ -15,9 +15,6 @@
 
 #include "animation_system.h"
 
-#include <PropertyTools/property_api_impl.inl>
-#include <PropertyTools/property_data.h>
-#include <PropertyTools/property_macros.h>
 #include <algorithm>
 #include <cfloat>
 #include <cinttypes>
@@ -44,9 +41,13 @@
 #include <core/perf/cpu_perf_scope.h>
 #include <core/perf/intf_performance_data_manager.h>
 #include <core/plugin/intf_plugin_register.h>
+#include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_data.h>
+#include <core/property_tools/property_macros.h>
 
 #include "ecs/components/initial_transform_component.h"
 #include "ecs/systems/animation_playback.h"
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -89,6 +90,28 @@ private:
     size_t count_;
 };
 
+class AnimationSystem::FrameIndexTask final : public IThreadPool::ITask {
+public:
+    FrameIndexTask(AnimationSystem& system, size_t offset, size_t count)
+        : system_(system), offset_(offset), count_(count) {};
+
+    void operator()() override
+    {
+        const auto offset = Math::min(offset_, system_.trackOrder_.size());
+        const auto count = Math::min(count_, system_.trackOrder_.size() - offset);
+        const auto results = array_view(static_cast<const uint32_t*>(system_.trackOrder_.data()) + offset, count);
+        system_.CalculateFrameIndices(results);
+    }
+
+protected:
+    void Destroy() override {}
+
+private:
+    AnimationSystem& system_;
+    size_t offset_;
+    size_t count_;
+};
+
 class AnimationSystem::AnimateTask final : public IThreadPool::ITask {
 public:
     AnimateTask(AnimationSystem& system, size_t offset, size_t count)
@@ -99,7 +122,6 @@ public:
         const auto offset = Math::min(offset_, system_.trackOrder_.size());
         const auto count = Math::min(count_, system_.trackOrder_.size() - offset);
         const auto results = array_view(static_cast<const uint32_t*>(system_.trackOrder_.data()) + offset, count);
-        system_.Calculate(results);
         system_.AnimateTracks(results);
     }
 
@@ -113,9 +135,8 @@ private:
 };
 
 namespace {
-BEGIN_PROPERTY(AnimationSystem::Properties, SystemMetadata)
-    DECL_PROPERTY2(AnimationSystem::Properties, minTaskSize, "Task size", PropertyFlags::IS_SLIDER)
-END_PROPERTY();
+PROPERTY_LIST(
+    AnimationSystem::Properties, SystemMetadata, MEMBER_PROPERTY(minTaskSize, "Task size", PropertyFlags::IS_SLIDER))
 
 constexpr PropertyTypeDecl PROPERTY_HANDLE_PTR_T = PROPERTYTYPE(CORE_NS::IPropertyHandle*);
 
@@ -666,6 +687,9 @@ void AnimationSystem::Initialize()
 
 bool AnimationSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t delta)
 {
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "Update", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
     if (!active_) {
         return false;
     }
@@ -685,10 +709,10 @@ bool AnimationSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t 
     animationQuery_.Execute();
     trackQuery_.Execute();
 
-    auto results = animationQuery_.GetResults();
     if (animationGeneration_ != animationManager_.GetGenerationCounter()) {
         // Handle stopped animations first to avoid glitches. Alternative would be filtering out tracks which are
         // stopped, but there's another track targeting the same property.
+        auto results = animationQuery_.GetResults();
         animationOrder_.clear();
         animationOrder_.reserve(results.size());
         uint32_t index = 0U;
@@ -708,31 +732,16 @@ bool AnimationSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t 
     // Reset trackValues_ to stopped state before walking through animations.
     trackValues_.resize(animationTrackManager_.GetComponentCount());
     for (auto& values : trackValues_) {
-        values.stopped = true;
+        values.state = TrackState::STOPPED;
     }
 
     frameIndices_.resize(animationTrackManager_.GetComponentCount());
 
-    const auto deltaS = static_cast<float>(delta) / 1000000.f;
     // For each animation update the playback state, time position and weight, and gather tracks in trackOrder_.
     trackOrder_.clear();
     trackOrder_.reserve(animationTrackManager_.GetComponentCount());
-    for (const auto& index : animationOrder_) {
-        const auto& row = results[index];
-        bool setPaused = false;
-        {
-            auto animationHandle = animationManager_.Read(row.components[0]);
-            auto stateHandle = stateManager_.Write(row.components[1]);
-            if (animationHandle && stateHandle) {
-                UpdateAnimation(*stateHandle, *animationHandle, trackQuery_, deltaS);
-                setPaused =
-                    (stateHandle->completed && animationHandle->state == AnimationComponent::PlaybackState::PLAY);
-            }
-        }
-        if (setPaused) {
-            animationManager_.Write(row.components[0])->state = AnimationComponent::PlaybackState::PAUSE;
-        }
-    }
+
+    UpdateAnimationStates(delta);
 
     {
         // Would constructing a reordered ResultRow array be better than indices into the results? Would be one
@@ -744,9 +753,6 @@ bool AnimationSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t 
         const auto threadCount = threadPool_->GetNumberOfThreads() + 1;
         const auto resultCount = trackOrder_.size();
         taskSize_ = Math::max(systemProperties_.minTaskSize, resultCount / threadCount);
-        if (taskSize_ == 0) {
-            taskSize_ = 1;
-        }
         tasks_ = ((resultCount / taskSize_)) ? (resultCount / taskSize_) - 1U : 0U;
         remaining_ = resultCount - (tasks_ * taskSize_);
     }
@@ -759,6 +765,7 @@ bool AnimationSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t 
 
     // For each track batch reset the target properties to initial values, wait for trackValues_ to be filled and start
     // new task to handle the actual animation.
+    AnimateTrackValues();
     ResetToInitialTrackValues();
 
     // Update target properties, this will apply animations on top of current value.
@@ -877,6 +884,10 @@ void AnimationSystem::OnComponentEvent(
             }
             break;
         }
+        case IEcs::ComponentListener::EventType::MOVED: {
+            // Not using directly with ComponentIds.
+            break;
+        }
     }
 }
 
@@ -908,8 +919,21 @@ void AnimationSystem::OnAnimationComponentsCreated(BASE_NS::array_view<const COR
 void AnimationSystem::OnAnimationComponentsUpdated(BASE_NS::array_view<const CORE_NS::Entity> entities)
 {
     for (const auto entity : entities) {
-        auto stateHandle = stateManager_.Write(entity);
         auto animationHandle = animationManager_.Read(entity);
+        if (!animationHandle) {
+            // if there's no animation component then there's no need for state component either.
+            stateManager_.Destroy(entity);
+            continue;
+        }
+        auto stateHandle = stateManager_.Write(entity);
+        if (!stateHandle) {
+            // state component should have been created already, but if hasn't been for some reason then just add one.
+            stateManager_.Create(entity);
+            stateHandle = stateManager_.Write(entity);
+            if (!stateHandle) {
+                continue;
+            }
+        }
         const auto oldState = stateHandle->state;
         const auto newState = animationHandle->state;
         if (newState != AnimationComponent::PlaybackState::STOP) {
@@ -926,7 +950,10 @@ void AnimationSystem::OnAnimationComponentsUpdated(BASE_NS::array_view<const COR
             } else if (newState == AnimationComponent::PlaybackState::STOP) {
                 stateHandle->time = 0.0f;
                 stateHandle->currentLoop = 0;
-                stateHandle->completed = false;
+                // setting the animation as completed allows to identify which animations have been set to stopped state
+                // for this frame. for such animations the tracks are rest to the initial state, but for previously
+                // stopped animations we do nothing.
+                stateHandle->completed = true;
             } else if (newState == AnimationComponent::PlaybackState::PLAY) {
                 stateHandle->completed = false;
             }
@@ -960,6 +987,31 @@ void AnimationSystem::OnAnimationTrackComponentsUpdated(BASE_NS::array_view<cons
     }
 }
 
+void AnimationSystem::UpdateAnimationStates(uint64_t delta)
+{
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "UpdateAnimationStates", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
+    const auto deltaS = static_cast<float>(delta) / 1000000.f;
+    auto results = animationQuery_.GetResults();
+    for (const auto& index : animationOrder_) {
+        const auto& row = results[index];
+        bool setPaused = false;
+        {
+            auto animationHandle = animationManager_.Read(row.components[0]);
+            auto stateHandle = stateManager_.Write(row.components[1]);
+            if (animationHandle && stateHandle) {
+                UpdateAnimation(*stateHandle, *animationHandle, trackQuery_, deltaS);
+                setPaused =
+                    (stateHandle->completed && animationHandle->state == AnimationComponent::PlaybackState::PLAY);
+            }
+        }
+        if (setPaused) {
+            animationManager_.Write(row.components[0])->state = AnimationComponent::PlaybackState::PAUSE;
+        }
+    }
+}
+
 void AnimationSystem::UpdateAnimation(AnimationStateComponent& state, const AnimationComponent& animation,
     const CORE_NS::ComponentQuery& trackQuery, float delta)
 {
@@ -967,17 +1019,19 @@ void AnimationSystem::UpdateAnimation(AnimationStateComponent& state, const Anim
     switch (animation.state) {
         case AnimationComponent::PlaybackState::STOP: {
             // Mark the tracks of this animation as stopped so that they are skipped in later steps.
+            const auto stoppingOrStopped = state.completed ? TrackState::STOPPING : TrackState::STOPPED;
             for (const auto& trackState : state.trackStates) {
                 if (!EntityUtil::IsValid(trackState.entity)) {
                     continue;
                 }
                 if (auto row = trackQuery.FindResultRow(trackState.entity); row) {
                     trackOrder_.push_back(static_cast<uint32_t>(std::distance(begin, row)));
-                    trackValues_[row->components[1]].stopped = true;
+                    trackValues_[row->components[1]].state = stoppingOrStopped;
                 }
             }
             // Stopped animation doesn't need any actions.
             state.dirty = false;
+            state.completed = false;
             return;
         }
         case AnimationComponent::PlaybackState::PLAY: {
@@ -1015,6 +1069,7 @@ void AnimationSystem::UpdateAnimation(AnimationStateComponent& state, const Anim
 
     // Set the animation's state to each track.
     const auto forward = (animation.speed >= 0.f);
+    const auto pausedOrPlaying = state.completed ? TrackState::PAUSED : TrackState::PLAYING;
     for (const auto& trackState : state.trackStates) {
         auto row = EntityUtil::IsValid(trackState.entity) ? trackQuery.FindResultRow(trackState.entity) : nullptr;
         if (row) {
@@ -1022,7 +1077,7 @@ void AnimationSystem::UpdateAnimation(AnimationStateComponent& state, const Anim
             auto& track = trackValues_[row->components[1]];
             track.timePosition = timePosition;
             track.weight = animation.weight;
-            track.stopped = false;
+            track.state = pausedOrPlaying;
             track.forward = forward;
         }
     }
@@ -1030,8 +1085,10 @@ void AnimationSystem::UpdateAnimation(AnimationStateComponent& state, const Anim
 
 void AnimationSystem::InitializeTrackValues()
 {
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "InitializeTrackValues", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
     initTasks_.clear();
-    initTaskCount_ = 0U;
     if (tasks_) {
         // Reserve for twice as many tasks as both init and anim task results are in the same vector.
         taskResults_.reserve(taskResults_.size() + tasks_ * 2U);
@@ -1051,26 +1108,32 @@ void AnimationSystem::InitializeTrackValues()
     } else {
         InitializeTrackValues(array_view(static_cast<const uint32_t*>(trackOrder_.data()), remaining_));
     }
-    initTaskCount_ = taskId_ - initTaskStart_;
 }
 
-void AnimationSystem::ResetToInitialTrackValues()
+void AnimationSystem::AnimateTrackValues()
 {
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "AnimateTrackValues", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
+
+    frameIndexTasks_.clear();
+    frameIndexTasks_.reserve(remaining_ ? (tasks_ + 1U) : tasks_);
+
     animTasks_.clear();
     animTasks_.reserve(remaining_ ? (tasks_ + 1U) : tasks_);
     animTaskStart_ = taskId_;
-    animTaskCount_ = 0;
+
     auto batch = [this](size_t i, size_t offset, size_t count) {
-        // Wait that initial values for this track batch have been filled
-        taskResults_[i]->Wait();
+        // Start task for calculating which keyframes are used.
+        auto& frameIndexTask = frameIndexTasks_.emplace_back(*this, offset, count);
+        threadPool_->PushNoWait(IThreadPool::ITask::Ptr { &frameIndexTask });
 
-        // Start task for calculating which keyframes are used and interpolate between them.
+        // Start task for interpolating between the selected keyframes.
+        // This work requires the initial values as well as the keyframe indices.
         auto& task = animTasks_.emplace_back(*this, offset, count);
-        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr { &task }));
+        const IThreadPool::ITask* dependencies[] = { &initTasks_[i], &frameIndexTask };
+        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr { &task }, dependencies));
         ++taskId_;
-
-        // While task is running reset the target property so we can later sum the results of multiple tracks.
-        ResetTargetProperties(array_view(static_cast<const uint32_t*>(trackOrder_.data()) + offset, count));
     };
     for (size_t i = 0U; i < tasks_; ++i) {
         batch(i, i * taskSize_, taskSize_);
@@ -1079,27 +1142,52 @@ void AnimationSystem::ResetToInitialTrackValues()
         batch(tasks_, tasks_ * taskSize_, remaining_);
     } else {
         const auto results = array_view(static_cast<const uint32_t*>(trackOrder_.data()), remaining_);
-        Calculate(results);
+        CalculateFrameIndices(results);
         AnimateTracks(results);
+    }
+}
+
+void AnimationSystem::ResetToInitialTrackValues()
+{
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "ResetToInitialTrackValues", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
+
+    auto batch = [this](size_t i, size_t count) {
+        // Wait that initial values for this track batch have been filled
+        taskResults_[i]->Wait();
+
+        // While task is running reset the target property so we can later sum the results of multiple tracks.
+        ResetTargetProperties(array_view(static_cast<const uint32_t*>(trackOrder_.data()) + i * taskSize_, count));
+    };
+    for (size_t i = 0U; i < tasks_; ++i) {
+        batch(i, taskSize_);
+    }
+    if (remaining_ >= systemProperties_.minTaskSize) {
+        batch(tasks_, remaining_);
+    } else {
+        const auto results = array_view(static_cast<const uint32_t*>(trackOrder_.data()), remaining_);
         ResetTargetProperties(results);
     }
-    animTaskCount_ = taskId_ - animTaskStart_;
 }
 
 void AnimationSystem::WriteUpdatedTrackValues()
 {
-    auto batch = [this](size_t i, size_t offset, size_t count) {
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "WriteUpdatedTrackValues", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
+    auto batch = [this](size_t i, size_t count) {
         // Wait for animation task for this batch to finish.
         taskResults_[i + animTaskStart_]->Wait();
 
         // Apply the result of each track animation to the target property.
-        ApplyResults(array_view(static_cast<const uint32_t*>(trackOrder_.data()) + offset, count));
+        ApplyResults(array_view(static_cast<const uint32_t*>(trackOrder_.data()) + i * taskSize_, count));
     };
     for (size_t i = 0U; i < tasks_; ++i) {
-        batch(i, i * taskSize_, taskSize_);
+        batch(i, taskSize_);
     }
     if (remaining_ >= systemProperties_.minTaskSize) {
-        batch(tasks_, tasks_ * taskSize_, remaining_);
+        batch(tasks_, remaining_);
     } else {
         ApplyResults(array_view(static_cast<const uint32_t*>(trackOrder_.data()), remaining_));
     }
@@ -1107,13 +1195,17 @@ void AnimationSystem::WriteUpdatedTrackValues()
 
 void AnimationSystem::ResetTargetProperties(array_view<const uint32_t> resultIndices)
 {
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "ResetTargetProperties", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
     auto results = trackQuery_.GetResults();
     for (auto index : resultIndices) {
         const ComponentQuery::ResultRow& row = results[index];
         const auto trackId = row.components[1];
-
-        const auto& values = trackValues_[trackId];
-
+        auto& trackValues = trackValues_[trackId];
+        if (trackValues.state == TrackState::STOPPED) {
+            continue;
+        }
         auto trackHandle = animationTrackManager_.Read(trackId);
         auto entry = GetEntry(*trackHandle);
         if (entry.component && entry.property) {
@@ -1130,9 +1222,9 @@ void AnimationSystem::ResetTargetProperties(array_view<const uint32_t> resultInd
                         continue;
                     }
                 }
-                if (entry.property->type == values.initial.type) {
+                if (entry.property->type == trackValues.initial.type) {
                     if (auto baseAddress = ScopedHandle<uint8_t>(targetHandle); baseAddress) {
-                        Assign(entry.property->type, &*baseAddress + entry.propertyOffset, values.initial);
+                        Assign(entry.property->type, &*baseAddress + entry.propertyOffset, trackValues.initial);
                     }
                 } else {
                     CORE_LOG_ONCE_D(to_string(Hash(trackId, entry.property->type.typeHash)),
@@ -1145,6 +1237,9 @@ void AnimationSystem::ResetTargetProperties(array_view<const uint32_t> resultInd
 
 void AnimationSystem::InitializeTrackValues(array_view<const uint32_t> resultIndices)
 {
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "InitializeTrackValues", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
     auto& initialTransformManager = initialTransformManager_;
     auto& trackValues = trackValues_;
     auto results = trackQuery_.GetResults();
@@ -1158,13 +1253,16 @@ void AnimationSystem::InitializeTrackValues(array_view<const uint32_t> resultInd
     }
 }
 
-void AnimationSystem::Calculate(array_view<const uint32_t> resultIndices)
+void AnimationSystem::CalculateFrameIndices(array_view<const uint32_t> resultIndices)
 {
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "CalculateFrameIndices", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
     auto results = trackQuery_.GetResults();
     for (auto index : resultIndices) {
         const ComponentQuery::ResultRow& row = results[index];
         const auto trackId = row.components[1];
-        if (trackValues_[trackId].stopped) {
+        if (trackValues_[trackId].state > TrackState::PAUSED) {
             continue;
         }
         if (auto track = animationTrackManager_.Read(trackId); track) {
@@ -1197,12 +1295,15 @@ void AnimationSystem::Calculate(array_view<const uint32_t> resultIndices)
 
 void AnimationSystem::AnimateTracks(array_view<const uint32_t> resultIndices)
 {
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "AnimationSystem", "AnimateTracks", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
     auto results = trackQuery_.GetResults();
     for (auto index : resultIndices) {
         const ComponentQuery::ResultRow& row = results[index];
         const auto trackId = row.components[1];
         auto& trackValues = trackValues_[trackId];
-        if (trackValues.stopped) {
+        if (trackValues.state > TrackState::PAUSED) {
             continue;
         }
         if (auto trackHandle = animationTrackManager_.Read(trackId); trackHandle) {
@@ -1264,7 +1365,7 @@ void AnimationSystem::ApplyResults(array_view<const uint32_t> resultIndices)
         const auto trackId = row.components[1];
         auto& values = trackValues_[trackId];
 
-        if (!values.stopped && values.updated) {
+        if (values.state < TrackState::STOPPING && values.updated) {
             values.updated = false;
             auto trackHandle = animationTrackManager_.Read(trackId);
             auto entry = GetEntry(*trackHandle);

@@ -29,12 +29,12 @@ CORE_BEGIN_NAMESPACE()
 // Helper class for running std::function as a ThreadPool task.
 class FunctionTask final : public IThreadPool::ITask {
 public:
-    static Ptr Create(std::function<void()> func)
+    static Ptr Create(std::function<void()>&& func)
     {
-        return Ptr { new FunctionTask(move(func)) };
+        return Ptr { new FunctionTask(std::move(func)) };
     }
 
-    explicit FunctionTask(std::function<void()> func) : func_(move(func)) {};
+    explicit FunctionTask(std::function<void()>&& func) : func_(std::move(func)) {};
 
     void operator()() override
     {

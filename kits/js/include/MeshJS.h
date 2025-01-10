@@ -12,13 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef OHOS_RENDER_3D_MESH_JS_H
-#define OHOS_RENDER_3D_MESH_JS_H
+#ifndef MESH_JS_H
+#define MESH_JS_H
 #include <meta/interface/intf_object.h>
 
 #include "BaseObjectJS.h"
-#include "NodeJS.h"
+#include "SceneResourceImpl.h"
 
 class MeshJS : public BaseObject<MeshJS>, SceneResourceImpl {
 public:
@@ -29,11 +28,11 @@ public:
     virtual void* GetInstanceImpl(uint32_t) override;
 
 private:
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     napi_value GetSubmesh(NapiApi::FunctionContext<>& ctx);
     napi_value GetAABB(NapiApi::FunctionContext<>& ctx);
 
     napi_value GetMaterialOverride(NapiApi::FunctionContext<>& ctx);
     void SetMaterialOverride(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 };
-#endif // OHOS_RENDER_3D_MESH_JS_H
+#endif

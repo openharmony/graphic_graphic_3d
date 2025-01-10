@@ -77,7 +77,7 @@ public:
      */
     virtual BASE_NS::array_view<const RenderCamera::Environment> GetEnvironments() const = 0;
 
-    /** Get environment by id.
+    /** Get environment by id. With invalid id the main environment is returned.
      * @return render environment.
      */
     virtual RenderCamera::Environment GetEnvironment(const uint64_t id) const = 0;
@@ -86,6 +86,16 @@ public:
      * @return Count of environments.
      */
     virtual uint32_t GetEnvironmentCount() const = 0;
+
+    /** Get information if there are blend environments
+     * @return True if there are environments which needs to be blended.
+     */
+    virtual bool HasBlendEnvironments() const = 0;
+
+    /** Get environment index
+     * @return Index of the environment, main environment index if invalid id given.
+     */
+    virtual uint32_t GetEnvironmentIndex(const uint64_t id) const = 0;
 
 protected:
     IRenderDataStoreDefaultCamera() = default;

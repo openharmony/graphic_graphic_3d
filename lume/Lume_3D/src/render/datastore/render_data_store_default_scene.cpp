@@ -39,6 +39,24 @@ void RenderDataStoreDefaultScene::Clear()
     nextId = 0;
 }
 
+void RenderDataStoreDefaultScene::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStoreDefaultScene::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStoreDefaultScene::GetRefCount()
+{
+    return refcnt_;
+}
+
 void RenderDataStoreDefaultScene::SetScene(const RenderScene& renderScene)
 {
     const size_t arrIdx = scenes_.size();
@@ -70,14 +88,9 @@ RenderScene RenderDataStoreDefaultScene::GetScene() const
 }
 
 // for plugin / factory interface
-RENDER_NS::IRenderDataStore* RenderDataStoreDefaultScene::Create(RENDER_NS::IRenderContext&, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultScene::Create(IRenderContext&, char const* name)
 {
     // device not needed
-    return new RenderDataStoreDefaultScene(name);
-}
-
-void RenderDataStoreDefaultScene::Destroy(IRenderDataStore* instance)
-{
-    delete static_cast<RenderDataStoreDefaultScene*>(instance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultScene(name));
 }
 CORE3D_END_NAMESPACE()

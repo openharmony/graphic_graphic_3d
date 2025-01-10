@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_GFX__PIPELINE_STATE_OBJECT_H
-#define RENDER_GFX__PIPELINE_STATE_OBJECT_H
+#ifndef RENDER_DEVICE_PIPELINE_STATE_OBJECT_H
+#define RENDER_DEVICE_PIPELINE_STATE_OBJECT_H
 
 #include <render/namespace.h>
 
@@ -45,4 +45,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__GFX__PIPELINE_STATE_OBJECT_H
+#endif // RENDER_DEVICE_PIPELINE_STATE_OBJECT_H

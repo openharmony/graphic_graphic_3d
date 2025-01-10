@@ -17,32 +17,36 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
-#include <scene_plugin/api/camera_uid.h>
-#include <scene_plugin/interface/intf_camera.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <scene/interface/intf_camera.h>
+#include <scene/interface/intf_node.h>
+#include <scene/interface/intf_raycast.h>
+#include <scene/interface/intf_scene.h>
 
+#include "PromiseBase.h"
+#include "Raycast.h"
 #include "SceneJS.h"
+#include "Vec2Proxy.h"
+#include "Vec3Proxy.h"
 static constexpr uint32_t ACTIVE_RENDER_BIT = 1; //  CameraComponent::ACTIVE_RENDER_BIT  comes from lume3d...
 
 void* CameraJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == CameraJS::ID) {
+    if (id == CameraJS::ID)
         return this;
-    }
     return NodeImpl::GetInstanceImpl(id);
 }
-void CameraJS::DisposeNative()
+void CameraJS::DisposeNative(void*)
 {
     if (!disposed_) {
-        LOG_F("CameraJS::DisposeNative");
+        LOG_V("CameraJS::DisposeNative");
         disposed_ = true;
 
         NapiApi::Object obj = scene_.GetObject();
         auto* tro = obj.Native<TrueRootObject>();
         if (tro) {
-            SceneJS* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
+            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
             if (sceneJS) {
-                sceneJS->ReleaseStrongDispose((uintptr_t)&scene_);
+                sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
             }
         }
 
@@ -56,31 +60,24 @@ void CameraJS::DisposeNative()
         postProc_.Reset();
 
         clearColor_.reset();
-        if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
+        if (auto cam = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
             // reset the native object refs
             SetNativeObject(nullptr, false);
             SetNativeObject(nullptr, true);
 
-            ExecSyncTask([this, cam = BASE_NS::move(camera), res = BASE_NS::move(resources_)]() mutable {
-                auto ptr = cam->PostProcess()->GetValue();
-                ReleaseObject(interface_pointer_cast<META_NS::IObject>(ptr));
-                ptr.reset();
-                cam->PostProcess()->SetValue(nullptr);
-                // dispose all extra objects.
-                res.clear();
+            auto ptr = cam->PostProcess()->GetValue();
+            ReleaseObject(interface_pointer_cast<META_NS::IObject>(ptr));
+            ptr.reset();
+            cam->PostProcess()->SetValue(nullptr);
+            // dispose all extra objects.
+            resources_.clear();
 
-                auto camnode = interface_pointer_cast<SCENE_NS::INode>(cam);
-                if (camnode == nullptr) {
-                    return META_NS::IAny::Ptr {};
+            if (auto camnode = interface_pointer_cast<SCENE_NS::INode>(cam)) {
+                cam->SetActive(false);
+                if (auto scene = camnode->GetScene()) {
+                    scene->ReleaseNode(camnode);
                 }
-                auto scene = camnode->GetScene();
-                if (scene == nullptr) {
-                    return META_NS::IAny::Ptr {};
-                }
-                scene->DeactivateCamera(cam);
-                scene->ReleaseNode(camnode);
-                return META_NS::IAny::Ptr {};
-            });
+            }
         }
         scene_.Reset();
     }
@@ -99,6 +96,10 @@ void CameraJS::Init(napi_env env, napi_value exports)
     node_props.push_back(
         GetSetProperty<Object, CameraJS, &CameraJS::GetPostProcess, &CameraJS::SetPostProcess>("postProcess"));
     node_props.push_back(GetSetProperty<Object, CameraJS, &CameraJS::GetColor, &CameraJS::SetColor>("clearColor"));
+
+    node_props.push_back(Method<FunctionContext<Object>, CameraJS, &CameraJS::WorldToScreen>("worldToScreen"));
+    node_props.push_back(Method<FunctionContext<Object>, CameraJS, &CameraJS::ScreenToWorld>("screenToWorld"));
+    node_props.push_back(Method<FunctionContext<Object, Object>, CameraJS, &CameraJS::Raycast>("raycast"));
 
     napi_value func;
     auto status = napi_define_class(env, "Camera", NAPI_AUTO_LENGTH, BaseObject::ctor<CameraJS>(), nullptr,
@@ -123,20 +124,24 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject<CameraJS>(e, i
 
     auto scn = GetNativeMeta<SCENE_NS::IScene>(scene);
     if (scn == nullptr) {
-        CORE_LOG_F("Invalid scene for CameraJS!");
+        // hmm..
+        LOG_F("Invalid scene for CameraJS!");
         return;
     }
 
-    NapiApi::Object meJs(e, fromJs.This());
+    NapiApi::Object meJs(fromJs.This());
     auto* tro = scene.Native<TrueRootObject>();
-    auto* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-    sceneJS->StrongDisposeHook((uintptr_t)&scene_, meJs);
+    if (tro) {
+        auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+        if (sceneJS) {
+            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+        }
+    }
 
     NapiApi::Object args = fromJs.Arg<1>();
     auto obj = GetNativeObjectParam<META_NS::IObject>(args);
     if (obj) {
         // linking to an existing object.
-        NapiApi::Object meJs(e, fromJs.This());
         SetNativeObject(obj, false);
         StoreJsObj(obj, meJs);
         return;
@@ -153,37 +158,32 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject<CameraJS>(e, i
         path = NapiApi::Value<BASE_NS::string>(e, prm);
     }
 
-    uint32_t pipeline = SCENE_NS::ICamera::SceneCameraPipeline::SCENE_CAM_PIPELINE_LIGHT_FORWARD;
+    uint32_t pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD);
     if (auto prm = args.Get("renderPipeline")) {
         pipeline = NapiApi::Value<uint32_t>(e, prm);
     }
 
     BASE_NS::string nodePath;
 
-    if (path) {
+    if (path.IsDefined()) {
         // create using path
         nodePath = path.valueOrDefault("");
-    } else if (name) {
+    } else if (name.IsDefined()) {
         // use the name as path (creates under root)
         nodePath = name.valueOrDefault("");
-    } else {
-        // no name or path defined should this just fail?
     }
 
     // Create actual camera object.
-    SCENE_NS::ICamera::Ptr node;
-    ExecSyncTask([scn, nodePath, &node, pipeline]() {
-        node = scn->CreateNode<SCENE_NS::ICamera>(nodePath, true);
-        node->RenderingPipeline()->SetValue(pipeline);
-        scn->DeactivateCamera(node);
-        return META_NS::IAny::Ptr {};
-    });
-
+    SCENE_NS::ICamera::Ptr node =
+        scn->CreateNode<SCENE_NS::ICamera>(nodePath, SCENE_NS::ClassId::CameraNode).GetResult();
+    node->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
+    node->SetActive(false);
+    node->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
     SetNativeObject(interface_pointer_cast<META_NS::IObject>(node), false);
     node.reset();
     StoreJsObj(GetNativeObject(), meJs);
 
-    if (name) {
+    if (name.IsDefined()) {
         // set the name of the object. if we were given one
         meJs.Set("name", name);
     }
@@ -193,77 +193,75 @@ void CameraJS::Finalize(napi_env env)
 {
     // make sure the camera gets deactivated (the actual c++ camera might not be destroyed here)
     if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera]() {
-            if (auto scene = interface_cast<SCENE_NS::INode>(camera)->GetScene()) {
-                scene->DeactivateCamera(camera);
-            }
-            return META_NS::IAny::Ptr {};
-        });
+        if (auto scene = interface_cast<SCENE_NS::INode>(camera)->GetScene()) {
+            camera->SetActive(false);
+        }
     }
     BaseObject<CameraJS>::Finalize(env);
 }
 CameraJS::~CameraJS()
 {
-    LOG_F("CameraJS -- ");
+    LOG_V("CameraJS -- ");
 }
 napi_value CameraJS::GetFov(NapiApi::FunctionContext<>& ctx)
 {
-    float fov = 0.0;
-    if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, &fov]() {
-            fov = 0.0;
-            if (camera) {
-                fov = camera->FoV()->GetValue();
-            }
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
 
-    napi_value value;
-    napi_status status = napi_create_double(ctx, fov, &value);
-    return value;
+    float fov = 0.0;
+    if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
+        fov = 0.0;
+        if (camera) {
+            fov = camera->FoV()->GetValue();
+        }
+    }
+
+    return ctx.GetNumber(fov);
 }
 
 void CameraJS::SetFov(NapiApi::FunctionContext<float>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     float fov = ctx.Arg<0>();
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, fov]() {
-            camera->FoV()->SetValue(fov);
-            return META_NS::IAny::Ptr {};
-        });
+        camera->FoV()->SetValue(fov);
     }
 }
 
 napi_value CameraJS::GetEnabled(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     bool activ = false;
     if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, &activ]() {
-            if (camera) {
-                if (auto scene = interface_cast<SCENE_NS::INode>(camera)->GetScene()) {
-                    activ = scene->IsCameraActive(camera);
-                }
-            }
-            return META_NS::IAny::Ptr {};
-        });
+        if (camera) {
+            activ = camera->IsActive();
+        }
     }
-    napi_value value;
-    napi_status status = napi_get_boolean(ctx, activ, &value);
-    return value;
+    return ctx.GetBoolean(activ);
 }
 
 void CameraJS::SetEnabled(NapiApi::FunctionContext<bool>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     bool activ = ctx.Arg<0>();
     if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
         ExecSyncTask([camera, activ]() {
-            if (auto scene = interface_cast<SCENE_NS::INode>(camera)->GetScene()) {
+            if (camera) {
+                uint32_t flags = camera->SceneFlags()->GetValue();
                 if (activ) {
-                    scene->ActivateCamera(camera);
+                    flags |= uint32_t(SCENE_NS::CameraSceneFlag::MAIN_CAMERA_BIT);
                 } else {
-                    scene->DeactivateCamera(camera);
+                    flags &= ~uint32_t(SCENE_NS::CameraSceneFlag::MAIN_CAMERA_BIT);
                 }
+                camera->SceneFlags()->SetValue(flags);
+                camera->SetActive(activ);
             }
             return META_NS::IAny::Ptr {};
         });
@@ -272,90 +270,86 @@ void CameraJS::SetEnabled(NapiApi::FunctionContext<bool>& ctx)
 
 napi_value CameraJS::GetFar(NapiApi::FunctionContext<>& ctx)
 {
-    float fov = 0.0;
-    if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, &fov]() {
-            fov = 0.0;
-            if (camera) {
-                fov = camera->FarPlane()->GetValue();
-            }
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
-
-    napi_value value;
-    napi_status status = napi_create_double(ctx, fov, &value);
-    return value;
+    float far = 0.0;
+    if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
+        far = camera->FarPlane()->GetValue();
+    }
+    return ctx.GetNumber(far);
 }
 
 void CameraJS::SetFar(NapiApi::FunctionContext<float>& ctx)
 {
     float fov = ctx.Arg<0>();
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, fov]() {
-            camera->FarPlane()->SetValue(fov);
-            return META_NS::IAny::Ptr {};
-        });
+        camera->FarPlane()->SetValue(fov);
     }
 }
 
 napi_value CameraJS::GetNear(NapiApi::FunctionContext<>& ctx)
 {
-    float fov = 0.0;
-    if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, &fov]() {
-            fov = 0.0;
-            if (camera) {
-                fov = camera->NearPlane()->GetValue();
-            }
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
-
-    napi_value value;
-    napi_status status = napi_create_double(ctx, fov, &value);
-    return value;
+    float near = 0.0;
+    if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
+        near = camera->NearPlane()->GetValue();
+    }
+    return ctx.GetNumber(near);
 }
 
 void CameraJS::SetNear(NapiApi::FunctionContext<float>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     float fov = ctx.Arg<0>();
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, fov]() {
-            camera->NearPlane()->SetValue(fov);
-            return META_NS::IAny::Ptr {};
-        });
+        camera->NearPlane()->SetValue(fov);
     }
 }
 
 napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        SCENE_NS::IPostProcess::Ptr postproc;
-        ExecSyncTask([camera, &postproc]() {
-            postproc = camera->PostProcess()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        SCENE_NS::IPostProcess::Ptr postproc = camera->PostProcess()->GetValue();
+        if (!postproc) {
+            // early out.
+            return ctx.GetNull();
+        }
         auto obj = interface_pointer_cast<META_NS::IObject>(postproc);
         if (auto cached = FetchJsObj(obj)) {
             // always return the same js object.
-            return cached;
+            return cached.ToNapiValue();
         }
-        NapiApi::Object parms;            /*empty object*/
-        napi_value args[] = { ctx.This(), // Camera..
-            parms };
-        napi_value postProcJS = CreateFromNativeInstance(ctx, obj, false, BASE_NS::countof(args), args);
-        postProc_ = { ctx, postProcJS }; // take ownership of the object.
-        return postProcJS;
+        NapiApi::Env env(ctx.Env());
+        NapiApi::Object parms(env);
+        napi_value args[] = { ctx.This().ToNapiValue(), parms.ToNapiValue() };
+        // take ownership of the object.
+        postProc_ = NapiApi::StrongRef(CreateFromNativeInstance(env, obj, false, BASE_NS::countof(args), args));
+        return postProc_.GetValue();
     }
     return ctx.GetNull();
 }
 
 void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
+
+    auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject());
+    if (!camera) {
+        return;
+    }
     NapiApi::Object psp = ctx.Arg<0>();
     if (auto currentlySet = postProc_.GetObject()) {
-        if ((napi_value)currentlySet == (napi_value)psp) {
+        if (psp.StrictEqual(currentlySet)) {
             // setting the exactly the same postprocess setting. do nothing.
             return;
         }
@@ -367,101 +361,59 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
 
     SCENE_NS::IPostProcess::Ptr postproc;
-    // see if we have a native backing for the input object..
-    TrueRootObject* native = psp.Native<TrueRootObject>();
-    if (!native) {
-        // nope.. so create a new bridged object.
-        napi_value args[] = {
-            ctx.This(), // Camera..
-            ctx.Arg<0>() // "javascript object for values"
-        };
-        psp = { GetJSConstructor(ctx, "PostProcessSettings"), BASE_NS::countof(args), args };
-        native = psp.Native<TrueRootObject>();
-    }
-    postProc_ = { ctx, psp };
+    if (psp) {
+        // see if we have a native backing for the input object..
+        TrueRootObject* native = psp.Native<TrueRootObject>();
+        if (!native) {
+            // nope.. so create a new bridged object.
+            napi_value args[] = {
+                ctx.This().ToNapiValue(),  // Camera..
+                ctx.Arg<0>().ToNapiValue() // "javascript object for values"
+            };
+            psp = { GetJSConstructor(ctx.Env(), "PostProcessSettings"), BASE_NS::countof(args), args };
+            native = psp.Native<TrueRootObject>();
+        }
+        postProc_ = NapiApi::StrongRef(psp);
 
-    if (native) {
-        postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(native->GetNativeObject());
+        if (native) {
+            postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(native->GetNativeObject());
+        }
     }
-    if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, postproc = BASE_NS::move(postproc)]() {
-            camera->PostProcess()->SetValue(postproc);
-            return META_NS::IAny::Ptr {};
-        });
-    }
-}
-
-// the PipelineFlagBits are not declared in sceneplugin api..
-namespace {
-
-enum PipelineFlagBits : uint32_t {
-    /** Target clear flags depth. Override camera render node graph loadOp with clear.
-     * Without clear the default render node graph based loadOp is used. (Default pipelines use depth clear)
-     */
-    CLEAR_DEPTH_BIT = (1 << 0),
-    /** Target clear flags color. Override camera render node graph loadOp with clear.
-     * Without clear the default render node graph based loadOp is used. (Default pipelines do not use color clear)
-     */
-    CLEAR_COLOR_BIT = (1 << 1),
-    /** Enable MSAA for rendering. Only affects non deferred default pipelines. */
-    MSAA_BIT = (1 << 2),
-    /** Automatically use pre-pass if there are default material needs (e.g. for transmission). Automatic RNG
-       generation needs to be enabled for the ECS scene. */
-    ALLOW_COLOR_PRE_PASS_BIT = (1 << 3),
-    /** Force pre-pass every frame. Use for e.g. custom shaders without default material needs. Automatic RNG
-       generation needs to be enabled for the ECS scene. */
-    FORCE_COLOR_PRE_PASS_BIT = (1 << 4),
-    /** Store history (store history for next frame, needed for e.g. temporal filtering) */
-    HISTORY_BIT = (1 << 5),
-    /** Jitter camera. With Halton sampling */
-    JITTER_BIT = (1 << 6),
-    /** Output samplable velocity / normal */
-    VELOCITY_OUTPUT_BIT = (1 << 7),
-    /** Output samplable depth */
-    DEPTH_OUTPUT_BIT = (1 << 8),
-    /** Is a multi-view camera and is not be rendered separately at all
-     * The camera is added to other camera as multiViewCameras
-     */
-    MULTI_VIEW_ONLY_BIT = (1 << 9),
-    /** Generate environment cubemap dynamically for the camera
-     */
-    DYNAMIC_CUBEMAP_BIT = (1 << 10),
-    /** Disallow reflection plane for camera
-     */
-    DISALLOW_REFLECTION_BIT = (1 << 11),
-};
+    camera->PostProcess()->SetValue(postproc);
 }
 
 napi_value CameraJS::GetColor(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
     auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetThisNativeObject(ctx));
     if (!camera) {
-        return {};
+        return ctx.GetUndefined();
     }
-    bool enabled { false };
-    ExecSyncTask([camera, &enabled]() {
-        // enable camera clear
-        uint32_t curBits = camera->PipelineFlags()->GetValue();
-        enabled = curBits & PipelineFlagBits::CLEAR_COLOR_BIT;
-        return META_NS::IAny::Ptr {};
-    });
+    uint32_t curBits = camera->PipelineFlags()->GetValue();
+    bool enabled = curBits & static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::CLEAR_COLOR_BIT);
     if (!enabled) {
         return ctx.GetNull();
     }
 
     if (clearColor_ == nullptr) {
-        clearColor_ = BASE_NS::make_unique<ColorProxy>(ctx, camera->ClearColor());
+        clearColor_ = BASE_NS::make_unique<ColorProxy>(ctx.Env(), camera->ClearColor());
     }
     return clearColor_->Value();
 }
 void CameraJS::SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetThisNativeObject(ctx));
     if (!camera) {
         return;
     }
     if (clearColor_ == nullptr) {
-        clearColor_ = BASE_NS::make_unique<ColorProxy>(ctx, camera->ClearColor());
+        clearColor_ = BASE_NS::make_unique<ColorProxy>(ctx.Env(), camera->ClearColor());
     }
     NapiApi::Object obj = ctx.Arg<0>();
     if (obj) {
@@ -470,31 +422,146 @@ void CameraJS::SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     } else {
         clearColorEnabled_ = false;
     }
-    ExecSyncTask([camera, clearColorEnabled = clearColorEnabled_, msaaEnabled = msaaEnabled_]() {
-        // enable camera clear
-        uint32_t curBits = camera->PipelineFlags()->GetValue();
-        if (msaaEnabled) {
-            curBits |= PipelineFlagBits::MSAA_BIT;
-        } else {
-            curBits &= ~PipelineFlagBits::MSAA_BIT;
+    // enable camera clear
+    uint32_t curBits = camera->PipelineFlags()->GetValue();
+    if (msaaEnabled_) {
+        curBits |= static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::MSAA_BIT);
+    } else {
+        curBits &= ~static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::MSAA_BIT);
+    }
+    if (clearColorEnabled_) {
+        curBits |= static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::CLEAR_COLOR_BIT);
+    } else {
+        curBits &= ~static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::CLEAR_COLOR_BIT);
+    }
+    camera->PipelineFlags()->SetValue(curBits);
+}
+
+napi_value CameraJS::WorldToScreen(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    return ProjectCoords<ProjectionDirection::WORLD_TO_SCREEN>(ctx);
+}
+
+napi_value CameraJS::ScreenToWorld(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    return ProjectCoords<ProjectionDirection::SCREEN_TO_WORLD>(ctx);
+}
+
+template <CameraJS::ProjectionDirection dir>
+napi_value CameraJS::ProjectCoords(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    NapiApi::StrongRef scene;
+    auto inCoordJs = ctx.Arg<0>();
+    auto raycastSelf = SCENE_NS::ICameraRayCast::Ptr {};
+    auto inCoord = BASE_NS::Math::Vec3 {};
+    if (!ExtractRaycastStuff(inCoordJs, scene, raycastSelf, inCoord)) {
+        return {};
+    }
+    auto outCoord = BASE_NS::Math::Vec3 {};
+    if constexpr (dir == ProjectionDirection::WORLD_TO_SCREEN) {
+        outCoord = raycastSelf->WorldPositionToScreen(inCoord).GetResult();
+    } else {
+        outCoord = raycastSelf->ScreenPositionToWorld(inCoord).GetResult();
+    }
+    return Vec3Proxy::ToNapiObject(outCoord, ctx.Env()).ToNapiValue();
+}
+
+napi_value CameraJS::Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
+    struct Promise : public PromiseBase {
+        using PromiseBase::PromiseBase;
+        NapiApi::StrongRef this_;
+        NapiApi::StrongRef coordArg_;
+        NapiApi::StrongRef optionArg_;
+        bool SetResult() override
+        {
+            auto* rootObject = static_cast<CameraJS*>(this_.GetObject().Native<TrueRootObject>());
+            result_ = rootObject->Raycast(this_.GetEnv(), coordArg_.GetObject(), optionArg_.GetObject());
+            return (bool)result_;
         }
-        if (clearColorEnabled) {
-            curBits |= PipelineFlagBits::CLEAR_COLOR_BIT;
+    };
+    auto promise = new Promise(ctx.Env());
+    auto jsPromise = promise->ToNapiValue();
+    promise->this_ = NapiApi::StrongRef(ctx.This());
+    promise->coordArg_ = NapiApi::StrongRef(ctx.Arg<0>());
+    promise->optionArg_ = NapiApi::StrongRef(ctx.Arg<1>());
+
+    auto func = [promise]() {
+        promise->SettleLater();
+        return false;
+    };
+    auto task = META_NS::MakeCallback<META_NS::ITaskQueueTask>(BASE_NS::move(func));
+    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddTask(task);
+
+    return jsPromise;
+}
+
+napi_value CameraJS::Raycast(napi_env env, NapiApi::Object screenCoordJs, NapiApi::Object optionsJs)
+{
+    auto scene = NapiApi::StrongRef {};
+    auto raycastSelf = SCENE_NS::ICameraRayCast::Ptr {};
+    auto screenCoord = BASE_NS::Math::Vec2 {};
+    if (!ExtractRaycastStuff(screenCoordJs, scene, raycastSelf, screenCoord)) {
+        return {};
+    }
+
+    auto options = ToNativeOptions(env, optionsJs);
+    const auto hitResults = raycastSelf->CastRay(screenCoord, options).GetResult();
+
+    napi_value hitList;
+    napi_create_array_with_length(env, hitResults.size(), &hitList);
+    size_t i = 0;
+    for (const auto& hitResult : hitResults) {
+        auto hitObject = CreateRaycastResult(scene, env, hitResult);
+        napi_set_element(env, hitList, i, hitObject.ToNapiValue());
+        i++;
+    }
+    return hitList;
+}
+
+template<typename CoordType>
+bool CameraJS::ExtractRaycastStuff(const NapiApi::Object& jsCoord, NapiApi::StrongRef& scene,
+    SCENE_NS::ICameraRayCast::Ptr& raycastSelf, CoordType& nativeCoord)
+{
+    scene = NapiApi::StrongRef { scene_.GetObject() };
+    if (!scene.GetValue()) {
+        LOG_E("Scene is gone");
+        return false;
+    }
+
+    raycastSelf = interface_pointer_cast<SCENE_NS::ICameraRayCast>(GetNativeObject());
+    if (!raycastSelf) {
+        LOG_F("Unable to access raycast API");
+        return false;
+    }
+
+    bool conversionOk = false;
+    if constexpr (BASE_NS::is_same_v<CoordType, BASE_NS::Math::Vec2>) {
+        nativeCoord = Vec2Proxy::ToNative(jsCoord, conversionOk);
         } else {
-            curBits &= ~PipelineFlagBits::CLEAR_COLOR_BIT;
-        }
-        camera->PipelineFlags()->SetValue(curBits);
-        return META_NS::IAny::Ptr {};
-    });
+        nativeCoord = Vec3Proxy::ToNative(jsCoord, conversionOk);
+    }
+    if (!conversionOk) {
+        LOG_E("Invalid position argument");
+        return false;
+    }
+    return true;
 }
 
 META_NS::IObject::Ptr CameraJS::CreateObject(const META_NS::ClassInfo& type)
 {
-    META_NS::IObject::Ptr obj = META_NS::GetObjectRegistry().Create(type);
-    if (obj) {
-        resources_[(uintptr_t)obj.get()] = obj;
+    if (auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+        META_NS::IObject::Ptr obj = scn->CreateObject(type).GetResult();
+        if (obj) {
+            resources_[(uintptr_t)obj.get()] = obj;
+        }
+        return obj;
     }
-    return obj;
+    return nullptr;
 }
 void CameraJS::ReleaseObject(const META_NS::IObject::Ptr& obj)
 {
@@ -505,38 +572,35 @@ void CameraJS::ReleaseObject(const META_NS::IObject::Ptr& obj)
 
 napi_value CameraJS::GetMSAA(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     bool enabled = false;
     if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, &enabled]() {
-            uint32_t curBits = camera->PipelineFlags()->GetValue();
-            enabled = curBits & PipelineFlagBits::MSAA_BIT;
-            return META_NS::IAny::Ptr {};
-        });
+        uint32_t curBits = camera->PipelineFlags()->GetValue();
+        enabled = curBits & static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::MSAA_BIT);
     }
-
-    napi_value value;
-    napi_status status = napi_get_boolean(ctx, enabled, &value);
-    return value;
+    return ctx.GetBoolean(enabled);
 }
 
 void CameraJS::SetMSAA(NapiApi::FunctionContext<bool>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     msaaEnabled_ = ctx.Arg<0>();
     if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        ExecSyncTask([camera, msaaEnabled = msaaEnabled_, clearColorEnabled = clearColorEnabled_]() {
-            uint32_t curBits = camera->PipelineFlags()->GetValue();
-            if (msaaEnabled) {
-                curBits |= PipelineFlagBits::MSAA_BIT;
-            } else {
-                curBits &= ~PipelineFlagBits::MSAA_BIT;
-            }
-            if (clearColorEnabled) {
-                curBits |= PipelineFlagBits::CLEAR_COLOR_BIT;
-            } else {
-                curBits &= ~PipelineFlagBits::CLEAR_COLOR_BIT;
-            }
-            camera->PipelineFlags()->SetValue(curBits);
-            return META_NS::IAny::Ptr {};
-        });
+        uint32_t curBits = camera->PipelineFlags()->GetValue();
+        if (msaaEnabled_) {
+            curBits |= static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::MSAA_BIT);
+        } else {
+            curBits &= ~static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::MSAA_BIT);
+        }
+        if (clearColorEnabled_) {
+            curBits |= static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::CLEAR_COLOR_BIT);
+        } else {
+            curBits &= ~static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::CLEAR_COLOR_BIT);
+        }
+        camera->PipelineFlags()->SetValue(curBits);
     }
 }

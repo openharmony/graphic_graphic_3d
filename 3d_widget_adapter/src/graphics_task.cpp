@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -115,8 +115,8 @@ void GraphicsTask::Start()
         return;
     }
     exit_ = false;
-    loop_ = std::thread(std::bind(&GraphicsTask::EngineThread, this));
-    PushAsyncMessage(std::bind(&GraphicsTask::SetName, this));
+    loop_ = std::thread([this] { this->EngineThread(); });
+    PushAsyncMessage([this] { this->SetName(); });
     WIDGET_LOGD("GraphicsTask::Start end");
 }
 

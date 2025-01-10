@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -91,7 +91,7 @@ public:
      * If the name is already the already created the object is not created again.
      * NOTE: if "materialMetaData" is found from the shader the localFactorData is fetch from it.
      * One needs to do Set() to override this default built-in data.
-     * @param name A unique name of the post process.
+     * @param name A name of the post process.
      * @param ppName A unique name for the single post process.
      * @param shader Optional shader handle to be used as post process default shader.
      */
@@ -124,7 +124,7 @@ public:
 
     /** Set variables to a single post process.
      * @param name Name of the post process stack
-     * @param ppName Name of the single post process effect.
+     * @param ppName Name of the single post process
      * @param vars Variables to set for the single post process
      */
     virtual void Set(
@@ -160,4 +160,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_DATA_STORE_POST_PROCESS_H
+#endif // API_RENDER_IRENDER_DATA_STORE_FULLSCREEN_SHADER_H

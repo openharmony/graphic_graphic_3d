@@ -1,0 +1,131 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("runtime_utils_api") {
+  include_dirs = [ "Util/include" ]
+  configs = [
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+  ]
+
+  #defines = []
+}
+
+ohos_source_set("runtime_utils_src") {
+  configs = [ ":runtime_utils_api" ]
+
+  sources = [
+    "Util/src/util/io_util.cpp",
+    "Util/src/util/json.cpp",
+    "Util/src/util/path_util.cpp",
+  ]
+
+  deps = []
+
+  external_deps = []
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+#ohos_static_library("runtime_utils") {
+#deps = [ ":runtime_utils_src" ]
+
+#  part_name = "graphic_3d"
+#  subsystem_name = "graphic"
+#}
+
+config("ecs_serializer_api") {
+  include_dirs = [ "EcsSerializer/include" ]
+  configs = [ ":runtime_utils_api" ]
+
+  #defines = []
+}
+
+config("ecs_serializer_config") {
+  configs = [ ":ecs_serializer_api" ]
+  include_dirs = [ "src" ]
+
+  #defines = [ ]
+
+  ldflags = []
+
+  cflags = [
+    "-Wno-unused-function",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-logical-op-parentheses",
+    "-Wno-unused-local-typedef",
+    "-fvisibility=hidden",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-Wno-ignored-qualifiers",
+    "-fno-rtti",
+  ]
+  cflags_cc = [
+    "-std=c++17",
+    "-Wno-overloaded-virtual",
+    "-Wno-thread-safety-attributes",
+    "-Wno-missing-braces",
+  ]
+}
+
+ohos_source_set("ecs_serializer_src") {
+  public_configs = [
+    ":ecs_serializer_config",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+  ]
+
+  sources = [
+    "EcsSerializer/src/ecs_serializer/asset_migration.cpp",
+    "EcsSerializer/src/ecs_serializer/asset_migration.h",
+    "EcsSerializer/src/ecs_serializer/ecs_asset_loader.cpp",
+    "EcsSerializer/src/ecs_serializer/ecs_asset_manager.cpp",
+    "EcsSerializer/src/ecs_serializer/ecs_serializer.cpp",
+    "EcsSerializer/src/ecs_serializer/entity_collection.cpp",
+  ]
+
+  public_deps = []
+
+  deps = [
+    #":runtime_utils",
+    "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
+  ]
+
+  external_deps = [
+    #    "c_utils:utils",
+  ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_static_library("EcsSerializer") {
+  public_configs = [
+    ":runtime_utils_api",
+    ":ecs_serializer_api",
+  ]
+  deps = [
+    ":ecs_serializer_src",
+    ":runtime_utils_src",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

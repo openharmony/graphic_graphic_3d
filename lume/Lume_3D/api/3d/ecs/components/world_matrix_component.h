@@ -32,6 +32,9 @@ BEGIN_COMPONENT(IWorldMatrixComponentManager, WorldMatrixComponent)
     /** World space transformation of the object.
      */
     DEFINE_PROPERTY(BASE_NS::Math::Mat4X4, matrix, "World Matrix", 0, VALUE(BASE_NS::Math::IDENTITY_4X4))
+    /** World space transformation of the object from the previous frame.
+     */
+    DEFINE_PROPERTY(BASE_NS::Math::Mat4X4, prevMatrix, "Previous World Matrix", 0, VALUE(BASE_NS::Math::IDENTITY_4X4))
 
 END_COMPONENT(IWorldMatrixComponentManager, WorldMatrixComponent, "4f76b9cc-4586-434d-a4dd-3bd115188d48")
 #if !defined(IMPLEMENT_MANAGER)

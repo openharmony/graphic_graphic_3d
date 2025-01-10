@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,21 +18,23 @@
 
 #include "SceneJS.h"
 #include "scene_adapter/scene_bridge.h"
+#include "SceneJS.h"
+
 #include "3d_widget_adapter_log.h"
 
 namespace OHOS::Render3D {
+
 std::shared_ptr<ISceneAdapter> SceneBridge::UnwrapSceneFromJs(napi_env env, napi_value value)
 {
     SceneJS* sceneNapi = nullptr;
     napi_status status = napi_unwrap(env, value, reinterpret_cast<void**>(&sceneNapi));
-
     if (status != napi_ok) {
         WIDGET_LOGE("unwrap scene napi from js failed");
         return nullptr;
     }
 
     if (sceneNapi == nullptr) {
-        WIDGET_LOGE("get scene napi pointer nullptr");
+        WIDGET_LOGD("get scene napi pointer nullptr");
         return nullptr;
     }
 
@@ -42,4 +44,4 @@ std::shared_ptr<ISceneAdapter> SceneBridge::UnwrapSceneFromJs(napi_env env, napi
 
     return sceneNapi->scene_;
 }
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

@@ -19,7 +19,7 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE3D_BEGIN_NAMESPACE()
 using BASE_NS::array_view;
@@ -31,30 +31,33 @@ using CORE_NS::IEcs;
 using CORE_NS::Property;
 
 class NameComponentManager final : public BaseManager<NameComponent, INameComponentManager> {
-    BEGIN_PROPERTY(NameComponent, ComponentMetadata)
+    BEGIN_PROPERTY(NameComponent, componentMetaData_)
 #include <3d/ecs/components/name_component.h>
     END_PROPERTY();
-    const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit NameComponentManager(IEcs& ecs)
         : BaseManager<NameComponent, INameComponentManager>(ecs, CORE_NS::GetName<NameComponent>())
     {}
+
     ~NameComponentManager() = default;
+
     size_t PropertyCount() const override
     {
-        return ComponentMetaData.size();
+        return BASE_NS::countof(componentMetaData_);
     }
+
     const Property* MetaData(size_t index) const override
     {
-        if (index < ComponentMetaData.size()) {
-            return &ComponentMetaData[index];
+        if (index < BASE_NS::countof(componentMetaData_)) {
+            return &componentMetaData_[index];
         }
         return nullptr;
     }
+
     array_view<const Property> MetaData() const override
     {
-        return ComponentMetaData;
+        return componentMetaData_;
     }
 };
 

@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__IO__PROXY_DIRECTORY_H
-#define CORE__IO__PROXY_DIRECTORY_H
+#ifndef CORE_IO_PROXY_DIRECTORY_H
+#define CORE_IO_PROXY_DIRECTORY_H
 
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
@@ -43,4 +43,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE__IO__PROXY_DIRECTORY_H
+#endif // CORE_IO_PROXY_DIRECTORY_H

@@ -15,29 +15,23 @@
 
 #include "gpu_program_vk.h"
 
-#include <algorithm>
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
 
 #include <base/containers/array_view.h>
 #include <base/containers/vector.h>
-#include <render/device/gpu_resource_desc.h>
 #include <render/device/pipeline_layout_desc.h>
 #include <render/namespace.h>
 
 #include "device/device.h"
 #include "device/gpu_program_util.h"
-#include "device/shader_module.h"
 #include "util/log.h"
 #include "vulkan/device_vk.h"
 #include "vulkan/shader_module_vk.h"
-#include "vulkan/validate_vk.h"
 
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-GpuShaderProgramVk::GpuShaderProgramVk(Device& device, const GpuShaderProgramCreateData& createData)
-    : GpuShaderProgram()
+GpuShaderProgramVk::GpuShaderProgramVk(const GpuShaderProgramCreateData& createData) : GpuShaderProgram()
 {
     PLUGIN_ASSERT(createData.vertShaderModule);
     PLUGIN_ASSERT(createData.fragShaderModule);
@@ -89,8 +83,7 @@ const ShaderReflection& GpuShaderProgramVk::GetReflection() const
     return reflection_;
 }
 
-GpuComputeProgramVk::GpuComputeProgramVk(Device& device, const GpuComputeProgramCreateData& createData)
-    : GpuComputeProgram()
+GpuComputeProgramVk::GpuComputeProgramVk(const GpuComputeProgramCreateData& createData) : GpuComputeProgram()
 {
     PLUGIN_ASSERT(createData.compShaderModule);
 

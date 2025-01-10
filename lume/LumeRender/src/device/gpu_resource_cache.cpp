@@ -18,8 +18,6 @@
 #include <algorithm>
 #include <cinttypes>
 
-#include <base/containers/fixed_string.h>
-#include <base/containers/string.h>
 #include <base/math/mathf.h>
 #include <render/resource_handle.h>
 
@@ -80,12 +78,12 @@ GpuResourceCache::~GpuResourceCache()
         uint32_t aliveCounter = 0;
         const uint32_t readIdx = 1u - writeIdx_;
         for (const auto& imagesRef : frameData_[writeIdx_].images) {
-            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2:count number
+            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2 : count
                 aliveCounter++;
             }
         }
         for (const auto& imagesRef : frameData_[readIdx].images) {
-            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2: count number
+            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2 : count
                 aliveCounter++;
             }
         }
@@ -107,8 +105,8 @@ void GpuResourceCache::BeginFrame(const uint64_t frameCount)
     frameCounter_ = frameCount;
     writeIdx_ = 1u - writeIdx_;
 
-    AllocateAndRemapImages();
     DestroyOldImages();
+    AllocateAndRemapImages();
 }
 
 array_view<const GpuResourceCache::ImageData> GpuResourceCache::GetImageData() const
@@ -215,7 +213,7 @@ void GpuResourceCache::DestroyOldImages()
     }
 }
 
-uint64_t GpuResourceCache::HashCacheGpuImageDesc(const CacheGpuImageDesc& desc) const
+uint64_t GpuResourceCache::HashCacheGpuImageDesc(const CacheGpuImageDesc& desc)
 {
     // pack: width, height, mipCount, layerCount to a single 64 bit "hash"
     const uint32_t sizeHash = (desc.width << 16u) | desc.height;

@@ -13,12 +13,14 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
-#define RENDER_RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#ifndef RENDER_DATASTORE_RENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#define RENDER_DATASTORE_RENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
 
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 
+#include <base/containers/refcnt_ptr.h>
 #include <base/containers/string.h>
 #include <base/containers/vector.h>
 #include <base/util/uid.h>
@@ -60,39 +62,19 @@ RenderDataStoreDefaultAccelerationStructureStaging implementation.
 class RenderDataStoreDefaultAccelerationStructureStaging final
     : public IRenderDataStoreDefaultAccelerationStructureStaging {
 public:
-    RenderDataStoreDefaultAccelerationStructureStaging(IRenderContext& renderContext, const BASE_NS::string_view name);
+    RenderDataStoreDefaultAccelerationStructureStaging(IRenderContext& renderContext, BASE_NS::string_view name);
     ~RenderDataStoreDefaultAccelerationStructureStaging() override;
 
-    void CommitFrameData() override {};
+    // IRenderDataStore
     void PreRender() override;
     void PostRender() override;
-    void PreRenderBackend() override {};
-    void PostRenderBackend() override {};
+    void PreRenderBackend() override {}
+    void PostRenderBackend() override {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
         return 0;
-    };
-
-    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
-        const BASE_NS::array_view<const StagingAccelerationStructureGeometryTrianglesData> geometries) override;
-    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
-        const BASE_NS::array_view<const StagingAccelerationStructureGeometryInstancesData> geometries) override;
-    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
-        const BASE_NS::array_view<const StagingAccelerationStructureGeometryAabbsData> geometries) override;
-
-    void CopyAccelerationStructureInstanceData(const RenderHandleReference& buffer, const uint32_t offset,
-        const BASE_NS::array_view<const StagingAccelerationStructureInstance> instances) override;
-
-    bool HasStagingData() const;
-    AccelerationStructureBuildConsumeStruct ConsumeStagingBuildData();
-    AccelerationStructureInstanceConsumeStruct ConsumeStagingInstanceData();
-
-    // for plugin / factory interface
-    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultAccelerationStructureStaging";
-
-    static IRenderDataStore* Create(IRenderContext& renderContext, char const* name);
-    static void Destroy(IRenderDataStore* instance);
+    }
 
     BASE_NS::string_view GetTypeName() const override
     {
@@ -109,6 +91,30 @@ public:
         return UID;
     }
 
+    void Ref() override;
+    void Unref() override;
+    int32_t GetRefCount() override;
+
+    // IRenderDataStoreDefaultAccelerationStructureStaging
+    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
+        BASE_NS::array_view<const StagingAccelerationStructureGeometryTrianglesData> geometries) override;
+    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
+        BASE_NS::array_view<const StagingAccelerationStructureGeometryInstancesData> geometries) override;
+    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
+        BASE_NS::array_view<const StagingAccelerationStructureGeometryAabbsData> geometries) override;
+
+    void CopyAccelerationStructureInstanceData(const RenderHandleReference& buffer, uint32_t offset,
+        BASE_NS::array_view<const StagingAccelerationStructureInstance> instances) override;
+
+    bool HasStagingData() const;
+    AccelerationStructureBuildConsumeStruct ConsumeStagingBuildData();
+    AccelerationStructureInstanceConsumeStruct ConsumeStagingInstanceData();
+
+    // for plugin / factory interface
+    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultAccelerationStructureStaging";
+
+    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(IRenderContext& renderContext, const char* name);
+
 private:
     IGpuResourceManager& gpuResourceMgr_;
     const BASE_NS::string name_;
@@ -120,7 +126,9 @@ private:
     AccelerationStructureInstanceConsumeStruct frameStagingInstance_;
 
     mutable std::mutex mutex_;
+
+    std::atomic_int32_t refcnt_ { 0 };
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#endif // RENDER_DATASTORE_RENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H

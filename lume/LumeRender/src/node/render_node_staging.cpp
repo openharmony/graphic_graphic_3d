@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <cinttypes>
-#include <cstring>
 
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
@@ -27,6 +26,7 @@
 #include <render/nodecontext/intf_render_node_context_manager.h>
 
 #include "datastore/render_data_store_default_staging.h"
+#include "default_engine_constants.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
@@ -48,7 +48,7 @@ void CopyHostDirectlyToBuffer(
         auto const& bufferDesc = gpuResourceMgr.GetBufferDescriptor(ref.dstHandle.GetHandle());
         const uint8_t* baseDstDataEnd = baseDstDataBegin + bufferDesc.byteSize;
 
-        const uint8_t* baseSrcDataBegin = static_cast<const uint8_t*>(ref.stagingData.data());
+        const auto* baseSrcDataBegin = static_cast<const uint8_t*>(ref.stagingData.data());
         const uint32_t bufferBeginIndex = ref.beginIndex;
         const uint32_t bufferEndIndex = bufferBeginIndex + ref.count;
         for (uint32_t bufferIdx = bufferBeginIndex; bufferIdx < bufferEndIndex; ++bufferIdx) {
@@ -113,7 +113,7 @@ void RenderNodeStaging::PreExecuteFrame()
     if (renderNodeContextMgr_->GetRenderNodeGraphData().renderingConfiguration.renderBackend ==
         DeviceBackendType::OPENGLES) {
         const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-        if (RenderDataStoreDefaultStaging* dataStoreDefaultStaging = static_cast<RenderDataStoreDefaultStaging*>(
+        if (auto* dataStoreDefaultStaging = static_cast<RenderDataStoreDefaultStaging*>(
                 renderDataStoreMgr.GetRenderDataStore(dataStoreNameStaging_));
             dataStoreDefaultStaging) {
             renderStaging.PreExecuteFrame(dataStoreDefaultStaging->GetImageClearByteSize());
@@ -132,7 +132,7 @@ void RenderNodeStaging::ExecuteFrame(IRenderCommandList& cmdList)
     StagingConsumeStruct renderDataStoreStaging;
     StagingDirectDataCopyConsumeStruct renderDataStoreStagingDirectCopy;
     StagingImageClearConsumeStruct renderDataStoreImageClear;
-    if (RenderDataStoreDefaultStaging* dataStoreDefaultStaging =
+    if (auto* dataStoreDefaultStaging =
             static_cast<RenderDataStoreDefaultStaging*>(renderDataStoreMgr.GetRenderDataStore(dataStoreNameStaging_));
         dataStoreDefaultStaging) {
         hasData = hasData || dataStoreDefaultStaging->HasBeginStagingData();
@@ -146,9 +146,18 @@ void RenderNodeStaging::ExecuteFrame(IRenderCommandList& cmdList)
         return;
     }
 
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderStaging", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
+
     // memcpy to staging
     const StagingConsumeStruct staging = gpuResourceMgrImpl.ConsumeStagingData();
-    renderStaging.CopyHostToStaging(gpuResourceMgr, staging);
+    if (RenderHandleUtil::IsValid(staging.stagingBuffer) && (staging.stagingByteSize > 0)) {
+        if (auto* dataPtr = static_cast<uint8_t*>(gpuResourceMgr.MapBufferMemory(staging.stagingBuffer)); dataPtr) {
+            RenderStaging::StagingMappedBuffer smb { staging.stagingBuffer, dataPtr, staging.stagingByteSize };
+            renderStaging.CopyHostToStaging(staging, smb);
+
+            gpuResourceMgr.UnmapBuffer(staging.stagingBuffer);
+        }
+    }
     renderStaging.CopyHostToStaging(gpuResourceMgr, renderDataStoreStaging);
     // direct memcpy
     CopyHostDirectlyToBuffer(gpuResourceMgr, staging);
@@ -157,8 +166,8 @@ void RenderNodeStaging::ExecuteFrame(IRenderCommandList& cmdList)
     // images
     renderStaging.ClearImages(cmdList, gpuResourceMgr, renderDataStoreImageClear);
     renderStaging.CopyStagingToImages(cmdList, gpuResourceMgr, staging, renderDataStoreStaging);
-    renderStaging.CopyImagesToBuffers(cmdList, gpuResourceMgr, staging, renderDataStoreStaging);
-    renderStaging.CopyImagesToImages(cmdList, gpuResourceMgr, staging, renderDataStoreStaging);
+    renderStaging.CopyImagesToBuffers(cmdList, staging, renderDataStoreStaging);
+    renderStaging.CopyImagesToImages(cmdList, staging, renderDataStoreStaging);
 
     // buffers
     renderStaging.CopyBuffersToBuffers(cmdList, staging, renderDataStoreStaging);

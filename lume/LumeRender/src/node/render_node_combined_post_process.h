@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_COMBINED_POST_PROCESS_H
-#define RENDER_RENDER__NODE__RENDER_NODE_COMBINED_POST_PROCESS_H
+#ifndef RENDER_NODE_RENDER_NODE_COMBINED_POST_PROCESS_H
+#define RENDER_NODE_RENDER_NODE_COMBINED_POST_PROCESS_H
 
 #include <base/util/uid.h>
 #include <render/namespace.h>
@@ -46,7 +46,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "82fbcb54-5762-499f-a039-b3862b316f33" };
-    static constexpr char const* TYPE_NAME = "CORE_RN_COMBINED_POST_PROCESS";
+    static constexpr const char* TYPE_NAME = "CORE_RN_COMBINED_POST_PROCESS";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -59,4 +59,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_COMBINED_POST_PROCESS_H
+#endif // RENDER_NODE_RENDER_NODE_COMBINED_POST_PROCESS_H

@@ -17,7 +17,6 @@
 #define CORE_ECS_ANIMATIONSYSTEM_H
 
 #include <ComponentTools/component_query.h>
-#include <PropertyTools/property_api_impl.h>
 
 #include <3d/ecs/systems/intf_animation_system.h>
 #include <3d/namespace.h>
@@ -25,6 +24,7 @@
 #include <base/containers/vector.h>
 #include <core/ecs/entity.h>
 #include <core/namespace.h>
+#include <core/property_tools/property_api_impl.h>
 #include <core/threading/intf_thread_pool.h>
 
 #include "ecs/components/initial_transform_component.h"
@@ -104,17 +104,24 @@ private:
         size_t nextFrameIndex;
     };
 
+    enum class TrackState : uint8_t {
+        PLAYING,
+        PAUSED,
+        STOPPING,
+        STOPPED,
+    };
     struct TrackValues {
         InitialTransformComponent initial;
         InitialTransformComponent result;
         float timePosition { 0.f };
         float weight { 0.f };
-        bool stopped { true };
+        TrackState state { TrackState::STOPPED };
         bool forward { true };
         bool updated { false };
     };
 
     class InitTask;
+    class FrameIndexTask;
     class AnimateTask;
 
     // IEcs::ComponentListener
@@ -124,15 +131,17 @@ private:
     void OnAnimationComponentsUpdated(BASE_NS::array_view<const CORE_NS::Entity> entities);
     void OnAnimationTrackComponentsUpdated(BASE_NS::array_view<const CORE_NS::Entity> entities);
 
+    void UpdateAnimationStates(uint64_t delta);
     void UpdateAnimation(AnimationStateComponent& state, const AnimationComponent& animation,
         const CORE_NS::ComponentQuery& trackQuery, float delta);
     void InitializeTrackValues();
+    void AnimateTrackValues();
     void ResetToInitialTrackValues();
     void WriteUpdatedTrackValues();
 
     void InitializeTrackValues(BASE_NS::array_view<const uint32_t> resultIndices);
     void ResetTargetProperties(BASE_NS::array_view<const uint32_t> resultIndices);
-    void Calculate(BASE_NS::array_view<const uint32_t> resultIndices);
+    void CalculateFrameIndices(BASE_NS::array_view<const uint32_t> resultIndices);
     void AnimateTracks(BASE_NS::array_view<const uint32_t> resultIndices);
     void ApplyResults(BASE_NS::array_view<const uint32_t> resultIndices);
 
@@ -175,11 +184,11 @@ private:
 
     BASE_NS::vector<InitTask> initTasks_;
     uint64_t initTaskStart_ { 0U };
-    uint64_t initTaskCount_ { 0U };
+
+    BASE_NS::vector<FrameIndexTask> frameIndexTasks_;
 
     BASE_NS::vector<AnimateTask> animTasks_;
     uint64_t animTaskStart_ { 0U };
-    uint64_t animTaskCount_ { 0U };
 
     BASE_NS::vector<TrackValues> trackValues_;
     BASE_NS::vector<FrameData> frameIndices_;

@@ -12,42 +12,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "GeometryJS.h"
 
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
-#include <scene_plugin/api/camera_uid.h>
-#include <scene_plugin/interface/intf_camera.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <scene/interface/intf_camera.h>
+#include <scene/interface/intf_scene.h>
+#include <scene/interface/intf_mesh.h>
+
+#include "SceneJS.h"
 
 void* GeometryJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == GeometryJS::ID) {
+    if (id == GeometryJS::ID)
         return this;
-    }
     return NodeImpl::GetInstanceImpl(id);
 }
-void GeometryJS::DisposeNative()
+void GeometryJS::DisposeNative(void*)
 {
-    // do nothing for now..
-    CORE_LOG_F("GeometryJS::DisposeNative");
-    if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
-        // reset the native object refs
-        SetNativeObject(nullptr, false);
-        SetNativeObject(nullptr, true);
+    if (!disposed_) {
+        LOG_V("GeometryJS::DisposeNative");
+        disposed_ = true;
 
-        ExecSyncTask([nod = BASE_NS::move(node)]() mutable {
-            auto scene = nod->GetScene();
-            if (scene == nullptr) {
-                return META_NS::IAny::Ptr {};
+        NapiApi::Object obj = scene_.GetObject();
+        auto* tro = obj.Native<TrueRootObject>();
+        if (tro) {
+            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+            if (sceneJS) {
+                sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
             }
-            scene->ReleaseNode(nod);
-            return META_NS::IAny::Ptr {};
-        });
+        }
+
+        if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
+            // reset the native object refs
+            SetNativeObject(nullptr, false);
+            SetNativeObject(nullptr, true);
+
+            if (auto scene = node->GetScene()) {
+                scene->ReleaseNode(node);
+            }
+        }
+        scene_.Reset();
     }
-    scene_.Reset();
 }
 void GeometryJS::Init(napi_env env, napi_value exports)
 {
@@ -68,51 +75,68 @@ void GeometryJS::Init(napi_env env, napi_value exports)
 
 GeometryJS::GeometryJS(napi_env e, napi_callback_info i) : BaseObject<GeometryJS>(e, i), NodeImpl(NodeImpl::GEOMETRY)
 {
-    LOG_F("GeometryJS ++ ");
+    LOG_V("GeometryJS ++ ");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
-    // java script call.. with arguments
     if (!fromJs) {
         // okay internal create. we will receive the object after.
         return;
     }
     scene_ = fromJs.Arg<0>().valueOrDefault();
-    // Creating new object...  (so we must have scene etc)
     auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
     if (scn == nullptr) {
-        CORE_LOG_F("Invalid scene for GeometryJS!");
+        // hmm..
+        LOG_F("Invalid scene for GeometryJS!");
         return;
     }
-    // missing actual creation of geometry node. (refer to camerajs etc)
+    {
+        // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
+        NapiApi::Object meJs(fromJs.This());
+        NapiApi::Object scene = fromJs.Arg<0>();
+        auto* tro = scene.Native<TrueRootObject>();
+        if (tro) {
+            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+            if (sceneJS) {
+                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+            }
+        }
+    }
 }
 GeometryJS::~GeometryJS()
 {
-    LOG_F("GeometryJS -- ");
+    LOG_V("GeometryJS -- ");
 }
 
 napi_value GeometryJS::GetMesh(NapiApi::FunctionContext<>& ctx)
 {
-    META_NS::IObject::Ptr mesh;
-    if (auto geom = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
-        ExecSyncTask([geom, &mesh]() {
-            mesh = interface_pointer_cast<META_NS::IObject>(geom->Mesh()->GetValue());
-            return META_NS::IAny::Ptr {};
-        });
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
+    META_NS::IObject::Ptr mesh = GetNativeObject();
+    if (!interface_cast<SCENE_NS::IMesh>(mesh)) {
+        mesh = nullptr;
     }
 
     if (!mesh) {
-        // no parent.
-        napi_value res;
-        napi_get_null(ctx, &res);
-        return res;
+        // no mesh.
+        return ctx.GetNull();
     }
 
-    if (auto cached = FetchJsObj(mesh)) {
+    if (auto cached = FetchJsObj(mesh, "_JSWMesh")) {
         // always return the same js object.
-        return cached;
+        return cached.ToNapiValue();
     }
     // create new js object for the native node.
-    NapiApi::Object argJS(ctx);
-    napi_value args[] = { scene_.GetValue(), argJS };
+    NapiApi::Env env(ctx.Env());
+    NapiApi::Object argJS(env);
+    napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
 
-    return CreateFromNativeInstance(ctx, mesh, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
+    MakeNativeObjectParam(env, mesh, BASE_NS::countof(args), args);
+
+    auto nodeJS = CreateJsObj(env, "Mesh", mesh, false, BASE_NS::countof(args), args);
+    if (!nodeJS) {
+        LOG_E("Could not create JSObject for Class %s", "Mesh");
+        return {};
+    }
+    return StoreJsObj(mesh, nodeJS, "_JSWMesh").ToNapiValue();
 }

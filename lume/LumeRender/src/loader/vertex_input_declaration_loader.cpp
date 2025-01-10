@@ -30,7 +30,7 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 // clang-format off
-CORE_JSON_SERIALIZE_ENUM(VertexInputRate,
+RENDER_JSON_SERIALIZE_ENUM(VertexInputRate,
     {
         { CORE_VERTEX_INPUT_RATE_VERTEX, "vertex" },
         { CORE_VERTEX_INPUT_RATE_INSTANCE, "instance" },
@@ -53,10 +53,13 @@ void FromJson(
 }
 
 namespace {
-VertexInputDeclarationLoader::LoadResult LoadState(
-    const json::value& jsonData, const string_view uri, VertexInputDeclarationData& vertexInputDeclarationData_)
+VertexInputDeclarationLoader::LoadResult LoadState(const json::value& jsonData, const string_view uri,
+    VertexInputDeclarationData& vertexInputDeclarationData_, string& renderSlotName, bool& defaultRenderSlot)
 {
     VertexInputDeclarationLoader::LoadResult result;
+
+    SafeGetJsonValue(jsonData, "renderSlot", result.error, renderSlotName);
+    SafeGetJsonValue(jsonData, "renderSlotDefault", result.error, defaultRenderSlot);
 
     vector<VertexInputDeclaration::VertexInputBindingDescription> bindings;
     vector<VertexInputDeclaration::VertexInputAttributeDescription> attributes;
@@ -89,22 +92,13 @@ VertexInputDeclarationLoader::LoadResult LoadState(
     return result;
 }
 
-VertexInputDeclarationLoader::LoadResult Load(
-    const json::value& jsonData, const string_view uri, VertexInputDeclarationData& vertexInputDeclarationData_)
+VertexInputDeclarationLoader::LoadResult Load(const json::value& jsonData, const string_view uri,
+    VertexInputDeclarationData& vertexInputDeclarationData, string& renderSlotName, bool& renderSlotDefault)
 {
     VertexInputDeclarationLoader::LoadResult result;
 
-#if (RENDER_VALIDATION_ENABLED == 1)
-    {
-        string name;
-        SafeGetJsonValue(jsonData, "name", result.error, name);
-        if (!name.empty()) {
-            PLUGIN_LOG_W("RENDER_VALIDATION: name not supported in vertex input declaration json");
-        }
-    }
-#endif
     if (const json::value* stateIter = jsonData.find("vertexInputState"); stateIter) {
-        result = LoadState(*stateIter, uri, vertexInputDeclarationData_);
+        result = LoadState(*stateIter, uri, vertexInputDeclarationData, renderSlotName, renderSlotDefault);
     } else {
         result.error += "vertex input state not found\n";
         result.success = false;
@@ -129,12 +123,22 @@ VertexInputDeclarationView VertexInputDeclarationLoader::GetVertexInputDeclarati
     };
 }
 
+BASE_NS::string_view VertexInputDeclarationLoader::GetRenderSlot() const
+{
+    return renderSlotName_;
+}
+
+bool VertexInputDeclarationLoader::GetDefaultRenderSlot() const
+{
+    return renderSlotDefaultVid_;
+}
+
 VertexInputDeclarationLoader::LoadResult VertexInputDeclarationLoader::Load(const string_view jsonString)
 {
     VertexInputDeclarationLoader::LoadResult result;
     const auto json = json::parse(jsonString.data());
     if (json) {
-        result = RENDER_NS::Load(json, uri_, vertexInputDeclarationData_);
+        result = RENDER_NS::Load(json, uri_, vertexInputDeclarationData_, renderSlotName_, renderSlotDefaultVid_);
     } else {
         result.success = false;
         result.error = "Invalid json file.";

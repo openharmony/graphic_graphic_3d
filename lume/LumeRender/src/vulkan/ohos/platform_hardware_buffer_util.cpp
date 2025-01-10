@@ -101,6 +101,12 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
         &imageCreateInfo,                    // pCreateInfo
         nullptr,                             // pAllocator
         &hwBufferImage.image));              // pImage
+
+    // some older version of validation layers required calling vkGetImageMemoryRequirements before
+    // vkAllocateMemory. with at least 1.3.224.1 it's an error to call vkGetImageMemoryRequirements:
+    // "If image was created with the VK_EXTERNAL_MEMORY_HANDLE_TYPE_OHOS_NATIVE_BUFFER_BIT_OPENHARMONY external memory
+    // handle type, then image must be bound to memory."
+
     // get memory type index based on
     const uint32_t memoryTypeIndex =
         GetMemoryTypeIndex(platData.physicalDeviceProperties.physicalDeviceMemoryProperties,
@@ -115,7 +121,7 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
     OH_NativeBuffer* nativeBuffer = static_cast<OH_NativeBuffer*>(reinterpret_cast<void*>(hwBuffer));
     PLUGIN_ASSERT(nativeBuffer);
     VkMemoryDedicatedAllocateInfo dedicatedMemoryAllocateInfo {
-        VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO, // sType
+        VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO, // sType;
         nullptr,                                          // pNext
         hwBufferImage.image,                              // image
         VK_NULL_HANDLE,                                   // buffer

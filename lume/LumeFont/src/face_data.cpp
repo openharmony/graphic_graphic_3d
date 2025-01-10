@@ -51,8 +51,8 @@ FontManager& FaceData::GetFontManager() const
 
 FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi, bool sdf)
 {
-    const FT_Pos pixelSize26Dot6 = FloatToFTPos(sizeInPt * yDpi / 72.f);
-    const int64_t pixelSize = (pixelSize26Dot6 >> 6) | (sdf ? (1ll << 32) : 0);
+    const FT_Pos pixelSize26Dot6 = FloatToFTPos(sizeInPt * yDpi / 72.f); // 72.0 : param
+    const int64_t pixelSize = (pixelSize26Dot6 >> 6) | (sdf ? (1ll << 32) : 0); // 6 32 : param
 
     {
         std::shared_lock readerLock(mutex_);
@@ -95,8 +95,7 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
             }
             if (smallestDiff) {
                 CORE_LOG_N("use of closest match for bitmap font, request: %dpx , selected: %dpx",
-                    pixelSize26Dot6 >> 6, // 6: shift
-                    sizes[closestIdx].y_ppem >> 6); // 6: shift
+                    pixelSize26Dot6 >> 6, sizes[closestIdx].y_ppem >> 6); // 6 : param
             }
         }
         err = FT_Select_Size(face_, closestIdx);
@@ -113,8 +112,7 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
     datas_.push_back(Data { pixelSize, std::move(fontData) });
 
     CORE_LOG_N("create FontData PT: %f dpi: %d (pix: %d, yppem: %d, h: %d) %p", sizeInPt, yDpi, pixelSize,
-        fontDataPtr->sizeData_->metrics.y_ppem, fontDataPtr->sizeData_->metrics.height >> 6, this); // 6: shift
-
+        fontDataPtr->sizeData_->metrics.y_ppem, fontDataPtr->sizeData_->metrics.height >> 6, this); // 6 : param
     return fontDataPtr;
 }
 
@@ -153,18 +151,18 @@ int FaceData::UpdateGlyph(bool sdf, FT_Size ftSize, uint32_t glyphIndex, FontDef
     FT_BBox bbox;
     FT_Glyph_Get_CBox(bmp, FT_GLYPH_BBOX_UNSCALED, &bbox);
 
-    glyph.xMin = static_cast<int16_t>(bbox.xMin);
-    glyph.xMax = static_cast<int16_t>(bbox.xMax);
-    glyph.yMin = static_cast<int16_t>(bbox.yMin);
-    glyph.yMax = static_cast<int16_t>(bbox.yMax);
-    glyph.hlsb = static_cast<int16_t>(face_->glyph->metrics.horiBearingX);
-    glyph.htsb = static_cast<int16_t>(face_->glyph->metrics.horiBearingY);
-    glyph.hAdv = static_cast<int16_t>(face_->glyph->metrics.horiAdvance);
+    glyph.xMin = FontDefs::FTPosToInt16(bbox.xMin);
+    glyph.xMax = FontDefs::FTPosToInt16(bbox.xMax);
+    glyph.yMin = FontDefs::FTPosToInt16(bbox.yMin);
+    glyph.yMax = FontDefs::FTPosToInt16(bbox.yMax);
+    glyph.hlsb = FontDefs::FTPosToInt16(face_->glyph->metrics.horiBearingX);
+    glyph.htsb = FontDefs::FTPosToInt16(face_->glyph->metrics.horiBearingY);
+    glyph.hAdv = FontDefs::FTPosToInt16(face_->glyph->metrics.horiAdvance);
 
     if (FT_HAS_VERTICAL(face_)) {
-        glyph.vlsb = static_cast<int16_t>(face_->glyph->metrics.vertBearingX);
-        glyph.vtsb = static_cast<int16_t>(face_->glyph->metrics.vertBearingY);
-        glyph.vAdv = static_cast<int16_t>(face_->glyph->metrics.vertAdvance);
+        glyph.vlsb = FontDefs::FTPosToInt16(face_->glyph->metrics.vertBearingX);
+        glyph.vtsb = FontDefs::FTPosToInt16(face_->glyph->metrics.vertBearingY);
+        glyph.vAdv = FontDefs::FTPosToInt16(face_->glyph->metrics.vertAdvance);
     }
 
     glyph.atlas.rect.w = 0;
@@ -205,21 +203,21 @@ int FaceData::UpdateGlyph(bool sdf, FT_Size ftSize, uint32_t glyphIndex, FontDef
         FT_Bitmap_Init(&converted);
         FT_Bitmap_Convert(bmp->library, &((FT_BitmapGlyph)bmp)->bitmap, &converted, 1);
 
-        if (converted.num_grays == 2U) {
+        if (converted.num_grays == 2U) { // 2 : param
             // convert created a binary bitmap, expand to 0..255 range.
             std::transform(converted.buffer, converted.buffer + converted.pitch * converted.rows, converted.buffer,
                 [](const uint8_t& c) { return (c) ? uint8_t(0xffU) : uint8_t(0x00U); });
-        } else if (converted.num_grays == 4U) {
+        } else if (converted.num_grays == 4U) { // 4 ；param
             // convert created a 2 bit bitmap, expand to 0..255 range.
             std::transform(converted.buffer, converted.buffer + converted.pitch * converted.rows, converted.buffer,
                 [](const uint8_t& c) {
-                    auto half = (c << 2U) | c;
-                    return uint8_t((half << 4U) | half);
+                    auto half = (c << 2U) | c; // 2 : param
+                    return uint8_t((half << 4U) | half); // 4 : param
                 });
-        } else if (converted.num_grays == 16U) {
+        } else if (converted.num_grays == 16U) { // 16 : channel
             // convert created a 4 bit bitmap, expand to 0..255 range.
             std::transform(converted.buffer, converted.buffer + converted.pitch * converted.rows, converted.buffer,
-                [](const uint8_t& c) { return uint8_t((c << 4U) | c); });
+                [](const uint8_t& c) { return uint8_t((c << 4U) | c); }); // 4 : param
         }
     }
 

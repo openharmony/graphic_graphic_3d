@@ -15,8 +15,6 @@
 
 #include "morphing_system.h"
 
-#include <PropertyTools/property_api_impl.inl>
-#include <PropertyTools/property_macros.h>
 #include <algorithm>
 
 #include <3d/ecs/components/mesh_component.h>
@@ -33,6 +31,8 @@
 #include <core/namespace.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property/property_types.h>
+#include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
@@ -49,9 +49,11 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 namespace {
-BEGIN_PROPERTY(IMorphingSystem::Properties, ComponentMetadata)
-    DECL_PROPERTY2(IMorphingSystem::Properties, dataStoreName, "RenderDataStoreMorph", 0)
-END_PROPERTY();
+constexpr auto MORPH_INDEX = 0U;
+constexpr auto RENDER_MESH_INDEX = 1U;
+constexpr auto NODE_INDEX = 2U;
+
+PROPERTY_LIST(IMorphingSystem::Properties, ComponentMetadata, MEMBER_PROPERTY(dataStoreName, "RenderDataStoreMorph", 0))
 
 RenderVertexBuffer GetBuffer(
     const MeshComponent::Submesh::BufferAccess& bufferAccess, const IRenderHandleComponentManager& bufferManager)
@@ -122,8 +124,9 @@ void MorphingSystem::Initialize()
     ecs_.AddListener(static_cast<IEcs::EntityListener&>(*this));
     ecs_.AddListener(morphManager_, *this);
     nodeQuery_.SetEcsListenersEnabled(true);
-    ComponentQuery::Operation operations[] = { { nodeManager_, ComponentQuery::Operation::Method::REQUIRE } };
-    nodeQuery_.SetupQuery(renderMeshManager_, operations, true);
+    ComponentQuery::Operation operations[] = { { renderMeshManager_, ComponentQuery::Operation::Method::REQUIRE },
+        { nodeManager_, ComponentQuery::Operation::Method::REQUIRE } };
+    nodeQuery_.SetupQuery(morphManager_, operations, true);
 }
 
 void MorphingSystem::Uninitialize()
@@ -136,9 +139,9 @@ void MorphingSystem::Uninitialize()
 void MorphingSystem::SetDataStore(IRenderDataStoreManager& manager, const string_view name)
 {
     if (!name.empty()) {
-        dataStore_ = static_cast<IRenderDataStoreMorph*>(manager.GetRenderDataStore(properties_.dataStoreName.data()));
+        dataStore_ = refcnt_ptr<IRenderDataStoreMorph>(manager.GetRenderDataStore(properties_.dataStoreName.data()));
     } else {
-        dataStore_ = nullptr;
+        dataStore_.reset();
     }
 }
 
@@ -185,7 +188,7 @@ void MorphingSystem::OnEntityEvent(const IEntityManager::EventType type, const a
 {
     if (type == IEntityManager::EventType::DESTROYED) {
         // remove entities that were destroyed
-        for (auto e : entities) {
+        for (const auto& e : entities) {
             dirty_.erase(e);
         }
     }
@@ -196,7 +199,7 @@ void MorphingSystem::OnComponentEvent(const ComponentListener::EventType type,
 {
     if (type == ComponentListener::EventType::DESTROYED) {
         // morph component removed..
-        for (auto e : entities) {
+        for (const auto& e : entities) {
             reset_.push_back(e);
             dirty_.erase(e);
         }
@@ -254,41 +257,33 @@ bool MorphingSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
     RenderDataMorph::Submesh renderData;
 
     // Actual processing follows..
-    auto& entityManager = ecs_.GetEntityManager();
-    for (IComponentManager::ComponentId i = 0; i < morphManager_.GetComponentCount(); i++) {
-        const Entity id = morphManager_.GetEntity(i);
-        if (entityManager.IsAlive(id)) {
-            if (auto* row = nodeQuery_.FindResultRow(id); row) {
-                if (nodeManager_.Read(row->components[1])->effectivelyEnabled) {
-                    // This should be true. (there is a render mesh for this entity)
-                    if (const ScopedHandle<const RenderMeshComponent> renderMeshData =
-                            renderMeshManager_.Read(row->components[0]);
-                        renderMeshData) {
-                        if (const ScopedHandle<const MeshComponent> meshData = meshManager_.Read(renderMeshData->mesh);
-                            meshData) {
-                            const ScopedHandle<const MorphComponent> morphData = morphManager_.Read(i);
-                            dirty_[id] = Morph(*meshData, *morphData, dirty_[id]);
-                        }
-                    }
-                }
-            }
+    for (const auto& row : nodeQuery_.GetResults()) {
+        if (!nodeManager_.Read(row.components[NODE_INDEX])->effectivelyEnabled) {
+            continue;
+        }
+        const ScopedHandle<const RenderMeshComponent> renderMeshData =
+            renderMeshManager_.Read(row.components[RENDER_MESH_INDEX]);
+        if (const ScopedHandle<const MeshComponent> meshData = meshManager_.Read(renderMeshData->mesh)) {
+            const ScopedHandle<const MorphComponent> morphData = morphManager_.Read(row.components[MORPH_INDEX]);
+            dirty_[row.entity] = Morph(*meshData, *morphData, dirty_[row.entity]);
         }
     }
+
     // no active targets for the removed morph components
     currentMorphSubmesh_.activeTargets.clear();
-    for (auto id : reset_) {
+    for (const auto& id : reset_) {
         // reset the render mesh of removed component..
-        // This should be true. (there is a render mesh for this entity)
-        if (const auto renderMeshId = renderMeshManager_.GetComponentId(id);
-            renderMeshId != IComponentManager::INVALID_COMPONENT_ID) {
-            const RenderMeshComponent renderMeshComponent = renderMeshManager_.Get(renderMeshId);
-            if (const auto meshData = meshManager_.Read(renderMeshComponent.mesh); meshData) {
-                const auto& mesh = *meshData;
-                for (const auto& submesh : mesh.submeshes) {
-                    if (submesh.morphTargetCount > 0U) {
-                        AddMorphSubmesh(*dataStore_, submesh, mesh, currentMorphSubmesh_, gpuHandleManager_);
-                    }
-                }
+        const ScopedHandle<const RenderMeshComponent> renderMeshData = renderMeshManager_.Read(id);
+        if (!renderMeshData) {
+            continue;
+        }
+        const ScopedHandle<const MeshComponent> meshData = meshManager_.Read(renderMeshData->mesh);
+        if (!meshData) {
+            continue;
+        }
+        for (const auto& submesh : meshData->submeshes) {
+            if (submesh.morphTargetCount > 0U) {
+                AddMorphSubmesh(*dataStore_, submesh, *meshData, currentMorphSubmesh_, gpuHandleManager_);
             }
         }
     }

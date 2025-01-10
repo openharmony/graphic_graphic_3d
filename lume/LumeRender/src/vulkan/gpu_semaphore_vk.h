@@ -33,7 +33,7 @@ struct GpuSemaphorePlatformDataVk final {
 class GpuSemaphoreVk final : public GpuSemaphore {
 public:
     explicit GpuSemaphoreVk(Device& device);
-    GpuSemaphoreVk(Device& device, const uint64_t handle);
+    GpuSemaphoreVk(Device& device, uint64_t handle);
     ~GpuSemaphoreVk() override;
 
     uint64_t GetHandle() const override;

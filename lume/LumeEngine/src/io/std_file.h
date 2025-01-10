@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__IO__STD_FILE_H
-#define CORE__IO__STD_FILE_H
+#ifndef CORE_IO_STD_FILE_H
+#define CORE_IO_STD_FILE_H
 
 #include <fstream>
 
@@ -39,12 +39,16 @@ public:
     // Create a new file, the existing file will be overridden.
     static IFile::Ptr Create(BASE_NS::string_view path, Mode mode);
 
+    static bool FileExists(BASE_NS::string_view path);
+
     // Close file.
     void Close() override;
 
     uint64_t Read(void* buffer, uint64_t count) override;
 
     uint64_t Write(const void* buffer, uint64_t count) override;
+
+    uint64_t Append(const void* buffer, uint64_t count, uint64_t flushSize) override;
 
     uint64_t GetLength() const override;
 
@@ -66,4 +70,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE__IO__STD_FILE_H
+#endif // CORE_IO_STD_FILE_H

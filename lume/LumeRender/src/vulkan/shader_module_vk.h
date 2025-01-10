@@ -35,7 +35,7 @@ struct ShaderModulePlatformDataVk : ShaderModulePlatformData {
 class ShaderModuleVk final : public ShaderModule {
 public:
     ShaderModuleVk(Device& device, const ShaderModuleCreateInfo& createInfo);
-    ~ShaderModuleVk();
+    ~ShaderModuleVk() override;
 
     ShaderStageFlags GetShaderStageFlags() const override;
 

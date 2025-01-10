@@ -88,10 +88,10 @@ VkFormat GetColorFormat(const uint32_t flags, const vector<VkSurfaceFormatKHR>& 
         return VK_FORMAT_R8G8B8A8_SRGB;
     }
 
-    for (size_t idx = 0; idx < formats.size(); ++idx) {
-        for (size_t jdx = 0; jdx < surfaceFormats.size(); ++jdx) {
-            if (formats[idx] == surfaceFormats[jdx].format) {
-                return surfaceFormats[jdx].format;
+    for (auto format : formats) {
+        for (auto surfaceFormat : surfaceFormats) {
+            if (format == surfaceFormat.format) {
+                return surfaceFormat.format;
             }
         }
     }
@@ -111,9 +111,9 @@ ColorInfo GetColorInfo(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR
     ColorInfo ci;
     ci.format = GetColorFormat(flags, surfaceFormats);
     ci.colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR;
-    for (size_t idx = 0; idx < surfaceFormats.size(); ++idx) {
-        if (surfaceFormats[idx].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            ci.colorSpace = surfaceFormats[idx].colorSpace;
+    for (auto& surfaceFormat : surfaceFormats) {
+        if (surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            ci.colorSpace = surfaceFormat.colorSpace;
             break;
         }
     }
@@ -246,9 +246,7 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
     auto const physicalDevice = devicePlatformData.physicalDevice;
     // check for surface creation automatically
     if ((swapchainCreateInfo.surfaceHandle == 0) && swapchainCreateInfo.window.window) {
-        CreateFunctionsVk::Window win;
-        win.instance = swapchainCreateInfo.window.instance;
-        win.window = swapchainCreateInfo.window.window;
+        CreateFunctionsVk::Window win { swapchainCreateInfo.window.instance, swapchainCreateInfo.window.window };
         surface_ = CreateFunctionsVk::CreateSurface(devicePlatformData.instance, win);
         ownsSurface_ = true;
     } else {
@@ -284,7 +282,7 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             (surfaceCapabilities.maxImageCount == 0)
                 ? (Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount))
                 : (Math::min(surfaceCapabilities.maxImageCount,
-                    Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
+                   Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
         PLUGIN_LOG_D("swapchainImageCount: %u", imageCount);
 
         const VkSurfaceTransformFlagsKHR swapchainTransform =
@@ -292,7 +290,7 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
                 ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
                 : surfaceCapabilities.currentTransform;
 
-        const VkImageUsageFlags desiredUsageFlags = static_cast<VkImageUsageFlags>(swapchainCreateInfo.imageUsageFlags);
+        const auto desiredUsageFlags = static_cast<VkImageUsageFlags>(swapchainCreateInfo.imageUsageFlags);
         const VkImageUsageFlags imageUsageFlags = desiredUsageFlags & surfaceCapabilities.supportedUsageFlags;
         PLUGIN_LOG_D("swapchain usage flags, selected: %u, desired: %u, capabilities: %u", imageUsageFlags,
             desiredUsageFlags, surfaceCapabilities.supportedUsageFlags);

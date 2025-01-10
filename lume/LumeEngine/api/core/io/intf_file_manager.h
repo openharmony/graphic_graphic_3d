@@ -37,7 +37,7 @@ CORE_BEGIN_NAMESPACE()
  */
 class IFileManager : public IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "5507e02b-b900-44e4-a969-0eda2d0918ac" };
+    static constexpr auto UID = BASE_NS::Uid { "0bf64638-a403-426d-9563-85d35bc3d3c1" };
 
     using Ptr = BASE_NS::refcnt_ptr<IFileManager>;
 
@@ -53,6 +53,13 @@ public:
      */
     virtual IFile::Ptr OpenFile(BASE_NS::string_view uri) = 0;
 
+    /** Opens file in given uri.
+     *  @param uri The complete file uri, such as '%file://images/texture.png'
+     *  @param mode Access mode
+     *  @return File that was opened, empty ptr if file cannot be opened.
+     */
+    virtual IFile::Ptr OpenFile(BASE_NS::string_view uri, IFile::Mode mode) = 0;
+
     /** Creates a new file to given uri.
      *  @param uri The complete file uri, such as '%file://logs/log.txt'
      *  @return File that was created, empty ptr if file cannot be created.
@@ -64,6 +71,12 @@ public:
      *  @return True if deletion is successful, otherwise false.
      */
     virtual bool DeleteFile(BASE_NS::string_view uri) = 0;
+
+    /** Check if file exists.
+     *  @param uri The complete file uri, such as '%file://logs/log.txt'
+     *  @return True if the file exists, otherwise false.
+     */
+    virtual bool FileExists(BASE_NS::string_view uri) const = 0;
 
     /** Opens directory in given uri.
      *  @param uri The complete directory uri, such as '%file://images/'
@@ -83,6 +96,12 @@ public:
      */
     virtual bool DeleteDirectory(BASE_NS::string_view uri) = 0;
 
+    /** Check if directory exists.
+     *  @param uri The complete directory uri, such as '%file://logs/'
+     *  @return True if directory exists, otherwise false.
+     */
+    virtual bool DirectoryExists(BASE_NS::string_view uri) const = 0;
+
     /** Rename file or directory
      *  @param fromUri The complete uri for file/directory to rename, such as '%file://logs/old.txt'
      *  @param toUri The complete file uri for destination name, such as '%file://logs/new.txt'
@@ -94,8 +113,9 @@ public:
      *  an uri with the registered protocol string.
      *  @param protocol protocol string that is used to point to the filesystem.
      *  @param filesystem file system object that implements the filesystem.
+     *  @return False if filesystem is null ot a filesystem was already registered with protocol, otherwise true.
      */
-    virtual void RegisterFilesystem(BASE_NS::string_view protocol, IFilesystem::Ptr filesystem) = 0;
+    virtual bool RegisterFilesystem(BASE_NS::string_view protocol, IFilesystem::Ptr filesystem) = 0;
 
     /** Unregister a filesystem.
      *  @param protocol protocol string that is used to point to the filesystem.
@@ -128,6 +148,12 @@ public:
     virtual void UnregisterPath(BASE_NS::string_view protocol, BASE_NS::string_view uri) = 0;
 
     virtual IFilesystem::Ptr CreateROFilesystem(const void* const data, uint64_t size) = 0;
+
+    /** Query the filesystem for given protocol.
+     *  @param protocol protocol string that is used to point to the filesystem.
+     *  @return Filesystem previously registered for the given protocol or null.
+     */
+    virtual IFilesystem* GetFilesystem(BASE_NS::string_view protocol) const = 0;
 
 protected:
     IFileManager() = default;

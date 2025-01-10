@@ -20,39 +20,33 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
-using RENDER_NS::TonemapConfiguration;
 using RENDER_NS::BloomConfiguration;
-using RENDER_NS::DitherConfiguration;
 using RENDER_NS::BlurConfiguration;
 using RENDER_NS::ColorConversionConfiguration;
-using RENDER_NS::FxaaConfiguration;
-using RENDER_NS::VignetteConfiguration;
 using RENDER_NS::ColorFringeConfiguration;
-using RENDER_NS::TaaConfiguration;
-using RENDER_NS::MotionBlurConfiguration;
+using RENDER_NS::DitherConfiguration;
 using RENDER_NS::DofConfiguration;
+using RENDER_NS::FxaaConfiguration;
+using RENDER_NS::LensFlareConfiguration;
+using RENDER_NS::MotionBlurConfiguration;
+using RENDER_NS::TaaConfiguration;
+using RENDER_NS::TonemapConfiguration;
+using RENDER_NS::VignetteConfiguration;
 
 using CORE3D_NS::PostProcessComponent;
 
 DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandle);
 DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandleReference);
 
-BEGIN_ENUM(PostProcessFlagBitsMetaData, PostProcessComponent::FlagBits)
-DECL_ENUM(PostProcessComponent::FlagBits, TONEMAP_BIT, "Tonemap")
-DECL_ENUM(PostProcessComponent::FlagBits, BLOOM_BIT, "Bloom")
-DECL_ENUM(PostProcessComponent::FlagBits, VIGNETTE_BIT, "Vignette")
-DECL_ENUM(PostProcessComponent::FlagBits, COLOR_FRINGE_BIT, "Color Fringe")
-DECL_ENUM(PostProcessComponent::FlagBits, DITHER_BIT, "Dither")
-DECL_ENUM(PostProcessComponent::FlagBits, BLUR_BIT, "Blur")
-DECL_ENUM(PostProcessComponent::FlagBits, COLOR_CONVERSION_BIT, "Color Conversion")
-DECL_ENUM(PostProcessComponent::FlagBits, FXAA_BIT, "Fast Approximate Anti-Aliasing")
-DECL_ENUM(PostProcessComponent::FlagBits, TAA_BIT, "Temporat Anti-Aliasing")
-DECL_ENUM(PostProcessComponent::FlagBits, DOF_BIT, "Depth of Field")
-DECL_ENUM(PostProcessComponent::FlagBits, MOTION_BLUR_BIT, "Motion Blur")
-END_ENUM(PostProcessFlagBitsMetaData, PostProcessComponent::FlagBits)
+ENUM_TYPE_METADATA(PostProcessComponent::FlagBits, ENUM_VALUE(TONEMAP_BIT, "Tonemap"), ENUM_VALUE(BLOOM_BIT, "Bloom"),
+    ENUM_VALUE(VIGNETTE_BIT, "Vignette"), ENUM_VALUE(COLOR_FRINGE_BIT, "Color Fringe"),
+    ENUM_VALUE(DITHER_BIT, "Dither"), ENUM_VALUE(BLUR_BIT, "Blur"),
+    ENUM_VALUE(COLOR_CONVERSION_BIT, "Color Conversion"), ENUM_VALUE(FXAA_BIT, "Fast Approximate Anti-Aliasing"),
+    ENUM_VALUE(TAA_BIT, "Temporat Anti-Aliasing"), ENUM_VALUE(DOF_BIT, "Depth of Field"),
+    ENUM_VALUE(MOTION_BLUR_BIT, "Motion Blur"), ENUM_VALUE(LENS_FLARE_BIT, "Lens Flare"))
 
 /** Extend propertysystem with the enums */
 DECLARE_PROPERTY_TYPE(TonemapConfiguration::TonemapType);
@@ -68,6 +62,7 @@ DECLARE_PROPERTY_TYPE(TaaConfiguration::Sharpness);
 DECLARE_PROPERTY_TYPE(TaaConfiguration::Quality);
 DECLARE_PROPERTY_TYPE(MotionBlurConfiguration::Sharpness);
 DECLARE_PROPERTY_TYPE(MotionBlurConfiguration::Quality);
+DECLARE_PROPERTY_TYPE(LensFlareConfiguration::Quality);
 
 /** Extend propertysystem with the types */
 DECLARE_PROPERTY_TYPE(TonemapConfiguration);
@@ -81,157 +76,85 @@ DECLARE_PROPERTY_TYPE(FxaaConfiguration);
 DECLARE_PROPERTY_TYPE(TaaConfiguration);
 DECLARE_PROPERTY_TYPE(DofConfiguration);
 DECLARE_PROPERTY_TYPE(MotionBlurConfiguration);
+DECLARE_PROPERTY_TYPE(LensFlareConfiguration);
 
 // Declare their metadata
-BEGIN_ENUM(TonemapConfigurationTonemapTypeMetaData, TonemapConfiguration::TonemapType)
-DECL_ENUM(TonemapConfiguration::TonemapType, TONEMAP_ACES, "aces")
-DECL_ENUM(TonemapConfiguration::TonemapType, TONEMAP_ACES_2020, "aces_2020")
-DECL_ENUM(TonemapConfiguration::TonemapType, TONEMAP_FILMIC, "filmic")
-END_ENUM(TonemapConfigurationTonemapTypeMetaData, TonemapConfiguration::TonemapType)
+ENUM_TYPE_METADATA(TonemapConfiguration::TonemapType, ENUM_VALUE(TONEMAP_ACES, "aces"),
+    ENUM_VALUE(TONEMAP_ACES_2020, "aces_2020"), ENUM_VALUE(TONEMAP_FILMIC, "filmic"))
 
-BEGIN_ENUM(BloomConfigurationQualityTypeMetaData, BloomConfiguration::BloomQualityType)
-DECL_ENUM(BloomConfiguration::BloomQualityType, QUALITY_TYPE_LOW, "low")
-DECL_ENUM(BloomConfiguration::BloomQualityType, QUALITY_TYPE_NORMAL, "normal")
-DECL_ENUM(BloomConfiguration::BloomQualityType, QUALITY_TYPE_HIGH, "high")
-END_ENUM(BloomConfigurationQualityTypeMetaData, BloomConfiguration::BloomQualityType)
+ENUM_TYPE_METADATA(BloomConfiguration::BloomQualityType, ENUM_VALUE(QUALITY_TYPE_LOW, "low"),
+    ENUM_VALUE(QUALITY_TYPE_NORMAL, "normal"), ENUM_VALUE(QUALITY_TYPE_HIGH, "high"))
 
-BEGIN_ENUM(BloomConfigurationBloomTypeMetaData, BloomConfiguration::BloomType)
-DECL_ENUM(BloomConfiguration::BloomType, TYPE_NORMAL, "normal")
-DECL_ENUM(BloomConfiguration::BloomType, TYPE_HORIZONTAL, "horizontal")
-DECL_ENUM(BloomConfiguration::BloomType, TYPE_VERTICAL, "vertical")
-DECL_ENUM(BloomConfiguration::BloomType, TYPE_BILATERAL, "bilateral")
-END_ENUM(BloomConfigurationBloomTypeMetaData, BloomConfiguration::BloomType)
+ENUM_TYPE_METADATA(BloomConfiguration::BloomType, ENUM_VALUE(TYPE_NORMAL, "normal"),
+    ENUM_VALUE(TYPE_HORIZONTAL, "horizontal"), ENUM_VALUE(TYPE_VERTICAL, "vertical"),
+    ENUM_VALUE(TYPE_BILATERAL, "bilateral"))
 
-BEGIN_ENUM(DitherConfigurationDitherTypeMetaData, DitherConfiguration::DitherType)
-DECL_ENUM(DitherConfiguration::DitherType, INTERLEAVED_NOISE, "interleaved_noise")
-DECL_ENUM(DitherConfiguration::DitherType, TRIANGLE_NOISE, "triangle_noise")
-DECL_ENUM(DitherConfiguration::DitherType, TRIANGLE_NOISE_RGB, "triangle_noise_rgb")
-END_ENUM(DitherConfigurationDitherTypeMetaData, DitherConfiguration::DitherType)
+ENUM_TYPE_METADATA(DitherConfiguration::DitherType, ENUM_VALUE(INTERLEAVED_NOISE, "interleaved_noise"),
+    ENUM_VALUE(TRIANGLE_NOISE, "triangle_noise"), ENUM_VALUE(TRIANGLE_NOISE_RGB, "triangle_noise_rgb"))
 
-BEGIN_ENUM(BlurConfigurationBlurQualityTypeMetaData, BlurConfiguration::BlurQualityType)
-DECL_ENUM(BlurConfiguration::BlurQualityType, QUALITY_TYPE_LOW, "low")
-DECL_ENUM(BlurConfiguration::BlurQualityType, QUALITY_TYPE_NORMAL, "normal")
-DECL_ENUM(BlurConfiguration::BlurQualityType, QUALITY_TYPE_HIGH, "high")
-END_ENUM(BlurConfigurationBlurQualityTypeMetaData, BlurConfiguration::BlurQualityType)
+ENUM_TYPE_METADATA(BlurConfiguration::BlurQualityType, ENUM_VALUE(QUALITY_TYPE_LOW, "low"),
+    ENUM_VALUE(QUALITY_TYPE_NORMAL, "normal"), ENUM_VALUE(QUALITY_TYPE_HIGH, "high"))
 
-BEGIN_ENUM(BlurConfigurationBlurTypeMetaData, BlurConfiguration::BlurType)
-DECL_ENUM(BlurConfiguration::BlurType, TYPE_NORMAL, "low")
-DECL_ENUM(BlurConfiguration::BlurType, TYPE_HORIZONTAL, "normal")
-DECL_ENUM(BlurConfiguration::BlurType, TYPE_VERTICAL, "high")
-END_ENUM(BlurConfigurationBlurTypeMetaData, BlurConfiguration::BlurType)
+ENUM_TYPE_METADATA(BlurConfiguration::BlurType, ENUM_VALUE(TYPE_NORMAL, "low"), ENUM_VALUE(TYPE_HORIZONTAL, "normal"),
+    ENUM_VALUE(TYPE_VERTICAL, "high"))
 
-BEGIN_ENUM(
-    ColorConversionConfigurationConversionFunctionTypeMetaData, ColorConversionConfiguration::ConversionFunctionType)
-DECL_ENUM(ColorConversionConfiguration::ConversionFunctionType, CONVERSION_LINEAR, "linear")
-DECL_ENUM(ColorConversionConfiguration::ConversionFunctionType, CONVERSION_LINEAR_TO_SRGB, "linear_to_srgb")
-END_ENUM(
-    ColorConversionConfigurationConversionFunctionTypeMetaData, ColorConversionConfiguration::ConversionFunctionType)
+ENUM_TYPE_METADATA(ColorConversionConfiguration::ConversionFunctionType, ENUM_VALUE(CONVERSION_LINEAR, "linear"),
+    ENUM_VALUE(CONVERSION_LINEAR_TO_SRGB, "linear_to_srgb"))
 
-BEGIN_ENUM(FxaaConfigurationSharpnessMetaData, FxaaConfiguration::Sharpness)
-DECL_ENUM(FxaaConfiguration::Sharpness, SOFT, "soft")
-DECL_ENUM(FxaaConfiguration::Sharpness, MEDIUM, "medium")
-DECL_ENUM(FxaaConfiguration::Sharpness, SHARP, "sharp")
-END_ENUM(FxaaConfigurationSharpnessMetaData, FxaaConfiguration::Sharpness)
+ENUM_TYPE_METADATA(
+    FxaaConfiguration::Sharpness, ENUM_VALUE(SOFT, "soft"), ENUM_VALUE(MEDIUM, "medium"), ENUM_VALUE(SHARP, "sharp"))
 
-BEGIN_ENUM(FxaaConfigurationQualityMetaData, FxaaConfiguration::Quality)
-DECL_ENUM(FxaaConfiguration::Quality, LOW, "low")
-DECL_ENUM(FxaaConfiguration::Quality, MEDIUM, "medium")
-DECL_ENUM(FxaaConfiguration::Quality, HIGH, "high")
-END_ENUM(FxaaConfigurationQualityMetaData, FxaaConfiguration::Quality)
+ENUM_TYPE_METADATA(
+    FxaaConfiguration::Quality, ENUM_VALUE(LOW, "low"), ENUM_VALUE(MEDIUM, "medium"), ENUM_VALUE(HIGH, "high"))
 
-BEGIN_ENUM(TaaConfigurationSharpnessMetaData, TaaConfiguration::Sharpness)
-DECL_ENUM(TaaConfiguration::Sharpness, SOFT, "soft")
-DECL_ENUM(TaaConfiguration::Sharpness, MEDIUM, "medium")
-DECL_ENUM(TaaConfiguration::Sharpness, SHARP, "sharp")
-END_ENUM(TaaConfigurationSharpnessMetaData, TaaConfiguration::Sharpness)
+ENUM_TYPE_METADATA(
+    TaaConfiguration::Sharpness, ENUM_VALUE(SOFT, "soft"), ENUM_VALUE(MEDIUM, "medium"), ENUM_VALUE(SHARP, "sharp"))
 
-BEGIN_ENUM(TaaConfigurationQualityMetaData, TaaConfiguration::Quality)
-DECL_ENUM(TaaConfiguration::Quality, LOW, "low")
-DECL_ENUM(TaaConfiguration::Quality, MEDIUM, "medium")
-DECL_ENUM(TaaConfiguration::Quality, HIGH, "high")
-END_ENUM(TaaConfigurationQualityMetaData, TaaConfiguration::Quality)
+ENUM_TYPE_METADATA(
+    TaaConfiguration::Quality, ENUM_VALUE(LOW, "low"), ENUM_VALUE(MEDIUM, "medium"), ENUM_VALUE(HIGH, "high"))
 
-BEGIN_METADATA(TonemapConfigurationMetaData, TonemapConfiguration)
-DECL_PROPERTY2(TonemapConfiguration, tonemapType, "", 0)
-DECL_PROPERTY2(TonemapConfiguration, exposure, "", 0)
-END_METADATA(TonemapConfigurationMetaData, TonemapConfiguration)
+DATA_TYPE_METADATA(TonemapConfiguration, MEMBER_PROPERTY(tonemapType, "", 0), MEMBER_PROPERTY(exposure, "", 0))
 
-BEGIN_METADATA(BloomConfigurationMetaData, BloomConfiguration)
-DECL_PROPERTY2(BloomConfiguration, bloomType, "", 0)
-DECL_PROPERTY2(BloomConfiguration, bloomQualityType, "", 0)
-DECL_PROPERTY2(BloomConfiguration, thresholdHard, "", 0)
-DECL_PROPERTY2(BloomConfiguration, thresholdSoft, "", 0)
-DECL_PROPERTY2(BloomConfiguration, amountCoefficient, "", 0)
-DECL_PROPERTY2(BloomConfiguration, dirtMaskCoefficient, "", 0)
-DECL_PROPERTY2(BloomConfiguration, dirtMaskImage, "", 0)
-DECL_PROPERTY2(BloomConfiguration, useCompute, "", 0)
-END_METADATA(BloomConfigurationMetaData, BloomConfiguration)
+DATA_TYPE_METADATA(BloomConfiguration, MEMBER_PROPERTY(bloomType, "", 0), MEMBER_PROPERTY(bloomQualityType, "", 0),
+    MEMBER_PROPERTY(thresholdHard, "", 0), MEMBER_PROPERTY(thresholdSoft, "", 0),
+    MEMBER_PROPERTY(amountCoefficient, "", 0), MEMBER_PROPERTY(dirtMaskCoefficient, "", 0),
+    MEMBER_PROPERTY(scatter, "", 0), MEMBER_PROPERTY(scaleFactor, "", 0), MEMBER_PROPERTY(dirtMaskImage, "", 0),
+    MEMBER_PROPERTY(useCompute, "", 0))
 
-BEGIN_METADATA(VignetteConfigurationMetaData, VignetteConfiguration)
-DECL_PROPERTY2(VignetteConfiguration, coefficient, "", 0)
-DECL_PROPERTY2(VignetteConfiguration, power, "", 0)
-END_METADATA(VignetteConfigurationMetaData, VignetteConfiguration)
+DATA_TYPE_METADATA(VignetteConfiguration, MEMBER_PROPERTY(coefficient, "", 0), MEMBER_PROPERTY(power, "", 0))
 
-BEGIN_METADATA(ColorFringeConfigurationMetaData, ColorFringeConfiguration)
-DECL_PROPERTY2(ColorFringeConfiguration, coefficient, "", 0)
-DECL_PROPERTY2(ColorFringeConfiguration, distanceCoefficient, "", 0)
-END_METADATA(ColorFringeConfigurationMetaData, ColorFringeConfiguration)
+DATA_TYPE_METADATA(
+    ColorFringeConfiguration, MEMBER_PROPERTY(coefficient, "", 0), MEMBER_PROPERTY(distanceCoefficient, "", 0))
 
-BEGIN_METADATA(DitherConfigurationMetaData, DitherConfiguration)
-DECL_PROPERTY2(DitherConfiguration, ditherType, "", 0)
-DECL_PROPERTY2(DitherConfiguration, amountCoefficient, "", 0)
-END_METADATA(DitherConfigurationMetaData, DitherConfiguration)
+DATA_TYPE_METADATA(DitherConfiguration, MEMBER_PROPERTY(ditherType, "", 0), MEMBER_PROPERTY(amountCoefficient, "", 0))
 
-BEGIN_METADATA(BlurConfigurationMetaData, BlurConfiguration)
-DECL_PROPERTY2(BlurConfiguration, blurType, "", 0)
-DECL_PROPERTY2(BlurConfiguration, blurQualityType, "", 0)
-DECL_PROPERTY2(BlurConfiguration, filterSize, "", 0)
-DECL_PROPERTY2(BlurConfiguration, maxMipLevel, "", 0)
-END_METADATA(BlurConfigurationMetaData, BlurConfiguration)
+DATA_TYPE_METADATA(BlurConfiguration, MEMBER_PROPERTY(blurType, "", 0), MEMBER_PROPERTY(blurQualityType, "", 0),
+    MEMBER_PROPERTY(filterSize, "", 0), MEMBER_PROPERTY(maxMipLevel, "", 0))
 
-BEGIN_METADATA(ColorConversionConfigurationMetaData, ColorConversionConfiguration)
-DECL_PROPERTY2(ColorConversionConfiguration, conversionFunctionType, "", 0)
-END_METADATA(ColorConversionConfigurationMetaData, ColorConversionConfiguration)
+DATA_TYPE_METADATA(ColorConversionConfiguration, MEMBER_PROPERTY(conversionFunctionType, "", 0))
 
-BEGIN_METADATA(FxaaConfigurationMetaData, FxaaConfiguration)
-DECL_PROPERTY2(FxaaConfiguration, sharpness, "", 0)
-DECL_PROPERTY2(FxaaConfiguration, quality, "", 0)
-END_METADATA(FxaaConfigurationMetaData, FxaaConfiguration)
+DATA_TYPE_METADATA(FxaaConfiguration, MEMBER_PROPERTY(sharpness, "", 0), MEMBER_PROPERTY(quality, "", 0))
 
-BEGIN_METADATA(TaaConfigurationMetaData, TaaConfiguration)
-DECL_PROPERTY2(TaaConfiguration, sharpness, "", 0)
-DECL_PROPERTY2(TaaConfiguration, quality, "", 0)
-END_METADATA(TaaConfigurationMetaData, TaaConfiguration)
+DATA_TYPE_METADATA(TaaConfiguration, MEMBER_PROPERTY(sharpness, "", 0), MEMBER_PROPERTY(quality, "", 0))
 
-BEGIN_METADATA(DofConfigurationMetaData, DofConfiguration)
-DECL_PROPERTY2(DofConfiguration, focusPoint, "", 0)
-DECL_PROPERTY2(DofConfiguration, focusRange, "", 0)
-DECL_PROPERTY2(DofConfiguration, nearTransitionRange, "", 0)
-DECL_PROPERTY2(DofConfiguration, farTransitionRange, "", 0)
-DECL_PROPERTY2(DofConfiguration, nearBlur, "", 0)
-DECL_PROPERTY2(DofConfiguration, farBlur, "", 0)
-DECL_PROPERTY2(DofConfiguration, nearPlane, "", 0)
-DECL_PROPERTY2(DofConfiguration, farPlane, "", 0)
-END_METADATA(DofConfigurationMetaData, DofConfiguration)
+DATA_TYPE_METADATA(DofConfiguration, MEMBER_PROPERTY(focusPoint, "", 0), MEMBER_PROPERTY(focusRange, "", 0),
+    MEMBER_PROPERTY(nearTransitionRange, "", 0), MEMBER_PROPERTY(farTransitionRange, "", 0),
+    MEMBER_PROPERTY(nearBlur, "", 0), MEMBER_PROPERTY(farBlur, "", 0), MEMBER_PROPERTY(nearPlane, "", 0),
+    MEMBER_PROPERTY(farPlane, "", 0))
 
-BEGIN_ENUM(MotionBlurConfigurationSharpnessMetaData, MotionBlurConfiguration::Sharpness)
-DECL_ENUM(MotionBlurConfiguration::Sharpness, SOFT, "soft")
-DECL_ENUM(MotionBlurConfiguration::Sharpness, MEDIUM, "medium")
-DECL_ENUM(MotionBlurConfiguration::Sharpness, SHARP, "sharp")
-END_ENUM(MotionBlurConfigurationSharpnessMetaData, MotionBlurConfiguration::Sharpness)
+ENUM_TYPE_METADATA(MotionBlurConfiguration::Sharpness, ENUM_VALUE(SOFT, "soft"), ENUM_VALUE(MEDIUM, "medium"),
+    ENUM_VALUE(SHARP, "sharp"))
 
-BEGIN_ENUM(MotionBlurConfigurationQualityMetaData, MotionBlurConfiguration::Quality)
-DECL_ENUM(MotionBlurConfiguration::Quality, LOW, "low")
-DECL_ENUM(MotionBlurConfiguration::Quality, MEDIUM, "medium")
-DECL_ENUM(MotionBlurConfiguration::Quality, HIGH, "high")
-END_ENUM(MotionBlurConfigurationQualityMetaData, MotionBlurConfiguration::Quality)
+ENUM_TYPE_METADATA(
+    MotionBlurConfiguration::Quality, ENUM_VALUE(LOW, "low"), ENUM_VALUE(MEDIUM, "medium"), ENUM_VALUE(HIGH, "high"))
 
-BEGIN_METADATA(MotionBlurConfigurationMetaData, MotionBlurConfiguration)
-DECL_PROPERTY2(MotionBlurConfiguration, alpha, "", 0)
-DECL_PROPERTY2(MotionBlurConfiguration, velocityCoefficient, "", 0)
-DECL_PROPERTY2(MotionBlurConfiguration, sharpness, "", 0)
-DECL_PROPERTY2(MotionBlurConfiguration, quality, "", 0)
-END_METADATA(MotionBlurConfigurationMetaData, MotionBlurConfiguration)
+DATA_TYPE_METADATA(MotionBlurConfiguration, MEMBER_PROPERTY(alpha, "", 0), MEMBER_PROPERTY(velocityCoefficient, "", 0),
+    MEMBER_PROPERTY(sharpness, "", 0), MEMBER_PROPERTY(quality, "", 0))
+
+ENUM_TYPE_METADATA(
+    LensFlareConfiguration::Quality, ENUM_VALUE(LOW, "low"), ENUM_VALUE(MEDIUM, "medium"), ENUM_VALUE(HIGH, "high"))
+DATA_TYPE_METADATA(LensFlareConfiguration, MEMBER_PROPERTY(quality, "", 0), MEMBER_PROPERTY(intensity, "", 0),
+    MEMBER_PROPERTY(flarePosition, "", 0))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -245,26 +168,26 @@ using CORE_NS::Property;
 using CORE_NS::PropertyFlags;
 
 class PostProcessComponentManager final : public BaseManager<PostProcessComponent, IPostProcessComponentManager> {
-    BEGIN_PROPERTY(PostProcessComponent, ComponentMetadata)
+    BEGIN_PROPERTY(PostProcessComponent, componentMetaData_)
 #include <3d/ecs/components/post_process_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit PostProcessComponentManager(IEcs& ecs)
-        : BaseManager<PostProcessComponent, IPostProcessComponentManager>(ecs, CORE_NS::GetName<PostProcessComponent>())
+        : BaseManager<PostProcessComponent, IPostProcessComponentManager>(
+              ecs, CORE_NS::GetName<PostProcessComponent>(), 0U)
     {}
 
     ~PostProcessComponentManager() = default;
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

@@ -216,6 +216,8 @@ struct RenderNodeHandles {
 
         /** Render pass subpass contents */
         SubpassContents subpassContents { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE };
+        /** Render pass subpass flags. */
+        SubpassFlags subpassFlags { 0u };
 
         // render pass subpass attachment indices
         /** Depth attachment index */
@@ -231,10 +233,10 @@ struct RenderNodeHandles {
         /** Fragment shading rate attachment index */
         uint32_t fragmentShadingRateAttachmentIndex { ~0u };
 
-        /** Depth resolve mode flag bit */
-        ResolveModeFlagBits depthResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
-        /** Stencil resolve mode flag bit */
-        ResolveModeFlagBits stencilResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+        /** Depth resolve mode flags */
+        ResolveModeFlags depthResolveModeFlags { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+        /** Stencil resolve mode flags */
+        ResolveModeFlags stencilResolveModeFlags { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
 
         /** Shading rate attachment texel size for subpass */
         Size2D shadingRateTexelSize { 1u, 1u };
@@ -342,6 +344,8 @@ struct RenderNodeGraphInputs {
 
         /** Render pass subpass contents */
         SubpassContents subpassContents { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE };
+        /** Render pass subpass flags */
+        SubpassFlags subpassFlags { 0u };
 
         /** Depth attachment index */
         uint32_t depthAttachmentIndex { ~0u };
@@ -357,9 +361,9 @@ struct RenderNodeGraphInputs {
         uint32_t fragmentShadingRateAttachmentIndex { ~0u };
 
         /** Depth resolve mode flag bit */
-        ResolveModeFlagBits depthResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+        ResolveModeFlags depthResolveModeFlags { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
         /** Stencil resolve mode flag bit */
-        ResolveModeFlagBits stencilResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+        ResolveModeFlags stencilResolveModeFlags { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
 
         /** Shading rate attachment texel size for subpass
          */

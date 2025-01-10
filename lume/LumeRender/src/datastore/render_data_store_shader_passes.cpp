@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,7 +15,6 @@
 
 #include "render_data_store_shader_passes.h"
 
-#include <cinttypes>
 #include <cstdint>
 
 #include <base/containers/fixed_string.h>
@@ -37,13 +36,12 @@ constexpr uint32_t Align(uint32_t value, uint32_t align)
     }
     return ((value + align) / align) * align;
 }
-}// namespace
+} // namespace
 
-RenderDataStoreShaderPasses::RenderDataStoreShaderPasses(const IRenderContext& renderContext, const string_view name)
-    : renderContext_(renderContext), name_(name)
+RenderDataStoreShaderPasses::RenderDataStoreShaderPasses(
+    const IRenderContext& /* renderContext */, const string_view name)
+    : name_(name)
 {}
-
-RenderDataStoreShaderPasses::~RenderDataStoreShaderPasses() {}
 
 void RenderDataStoreShaderPasses::PostRender()
 {
@@ -58,6 +56,24 @@ void RenderDataStoreShaderPasses::Clear()
     nameToComputeObjects_.clear();
 }
 
+void RenderDataStoreShaderPasses::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStoreShaderPasses::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStoreShaderPasses::GetRefCount()
+{
+    return refcnt_;
+}
+
 void RenderDataStoreShaderPasses::AddRenderData(
     const BASE_NS::string_view name, const BASE_NS::array_view<const RenderPassData> data)
 {
@@ -69,7 +85,7 @@ void RenderDataStoreShaderPasses::AddRenderData(
         for (const auto& rpRef : ref.rpData) {
             for (const auto& shaderRef : rpRef.shaderBinders) {
                 if (shaderRef) {
-                    ref.alignedPropertyByteSize = Align(shaderRef->GetPropertyBindingByteSize(), OFFSET_ALIGNMENT);
+                    ref.alignedPropertyByteSize += Align(shaderRef->GetPropertyBindingByteSize(), OFFSET_ALIGNMENT);
                 }
             }
         }
@@ -87,7 +103,7 @@ void RenderDataStoreShaderPasses::AddComputeData(
         for (const auto& rpRef : ref.cpData) {
             for (const auto& shaderRef : rpRef.shaderBinders) {
                 if (shaderRef) {
-                    ref.alignedPropertyByteSize = Align(shaderRef->GetPropertyBindingByteSize(), OFFSET_ALIGNMENT);
+                    ref.alignedPropertyByteSize += Align(shaderRef->GetPropertyBindingByteSize(), OFFSET_ALIGNMENT);
                 }
             }
         }
@@ -185,14 +201,8 @@ RenderDataStoreShaderPasses::PropertyBindingDataInfo RenderDataStoreShaderPasses
 }
 
 // for plugin / factory interface
-IRenderDataStore* RenderDataStoreShaderPasses::Create(IRenderContext& renderContext, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreShaderPasses::Create(IRenderContext& renderContext, const char* name)
 {
-    // engine not used
-    return new RenderDataStoreShaderPasses(renderContext, name);
-}
-
-void RenderDataStoreShaderPasses::Destroy(IRenderDataStore* instance)
-{
-    delete static_cast<RenderDataStoreShaderPasses*>(instance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStoreShaderPasses(renderContext, name));
 }
 RENDER_END_NAMESPACE()

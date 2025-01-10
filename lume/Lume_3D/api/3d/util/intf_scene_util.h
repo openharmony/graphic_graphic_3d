@@ -172,6 +172,32 @@ public:
      */
     virtual ISceneLoader::Ptr GetSceneLoader(BASE_NS::string_view uri) const = 0;
 
+    /** Create a reflection probe.
+     * @param ecs Entity component system instance.
+     * @param position Vector3 position for probing.
+     */
+    virtual CORE_NS::EntityReference CreateReflectionProbe(
+        CORE_NS::IEcs& ecs, const BASE_NS::Math::Vec3& position) const = 0;
+
+    /** Create a copy of the entity hierarchy in source ECS starting from sourceEntity in destination ECS and place the
+     * hierarchy under parentEntity. If parentEntity is invalid clones will be placed under the root.
+     * @param destination ECS where new entities are created.
+     * @param parentEntity Entity which will be the parent of the new entities.
+     * @param source ECS from which to copy.
+     * @param sourceEntity Entity which will be copied along with it's entire hieararchy.
+     * @return Entity which is a clone of sourceEntity, or an invalid entity if cloning failed. Cloning may fail if
+     * destination and source are same, parentEntity is valid but not in destination, sourceEntity is not in source.
+     */
+    virtual CORE_NS::Entity Clone(CORE_NS::IEcs& destination, CORE_NS::Entity parentEntity, const CORE_NS::IEcs& source,
+        CORE_NS::Entity sourceEntity) const = 0;
+
+    /** Create a copy of all the entities in source ECS into destination ECS.
+     * @param destination ECS where new entities are created.
+     * @param source ECS from which to copy.
+     * @return Vector containing all the clones.
+     */
+    virtual BASE_NS::vector<CORE_NS::Entity> Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source) const = 0;
+
 protected:
     ISceneUtil() = default;
     virtual ~ISceneUtil() = default;

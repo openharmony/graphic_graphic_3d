@@ -42,7 +42,7 @@ Automatically creates transitions and barriers to command lists.
 */
 class RenderGraph final {
 public:
-    explicit RenderGraph(GpuResourceManager& gpuResourceMgr);
+    explicit RenderGraph(Device& device);
     ~RenderGraph() = default;
 
     RenderGraph(const RenderGraph&) = delete;
@@ -54,13 +54,12 @@ public:
      * backbufferHandle Backbuffer handle for automatic backbuffer/swapchain dependency.
      * renderNodeGraphNodeStore All render node graph render nodes.
      */
-    void ProcessRenderNodeGraph(const bool checkBackbufferDependancy,
-        const BASE_NS::array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores);
+    void ProcessRenderNodeGraph(
+        bool checkBackbufferDependancy, BASE_NS::array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores);
 
     struct RenderGraphBufferState {
         GpuResourceState state;
         BindableBuffer resource;
-        RenderCommandWithType prevRc;
         uint32_t prevRenderNodeIndex { ~0u };
     };
     static constexpr uint32_t MAX_MIP_STATE_COUNT { 16u };
@@ -80,7 +79,6 @@ public:
 
         // batch barriers to the first render pass
         RenderBarrierList* firstRenderPassBarrierList { nullptr };
-        uint32_t firstBarrierPointIndex { ~0u };
         bool supportOpen { false };
     };
 
@@ -133,20 +131,19 @@ private:
     // handles backbuffer layouts as well
     void StoreFinalImageState();
 
-    void RenderCommand(const uint32_t renderNodeIndex, const uint32_t commandListCommandIndex,
-        RenderNodeContextData& nodeData, RenderCommandBeginRenderPass& rc, StateCache& stateCache);
-    void BeginRenderPassHandleDependency(
-        BeginRenderPassParameters& params, const uint32_t commandListCommandIndex, RenderNodeContextData& nodeData);
+    void RenderCommand(uint32_t renderNodeIndex, uint32_t commandListCommandIndex, RenderNodeContextData& nodeData,
+        RenderCommandBeginRenderPass& rc, StateCache& stateCache);
+    static void BeginRenderPassHandleDependency(
+        BeginRenderPassParameters& params, uint32_t commandListCommandIndex, RenderNodeContextData& nodeData);
     void BeginRenderPassUpdateImageStates(BeginRenderPassParameters& params, const GpuQueue& gpuQueue,
-        BASE_NS::array_view<ImageLayout>& finalImageLayouts, const uint32_t renderNodeIndex);
+        BASE_NS::array_view<ImageLayout>& finalImageLayouts, uint32_t renderNodeIndex);
     void BeginRenderPassUpdateSubpassImageStates(BASE_NS::array_view<const uint32_t> attatchmentIndices,
         const RenderPassDesc& renderPassDesc, const RenderPassAttachmentResourceStates& subpassResourceStatesRef,
-        BASE_NS::array_view<ImageLayout> finalImageLayouts, StateCache& stateCache);
+        BASE_NS::array_view<ImageLayout> finalImageLayouts);
 
-    void RenderCommand(const uint32_t renderNodeIndex, const uint32_t commandListCommandIndex,
-        const RenderNodeContextData& nodeData, RenderCommandEndRenderPass& rc, StateCache& stateCache);
-    void RenderCommand(const uint32_t renderNodeIndex, const uint32_t commandListCommandIndex,
-        RenderNodeContextData& nodeData, RenderCommandBarrierPoint& rc, StateCache& stateCache);
+    static void RenderCommand(RenderCommandEndRenderPass& rc, StateCache& stateCache);
+    void RenderCommand(uint32_t renderNodeIndex, uint32_t commandListCommandIndex, RenderNodeContextData& nodeData,
+        RenderCommandBarrierPoint& rc, StateCache& stateCache);
 
     struct ParameterCacheAllocOpt {
         BASE_NS::vector<CommandBarrier> combinedBarriers;
@@ -169,11 +166,11 @@ private:
     static void UpdateImageResourceState(
         RenderGraphImageState& stateRef, const ParameterCache& params, const CommandBarrier& cb);
 
-    void HandleCustomBarriers(ParameterCache& params, const uint32_t barrierIndexBegin,
+    void HandleCustomBarriers(ParameterCache& params, uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const CommandBarrier>& customBarrierListRef);
-    void HandleVertexInputBufferBarriers(ParameterCache& params, const uint32_t barrierIndexBegin,
+    void HandleVertexInputBufferBarriers(ParameterCache& params, uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const VertexBuffer>& vertexInputBufferBarrierListRef);
-    void HandleRenderpassIndirectBufferBarriers(ParameterCache& params, const uint32_t barrierIndexBegin,
+    void HandleRenderpassIndirectBufferBarriers(ParameterCache& params, uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const VertexBuffer>& indirectBufferBarrierListRef);
 
     void HandleClearImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
@@ -197,25 +194,21 @@ private:
     void UpdateStateAndCreateBarriersGpuBuffer(
         const GpuResourceState& resourceState, const BindableBuffer& res, RenderGraph::ParameterCache& params);
 
-    void AddCommandBarrierAndUpdateStateCache(const uint32_t renderNodeIndex,
-        const GpuResourceState& newGpuResourceState, const RenderCommandWithType& rcWithType,
+    void AddCommandBarrierAndUpdateStateCacheBuffer(uint32_t renderNodeIndex,
+        const GpuResourceState& newGpuResourceState, const BindableBuffer& newBuffer,
         BASE_NS::vector<CommandBarrier>& barriers, BASE_NS::vector<GpuQueueTransferState>& currNodeGpuResourceTransfer);
 
-    void AddCommandBarrierAndUpdateStateCacheBuffer(const uint32_t renderNodeIndex,
-        const GpuResourceState& newGpuResourceState, const BindableBuffer& newBuffer,
-        const RenderCommandWithType& rcWithType, BASE_NS::vector<CommandBarrier>& barriers,
-        BASE_NS::vector<GpuQueueTransferState>& currNodeGpuResourceTransfer);
-
-    void AddCommandBarrierAndUpdateStateCacheImage(const uint32_t renderNodeIndex,
+    void AddCommandBarrierAndUpdateStateCacheImage(uint32_t renderNodeIndex,
         const GpuResourceState& newGpuResourceState, const BindableImage& newImage,
         const RenderCommandWithType& rcWithType, BASE_NS::vector<CommandBarrier>& barriers,
         BASE_NS::vector<GpuQueueTransferState>& currNodeGpuResourceTransfer);
 
     // if there's no state ATM, a undefined/invalid starting state is created
     // do not call this method with non dynamic trackable resources
-    RenderGraphBufferState& GetBufferResourceStateRef(const RenderHandle handle, const GpuQueue& queue);
-    RenderGraphImageState& GetImageResourceStateRef(const RenderHandle handle, const GpuQueue& queue);
+    RenderGraphBufferState& GetBufferResourceStateRef(RenderHandle handle, const GpuQueue& queue);
+    RenderGraphImageState& GetImageResourceStateRef(RenderHandle handle, const GpuQueue& queue);
 
+    Device& device_;
     GpuResourceManager& gpuResourceMgr_;
 
     // stored every time at the end of the frame

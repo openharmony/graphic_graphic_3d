@@ -16,7 +16,6 @@
 #include "node_context_pool_manager_gles.h"
 
 #include <algorithm>
-#include <numeric>
 
 #include <render/namespace.h>
 
@@ -24,7 +23,6 @@
 #include "gles/device_gles.h"
 #include "gles/gl_functions.h"
 #include "gles/gpu_image_gles.h"
-#include "gles/swapchain_gles.h"
 #include "nodecontext/render_command_list.h" // RenderPassBeginInfo...
 #include "util/log.h"
 
@@ -68,7 +66,7 @@ void UpdateBindImages(const RenderCommandBeginRenderPass& beginRenderPass, array
     }
 }
 
-uint64_t HashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourceManager& gpuResourceMgr_)
+uint64_t HashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourceManager& gpuResourceMgr)
 {
     const auto& renderPassDesc = beginRenderPass.renderPassDesc;
     uint64_t rpHash = 0;
@@ -77,8 +75,18 @@ uint64_t HashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourc
         for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
             HashCombine(rpHash, renderPassDesc.attachments[idx].layer);
             HashCombine(rpHash, renderPassDesc.attachments[idx].mipLevel);
-            const EngineResourceHandle gpuHandle = gpuResourceMgr_.GetGpuHandle(renderPassDesc.attachmentHandles[idx]);
-            HashCombine(rpHash, gpuHandle.id);
+            // generation counters and hashing with handles is not enough
+            // the reason is that e.g. shallow handles can point to to different GPU handles
+            // and have counter of zero in their index
+            // this can lead with handle re-use to situations where the gen counter is zero
+            // NOTE: we hash with our own gpuHandle and gl image (if gl image id would be re-used)
+            const RenderHandle clientHandle = renderPassDesc.attachmentHandles[idx];
+            const EngineResourceHandle gpuHandle = gpuResourceMgr.GetGpuHandle(clientHandle);
+            uint64_t imageId = clientHandle.id;
+            if (const GpuImageGLES* image = gpuResourceMgr.GetImage<GpuImageGLES>(clientHandle); image) {
+                imageId = (uint64_t)(image->GetPlatformData().image);
+            }
+            HashCombine(rpHash, gpuHandle.id, imageId);
         }
     }
 
@@ -160,13 +168,13 @@ bool VerifyFBO()
 
 bool HasStencil(const GpuImageGLES* image)
 {
-    const GpuImagePlatformDataGL& dplat = static_cast<const GpuImagePlatformDataGL&>(image->GetPlatformData());
+    const auto& dplat = static_cast<const GpuImagePlatformDataGL&>(image->GetPlatformData());
     return (dplat.format == GL_STENCIL_INDEX) || (dplat.format == GL_DEPTH_STENCIL);
 }
 
 bool HasDepth(const GpuImageGLES* image)
 {
-    const GpuImagePlatformDataGL& dplat = static_cast<const GpuImagePlatformDataGL&>(image->GetPlatformData());
+    const auto& dplat = static_cast<const GpuImagePlatformDataGL&>(image->GetPlatformData());
     return (dplat.format == GL_DEPTH_COMPONENT) || (dplat.format == GL_DEPTH_STENCIL);
 }
 
@@ -213,8 +221,7 @@ bool IsDefaultResolve(array_view<const BindImage> images, const RenderPassSubpas
         // looks good, one color
         if (sb.resolveAttachmentIndices[0U] < static_cast<uint32_t>(images.size())) {
             if (const GpuImageGLES* color = images[sb.resolveAttachmentIndices[0]].image; color) {
-                const GpuImagePlatformDataGL& plat =
-                    static_cast<const GpuImagePlatformDataGL&>(color->GetPlatformData());
+                const auto& plat = static_cast<const GpuImagePlatformDataGL&>(color->GetPlatformData());
                 if ((plat.image == 0) && (plat.renderBuffer == 0)) {
                     return true;
                 }
@@ -225,8 +232,7 @@ bool IsDefaultResolve(array_view<const BindImage> images, const RenderPassSubpas
         if (sb.depthResolveAttachmentIndex < static_cast<uint32_t>(images.size())) {
             // looks good, one depth
             if (const GpuImageGLES* depth = images[sb.depthResolveAttachmentIndex].image; depth) {
-                const GpuImagePlatformDataGL& plat =
-                    static_cast<const GpuImagePlatformDataGL&>(depth->GetPlatformData());
+                const auto& plat = static_cast<const GpuImagePlatformDataGL&>(depth->GetPlatformData());
                 if ((plat.image == 0) && (plat.renderBuffer == 0)) {
                     return true;
                 }
@@ -250,12 +256,12 @@ void DeleteFbos(DeviceGLES& device, LowlevelFramebufferGL& ref)
             device.DeleteFrameBuffer(r);
         }
         // the same fbos can be used multiple render passes, so clean those references too.
-        for (uint32_t j = 0; j < ref.fbos.size(); j++) {
-            if (f == ref.fbos[j].fbo) {
-                ref.fbos[j].fbo = 0;
+        for (auto& fbo : ref.fbos) {
+            if (f == fbo.fbo) {
+                fbo.fbo = 0;
             }
-            if (r == ref.fbos[j].resolve) {
-                ref.fbos[j].resolve = 0;
+            if (r == fbo.resolve) {
+                fbo.resolve = 0;
             }
         }
     }
@@ -265,7 +271,7 @@ void DeleteFbos(DeviceGLES& device, LowlevelFramebufferGL& ref)
 void BindToFbo(
     GLenum attachType, const BindImage& image, uint32_t& width, uint32_t& height, uint32_t views, bool isStarted)
 {
-    const GpuImagePlatformDataGL& plat = static_cast<const GpuImagePlatformDataGL&>(image.image->GetPlatformData());
+    const auto& plat = static_cast<const GpuImagePlatformDataGL&>(image.image->GetPlatformData());
     const GpuImageDesc& desc = image.image->GetDesc();
     if (isStarted) {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -316,8 +322,7 @@ void BindToFbo(
 void BindToFboMultisampled(GLenum attachType, const BindImage& image, const BindImage& resolveImage, uint32_t& width,
     uint32_t& height, uint32_t views, bool isStarted, bool multisampledRenderToTexture)
 {
-    const GpuImagePlatformDataGL& plat =
-        static_cast<const GpuImagePlatformDataGL&>(resolveImage.image->GetPlatformData());
+    const auto& plat = static_cast<const GpuImagePlatformDataGL&>(resolveImage.image->GetPlatformData());
     const GpuImageDesc& desc = image.image->GetDesc();
     if (isStarted) {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -358,16 +363,16 @@ void BindToFboMultisampled(GLenum attachType, const BindImage& image, const Bind
             const auto samples = (desc.sampleCountFlags & CORE_SAMPLE_COUNT_8_BIT)
                                      ? 8
                                      : ((desc.sampleCountFlags & CORE_SAMPLE_COUNT_4_BIT) ? 4 : 2);
-            glFramebufferTextureMultisampleMultiviewOVR(
-                GL_FRAMEBUFFER, attachType, plat.image, image.mipLevel, samples, image.layer, views);
+            glFramebufferTextureMultisampleMultiviewOVR(GL_FRAMEBUFFER, attachType, plat.image, GLint(image.mipLevel),
+                GLint(samples), GLint(image.layer), GLsizei(views));
         } else {
 #endif
             if (views) {
                 glFramebufferTextureMultiviewOVR(
-                    GL_FRAMEBUFFER, attachType, plat.image, (GLint)image.mipLevel, (GLint)image.layer, (GLsizei)views);
+                    GL_FRAMEBUFFER, attachType, plat.image, GLint(image.mipLevel), GLint(image.layer), GLsizei(views));
             } else {
                 glFramebufferTextureLayer(
-                    GL_FRAMEBUFFER, attachType, plat.image, (GLint)image.mipLevel, (GLint)image.layer);
+                    GL_FRAMEBUFFER, attachType, plat.image, GLint(image.mipLevel), GLint(image.layer));
             }
 #if RENDER_HAS_GLES_BACKEND
         }
@@ -582,7 +587,7 @@ LowlevelFramebufferGL::SubPassPair ProcessSubPass(DeviceGLES& device, LowlevelFr
 }
 
 #if RENDER_HAS_GLES_BACKEND
-void MapColorAttachments(array_view<RenderPassSubpassDesc>::iterator begin,
+void MapColorAttachments([[maybe_unused]] array_view<RenderPassSubpassDesc>::iterator begin,
     array_view<RenderPassSubpassDesc>::iterator pos, array_view<const BindImage> images, array_view<uint32_t> imageMap,
     array_view<RenderPassDesc::AttachmentDesc> attachments)
 {
@@ -613,11 +618,11 @@ void MapColorAttachments(array_view<RenderPassSubpassDesc>::iterator begin,
     }
 }
 
-void MapDepthAttachments(array_view<RenderPassSubpassDesc>::iterator begin,
+void MapDepthAttachments([[maybe_unused]] array_view<RenderPassSubpassDesc>::iterator begin,
     array_view<RenderPassSubpassDesc>::iterator pos, array_view<const BindImage> images, array_view<uint32_t> imageMap,
     array_view<RenderPassDesc::AttachmentDesc> attachments)
 {
-    if ((pos->depthResolveAttachmentCount > 0) && (pos->depthResolveModeFlagBit || pos->stencilResolveModeFlagBit)) {
+    if ((pos->depthResolveAttachmentCount > 0) && (pos->depthResolveModeFlags || pos->stencilResolveModeFlags)) {
         const auto depth = pos->depthAttachmentIndex;
         // if the attachment can be used as an input attachment we can't render directly to the resolve attachment.
         if (images[depth].image &&
@@ -663,9 +668,11 @@ void UpdateSubpassAttachments(array_view<RenderPassSubpassDesc>::iterator begin,
         i->resolveAttachmentCount = resolveCount;
 
         const auto oldDepth = i->depthAttachmentIndex;
-        if (const auto newDepth = imageMap[oldDepth]; newDepth != EMPTY_ATTACHMENT) {
-            i->depthAttachmentIndex = newDepth;
-            i->depthResolveAttachmentCount = 0;
+        if (oldDepth != EMPTY_ATTACHMENT) {
+            if (const auto newDepth = imageMap[oldDepth]; newDepth != EMPTY_ATTACHMENT) {
+                i->depthAttachmentIndex = newDepth;
+                i->depthResolveAttachmentCount = 0;
+            }
         }
     }
 }
@@ -820,7 +827,7 @@ void NodeContextPoolManagerGLES::FilterRenderPass(RenderCommandBeginRenderPass& 
     auto pos = std::find_if(begin, end, [](const RenderPassSubpassDesc& subpass) {
         return (subpass.resolveAttachmentCount > 0) ||
                ((subpass.depthResolveAttachmentCount > 0) &&
-                   (subpass.depthResolveModeFlagBit || subpass.stencilResolveModeFlagBit));
+                   (subpass.depthResolveModeFlags || subpass.stencilResolveModeFlags));
     });
     if (pos != end) {
         BindImage images[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];

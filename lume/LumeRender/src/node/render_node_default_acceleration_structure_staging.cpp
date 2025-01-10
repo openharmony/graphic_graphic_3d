@@ -100,59 +100,56 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrame(IRenderCommandL
                     cmdList.BuildAccelerationStructures(move(geometry), {}, {}, { &instanceData, count });
                 }
             }
-            ExecuteFrameProcessInstanceData(ds);
+            ExecuteFrameProcessInstanceData(*ds);
         }
     }
 #endif
 }
 
 void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessInstanceData(
-    RenderDataStoreDefaultAccelerationStructureStaging* dataStore)
+    RenderDataStoreDefaultAccelerationStructureStaging& dataStore)
 {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
 #if (RENDER_HAS_VULKAN_BACKEND == 1)
-    if (dataStore) {
-        AccelerationStructureInstanceConsumeStruct stagingInstanceData = dataStore->ConsumeStagingInstanceData();
-        auto& gpuResourceMgr =
-            static_cast<RenderNodeGpuResourceManager&>(renderNodeContextMgr_->GetGpuResourceManager());
-        const auto& gpuResourceMgrImpl = static_cast<const GpuResourceManager&>(gpuResourceMgr.GetGpuResourceManager());
-        for (const auto dataRef : stagingInstanceData.copyInfo) {
-            if (dataRef.bufferOffset.handle && (dataRef.count > 0)) {
-                const RenderHandle dstHandle = dataRef.bufferOffset.handle.GetHandle();
-                const GpuBufferDesc dstBufferDesc = gpuResourceMgr.GetBufferDescriptor(dstHandle);
-                if (uint8_t* dstDataBegin = static_cast<uint8_t*>(gpuResourceMgr.MapBuffer(dstHandle)); dstDataBegin) {
-                    const uint8_t* dstDataEnd = dstDataBegin + dstBufferDesc.byteSize;
-                    // loop and copy all instances
-                    for (uint32_t idx = 0; idx < dataRef.count; ++idx) {
-                        const auto& instanceRef = stagingInstanceData.instances[dataRef.startIndex + idx];
-                        uint64_t accelerationStructureReference = 0;
-                        if (const GpuBufferVk* accelPtr = gpuResourceMgrImpl.GetBuffer<GpuBufferVk>(
-                                instanceRef.accelerationStructureReference.GetHandle());
-                            accelPtr) {
-                            accelerationStructureReference =
-                                accelPtr->GetPlatformDataAccelerationStructure().deviceAddress;
-                        }
-                        VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-                            0.0f, 1.0f, 0.0f };
-
-                        VkAccelerationStructureInstanceKHR instance {
-                            transformMatrix,                 // transform;
-                            instanceRef.instanceCustomIndex, // instanceCustomIndex : 24
-                            instanceRef.mask,                // mask : 8
-                            0,                               // instanceShaderBindingTableRecordOffset : 24
-                            VkGeometryInstanceFlagsKHR(instanceRef.flags), // flags : 8
-                            accelerationStructureReference,                // accelerationStructureReference
-                        };
-                        const size_t byteSize = sizeof(VkAccelerationStructureInstanceKHR);
-                        uint8_t* dstData = dstDataBegin + byteSize * idx;
-                        CloneData(dstData, size_t(dstDataEnd - dstData), &instance, byteSize);
-                    }
-
-                    gpuResourceMgr.UnmapBuffer(dstHandle);
-                } else {
-                    PLUGIN_LOG_E("accel staging: dstHandle %" PRIu64, dstHandle.id);
+    AccelerationStructureInstanceConsumeStruct stagingInstanceData = dataStore.ConsumeStagingInstanceData();
+    auto& gpuResourceMgr = static_cast<RenderNodeGpuResourceManager&>(renderNodeContextMgr_->GetGpuResourceManager());
+    const auto& gpuResourceMgrImpl = static_cast<const GpuResourceManager&>(gpuResourceMgr.GetGpuResourceManager());
+    for (const auto dataRef : stagingInstanceData.copyInfo) {
+        if ((!dataRef.bufferOffset.handle) || (dataRef.count == 0)) {
+            continue;
+        }
+        const RenderHandle dstHandle = dataRef.bufferOffset.handle.GetHandle();
+        const GpuBufferDesc dstBufferDesc = gpuResourceMgr.GetBufferDescriptor(dstHandle);
+        if (uint8_t* dstDataBegin = static_cast<uint8_t*>(gpuResourceMgr.MapBuffer(dstHandle)); dstDataBegin) {
+            const uint8_t* dstDataEnd = dstDataBegin + dstBufferDesc.byteSize;
+            // loop and copy all instances
+            for (uint32_t idx = 0; idx < dataRef.count; ++idx) {
+                const auto& instanceRef = stagingInstanceData.instances[dataRef.startIndex + idx];
+                uint64_t accelerationStructureReference = 0;
+                if (const GpuBufferVk* accelPtr = gpuResourceMgrImpl.GetBuffer<GpuBufferVk>(
+                        instanceRef.accelerationStructureReference.GetHandle());
+                    accelPtr) {
+                    accelerationStructureReference = accelPtr->GetPlatformDataAccelerationStructure().deviceAddress;
                 }
+                VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                    1.0f, 0.0f };
+
+                VkAccelerationStructureInstanceKHR instance {
+                    transformMatrix,                               // transform;
+                    instanceRef.instanceCustomIndex,               // instanceCustomIndex : 24
+                    instanceRef.mask,                              // mask : 8
+                    0,                                             // instanceShaderBindingTableRecordOffset : 24
+                    VkGeometryInstanceFlagsKHR(instanceRef.flags), // flags : 8
+                    accelerationStructureReference,                // accelerationStructureReference
+                };
+                const size_t byteSize = sizeof(VkAccelerationStructureInstanceKHR);
+                uint8_t* dstData = dstDataBegin + byteSize * idx;
+                CloneData(dstData, size_t(dstDataEnd - dstData), &instance, byteSize);
             }
+
+            gpuResourceMgr.UnmapBuffer(dstHandle);
+        } else {
+            PLUGIN_LOG_E("accel staging: dstHandle %" PRIu64, dstHandle.id);
         }
     }
 #endif

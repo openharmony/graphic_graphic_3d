@@ -16,10 +16,13 @@
 #ifndef LOADER_SHADER_DATA_LOADER_H
 #define LOADER_SHADER_DATA_LOADER_H
 
+#include <utility>
+
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
 #include <core/namespace.h>
+#include <render/device/intf_shader_manager.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 
@@ -36,7 +39,7 @@ public:
     /** Describes result of the parsing operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(const BASE_NS::string& aError) : success(false), error(aError) {}
+        explicit LoadResult(BASE_NS::string error) : success(false), error(BASE_NS::move(error)) {}
 
         /** Indicates, whether the parsing operation is successful. */
         bool success { true };
@@ -45,37 +48,10 @@ public:
         BASE_NS::string error;
     };
 
-    /** Describes a single shader variant. */
-    struct ShaderVariant {
-        bool renderSlotDefaultShader { false };
-        BASE_NS::string variantName;
-        BASE_NS::string displayName;
-
-        BASE_NS::string vertexShader;
-        BASE_NS::string fragmentShader;
-        BASE_NS::string computeShader;
-
-        BASE_NS::string vertexInputDeclaration;
-        BASE_NS::string pipelineLayout;
-        GraphicsState graphicsState;
-
-        BASE_NS::string renderSlot;
-        BASE_NS::vector<BASE_NS::string> customGraphicsStateSlotNames;
-        BASE_NS::string shaderFileStr;
-        BASE_NS::string materialMetadata;
-
-        GraphicsStateFlags stateFlags { 0U };
-    };
-
     /** Uri of the loaded file.
      * @return Uri path.
      */
     BASE_NS::string_view GetUri() const;
-
-    /** Base shader for variants.
-     * @return Base shader path.
-     */
-    BASE_NS::string_view GetBaseShader() const;
 
     /** Base category for all shader variants.
      * @return Base category for shaders.
@@ -85,7 +61,7 @@ public:
     /** Get all shader variants.
      * @return Array view of shader variants.
      */
-    BASE_NS::array_view<const ShaderVariant> GetShaderVariants() const;
+    BASE_NS::array_view<const IShaderManager::ShaderVariant> GetShaderVariants() const;
 
     /** Loads shader state from given uri, using file manager.
      * @param fileManager A file manager to access the file in given uri.
@@ -95,13 +71,12 @@ public:
     LoadResult Load(CORE_NS::IFileManager& fileManager, BASE_NS::string_view uri);
 
 private:
-    LoadResult Load(BASE_NS::string&& jsonData);
+    LoadResult Load(BASE_NS::string_view uri, BASE_NS::string&& jsonData);
 
     BASE_NS::string uri_;
-    BASE_NS::string baseShader_;
     BASE_NS::string baseCategory_;
 
-    BASE_NS::vector<ShaderVariant> shaderVariants_;
+    BASE_NS::vector<IShaderManager::ShaderVariant> shaderVariants_;
 };
 CORE_END_NAMESPACE()
 

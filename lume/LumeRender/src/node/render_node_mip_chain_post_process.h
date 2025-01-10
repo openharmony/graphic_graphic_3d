@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_MIP_CHAIN_GENERIC_H
-#define RENDER_RENDER__NODE__RENDER_NODE_MIP_CHAIN_GENERIC_H
+#ifndef RENDER_NODE_RENDER_NODE_MIP_CHAIN_GENERIC_H
+#define RENDER_NODE_RENDER_NODE_MIP_CHAIN_GENERIC_H
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
@@ -28,7 +28,7 @@
 #include <render/nodecontext/intf_render_node.h>
 #include <render/resource_handle.h>
 
-#include "node/render_copy.h"
+#include "nodecontext/render_node_copy_util.h"
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
@@ -46,7 +46,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "1d891c63-28bb-44c4-98b4-64959419c9b1" };
-    static constexpr char const* TYPE_NAME = "CORE_RN_MIP_CHAIN_POST_PROCESS";
+    static constexpr const char* TYPE_NAME = "CORE_RN_MIP_CHAIN_POST_PROCESS";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -59,8 +59,8 @@ private:
     RenderPass GetBaseRenderPass();
     void RenderGraphics(IRenderCommandList& cmdList);
     void RenderCompute(IRenderCommandList& cmdList);
-    void BindDefaultResources(const uint32_t set, const DescriptorSetLayoutBindingResources& bindings);
-    void RegisterOutputs(const RenderHandle output);
+    void BindDefaultResources(uint32_t set, const DescriptorSetLayoutBindingResources& bindings);
+    void RegisterOutputs(RenderHandle output);
     void UpdateImageData();
     void UpdateGlobalSet(IRenderCommandList& cmdList);
     bool GetRequiresPreCopy() const;
@@ -141,7 +141,7 @@ private:
     };
     UboHandles ubos_;
 
-    RenderCopy renderCopy_;
+    RenderNodeCopyUtil renderCopy_;
     bool useAutoBindSet0_ { false };
     bool valid_ { false };
 
@@ -151,4 +151,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_RENDER__NODE__RENDER_NODE_MIP_CHAIN_GENERIC_H
+#endif // RENDER_NODE_RENDER_NODE_MIP_CHAIN_GENERIC_H

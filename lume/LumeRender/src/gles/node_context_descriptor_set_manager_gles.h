@@ -28,10 +28,27 @@ RENDER_BEGIN_NAMESPACE()
 struct RenderPassBeginInfo;
 class GpuResourceManager;
 
-class NodeContextDescriptorSetManagerGLES final : public NodeContextDescriptorSetManager {
+class DescriptorSetManagerGles final : public DescriptorSetManager {
 public:
-    explicit NodeContextDescriptorSetManagerGLES(Device& device);
-    ~NodeContextDescriptorSetManagerGLES();
+    explicit DescriptorSetManagerGles(Device& device);
+    ~DescriptorSetManagerGles() override = default;
+
+    void BeginFrame() override;
+    void BeginBackendFrame();
+
+    void UpdateDescriptorSetGpuHandle(const RenderHandle& handle) override;
+    void UpdateCpuDescriptorSetPlatform(const DescriptorSetLayoutBindingResources& bindingResources) override;
+
+    void CreateDescriptorSets(const uint32_t arrayIndex, const uint32_t descriptorSetCount,
+        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) override;
+
+private:
+};
+
+class NodeContextDescriptorSetManagerGles final : public NodeContextDescriptorSetManager {
+public:
+    explicit NodeContextDescriptorSetManagerGles(Device& device);
+    ~NodeContextDescriptorSetManagerGles();
 
     void ResetAndReserve(const DescriptorCounts& descriptorCounts) override;
     void BeginFrame() override;

@@ -17,9 +17,14 @@
 
 #include <cstdint>
 
+#if defined(__OHOS_PLATFORM__)
+#undef HAS_FILESYSTEM
+#else
 #ifdef __has_include
 #if __has_include(<filesystem>)
 #include <filesystem>
+#define HAS_FILESYSTEM
+#endif
 #endif
 #endif
 
@@ -27,11 +32,11 @@
 #include <cerrno>
 #include <dirent.h>
 
-#ifndef _DIRENT_HAVE_D_TYPE
 #include <sys/stat.h>
+#ifndef _DIRENT_HAVE_D_TYPE
 #include <sys/types.h>
-
 #endif
+#include "io/std_directory.h"
 #include <climits>
 #define CORE_MAX_PATH PATH_MAX
 #endif
@@ -41,8 +46,6 @@
 #include <core/io/intf_file.h>
 #include <core/log.h>
 #include <core/namespace.h>
-
-#include "io/std_directory.h"
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string;
@@ -168,6 +171,16 @@ IFile::Ptr StdFile::Create(const string_view path, Mode mode)
 #endif
     return {};
 }
+bool StdFile::FileExists(const string_view path)
+{
+#if defined(HAS_FILESYSTEM)
+    std::error_code ec;
+    return std::filesystem::is_regular_file(U8Path(path), ec) && !ec;
+#else
+    struct stat statBuf {};
+    return (stat(path.data(), &statBuf) == 0) && S_ISREG(statBuf.st_mode);
+#endif
+}
 
 void StdFile::Close()
 {
@@ -191,6 +204,23 @@ uint64_t StdFile::Write(const void* buffer, uint64_t count)
     const auto pos = file_.tellp();
     file_.write(static_cast<const char*>(buffer), static_cast<std::streamsize>(count));
     return static_cast<uint64_t>(file_.tellp() - pos);
+}
+
+uint64_t StdFile::Append(const void* buffer, uint64_t count, uint64_t flushSize)
+{
+    uint64_t actualFlushSize = (flushSize == 0) ? count : flushSize;
+    uint64_t bytesWritten = 0;
+    file_.seekp(0, std::ios::end);
+    while (bytesWritten < count) {
+        uint64_t bytesToWrite = std::min(actualFlushSize, count - bytesWritten);
+        file_.write(static_cast<const char*>(buffer) + bytesWritten, static_cast<std::streamsize>(bytesToWrite));
+        if (flushSize != 0) {
+            file_.flush();
+        }
+        bytesWritten += bytesToWrite;
+    }
+
+    return bytesWritten;
 }
 
 uint64_t StdFile::GetLength() const

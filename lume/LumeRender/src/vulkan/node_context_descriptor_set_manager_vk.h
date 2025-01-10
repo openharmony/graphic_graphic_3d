@@ -20,6 +20,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include <base/containers/array_view.h>
+#include <base/containers/string.h>
 #include <base/containers/vector.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
@@ -45,15 +46,6 @@ struct LowLevelDescriptorSetVk {
     uint16_t immutableSamplerBitmask { 0u };
 };
 
-// storage counts
-struct LowLevelDescriptorCountsVk {
-    uint32_t writeDescriptorCount { 0u };
-    uint32_t bufferCount { 0u };
-    uint32_t imageCount { 0u };
-    uint32_t samplerCount { 0u };
-    uint32_t accelCount { 0u };
-};
-
 struct LowLevelContextDescriptorPoolVk {
     // buffering count of 3 (max) is used often with vulkan triple buffering
     // gets the real used buffering count from the device
@@ -65,7 +57,7 @@ struct LowLevelContextDescriptorPoolVk {
     VkDescriptorPool additionalPlatformDescriptorPool { VK_NULL_HANDLE };
 
     struct DescriptorSetData {
-        LowLevelDescriptorCountsVk descriptorCounts;
+        LowLevelDescriptorCounts descriptorCounts;
         // indexed with frame buffering index
         LowLevelDescriptorSetVk bufferingSet[MAX_BUFFERING_COUNT];
 
@@ -109,10 +101,55 @@ struct LowLevelContextDescriptorWriteDataVk {
     }
 };
 
+struct PendingDeallocations {
+    uint64_t frameIndex { 0 };
+    LowLevelContextDescriptorPoolVk descriptorPool;
+};
+
+struct OneFrameDescriptorNeed {
+    static constexpr uint32_t DESCRIPTOR_ARRAY_SIZE = CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT + 1;
+    uint8_t descriptorCount[DESCRIPTOR_ARRAY_SIZE] { 0 };
+};
+
+class DescriptorSetManagerVk final : public DescriptorSetManager {
+public:
+    explicit DescriptorSetManagerVk(Device& device);
+    ~DescriptorSetManagerVk() override;
+
+    void BeginFrame() override;
+    void BeginBackendFrame();
+
+    void CreateDescriptorSets(const uint32_t arrayIndex, const uint32_t descriptorSetCount,
+        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) override;
+    void UpdateDescriptorSetGpuHandle(const RenderHandle& handle) override;
+    void UpdateCpuDescriptorSetPlatform(const DescriptorSetLayoutBindingResources& bindingResources) override;
+
+    const LowLevelDescriptorSetVk* GetDescriptorSet(const RenderHandle& handle) const;
+    LowLevelContextDescriptorWriteDataVk& GetLowLevelDescriptorWriteData();
+
+private:
+    VkDevice vkDevice_;
+
+    void ResizeDescriptorSetWriteData();
+
+    BASE_NS::vector<PendingDeallocations> pendingDeallocations_;
+
+    uint32_t bufferingCount_ { LowLevelContextDescriptorPoolVk::MAX_BUFFERING_COUNT };
+
+    BASE_NS::vector<LowLevelContextDescriptorPoolVk> lowLevelDescriptorPools_;
+
+    // use same vector, so we do not re-create the same with every reset
+    // the memory allocation is small
+    BASE_NS::vector<VkDescriptorPoolSize> descriptorPoolSizes_;
+
+    // needs to be locked
+    LowLevelContextDescriptorWriteDataVk lowLevelDescriptorWriteData_;
+};
+
 class NodeContextDescriptorSetManagerVk final : public NodeContextDescriptorSetManager {
 public:
     explicit NodeContextDescriptorSetManagerVk(Device& device);
-    ~NodeContextDescriptorSetManagerVk();
+    ~NodeContextDescriptorSetManagerVk() override;
 
     void ResetAndReserve(const DescriptorCounts& descriptorCounts) override;
     void BeginFrame() override;
@@ -120,44 +157,30 @@ public:
     void BeginBackendFrame();
 
     RenderHandle CreateDescriptorSet(
-        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) override;
+        BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) override;
     RenderHandle CreateOneFrameDescriptorSet(
-        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) override;
+        BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) override;
 
-    const LowLevelDescriptorCountsVk& GetLowLevelDescriptorCounts(const RenderHandle handle);
-    const LowLevelDescriptorSetVk* GetDescriptorSet(const RenderHandle handle) const;
-
+    const LowLevelDescriptorSetVk* GetDescriptorSet(RenderHandle handle) const;
     LowLevelContextDescriptorWriteDataVk& GetLowLevelDescriptorWriteData();
 
     // deferred gpu descriptor set creation happens here
-    void UpdateDescriptorSetGpuHandle(const RenderHandle handle) override;
+    void UpdateDescriptorSetGpuHandle(RenderHandle handle) override;
     void UpdateCpuDescriptorSetPlatform(const DescriptorSetLayoutBindingResources& bindingResources) override;
 
 private:
     Device& device_;
+    VkDevice vkDevice_;
 
-    void CreateGpuDescriptorSet(const uint32_t bufferCount, const RenderHandle clientHandle,
-        const CpuDescriptorSet& cpuDescriptorSet, LowLevelContextDescriptorPoolVk& descriptorPool);
-    void DestroyPool(LowLevelContextDescriptorPoolVk& descriptorPool);
     void ClearDescriptorSetWriteData();
     void ResizeDescriptorSetWriteData();
 
     uint32_t bufferingCount_ { 0 };
     LowLevelContextDescriptorPoolVk descriptorPool_[DESCRIPTOR_SET_INDEX_TYPE_COUNT];
 
-    struct PendingDeallocations {
-        uint64_t frameIndex { 0 };
-        LowLevelContextDescriptorPoolVk descriptorPool;
-    };
     BASE_NS::vector<PendingDeallocations> pendingDeallocations_;
 
-    struct OneFrameDescriptorNeed {
-        static constexpr uint32_t DESCRIPTOR_ARRAY_SIZE = CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT + 1;
-        uint8_t descriptorCount[DESCRIPTOR_ARRAY_SIZE] { 0 };
-    };
     OneFrameDescriptorNeed oneFrameDescriptorNeed_;
-
-    LowLevelDescriptorCountsVk defaultLowLevelDescriptorSetMemoryStoreVk_;
 
     // use same vector, so we do not re-create the same with every reset
     // the memory allocation is small
@@ -166,6 +189,7 @@ private:
     LowLevelContextDescriptorWriteDataVk lowLevelDescriptorWriteData_;
 
     uint32_t oneFrameDescSetGeneration_ { 0u };
+
 #if (RENDER_VALIDATION_ENABLED == 1)
     static constexpr uint32_t MAX_ONE_FRAME_GENERATION_IDX { 16u };
 #endif

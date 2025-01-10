@@ -22,7 +22,9 @@
 
 #include <base/containers/string.h>
 #include <base/containers/unique_ptr.h>
+#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
+#include <base/util/color.h>
 #include <base/util/formats.h>
 #include <core/namespace.h>
 #include <core/threading/intf_thread_pool.h>
@@ -37,6 +39,7 @@
 RENDER_BEGIN_NAMESPACE()
 class RenderContext;
 class GpuResourceManager;
+class DescriptorSetManager;
 
 class ShaderModule;
 class ComputePipelineStateObject;
@@ -107,13 +110,13 @@ public:
     // Generally set once to true when device is created.
     // Set to false e.g. when device is lost.
     // Set and Get uses atomics if needed by the platform.
-    void SetDeviceStatus(const bool status);
+    void SetDeviceStatus(bool status);
     bool GetDeviceStatus() const;
 
     // (re-)create swapchain
     void CreateSwapchain(const SwapchainCreateInfo& swapchainCreateInfo) override;
     RenderHandleReference CreateSwapchainHandle(const SwapchainCreateInfo& swapchainCreateInfo,
-        const RenderHandleReference& replacedHandle, const BASE_NS::string_view name) override;
+        const RenderHandleReference& replacedHandle, BASE_NS::string_view name) override;
     RenderHandleReference CreateSwapchainHandle(const SwapchainCreateInfo& swapchainCreateInfo) override;
     void DestroySwapchain() override;
     void DestroySwapchain(const RenderHandleReference& handle) override;
@@ -122,7 +125,7 @@ public:
     virtual void DestroyDeviceSwapchain() = 0;
 
     RenderHandleReference CreateSwapchainImpl(const SwapchainCreateInfo& swapchainCreateInfo,
-        const RenderHandleReference& replacedHandle, const BASE_NS::string_view name);
+        const RenderHandleReference& replacedHandle, BASE_NS::string_view name);
     void DestroySwapchainImpl(const RenderHandleReference& handle);
 
     SurfaceTransformFlags GetSurfaceTransformFlags(const RenderHandle& handle) const;
@@ -145,6 +148,8 @@ public:
     IGpuResourceManager& GetGpuResourceManager() const override;
     IShaderManager& GetShaderManager() const override;
 
+    DescriptorSetManager& GetDescriptorSetManager() const;
+
     void SetBackendConfig(const BackendConfig& config) override;
 
     uint64_t GetFrameCount() const override;
@@ -155,7 +160,7 @@ public:
 
     bool HasSwapchain() const;
     // get swapchain with shallow
-    const Swapchain* GetSwapchain(const RenderHandle handle) const;
+    const Swapchain* GetSwapchain(RenderHandle handle) const;
 
     struct SwapchainData {
         static constexpr uint32_t MAX_IMAGE_VIEW_COUNT { 5U };
@@ -181,14 +186,16 @@ public:
 
         BASE_NS::unique_ptr<Swapchain> swapchain;
     };
-    SwapchainData GetSwapchainData(const RenderHandle handle) const;
+    SwapchainData GetSwapchainData(RenderHandle handle) const;
 
     // Number of command buffers to allocate for each node
     uint32_t GetCommandBufferingCount() const;
     // Get ANDed memory property flags from all memory pools
     MemoryPropertyFlags GetSharedMemoryPropertyFlags() const;
 
-    BASE_NS::Format GetFormatOrFallback(BASE_NS::Format format) const;
+    BASE_NS::Format GetFormatOrFallback(BASE_NS::Format inputFormat) const;
+    BASE_NS::Format GetColorSpaceFormat(BASE_NS::Format inputFormat, BASE_NS::ColorSpaceFlags colorSpaceFlags) const;
+    BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const;
 
     // Platform specific creation
 
@@ -210,7 +217,7 @@ public:
 
     virtual BASE_NS::unique_ptr<RenderFrameSync> CreateRenderFrameSync() = 0;
     virtual BASE_NS::unique_ptr<RenderBackend> CreateRenderBackend(
-        GpuResourceManager& gpuResourceMgr, const CORE_NS::IParallelTaskQueue::Ptr& queue) = 0;
+        GpuResourceManager& gpuResourceMgr, CORE_NS::ITaskQueue* queue) = 0;
 
     virtual BASE_NS::unique_ptr<ShaderModule> CreateShaderModule(const ShaderModuleCreateInfo& data) = 0;
     virtual BASE_NS::unique_ptr<ShaderModule> CreateComputeShaderModule(const ShaderModuleCreateInfo& data) = 0;
@@ -225,8 +232,8 @@ public:
         const GpuShaderProgram& gpuProgram, const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclarationView,
         const ShaderSpecializationConstantDataView& shaderSpecializationConstantDataView,
-        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
-        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDesc, const uint32_t subpassIndex,
+        BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDesc, uint32_t subpassIndex,
         const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData) = 0;
 
     virtual BASE_NS::unique_ptr<ComputePipelineStateObject> CreateComputePipelineStateObject(
@@ -235,7 +242,7 @@ public:
         const LowLevelPipelineLayoutData* pipelineLayoutData) = 0;
 
     virtual BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphore() = 0;
-    virtual BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(const uint64_t handle) = 0;
+    virtual BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(uint64_t handle) = 0;
 
     // returns a valid queue from the same family or default queue
     virtual GpuQueue GetValidGpuQueue(const GpuQueue& gpuQueue) const = 0;
@@ -254,6 +261,7 @@ protected:
 
     BASE_NS::unique_ptr<GpuResourceManager> gpuResourceMgr_;
     BASE_NS::unique_ptr<ShaderManager> shaderMgr_;
+    BASE_NS::unique_ptr<DescriptorSetManager> globalDescriptorSetMgr_;
 
     // multi-swapchain, the built-in default is only with swapchain_ and swapchainData_
     BASE_NS::vector<InternalSwapchainData> swapchains_;
@@ -268,6 +276,9 @@ protected:
 
     MemoryPropertyFlags deviceSharedMemoryPropertyFlags_ { 0 };
     CommonDeviceProperties commonDeviceProperties_;
+
+    BASE_NS::unordered_map<BASE_NS::Format, BASE_NS::Format> colorSpaceLinearFormats_;
+    BASE_NS::unordered_map<BASE_NS::Format, BASE_NS::Format> colorSpaceSrgbAsLinearFormats_;
 };
 
 // Plaform specific helper

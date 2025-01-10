@@ -522,6 +522,8 @@ enum PrimitiveTopology {
     CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY = 9,
     /** Patch list */
     CORE_PRIMITIVE_TOPOLOGY_PATCH_LIST = 10,
+    /** Max enum (not defined) */
+    CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM = 0x7FFFFFFF,
 };
 
 /** Blend factor */
@@ -769,6 +771,15 @@ enum SubpassContents {
     /* Secondary command lists */
     CORE_SUBPASS_CONTENTS_SECONDARY_COMMAND_LISTS = 1,
 };
+
+/** Subpass flag bits
+ */
+enum SubpassFlagBits {
+    /* Merge subpass to previous subpasses */
+    CORE_SUBPASS_MERGE_BIT = 1,
+};
+/** Subpass flags */
+using SubpassFlags = uint32_t;
 
 /** Fragment shading rate combiner op */
 enum FragmentShadingRateCombinerOp {
@@ -1066,15 +1077,18 @@ struct RenderPassSubpassDesc {
     uint32_t fragmentShadingRateAttachmentCount { 0u };
 
     /** Depth resolve mode flag bit */
-    ResolveModeFlagBits depthResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+    ResolveModeFlags depthResolveModeFlags { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
     /** Stencil resolve mode flag bit */
-    ResolveModeFlagBits stencilResolveModeFlagBit { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+    ResolveModeFlags stencilResolveModeFlags { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
 
     /** Shading rate texel size for subpass (will be clamped to device limits automatically if not set accordingly) */
     Size2D shadingRateTexelSize { 1u, 1u };
 
     /** Multi-view bitfield of view indices. Multi-view is ignored while zero. */
     uint32_t viewMask { 0u };
+
+    /** Subpass flags */
+    SubpassFlags subpassFlags { 0u };
 };
 
 /** Render pass */

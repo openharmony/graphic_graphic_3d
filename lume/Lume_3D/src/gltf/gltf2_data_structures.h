@@ -100,6 +100,8 @@ enum class RenderMode : int {
     INVALID = 0xff
 };
 
+constexpr const RenderMode DEFAULT_RENDER_MODE { RenderMode::TRIANGLES };
+
 enum class ComponentType : int {
     INVALID,
     BYTE = 5120,
@@ -123,15 +125,6 @@ enum class AlphaMode : int {
     // The rendered output is combined with the background using the normal
     // painting operation (i.e. the Porter and Duff over operator).
     BLEND,
-};
-
-enum class BlendMode : int {
-    TRANSPARENT_ALPHA, // transparentAlpha
-    TRANSPARENT_COLOR, // transparentColor
-    ADD,               // add
-    MODULATE,          // modulate
-    REPLACE,           // replace
-    NONE               // use alphaMode if blendMode not mentioned, (default)
 };
 
 enum class MimeType : int { INVALID, JPEG, PNG, KTX, DDS, KTX2 };
@@ -445,7 +438,7 @@ struct OcclusionTexture {
 };
 
 struct Material {
-    enum class Type { MetallicRoughness, SpecularGlossiness, Unlit, TextureSheetAnimation };
+    enum class Type { MetallicRoughness, SpecularGlossiness, Unlit };
 
     Type type { Type::MetallicRoughness };
 
@@ -473,8 +466,6 @@ struct Material {
     BASE_NS::Math::Vec4 emissiveFactor = BASE_NS::Math::Vec4(0.f, 0.f, 0.f, 1.f); // "default": [ 0.0, 0.0, 0.0 ],
 
     AlphaMode alphaMode = AlphaMode::OPAQUE;
-
-    BlendMode blendMode = BlendMode::NONE;
 
     float alphaCutoff = 0.5f; // "minimum": 0.0,
 
@@ -613,7 +604,7 @@ struct MeshPrimitive {
     uint32_t materialIndex = GLTF_INVALID_INDEX;
 
     // The type of primitives to render. All valid values correspond to WebGL enums.
-    RenderMode mode = RenderMode::TRIANGLES;
+    RenderMode mode = DEFAULT_RENDER_MODE;
 
     // An array of Morph Targets,
     // each  Morph Target is a dictionary mapping attributes

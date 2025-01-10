@@ -19,7 +19,6 @@
 
 #include <base/util/uid_util.h>
 #include <render/datastore/intf_render_data_store.h>
-#include <render/device/intf_device.h>
 #include <render/intf_render_context.h>
 #include <render/namespace.h>
 
@@ -32,14 +31,6 @@ RenderDataStoreManager::RenderDataStoreManager(IRenderContext& renderContext) : 
 
 void RenderDataStoreManager::CommitFrameData()
 {
-    // only modify the write index when double buffered in use
-    if (renderDataStoreFlags_ & DOUBLE_BUFFERED_RENDER_DATA_STORES) {
-        frameWriteIndex_ = 1u - frameWriteIndex_;
-    }
-#if (RENDER_VALIDATION_ENABLED == 1)
-    commitDeviceFrameIndex_ = renderContext_.GetDevice().GetFrameCount();
-#endif
-
     decltype(pendingRenderAccess_) pendingRenderAccess;
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -52,13 +43,25 @@ void RenderDataStoreManager::CommitFrameData()
             renderAccessStores_.erase(pendingRef.hash);
         } else {
             PLUGIN_ASSERT(pendingRef.renderDataStore);
-            renderAccessStores_.insert_or_assign(pendingRef.hash, pendingRef.renderDataStore);
+            renderAccessStores_.insert_or_assign(pendingRef.hash, BASE_NS::move(pendingRef.renderDataStore));
         }
     }
+    pendingRenderAccess.clear();
 
     // all valid stores can be accessed from render access stores without locks
-    for (const auto& ref : renderAccessStores_) {
-        ref.second->CommitFrameData();
+    for (auto it = renderAccessStores_.begin(); it != renderAccessStores_.end();) {
+        if (it->second->GetRefCount() > 2) { // 2 2 in stores_, renderAccessStores_ and user
+            ++it;
+        } else {
+            pendingRenderAccess.push_back({ it->first, {}, true });
+            it = renderAccessStores_.erase(it);
+        }
+    }
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (const auto& ref : pendingRenderAccess) {
+            stores_.erase(ref.hash);
+        }
     }
 }
 
@@ -96,10 +99,10 @@ void RenderDataStoreManager::PostRenderBackend()
     DeferredDestruction();
 }
 
-IRenderDataStore* RenderDataStoreManager::GetRenderDataStore(const string_view name) const
+BASE_NS::refcnt_ptr<IRenderDataStore> RenderDataStoreManager::GetRenderDataStore(const string_view name) const
 {
     if (name.empty()) {
-        return nullptr;
+        return {};
     }
 
     auto const nameHash = hash(name);
@@ -107,13 +110,13 @@ IRenderDataStore* RenderDataStoreManager::GetRenderDataStore(const string_view n
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (const auto iter = stores_.find(nameHash); iter != stores_.cend()) {
-        return iter->second.get();
+        return iter->second;
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_W(
             name + "_RDS_NOT_FOUND__", "RENDER_VALIDATION: render data store: (%s), not found", name.data());
 #endif
-        return nullptr;
+        return {};
     }
 }
 
@@ -127,7 +130,7 @@ IRenderDataStore* RenderDataStoreManager::GetRenderTimeRenderDataStore(const str
 
     auto const nameHash = hash(name);
     if (const auto iter = renderAccessStores_.find(nameHash); iter != renderAccessStores_.cend()) {
-        return iter->second;
+        return iter->second.get();
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_W(
@@ -137,19 +140,20 @@ IRenderDataStore* RenderDataStoreManager::GetRenderTimeRenderDataStore(const str
     }
 }
 
-IRenderDataStore* RenderDataStoreManager::Create(const Uid& dataStoreTypeUid, char const* dataStoreName)
+BASE_NS::refcnt_ptr<IRenderDataStore> RenderDataStoreManager::Create(
+    const Uid& dataStoreTypeUid, const char* dataStoreName)
 {
     auto const dataStoreTypeHash = hash(dataStoreTypeUid);
     if (auto const factoryIt = factories_.find(dataStoreTypeHash); factoryIt != factories_.end()) {
         auto const dataStoreNameHash = hash(string_view(dataStoreName));
-        IRenderDataStore* dataStore = nullptr;
+        refcnt_ptr<IRenderDataStore> dataStore;
 
         std::lock_guard<std::mutex> lock(mutex_);
 
         if (auto const namedStoreIt = stores_.find(dataStoreNameHash); namedStoreIt != stores_.cend()) {
             PLUGIN_LOG_D("Named data store already exists (type: %s) (name: %s)", to_string(dataStoreTypeUid).data(),
                 dataStoreName);
-            dataStore = namedStoreIt->second.get();
+            dataStore = namedStoreIt->second;
             if (dataStore->GetUid() != dataStoreTypeUid) {
                 PLUGIN_LOG_E("Named data store (type: %s, name: %s) exists with different type (%s)",
                     to_string(dataStoreTypeUid).data(), dataStoreName, dataStore->GetTypeName().data());
@@ -157,10 +161,9 @@ IRenderDataStore* RenderDataStoreManager::Create(const Uid& dataStoreTypeUid, ch
             }
         } else {
             auto const dataStoreIt = stores_.insert_or_assign(dataStoreNameHash,
-                RenderDataStorePtr { factoryIt->second.createDataStore(renderContext_, dataStoreName),
-                    factoryIt->second.destroyDataStore });
+                refcnt_ptr<IRenderDataStore>(factoryIt->second.createDataStore(renderContext_, dataStoreName)));
             pointerToStoreHash_.insert_or_assign(dataStoreIt.first->second.get(), uint64_t { dataStoreNameHash });
-            dataStore = dataStoreIt.first->second.get();
+            dataStore = dataStoreIt.first->second;
         }
 
         pendingRenderAccess_.push_back({ dataStoreNameHash, dataStore, false });
@@ -168,51 +171,13 @@ IRenderDataStore* RenderDataStoreManager::Create(const Uid& dataStoreTypeUid, ch
     } else {
         PLUGIN_LOG_E("render data store type not found (type: %s) (named: %s)", to_string(dataStoreTypeUid).data(),
             dataStoreName);
-        PLUGIN_ASSERT(false);
     }
     return nullptr;
-}
-
-void RenderDataStoreManager::Destroy(const Uid& dataStoreTypeUid, IRenderDataStore* instance)
-{
-    if (instance) {
-        const uint64_t typeHash = hash(dataStoreTypeUid);
-
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        deferredDestructionDataStores_.push_back({ typeHash, instance });
-
-        PLUGIN_ASSERT(pointerToStoreHash_.contains(instance));
-        if (auto const storeIt = pointerToStoreHash_.find(instance); storeIt != pointerToStoreHash_.cend()) {
-            pendingRenderAccess_.push_back({ storeIt->second, instance, true });
-        }
-    }
 }
 
 IRenderDataStoreManager::RenderDataStoreFlags RenderDataStoreManager::GetRenderDataStoreFlags() const
 {
     return renderDataStoreFlags_;
-}
-
-#if (RENDER_VALIDATION_ENABLED == 1)
-void RenderDataStoreManager::ValidateCommitFrameData() const
-{
-    if (renderDataStoreFlags_ & DOUBLE_BUFFERED_RENDER_DATA_STORES) {
-        if (commitDeviceFrameIndex_ != renderContext_.GetDevice().GetFrameCount()) {
-            PLUGIN_LOG_E("Render data store manager CommitFrameData() needs to be called before rendering when using "
-                         "double buffered render data stores.");
-        }
-    }
-}
-#endif
-
-IRenderDataStoreManager::FrameIndices RenderDataStoreManager::GetFrameIndices() const
-{
-    if (renderDataStoreFlags_ & DOUBLE_BUFFERED_RENDER_DATA_STORES) {
-        return { frameWriteIndex_, 1u - frameWriteIndex_ };
-    } else {
-        return { frameWriteIndex_, frameWriteIndex_ };
-    }
 }
 
 void RenderDataStoreManager::DeferredDestruction()
@@ -236,13 +201,12 @@ void RenderDataStoreManager::AddRenderDataStoreFactory(const RenderDataStoreType
     // plugin load and factory addition is sequential
     // not locked access
 
-    if (typeInfo.createDataStore && typeInfo.destroyDataStore) {
+    if (typeInfo.createDataStore) {
         auto const dataStoreTypeHash = hash(typeInfo.uid);
         factories_.insert({ dataStoreTypeHash, typeInfo });
     } else {
         PLUGIN_LOG_E("RenderDataStoreTypeInfo must provide non-null function pointers");
         PLUGIN_ASSERT(typeInfo.createDataStore && "createDataStore cannot be null");
-        PLUGIN_ASSERT(typeInfo.destroyDataStore && "destroyDataStore cannot be null");
     }
 }
 

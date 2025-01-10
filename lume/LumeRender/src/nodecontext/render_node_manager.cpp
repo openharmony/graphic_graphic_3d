@@ -23,7 +23,7 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-IRenderNode* RenderNodeManager::Create(char const* nodeType)
+IRenderNode* RenderNodeManager::Create(const char* nodeType)
 {
     if (auto const pos = factories_.find(nodeType); pos != factories_.end()) {
         return pos->second.createNode();
@@ -31,7 +31,7 @@ IRenderNode* RenderNodeManager::Create(char const* nodeType)
     return nullptr;
 }
 
-void RenderNodeManager::Destroy(char const* nodeType, IRenderNode* aInstance)
+void RenderNodeManager::Destroy(const char* nodeType, IRenderNode* aInstance)
 {
     if (auto const pos = factories_.find(nodeType); pos != factories_.end()) {
         return pos->second.destroyNode(aInstance);
@@ -39,7 +39,7 @@ void RenderNodeManager::Destroy(char const* nodeType, IRenderNode* aInstance)
 }
 
 unique_ptr<IRenderNode, RenderNodeTypeInfo::DestroyRenderNodeFn> RenderNodeManager::CreateRenderNode(
-    char const* nodeType)
+    const char* nodeType)
 {
     if (auto const pos = factories_.find(nodeType); pos != factories_.end()) {
         return { pos->second.createNode(), pos->second.destroyNode };
@@ -47,7 +47,7 @@ unique_ptr<IRenderNode, RenderNodeTypeInfo::DestroyRenderNodeFn> RenderNodeManag
     return { nullptr, nullptr };
 }
 
-RenderNodeManager::RenderNodeTypeInfoFlags RenderNodeManager::GetRenderNodeTypeInfoFlags(char const* nodeType)
+RenderNodeManager::RenderNodeTypeInfoFlags RenderNodeManager::GetRenderNodeTypeInfoFlags(const char* nodeType)
 {
     if (auto const pos = factories_.find(nodeType); pos != factories_.end()) {
         return { pos->second.renderNodeBackendFlags, pos->second.renderNodeClassType };

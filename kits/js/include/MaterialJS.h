@@ -12,18 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef OHOS_RENDER_3D_MATERIAL_JS_H
-#define OHOS_RENDER_3D_MATERIAL_JS_H
+#ifndef MATERIAL_JS_H
+#define MATERIAL_JS_H
 #include <meta/interface/intf_object.h>
 
 #include "BaseObjectJS.h"
-#include "NodeJS.h"
+#include "SceneResourceImpl.h"
 
 class BaseMaterial : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 30;
-    enum MaterialType { SHADER = 1 };
+    enum MaterialType { SHADER = 1, METALLIC_ROUGHNESS = 2 };
+    enum CullMode { NONE = 0, FRONT = 1, BACK = 2 };
     static void Init(const char* name, napi_env env, napi_value exports, napi_callback ctor,
         BASE_NS::vector<napi_property_descriptor>& props);
     BaseMaterial(MaterialType lt);
@@ -35,7 +35,20 @@ protected:
 
 private:
     napi_value GetMaterialType(NapiApi::FunctionContext<>& ctx);
+    napi_value GetShadowReceiver(NapiApi::FunctionContext<>& ctx);
+    void SetShadowReceiver(NapiApi::FunctionContext<bool>& ctx);
+    napi_value GetCullMode(NapiApi::FunctionContext<>& ctx);
+    void SetCullMode(NapiApi::FunctionContext<uint32_t>& ctx);
+    napi_value GetBlend(NapiApi::FunctionContext<>& ctx);
+    void SetBlend(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    napi_value GetAlphaCutoff(NapiApi::FunctionContext<>& ctx);
+    void SetAlphaCutoff(NapiApi::FunctionContext<float>& ctx);
+    napi_value GetRenderSort(NapiApi::FunctionContext<>& ctx);
+    void SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
     MaterialType materialType_;
+    NapiApi::StrongRef blend_;
+    NapiApi::StrongRef renderSort_;
 };
 
 class ShaderMaterialJS : BaseObject<ShaderMaterialJS>, BaseMaterial {
@@ -47,7 +60,7 @@ public:
 
 private:
     void* GetInstanceImpl(uint32_t) override;
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
 
     napi_value GetColorShader(NapiApi::FunctionContext<>& ctx);
@@ -57,4 +70,4 @@ private:
 
     NapiApi::StrongRef shader_;
 };
-#endif // OHOS_RENDER_3D_MESH_JS_H
+#endif

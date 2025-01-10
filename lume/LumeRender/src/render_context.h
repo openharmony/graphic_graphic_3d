@@ -30,7 +30,10 @@
 #include <render/resource_handle.h>
 
 #include "loader/render_data_configuration_loader.h"
+#include "nodecontext/render_node_copy_util.h"
 #include "nodecontext/render_node_post_process_util.h"
+#include "postprocesses/render_post_process_flare.h"
+#include "postprocesses/render_post_process_flare_node.h"
 
 CORE_BEGIN_NAMESPACE()
 class IEngine;
@@ -48,6 +51,7 @@ class RenderUtil;
 
 class IDevice;
 class IRenderer;
+class IRenderDataStore;
 class IRenderDataStoreManager;
 class IRenderNodeGraphManager;
 class IRenderUtil;
@@ -81,7 +85,11 @@ public:
 
     CORE_NS::IEngine& GetEngine() const override;
 
+    BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const override;
+
     BASE_NS::string_view GetVersion() override;
+
+    void WritePipelineCache() const override;
 
     RenderCreateInfo GetCreateInfo() const;
 
@@ -107,6 +115,7 @@ private:
 
     void RegisterDefaultPaths();
     BASE_NS::unique_ptr<Device> CreateDevice(const DeviceCreateInfo& createInfo);
+    void WritePipelineCacheInternal(bool activate) const;
 
     RenderPluginState& pluginState_;
     CORE_NS::IEngine& engine_;
@@ -118,7 +127,7 @@ private:
     BASE_NS::unique_ptr<RenderUtil> renderUtil_;
     RenderDataConfigurationLoaderImpl renderDataConfigurationLoader_;
 
-    CORE_NS::InterfaceTypeInfo interfaceInfos_[2U] {
+    CORE_NS::InterfaceTypeInfo interfaceInfos_[5U] {
         CORE_NS::InterfaceTypeInfo {
             this,
             UID_RENDER_DATA_CONFIGURATION_LOADER,
@@ -141,10 +150,34 @@ private:
             },
             nullptr, // nullptr for GetInstance
         },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessFlare::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> IInterface* { return new RenderPostProcessFlare(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessFlareNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> IInterface* { return new RenderPostProcessFlareNode(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            this, UID_RENDER_NODE_COPY_UTIL, CORE_NS::GetName<IRenderNodeCopyUtil>().data(),
+            [](CORE_NS::IClassFactory&, CORE_NS::PluginToken token) -> CORE_NS::IInterface* {
+                if (token) {
+                    return new RenderNodeCopyUtil();
+                }
+                return nullptr;
+            },
+            nullptr, // nullptr for GetInstance
+        },
     };
 
     uint32_t refCount_ { 0 };
-
+    BASE_NS::vector<BASE_NS::refcnt_ptr<IRenderDataStore>> defaultRenderDataStores_;
     BASE_NS::vector<BASE_NS::pair<CORE_NS::PluginToken, const IRenderPlugin*>> plugins_;
     BASE_NS::vector<const CORE_NS::InterfaceTypeInfo*> interfaceTypeInfos_;
 
@@ -176,7 +209,7 @@ struct RenderPluginState {
     };
 
     IRenderContext* CreateInstance(CORE_NS::IEngine& engine);
-    IRenderContext* GetInstance();
+    IRenderContext* GetInstance() const;
     void Destroy();
 };
 RENDER_END_NAMESPACE()

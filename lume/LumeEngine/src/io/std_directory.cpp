@@ -17,13 +17,19 @@
 
 #include <algorithm>
 
+#if defined(__OHOS_PLATFORM__)
+#undef HAS_FILESYSTEM
+#else
 #ifdef __has_include
 #if __has_include(<filesystem>)
 #include <filesystem>
+#define HAS_FILESYSTEM
 #include <chrono>
 #include <system_error>
 #endif
 #endif
+#endif
+
 #if !defined(HAS_FILESYSTEM)
 #include <dirent.h>
 #include <sys/stat.h>
@@ -33,7 +39,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <base/containers/iterator.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
@@ -112,9 +117,13 @@ IDirectory::Ptr StdDirectory::Open(const string_view path)
     if (std::filesystem::is_directory(U8Path(path), ec)) {
         return IDirectory::Ptr { BASE_NS::make_unique<StdDirectory>(make_unique<DirImpl>(path)).release() };
     }
-    const auto message = ec.message();
-    CORE_LOG_E("'%.*s ec %d '%s'", static_cast<int>(path.size()), path.data(), ec.value(), message.data());
     return {};
+}
+
+bool StdDirectory::DirectoryExists(const string_view path)
+{
+    std::error_code ec;
+    return (std::filesystem::is_directory(U8Path(path), ec));
 }
 
 vector<IDirectory::Entry> StdDirectory::GetEntries() const
@@ -216,6 +225,12 @@ IDirectory::Ptr StdDirectory::Open(const string_view path)
     return {};
 }
 
+bool StdDirectory::DirectoryExists(const string_view path)
+{
+    struct stat statBuf {};
+    return (stat(path.data(), &statBuf) == 0) && S_ISDIR(statBuf.st_mode);
+}
+
 vector<IDirectory::Entry> StdDirectory::GetEntries() const
 {
     CORE_ASSERT_MSG(dir_, "Dir not open");
@@ -272,7 +287,7 @@ string StdDirectory::ResolveAbsolutePath(const string_view pathIn, bool isDirect
             }
         }
     }
-#elif defined(__linux__)
+#elif defined(__OHOS_PLATFORM__) || defined(__linux__)
     char resolvedPath[PATH_MAX];
     if (realpath(string(path).c_str(), resolvedPath) != nullptr) {
         absolutePath = resolvedPath;
@@ -292,7 +307,7 @@ void StdDirectory::FormatPath(string& path, bool isDirectory)
     std::replace(path.begin(), path.end(), '\\', '/');
 
     // Ensure there is last separator in place.
-    if (path.length() > 0 && isDirectory) {
+    if (!path.empty() && isDirectory) {
         if (path[length - 1] != '/') {
             path += '/';
         }

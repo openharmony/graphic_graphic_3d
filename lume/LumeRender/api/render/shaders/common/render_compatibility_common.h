@@ -41,9 +41,18 @@ precision highp int;
 // CORE RELAXED PRECISION
 #define CORE_RELAXEDP mediump
 
+#define CORE_BACKEND_TYPE_SPEC_ID 256
 // 0 = vulkan  (NDC top-left origin, 0 - 1 depth)
 // 1 = gl/gles (bottom-left origin, -1 - 1 depth)
-layout(constant_id = 256) const uint CORE_BACKEND_TYPE = 0;
+layout(constant_id = CORE_BACKEND_TYPE_SPEC_ID) const uint CORE_BACKEND_TYPE = 0;
+
+#define CORE_BACKEND_TYPE_MASK 0xf
+#define CORE_BACKEND_TRANSFORM_MASK 0xf0
+#define CORE_BACKEND_TRANSFORM_OFFSET (1 << 4)
+#define CORE_BACKEND_TRANSFORM_0 (1 << 4)
+#define CORE_BACKEND_TRANSFORM_90 (1 << 5)
+#define CORE_BACKEND_TRANSFORM_180 (1 << 6)
+#define CORE_BACKEND_TRANSFORM_270 (1 << 7)
 
 // change from top-left NDC origin (vulkan) to bottom-left NDC origin (opengl)
 // Our input data (post-projection / NDC coordinates) are in vulkan top-left.
@@ -53,7 +62,7 @@ layout(constant_id = 257) const float CORE_FLIP_NDC = 1.0;
 #define CORE_VERTEX_OUT(a)                                                                                           \
     {                                                                                                                \
         gl_Position = (a);                                                                                           \
-        if (CORE_BACKEND_TYPE != 0) {                                                                                \
+        if ((CORE_BACKEND_TYPE & CORE_BACKEND_TYPE_MASK) != 0) {                                                     \
             gl_Position = vec4(                                                                                      \
                 gl_Position.x, gl_Position.y * CORE_FLIP_NDC, (gl_Position.z * 2.0 - gl_Position.w), gl_Position.w); \
         }                                                                                                            \
@@ -70,6 +79,30 @@ vec2 GetFragCoordUv(vec2 fragCoord, vec2 inverseTexelSize)
 
 // out uv, gl_FragCoord, inverse tex size (i.e. texel size)
 #define CORE_GET_FRAGCOORD_UV(uv, fc, its) (uv = GetFragCoordUv(fc, its))
+
+void PreRotateSurface(inout vec2 clipXy)
+{
+    if ((CORE_BACKEND_TYPE & CORE_BACKEND_TYPE_MASK) == 0) {
+        const uint rotate = CORE_BACKEND_TYPE & CORE_BACKEND_TRANSFORM_MASK;
+        if (rotate == CORE_BACKEND_TRANSFORM_90) {
+            const mat2 m = mat2(0.0, 1.0, -1.0, 0.0);
+            clipXy = m * clipXy;
+        } else if (rotate == CORE_BACKEND_TRANSFORM_180) {
+            const mat2 m = mat2(-1.0, 0.0, 0.0, -1.0);
+            clipXy = m * clipXy;
+        } else if (rotate == CORE_BACKEND_TRANSFORM_270) {
+            const mat2 m = mat2(0.0, -1.0, 1.0, 0.0);
+            clipXy = m * clipXy;
+        }
+    }
+}
+
+#define CORE_PRE_ROTATE_SURFACE(clipXy) (PreRotateSurface(clipXy))
+
+#else
+
+static constexpr uint32_t CORE_BACKEND_TYPE_SPEC_ID { 256U };
+static constexpr uint32_t CORE_BACKEND_TRANSFORM_OFFSET { 4U };
 
 #endif
 

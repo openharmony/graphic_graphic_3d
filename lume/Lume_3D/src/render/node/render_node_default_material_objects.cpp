@@ -18,6 +18,7 @@
 #include <3d/render/default_material_constants.h>
 #include <3d/render/intf_render_data_store_default_material.h>
 #include <base/containers/allocator.h>
+#include <base/containers/type_traits.h>
 #include <base/math/matrix.h>
 #include <base/math/vector.h>
 #include <core/log.h>
@@ -26,6 +27,8 @@
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/pipeline_layout_desc.h>
+#include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
+#include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/resource_handle.h>
 
@@ -40,6 +43,11 @@ using namespace RENDER_NS;
 namespace {
 constexpr uint32_t UBO_BIND_OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
 constexpr uint32_t MIN_UBO_OBJECT_COUNT { CORE_UNIFORM_BUFFER_MAX_BIND_SIZE / UBO_BIND_OFFSET_ALIGNMENT };
+constexpr uint32_t MIN_MATERIAL_DESC_SET_COUNT { 64U };
+
+constexpr GpuBufferDesc UBO_DESC { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 0U };
 
 constexpr size_t Align(size_t value, size_t align)
 {
@@ -48,15 +56,98 @@ constexpr size_t Align(size_t value, size_t align)
     }
     return ((value + align) / align) * align;
 }
+
+void GetDefaultMaterialGpuResources(const IRenderNodeGpuResourceManager& gpuResourceMgr,
+    RenderNodeDefaultMaterialObjects::MaterialHandleStruct& defaultMat)
+{
+    defaultMat.resources[MaterialComponent::TextureIndex::BASE_COLOR].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_BASE_COLOR);
+    defaultMat.resources[MaterialComponent::TextureIndex::NORMAL].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_NORMAL);
+    defaultMat.resources[MaterialComponent::TextureIndex::MATERIAL].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_MATERIAL);
+    defaultMat.resources[MaterialComponent::TextureIndex::EMISSIVE].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_EMISSIVE);
+    defaultMat.resources[MaterialComponent::TextureIndex::AO].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_AO);
+
+    defaultMat.resources[MaterialComponent::TextureIndex::CLEARCOAT].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT);
+    defaultMat.resources[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT_ROUGHNESS);
+    defaultMat.resources[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT_NORMAL);
+
+    defaultMat.resources[MaterialComponent::TextureIndex::SHEEN].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_SHEEN);
+
+    defaultMat.resources[MaterialComponent::TextureIndex::TRANSMISSION].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_TRANSMISSION);
+
+    defaultMat.resources[MaterialComponent::TextureIndex::SPECULAR].handle =
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_SPECULAR);
+
+    const RenderHandle samplerHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT");
+    for (uint32_t idx = 0; idx < countof(defaultMat.resources); ++idx) {
+        defaultMat.resources[idx].samplerHandle = samplerHandle;
+    }
+}
+
+// returns if there were changes and needs a descriptor set update
+bool UpdateCurrentMaterialHandles(IRenderNodeGpuResourceManager& gpuResourceMgr, const bool forceUpdate,
+    const RenderNodeDefaultMaterialObjects::MaterialHandleStruct& defaultMat,
+    const RenderDataDefaultMaterial::MaterialHandles& matHandles,
+    RenderNodeDefaultMaterialObjects::MaterialHandleStruct& storedMaterialHandles)
+{
+    RenderNodeDefaultMaterialObjects::MaterialHandleStruct currMaterialHandles;
+    bool hasChanges = false;
+    for (uint32_t idx = 0; idx < countof(matHandles.images); ++idx) {
+        const auto& defaultRes = defaultMat.resources[idx];
+        const auto& srcImage = matHandles.images[idx];
+        const auto& srcSampler = matHandles.samplers[idx];
+        auto& dst = currMaterialHandles.resources[idx];
+
+        // fetch updated with generation counter raw handles
+        if (RenderHandleUtil::IsValid(srcImage)) {
+            dst.handle = gpuResourceMgr.GetRawHandle(srcImage);
+        } else {
+            dst.handle = defaultRes.handle;
+        }
+        if (RenderHandleUtil::IsValid(srcSampler)) {
+            dst.samplerHandle = gpuResourceMgr.GetRawHandle(srcSampler);
+        } else {
+            dst.samplerHandle = defaultRes.samplerHandle;
+        }
+
+        // check if there are changes
+        auto& stored = storedMaterialHandles.resources[idx];
+        if ((stored.handle != dst.handle) || (stored.samplerHandle != dst.samplerHandle) ||
+            (dst.handle.id & RenderHandleUtil::RENDER_HANDLE_NEEDS_UPDATE_MASK)) {
+            hasChanges = true;
+            stored.handle = dst.handle;
+            stored.samplerHandle = dst.samplerHandle;
+        }
+    }
+    return hasChanges;
+}
 } // namespace
 
 void RenderNodeDefaultMaterialObjects::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
+    globalDescs_ = {};
 
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
+
+    const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+    const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+    const RenderHandle defaultPlHandle =
+        shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_FORWARD);
+    defaultMaterialPipelineLayout_ = shaderMgr.GetPipelineLayout(defaultPlHandle);
+    GetDefaultMaterialGpuResources(gpuResourceMgr, defaultMaterialStruct_);
+
     ProcessBuffers({ 1u, 1u, 1u, 1u });
 }
 
@@ -74,10 +165,11 @@ void RenderNodeDefaultMaterialObjects::PreExecuteFrame()
             Math::max(dsOc.submeshCount, 1u),
             Math::max(dsOc.skinCount, 1u),
             Math::max(dsOc.materialCount, 1u),
+            Math::max(dsOc.uniqueMaterialCount, 1u),
         };
         ProcessBuffers(oc);
     } else {
-        ProcessBuffers({ 1u, 1u, 1u, 1u });
+        ProcessBuffers({ 1u, 1u, 1u, 1u, 1u });
     }
 }
 
@@ -89,6 +181,7 @@ void RenderNodeDefaultMaterialObjects::ExecuteFrame(IRenderCommandList& cmdList)
 
     if (dataStoreMaterial) {
         UpdateBuffers(*dataStoreMaterial);
+        UpdateDescriptorSets(cmdList, *dataStoreMaterial);
     } else {
         CORE_LOG_E("invalid render data store in RenderNodeDefaultMaterialObjects");
     }
@@ -159,37 +252,111 @@ void RenderNodeDefaultMaterialObjects::UpdateMaterialBuffers(const IRenderDataSt
     auto matFactorData = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.mat.GetHandle()));
     auto matTransformData = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.matTransform.GetHandle()));
     auto userMaterialData = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.userMat.GetHandle()));
-    if (matFactorData && matTransformData && userMaterialData) {
-        const auto* matFactorDataEnd = matFactorData + UBO_BIND_OFFSET_ALIGNMENT * objectCounts_.maxMaterialCount;
-        const auto* matTransformDataEnd = matTransformData + UBO_BIND_OFFSET_ALIGNMENT * objectCounts_.maxMaterialCount;
-        const auto* userMaterialDataEnd = userMaterialData + UBO_BIND_OFFSET_ALIGNMENT * objectCounts_.maxMaterialCount;
-        const auto materialUniforms = dataStoreMaterial.GetMaterialUniforms();
-        for (uint32_t matIdx = 0; matIdx < materialUniforms.size(); ++matIdx) {
-            const RenderDataDefaultMaterial::AllMaterialUniforms& uniforms = materialUniforms[matIdx];
-            if (!CloneData(matFactorData, size_t(matFactorDataEnd - matFactorData), &uniforms.factors,
-                    sizeof(RenderDataDefaultMaterial::MaterialUniforms))) {
-                CORE_LOG_I("materialFactorData ubo copying failed");
-            }
-            if (!CloneData(matTransformData, size_t(matTransformDataEnd - matTransformData), &uniforms.transforms,
-                    sizeof(RenderDataDefaultMaterial::MaterialPackedUniforms))) {
-                CORE_LOG_I("materialTransformData ubo copying failed");
-            }
-            const auto materialCustomProperties = dataStoreMaterial.GetMaterialCustomPropertyData(matIdx);
-            if (!materialCustomProperties.empty()) {
-                CORE_ASSERT(materialCustomProperties.size_bytes() <= UBO_BIND_OFFSET_ALIGNMENT);
-                if (!CloneData(userMaterialData, size_t(userMaterialDataEnd - userMaterialData),
-                        materialCustomProperties.data(), materialCustomProperties.size_bytes())) {
-                    CORE_LOG_I("userMaterialData ubo copying failed");
-                }
-            }
-            matFactorData = matFactorData + UBO_BIND_OFFSET_ALIGNMENT;
-            matTransformData = matTransformData + UBO_BIND_OFFSET_ALIGNMENT;
-            userMaterialData = userMaterialData + UBO_BIND_OFFSET_ALIGNMENT;
+    if (!matFactorData || !matTransformData || !userMaterialData) {
+        return;
+    }
+    const auto* matFactorDataEnd = matFactorData + UBO_BIND_OFFSET_ALIGNMENT * objectCounts_.maxMaterialCount;
+    const auto* matTransformDataEnd = matTransformData + UBO_BIND_OFFSET_ALIGNMENT * objectCounts_.maxMaterialCount;
+    const auto* userMaterialDataEnd = userMaterialData + UBO_BIND_OFFSET_ALIGNMENT * objectCounts_.maxMaterialCount;
+    const auto materialUniforms = dataStoreMaterial.GetMaterialUniforms();
+    const auto materialFrameIndices = dataStoreMaterial.GetMaterialFrameIndices();
+    for (uint32_t matOff = 0; matOff < materialFrameIndices.size(); ++matOff) {
+        const uint32_t matIdx = materialFrameIndices[matOff];
+        if (matIdx >= materialUniforms.size()) {
+            continue;
         }
 
-        gpuResourceMgr.UnmapBuffer(ubos_.mat.GetHandle());
-        gpuResourceMgr.UnmapBuffer(ubos_.matTransform.GetHandle());
-        gpuResourceMgr.UnmapBuffer(ubos_.userMat.GetHandle());
+        const RenderDataDefaultMaterial::AllMaterialUniforms& uniforms = materialUniforms[matIdx];
+        if (!CloneData(matFactorData, size_t(matFactorDataEnd - matFactorData), &uniforms.factors,
+                sizeof(RenderDataDefaultMaterial::MaterialUniforms))) {
+            CORE_LOG_I("materialFactorData ubo copying failed");
+        }
+        if (!CloneData(matTransformData, size_t(matTransformDataEnd - matTransformData), &uniforms.transforms,
+                sizeof(RenderDataDefaultMaterial::MaterialPackedUniforms))) {
+            CORE_LOG_I("materialTransformData ubo copying failed");
+        }
+        const auto materialCustomProperties = dataStoreMaterial.GetMaterialCustomPropertyData(matIdx);
+        if (!materialCustomProperties.empty()) {
+            CORE_ASSERT(materialCustomProperties.size_bytes() <= UBO_BIND_OFFSET_ALIGNMENT);
+            if (!CloneData(userMaterialData, size_t(userMaterialDataEnd - userMaterialData),
+                    materialCustomProperties.data(), materialCustomProperties.size_bytes())) {
+                CORE_LOG_I("userMaterialData ubo copying failed");
+            }
+        }
+        matFactorData = matFactorData + UBO_BIND_OFFSET_ALIGNMENT;
+        matTransformData = matTransformData + UBO_BIND_OFFSET_ALIGNMENT;
+        userMaterialData = userMaterialData + UBO_BIND_OFFSET_ALIGNMENT;
+    }
+
+    gpuResourceMgr.UnmapBuffer(ubos_.mat.GetHandle());
+    gpuResourceMgr.UnmapBuffer(ubos_.matTransform.GetHandle());
+    gpuResourceMgr.UnmapBuffer(ubos_.userMat.GetHandle());
+}
+
+void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
+    IRenderCommandList& cmdList, const IRenderDataStoreDefaultMaterial& dataStoreMaterial)
+{
+    // loop through all materials at the moment
+    {
+        const auto& materialHandles = dataStoreMaterial.GetMaterialHandles();
+        CORE_ASSERT(materialHandles.size() <= globalDescs_.descriptorSets.size());
+        CORE_ASSERT(globalDescs_.descriptorSets.size() == globalDescs_.materials.size());
+        IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+        for (size_t idx = 0; idx < materialHandles.size(); ++idx) {
+            auto* binder = globalDescs_.descriptorSets[idx].get();
+            if (binder && (idx < materialHandles.size())) {
+                const auto& matHandles = materialHandles[idx];
+                MaterialHandleStruct& storedMatHandles = globalDescs_.materials[idx];
+                const bool updateDescSet = UpdateCurrentMaterialHandles(
+                    gpuResourceMgr, globalDescs_.forceUpdate, defaultMaterialStruct_, matHandles, storedMatHandles);
+                if (globalDescs_.forceUpdate || updateDescSet) {
+                    uint32_t bindingIdx = 0u;
+                    // base color is bound separately to support automatic hwbuffer/OES shader modification
+                    binder->BindImage(
+                        bindingIdx++, storedMatHandles.resources[MaterialComponent::TextureIndex::BASE_COLOR]);
+
+                    CORE_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
+                    // skip baseColor as it's bound already
+                    constexpr size_t theCount = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT - 1;
+                    binder->BindImages(bindingIdx++, array_view(storedMatHandles.resources + 1, theCount));
+
+                    cmdList.UpdateDescriptorSet(
+                        binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
+                }
+            }
+        }
+        globalDescs_.forceUpdate = false;
+    }
+    if (auto* binder = globalDescs_.dmSet1Binder.get(); binder) {
+        // NOTE: should be PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE or current size
+        constexpr uint32_t skinSize = sizeof(DefaultMaterialSkinStruct);
+        uint32_t bindingIdx = 0u;
+        binder->BindBuffer(bindingIdx++, ubos_.mesh.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+        binder->BindBuffer(bindingIdx++, ubos_.submeshSkin.GetHandle(), 0U, skinSize);
+        binder->BindBuffer(bindingIdx++, ubos_.mat.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+        binder->BindBuffer(
+            bindingIdx++, ubos_.matTransform.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+        binder->BindBuffer(
+            bindingIdx++, ubos_.userMat.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+        cmdList.UpdateDescriptorSet(binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
+    }
+    // update only once
+    if (!globalDescs_.dmSet2Ready) {
+        if (auto* binder = globalDescs_.dmSet2Binder.get(); binder) {
+            uint32_t bindingIdx = 0u;
+            // base color is bound separately to support automatic hwbuffer/OES shader modification
+            binder->BindImage(
+                bindingIdx++, defaultMaterialStruct_.resources[MaterialComponent::TextureIndex::BASE_COLOR]);
+
+            CORE_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
+            // skip baseColor as it's bound already
+            constexpr size_t theCount = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT - 1;
+            binder->BindImages(bindingIdx++, array_view(defaultMaterialStruct_.resources + 1, theCount));
+
+            cmdList.UpdateDescriptorSet(
+                binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
+            globalDescs_.dmSet2Ready = true;
+        }
     }
 }
 
@@ -200,6 +367,7 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
     constexpr uint32_t baseStructSize = CORE_UNIFORM_BUFFER_MAX_BIND_SIZE;
     constexpr uint32_t singleComponentStructSize = UBO_BIND_OFFSET_ALIGNMENT;
     const string_view us = stores_.dataStoreNameScene;
+    GpuBufferDesc bDesc = UBO_DESC;
     // instancing utilization for mesh and materials
     if (objectCounts_.maxMeshCount < objectCounts.maxMeshCount) {
         // mesh matrix uses max ubo bind size to utilize gpu instancing
@@ -212,19 +380,14 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
         objectCounts_.maxMeshCount = (byteSize / singleComponentStructSize) - MIN_UBO_OBJECT_COUNT;
         CORE_ASSERT((int32_t(byteSize / singleComponentStructSize) - int32_t(MIN_UBO_OBJECT_COUNT)) > 0);
 
-        ubos_.mesh = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME,
-            GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, byteSize });
+        bDesc.byteSize = byteSize;
+        ubos_.mesh = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME, bDesc);
     }
     if (objectCounts_.maxSkinCount < objectCounts.maxSkinCount) {
         objectCounts_.maxSkinCount = objectCounts.maxSkinCount + (objectCounts.maxSkinCount / overEstimate);
 
-        ubos_.submeshSkin = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::SKIN_DATA_BUFFER_NAME,
-            GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                static_cast<uint32_t>(sizeof(DefaultMaterialSkinStruct)) * objectCounts_.maxSkinCount });
+        bDesc.byteSize = static_cast<uint32_t>(sizeof(DefaultMaterialSkinStruct)) * objectCounts_.maxSkinCount;
+        ubos_.submeshSkin = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::SKIN_DATA_BUFFER_NAME, bDesc);
     }
     if (objectCounts_.maxMaterialCount < objectCounts.maxMaterialCount) {
         CORE_STATIC_ASSERT(sizeof(RenderDataDefaultMaterial::MaterialUniforms) <= UBO_BIND_OFFSET_ALIGNMENT);
@@ -236,17 +399,63 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
         objectCounts_.maxMaterialCount = (byteSize / singleComponentStructSize) - MIN_UBO_OBJECT_COUNT;
         CORE_ASSERT((int32_t(byteSize / singleComponentStructSize) - int32_t(MIN_UBO_OBJECT_COUNT)) > 0);
 
-        const GpuBufferDesc bufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, byteSize };
-
-        ubos_.mat = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_DATA_BUFFER_NAME, bufferDesc);
-
-        ubos_.matTransform = gpuResourceMgr.Create(
-            us + DefaultMaterialMaterialConstants::MATERIAL_TRANSFORM_DATA_BUFFER_NAME, bufferDesc);
-
+        bDesc.byteSize = byteSize;
+        ubos_.mat = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_DATA_BUFFER_NAME, bDesc);
+        ubos_.matTransform =
+            gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_TRANSFORM_DATA_BUFFER_NAME, bDesc);
         ubos_.userMat =
-            gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_USER_DATA_BUFFER_NAME, bufferDesc);
+            gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_USER_DATA_BUFFER_NAME, bDesc);
+    }
+    if (objectCounts_.maxUniqueMaterialCount < objectCounts.maxUniqueMaterialCount) {
+        CORE_STATIC_ASSERT(sizeof(RenderDataDefaultMaterial::MaterialUniforms) <= UBO_BIND_OFFSET_ALIGNMENT);
+        objectCounts_.maxUniqueMaterialCount = objectCounts.maxUniqueMaterialCount +
+                                               (objectCounts.maxUniqueMaterialCount / overEstimate) +
+                                               MIN_MATERIAL_DESC_SET_COUNT;
+        objectCounts_.maxUniqueMaterialCount =
+            static_cast<uint32_t>(Align(objectCounts_.maxUniqueMaterialCount, MIN_MATERIAL_DESC_SET_COUNT));
+        // global descriptor sets
+        INodeContextDescriptorSetManager& dsMgr = renderNodeContextMgr_->GetDescriptorSetManager();
+        constexpr uint32_t set = 2U;
+        globalDescs_.handles.clear();
+        globalDescs_.descriptorSets.clear();
+        globalDescs_.forceUpdate = true;
+        const auto& bindings = defaultMaterialPipelineLayout_.descriptorSetLayouts[set].bindings;
+        globalDescs_.handles = dsMgr.CreateGlobalDescriptorSets(
+            us + DefaultMaterialMaterialConstants::MATERIAL_RESOURCES_GLOBAL_DESCRIPTOR_SET_NAME, bindings,
+            objectCounts_.maxUniqueMaterialCount);
+        globalDescs_.descriptorSets.resize(globalDescs_.handles.size());
+        globalDescs_.materials.resize(globalDescs_.handles.size());
+        for (size_t idx = 0; idx < globalDescs_.handles.size(); ++idx) {
+            globalDescs_.descriptorSets[idx] =
+                dsMgr.CreateDescriptorSetBinder(globalDescs_.handles[idx].GetHandle(), bindings);
+        }
+    }
+    ProcessGlobalBinders();
+}
+
+void RenderNodeDefaultMaterialObjects::ProcessGlobalBinders()
+{
+    if (!globalDescs_.dmSet1Binder) {
+        const string_view us = stores_.dataStoreNameScene;
+        INodeContextDescriptorSetManager& dsMgr = renderNodeContextMgr_->GetDescriptorSetManager();
+        globalDescs_.dmSet1 = {};
+        globalDescs_.dmSet1Binder = {};
+        constexpr uint32_t set = 1U;
+        const auto& bindings = defaultMaterialPipelineLayout_.descriptorSetLayouts[set].bindings;
+        globalDescs_.dmSet1 = dsMgr.CreateGlobalDescriptorSet(
+            us + DefaultMaterialMaterialConstants::MATERIAL_SET1_GLOBAL_DESCRIPTOR_SET_NAME, bindings);
+        globalDescs_.dmSet1Binder = dsMgr.CreateDescriptorSetBinder(globalDescs_.dmSet1.GetHandle(), bindings);
+    }
+    if (!globalDescs_.dmSet2Binder) {
+        const string_view us = stores_.dataStoreNameScene;
+        INodeContextDescriptorSetManager& dsMgr = renderNodeContextMgr_->GetDescriptorSetManager();
+        globalDescs_.dmSet2 = {};
+        globalDescs_.dmSet2Binder = {};
+        constexpr uint32_t set = 2U;
+        const auto& bindings = defaultMaterialPipelineLayout_.descriptorSetLayouts[set].bindings;
+        globalDescs_.dmSet2 = dsMgr.CreateGlobalDescriptorSet(
+            us + DefaultMaterialMaterialConstants::MATERIAL_DEFAULT_RESOURCE_GLOBAL_DESCRIPTOR_SET_NAME, bindings);
+        globalDescs_.dmSet2Binder = dsMgr.CreateDescriptorSetBinder(globalDescs_.dmSet2.GetHandle(), bindings);
     }
 }
 

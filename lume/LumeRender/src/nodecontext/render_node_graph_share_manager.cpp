@@ -42,7 +42,7 @@ void RenderNodeGraphGlobalShareDataManager::SetGlobalRenderNodeResources(
     const string_view nodeName, const array_view<const IRenderNodeGraphShareManager::NamedResource> resources)
 {
     auto& ref = renderNodes_[nodeName];
-    ref.resources.insert(ref.resources.end(), resources.begin(), resources.end());
+    ref.resources.append(resources.begin(), resources.end());
 #if (RENDER_VALIDATION_ENABLED == 1)
     // BeginFrame() not called?
     PLUGIN_ASSERT_MSG(ref.resources.size() < A_BIG_TEST_NUMBER,

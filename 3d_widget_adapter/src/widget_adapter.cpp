@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include "3d_widget_adapter_log.h"
 #include "graphics_manager.h"
 #include "widget_trace.h"
+#include "widget_qos.h"
 
 namespace OHOS::Render3D {
 #ifdef CHECK_NULL_PTR
@@ -82,15 +83,26 @@ bool WidgetAdapter::OnTouchEvent(const PointerEvent& event)
     return true;
 }
 
-bool WidgetAdapter::DrawFrame()
+void WidgetAdapter::PerformDrawFrame()
 {
-    WIDGET_SCOPED_TRACE("WidgetAdpater::DrawFrame");
-    CHECK_NULL_PTR(engine_);
 #if MULTI_ECS_UPDATE_AT_ONCE
     engine_->DeferDraw();
 #else
     engine_->DrawFrame();
 #endif
+}
+
+bool WidgetAdapter::DrawFrame()
+{
+    WIDGET_SCOPED_TRACE_ARGS("WidgetAdpater::DrawFrame QOS:%d", firstFrame_);
+    CHECK_NULL_PTR(engine_);
+    if (firstFrame_) {
+        Widget3DQosScoped qos("WidgetAdapter::DrawFrame");
+        firstFrame_ = false;
+        PerformDrawFrame();
+    } else {
+        PerformDrawFrame();
+    }
     return true;
 }
 
@@ -121,25 +133,14 @@ bool WidgetAdapter::UpdateCustomRender(const std::shared_ptr<CustomRenderDescrip
 bool WidgetAdapter::UpdateShaderPath(const std::string& shaderPath)
 {
     CHECK_NULL_PTR(engine_);
-    auto tempPath = const_cast<std::string&> (shaderPath);
-    auto index = tempPath.find_last_of("/");
-    auto strSize = tempPath.size();
-    if (index != std::string::npos && index != (strSize - 1)) {
-        auto fileName = tempPath.substr(index + 1);
-        auto suffixIndex = fileName.find_last_of(".");
-        if (suffixIndex != std::string::npos) {
-            tempPath = tempPath.substr(0, index);
-            auto dirIndex = tempPath.find_last_of("/");
-            tempPath = (dirIndex != std::string::npos) ? tempPath.substr(0, dirIndex) : tempPath;
-        }
-    }
-    auto shaderPathOut = const_cast<const std::string&> (tempPath);
-    engine_->UpdateShaderPath(shaderPathOut);
+    WIDGET_LOGE("shader  path %s", shaderPath.c_str());
+    engine_->UpdateShaderPath(shaderPath);
     return true;
 }
 
 bool WidgetAdapter::UpdateImageTexturePaths(const std::vector<std::string>& imageTextures)
 {
+    Widget3DQosScoped qos("WidgetAdapter::UpdateImageTexturePaths");
     CHECK_NULL_PTR(engine_);
     engine_->UpdateImageTexturePaths(imageTextures);
     return true;

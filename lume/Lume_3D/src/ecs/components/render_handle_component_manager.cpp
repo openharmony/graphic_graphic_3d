@@ -26,7 +26,7 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandle);
@@ -47,10 +47,9 @@ using RENDER_NS::RenderHandle;
 using RENDER_NS::RenderHandleReference;
 
 class RenderHandleComponentManager final : public BaseManager<RenderHandleComponent, IRenderHandleComponentManager> {
-    BEGIN_PROPERTY(RenderHandleComponent, ComponentMetadata)
+    BEGIN_PROPERTY(RenderHandleComponent, componentMetaData_)
 #include <3d/ecs/components/render_handle_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit RenderHandleComponentManager(IEcs& ecs)
@@ -62,12 +61,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;
@@ -113,8 +112,8 @@ public:
     Entity GetEntityWithReference(const RenderHandleReference& handle) const override
     {
         if (const auto pos = std::find_if(components_.begin(), components_.end(),
-                [handle = handle.GetHandle()](
-                    const BaseComponentHandle& component) { return component.data_.reference.GetHandle() == handle; });
+            [handle = handle.GetHandle()](
+                const BaseComponentHandle& component) { return component.data_.reference.GetHandle() == handle; });
             pos != components_.end()) {
             return pos->entity_;
         }

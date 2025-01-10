@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <base/namespace.h>
+#include <base/util/hash.h>
 
 BASE_BEGIN_NAMESPACE()
 /** \addtogroup group_formats
@@ -410,8 +411,13 @@ enum Format {
     BASE_FORMAT_G8_B8R8_2PLANE_422_UNORM = 1000156005,
     /** G8 B8R8 3PLANE 444 UNORM */
     BASE_FORMAT_G8_B8_R8_3PLANE_444_UNORM = 1000156006,
-    /** Max enumeration */
 };
+
+template<>
+inline uint64_t hash(const Format& value)
+{
+    return Hash(static_cast<uint32_t>(value));
+}
 /** @} */
 BASE_END_NAMESPACE()
 

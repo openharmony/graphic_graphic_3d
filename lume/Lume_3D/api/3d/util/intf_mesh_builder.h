@@ -40,6 +40,21 @@ public:
 
     using Ptr = BASE_NS::refcnt_ptr<IMeshBuilder>;
 
+    enum ConfigurationFlagBits : uint32_t {
+        /** Don't use staging buffer. Requires less memory and avoids copying data from staging to final buffers, but
+           this implies host visible buffers which can have . */
+        NO_STAGING_BUFFER = 0x1,
+    };
+
+    /** Initialization parameters. */
+    struct Configuration {
+        /** Defines the expected vertex input layout i.e. how the mesh data should be stored in buffers. */
+        RENDER_NS::VertexInputDeclarationView vertexInputDeclaration;
+        /** Number of submeshes in the next mesh. */
+        size_t submeshCount;
+        uint32_t flags;
+    };
+
     /** Submesh attributes */
     struct Submesh {
         /** Vertex count */
@@ -61,22 +76,31 @@ public:
         bool colors { false };
         /** Joints */
         bool joints { false };
+
+        /** Optional input assembly. Will be filled to Submesh */
+        RENDER_NS::GraphicsState::InputAssembly inputAssembly { false,
+            RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM };
     };
 
     /** GPU buffer create info */
     struct GpuBufferCreateInfo {
-        /** Vertex buffer additional usage flags */
-        RENDER_NS::BufferUsageFlags vertexBufferFlags { 0U };
-        /** Index buffer additional usage flags */
-        RENDER_NS::BufferUsageFlags indexBufferFlags { 0U };
-        /** Morph buffer additional usage flags */
-        RENDER_NS::BufferUsageFlags morphBufferFlags { 0U };
+        /** Additional usage flags */
+        RENDER_NS::BufferUsageFlags usage { 0U };
+        /** Engine creation flags */
+        RENDER_NS::EngineBufferCreationFlags engineCreation { 0U };
+        /** Memory property flags */
+        RENDER_NS::MemoryPropertyFlags memoryFlags { 0U };
     };
 
-    /** Setup vertex declaration and submesh count for the builder. Also resets the builder for re-use.
+    /** Prepare the builder for adding submeshes. Also resets the builder for re-use.
      */
     virtual void Initialize(
         const RENDER_NS::VertexInputDeclarationView& vertexInputDeclaration, size_t submeshCount) = 0;
+
+    /** Prepare the builder for adding submeshes. Also resets the builder for re-use.
+     * @param config Configuration parameters.
+     */
+    virtual void Initialize(const Configuration& config) = 0;
 
     /** Add a submesh and related import info to this mesh.
      * @param submesh Submesh import information that is used to determine memory requirements etc.
@@ -199,10 +223,20 @@ public:
      */
     virtual void CreateGpuResources(const GpuBufferCreateInfo& createInfo) = 0;
 
-    /** Helper for creating an entity with a mesh component. The mesh component is filled using the previously given
-     * data (submeshes, vertex data, index data, etc.). NOTE: the mesh component owns the attached GPU resources.
+    /** Create a mesh entity with a mesh component from the previously given data (submeshes, vertices, indices etc).
+     * @param ecs The ECS instance.
+     * @return The created entity, or an invalid entity if there is no mesh data or if an error occurred.
+     * @note The mesh component owns the attached GPU resources.
      */
     virtual CORE_NS::Entity CreateMesh(CORE_NS::IEcs& ecs) const = 0;
+
+    /** Create a mesh entity with a mesh component from the previously given data (submeshes, vertices, indices etc).
+     * @param ecs The ECS instance.
+     * @param meshEntity If valid, append to the mesh component of this entity (or create a new component).
+     * @return The created entity, or an invalid entity if there is no mesh data or if an error occurred.
+     * @note The mesh component owns the attached GPU resources.
+     */
+    virtual CORE_NS::Entity CreateMesh(CORE_NS::IEcs& ecs, CORE_NS::Entity meshEntity) const = 0;
 
 protected:
     IMeshBuilder() = default;

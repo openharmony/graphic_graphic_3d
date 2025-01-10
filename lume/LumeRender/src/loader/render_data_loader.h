@@ -32,8 +32,8 @@ class IRenderDataStorePod;
  */
 class RenderDataLoader {
 public:
-    static constexpr char const* const RENDER_CONFIG_PATH = "renderdataconfigurations://";
-    static constexpr char const* const POST_PROCESS_PATH = "postprocess";
+    static constexpr const char* const RENDER_CONFIG_PATH = "renderdataconfigurations://";
+    static constexpr const char* const POST_PROCESS_PATH = "postprocess";
 
     /** Constructor.
      * @param fileManager File manager to be used when loading files.
@@ -53,7 +53,7 @@ private:
     };
 
     void RecurseDirectory(BASE_NS::string_view currentPath, const CORE_NS::IDirectory& dir,
-        const ConfigurationType configurationType, IRenderDataStorePod& renderDataStorePod);
+        ConfigurationType configurationType, IRenderDataStorePod& renderDataStorePod);
 };
 RENDER_END_NAMESPACE()
 

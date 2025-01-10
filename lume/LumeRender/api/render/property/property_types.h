@@ -30,12 +30,20 @@ inline constexpr CORE_NS::PropertyTypeDecl BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_
     PROPERTYTYPE(RENDER_NS::BindableImageWithHandleReference);
 inline constexpr CORE_NS::PropertyTypeDecl BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T =
     PROPERTYTYPE(RENDER_NS::BindableSamplerWithHandleReference);
+
+inline constexpr CORE_NS::PropertyTypeDecl BINDABLE_BUFFER_T = PROPERTYTYPE(RENDER_NS::BindableBuffer);
+inline constexpr CORE_NS::PropertyTypeDecl BINDABLE_IMAGE_T = PROPERTYTYPE(RENDER_NS::BindableImage);
+inline constexpr CORE_NS::PropertyTypeDecl BINDABLE_SAMPLER_T = PROPERTYTYPE(RENDER_NS::BindableSampler);
 } // namespace PropertyType
 
 #ifdef DECLARE_PROPERTY_TYPE
 DECLARE_PROPERTY_TYPE(RENDER_NS::BindableBufferWithHandleReference);
 DECLARE_PROPERTY_TYPE(RENDER_NS::BindableImageWithHandleReference);
 DECLARE_PROPERTY_TYPE(RENDER_NS::BindableSamplerWithHandleReference);
+
+DECLARE_PROPERTY_TYPE(RENDER_NS::BindableBuffer);
+DECLARE_PROPERTY_TYPE(RENDER_NS::BindableImage);
+DECLARE_PROPERTY_TYPE(RENDER_NS::BindableSampler);
 #endif
 CORE_END_NAMESPACE()
 #endif // API_RENDER_PROPERTY_PROPERTY_TYPES_H

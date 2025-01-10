@@ -25,7 +25,6 @@
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
-#include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
@@ -205,7 +204,7 @@ void RenderNodeSinglePostProcess::InitNode(IRenderNodeContextManager& renderNode
             false };
         renderBlur_.Init(renderNodeContextMgr, blurInfo);
     }
-    renderCopy_.Init(renderNodeContextMgr, {});
+    renderCopy_.Init(renderNodeContextMgr);
     RegisterOutputs(output);
 }
 
@@ -232,12 +231,10 @@ void RenderNodeSinglePostProcess::PreExecuteFrame()
                ppLocalConfig_.variables.enabled) {
         RenderBlur::BlurInfo blurInfo { GetBindableImage(builtInVariables_.input), ubos_.postProcess.GetHandle(),
             false };
-        renderBlur_.PreExecute(*renderNodeContextMgr_, blurInfo, ppGlobalConfig_);
+        renderBlur_.PreExecute(*renderNodeContextMgr_, blurInfo);
     }
     {
-        RenderCopy::CopyInfo copyInfo { GetBindableImage(builtInVariables_.input),
-            GetBindableImage(builtInVariables_.output), {} };
-        renderCopy_.PreExecute(*renderNodeContextMgr_, copyInfo);
+        renderCopy_.PreExecute();
     }
     RegisterOutputs(output);
 }
@@ -264,7 +261,9 @@ void RenderNodeSinglePostProcess::ExecuteFrame(IRenderCommandList& cmdList)
             ExecuteSinglePostProcess(cmdList);
         }
     } else if (jsonInputs_.defaultOutputImage == DefaultOutputImage::INPUT_OUTPUT_COPY) {
-        renderCopy_.Execute(*renderNodeContextMgr_, cmdList);
+        IRenderNodeCopyUtil::CopyInfo copyInfo { GetBindableImage(builtInVariables_.input),
+            GetBindableImage(builtInVariables_.output), {} };
+        renderCopy_.Execute(cmdList, copyInfo);
     }
 }
 
@@ -346,8 +345,8 @@ void RenderNodeSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandList& c
         cmdList.SetDynamicStateScissor(scissorDesc);
 
         if (pipelineLayout_.pushConstant.byteSize > 0) {
-            const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
-            const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
+            const auto fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
+            const auto fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
             const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
                 ppLocalConfig_.variables.factor };
             cmdList.PushConstantData(pipelineLayout_.pushConstant, arrayviewU8(pc));
@@ -363,8 +362,8 @@ void RenderNodeSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandList& c
             const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(dispatchResources.image);
             const Math::UVec3 targetSize = { desc.width, desc.height, desc.depth };
             if (pipelineLayout_.pushConstant.byteSize > 0) {
-                const float fWidth = static_cast<float>(targetSize.x);
-                const float fHeight = static_cast<float>(targetSize.y);
+                const auto fWidth = static_cast<float>(targetSize.x);
+                const auto fHeight = static_cast<float>(targetSize.y);
                 const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
                     ppLocalConfig_.variables.factor };
                 cmdList.PushConstantData(pipelineLayout_.pushConstant, arrayviewU8(pc));
@@ -435,11 +434,11 @@ void RenderNodeSinglePostProcess::ProcessPostProcessConfiguration()
         auto& dsMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
         if (const IRenderDataStore* ds = dsMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName); ds) {
             if (jsonInputs_.renderDataStore.typeName == RenderDataStorePostProcess::TYPE_NAME) {
-                auto* const dataStore = static_cast<IRenderDataStorePostProcess const*>(ds);
+                auto* const dataStore = static_cast<const IRenderDataStorePostProcess*>(ds);
                 ppLocalConfig_ = dataStore->Get(jsonInputs_.renderDataStore.configurationName, jsonInputs_.ppName);
             }
         }
-        if (const IRenderDataStorePod* ds =
+        if (const auto* ds =
                 static_cast<const IRenderDataStorePod*>(dsMgr.GetRenderDataStore(RENDER_DATA_STORE_POD_NAME));
             ds) {
             auto const dataView = ds->Get(jsonInputs_.renderDataStore.configurationName);
@@ -479,14 +478,14 @@ void RenderNodeSinglePostProcess::InitCreateBinders()
     INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
     DescriptorCounts dc;
     if (builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLOOM_BIT) {
-        dc = renderBloom_.GetDescriptorCounts();
+        dc = RenderBloom::GetDescriptorCounts();
     } else if (builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLUR_BIT) {
-        dc = renderBlur_.GetDescriptorCounts();
+        dc = RenderBlur::GetDescriptorCounts();
     } else {
         dc = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
     }
     if (jsonInputs_.defaultOutputImage == DefaultOutputImage::INPUT_OUTPUT_COPY) {
-        const DescriptorCounts copyDc = renderCopy_.GetDescriptorCounts();
+        const DescriptorCounts copyDc = renderCopy_.GetRenderDescriptorCounts();
         for (const auto& ref : copyDc.counts) {
             dc.counts.push_back(ref);
         }

@@ -20,8 +20,6 @@ layout(location = 0) in vec2 inUv;
 
 layout(location = 0) out vec4 outColor;
 
-#define MOTION_BLUR_EPSILON 0.0001
-
 #define CORE_SPREAD_TYPE_NEIGHBORHOOD 0
 #define CORE_SPREAD_TYPE_HORIZONTAL 1
 #define CORE_SPREAD_TYPE_VERTICAL 2

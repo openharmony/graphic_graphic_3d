@@ -294,7 +294,7 @@ static inline Mat4X4 RotateZCWRadians(const Mat4X4& mat, float rot)
 static inline constexpr Mat4X4 Trs(
     const Vec3& translationVector, const Quat& rotationQuaternion, const Vec3& scaleVector)
 {
-    return Scale(Translate(Mat4X4(1.f), translationVector) * Mat4Cast(rotationQuaternion), scaleVector);
+    return Scale(Translate(Math::IDENTITY_4X4, translationVector) * Mat4Cast(rotationQuaternion), scaleVector);
 }
 
 /** Transforms direction by this matrix */
@@ -839,6 +839,84 @@ static inline bool Decompose(
 
     return true;
 }
+
+/** Decompose matrix */
+static inline bool Decompose(Mat4X4 const& modelMatrix, Vec3& scale, Quat& orientation, Vec3& translation)
+{
+    Mat4X4 localMatrix(modelMatrix);
+
+    if (localMatrix.w.w != 1.f) {
+        if (abs(localMatrix.w.w) < EPSILON) {
+            return false;
+        }
+
+        for (size_t i = 0; i < 4U; ++i) {
+            for (size_t j = 0; j < 4U; ++j) {
+                localMatrix[i][j] /= localMatrix.w.w;
+            }
+        }
+    }
+    translation = Vec3(localMatrix.w);
+
+    Vec3 row[3];
+    for (size_t i = 0U; i < 3U; ++i) {
+        for (size_t j = 0U; j < 3U; ++j) {
+            row[i][j] = localMatrix[i][j];
+        }
+    }
+
+    scale.x = Magnitude(row[0]);
+    if (abs(scale.x) < EPSILON) {
+        return false;
+    }
+    row[0] = row[0] / scale.x;
+
+    scale.y = Magnitude(row[1]);
+    if (abs(scale.y) < EPSILON) {
+        return false;
+    }
+    row[1] = row[1] / scale.y;
+
+    scale.z = Magnitude(row[2]);
+    if (abs(scale.z) < EPSILON) {
+        return false;
+    }
+    row[2] = row[2] / scale.z;
+
+    unsigned i, j, k = 0U;
+    float root;
+    const float trace = row[0].x + row[1].y + row[2].z;
+    if (trace > 0.0f) {
+        root = sqrt(trace + 1.0f);
+        orientation.w = 0.5f * root;
+        root = 0.5f / root; // root cannot be zero as it's square root of at least 1
+        orientation.x = root * (row[1].z - row[2].y);
+        orientation.y = root * (row[2].x - row[0].z);
+        orientation.z = root * (row[0].y - row[1].x);
+    } else { // End if > 0
+        constexpr const unsigned next[3] = { 1U, 2U, 0U };
+        i = 0U;
+        if (row[1].y > row[0].x) {
+            i = 1U;
+        }
+        if (row[2].z > row[i][i]) {
+            i = 2U;
+        }
+        j = next[i];
+        k = next[j];
+
+        root = sqrt(row[i][i] - row[j][j] - row[k][k] + 1.0f);
+
+        orientation[i] = 0.5f * root;
+        root = (abs(root) > EPSILON) ? 0.5f / root : HUGE_VALF;
+        orientation[j] = root * (row[i][j] + row[j][i]);
+        orientation[k] = root * (row[i][k] + row[k][i]);
+        orientation.w = root * (row[j][k] - row[k][j]);
+    } // End if <= 0
+
+    return true;
+}
+
 /** Check if matrix has any rotation/shear components */
 static inline bool HasRotation(Mat3X3 const& m)
 {

@@ -76,6 +76,12 @@ public:
     virtual IDescriptorSetBinder::Ptr CreateDescriptorSetBinder(const RenderHandle handle,
         const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) = 0;
 
+    /** Create a descriptor set handle and IDescriptorSetBinder based on layout bindings.
+     * Layout bindings are expected to be sorted starting from the smallest index.
+     */
+    virtual IDescriptorSetBinder::Ptr CreateDescriptorSetBinder(
+        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) = 0;
+
     /** Create a IPipelineDescriptorSetBinder based on pipeline layout.
      * @param pipelineLayout PipelineLayout
      */
@@ -102,6 +108,38 @@ public:
     /** Creates a one frame dynamic single descriptor set from pipeline layout. Valid for a one frame and does not need
      * reserve. */
     virtual RenderHandle CreateOneFrameDescriptorSet(const uint32_t set, const PipelineLayout& pipelineLayout) = 0;
+
+    /** Creates a global descriptor set which can be fetched and used in all around the renderer
+     * @param name A unique name
+     * @param descriptorSetLayoutBindings Descriptor set layout bindings.
+     * @return RenderHandleReference to a global descriptor set.
+     */
+    virtual RenderHandleReference CreateGlobalDescriptorSet(const BASE_NS::string_view name,
+        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) = 0;
+
+    /** Creates a global descriptor sets which can be fetched and used in all around the renderer
+     * @param name A unique name/id
+     * @param descriptorSetLayoutBindings Descriptor set layout bindings.
+     * @param descriptorSetCount Amount of similar descriptor sets.
+     * @return RenderHandleReference to a global descriptor set.
+     */
+    virtual BASE_NS::vector<RenderHandleReference> CreateGlobalDescriptorSets(const BASE_NS::string_view name,
+        const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings,
+        const uint32_t descriptorSetCount) = 0;
+
+    /** Get global descriptor set. To be on the safe side this should be re-fetched every frame.
+     * Should be fetched during multi-threaded ExecuteFrame
+     * @param name A unique name/id
+     * @return RenderHandle to a global descriptor set.
+     */
+    virtual RenderHandle GetGlobalDescriptorSet(const BASE_NS::string_view name) const = 0;
+
+    /** Get global descriptor set. To be on the safe side this should be re-fetched every frame.
+     * Should be fetched during multi-threaded ExecuteFrame
+     * @param name Name/id of the global descriptor set
+     * @return array view of render handle references
+     */
+    virtual BASE_NS::array_view<const RenderHandle> GetGlobalDescriptorSets(const BASE_NS::string_view name) const = 0;
 
 protected:
     INodeContextDescriptorSetManager() = default;

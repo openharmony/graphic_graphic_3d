@@ -300,7 +300,7 @@ void GpuImageVk::CreateVkImage()
         VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,           // initialLayout
     };
 
-    VkMemoryPropertyFlags memoryPropertyFlags = static_cast<VkMemoryPropertyFlags>(desc_.memoryPropertyFlags);
+    auto memoryPropertyFlags = static_cast<VkMemoryPropertyFlags>(desc_.memoryPropertyFlags);
     const VkMemoryPropertyFlags requiredFlags =
         (memoryPropertyFlags & (~(VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
                                    CORE_MEMORY_PROPERTY_PROTECTED_BIT)));
@@ -341,7 +341,7 @@ void GpuImageVk::CreateVkImageViews(
     PLUGIN_ASSERT(plat_.image);
     const VkDevice vkDevice = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
 
-    const VkImageViewType imageViewType = (VkImageViewType)desc_.imageViewType;
+    const auto imageViewType = (VkImageViewType)desc_.imageViewType;
     const VkImageAspectFlags shaderViewImageAspectFlags = imageAspectFlags & (~VK_IMAGE_ASPECT_STENCIL_BIT);
 
     const VkComponentMapping componentMapping = {
@@ -443,17 +443,14 @@ VkImageAspectFlags GetImageAspectFlagsFromFormat(const VkFormat format)
     const bool isDepthFormat =
         ((format == VkFormat::VK_FORMAT_D16_UNORM) || (format == VkFormat::VK_FORMAT_X8_D24_UNORM_PACK32) ||
             (format == VkFormat::VK_FORMAT_D32_SFLOAT) || (format == VkFormat::VK_FORMAT_D16_UNORM_S8_UINT) ||
-            (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT))
-            ? true
-            : false;
+            (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT));
     if (isDepthFormat) {
         flags |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
 
         const bool isStencilFormat =
             ((format == VkFormat::VK_FORMAT_S8_UINT) || (format == VkFormat::VK_FORMAT_D16_UNORM_S8_UINT) ||
-                (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT) || (format == VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT))
-                ? true
-                : false;
+                (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT) ||
+                (format == VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT));
         if (isStencilFormat) {
             flags |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT;
         }

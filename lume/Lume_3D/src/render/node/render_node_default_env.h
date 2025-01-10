@@ -47,7 +47,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "e3bc29b2-c1d0-4322-a41a-449354fd5a42" };
-    static constexpr char const* const TYPE_NAME = "RenderNodeDefaultEnv";
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultEnv";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -61,18 +61,24 @@ public:
 private:
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
+    struct ShaderData {
+        RENDER_NS::RenderHandle pso;
+        RENDER_NS::RenderHandle shader;
+        // typically set 3 (with old compatibility might be the set 1)
+        bool customSet { false };
+        uint32_t customSetIndex { ~0U };
+    };
+
     void ParseRenderNodeInputs();
 
-    void RenderData(RENDER_NS::IRenderCommandList& cmdList);
+    void RenderData(const IRenderDataStoreDefaultCamera& dsCamera, RENDER_NS::IRenderCommandList& cmdList);
     bool UpdateAndBindCustomSet(RENDER_NS::IRenderCommandList& cmdList, const RenderCamera::Environment& renderEnv);
     void UpdateCurrentScene(
         const IRenderDataStoreDefaultScene& dataStoreScene, const IRenderDataStoreDefaultCamera& dataStoreCamera);
-    RENDER_NS::RenderHandle GetPso(const RENDER_NS::RenderHandle shaderHandle,
+    ShaderData GetPso(const RENDER_NS::RenderHandle shaderHandle,
         const RenderCamera::Environment::BackgroundType bgType,
         const RENDER_NS::RenderPostProcessConfiguration& renderPostProcessConfiguration);
     void CreateDescriptorSets();
-    // unique scene name
-    void GetSceneUniformBuffers(const BASE_NS::string_view us);
     void UpdatePostProcessConfiguration();
     BASE_NS::array_view<const RENDER_NS::DynamicStateEnum> GetDynamicStates() const;
     void ResetRenderSlotData(const bool enableMultiview);
@@ -92,8 +98,6 @@ private:
     JsonInputs jsonInputs_;
     RENDER_NS::RenderNodeHandles::InputRenderPass inputRenderPass_;
 
-    SceneBufferHandles sceneBuffers_;
-    SceneCameraBufferHandles cameraBuffers_;
     SceneRenderDataStores stores_;
 
     RENDER_NS::RenderHandle cubemapSampler;
@@ -101,17 +105,10 @@ private:
     RenderCamera::Environment::BackgroundType currentBgType_ { RenderCamera::Environment::BG_TYPE_NONE };
     RenderCamera::ShaderFlags currentCameraShaderFlags_ { 0U };
 
-    struct DescriptorSets {
-        RENDER_NS::IDescriptorSetBinder::Ptr set0;
-        RENDER_NS::IDescriptorSetBinder::Ptr set1;
-    };
-    DescriptorSets allDescriptorSets_;
+    RENDER_NS::IDescriptorSetBinder::Ptr builtInSet3_;
 
     RENDER_NS::PipelineLayout defaultPipelineLayout_;
-    RENDER_NS::RenderHandle shaderHandle_;
-    RENDER_NS::RenderHandle psoHandle_;
     bool enableMultiView_ { false };
-    bool customSet2_ { false };
 
     struct CurrentScene {
         RenderCamera camera;
@@ -122,6 +119,10 @@ private:
     };
     CurrentScene currentScene_;
     DefaultImages defaultImages_;
+    BASE_NS::string cameraName_;
+
+    ShaderData currShaderData_;
+    ShaderData defaultShaderData_;
 
     RENDER_NS::RenderPass renderPass_;
     // the base default render node graph from RNG setup

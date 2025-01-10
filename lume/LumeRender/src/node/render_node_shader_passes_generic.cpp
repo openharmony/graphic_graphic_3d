@@ -80,7 +80,7 @@ void RenderNodeShaderPassesGeneric::InitNode(IRenderNodeContextManager& renderNo
     if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
         if (jsonInputs_.renderDataStore.typeName != RenderDataStoreShaderPasses::TYPE_NAME) {
             PLUGIN_LOG_W("RENDER_VALIDATION: RenderNodeShaderPassesGeneric only supports render data store with "
-                "typename RenderDataStoreShaderPasses (typename: %s)",
+                         "typename RenderDataStoreShaderPasses (typename: %s)",
                 jsonInputs_.renderDataStore.typeName.c_str());
             valid_ = false;
         }
@@ -105,15 +105,16 @@ void RenderNodeShaderPassesGeneric::PreExecuteFrame()
     uint32_t uboByteSize = 0U;
     uboByteSize += dsShaderPasses_->GetRenderPropertyBindingInfo().alignedByteSize;
     uboByteSize += dsShaderPasses_->GetComputePropertyBindingInfo().alignedByteSize;
-    if (uboByteSize > uboData_.byteSize) {
+    // create the built-in buffer even if the bytesize would be zero
+    if ((uboByteSize > uboData_.byteSize) || (uboData_.byteSize == 0U)) {
         uboData_.byteSize = uboByteSize + (OFFSET_ALIGNMENT * OVERESTIMATE_COUNT);
         uboData_.byteSize = static_cast<uint32_t>(Align(uboData_.byteSize, OFFSET_ALIGNMENT));
 
         IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
         uboData_.handle = gpuResourceMgr.Create(
             uboData_.handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, uboData_.byteSize });
+                                 (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, uboData_.byteSize });
     }
 }
 
@@ -177,9 +178,10 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameGraphics(IRenderCommandList& cmd
             if (ref.renderPass.subpassDesc.fragmentShadingRateAttachmentCount > 0) {
                 cmdList.SetDynamicStateFragmentShadingRate(
                     { 1u, 1u },
-                    FragmentShadingRateCombinerOps { 
+                    FragmentShadingRateCombinerOps {
                         CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
-                        CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
+                        CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE
+		    });
             }
 
             for (const auto& shaderRef : ref.shaderBinders) {
@@ -253,6 +255,7 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameGraphics(IRenderCommandList& cmd
                     }
                 }
             }
+
             cmdList.EndRenderPass();
         }
     }
@@ -273,7 +276,7 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameCompute(IRenderCommandList& cmdL
             if (!shaderRef) {
                 continue;
             }
-            const auto& sRef = (const ShaderPipelineBinder &)(*shaderRef.get());
+            const auto& sRef = (const ShaderPipelineBinder&)(*shaderRef.get());
             IPipelineDescriptorSetBinder* binder = sRef.GetPipelineDescriptorSetBinder();
             if (!binder) {
                 continue;
@@ -338,7 +341,7 @@ uint32_t RenderNodeShaderPassesGeneric::WriteLocalUboData(const array_view<const
         if ((uboData_.currentOffset + uboData.size_bytes()) < uboData_.byteSize) {
             uint8_t* currData = uboData_.mapData + uboData_.currentOffset;
             const uint8_t* dataPtrEnd = uboData_.mapData + uboData_.byteSize;
-            const uint32_t writeDataByteSize = static_cast<uint32_t>(uboData.size_bytes());
+            const auto writeDataByteSize = static_cast<uint32_t>(uboData.size_bytes());
             CloneData(currData, size_t(dataPtrEnd - currData), uboData.data(), uboData.size_bytes());
 
             uboData_.currentOffset = Align(uboData_.currentOffset + writeDataByteSize, OFFSET_ALIGNMENT);

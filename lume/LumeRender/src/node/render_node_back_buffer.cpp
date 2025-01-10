@@ -15,18 +15,15 @@
 
 #include "render_node_back_buffer.h"
 
-#include <base/containers/string.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
-#include <render/device/pipeline_layout_desc.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
-#include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_parser_util.h>
@@ -34,7 +31,6 @@
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
 
-#include "device/gpu_resource_handle_util.h"
 #include "util/log.h"
 
 // shaders
@@ -49,8 +45,8 @@ PostProcessTonemapStruct FillPushConstant(
 {
     PostProcessTonemapStruct pushData;
 
-    const float fWidth = static_cast<float>(dstImageDesc.width);
-    const float fHeight = static_cast<float>(dstImageDesc.height);
+    const auto fWidth = static_cast<float>(dstImageDesc.width);
+    const auto fHeight = static_cast<float>(dstImageDesc.height);
 
     pushData.texSizeInvTexSize[0u] = fWidth;
     pushData.texSizeInvTexSize[1u] = fHeight;
@@ -155,14 +151,14 @@ void RenderNodeBackBuffer::CheckForPsoSpecilization(const PostProcessConfigurati
 }
 
 PostProcessConfiguration RenderNodeBackBuffer::GetPostProcessConfiguration(
-    const IRenderNodeRenderDataStoreManager& dataStoreMgr)
+    const IRenderNodeRenderDataStoreManager& dataStoreMgr) const
 {
     if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
-        auto const dataStore = static_cast<IRenderDataStorePod const*>(
+        auto const dataStore = static_cast<const IRenderDataStorePod*>(
             dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName));
         if (dataStore) {
             auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
-            const PostProcessConfiguration* data = (const PostProcessConfiguration*)dataView.data();
+            const auto* data = (const PostProcessConfiguration*)dataView.data();
             if (data) {
                 return *data;
             }

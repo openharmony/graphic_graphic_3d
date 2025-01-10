@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE_CONTEXT_PSO_MANAGER_H
-#define RENDER_RENDER__NODE_CONTEXT_PSO_MANAGER_H
+#ifndef RENDER_NODECONTEXT_NODE_CONTEXT_PSO_MANAGER_H
+#define RENDER_NODECONTEXT_NODE_CONTEXT_PSO_MANAGER_H
 
 #include <cstddef>
 #include <cstdint>
@@ -62,6 +62,8 @@ public:
         const ShaderSpecializationConstantDataView& shaderSpecialization) override;
     RenderHandle GetComputePsoHandle(const RenderHandle shader, const PipelineLayout& pipelineLayout,
         const ShaderSpecializationConstantDataView& shaderSpecialization) override;
+    RenderHandle GetComputePsoHandle(const IShaderManager::ShaderData& shaderData,
+        const ShaderSpecializationConstantDataView& shaderSpecialization) override;
 
     RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const RenderHandle graphicsState,
         const RenderHandle pipelineLayout, const RenderHandle vertexInputDeclaration,
@@ -73,6 +75,9 @@ public:
         const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
     RenderHandle GetGraphicsPsoHandle(const RenderHandle shader, const GraphicsState& graphicsState,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
+        const ShaderSpecializationConstantDataView& shaderSpecialization,
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
+    RenderHandle GetGraphicsPsoHandle(const IShaderManager::GraphicsShaderData& shaderData,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
         const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) override;
 
@@ -100,6 +105,7 @@ private:
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
         const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const GraphicsState* graphicsState);
+    void ProcessReloadedShaders();
 
     struct ComputePipelineStateCreationData {
         RenderHandle shaderHandle;
@@ -158,6 +164,9 @@ private:
 #endif
     };
     GraphicsPipelineStateCache graphicsPipelineStateCache_;
+
+    // pso re-creation based on reloaded shaders
+    uint64_t lastReloadedShadersFrameIndex_ { 0 };
 };
 RENDER_END_NAMESPACE()
 

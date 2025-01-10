@@ -19,19 +19,16 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
+using CORE3D_NS::EnvironmentComponent;
 /** Extend propertysystem with the enums */
-DECLARE_PROPERTY_TYPE(CORE3D_NS::EnvironmentComponent::Background);
+DECLARE_PROPERTY_TYPE(EnvironmentComponent::Background);
 
 // Declare their metadata
-BEGIN_ENUM(EnvironmentComponentBackgroundTypeMetaData, CORE3D_NS::EnvironmentComponent::Background)
-DECL_ENUM(CORE3D_NS::EnvironmentComponent::Background, NONE, "None")
-DECL_ENUM(CORE3D_NS::EnvironmentComponent::Background, IMAGE, "Image")
-DECL_ENUM(CORE3D_NS::EnvironmentComponent::Background, CUBEMAP, "Cubemap")
-DECL_ENUM(CORE3D_NS::EnvironmentComponent::Background, EQUIRECTANGULAR, "Equirectangular")
-END_ENUM(EnvironmentComponentBackgroundTypeMetaData, CORE3D_NS::EnvironmentComponent::Background)
+ENUM_TYPE_METADATA(EnvironmentComponent::Background, ENUM_VALUE(NONE, "None"), ENUM_VALUE(IMAGE, "Image"),
+    ENUM_VALUE(CUBEMAP, "Cubemap"), ENUM_VALUE(EQUIRECTANGULAR, "Equirectangular"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -44,26 +41,26 @@ using CORE_NS::IEcs;
 using CORE_NS::Property;
 
 class EnvironmentComponentManager final : public BaseManager<EnvironmentComponent, IEnvironmentComponentManager> {
-    BEGIN_PROPERTY(EnvironmentComponent, ComponentMetadata)
+    BEGIN_PROPERTY(EnvironmentComponent, componentMetaData_)
 #include <3d/ecs/components/environment_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit EnvironmentComponentManager(IEcs& ecs)
-        : BaseManager<EnvironmentComponent, IEnvironmentComponentManager>(ecs, CORE_NS::GetName<EnvironmentComponent>())
+        : BaseManager<EnvironmentComponent, IEnvironmentComponentManager>(
+              ecs, CORE_NS::GetName<EnvironmentComponent>(), 2U)
     {}
 
     ~EnvironmentComponentManager() = default;
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

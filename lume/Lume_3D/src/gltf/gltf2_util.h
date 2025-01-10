@@ -33,7 +33,6 @@ bool GetDataType(BASE_NS::string_view dataType, DataType& out);
 bool GetCameraType(BASE_NS::string_view type, CameraType& out);
 
 bool GetAlphaMode(BASE_NS::string_view dataType, AlphaMode& out);
-bool GetBlendMode(BASE_NS::string_view dataType, BlendMode& out);
 
 bool GetAnimationInterpolation(BASE_NS::string_view interpolation, AnimationInterpolation& out);
 bool GetAnimationPath(BASE_NS::string_view path, AnimationPath& out);
@@ -49,7 +48,6 @@ BASE_NS::string_view GetLightType(LightType type);
 #endif
 
 BASE_NS::string_view GetAlphaMode(AlphaMode mode);
-BASE_NS::string_view GetBlendMode(BlendMode mode);
 BASE_NS::string_view GetAnimationInterpolation(AnimationInterpolation interpolation);
 BASE_NS::string_view GetAnimationPath(AnimationPath path);
 
@@ -72,8 +70,7 @@ void SplitFilename(BASE_NS::string_view source, BASE_NS::string_view& base, BASE
 void SplitBaseFilename(BASE_NS::string_view source, BASE_NS::string_view& name, BASE_NS::string_view& extension);
 
 BASE_NS::string_view ParseDataUri(const BASE_NS::string_view in, size_t& offsetToData);
-bool DecodeDataURI(BASE_NS::vector<uint8_t>& out, BASE_NS::string_view in, size_t reqBytes, bool checkSize,
-    BASE_NS::string_view& mimeType);
+bool DecodeDataURI(BASE_NS::vector<uint8_t>& out, BASE_NS::string_view in, size_t reqBytes, bool checkSize);
 bool IsDataURI(BASE_NS::string_view in);
 
 // Buffer / data helpers
@@ -88,7 +85,7 @@ struct GLTFLoadDataResult {
     bool normalized { false };
     BASE_NS::string error;
 
-    ComponentType componentType;
+    ComponentType componentType { ComponentType::INVALID };
     size_t componentByteSize { 0 };
     size_t componentCount { 0 };
 
@@ -107,7 +104,7 @@ struct BufferLoadResult {
 };
 
 // Populate GLTF buffers with data.
-BufferLoadResult LoadBuffers(const Data& data, CORE_NS::IFileManager& fileManager);
+BufferLoadResult LoadBuffers(const Data* data, CORE_NS::IFileManager& fileManager);
 
 enum UriLoadResult {
     URI_LOAD_SUCCESS,

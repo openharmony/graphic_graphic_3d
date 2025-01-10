@@ -47,6 +47,35 @@ struct PipelineLayoutConstants {
     static constexpr uint32_t MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE { 256u };
 };
 
+enum AdditionalDescriptorTypeImageFlagBits {
+    /** Depth */
+    CORE_DESCRIPTOR_TYPE_IMAGE_DEPTH_BIT = 0x00000001,
+    /** Array */
+    CORE_DESCRIPTOR_TYPE_IMAGE_ARRAY_BIT = 0x00000002,
+    /** Multisample */
+    CORE_DESCRIPTOR_TYPE_IMAGE_MULTISAMPLE_BIT = 0x00000004,
+    /** Sampled */
+    CORE_DESCRIPTOR_TYPE_IMAGE_SAMPLED_BIT = 0x00000008,
+    /** Image load store */
+    CORE_DESCRIPTOR_TYPE_IMAGE_LOAD_STORE_BIT = 0x00000010,
+
+    /** 1D */
+    CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_1D_BIT = 0x00010000,
+    /** 2D */
+    CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_2D_BIT = 0x00020000,
+    /** 3D */
+    CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_3D_BIT = 0x00040000,
+    /** Cube */
+    CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_CUBE_BIT = 0x00080000,
+    /** Image load store */
+    CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_BUFFER_BIT = 0x0010000,
+    /** Input attachment */
+    CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_SUBPASS_BIT = 0x00200000,
+};
+
+/** Container for additional descriptor type flags */
+using AdditionalDescriptorTypeFlags = uint32_t;
+
 /** Descriptor set layout binding */
 struct DescriptorSetLayoutBinding {
     /** Binding */
@@ -54,9 +83,11 @@ struct DescriptorSetLayoutBinding {
     /** Descriptor type */
     DescriptorType descriptorType { DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM };
     /** Descriptor count */
-    uint32_t descriptorCount { 0 };
+    uint32_t descriptorCount { 0U };
     /** Stage flags */
-    ShaderStageFlags shaderStageFlags { 0 };
+    ShaderStageFlags shaderStageFlags { 0U };
+    /** Additional flags by type, all packed to a single uint */
+    AdditionalDescriptorTypeFlags additionalDescriptorTypeFlags { 0U };
 };
 
 /** Descriptor set layout bindings */
@@ -127,7 +158,7 @@ struct BindableImageWithHandleReference {
     RenderHandleReference samplerHandle;
 };
 
-/** Bindable with sampler handle reference */
+/** Bindable sampler with render handle reference */
 struct BindableSamplerWithHandleReference {
     /** Handle */
     RenderHandleReference handle;
@@ -217,7 +248,7 @@ struct PushConstant {
 struct PipelineLayout {
     /** Push constant */
     PushConstant pushConstant;
-    /** Descriptor set count */
+    /** [[DEPRECATED DO NOT USE]] Descriptor set count */
     uint32_t descriptorSetCount { 0 };
     /** Descriptor sets */
     DescriptorSetLayout descriptorSetLayouts[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] {};

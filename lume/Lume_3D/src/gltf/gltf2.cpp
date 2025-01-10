@@ -88,7 +88,10 @@ IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs)
         if (auto pool = ecs.GetThreadPool(); pool) {
             return CreateGLTF2Importer(ecs, *pool);
         }
-        return IGLTF2Importer::Ptr { new GLTF2::GLTF2Importer(*engine_, *renderContext_, ecs) };
+        auto ret = BASE_NS::make_unique<GLTF2::GLTF2Importer>(*engine_, *renderContext_, ecs);
+        if (ret->IsValid()) {
+            return IGLTF2Importer::Ptr { ret.release() };
+        }
     }
     return nullptr;
 }
@@ -97,7 +100,10 @@ IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs, IThreadPool& pool)
 {
     CORE_ASSERT(engine_ && renderContext_);
     if (engine_ && renderContext_) {
-        return IGLTF2Importer::Ptr { new GLTF2::GLTF2Importer(*engine_, *renderContext_, ecs, pool) };
+        auto ret = BASE_NS::make_unique<GLTF2::GLTF2Importer>(*engine_, *renderContext_, ecs, pool);
+        if (ret->IsValid()) {
+            return IGLTF2Importer::Ptr { ret.release() };
+        }
     }
     return nullptr;
 }
@@ -167,35 +173,37 @@ void Gltf2::Unref() {}
 bool Gltf2::SaveGLTF(IEcs& ecs, const string_view uri)
 {
     CORE_ASSERT(engine_);
-    if (engine_) {
-        if (auto result = GLTF2::ExportGLTF(*engine_, ecs); result.success) {
-            if (auto file = fileManager_.CreateFile(uri); file) {
-                auto const ext = uri.rfind('.');
-                auto const extension = string_view(uri.data() + ext + 1);
-                if (extension == "gltf") {
-                    for (auto const& buffer : result.data->buffers) {
-                        string dataFileUri = uri.substr(0, ext) + ".bin";
-                        if (auto dataFile = fileManager_.CreateFile(dataFileUri); dataFile) {
-                            dataFile->Write(buffer->data.data(), buffer->data.size());
-                            if (auto const path = dataFileUri.rfind('/'); path != string::npos) {
-                                dataFileUri.erase(0, path + 1);
-                            }
-                            buffer->uri = dataFileUri;
-                        }
-                    }
-                    GLTF2::SaveGLTF(*result.data, *file, engine_->GetVersion());
-                } else {
-                    GLTF2::SaveGLB(*result.data, *file, engine_->GetVersion());
-                }
-            } else {
-                result.error += "Failed to create file: " + uri;
-                result.success = false;
-            }
-            return result.success;
-        } else {
-            return result.success;
-        }
+    if (!engine_) {
+        return false;
     }
-    return false;
+    auto file = fileManager_.CreateFile(uri);
+    if (!file) {
+        return false;
+    }
+    const auto result = GLTF2::ExportGLTF(*engine_, ecs);
+    if (!result.success) {
+        return false;
+    }
+
+    auto const ext = uri.rfind('.');
+    auto const extension = string_view(uri.data() + ext + 1);
+    if (extension == "gltf") {
+        for (auto const& buffer : result.data->buffers) {
+            string dataFileUri = uri.substr(0, ext) + ".bin";
+            auto dataFile = fileManager_.CreateFile(dataFileUri);
+            if (!dataFile) {
+            }
+            dataFile->Write(buffer->data.data(), buffer->data.size());
+            if (auto const path = dataFileUri.rfind('/'); path != string::npos) {
+                dataFileUri.erase(0, path + 1);
+            }
+            buffer->uri = dataFileUri;
+        }
+        GLTF2::SaveGLTF(*result.data, *file, engine_->GetVersion());
+    } else {
+        GLTF2::SaveGLB(*result.data, *file, engine_->GetVersion());
+    }
+
+    return true;
 }
 CORE3D_END_NAMESPACE()

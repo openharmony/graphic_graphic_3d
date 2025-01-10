@@ -21,10 +21,12 @@
 #include <core/os/intf_platform.h>
 
 CORE_BEGIN_NAMESPACE()
+struct PlatformCreateExtensionInfo;
 struct PlatformCreateInfo;
 class Platform {
 public:
     static CORE_NS::IPlatform::Ptr Create(CORE_NS::PlatformCreateInfo const& createInfo);
+    static const CORE_NS::PlatformCreateExtensionInfo* Extensions(PlatformCreateInfo const& createInfo);
 };
 CORE_END_NAMESPACE()
 

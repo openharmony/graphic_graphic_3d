@@ -15,9 +15,10 @@
 
 #include "NodeJS.h"
 
-#include <scene_plugin/interface/intf_node.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <scene/interface/intf_node.h>
+#include <scene/interface/intf_scene.h>
 
+#include "SceneJS.h"
 void NodeJS::Init(napi_env env, napi_value exports)
 {
     BASE_NS::vector<napi_property_descriptor> node_props;
@@ -34,7 +35,7 @@ void NodeJS::Init(napi_env env, napi_value exports)
 
 NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject<NodeJS>(e, i), NodeImpl(NodeImpl::NODE)
 {
-    LOG_F("NodeJS ++");
+    LOG_V("NodeJS ++");
 
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     if (!fromJs) {
@@ -42,21 +43,33 @@ NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject<NodeJS>(e, i), Nod
         // expecting caller to finish initialization
         return;
     }
-    // java script call.. with arguments
-    NapiApi::Object scene = fromJs.Arg<0>();
-    scene_ = scene;
-    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene);
 
+    {
+        // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
+        NapiApi::Object meJs(fromJs.This());
+        NapiApi::Object scene = fromJs.Arg<0>();
+        auto* tro = scene.Native<TrueRootObject>();
+        if (tro) {
+            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+            if (sceneJS) {
+                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+            }
+        }
+    }
+
+    // java script call.. with arguments
+    scene_ = fromJs.Arg<0>().valueOrDefault();
+    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
     if (scn == nullptr) {
-        CORE_LOG_F("Invalid scene for NodeJS!");
+        // hmm..
+        LOG_F("Invalid scene for NodeJS!");
         return;
     }
     NapiApi::Object args = fromJs.Arg<1>();
 
     auto obj = GetNativeObjectParam<META_NS::IObject>(args);
     if (obj) {
-        NapiApi::Object meJs(e, fromJs.This());
-        StoreJsObj(obj, meJs);
+        StoreJsObj(obj, fromJs.This());
         return;
     }
 
@@ -72,47 +85,53 @@ NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject<NodeJS>(e, i), Nod
 
     BASE_NS::string nodePath;
 
-    if (path) {
+    if (path.IsDefined()) {
         // create using path
         nodePath = path.valueOrDefault("");
-    } else if (name) {
+    } else if (name.IsDefined()) {
         // use the name as path (creates under root)
         nodePath = name.valueOrDefault("");
-    } else {
-        // no name or path defined should this just fail?
     }
 
     // Create actual node object.
-    SCENE_NS::INode::Ptr node;
-    ExecSyncTask([scn, nodePath, &node]() {
-        node = scn->CreateNode<SCENE_NS::INode>(nodePath, true);
-        return META_NS::IAny::Ptr {};
-    });
+    SCENE_NS::INode::Ptr node = scn->CreateNode(nodePath).GetResult();
 
     SetNativeObject(interface_pointer_cast<META_NS::IObject>(node), false);
     node.reset();
-    NapiApi::Object meJs(e, fromJs.This());
+    NapiApi::Object meJs(fromJs.This());
     StoreJsObj(GetNativeObject(), meJs);
 
-    if (name) {
+    if (name.IsDefined()) {
         // set the name of the object. if we were given one
         meJs.Set("name", name);
     }
 }
 NodeJS::~NodeJS()
 {
-    LOG_F("NodeJS --");
+    LOG_V("NodeJS --");
 }
 void* NodeJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == NodeJS::ID) {
+    if (id == NodeJS::ID)
         return this;
-    }
     return NodeImpl::GetInstanceImpl(id);
 }
 
-void NodeJS::DisposeNative()
+void NodeJS::DisposeNative(void*)
 {
-    LOG_F("NodeJS::DisposeNative");
-    scene_.Reset();
+    if (!disposed_) {
+        LOG_V("NodeJS::DisposeNative");
+        disposed_ = true;
+
+        NapiApi::Object obj = scene_.GetObject();
+        auto* tro = obj.Native<TrueRootObject>();
+        if (tro) {
+            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+            if (sceneJS) {
+                sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+            }
+        }
+
+        scene_.Reset();
+    }
 }

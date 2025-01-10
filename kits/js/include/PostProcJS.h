@@ -13,11 +13,9 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_POSTPROCJS_H
-#define OHOS_RENDER_3D_POSTPROCJS_H
-
+#ifndef POSTPROCJS_H
+#define POSTPROCJS_H
 #include "BaseObjectJS.h"
-#include "SceneResourceImpl.h"
 
 class PostProcJS : public BaseObject<PostProcJS> {
 public:
@@ -26,20 +24,21 @@ public:
 
     PostProcJS(napi_env, napi_callback_info);
     ~PostProcJS() override;
-    void* GetInstanceImpl(uint32_t id) override;
+    void* GetInstanceImpl(uint32_t) override;
 
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
 
     // JS properties
     napi_value GetToneMapping(NapiApi::FunctionContext<>& ctx);
     void SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value GetBloom(NapiApi::FunctionContext<>& ctx);
-    void SetBloom(NapiApi::FunctionContext<bool>& ctx);
+    void SetBloom(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     NapiApi::StrongRef toneMap_; // keep a strong ref..
 
     NapiApi::WeakRef camera_; // weak ref to owning camera.
+    NapiApi::StrongRef bloom_; // keep a strong ref..
 };
-#endif // OHOS_RENDER_3D_POSTPROCJS_H
+#endif

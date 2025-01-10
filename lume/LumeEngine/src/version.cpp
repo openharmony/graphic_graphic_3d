@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,7 @@
 
 CORE_BEGIN_NAMESPACE()
 CORE_PUBLIC BASE_NS::string_view GetVersion() { return ""; }
-CORE_PUBLIC BASE_NS::string_view GetVersionRev() { return ""; }
+CORE_PUBLIC BASE_NS::string_view GetVersionRev() { return "f4a6960"; }
 CORE_PUBLIC BASE_NS::string_view GetVersionBranch() { return ""; }
 #ifdef NDEBUG
 CORE_PUBLIC bool IsDebugBuild() { return true; }

@@ -19,17 +19,14 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 using CORE3D_NS::AnimationComponent;
 DECLARE_PROPERTY_TYPE(AnimationComponent::PlaybackState);
 
-BEGIN_ENUM(AnimationPlaybackStateMetaData, AnimationComponent::PlaybackState)
-DECL_ENUM(AnimationComponent::PlaybackState, STOP, "Stop")
-DECL_ENUM(AnimationComponent::PlaybackState, PLAY, "Play")
-DECL_ENUM(AnimationComponent::PlaybackState, PAUSE, "Pause")
-END_ENUM(AnimationPlaybackStateMetaData, AnimationComponent::PlaybackState)
+ENUM_TYPE_METADATA(
+    AnimationComponent::PlaybackState, ENUM_VALUE(STOP, "Stop"), ENUM_VALUE(PLAY, "Play"), ENUM_VALUE(PAUSE, "Pause"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -42,34 +39,33 @@ using CORE_NS::IEcs;
 using CORE_NS::Property;
 
 class AnimationComponentManager final : public BaseManager<AnimationComponent, IAnimationComponentManager> {
-    BEGIN_PROPERTY(AnimationComponent, ComponentMetadata)
+    BEGIN_PROPERTY(AnimationComponent, componentMetaData_)
 #include <3d/ecs/components/animation_component.h>
     END_PROPERTY();
-    const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit AnimationComponentManager(IEcs& ecs)
-        : BaseManager<AnimationComponent, IAnimationComponentManager>(ecs, CORE_NS::GetName<AnimationComponent>())
+        : BaseManager<AnimationComponent, IAnimationComponentManager>(ecs, CORE_NS::GetName<AnimationComponent>(), 0U)
     {}
 
     ~AnimationComponentManager() = default;
 
     size_t PropertyCount() const override
     {
-        return ComponentMetaData.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < ComponentMetaData.size()) {
-            return &ComponentMetaData[index];
+        if (index < BASE_NS::countof(componentMetaData_)) {
+            return &componentMetaData_[index];
         }
         return nullptr;
     }
 
     array_view<const Property> MetaData() const override
     {
-        return ComponentMetaData;
+        return componentMetaData_;
     }
 };
 

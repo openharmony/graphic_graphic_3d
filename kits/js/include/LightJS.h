@@ -12,14 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef OHOS_RENDER_3D_LIGHT_JS_H
-#define OHOS_RENDER_3D_LIGHT_JS_H
+#ifndef LIGHT_JS_H
+#define LIGHT_JS_H
 #include <meta/interface/intf_object.h>
 
 #include "BaseObjectJS.h"
 #include "ColorProxy.h"
-#include "NodeJS.h"
+#include "NodeImpl.h"
 
 class BaseLight : public NodeImpl {
 public:
@@ -76,7 +75,7 @@ public:
 
 private:
     void* GetInstanceImpl(uint32_t id);
-    void DisposeNative();
+    void DisposeNative(void*);
     void Finalize(napi_env env);
 };
 
@@ -88,7 +87,7 @@ public:
 
 private:
     void* GetInstanceImpl(uint32_t id);
-    void DisposeNative();
+    void DisposeNative(void*);
     void Finalize(napi_env env);
     napi_value GetNear(NapiApi::FunctionContext<>& ctx);
     void SetNear(NapiApi::FunctionContext<float>& ctx);
@@ -101,8 +100,8 @@ public:
 
 private:
     void* GetInstanceImpl(uint32_t id);
-    void DisposeNative();
+    void DisposeNative(void*);
     void Finalize(napi_env env);
 };
 
-#endif // OHOS_RENDER_3D_LIGHT_JS_H
+#endif

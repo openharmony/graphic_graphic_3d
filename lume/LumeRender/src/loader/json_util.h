@@ -31,82 +31,34 @@
 #include <core/json/json.h>
 #include <core/namespace.h>
 
+#include "util/json_util.h"
 #include "util/log.h"
 #include "util/string_util.h"
 
 RENDER_BEGIN_NAMESPACE()
-#define CORE_JSON_SERIALIZE_ENUM(ENUM_TYPE, ...)                                                                    \
-    template<typename BasicJsonType>                                                                                \
-    inline void to_json(BasicJsonType& j, const ENUM_TYPE& e)                                                       \
-    {                                                                                                               \
-        static_assert(std::is_enum<ENUM_TYPE>::value, #ENUM_TYPE " must be an enum!");                              \
-        static constexpr std::pair<ENUM_TYPE, BASE_NS::string_view> m[] = __VA_ARGS__;                              \
-        auto it = std::find_if(std::begin(m), std::end(m),                                                          \
-            [e](const std::pair<ENUM_TYPE, BASE_NS::string_view>& ej_pair) -> bool { return ej_pair.first == e; }); \
-        j = ((it != std::end(m)) ? it : std::begin(m))->second;                                                     \
-    }                                                                                                               \
-    template<typename BasicJsonType>                                                                                \
-    inline bool FromJson(const BasicJsonType& j, ENUM_TYPE& e)                                                      \
-    {                                                                                                               \
-        static_assert(std::is_enum<ENUM_TYPE>::value, #ENUM_TYPE " must be an enum!");                              \
-        static constexpr std::pair<ENUM_TYPE, BASE_NS::string_view> m[] = __VA_ARGS__;                              \
-        if (j.is_string()) {                                                                                        \
-            auto it = std::find_if(std::begin(m), std::end(m),                                                      \
-                [name = j.string_](const std::pair<ENUM_TYPE, BASE_NS::string_view>& ej_pair) -> bool {             \
-                    return ej_pair.second == name;                                                                  \
-                });                                                                                                 \
-            e = ((it != std::end(m)) ? it : std::begin(m))->first;                                                  \
-            return true;                                                                                            \
-        }                                                                                                           \
-        return false;                                                                                               \
+#define RENDER_JSON_SERIALIZE_ENUM(ENUM_TYPE, ...)                                                 \
+    template<typename BasicJsonType>                                                               \
+    inline bool FromJson(const BasicJsonType& j, ENUM_TYPE& e)                                     \
+    {                                                                                              \
+        static_assert(std::is_enum<ENUM_TYPE>::value, #ENUM_TYPE " must be an enum!");             \
+        using StorageType = std::underlying_type_t<ENUM_TYPE>;                                     \
+        struct Pair {                                                                              \
+            constexpr Pair(StorageType v, const char* c) : value(v), name(c)                       \
+            {}                                                                                     \
+            constexpr Pair(ENUM_TYPE v, const char* c) : value(StorageType(v)), name(c)            \
+            {}                                                                                     \
+            StorageType value;                                                                     \
+            BASE_NS::string_view name;                                                             \
+        };                                                                                         \
+        static constexpr Pair m[] = __VA_ARGS__;                                                   \
+        if (j.is_string()) {                                                                       \
+            auto it = std::find_if(std::begin(m), std::end(m),                                     \
+                [name = j.string_](const Pair& ej_pair) -> bool { return ej_pair.name == name; }); \
+            e = static_cast<ENUM_TYPE>(((it != std::end(m)) ? it : std::begin(m))->value);         \
+            return true;                                                                           \
+        }                                                                                          \
+        return false;                                                                              \
     }
-
-template<typename T, BASE_NS::enable_if_t<BASE_NS::is_same_v<bool, T>, bool> = true>
-inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
-{
-    if (jsonData.is_boolean()) {
-        result = static_cast<T>(jsonData.boolean_);
-        return true;
-    }
-    return false;
-}
-
-template<typename T, BASE_NS::enable_if_t<!BASE_NS::is_same_v<bool, T> && BASE_NS::is_arithmetic_v<T>, bool> = true>
-inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
-{
-    if (jsonData.is_number()) {
-        result = jsonData.as_number<T>();
-        return true;
-    }
-    return false;
-}
-
-template<typename T, BASE_NS::enable_if_t<BASE_NS::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
-inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
-{
-    if (jsonData.is_string()) {
-        result = BASE_NS::string_view { jsonData.string_ };
-        return true;
-    }
-    return false;
-}
-
-namespace Detail {
-constexpr const BASE_NS::string_view INVALID_DATATYPE = "Failed to read value, invalid datatype: ";
-template<typename T>
-inline T Convert(const CORE_NS::json::value& value)
-{
-    T result;
-    FromJson(value, result);
-    return result;
-}
-
-template<typename Container, typename OutIt, typename Fn>
-inline OutIt Transform(Container&& container, OutIt dest, Fn func)
-{
-    return std::transform(container.begin(), container.end(), dest, func);
-}
-} // namespace Detail
 
 template<class T>
 struct JsonContext {
@@ -123,32 +75,7 @@ inline bool ParseHex(BASE_NS::string_view str, uint32_t& val)
     return !(end != (str.end().ptr()) || errno != 0);
 }
 
-template<class JsonType, typename T>
-inline void FromJson(const JsonType& jsonData, BASE_NS::array_view<T> container)
-{
-    if (jsonData.is_array()) {
-        const auto view =
-            BASE_NS::array_view(jsonData.array_.data(), BASE_NS::Math::min(jsonData.array_.size(), container.size()));
-        Detail::Transform(view, std::begin(container), [](const JsonType& value) { return Detail::Convert<T>(value); });
-    }
-}
-
-template<class JsonType, typename T>
-inline void FromJson(const JsonType& jsonData, BASE_NS::vector<T>& container)
-{
-    if (jsonData.is_array()) {
-        Detail::Transform(jsonData.array_, std::back_inserter(container),
-            [](const JsonType& value) { return Detail::Convert<T>(value); });
-    }
-}
-
-template<class JsonType, typename T, size_t N>
-inline void FromJson(const JsonType& jsonData, T (&container)[N])
-{
-    FromJson(jsonData, BASE_NS::array_view(container));
-}
-
-template<class JsonType, typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>>>
+template<class JsonType, class T, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>, bool> = true>
 bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
@@ -229,7 +156,7 @@ bool SafeGetJsonUidValue(
 }
 
 template<class ArrayType, class JsonType, class ResultType>
-void ParseArray(JsonType const& jData, char const* element, BASE_NS::vector<ArrayType>& out, ResultType& res)
+void ParseArray(JsonType const& jData, const char* element, BASE_NS::vector<ArrayType>& out, ResultType& res)
 {
     if (auto const array = jData.find(element); array && array->is_array()) {
         out.reserve(out.size() + array->array_.size());
@@ -256,15 +183,6 @@ void SafeGetJsonMask(
             error += "Failed to read value: " + element + " (" + CORE_NS::json::to_string(*mask) + ")";
         }
     }
-}
-
-template<class JsonType, typename T,
-    BASE_NS::enable_if_t<BASE_NS::is_array_v<decltype(T::data)> &&
-                             BASE_NS::is_arithmetic_v<BASE_NS::remove_extent_t<decltype(T::data)>>,
-        bool> = true>
-inline void FromJson(const JsonType& jsonData, T& output)
-{
-    FromJson(jsonData, output.data);
 }
 RENDER_END_NAMESPACE()
 

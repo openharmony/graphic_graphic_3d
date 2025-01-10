@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <base/containers/array_view.h>
+#include <base/math/vector.h>
 #include <base/util/uid.h>
 #include <core/plugin/intf_interface.h>
 #include <render/device/gpu_resource_desc.h>
@@ -264,14 +265,14 @@ public:
     virtual void UpdateDescriptorSets(const BASE_NS::array_view<const RenderHandle> handles,
         const BASE_NS::array_view<const DescriptorSetLayoutBindingResources> bindingResources) = 0;
 
-    /** Bind a single descriptor set to pipeline.
+    /** Bind a single descriptor set to pipeline. (Might combine consecutive descriptor set bindings)
      * There can be maximum of 4 sets. I.e. the maximum set index is 3.
      * @param set Set to bind
      * @param handle Handle to resource
      */
     virtual void BindDescriptorSet(const uint32_t set, const RenderHandle handle) = 0;
 
-    /** Bind a single descriptor set to pipeline.
+    /** Bind a single descriptor set to pipeline. (Might combine consecutive descriptor set bindings)
      * There can be maximum of 4 sets. I.e. the maximum set index is 3.
      * @param set Set to bind
      * @param handle Handle to resource
@@ -280,7 +281,7 @@ public:
     virtual void BindDescriptorSet(
         const uint32_t set, const RenderHandle handle, const BASE_NS::array_view<const uint32_t> dynamicOffsets) = 0;
 
-    /** Bind multiple descriptor sets to pipeline.
+    /** Bind multiple descriptor sets to pipeline. (Might combine consecutive descriptor set bindings)
      * There can be maximum of 4 sets. I.e. the maximum set index is 3.
      * Descriptor sets needs to be a contiguous set.
      * @param firstSet First set index
@@ -297,16 +298,16 @@ public:
         BASE_NS::array_view<const uint32_t> dynamicOffsets;
     };
 
-    /** Bind a single descriptor set to pipeline.
+    /** Bind a single descriptor set to pipeline. (Might combine consecutive descriptor set bindings)
      * There can be maximum of 4 sets. I.e. the maximum set index is 3.
      * @param set Set to bind
      * @param descriptorSetData Descriptor set data
      */
     virtual void BindDescriptorSet(const uint32_t set, const BindDescriptorSetData& desriptorSetData) = 0;
 
-    /** Bind multiple descriptor sets to pipeline some with dynamic offsets.
-     * There can be maximum of 4 sets. I.e. the maximum set index is 3.
-     * Descriptor sets needs to be a contiguous set.
+    /** Bind multiple descriptor sets to pipeline some with dynamic offsets. (Might combine consecutive descriptor set
+     * bindings.) There can be maximum of 4 sets. I.e. the maximum set index is 3. Descriptor sets needs to be a
+     * contiguous set.
      * @param firstSet First set index
      * @param descriptorSetData Descriptor set data
      */
@@ -400,6 +401,24 @@ public:
      */
     virtual void SetExecuteBackendFramePosition() = 0;
 
+    /** Begin render debug marker (works only when RENDER_DEBUG_MARKERS_ENABLED is 1)
+     * Can be visualized with different graphics tools.
+     * Default color is white.
+     * @param name Name of the marker
+     */
+    virtual void BeginDebugMarker(const BASE_NS::string_view name) = 0;
+
+    /** Begin render debug marker (works only when RENDER_DEBUG_MARKERS_ENABLED is 1)
+     * Can be visualized with different graphics tools.
+     * @param name Name of the marker
+     * @param color Color of the marker
+     */
+    virtual void BeginDebugMarker(const BASE_NS::string_view name, const BASE_NS::Math::Vec4 color) = 0;
+
+    /** Ends the debug marker.
+     */
+    virtual void EndDebugMarker() = 0;
+
 protected:
     IRenderCommandList() = default;
     virtual ~IRenderCommandList() = default;
@@ -409,6 +428,53 @@ protected:
     IRenderCommandList(IRenderCommandList&&) = delete;
     IRenderCommandList& operator=(IRenderCommandList&&) = delete;
 };
+
+#if (RENDER_DEBUG_MARKERS_ENABLED == 1)
+
+class RenderCommandListDebugMarkerScope final {
+public:
+    inline RenderCommandListDebugMarkerScope(IRenderCommandList& cmdList, const BASE_NS::string_view name);
+    inline RenderCommandListDebugMarkerScope(
+        IRenderCommandList& cmdList, const BASE_NS::string_view name, const BASE_NS::Math::Vec4 color);
+    inline ~RenderCommandListDebugMarkerScope();
+
+protected:
+    IRenderCommandList& cmdList_;
+};
+
+inline RenderCommandListDebugMarkerScope::RenderCommandListDebugMarkerScope(
+    IRenderCommandList& cmdList, const BASE_NS::string_view name)
+    : cmdList_(cmdList)
+{
+    cmdList_.BeginDebugMarker(name);
+}
+
+inline RenderCommandListDebugMarkerScope::RenderCommandListDebugMarkerScope(
+    IRenderCommandList& cmdList, const BASE_NS::string_view name, const BASE_NS::Math::Vec4 color)
+    : cmdList_(cmdList)
+{
+    cmdList_.BeginDebugMarker(name, color);
+}
+
+inline RenderCommandListDebugMarkerScope::~RenderCommandListDebugMarkerScope()
+{
+    cmdList_.EndDebugMarker();
+}
+
+// Helper to concatenate macro values.
+#define RENDER_CMD_LIST_CONCAT_NOEXP(value0, value1) value0##value1
+#define RENDER_CMD_LIST_CONCAT(value0, value1) RENDER_CMD_LIST_CONCAT_NOEXP(value0, value1)
+
+#define RENDER_DEBUG_MARKER_SCOPE(cmdList, name) \
+    RENDER_NS::RenderCommandListDebugMarkerScope RENDER_CMD_LIST_CONCAT(rclDebugMarkerScope, __LINE__)(cmdList, name)
+#define RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, name, color)                                                  \
+    RENDER_NS::RenderCommandListDebugMarkerScope RENDER_CMD_LIST_CONCAT(rclDebugMarkerColorScope, __LINE__)( \
+        cmdList, name, color)
+
+#else
+#define RENDER_DEBUG_MARKER_SCOPE(cmdList, name)
+#define RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, name, color)
+#endif
 RENDER_END_NAMESPACE()
 
 #endif // API_RENDER_IRENDER_COMMAND_LIST_H

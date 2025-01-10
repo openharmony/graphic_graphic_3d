@@ -34,7 +34,7 @@ constexpr void Uint8ToHex(const uint8_t value, char* c0, char* c1)
 
 constexpr Uid StringToUid(string_view value)
 {
-    constexpr size_t UID_LENGTH = 36;
+    constexpr size_t UID_LENGTH = 36U;
     BASE_ASSERT(value.size() == UID_LENGTH);
     char str[UID_LENGTH + 1] {};
     str[UID_LENGTH] = '\0';
@@ -44,39 +44,39 @@ constexpr Uid StringToUid(string_view value)
 
 constexpr fixed_string<36u> to_string(const Uid& value)
 {
-    constexpr size_t UID_LENGTH = 36;
+    constexpr size_t UID_LENGTH = 36U;
     fixed_string<UID_LENGTH> str(UID_LENGTH);
 
     auto* dst = str.data();
     uint64_t data = value.data[0];
     for (size_t i = 0; i < sizeof(uint32_t); ++i) {
         Uint8ToHex(data >> 56U, dst, dst + 1);
-        dst += 2;
+        dst += 2U;
         data <<= 8U;
     }
     *dst++ = '-';
     for (size_t i = 0; i < sizeof(uint16_t); ++i) {
         Uint8ToHex(data >> 56U, dst, dst + 1);
-        dst += 2;
+        dst += 2U;
         data <<= 8U;
     }
     *dst++ = '-';
     for (size_t i = 0; i < sizeof(uint16_t); ++i) {
         Uint8ToHex(data >> 56U, dst, dst + 1);
-        dst += 2;
+        dst += 2U;
         data <<= 8U;
     }
     *dst++ = '-';
     data = value.data[1];
     for (size_t i = 0; i < sizeof(uint16_t); ++i) {
         Uint8ToHex(data >> 56U, dst, dst + 1);
-        dst += 2;
+        dst += 2U;
         data <<= 8U;
     }
     *dst++ = '-';
-    for (size_t i = 0; i < (sizeof(uint16_t) * 3); ++i) {
+    for (size_t i = 0; i < (sizeof(uint16_t) * 3U); ++i) {
         Uint8ToHex(data >> 56U, dst, dst + 1);
-        dst += 2;
+        dst += 2U;
         data <<= 8U;
     }
     return str;

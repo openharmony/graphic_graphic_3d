@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DM_INPLANE_SAMPLING_COMMON_H
-#define SHADERS__COMMON__3D_DM_INPLANE_SAMPLING_COMMON_H
+#ifndef SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_COMMON_H
+#define SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_COMMON_H
 
 /*
  * Needs to be included after the descriptor sets are bound.
@@ -336,6 +336,17 @@ CORE_RELAXEDP vec4 GetUnpackBaseColorFinalValue(in CORE_RELAXEDP vec4 color, in 
     return baseColor;
 }
 
+uint GetMaterialInstanceIndex(in uint indices)
+{
+    uint instanceIdx = 0U;
+    if (((CORE_MATERIAL_FLAGS & CORE_MATERIAL_GPU_INSTANCING_BIT) == CORE_MATERIAL_GPU_INSTANCING_BIT) &&
+        ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_GPU_INSTANCING_MATERIAL_BIT) ==
+            CORE_MATERIAL_GPU_INSTANCING_MATERIAL_BIT)) {
+        instanceIdx = GetUnpackFlatIndicesInstanceIdx(indices);
+    }
+    return instanceIdx;
+}
+
 // DEPRECATED: use the one with cameraIdx
 vec2 GetFinalCalculatedVelocity(in vec3 pos, in vec3 prevPos)
 {
@@ -365,4 +376,4 @@ vec2 GetFinalCalculatedVelocity(in vec3 pos, in vec3 prevPos, in uint cameraIdx)
     // better precision for fp16 and expected in parts of engine
     return (uvPos - oldUvPos) * uGeneralData.viewportSizeInvViewportSize.xy;
 }
-#endif // SHADERS__COMMON__3D_DM_INPLANE_SAMPLING_COMMON_H
+#endif // SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_COMMON_H

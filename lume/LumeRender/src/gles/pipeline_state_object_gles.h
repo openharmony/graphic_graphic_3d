@@ -50,10 +50,10 @@ public:
         const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
         const ShaderSpecializationConstantDataView& specializationConstants,
-        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
-        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex);
+        const Base::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+        const Base::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs);
 
-    ~GraphicsPipelineStateObjectGLES();
+    ~GraphicsPipelineStateObjectGLES() override;
 
     const PipelineStateObjectPlatformDataGL& GetPlatformData() const;
 
@@ -74,7 +74,7 @@ class ComputePipelineStateObjectGLES final : public ComputePipelineStateObject {
 public:
     ComputePipelineStateObjectGLES(Device& device, const GpuComputeProgram& gpuComputeProgram,
         const PipelineLayout& pipelineLayout, const ShaderSpecializationConstantDataView& specializationConstants);
-    ~ComputePipelineStateObjectGLES();
+    ~ComputePipelineStateObjectGLES() override;
 
     const PipelineStateObjectPlatformDataGL& GetPlatformData() const;
 

@@ -12,56 +12,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "ToneMapJS.h"
 
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/property/property_events.h>
-#include <scene_plugin/api/camera.h> //for the classid...
-#include <scene_plugin/api/node_uid.h>
-#include <scene_plugin/interface/intf_ecs_scene.h>
-#include <scene_plugin/interface/intf_node.h>
-#include <scene_plugin/interface/intf_postprocess.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <scene/interface/intf_node.h>
+#include <scene/interface/intf_postprocess.h>
+#include <scene/interface/intf_scene.h>
 
 #include <render/intf_render_context.h>
 
-#include "PostProcJS.h"
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 using namespace SCENE_NS;
-SCENE_NS::ITonemap::TonemapType ConvertTo(ToneMapJS::ToneMappingType typeI)
+SCENE_NS::TonemapType ConvertTo(ToneMapJS::ToneMappingType typeI)
 {
-    SCENE_NS::ITonemap::TonemapType type;
+    SCENE_NS::TonemapType type;
     switch (typeI) {
         case ToneMapJS::ToneMappingType::ACES:
-            type = SCENE_NS::ITonemap::TonemapType::ACES;
+            type = SCENE_NS::TonemapType::ACES;
             break;
         case ToneMapJS::ToneMappingType::ACES_2020:
-            type = SCENE_NS::ITonemap::TonemapType::ACES_2020;
+            type = SCENE_NS::TonemapType::ACES_2020;
             break;
         case ToneMapJS::ToneMappingType::FILMIC:
-            type = SCENE_NS::ITonemap::TonemapType::FILMIC;
+            type = SCENE_NS::TonemapType::FILMIC;
             break;
         default:
             // default from lowlev..
-            type = ITonemap::TonemapType::ACES;
+            type = SCENE_NS::TonemapType::ACES;
             break;
     }
     return type;
 }
-ToneMapJS::ToneMappingType ConvertFrom(SCENE_NS::ITonemap::TonemapType typeI)
+ToneMapJS::ToneMappingType ConvertFrom(SCENE_NS::TonemapType typeI)
 {
     ToneMapJS::ToneMappingType type;
     switch (typeI) {
-        case SCENE_NS::ITonemap::TonemapType::ACES:
+        case SCENE_NS::TonemapType::ACES:
             type = ToneMapJS::ToneMappingType::ACES;
             break;
-        case SCENE_NS::ITonemap::TonemapType::ACES_2020:
+        case SCENE_NS::TonemapType::ACES_2020:
             type = ToneMapJS::ToneMappingType::ACES_2020;
             break;
-        case SCENE_NS::ITonemap::TonemapType::FILMIC:
+        case SCENE_NS::TonemapType::FILMIC:
             type = ToneMapJS::ToneMappingType ::FILMIC;
             break;
         default:
@@ -72,7 +69,7 @@ ToneMapJS::ToneMappingType ConvertFrom(SCENE_NS::ITonemap::TonemapType typeI)
     return type;
 }
 
-SCENE_NS::ITonemap::TonemapType ConvertTo(uint32_t typeI)
+SCENE_NS::TonemapType ConvertTo(uint32_t typeI)
 {
     return ConvertTo(static_cast<ToneMapJS::ToneMappingType>(typeI));
 }
@@ -83,8 +80,8 @@ void ToneMapJS::Init(napi_env env, napi_value exports)
     BASE_NS::vector<napi_property_descriptor> node_props;
     // clang-format off
     node_props.emplace_back(GetSetProperty<uint32_t, ToneMapJS, &ToneMapJS::GetType, &ToneMapJS::SetType>("type"));
-    node_props.emplace_back(GetSetProperty<float, ToneMapJS, &ToneMapJS::GetExposure,
-        &ToneMapJS::SetExposure>("exposure"));
+    node_props.emplace_back(
+        GetSetProperty<float, ToneMapJS, &ToneMapJS::GetExposure, &ToneMapJS::SetExposure>("exposure"));
     node_props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, ToneMapJS, &ToneMapJS::Dispose>("destroy"));
     // clang-format on
 
@@ -98,8 +95,7 @@ void ToneMapJS::Init(napi_env env, napi_value exports)
 
     NapiApi::Object exp(env, exports);
 
-    napi_value eType;
-    napi_value v;
+    napi_value eType, v;
     napi_create_object(env, &eType);
 #define DECL_ENUM(enu, x)                            \
     napi_create_uint32(env, ToneMappingType::x, &v); \
@@ -114,72 +110,67 @@ void ToneMapJS::Init(napi_env env, napi_value exports)
 
 napi_value ToneMapJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
-    LOG_F("ToneMapJS::Dispose");
-    DisposeNative();
+    LOG_V("ToneMapJS::Dispose");
+    DisposeNative(nullptr);
     return {};
 }
-void ToneMapJS::DisposeNative()
+void ToneMapJS::DisposeNative(void*)
 {
     if (!disposed_) {
         disposed_ = true;
-        LOG_F("ToneMapJS::DisposeNative");
+        LOG_V("ToneMapJS::DisposeNative");
         if (auto tmp = interface_pointer_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
             // reset the native object refs
             SetNativeObject(nullptr, false);
             SetNativeObject(nullptr, true);
-
-            ExecSyncTask([scn = BASE_NS::move(tmp)]() { return META_NS::IAny::Ptr {}; });
         }
     }
 }
 void* ToneMapJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == ToneMapJS::ID) {
+    if (id == ToneMapJS::ID)
         return this;
-    }
     return nullptr;
 }
 void ToneMapJS::Finalize(napi_env env)
 {
-    // hmm.. do i need to do something BEFORE the object gets deleted..
-    DisposeNative();
+    DisposeNative(nullptr);
     BaseObject<ToneMapJS>::Finalize(env);
 }
 
 ToneMapJS::ToneMapJS(napi_env e, napi_callback_info i) : BaseObject<ToneMapJS>(e, i)
 {
-    LOG_F("ToneMapJS ++");
+    LOG_V("ToneMapJS ++");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     if (!fromJs) {
         // no arguments. so internal create.
         // expecting caller to finish
         return;
     }
+
     // postprocess that we bind to..
     NapiApi::Object postProcJS = fromJs.Arg<0>();
     auto postproc = GetNativeMeta<SCENE_NS::IPostProcess>(postProcJS);
+
     NapiApi::Object toneMapArgs = fromJs.Arg<1>();
+
     // now, based on parameters, initialize the object
     // so it is a tonemap
     float exposure = toneMapArgs.Get<float>("exposure").valueOrDefault(0.7);
-    SCENE_NS::ITonemap::TonemapType type =
+    SCENE_NS::TonemapType type =
         ConvertTo(toneMapArgs.Get<uint32_t>("type").valueOrDefault(ToneMappingType::ACES));
 
     auto tonemap = GetNativeObjectParam<SCENE_NS::ITonemap>(toneMapArgs);
-
-    ExecSyncTask([&tonemap, exposure, type, postproc]() -> META_NS::IAny::Ptr {
-        if (!tonemap) {
-            tonemap = META_NS::GetObjectRegistry().Create<SCENE_NS::ITonemap>(SCENE_NS::ClassId::Tonemap);
-        }
-        tonemap->Type()->SetValue(type);
-        tonemap->Exposure()->SetValue(exposure);
-        tonemap->Enabled()->SetValue(true);
-        postproc->Tonemap()->SetValue(tonemap);
-        return {};
-    });
+    if (!tonemap) {
+        tonemap = META_NS::GetObjectRegistry().Create<SCENE_NS::ITonemap>(SCENE_NS::ClassId::Tonemap);
+    }
+    tonemap->Type()->SetValue(type);
+    tonemap->Exposure()->SetValue(exposure);
+    tonemap->Enabled()->SetValue(true);
+    postproc->Tonemap()->SetValue(tonemap);
     auto obj = interface_pointer_cast<META_NS::IObject>(tonemap);
-    // process constructor args..
-    NapiApi::Object meJs(e, fromJs.This());
+    //  process constructor args..
+    NapiApi::Object meJs(fromJs.This());
     // weak ref, due to the ToneMap class being owned by the postprocess.
     SetNativeObject(obj, false);
     StoreJsObj(obj, meJs);
@@ -187,8 +178,8 @@ ToneMapJS::ToneMapJS(napi_env e, napi_callback_info i) : BaseObject<ToneMapJS>(e
 
 ToneMapJS::~ToneMapJS()
 {
-    LOG_F("ToneMapJS --");
-    DisposeNative();
+    LOG_V("ToneMapJS --");
+    DisposeNative(nullptr);
     if (!GetNativeObject()) {
         return;
     }
@@ -196,28 +187,20 @@ ToneMapJS::~ToneMapJS()
 
 napi_value ToneMapJS::GetType(NapiApi::FunctionContext<>& ctx)
 {
-    SCENE_NS::ITonemap::TonemapType type = SCENE_NS::ITonemap::TonemapType::ACES; // default
+    SCENE_NS::TonemapType type = SCENE_NS::TonemapType::ACES; // default
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        ExecSyncTask([toneMap, &type]() {
-            type = toneMap->Type()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        type = toneMap->Type()->GetValue();
     }
 
     auto typeI = ConvertFrom(type);
-    napi_value value;
-    napi_status status = napi_create_uint32(ctx, static_cast<uint32_t>(typeI), &value);
-    return value;
+    return ctx.GetNumber(static_cast<uint32_t>(typeI));
 }
 void ToneMapJS::SetType(NapiApi::FunctionContext<uint32_t>& ctx)
 {
     auto type = ConvertTo(ctx.Arg<0>());
 
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        ExecSyncTask([toneMap, type]() {
-            toneMap->Type()->SetValue(type);
-            return META_NS::IAny::Ptr {};
-        });
+        toneMap->Type()->SetValue(type);
     }
 }
 
@@ -225,24 +208,16 @@ napi_value ToneMapJS::GetExposure(NapiApi::FunctionContext<>& ctx)
 {
     float exp = 0.0;
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        ExecSyncTask([toneMap, &exp]() {
-            exp = toneMap->Exposure()->GetValue();
-            return META_NS::IAny::Ptr {};
-        });
+        exp = toneMap->Exposure()->GetValue();
     }
 
-    napi_value value;
-    napi_status status = napi_create_double(ctx, exp, &value);
-    return value;
+    return ctx.GetNumber(exp);
 }
 
 void ToneMapJS::SetExposure(NapiApi::FunctionContext<float>& ctx)
 {
     float exp = ctx.Arg<0>();
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        ExecSyncTask([toneMap, exp]() {
-            toneMap->Exposure()->SetValue(exp);
-            return META_NS::IAny::Ptr {};
-        });
+        toneMap->Exposure()->SetValue(exp);
     }
 }

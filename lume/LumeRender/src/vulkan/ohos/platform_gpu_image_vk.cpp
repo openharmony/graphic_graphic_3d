@@ -64,8 +64,7 @@ void GpuImageVk::CreatePlatformHwBuffer()
             if (plat_.format == VK_FORMAT_UNDEFINED) {
                 // with external format, chained conversion info is needed
                 VkSamplerYcbcrConversionCreateInfo ycbcrConversionCreateInfo;
-                PlatformHardwareBufferUtil::FillYcbcrConversionInfo(
-                    deviceVk, hwBufferProperties, ycbcrConversionCreateInfo);
+                PlatformHardwareBufferUtil::FillYcbcrConversionInfo(hwBufferProperties, ycbcrConversionCreateInfo);
 
                 VkExternalFormatOHOS externalFormat {
                     VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_OHOS, // sType

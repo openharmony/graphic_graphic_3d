@@ -20,7 +20,7 @@
 #include "ecs/components/initial_transform_component.h"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 DECLARE_PROPERTY_TYPE(CORE3D_NS::InitialTransformComponent::Data);
@@ -37,10 +37,9 @@ using CORE_NS::Property;
 
 class InitialTransformComponentManager final
     : public BaseManager<InitialTransformComponent, IInitialTransformComponentManager> {
-    BEGIN_PROPERTY(InitialTransformComponent, ComponentMetadata)
+    BEGIN_PROPERTY(InitialTransformComponent, componentMetaData_)
 #include "ecs/components/initial_transform_component.h"
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit InitialTransformComponentManager(IEcs& ecs)
@@ -52,12 +51,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

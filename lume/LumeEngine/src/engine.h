@@ -16,7 +16,6 @@
 #ifndef CORE_ENGINE_H
 #define CORE_ENGINE_H
 
-#include <atomic>
 #include <cstdint>
 
 #include <base/containers/array_view.h>
@@ -31,12 +30,13 @@
 #include <core/io/intf_file_manager.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_register.h>
-#include <core/plugin/intf_interface.h>
+#include <core/plugin/intf_interface_helper.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 
+#include "resources/resource_manager.h"
+
 BASE_BEGIN_NAMESPACE()
-struct Uid;
 template<class T1, class T2>
 struct pair;
 BASE_END_NAMESPACE()
@@ -46,7 +46,8 @@ class IImageLoaderManager;
 class IPlatform;
 class IThreadPool;
 
-class Engine final : public IEngine, virtual public IClassRegister, IPluginRegister::ITypeInfoListener {
+class Engine final : public IInterfaceHelper<IEngine, IClassRegister, IClassFactory>,
+                     IPluginRegister::ITypeInfoListener {
 public:
     explicit Engine(EngineCreateInfo const& createInfo);
     ~Engine() override;
@@ -68,11 +69,8 @@ public:
     BASE_NS::string_view GetVersion() override;
     bool IsDebugBuild() override;
 
-    // IInterface
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
     IInterface* GetInterface(const BASE_NS::Uid& uid) override;
-    void Ref() override;
-    void Unref() override;
 
     // IClassFactory
     IInterface::Ptr CreateInstance(const BASE_NS::Uid& uid) override;
@@ -98,15 +96,15 @@ private:
     uint64_t deltaTime_ { 1 };
 
     BASE_NS::unique_ptr<IPlatform> platform_;
-    ContextInfo applicationContext_;
 
     IFileManager::Ptr fileManager_;
 
     BASE_NS::unique_ptr<class ImageLoaderManager> imageManager_;
-    std::atomic_int32_t refCount_ { 0 };
 
     BASE_NS::vector<BASE_NS::pair<PluginToken, const IEnginePlugin*>> plugins_;
     BASE_NS::vector<const InterfaceTypeInfo*> interfaceTypeInfos_;
+
+    ResourceManager resourceManager_;
 };
 CORE_END_NAMESPACE()
 

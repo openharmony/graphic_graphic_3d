@@ -22,6 +22,15 @@
 
 #include "render_compatibility_common.h"
 
+// match with core/base color conversions
+
+// No conversion and should be used as default
+#define CORE_COLOR_CONVERSION_TYPE_NONE 0
+// sRGB to linear conversion
+#define CORE_COLOR_CONVERSION_TYPE_SRGB_TO_LINEAR 1
+// Linear to sRGB conversion
+#define CORE_COLOR_CONVERSION_TYPE_LINEAR_TO_SRGB 2
+
 /**
  * Calculate luma.
  */

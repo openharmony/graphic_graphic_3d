@@ -63,10 +63,16 @@ typedef intptr_t EGLAttrib;
 
 #include "gles/gl_functions.h"
 #include "util/log.h"
-#define declare(a, b) a b = nullptr;
+
+#define declare(a, b) extern "C" { a b = nullptr; }
+// NOTE: intentional re-include of gl_functions.h
+#undef GLES_FUNCTIONS_H
 #include "gles/gl_functions.h"
-#define declare(a, b) a b = nullptr;
+#define declare(a, b) extern "C" { a b = nullptr; }
+// NOTE: intentional re-include of gl_functions.h
+#undef EGL_FUNCTIONS_H
 #include "gles/egl_functions.h"
+
 #include "gles/surface_information.h"
 #include "gles/swapchain_gles.h"
 
@@ -85,12 +91,12 @@ using BASE_NS::vector;
 
 namespace EGLHelpers {
 namespace {
-static bool FilterError(
+bool FilterError(
     GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const string_view, const void*) noexcept
 {
     if (source == GL_DEBUG_SOURCE_OTHER) {
         if (type == GL_DEBUG_TYPE_PERFORMANCE) {
-            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) { // 2147483647:big data
+            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) { // 2147483647 : id
                 /*  Ignore the following warning that Adreno drivers seem to spam.
                 source: GL_DEBUG_SOURCE_OTHER
                 type: GL_DEBUG_TYPE_PERFORMANCE
@@ -146,7 +152,7 @@ const char* EglErrorStr(EGLint aError)
             break;
     }
 
-    static char error[64];
+    static char error[64]; // 64 : size
     if (sprintf_s(error, sizeof(error), "Unknown error %x", aError) < 0) {
         PLUGIN_LOG_E("EglErrorStr: sprintf_s failed");
     }
@@ -177,7 +183,7 @@ void CheckEGLError2(const char* const file, int line)
 
 struct Attribute {
     EGLint attribute;
-    char const* const Name;
+    const char* const name;
 };
 
 void DumpEGLStrings(EGLDisplay dpy)
@@ -185,12 +191,12 @@ void DumpEGLStrings(EGLDisplay dpy)
     // extensions dumped later.
     static constexpr Attribute strings[] = { ATTRIBUTE(EGL_CLIENT_APIS), ATTRIBUTE(EGL_VENDOR),
         ATTRIBUTE(EGL_VERSION) };
-    for (size_t attr = 0; attr < sizeof(strings) / sizeof(Attribute); attr++) {
-        const char* const value = eglQueryString(dpy, strings[attr].attribute);
+    for (auto string : strings) {
+        const char* const value = eglQueryString(dpy, string.attribute);
         if (value) {
-            PLUGIN_LOG_D("\t%-32s: %s", strings[attr].Name, value);
+            PLUGIN_LOG_D("\t%-32s: %s", string.name, value);
         } else {
-            PLUGIN_LOG_D("\t%-32s:", strings[attr].Name);
+            PLUGIN_LOG_D("\t%-32s:", string.name);
         }
     }
 }
@@ -212,11 +218,11 @@ void DumpEGLConfigs(EGLDisplay dpy)
 }
 #endif
 
-bool stringToUInt(string_view string, EGLint& value)
+bool StringToUInt(string_view string, EGLint& value)
 {
     value = 0;
     for (auto digit : string) {
-        value *= 10;
+        value *= 10; // 10 ； param
         if ((digit >= '0') && (digit <= '9')) {
             value += digit - '0';
         } else {
@@ -224,6 +230,38 @@ bool stringToUInt(string_view string, EGLint& value)
         }
     }
     return true;
+}
+
+void ParseMajorAndMinor(const string_view version, EGLint& major, EGLint& minor)
+{
+    const auto dot = version.find_first_of('.');
+    if (dot != string_view::npos) {
+        const auto majorS = version.substr(0, dot);
+        if (!StringToUInt(majorS, major)) {
+            major = 0;
+        }
+        const auto space = version.find_first_of(' ', dot + 1);
+        if (space != string_view::npos) {
+            auto minorS = version.substr(dot + 1, space - (dot + 1));
+            if (!StringToUInt(minorS, minor)) {
+                minor = 0;
+            }
+        }
+    }
+}
+
+bool ParseGlVersion(string_view versionString, EGLint& glMajor, EGLint& glMinor)
+{
+    // the format according to spec pdf is "OpenGL ES N.M vendor-specific information"
+    static constexpr string_view glesString = "OpenGL ES ";
+    if (!versionString.starts_with(glesString)) {
+        return false;
+    }
+    // Must be OpenGL ES FULL. Trust this information. (even if it might mismatch with the eglQueryContext
+    // results)
+    versionString.remove_prefix(glesString.size());
+    ParseMajorAndMinor(versionString, glMajor, glMinor);
+    return glMajor < 1;
 }
 
 void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
@@ -272,10 +310,10 @@ void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
         ATTRIBUTE(EGL_VG_COLORSPACE),
         ATTRIBUTE(EGL_WIDTH), // Returns the width of the surface in pixels.
     };
-    for (size_t attr = 0; attr < sizeof(attribs) / sizeof(Attribute); attr++) {
+    for (auto attrib : attribs) {
         EGLint value;
-        if (EGL_TRUE == eglQuerySurface(dpy, surf, attribs[attr].attribute, &value)) {
-            PLUGIN_LOG_V("\t%-32s: %10d (0x%08x)", attribs[attr].Name, value, value);
+        if (EGL_TRUE == eglQuerySurface(dpy, surf, attrib.attribute, &value)) {
+            PLUGIN_LOG_V("\t%-32s: %10d (0x%08x)", attrib.name, value, value);
         }
     }
 }
@@ -334,10 +372,10 @@ void DumpEGLConfig(EGLDisplay dpy, const EGLConfig& config)
         // passed to eglChooseConfig, it is not an attribute of the resulting config and cannot be queried using
         // eglGetConfigAttrib.
     };
-    for (size_t attr = 0; attr < sizeof(attributes) / sizeof(Attribute); attr++) {
+    for (auto attribute : attributes) {
         EGLint value;
-        if (EGL_TRUE == eglGetConfigAttrib(dpy, config, attributes[attr].attribute, &value)) {
-            PLUGIN_LOG_V("\t%-32s: %10d (0x%08x)", attributes[attr].Name, value, value);
+        if (EGL_TRUE == eglGetConfigAttrib(dpy, config, attribute.attribute, &value)) {
+            PLUGIN_LOG_V("\t%-32s: %10d (0x%08x)", attribute.name, value, value);
         }
     }
 }
@@ -423,7 +461,7 @@ void FillProperties(DevicePropertiesGLES& properties)
     glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &properties.maxComputeWorkGroupInvocations);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, properties.maxComputeWorkGroupSize);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, properties.maxComputeWorkGroupSize + 1);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, properties.maxComputeWorkGroupSize + 2); // 2 : param
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, properties.maxComputeWorkGroupSize + 2); // 2 ； param
     glGetIntegerv(GL_MAX_DEPTH_TEXTURE_SAMPLES, &properties.maxDepthTextureSamples);
     glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTERS, &properties.maxFragmentAtomicCounters);
     glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS, &properties.maxFragmentAtomicCounterBuffers);
@@ -461,23 +499,22 @@ void FillProperties(DevicePropertiesGLES& properties)
     glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &properties.maxTextureBufferSize);
 }
 
-bool IsSrgbSurfaceSupported(const DevicePlatformDataGLES& plat)
+bool IsSurfaceColorspaceSupported(const DevicePlatformDataGLES& plat)
 {
     // Check if EGL supports sRGB color space (either EGL is > 1.5 or EGL_KHR_gl_colorspace extension is supported).
-    if (plat.majorVersion > 1u || (plat.majorVersion == 1u && plat.minorVersion >= 5u)) {
+    if (plat.majorVersion > 1u || (plat.majorVersion == 1u && plat.minorVersion >= 5u)) { // 5 ；version
         // EGL 1.5 or newer -> no need to check the extension.
         return true;
     }
     // Check if the sRGB color space extension is supported.
     return plat.hasColorSpaceExt;
 }
-
 } // namespace
 
 #undef ATTRIBUTE
 void EGLState::HandleExtensions()
 {
-    if (plat_.minorVersion > 4) {
+    if (plat_.minorVersion > 4) { // 4 : version
         cextensions_ = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
         CHECK_EGL_ERROR();
         PLUGIN_LOG_D("\t%-32s: %s", "EGL_EXTENSIONS (CLIENT)", cextensions_.c_str());
@@ -488,6 +525,62 @@ void EGLState::HandleExtensions()
     CHECK_EGL_ERROR();
     ParseExtensions(dextensions_, dextensionList_);
     PLUGIN_LOG_D("\t%-32s: %s", "EGL_EXTENSIONS (DISPLAY)", dextensions_.c_str());
+}
+
+void EGLState::FillSurfaceInfo(const EGLDisplay display, const EGLSurface surface, const EGLint configId,
+    const EGLConfig config, GlesImplementation::SurfaceInfo& res) const
+{
+    res.configId = static_cast<uint32_t>(configId);
+
+    // Fetch surface parameters
+    EGLint value = 0;
+    eglQuerySurface(display, surface, EGL_WIDTH, &value);
+    res.width = static_cast<uint32_t>(value);
+    eglQuerySurface(display, surface, EGL_HEIGHT, &value);
+    res.height = static_cast<uint32_t>(value);
+
+    eglGetConfigAttrib(display, config, EGL_RED_SIZE, &value);
+    res.red_size = static_cast<uint32_t>(value);
+    eglGetConfigAttrib(display, config, EGL_GREEN_SIZE, &value);
+    res.green_size = static_cast<uint32_t>(value);
+    eglGetConfigAttrib(display, config, EGL_BLUE_SIZE, &value);
+    res.blue_size = static_cast<uint32_t>(value);
+    eglGetConfigAttrib(display, config, EGL_ALPHA_SIZE, &value);
+    res.alpha_size = static_cast<uint32_t>(value);
+
+    eglGetConfigAttrib(display, config, EGL_DEPTH_SIZE, &value);
+    res.depth_size = static_cast<uint32_t>(value);
+
+    eglGetConfigAttrib(display, config, EGL_STENCIL_SIZE, &value);
+    res.stencil_size = static_cast<uint32_t>(value);
+
+    eglGetConfigAttrib(display, config, EGL_SAMPLES, &value);
+    res.samples = static_cast<uint32_t>(value);
+
+    EGLint colorspace = 0;
+    EGLint COLOR_SPACE = 0;
+    EGLint COLOR_SPACE_SRGB = 0;
+    if (IsVersionGreaterOrEqual(1, 5)) { // 5 : version
+        COLOR_SPACE = EGL_GL_COLORSPACE;
+        COLOR_SPACE_SRGB = EGL_GL_COLORSPACE_SRGB;
+    } else if (hasColorSpaceExt_) {
+        COLOR_SPACE = EGL_GL_COLORSPACE_KHR;
+        COLOR_SPACE_SRGB = EGL_GL_COLORSPACE_SRGB_KHR;
+    }
+
+    if (COLOR_SPACE > 0) {
+        if (eglQuerySurface(display, surface, COLOR_SPACE, &colorspace)) {
+            // EGL_GL_COLORSPACE_SRGB or EGL_GL_COLORSPACE_LINEAR.
+            res.srgb = (colorspace == COLOR_SPACE_SRGB);
+        }
+    }
+
+    if (colorspace == 0) {
+        // surface is linear (no conversion made during read/write)
+        // data should be srgb though.
+        PLUGIN_LOG_E("EGL_GL_COLORSPACE query failed (or not available). Defaulting to linear buffer with srgb data");
+        res.srgb = false;
+    }
 }
 
 uint32_t EGLState::MajorVersion() const
@@ -512,7 +605,7 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
         attributes.push_back(b);
     };
     // Request OpenGL ES 3.x configs
-    if (IsVersionGreaterOrEqual(1, 5)) {
+    if (IsVersionGreaterOrEqual(1, 5)) { // 5 : version
         // EGL 1.5+
         addAttribute(EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT);
         addAttribute(EGL_CONFORMANT, EGL_OPENGL_ES3_BIT);
@@ -527,9 +620,9 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
     }
     addAttribute(EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT);
     addAttribute(EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
-    addAttribute(EGL_RED_SIZE, 8);
-    addAttribute(EGL_GREEN_SIZE, 8);
-    addAttribute(EGL_BLUE_SIZE, 8);
+    addAttribute(EGL_RED_SIZE, 8); // 8 :size
+    addAttribute(EGL_GREEN_SIZE, 8); // 8 : size
+    addAttribute(EGL_BLUE_SIZE, 8); // 8 :size
     addAttribute(EGL_CONFIG_CAVEAT, EGL_NONE);
     if (backendConfig) {
         if (backendConfig->MSAASamples > 1) {
@@ -541,6 +634,8 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
         addAttribute(EGL_STENCIL_SIZE, (EGLint)backendConfig->stencilBits);
         PLUGIN_LOG_I("Samples:%d Alpha:%d Depth:%d Stencil:%d", backendConfig->MSAASamples, backendConfig->alphaBits,
             backendConfig->depthBits, backendConfig->stencilBits);
+    } else {
+        addAttribute(EGL_ALPHA_SIZE, 8); // 8 : param
     }
     addAttribute(EGL_NONE, EGL_NONE); // terminate list
     eglChooseConfig(plat_.display, attributes.data(), &plat_.config, 1, &num_configs);
@@ -560,7 +655,7 @@ void EGLState::CreateContext(const BackendExtraGLES* backendConfig)
         context_attributes.push_back(a);
         context_attributes.push_back(b);
     };
-    if (IsVersionGreaterOrEqual(1, 5)) {
+    if (IsVersionGreaterOrEqual(1, 5)) { // 5 : version
         // egl 1.5 or greater.
         addAttribute(EGL_CONTEXT_MAJOR_VERSION, 3); // Select an OpenGL ES 3.x context
         addAttribute(EGL_CONTEXT_MINOR_VERSION, 2); // Select an OpenGL ES x.2 context
@@ -588,6 +683,7 @@ void EGLState::CreateContext(const BackendExtraGLES* backendConfig)
     if (backendConfig) {
         sharedContext = backendConfig->sharedContext;
     }
+    PLUGIN_LOG_I("Creating new context in DeviceGLES, using shared context: %d", static_cast<bool>(sharedContext));
     plat_.context = eglCreateContext(plat_.display, plat_.config, sharedContext, context_attributes.data());
     CHECK_EGL_ERROR();
 
@@ -615,24 +711,16 @@ bool EGLState::IsVersionGreaterOrEqual(uint32_t major, uint32_t minor) const
 bool EGLState::VerifyVersion()
 {
     // Verify that we have at least 3.2 context.
-    EGLint glMajor = 0;
-    EGLint glMinor = 0;
     SaveContext();
     SetContext(nullptr); // activate the context with the dummy PBuffer.
-    string_view string((char*)glGetString(GL_VERSION));
-    // the format according to spec pdf is "OpenGL ES N.M vendor-specific information"
-    bool fail = false;
-    if (string.starts_with("OpenGL ES ")) {
-        // Must be OpenGL ES FULL. Trust this information. (even if it might mismatch with the eglQueryContext results)
-        string_view version = string.substr(10);
-        version = version.substr(0, version.find_first_of(' '));
-        auto dot = version.find_first_of('.');
-        auto majorS = version.substr(0, dot);
-        if (dot != string_view::npos) {
-            auto minorS = version.substr(dot + 1);
-            fail = (stringToUInt(minorS, glMinor)) ? fail : false;
-        }
-        fail = (stringToUInt(majorS, glMajor)) ? fail : false;
+    EGLint glMajor = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &glMajor);
+    EGLint glMinor = 0;
+    glGetIntegerv(GL_MINOR_VERSION, &glMinor);
+    string_view string((const char*)glGetString(GL_VERSION));
+    bool fail = (glGetError() != GL_NO_ERROR);
+    if (fail) {
+        fail = ParseGlVersion(string, glMajor, glMinor);
     }
     if (fail) {
         // Try these then, if parsing the GL_VERSION string failed
@@ -641,10 +729,10 @@ bool EGLState::VerifyVersion()
         eglQueryContext(plat_.display, plat_.context, EGL_CONTEXT_MINOR_VERSION_KHR, &glMinor);
     }
 
-    if (glMajor < 3) {
+    if (glMajor < 3) { // 3 : version
         fail = true;
-    } else if (glMajor == 3) {
-        if (glMinor < 2) {
+    } else if (glMajor == 3) { // 3 : version
+        if (glMinor < 2) { // 2 ；version
             // We do NOT support 3.0 or 3.1
             fail = true;
         }
@@ -667,50 +755,44 @@ bool EGLState::VerifyVersion()
 bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
 {
     auto backendConfig = static_cast<const BackendExtraGLES*>(createInfo.backendConfiguration);
-    EGLint major, minor;
+    EGLint major = 0;
+    EGLint minor = 0;
 
     plat_.display = eglGetDisplay(backendConfig ? backendConfig->display : EGL_DEFAULT_DISPLAY);
     const EGLContext appContext = backendConfig ? backendConfig->applicationContext : EGL_NO_CONTEXT;
     const EGLContext sharedContext = backendConfig ? backendConfig->sharedContext : EGL_NO_CONTEXT;
     if (appContext == EGL_NO_CONTEXT && sharedContext == EGL_NO_CONTEXT) {
-        if (!eglInitialize(plat_.display, &major, &minor)) {
-            PLUGIN_LOG_E("EGL initialization failed");
-            CHECK_EGL_ERROR();
-            PLUGIN_ASSERT(false);
-            return false;
+        EGLint numConfig = 0;
+        if (!eglGetConfigs(plat_.display, nullptr, 0, &numConfig) && eglGetError() == EGL_NOT_INITIALIZED) {
+            if (!eglInitialize(plat_.display, &major, &minor)) {
+                PLUGIN_LOG_E("EGL initialization failed");
+                CHECK_EGL_ERROR();
+                PLUGIN_ASSERT(false);
+                return false;
+            }
+            plat_.eglInitialized = true;
         }
-        plat_.eglInitialized = true;
-    } else {
-        major = 0;
-        minor = 0;
-
-        // Check version from display as we don't call eglInitialize ourselves
+    }
+    if (!major) {
+        // Check version from display as we may not have called eglInitialize ourselves
         const string_view version = eglQueryString(plat_.display, EGL_VERSION);
         if (!version.empty()) {
-            const auto dot = version.find_first_of('.');
-            if (dot != string_view::npos) {
-                const auto majorS = version.substr(0, dot);
-                if (!stringToUInt(majorS, major)) {
-                    major = 0;
-                }
-                const auto space = version.find_first_of(' ', dot + 1);
-                if (space != string_view::npos) {
-                    auto minorS = version.substr(dot + 1, space - (dot + 1));
-                    if (!stringToUInt(minorS, minor)) {
-                        minor = 0;
-                    }
-                }
-            }
+            ParseMajorAndMinor(version, major, minor);
         } else {
+            PLUGIN_LOG_F("Could not get EGL version.");
             CHECK_EGL_ERROR();
+            if (plat_.eglInitialized) {
+                eglTerminate(plat_.display);
+            }
+            return false;
         }
     }
     plat_.majorVersion = static_cast<uint32_t>(major);
     plat_.minorVersion = static_cast<uint32_t>(minor);
     PLUGIN_LOG_I("EGL %d.%d Initialized", major, minor);
 
-    if (!IsVersionGreaterOrEqual(1, 4)) {
-        // we need atleast egl 1.4
+    if (!IsVersionGreaterOrEqual(1, 4)) { // 4 : version
+        // we need at least egl 1.4
         PLUGIN_LOG_F("EGL version too old. 1.4 or later requried.");
         if (plat_.eglInitialized) {
             eglTerminate(plat_.display);
@@ -785,22 +867,19 @@ bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
 
 void EGLState::GlInitialize()
 {
-#define declare(a, b)                                                                     \
-    if (b == nullptr) {                                                                   \
-        *(reinterpret_cast<void**>(&b)) = reinterpret_cast<void*>(eglGetProcAddress(#b)); \
-    }                                                                                     \
-    if (b == nullptr) {                                                                   \
-        PLUGIN_LOG_E("Missing %s\n", #b);                                                 \
+#define getter(a, b)                               \
+    b = reinterpret_cast<a>(eglGetProcAddress(#b));\
+    if (!b) {                                      \
+        PLUGIN_LOG_E("Missing %s\n", #b);          \
     }
-#include "gles/gl_functions.h"
 
-#define declare(a, b)                                                                     \
-    if (b == nullptr) {                                                                   \
-        *(reinterpret_cast<void**>(&b)) = reinterpret_cast<void*>(eglGetProcAddress(#b)); \
-    }                                                                                     \
-    if (b == nullptr) {                                                                   \
-        PLUGIN_LOG_E("Missing %s\n", #b);                                                 \
-    }
+#define declare(a, b) getter(a, b)
+// NOTE: intentional re-include of gl_functions.h
+#undef GLES_FUNCTIONS_H
+#include "gles/gl_functions.h"
+// NOTE: intentional re-include of egl_functions.h
+#define declare(a, b) getter(a, b)
+#undef EGL_FUNCTIONS_H
 #include "gles/egl_functions.h"
     if (!HasExtension("EGL_ANDROID_get_native_client_buffer")) {
         eglGetNativeClientBufferANDROID = nullptr;
@@ -819,7 +898,7 @@ void EGLState::GlInitialize()
     SetSwapInterval(1); // default to vsync enabled.
 }
 
-bool EGLState::IsValid()
+bool EGLState::IsValid() const
 {
     return (plat_.context != EGL_NO_CONTEXT);
 }
@@ -908,15 +987,19 @@ void EGLState::DestroyContext()
         CHECK_EGL_ERROR();
         if (dummySurface_ != EGL_NO_SURFACE) {
             eglDestroySurface(plat_.display, dummySurface_);
+            dummySurface_ = EGL_NO_SURFACE;
         }
         CHECK_EGL_ERROR();
         if (plat_.contextCreated) {
+            plat_.contextCreated = false;
             if (plat_.context != EGL_NO_CONTEXT) {
                 eglDestroyContext(plat_.display, plat_.context);
                 CHECK_EGL_ERROR();
+                plat_.context = EGL_NO_CONTEXT;
             }
         }
         if (plat_.eglInitialized) {
+            plat_.eglInitialized = false;
             eglTerminate(plat_.display);
             CHECK_EGL_ERROR();
         }
@@ -951,23 +1034,26 @@ void* EGLState::ErrorFilter() const
     return reinterpret_cast<void*>(FilterError);
 }
 
-uintptr_t EGLState::CreateSurface(uintptr_t window, uintptr_t instance) const noexcept
+uintptr_t EGLState::CreateSurface(uintptr_t window, uintptr_t /* instance */, bool isSrgb) const noexcept
 {
     // Check if sRGB colorspace is supported by EGL.
-    const bool isSrgbSurfaceSupported = IsSrgbSurfaceSupported(plat_);
+    const bool isSurfaceColorspaceSupported = IsSurfaceColorspaceSupported(plat_);
 
     EGLint attribsSrgb[] = { EGL_NONE, EGL_NONE, EGL_NONE };
-    if (isSrgbSurfaceSupported) {
-        if (IsVersionGreaterOrEqual(1, 5)) { // 5 : param
+    if (isSurfaceColorspaceSupported) {
+        if (IsVersionGreaterOrEqual(1, 5)) { // 5 : version
             attribsSrgb[0] = EGL_GL_COLORSPACE;
-            attribsSrgb[1] = EGL_GL_COLORSPACE_SRGB;
+            attribsSrgb[1] = isSrgb ? EGL_GL_COLORSPACE_SRGB : EGL_GL_COLORSPACE_LINEAR;
         } else if (hasColorSpaceExt_) {
             attribsSrgb[0] = EGL_GL_COLORSPACE_KHR;
-            attribsSrgb[1] = EGL_GL_COLORSPACE_SRGB_KHR;
+            attribsSrgb[1] = isSrgb ? EGL_GL_COLORSPACE_SRGB_KHR : EGL_GL_COLORSPACE_LINEAR_KHR;
         }
     }
+    // depending on the platform EGLNativeWindowType may be a pointer, uintptr_t or khronos_uintptr_t or....
+    EGLNativeWindowType eglWindow = reinterpret_cast<EGLNativeWindowType>(reinterpret_cast<void*>(window));
+
     EGLSurface eglSurface = eglCreateWindowSurface(plat_.display, plat_.config,
-        reinterpret_cast<EGLNativeWindowType>(window), isSrgbSurfaceSupported ? attribsSrgb : nullptr);
+        eglWindow, isSurfaceColorspaceSupported ? attribsSrgb : nullptr);
     if (eglSurface == EGL_NO_SURFACE) {
         EGLint error = eglGetError();
         PLUGIN_LOG_E("eglCreateWindowSurface failed (with null attributes): %d", error);
@@ -1020,63 +1106,7 @@ bool EGLState::GetSurfaceInformation(
         }
     }
 #endif
-
-    // Fetch surface parameters
-    EGLint width = 0;
-    EGLint height = 0;
-    EGLint red_size = 0;
-    EGLint green_size = 0;
-    EGLint blue_size = 0;
-    EGLint alpha_size = 0;
-    EGLint samples = 0;
-    EGLint depth_size = 0;
-    EGLint stencil_size = 0;
-    eglQuerySurface(display, surface, EGL_WIDTH, &width);
-    eglQuerySurface(display, surface, EGL_HEIGHT, &height);
-    eglGetConfigAttrib(display, config, EGL_RED_SIZE, &red_size);
-    eglGetConfigAttrib(display, config, EGL_GREEN_SIZE, &green_size);
-    eglGetConfigAttrib(display, config, EGL_BLUE_SIZE, &blue_size);
-    eglGetConfigAttrib(display, config, EGL_ALPHA_SIZE, &alpha_size);
-    eglGetConfigAttrib(display, config, EGL_SAMPLES, &samples);
-    eglGetConfigAttrib(display, config, EGL_DEPTH_SIZE, &depth_size);
-    eglGetConfigAttrib(display, config, EGL_STENCIL_SIZE, &stencil_size);
-
-    res.configId = (uint32_t)configId;
-    res.alpha_size = (uint32_t)alpha_size;
-    res.blue_size = (uint32_t)blue_size;
-    res.depth_size = (uint32_t)depth_size;
-    res.green_size = (uint32_t)green_size;
-    res.height = (uint32_t)height;
-    res.red_size = (uint32_t)red_size;
-    res.samples = (uint32_t)samples;
-    res.stencil_size = (uint32_t)stencil_size;
-    res.width = (uint32_t)width;
-
-    EGLint colorspace = 0;
-    EGLint COLOR_SPACE = 0;
-    EGLint COLOR_SPACE_SRGB = 0;
-    if (IsVersionGreaterOrEqual(1, 5)) {
-        COLOR_SPACE = EGL_GL_COLORSPACE;
-        COLOR_SPACE_SRGB = EGL_GL_COLORSPACE_SRGB;
-    } else if (hasColorSpaceExt_) {
-        COLOR_SPACE = EGL_GL_COLORSPACE_KHR;
-        COLOR_SPACE_SRGB = EGL_GL_COLORSPACE_SRGB_KHR;
-    }
-
-    if (COLOR_SPACE > 0) {
-        if (eglQuerySurface(display, surface, COLOR_SPACE, &colorspace)) {
-            // EGL_GL_COLORSPACE_SRGB or EGL_GL_COLORSPACE_LINEAR.
-            res.srgb = (colorspace == COLOR_SPACE_SRGB);
-        }
-    }
-
-    if (colorspace == 0) {
-        // surface is linear (no conversion made during read/write)
-        // data should be srgb though.
-        PLUGIN_LOG_E("EGL_GL_COLORSPACE query failed (or not available). Defaulting to linear buffer with srgb data");
-        res.srgb = false;
-    }
-
+    FillSurfaceInfo(display, surface, configId, config, res);
     return true;
 }
 

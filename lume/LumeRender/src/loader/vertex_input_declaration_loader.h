@@ -16,6 +16,8 @@
 #ifndef LOADER_VERTEX_INPUT_DECLARATION_LOADER_H
 #define LOADER_VERTEX_INPUT_DECLARATION_LOADER_H
 
+#include <utility>
+
 #include <base/containers/string.h>
 #include <core/namespace.h>
 #include <render/device/pipeline_state_desc.h>
@@ -34,7 +36,7 @@ public:
     /** Describes result of the parsing operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(const BASE_NS::string& error) : success(false), error(error) {}
+        explicit LoadResult(BASE_NS::string error) : success(false), error(BASE_NS::move(error)) {}
 
         /** Indicates, whether the parsing operation is successful. */
         bool success { true };
@@ -53,6 +55,16 @@ public:
      */
     VertexInputDeclarationView GetVertexInputDeclarationView() const;
 
+    /** Get optional render slot.
+     * @return A render slot (optional)
+     */
+    BASE_NS::string_view GetRenderSlot() const;
+
+    /** Get optional render slot.
+     * @return A render slot (optional)
+     */
+    bool GetDefaultRenderSlot() const;
+
     /** Loads vertex input declaration from json string.
      * @param jsonString A string containing valid json as content.
      * @return A structure containing result for the parsing operation.
@@ -69,6 +81,8 @@ public:
 private:
     VertexInputDeclarationData vertexInputDeclarationData_;
     BASE_NS::string uri_;
+    BASE_NS::string renderSlotName_;
+    bool renderSlotDefaultVid_ { false };
 };
 RENDER_END_NAMESPACE()
 

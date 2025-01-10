@@ -20,7 +20,7 @@
 #include "3d/shaders/common/3d_dm_inplace_fog_common.h"
 #include "3d/shaders/common/3d_dm_inplace_post_process.h"
 #include "3d/shaders/common/3d_dm_inplace_sampling_common.h"
-#include "common/inplace_lighting_common.h"
+#include "3d/shaders/common/3d_dm_lighting_common.h"
 
 // in / out
 
@@ -142,6 +142,7 @@ vec4 PlaneReflector(const vec2 fragUv)
     shadingData.alpha2 = brdfData.alpha2;
     shadingData.diffuseColor = brdfData.diffuseColor;
     shadingData.layers = uMeshMatrix.mesh[instanceIdx].layers.xy;
+    shadingData.cameraIdx = cameraIdx;
     CORE_RELAXEDP const float roughness = brdfData.roughness;
 
     vec3 color = vec3(0.0); // brdfData.diffuseColor

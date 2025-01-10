@@ -1,0 +1,170 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// includes
+#include "3d/shaders/common/3d_dm_light_clustering_common.h"
+
+// sets
+layout(set = 0, binding = 0, std140) uniform uCameraMatrices
+{
+    DefaultCameraMatrixStruct uCameras[CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT];
+};
+
+layout(set = 0, binding = 1, std140) uniform uGeneralStructData
+{
+    DefaultMaterialGeneralDataStruct uGeneralData;
+};
+
+layout(set = 0, binding = 2, std140) uniform uLightStructData
+{
+    DefaultMaterialLightStruct uLightData;
+};
+
+layout(set = 0, binding = 3, std430) buffer uLightClusterIndexData
+{
+    DefaultMaterialLightClusterData uLightClusterData[CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT];
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// calculates the light cluster index, returns CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT
+// if it's not possible to populate the cluster.
+uint GetLightIndexInCluster(const vec3 clusterPos, const DefaultMaterialLightClusterData cluster, const uint lightIdx, out uint clusterLightCount) {
+    // the typical scenario, we have fewer than CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT
+    // lights affecting this cluster.
+    if (cluster.count < CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT) {
+        clusterLightCount = cluster.count + 1;
+        return cluster.count;
+    }
+
+    // special case, we have a lot of lights affecting the cluster
+    // and we must prioritize them by intensity.
+    // NOTE: right now the intensity is only determined by the distance, but the
+    //       actual intensity at a given distance could also be taken into account.
+
+    // find the light that is the furthest away from the cluster center
+    float maxLightDist = 0.0;
+    uint maxLightIdx = 0;
+
+    for (uint ii = 0; ii < CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT; ii++) {
+        const uint clIdx = cluster.lightIndices[ii];
+        const float dist = length(uLightData.lights[clIdx].pos.xyz - clusterPos);
+
+        if (dist > maxLightDist) {
+            maxLightDist = dist;
+            maxLightIdx = ii;
+        }
+    }
+
+    // replace the furthest light with the new light if the new light would be closer.
+    const float lightDist = length(uLightData.lights[lightIdx].pos.xyz - clusterPos);
+    if (lightDist < maxLightDist) {
+        clusterLightCount = CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT;
+        return maxLightIdx;
+    }
+
+    // couldn't replace any light, return as invalid
+    clusterLightCount = CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT;
+    return CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT;
+}
+
+layout(local_size_x = LIGHT_CLUSTER_TGS, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    const uint cameraIdx = 0;
+    const uint clusterIdx = gl_GlobalInvocationID.x; 
+    if (clusterIdx >= CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT) {
+        return;
+    }
+    DefaultMaterialLightClusterData cluster;
+    for (uint ii = 0; ii < CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT; ii++) {
+        cluster.lightIndices[ii] = 0;
+    }
+
+    /**
+     *  NOTE: If the would-be-active number of lights inside a cluster reaches
+     *        CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT, the cluster's edges
+     *        will become visible during rendering. Realistically there aren't
+     *        many ways of fixing that issue, other than increasing the value of 
+     *        CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT. Additionally, the
+     *        performance cost of doing so is relatively minimal in real-world scenarios.
+     */
+
+    vec3 minCorner;
+    vec3 maxCorner;
+    ClusterIdxToClusterCorners(clusterIdx, uCameras[cameraIdx].proj, uGeneralData.viewportSizeInvViewportSize.xy, minCorner, maxCorner);
+
+    const vec3 cameraPosition = uCameras[cameraIdx].viewInv[3].xyz;
+    const vec3 cameraForward = normalize(-vec3(
+        uCameras[cameraIdx].view[0][2],
+        uCameras[cameraIdx].view[1][2],
+        uCameras[cameraIdx].view[2][2])
+    );
+
+    const vec4 clusterCenterPosUnproj = uCameras[cameraIdx].viewInv * vec4((minCorner + maxCorner) / 2.0, 1.0);
+    const vec3 clusterCenterPos = clusterCenterPosUnproj.xyz / clusterCenterPosUnproj.w;
+
+    cluster.count = 0;
+
+    // cluster the spot lights
+    for (uint ii = uLightData.spotLightBeginIndex; ii < uLightData.spotLightBeginIndex + uLightData.spotLightCount; ii++) {
+        const DefaultMaterialSingleLightStruct light = uLightData.lights[ii];
+
+        const vec3 lightPosWorld = light.pos.xyz;
+        const vec3 dir = light.dir.xyz;
+        const float range = light.dir.w;
+        const float coneAngle = max(light.spotLightParams.x, light.spotLightParams.y);
+
+        const vec4 minCornerUnproj = uCameras[cameraIdx].viewInv * vec4(minCorner, 1.0);
+        const vec4 maxCornerUnproj = uCameras[cameraIdx].viewInv * vec4(maxCorner, 1.0);
+
+        const vec3 minCornerWorld = minCornerUnproj.xyz / minCornerUnproj.w;
+        const vec3 maxCornerWorld = maxCornerUnproj.xyz / maxCornerUnproj.w;
+
+        if (ConeClusterIntersect(lightPosWorld, dir, range, coneAngle, minCornerWorld, maxCornerWorld) ||
+            CameraClusterSpotLightIntersect(lightPosWorld, dir, range, minCornerWorld, maxCornerWorld, uCameras[cameraIdx].proj,
+                                       uCameras[cameraIdx].view, cameraPosition, cameraForward)) {
+            /**
+             * the light assignment is done indirectly like this in order for 
+             * closer light sources to be prioritized. Other alternative would be to
+             * sort the lights first in a separate pass by distance to the camera or
+             * to just ignore any light source that would naturally fall outside the max count.
+             * Most reference implementations seem to with the latter version.
+             * In the case the number of lights affecting the cluster is less than 
+             * CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT, the behaviour will mirror the latter.
+             */
+
+            uint clusterLightCount;
+            const uint idxInCluster = GetLightIndexInCluster(clusterCenterPos, cluster, ii, clusterLightCount);
+            if (idxInCluster == CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT) {
+                continue;
+            }
+
+            cluster.lightIndices[idxInCluster] = ii;
+            cluster.count = clusterLightCount;
+        }
+    }
+
+    // cluster the point lights
+    for (uint ii = uLightData.pointLightBeginIndex; ii < uLightData.pointLightBeginIndex + uLightData.pointLightCount; ii++) {
+        const DefaultMaterialSingleLightStruct light = uLightData.lights[ii];
+        
+        const vec3 lightPos = (uCameras[cameraIdx].view * light.pos).xyz;
+        const float radius = light.dir.w;
+
+        if (SphereClusterIntersect(lightPos, radius, minCorner, maxCorner)) {
+            uint clusterLightCount;
+            const uint idxInCluster = GetLightIndexInCluster(clusterCenterPos, cluster, ii, clusterLightCount);
+            if (idxInCluster == CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT) {
+                continue;
+            }
+
+            cluster.lightIndices[idxInCluster] = ii;
+            cluster.count = clusterLightCount;
+        }
+    }
+
+    uLightClusterData[clusterIdx] = cluster;
+}

@@ -16,7 +16,6 @@
 #include "system_graph_loader.h"
 
 #include <charconv>
-#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 
@@ -26,7 +25,6 @@
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
-#include <base/containers/vector.h>
 #include <base/math/quaternion.h>
 #include <base/math/vector.h>
 #include <base/namespace.h>
@@ -69,7 +67,7 @@ template<class TYPEINFO>
 const TYPEINFO* FindTypeInfo(const string_view name, const array_view<const ITypeInfo* const>& container)
 {
     for (const auto& info : container) {
-        if (static_cast<const TYPEINFO*>(info)->typeName == name) {
+        if (info && info->typeUid == TYPEINFO::UID && (static_cast<const TYPEINFO*>(info)->typeName == name)) {
             return static_cast<const TYPEINFO*>(info);
         }
     }
@@ -102,7 +100,7 @@ struct PropertyValue {
 
 // For primitive types..
 template<typename ElementType>
-void ReadArrayPropertyValue(const json::value& jsonData, PropertyValue& propertyData, string& error)
+void ReadArrayPropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     ElementType* output = &propertyData.Get<ElementType>();
     if (propertyData.info->type.isArray) {
@@ -122,7 +120,7 @@ void ReadArrayPropertyValue(const json::value& jsonData, PropertyValue& property
 
 // Specialization for char types (strings).. (null terminate the arrays)
 template<>
-void ReadArrayPropertyValue<char>(const json::value& jsonData, PropertyValue& propertyData, string& error)
+void ReadArrayPropertyValue<char>(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     char* output = &propertyData.Get<char>();
     string_view result;
@@ -137,20 +135,20 @@ void ReadArrayPropertyValue<char>(const json::value& jsonData, PropertyValue& pr
 }
 
 template<class HandleType>
-void ReadHandlePropertyValue(const json::value& jsonData, PropertyValue& propertyData, string& error)
+void ReadHandlePropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     decltype(HandleType::id) result;
     if (SafeGetJsonValue(jsonData, propertyData.info->name, error, result)) {
-        HandleType& handle = propertyData.Get<HandleType>();
+        auto& handle = propertyData.Get<HandleType>();
         handle.id = result;
     }
 }
 
 template<class VecType, size_t n>
-void ReadVecPropertyValue(const json::value& jsonData, PropertyValue& propertyData, string& /* error */)
+void ReadVecPropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& /* error */)
 {
     if (auto const array = jsonData.find(propertyData.info->name); array) {
-        VecType& result = propertyData.Get<VecType>();
+        auto& result = propertyData.Get<VecType>();
         from_json(*array, result.data);
     }
 }
@@ -160,147 +158,153 @@ bool ResolveComponentDependencies(
 {
     for (const Uid& dependencyUid : dependencies) {
         // default constructed UID is used as a wildcard for dependecies not known at compile time.
-        if (dependencyUid != Uid {}) {
-            // See if this component type exists in ecs
-            const IComponentManager* componentManager = ecs.GetComponentManager(dependencyUid);
-            if (!componentManager) {
-                // Find component type and create such manager.
-                const auto* componentTypeInfo =
-                    FindTypeInfo<ComponentManagerTypeInfo>(dependencyUid, componentMetadata);
-                if (componentTypeInfo) {
-                    ecs.CreateComponentManager(*componentTypeInfo);
-                } else {
-                    // Could not find this component manager, unable to continue.
-                    return false;
-                }
-            }
+        if (dependencyUid == Uid {}) {
+            continue;
+        }
+        // See if this component type exists in ecs
+        const IComponentManager* componentManager = ecs.GetComponentManager(dependencyUid);
+        if (componentManager) {
+            continue;
+        }
+        // Find component type and create such manager.
+        const auto* componentTypeInfo = FindTypeInfo<ComponentManagerTypeInfo>(dependencyUid, componentMetadata);
+        if (componentTypeInfo) {
+            ecs.CreateComponentManager(*componentTypeInfo);
+        } else {
+            // Could not find this component manager, unable to continue.
+            return false;
         }
     }
 
     return true;
 }
 
-PropertyValue GetProperty(IPropertyHandle* handle, size_t i, void* offset)
+void ReadPropertyValue(const json::value& jsonData, const PropertyValue& property, string& error)
 {
-    auto* api = handle->Owner();
-    if (i < api->PropertyCount()) {
-        auto prop = api->MetaData(i);
-        return { handle, static_cast<uint8_t*>(offset) + prop->offset, prop };
+    if (property.info) {
+        switch (property.info->type) {
+            case PropertyType::BOOL_T:
+            case PropertyType::BOOL_ARRAY_T:
+                ReadArrayPropertyValue<bool>(jsonData, property, error);
+                break;
+
+            case PropertyType::CHAR_T:
+            case PropertyType::CHAR_ARRAY_T:
+                ReadArrayPropertyValue<char>(jsonData, property, error);
+                break;
+
+            case PropertyType::INT8_T:
+            case PropertyType::INT8_ARRAY_T:
+                ReadArrayPropertyValue<int8_t>(jsonData, property, error);
+                break;
+
+            case PropertyType::INT16_T:
+            case PropertyType::INT16_ARRAY_T:
+                ReadArrayPropertyValue<int16_t>(jsonData, property, error);
+                break;
+
+            case PropertyType::INT32_T:
+            case PropertyType::INT32_ARRAY_T:
+                ReadArrayPropertyValue<int32_t>(jsonData, property, error);
+                break;
+
+            case PropertyType::INT64_T:
+            case PropertyType::INT64_ARRAY_T:
+                ReadArrayPropertyValue<int64_t>(jsonData, property, error);
+                break;
+
+            case PropertyType::UINT8_T:
+            case PropertyType::UINT8_ARRAY_T:
+                ReadArrayPropertyValue<uint8_t>(jsonData, property, error);
+                break;
+
+            case PropertyType::UINT16_T:
+            case PropertyType::UINT16_ARRAY_T:
+                ReadArrayPropertyValue<uint16_t>(jsonData, property, error);
+                break;
+
+            case PropertyType::UINT32_T:
+            case PropertyType::UINT32_ARRAY_T:
+                ReadArrayPropertyValue<uint32_t>(jsonData, property, error);
+                break;
+
+            case PropertyType::UINT64_T:
+            case PropertyType::UINT64_ARRAY_T:
+                ReadArrayPropertyValue<uint64_t>(jsonData, property, error);
+                break;
+
+            case PropertyType::DOUBLE_T:
+            case PropertyType::DOUBLE_ARRAY_T:
+                ReadArrayPropertyValue<double>(jsonData, property, error);
+                break;
+
+            case PropertyType::ENTITY_T:
+                ReadHandlePropertyValue<Entity>(jsonData, property, error);
+                break;
+
+            case PropertyType::VEC2_T:
+                ReadVecPropertyValue<Vec2, BASE_NS::extent_v<decltype(BASE_NS::Math::Vec2::data)>>(
+                    jsonData, property, error);
+                break;
+            case PropertyType::VEC3_T:
+                ReadVecPropertyValue<Vec3, BASE_NS::extent_v<decltype(BASE_NS::Math::Vec3::data)>>(
+                    jsonData, property, error);
+                break;
+            case PropertyType::VEC4_T:
+                ReadVecPropertyValue<Vec4, BASE_NS::extent_v<decltype(BASE_NS::Math::Vec4::data)>>(
+                    jsonData, property, error);
+                break;
+            case PropertyType::QUAT_T:
+                ReadVecPropertyValue<Quat, BASE_NS::extent_v<decltype(BASE_NS::Math::Quat::data)>>(
+                    jsonData, property, error);
+                break;
+            case PropertyType::MAT4X4_T:
+                // NOTE: Implement.
+                break;
+
+            case PropertyType::FLOAT_T:
+            case PropertyType::FLOAT_ARRAY_T:
+                ReadArrayPropertyValue<float>(jsonData, property, error);
+                break;
+
+            case PropertyType::STRING_T:
+                ReadArrayPropertyValue<string>(jsonData, property, error);
+                break;
+
+            case PropertyType::ENTITY_ARRAY_T:
+            case PropertyType::VEC2_ARRAY_T:
+            case PropertyType::VEC3_ARRAY_T:
+            case PropertyType::VEC4_ARRAY_T:
+            case PropertyType::QUAT_ARRAY_T:
+            case PropertyType::MAT4X4_ARRAY_T:
+            case PropertyType::INVALID:
+                // NOTE: Implement.
+                break;
+        }
     }
-    return { nullptr, nullptr, nullptr };
 }
 
 void ParseProperties(const json::value& jsonData, ISystem& system, string& error)
 {
-    if (const json::value* propertiesIt = jsonData.find("properties"); propertiesIt) {
-        if (auto systemPropertyHandle = system.GetProperties(); systemPropertyHandle) {
-            const IPropertyApi* propertyApi = systemPropertyHandle->Owner();
-            if (auto offset = systemPropertyHandle->WLock(); offset) {
-                for (size_t i = 0; i < propertyApi->PropertyCount(); ++i) {
-                    PropertyValue property = GetProperty(systemPropertyHandle, i, offset);
-                    if (property.info) {
-                        switch (property.info->type) {
-                            case PropertyType::BOOL_T:
-                            case PropertyType::BOOL_ARRAY_T:
-                                ReadArrayPropertyValue<bool>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::CHAR_T:
-                            case PropertyType::CHAR_ARRAY_T:
-                                ReadArrayPropertyValue<char>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::INT8_T:
-                            case PropertyType::INT8_ARRAY_T:
-                                ReadArrayPropertyValue<int8_t>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::INT16_T:
-                            case PropertyType::INT16_ARRAY_T:
-                                ReadArrayPropertyValue<int16_t>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::INT32_T:
-                            case PropertyType::INT32_ARRAY_T:
-                                ReadArrayPropertyValue<int32_t>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::INT64_T:
-                            case PropertyType::INT64_ARRAY_T:
-                                ReadArrayPropertyValue<int64_t>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::UINT8_T:
-                            case PropertyType::UINT8_ARRAY_T:
-                                ReadArrayPropertyValue<uint8_t>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::UINT16_T:
-                            case PropertyType::UINT16_ARRAY_T:
-                                ReadArrayPropertyValue<uint16_t>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::UINT32_T:
-                            case PropertyType::UINT32_ARRAY_T:
-                                ReadArrayPropertyValue<uint32_t>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::UINT64_T:
-                            case PropertyType::UINT64_ARRAY_T:
-                                ReadArrayPropertyValue<uint64_t>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::DOUBLE_T:
-                            case PropertyType::DOUBLE_ARRAY_T:
-                                ReadArrayPropertyValue<double>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::ENTITY_T:
-                                ReadHandlePropertyValue<Entity>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::VEC2_T:
-                                ReadVecPropertyValue<Vec2, 2>(*propertiesIt, property, error); // 2: Vec2
-                                break;
-                            case PropertyType::VEC3_T:
-                                ReadVecPropertyValue<Vec3, 3>(*propertiesIt, property, error); // 3: Vec3
-                                break;
-                            case PropertyType::VEC4_T:
-                                ReadVecPropertyValue<Vec4, 4>(*propertiesIt, property, error); // 4: Vec4
-                                break;
-                            case PropertyType::QUAT_T:
-                                ReadVecPropertyValue<Quat, 4>(*propertiesIt, property, error); // 4: Vec4
-                                break;
-                            case PropertyType::MAT4X4_T:
-                                // NOTE: Implement.
-                                break;
-
-                            case PropertyType::FLOAT_T:
-                            case PropertyType::FLOAT_ARRAY_T:
-                                ReadArrayPropertyValue<float>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::STRING_T:
-                                ReadArrayPropertyValue<string>(*propertiesIt, property, error);
-                                break;
-
-                            case PropertyType::ENTITY_ARRAY_T:
-                            case PropertyType::VEC2_ARRAY_T:
-                            case PropertyType::VEC3_ARRAY_T:
-                            case PropertyType::VEC4_ARRAY_T:
-                            case PropertyType::QUAT_ARRAY_T:
-                            case PropertyType::MAT4X4_ARRAY_T:
-                            case PropertyType::INVALID:
-                                // NOTE: Implement.
-                                break;
-                        }
-                    }
-                }
+    const json::value* propertiesIt = jsonData.find("properties");
+    if (!propertiesIt) {
+        return;
+    }
+    auto systemPropertyHandle = system.GetProperties();
+    if (!systemPropertyHandle) {
+        return;
+    }
+    if (auto offset = systemPropertyHandle->WLock(); offset) {
+        const IPropertyApi* propertyApi = systemPropertyHandle->Owner();
+        for (size_t i = 0U, count = propertyApi->PropertyCount(); i < count; ++i) {
+            if (auto* prop = propertyApi->MetaData(i)) {
+                PropertyValue property { systemPropertyHandle, static_cast<uint8_t*>(offset) + prop->offset, prop };
+                ReadPropertyValue(*propertiesIt, property, error);
             }
-            systemPropertyHandle->WUnlock();
-            system.SetProperties(*systemPropertyHandle); // notify that the properties HAVE changed.
         }
     }
+    systemPropertyHandle->WUnlock();
+    system.SetProperties(*systemPropertyHandle); // notify that the properties HAVE changed.
 }
 
 bool ParseSystem(const json::value& jsonData, const array_view<const ITypeInfo* const>& componentMetadata,
@@ -338,6 +342,56 @@ bool ParseSystem(const json::value& jsonData, const array_view<const ITypeInfo* 
 
     return optional;
 }
+
+SystemGraphLoader::LoadResult ParseSystemGraphVersion(const json::value& jsonData)
+{
+    SystemGraphLoader::LoadResult finalResult;
+    string ver;
+    string type;
+    uint32_t verMajor { ~0u };
+    uint32_t verMinor { ~0u };
+    if (const json::value* iter = jsonData.find("compatibility_info"); iter) {
+        SafeGetJsonValue(*iter, "type", finalResult.error, type);
+        SafeGetJsonValue(*iter, "version", finalResult.error, ver);
+        if (ver.size() == VERSION_SIZE) {
+            const auto delim = ver.find('.');
+            if ((delim != string::npos) && (delim < (ver.size() - 1U))) {
+                std::from_chars(ver.data(), ver.data() + delim, verMajor);
+                std::from_chars(ver.data() + delim + 1, ver.data() + ver.size(), verMinor);
+            }
+        }
+    }
+    if ((type != "systemgraph") || (verMajor != VERSION_MAJOR)) {
+        // NOTE: we're still loading the system graph
+        CORE_LOG_W("DEPRECATED SYSTEM GRAPH: invalid system graph type (%s) and / or invalid version (%s).",
+            type.c_str(), ver.c_str());
+    }
+    return finalResult;
+}
+
+ISystemGraphLoader::LoadResult LoadFromNullTerminated(const string_view jsonString, IEcs& ecs)
+{
+    const auto json = json::parse(jsonString.data());
+    if (!json) {
+        return ISystemGraphLoader::LoadResult("Invalid json file.");
+    }
+    ISystemGraphLoader::LoadResult finalResult = ParseSystemGraphVersion(json);
+    const auto& systemsArrayIt = json.find("systems");
+    if (systemsArrayIt && systemsArrayIt->is_array()) {
+        auto& pluginRegister = GetPluginRegister();
+        auto componentMetadata = pluginRegister.GetTypeInfos(ComponentManagerTypeInfo::UID);
+        auto systemMetadata = pluginRegister.GetTypeInfos(SystemTypeInfo::UID);
+        for (const auto& systemJson : systemsArrayIt->array_) {
+            if (!ParseSystem(systemJson, componentMetadata, systemMetadata, ecs, finalResult.error)) {
+                break;
+            }
+        }
+    }
+
+    finalResult.success = finalResult.error.empty();
+
+    return finalResult;
+}
 } // namespace
 
 SystemGraphLoader::LoadResult SystemGraphLoader::Load(const string_view uri, IEcs& ecs)
@@ -356,52 +410,14 @@ SystemGraphLoader::LoadResult SystemGraphLoader::Load(const string_view uri, IEc
         return LoadResult("Failed to read file.");
     }
 
-    return LoadString(raw, ecs);
+    return LoadFromNullTerminated(raw, ecs);
 }
 
 SystemGraphLoader::LoadResult SystemGraphLoader::LoadString(const string_view jsonString, IEcs& ecs)
 {
-    auto const json = json::parse(jsonString.data());
-    if (json) {
-        LoadResult finalResult;
-        {
-            string ver;
-            string type;
-            uint32_t verMajor { ~0u };
-            uint32_t verMinor { ~0u };
-            if (const json::value* iter = json.find("compatibility_info"); iter) {
-                SafeGetJsonValue(*iter, "type", finalResult.error, type);
-                SafeGetJsonValue(*iter, "version", finalResult.error, ver);
-                if (ver.size() == VERSION_SIZE) {
-                    if (const auto delim = ver.find('.'); delim != string::npos) {
-                        std::from_chars(ver.data(), ver.data() + delim, verMajor);
-                        std::from_chars(ver.data() + delim + 1, ver.data() + ver.size(), verMinor);
-                    }
-                }
-            }
-            if ((type != "systemgraph") || (verMajor != VERSION_MAJOR)) {
-                // NOTE: we're still loading the system graph
-                CORE_LOG_W("DEPRECATED SYSTEM GRAPH: invalid system graph type (%s) and / or invalid version (%s).",
-                    type.c_str(), ver.c_str());
-            }
-        }
-        auto& pluginRegister = GetPluginRegister();
-        auto componentMetadata = pluginRegister.GetTypeInfos(ComponentManagerTypeInfo::UID);
-        auto systemMetadata = pluginRegister.GetTypeInfos(SystemTypeInfo::UID);
-        const auto& systemsArrayIt = json.find("systems");
-        if (systemsArrayIt && systemsArrayIt->is_array()) {
-            for (const auto& systemJson : systemsArrayIt->array_) {
-                if (!ParseSystem(systemJson, componentMetadata, systemMetadata, ecs, finalResult.error)) {
-                    break;
-                }
-            }
-        }
-
-        finalResult.success = finalResult.error.empty();
-
-        return finalResult;
-    }
-    return LoadResult("Invalid json file.");
+    // make sure the input is zero terminated before parsing.
+    const auto asString = string(jsonString);
+    return LoadFromNullTerminated(asString, ecs);
 }
 
 SystemGraphLoader::SystemGraphLoader(IFileManager& fileManager) : fileManager_ { fileManager } {}
@@ -434,6 +450,6 @@ IInterface* SystemGraphLoaderFactory::GetInterface(const Uid& uid)
 }
 
 void SystemGraphLoaderFactory::Ref() {}
-void SystemGraphLoaderFactory::Unref() {}
 
+void SystemGraphLoaderFactory::Unref() {}
 CORE_END_NAMESPACE()

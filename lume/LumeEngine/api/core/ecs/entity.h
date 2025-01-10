@@ -37,14 +37,34 @@ struct Entity {
     uint64_t id { INVALID_ENTITY };
 };
 
-inline bool operator==(Entity const& lhs, Entity const& rhs)
+constexpr bool operator==(const Entity& lhs, const Entity& rhs)
 {
     return lhs.id == rhs.id;
 }
 
-inline bool operator!=(Entity const& lhs, Entity const& rhs)
+constexpr bool operator!=(const Entity& lhs, const Entity& rhs)
 {
     return lhs.id != rhs.id;
+}
+
+constexpr bool operator<(const Entity& lhs, const Entity& rhs)
+{
+    return lhs.id < rhs.id;
+}
+
+constexpr bool operator<=(const Entity& lhs, const Entity& rhs)
+{
+    return lhs.id <= rhs.id;
+}
+
+constexpr bool operator>(const Entity& lhs, const Entity& rhs)
+{
+    return lhs.id > rhs.id;
+}
+
+constexpr bool operator>=(const Entity& lhs, const Entity& rhs)
+{
+    return lhs.id >= rhs.id;
 }
 
 /** Entity util for checking entities validity */
@@ -61,12 +81,12 @@ CORE_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
 template<typename T>
-uint64_t hash(const T& b);
+uint64_t hash(const T&);
 
 template<>
-inline uint64_t hash(const CORE_NS::Entity& b)
+inline uint64_t hash(const CORE_NS::Entity& value)
 {
-    return b.id;
+    return value.id;
 }
 BASE_END_NAMESPACE()
 

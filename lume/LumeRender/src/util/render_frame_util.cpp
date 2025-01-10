@@ -25,7 +25,6 @@
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/intf_device.h>
 #include <render/device/intf_gpu_resource_manager.h>
-#include <render/device/intf_shader_manager.h>
 #include <render/intf_render_context.h>
 
 #include "device/device.h"
@@ -43,12 +42,12 @@ const string_view RENDER_DATA_STORE_POD { "RenderDataStorePod" };
 const string_view POD_NAME { "NodeGraphBackBufferConfiguration" };
 
 GpuBufferDesc GetStagingBufferDesc(
-    const uint32_t byteSize, const EngineBufferCreationFlags engineBufferCreatoinAdditionalFlags)
+    const uint32_t byteSize, const EngineBufferCreationFlags engineBufferCreationAdditionalFlags)
 {
     return GpuBufferDesc {
         CORE_BUFFER_USAGE_TRANSFER_DST_BIT,
         CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-        CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS,
+        CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS | engineBufferCreationAdditionalFlags,
         byteSize,
         {},
     };
@@ -62,11 +61,11 @@ RenderFrameUtil::RenderFrameUtil(const IRenderContext& renderContext)
     defaultCopyData_.byteBuffer = make_unique<ByteArray>(0U);
 
     const IRenderDataStoreManager& dsManager = renderContext.GetRenderDataStoreManager();
-    dsStaging_ =
-        static_cast<IRenderDataStoreDefaultStaging*>(dsManager.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING));
+    dsStaging_ = static_cast<IRenderDataStoreDefaultStaging*>(
+        dsManager.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING).get());
     PLUGIN_ASSERT(dsStaging_);
     dsCpuToGpuCopy_ = static_cast<IRenderDataStoreDefaultGpuResourceDataCopy*>(
-        dsManager.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_DATA_COPY));
+        dsManager.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_DATA_COPY).get());
     PLUGIN_ASSERT(dsCpuToGpuCopy_);
 }
 
@@ -142,7 +141,7 @@ void RenderFrameUtil::ProcessFrameCopyData()
 void RenderFrameUtil::ProcessFrameInputCopyData(const RenderFrameUtil::CopyData& copyData)
 {
     IGpuResourceManager& gpuResourceMgr = device_.GetGpuResourceManager();
-    const uint32_t count = static_cast<uint32_t>(copyData.copyData.size());
+    const auto count = static_cast<uint32_t>(copyData.copyData.size());
     for (uint32_t idx = 0; idx < count; ++idx) {
         const auto& dataToBeCopied = copyData.copyData[idx];
         const RenderHandleType type = dataToBeCopied.handle.GetHandleType();
@@ -209,7 +208,7 @@ void RenderFrameUtil::ProcessFrameSignalData()
     thisFrameSignalData_.gpuSemaphores.reserve(postSignalData_.size());
     thisFrameSignalData_.signalData.reserve(postSignalData_.size());
 
-    Device& device = (Device&)device_;
+    auto& device = (Device&)device_;
     const DeviceBackendType backendType = device.GetBackendType();
     // check the input data and create possible semaphores
     for (const auto& ref : postSignalData_) {
@@ -233,8 +232,7 @@ void RenderFrameUtil::ProcessFrameBackBufferConfiguration()
 {
     if (postBackBufferConfig_.force) {
         const auto& rdsMgr = renderContext_.GetRenderDataStoreManager();
-        if (auto* dataStorePod = static_cast<IRenderDataStorePod*>(rdsMgr.GetRenderDataStore(RENDER_DATA_STORE_POD));
-            dataStorePod) {
+        if (refcnt_ptr<IRenderDataStorePod> dataStorePod = rdsMgr.GetRenderDataStore(RENDER_DATA_STORE_POD)) {
             NodeGraphBackBufferConfiguration ngbbc;
             ngbbc.backBufferName[postBackBufferConfig_.bbc.backBufferName.copy(
                 ngbbc.backBufferName, countof(ngbbc.backBufferName) - 1)] = '\0';
@@ -253,7 +251,7 @@ void RenderFrameUtil::ProcessFrameBackBufferConfiguration()
 void RenderFrameUtil::ProcessFrameSignalDeferredDestroy()
 {
     // already used in previous frame
-    const Device& device = (const Device&)device_;
+    const auto& device = (const Device&)device_;
     const uint64_t frameCount = device.GetFrameCount();
     const auto minAge = device.GetCommandBufferingCount();
     const auto ageLimit = (frameCount < minAge) ? 0 : (frameCount - minAge);

@@ -77,15 +77,9 @@ void ComponentQuery::SetupQuery(
 
 bool ComponentQuery::Execute()
 {
-    if (enableListeners_ && valid_) {
+    if ((enableListeners_ && valid_) || managers_.empty() || !managers_[0]) {
         // No changes detected since previous execute.
-        return false;
-    }
-    if (managers_.empty()) {
         // Query setup not done.
-        return false;
-    }
-    if (!managers_[0]) {
         // Base manager is null.
         return false;
     }
@@ -99,45 +93,47 @@ bool ComponentQuery::Execute()
     const size_t managerCount = managers_.size();
     size_t index = 0U;
     for (IComponentManager::ComponentId id = 0; id < baseComponents; ++id) {
-        if (const Entity entity = baseComponentSet.GetEntity(id); em.IsAlive(entity)) {
-            auto& row = result_[index];
-            row.entity = entity;
-            row.components.resize(managerCount, IComponentManager::INVALID_COMPONENT_ID);
-            row.components[0U] = id;
+        const Entity entity = baseComponentSet.GetEntity(id);
+        if (!em.IsAlive(entity)) {
+            continue;
+        }
+        auto& row = result_[index];
+        row.entity = entity;
+        row.components.resize(managerCount, IComponentManager::INVALID_COMPONENT_ID);
+        row.components[0U] = id;
 
-            bool valid = true;
+        bool valid = true;
 
-            // NOTE: starting from index 1 that is the first manager after the base component set.
-            for (size_t i = 1; valid && (i < managerCount); ++i) {
-                const auto& manager = managers_[i];
-                const auto componentId =
-                    manager ? manager->GetComponentId(entity) : IComponentManager::INVALID_COMPONENT_ID;
-                row.components[i] = componentId;
+        // NOTE: starting from index 1 that is the first manager after the base component set.
+        for (size_t i = 1; valid && (i < managerCount); ++i) {
+            const auto& manager = managers_[i];
+            const auto componentId =
+                manager ? manager->GetComponentId(entity) : IComponentManager::INVALID_COMPONENT_ID;
+            row.components[i] = componentId;
 
-                switch (operationMethods_[i]) {
-                    case Operation::REQUIRE: {
-                        // for required components ID must be valid
-                        valid = (componentId != IComponentManager::INVALID_COMPONENT_ID);
-                        break;
-                    }
+            switch (operationMethods_[i]) {
+                case Operation::REQUIRE: {
+                    // for required components ID must be valid
+                    valid = (componentId != IComponentManager::INVALID_COMPONENT_ID);
+                    break;
+                }
 
-                    case Operation::OPTIONAL: {
-                        // for optional ID doesn't matter
-                        break;
-                    }
+                case Operation::OPTIONAL: {
+                    // for optional ID doesn't matter
+                    break;
+                }
 
-                    default: {
-                        valid = false;
-                    }
+                default: {
+                    valid = false;
                 }
             }
+        }
 
-            if (valid) {
-                if (enableLookup_) {
-                    mapping_[entity] = index;
-                }
-                ++index;
+        if (valid) {
+            if (enableLookup_) {
+                mapping_[entity] = index;
             }
+            ++index;
         }
     }
     result_.resize(index);
@@ -215,11 +211,12 @@ void ComponentQuery::UnregisterEcsListeners()
 
 void ComponentQuery::OnEntityEvent(const IEcs::EntityListener::EventType type, const array_view<const Entity> entities)
 {
-    if (!valid_) {
-        // Listener is only used to invalidate the quety. If the query is already invalid -> no need to check anything.
-        return;
-    }
     if (type == IEcs::EntityListener::EventType::ACTIVATED || type == IEcs::EntityListener::EventType::DEACTIVATED) {
+        if (!valid_) {
+            // Listener is only used to invalidate the quety. If the query is already invalid -> no need to check
+            // anything.
+            return;
+        }
         const auto managerCount = managers_.size();
         for (const auto& entity : entities) {
             // We are only interested in entities that have all the required managers.

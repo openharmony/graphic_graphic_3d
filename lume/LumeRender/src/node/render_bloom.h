@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_BLOOM_H
-#define RENDER_RENDER__NODE__RENDER_BLOOM_H
+#ifndef RENDER_NODE_RENDER_BLOOM_H
+#define RENDER_NODE_RENDER_BLOOM_H
 
 #include <array>
 
@@ -47,7 +47,7 @@ public:
     void Execute(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
         const PostProcessConfiguration& ppConfig);
 
-    DescriptorCounts GetDescriptorCounts() const;
+    static DescriptorCounts GetDescriptorCounts();
     // call after PreExecute, to get the output
     RenderHandle GetFinalTarget() const;
 
@@ -58,7 +58,7 @@ private:
     void ComputeUpscale(const PushConstant& pc, IRenderCommandList& cmdList);
     void ComputeCombine(const PushConstant& pc, IRenderCommandList& cmdList);
 
-    void GraphicsBloom(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList);
+    void GraphicsBloom(IRenderCommandList& cmdList);
 
     void RenderDownscaleAndThreshold(RenderPass& renderPass, const PushConstant& pc, IRenderCommandList& cmdList);
     void RenderDownscale(RenderPass& renderPass, const PushConstant& pc, IRenderCommandList& cmdList);
@@ -69,9 +69,8 @@ private:
     void CreatePsos(IRenderNodeContextManager& renderNodeContextMgr);
     void CreateComputePsos(IRenderNodeContextManager& renderNodeContextMgr);
     void CreateRenderPsos(IRenderNodeContextManager& renderNodeContextMgr);
-    std::pair<RenderHandle, const PipelineLayout&> CreateAndReflectRenderPso(
-        IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view shader,
-        const RenderPass& renderPass);
+    static std::pair<RenderHandle, const PipelineLayout&> CreateAndReflectRenderPso(
+        IRenderNodeContextManager& renderNodeContextMgr, const Base::string_view shader);
     void UpdateGlobalSet(IRenderCommandList& cmdList);
 
     static constexpr uint32_t TARGET_COUNT { 7u };
@@ -121,6 +120,9 @@ private:
 
     BASE_NS::Math::UVec2 baseSize_ { 0u, 0u };
     BASE_NS::Math::Vec4 bloomParameters_ { 0.0f, 0.0f, 0.0f, 0.0f };
+    float scaleFactor_ { 1.0f };
+    // calculated from the amount of textures and scale factor
+    size_t frameScaleMaxCount_ { 0 };
 
     RenderHandleReference samplerHandle_;
     BASE_NS::Format format_ { BASE_NS::Format::BASE_FORMAT_UNDEFINED };

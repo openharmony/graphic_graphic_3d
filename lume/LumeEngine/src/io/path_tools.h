@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__IO__PATH_TOOLS_H
-#define CORE__IO__PATH_TOOLS_H
+#ifndef CORE_IO_PATH_TOOLS_H
+#define CORE_IO_PATH_TOOLS_H
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
@@ -49,4 +49,4 @@ void SplitPath(BASE_NS::string_view pathIn, BASE_NS::string_view& drive, BASE_NS
     BASE_NS::string_view& filename, BASE_NS::string_view& ext);
 #endif
 CORE_END_NAMESPACE()
-#endif
+#endif // CORE_IO_PATH_TOOLS_H

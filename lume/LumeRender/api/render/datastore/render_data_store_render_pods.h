@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,9 +24,9 @@
 
 RENDER_BEGIN_NAMESPACE()
 /** \addtogroup group_render_renderdatastorerenderpods
- * @{
+ *  @{
  */
-/** A POD for back buffer configuration 
+/** A POD for back buffer configuration
  * Deprecated: prefer using IRenderFrameUtil::SetBackBufferConfiguration()
  */
 struct NodeGraphBackBufferConfiguration {
@@ -174,6 +174,13 @@ struct BloomConfiguration {
     float amountCoefficient { 0.25f };
     /** Dirt mask coefficient */
     float dirtMaskCoefficient { 0.0f };
+    /** Scatter (amount of bloom spread). (1.0 full spread / default) */
+    float scatter { 1.0f };
+    /** Scaling factor. Controls the amount of scaling and bloom spread
+     * Reduces the downscale and upscale steps
+     * Values 0 - 1. Value of 0.5 halves the scale steps
+     */
+    float scaleFactor { 1.0f };
 
     /** Optional dirt mask image handle */
     RenderHandle dirtMaskImage {};
@@ -298,23 +305,31 @@ struct TaaConfiguration {
     Sharpness sharpness { Sharpness::SHARP };
     /** Overall edge quality. */
     Quality quality { Quality::MEDIUM };
+    /** Whether to use bicubic sampling. */
+    bool useBicubic { true };
+    /** Whether to use mean-variance clipping of the history color. */
+    bool useVarianceClipping { true };
+    /** Whether to use yCoCG filtering. */
+    bool useyCoCG { true };
+    /** If set to true, do not use bicubic filtering for edges. */
+    bool ignoreBicubicEdges { true };
 };
 
 /** Depth of field configuration.
  * This is expected to be filled so that focusPoint is between nearPlane and farPlane.
  * Amount of blurriness:
- * nearPlane                             focusPoint                         farPlane
- *      nearBlur |   (nearBlur..0)     |      0     |      (0..farBlur)   |  farBlur
- *               | nearTransitionRange | focusRange |  farTransitionRange |
+ * nearPlane                             focusPoint                            farPlane
+ *      nearBlur |    (nearBlur..0)    |      0     |    (0..farBlur)    | farBlur
+ *               | nearTransitionRange | focusRange | farTransitionRange |
  */
 struct DofConfiguration {
     /** Distance to point of focus. */
     float focusPoint { 3.f };
-    /** Range around focusPoint which is in focus */
+    /** Range around focusPoint which is in focus. */
     float focusRange { 1.f };
-    /** Range before focusRange where the view transitions from focused to blurred. */
+    /** Range before focusRange where the view transitions from blurred to focused. */
     float nearTransitionRange { 1.f };
-    /** Range after focusRange where the view transitions from blurred to focused. */
+    /** Range after focusRange where the view transitions from focused to blurred. */
     float farTransitionRange { 1.f };
     /** Blur level used close to the viewer. */
     float nearBlur { 2.f };
@@ -337,11 +352,25 @@ struct MotionBlurConfiguration {
     /** Sharpness. */
     Sharpness sharpness { Sharpness::SHARP };
     /** Quality. */
-    Quality quality { Quality::MEDIUM };
+    Quality quality { Quality::HIGH };
     /** Alpha blending. 1.0 -> fully motion blur sample. */
     float alpha { 1.0f };
     /** Velocity coefficient. */
     float velocityCoefficient { 1.0f };
+};
+
+/** Lens flare configuration.
+ */
+struct LensFlareConfiguration {
+    /** Quality of the effect. */
+    enum class Quality : uint32_t { LOW = 0U, MEDIUM = 1U, HIGH = 2U };
+
+    /** Quality. */
+    Quality quality { Quality::HIGH };
+    /** Intensity of the effect. */
+    float intensity { 1.0f };
+    /** Flare position */
+    BASE_NS::Math::Vec3 flarePosition { 0.0f, 0.0f, 0.0f };
 };
 
 /** Post process configuration POD. */
@@ -371,6 +400,8 @@ struct PostProcessConfiguration {
         ENABLE_DOF_BIT = (1 << 12),
         /** Enable motion blur */
         ENABLE_MOTION_BLUR_BIT = (1 << 13),
+        /** Enable lens flare */
+        ENABLE_LENS_FLARE_BIT = (1 << 14),
     };
     using PostProcessEnableFlags = uint32_t;
 
@@ -388,8 +419,9 @@ struct PostProcessConfiguration {
         INDEX_TAA = 11,
         INDEX_DOF = 12,
         INDEX_MOTION_BLUR = 13,
+        INDEX_LENS_FLARE = 14,
 
-        INDEX_FACTOR_COUNT = 14,
+        INDEX_FACTOR_COUNT = 15,
     };
     /** Enabled flags */
     PostProcessEnableFlags enableFlags { 0u };
@@ -421,6 +453,9 @@ struct PostProcessConfiguration {
 
     /** Motion blur configuration */
     MotionBlurConfiguration motionBlurConfiguration;
+
+    /** Lens flare configuration */
+    LensFlareConfiguration lensFlareConfiguration;
 
     /** User post process factors which are automatically mapped and can be used easily anywhere in the pipeline */
     BASE_NS::Math::Vec4 userFactors[PostProcessConstants::USER_GLOBAL_FACTOR_COUNT];

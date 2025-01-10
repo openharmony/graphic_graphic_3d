@@ -18,7 +18,6 @@
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
-#include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
@@ -32,6 +31,7 @@
 #include <core/namespace.h>
 #include <core/plugin/intf_class_factory.h>
 #include <core/plugin/intf_interface.h>
+#include <core/plugin/intf_interface_helper.h>
 #include <core/plugin/intf_plugin.h>
 
 #include "dev/file_monitor.h"
@@ -40,7 +40,9 @@
 #include "io/path_tools.h"
 #include "io/rofs_filesystem.h"
 #include "io/std_filesystem.h"
+#ifdef _WIN32
 #include "util/string_util.h"
+#endif // _WIN32
 
 CORE_BEGIN_NAMESPACE();
 namespace {
@@ -49,16 +51,11 @@ using BASE_NS::string_view;
 using BASE_NS::Uid;
 using BASE_NS::vector;
 
-class FileMonitorImpl final : public IFileMonitor {
+class FileMonitorImpl final : public IInterfaceHelper<IFileMonitor> {
 public:
-    const IInterface* GetInterface(const Uid& uid) const override;
-    IInterface* GetInterface(const Uid& uid) override;
-    void Ref() override;
-    void Unref() override;
-
     void Initialize(IFileManager&) override;
-    bool AddPath(const string_view path) override;
-    bool RemovePath(const string_view path) override;
+    bool AddPath(string_view path) override;
+    bool RemovePath(string_view path) override;
     void ScanModifications(vector<string>& added, vector<string>& removed, vector<string>& modified) override;
 
     FileMonitorImpl() = default;
@@ -68,7 +65,6 @@ public:
     }
 
     BASE_NS::unique_ptr<FileMonitor> fileMonitor_;
-    uint32_t refCount_ { 0 };
 };
 
 class FilesystemApi final : public IFileSystemApi {
@@ -200,34 +196,6 @@ public:
     }
 };
 } // namespace
-
-const IInterface* FileMonitorImpl::GetInterface(const Uid& uid) const
-{
-    if ((uid == IFileMonitor::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-IInterface* FileMonitorImpl::GetInterface(const Uid& uid)
-{
-    if ((uid == IFileMonitor::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-void FileMonitorImpl::Ref()
-{
-    refCount_++;
-}
-
-void FileMonitorImpl::Unref()
-{
-    if (--refCount_ == 0) {
-        delete this;
-    }
-}
 
 void FileMonitorImpl::Initialize(IFileManager& manager)
 {

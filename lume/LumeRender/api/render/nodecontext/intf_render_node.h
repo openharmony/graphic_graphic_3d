@@ -73,7 +73,7 @@ public:
 
     /** Sequential, called once after render graph has been initialized.
      * Anything can be done here, including gpu resource creation.
-     * Note: InitNode can get called multiple times during runtime e.g. after hot-reloading assets. The node must
+     * Note: InitNode can get called multiple times during runtime. The node must
      * invalidate any changed state/ handles and assume it starts from scratch.
      * @param renderNodeContextMgr Provides access to needed managers.
      */
@@ -81,6 +81,7 @@ public:
 
     /** Sequential, called before ExecuteFrame every frame.
      * Create/destroy gpu resources here if needed. Prefer not doing any other work.
+     * Re-creation of descriptor sets should be done here as well.
      * IRenderNodeGpuResourceManager keeps track of created resources
      * -> do not explicitly destroy if not needed.
      */

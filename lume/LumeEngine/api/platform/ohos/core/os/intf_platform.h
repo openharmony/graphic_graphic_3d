@@ -38,7 +38,7 @@ public:
      * @return Platform specific data struct
      */
     virtual const PlatformData& GetPlatformData() const = 0;
-    virtual BASE_NS::string RegisterDefaultPaths(IFileManager& fileManager) = 0;
+    virtual BASE_NS::string RegisterDefaultPaths(IFileManager& fileManager) const = 0;
     /** Register platform specific plugin locations
      * @param registry Plugin registry instance to register paths to
      */

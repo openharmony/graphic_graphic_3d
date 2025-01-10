@@ -73,13 +73,21 @@ public:
     void GetDefaultMaterialShaderData(CORE_NS::IEcs& ecs, const ISceneUtil::MaterialShaderInfo& info,
         MaterialComponent::Shader& materialShader, MaterialComponent::Shader& depthShader) const override;
     void GetDefaultMaterialShaderData(CORE_NS::IEcs& ecs, const ISceneUtil::MaterialShaderInfo& info,
-        const BASE_NS::string_view renderSlot, MaterialComponent::Shader& shader) const override;
+        BASE_NS::string_view renderSlot, MaterialComponent::Shader& shader) const override;
 
     void ShareSkin(CORE_NS::IEcs& ecs, CORE_NS::Entity targetEntity, CORE_NS::Entity sourceEntity) const override;
 
     void RegisterSceneLoader(const ISceneLoader::Ptr& loader) override;
     void UnregisterSceneLoader(const ISceneLoader::Ptr& loader) override;
     ISceneLoader::Ptr GetSceneLoader(BASE_NS::string_view uri) const override;
+
+    CORE_NS::EntityReference CreateReflectionProbe(
+        CORE_NS::IEcs& ecs, const BASE_NS::Math::Vec3& position) const override;
+
+    CORE_NS::Entity Clone(CORE_NS::IEcs& destination, CORE_NS::Entity parentEntity, const CORE_NS::IEcs& source,
+        CORE_NS::Entity sourceEntity) const override;
+
+    BASE_NS::vector<CORE_NS::Entity> Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source) const override;
 
 private:
     IGraphicsContext& graphicsContext_;

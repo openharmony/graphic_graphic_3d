@@ -12,9 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef OHOS_RENDER_3D_ENVIRONMENTJS_H
-#define OHOS_RENDER_3D_ENVIRONMENTJS_H
+#ifndef ENVIRONMENTJS_H
+#define ENVIRONMENTJS_H
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 #include "Vec4Proxy.h"
@@ -28,8 +27,7 @@ public:
     void* GetInstanceImpl(uint32_t id) override;
 
 private:
-    napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
     // JS properties
     enum EnvironmentBackgroundType {
@@ -86,7 +84,5 @@ private:
     BASE_NS::unique_ptr<Vec4Proxy> diffuseFactor_;
     BASE_NS::unique_ptr<Vec4Proxy> specularFactor_;
     BASE_NS::unique_ptr<Vec4Proxy> environmentFactor_;
-
-    // weak reference to the owning scene.
 };
-#endif // OHOS_RENDER_3D_ENVIRONMENTJS_H
+#endif

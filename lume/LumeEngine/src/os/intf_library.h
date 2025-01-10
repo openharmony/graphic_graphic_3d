@@ -47,7 +47,7 @@ public:
     using Ptr = BASE_NS::unique_ptr<ILibrary, Deleter>;
 
     /** Load library from given path */
-    static ILibrary::Ptr Load(const BASE_NS::string_view filepath);
+    static ILibrary::Ptr Load(BASE_NS::string_view filepath);
 
 protected:
     ILibrary() = default;

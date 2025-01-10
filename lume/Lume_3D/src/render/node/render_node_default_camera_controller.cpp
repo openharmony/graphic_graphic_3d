@@ -20,18 +20,35 @@
 #include <string>
 #endif
 
+#include <3d/implementation_uids.h>
 #include <3d/render/default_material_constants.h>
 #include <3d/render/intf_render_data_store_default_camera.h>
 #include <3d/render/intf_render_data_store_default_light.h>
 #include <3d/render/intf_render_data_store_default_material.h>
 #include <3d/render/intf_render_data_store_default_scene.h>
+#include <3d/shaders/common/3d_dm_structures_common.h>
+#include <base/containers/array_view.h>
+#include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
+#include <base/containers/vector.h>
+#include <base/math/mathf.h>
 #include <base/math/matrix_util.h>
+#include <base/math/vector.h>
 #include <core/log.h>
+#include <core/namespace.h>
+#include <core/plugin/intf_class_register.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
+#include <render/datastore/render_data_store_render_pods.h>
+#include <render/device/gpu_resource_desc.h>
 #include <render/device/intf_gpu_resource_manager.h>
+#include <render/device/intf_shader_manager.h>
+#include <render/intf_render_context.h>
+#include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
+#include <render/nodecontext/intf_node_context_pso_manager.h>
+#include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
+#include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
 #include <render/nodecontext/intf_render_node_parser_util.h>
@@ -50,6 +67,7 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
+constexpr bool USE_IMMUTABLE_SAMPLERS { false };
 constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
 constexpr string_view POD_DATA_STORE_NAME { "RenderDataStorePod" };
 
@@ -138,11 +156,28 @@ constexpr GpuImageDesc DEPTH_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_
     CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, 0U,
     CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 1U, 1U, 1U, 1U, 1U, CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
 
-constexpr GpuImageDesc CUBEMAP_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_CUBE,
-    BASE_FORMAT_B10G11R11_UFLOAT_PACK32, CORE_IMAGE_TILING_OPTIMAL,
-    CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT, CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-    CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 256U, 256U, 1U, 9U, 6U,
-    CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
+RenderNodeDefaultCameraController::ShadowBuffers GetShadowBufferNodeData(
+    IRenderNodeGpuResourceManager& gpuResourceMgr, const string_view sceneName)
+{
+    RenderNodeDefaultCameraController::ShadowBuffers sb;
+    sb.vsmSamplerHandle =
+        gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_VSM_SHADOW_SAMPLER);
+    sb.pcfSamplerHandle =
+        gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_PCF_SHADOW_SAMPLER);
+
+    sb.depthHandle =
+        gpuResourceMgr.GetImageHandle(sceneName + DefaultMaterialLightingConstants::SHADOW_DEPTH_BUFFER_NAME);
+    sb.vsmColorHandle =
+        gpuResourceMgr.GetImageHandle(sceneName + DefaultMaterialLightingConstants::SHADOW_VSM_COLOR_BUFFER_NAME);
+    if (!RenderHandleUtil::IsValid(sb.depthHandle)) {
+        sb.depthHandle = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE_WHITE");
+    }
+    if (!RenderHandleUtil::IsValid(sb.vsmColorHandle)) {
+        sb.vsmColorHandle = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE");
+    }
+
+    return sb;
+}
 
 void ValidateColorDesc(const IRenderNodeGpuResourceManager& gpuResourceMgr, const GpuImageDesc& input,
     const bool bilinearSampling, GpuImageDesc& desc)
@@ -399,7 +434,7 @@ void CreateColorTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const Ren
             msaaDesc.format = targetDesc.format;
         }
         msaaDesc.engineCreationFlags |= CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS;
-        msaaDesc.sampleCountFlags = CORE_SAMPLE_COUNT_4_BIT;
+        msaaDesc.sampleCountFlags = camera.msaaSampleCountFlags;
         msaaDesc.usageFlags = CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
         msaaDesc.memoryPropertyFlags =
             CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
@@ -438,14 +473,14 @@ void CreateDepthTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const Ren
     // this (re-)creates all the needed depth targets
     // we support cameras without depth targets (default depth is created if no msaa)
     GpuImageDesc desc = cameraResourceSetup.inputImageDescs.depth;
+    desc.layerCount = targetDesc.layerCount;
     desc.width = targetDesc.width;
     desc.height = targetDesc.height;
-    desc.layerCount = targetDesc.layerCount;
     desc.imageViewType = GetImageViewType(desc.layerCount, desc.imageViewType);
     if (camera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) {
         GpuImageDesc msaaDesc = desc;
         msaaDesc.engineCreationFlags |= CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS;
-        msaaDesc.sampleCountFlags = CORE_SAMPLE_COUNT_4_BIT;
+        msaaDesc.sampleCountFlags = camera.msaaSampleCountFlags;
         // If MSAA targets have input attachment bit they are not created as renderbuffers and
         // EXT_multisample_render_to_texture supports only depth with renderbuffers.
         msaaDesc.usageFlags = CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
@@ -492,9 +527,12 @@ bool ColorTargetsRecreationNeeded(const RenderCamera& camera,
                                    ? (desc.format != camRes.inputImageDescs.output.format)
                                    : false;
     const bool multiviewChanged = (camera.multiViewCameraCount > 0U) != camRes.isMultiview;
+    const bool msaaCountChanged =
+        (camera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) && (camera.msaaSampleCountFlags != camRes.sampleCountFlags);
 
     bool changed = false;
-    if (creationFlagsChanged || pipelineChanged || resChanged || formatChanged || multiviewChanged) {
+    if (creationFlagsChanged || pipelineChanged || resChanged || formatChanged || multiviewChanged ||
+        msaaCountChanged) {
         changed = true;
     }
     return changed;
@@ -511,9 +549,11 @@ bool DepthTargetsRecreationNeeded(const RenderCamera& camera,
     const RenderCamera::Flags oldFlags = camRes.camFlags & importantFlags;
     const bool creationFlagsChanged = newFlags != oldFlags;
     const bool multiviewChanged = (camera.multiViewCameraCount > 0U) != camRes.isMultiview;
+    const bool msaaCountChanged =
+        (camera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) && (camera.msaaSampleCountFlags != camRes.sampleCountFlags);
 
     bool changed = false;
-    if (formatChanged || resChanged || creationFlagsChanged || multiviewChanged) {
+    if (formatChanged || resChanged || creationFlagsChanged || multiviewChanged || msaaCountChanged) {
         changed = true;
     }
     return changed;
@@ -525,6 +565,26 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
     renderNodeContextMgr_ = &renderNodeContextMgr;
     SetDefaultGpuImageDescs();
     ParseRenderNodeInputs();
+
+    globalDescs_ = {};
+    if constexpr (RenderLightHelper::ENABLE_CLUSTERED_LIGHTING) {
+        // load the light clustering shader
+        if (renderNodeContextMgr_) {
+            auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+
+            clusterBinders_ = {};
+            clusterBinders_.shaderHandleCluster =
+                shaderMgr.GetShaderHandle("3dshaders://computeshader/core3d_cluster_lights.shader");
+            clusterBinders_.pipelineLayout = shaderMgr.GetReflectionPipelineLayout(clusterBinders_.shaderHandleCluster);
+
+            clusterBinders_.pl = shaderMgr.GetPipelineLayout(
+                shaderMgr.GetPipelineLayoutHandle("3dpipelinelayouts://core3d_cluster_lights.shaderpl"));
+
+            auto& psoMgr = renderNodeContextMgr.GetPsoManager();
+            clusterBinders_.psoHandle =
+                psoMgr.GetComputePsoHandle(clusterBinders_.shaderHandleCluster, clusterBinders_.pipelineLayout, {});
+        }
+    }
 
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
@@ -544,6 +604,14 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
     defaultCubemap_ = renderNodeContextMgr_->GetGpuResourceManager().GetImageHandle(
         DefaultMaterialGpuResourceConstants::CORE_DEFAULT_SKYBOX_CUBEMAP);
 
+    auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
+    defaultSamplers_.cubemapHandle =
+        gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP_SAMPLER);
+    defaultSamplers_.linearHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_CLAMP");
+    defaultSamplers_.nearestHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_NEAREST_CLAMP");
+    defaultSamplers_.linearMipHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP");
+    defaultColorPrePassHandle_ = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE");
+
     const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
     const auto* dataStoreScene =
         static_cast<IRenderDataStoreDefaultScene*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameScene));
@@ -557,7 +625,12 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
         CreateResources();
         RegisterOutputs();
         CreateBuffers();
+
+        // get the camera buffers
+        uboHandles_.cameraData = renderNodeContextMgr_->GetGpuResourceManager().GetBufferHandle(
+            dataStoreScene->GetName() + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME);
     }
+    shadowBuffers_ = GetShadowBufferNodeData(gpuResourceMgr, stores_.dataStoreNameScene);
 }
 
 void RenderNodeDefaultCameraController::PreExecuteFrame()
@@ -575,11 +648,102 @@ void RenderNodeDefaultCameraController::PreExecuteFrame()
         CreateResources();
         RegisterOutputs();
     }
+
+    if constexpr (RenderLightHelper::ENABLE_CLUSTERED_LIGHTING) {
+        if (!clusterBinders_.clusterBuffersSet0) {
+            auto& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
+
+            const DescriptorCounts dc =
+                renderNodeContextMgr_->GetRenderNodeUtil().GetDescriptorCounts(clusterBinders_.pl);
+            descriptorSetMgr.ResetAndReserve(dc);
+
+            const RenderHandle setDescHandle = descriptorSetMgr.CreateDescriptorSet(0u, clusterBinders_.pl);
+            clusterBinders_.clusterBuffersSet0 = descriptorSetMgr.CreateDescriptorSetBinder(
+                setDescHandle, clusterBinders_.pl.descriptorSetLayouts[0u].bindings);
+        }
+    }
+    if (!globalDescs_.dmSet0Binder) {
+        auto& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
+        const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+        const RenderHandle defaultPlHandle =
+            shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_FORWARD);
+        const PipelineLayout pl = shaderMgr.GetPipelineLayout(defaultPlHandle);
+
+        const string_view us = stores_.dataStoreNameScene;
+        string camName;
+        if (currentScene_.customCameraId != INVALID_CAM_ID) {
+            camName = to_string(currentScene_.customCameraId);
+        } else if (!(currentScene_.customCameraName.empty())) {
+            camName = currentScene_.customCameraName;
+        }
+        globalDescs_ = {};
+        const auto& bindings = pl.descriptorSetLayouts[0U].bindings;
+        globalDescs_.dmSet0 = descriptorSetMgr.CreateGlobalDescriptorSet(
+            us + DefaultMaterialMaterialConstants::MATERIAL_SET0_GLOBAL_DESCRIPTOR_SET_PREFIX_NAME + camName, bindings);
+        globalDescs_.dmSet0Binder =
+            descriptorSetMgr.CreateDescriptorSetBinder(globalDescs_.dmSet0.GetHandle(), bindings);
+    }
 }
 
 void RenderNodeDefaultCameraController::ExecuteFrame(IRenderCommandList& cmdList)
 {
     UpdateBuffers();
+    UpdateGlobalDescriptorSets(cmdList);
+    if constexpr (RenderLightHelper::ENABLE_CLUSTERED_LIGHTING) {
+        ClusterLights(cmdList);
+    }
+}
+
+void RenderNodeDefaultCameraController::UpdateGlobalDescriptorSets(IRenderCommandList& cmdList)
+{
+    if (!globalDescs_.dmSet0Binder) {
+        return;
+    }
+
+    auto& binder = *globalDescs_.dmSet0Binder;
+    {
+        uint32_t bindingIndex = 0;
+        binder.BindBuffer(bindingIndex++, uboHandles_.cameraData, 0u);
+        binder.BindBuffer(bindingIndex++, uboHandles_.generalData.GetHandle(), 0u);
+
+        const RenderHandle radianceCubemap = currentScene_.cameraEnvRadianceHandle;
+        const RenderHandle colorPrePass = RenderHandleUtil::IsValid(currentScene_.prePassColorTarget)
+                                              ? currentScene_.prePassColorTarget
+                                              : defaultColorPrePassHandle_;
+
+        binder.BindBuffer(
+            bindingIndex++, { uboHandles_.environment.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
+        binder.BindBuffer(
+            bindingIndex++, { uboHandles_.fog.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
+        binder.BindBuffer(
+            bindingIndex++, { uboHandles_.light.GetHandle(), 0u, PipelineStateConstants ::GPU_BUFFER_WHOLE_SIZE });
+        binder.BindBuffer(
+            bindingIndex++, { uboHandles_.postProcess.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
+        binder.BindBuffer(bindingIndex++,
+            { uboHandles_.lightCluster.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
+        // use immutable samplers for all set 0 samplers
+        AdditionalDescriptorFlags descFlags = 0U;
+        if constexpr (USE_IMMUTABLE_SAMPLERS) {
+            descFlags = CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT;
+        }
+        BindableImage bi;
+        bi.handle = colorPrePass;
+        bi.samplerHandle = defaultSamplers_.linearMipHandle;
+        binder.BindImage(bindingIndex++, bi, descFlags);
+        bi.handle = shadowBuffers_.vsmColorHandle;
+        bi.samplerHandle = shadowBuffers_.vsmSamplerHandle;
+        binder.BindImage(bindingIndex++, bi, descFlags);
+        bi.handle = shadowBuffers_.depthHandle;
+        bi.samplerHandle = shadowBuffers_.pcfSamplerHandle;
+        binder.BindImage(bindingIndex++, bi, descFlags);
+        bi.handle = radianceCubemap;
+        bi.samplerHandle = defaultSamplers_.cubemapHandle;
+        binder.BindImage(bindingIndex++, bi, descFlags);
+    }
+
+    const RenderHandle handles[] { binder.GetDescriptorSetHandle() };
+    const DescriptorSetLayoutBindingResources resources[] { binder.GetDescriptorSetLayoutBindingResources() };
+    cmdList.UpdateDescriptorSets(handles, resources);
 }
 
 void RenderNodeDefaultCameraController::UpdateCurrentScene(const IRenderDataStoreDefaultScene& dataStoreScene,
@@ -596,6 +760,15 @@ void RenderNodeDefaultCameraController::UpdateCurrentScene(const IRenderDataStor
     if (const auto cameras = dataStoreCamera.GetCameras(); cameraIdx < (uint32_t)cameras.size()) {
         // store current frame camera
         currentScene_.camera = cameras[cameraIdx];
+    }
+
+    const auto camHandles = RenderNodeSceneUtil::GetSceneCameraImageHandles(
+        *renderNodeContextMgr_, stores_.dataStoreNameScene, currentScene_.camera.name, currentScene_.camera);
+    currentScene_.cameraEnvRadianceHandle = camHandles.radianceCubemap;
+
+    if (!currentScene_.camera.prePassColorTargetName.empty()) {
+        currentScene_.prePassColorTarget =
+            renderNodeContextMgr_->GetGpuResourceManager().GetImageHandle(currentScene_.camera.prePassColorTargetName);
     }
 
     currentScene_.cameraIdx = cameraIdx;
@@ -667,10 +840,6 @@ void RenderNodeDefaultCameraController::RegisterOutputs()
             createdTargets_.history[nextIndex].GetHandle());
         camRes_.historyFlipFrame = nextIndex;
     }
-    // output cubemap
-    const RenderHandle cubemap = (createdTargets_.cubemap) ? createdTargets_.cubemap.GetHandle() : defaultCubemap_;
-    shrMgr.RegisterRenderNodeOutput(DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_RADIANCE_CUBEMAP, cubemap);
-    shrMgr.RegisterGlobalRenderNodeOutput(DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_RADIANCE_CUBEMAP, cubemap);
 }
 
 void RenderNodeDefaultCameraController::CreateResources()
@@ -729,13 +898,14 @@ void RenderNodeDefaultCameraController::CreateResources()
         camRes_.camFlags = camera.flags;
         camRes_.pipelineType = camera.renderPipelineType;
         camRes_.isMultiview = (camera.multiViewCameraCount > 0U);
+        camRes_.sampleCountFlags = camera.msaaSampleCountFlags;
         if (isMultiview) {
             colorDesc.layerCount = mvLayerCount;
         }
 
         if ((camRes_.renResolution.x < 1U) || (camRes_.renResolution.y < 1U)) {
-            const string_view nodeName = renderNodeContextMgr_->GetName();
 #if (CORE3D_VALIDATION_ENABLED == 1)
+            const string_view nodeName = renderNodeContextMgr_->GetName();
             CORE_LOG_ONCE_E(nodeName + "cam_controller_renRes",
                 "CORE3D_VALIDATION: RN:%s camera render resolution %ux%u", nodeName.data(), camRes_.renResolution.x,
                 camRes_.renResolution.y);
@@ -770,19 +940,6 @@ void RenderNodeDefaultCameraController::CreateResourceBaseTargets()
     IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const auto& camera = currentScene_.camera;
 
-    if ((camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_DYNAMIC_CUBEMAP_BIT) && (!createdTargets_.cubemap)) {
-        const string_view us = stores_.dataStoreNameScene;
-        const string_view camName = currentScene_.customCamRngName;
-        // readiance cubemap is always created with a name
-        createdTargets_.cubemap = gpuResourceMgr.Create(
-            us + DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME + "RADIANCE_CUBEMAP_" + camName,
-            camRes_.inputImageDescs.cubemap);
-#if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_I(
-            "CORE3D_VALIDATION: camera (%s) creating dynamic radiance cubemap", currentScene_.customCamRngName.data());
-#endif
-    }
-
     camRes_.colorTarget = camera.colorTargets[0].GetHandle();
     camRes_.depthTarget = camera.depthTarget.GetHandle();
     // update formats if given
@@ -798,7 +955,16 @@ void RenderNodeDefaultCameraController::CreateResourceBaseTargets()
     UpdateTargetFormats(camera.colorTargetCustomization[0U], camRes_.inputImageDescs.color);
     UpdateTargetFormats(camera.depthTargetCustomization, camRes_.inputImageDescs.depth);
     if (camera.flags & RenderCamera::CAMERA_FLAG_MAIN_BIT) {
-        if (!RenderHandleUtil::IsValid(camRes_.colorTarget)) {
+#if (CORE3D_VALIDATION_ENABLED == 1)
+        if ((!RenderHandleUtil::IsValid(camRes_.colorTarget)) &&
+            (camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT)) {
+            CORE_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "cubemap_def_backbuffer",
+                "CORE3D_VALIDATION: camera (%s) main camera with default backbuffer cannot be cubemap camera",
+                currentScene_.customCamRngName.data());
+        }
+#endif
+        if ((!RenderHandleUtil::IsValid(camRes_.colorTarget)) &&
+            ((camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT) == 0)) {
             camRes_.colorTarget = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_BACKBUFFER");
 #if (CORE3D_VALIDATION_ENABLED == 1)
             CORE_LOG_ONCE_I(renderNodeContextMgr_->GetName() + "using_def_backbuffer",
@@ -856,12 +1022,13 @@ void RenderNodeDefaultCameraController::CreateBuffers()
         gpuResourceMgr.Create(us + DefaultMaterialCameraConstants::CAMERA_LIGHT_BUFFER_PREFIX_NAME + camName,
             GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memPropertyFlags,
                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, sizeof(DefaultMaterialLightStruct) });
+
     // NOTE: storage buffer
     uboHandles_.lightCluster =
         gpuResourceMgr.Create(us + DefaultMaterialCameraConstants::CAMERA_LIGHT_CLUSTER_BUFFER_PREFIX_NAME + camName,
             GpuBufferDesc { CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, memPropertyFlags,
                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                sizeof(uint32_t) * RenderLightHelper::DEFAULT_CLUSTER_INDEX_COUNT });
+                sizeof(DefaultMaterialLightClusterData) * CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT });
 }
 
 void RenderNodeDefaultCameraController::UpdateBuffers()
@@ -907,6 +1074,24 @@ void RenderNodeDefaultCameraController::UpdatePostProcessUniformBuffer()
     }
 }
 
+namespace {
+Math::UVec4 GetMultiEnvironmentIndices(const RenderCamera& cam)
+{
+    if (cam.environment.multiEnvCount > 0U) {
+        Math::UVec4 multiEnvIndices = { 0U, 0U, 0U, 0U };
+        // the first value in multiEnvIndices is the count
+        // first index is the main environment, next indices are the blend environments
+        for (uint32_t idx = 1U; idx < cam.environment.multiEnvCount; ++idx) {
+            multiEnvIndices[0U]++;
+            multiEnvIndices[idx] = idx;
+        }
+        return multiEnvIndices;
+    } else {
+        return { 0U, 0U, 0U, 0U };
+    }
+}
+} // namespace
+
 void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
 {
     BASE_NS::Math::Vec4
@@ -927,8 +1112,13 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
             data) {
             const auto* dataEnd = data + envByteSize;
             const auto& camera = currentScene_.camera;
-            for (uint32_t idx = 0; idx < camera.environmentCount; ++idx) {
-                const RenderCamera::Environment currEnv = dsCamera->GetEnvironment(camera.environmentIds[idx]);
+            const Math::UVec4 multiEnvIndices = GetMultiEnvironmentIndices(camera);
+            // process main environment and multi envs
+            const uint32_t envCount = 1U + camera.environment.multiEnvCount;
+            for (uint32_t idx = 0; idx < envCount; ++idx) {
+                const RenderCamera::Environment currEnv =
+                    (idx == 0U) ? camera.environment
+                                : dsCamera->GetEnvironment(camera.environment.multiEnvIds[idx - 1U]);
 
                 const Math::UVec2 id = GetPacked64(currEnv.id);
                 const Math::UVec2 layer = GetPacked64(currEnv.layerMask);
@@ -947,10 +1137,10 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                     Math::Mat4Cast(currEnv.rotation),
                     Math::UVec4(id.x, id.y, layer.x, layer.y),
                     {},
-                    {},
+                    multiEnvIndices,
                 };
                 constexpr size_t countOfSh = countof(envStruct.shIndirectCoefficients);
-                if (currEnv.radianceCubemap) {
+                if (currEnv.radianceCubemap || (currEnv.multiEnvCount > 0U)) {
                     for (size_t jdx = 0; jdx < countOfSh; ++jdx) {
                         envStruct.shIndirectCoefficients[jdx] = currEnv.shIndirectCoefficients[jdx];
                     }
@@ -1070,6 +1260,44 @@ void RenderNodeDefaultCameraController::UpdatePostProcessConfiguration()
     }
 }
 
+void RenderNodeDefaultCameraController::ClusterLights(Render::IRenderCommandList& cmdList)
+{
+    cmdList.BindPipeline(clusterBinders_.psoHandle);
+
+    {
+        auto& binder = *clusterBinders_.clusterBuffersSet0;
+
+        uint32_t binding = 0;
+        binder.BindBuffer(binding++, uboHandles_.cameraData, 0);
+        binder.BindBuffer(binding++, uboHandles_.generalData.GetHandle(), 0);
+        binder.BindBuffer(binding++, uboHandles_.light.GetHandle(), 0);
+        binder.BindBuffer(binding++, uboHandles_.lightCluster.GetHandle(), 0);
+
+        if (!binder.GetDescriptorSetLayoutBindingValidity()) {
+            return;
+        }
+
+        cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
+        cmdList.BindDescriptorSet(0, binder.GetDescriptorSetHandle());
+    }
+
+    const uint32_t tgx = (CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT + (LIGHT_CLUSTER_TGS - 1)) / LIGHT_CLUSTER_TGS;
+    cmdList.Dispatch(tgx, 1, 1);
+
+    {
+        // add barrier for memory
+        constexpr GeneralBarrier src { AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
+            PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
+        constexpr GeneralBarrier dst { AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT |
+                                           AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
+            PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
+
+        cmdList.CustomMemoryBarrier(src, dst);
+        cmdList.AddCustomBarrierPoint();
+    }
+}
+
 void RenderNodeDefaultCameraController::SetDefaultGpuImageDescs()
 {
     camRes_.inputImageDescs.depth = DEPTH_DEFAULT_DESC;
@@ -1080,8 +1308,6 @@ void RenderNodeDefaultCameraController::SetDefaultGpuImageDescs()
     camRes_.inputImageDescs.history = HISTORY_DEFAULT_DESC;
     camRes_.inputImageDescs.baseColor = BASE_COLOR_DEFAULT_DESC;
     camRes_.inputImageDescs.material = MATERIAL_DEFAULT_DESC;
-
-    camRes_.inputImageDescs.cubemap = CUBEMAP_DEFAULT_DESC;
 }
 
 void RenderNodeDefaultCameraController::ParseRenderNodeInputs()
@@ -1109,8 +1335,6 @@ void RenderNodeDefaultCameraController::ParseRenderNodeInputs()
             camRes_.inputImageDescs.baseColor = ref.desc;
         } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_MATERIAL) {
             camRes_.inputImageDescs.material = ref.desc;
-        } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_RADIANCE_CUBEMAP) {
-            camRes_.inputImageDescs.cubemap = ref.desc;
         }
     }
 
@@ -1123,7 +1347,6 @@ void RenderNodeDefaultCameraController::ParseRenderNodeInputs()
     ValidateColorDesc(gpuResourceMgr, HISTORY_DEFAULT_DESC, true, camRes_.inputImageDescs.history);
     ValidateColorDesc(gpuResourceMgr, BASE_COLOR_DEFAULT_DESC, false, camRes_.inputImageDescs.baseColor);
     ValidateColorDesc(gpuResourceMgr, MATERIAL_DEFAULT_DESC, false, camRes_.inputImageDescs.material);
-    ValidateColorDesc(gpuResourceMgr, CUBEMAP_DEFAULT_DESC, false, camRes_.inputImageDescs.cubemap);
 }
 
 // for plugin / factory interface

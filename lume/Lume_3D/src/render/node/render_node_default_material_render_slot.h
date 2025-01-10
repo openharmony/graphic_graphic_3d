@@ -52,34 +52,12 @@ public:
         return 0U;
     }
 
-    struct MaterialHandleStruct {
-        RENDER_NS::BindableImage resources[RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT];
-    };
-
     struct ShadowBuffers {
         RENDER_NS::RenderHandle depthHandle;
         RENDER_NS::RenderHandle vsmColorHandle;
 
         RENDER_NS::RenderHandle pcfSamplerHandle;
         RENDER_NS::RenderHandle vsmSamplerHandle;
-    };
-
-    struct BufferHandles {
-        RENDER_NS::RenderHandle mat;
-        RENDER_NS::RenderHandle matTransform;
-        RENDER_NS::RenderHandle matCustom;
-        RENDER_NS::RenderHandle mesh;
-        RENDER_NS::RenderHandle skinJoint;
-        RENDER_NS::RenderHandle environment;
-        RENDER_NS::RenderHandle fog;
-        RENDER_NS::RenderHandle generalData;
-        RENDER_NS::RenderHandle postProcess;
-
-        RENDER_NS::RenderHandle camera;
-        RENDER_NS::RenderHandle light;
-        RENDER_NS::RenderHandle lightCluster;
-
-        RENDER_NS::RenderHandle defaultBuffer;
     };
 
     struct PerShaderData {
@@ -99,12 +77,26 @@ public:
         RENDER_NS::RenderHandle defaultPlHandle;
         RENDER_NS::RenderHandle defaultVidHandle;
         RENDER_NS::PipelineLayout defaultPipelineLayout;
+        RENDER_NS::PipelineLayout defaultTmpPipelineLayout;
         BASE_NS::vector<RENDER_NS::ShaderSpecialization::Constant> defaultSpecilizationConstants;
+        bool defaultPlSet3 { false };
+    };
+    struct PipelineInfo {
+        RENDER_NS::RenderHandle boundPsoHandle;
+        uint64_t boundShaderHash { 0U };
+        bool boundCustomSetNeed { false };
+    };
+    struct FrameGlobalDescriptorSets {
+        RENDER_NS::RenderHandle set0;
+        RENDER_NS::RenderHandle set1;
+        RENDER_NS::RenderHandle set2Default;
+        BASE_NS::array_view<const RENDER_NS::RenderHandle> set2;
+        bool valid = false;
     };
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "80758e28-f064-45e6-878d-624652598405" };
-    static constexpr char const* const TYPE_NAME = "RenderNodeDefaultMaterialRenderSlot";
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultMaterialRenderSlot";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -124,6 +116,7 @@ private:
         RENDER_NS::RenderSlotCullType cullType { RENDER_NS::RenderSlotCullType::NONE };
 
         RenderSceneFlags nodeFlags { 0u };
+        BASE_NS::string renderSlotName;
         uint32_t renderSlotId { 0u };
         uint32_t shaderRenderSlotId { 0u };
         uint32_t stateRenderSlotId { 0u };
@@ -145,12 +138,6 @@ private:
         RENDER_NS::RenderHandle gfxState;
         uint64_t hash { 0 };
     };
-    struct ObjectCounts {
-        uint32_t maxSlotMeshCount { 0u };
-        uint32_t maxSlotSubmeshCount { 0u };
-        uint32_t maxSlotSkinCount { 0u };
-        uint32_t maxSlotMaterialCount { 0u };
-    };
     struct CurrentScene {
         RenderCamera camera;
         RENDER_NS::RenderHandle cameraEnvRadianceHandle;
@@ -164,6 +151,7 @@ private:
         IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
         IRenderDataStoreDefaultLight::LightingFlags lightingFlags { 0u };
         RenderCamera::ShaderFlags cameraShaderFlags { 0u }; // evaluated based on camera and scene flags
+        BASE_NS::vector<uint32_t> mvCameraIndices;
     };
     struct SpecializationData {
         static constexpr uint32_t MAX_FLAG_COUNT { 16u };
@@ -179,15 +167,16 @@ private:
     void ParseRenderNodeInputs();
     void RenderSubmeshes(RENDER_NS::IRenderCommandList& cmdList,
         const IRenderDataStoreDefaultMaterial& dataStoreMaterial, const IRenderDataStoreDefaultCamera& dataStoreCamera);
-    void UpdateSet01(RENDER_NS::IRenderCommandList& cmdList);
-    void UpdateAndBindSet2(
-        RENDER_NS::IRenderCommandList& cmdList, const MaterialHandleStruct& materialHandles, const uint32_t objIdx);
+    void BindPipeline(RENDER_NS::IRenderCommandList& cmdList, const SlotSubmeshIndex& ssp,
+        const RenderDataDefaultMaterial::SubmeshMaterialFlags& materialFlags, RenderSubmeshFlags submeshFlags,
+        const RENDER_NS::GraphicsState::InputAssembly& inputAssembly, PipelineInfo& info);
+    uint32_t BindSet1And2(RENDER_NS::IRenderCommandList& cmdList, const RenderSubmesh& currSubmesh,
+        RenderSubmeshFlags submeshFlags, bool initialBindDone, const FrameGlobalDescriptorSets& fgds,
+        uint32_t currMaterialIndex);
     bool UpdateAndBindSet3(RENDER_NS::IRenderCommandList& cmdList,
         const RenderDataDefaultMaterial::CustomResourceData& customResourceData);
     void CreateDefaultShaderData();
-    // unique scene name as input
-    void GetSceneUniformBuffers(const BASE_NS::string_view us);
-    PsoAndInfo CreateNewPso(const ShaderStateData& ssd,
+    PsoAndInfo CreateNewPso(const ShaderStateData& ssd, const RENDER_NS::GraphicsState::InputAssembly& ia,
         const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
         const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
         const RenderCamera::ShaderFlags cameraShaderFlags);
@@ -195,33 +184,25 @@ private:
         const IRenderDataStoreDefaultCamera& dataStoreCamera, const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
     void UpdateCurrentScene(const IRenderDataStoreDefaultScene& dataStoreScene,
         const IRenderDataStoreDefaultCamera& dataStoreCamera, const IRenderDataStoreDefaultLight& dataStoreLight);
-    void ProcessBuffersAndDescriptors(const ObjectCounts& objectCounts);
-    void ResetAndUpdateDescriptorSets();
 
     void UpdatePostProcessConfiguration();
-    PsoAndInfo GetSubmeshPso(const ShaderStateData& ssd,
-        const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
-        const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
-        const RenderCamera::ShaderFlags cameraShaderFlags);
-    RENDER_NS::ShaderSpecializationConstantDataView GetShaderSpecializationView(
-        const RENDER_NS::GraphicsState& gfxState,
-        const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
-        const RenderSubmeshFlags submeshFlags, const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
-        const RenderCamera::ShaderFlags cameraShaderFlags);
+    PsoAndInfo GetSubmeshPso(const ShaderStateData& ssd, const RENDER_NS::GraphicsState::InputAssembly& ia,
+        const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMatFlags, const RenderSubmeshFlags submeshFlags,
+        const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
+        const RenderCamera::ShaderFlags camShaderFlags);
+    RENDER_NS::ShaderSpecializationConstantDataView GetShaderSpecView(const RENDER_NS::GraphicsState& gfxState,
+        const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMatFlags, const RenderSubmeshFlags submeshFlags,
+        const IRenderDataStoreDefaultLight::LightingFlags lightingFlags,
+        const RenderCamera::ShaderFlags camShaderFlags);
     BASE_NS::array_view<const RENDER_NS::DynamicStateEnum> GetDynamicStates() const;
     void EvaluateFogBits();
     void ResetRenderSlotData(const uint32_t shaderRenderSlotId, const bool multiView);
-
-    MaterialHandleStruct defaultMaterialStruct_;
+    const RENDER_NS::PipelineLayout& GetEvaluatedPipelineLayout(
+        const RENDER_NS::RenderHandle& currShader, bool& needsCustomSet);
 
     CurrentScene currentScene_;
     SceneRenderDataStores stores_;
-
-    ObjectCounts objectCounts_;
-
-    SceneBufferHandles sceneBuffers_;
-    SceneCameraBufferHandles cameraBuffers_;
-    ShadowBuffers shadowBuffers_;
+    BASE_NS::string cameraName_;
 
     struct DefaultSamplers {
         RENDER_NS::RenderHandle cubemapHandle;
@@ -233,13 +214,6 @@ private:
     DefaultSamplers defaultSamplers_;
 
     RENDER_NS::RenderHandle defaultColorPrePassHandle_;
-
-    struct AllDescriptorSets {
-        static constexpr uint32_t SINGLE_SET_COUNT { 2u };
-        RENDER_NS::IDescriptorSetBinder::Ptr set01[SINGLE_SET_COUNT];
-        BASE_NS::vector<RENDER_NS::IDescriptorSetBinder::Ptr> sets2;
-    };
-    AllDescriptorSets allDescriptorSets_;
     AllShaderData allShaderData_;
     SpecializationData specializationData_;
 

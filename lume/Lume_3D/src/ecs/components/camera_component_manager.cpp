@@ -21,7 +21,7 @@
 #include "ecs/components/layer_flag_bits_metadata.h"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::array_view;
@@ -38,65 +38,50 @@ DECLARE_PROPERTY_TYPE(CameraComponent::Culling);
 DECLARE_PROPERTY_TYPE(CameraComponent::TargetUsage);
 DECLARE_PROPERTY_TYPE(vector<CameraComponent::TargetUsage>);
 DECLARE_PROPERTY_TYPE(Format);
+DECLARE_PROPERTY_TYPE(CameraComponent::SampleCount);
 
 // Declare their metadata
-BEGIN_ENUM(CameraTypeMetaData, CameraComponent::Projection)
-DECL_ENUM(CameraComponent::Projection, ORTHOGRAPHIC, "Orthographic")
-DECL_ENUM(CameraComponent::Projection, PERSPECTIVE, "Perspective")
-DECL_ENUM(CameraComponent::Projection, FRUSTUM, "Frustum")
-DECL_ENUM(CameraComponent::Projection, CUSTOM, "Custom Projection")
-END_ENUM(CameraTypeMetaData, CameraComponent::Projection)
+ENUM_TYPE_METADATA(CameraComponent::Projection, ENUM_VALUE(ORTHOGRAPHIC, "Orthographic"),
+    ENUM_VALUE(PERSPECTIVE, "Perspective"), ENUM_VALUE(FRUSTUM, "Frustum"), ENUM_VALUE(CUSTOM, "Custom Projection"))
 
-BEGIN_ENUM(CameraRenderPipelineTypeMetaData, CameraComponent::RenderingPipeline)
-DECL_ENUM(CameraComponent::RenderingPipeline, LIGHT_FORWARD, "Light-Weight Forward")
-DECL_ENUM(CameraComponent::RenderingPipeline, FORWARD, "Forward")
-DECL_ENUM(CameraComponent::RenderingPipeline, DEFERRED, "Deferred")
-DECL_ENUM(CameraComponent::RenderingPipeline, CUSTOM, "Custom")
-END_ENUM(CameraRenderPipelineTypeMetaData, CameraComponent::RenderingPipeline)
+ENUM_TYPE_METADATA(CameraComponent::RenderingPipeline, ENUM_VALUE(LIGHT_FORWARD, "Light-Weight Forward"),
+    ENUM_VALUE(FORWARD, "Forward"), ENUM_VALUE(DEFERRED, "Deferred"), ENUM_VALUE(CUSTOM, "Custom"))
 
-BEGIN_ENUM(CameraCullTypeMetaData, CameraComponent::Culling)
-DECL_ENUM(CameraComponent::Culling, NONE, "None")
-DECL_ENUM(CameraComponent::Culling, VIEW_FRUSTUM, "View Frustum")
-END_ENUM(CameraCullTypeMetaData, CameraComponent::Culling)
+ENUM_TYPE_METADATA(CameraComponent::Culling, ENUM_VALUE(NONE, "None"), ENUM_VALUE(VIEW_FRUSTUM, "View Frustum"))
 
-BEGIN_ENUM(CameraSceneFlagBitsMetaData, CameraComponent::SceneFlagBits)
-DECL_ENUM(CameraComponent::SceneFlagBits, ACTIVE_RENDER_BIT, "Active Render")
-DECL_ENUM(CameraComponent::SceneFlagBits, MAIN_CAMERA_BIT, "Main Camera")
-END_ENUM(CameraSceneFlagBitsMetaData, CameraComponent::SceneFlagBits)
+ENUM_TYPE_METADATA(CameraComponent::SceneFlagBits, ENUM_VALUE(ACTIVE_RENDER_BIT, "Active Render"),
+    ENUM_VALUE(MAIN_CAMERA_BIT, "Main Camera"))
 
-BEGIN_ENUM(CameraPipelineFlagBitsMetaData, CameraComponent::PipelineFlagBits)
-DECL_ENUM(CameraComponent::PipelineFlagBits, CLEAR_DEPTH_BIT, "Clear Depth")
-DECL_ENUM(CameraComponent::PipelineFlagBits, CLEAR_COLOR_BIT, "Clear Color")
-DECL_ENUM(CameraComponent::PipelineFlagBits, MSAA_BIT, "MSAA")
-DECL_ENUM(CameraComponent::PipelineFlagBits, ALLOW_COLOR_PRE_PASS_BIT, "Allow Color Pre-Pass")
-DECL_ENUM(CameraComponent::PipelineFlagBits, FORCE_COLOR_PRE_PASS_BIT, "Force Color Pre-Pass")
-DECL_ENUM(CameraComponent::PipelineFlagBits, HISTORY_BIT, "Create And Store History Image")
-DECL_ENUM(CameraComponent::PipelineFlagBits, JITTER_BIT, "Jitter Camera, Offset Within Pixel")
-DECL_ENUM(CameraComponent::PipelineFlagBits, VELOCITY_OUTPUT_BIT, "Output Samplable Velocity")
-DECL_ENUM(CameraComponent::PipelineFlagBits, DEPTH_OUTPUT_BIT, "Output Samplable Depth")
-DECL_ENUM(CameraComponent::PipelineFlagBits, MULTI_VIEW_ONLY_BIT, "Camera Will Be Used Only As A Multi-View Layer")
-END_ENUM(CameraPipelineFlagBitsMetaData, CameraComponent::PipelineFlagBits)
+ENUM_TYPE_METADATA(CameraComponent::PipelineFlagBits, ENUM_VALUE(CLEAR_DEPTH_BIT, "Clear Depth"),
+    ENUM_VALUE(CLEAR_COLOR_BIT, "Clear Color"), ENUM_VALUE(MSAA_BIT, "MSAA"),
+    ENUM_VALUE(ALLOW_COLOR_PRE_PASS_BIT, "Allow Color Pre-Pass"),
+    ENUM_VALUE(FORCE_COLOR_PRE_PASS_BIT, "Force Color Pre-Pass"),
+    ENUM_VALUE(HISTORY_BIT, "Create And Store History Image"),
+    ENUM_VALUE(JITTER_BIT, "Jitter Camera, Offset Within Pixel"),
+    ENUM_VALUE(VELOCITY_OUTPUT_BIT, "Output Samplable Velocity"),
+    ENUM_VALUE(DEPTH_OUTPUT_BIT, "Output Samplable Depth"),
+    ENUM_VALUE(MULTI_VIEW_ONLY_BIT, "Camera Will Be Used Only As A Multi-View Layer"),
+    ENUM_VALUE(DISALLOW_REFLECTION_BIT, "Disallows Reflection Plane For Camera"),
+    ENUM_VALUE(CUBEMAP_BIT, "Camera Will Have Automatic Cubemap Targets"))
 
 // define some meaningful image formats for camera component usage
-BEGIN_ENUM(FormatMetaData, Format)
-DECL_ENUM(Format, BASE_FORMAT_UNDEFINED, "BASE_FORMAT_UNDEFINED")
-DECL_ENUM(Format, BASE_FORMAT_R8G8B8A8_UNORM, "BASE_FORMAT_R8G8B8A8_UNORM")
-DECL_ENUM(Format, BASE_FORMAT_R8G8B8A8_SRGB, "BASE_FORMAT_R8G8B8A8_SRGB")
-DECL_ENUM(Format, BASE_FORMAT_A2R10G10B10_UNORM_PACK32, "BASE_FORMAT_A2R10G10B10_UNORM_PACK32")
-DECL_ENUM(Format, BASE_FORMAT_R16G16B16A16_UNORM, "BASE_FORMAT_R16G16B16A16_UNORM")
-DECL_ENUM(Format, BASE_FORMAT_R16G16B16A16_SFLOAT, "BASE_FORMAT_R16G16B16A16_SFLOAT")
-DECL_ENUM(Format, BASE_FORMAT_B10G11R11_UFLOAT_PACK32, "BASE_FORMAT_B10G11R11_UFLOAT_PACK32")
-DECL_ENUM(Format, BASE_FORMAT_D16_UNORM, "BASE_FORMAT_D16_UNORM")
-DECL_ENUM(Format, BASE_FORMAT_D32_SFLOAT, "BASE_FORMAT_D32_SFLOAT")
-DECL_ENUM(Format, BASE_FORMAT_D24_UNORM_S8_UINT, "BASE_FORMAT_D24_UNORM_S8_UINT")
-END_ENUM(FormatMetaData, Format)
+ENUM_TYPE_METADATA(Format, ENUM_VALUE(BASE_FORMAT_UNDEFINED, "BASE_FORMAT_UNDEFINED"),
+    ENUM_VALUE(BASE_FORMAT_R8G8B8A8_UNORM, "BASE_FORMAT_R8G8B8A8_UNORM"),
+    ENUM_VALUE(BASE_FORMAT_R8G8B8A8_SRGB, "BASE_FORMAT_R8G8B8A8_SRGB"),
+    ENUM_VALUE(BASE_FORMAT_A2R10G10B10_UNORM_PACK32, "BASE_FORMAT_A2R10G10B10_UNORM_PACK32"),
+    ENUM_VALUE(BASE_FORMAT_R16G16B16A16_UNORM, "BASE_FORMAT_R16G16B16A16_UNORM"),
+    ENUM_VALUE(BASE_FORMAT_R16G16B16A16_SFLOAT, "BASE_FORMAT_R16G16B16A16_SFLOAT"),
+    ENUM_VALUE(BASE_FORMAT_B10G11R11_UFLOAT_PACK32, "BASE_FORMAT_B10G11R11_UFLOAT_PACK32"),
+    ENUM_VALUE(BASE_FORMAT_D16_UNORM, "BASE_FORMAT_D16_UNORM"),
+    ENUM_VALUE(BASE_FORMAT_D32_SFLOAT, "BASE_FORMAT_D32_SFLOAT"),
+    ENUM_VALUE(BASE_FORMAT_D24_UNORM_S8_UINT, "BASE_FORMAT_D24_UNORM_S8_UINT"))
 
-BEGIN_METADATA(CameraTargetUsageMetaData, CameraComponent::TargetUsage)
-DECL_PROPERTY2(CameraComponent::TargetUsage, format, "Format", 0)
-DECL_PROPERTY2(CameraComponent::TargetUsage, usageFlags, "Usage", 0)
-END_METADATA(CameraTargetUsageMetaData, CameraComponent::TargetUsage)
+ENUM_TYPE_METADATA(CameraComponent::SampleCount, ENUM_VALUE(SAMPLE_COUNT_2, "2 Samples"),
+    ENUM_VALUE(SAMPLE_COUNT_4, "4 Samples"), ENUM_VALUE(SAMPLE_COUNT_8, "8 Samples"))
 
-DECLARE_CONTAINER_API(CameraTargetUsageContainerApi, CameraComponent::TargetUsage)
+DATA_TYPE_METADATA(
+    CameraComponent::TargetUsage, MEMBER_PROPERTY(format, "Format", 0), MEMBER_PROPERTY(usageFlags, "Usage", 0))
+
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -110,10 +95,9 @@ using CORE_NS::Property;
 using CORE_NS::PropertyFlags;
 
 class CameraComponentManager final : public BaseManager<CameraComponent, ICameraComponentManager> {
-    BEGIN_PROPERTY(CameraComponent, ComponentMetadata)
+    BEGIN_PROPERTY(CameraComponent, componentMetaData_)
 #include <3d/ecs/components/camera_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit CameraComponentManager(IEcs& ecs)
@@ -124,12 +108,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

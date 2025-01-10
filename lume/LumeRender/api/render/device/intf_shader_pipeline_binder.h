@@ -123,7 +123,7 @@ public:
      */
     virtual void BindBuffer(uint32_t set, uint32_t binding, const BindableBufferWithHandleReference& resource) = 0;
 
-    /** Bind buffers for array binding.
+    /** Bind buffers for array bindings.
      * @param set Set index
      * @param binding Binding index
      * @param resources Binding resources
@@ -131,14 +131,14 @@ public:
      */
     virtual void BindBuffers(
         uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableBufferWithHandleReference> resources) = 0;
-    
+
     /** Bind image.
      * @param set Set index
      * @param binding Binding index
      * @param resource Binding resource handle
      */
     virtual void BindImage(uint32_t set, uint32_t binding, const BindableImageWithHandleReference& resource) = 0;
-    
+
     /** Bind images for array bindings.
      * @param set Set index
      * @param binding Binding index
@@ -154,31 +154,31 @@ public:
      */
     virtual void BindSampler(uint32_t set, uint32_t binding, const BindableSamplerWithHandleReference& resource) = 0;
 
-    /** Bind sampler for array bindings.
+    /** Bind samplers for array bindings
      * @param set Set index
      * @param binding Binding index
      * @param handle Binding resource handle
      */
     virtual void BindSamplers(
         uint32_t set, uint32_t binding, BASE_NS::array_view<const BindableSamplerWithHandleReference> resources) = 0;
-    
+
     /** Bind vertex buffers
      * @param vertexBuffers vertex buffers
      */
     virtual void BindVertexBuffers(BASE_NS::array_view<const VertexBufferWithHandleReference> vertexBuffers) = 0;
 
-    /** Bind index Buffer
-     * @param indexBuffer vertex Buffer
+    /** Bind index buffer
+     * @param indexBuffer vertex buffers
      */
     virtual void BindIndexBuffer(const IndexBufferWithHandleReference& indexBuffer) = 0;
 
     /** Set draw command
-     * @param indexBuffer vertex Buffer
+     * @param indexBuffer vertex buffers
      */
     virtual void SetDrawCommand(const DrawCommand& drawCommand) = 0;
 
-    /** Bind dispatch command
-     * @param indexBuffer vertex Buffer
+    /** Set dispatch commnd
+     * @param indexBuffer vertex buffers
      */
     virtual void SetDispatchCommand(const DispatchCommand& dispatchCommand) = 0;
 
@@ -197,12 +197,12 @@ public:
      */
     virtual BASE_NS::array_view<const VertexBufferWithHandleReference> GetVertexBuffers() const = 0;
 
-    /** Get index buffers
+    /** Get index buffer
      * @return IndexBuffer
      */
     virtual IndexBufferWithHandleReference GetIndexBuffer() const = 0;
 
-    /** Get draw command
+    /** Get draw commdn
      * @return DrawCommand
      */
     virtual DrawCommand GetDrawCommand() const = 0;
@@ -212,20 +212,20 @@ public:
      */
     virtual DispatchCommand GetDispatchCommand() const = 0;
 
-    /** Get pipeline Layout
-     * @return PipelineLayout
+    /** Get pipeline layout
+     * @return Pipeline layout.
      */
     virtual PipelineLayout GetPipelineLayout() const = 0;
 
-    /** Get property handle for built-in custom, material properties. Check th pointer always.
-     *  @return Pointer to property handle if properties present, nullptr otherwise.
+    /** Get property handle for built-in custom material properties. Check the pointer always.
+     * @return Pointer to property handle if properties present, nullptr otherwise.
      */
-   virtual CORE_NS::IPropertyHandle* GetProperties() = 0;
+    virtual CORE_NS::IPropertyHandle* GetProperties() = 0;
 
-   /** Get binding property handle for built-in binding properties. Check the pointer always.
-    * @return Pointer to property handle if properties present, nullptr otherwise.
-    */
-   virtual CORE_NS::IPropertyHandle* GetBindingProperties() = 0;
+    /** Get binding property handle for built-in binding properties. Check the pointer always.
+     * @return Pointer to property handle if properties present, nullptr otherwise.
+     */
+    virtual CORE_NS::IPropertyHandle* GetBindingProperties() = 0;
 
     /** Get resource binding.
      * @param set Set index
@@ -234,9 +234,9 @@ public:
      */
     virtual ResourceBinding GetResourceBinding(uint32_t set, uint32_t binding) const = 0;
 
-    /** Get property binding data and binding information
-     *  the data is not automatically move to GPU access (render node(s) should handle that)
-     * @return PropertyBindingView
+    /** Get property binding data and binding information.
+     * The data is not automatically moved to GPU access (render node(s) should handle that)
+     * @return PropertyBindingView.
      */
     virtual PropertyBindingView GetPropertyBindingView() const = 0;
 

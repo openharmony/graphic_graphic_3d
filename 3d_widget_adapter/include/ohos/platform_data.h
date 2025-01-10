@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,17 +16,27 @@
 #ifndef OHOS_RENDER_3D_PLATFORM_DATA_H
 #define OHOS_RENDER_3D_PLATFORM_DATA_H
 
+#include <memory>
 #include <string>
 
+namespace OHOS::Global::Resource {
+class ResourceManager;
+}
+
 namespace OHOS::Render3D {
+
 struct HapInfo {
     std::string hapPath_ = "";
     std::string bundleName_ = "";
     std::string moduleName_ = "";
+    std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager_;
 };
+
 struct PlatformData {
     /** Core root path */
     std::string coreRootPath_;
+    /** Core root path */
+    std::string corePluginPath_;
     /** Application root path */
     std::string appRootPath_;
     /** Application plugin path */

@@ -17,6 +17,7 @@
 #define DEFAULT_ENGINE_CONSTANTS_H
 
 #include <base/containers/string_view.h>
+#include <base/math/vector.h>
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
@@ -65,6 +66,11 @@ struct DefaultEngineGpuResourceConstants {
     static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP {
         "CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP"
     };
+};
+
+struct DefaultDebugConstants {
+    /** Default color used for e.g. debug markers inside render */
+    static constexpr const BASE_NS::Math::Vec4 CORE_DEFAULT_DEBUG_COLOR { 1.0f, 0.5f, 1.0f, 1.0f };
 };
 /** @} */
 RENDER_END_NAMESPACE()

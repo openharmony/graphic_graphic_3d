@@ -15,13 +15,13 @@
 
 #include "util/property_util.h"
 
-#include <PropertyTools/core_metadata.inl>
 #include <cinttypes>
 
 #include <base/math/vector.h>
 #include <core/log.h>
 #include <core/property/intf_property_handle.h>
 #include <core/property/property_types.h>
+#include <core/property_tools/core_metadata.inl>
 #include <render/property/property_types.h>
 
 #include "util/json_util.h"
@@ -77,40 +77,40 @@ constexpr MetaData GetMetaData(const PropertyTypeDecl& typeDecl)
 {
     switch (typeDecl) {
         case PropertyType::UINT32_T:
-            return PropertyType::MetaDataFrom<uint32_t>(nullptr);
+            return PropertyType::MetaDataFrom<uint32_t>();
         case PropertyType::INT32_T:
-            return PropertyType::MetaDataFrom<int32_t>(nullptr);
+            return PropertyType::MetaDataFrom<int32_t>();
         case PropertyType::FLOAT_T:
-            return PropertyType::MetaDataFrom<float>(nullptr);
+            return PropertyType::MetaDataFrom<float>();
 
         case PropertyType::BOOL_T:
-            return PropertyType::MetaDataFrom<bool>(nullptr);
+            return PropertyType::MetaDataFrom<bool>();
 
         case PropertyType::UVEC2_T:
-            return PropertyType::MetaDataFrom<Math::UVec2>(nullptr);
+            return PropertyType::MetaDataFrom<Math::UVec2>();
         case PropertyType::IVEC2_T:
-            return PropertyType::MetaDataFrom<Math::IVec2>(nullptr);
+            return PropertyType::MetaDataFrom<Math::IVec2>();
         case PropertyType::VEC2_T:
-            return PropertyType::MetaDataFrom<Math::Vec2>(nullptr);
+            return PropertyType::MetaDataFrom<Math::Vec2>();
 
         case PropertyType::UVEC3_T:
-            return PropertyType::MetaDataFrom<Math::UVec3>(nullptr);
+            return PropertyType::MetaDataFrom<Math::UVec3>();
         case PropertyType::IVEC3_T:
-            return PropertyType::MetaDataFrom<Math::IVec3>(nullptr);
+            return PropertyType::MetaDataFrom<Math::IVec3>();
         case PropertyType::VEC3_T:
-            return PropertyType::MetaDataFrom<Math::Vec3>(nullptr);
+            return PropertyType::MetaDataFrom<Math::Vec3>();
 
         case PropertyType::UVEC4_T:
-            return PropertyType::MetaDataFrom<Math::UVec4>(nullptr);
+            return PropertyType::MetaDataFrom<Math::UVec4>();
         case PropertyType::IVEC4_T:
-            return PropertyType::MetaDataFrom<Math::IVec4>(nullptr);
+            return PropertyType::MetaDataFrom<Math::IVec4>();
         case PropertyType::VEC4_T:
-            return PropertyType::MetaDataFrom<Math::Vec4>(nullptr);
+            return PropertyType::MetaDataFrom<Math::Vec4>();
 
         case PropertyType::MAT3X3_T:
-            return PropertyType::MetaDataFrom<Math::Mat3X3>(nullptr);
+            return PropertyType::MetaDataFrom<Math::Mat3X3>();
         case PropertyType::MAT4X4_T:
-            return PropertyType::MetaDataFrom<Math::Mat4X4>(nullptr);
+            return PropertyType::MetaDataFrom<Math::Mat4X4>();
     }
     return {};
 }
@@ -374,16 +374,22 @@ size_t CustomPropertyPodHelper::GetPropertyTypeAlignment(const PropertyTypeDecl&
         case PropertyType::UVEC4_T:
             [[fallthrough]];
         case PropertyType::IVEC4_T:
-            align = sizeof(float) * 4U;
-            break;
+            [[fallthrough]];
         case PropertyType::MAT3X3_T:
-            align = sizeof(float) * 4U * 3U;
-            break;
+            [[fallthrough]];
         case PropertyType::MAT4X4_T:
-            align = sizeof(float) * 4U * 4U;
+            align = sizeof(float) * 4U;
             break;
     }
     return align;
+}
+
+template<typename T>
+inline void SafeFromJsonValue(const json::value* value, T& val)
+{
+    if (value) {
+        FromJson(*value, val);
+    }
 }
 
 void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl& propertyType, const json::value* value,
@@ -391,64 +397,64 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
 {
     if (propertyType == PropertyType::VEC4_T) {
         Math::Vec4 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4) });
     } else if (propertyType == PropertyType::UVEC4_T) {
         Math::UVec4 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4) });
     } else if (propertyType == PropertyType::IVEC4_T) {
         Math::IVec4 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4) });
     } else if (propertyType == PropertyType::VEC3_T) {
         Math::Vec3 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3) });
     } else if (propertyType == PropertyType::UVEC3_T) {
         Math::UVec3 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3) });
     } else if (propertyType == PropertyType::IVEC3_T) {
         Math::IVec3 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3) });
     } else if (propertyType == PropertyType::VEC2_T) {
         Math::Vec2 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
     } else if (propertyType == PropertyType::UVEC2_T) {
         Math::UVec2 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
     } else if (propertyType == PropertyType::IVEC2_T) {
         Math::IVec2 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
     } else if (propertyType == PropertyType::FLOAT_T) {
         float val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
     } else if (propertyType == PropertyType::UINT32_T) {
         uint32_t val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
     } else if (propertyType == PropertyType::INT32_T) {
         int32_t val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
     } else if (propertyType == PropertyType::BOOL_T) {
         bool tmpVal;
-        FromJson(*value, tmpVal);
+        SafeFromJsonValue(value, tmpVal);
         uint32_t val = tmpVal;
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
     } else if (propertyType == PropertyType::MAT3X3_T) {
         Math::Mat3X3 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Mat3X3) });
     } else if (propertyType == PropertyType::MAT4X4_T) {
         Math::Mat4X4 val;
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Mat4X4) });
     } else {
         CORE_LOG_W("RENDER_VALIDATION: Invalid property type only int, uint, float, and XvecX variants supported");
@@ -473,35 +479,27 @@ CustomPropertyBindingContainer::CustomPropertyBindingContainer(CustomPropertyWri
 CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
 {
     if (!data_.empty()) {
-        const uint32_t tmp = MAX_STRUCT_HANDLE_REF_BYTE_SIZE;
         PLUGIN_ASSERT(metaData_.size() <= data_.size());
-        for (size_t idx = 0; idx < metaData_.size(); ++idx) {
-            const auto& meta = metaData_[idx];
+        for (const auto& meta : metaData_) {
             CORE_ASSERT(meta.offset < data_.size_in_bytes());
             switch (meta.type) {
                 case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                     PLUGIN_ASSERT(meta.size == BUFFER_HANDLE_REF_BYTE_SIZE);
-                    if (BindableBufferWithHandleReference* resource =
-                            (BindableBufferWithHandleReference*)(data_.data() + meta.offset);
-                        resource) {
-                        DestroyHelper(*resource);
-                    }
-                } 
-                    break;
-                case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
-                    PLUGIN_ASSERT(meta.size == IMAGE_HANDLE_REF_BYTE_SIZE);
-                    if (BindableImageWithHandleReference* resource =
-                            (BindableImageWithHandleReference*)(data_.data() + meta.offset);
-                        resource) {
+                    if (auto* resource = (BindableBufferWithHandleReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
                 }
-                    break;
+		   break;
+                case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
+                    PLUGIN_ASSERT(meta.size == IMAGE_HANDLE_REF_BYTE_SIZE);
+                    if (auto* resource = (BindableImageWithHandleReference*)(data_.data() + meta.offset); resource) {
+                        DestroyHelper(*resource);
+                    }
+                }
+                break;
                 case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
                     PLUGIN_ASSERT(meta.size == SAMPLER_HANDLE_REF_BYTE_SIZE);
-                    if (BindableSamplerWithHandleReference* resource =
-                            (BindableSamplerWithHandleReference*)(data_.data() + meta.offset);
-                        resource) {
+                    if (auto* resource = (BindableSamplerWithHandleReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
                 }
@@ -599,16 +597,13 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
     switch (typeDecl) {
         case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
             byteSize = BUFFER_HANDLE_REF_BYTE_SIZE;
-        }
-            break;
+        } break;
         case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
             byteSize = IMAGE_HANDLE_REF_BYTE_SIZE;
-        }
-            break;
+        } break;
         case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
             byteSize = SAMPLER_HANDLE_REF_BYTE_SIZE;
-        }
-            break;
+        } break;
     }
     if ((byteSize > 0) && reserved) {
         metaStrings_.push_back({ string { propertyName }, string { displayName } });
@@ -631,15 +626,15 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
             case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableBufferWithHandleReference;
             }
-                break;
+            break;
             case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableImageWithHandleReference;
             }
-                break;
+            break;
             case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableSamplerWithHandleReference;
             }
-                break;
+            break;
         }
     } else {
         CORE_LOG_W("unsupported property addition for custom property binding container");

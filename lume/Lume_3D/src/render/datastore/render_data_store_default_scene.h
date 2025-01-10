@@ -16,6 +16,7 @@
 #ifndef CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_SCENE_H
 #define CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_SCENE_H
 
+#include <atomic>
 #include <cstdint>
 
 #include <3d/render/intf_render_data_store_default_scene.h>
@@ -38,27 +39,17 @@ public:
     explicit RenderDataStoreDefaultScene(const BASE_NS::string_view name);
     ~RenderDataStoreDefaultScene() override = default;
 
-    void CommitFrameData() override {};
-    void PreRender() override {};
+    // IRenderDataStore
+    void PreRender() override {}
     // Reset and start indexing from the beginning. i.e. frame boundary reset.
     void PostRender() override;
-    void PreRenderBackend() override {};
-    void PostRenderBackend() override {};
+    void PreRenderBackend() override {}
+    void PostRenderBackend() override {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
         return 0;
-    };
-
-    void SetScene(const RenderScene& scene) override;
-    RenderScene GetScene(const BASE_NS::string_view sceneName) const override;
-    RenderScene GetScene() const override;
-
-    // for plugin / factory interface
-    static constexpr char const* const TYPE_NAME = "RenderDataStoreDefaultScene";
-    static IRenderDataStore* Create(RENDER_NS::IRenderContext& renderContext, char const* name);
-    static void Destroy(IRenderDataStore* instance);
-
+    }
     BASE_NS::string_view GetTypeName() const override
     {
         return TYPE_NAME;
@@ -74,12 +65,27 @@ public:
         return UID;
     }
 
+    void Ref() override;
+    void Unref() override;
+    int32_t GetRefCount() override;
+
+    // IRenderDataStoreDefaultScene
+    void SetScene(const RenderScene& scene) override;
+    RenderScene GetScene(const BASE_NS::string_view sceneName) const override;
+    RenderScene GetScene() const override;
+
+    // for plugin / factory interface
+    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultScene";
+    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, char const* name);
+
 private:
     BASE_NS::string name_;
 
     BASE_NS::vector<RenderScene> scenes_;
     BASE_NS::unordered_map<BASE_NS::string, size_t> nameToScene_;
     uint32_t nextId { 0u };
+
+    std::atomic_int32_t refcnt_ { 0 };
 };
 CORE3D_END_NAMESPACE()
 

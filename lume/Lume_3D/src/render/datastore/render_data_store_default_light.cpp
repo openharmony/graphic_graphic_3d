@@ -40,6 +40,24 @@ void RenderDataStoreDefaultLight::Clear()
     lightCounts_ = {};
 }
 
+void RenderDataStoreDefaultLight::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStoreDefaultLight::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStoreDefaultLight::GetRefCount()
+{
+    return refcnt_;
+}
+
 void RenderDataStoreDefaultLight::SetShadowTypes(const ShadowTypes& shadowTypes, const uint32_t flags)
 {
     shadowTypes_ = shadowTypes;
@@ -84,34 +102,33 @@ void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
     renderLight.color.y = Math::max(0.0f, renderLight.color.y);
     renderLight.color.z = Math::max(0.0f, renderLight.color.z);
     const uint32_t lightCount = lightCounts_.directional + lightCounts_.spot + lightCounts_.point;
-#if (CORE3D_VALIDATION_ENABLED == 1)
     if (lightCount >= DefaultMaterialLightingConstants::MAX_LIGHT_COUNT) {
+#if (CORE3D_VALIDATION_ENABLED == 1)
         CORE_LOG_ONCE_W("drop_light_count_", "CORE3D_VALIDATION: light dropped (max count: %u)",
             DefaultMaterialLightingConstants::MAX_LIGHT_COUNT);
-    }
 #endif
-    if (lightCount < DefaultMaterialLightingConstants::MAX_LIGHT_COUNT) {
-        if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT) {
-            lightCounts_.directional++;
-        } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_SPOT_LIGHT_BIT) {
-            lightCounts_.spot++;
-        } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_POINT_LIGHT_BIT) {
-            lightCounts_.point++;
-        }
-        if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT) {
-            const uint32_t shadowCount = lightCounts_.dirShadow + lightCounts_.spotShadow;
-            if (shadowCount < DefaultMaterialLightingConstants::MAX_SHADOW_COUNT) {
-                if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT) {
-                    lightCounts_.dirShadow++;
-                } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_SPOT_LIGHT_BIT) {
-                    lightCounts_.spotShadow++;
-                }
-                renderLight.shadowIndex = shadowCount; // shadow index in atlas
-                lightCounts_.shadowCount = lightCounts_.spotShadow + lightCounts_.dirShadow;
-            }
-        }
-        lights_.push_back(move(renderLight));
+        return;
     }
+    if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT) {
+        lightCounts_.directional++;
+    } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_SPOT_LIGHT_BIT) {
+        lightCounts_.spot++;
+    } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_POINT_LIGHT_BIT) {
+        lightCounts_.point++;
+    }
+    if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT) {
+        const uint32_t shadowCount = lightCounts_.dirShadow + lightCounts_.spotShadow;
+        if (shadowCount < DefaultMaterialLightingConstants::MAX_SHADOW_COUNT) {
+            if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT) {
+                lightCounts_.dirShadow++;
+            } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_SPOT_LIGHT_BIT) {
+                lightCounts_.spotShadow++;
+            }
+            renderLight.shadowIndex = shadowCount; // shadow index in atlas
+            lightCounts_.shadowCount = lightCounts_.spotShadow + lightCounts_.dirShadow;
+        }
+    }
+    lights_.push_back(move(renderLight));
 }
 
 array_view<const RenderLight> RenderDataStoreDefaultLight::GetLights() const
@@ -140,14 +157,8 @@ IRenderDataStoreDefaultLight::LightingFlags RenderDataStoreDefaultLight::GetLigh
 }
 
 // for plugin / factory interface
-RENDER_NS::IRenderDataStore* RenderDataStoreDefaultLight::Create(RENDER_NS::IRenderContext&, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultLight::Create(RENDER_NS::IRenderContext&, char const* name)
 {
-    // engine not needed
-    return new RenderDataStoreDefaultLight(name);
-}
-
-void RenderDataStoreDefaultLight::Destroy(IRenderDataStore* instance)
-{
-    delete static_cast<RenderDataStoreDefaultLight*>(instance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultLight(name));
 }
 CORE3D_END_NAMESPACE()

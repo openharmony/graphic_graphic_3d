@@ -28,7 +28,7 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IUriComponentManager, UriComponent)
 
-    DEFINE_PROPERTY(BASE_NS::string, uri, "Uri", 0, )
+    DEFINE_PROPERTY(BASE_NS::string, uri, "Uri", 0,)
 
 END_COMPONENT(IUriComponentManager, UriComponent, "8588db9a-1012-400a-95db-84414bb5ec65")
 #if !defined(IMPLEMENT_MANAGER)

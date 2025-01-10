@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "AnimationJS.h"
 #include "CameraJS.h"
 #include "EnvironmentJS.h"
@@ -22,21 +23,21 @@
 #include "MeshJS.h"
 #include "NodeJS.h"
 #include "PostProcJS.h"
+#include "SceneComponentJS.h"
 #include "SceneJS.h"
 #include "ShaderJS.h"
 #include "SubMeshJS.h"
 #include "ToneMapJS.h"
+#include "TextNodeJS.h"
 
 void RegisterClasses(napi_env env, napi_value exports)
 {
-    napi_status status;
-    napi_value zero;
-    napi_value one;
+    napi_value zero, one;
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    napi_get_instance_data(env, reinterpret_cast<void**>(&mis));
 
-    status = napi_create_double(env, 0.0, &zero);
-    status = napi_create_double(env, 1.0, &one);
+    napi_create_double(env, 0.0, &zero);
+    napi_create_double(env, 1.0, &one);
 
     // Declare color class
     {
@@ -44,32 +45,46 @@ void RegisterClasses(napi_env env, napi_value exports)
         auto colorCtor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
-        napi_property_descriptor desc4[] = {
-            {"r", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"g", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"b", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"a", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr}
-        };
+            napi_property_descriptor desc4[] = {
+                {"r", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"g", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"b", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"a", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr}
+            };
         // clang-format on
         napi_value color_class = nullptr;
-        status = napi_define_class(
+        napi_define_class(
             env, "Color", NAPI_AUTO_LENGTH, colorCtor, nullptr, BASE_NS::countof(desc4), desc4, &color_class);
         mis->StoreCtor("Color", color_class);
     }
     // Declare math classes.. "simply" for now.
     {
-        /// Vec
+        /// Vec2
+        auto vec2Ctor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
+
+        // clang-format off
+            napi_property_descriptor desc2[] = {
+                {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"y", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+            };
+        // clang-format on
+        napi_value vec2_class = nullptr;
+        napi_define_class(
+            env, "Vec2", NAPI_AUTO_LENGTH, vec2Ctor, nullptr, BASE_NS::countof(desc2), desc2, &vec2_class);
+        mis->StoreCtor("Vec2", vec2_class);
+
+        /// Vec3
         auto vec3Ctor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
-        napi_property_descriptor desc3[] = {
-            {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"y", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"z", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr}
-        };
+            napi_property_descriptor desc3[] = {
+                {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"y", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"z", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr}
+            };
         // clang-format on
         napi_value vec3_class = nullptr;
-        status = napi_define_class(
+        napi_define_class(
             env, "Vec3", NAPI_AUTO_LENGTH, vec3Ctor, nullptr, BASE_NS::countof(desc3), desc3, &vec3_class);
         mis->StoreCtor("Vec3", vec3_class);
 
@@ -77,15 +92,15 @@ void RegisterClasses(napi_env env, napi_value exports)
         auto vec4Ctor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
-        napi_property_descriptor desc4[] = {
-            {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"y", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"z", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"w", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr}
-        };
+            napi_property_descriptor desc4[] = {
+                {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"y", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"z", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"w", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr}
+            };
         // clang-format on
         napi_value vec4_class = nullptr;
-        status = napi_define_class(
+        napi_define_class(
             env, "Vec4", NAPI_AUTO_LENGTH, vec4Ctor, nullptr, BASE_NS::countof(desc4), desc4, &vec4_class);
         mis->StoreCtor("Vec4", vec4_class);
 
@@ -93,15 +108,15 @@ void RegisterClasses(napi_env env, napi_value exports)
         auto QuatCtor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
-        napi_property_descriptor qdesc[] = {
-            {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"y", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"z", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
-            {"w", nullptr, nullptr, nullptr, nullptr, one, napi_default_jsproperty, nullptr}
-        };
+            napi_property_descriptor qdesc[] = {
+                {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"y", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"z", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
+                {"w", nullptr, nullptr, nullptr, nullptr, one, napi_default_jsproperty, nullptr}
+            };
         // clang-format on
         napi_value quaternion_class = nullptr;
-        status = napi_define_class(
+        napi_define_class(
             env, "Quaternion", NAPI_AUTO_LENGTH, QuatCtor, nullptr, BASE_NS::countof(qdesc), qdesc, &quaternion_class);
         mis->StoreCtor("Quaternion", quaternion_class);
     }
@@ -123,6 +138,8 @@ void RegisterClasses(napi_env env, napi_value exports)
     ToneMapJS::Init(env, scene3dNS);
     ShaderJS::Init(env, scene3dNS);
     AnimationJS::Init(env, scene3dNS);
+    SceneComponentJS::Init(env, scene3dNS);
+    TextNodeJS::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
     NodeImpl::RegisterEnums({ env, scene3dNS });

@@ -13,24 +13,27 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_QUAT_PROXY_H
-#define OHOS_RENDER_3D_QUAT_PROXY_H
+#ifndef QUAT_PROXY_H
+#define QUAT_PROXY_H
 #include <meta/interface/property/property.h>
 
 #include <base/math/quaternion.h>
 
 #include "PropertyProxy.h"
-class QuatProxy : public PropertyProxy {
-    BASE_NS::Math::Quat value;
-    void UpdateLocalValues() override;
-    void UpdateRemoteValues() override;
-
+class QuatProxy : public ObjectPropertyProxy {
 public:
     QuatProxy(napi_env env, META_NS::Property<BASE_NS::Math::Quat> prop);
     ~QuatProxy() override;
-    bool SetValue(NapiApi::Object obj) override;
+    void SetValue(NapiApi::Object obj) override;
+
+protected:
     void SetValue(const BASE_NS::Math::Quat& v);
-    void SetValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
-    napi_value GetValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
+    void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
+    napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
+    void UpdateLocalValues() override;
+    void UpdateRemoteValues() override;
+
+private:
+    BASE_NS::Math::Quat value;
 };
-#endif // OHOS_RENDER_3D_QUAT_PROXY_H
+#endif

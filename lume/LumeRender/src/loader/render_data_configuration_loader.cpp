@@ -27,72 +27,72 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 // clang-format off
-CORE_JSON_SERIALIZE_ENUM(TonemapConfiguration::TonemapType,
+RENDER_JSON_SERIALIZE_ENUM(TonemapConfiguration::TonemapType,
     {
-        { static_cast<TonemapConfiguration::TonemapType>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { TonemapConfiguration::TonemapType::TONEMAP_ACES, "aces" },
         { TonemapConfiguration::TonemapType::TONEMAP_ACES_2020, "aces_2020" },
         { TonemapConfiguration::TonemapType::TONEMAP_FILMIC, "filmic" },
     })
-CORE_JSON_SERIALIZE_ENUM(ColorConversionConfiguration::ConversionFunctionType,
+RENDER_JSON_SERIALIZE_ENUM(ColorConversionConfiguration::ConversionFunctionType,
     {
-        { static_cast<ColorConversionConfiguration::ConversionFunctionType>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { ColorConversionConfiguration::ConversionFunctionType::CONVERSION_LINEAR, "linear" },
         { ColorConversionConfiguration::ConversionFunctionType::CONVERSION_LINEAR_TO_SRGB, "linear_to_srgb" },
     })
-CORE_JSON_SERIALIZE_ENUM(DitherConfiguration::DitherType,
+RENDER_JSON_SERIALIZE_ENUM(DitherConfiguration::DitherType,
     {
-        { static_cast<DitherConfiguration::DitherType>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { DitherConfiguration::DitherType::INTERLEAVED_NOISE, "interleaved_noise" },
         { DitherConfiguration::DitherType::TRIANGLE_NOISE, "triangle_noise" },
         { DitherConfiguration::DitherType::TRIANGLE_NOISE_RGB, "triangle_noise_rgb" },
     })
-CORE_JSON_SERIALIZE_ENUM(BlurConfiguration::BlurQualityType,
+RENDER_JSON_SERIALIZE_ENUM(BlurConfiguration::BlurQualityType,
     {
-        { static_cast<BlurConfiguration::BlurQualityType>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { BlurConfiguration::BlurQualityType::QUALITY_TYPE_LOW, "low" },
         { BlurConfiguration::BlurQualityType::QUALITY_TYPE_NORMAL, "normal" },
         { BlurConfiguration::BlurQualityType::QUALITY_TYPE_HIGH, "high" },
     })
-CORE_JSON_SERIALIZE_ENUM(BlurConfiguration::BlurType,
+RENDER_JSON_SERIALIZE_ENUM(BlurConfiguration::BlurType,
     {
-        { static_cast<BlurConfiguration::BlurType>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { BlurConfiguration::BlurType::TYPE_NORMAL, "normal" },
         { BlurConfiguration::BlurType::TYPE_HORIZONTAL, "horizontal" },
         { BlurConfiguration::BlurType::TYPE_VERTICAL, "vertical" },
     })
-CORE_JSON_SERIALIZE_ENUM(BloomConfiguration::BloomQualityType,
+RENDER_JSON_SERIALIZE_ENUM(BloomConfiguration::BloomQualityType,
     {
-        { static_cast<BloomConfiguration::BloomQualityType>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { BloomConfiguration::BloomQualityType::QUALITY_TYPE_LOW, "low" },
         { BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL, "normal" },
         { BloomConfiguration::BloomQualityType::QUALITY_TYPE_HIGH, "high" },
     })
-CORE_JSON_SERIALIZE_ENUM(BloomConfiguration::BloomType,
+RENDER_JSON_SERIALIZE_ENUM(BloomConfiguration::BloomType,
     {
-        { static_cast<BloomConfiguration::BloomType>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { BloomConfiguration::BloomType::TYPE_NORMAL, "normal" },
         { BloomConfiguration::BloomType::TYPE_HORIZONTAL, "horizontal" },
         { BloomConfiguration::BloomType::TYPE_VERTICAL, "vertical" },
         { BloomConfiguration::BloomType::TYPE_BILATERAL, "bilateral" },
     })
-CORE_JSON_SERIALIZE_ENUM(FxaaConfiguration::Sharpness,
+RENDER_JSON_SERIALIZE_ENUM(FxaaConfiguration::Sharpness,
     {
-        { static_cast<FxaaConfiguration::Sharpness>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { FxaaConfiguration::Sharpness::SOFT, "soft" },
         { FxaaConfiguration::Sharpness::MEDIUM, "medium" },
         { FxaaConfiguration::Sharpness::SHARP, "sharp" },
     })
-CORE_JSON_SERIALIZE_ENUM(FxaaConfiguration::Quality,
+RENDER_JSON_SERIALIZE_ENUM(FxaaConfiguration::Quality,
     {
-        { static_cast<FxaaConfiguration::Quality>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { FxaaConfiguration::Quality::LOW, "low" },
         { FxaaConfiguration::Quality::MEDIUM, "medium" },
         { FxaaConfiguration::Quality::HIGH, "high" },
     })
-CORE_JSON_SERIALIZE_ENUM(PostProcessConfiguration::PostProcessEnableFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(PostProcessConfiguration::PostProcessEnableFlagBits,
     {
-        { static_cast<PostProcessConfiguration::PostProcessEnableFlagBits>(0x7FFFFFFF), nullptr },
+        { 0x7FFFFFFF, nullptr },
         { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_TONEMAP_BIT, "tonemap" },
         { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_VIGNETTE_BIT, "vignette" },
         { PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_DITHER_BIT, "dither" },
@@ -132,6 +132,8 @@ IRenderDataConfigurationLoader::LoadedPostProcess LoadPostProcess(const json::va
                 SafeGetJsonValue(*cIter, "thresholdSoft", err, ppConfig.bloomConfiguration.thresholdSoft);
                 SafeGetJsonValue(*cIter, "amountCoefficient", err, ppConfig.bloomConfiguration.amountCoefficient);
                 SafeGetJsonValue(*cIter, "dirtMaskCoefficient", err, ppConfig.bloomConfiguration.dirtMaskCoefficient);
+                SafeGetJsonValue(*cIter, "scatter", err, ppConfig.bloomConfiguration.scatter);
+                SafeGetJsonValue(*cIter, "scaleFactor", err, ppConfig.bloomConfiguration.scaleFactor);
                 SafeGetJsonValue(*cIter, "useCompute", err, ppConfig.bloomConfiguration.useCompute);
                 // NOTE: dirt mask name should be added
             }
@@ -173,13 +175,10 @@ IRenderDataConfigurationLoader::LoadedPostProcess LoadPostProcess(const json::va
 
     return result;
 }
-} // namespace
-
-IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoader::LoadPostProcess(
-    const string_view jsonString)
+IRenderDataConfigurationLoader::LoadedPostProcess LoadFromNullTerminated(const string_view jsonString)
 {
     IRenderDataConfigurationLoader::LoadedPostProcess result;
-    auto json = json::parse(jsonString.data());
+    const auto json = json::parse(jsonString.data());
     if (json) {
         result = RENDER_NS::LoadPostProcess(json);
     } else {
@@ -188,6 +187,15 @@ IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoader:
     }
 
     return result;
+}
+} // namespace
+
+IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoader::LoadPostProcess(
+    const string_view jsonString)
+{
+    // make sure the input is zero terminated before parsing.
+    const auto asString = string(jsonString);
+    return LoadFromNullTerminated(asString);
 }
 
 IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoader::LoadPostProcess(
@@ -212,8 +220,8 @@ IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoader:
         result.loadResult = IRenderDataConfigurationLoader::LoadResult("Failed to read file.");
         return result;
     }
-
-    return LoadPostProcess(raw);
+    result = LoadFromNullTerminated(raw);
+    return result;
 }
 
 IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoaderImpl::LoadPostProcess(

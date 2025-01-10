@@ -28,6 +28,7 @@
 #include "device/gpu_program.h"
 #include "device/gpu_program_util.h"
 #include "device/gpu_resource_handle_util.h"
+#include "render/shaders/common/render_compatibility_common.h"
 #include "util/log.h"
 #include "vulkan/create_functions_vk.h"
 #include "vulkan/device_vk.h"
@@ -41,14 +42,6 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr uint32_t MAX_DYNAMIC_STATE_COUNT { 10u };
 
-constexpr VkDescriptorSetLayoutCreateInfo EMPTY_LAYOUT_INFO {
-    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
-    nullptr,                                             // pNext
-    0U,                                                  // flags
-    0U,                                                  // bindingCount
-    nullptr,                                             // pBindings
-};
-
 void GetVertexInputs(const VertexInputDeclarationView& vertexInputDeclaration,
     vector<VkVertexInputBindingDescription>& vertexInputBindingDescriptions,
     vector<VkVertexInputAttributeDescription>& vertexInputAttributeDescriptions)
@@ -59,7 +52,7 @@ void GetVertexInputs(const VertexInputDeclarationView& vertexInputDeclaration,
     for (size_t idx = 0; idx < vertexInputBindingDescriptions.size(); ++idx) {
         const auto& bindingRef = vertexInputDeclaration.bindingDescriptions[idx];
 
-        const VkVertexInputRate vertexInputRate = (VkVertexInputRate)bindingRef.vertexInputRate;
+        const auto vertexInputRate = (VkVertexInputRate)bindingRef.vertexInputRate;
         vertexInputBindingDescriptions[idx] = {
             bindingRef.binding, // binding
             bindingRef.stride,  // stride
@@ -69,7 +62,7 @@ void GetVertexInputs(const VertexInputDeclarationView& vertexInputDeclaration,
 
     for (size_t idx = 0; idx < vertexInputAttributeDescriptions.size(); ++idx) {
         const auto& attributeRef = vertexInputDeclaration.attributeDescriptions[idx];
-        const VkFormat vertexInputFormat = (VkFormat)attributeRef.format;
+        const auto vertexInputFormat = (VkFormat)attributeRef.format;
         vertexInputAttributeDescriptions[idx] = {
             attributeRef.location, // location
             attributeRef.binding,  // binding
@@ -82,31 +75,31 @@ void GetVertexInputs(const VertexInputDeclarationView& vertexInputDeclaration,
 struct DescriptorSetFillData {
     uint32_t descriptorSetCount { 0 };
     uint32_t pushConstantRangeCount { 0u };
-    VkPushConstantRange pushConstantRanges[PipelineLayoutConstants::MAX_PUSH_CONSTANT_RANGE_COUNT];
+    VkPushConstantRange pushConstantRanges[PipelineLayoutConstants::MAX_PUSH_CONSTANT_RANGE_COUNT] {};
     VkDescriptorSetLayout descriptorSetLayouts[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { VK_NULL_HANDLE,
         VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE };
     // the layout can be coming for special descriptor sets (with e.g. platform formats and immutable samplers)
     bool descriptorSetLayoutOwnership[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { true, true, true, true };
 };
 
-void GetDescriptorSetFillData(const PipelineLayout& pipelineLayout,
+void GetDescriptorSetFillData(const DeviceVk& deviceVk, const PipelineLayout& pipelineLayout,
     const LowLevelPipelineLayoutData& pipelineLayoutData, const VkDevice device,
     const VkShaderStageFlags neededShaderStageFlags, DescriptorSetFillData& ds)
 {
     // NOTE: support for only one push constant
     ds.pushConstantRangeCount = (pipelineLayout.pushConstant.byteSize > 0) ? 1u : 0u;
-    const LowLevelPipelineLayoutDataVk& pipelineLayoutDataVk =
-        static_cast<const LowLevelPipelineLayoutDataVk&>(pipelineLayoutData);
+    const auto& pipelineLayoutDataVk = static_cast<const LowLevelPipelineLayoutDataVk&>(pipelineLayoutData);
     // uses the same temp array for all bindings in all sets
     VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT];
     for (uint32_t operationIdx = 0; operationIdx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++operationIdx) {
-        const auto& descRef = pipelineLayout.descriptorSetLayouts[operationIdx];
-        if ((ds.descriptorSetCount >= pipelineLayout.descriptorSetCount) &&
-            (descRef.set == PipelineLayoutConstants::INVALID_INDEX)) {
+        const uint32_t setIdx = operationIdx;
+        const auto& descRef = pipelineLayout.descriptorSetLayouts[setIdx];
+        if (descRef.set == PipelineLayoutConstants::INVALID_INDEX) {
+            ds.descriptorSetLayouts[setIdx] = deviceVk.GetDefaultVulkanObjects().emptyDescriptorSetLayout;
+            ds.descriptorSetLayoutOwnership[setIdx] = false; // not owned, cannot be destroyed
             continue;
         }
-        ds.descriptorSetCount++;
-        const uint32_t setIdx = operationIdx;
+        ds.descriptorSetCount = setIdx + 1U; // store the final valid set
         const auto& descSetLayoutData = pipelineLayoutDataVk.descriptorSetLayouts[setIdx];
         // NOTE: we are currently only doing handling of special (immutable sampler needing) layouts
         // with the descriptor set layout coming from the real descriptor set
@@ -116,50 +109,42 @@ void GetDescriptorSetFillData(const PipelineLayout& pipelineLayout,
             ds.descriptorSetLayoutOwnership[setIdx] = false; // not owned, cannot be destroyed
         } else {
             constexpr VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateFlags { 0 };
-            if (descRef.set == PipelineLayoutConstants::INVALID_INDEX) {
-                // provide empty layout for empty set
-                VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
-                    &EMPTY_LAYOUT_INFO,                                // pCreateInfo
-                    nullptr,                                           // pAllocator
-                    &ds.descriptorSetLayouts[setIdx]));                // pSetLayout
-            } else {
-                const uint32_t bindingCount = static_cast<uint32_t>(descRef.bindings.size());
-                PLUGIN_ASSERT(bindingCount <= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
-                for (uint32_t bindingOpIdx = 0; bindingOpIdx < bindingCount; ++bindingOpIdx) {
-                    const auto& bindingRef = descRef.bindings[bindingOpIdx];
-                    const VkShaderStageFlags shaderStageFlags = (VkShaderStageFlags)bindingRef.shaderStageFlags;
-                    const uint32_t bindingIdx = bindingRef.binding;
-                    const VkDescriptorType descriptorType = (VkDescriptorType)bindingRef.descriptorType;
-                    const uint32_t descriptorCount = bindingRef.descriptorCount;
+            const auto bindingCount = static_cast<uint32_t>(descRef.bindings.size());
+            PLUGIN_ASSERT(bindingCount <= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
+            for (uint32_t bindingOpIdx = 0; bindingOpIdx < bindingCount; ++bindingOpIdx) {
+                const auto& bindingRef = descRef.bindings[bindingOpIdx];
+                const auto shaderStageFlags = (VkShaderStageFlags)bindingRef.shaderStageFlags;
+                const uint32_t bindingIdx = bindingRef.binding;
+                const auto descriptorType = (VkDescriptorType)bindingRef.descriptorType;
+                const uint32_t descriptorCount = bindingRef.descriptorCount;
 
-                    PLUGIN_ASSERT((shaderStageFlags & neededShaderStageFlags) > 0);
-                    descriptorSetLayoutBindings[bindingOpIdx] = {
-                        bindingIdx,       // binding
-                        descriptorType,   // descriptorType
-                        descriptorCount,  // descriptorCount
-                        shaderStageFlags, // stageFlags
-                        nullptr,          // pImmutableSamplers
-                    };
-                }
-
-                const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {
-                    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
-                    nullptr,                                             // pNext
-                    descriptorSetLayoutCreateFlags,                      // flags
-                    bindingCount,                                        // bindingCount
-                    descriptorSetLayoutBindings,                         // pBindings
+                PLUGIN_ASSERT((shaderStageFlags & neededShaderStageFlags) > 0);
+                descriptorSetLayoutBindings[bindingOpIdx] = {
+                    bindingIdx,       // binding
+                    descriptorType,   // descriptorType
+                    descriptorCount,  // descriptorCount
+                    shaderStageFlags, // stageFlags
+                    nullptr,          // pImmutableSamplers
                 };
-
-                VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
-                    &descriptorSetLayoutCreateInfo,                    // pCreateInfo
-                    nullptr,                                           // pAllocator
-                    &ds.descriptorSetLayouts[setIdx]));                // pSetLayout
             }
+
+            const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {
+                VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
+                nullptr,                                             // pNext
+                descriptorSetLayoutCreateFlags,                      // flags
+                bindingCount,                                        // bindingCount
+                descriptorSetLayoutBindings,                         // pBindings
+            };
+
+            VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
+                &descriptorSetLayoutCreateInfo,                    // pCreateInfo
+                nullptr,                                           // pAllocator
+                &ds.descriptorSetLayouts[setIdx]));                // pSetLayout
         }
     }
 
     if (ds.pushConstantRangeCount == 1) {
-        const VkShaderStageFlags shaderStageFlags = (VkShaderStageFlags)pipelineLayout.pushConstant.shaderStageFlags;
+        const auto shaderStageFlags = (VkShaderStageFlags)pipelineLayout.pushConstant.shaderStageFlags;
         PLUGIN_ASSERT((shaderStageFlags & neededShaderStageFlags) > 0);
         const uint32_t bytesize = pipelineLayout.pushConstant.byteSize;
         ds.pushConstantRanges[0] = {
@@ -169,27 +154,61 @@ void GetDescriptorSetFillData(const PipelineLayout& pipelineLayout,
         };
     }
 }
+
+void GetSpecializationFillData(const ShaderSpecializationConstantDataView& inputSpecConstants,
+    GraphicsPipelineStateObjectVk::SpecializationData& outputSpecData)
+{
+    outputSpecData.constantData.constants.resize(inputSpecConstants.constants.size());
+    for (size_t idx = 0; idx < inputSpecConstants.constants.size(); ++idx) {
+        outputSpecData.constantData.constants[idx] = inputSpecConstants.constants[idx];
+    }
+    outputSpecData.constantData.data.resize(inputSpecConstants.data.size());
+    for (size_t idx = 0; idx < inputSpecConstants.data.size(); ++idx) {
+        outputSpecData.constantData.data[idx] = inputSpecConstants.data[idx];
+    }
+    // handle possible surface transform specialization additions
+    // expects that they are not pre-filled by users
+    if (outputSpecData.surfaceTransformFlags != 0U) {
+        auto FillConstantData = [&](const ShaderStageFlags shaderStageFlags) {
+            const auto offset = static_cast<uint32_t>(outputSpecData.constantData.data.size_in_bytes());
+            outputSpecData.constantData.constants.push_back(ShaderSpecialization::Constant {
+                shaderStageFlags, CORE_BACKEND_TYPE_SPEC_ID, ShaderSpecialization::Constant::Type::UINT32, offset });
+            outputSpecData.constantData.data.push_back(
+                outputSpecData.surfaceTransformFlags << CORE_BACKEND_TRANSFORM_OFFSET);
+        };
+        FillConstantData(
+            ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT | ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT);
+    }
+
+    // reserve max
+    outputSpecData.vs.reserve(inputSpecConstants.constants.size());
+    outputSpecData.fs.reserve(inputSpecConstants.constants.size());
+}
 } // namespace
 
 GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, const GpuShaderProgram& gpuShaderProgram,
     const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
     const VertexInputDeclarationView& vertexInputDeclaration,
-    const ShaderSpecializationConstantDataView& specializationConstants,
-    const array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+    const ShaderSpecializationConstantDataView& inputSpecConstants,
+    const array_view<const DynamicStateEnum> dynamicStates,
     const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
     const LowLevelRenderPassData& renderPassData, const LowLevelPipelineLayoutData& pipelineLayoutData)
     : GraphicsPipelineStateObject(), device_(device)
 {
     PLUGIN_ASSERT(!renderPassSubpassDescs.empty());
 
-    const LowLevelRenderPassDataVk& lowLevelRenderPassDataVk = (const LowLevelRenderPassDataVk&)renderPassData;
+    specializationData_.Clear();
+    const auto& lowLevelRenderPassDataVk = (const LowLevelRenderPassDataVk&)renderPassData;
 
-    const DeviceVk& deviceVk = (const DeviceVk&)device_;
-    const DevicePlatformDataVk& devicePlatVk = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
+    const auto& deviceVk = (const DeviceVk&)device_;
+    const auto& devicePlatVk = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
     const VkDevice vkDevice = devicePlatVk.device;
 
-    const GpuShaderProgramVk& program = static_cast<const GpuShaderProgramVk&>(gpuShaderProgram);
+    const auto& program = static_cast<const GpuShaderProgramVk&>(gpuShaderProgram);
     const GpuShaderProgramPlatformDataVk& platData = program.GetPlatformData();
+    if (!platData.vert || !platData.frag) {
+        return;
+    }
 
     vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions;
     vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
@@ -341,16 +360,17 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
         &lowLevelRenderPassDataVk.scissor,                     // pScissors
     };
 
-    // reserve max
-    vector<VkSpecializationMapEntry> vertexStageSpecializations;
-    vector<VkSpecializationMapEntry> fragmentStageSpecializations;
-    vertexStageSpecializations.reserve(specializationConstants.constants.size());
-    fragmentStageSpecializations.reserve(specializationConstants.constants.size());
+    PLUGIN_ASSERT(specializationData_.surfaceTransformFlags == 0U);
+    if (lowLevelRenderPassDataVk.isSwapchain && (lowLevelRenderPassDataVk.surfaceTransformFlags != 0U)) {
+        specializationData_.surfaceTransformFlags = lowLevelRenderPassDataVk.surfaceTransformFlags;
+    }
+    // fill the data to members
+    GetSpecializationFillData(inputSpecConstants, specializationData_);
 
     uint32_t vertexDataSize = 0;
     uint32_t fragmentDataSize = 0;
 
-    for (auto const& constant : specializationConstants.constants) {
+    for (auto const& constant : specializationData_.constantData.constants) {
         const auto constantSize = GpuProgramUtil::SpecializationByteSize(constant.type);
         const VkSpecializationMapEntry entry {
             static_cast<uint32_t>(constant.id), // constantID
@@ -358,27 +378,27 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
             constantSize                        // entry.size
         };
         if (constant.shaderStage & CORE_SHADER_STAGE_VERTEX_BIT) {
-            vertexStageSpecializations.push_back(entry);
-            vertexDataSize = std::max(vertexDataSize, constant.offset + constantSize);
+            specializationData_.vs.push_back(entry);
+            vertexDataSize = Math::max(vertexDataSize, constant.offset + constantSize);
         }
         if (constant.shaderStage & CORE_SHADER_STAGE_FRAGMENT_BIT) {
-            fragmentStageSpecializations.push_back(entry);
-            fragmentDataSize = std::max(fragmentDataSize, constant.offset + constantSize);
+            specializationData_.fs.push_back(entry);
+            fragmentDataSize = Math::max(fragmentDataSize, constant.offset + constantSize);
         }
     }
 
     const VkSpecializationInfo vertexSpecializationInfo {
-        static_cast<uint32_t>(vertexStageSpecializations.size()), // mapEntryCount
-        vertexStageSpecializations.data(),                        // pMapEntries
-        vertexDataSize,                                           // dataSize
-        specializationConstants.data.data()                       // pData
+        static_cast<uint32_t>(specializationData_.vs.size()), // mapEntryCount
+        specializationData_.vs.data(),                        // pMapEntries
+        vertexDataSize,                                       // dataSize
+        specializationData_.constantData.data.data(),         // pData
     };
 
     const VkSpecializationInfo fragmentSpecializationInfo {
-        static_cast<uint32_t>(fragmentStageSpecializations.size()), // mapEntryCount
-        fragmentStageSpecializations.data(),                        // pMapEntries
-        fragmentDataSize,                                           // dataSize
-        specializationConstants.data.data()                         // pData
+        static_cast<uint32_t>(specializationData_.fs.size()), // mapEntryCount
+        specializationData_.fs.data(),                        // pMapEntries
+        fragmentDataSize,                                     // dataSize
+        specializationData_.constantData.data.data(),         // pData
     };
 
     constexpr uint32_t stageCount { 2 };
@@ -405,7 +425,7 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
 
     // NOTE: support for only one push constant
     DescriptorSetFillData ds;
-    GetDescriptorSetFillData(pipelineLayout, pipelineLayoutData, vkDevice,
+    GetDescriptorSetFillData(deviceVk, pipelineLayout, pipelineLayoutData, vkDevice,
         VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT | VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, ds);
 
     const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo {
@@ -437,9 +457,7 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
 
     const bool msaaEnabled =
         (VkBool32)((sampleCountFlagBits != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT) &&
-                   (sampleCountFlagBits != VkSampleCountFlagBits::VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM))
-            ? true
-            : false;
+                   (sampleCountFlagBits != VkSampleCountFlagBits::VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM)) != 0;
     if (msaaEnabled) {
         if (devicePlatVk.enabledPhysicalDeviceFeatures.sampleRateShading) {
             sampleShadingEnable = VK_TRUE;
@@ -536,13 +554,15 @@ ComputePipelineStateObjectVk::ComputePipelineStateObjectVk(Device& device, const
     const LowLevelPipelineLayoutData& pipelineLayoutData)
     : ComputePipelineStateObject(), device_(device)
 {
-    const DeviceVk& deviceVk = (const DeviceVk&)device_;
-    const DevicePlatformDataVk& devicePlatVk = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
+    const auto& deviceVk = (const DeviceVk&)device_;
+    const auto& devicePlatVk = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
     const VkDevice vkDevice = devicePlatVk.device;
 
-    const GpuComputeProgramVk& program = static_cast<const GpuComputeProgramVk&>(gpuComputeProgram);
+    const auto& program = static_cast<const GpuComputeProgramVk&>(gpuComputeProgram);
     const auto& platData = program.GetPlatformData();
-    const VkShaderModule shaderModule = platData.comp;
+    if (!platData.comp) {
+        return;
+    }
 
     vector<VkSpecializationMapEntry> computeStateSpecializations;
     computeStateSpecializations.reserve(specializationConstants.constants.size());
@@ -572,7 +592,7 @@ ComputePipelineStateObjectVk::ComputePipelineStateObjectVk(Device& device, const
         nullptr,                                             // pNext
         0,                                                   // flags
         VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,  // stage
-        shaderModule,                                        // module
+        platData.comp,                                       // module
         "main",                                              // pName
         &computeSpecializationInfo,                          // pSpecializationInfo
     };
@@ -580,7 +600,7 @@ ComputePipelineStateObjectVk::ComputePipelineStateObjectVk(Device& device, const
     // NOTE: support for only one push constant
     DescriptorSetFillData ds;
     GetDescriptorSetFillData(
-        pipelineLayout, pipelineLayoutData, vkDevice, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT, ds);
+        deviceVk, pipelineLayout, pipelineLayoutData, vkDevice, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT, ds);
 
     const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo {
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // sType

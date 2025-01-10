@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,9 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef __LUME_ELF_DEFINES__
-#define __LUME_ELF_DEFINES__
+
+#ifndef LUME_ELF_COMMON_H
+#define LUME_ELF_COMMON_H
+
 #include <cstdint>
+
 #define EI_NIDENT 16
 #define ET_REL 1
 #define EM_NONE 0
@@ -44,7 +47,7 @@
 #define STV_HIDDEN 2
 #define ELF_ST_BIND(info) ((info) >> 4)
 #define ELF_ST_TYPE(info) ((info)&0xf)
-#define ELF_ST_INFO(bind, type) (((bind) << 4) + ((type)&0xf))
+#define ELF_ST_INFO(bind, type) (((bind) << 4) + ((type) & 0xf))
 
 typedef struct ElfIdent {
     char EI_MAG0;
@@ -58,4 +61,4 @@ typedef struct ElfIdent {
     uint8_t EI_PAD[EI_NIDENT - 8];
 } ElfIdent;
 
-#endif
+#endif // LUME_ELF_COMMON_H

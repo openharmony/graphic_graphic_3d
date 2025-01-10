@@ -28,7 +28,6 @@
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
 
-#include "render/node/render_copy_helper.h"
 #include "render/render_node_scene_util.h"
 
 RENDER_BEGIN_NAMESPACE()
@@ -179,8 +178,6 @@ private:
         RENDER_NS::RenderHandleReference postProcess;
     };
     UboHandles ubos_;
-
-    RenderCopyHelper renderCopy_;
 
     bool useAutoBindSet0_ { false };
     bool valid_ { false };

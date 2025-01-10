@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,12 +42,10 @@
 #include <meta/api/make_callback.h>
 #include <meta/ext/object.h>
 
-#include <scene_plugin/namespace.h>
-#include <scene_plugin/interface/intf_scene.h>
-#include <scene_plugin/interface/intf_ecs_scene.h>
-#include <scene_plugin/interface/intf_mesh.h>
-#include <scene_plugin/interface/intf_material.h>
-#include <scene_plugin/api/scene_uid.h>
+#include <scene/base/namespace.h>
+#include <scene/interface/intf_scene.h>
+#include <scene/interface/intf_mesh.h>
+#include <scene/interface/intf_material.h>
 
 #include <render/implementation_uids.h>
 #include <render/gles/intf_device_gles.h>
@@ -67,29 +65,29 @@ public:
     std::shared_ptr<TextureLayer> CreateTextureLayer() override;
     void OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
     void RenderFrame(bool needsSyncPaint = false) override;
-    void Deinit() override {};
+    void Deinit() override;
     bool NeedsRepaint() override;
     virtual void SetSceneObj(META_NS::IObject::Ptr pt);
+    static void ShutdownPluginRegistry();
+    static void DeinitRenderThread();
 
     ~SceneAdapter() override;
 
 private:
-    bool LoadEngineLib();
+    static bool LoadEngineLib();
     bool LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo);
     bool InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo);
     void AttachSwapchain(META_NS::IObject::Ptr camera, RENDER_NS::RenderHandleReference swapchain);
     void RenderFunction();
-    void InitRenderThread();
-    void DeinitRenderThread();
+    void CreateRenderFunction();
 
     META_NS::IObject::Ptr sceneWidgetObj_;
+
     RENDER_NS::RenderHandleReference swapchainHandle_;
 
     std::shared_ptr<TextureLayer> textureLayer_;
-    HapInfo hapInfo_;
-    SCENE_NS::IBitmap::Ptr bitmap_;
-    uint32_t key_;
-    META_NS::ITaskQueue::Token renderTask {};
+    SCENE_NS::IRenderTarget::Ptr bitmap_;
+    uint32_t key_ = 0;
     bool needsRepaint_ = true;
     META_NS::ITaskQueueTask::Ptr singleFrameAsync;
     META_NS::ITaskQueueWaitableTask::Ptr singleFrameSync;

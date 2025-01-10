@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,6 +33,7 @@ CORE_NS::PlatformCreateInfo Lume::ToEnginePlatformData(const PlatformData& data)
 {
     return {
         data.coreRootPath_.c_str(),
+        data.corePluginPath_.c_str(),
         data.appRootPath_.c_str(),
         data.appPluginPath_.c_str(),
         data.hapInfo_.hapPath_.c_str(),
@@ -41,5 +42,9 @@ CORE_NS::PlatformCreateInfo Lume::ToEnginePlatformData(const PlatformData& data)
     };
 }
 void Lume::RegisterAssertPath()
-{}
+{
+    auto& fileManager = engine_->GetFileManager();
+    const auto& platform = engine_->GetPlatform();
+    platform.RegisterDefaultPaths(fileManager);
+}
 } // namespace OHOS::Render3D

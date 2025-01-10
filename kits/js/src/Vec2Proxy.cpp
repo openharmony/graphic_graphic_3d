@@ -1,4 +1,3 @@
-
 /*
  * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +15,7 @@
 
 #include "Vec2Proxy.h"
 
-Vec2Proxy::Vec2Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec2> prop) : PropertyProxy(prop)
+Vec2Proxy::Vec2Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec2> prop) : ObjectPropertyProxy(prop)
 {
     // Construct a "Lume::Vec2" instance
     Create(env, "Vec2");
@@ -25,7 +24,10 @@ Vec2Proxy::Vec2Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec2> prop) 
     Hook("y");
     SyncGet();
 }
-Vec2Proxy::~Vec2Proxy() {}
+Vec2Proxy::~Vec2Proxy()
+{
+    Reset();
+}
 void Vec2Proxy::UpdateLocalValues()
 {
     // executed in javascript thread (locks handled outside)
@@ -38,57 +40,69 @@ void Vec2Proxy::UpdateRemoteValues()
 }
 void Vec2Proxy::SetValue(const BASE_NS::Math::Vec2& v)
 {
-    // currently executed in engine thread, hence the locks.
-    duh.Lock();
+    Lock();
     if (value != v) {
         value = v;
         ScheduleUpdate();
     }
-    duh.Unlock();
+    Unlock();
 }
-void Vec2Proxy::SetValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
+void Vec2Proxy::SetMemberValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
 {
     // should be executed in the javascript thread.
     NapiApi::FunctionContext<float> info(cb.GetEnv(), cb.GetInfo());
-    float val = info.Arg<0>();
-    duh.Lock();
-    if ((memb == "x") && (val != value.x)) {
-        value.x = val;
-        ScheduleUpdate();
-    } else if ((memb == "y") && (val != value.y)) {
-        value.y = val;
-        ScheduleUpdate();
+    if (info) {
+        float val = info.Arg<0>();
+        Lock();
+        if ((memb == "x") && (val != value.x)) {
+            value.x = val;
+            ScheduleUpdate();
+        } else if ((memb == "y") && (val != value.y)) {
+            value.y = val;
+            ScheduleUpdate();
+        }
+        Unlock();
     }
-    duh.Unlock();
 }
-napi_value Vec2Proxy::GetValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
+napi_value Vec2Proxy::GetMemberValue(const NapiApi::Env cb, BASE_NS::string_view memb)
 {
     // should be executed in the javascript thread.
     float res;
-    duh.Lock();
+    Lock();
     if (memb == "x") {
         res = value.x;
     } else if (memb == "y") {
         res = value.y;
     } else {
         // invalid member?
-        duh.Unlock();
-        return {};
+        Unlock();
+        return cb.GetUndefined();
     }
-    duh.Unlock();
-    napi_value value;
-    napi_status status = napi_create_double(cb.GetEnv(), res, &value);
-    return value;
+    Unlock();
+    return cb.GetNumber(res);
 }
 
-bool Vec2Proxy::SetValue(NapiApi::Object obj)
+void Vec2Proxy::SetValue(NapiApi::Object obj)
 {
     auto x = obj.Get<float>("x");
     auto y = obj.Get<float>("y");
     if (x.IsValid() && y.IsValid()) {
-        BASE_NS::Math::Vec2 v(x, y);
-        SetValue(v);
-        return true;
+        SetValue({ x, y });
     }
-    return false;
+}
+
+BASE_NS::Math::Vec2 Vec2Proxy::ToNative(NapiApi::Object vec2, bool& success)
+{
+    auto x = vec2.Get<float>("x");
+    auto y = vec2.Get<float>("y");
+    success = x.IsValid() && y.IsValid();
+    return BASE_NS::Math::Vec2 { x, y };
+}
+
+NapiApi::Object Vec2Proxy::ToNapiObject(BASE_NS::Math::Vec2 vec2, napi_env env)
+{
+    auto screenCoordJs = NapiApi::Object(env);
+    screenCoordJs.Set("x", NapiApi::Value<float>(env, vec2.x));
+    screenCoordJs.Set("y", NapiApi::Value<float>(env, vec2.y));
+    return screenCoordJs;
 }

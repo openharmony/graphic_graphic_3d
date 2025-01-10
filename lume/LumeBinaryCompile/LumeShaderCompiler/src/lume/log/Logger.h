@@ -1,8 +1,5 @@
-#ifndef LUME_LOG_LOGGER_H
-#define LUME_LOG_LOGGER_H
-
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,42 +13,44 @@
  * limitations under the License.
  */
 
-#include <lume/Log.h>
+#ifndef LUME_LOG_LOGGER_H
+#define LUME_LOG_LOGGER_H
 
+#include <lume/Log.h>
+#include <memory>
 #include <mutex>
 #include <vector>
-#include <memory>
 
+namespace lume {
 
-namespace lume
-{
-
-class Logger : public ILogger
-{
+class Logger : public ILogger {
 public:
-    static const char* getLogLevelName(LogLevel aLogLevel, bool aShortName);
+    static const char* GetLogLevelName(LogLevel logLevel, bool shortName);
 
-    Logger(bool aDefaultOutputs);
+    explicit Logger(bool defaultOutputs);
     virtual ~Logger();
 
-    void vlog(LogLevel aLogLevel, const char *aFilename, int aLinenumber, const char *aFormat, va_list aArgs) override;
-    FORMAT_FUNC(5, 6) void log(LogLevel aLogLevel, const char *aFilename, int aLinenumber, FORMAT_ATTRIBUTE const char *aFormat, ...) override;
+    void Vlog(LogLevel logLevel, const char* filename, int linenumber, const char* format, va_list args) override;
+    FORMAT_FUNC(5, 6)
+    void Log(
+        LogLevel logLevel, const char* filename, int linenumber, FORMAT_ATTRIBUTE const char* format, ...) override;
+    void Write(LogLevel logLevel, const char* filename, int linenumber, const char* buffer) override;
 
-    FORMAT_FUNC(6, 7) bool logAssert(const char *aFilename, int aLinenumber, bool expression, const char *expressionString, FORMAT_ATTRIBUTE const char *aFormat, ...) override;
+    FORMAT_FUNC(6, 7)
+    bool LogAssert(const char* filename, int linenumber, bool expression, const char* expressionString,
+        FORMAT_ATTRIBUTE const char* format, ...) override;
 
-    LogLevel getLogLevel() const override;
-    void setLogLevel(LogLevel aLogLevel) override;
+    LogLevel GetLogLevel() const override;
+    void SetLogLevel(LogLevel logLevel) override;
 
-    void addOutput(std::unique_ptr<IOutput> aOutput) override;
+    void AddOutput(std::unique_ptr<IOutput> output) override;
 
 private:
-    LogLevel mLogLevel = LogLevel::Verbose;
+    LogLevel mLogLevel = LogLevel::VERBOSE;
     std::mutex mLoggerMutex;
 
-    std::vector< std::unique_ptr<IOutput> > mOutputs;
+    std::vector<std::unique_ptr<IOutput>> mOutputs;
 };
-
-
-} // lume
+} // namespace lume
 
 #endif // LUME_LOG_LOGGER_H

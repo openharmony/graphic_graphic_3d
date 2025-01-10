@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_BLOOM_H
-#define RENDER_RENDER__NODE__RENDER_NODE_BLOOM_H
+#ifndef RENDER_NODE_RENDER_NODE_BLOOM_H
+#define RENDER_NODE_RENDER_NODE_BLOOM_H
 
 #include <base/util/uid.h>
 #include <render/datastore/render_data_store_render_pods.h>
@@ -44,7 +44,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "cc25f8bd-bad6-48f9-8cb2-af24681643b6" };
-    static constexpr char const* TYPE_NAME = "RenderNodeBloom";
+    static constexpr const char* TYPE_NAME = "RenderNodeBloom";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -76,4 +76,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_BLOOM_H
+#endif // RENDER_NODE_RENDER_NODE_BLOOM_H

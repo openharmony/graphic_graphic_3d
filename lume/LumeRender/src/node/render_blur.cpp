@@ -26,12 +26,10 @@
 #include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_util.h>
-#include <render/shaders/common/render_blur_common.h>
 
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
 #include "render/shaders/common/render_post_process_structs_common.h"
-#include "util/log.h"
 
 using namespace BASE_NS;
 
@@ -81,8 +79,7 @@ void RenderBlur::Init(IRenderNodeContextManager& renderNodeContextMgr, const Blu
     }
 }
 
-void RenderBlur::PreExecute(
-    IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo, const PostProcessConfiguration& ppConfig)
+void RenderBlur::PreExecute(IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo)
 {
     blurInfo_ = blurInfo;
     imageData_.mipImage = blurInfo.blurTarget.handle;
@@ -90,10 +87,10 @@ void RenderBlur::PreExecute(
 
     const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
     const GpuImageDesc imageDesc = gpuResourceMgr.GetImageDescriptor(imageData_.mipImage);
-    imageData_.mipCount = imageDesc.mipCount;
+    imageData_.mipCount = Math::min(imageDesc.mipCount, MAX_MIP_COUNT);
     imageData_.format = imageDesc.format;
     imageData_.size = { imageDesc.width, imageDesc.height };
-    if (GAUSSIAN_TYPE) {
+    if constexpr (GAUSSIAN_TYPE) {
         CreateTargets(renderNodeContextMgr, imageData_.size);
     }
 }
@@ -104,6 +101,8 @@ void RenderBlur::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRende
     if (!RenderHandleUtil::IsGpuImage(imageData_.mipImage)) {
         return;
     }
+
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderBlur", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
 
     UpdateGlobalSet(cmdList);
 
@@ -139,8 +138,8 @@ void RenderBlur::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRende
         }
     }
 
-    if (GAUSSIAN_TYPE) {
-        RenderGaussian(renderNodeContextMgr, cmdList, renderPass, ppConfig);
+    if constexpr (GAUSSIAN_TYPE) {
+        RenderGaussian(cmdList, renderPass, ppConfig);
     } else {
         RenderData(renderNodeContextMgr, cmdList, renderPass, ppConfig);
     }
@@ -156,7 +155,7 @@ void RenderBlur::UpdateGlobalSet(IRenderCommandList& cmdList)
     cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
 }
 
-DescriptorCounts RenderBlur::GetDescriptorCounts() const
+DescriptorCounts RenderBlur::GetDescriptorCounts()
 {
     // expected high max mip count
     return DescriptorCounts { {
@@ -190,7 +189,7 @@ void RenderBlur::RenderData(IRenderNodeContextManager& renderNodeContextMgr, IRe
     RenderPass renderPass = renderPassBase;
     const GpuImageDesc imageDesc = renderNodeContextMgr.GetGpuResourceManager().GetImageDescriptor(imageData_.mipImage);
 
-    if (USE_CUSTOM_BARRIERS) {
+    if constexpr (USE_CUSTOM_BARRIERS) {
         cmdList.BeginDisableAutomaticBarrierPoints();
     }
 
@@ -207,13 +206,13 @@ void RenderBlur::RenderData(IRenderNodeContextManager& renderNodeContextMgr, IRe
 
         const uint32_t currWidth = Math::max(1u, imageDesc.width >> renderPassMipLevel);
         const uint32_t currHeight = Math::max(1u, imageDesc.height >> renderPassMipLevel);
-        const float fCurrWidth = static_cast<float>(currWidth);
-        const float fCurrHeight = static_cast<float>(currHeight);
+        const auto fCurrWidth = static_cast<float>(currWidth);
+        const auto fCurrHeight = static_cast<float>(currHeight);
 
         renderPass.renderPassDesc.renderArea = { 0, 0, currWidth, currHeight };
         renderPass.renderPassDesc.attachments[0].mipLevel = renderPassMipLevel;
 
-        if (USE_CUSTOM_BARRIERS) {
+        if constexpr (USE_CUSTOM_BARRIERS) {
             imageSubresourceRange.baseMipLevel = renderPassMipLevel;
             cmdList.CustomImageBarrier(imageData_.mipImage, SRC_UNDEFINED, COL_ATTACHMENT, imageSubresourceRange);
             imageSubresourceRange.baseMipLevel = inputMipLevel;
@@ -252,7 +251,7 @@ void RenderBlur::RenderData(IRenderNodeContextManager& renderNodeContextMgr, IRe
         cmdList.EndRenderPass();
     }
 
-    if (USE_CUSTOM_BARRIERS) {
+    if constexpr (USE_CUSTOM_BARRIERS) {
         if (imageData_.mipCount > 1u) {
             // transition the final used mip level
             if (blurCount > 0) {
@@ -345,11 +344,11 @@ void BlurPass(const ConstDrawInput& di, IDescriptorSetBinder& binder, IDescripto
 }
 } // namespace
 
-void RenderBlur::RenderGaussian(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
-    const RenderPass& renderPassBase, const PostProcessConfiguration& ppConfig)
+void RenderBlur::RenderGaussian(
+    IRenderCommandList& cmdList, const RenderPass& renderPassBase, const PostProcessConfiguration& ppConfig)
 {
     RenderPass renderPass = renderPassBase;
-    if (USE_CUSTOM_BARRIERS) {
+    if constexpr (USE_CUSTOM_BARRIERS) {
         cmdList.BeginDisableAutomaticBarrierPoints();
     }
 
@@ -374,13 +373,13 @@ void RenderBlur::RenderGaussian(IRenderNodeContextManager& renderNodeContextMgr,
         cmdList.SetDynamicStateScissor({ 0, 0, size.x, size.y });
 
         // downscale
-        if (USE_CUSTOM_BARRIERS) {
+        if constexpr (USE_CUSTOM_BARRIERS) {
             DownscaleBarrier(cmdList, imageData_.mipImage, mip);
         }
         BlurPass(di, *binders_[descIdx++], *globalSet0_, renderData_.psoScale, imageData_.mipImage, mip - 1u);
 
         // horizontal (from real image to temp)
-        if (USE_CUSTOM_BARRIERS) {
+        if constexpr (USE_CUSTOM_BARRIERS) {
             BlurHorizontalBarrier(cmdList, imageData_.mipImage, mip, tempTarget_.tex.GetHandle());
         }
 
@@ -389,7 +388,7 @@ void RenderBlur::RenderGaussian(IRenderNodeContextManager& renderNodeContextMgr,
         BlurPass(di, *binders_[descIdx++], *globalSet0_, renderData_.psoBlur, imageData_.mipImage, mip);
 
         // vertical
-        if (USE_CUSTOM_BARRIERS) {
+        if constexpr (USE_CUSTOM_BARRIERS) {
             BlurVerticalBarrier(cmdList, imageData_.mipImage, mip, tempTarget_.tex.GetHandle());
         }
 
@@ -399,7 +398,7 @@ void RenderBlur::RenderGaussian(IRenderNodeContextManager& renderNodeContextMgr,
         BlurPass(di, *binders_[descIdx++], *globalSet0_, renderData_.psoBlur, tempTarget_.tex.GetHandle(), mip - 1);
     }
 
-    if (USE_CUSTOM_BARRIERS) {
+    if constexpr (USE_CUSTOM_BARRIERS) {
         if (imageData_.mipCount > 1u) {
             // transition the final used mip level
             if (blurCount > 0) {

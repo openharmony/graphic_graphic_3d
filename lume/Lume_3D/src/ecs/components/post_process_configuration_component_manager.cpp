@@ -13,11 +13,14 @@
  * limitations under the License.
  */
 
+#include <atomic>
+
 #include <3d/ecs/components/post_process_configuration_component.h>
 #include <3d/ecs/components/render_handle_component.h>
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
 #include <base/containers/type_traits.h>
+#include <base/util/errors.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/intf_engine.h>
 #include <render/datastore/intf_render_data_store_post_process.h>
@@ -32,7 +35,7 @@
 #include "util/property_util.h"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 using CORE3D_NS::PostProcessConfigurationComponent;
@@ -43,21 +46,11 @@ DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandleReference);
 DECLARE_PROPERTY_TYPE(PostProcessConfigurationComponent::PostProcessEffect);
 DECLARE_PROPERTY_TYPE(BASE_NS::vector<PostProcessConfigurationComponent::PostProcessEffect>);
 
-BEGIN_METADATA(
-    PostProcessConfigurationComponentPostProcessEffectMetaData, PostProcessConfigurationComponent::PostProcessEffect)
-DECL_PROPERTY2(PostProcessConfigurationComponent::PostProcessEffect, name, "Effect Name", 0)
-DECL_PROPERTY2(
-    PostProcessConfigurationComponent::PostProcessEffect, globalUserFactorIndex, "Global User Factor Index", 0)
-DECL_PROPERTY2(PostProcessConfigurationComponent::PostProcessEffect, shader, "Shader", 0)
-DECL_PROPERTY2(PostProcessConfigurationComponent::PostProcessEffect, enabled, "Enabled", 0)
-DECL_PROPERTY2(PostProcessConfigurationComponent::PostProcessEffect, flags, "Additional Non Typed Flags", 0)
-DECL_PROPERTY2(PostProcessConfigurationComponent::PostProcessEffect, factor, "Global Factor", 0)
-DECL_PROPERTY2(PostProcessConfigurationComponent::PostProcessEffect, customProperties, "Custom Properties", 0)
-END_METADATA(
-    PostProcessConfigurationComponentPostProcessEffectMetaData, PostProcessConfigurationComponent::PostProcessEffect)
+DATA_TYPE_METADATA(PostProcessConfigurationComponent::PostProcessEffect, MEMBER_PROPERTY(name, "Effect Name", 0),
+    MEMBER_PROPERTY(globalUserFactorIndex, "Global User Factor Index", 0), MEMBER_PROPERTY(shader, "Shader", 0),
+    MEMBER_PROPERTY(enabled, "Enabled", 0), MEMBER_PROPERTY(flags, "Additional Non Typed Flags", 0),
+    MEMBER_PROPERTY(factor, "Global Factor", 0), MEMBER_PROPERTY(customProperties, "Custom Properties", 0))
 
-// Needed to get containerMethods through MetaData() -> Property -> metaData -> containerMethods
-DECLARE_CONTAINER_API(PPCC_PPE, PostProcessConfigurationComponent::PostProcessEffect);
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -155,6 +148,7 @@ public:
     vector<Entity> GetAddedComponents() override;
     vector<Entity> GetRemovedComponents() override;
     vector<Entity> GetUpdatedComponents() override;
+    vector<Entity> GetMovedComponents() override;
     CORE_NS::ComponentManagerModifiedFlags GetModifiedFlags() const override;
     void ClearModifiedFlags() override;
     uint32_t GetGenerationCounter() const override;
@@ -192,6 +186,29 @@ private:
         BASE_NS::CompileTime::FNV1aHash(CORE_NS::GetName<PostProcessConfigurationComponent>().data(),
             CORE_NS::GetName<PostProcessConfigurationComponent>().size());
 
+    class ComponentHandle;
+
+    class PropertySignal final : public CustomPropertyWriteSignal {
+    public:
+        explicit PropertySignal(PostProcessConfigurationComponentManager::ComponentHandle& componentHandle)
+            : componentHandle_(componentHandle)
+        {}
+        ~PropertySignal() override = default;
+
+        void Signal() override
+        {
+            // update generation etc..
+            ++componentHandle_.generation_;
+            if (CORE_NS::EntityUtil::IsValid(componentHandle_.entity_)) {
+                componentHandle_.dirty_ = true;
+                componentHandle_.manager_->Updated(componentHandle_.entity_);
+            }
+        }
+
+    private:
+        PostProcessConfigurationComponentManager::ComponentHandle& componentHandle_;
+    };
+
     class ComponentHandle : public IPropertyHandle, IPropertyApi {
     public:
         ComponentHandle() = delete;
@@ -227,19 +244,22 @@ private:
         Entity entity_;
         uint32_t generation_ { 0u };
         bool dirty_ { false };
+#ifndef NDEBUG
         mutable std::atomic_int32_t rLocked_ { 0 };
         mutable bool wLocked_ { false };
+#endif
         PostProcessConfigurationComponent data_;
 
         // shader per single post process
         vector<Entity> effectShaders_;
         // custom property blob per single post process shader
         vector<unique_ptr<CustomPropertyPodContainer>> customProperties_;
+        PropertySignal propertySignal_;
     };
 
     IEcs& ecs_;
-    IShaderManager& shaderManager_;
     IRenderHandleComponentManager* renderHandleManager_ { nullptr };
+    IShaderManager* shaderManager_ { nullptr };
 
     uint32_t generationCounter_ { 0u };
     uint32_t modifiedFlags_ { 0u };
@@ -248,15 +268,20 @@ private:
     BASE_NS::vector<Entity> added_;
     BASE_NS::vector<Entity> removed_;
     BASE_NS::vector<Entity> updated_;
+    BASE_NS::vector<Entity> moved_;
 };
 
 PostProcessConfigurationComponentManager::PostProcessConfigurationComponentManager(IEcs& ecs) noexcept
-    : ecs_(ecs), shaderManager_(GetInstance<IRenderContext>(
-                     *ecs.GetClassFactory().GetInterface<IClassRegister>(), UID_RENDER_CONTEXT)
-                                    ->GetDevice()
-                                    .GetShaderManager()),
-      renderHandleManager_(GetManager<IRenderHandleComponentManager>(ecs))
-{}
+    : ecs_(ecs), renderHandleManager_(GetManager<IRenderHandleComponentManager>(ecs))
+{
+    if (CORE_NS::IEngine* engine = ecs_.GetClassFactory().GetInterface<CORE_NS::IEngine>(); engine) {
+        if (IRenderContext* renderContext =
+                GetInstance<IRenderContext>(*engine->GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
+            renderContext) {
+            shaderManager_ = &renderContext->GetDevice().GetShaderManager();
+        }
+    }
+}
 
 PostProcessConfigurationComponentManager::~PostProcessConfigurationComponentManager() = default;
 
@@ -379,7 +404,15 @@ void PostProcessConfigurationComponentManager::Create(Entity entity)
     if (CORE_NS::EntityUtil::IsValid(entity)) {
         if (auto it = entityComponent_.find(entity); it == entityComponent_.end()) {
             entityComponent_.insert({ entity, static_cast<ComponentId>(components_.size()) });
+            const auto oldCapacity = components_.capacity();
             auto& component = components_.emplace_back(this, entity);
+            if (components_.capacity() != oldCapacity) {
+                moved_.reserve(moved_.size() + components_.size());
+                for (const auto& handle : components_) {
+                    moved_.push_back(handle.entity_);
+                }
+                modifiedFlags_ |= CORE_NS::CORE_COMPONENT_MANAGER_COMPONENT_MOVED_BIT;
+            }
             added_.push_back(entity);
             modifiedFlags_ |= CORE_NS::CORE_COMPONENT_MANAGER_COMPONENT_ADDED_BIT;
             generationCounter_++;
@@ -418,24 +451,26 @@ void PostProcessConfigurationComponentManager::Gc()
     }
     ComponentId componentCount = static_cast<ComponentId>(components_.size());
     for (ComponentId id = 0; id < componentCount;) {
-        auto* it = &components_[id];
-        // invalid entity, if so clean garbage
-        if (!CORE_NS::EntityUtil::IsValid(it->entity_)) {
-            // find last valid and swap with it
-            for (ComponentId rid = componentCount - 1; rid > id; rid--) {
-                auto* rit = &components_[rid];
-                // valid entity? if so swap the components.
-                if (CORE_NS::EntityUtil::IsValid(rit->entity_)) {
-                    // fix the entityComponent_ map (update the component id for the entity)
-                    entityComponent_[rit->entity_] = id;
-                    *it = move(*rit);
-                    break;
-                }
-            }
-            componentCount--;
+        if (CORE_NS::EntityUtil::IsValid(components_[id].entity_)) {
+            ++id;
             continue;
         }
-        id++;
+        // invalid entity.. if so clean garbage
+        // find last valid and swap with it
+        ComponentId rid = componentCount - 1;
+        while ((rid > id) && !CORE_NS::EntityUtil::IsValid(components_[rid].entity_)) {
+            --rid;
+        }
+        if ((rid > id) && CORE_NS::EntityUtil::IsValid(components_[rid].entity_)) {
+            moved_.push_back(components_[rid].entity_);
+            // fix the entityComponent_ map (update the component id for the entity)
+            entityComponent_[components_[rid].entity_] = id;
+            components_[id] = BASE_NS::move(components_[rid]);
+        }
+        --componentCount;
+    }
+    if (!moved_.empty()) {
+        modifiedFlags_ |= CORE_COMPONENT_MANAGER_COMPONENT_MOVED_BIT;
     }
     if (components_.size() > componentCount) {
         auto diff = static_cast<typename decltype(components_)::difference_type>(componentCount);
@@ -474,6 +509,11 @@ vector<Entity> PostProcessConfigurationComponentManager::GetUpdatedComponents()
         }
     }
     return updated;
+}
+
+vector<Entity> PostProcessConfigurationComponentManager::GetMovedComponents()
+{
+    return BASE_NS::move(moved_);
 }
 
 CORE_NS::ComponentManagerModifiedFlags PostProcessConfigurationComponentManager::GetModifiedFlags() const
@@ -597,7 +637,15 @@ void PostProcessConfigurationComponentManager::Set(Entity entity, const PostProc
             *handle = data;
         } else {
             entityComponent_.insert({ entity, static_cast<ComponentId>(components_.size()) });
+            const auto oldCapacity = components_.capacity();
             auto& component = components_.emplace_back(this, entity, data);
+            if (components_.capacity() != oldCapacity) {
+                moved_.reserve(moved_.size() + components_.size());
+                for (const auto& componentHandle : components_) {
+                    moved_.push_back(componentHandle.entity_);
+                }
+                modifiedFlags_ |= CORE_NS::CORE_COMPONENT_MANAGER_COMPONENT_MOVED_BIT;
+            }
             added_.push_back(entity);
             modifiedFlags_ |= CORE_NS::CORE_COMPONENT_MANAGER_COMPONENT_ADDED_BIT;
             generationCounter_++;
@@ -656,17 +704,27 @@ PostProcessConfigurationComponentManager::ComponentHandle::ComponentHandle(
     : ComponentHandle(owner, entity, {})
 {}
 
+WARNING_SCOPE_START(W_THIS_USED_BASE_INITIALIZER_LIST);
 PostProcessConfigurationComponentManager::ComponentHandle::ComponentHandle(
     PostProcessConfigurationComponentManager* owner, Entity entity,
     const PostProcessConfigurationComponent& data) noexcept
-    : manager_(owner), entity_(entity), data_(data)
+    : manager_(owner), entity_(entity), data_(data), propertySignal_(*this)
 {}
 
 PostProcessConfigurationComponentManager::ComponentHandle::ComponentHandle(ComponentHandle&& other) noexcept
     : manager_(other.manager_), entity_(exchange(other.entity_, {})), generation_(exchange(other.generation_, 0u)),
-      rLocked_(other.rLocked_.exchange(0)), wLocked_(exchange(other.wLocked_, false)), data_(exchange(other.data_, {})),
-      customProperties_(exchange(other.customProperties_, {}))
-{}
+#ifndef NDEBUG
+      rLocked_(other.rLocked_.exchange(0)), wLocked_(exchange(other.wLocked_, false)),
+#endif
+      data_(exchange(other.data_, {})), customProperties_(exchange(other.customProperties_, {})), propertySignal_(*this)
+{
+    for (auto& properties : customProperties_) {
+        if (properties) {
+            properties->UpdateSignal(propertySignal_);
+        }
+    }
+}
+WARNING_SCOPE_END();
 
 typename PostProcessConfigurationComponentManager::ComponentHandle&
 PostProcessConfigurationComponentManager::ComponentHandle::operator=(ComponentHandle&& other) noexcept
@@ -676,11 +734,18 @@ PostProcessConfigurationComponentManager::ComponentHandle::operator=(ComponentHa
         entity_ = exchange(other.entity_, {});
         generation_ = exchange(other.generation_, 0u);
         dirty_ = exchange(other.dirty_, false);
+#ifndef NDEBUG
         rLocked_ = other.rLocked_.exchange(0);
         wLocked_ = exchange(other.wLocked_, false);
+#endif
         data_ = exchange(other.data_, {});
         effectShaders_ = exchange(other.effectShaders_, {});
         customProperties_ = exchange(other.customProperties_, {});
+        for (auto& properties : customProperties_) {
+            if (properties) {
+                properties->UpdateSignal(propertySignal_);
+            }
+        }
     }
     return *this;
 }
@@ -699,31 +764,39 @@ size_t PostProcessConfigurationComponentManager::ComponentHandle::Size() const
 const void* PostProcessConfigurationComponentManager::ComponentHandle::RLock() const
 {
     CORE_ASSERT(manager_);
+#ifndef NDEBUG
     CORE_ASSERT(!wLocked_);
     rLocked_++;
+#endif
     return &data_;
 }
 
 void PostProcessConfigurationComponentManager::ComponentHandle::RUnlock() const
 {
     CORE_ASSERT(manager_);
+#ifndef NDEBUG
     CORE_ASSERT(rLocked_ > 0);
     rLocked_--;
+#endif
 }
 
 void* PostProcessConfigurationComponentManager::ComponentHandle::WLock()
 {
     CORE_ASSERT(manager_);
+#ifndef NDEBUG
     CORE_ASSERT(rLocked_ <= 1 && !wLocked_);
     wLocked_ = true;
+#endif
     return &data_;
 }
 
 void PostProcessConfigurationComponentManager::ComponentHandle::WUnlock()
 {
     CORE_ASSERT(manager_);
+#ifndef NDEBUG
     CORE_ASSERT(wLocked_);
     wLocked_ = false;
+#endif
     // update generation etc..
     generation_++;
     if (CORE_NS::EntityUtil::IsValid(entity_)) {
@@ -802,6 +875,9 @@ void PostProcessConfigurationComponentManager::ComponentHandle::UpdateMetadata()
             return;
         }
     }
+    if (!manager_->shaderManager_) {
+        return;
+    }
     // resize for all single post processes
     effectShaders_.resize(data_.postProcesses.size());
     customProperties_.resize(data_.postProcesses.size());
@@ -812,9 +888,10 @@ void PostProcessConfigurationComponentManager::ComponentHandle::UpdateMetadata()
             effectShaders_[idx] = data_.postProcesses[idx].shader;
             const auto currentShader = manager_->renderHandleManager_->GetRenderHandleReference(effectShaders_[idx]);
 
-            auto newPod = make_unique<CustomPropertyPodContainer>(CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE);
+            auto newPod =
+                make_unique<CustomPropertyPodContainer>(propertySignal_, CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE);
             if (currentShader) {
-                if (const json::value* metaJson = manager_->shaderManager_.GetMaterialMetadata(currentShader);
+                if (const json::value* metaJson = manager_->shaderManager_->GetMaterialMetadata(currentShader);
                     metaJson && metaJson->is_array()) {
                     UpdateCustomPropertyMetadata(*metaJson, *newPod);
                 }

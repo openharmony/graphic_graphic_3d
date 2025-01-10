@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Huawei Device Co., Ltd.
+# Copyright (c) 2024 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,13 +25,18 @@ config("lume3d_config") {
     "${LUME_CORE_PATH}/api",
     "${LUME_RENDER_PATH}/api",
     "${LUME_CORE3D_PATH}/api",
+    "${LUME_META_PATH}/include",
+    "${LUME_SCENE_PATH}/include",
   ]
 
   if (current_os == "ohos") {
     include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
   }
 
-  configs = []
+  configs = [
+    "${LUME_ROOT}/LumeFont:lume_font_api",
+    "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
+  ]
 
   cflags = [
     "-Wall",
@@ -47,6 +52,8 @@ config("lume3d_config") {
     "-Wno-nullability-completeness",
     "-Wno-ignored-qualifiers",
     "-Wno-switch",
+    "-Wno-overloaded-virtual",
+    "-Wno-parentheses",
 
     "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
     "-DCORE_BUILD_2D = 0",
@@ -66,11 +73,10 @@ config("lume3d_config") {
     "-DRENDER_HAS_GL_BACKEND=0",
     "-DRENDER_HAS_GLES_BACKEND = 1",
     "-DRENDER_HAS_VULKAN_BACKEND = 1",
-    "-DVK_USE_PLATFORM_ANDROID_KHR = 1",
+    "-DVK_USE_PLATFORM_OHOS = 1",
     "-DCORE_LOG_NO_DEBUG=0",
     "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
     "-DCORE_LOG_TO_CONSOLE",
-    "-DCORE_LOG_DISABLED=0",
     "-DCORE_DYNAMIC=1",
   ]
 }
@@ -101,6 +107,7 @@ ohos_source_set("napi_source") {
   sources = [
     "src/AnimationJS.cpp",
     "src/BaseObjectJS.cpp",
+    "src/BloomJS.cpp",
     "src/CameraJS.cpp",
     "src/ColorProxy.cpp",
     "src/EnvironmentJS.cpp",
@@ -111,30 +118,33 @@ ohos_source_set("napi_source") {
     "src/MeshJS.cpp",
     "src/NodeImpl.cpp",
     "src/NodeJS.cpp",
-    "src/ObjectProxy.cpp",
     "src/PostProcJS.cpp",
+    "src/PromiseBase.cpp",
     "src/PropertyProxy.cpp",
     "src/QuatProxy.cpp",
+    "src/Raycast.cpp",
+    "src/SceneComponentJS.cpp",
     "src/SceneJS.cpp",
     "src/SceneResourceImpl.cpp",
     "src/ShaderJS.cpp",
+    "src/ShaderMaterialJS.cpp",
     "src/SubMeshJS.cpp",
+    "src/TextNodeJS.cpp",
     "src/ToneMapJS.cpp",
     "src/Vec2Proxy.cpp",
     "src/Vec3Proxy.cpp",
     "src/Vec4Proxy.cpp",
     "src/native_module_export.cpp",
+    "src/nodejstaskqueue.cpp",
     "src/register_module.cpp",
   ]
 
-  include_dirs = [ "../../3d_widget_adapter/includ/ohos" ]
+  include_dirs = [ "../../3d_widget_adapter/include/ohos" ]
 
   defines = []
 
   configs = [
     ":lume3d_config",
-    "${LUME_METAOBJECT_PATH}:lume_metaobject_config",
-    "${LUME_SCP_PATH}:lume_scenewidget_config",
     "../../3d_scene_adapter:scene_adapter_config",
   ]
 
@@ -144,7 +154,8 @@ ohos_source_set("napi_source") {
 
   external_deps = [
     "c_utils:utils",
-    "egl:libEGL",
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
     "hilog:libhilog",
     "hitrace:hitrace_meter",
     "init:libbegetutil",
@@ -161,6 +172,7 @@ group("napiInterface") {
 
 ohos_shared_library("libscene") {
   deps = [ ":napi_source" ]
+  external_deps = [ "hilog:libhilog" ]
   public_configs = [ ":napi_config" ]
   relative_install_dir = "module/graphics"
   part_name = "graphic_3d"

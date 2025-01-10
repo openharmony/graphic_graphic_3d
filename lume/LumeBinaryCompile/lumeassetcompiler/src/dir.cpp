@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,10 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "dir.h"
 
-#if _WIN32
+#if defined(_WIN32) && (_WIN32)
 #include <windows.h>
+#include <cstring>
 #include <string>
 struct DIR {
     HANDLE handle;
@@ -41,13 +43,13 @@ struct dirent* readdir(DIR* d)
         // end.
         return nullptr;
     }
-    strcpy(d->cur.d_name, d->data.cFileName);
+    strcpy_s(d->cur.d_name, d->data.cFileName);
     if (d->data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         d->cur.d_type = DT_DIR;
     } else {
         d->cur.d_type = DT_REG;
     }
-    if (false == FindNextFileA(d->handle, &d->data)) {
+    if (FindNextFileA(d->handle, &d->data) == false) {
         // clear;
         d->data = {};
     }

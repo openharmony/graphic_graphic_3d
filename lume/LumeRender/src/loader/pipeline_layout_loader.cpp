@@ -20,7 +20,6 @@
 #include <render/device/pipeline_layout_desc.h>
 #include <render/namespace.h>
 
-#include "json_format_serialization.h"
 #include "json_util.h"
 #include "util/log.h"
 
@@ -29,7 +28,7 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 // clang-format off
-CORE_JSON_SERIALIZE_ENUM(ShaderStageFlagBits,
+RENDER_JSON_SERIALIZE_ENUM(ShaderStageFlagBits,
     {
         { (ShaderStageFlagBits)0, nullptr },
         { ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT, "vertex_bit" },
@@ -37,7 +36,29 @@ CORE_JSON_SERIALIZE_ENUM(ShaderStageFlagBits,
         { ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, "compute_bit" },
     })
 
-CORE_JSON_SERIALIZE_ENUM(DescriptorType,
+RENDER_JSON_SERIALIZE_ENUM(AdditionalDescriptorTypeImageFlagBits,
+    {
+        { (AdditionalDescriptorTypeImageFlagBits)0, nullptr },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DEPTH_BIT, "image_depth_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_ARRAY_BIT, "image_array_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_MULTISAMPLE_BIT, "image_multisample_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_SAMPLED_BIT, "image_sampled_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_LOAD_STORE_BIT, "image_load_store_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_1D_BIT,
+	    "image_dimension_1d_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_2D_BIT,
+	    "image_dimension_2d_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_3D_BIT,
+	    "image_dimension_3d_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_CUBE_BIT,
+	    "image_dimension_cube_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_BUFFER_BIT,
+	    "image_dimension_buffer_bit" },
+        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_SUBPASS_BIT,
+	    "image_dimension_subpass_bit" },
+    })
+
+RENDER_JSON_SERIALIZE_ENUM(DescriptorType,
     {
         { DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM, nullptr }, // default
         { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, "sampler" },
@@ -61,6 +82,8 @@ void FromJson(const json::value& jsonData, JsonContext<DescriptorSetLayoutBindin
     SafeGetJsonValue(jsonData, "descriptorCount", context.error, context.data.descriptorCount);
     SafeGetJsonBitfield<ShaderStageFlagBits>(
         jsonData, "shaderStageFlags", context.error, context.data.shaderStageFlags);
+    SafeGetJsonBitfield<AdditionalDescriptorTypeImageFlagBits>(
+        jsonData, "additionalDescriptorTypeFlags", context.error, context.data.additionalDescriptorTypeFlags);
 }
 
 void FromJson(const json::value& jsonData, JsonContext<DescriptorSetLayout>& context)
@@ -73,10 +96,14 @@ void FromJson(const json::value& jsonData, JsonContext<DescriptorSetLayout>& con
     // NOTE: does not fetch descriptor set arrays
 }
 
-PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, const string_view uri, PipelineLayout& pl)
+PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unused]] const string_view uri,
+    PipelineLayout& pl, string& renderSlotName, bool& defaultRenderSlot)
 {
     PipelineLayoutLoader::LoadResult result;
     pl = {}; // reset
+
+    SafeGetJsonValue(jsonData, "renderSlot", result.error, renderSlotName);
+    SafeGetJsonValue(jsonData, "renderSlotDefault", result.error, defaultRenderSlot);
 
     if (const auto pcIter = jsonData.find("pushConstant"); pcIter) {
         SafeGetJsonValue(*pcIter, "size", result.error, pl.pushConstant.byteSize);
@@ -85,7 +112,8 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, const string_
             *pcIter, "shaderStageFlags", result.error, pl.pushConstant.shaderStageFlags);
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (pl.pushConstant.byteSize > PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) {
-            PLUGIN_LOG_W("RENDER_VALIDATION: Invalid push constant size clamped (name:%s). push constant size %u <= %u",
+            PLUGIN_LOG_W(
+                "RENDER_VALIDATION: Invalid push constant size clamped (name:%s). push constant size %u <= %u",
                 uri.data(), pl.pushConstant.byteSize, PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE);
         }
 #endif
@@ -97,7 +125,7 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, const string_
     ParseArray<decltype(descriptorSetLayouts)::value_type>(
         jsonData, "descriptorSetLayouts", descriptorSetLayouts, result);
     if (!descriptorSetLayouts.empty()) {
-        const uint32_t inputDescriptorSetCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+        const auto inputDescriptorSetCount = static_cast<uint32_t>(descriptorSetLayouts.size());
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (inputDescriptorSetCount > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
             PLUGIN_LOG_W("RENDER_VALIDATION: Invalid pipeline layout sizes clamped (name:%s). Set count %u <= %u",
@@ -150,10 +178,20 @@ const PipelineLayout& PipelineLayoutLoader::GetPipelineLayout() const
     return pipelineLayout_;
 }
 
+BASE_NS::string_view PipelineLayoutLoader::GetRenderSlot() const
+{
+    return renderSlotName_;
+}
+
+bool PipelineLayoutLoader::GetDefaultRenderSlot() const
+{
+    return renderSlotDefaultPl_;
+}
+
 PipelineLayoutLoader::LoadResult PipelineLayoutLoader::Load(const string_view jsonString)
 {
     if (json::value jsonData = json::parse(jsonString.data()); jsonData) {
-        return RENDER_NS::Load(jsonData, uri_, pipelineLayout_);
+        return RENDER_NS::Load(jsonData, uri_, pipelineLayout_, renderSlotName_, renderSlotDefaultPl_);
     }
     return LoadResult("Invalid json file.");
 }

@@ -4,13 +4,13 @@
         "type" : "shader"
     },
     "category": "3D",
-    "baseShader": "3dshaders://shader/core3d_dm_fullscreen_env.shader",
+    "displayName": "Environment",
     "shaders": [
         {
             "displayName": "Default Environment",
             "variantName": "ENV",
-            "vert": "3dshaders://shader/core3d_dm_fullscreen_triangle_env.vert.spv",
-            "frag": "3dshaders://shader/core3d_dm_fullscreen_env.frag.spv",
+            "vert": "3dshaders://shader/core3d_dm_env.vert.spv",
+            "frag": "3dshaders://shader/core3d_dm_env.frag.spv",
             "pipelineLayout": "3dpipelinelayouts://core3d_dm_env.shaderpl",
             "renderSlot": "CORE3D_RS_DM_ENV",
             "state": {
@@ -44,10 +44,10 @@
         {
             "displayName": "Default Environment Multiview",
             "variantName": "ENV_MV",
-            "vert": "3dshaders://shader/core3d_dm_fullscreen_triangle_env_mv.vert.spv",
-            "frag": "3dshaders://shader/core3d_dm_fullscreen_env.frag.spv",
+            "vert": "3dshaders://shader/core3d_dm_env_mv.vert.spv",
+            "frag": "3dshaders://shader/core3d_dm_env.frag.spv",
             "pipelineLayout": "3dpipelinelayouts://core3d_dm_env.shaderpl",
-            "renderSlot": "CORE3D_RS_DM_ENV",
+            "renderSlot": "CORE3D_RS_DM_ENV_MV",
             "state": {
                 "rasterizationState": {
                     "enableDepthClamp": false,

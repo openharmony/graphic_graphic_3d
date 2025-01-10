@@ -8,10 +8,8 @@
 #include "render/shaders/common/render_post_process_common.h"
 #include "render/shaders/common/render_tonemap_common.h"
 
-#define G3D_FXAA_PATCHES 1
-#define FXAA_PC_CONSOLE 1
-#define FXAA_GLSL_130 1
-#define FXAA_GREEN_AS_LUMA 1
+#define FXAA_USE_PATCHES 1
+#define FXAA_LUMA_GREEN 1
 #include "common/fxaa_reference.h"
 
 // sets
@@ -19,7 +17,7 @@
 #include "render/shaders/common/render_post_process_layout_common.h"
 
 layout(set = 1, binding = 0) uniform texture2D uTex;
-#if (FXAA_GREEN_AS_LUMA == 0)
+#if (FXAA_LUMA_GREEN == 0)
 layout(set = 1, binding = 1) uniform texture2D uTexAlpha;
 layout(set = 1, binding = 2) uniform sampler uSampler;
 #else
@@ -90,7 +88,7 @@ void main(void)
                          // 0.0625 called "high quality"]
         vec4(0)          // unused FxaaFloat4 fxaaConsole360ConstDir
     );
-#if (FXAA_GREEN_AS_LUMA == 0)
+#if (FXAA_LUMA_GREEN == 0)
     // luma is in uTex alpha, alpha is in separate texture
     const float alpha = textureLod(sampler2D(uTexAlpha, uSampler), inUv, 0).x;
 

@@ -71,13 +71,13 @@ struct Uid {
     {
         uint64_t value = 0U;
         for (auto first = values, last = values + 8; first != last; ++first) {
-            value = (value << 8) | *first; // 8: Multiply by 256
+            value = (value << 8U) | *first;
         }
         data[0] = value;
 
         value = 0U;
         for (auto first = values + 8, last = values + 16; first != last; ++first) {
-            value = (value << 8) | *first; // 8: Multiply by 256
+            value = (value << 8U) | *first;
         }
         data[1] = value;
     }
@@ -89,31 +89,31 @@ struct Uid {
 
             uint64_t value = 0U;
             for (size_t i = 0; i < sizeof(uint32_t); ++i) {
-                value = (value << 8) | HexToUint8(src); // 8: Multiply by 256
-                src += 2;
+                value = (value << 8U) | HexToUint8(src);
+                src += 2U;
             }
             ++src;
             for (size_t i = 0; i < sizeof(uint16_t); ++i) {
-                value = (value << 8) | HexToUint8(src); // 8: Multiply by 256
-                src += 2;
+                value = (value << 8U) | HexToUint8(src);
+                src += 2U;
             }
             ++src;
             for (size_t i = 0; i < sizeof(uint16_t); ++i) {
-                value = (value << 8) | HexToUint8(src); // 8: Multiply by 256
-                src += 2;
+                value = (value << 8U) | HexToUint8(src);
+                src += 2U;
             }
             ++src;
             data[0U] = value;
 
             value = 0U;
             for (size_t i = 0; i < sizeof(uint16_t); ++i) {
-                value = (value << 8) | HexToUint8(src); // 8: Multiply by 256
-                src += 2;
+                value = (value << 8U) | HexToUint8(src);
+                src += 2U;
             }
             ++src;
-            for (size_t i = 0; i < (sizeof(uint16_t) * 3); ++i) {
-                value = (value << 8) | HexToUint8(src); // 8: Multiply by 256
-                src += 2;
+            for (size_t i = 0; i < (sizeof(uint16_t) * 3U); ++i) {
+                value = (value << 8U) | HexToUint8(src);
+                src += 2U;
             }
             data[1U] = value;
         }

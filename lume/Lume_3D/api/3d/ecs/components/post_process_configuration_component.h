@@ -59,13 +59,13 @@ BEGIN_COMPONENT(IPostProcessConfigurationComponentManager, PostProcessConfigurat
 
     /** Post processes.
      */
-    DEFINE_PROPERTY(BASE_NS::vector<PostProcessEffect>, postProcesses, "Post Processes", 0, )
+    DEFINE_PROPERTY(BASE_NS::vector<PostProcessEffect>, postProcesses, "Post Processes", 0,)
 
     /** Custom post process render node graph file. (Can be patched with e.g. post process ids etc.)
      * Chosen automatically to camera post processes if the entity of the component is attached
      * to CameraComponent::postProcess
      */
-    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Post Process RNG File", 0, )
+    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Post Process RNG File", 0,)
 
 END_COMPONENT(IPostProcessConfigurationComponentManager, PostProcessConfigurationComponent,
     "050af984-be02-49ae-b950-19b829252769")

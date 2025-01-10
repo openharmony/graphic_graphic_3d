@@ -16,7 +16,6 @@
 #include "gles/swapchain_gles.h"
 
 #include <base/math/vector.h>
-#include <core/intf_engine.h>
 #include <render/namespace.h>
 
 #include "gles/device_gles.h"
@@ -38,15 +37,16 @@ struct FormatInfo {
 };
 
 // NOTE: add more mappings if needed.
-static constexpr FormatInfo FORMATS[] = { { BASE_FORMAT_R8G8B8_UNORM, 8, 8, 8, 0, GL_RGB8, GL_RGB8 },
+constexpr FormatInfo FORMATS[] = { { BASE_FORMAT_R8G8B8_UNORM, 8, 8, 8, 0, GL_RGB8, GL_RGB8 },
     { BASE_FORMAT_R8G8B8A8_UNORM, 8, 8, 8, 8, GL_RGBA8, GL_RGBA8 },
+    { BASE_FORMAT_A2B10G10R10_UNORM_PACK32, 10U, 10U, 10U, 2U, GL_RGB10_A2, GL_RGB10_A2 },
 #if RENDER_HAS_GL_BACKEND
     { BASE_FORMAT_R16G16B16_UNORM, 16, 16, 16, 0, GL_RGB16, GL_RGB16 },
     { BASE_FORMAT_R16G16B16A16_UNORM, 16, 16, 16, 16, GL_RGBA16, GL_RGBA16 },
 #endif
     { BASE_FORMAT_UNDEFINED, 0, 0, 0, 0, GL_NONE, GL_NONE } };
 
-static constexpr FormatInfo FORMATS_SRGB[] = { { BASE_FORMAT_R8G8B8_SRGB, 8, 8, 8, 0, GL_SRGB8, GL_SRGB8_ALPHA8 },
+constexpr FormatInfo FORMATS_SRGB[] = { { BASE_FORMAT_R8G8B8_SRGB, 8, 8, 8, 0, GL_SRGB8, GL_SRGB8_ALPHA8 },
     { BASE_FORMAT_R8G8B8A8_SRGB, 8, 8, 8, 8, GL_SRGB8_ALPHA8, GL_SRGB8_ALPHA8 },
     { BASE_FORMAT_UNDEFINED, 0, 0, 0, 0, GL_NONE, GL_NONE } };
 
@@ -131,7 +131,7 @@ GLenum FormatToGlFormat(Format colorFormat)
         }
 
         for (int i = 0;; i++) {
-            if (format[i].format == BASE_FORMAT_MAX_ENUM) {
+            if (format[i].format == BASE_FORMAT_UNDEFINED) {
                 // no match.
                 break;
             }
@@ -151,7 +151,7 @@ GlesImplementation::SurfaceInfo ExtractInfo(DeviceGLES& device, const uint64_t s
 #if RENDER_HAS_GLES_BACKEND
     if (device.GetBackendType() == DeviceBackendType::OPENGLES) {
         const auto& devicePlatformData = (const DevicePlatformDataGLES&)device.GetPlatformData();
-        EGLSurface surface = (EGLSurface)surfaceHandle;
+        auto surface = (EGLSurface)surfaceHandle;
         if (!EGLState.GetSurfaceInformation(devicePlatformData, surface, info)) {
             PLUGIN_LOG_E("Could not query surface information");
         }
@@ -274,7 +274,8 @@ SwapchainGLES::SwapchainGLES(Device& device, const SwapchainCreateInfo& swapchai
     // check for surface creation automatically
     if ((swapchainCreateInfo.surfaceHandle == 0) && swapchainCreateInfo.window.window) {
         plat_.surface =
-            device_.GetEglState().CreateSurface(swapchainCreateInfo.window.window, swapchainCreateInfo.window.instance);
+            device_.GetEglState().CreateSurface(swapchainCreateInfo.window.window, swapchainCreateInfo.window.instance,
+                (swapchainCreateInfo.swapchainFlags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT));
         ownsSurface_ = true;
     } else {
         plat_.surface = (uintptr_t)swapchainCreateInfo.surfaceHandle;

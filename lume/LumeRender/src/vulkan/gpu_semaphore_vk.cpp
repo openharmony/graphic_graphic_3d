@@ -21,7 +21,6 @@
 #include <render/namespace.h>
 
 #include "device/device.h"
-#include "vulkan/device_vk.h"
 #include "vulkan/validate_vk.h"
 
 RENDER_BEGIN_NAMESPACE()

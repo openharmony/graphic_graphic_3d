@@ -58,6 +58,11 @@
 
 #define CORE_POST_PROCESS_COLOR_CONVERSION_SRGB 1
 
+#define TAA_USE_BICUBIC_BIT 1
+#define TAA_USE_VARIANCE_CLIPPING_BIT 2
+#define TAA_USE_YCOCG_BIT 3
+#define TAA_IGNORE_EDGES_BIT 4
+
 #else
 
 // note global post process UBO struct alignment for 512
@@ -65,6 +70,11 @@ constexpr uint32_t POST_PROCESS_GLOBAL_VEC4_FACTOR_COUNT { 14u };
 constexpr uint32_t POST_PROCESS_GLOBAL_USER_VEC4_FACTOR_COUNT { 16u };
 // note UBO struct alignment for 256
 constexpr uint32_t POST_PROCESS_LOCAL_VEC4_FACTOR_COUNT { 16u };
+
+constexpr uint32_t TAA_USE_BICUBIC_BIT { 1u };
+constexpr uint32_t TAA_USE_VARIANCE_CLIPPING_BIT { 2u };
+constexpr uint32_t TAA_USE_YCOCG_BIT { 3u };
+constexpr uint32_t TAA_IGNORE_EDGES_BIT { 4u };
 
 #endif
 

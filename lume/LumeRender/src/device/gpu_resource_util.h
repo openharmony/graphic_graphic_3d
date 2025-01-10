@@ -31,11 +31,11 @@ class GpuSampler;
 class GpuResourceManager;
 
 namespace GpuResourceUtil {
-void CopyGpuResource(const IDevice& device, const GpuResourceManager& gpuResourceMgr, const RenderHandle handle,
+void CopyGpuResource(const IDevice& device, const GpuResourceManager& gpuResourceMgr, RenderHandle handle,
     BASE_NS::ByteArray& byteArray);
-void DebugBufferName(const IDevice& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
-void DebugImageName(const IDevice& device, const GpuImage& image, const BASE_NS::string_view name);
-void DebugSamplerName(const IDevice& device, const GpuSampler& sampler, const BASE_NS::string_view name);
+void DebugBufferName(const IDevice& device, const GpuBuffer& buffer, BASE_NS::string_view name);
+void DebugImageName(const IDevice& device, const GpuImage& image, BASE_NS::string_view name);
+void DebugSamplerName(const IDevice& device, const GpuSampler& sampler, BASE_NS::string_view name);
 } // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()
 

@@ -46,10 +46,11 @@ enum RenderHandleInfoFlagBits {
     CORE_RESOURCE_HANDLE_MAP_OUTSIDE_RENDERER = 0x00000020,
     CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION = 0x00000040, // e.g. hwBuffer ycbcr conversion / oes
     CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE = 0x00000080,
-    CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE = 0x00000100,
+    CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE = 0x00000100, // e.g. remappable resource or dynamic ring buffer buffer
     CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE =
         0x00000200, // created to be used as swapchain (fast check for additional processing)
-    CORE_RESOURCE_HANDLE_DYNAMIC_ADDITIONAL_STATE = 0x00000400, // additional image state tracking
+    CORE_RESOURCE_HANDLE_DYNAMIC_ADDITIONAL_STATE = 0x00000400,      // additional image state tracking
+    CORE_RESOURCE_HANDLE_RENDER_TIME_MAPPED_GPU_BUFFER = 0x00000800, // special render time mappable GPU buffer
 };
 using RenderHandleInfoFlags = uint32_t;
 
@@ -57,19 +58,21 @@ namespace RenderHandleUtil {
 static constexpr uint64_t RES_ID_MASK { GPU_RESOURCE_HANDLE_ID_MASK };
 static constexpr uint64_t RES_HANDLE_ID_MASK { 0x00FFfff0 };
 static constexpr uint64_t RES_HANDLE_GENERATION_MASK { 0xFF000000 };
-static constexpr uint64_t RES_HANDLE_HAS_NAME_MASK { 0x1000000000000 };
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_MASK { 0xffff00000000 };
+static constexpr uint64_t RES_HANDLE_HAS_NAME_MASK { 0x100000000000 };
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_MASK { 0xfff00000000 };
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_MASK { 0xFFFF000000000000 };
 
-static constexpr uint64_t RES_HANDLE_ID_SHIFT { 4 };
+static constexpr uint64_t RES_HANDLE_ID_SHIFT { 4 }; // 4 : param
 static constexpr uint64_t RES_HANDLE_TYPE_SHIFT { 0 };
-static constexpr uint64_t RES_HANDLE_GENERATION_SHIFT { 24 };
-static constexpr uint64_t RES_HANDLE_HAS_NAME_SHIFT { 48 };
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT { 32 };
+static constexpr uint64_t RES_HANDLE_GENERATION_SHIFT { 24 }; // 24 : param
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT { 32 }; // 32 : param 
+static constexpr uint64_t RES_HANDLE_HAS_NAME_SHIFT { 44 }; // 44 : param
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_SHIFT { 48 }; // 48 : param
 
-RenderHandle CreateGpuResourceHandle(const RenderHandleType type, const RenderHandleInfoFlags infoFlags,
-    const uint32_t index, const uint32_t generationIndex);
-RenderHandle CreateGpuResourceHandle(const RenderHandleType type, const RenderHandleInfoFlags infoFlags,
-    const uint32_t index, const uint32_t generationIndex, const uint32_t hasNameId);
+RenderHandle CreateGpuResourceHandle(
+    RenderHandleType type, RenderHandleInfoFlags infoFlags, uint32_t index, uint32_t generationIndex);
+RenderHandle CreateGpuResourceHandle(RenderHandleType type, RenderHandleInfoFlags infoFlags, uint32_t index,
+    uint32_t generationIndex, uint32_t hasNameId);
 
 // only related to GPU resources
 inline constexpr bool IsDynamicResource(const RenderHandle handle)
@@ -154,10 +157,11 @@ inline constexpr bool IsGpuAccelerationStructure(const RenderHandle& handle)
                RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE);
 }
 
-RenderHandle CreateHandle(const RenderHandleType type, const uint32_t index);
-RenderHandle CreateHandle(const RenderHandleType type, const uint32_t index, const uint32_t generationIndex);
+RenderHandle CreateHandle(RenderHandleType type, uint32_t index);
+RenderHandle CreateHandle(RenderHandleType type, uint32_t index, uint32_t generationIndex);
+RenderHandle CreateHandle(RenderHandleType type, uint32_t index, uint32_t generationIndex, uint32_t additionalData);
 RenderHandle CreateHandle(
-    const RenderHandleType type, const uint32_t index, const uint32_t generationIndex, const uint32_t additionalData);
+    RenderHandleType type, uint32_t index, uint32_t generationIndex, uint32_t additionalData, uint32_t additionalIndex);
 
 inline constexpr uint32_t GetIndexPart(const RenderHandle handle)
 {
@@ -180,6 +184,10 @@ inline constexpr uint32_t GetAdditionalData(const RenderHandle handle)
 {
     return (handle.id & RES_HANDLE_ADDITIONAL_INFO_MASK) >> RES_HANDLE_ADDITIONAL_INFO_SHIFT;
 }
+inline constexpr uint32_t GetAdditionalIndexPart(const RenderHandle handle)
+{
+    return (handle.id & RES_HANDLE_ADDITIONAL_INDEX_MASK) >> RES_HANDLE_ADDITIONAL_INDEX_SHIFT;
+}
 // 0xF (1 << descriptorSetIndex)
 inline constexpr uint32_t GetPipelineLayoutDescriptorSetMask(const RenderHandle handle)
 {
@@ -188,7 +196,8 @@ inline constexpr uint32_t GetPipelineLayoutDescriptorSetMask(const RenderHandle 
 
 inline constexpr bool IsValid(const EngineResourceHandle& handle)
 {
-    return handle.id != INVALID_RESOURCE_HANDLE;
+    // ignore generation mask, invalid handle might have generation index for update purposes
+    return ((handle.id | RenderHandleUtil::RES_HANDLE_GENERATION_MASK) != INVALID_RESOURCE_HANDLE);
 }
 inline constexpr RenderHandleType GetHandleType(const EngineResourceHandle& handle)
 {
@@ -202,8 +211,7 @@ inline constexpr uint32_t GetGenerationIndexPart(const EngineResourceHandle& han
 {
     return GetGenerationIndexPart(RenderHandle { handle.id });
 }
-EngineResourceHandle CreateEngineResourceHandle(
-    const RenderHandleType type, const uint32_t index, const uint32_t generationIndex);
+EngineResourceHandle CreateEngineResourceHandle(RenderHandleType type, uint32_t index, uint32_t generationIndex);
 } // namespace RenderHandleUtil
 RENDER_END_NAMESPACE()
 

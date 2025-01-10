@@ -41,21 +41,24 @@ BEGIN_COMPONENT(IAnimationStateComponentManager, AnimationStateComponent)
     using Flags = uint8_t;
 #endif
     // Animated entities (matches tracks).
-    DEFINE_PROPERTY(BASE_NS::vector<TrackState>, trackStates, "", CORE_NS::PropertyFlags::IS_HIDDEN, )
+    DEFINE_PROPERTY(BASE_NS::vector<TrackState>, trackStates, "", CORE_NS::PropertyFlags::IS_HIDDEN,)
 
-    DEFINE_PROPERTY(AnimationComponent::PlaybackState, state, "", CORE_NS::PropertyFlags::IS_HIDDEN,
-        VALUE(AnimationComponent::PlaybackState::STOP))
-
-    // Playback time.
+    /** Playback time. */
     DEFINE_PROPERTY(float, time, "Playback Time", 0, VALUE(0.0f))
 
-    // current repeat loop.
+    // Current repeat loop.
     DEFINE_PROPERTY(uint32_t, currentLoop, "", CORE_NS::PropertyFlags::IS_HIDDEN, VALUE(0U))
+
+    // Last known playback state.
+    DEFINE_PROPERTY(AnimationComponent::PlaybackState, state, "", CORE_NS::PropertyFlags::IS_HIDDEN,
+        VALUE(AnimationComponent::PlaybackState::STOP))
 
     // Completion flag.
     DEFINE_PROPERTY(bool, completed, "", CORE_NS::PropertyFlags::IS_HIDDEN, VALUE(false))
 
+    // Dirty state means the animation need to be updated also at the next frame.
     DEFINE_PROPERTY(bool, dirty, "", CORE_NS::PropertyFlags::IS_HIDDEN, VALUE(false))
+
     /** Additional controls for animation playback. */
     DEFINE_BITFIELD_PROPERTY(
         Flags, options, "Options", CORE_NS::PropertyFlags::IS_BITFIELD, VALUE(0), AnimationStateComponent::FlagBits)

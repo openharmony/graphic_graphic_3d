@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_NAMED_IMPL_H
-#define OHOS_RENDER_3D_NAMED_IMPL_H
+#ifndef NAMED_IMPL_H
+#define NAMED_IMPL_H
 #include <napi_api.h>
 class SceneResourceImpl {
 public:
@@ -63,16 +63,20 @@ public:
 protected:
     static void GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props);
 
-    void SetUri(const NapiApi::StrongRef& uri);
+    void SetUri(NapiApi::StrongRef uri);
     napi_value GetObjectType(NapiApi::FunctionContext<>& ctx);
     napi_value GetName(NapiApi::FunctionContext<>& ctx);
     void SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx);
     napi_value GetUri(NapiApi::FunctionContext<>& ctx);
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
 
-    NapiApi::StrongRef scene_;
+    NapiApi::WeakRef scene_;
+    NapiApi::StrongRef uri_;
+
+    // returns false if owning scene has been destroyed.
+    bool validateSceneRef();
+
 private:
     SceneResourceType type_;
-    NapiApi::StrongRef uri_;
 };
-#endif // OHOS_RENDER_3D_NAMED_IMPL_H
+#endif

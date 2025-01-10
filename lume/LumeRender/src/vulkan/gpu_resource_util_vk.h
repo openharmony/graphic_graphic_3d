@@ -34,10 +34,10 @@ class GpuSampler;
 namespace GpuResourceUtil {
 void CopyGpuBufferVk(GpuBuffer& buffer, BASE_NS::ByteArray& byteArray);
 void DebugObjectNameVk(
-    const IDevice& device, const VkObjectType objectType, const uint64_t castedHandle, const BASE_NS::string_view name);
-void DebugBufferNameVk(const IDevice& device, const GpuBuffer& buffer, const BASE_NS::string_view name);
-void DebugImageNameVk(const IDevice& device, const GpuImage& image, const BASE_NS::string_view name);
-void DebugSamplerNameVk(const IDevice& device, const GpuSampler& sampler, const BASE_NS::string_view name);
+    const IDevice& device, VkObjectType objectType, uint64_t castedHandle, BASE_NS::string_view name);
+void DebugBufferNameVk(const IDevice& device, const GpuBuffer& buffer, BASE_NS::string_view name);
+void DebugImageNameVk(const IDevice& device, const GpuImage& image, BASE_NS::string_view name);
+void DebugSamplerNameVk(const IDevice& device, const GpuSampler& sampler, BASE_NS::string_view name);
 } // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()
 

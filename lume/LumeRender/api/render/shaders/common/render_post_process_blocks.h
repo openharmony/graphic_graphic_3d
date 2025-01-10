@@ -83,6 +83,31 @@ void PostProcessColorFringeBlock(in uint postProcessFlags, in vec4 chromaFactor,
 }
 
 /**
+ * Array image version
+ * returns chroma applied color with two additional samples, coefficient in the range 0-1
+ */
+void PostProcessColorFringeBlock(in uint postProcessFlags, in vec4 chromaFactor, in vec2 uv, in vec2 uvSize,
+    in sampler2DArray imgSampler, in float layer, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+    if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_COLOR_FRINGE_BIT) ==
+        POST_PROCESS_SPECIALIZATION_COLOR_FRINGE_BIT) {
+        // this is cheap chroma
+        const vec2 distUv = (uv - 0.5) * 2.0;
+        const CORE_RELAXEDP float chroma = dot(distUv, distUv) * chromaFactor.y * chromaFactor.x;
+
+        const vec2 uvDistToImageCenter = chroma * uvSize;
+        const CORE_RELAXEDP float chromaRed =
+            textureLod(imgSampler, vec3(uv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), layer), 0).x;
+        const CORE_RELAXEDP float chromaBlue =
+            textureLod(imgSampler, vec3(uv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), layer), 0).z;
+
+        outCol.r = chromaRed;
+        outCol.b = chromaBlue;
+    }
+}
+
+/**
  * returns dithered color
  */
 void PostProcessDitherBlock(in uint postProcessFlags, in vec4 ditherFactor, in vec2 uv, in vec3 inCol, out vec3 outCol)

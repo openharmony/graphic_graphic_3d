@@ -61,6 +61,9 @@ struct LowLevelRenderPassDataVk final : public LowLevelRenderPassData {
     uint64_t frameBufferHash { 0 };
 
     VkFramebuffer framebuffer { VK_NULL_HANDLE };
+
+    bool isSwapchain { false };
+    SurfaceTransformFlags surfaceTransformFlags { 0U };
 };
 
 struct LowLevelPipelineLayoutDataVk final : public LowLevelPipelineLayoutData {

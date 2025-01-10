@@ -87,7 +87,10 @@ public:
             MODIFIED,
             /** Component destroyed from entity
              */
-            DESTROYED
+            DESTROYED,
+            /** Component relocated and its ID has changed.
+             */
+            MOVED,
         };
         /** Entities added to processing. */
         virtual void OnComponentEvent(
@@ -105,7 +108,7 @@ public:
         @param entity Entity where we get components.
         @param result List where entitys components are written in.
     */
-    virtual void GetComponents(Entity entity, BASE_NS::vector<IComponentManager*>& result) = 0;
+    virtual void GetComponents(Entity entity, BASE_NS::vector<IComponentManager*>& result) const = 0;
 
     /** Get systems of this ECS.
      */
@@ -217,6 +220,10 @@ public:
      * @param scale Time scaling factor.
      */
     virtual void SetTimeScale(float scale) = 0;
+
+    /** Gets entity manager for ECS.
+     */
+    virtual const IEntityManager& GetEntityManager() const = 0;
 
     using Ptr = BASE_NS::refcnt_ptr<IEcs>;
 

@@ -13,10 +13,9 @@
  * limitations under the License.
  */
 
-#ifndef CORE__IO__FILEMANAGER_H
-#define CORE__IO__FILEMANAGER_H
+#ifndef CORE_IO_FILEMANAGER_H
+#define CORE_IO_FILEMANAGER_H
 
-#include <atomic>
 #include <cstdint>
 
 #include <base/containers/string.h>
@@ -29,34 +28,32 @@
 #include <core/io/intf_file_manager.h>
 #include <core/io/intf_file_system.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_interface_helper.h>
 
 CORE_BEGIN_NAMESPACE()
 class ProxyFilesystem;
 
-class FileManager final : public IFileManager {
+class FileManager final : public IInterfaceHelper<IFileManager> {
 public:
-    const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
-    IInterface* GetInterface(const BASE_NS::Uid& uid) override;
-    void Ref() override;
-    void Unref() override;
-
     FileManager();
     ~FileManager() override = default;
 
     IDirectory::Entry GetEntry(BASE_NS::string_view uri) override;
 
     IFile::Ptr OpenFile(BASE_NS::string_view uri) override;
+    IFile::Ptr OpenFile(BASE_NS::string_view uri, IFile::Mode mode) override;
     IFile::Ptr CreateFile(BASE_NS::string_view uri) override;
-
     bool DeleteFile(BASE_NS::string_view uri) override;
+    bool FileExists(BASE_NS::string_view uri) const override;
 
     IDirectory::Ptr OpenDirectory(BASE_NS::string_view uri) override;
     IDirectory::Ptr CreateDirectory(BASE_NS::string_view uri) override;
     bool DeleteDirectory(BASE_NS::string_view uri) override;
+    bool DirectoryExists(BASE_NS::string_view uri) const override;
 
     bool Rename(BASE_NS::string_view fromUri, BASE_NS::string_view toUri) override;
 
-    void RegisterFilesystem(BASE_NS::string_view protocol, IFilesystem::Ptr filesystem) override;
+    bool RegisterFilesystem(BASE_NS::string_view protocol, IFilesystem::Ptr filesystem) override;
     void UnregisterFilesystem(BASE_NS::string_view protocol) override;
 
     void RegisterAssetPath(BASE_NS::string_view uri) override;
@@ -67,12 +64,11 @@ public:
     bool RegisterPath(BASE_NS::string_view protocol, BASE_NS::string_view uri, bool prepend) override;
     void UnregisterPath(BASE_NS::string_view protocol, BASE_NS::string_view uri) override;
 
-    virtual IFilesystem::Ptr CreateROFilesystem(const void* const data, uint64_t size) override;
+    IFilesystem::Ptr CreateROFilesystem(const void* data, uint64_t size) override;
+
+    IFilesystem* GetFilesystem(BASE_NS::string_view protocol) const override;
 
 private:
-    // NOTE: Johannes Pystynen 2019/10/25, Faster access when protocol is known.
-    IFilesystem* GetFilesystem(BASE_NS::string_view protocol) const;
-
     // Fix "invalid" uris (converts relative file:// -> absolute. does not affect other protocols.)
     BASE_NS::string FixPath(BASE_NS::string_view pathIn) const;
 
@@ -82,9 +78,7 @@ private:
     BASE_NS::unordered_map<BASE_NS::string, IFilesystem::Ptr> filesystems_;
 
     BASE_NS::unordered_map<BASE_NS::string, ProxyFilesystem*> proxyFilesystems_;
-
-    std::atomic_int32_t refCount_ { 0 };
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE__IO__FILEMANAGER_H
+#endif // CORE_IO_FILEMANAGER_H

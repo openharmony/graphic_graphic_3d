@@ -29,7 +29,7 @@
 #define DEFINE_STATIC_PLUGIN(NAME)                                                              \
     __pragma(section("spd$d", long, read))                                                      \
     __declspec(allocate("spd$d"))                                                               \
-    extern constexpr CORE_NS::IPlugin const* const NAME##_StaticPlugin = &NAME##_pluginData;
+    extern constexpr const CORE_NS::IPlugin* const NAME##_StaticPlugin = &NAME##_pluginData
 #else
 #define PLUGIN_DATA(NAME) __attribute__((used)) constexpr const CORE_NS::IPlugin NAME##_pluginData
 #if __aarch64__
@@ -55,13 +55,13 @@
         " static_plugin_list_end:\n"                                                                                  \
         " .popsection\n");                                                                                            \
     extern const CORE_NS::IPlugin* const NAME##_StaticPlugin;                                                         \
-    __attribute__((visibility("hidden"), used)) CORE_NS::IPlugin const* const NAME##_DATA_ref = NAME##_StaticPlugin;  \
-    extern CORE_NS::IPlugin const* const static_plugin_list;                                                          \
-    extern __attribute__((visibility("hidden"), used, weak)) CORE_NS::IPlugin const* const static_plugin_list_ref =   \
+    __attribute__((visibility("hidden"), used)) const CORE_NS::IPlugin* const NAME##_DATA_ref = NAME##_StaticPlugin;  \
+    extern const CORE_NS::IPlugin* const static_plugin_list;                                                          \
+    extern __attribute__((visibility("hidden"), used, weak)) const CORE_NS::IPlugin* const static_plugin_list_ref =   \
         static_plugin_list;                                                                                           \
-    extern CORE_NS::IPlugin const* const static_plugin_list_end;                                                      \
+    extern const CORE_NS::IPlugin* const static_plugin_list_end;                                                      \
     extern __attribute__((visibility("hidden"), used, weak))                                                          \
-        CORE_NS::IPlugin const* const static_plugin_list_end_ref = static_plugin_list_end;
+        const CORE_NS::IPlugin* const static_plugin_list_end_ref = static_plugin_list_end
 #endif
 #else
 
@@ -82,7 +82,7 @@ void RegisterStaticPlugin(const CORE_NS::IPlugin& plugin);
         {                                                                            \
             CORE_NS::StaticPluginRegistry::RegisterStaticPlugin(NAME##_pluginData); \
         }                                                                            \
-    } magic;
+    } magic
 #else
     // Use "constructor" attribute to call a function during initialization.
     // ("safer", but with dynamic runtime init/memory cost)

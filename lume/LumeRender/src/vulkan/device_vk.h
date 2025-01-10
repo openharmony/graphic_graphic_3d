@@ -99,7 +99,7 @@ public:
     // From IDevice
     DeviceBackendType GetBackendType() const override;
     const DevicePlatformData& GetPlatformData() const override;
-    FormatProperties GetFormatProperties(const BASE_NS::Format format) const override;
+    FormatProperties GetFormatProperties(BASE_NS::Format format) const override;
     AccelerationStructureBuildSizes GetAccelerationStructureBuildSizes(
         const AccelerationStructureBuildGeometryInfo& geometry,
         BASE_NS::array_view<const AccelerationStructureGeometryTrianglesInfo> triangles,
@@ -140,7 +140,7 @@ public:
     BASE_NS::unique_ptr<GpuImage> CreateGpuImageView(
         const GpuImageDesc& desc, const BackendSpecificImageDesc& platformData) override;
     BASE_NS::unique_ptr<GpuImage> CreateGpuImageView(
-        const GpuImageDesc& desc, const GpuImagePlatformData& platformData, const uintptr_t hwBuffer);
+        const GpuImageDesc& desc, const GpuImagePlatformData& platformData, uintptr_t hwBuffer);
     BASE_NS::vector<BASE_NS::unique_ptr<GpuImage>> CreateGpuImageViews(const Swapchain& platformData) override;
 
     BASE_NS::unique_ptr<GpuSampler> CreateGpuSampler(const GpuSamplerDesc& desc) override;
@@ -148,7 +148,7 @@ public:
     BASE_NS::unique_ptr<RenderFrameSync> CreateRenderFrameSync() override;
 
     BASE_NS::unique_ptr<RenderBackend> CreateRenderBackend(
-        GpuResourceManager& gpuResourceMgr, const CORE_NS::IParallelTaskQueue::Ptr& queue) override;
+        GpuResourceManager& gpuResourceMgr, CORE_NS::ITaskQueue* queue) override;
 
     BASE_NS::unique_ptr<ShaderModule> CreateShaderModule(const ShaderModuleCreateInfo& data) override;
     BASE_NS::unique_ptr<ShaderModule> CreateComputeShaderModule(const ShaderModuleCreateInfo& data) override;
@@ -163,8 +163,8 @@ public:
         const GpuShaderProgram& gpuProgram, const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
         const ShaderSpecializationConstantDataView& specializationConstants,
-        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
-        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
+        BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, uint32_t subpassIndex,
         const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData) override;
 
     BASE_NS::unique_ptr<ComputePipelineStateObject> CreateComputePipelineStateObject(
@@ -173,7 +173,7 @@ public:
         const LowLevelPipelineLayoutData* pipelineLayoutData) override;
 
     BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphore() override;
-    BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(const uint64_t handle) override;
+    BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(uint64_t handle) override;
 
     struct FeatureConfigurations {
         float minSampleShading { 0.25f };
@@ -196,7 +196,7 @@ public:
     };
     const CommonDeviceExtensions& GetCommonDeviceExtensions() const;
     const PlatformDeviceExtensions& GetPlatformDeviceExtensions() const;
-    bool HasDeviceExtension(const BASE_NS::string_view extensionName) const;
+    bool HasDeviceExtension(BASE_NS::string_view extensionName) const;
 
     const DebugFunctionUtilitiesVk& GetDebugFunctionUtilities() const;
     void CreateDebugFunctions();
@@ -238,6 +238,11 @@ public:
     const PlatformExtFunctions& GetPlatformExtFunctions() const;
     void CreatePlatformExtFunctions();
 
+    struct DefaultVulkanObjects {
+        VkDescriptorSetLayout emptyDescriptorSetLayout { VK_NULL_HANDLE };
+    };
+    const DefaultVulkanObjects& GetDefaultVulkanObjects() const;
+
 private:
     BASE_NS::vector<QueueProperties> CheckExternalConfig(const BackendExtraVk* backendConfiguration);
     void CreateInstance();
@@ -274,6 +279,7 @@ private:
     DebugFunctionUtilitiesVk debugFunctionUtilities_;
     ExtFunctions extFunctions_;
     PlatformExtFunctions platformExtFunctions_;
+    DefaultVulkanObjects defaultVulkanObjects_;
 };
 
 BASE_NS::unique_ptr<Device> CreateDeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createInfo);
@@ -282,7 +288,7 @@ BASE_NS::unique_ptr<Device> CreateDeviceVk(RenderContext& renderContext, DeviceC
 class LowLevelDeviceVk final : public ILowLevelDeviceVk {
 public:
     explicit LowLevelDeviceVk(DeviceVk& deviceVk);
-    ~LowLevelDeviceVk() = default;
+    ~LowLevelDeviceVk() override = default;
 
     DeviceBackendType GetBackendType() const override;
     const DevicePlatformDataVk& GetPlatformDataVk() const override;

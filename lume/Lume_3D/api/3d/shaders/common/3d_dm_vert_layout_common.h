@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DEFAULT_MATERIAL_VERT_LAYOUT_COMMON_H
-#define SHADERS__COMMON__3D_DEFAULT_MATERIAL_VERT_LAYOUT_COMMON_H
+#ifndef SHADERS_COMMON_3D_DEFAULT_MATERIAL_VERT_LAYOUT_COMMON_H
+#define SHADERS_COMMON_3D_DEFAULT_MATERIAL_VERT_LAYOUT_COMMON_H
 
 #include "3d/shaders/common/3d_dm_structures_common.h"
 #include "render/shaders/common/render_compatibility_common.h"
@@ -74,11 +74,10 @@ layout(set = 1, binding = 4, std140) uniform uMaterialUserStructData
     DefaultMaterialUserMaterialStruct uMaterialUserData;
 };
 
-layout(constant_id = 0) const uint CORE_SUBMESH_FLAGS = 0;
-layout(constant_id = 1) const uint CORE_MATERIAL_FLAGS = 0;
-
+layout(constant_id = CORE_DM_CONSTANT_ID_SUBMESH_FLAGS) const uint CORE_SUBMESH_FLAGS = 0;
+layout(constant_id = CORE_DM_CONSTANT_ID_MATERIAL_FLAGS) const uint CORE_MATERIAL_FLAGS = 0;
 #else
 
 #endif
 
-#endif // SHADERS__COMMON__3D_DEFAULT_MATERIAL_VERT_LAYOUT_COMMON_H
+#endif // SHADERS_COMMON_3D_DEFAULT_MATERIAL_VERT_LAYOUT_COMMON_H

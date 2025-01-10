@@ -13,25 +13,25 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_RENDER_3D_VEC4_PROXY_H
-#define OHOS_RENDER_3D_VEC4_PROXY_H
-
+#ifndef VEC4_PROXY_H
+#define VEC4_PROXY_H
 #include <meta/interface/property/property.h>
 
 #include <base/math/vector.h>
 
 #include "PropertyProxy.h"
-class Vec4Proxy : public PropertyProxy {
-    BASE_NS::Math::Vec4 value;
-    void UpdateLocalValues() override;
-    void UpdateRemoteValues() override;
-
+class Vec4Proxy : public ObjectPropertyProxy {
 public:
     Vec4Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec4> prop);
     ~Vec4Proxy() override;
-    bool SetValue(NapiApi::Object obj) override;
+    void SetValue(NapiApi::Object obj) override;
+
+private:
     void SetValue(const BASE_NS::Math::Vec4& v);
-    void SetValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
-    napi_value GetValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
+    void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
+    napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
+    void UpdateLocalValues() override;
+    void UpdateRemoteValues() override;
+    BASE_NS::Math::Vec4 value;
 };
-#endif // OHOS_RENDER_3D_VEC4_PROXY_H
+#endif

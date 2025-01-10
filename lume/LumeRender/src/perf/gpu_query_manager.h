@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_PERF__GPU_QUERY_MANAGER_H
-#define RENDER_PERF__GPU_QUERY_MANAGER_H
+#ifndef RENDER_PERF_GPU_QUERY_MANAGER_H
+#define RENDER_PERF_GPU_QUERY_MANAGER_H
 
 #include <cstdint>
 
@@ -25,10 +25,10 @@
 #include <render/namespace.h>
 
 #include "device/gpu_resource_handle_util.h"
+#include "perf/gpu_query.h"
 
 RENDER_BEGIN_NAMESPACE()
 class Device;
-class GpuQuery;
 
 /** GpuQueryManager.
  * Do not use or call directly. This is managed and handled automatically in the renderer.
@@ -36,10 +36,10 @@ class GpuQuery;
  */
 class GpuQueryManager final {
 public:
-    EngineResourceHandle Create(const BASE_NS::string_view name, BASE_NS::unique_ptr<GpuQuery> gpuQuery);
+    EngineResourceHandle Create(BASE_NS::string_view name, BASE_NS::unique_ptr<GpuQuery> gpuQuery);
 
     EngineResourceHandle GetGpuHandle(BASE_NS::string_view name) const;
-    GpuQuery* Get(const EngineResourceHandle handle) const;
+    GpuQuery* Get(EngineResourceHandle handle) const;
 
 private:
     BASE_NS::unordered_map<BASE_NS::string, EngineResourceHandle> nameToHandle_;
@@ -47,4 +47,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__PERF__GPU_QUERY_MANAGER_H
+#endif // RENDER_PERF_GPU_QUERY_MANAGER_H

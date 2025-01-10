@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -76,8 +76,8 @@ void ShaderInputBuffer::Update(float *buffer, uint32_t floatSize)
         return;
     }
 
-    auto ret = memcpy_s(reinterpret_cast<void *>(buffer_), floatSize,
-        reinterpret_cast<void *>(buffer), floatSize_);
+    auto ret = memcpy_s(reinterpret_cast<void *>(buffer_), floatSize_,
+        reinterpret_cast<void *>(buffer), floatSize);
     if (ret != EOK) {
         WIDGET_LOGE("ShaderInputBuffer Update memory copy error");
     }

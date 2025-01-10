@@ -51,7 +51,6 @@ class RenderBarrierList;
 class RenderCommandList;
 struct LowLevelCommandBufferVk;
 struct RenderCommandContext;
-struct RenderPerfTimings;
 
 struct NodeGraphBackBufferConfiguration;
 
@@ -86,6 +85,8 @@ struct PerfCounters {
     uint32_t triangleCount { 0u };
     uint32_t instanceCount { 0u };
 };
+#else
+struct PerfCounters {};
 #endif
 
 /**
@@ -96,14 +97,13 @@ Generally one render command list will generate one vulkan command buffer.
 **/
 class RenderBackendVk final : public RenderBackend {
 public:
-    RenderBackendVk(Device& dev, GpuResourceManager& gpuResourceManager, const CORE_NS::IParallelTaskQueue::Ptr& queue);
-    ~RenderBackendVk() = default;
+    RenderBackendVk(Device& dev, GpuResourceManager& gpuResourceManager, CORE_NS::ITaskQueue* queue);
+    ~RenderBackendVk() override = default;
 
     void Render(RenderCommandFrameData& renderCommandFrameData,
         const RenderBackendBackBufferConfiguration& backBufferConfig) override;
     void Present(const RenderBackendBackBufferConfiguration& backBufferConfig) override;
 
-private:
     struct StateCache {
         const RenderCommandBeginRenderPass* renderCommandBeginRenderPass { nullptr };
         LowLevelRenderPassDataVk lowLevelRenderPassData;
@@ -129,6 +129,7 @@ private:
 #endif
     };
 
+private:
     struct MultiRenderCommandListDesc {
         RenderCommandContext* baseContext { nullptr };
 
@@ -147,11 +148,13 @@ private:
     void AcquirePresentationInfo(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
 
+    void UpdateGlobalDescriptorSets();
+
     void RenderProcessCommandLists(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
     void RenderProcessSubmitCommandLists(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
-    void RenderSingleCommandList(RenderCommandContext& renderCommandCtx, const uint32_t cmdBufIdx,
+    void RenderSingleCommandList(RenderCommandContext& renderCommandCtx, uint32_t cmdBufIdx,
         const MultiRenderCommandListDesc& mrclDesc, const DebugNames& debugNames);
 
     void UpdateCommandListDescriptorSets(
@@ -159,34 +162,34 @@ private:
 
     // secondary command buffers related methods
     void RenderPrimaryRenderPass(const RenderCommandFrameData& renderCommandFrameData,
-        RenderCommandContext& renderCommandCtx, const uint32_t cmdBufIdx,
+        RenderCommandContext& renderCommandCtx, uint32_t cmdBufIdx,
         const MultiRenderCommandListDesc& multiRenderCommandListDesc, const DebugNames& debugNames);
-    void RenderExecuteSecondaryCommandLists(
+    static void RenderExecuteSecondaryCommandLists(
         const LowLevelCommandBufferVk& cmdBuffer, const LowLevelCommandBufferVk& executeCmdBuffer);
-    VkCommandBufferInheritanceInfo RenderGetCommandBufferInheritanceInfo(
+    static VkCommandBufferInheritanceInfo RenderGetCommandBufferInheritanceInfo(
         const RenderCommandList& renderCommandList, NodeContextPoolManager& poolMgr);
 
-    void RenderCommand(const RenderCommandDraw& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandDraw& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
     void RenderCommand(const RenderCommandDrawIndirect& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
-    void RenderCommand(const RenderCommandDispatch& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandDispatch& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
     void RenderCommand(const RenderCommandDispatchIndirect& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
 
-    void RenderCommand(const RenderCommandBindPipeline& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandBindPipeline& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, StateCache& stateCache);
     void RenderCommand(const RenderCommandBindVertexBuffers& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
     void RenderCommand(const RenderCommandBindIndexBuffer& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
 
-    void RenderCommand(const RenderCommandBeginRenderPass& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandBeginRenderPass& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, StateCache& stateCache);
-    void RenderCommand(const RenderCommandNextSubpass& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandNextSubpass& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
-    void RenderCommand(const RenderCommandEndRenderPass& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandEndRenderPass& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, StateCache& stateCache);
 
     void RenderCommand(const RenderCommandCopyBuffer& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
@@ -207,7 +210,7 @@ private:
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, StateCache& stateCache,
         NodeContextDescriptorSetManager& ncdsm);
 
-    void RenderCommand(const RenderCommandPushConstant& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandPushConstant& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
 
     void RenderCommand(const RenderCommandBuildAccelerationStructure& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
@@ -217,19 +220,23 @@ private:
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
 
     // dynamic states
-    void RenderCommand(const RenderCommandDynamicStateViewport& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandDynamicStateViewport& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
-    void RenderCommand(const RenderCommandDynamicStateScissor& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandDynamicStateScissor& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
-    void RenderCommand(const RenderCommandDynamicStateLineWidth& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
-        NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
-    void RenderCommand(const RenderCommandDynamicStateDepthBias& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
-        NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
-    void RenderCommand(const RenderCommandDynamicStateBlendConstants& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
-        NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
-    void RenderCommand(const RenderCommandDynamicStateDepthBounds& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
-        NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
-    void RenderCommand(const RenderCommandDynamicStateStencil& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandDynamicStateLineWidth& renderCmd,
+        const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
+        const StateCache& stateCache);
+    static void RenderCommand(const RenderCommandDynamicStateDepthBias& renderCmd,
+        const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
+        const StateCache& stateCache);
+    static void RenderCommand(const RenderCommandDynamicStateBlendConstants& renderCmd,
+        const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
+        const StateCache& stateCache);
+    static void RenderCommand(const RenderCommandDynamicStateDepthBounds& renderCmd,
+        const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
+        const StateCache& stateCache);
+    static void RenderCommand(const RenderCommandDynamicStateStencil& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
     void RenderCommand(const RenderCommandDynamicStateFragmentShadingRate& renderCmd,
         const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
@@ -239,13 +246,27 @@ private:
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
 
     // queries
-    void RenderCommand(const RenderCommandWriteTimestamp& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+    static void RenderCommand(const RenderCommandWriteTimestamp& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
+
+    // markers
+
+#if (RENDER_DEBUG_MARKERS_ENABLED == 1) || (RENDER_DEBUG_COMMAND_MARKERS_ENABLED == 1)
+    void BeginDebugMarker(
+        const LowLevelCommandBufferVk& cmdBuf, const BASE_NS::string_view name, const BASE_NS::Math::Vec4 color);
+    void EndDebugMarker(const LowLevelCommandBufferVk& cmdBuf);
+#endif
+#if (RENDER_DEBUG_MARKERS_ENABLED == 1)
+    void RenderCommand(const RenderCommandBeginDebugMarker& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+        NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
+    void RenderCommand(const RenderCommandEndDebugMarker& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
+        NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
+#endif
 
     Device& device_;
     DeviceVk& deviceVk_;
     GpuResourceManager& gpuResourceMgr_;
-    CORE_NS::IParallelTaskQueue* queue_ { nullptr };
+    CORE_NS::ITaskQueue* const queue_ { nullptr };
 
     CommandBufferSubmitter commandBufferSubmitter_;
 
@@ -260,6 +281,7 @@ private:
         ImageLayout imageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
         VkImage swapchainImage { VK_NULL_HANDLE };
         VkSwapchainKHR swapchain { VK_NULL_HANDLE };
+        PerfCounters performanceCounters {};
     };
     struct PresentationData {
         bool present { true };
@@ -268,7 +290,7 @@ private:
     PresentationData presentationData_;
 
     // internal presentationInfo_ state change (called 0 or 1 time from random thread for presentation layout change)
-    void RenderPresentationLayout(const LowLevelCommandBufferVk& cmdBuf, const uint32_t cmdBufferIdx);
+    void RenderPresentationLayout(const LowLevelCommandBufferVk& cmdBuf, uint32_t cmdBufferIdx);
 
 #if (RENDER_PERF_ENABLED == 1)
 

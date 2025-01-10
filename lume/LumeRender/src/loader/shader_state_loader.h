@@ -20,6 +20,7 @@
 #include <base/containers/vector.h>
 #include <base/util/uid.h>
 #include <core/namespace.h>
+#include <render/device/intf_shader_manager.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
 
@@ -27,17 +28,6 @@ CORE_BEGIN_NAMESPACE()
 class IFileManager;
 CORE_END_NAMESPACE()
 RENDER_BEGIN_NAMESPACE()
-
-struct ShaderStateLoaderVariantData {
-    BASE_NS::string renderSlot;
-    BASE_NS::string variantName;
-
-    BASE_NS::string baseShaderState;
-    BASE_NS::string baseVariantName;
-
-    GraphicsStateFlags stateFlags { 0U };
-    bool renderSlotDefaultState { false };
-};
 
 /** Shader state loader.
  * A class that can be used to load shader (graphics) state data from a json.
@@ -47,7 +37,7 @@ public:
     /** Describes result of the parsing operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(const BASE_NS::string& aError) : success(false), error(aError) {}
+        explicit LoadResult(BASE_NS::string error) : success(false), error(BASE_NS::move(error)) {}
 
         /** Indicates, whether the parsing operation is successful. */
         bool success { true };
@@ -58,7 +48,7 @@ public:
 
     struct GraphicsStates {
         BASE_NS::vector<GraphicsState> states;
-        BASE_NS::vector<ShaderStateLoaderVariantData> variantData;
+        BASE_NS::vector<IShaderManager::ShaderStateLoaderVariantData> variantData;
     };
 
     /** Retrieve uri of shader state.
@@ -69,7 +59,7 @@ public:
     /** Retrieve graphics state variant names.
      * @return Graphics state variant names, as defined in the json file.
      */
-    BASE_NS::array_view<const ShaderStateLoaderVariantData> GetGraphicsStateVariantData() const;
+    BASE_NS::array_view<const IShaderManager::ShaderStateLoaderVariantData> GetGraphicsStateVariantData() const;
 
     /** Retrieve graphics states.
      * @return Graphics states, as defined in the json file.
@@ -86,7 +76,7 @@ public:
 private:
     BASE_NS::string uri_;
     BASE_NS::vector<GraphicsState> graphicsStates_;
-    BASE_NS::vector<ShaderStateLoaderVariantData> graphicsStateVariantData_;
+    BASE_NS::vector<IShaderManager::ShaderStateLoaderVariantData> graphicsStateVariantData_;
 };
 RENDER_END_NAMESPACE()
 

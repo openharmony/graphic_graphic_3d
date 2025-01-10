@@ -15,14 +15,12 @@
 
 #include "device_vk.h"
 
-#include <algorithm>
 #include <cinttypes>
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
 #include <base/containers/vector.h>
 #include <base/math/mathf.h>
-#include <core/engine_info.h>
 #include <render/intf_render_context.h>
 #include <render/namespace.h>
 
@@ -31,6 +29,7 @@
 #include "device/gpu_resource_manager.h"
 #include "device/shader_manager.h"
 #include "device/shader_module.h"
+#include "perf/cpu_perf_scope.h"
 #include "platform_vk.h"
 #include "util/log.h"
 #include "vulkan/create_functions_vk.h"
@@ -38,7 +37,6 @@
 #include "vulkan/gpu_image_vk.h"
 #include "vulkan/gpu_memory_allocator_vk.h"
 #include "vulkan/gpu_program_vk.h"
-#include "vulkan/gpu_query_vk.h"
 #include "vulkan/gpu_sampler_vk.h"
 #include "vulkan/gpu_semaphore_vk.h"
 #include "vulkan/node_context_descriptor_set_manager_vk.h"
@@ -54,23 +52,19 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-static constexpr string_view DEVICE_EXTENSION_SWAPCHAIN { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_SWAPCHAIN { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 // promoted to 1.2, requires VK_KHR_create_renderpass2
-static constexpr string_view DEVICE_EXTENSION_DEPTH_STENCIL_RESOLVE { VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME };
-static constexpr string_view DEVICE_EXTENSION_CREATE_RENDERPASS2 { VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_DEPTH_STENCIL_RESOLVE { VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_CREATE_RENDERPASS2 { VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME };
 
-static constexpr string_view DEVICE_EXTENSION_EXTERNAL_MEMORY { VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME };
-static constexpr string_view DEVICE_EXTENSION_GET_MEMORY_REQUIREMENTS2 {
-    VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
-};
-static constexpr string_view DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION {
-    VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME
-};
-static constexpr string_view DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN { VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME };
-static constexpr string_view DEVICE_EXTENSION_MULTIVIEW { VK_KHR_MULTIVIEW_EXTENSION_NAME };
-static constexpr string_view DEVICE_EXTENSION_MAINTENANCE4 = VK_KHR_MAINTENANCE_4_EXTENSION_NAME;
-static constexpr string_view DEVICE_EXTENSION_DESCRIPTOR_INDEXING = VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
+constexpr string_view DEVICE_EXTENSION_EXTERNAL_MEMORY { VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_GET_MEMORY_REQUIREMENTS2 { VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION { VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN { VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_MULTIVIEW { VK_KHR_MULTIVIEW_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_MAINTENANCE4 = VK_KHR_MAINTENANCE_4_EXTENSION_NAME;
+constexpr string_view DEVICE_EXTENSION_DESCRIPTOR_INDEXING = VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
 
 struct ChainWrapper {
     void** ppNextFeatures { nullptr };
@@ -194,7 +188,7 @@ void GetPhysicalDeviceDescriptorIndexingFeaturesStructs(ChainObjects& co, ChainW
         VK_FALSE, // shaderUniformTexelBufferArrayNonUniformIndexing
         VK_FALSE, // shaderStorageTexelBufferArrayNonUniformIndexing
         VK_FALSE, // descriptorBindingUniformBufferUpdateAfterBind
-        VK_FALSE, // descriptorBindingSampledImageUpdateAsfterBind
+        VK_FALSE, // descriptorBindingSampledImageUpdateAfterBind
         VK_FALSE, // descriptorBindingStorageImageUpdateAfterBind
         VK_FALSE, // descriptorBindingStorageBufferUpdateAfterBind
         VK_FALSE, // descriptorBindingUniformTexelBufferUpdateAfterBind
@@ -330,7 +324,7 @@ void GetPhysicalDeviceMaintenance4Structs(ChainObjects& co, ChainWrapper& cw)
 
 constexpr uint32_t MIN_ALLOCATION_BLOCK_SIZE { 4u * 1024u * 1024u };
 constexpr uint32_t MAX_ALLOCATION_BLOCK_SIZE { 1024u * 1024u * 1024u };
-static constexpr const QueueProperties DEFAULT_QUEUE {
+constexpr const QueueProperties DEFAULT_QUEUE {
     VK_QUEUE_GRAPHICS_BIT, // requiredFlags
     1,                     // count
     1.0f,                  // priority
@@ -391,8 +385,8 @@ PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo GetAllocatorCreateInfo(
 }
 
 VkBool32 VKAPI_PTR DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData)
+    VkDebugUtilsMessageTypeFlagsEXT /* messageTypes */, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* /* pUserData */)
 {
     if (pCallbackData && pCallbackData->pMessageIdName && pCallbackData->pMessage) {
         if ((VkDebugUtilsMessageSeverityFlagsEXT)messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
@@ -431,6 +425,10 @@ VkBool32 VKAPI_PTR DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugRepor
 void EmplaceDeviceQueue(
     const VkDevice device, const LowLevelQueueInfo& aQueueInfo, vector<LowLevelGpuQueueVk>& aLowLevelQueues)
 {
+    if (!device) {
+        return;
+    }
+
     for (uint32_t idx = 0; idx < aQueueInfo.queueCount; ++idx) {
         VkQueue queue = VK_NULL_HANDLE;
         vkGetDeviceQueue(device,         // device
@@ -446,9 +444,8 @@ void CheckValidDepthFormats(const DevicePlatformDataVk& devicePlat, DevicePlatfo
     constexpr uint32_t DEPTH_FORMAT_COUNT { 4 };
     constexpr Format DEPTH_FORMATS[DEPTH_FORMAT_COUNT] = { BASE_FORMAT_D24_UNORM_S8_UINT, BASE_FORMAT_D32_SFLOAT,
         BASE_FORMAT_D16_UNORM, BASE_FORMAT_X8_D24_UNORM_PACK32 };
-    for (uint32_t idx = 0; idx < DEPTH_FORMAT_COUNT; ++idx) {
+    for (const Format& format : DEPTH_FORMATS) {
         VkFormatProperties formatProperties;
-        Format format = DEPTH_FORMATS[idx];
         vkGetPhysicalDeviceFormatProperties(devicePlat.physicalDevice, // physicalDevice
             (VkFormat)format,                                          // format
             &formatProperties);                                        // pFormatProperties
@@ -598,6 +595,30 @@ void FillFormatSupport(VkPhysicalDevice physicalDevice, vector<FormatProperties>
         formats[currIdx] = FillDeviceFormatSupport(physicalDevice, static_cast<Format>(formatIdx));
     }
 }
+
+void CreateDefaultVulkanObjects(VkDevice device, DeviceVk::DefaultVulkanObjects& dvo)
+{
+    constexpr VkDescriptorSetLayoutCreateInfo EMPTY_LAYOUT_INFO {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
+        nullptr,                                             // pNext
+        0U,                                                  // flags
+        0U,                                                  // bindingCount
+        nullptr,                                             // pBindings
+    };
+
+    PLUGIN_ASSERT(!dvo.emptyDescriptorSetLayout);
+    VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
+        &EMPTY_LAYOUT_INFO,                                // pCreateInfo
+        nullptr,                                           // pAllocator
+        &dvo.emptyDescriptorSetLayout));                   // pSetLayout
+}
+void DestroyDefaultVulkanObjects(VkDevice vkDevice, DeviceVk::DefaultVulkanObjects& dvo)
+{
+    PLUGIN_ASSERT(dvo.emptyDescriptorSetLayout);
+    vkDestroyDescriptorSetLayout(vkDevice, // device
+        dvo.emptyDescriptorSetLayout,      // descriptorSetLayout
+        nullptr);                          // pAllocator
+}
 } // namespace
 
 DeviceVk::DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createInfo) : Device(renderContext, createInfo)
@@ -605,7 +626,7 @@ DeviceVk::DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createI
     // assume instance and device will be created internally
     ownInstanceAndDevice_ = true;
 
-    const BackendExtraVk* backendExtra = static_cast<const BackendExtraVk*>(createInfo.backendConfiguration);
+    const auto* backendExtra = static_cast<const BackendExtraVk*>(createInfo.backendConfiguration);
     // update internal state based the optional backend configuration given by the client. the size of queuProperties
     // will depend on the enableMultiQueue setting.
     const auto queueProperties = CheckExternalConfig(backendExtra);
@@ -614,18 +635,30 @@ DeviceVk::DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createI
     CreateInstance();
     CreatePhysicalDevice();
 
+    if ((!plat_.instance) || (!plat_.physicalDevice)) {
+        PLUGIN_LOG_E("Invalid device.");
+        SetDeviceStatus(false);
+        return;
+    }
+
     const auto availableQueues = CreateFunctionsVk::GetAvailableQueues(plat_.physicalDevice, queueProperties);
 
     // own device creation does a lot of work for figuring out what to create, but for external device
-    // CheckExternalConfig stored the enabled extensions and features, and we just need to check what is available
+    // CheckExternalConfig stored the enabled extensions and features, and we just need to check what is available.
     if (ownInstanceAndDevice_) {
         CreateDevice(backendExtra, availableQueues);
     } else {
         commonDeviceExtensions_ = GetEnabledCommonDeviceExtensions(extensions_);
         platformDeviceExtensions_ = GetEnabledPlatformDeviceExtensions(extensions_);
-        // filling commonDeviceProperties_ isn't done, but at the moment that only contains fragment rate shading
+        // filling commonDeviceProperties_ isn't done, but at the moment that only contains fragment rate shading.
         // should walk through BackendExtraVk::extensions::physicalDeviceFeaturesToEnable::pNext and see what's
         // available.
+    }
+
+    if (!plat_.device) {
+        PLUGIN_LOG_E("Invalid device.");
+        SetDeviceStatus(false);
+        return;
     }
 
     CreateDebugFunctions();
@@ -663,14 +696,20 @@ DeviceVk::DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createI
     };
     gpuResourceMgr_ = make_unique<GpuResourceManager>(*this, grmCreateInfo);
     shaderMgr_ = make_unique<ShaderManager>(*this);
+    globalDescriptorSetMgr_ = make_unique<DescriptorSetManagerVk>(*this);
 
     lowLevelDevice_ = make_unique<LowLevelDeviceVk>(*this);
+
+    CreateDefaultVulkanObjects(plat_.device, defaultVulkanObjects_);
 }
 
 DeviceVk::~DeviceVk()
 {
     WaitForIdle();
 
+    DestroyDefaultVulkanObjects(plat_.device, defaultVulkanObjects_);
+
+    globalDescriptorSetMgr_.reset();
     // must release handles before taking down gpu resource manager.
     swapchains_.clear();
 
@@ -693,9 +732,11 @@ DeviceVk::~DeviceVk()
 
 void DeviceVk::CreateInstance()
 {
-    const auto instanceWrapper = (plat_.instance == VK_NULL_HANDLE) ?
-        CreateFunctionsVk::CreateInstance(VersionInfo { "core_renderer", 0, 1, 0},
-        VersionInfo { "core_renderer_app", 0, 1, 0 }) : CreateFunctionsVk::GetWrapper(plat_.instance);
+    RENDER_CPU_PERF_SCOPE("CreateInstance", "");
+    const auto instanceWrapper = (plat_.instance == VK_NULL_HANDLE)
+                                     ? CreateFunctionsVk::CreateInstance(VersionInfo { "core_renderer", 0, 1, 0 },
+                                                                         VersionInfo { "core_renderer_app", 0, 1, 0 })
+                                     : CreateFunctionsVk::GetWrapper(plat_.instance);
 
     plat_.instance = instanceWrapper.instance;
     // update with physical device creation
@@ -722,9 +763,10 @@ void DeviceVk::CreateInstance()
 
 void DeviceVk::CreatePhysicalDevice()
 {
-    auto physicalDeviceWrapper = (plat_.physicalDevice == VK_NULL_HANDLE) ?
-        CreateFunctionsVk::CreatePhysicalDevice(plat_.instance, DEFAULT_QUEUE ) :
-        CreateFunctionsVk::GetWrapper(plat_.physicalDevice);
+    RENDER_CPU_PERF_SCOPE("CreatePhysicalDevice", "");
+    auto physicalDeviceWrapper = (plat_.physicalDevice == VK_NULL_HANDLE)
+                                     ? CreateFunctionsVk::CreatePhysicalDevice(plat_.instance, DEFAULT_QUEUE)
+                                     : CreateFunctionsVk::GetWrapper(plat_.physicalDevice);
     const uint32_t physicalDeviceApiMajor =
         VK_VERSION_MAJOR(physicalDeviceWrapper.physicalDeviceProperties.physicalDeviceProperties.apiVersion);
     const uint32_t physicalDeviceApiMinor =
@@ -740,8 +782,7 @@ void DeviceVk::CreatePhysicalDevice()
     deviceSharedMemoryPropertyFlags_ =
         (memoryProperties.memoryTypeCount > 0) ? (MemoryPropertyFlags)memoryProperties.memoryTypes[0].propertyFlags : 0;
     for (uint32_t idx = 1; idx < memoryProperties.memoryTypeCount; ++idx) {
-        const MemoryPropertyFlags memoryPropertyFlags =
-            (MemoryPropertyFlags)memoryProperties.memoryTypes[idx].propertyFlags;
+        const auto memoryPropertyFlags = (MemoryPropertyFlags)memoryProperties.memoryTypes[idx].propertyFlags;
         // do not compare lazily allocated or protected memory blocks
         if ((memoryPropertyFlags & (CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT | CORE_MEMORY_PROPERTY_PROTECTED_BIT)) ==
             0) {
@@ -752,6 +793,7 @@ void DeviceVk::CreatePhysicalDevice()
 
 void DeviceVk::CreateDevice(const BackendExtraVk* backendExtra, const vector<LowLevelQueueInfo>& availableQueues)
 {
+    RENDER_CPU_PERF_SCOPE("CreateDevice", "");
     vector<string_view> preferredExtensions = GetPreferredDeviceExtensions(backendExtra, plat_);
     PreparePhysicalDeviceFeaturesForEnabling(backendExtra, plat_);
 
@@ -907,8 +949,8 @@ ILowLevelDevice& DeviceVk::GetLowLevelDevice() const
 
 FormatProperties DeviceVk::GetFormatProperties(const Format format) const
 {
-    const uint32_t formatSupportSize = static_cast<uint32_t>(formatProperties_.size());
-    const uint32_t formatIdx = static_cast<uint32_t>(format);
+    const auto formatSupportSize = static_cast<uint32_t>(formatProperties_.size());
+    const auto formatIdx = static_cast<uint32_t>(format);
     if (formatIdx < formatSupportSize) {
         return formatProperties_[formatIdx];
     } else if ((formatIdx >= DeviceFormatSupportConstants::ADDITIONAL_FORMAT_START_NUMBER) &&
@@ -1032,6 +1074,7 @@ AccelerationStructureBuildSizes DeviceVk::GetAccelerationStructureBuildSizes(
 
 unique_ptr<Swapchain> DeviceVk::CreateDeviceSwapchain(const SwapchainCreateInfo& swapchainCreateInfo)
 {
+    RENDER_CPU_PERF_SCOPE("CreateDeviceSwapchain", "");
     return make_unique<SwapchainVk>(*this, swapchainCreateInfo);
 }
 
@@ -1046,7 +1089,7 @@ GpuQueue DeviceVk::GetValidGpuQueue(const GpuQueue& gpuQueue) const
 {
     const auto getSpecificQueue = [](const uint32_t queueIndex, const GpuQueue::QueueType queueType,
                                       const vector<LowLevelGpuQueueVk>& specificQueues, const GpuQueue& defaultQueue) {
-        const uint32_t queueCount = (uint32_t)specificQueues.size();
+        const auto queueCount = (uint32_t)specificQueues.size();
         if (queueIndex < queueCount) {
             return GpuQueue { queueType, queueIndex };
         } else if (queueCount > 0) {
@@ -1055,7 +1098,7 @@ GpuQueue DeviceVk::GetValidGpuQueue(const GpuQueue& gpuQueue) const
         return defaultQueue;
     };
 
-    GpuQueue defaultQueue { GpuQueue::QueueType::GRAPHICS, 0 };
+    static GpuQueue defaultQueue { GpuQueue::QueueType::GRAPHICS, 0 };
     if (gpuQueue.type == GpuQueue::QueueType::COMPUTE) {
         return getSpecificQueue(
             gpuQueue.index, GpuQueue::QueueType::COMPUTE, lowLevelGpuQueues_.computeQueues, defaultQueue);
@@ -1077,6 +1120,8 @@ uint32_t DeviceVk::GetGpuQueueCount() const
 
 void DeviceVk::InitializePipelineCache(array_view<const uint8_t> initialData)
 {
+    RENDER_CPU_PERF_SCOPE("InitializePipelineCache", "");
+
     if (plat_.pipelineCache) {
         CreateFunctionsVk::DestroyPipelineCache(plat_.device, plat_.pipelineCache);
     }
@@ -1087,13 +1132,13 @@ void DeviceVk::InitializePipelineCache(array_view<const uint8_t> initialData)
         uint32_t deviceId;
         uint8_t pipelineCacheUUID[VK_UUID_SIZE];
     };
-    if (initialData.size() > sizeof(CacheHeader)) {
+    if (initialData.data() && (initialData.size() > sizeof(CacheHeader))) {
         CacheHeader header;
         CloneData(&header, sizeof(header), initialData.data(), sizeof(header));
         const auto& props = plat_.physicalDeviceProperties.physicalDeviceProperties;
         if (header.version != VkPipelineCacheHeaderVersion::VK_PIPELINE_CACHE_HEADER_VERSION_ONE ||
             header.vendorId != props.vendorID || header.deviceId != props.deviceID ||
-            memcmp(header.pipelineCacheUUID, props.pipelineCacheUUID, VK_UUID_SIZE)) {
+            memcmp(header.pipelineCacheUUID, props.pipelineCacheUUID, VK_UUID_SIZE) != 0) {
             initialData = {};
         }
     }
@@ -1128,7 +1173,7 @@ LowLevelGpuQueueVk DeviceVk::GetGpuQueue(const GpuQueue& gpuQueue) const
     // 3. returns the default queue
     const auto getSpecificQueue = [](const uint32_t queueIndex, const vector<LowLevelGpuQueueVk>& specificQueues,
                                       const LowLevelGpuQueueVk& defaultQueue) {
-        const uint32_t queueCount = (uint32_t)specificQueues.size();
+        const auto queueCount = (uint32_t)specificQueues.size();
         if (queueIndex < queueCount) {
             return specificQueues[queueIndex];
         } else if (queueCount > 0) {
@@ -1158,16 +1203,15 @@ vector<LowLevelGpuQueueVk> DeviceVk::GetLowLevelGpuQueues() const
 {
     vector<LowLevelGpuQueueVk> gpuQueues;
     gpuQueues.reserve(gpuQueueCount_);
-    gpuQueues.insert(gpuQueues.end(), lowLevelGpuQueues_.computeQueues.begin(), lowLevelGpuQueues_.computeQueues.end());
-    gpuQueues.insert(
-        gpuQueues.end(), lowLevelGpuQueues_.graphicsQueues.begin(), lowLevelGpuQueues_.graphicsQueues.end());
-    gpuQueues.insert(
-        gpuQueues.end(), lowLevelGpuQueues_.transferQueues.begin(), lowLevelGpuQueues_.transferQueues.end());
+    gpuQueues.append(lowLevelGpuQueues_.computeQueues.begin(), lowLevelGpuQueues_.computeQueues.end());
+    gpuQueues.append(lowLevelGpuQueues_.graphicsQueues.begin(), lowLevelGpuQueues_.graphicsQueues.end());
+    gpuQueues.append(lowLevelGpuQueues_.transferQueues.begin(), lowLevelGpuQueues_.transferQueues.end());
     return gpuQueues;
 }
 
 void DeviceVk::WaitForIdle()
 {
+    RENDER_CPU_PERF_SCOPE("WaitForIdle", "");
     if (plat_.device) {
         if (!isRenderbackendRunning_) {
             PLUGIN_LOG_D("Device - WaitForIdle");
@@ -1209,37 +1253,44 @@ bool DeviceVk::HasDeviceExtension(const string_view extensionName) const
 
 unique_ptr<Device> CreateDeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createInfo)
 {
+    RENDER_CPU_PERF_SCOPE("CreateDeviceVk", "");
     return make_unique<DeviceVk>(renderContext, createInfo);
 }
 
 unique_ptr<GpuBuffer> DeviceVk::CreateGpuBuffer(const GpuBufferDesc& desc)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuBuffer", "");
     return make_unique<GpuBufferVk>(*this, desc);
 }
 
 unique_ptr<GpuBuffer> DeviceVk::CreateGpuBuffer(const GpuAccelerationStructureDesc& descAccel)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuBuffer", "");
     return make_unique<GpuBufferVk>(*this, descAccel);
 }
 
 unique_ptr<GpuImage> DeviceVk::CreateGpuImage(const GpuImageDesc& desc)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuImage", "");
     return make_unique<GpuImageVk>(*this, desc);
 }
 
 unique_ptr<GpuImage> DeviceVk::CreateGpuImageView(
     const GpuImageDesc& desc, const GpuImagePlatformData& platformData, const uintptr_t hwBuffer)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuImageView", "");
     return make_unique<GpuImageVk>(*this, desc, platformData, hwBuffer);
 }
 
 unique_ptr<GpuImage> DeviceVk::CreateGpuImageView(const GpuImageDesc& desc, const GpuImagePlatformData& platformData)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuImageView", "");
     return CreateGpuImageView(desc, platformData, 0);
 }
 
 vector<unique_ptr<GpuImage>> DeviceVk::CreateGpuImageViews(const Swapchain& swapchain)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuImageViews", "");
     const GpuImageDesc& desc = swapchain.GetDesc();
     const auto& swapchainPlat = static_cast<const SwapchainVk&>(swapchain).GetPlatformData();
 
@@ -1256,7 +1307,8 @@ vector<unique_ptr<GpuImage>> DeviceVk::CreateGpuImageViews(const Swapchain& swap
 unique_ptr<GpuImage> DeviceVk::CreateGpuImageView(
     const GpuImageDesc& desc, const BackendSpecificImageDesc& platformData)
 {
-    const ImageDescVk& imageDesc = (const ImageDescVk&)platformData;
+    RENDER_CPU_PERF_SCOPE("CreateGpuImageView", "");
+    const auto& imageDesc = (const ImageDescVk&)platformData;
     GpuImagePlatformDataVk platData;
     platData.image = imageDesc.image;
     platData.imageView = imageDesc.imageView;
@@ -1265,38 +1317,44 @@ unique_ptr<GpuImage> DeviceVk::CreateGpuImageView(
 
 unique_ptr<GpuSampler> DeviceVk::CreateGpuSampler(const GpuSamplerDesc& desc)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuSampler", "");
     return make_unique<GpuSamplerVk>(*this, desc);
 }
 
 unique_ptr<RenderFrameSync> DeviceVk::CreateRenderFrameSync()
 {
+    RENDER_CPU_PERF_SCOPE("CreateRenderFrameSync", "");
     return make_unique<RenderFrameSyncVk>(*this);
 }
 
 unique_ptr<RenderBackend> DeviceVk::CreateRenderBackend(
-    GpuResourceManager& gpuResourceMgr, const CORE_NS::IParallelTaskQueue::Ptr& queue)
+    GpuResourceManager& gpuResourceMgr, CORE_NS::ITaskQueue* const queue)
 {
     return make_unique<RenderBackendVk>(*this, gpuResourceMgr, queue);
 }
 
 unique_ptr<ShaderModule> DeviceVk::CreateShaderModule(const ShaderModuleCreateInfo& data)
 {
+    RENDER_CPU_PERF_SCOPE("CreateShaderModule", "");
     return make_unique<ShaderModuleVk>(*this, data);
 }
 
 unique_ptr<ShaderModule> DeviceVk::CreateComputeShaderModule(const ShaderModuleCreateInfo& data)
 {
+    RENDER_CPU_PERF_SCOPE("CreateComputeShaderModule", "");
     return make_unique<ShaderModuleVk>(*this, data);
 }
 
 unique_ptr<GpuShaderProgram> DeviceVk::CreateGpuShaderProgram(const GpuShaderProgramCreateData& data)
 {
-    return make_unique<GpuShaderProgramVk>(*this, data);
+    RENDER_CPU_PERF_SCOPE("CreateGpuShaderProgram", "");
+    return make_unique<GpuShaderProgramVk>(data);
 }
 
 unique_ptr<GpuComputeProgram> DeviceVk::CreateGpuComputeProgram(const GpuComputeProgramCreateData& data)
 {
-    return make_unique<GpuComputeProgramVk>(*this, data);
+    RENDER_CPU_PERF_SCOPE("CreateGpuComputeProgram", "");
+    return make_unique<GpuComputeProgramVk>(data);
 }
 
 unique_ptr<NodeContextDescriptorSetManager> DeviceVk::CreateNodeContextDescriptorSetManager()
@@ -1318,17 +1376,19 @@ unique_ptr<GraphicsPipelineStateObject> DeviceVk::CreateGraphicsPipelineStateObj
     const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, const uint32_t subpassIndex,
     const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGraphicsPipelineStateObject", "");
     PLUGIN_ASSERT(renderPassData);
     PLUGIN_ASSERT(pipelineLayoutData);
     return make_unique<GraphicsPipelineStateObjectVk>(*this, gpuProgram, graphicsState, pipelineLayout,
-        vertexInputDeclaration, specializationConstants, dynamicStates, renderPassDesc, renderPassSubpassDescs,
-        subpassIndex, *renderPassData, *pipelineLayoutData);
+        vertexInputDeclaration, specializationConstants, dynamicStates, renderPassSubpassDescs, subpassIndex,
+        *renderPassData, *pipelineLayoutData);
 }
 
 unique_ptr<ComputePipelineStateObject> DeviceVk::CreateComputePipelineStateObject(const GpuComputeProgram& gpuProgram,
     const PipelineLayout& pipelineLayout, const ShaderSpecializationConstantDataView& specializationConstants,
     const LowLevelPipelineLayoutData* pipelineLayoutData)
 {
+    RENDER_CPU_PERF_SCOPE("CreateComputePipelineStateObject", "");
     PLUGIN_ASSERT(pipelineLayoutData);
     return make_unique<ComputePipelineStateObjectVk>(
         *this, gpuProgram, pipelineLayout, specializationConstants, *pipelineLayoutData);
@@ -1336,11 +1396,13 @@ unique_ptr<ComputePipelineStateObject> DeviceVk::CreateComputePipelineStateObjec
 
 unique_ptr<GpuSemaphore> DeviceVk::CreateGpuSemaphore()
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuSemaphore", "");
     return make_unique<GpuSemaphoreVk>(*this);
 }
 
 unique_ptr<GpuSemaphore> DeviceVk::CreateGpuSemaphoreView(const uint64_t handle)
 {
+    RENDER_CPU_PERF_SCOPE("CreateGpuSemaphoreView", "");
     return make_unique<GpuSemaphoreVk>(*this, handle);
 }
 
@@ -1351,6 +1413,11 @@ const DebugFunctionUtilitiesVk& DeviceVk::GetDebugFunctionUtilities() const
 
 void DeviceVk::CreateDebugFunctions()
 {
+    RENDER_CPU_PERF_SCOPE("CreateDebugFunctions", "");
+    if (!plat_.device) {
+        return;
+    }
+
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     debugFunctionUtilities_.vkSetDebugUtilsObjectNameEXT =
         (PFN_vkSetDebugUtilsObjectNameEXT)(void*)vkGetDeviceProcAddr(plat_.device, "vkSetDebugUtilsObjectNameEXT");
@@ -1373,8 +1440,14 @@ const PlatformExtFunctions& DeviceVk::GetPlatformExtFunctions() const
     return platformExtFunctions_;
 }
 
+const DeviceVk::DefaultVulkanObjects& DeviceVk::GetDefaultVulkanObjects() const
+{
+    return defaultVulkanObjects_;
+}
+
 void DeviceVk::CreateExtFunctions()
 {
+    RENDER_CPU_PERF_SCOPE("CreateExtFunctions", "");
     if (commonDeviceExtensions_.renderPass2) {
         extFunctions_.vkCreateRenderPass2KHR =
             (PFN_vkCreateRenderPass2KHR)(void*)vkGetInstanceProcAddr(plat_.instance, "vkCreateRenderPass2KHR");
@@ -1448,7 +1521,7 @@ const DevicePlatformDataVk& LowLevelDeviceVk::GetPlatformDataVk() const
 GpuBufferPlatformDataVk LowLevelDeviceVk::GetBuffer(RenderHandle handle) const
 {
     if (deviceVk_.GetLockResourceBackendAccess()) {
-        GpuBufferVk* buffer = gpuResourceMgr_.GetBuffer<GpuBufferVk>(handle);
+        auto* buffer = gpuResourceMgr_.GetBuffer<GpuBufferVk>(handle);
         if (buffer) {
             return buffer->GetPlatformData();
         }
@@ -1461,7 +1534,7 @@ GpuBufferPlatformDataVk LowLevelDeviceVk::GetBuffer(RenderHandle handle) const
 GpuImagePlatformDataVk LowLevelDeviceVk::GetImage(RenderHandle handle) const
 {
     if (deviceVk_.GetLockResourceBackendAccess()) {
-        GpuImageVk* image = gpuResourceMgr_.GetImage<GpuImageVk>(handle);
+        auto* image = gpuResourceMgr_.GetImage<GpuImageVk>(handle);
         if (image) {
             return image->GetPlatformData();
         }
@@ -1474,7 +1547,7 @@ GpuImagePlatformDataVk LowLevelDeviceVk::GetImage(RenderHandle handle) const
 GpuSamplerPlatformDataVk LowLevelDeviceVk::GetSampler(RenderHandle handle) const
 {
     if (deviceVk_.GetLockResourceBackendAccess()) {
-        GpuSamplerVk* sampler = gpuResourceMgr_.GetSampler<GpuSamplerVk>(handle);
+        auto* sampler = gpuResourceMgr_.GetSampler<GpuSamplerVk>(handle);
         if (sampler) {
             return sampler->GetPlatformData();
         }

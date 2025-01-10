@@ -37,6 +37,26 @@ void RenderDataStoreDefaultCamera::Clear()
 {
     cameras_.clear();
     environments_.clear();
+
+    hasBlendEnvironments_ = false;
+}
+
+void RenderDataStoreDefaultCamera::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStoreDefaultCamera::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStoreDefaultCamera::GetRefCount()
+{
+    return refcnt_;
 }
 
 void RenderDataStoreDefaultCamera::AddCamera(const RenderCamera& camera)
@@ -75,6 +95,9 @@ void RenderDataStoreDefaultCamera::AddEnvironment(const RenderCamera::Environmen
         }
     }
 #endif
+    if (environment.multiEnvCount != 0U) {
+        hasBlendEnvironments_ = true;
+    }
     // NOTE: there's only per camera environment limit at the moment, no environment limit for scene
     environments_.push_back(environment);
 }
@@ -136,8 +159,10 @@ array_view<const RenderCamera::Environment> RenderDataStoreDefaultCamera::GetEnv
 
 RenderCamera::Environment RenderDataStoreDefaultCamera::GetEnvironment(const uint64_t id) const
 {
+    const bool searchForDefaultEnv = (id == RenderSceneDataConstants::INVALID_ID);
     for (const auto& envRef : environments_) {
-        if (envRef.id == id) {
+        if ((envRef.id == id) ||
+            (searchForDefaultEnv && (envRef.flags & RenderCamera::Environment::ENVIRONMENT_FLAG_MAIN_BIT))) {
             return envRef;
         }
     }
@@ -149,14 +174,28 @@ uint32_t RenderDataStoreDefaultCamera::GetEnvironmentCount() const
     return static_cast<uint32_t>(environments_.size());
 }
 
-RENDER_NS::IRenderDataStore* RenderDataStoreDefaultCamera::Create(RENDER_NS::IRenderContext&, char const* name)
+bool RenderDataStoreDefaultCamera::HasBlendEnvironments() const
 {
-    // device not used
-    return new RenderDataStoreDefaultCamera(name);
+    return hasBlendEnvironments_;
 }
 
-void RenderDataStoreDefaultCamera::Destroy(IRenderDataStore* instance)
+uint32_t RenderDataStoreDefaultCamera::GetEnvironmentIndex(const uint64_t id) const
 {
-    delete static_cast<RenderDataStoreDefaultCamera*>(instance);
+    const bool searchForDefaultEnv = (id == RenderSceneDataConstants::INVALID_ID);
+    for (size_t idx = 0; idx < environments_.size(); ++idx) {
+        const auto& envRef = environments_[idx];
+        if ((envRef.id == id) ||
+            (searchForDefaultEnv && (envRef.flags & RenderCamera::Environment::ENVIRONMENT_FLAG_MAIN_BIT))) {
+            return static_cast<uint32_t>(idx);
+        }
+    }
+    return 0U;
+}
+
+refcnt_ptr<RENDER_NS::IRenderDataStore> RenderDataStoreDefaultCamera::Create(
+    RENDER_NS::IRenderContext&, char const* name)
+{
+    // device not used
+    return refcnt_ptr<RENDER_NS::IRenderDataStore>(new RenderDataStoreDefaultCamera(name));
 }
 CORE3D_END_NAMESPACE()

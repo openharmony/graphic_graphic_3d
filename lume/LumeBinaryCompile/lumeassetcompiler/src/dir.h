@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,9 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef __LUME_DIR__
-#define __LUME_DIR__
-#if _WIN32
+
+#ifndef LUME_DIR_H
+#define LUME_DIR_H
+#if defined(_WIN32) && (_WIN32)
 /*
  * File types
  */
@@ -41,4 +42,4 @@ void closedir(DIR* d);
 #include <dirent.h>
 #include <string>
 #endif
-#endif
+#endif // LUME_DIR_H

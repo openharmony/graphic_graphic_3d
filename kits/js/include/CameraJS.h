@@ -12,16 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef CAMERA_JS_H
+#define CAMERA_JS_H
 
-#ifndef OHOS_RENDER_3D_CAMERA_JS_H
-#define OHOS_RENDER_3D_CAMERA_JS_H
 #include <meta/interface/intf_object.h>
+#include <scene/interface/intf_raycast.h>
 
 #include <base/containers/unordered_map.h>
 
 #include "BaseObjectJS.h"
 #include "ColorProxy.h"
-#include "NodeJS.h"
+#include "NodeImpl.h"
 
 class CameraJS : public BaseObject<CameraJS>, public NodeImpl {
 public:
@@ -35,7 +36,7 @@ public:
     void ReleaseObject(const META_NS::IObject::Ptr&);
 
 private:
-    void DisposeNative() override;
+    void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
     napi_value GetFov(NapiApi::FunctionContext<>& ctx);
     void SetFov(NapiApi::FunctionContext<float>& ctx);
@@ -50,15 +51,31 @@ private:
 
     napi_value GetEnabled(NapiApi::FunctionContext<>& ctx);
     void SetEnabled(NapiApi::FunctionContext<bool>& ctx);
+
     napi_value GetMSAA(NapiApi::FunctionContext<>& ctx);
     void SetMSAA(NapiApi::FunctionContext<bool>& ctx);
+
     napi_value GetColor(NapiApi::FunctionContext<>& ctx);
     void SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
+    napi_value WorldToScreen(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    napi_value ScreenToWorld(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    enum class ProjectionDirection { WORLD_TO_SCREEN, SCREEN_TO_WORLD };
+    template<ProjectionDirection dir>
+    napi_value ProjectCoords(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
+    napi_value Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
+    napi_value Raycast(napi_env env, NapiApi::Object screenCoordJs, NapiApi::Object options);
+    template<typename CoordType>
+    bool ExtractRaycastStuff(const NapiApi::Object& jsCoord, NapiApi::StrongRef& scene,
+        SCENE_NS::ICameraRayCast::Ptr& raycastSelf, CoordType& nativeCoord);
+
     BASE_NS::unique_ptr<ColorProxy> clearColor_;
     NapiApi::StrongRef postProc_;
-    bool msaaEnabled_ { false };
-    bool clearColorEnabled_ { false };
+
     BASE_NS::unordered_map<uintptr_t, META_NS::IObject::Ptr> resources_;
+
+    bool msaaEnabled_{false};
+    bool clearColorEnabled_{false};
 };
-#endif // OHOS_RENDER_3D_CAMERA_JS_H
+#endif

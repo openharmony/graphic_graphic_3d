@@ -15,11 +15,13 @@
 #include "MaterialJS.h"
 
 #include <meta/api/make_callback.h>
+#include <meta/interface/builtin_objects.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
-#include <scene_plugin/api/light_uid.h>
-#include <scene_plugin/interface/intf_light.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <meta/interface/property/construct_property.h>
+#include <scene/interface/intf_shader.h>
+#include <scene/interface/intf_scene.h>
+#include <scene/interface/intf_material.h>
 
 #include "SceneJS.h"
 using IntfPtr = META_NS::SharedPtrIInterface;
@@ -33,7 +35,22 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
     SceneResourceImpl::GetPropertyDescs(node_props);
 
     using namespace NapiApi;
-    node_props.push_back(TROGetProperty<float, BaseMaterial, &BaseMaterial::GetMaterialType>("materialType"));
+    node_props.emplace_back(TROGetProperty<uint32_t, BaseMaterial, &BaseMaterial::GetMaterialType>("materialType"));
+    node_props.emplace_back(
+        TROGetSetProperty<bool, BaseMaterial, &BaseMaterial::GetShadowReceiver, &BaseMaterial::SetShadowReceiver>(
+            "shadowReceiver"));
+    node_props.emplace_back(
+        TROGetSetProperty<uint32_t, BaseMaterial, &BaseMaterial::GetCullMode, &BaseMaterial::SetCullMode>(
+            "cullMode"));
+    node_props.emplace_back(
+        TROGetSetProperty<NapiApi::Object, BaseMaterial, &BaseMaterial::GetBlend, &BaseMaterial::SetBlend>(
+            "blend"));
+    node_props.emplace_back(
+        TROGetSetProperty<float, BaseMaterial, &BaseMaterial::GetAlphaCutoff, &BaseMaterial::SetAlphaCutoff>(
+            "alphaCutoff"));
+    node_props.emplace_back(
+        TROGetSetProperty<NapiApi::Object, BaseMaterial, &BaseMaterial::GetRenderSort, &BaseMaterial::SetRenderSort>(
+            "renderSort"));
 
     napi_value func;
     auto status = napi_define_class(
@@ -43,240 +60,231 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
     napi_get_instance_data(env, (void**)&mis);
     mis->StoreCtor(class_name, func);
 
-    NapiApi::Object exp(env, exports);
-
-    napi_value eType;
-    napi_value v;
-    napi_create_object(env, &eType);
+    NapiApi::Object exp1(env, exports);
+    napi_value eType1, v1;
+    napi_create_object(env, &eType1);
 #define DECL_ENUM(enu, x)                         \
-    napi_create_uint32(env, MaterialType::x, &v); \
-    napi_set_named_property(env, enu, #x, v)
+    napi_create_uint32(env, MaterialType::x, &v1); \
+    napi_set_named_property(env, enu, #x, v1);
 
-    DECL_ENUM(eType, SHADER);
+    DECL_ENUM(eType1, SHADER);
+    DECL_ENUM(eType1, METALLIC_ROUGHNESS);
 #undef DECL_ENUM
-    exp.Set("MaterialType", eType);
+    exp1.Set("MaterialType", eType1);
+
+    NapiApi::Object exp2(env, exports);
+    napi_value eType2, v2;
+    napi_create_object(env, &eType2);
+#define DECL_ENUM(enu, x)                         \
+    napi_create_uint32(env, CullMode::x, &v2); \
+    napi_set_named_property(env, enu, #x, v2);
+
+    DECL_ENUM(eType2, NONE);
+    DECL_ENUM(eType2, FRONT);
+    DECL_ENUM(eType2, BACK);
+#undef DECL_ENUM
+    exp2.Set("CullMode", eType2);
 }
 
 void* BaseMaterial::GetInstanceImpl(uint32_t id)
 {
-    if (id == BaseMaterial::ID) {
+    if (id == BaseMaterial::ID)
         return (BaseMaterial*)this;
-    }
     return SceneResourceImpl::GetInstanceImpl(id);
 }
 void BaseMaterial::DisposeNative(TrueRootObject* tro)
 {
     // do nothing for now..
-    LOG_F("BaseMaterial::DisposeNative");
+    LOG_V("BaseMaterial::DisposeNative");
     if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(tro->GetNativeObject())) {
         // reset the native object refs
         tro->SetNativeObject(nullptr, false);
         tro->SetNativeObject(nullptr, true);
-
-        ExecSyncTask([material = BASE_NS::move(material)]() mutable {
-            auto node = interface_pointer_cast<SCENE_NS::INode>(material);
-            if (node == nullptr) {
-                return META_NS::IAny::Ptr {};
-            }
-            auto scene = node->GetScene();
-            if (scene == nullptr) {
-                return META_NS::IAny::Ptr {};
-            }
-            scene->ReleaseNode(node);
-            return META_NS::IAny::Ptr {};
-        });
     }
+    renderSort_.Reset();
+    blend_.Reset();
     scene_.Reset();
 }
 napi_value BaseMaterial::GetMaterialType(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     uint32_t type = -1; // return -1 if the object does not exist anymore
-    if (auto node = interface_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
-        type = materialType_;
+    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
+        type = META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::METALLIC_ROUGHNESS
+                   ? BaseMaterial::METALLIC_ROUGHNESS
+                   : BaseMaterial::SHADER;
     }
-    napi_value value;
-    napi_status status = napi_create_uint32(ctx, type, &value);
-    return value;
+    return ctx.GetNumber(type);
 }
-
-void ShaderMaterialJS::Init(napi_env env, napi_value exports)
+napi_value BaseMaterial::GetShadowReceiver(NapiApi::FunctionContext<>& ctx)
 {
-    BASE_NS::vector<napi_property_descriptor> props = {
-        NapiApi::GetSetProperty<NapiApi::Object, ShaderMaterialJS, &ShaderMaterialJS::GetColorShader,
-            &ShaderMaterialJS::SetColorShader>("colorShader"),
-    };
-
-    BaseMaterial::Init("ShaderMaterial", env, exports, BaseObject::ctor<ShaderMaterialJS>(), props);
-}
-
-ShaderMaterialJS::ShaderMaterialJS(napi_env e, napi_callback_info i)
-    : BaseObject<ShaderMaterialJS>(e, i), BaseMaterial(BaseMaterial::MaterialType::SHADER)
-{
-    // missing
-    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
-    NapiApi::Object meJs(e, fromJs.This());
-
-    NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene... (do i need it here?)
-    NapiApi::Object args = fromJs.Arg<1>();  // other args
-
-    scene_ = scene;
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        CORE_LOG_F("INVALID SCENE!");
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
     }
-
-    auto* tro = scene.Native<TrueRootObject>();
-    auto* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-    sceneJS->DisposeHook((uintptr_t)&scene_, meJs);
-
-    auto metaobj = GetNativeObjectParam<META_NS::IObject>(args); // Should be IMaterial
-    SetNativeObject(metaobj, true);
-    StoreJsObj(metaobj, meJs);
-
-    BASE_NS::string name;
-    if (auto prm = args.Get<BASE_NS::string>("name")) {
-        name = prm;
-    } else {
-        if (auto named = interface_cast<META_NS::INamed>(metaobj)) {
-            name = named->Name()->GetValue();
-        }
+    bool shadowReceiver = false;
+    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
+        uint32_t lightingFlags = uint32_t(META_NS::GetValue(material->LightingFlags()));
+        shadowReceiver = lightingFlags & uint32_t(SCENE_NS::LightingFlags::SHADOW_RECEIVER_BIT);
     }
-    meJs.Set("name", name);
+    return ctx.GetBoolean(shadowReceiver);
 }
-
-ShaderMaterialJS::~ShaderMaterialJS() {}
-void* ShaderMaterialJS::GetInstanceImpl(uint32_t id)
+void BaseMaterial::SetShadowReceiver(NapiApi::FunctionContext<bool>& ctx)
 {
-    if (id == ShaderMaterialJS::ID) {
-        return this;
-    }
-    return BaseMaterial::GetInstanceImpl(id);
-}
-void ShaderMaterialJS::DisposeNative()
-{
-    NapiApi::Object obj = scene_.GetObject();
-    if (obj) {
-        auto* tro = obj.Native<TrueRootObject>();
-        SceneJS* sceneJS;
-        if (tro) {
-            sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-            sceneJS->ReleaseDispose((uintptr_t)&scene_);
-        }
-    }
-    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject())) {
-        SetNativeObject(nullptr, false);
-        SetNativeObject(nullptr, true);
-        if (obj) {
-            ExecSyncTask([mat = BASE_NS::move(material)]() -> META_NS::IAny::Ptr {
-                mat->MaterialShader()->SetValue(nullptr);
-                return {};
-            });
-        }
-    } else {
-        SetNativeObject(nullptr, false);
-    }
-    shader_.Reset();
-
-    BaseMaterial::DisposeNative(this);
-}
-void ShaderMaterialJS::Finalize(napi_env env)
-{
-    BaseObject::Finalize(env);
-}
-
-void ShaderMaterialJS::SetColorShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
-{
-    NapiApi::Object shaderJS = ctx.Arg<0>();
-    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject());
-    if (!material) {
-        shader_.Reset();
+    if (!validateSceneRef()) {
         return;
     }
-    // handle the case where a "bound shader" is attached too.
-    auto shader = GetNativeMeta<SCENE_NS::IShader>(shaderJS);
-    if (shader == nullptr) {
-        // attaching to a bound shader. (if shader was bound to another material, we need to make a new copy)
-        auto boundShader = GetNativeMeta<META_NS::IObject>(shaderJS);
+    bool shadowReceiver = ctx.Arg<0>();
+    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
+        uint32_t lightingFlags = uint32_t(META_NS::GetValue(material->LightingFlags()));
+        if (shadowReceiver) {
+            lightingFlags |= uint32_t(SCENE_NS::LightingFlags::SHADOW_RECEIVER_BIT);
+        } else {
+            lightingFlags &= ~uint32_t(SCENE_NS::LightingFlags::SHADOW_RECEIVER_BIT);
+        }
+        META_NS::SetValue(material->LightingFlags(), static_cast<SCENE_NS::LightingFlags>(lightingFlags));
+    }
+}
+napi_value BaseMaterial::GetCullMode(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    auto cullMode = SCENE_NS::CullModeFlags::NONE;
+    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
+        if (auto shader = META_NS::GetValue(material->MaterialShader())) {
+            if (auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+                cullMode = static_cast<SCENE_NS::CullModeFlags>(shader->GetCullMode().GetResult());
+            }
+        }
+    }
+    return ctx.GetNumber(static_cast<uint32_t>(cullMode));
+}
+void BaseMaterial::SetCullMode(NapiApi::FunctionContext<uint32_t>& ctx)
+{
+    if (!validateSceneRef()) {
         return;
     }
-    // bind it to material (in native)
-    ExecSyncTask([material, &shader]() -> META_NS::IAny::Ptr {
-        material->MaterialShader()->SetValue(shader);
-        material->MaterialShaderState()->SetValue(nullptr);
-        return {};
-    });
+    auto cullMode = static_cast<SCENE_NS::CullModeFlags>((uint32_t)ctx.Arg<0>());
 
-    // construct a "bound" shader object from the "non bound" one.
-    NapiApi::Object parms(ctx);
-    napi_value args[] = {
-        scene_.GetValue(), // <- get the scene
-        parms              // other constructor parameters
-    };
-
-    parms.Set("name", shaderJS.Get("name"));
-    parms.Set("Material", ctx.This()); // js material object that we are bound to.
-
-    shaderBind_ = META_NS::GetObjectRegistry().Create(META_NS::ClassId::Object);
-    interface_cast<META_NS::IMetadata>(shaderBind_)
-        ->AddProperty(META_NS::ConstructProperty<IntfPtr>(
-            "shader", nullptr, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE));
-    interface_cast<META_NS::IMetadata>(shaderBind_)
-        ->GetPropertyByName<IntfPtr>("shader")
-        ->SetValue(interface_pointer_cast<CORE_NS::IInterface>(shader));
-
-    auto argc = BASE_NS::countof(args);
-    auto argv = args;
-    MakeNativeObjectParam(ctx, shaderBind_, argc, argv);
-    auto result = CreateJsObj(ctx, "Shader", shaderBind_, false, argc, argv);
-    shader_ = StoreJsObj(shaderBind_, NapiApi::Object(ctx, result));
+    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
+        if (auto shader = META_NS::GetValue(material->MaterialShader())) {
+            shader->SetCullMode(cullMode);
+        }
+    }
 }
-napi_value ShaderMaterialJS::GetColorShader(NapiApi::FunctionContext<>& ctx)
+napi_value BaseMaterial::GetBlend(NapiApi::FunctionContext<>& ctx)
 {
-    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject());
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
+    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
     if (!material) {
-        shader_.Reset();
-        return ctx.GetNull();
+        blend_.Reset();
+        return ctx.GetUndefined();
     }
-    if (shader_.IsEmpty()) {
-        // no shader set yet..
-        // see if we have one on the native side.
-        // and create the "bound shader" object from it.
 
-        // check native side..
-        SCENE_NS::IShader::Ptr shader;
-        ExecSyncTask([material, &shader]() -> META_NS::IAny::Ptr {
-            shader = material->MaterialShader()->GetValue();
-            return {};
-        });
-        if (!shader) {
-            // no shader in native also.
-            return ctx.GetNull();
-        }
-
-        // construct a "bound" shader object from the "non bound" one.
-        NapiApi::Object parms(ctx);
-        napi_value args[] = {
-            scene_.GetValue(), // <- get the scene
-            parms              // other constructor parameters
-        };
-
-        if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-            CORE_LOG_F("INVALID SCENE!");
-        }
-        parms.Set("Material", ctx.This()); // js material object that we are bound to.
-
-        shaderBind_ = META_NS::GetObjectRegistry().Create(META_NS::ClassId::Object);
-        interface_cast<META_NS::IMetadata>(shaderBind_)
-            ->AddProperty(META_NS::ConstructProperty<IntfPtr>(
-                "shader", nullptr, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE));
-        interface_cast<META_NS::IMetadata>(shaderBind_)
-            ->GetPropertyByName<IntfPtr>("shader")
-            ->SetValue(interface_pointer_cast<CORE_NS::IInterface>(shader));
-
-        auto argc = BASE_NS::countof(args);
-        auto argv = args;
-        MakeNativeObjectParam(ctx, shaderBind_, argc, argv);
-        auto result = CreateJsObj(ctx, "Shader", shaderBind_, false, argc, argv);
-        shader_ = StoreJsObj(shaderBind_, NapiApi::Object(ctx, result));
+    auto shader = META_NS::GetValue(material->MaterialShader());
+    if (!shader) {
+        blend_.Reset();
+        return ctx.GetUndefined();
     }
-    return shader_.GetValue();
+
+    bool enableBlend = shader->IsBlendEnabled().GetResult();
+
+    if (blend_.IsEmpty()) {
+        return ctx.GetUndefined();
+    }
+
+    return blend_.GetValue();
+}
+void BaseMaterial::SetBlend(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+
+    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
+    if (!material) {
+        // material destroyed, just make sure we have no shader reference anymore.
+        blend_.Reset();
+        return;
+    }
+
+    auto shader = META_NS::GetValue(material->MaterialShader());
+    if (!shader) {
+        blend_.Reset();
+        return;
+    }
+
+    NapiApi::Object blendObjectJS = ctx.Arg<0>();
+    bool enableBlend = blendObjectJS.Get<bool>("enabled");
+    shader->EnableBlend(enableBlend);
+
+    blend_ = NapiApi::StrongRef(blendObjectJS);
+}
+napi_value BaseMaterial::GetAlphaCutoff(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    float alphaCutoff = 1.0f;
+    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
+        alphaCutoff = META_NS::GetValue(material->AlphaCutoff());
+    }
+    return ctx.GetNumber(alphaCutoff);
+}
+void BaseMaterial::SetAlphaCutoff(NapiApi::FunctionContext<float>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+    float alphaCutoff = ctx.Arg<0>();
+
+    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
+        META_NS::SetValue(material->AlphaCutoff(), alphaCutoff);
+    }
+}
+napi_value BaseMaterial::GetRenderSort(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
+    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
+    if (!material) {
+        renderSort_.Reset();
+        return ctx.GetUndefined();
+    }
+
+    auto renderSort = META_NS::GetValue(material->RenderSort());
+
+    if (renderSort_.IsEmpty()) {
+        return ctx.GetUndefined();
+    }
+
+    return renderSort_.GetValue();
+}
+void BaseMaterial::SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+
+    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
+    if (!material) {
+        // material destroyed, just make sure we have no shader reference anymore.
+        renderSort_.Reset();
+        return;
+    }
+
+    SCENE_NS::RenderSort renderSort;
+    NapiApi::Object renderSortJS = ctx.Arg<0>();
+    renderSort.renderSortLayer = renderSortJS.Get<uint32_t>("renderSortLayer");
+    renderSort.renderSortLayerOrder = renderSortJS.Get<uint32_t>("renderSortLayerOrder");
+    META_NS::SetValue(material->RenderSort(), renderSort);
+
+    renderSort_ = NapiApi::StrongRef(renderSortJS);
 }

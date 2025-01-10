@@ -173,11 +173,6 @@ IPipelineDescriptorSetBinder::Ptr CreatePipelineDescriptorSetBinder(const Pipeli
     return IPipelineDescriptorSetBinder::Ptr { new PipelineDescriptorSetBinder(
         pipelineLayout, descriptorSetLayoutBindings) };
 }
-
-struct DescriptorCountValues {
-    uint32_t count { 0U };
-    uint32_t arrayCount { 0U };
-};
 } // namespace
 
 ShaderPipelineBinderPropertyBindingSignal::ShaderPipelineBinderPropertyBindingSignal(
@@ -197,7 +192,8 @@ ShaderPipelineBinder::ShaderPipelineBinder(
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (!((renderHandleType_ == RenderHandleType::SHADER_STATE_OBJECT) ||
             (renderHandleType_ == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT))) {
-        PLUGIN_LOG_W("RENDER_VALIDATION: Invalid handle for shader pipeline binder (type:%hhu)", renderHandleType_);
+        PLUGIN_LOG_W("RENDER_VALIDATION: Invalid handle for shader pipeline binder (type:%hhu)",
+            static_cast<uint8_t>(renderHandleType_));
     }
 #endif
     InitCustomProperties();
@@ -276,18 +272,28 @@ void ShaderPipelineBinder::EvaluateCustomPropertyBindings()
     for (uint32_t setIdx = 0; setIdx < static_cast<uint32_t>(descriptorSetResources_.size()); ++setIdx) {
         const auto& descRef = descriptorSetResources_[setIdx];
         const auto& plSet = pipelineLayout_.descriptorSetLayouts[setIdx];
-        for (const auto& bindingRef : descRef.bindings) {
-            bool valid = (bindingRef.binding < static_cast<uint32_t>(plSet.bindings.size()));
-            if (valid) {
+        const bool bindingCountMismatch = (descRef.bindings.size() != plSet.bindings.size());
+        if (!bindingCountMismatch) {
+            for (size_t idx = 0; idx < descRef.bindings.size(); ++idx) {
+                const auto& bindingRef = descRef.bindings[idx];
+                const auto& plBindingRef = plSet.bindings[idx];
                 const RenderHandleType plDescType =
-                    DescriptorSetBinderUtil::GetRenderHandleType(plSet.bindings[bindingRef.binding].descriptorType);
-                valid = valid && (bindingRef.type != plDescType);
+                    DescriptorSetBinderUtil::GetRenderHandleType(plBindingRef.descriptorType);
+                if (bindingRef.binding != plBindingRef.binding) {
+                    CORE_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline "
+                               "layout (set: %u, bindingIdx %u != bindingIdx %u)",
+                        setIdx, bindingRef.binding, plBindingRef.binding);
+                }
+                if (bindingRef.type != plDescType) {
+                    CORE_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline "
+                               "layout (set: %u, binding: %u)",
+                        setIdx, bindingRef.binding);
+                }
             }
-            if (valid) {
-                CORE_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline layout "
-                           "(set: %u, binding: %u)",
-                    setIdx, bindingRef.binding);
-            }
+        } else {
+            CORE_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding count missmatch."
+                       "(set: %u, bindings: %u != bindings: %u",
+                setIdx, static_cast<uint32_t>(descRef.bindings.size()), static_cast<uint32_t>(plSet.bindings.size()));
         }
     }
 #endif
@@ -342,7 +348,7 @@ void ShaderPipelineBinder::Bind(const uint32_t set, const uint32_t binding, cons
     } else if (type == RenderHandleType::GPU_IMAGE) {
         BindImage(set, binding,
             { handle, PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS,
-                {} });
+                ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, {} });
     } else if (type == RenderHandleType::GPU_SAMPLER) {
         BindSampler(set, binding, { handle });
     }
@@ -681,19 +687,19 @@ void ShaderPipelineBinder::BindPropertyBindings()
                 case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                     BindBuffer(sb.set, sb.binding, bindingProperties->GetValue<BindableBufferWithHandleReference>(idx));
                 }
-                    break;
+                break;
                 case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                     BindImage(sb.set, sb.binding, bindingProperties->GetValue<BindableImageWithHandleReference>(idx));
                 }
-                    break;
+                break;
                 case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
                     BindSampler(
                         sb.set, sb.binding, bindingProperties->GetValue<BindableSamplerWithHandleReference>(idx));
                 }
-                    break;
+                break;
                 default: {
                 }
-                    break;
+                break;
             }
         }
     }

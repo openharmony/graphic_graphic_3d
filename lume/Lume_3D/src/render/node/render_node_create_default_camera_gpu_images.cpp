@@ -67,43 +67,8 @@ void RenderNodeCreateDefaultCameraGpuImages::InitNode(IRenderNodeContextManager&
 void RenderNodeCreateDefaultCameraGpuImages::PreExecuteFrame()
 {
     CORE_ASSERT(resourceHandles_.size() == descs_.size());
-    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-    const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-    const auto* dataStoreCamera =
-        static_cast<IRenderDataStoreDefaultCamera*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameCamera));
-    if (dataStoreCamera) {
-        const auto& cameras = dataStoreCamera->GetCameras();
-        if (!cameras.empty() && !descs_.empty()) {
-            for (size_t idx = 0; idx < descs_.size(); ++idx) {
-                // If no camera given, we default to zero camera (main camera)
-                uint32_t cameraIndex = 0u;
-                if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
-                    cameraIndex = dataStoreCamera->GetCameraIndex(jsonInputs_.customCameraId);
-                } else if (!(jsonInputs_.customCameraName.empty())) {
-                    cameraIndex = dataStoreCamera->GetCameraIndex(jsonInputs_.customCameraName);
-                }
-                if (cameraIndex < (uint32_t)cameras.size()) {
-                    const auto& currCamera = cameras[cameraIndex];
-                    auto& currDesc = descs_[idx];
-                    const bool xChanged = (currCamera.renderResolution.x != currDesc.desc.width) ? true : false;
-                    const bool yChanged = (currCamera.renderResolution.y != currDesc.desc.height) ? true : false;
+    UpdateRenderTargets();
 
-                    if (xChanged || yChanged) {
-                        currDesc.desc.width = currCamera.renderResolution.x;
-                        currDesc.desc.height = currCamera.renderResolution.y;
-                        // additional copy
-                        GpuImageDesc desc = currDesc.desc;
-                        desc.width = Math::max(
-                            1u, static_cast<uint32_t>(static_cast<float>(desc.width) * currDesc.dependencySizeScale));
-                        desc.height = Math::max(
-                            1u, static_cast<uint32_t>(static_cast<float>(desc.height) * currDesc.dependencySizeScale));
-                        // replace the handle
-                        resourceHandles_[idx] = gpuResourceMgr.Create(resourceHandles_[idx], desc);
-                    }
-                }
-            }
-        }
-    }
     // broadcast the resources
     for (size_t idx = 0; idx < resourceHandles_.size(); ++idx) {
         IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
@@ -118,6 +83,50 @@ void RenderNodeCreateDefaultCameraGpuImages::ParseRenderNodeInputs()
     jsonInputs_.gpuImageDescs = parserUtil.GetGpuImageDescs(jsonVal, "gpuImageDescs");
     jsonInputs_.customCameraName = parserUtil.GetStringValue(jsonVal, "customCameraName");
     jsonInputs_.customCameraId = parserUtil.GetUintValue(jsonVal, "customCameraId");
+}
+
+void RenderNodeCreateDefaultCameraGpuImages::UpdateRenderTargets()
+{
+    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+    const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
+    const auto* dataStoreCamera =
+        static_cast<IRenderDataStoreDefaultCamera*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameCamera));
+    if (!dataStoreCamera) {
+        return;
+    }
+    const auto& cameras = dataStoreCamera->GetCameras();
+    if (cameras.empty() || descs_.empty()) {
+        return;
+    }
+    for (size_t idx = 0; idx < descs_.size(); ++idx) {
+        // If no camera given, we default to zero camera (main camera)
+        uint32_t cameraIndex = 0U;
+        if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
+            cameraIndex = dataStoreCamera->GetCameraIndex(jsonInputs_.customCameraId);
+        } else if (!jsonInputs_.customCameraName.empty()) {
+            cameraIndex = dataStoreCamera->GetCameraIndex(jsonInputs_.customCameraName);
+        }
+        if (cameraIndex >= (uint32_t)cameras.size()) {
+            continue;
+        }
+        const auto& currCamera = cameras[cameraIndex];
+        auto& currDesc = descs_[idx];
+        if ((currCamera.renderResolution.x == currDesc.desc.width) &&
+            (currCamera.renderResolution.y == currDesc.desc.height)) {
+            continue;
+        }
+
+        currDesc.desc.width = currCamera.renderResolution.x;
+        currDesc.desc.height = currCamera.renderResolution.y;
+        // additional copy
+        GpuImageDesc desc = currDesc.desc;
+        desc.width =
+            Math::max(1u, static_cast<uint32_t>(static_cast<float>(desc.width) * currDesc.dependencySizeScale));
+        desc.height =
+            Math::max(1u, static_cast<uint32_t>(static_cast<float>(desc.height) * currDesc.dependencySizeScale));
+        // replace the handle
+        resourceHandles_[idx] = gpuResourceMgr.Create(resourceHandles_[idx], desc);
+    }
 }
 
 // for plugin / factory interface

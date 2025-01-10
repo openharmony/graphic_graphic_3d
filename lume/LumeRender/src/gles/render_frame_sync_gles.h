@@ -33,7 +33,7 @@ struct LowLevelFenceGLES {
 class RenderFrameSyncGLES final : public RenderFrameSync {
 public:
     explicit RenderFrameSyncGLES(Device& device);
-    virtual ~RenderFrameSyncGLES();
+    ~RenderFrameSyncGLES() override;
 
     void BeginFrame() override;
     void WaitForFrameFence() override;

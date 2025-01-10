@@ -16,7 +16,7 @@
 #include "QuatProxy.h"
 
 #include <napi_api.h>
-QuatProxy::QuatProxy(napi_env env, META_NS::Property<BASE_NS::Math::Quat> prop) : PropertyProxy(prop)
+QuatProxy::QuatProxy(napi_env env, META_NS::Property<BASE_NS::Math::Quat> prop) : ObjectPropertyProxy(prop)
 {
     Create(env, "Quaternion");
     Hook("x");
@@ -25,7 +25,10 @@ QuatProxy::QuatProxy(napi_env env, META_NS::Property<BASE_NS::Math::Quat> prop) 
     Hook("w");
     SyncGet();
 }
-QuatProxy::~QuatProxy() {}
+QuatProxy::~QuatProxy()
+{
+    Reset();
+}
 void QuatProxy::UpdateLocalValues()
 {
     // update local values. (runs in engine thread)
@@ -37,37 +40,39 @@ void QuatProxy::UpdateRemoteValues()
 }
 void QuatProxy::SetValue(const BASE_NS::Math::Quat& v)
 {
-    duh.Lock();
+    Lock();
     if (value != v) {
         value = v;
         ScheduleUpdate();
     }
-    duh.Unlock();
+    Unlock();
 }
-void QuatProxy::SetValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
+void QuatProxy::SetMemberValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
 {
     NapiApi::FunctionContext<float> info(cb);
-    float val = info.Arg<0>();
-    duh.Lock();
-    if ((memb == "x") && (val != value.x)) {
-        value.x = val;
-        ScheduleUpdate();
-    } else if ((memb == "y") && (val != value.y)) {
-        value.y = val;
-        ScheduleUpdate();
-    } else if ((memb == "z") && (val != value.z)) {
-        value.z = val;
-        ScheduleUpdate();
-    } else if ((memb == "w") && (val != value.w)) {
-        value.w = val;
-        ScheduleUpdate();
+    if (info) {
+        float val = info.Arg<0>();
+        Lock();
+        if ((memb == "x") && (val != value.x)) {
+            value.x = val;
+            ScheduleUpdate();
+        } else if ((memb == "y") && (val != value.y)) {
+            value.y = val;
+            ScheduleUpdate();
+        } else if ((memb == "z") && (val != value.z)) {
+            value.z = val;
+            ScheduleUpdate();
+        } else if ((memb == "w") && (val != value.w)) {
+            value.w = val;
+            ScheduleUpdate();
+        }
+        Unlock();
     }
-    duh.Unlock();
 }
-napi_value QuatProxy::GetValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb)
+napi_value QuatProxy::GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb)
 {
     float res;
-    duh.Lock();
+    Lock();
     if (memb == "x") {
         res = value.x;
     } else if (memb == "y") {
@@ -78,25 +83,20 @@ napi_value QuatProxy::GetValue(NapiApi::FunctionContext<>& info, BASE_NS::string
         res = value.w;
     } else {
         // invalid member?
-        duh.Unlock();
-        return {};
+        Unlock();
+        return info.GetUndefined();
     }
-    duh.Unlock();
-    napi_value value;
-    napi_status status = napi_create_double(info, res, &value);
-    return value;
+    Unlock();
+    return info.GetNumber(res);
 }
 
-bool QuatProxy::SetValue(NapiApi::Object obj)
+void QuatProxy::SetValue(NapiApi::Object obj)
 {
     auto x = obj.Get<float>("x");
     auto y = obj.Get<float>("y");
     auto z = obj.Get<float>("z");
     auto w = obj.Get<float>("w");
     if (x.IsValid() && y.IsValid() && z.IsValid() && w.IsValid()) {
-        BASE_NS::Math::Quat q { x, y, z, w };
-        SetValue(q);
-        return true;
+        SetValue({ x, y, z, w });
     }
-    return false;
 }

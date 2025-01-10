@@ -14,8 +14,18 @@
         {
             "set" : 1,
             "bindings": [
-                { "binding" : 0, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit" },
-                { "binding" : 1, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit" }
+                { "binding" : 0, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 1, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 2, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" }, 
+                { "binding" : 3, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 4, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" }
+            ]
+        },
+        {
+            "set" : 2,
+            "bindings": [
+                { "binding" : 0, "descriptorType" : "combined_image_sampler", "descriptorCount": 1, "shaderStageFlags": "vertex_bit|fragment_bit" },
+                { "binding" : 1, "descriptorType" : "combined_image_sampler", "descriptorCount": 10, "shaderStageFlags" : "vertex_bit|fragment_bit" }
             ]
         }
     ]

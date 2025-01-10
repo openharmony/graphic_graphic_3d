@@ -31,11 +31,10 @@ public:
     explicit RenderNodeGraphLoader(CORE_NS::IFileManager&);
     ~RenderNodeGraphLoader() override = default;
 
-    LoadResult Load(const BASE_NS::string_view uri) override;
-    LoadResult LoadString(const BASE_NS::string_view jsonString) override;
+    LoadResult Load(BASE_NS::string_view uri) override;
+    LoadResult LoadString(BASE_NS::string_view jsonString) override;
 
 private:
-    LoadResult LoadString(const BASE_NS::string_view uri, const BASE_NS::string_view jsonString);
     CORE_NS::IFileManager& fileManager_;
 };
 RENDER_END_NAMESPACE()

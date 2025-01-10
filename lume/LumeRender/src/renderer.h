@@ -35,11 +35,8 @@ class GpuResourceManager;
 class IRenderContext;
 class IRenderDataStoreDefaultStaging;
 class ShaderManager;
-class PipelineRenderNodes;
-class RenderPipeline;
 class RenderFrameSync;
 class RenderGraph;
-class PipelineInitializerBase;
 class RenderNodeGraphManager;
 class RenderDataStoreManager;
 class RenderUtil;
@@ -54,10 +51,10 @@ Renderer renderers a render node graph with input data.
 class Renderer final : public IRenderer {
 public:
     explicit Renderer(IRenderContext& context);
-    ~Renderer();
+    ~Renderer() override;
 
-    uint64_t RenderFrame(const BASE_NS::array_view<const RenderHandleReference> renderNodeGraphs) override;
-    uint64_t RenderDeferred(const BASE_NS::array_view<const RenderHandleReference> renderNodeGraphs) override;
+    uint64_t RenderFrame(BASE_NS::array_view<const RenderHandleReference> renderNodeGraphs) override;
+    uint64_t RenderDeferred(BASE_NS::array_view<const RenderHandleReference> renderNodeGraphs) override;
     uint64_t RenderDeferredFrame() override;
 
     uint64_t RenderFrameBackend(const RenderFrameBackendInfo& info) override;
@@ -66,18 +63,17 @@ public:
     RenderStatus GetFrameStatus() const override;
 
 private:
-    void InitNodeGraphs(const BASE_NS::array_view<const RenderHandle> renderNodeGraphs);
+    void InitNodeGraphs(BASE_NS::array_view<const RenderHandle> renderNodeGraphs);
 
     // same render node graphs needs to be removed before calling this
-    void RenderFrameImpl(const BASE_NS::array_view<const RenderHandle> renderNodeGraphs);
+    void RenderFrameImpl(BASE_NS::array_view<const RenderHandle> renderNodeGraphs);
     void RenderFrameBackendImpl();
     void RenderFramePresentImpl();
 
-    void ExecuteRenderNodes(const BASE_NS::array_view<const RenderHandle> renderNodeGraphInputs,
-        const BASE_NS::array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores);
+    void ExecuteRenderNodes(BASE_NS::array_view<RenderNodeGraphNodeStore*> renderNodeGraphNodeStores);
 
-    void FillRngInputs(const BASE_NS::array_view<const RenderHandle> renderNodeGraphInputList,
-        BASE_NS::vector<RenderHandle>& rngInputs);
+    void FillRngInputs(
+        BASE_NS::array_view<const RenderHandle> renderNodeGraphInputList, BASE_NS::vector<RenderHandle>& rngInputs);
     void RemapBackBufferHandle(const IRenderDataStoreManager& renderData);
 
     void ProcessTimeStampEnd();
@@ -150,6 +146,8 @@ private:
     RenderStatus renderStatus_;
     // could be called in parallel
     uint64_t renderStatusDeferred_ { 0 };
+
+    bool forceSequentialQueue_ { false };
 };
 RENDER_END_NAMESPACE()
 

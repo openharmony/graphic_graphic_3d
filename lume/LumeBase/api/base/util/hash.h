@@ -28,7 +28,7 @@ constexpr uint32_t FNV_OFFSET_BASIS_32 = 0x811c9dc5u;
 constexpr uint32_t FNV_PRIME_32 = 16777619u;
 
 template<typename T>
-uint64_t hash(const T& value);
+uint64_t hash(const T&);
 
 template<>
 inline uint64_t hash(const uint8_t& value)

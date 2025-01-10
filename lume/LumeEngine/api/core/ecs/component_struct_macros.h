@@ -44,11 +44,11 @@
         /** Scoped write access to component data. */                                         \
         virtual CORE_NS::ScopedHandle<TYPE> Write(ComponentId index) = 0;                     \
         /** Scoped write access to component data. */                                         \
-        virtual CORE_NS::ScopedHandle<TYPE> Write(CORE_NS::Entity entity) = 0;
+        virtual CORE_NS::ScopedHandle<TYPE> Write(CORE_NS::Entity entity) = 0
 
 #define DECLARE_GENERIC_INTERFACE2(NAME, TYPE)                                                \
     protected:                                                                                \
-        NAME() = default;                                                                     \
+    NAME() = default;                                                                         \
         virtual ~NAME() = default;                                                            \
         NAME(const NAME&) = delete;                                                           \
         NAME(NAME&&) = delete;                                                                \
@@ -73,7 +73,7 @@
     }
 
 #define DECLARE_GENERIC_INTERFACE(NAME, TYPE, TYPE_UID)                                       \
-    DECLARE_GENERIC_INTERFACE1(NAME, TYPE, TYPE_UID)                                          \
+    DECLARE_GENERIC_INTERFACE1(NAME, TYPE, TYPE_UID);                                         \
     DECLARE_GENERIC_INTERFACE2(NAME, TYPE)
 
 #if !defined(IMPLEMENT_MANAGER)
@@ -96,7 +96,7 @@
 #define DEFINE_ARRAY_PROPERTY(type, count, name, displayname, flags, value) type name[count]{ value };
 
 #define BEGIN_COMPONENT_MANAGER(NAME, COMPONENT_NAME, TYPE_UID) \
-    DECLARE_GENERIC_INTERFACE1(NAME, COMPONENT_NAME, TYPE_UID)
+    DECLARE_GENERIC_INTERFACE1(NAME, COMPONENT_NAME, TYPE_UID);
 #define END_COMPONENT_MANAGER(NAME, COMPONENT_NAME) \
     DECLARE_GENERIC_INTERFACE2(NAME, COMPONENT_NAME)
 

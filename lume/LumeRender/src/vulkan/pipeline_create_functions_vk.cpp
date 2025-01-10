@@ -15,11 +15,9 @@
 
 #include "pipeline_create_functions_vk.h"
 
-#include <algorithm>
 #include <vulkan/vulkan_core.h>
 
 #include <base/containers/array_view.h>
-#include <base/containers/vector.h>
 #include <base/math/mathf.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
@@ -532,7 +530,7 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
             referenceIndex += subpassDesc.depthAttachmentCount;
             // cannot resolve mode NONE
             if ((subpassDesc.depthResolveAttachmentCount > 0) &&
-                (subpassDesc.depthResolveModeFlagBit || subpassDesc.stencilResolveModeFlagBit)) {
+                (subpassDesc.depthResolveModeFlags || subpassDesc.stencilResolveModeFlags)) {
                 VkAttachmentReference2KHR* depthResolveAttachment = nullptr;
                 depthResolveAttachment = &attachmentReferences[referenceIndex];
                 CreateAttachmentReferences2(&subpassDesc.depthResolveAttachmentIndex, layouts, compatibilityAttachments,
@@ -546,8 +544,7 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
                 subpassDescriptionDepthStencilResolve.pNext = nullptr;
                 // NOTE: acceptable values needs to be evaluated from the device
                 // independent resolve not yet supported
-                const VkResolveModeFlagBitsKHR depthStencilResolveMode =
-                    (VkResolveModeFlagBitsKHR)subpassDesc.depthResolveModeFlagBit;
+                const auto depthStencilResolveMode = (VkResolveModeFlagBitsKHR)subpassDesc.depthResolveModeFlags;
                 subpassDescriptionDepthStencilResolve.depthResolveMode = depthStencilResolveMode;
                 subpassDescriptionDepthStencilResolve.stencilResolveMode = depthStencilResolveMode;
                 subpassDescriptionDepthStencilResolve.pDepthStencilResolveAttachment = depthResolveAttachment;

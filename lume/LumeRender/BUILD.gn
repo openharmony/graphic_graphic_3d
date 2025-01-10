@@ -11,46 +11,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import("//build/ohos.gni")
-import("//foundation/graphic/graphic_2d/graphic_config.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 declare_args() {
+  RENDER_LOG_ENABLED = false
+  RENDER_VALIDATION_ENABLED = false
   RENDER_BUILD_GLES = true
   RENDER_BUILD_VULKAN = true
-  RENDER_EMBEDDED_ASSETS_ENABLED = true
   RENDER_ROFS = "rofsRndr"
 }
 
 config("lume_render_api") {
+  configs = [
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+  ]
   include_dirs = [ "api" ]
 
   defines = []
 
-  if (BUILDTYPE == "Release") {
-    defines += [ "PLUGIN_LOG_NO_DEBUG=0" ]
+  if (RENDER_BUILD_GLES) {
+    defines += [ "RENDER_HAS_GLES_BACKEND=1" ]
   }
 
-  if (BUILDTYPE == "MinSizeRel") {
-    defines += [ "PLUGIN_LOG_NO_DEBUG=0" ]
-  }
-
-  if (BUILDTYPE == "RelWithDebInfo") {
-    defines += [ "PLUGIN_LOG_NO_DEBUG=0" ]
-  }
-
-  if (LUME_OHOS_BUILD) {
-    defines += [ "__OHOS_PLATFORM__" ]
-  }
-
-  if (LUME_OHOS_BUILD && RENDER_BUILD_VULKAN) {
-    include_dirs += [
-      "src/vulkan/ohos",
-      #"//third_party/skia/third_party/vulkanmemoryallocator/include"
-    ]
+  if (RENDER_BUILD_VULKAN) {
+    defines += [ "RENDER_HAS_VULKAN_BACKEND=1" ]
+    configs += [ "//third_party/vulkan-headers:vulkan_headers_config" ]
   }
 }
 
 config("lume_render_config") {
+  configs = [
+    "${LUME_CORE_PATH}:lume_default",
+    ":lume_render_api",
+  ]
   include_dirs = [
     "3rdparty/",
     "src/",
@@ -58,47 +52,62 @@ config("lume_render_config") {
 
   defines = [
     "RENDER_PUBLIC=__attribute__((visibility(\"default\")))",
+    "RENDER_OPTIMIZE_FOR_INTEGRATED_GPU=1",
     "RENDER_DEV_ENABLED=0",
     "RENDER_PERF_ENABLED=0",
     "RENDER_TESTS_ENABLED=0",
     "RENDER_LOG_TO_CONSOLE=1",
     "RENDER_LOG_TO_FILE",
     "RENDER_LOG_TO_DEBUG_OUTPUT=0",
-    "RENDER_VULKAN_VALIDATION_ENABLED=0",
     "RENDER_DEBUG_GPU_RESOURCE_IDS=0",
     "RENDER_DEBUG_MARKERS_ENABLED=0",
     "RENDER_DEBUG_COMMAND_MARKERS_ENABLED=0",
     "RENDER_GL_FLIP_Y_SWAPCHAIN=0",
-    "RENDER_GL_DEBUG=0",
     "RENDER_GPU_TIMESTAMP_QUERIES_ENABLED=0",
     "RENDER_VULKAN_RT_ENABLED=0",
     "RENDER_BUILDTYPE=${BUILDTYPE}",
+    "RENDER_EMBEDDED_ASSETS_ENABLED=1",
     "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
     "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER}",
   ]
 
-  if (RENDER_EMBEDDED_ASSETS_ENABLED) {
-    defines += [ "RENDER_EMBEDDED_ASSETS_ENABLED=1" ]
+  if (RENDER_LOG_ENABLED) {
+    defines += [
+      "PLUGIN_LOG_DISABLED=0",
+      "PLUGIN_LOG_DEBUG=1",
+    ]
+  } else {
+    defines += [
+      "PLUGIN_LOG_DISABLED=1",
+      "PLUGIN_LOG_DEBUG=0",
+    ]
   }
 
-  if (RENDER_BUILD_GLES) {
-    defines += [ "RENDER_HAS_GLES_BACKEND=1" ]
+  if (LUME_OHOS_BUILD) {
+    defines += [ "__OHOS_PLATFORM__" ]
   }
 
+  if (RENDER_VALIDATION_ENABLED) {
+    defines += [
+      "RENDER_VALIDATION_ENABLED=1",
+      "RENDER_VULKAN_VALIDATION_ENABLED=0",
+      "RENDER_GL_DEBUG=1",
+    ]
+  }
   if (RENDER_BUILD_VULKAN) {
     defines += [
-      "RENDER_HAS_VULKAN_BACKEND=1",
       "VMA_STATS_STRING_ENABLED=0",
       "VMA_STATIC_VULKAN_FUNCTIONS=0",
-
-      #"USE_NEW_VMA=0"
     ]
 
     if (LUME_OHOS_BUILD) {
       defines += [ "RENDER_VULKAN_VALIDATION_ENABLE_WARNINGS=0" ]
+      include_dirs += [ "src/vulkan/ohos" ]
     }
+
+    # this should be replaced with a proper component definitions and configs/deps. (just like vulkan-headers:vulkan_headers_config)
+    defines += [ "PATH_TO_VMA=\"../../../../../../../third_party/skia/third_party/vulkanmemoryallocator/include/vk_mem_alloc.h\"" ]
   }
-  defines += [ "RENDER_PUBLIC=__attribute__((visibility(\"default\")))" ]
 
   ldflags = [ "-Wl,--undefined=AGPRender_StaticPlugin" ]
 
@@ -108,29 +117,32 @@ config("lume_render_config") {
     "-Wno-switch",
   ]
 }
-group("libvulkan") {
-  #public_deps = [ "${LIB_VULKAN_3D}" ]
-  #public_deps = libvulkan3D
-  external_deps = [ "vulkan-loader:vulkan_loader" ]
-}
 
 ohos_source_set("lume_render_src") {
-  public_configs = [
-    ":lume_render_config",
-    ":lume_render_api",
-    "${LUME_CORE_PATH}:lume_base_api",
-    "${LUME_CORE_PATH}:lume_engine_api",
-    "${LUME_CORE_PATH}:lume_default",
-    "${LUME_CORE_PATH}:lume_component_help_config",
-  ]
+  public_configs = [ ":lume_render_config" ]
+  deps = []
+  external_deps = []
 
   sources = [
+    "src/datastore/render_data_store_default_acceleration_structure_staging.cpp",
+    "src/datastore/render_data_store_default_acceleration_structure_staging.h",
+    "src/datastore/render_data_store_default_gpu_resource_data_copy.cpp",
+    "src/datastore/render_data_store_default_gpu_resource_data_copy.h",
+    "src/datastore/render_data_store_default_staging.cpp",
+    "src/datastore/render_data_store_default_staging.h",
+    "src/datastore/render_data_store_manager.cpp",
+    "src/datastore/render_data_store_manager.h",
+    "src/datastore/render_data_store_pod.cpp",
+    "src/datastore/render_data_store_pod.h",
+    "src/datastore/render_data_store_post_process.cpp",
+    "src/datastore/render_data_store_post_process.h",
+    "src/datastore/render_data_store_render_post_processes.cpp",
+    "src/datastore/render_data_store_render_post_processes.h",
+    "src/datastore/render_data_store_shader_passes.cpp",
+    "src/datastore/render_data_store_shader_passes.h",
     "src/default_engine_constants.h",
     "src/device/device.cpp",
     "src/device/device.h",
-
-    # "src/device/generic/platform_hardware_buffer.cpp",
-    "src/device/gpu_acceleration_structure.h",
     "src/device/gpu_buffer.h",
     "src/device/gpu_image.h",
     "src/device/gpu_program.h",
@@ -156,6 +168,8 @@ ohos_source_set("lume_render_src") {
     "src/device/shader_module.h",
     "src/device/shader_pipeline_binder.cpp",
     "src/device/shader_pipeline_binder.h",
+    "src/device/shader_reflection_data.cpp",
+    "src/device/shader_reflection_data.h",
     "src/device/swapchain.h",
     "src/loader/json_format_serialization.h",
     "src/loader/json_util.h",
@@ -177,47 +191,12 @@ ohos_source_set("lume_render_src") {
     "src/loader/shader_state_loader_util.h",
     "src/loader/vertex_input_declaration_loader.cpp",
     "src/loader/vertex_input_declaration_loader.h",
-    "src/perf/cpu_perf_scope.h",
-    "src/perf/cpu_timer.cpp",
-    "src/perf/cpu_timer.h",
-    "src/perf/gpu_query.h",
-    "src/perf/gpu_query_manager.cpp",
-    "src/perf/gpu_query_manager.h",
-    "src/plugin/static_plugin.cpp",
-    "src/render_backend.h",
-    "src/render_context.cpp",
-    "src/render_context.h",
-    "src/render_graph.cpp",
-    "src/render_graph.h",
-    "src/renderer.cpp",
-    "src/renderer.h",
-    "src/resource_handle_impl.cpp",
-    "src/resource_handle_impl.h",
-    "version.cpp",
-
-    #"src/plugin/static_registry.cpp",
-
-    "src/datastore/render_data_store_default_acceleration_structure_staging.cpp",
-    "src/datastore/render_data_store_default_acceleration_structure_staging.h",
-    "src/datastore/render_data_store_default_gpu_resource_data_copy.cpp",
-    "src/datastore/render_data_store_default_gpu_resource_data_copy.h",
-    "src/datastore/render_data_store_default_staging.cpp",
-    "src/datastore/render_data_store_default_staging.h",
-    "src/datastore/render_data_store_manager.cpp",
-    "src/datastore/render_data_store_manager.h",
-    "src/datastore/render_data_store_pod.cpp",
-    "src/datastore/render_data_store_pod.h",
-    "src/datastore/render_data_store_post_process.cpp",
-    "src/datastore/render_data_store_post_process.h",
-    "src/datastore/render_data_store_shader_passes.cpp",
     "src/node/core_render_node_factory.cpp",
     "src/node/core_render_node_factory.h",
     "src/node/render_bloom.cpp",
     "src/node/render_bloom.h",
     "src/node/render_blur.cpp",
     "src/node/render_blur.h",
-    "src/node/render_copy.cpp",
-    "src/node/render_copy.h",
     "src/node/render_motion_blur.cpp",
     "src/node/render_motion_blur.h",
     "src/node/render_node_back_buffer.cpp",
@@ -240,6 +219,8 @@ ohos_source_set("lume_render_src") {
     "src/node/render_node_fullscreen_generic.h",
     "src/node/render_node_mip_chain_post_process.cpp",
     "src/node/render_node_mip_chain_post_process.h",
+    "src/node/render_node_render_post_processes_generic.cpp",
+    "src/node/render_node_render_post_processes_generic.h",
     "src/node/render_node_shader_passes_generic.cpp",
     "src/node/render_node_shader_passes_generic.h",
     "src/node/render_node_single_post_process.cpp",
@@ -261,6 +242,8 @@ ohos_source_set("lume_render_src") {
     "src/nodecontext/render_command_list.h",
     "src/nodecontext/render_node_context_manager.cpp",
     "src/nodecontext/render_node_context_manager.h",
+    "src/nodecontext/render_node_copy_util.cpp",
+    "src/nodecontext/render_node_copy_util.h",
     "src/nodecontext/render_node_graph_manager.cpp",
     "src/nodecontext/render_node_graph_manager.h",
     "src/nodecontext/render_node_graph_node_store.h",
@@ -274,14 +257,40 @@ ohos_source_set("lume_render_src") {
     "src/nodecontext/render_node_post_process_util.h",
     "src/nodecontext/render_node_util.cpp",
     "src/nodecontext/render_node_util.h",
+    "src/perf/cpu_perf_scope.h",
+    "src/perf/cpu_timer.cpp",
+    "src/perf/cpu_timer.h",
+    "src/perf/gpu_query.h",
+    "src/perf/gpu_query_manager.cpp",
+    "src/perf/gpu_query_manager.h",
+    "src/plugin/static_plugin.cpp",
+    "src/postprocesses/render_post_process_flare.cpp",
+    "src/postprocesses/render_post_process_flare.h",
+    "src/postprocesses/render_post_process_flare_node.cpp",
+    "src/postprocesses/render_post_process_flare_node.h",
+    "src/render_backend.h",
+    "src/render_context.cpp",
+    "src/render_context.h",
+    "src/render_graph.cpp",
+    "src/render_graph.h",
+    "src/renderer.cpp",
+    "src/renderer.h",
+    "src/resource_handle_impl.cpp",
+    "src/resource_handle_impl.h",
+    "src/util/json.cpp",
+    "src/util/json_util.h",
     "src/util/linear_allocator.h",
     "src/util/log.h",
     "src/util/property_util.cpp",
+    "src/util/property_util.h",
     "src/util/render_frame_util.cpp",
     "src/util/render_frame_util.h",
     "src/util/render_util.cpp",
     "src/util/render_util.h",
+    "src/util/shader_saver.cpp",
+    "src/util/shader_saver.h",
     "src/util/string_util.h",
+    "version.cpp",
   ]
 
   if (RENDER_BUILD_GLES) {
@@ -290,7 +299,6 @@ ohos_source_set("lume_render_src") {
       "src/gles/device_gles.h",
       "src/gles/egl_state.cpp",
       "src/gles/egl_state.h",
-      "src/gles/generic/platform_device_gles.cpp",
       "src/gles/gl_functions.h",
       "src/gles/gpu_buffer_gles.cpp",
       "src/gles/gpu_buffer_gles.h",
@@ -305,6 +313,7 @@ ohos_source_set("lume_render_src") {
       "src/gles/gpu_sampler_gles.cpp",
       "src/gles/gpu_sampler_gles.h",
       "src/gles/gpu_semaphore_gles.cpp",
+      "src/gles/gpu_semaphore_gles.h",
       "src/gles/node_context_descriptor_set_manager_gles.cpp",
       "src/gles/node_context_descriptor_set_manager_gles.h",
       "src/gles/node_context_pool_manager_gles.cpp",
@@ -323,11 +332,13 @@ ohos_source_set("lume_render_src") {
       "src/gles/surface_information.h",
       "src/gles/swapchain_gles.cpp",
       "src/gles/swapchain_gles.h",
-      "src/gles/wgl_state.cpp",
-      "src/gles/wgl_state.h",
+    ]
+
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3",
     ]
   }
-
   if (RENDER_BUILD_VULKAN) {
     sources += [
       "src/vulkan/create_functions_vk.cpp",
@@ -370,11 +381,18 @@ ohos_source_set("lume_render_src") {
       "src/vulkan/swapchain_vk.h",
       "src/vulkan/validate_vk.h",
     ]
+    external_deps += [ "vulkan-loader:vulkan_loader" ]
+  }
 
-    if (LUME_OHOS_BUILD) {
+  if (LUME_OHOS_BUILD) {
+    # platform source
+    sources += [ "src/device/ohos/platform_hardware_buffer.cpp" ]
+    if (RENDER_BUILD_GLES) {
+      sources += [ "src/gles/ohos/platform_device_gles.cpp" ]
+    }
+    if (RENDER_BUILD_VULKAN) {
       # platform source
       sources += [
-        "src/device/ohos/platform_hardware_buffer.cpp",
         "src/vulkan/ohos/platform_create_functions_vk.cpp",
         "src/vulkan/ohos/platform_device_vk.cpp",
         "src/vulkan/ohos/platform_gpu_image_vk.cpp",
@@ -384,18 +402,10 @@ ohos_source_set("lume_render_src") {
       ]
     }
   }
-  external_deps = [
+  external_deps += [
     "c_utils:utils",
-    "graphic_2d:EGL",
-    "graphic_2d:GLESv3",
+    "graphic_surface:surface",
   ]
-
-  if (RENDER_BUILD_VULKAN) {
-    deps = [ ":libvulkan" ]
-
-    #public_deps = [ "//third_party/vulkan-headers:vulkan_headers" ]
-    external_deps += [ "vulkan-headers:vulkan_headers" ]
-  }
 
   part_name = "graphic_3d"
   subsystem_name = "graphic"
@@ -404,7 +414,7 @@ ohos_source_set("lume_render_src") {
 lume_compile_shader("lume_render_compile_shader") {
   script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
   outputs = [ "$target_gen_dir" ]
-  tool_path = "$target_gen_dir"
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/LumeShaderCompiler"
   dest_gen_path = "$target_gen_dir/assets"
   asset_path = rebase_path("./assets/render", root_build_dir)
   shader_path = "${dest_gen_path}/shaders"
@@ -425,7 +435,7 @@ lume_rofs("lume_render_rofs") {
 
   outputs = "${target_gen_dir}/assets/${output_obj}"
 
-  tool_path = "$target_gen_dir"
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/lumeassetcompiler"
   root = "/"
   bin_name = "BINARYDATAFORRENDER"
   size_name = "SIZEOFDATAFORRENDER"
@@ -453,45 +463,23 @@ source_set("lume_render_rofs_obj") {
   deps = [ ":lume_render_rofs" ]
 }
 
-ohos_static_library("libAGPRender") {
-  public_deps = [ ":lume_render_src" ]
-
-  if (RENDER_EMBEDDED_ASSETS_ENABLED) {
-    deps = [ ":lume_render_rofs_obj" ]
-  }
-  part_name = "graphic_3d"
-  subsystem_name = "graphic"
-}
-
-config("lume_render_plugin_config") {
-  defines = [ "CORE_PLUGIN=1" ]
-}
-
 ohos_source_set("lume_render_src_plugin") {
+  defines = [ "CORE_PLUGIN=1" ]
   sources = [
     "src/plugin/dynamic_plugin.cpp",
     "src/plugin/dynamic_registry.cpp",
-    "src/util/json.cpp",
   ]
 
-  configs = [
-    ":lume_render_plugin_config",
-    ":lume_render_api",
-    "${LUME_CORE_PATH}:lume_base_api",
-    "${LUME_CORE_PATH}:lume_engine_api",
-    "${LUME_CORE_PATH}:lume_default",
-  ]
-
-  part_name = "graphic_3d"
-  subsystem_name = "graphic"
+  configs = [ ":lume_render_config" ]
 }
 
 ohos_shared_library(LIB_RENDER) {
-  public_deps = [
-    ":libAGPRender",
+  deps = [
+    ":lume_render_rofs_obj",
+    ":lume_render_src",
     ":lume_render_src_plugin",
   ]
-
+  relative_install_dir = "graphics3d"
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

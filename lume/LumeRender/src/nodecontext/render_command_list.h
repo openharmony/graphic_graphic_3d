@@ -102,6 +102,9 @@ enum class RenderCommandType : uint32_t {
     GPU_QUEUE_TRANSFER_RELEASE,
     GPU_QUEUE_TRANSFER_ACQUIRE,
 
+    BEGIN_DEBUG_MARKER,
+    END_DEBUG_MARKER,
+
     COUNT, // used as the number of values and must be last
 };
 
@@ -148,6 +151,9 @@ constexpr const char* COMMAND_NAMES[] = {
 
     "GpuQueueTransferRelease",
     "GpuQueueTransferAcquire",
+
+    "BeginDebugMarker",
+    "EndDebugMark",
 };
 static_assert(BASE_NS::countof(COMMAND_NAMES) == (static_cast<uint32_t>(RenderCommandType::COUNT)));
 #endif
@@ -441,6 +447,19 @@ struct RenderCommandExecuteBackendFramePosition {
     uint64_t id { 0 };
 };
 
+#if (RENDER_DEBUG_MARKERS_ENABLED == 1)
+struct RenderCommandBeginDebugMarker {
+    static constexpr uint32_t SIZE_OF_NAME { 128U };
+
+    BASE_NS::fixed_string<SIZE_OF_NAME> name;
+    BASE_NS::Math::Vec4 color { 1.0f, 1.0f, 1.0f, 1.0f };
+};
+
+struct RenderCommandEndDebugMarker {
+    uint64_t id { 0 };
+};
+#endif
+
 struct RenderCommandWithType {
     RenderCommandType type { RenderCommandType::UNDEFINED };
     void* rc { nullptr };
@@ -463,9 +482,9 @@ public:
         BASE_NS::vector<BASE_NS::unique_ptr<LinearAllocator>> allocators;
     };
 
-    RenderCommandList(const BASE_NS::string_view nodeName, NodeContextDescriptorSetManager& nodeContextDescriptorSetMgr,
+    RenderCommandList(BASE_NS::string_view nodeName, NodeContextDescriptorSetManager& nodeContextDescriptorSetMgr,
         const GpuResourceManager& gpuResourceMgr, const NodeContextPsoManager& nodeContextPsoMgr, const GpuQueue& queue,
-        const bool enableMultiQueue);
+        bool enableMultiQueue);
     ~RenderCommandList() = default;
 
     // called in render node graph if multi-queue gpu release acquire barriers have been patched
@@ -477,6 +496,8 @@ public:
     GpuQueue GetGpuQueue() const;
     bool HasMultiRenderCommandListSubpasses() const;
     MultiRenderPassCommandListData GetMultiRenderCommandListData() const;
+    // bindings are important for global descriptor set dependencies
+    bool HasGlobalDescriptorSetBindings() const;
 
     BASE_NS::array_view<const CommandBarrier> GetCustomBarriers() const;
     BASE_NS::array_view<const VertexBuffer> GetRenderpassVertexInputBufferBarriers() const;
@@ -493,30 +514,27 @@ public:
     // clean-up if needed
     void AfterRenderNodeExecuteFrame();
 
-    void Draw(const uint32_t vertexCount, const uint32_t instanceCount, const uint32_t firstVertex,
-        const uint32_t firstInstance) override;
-    void DrawIndexed(const uint32_t indexCount, const uint32_t instanceCount, const uint32_t firstIndex,
-        const int32_t vertexOffset, const uint32_t firstInstance) override;
-    void DrawIndirect(const RenderHandle bufferHandle, const uint32_t offset, const uint32_t drawCount,
-        const uint32_t stride) override;
-    void DrawIndexedIndirect(const RenderHandle bufferHandle, const uint32_t offset, const uint32_t drawCount,
-        const uint32_t stride) override;
+    void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
+    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
+        uint32_t firstInstance) override;
+    void DrawIndirect(RenderHandle bufferHandle, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
+    void DrawIndexedIndirect(RenderHandle bufferHandle, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
 
-    void Dispatch(const uint32_t groupCountX, const uint32_t groupCountY, const uint32_t groupCountZ) override;
-    void DispatchIndirect(const RenderHandle bufferHandle, const uint32_t offset) override;
+    void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) override;
+    void DispatchIndirect(RenderHandle bufferHandle, uint32_t offset) override;
 
-    void BindPipeline(const RenderHandle psoHandle) override;
+    void BindPipeline(RenderHandle psoHandle) override;
 
     void PushConstantData(
-        const struct RENDER_NS::PushConstant& pushConstant, const BASE_NS::array_view<const uint8_t> data) override;
+        const struct RENDER_NS::PushConstant& pushConstant, BASE_NS::array_view<const uint8_t> data) override;
     void PushConstant(const struct RENDER_NS::PushConstant& pushConstant, const uint8_t* data) override;
 
-    void BindVertexBuffers(const BASE_NS::array_view<const VertexBuffer> vertexBuffers) override;
+    void BindVertexBuffers(BASE_NS::array_view<const VertexBuffer> vertexBuffers) override;
     void BindIndexBuffer(const IndexBuffer& indexBuffer) override;
 
-    void BeginRenderPass(const RenderPassDesc& renderPassDesc,
-        const BASE_NS::array_view<const RenderPassSubpassDesc> subpassDescs) override;
-    void BeginRenderPass(const RenderPassDesc& renderPassDesc, const uint32_t subpassStartIdx,
+    void BeginRenderPass(
+        const RenderPassDesc& renderPassDesc, BASE_NS::array_view<const RenderPassSubpassDesc> subpassDescs) override;
+    void BeginRenderPass(const RenderPassDesc& renderPassDesc, uint32_t subpassStartIdx,
         const RenderPassSubpassDesc& subpassDescs) override;
     void EndRenderPass() override;
 
@@ -527,60 +545,63 @@ public:
     void AddCustomBarrierPoint() override;
 
     void CustomMemoryBarrier(const GeneralBarrier& source, const GeneralBarrier& destination) override;
-    void CustomBufferBarrier(const RenderHandle handle, const BufferResourceBarrier& source,
-        const BufferResourceBarrier& destination, const uint32_t byteOffset, const uint32_t byteSize) override;
-    void CustomImageBarrier(const RenderHandle handle, const ImageResourceBarrier& destination,
+    void CustomBufferBarrier(RenderHandle handle, const BufferResourceBarrier& source,
+        const BufferResourceBarrier& destination, uint32_t byteOffset, uint32_t byteSize) override;
+    void CustomImageBarrier(RenderHandle handle, const ImageResourceBarrier& destination,
         const ImageSubresourceRange& imageSubresourceRange) override;
-    void CustomImageBarrier(const RenderHandle handle, const ImageResourceBarrier& source,
+    void CustomImageBarrier(RenderHandle handle, const ImageResourceBarrier& source,
         const ImageResourceBarrier& destination, const ImageSubresourceRange& imageSubresourceRange) override;
 
     void CopyBufferToBuffer(
-        const RenderHandle sourceHandle, const RenderHandle destinationHandle, const BufferCopy& bufferCopy) override;
-    void CopyBufferToImage(const RenderHandle sourceHandle, const RenderHandle destinationHandle,
-        const BufferImageCopy& bufferImageCopy) override;
-    void CopyImageToBuffer(const RenderHandle sourceHandle, const RenderHandle destinationHandle,
-        const BufferImageCopy& bufferImageCopy) override;
+        RenderHandle sourceHandle, RenderHandle destinationHandle, const BufferCopy& bufferCopy) override;
+    void CopyBufferToImage(
+        RenderHandle sourceHandle, RenderHandle destinationHandle, const BufferImageCopy& bufferImageCopy) override;
+    void CopyImageToBuffer(
+        RenderHandle sourceHandle, RenderHandle destinationHandle, const BufferImageCopy& bufferImageCopy) override;
     void CopyImageToImage(
-        const RenderHandle sourceHandle, const RenderHandle destinationHandle, const ImageCopy& imageCopy) override;
+        RenderHandle sourceHandle, RenderHandle destinationHandle, const ImageCopy& imageCopy) override;
 
-    void BlitImage(const RenderHandle sourceImageHandle, const RenderHandle destinationImageHandle,
-        const ImageBlit& imageBlit, const Filter filter) override;
+    void BlitImage(RenderHandle sourceImageHandle, RenderHandle destinationImageHandle, const ImageBlit& imageBlit,
+        Filter filter) override;
 
-    void UpdateDescriptorSet(
-        const RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources) override;
-    void UpdateDescriptorSets(const BASE_NS::array_view<const RenderHandle> handles,
-        const BASE_NS::array_view<const DescriptorSetLayoutBindingResources> bindingResources) override;
-    void BindDescriptorSet(const uint32_t set, const RenderHandle handle) override;
-    void BindDescriptorSet(const uint32_t set, const RenderHandle handle,
-        const BASE_NS::array_view<const uint32_t> dynamicOffsets) override;
-    void BindDescriptorSets(const uint32_t firstSet, const BASE_NS::array_view<const RenderHandle> handles) override;
-    void BindDescriptorSet(const uint32_t set, const BindDescriptorSetData& desriptorSetData) override;
+    void UpdateDescriptorSet(RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources) override;
+    void UpdateDescriptorSets(BASE_NS::array_view<const RenderHandle> handles,
+        BASE_NS::array_view<const DescriptorSetLayoutBindingResources> bindingResources) override;
+    void BindDescriptorSet(uint32_t set, RenderHandle handle) override;
+    void BindDescriptorSet(
+        uint32_t set, RenderHandle handle, BASE_NS::array_view<const uint32_t> dynamicOffsets) override;
+    void BindDescriptorSets(uint32_t firstSet, BASE_NS::array_view<const RenderHandle> handles) override;
+    void BindDescriptorSet(uint32_t set, const BindDescriptorSetData& desriptorSetData) override;
     void BindDescriptorSets(
-        const uint32_t firstSet, const BASE_NS::array_view<const BindDescriptorSetData> descriptorSetData) override;
+        uint32_t firstSet, BASE_NS::array_view<const BindDescriptorSetData> descriptorSetData) override;
 
     void BuildAccelerationStructures(const AccelerationStructureBuildGeometryData& geometry,
-        const BASE_NS::array_view<const AccelerationStructureGeometryTrianglesData> triangles,
-        const BASE_NS::array_view<const AccelerationStructureGeometryAabbsData> aabbs,
-        const BASE_NS::array_view<const AccelerationStructureGeometryInstancesData> instances) override;
+        BASE_NS::array_view<const AccelerationStructureGeometryTrianglesData> triangles,
+        BASE_NS::array_view<const AccelerationStructureGeometryAabbsData> aabbs,
+        BASE_NS::array_view<const AccelerationStructureGeometryInstancesData> instances) override;
 
-    void ClearColorImage(const RenderHandle handle, const ClearColorValue color,
-        const BASE_NS::array_view<const ImageSubresourceRange> ranges) override;
+    void ClearColorImage(
+        RenderHandle handle, ClearColorValue color, BASE_NS::array_view<const ImageSubresourceRange> ranges) override;
 
     // dynamic states
     void SetDynamicStateViewport(const ViewportDesc& viewportDesc) override;
     void SetDynamicStateScissor(const ScissorDesc& scissorDesc) override;
-    void SetDynamicStateLineWidth(const float lineWidth) override;
+    void SetDynamicStateLineWidth(float lineWidth) override;
     void SetDynamicStateDepthBias(
-        const float depthBiasConstantFactor, const float depthBiasClamp, const float depthBiasSlopeFactor) override;
-    void SetDynamicStateBlendConstants(const BASE_NS::array_view<const float> blendConstants) override;
-    void SetDynamicStateDepthBounds(const float minDepthBounds, const float maxDepthBounds) override;
-    void SetDynamicStateStencilCompareMask(const StencilFaceFlags faceMask, const uint32_t compareMask) override;
-    void SetDynamicStateStencilWriteMask(const StencilFaceFlags faceMask, const uint32_t writeMask) override;
-    void SetDynamicStateStencilReference(const StencilFaceFlags faceMask, const uint32_t reference) override;
+        float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) override;
+    void SetDynamicStateBlendConstants(BASE_NS::array_view<const float> blendConstants) override;
+    void SetDynamicStateDepthBounds(float minDepthBounds, float maxDepthBounds) override;
+    void SetDynamicStateStencilCompareMask(StencilFaceFlags faceMask, uint32_t compareMask) override;
+    void SetDynamicStateStencilWriteMask(StencilFaceFlags faceMask, uint32_t writeMask) override;
+    void SetDynamicStateStencilReference(StencilFaceFlags faceMask, uint32_t reference) override;
     void SetDynamicStateFragmentShadingRate(
         const Size2D& fragmentSize, const FragmentShadingRateCombinerOps& combinerOps) override;
 
     void SetExecuteBackendFramePosition() override;
+
+    void BeginDebugMarker(BASE_NS::string_view name) override;
+    void BeginDebugMarker(BASE_NS::string_view name, BASE_NS::Math::Vec4 color) override;
+    void EndDebugMarker() override;
 
     // IInterface
     const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
@@ -600,7 +621,7 @@ private:
     // add barrier/synchronization point where descriptor resources need to be synchronized
     // on gfx this happens before BeginRenderPass()
     // on compute this happens before Dispatch -methods
-    void AddBarrierPoint(const RenderCommandType renderCommandType);
+    void AddBarrierPoint(RenderCommandType renderCommandType);
 
     bool ProcessInputAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
         RenderPassAttachmentResourceStates& subpassResourceStates);
@@ -664,6 +685,8 @@ private:
     bool enableMultiQueue_ { false };
     // true if valid multi-queue gpu resource transfers are created in render node graph
     bool validReleaseAcquire_ { false };
+    // true if has any global descriptor set bindings, needed for global descriptor set dependencies
+    bool hasGlobalDescriptorSetBindings_ { false };
 
     // true if render pass has been begun with subpasscount > 1 and not all subpasses given
     bool hasMultiRpCommandListSubpasses_ { false };
@@ -694,6 +717,14 @@ private:
 
     // linear allocator for render command list commands
     LinearAllocatorStruct allocator_;
+
+#if (RENDER_DEBUG_MARKERS_ENABLED == 1)
+    // need to end at some point
+    struct DebugMarkerStack {
+        uint32_t stackCounter { 0U };
+    };
+    DebugMarkerStack debugMarkerStack_;
+#endif
 };
 RENDER_END_NAMESPACE()
 

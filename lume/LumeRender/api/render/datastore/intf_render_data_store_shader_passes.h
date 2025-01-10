@@ -27,7 +27,7 @@
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
-/** @ingroup group_render_IrenderDataStoreShaderPasses */
+/** @ingroup group_render_IRenderDataStoreShaderPasses */
 /** IRenderDataStoreShaderPasses interface.
  * Internally synchronized.
  * The data should not be added during render front-end.
@@ -70,7 +70,7 @@ public:
      */
     virtual void AddComputeData(BASE_NS::string_view name, BASE_NS::array_view<const ComputePassData> data) = 0;
 
-    /** Get compute data per block (name).
+    /** Get render data per block (name).
      * @param name Name of the data block. One can add data to same named block multiple times during a frame.
      * @return Render pass data.
      */
@@ -85,34 +85,34 @@ public:
     /** Get all rendering data.
      * @return Returns all RenderPassData.
      */
-     virtual BASE_NS::vector<RenderPassData> GetRenderData() const = 0;
+    virtual BASE_NS::vector<RenderPassData> GetRenderData() const = 0;
 
-    /** Get all rendering data.
-     * @return Returns all RenderPassData.
+    /** Get all compute data.
+     * @return Returns all ComputePassData.
      */
-     virtual BASE_NS::vector<ComputePassData> GetComputeData() const = 0;
+    virtual BASE_NS::vector<ComputePassData> GetComputeData() const = 0;
 
     /** Get render property binding info.
-     * @param name Name of the data block. One can add data to named block multiple times during a frame.
+     * @param name Name of the data block. One can add data to same named block multiple times during a frame.
      * @return PropertyBindingDataInfo Returns all render related.
      */
-     virtual PropertyBindingDataInfo GetRenderPropertyBindingInfo(BASE_NS::string_view name) const = 0;
+    virtual PropertyBindingDataInfo GetRenderPropertyBindingInfo(BASE_NS::string_view name) const = 0;
 
-    /** Get render property binding info.
-     * @param name Name of the data block. One can add data to named block multiple times during a frame.
+    /** Get compute property binding info.
+     * @param name Name of the data block. One can add data to same named block multiple times during a frame.
      * @return PropertyBindingDataInfo Returns all compute related.
      */
-     virtual PropertyBindingDataInfo GetComputePropertyBindingInfo(BASE_NS::string_view name) const = 0;
+    virtual PropertyBindingDataInfo GetComputePropertyBindingInfo(BASE_NS::string_view name) const = 0;
 
     /** Get all render property binding info.
      * @return PropertyBindingDataInfo Returns all render related.
      */
-     virtual PropertyBindingDataInfo GetRenderPropertyBindingInfo() const = 0;
+    virtual PropertyBindingDataInfo GetRenderPropertyBindingInfo() const = 0;
 
     /** Get all compute property binding info.
      * @return PropertyBindingDataInfo Returns all compute related.
      */
-     virtual PropertyBindingDataInfo GetComputePropertyBindingInfo() const = 0;
+    virtual PropertyBindingDataInfo GetComputePropertyBindingInfo() const = 0;
 
 protected:
     virtual ~IRenderDataStoreShaderPasses() override = default;

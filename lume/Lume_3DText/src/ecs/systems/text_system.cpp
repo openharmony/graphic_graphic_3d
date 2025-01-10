@@ -16,7 +16,9 @@
 #include "text_system.h"
 
 #include <ComponentTools/component_query.h>
+#if defined(TEXT3D_ENABLE_EXTRUDING) && (TEXT3D_ENABLE_EXTRUDING)
 #include <tesselator.h>
+#endif
 
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/mesh_component.h>
@@ -88,18 +90,19 @@ MeshData GenerateMeshData(FONT_NS::IFont& font, BASE_NS::string_view text)
         data.uvs.push_back(info.tl);
 
         data.indices.push_back(i0);
-        data.indices.push_back(i0 + 2U); // 2U index
-        data.indices.push_back(i0 + 3U); // 3U index
+        data.indices.push_back(i0 + 2U); // 2U : idx
+        data.indices.push_back(i0 + 3U); // 3U : idx
 
         data.indices.push_back(i0);
         data.indices.push_back(i0 + 1U);
-        data.indices.push_back(i0 + 2U); // 2U index
+        data.indices.push_back(i0 + 2U); // 2U : idx
     }
     // +z facing normal for each vertex
     data.normals.append(data.positions.size(), { 0.f, 0.f, 1.f });
     return data;
 }
 
+#if defined(TEXT3D_ENABLE_EXTRUDING) && (TEXT3D_ENABLE_EXTRUDING)
 void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount, const size_t vertexOffset,
     const float depth, const TESSreal* vertices, const float posX, const Font::GlyphInfo& info,
     const TESSindex* elements, const Font::GlyphMetrics& metrics, int& elementOffset, MeshData& data)
@@ -107,11 +110,11 @@ void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount,
     // front face vertices
     for (size_t ii = 0; ii < vertexCount; ii++) {
         const BASE_NS::Math::Vec3 pos(
-            vertices[2 * ii] + (posX + metrics.left - metrics.leftBearing), vertices[2 * ii + 1], 0.f); // 2: index
+            vertices[2 * ii] + (posX + metrics.left - metrics.leftBearing), vertices[2 * ii + 1], 0.f); // 2 ；idx
 
         const BASE_NS::Math::Vec2 uv(
-            info.tl.x + (vertices[2 * ii] / (metrics.right - metrics.left)) * (info.br.x - info.tl.x), // 2: index
-            info.br.y + (vertices[2 * ii + 1] / (metrics.top - metrics.bottom)) * (info.tl.y - info.br.y)); // 2: index
+            info.tl.x + (vertices[2 * ii] / (metrics.right - metrics.left)) * (info.br.x - info.tl.x), // 2 ： idx
+            info.br.y + (vertices[2 * ii + 1] / (metrics.top - metrics.bottom)) * (info.tl.y - info.br.y)); // 2 : idx
 
         data.positions.push_back(pos);
         data.uvs.push_back(uv);
@@ -120,10 +123,10 @@ void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount,
     }
 
     // front face indices
-    for (size_t ii = 0; ii < elementCount * 3; ii += 3) { // 3: index
+    for (size_t ii = 0; ii < elementCount * 3; ii += 3) { // 3 : size
         const uint16_t v0 = static_cast<uint16_t>(elements[ii] + vertexOffset);
         const uint16_t v1 = static_cast<uint16_t>(elements[ii + 1] + vertexOffset);
-        const uint16_t v2 = static_cast<uint16_t>(elements[ii + 2] + vertexOffset);
+        const uint16_t v2 = static_cast<uint16_t>(elements[ii + 2] + vertexOffset); // 2 : idx
 
         data.indices.push_back(v2);
         data.indices.push_back(v1);
@@ -133,7 +136,7 @@ void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount,
     // back face vertices
     for (size_t ii = 0; ii < vertexCount; ii++) {
         const BASE_NS::Math::Vec3 pos(
-            vertices[2 * ii] + (posX + metrics.left - metrics.leftBearing), vertices[2 * ii + 1], -depth); // 2: index
+            vertices[2 * ii] + (posX + metrics.left - metrics.leftBearing), vertices[2 * ii + 1], -depth); // 2 : idx
 
         const BASE_NS::Math::Vec2 uv = data.uvs[ii];
 
@@ -144,10 +147,10 @@ void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount,
     }
 
     // back face indices
-    for (size_t ii = 0; ii < elementCount * 3; ii += 3) { // 3: index
+    for (size_t ii = 0; ii < elementCount * 3; ii += 3) { // 3 : idx
         const uint16_t v0 = static_cast<uint16_t>(elements[ii] + vertexOffset + vertexCount);
         const uint16_t v1 = static_cast<uint16_t>(elements[ii + 1] + vertexOffset + vertexCount);
-        const uint16_t v2 = static_cast<uint16_t>(elements[ii + 2] + vertexOffset + vertexCount);
+        const uint16_t v2 = static_cast<uint16_t>(elements[ii + 2] + vertexOffset + vertexCount); // 2 : idx
 
         data.indices.push_back(v0);
         data.indices.push_back(v1);
@@ -188,7 +191,7 @@ void GenerateSideFaces(const float depth, const float posX, const Font::GlyphInf
             data.uvs.emplace_back(u2, info.br.y);
             data.uvs.emplace_back(u2, info.tl.y);
 
-            elementOffset += 4; // 4: offset index
+            elementOffset += 4; // 4 : offset
 
             const BASE_NS::Math::Vec3 edge1 = backFacePos1 - frontFacePos1;
             const BASE_NS::Math::Vec3 edge2 = frontFacePos2 - frontFacePos1;
@@ -199,16 +202,16 @@ void GenerateSideFaces(const float depth, const float posX, const Font::GlyphInf
             data.normals.push_back(-normal);
             data.normals.push_back(-normal);
 
-            const size_t sideVertOffset = data.positions.size() - 4; // 4 : offset
+            const size_t sideVertOffset = data.positions.size() - 4; // 4:size
 
             // side face indices
-            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2)); // 2: index
+            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2)); // 2 : offset
             data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 1));
             data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 0));
 
-            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 3)); // 3: index
+            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 3)); // 3 : idx
             data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 1));
-            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2)); // 2: index
+            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2)); // 2 : idx
         }
     }
 }
@@ -230,11 +233,11 @@ MeshData GenerateMeshData3D(FONT_NS::IFont& font, BASE_NS::string_view text, con
         const auto contours = font.GetGlyphContours(glyphIndex);
 
         for (const auto& contour : contours) {
-            tessAddContour(tessellator, 2, contour.points.data(), sizeof(BASE_NS::Math::Vec2), // 2: index
+            tessAddContour(tessellator, 2, contour.points.data(), sizeof(BASE_NS::Math::Vec2), // 2 :size
                 static_cast<int>(contour.points.size()));
         }
 
-        if (tessTesselate(tessellator, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, nullptr)) { // 2、3：index
+        if (tessTesselate(tessellator, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, nullptr)) { // 3,2 :size
             const size_t vertexCount = static_cast<size_t>(tessGetVertexCount(tessellator));
             const TESSreal* vertices = tessGetVertices(tessellator);
             const size_t elementCount = static_cast<size_t>(tessGetElementCount(tessellator));
@@ -255,6 +258,7 @@ MeshData GenerateMeshData3D(FONT_NS::IFont& font, BASE_NS::string_view text, con
     tessDeleteTess(tessellator);
     return data;
 }
+#endif
 
 template<typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexcept
@@ -414,6 +418,11 @@ bool TextSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
                 pos->second.font = fontManager_->CreateFont(*typeface);
             }
         }
+        if (!pos->second.font) {
+            CORE_LOG_ONCE_E(to_hex(entity.id), "Failed to create font with '%s' '%s'", textHandle->fontFamily.data(),
+                textHandle->fontStyle.data());
+            continue;
+        }
         if (pos->second.fontSize != textHandle->fontSize) {
             pos->second.fontSize = textHandle->fontSize;
             pos->second.font->SetSize(textHandle->fontSize);
@@ -451,10 +460,14 @@ void TextSystem::GenerateMesh(const TextComponent& textComponent, CORE_NS::Entit
         return;
     }
 
-    const auto data = textComponent.fontMethod == TextComponent::FontMethod::TEXT3D
-                          ? GenerateMeshData3D(*cached.font, textComponent.text, cached.font3DThickness)
-                          : GenerateMeshData(*cached.font, textComponent.text);
-
+#if defined(TEXT3D_ENABLE_EXTRUDING) && (TEXT3D_ENABLE_EXTRUDING)
+    const bool extrudedGeometry = (textComponent.fontMethod == TextComponent::FontMethod::TEXT3D);
+    const auto data = extrudedGeometry ? GenerateMeshData3D(*cached.font, textComponent.text, cached.font3DThickness)
+                                       : GenerateMeshData(*cached.font, textComponent.text);
+#else
+    const bool extrudedGeometry = false;
+    const auto data = GenerateMeshData(*cached.font, textComponent.text);
+#endif
     auto builder = CreateInstance<IMeshBuilder>(*renderClassFactory, UID_MESH_BUILDER);
     builder->Initialize(GetVertexInputDeclaration(*renderContext), 1U);
     builder->AddSubmesh(IMeshBuilder::Submesh { static_cast<uint32_t>(data.positions.size()),
@@ -463,9 +476,10 @@ void TextSystem::GenerateMesh(const TextComponent& textComponent, CORE_NS::Entit
     builder->Allocate();
 
     static constexpr auto empty = IMeshBuilder::DataBuffer {};
-    builder->SetVertexData(
-        0U, FillData(data.positions), FillData(data.normals), FillData(data.uvs), empty, empty, empty);
-    builder->SetIndexData(0, FillData(data.indices));
+    auto positionData = FillData(data.positions);
+    builder->SetVertexData(0U, positionData, FillData(data.normals), FillData(data.uvs), empty, empty, empty);
+    builder->CalculateAABB(0U, positionData);
+    builder->SetIndexData(0U, FillData(data.indices));
 
     auto meshEntity = builder->CreateMesh(ecs_);
     renderMeshManager_->Create(entity);
@@ -475,14 +489,21 @@ void TextSystem::GenerateMesh(const TextComponent& textComponent, CORE_NS::Entit
 
     // NOTE: ATM the materials created in the system are not available current frame
     // The create-event happens after the system are processed
-    if (data.atlas || textComponent.fontMethod == TextComponent::FontMethod::TEXT3D) {
+    if (data.atlas || extrudedGeometry) {
         auto* materialManager = GetManager<IMaterialComponentManager>(ecs_);
-        materialManager->Create(entity);
-        auto materialHandle = materialManager->Write(entity);
+        auto id = materialManager->GetComponentId(entity);
+        if (id == IComponentManager::INVALID_COMPONENT_ID) {
+            materialManager->Create(entity);
+            id = materialManager->GetComponentId(entity);
+        }
+        auto materialHandle = materialManager->Write(id);
+        if (!materialHandle) {
+            return;
+        }
         materialHandle->textures[0U].image =
             GetOrCreateEntityReference(ecs_.GetEntityManager(), *renderHandleManager_, data.atlas);
 
-        if (textComponent.fontMethod != TextComponent::FontMethod::TEXT3D) {
+        if (!extrudedGeometry) {
             const auto& shaderData =
                 (textComponent.fontMethod == TextComponent::FontMethod::SDF) ? sdfShader_ : rasterShader_;
             materialHandle->materialShader.shader =

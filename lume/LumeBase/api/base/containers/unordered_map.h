@@ -184,28 +184,110 @@ struct node_handle {
     using key_type = typename data_type::value_type::first_type;
     using mapped_type = typename data_type::value_type::second_type;
     using value_type = data_type;
+
     [[nodiscard]] bool empty() const noexcept
     {
         return pointer == nullptr;
     }
+
     explicit operator bool() const noexcept
     {
         return !empty();
     }
+
     key_type& key() const
     {
         return pointer->data.first;
     }
+
     mapped_type& mapped() const
     {
         return pointer->data.second;
     }
+
+    ~node_handle()
+    {
+        if (pointer) {
+            if constexpr (!__is_trivially_destructible(value_type)) {
+                pointer->~data_type();
+            }
+            allocator_.free(pointer);
+        }
+    }
+
+    node_handle() : allocator_ { default_allocator() } {}
+    node_handle(data_type* pointer, allocator& alloc) : pointer { pointer }, allocator_ { alloc } {}
+
+    node_handle(node_handle&& other) noexcept
+        : pointer { exchange(other.pointer, nullptr) }, allocator_ { other.allocator_ }
+    {}
+    node_handle& operator=(node_handle&& other) noexcept
+    {
+        if (&other != this) {
+            if (pointer) {
+                if constexpr (!__is_trivially_destructible(value_type)) {
+                    pointer->~data_type();
+                }
+                allocator_.free(pointer);
+            }
+            pointer = exchange(other.pointer, nullptr);
+            allocator_ = other.allocator_;
+        }
+        return *this;
+    }
+
+    node_handle(const node_handle&) = delete;
+    node_handle& operator=(const node_handle&) = delete;
+
     data_type* pointer { nullptr };
+
+private:
+    // Wrapper to create a "re-seatable" reference.
+    class Wrapper {
+    public:
+        inline Wrapper(allocator& a) : allocator_(&a) {}
+
+        inline Wrapper& operator=(allocator& a)
+        {
+            allocator_ = &a;
+            return *this;
+        }
+
+        inline void* alloc(allocator::size_type size)
+        {
+            if ((allocator_) && (allocator_->alloc)) {
+                return allocator_->alloc(allocator_->instance, size);
+            }
+            return nullptr;
+        }
+
+        inline void free(void* ptr)
+        {
+            if ((allocator_) && (allocator_->free)) {
+                allocator_->free(allocator_->instance, ptr);
+            }
+        }
+
+        allocator& get()
+        {
+            BASE_ASSERT(allocator_ != nullptr);
+            return *allocator_;
+        }
+
+        const allocator& get() const
+        {
+            BASE_ASSERT(allocator_ != nullptr);
+            return *allocator_;
+        }
+
+    private:
+        allocator* allocator_ { nullptr };
+    } allocator_;
 };
 
 template<class Key, class T>
 class unordered_map_base {
-    constexpr static uint32_t DEFAULT_SHIFT_AMOUNT = 4; // 1<<4 (16) initial buckets, seems to match ms stl.
+    constexpr static uint32_t DEFAULT_SHIFT_AMOUNT = 4U; // 1<<4 (16) initial buckets, seems to match ms stl.
     constexpr uint32_t get_sa(size_t const count, uint32_t const sa)
     {
         uint32_t ret = sa;
@@ -250,6 +332,27 @@ public:
     {
         clear();
     }
+
+    // The only way to get initializer_lists is to use std::initializer_list.
+    // Also initializer_lists are bad since they cause copies. please avoid them.
+    unordered_map_base(std::initializer_list<value_type> init)
+        : shift_amount_ { get_sa(init.size(), DEFAULT_SHIFT_AMOUNT) }, buckets_ { 1ull << shift_amount_ }
+    {
+        for (auto&& value : init) {
+            insert(value);
+        }
+    }
+
+    unordered_map_base& operator=(std::initializer_list<T> init)
+    {
+        clear();
+        reserve(init.size());
+        for (auto&& value : init) {
+            insert(value);
+        }
+        return *this;
+    }
+
     void reserve(size_t count)
     {
         const uint32_t new_shift_amount = get_sa(count, DEFAULT_SHIFT_AMOUNT);
@@ -275,12 +378,9 @@ public:
         }
     }
     unordered_map_base(unordered_map_base&& other) noexcept
-        : size_ { other.size_ }, shift_amount_ { other.shift_amount_ }, buckets_ { BASE_NS::move(other.buckets_) }
-    {
-        // move..
-        other.size_ = 0;
-        other.shift_amount_ = 0;
-    }
+        : size_ { BASE_NS::exchange(other.size_, 0U) },
+          shift_amount_ { BASE_NS::exchange(other.shift_amount_, 0U) }, buckets_ { BASE_NS::move(other.buckets_) }
+    {}
     unordered_map_base(const unordered_map_base& other)
         : shift_amount_ { other.shift_amount_ }, buckets_ { 1ull << shift_amount_ }
     {
@@ -359,7 +459,7 @@ public:
     }
     node_type extract(const key_type& key)
     {
-        return node_type { detach_entry(key) };
+        return node_type { detach_entry(key), buckets_.getAllocator() };
     }
     pair<iterator, bool> insert(value_type&& v)
     {
@@ -387,17 +487,17 @@ public:
             node_type node;
         };
         if (nh.empty()) {
-            return insert_return_type { end(), false };
+            return insert_return_type { end(), false, BASE_NS::move(nh) };
         }
         const auto& key = nh.pointer->data.first;
         const auto ind = index(key);
         auto res = get_entry(ind, key);
         if (res) {
-            return insert_return_type { iterator { *this, res }, false, nh };
+            return insert_return_type { iterator { *this, res }, false, BASE_NS::move(nh) };
         }
         auto nl = nh.pointer;
         nh.pointer = nullptr;
-        return insert_return_type { iterator { *this, create_entry(ind, nl) }, true };
+        return insert_return_type { iterator { *this, create_entry(ind, nl) }, true, BASE_NS::move(nh) };
     }
     template<class M>
     pair<iterator, bool> insert_or_assign(const key_type& key, M&& value)
@@ -486,9 +586,8 @@ public:
         if (&other != this) {
             // move..
             clear();
-            size_ = other.size_;
-            other.size_ = 0;
-            shift_amount_ = other.shift_amount_;
+            size_ = BASE_NS::exchange(other.size_, 0U);
+            shift_amount_ = BASE_NS::exchange(other.shift_amount_, 0U);
             buckets_ = BASE_NS::move(other.buckets_);
         }
         return *this;
@@ -500,20 +599,21 @@ public:
             clear();
             shift_amount_ = other.shift_amount_;
             buckets_.resize(1ull << shift_amount_);
-            for (auto b : other.buckets_) {
+            for (auto* b : other.buckets_) {
+                if (!b) {
+                    continue;
+                }
                 list_node* last = nullptr;
-                if (b) {
-                    uint32_t ind = index(b->data.first);
-                    for (; b != nullptr; b = b->next) {
-                        auto nb = allocate(b->data);
-                        if (last == nullptr) {
-                            last = buckets_[ind] = nb;
-                        } else {
-                            nb->prev = last;
-                            last = last->next = nb;
-                        }
-                        size_++;
+                const uint32_t ind = index(b->data.first);
+                for (; b != nullptr; b = b->next) {
+                    auto* nb = allocate(b->data);
+                    if (last == nullptr) {
+                        last = buckets_[ind] = nb;
+                    } else {
+                        nb->prev = last;
+                        last = last->next = nb;
                     }
+                    size_++;
                 }
             }
         }
@@ -525,26 +625,15 @@ protected:
     friend const_iterator;
 
     // helpers for the iterators. (perhaps link the nodes across buckets?)
-    list_node* advance(const const_iterator& it, uint32_t count = 1) const
+    list_node* advance(const const_iterator& it) const
     {
         list_node* next = nullptr;
-        while (count--) {
-            if (it.it_->next) {
-                next = it.it_->next;
-            } else {
-                // okay, advance to next bucket..
-                uint32_t ind = index(it.it_->data.first);
-                for (;;) {
-                    ind++;
-                    if (ind == buckets_.size()) {
-                        next = nullptr;
-                        break;
-                    }
-                    next = buckets_[ind];
-                    if (next) {
-                        break;
-                    }
-                }
+        if (it.it_->next) {
+            next = it.it_->next;
+        } else {
+            // okay, advance to next bucket..
+            for (uint32_t ind = index(it.it_->data.first) + 1U; (ind < buckets_.size()) && (!next); ++ind) {
+                next = buckets_[ind];
             }
         }
         return next;
@@ -650,6 +739,7 @@ protected:
         }
         return 0u;
     }
+
     template<class k>
     list_node* detach_entry(const k& key)
     {
@@ -670,6 +760,7 @@ protected:
         }
         return entry;
     }
+
     void rehash()
     {
         BASE_NS::vector<list_node*> tmp(BASE_NS::move(buckets_));
@@ -743,6 +834,10 @@ public:
     using base::operator[];
     using base::erase;
 
+    auto& operator[](const char* const key)
+    {
+        return operator[](string_view(key));
+    }
     auto& operator[](const string_view& key)
     {
         const auto ind = base::index(key);
@@ -795,6 +890,11 @@ public:
         }
         entry = base::create_entry(ind, typename base::key_type(key), BASE_NS::forward<M>(value));
         return { base::make_iterator(entry), true };
+    }
+
+    auto extract(const string_view& key)
+    {
+        return typename base::node_type { base::detach_entry(key), base::buckets_.getAllocator() };
     }
 };
 BASE_END_NAMESPACE()

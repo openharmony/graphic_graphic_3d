@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__IO__MEMORY_FILE_H
-#define CORE__IO__MEMORY_FILE_H
+#ifndef CORE_IO_MEMORY_FILE_H
+#define CORE_IO_MEMORY_FILE_H
 
 #include <cstddef>
 #include <cstdint>
@@ -59,7 +59,7 @@ private:
 /** Read-only memory file. */
 class MemoryFile final : public IFile {
 public:
-    explicit MemoryFile(std::shared_ptr<MemoryFileStorage>&& buffer);
+    MemoryFile(std::shared_ptr<MemoryFileStorage>&& buffer, Mode mode);
 
     ~MemoryFile() override = default;
 
@@ -70,6 +70,8 @@ public:
     uint64_t Read(void* buffer, uint64_t count) override;
 
     uint64_t Write(const void* buffer, uint64_t count) override;
+
+    uint64_t Append(const void* buffer, uint64_t count, uint64_t chunkSize) override;
 
     uint64_t GetLength() const override;
 
@@ -86,7 +88,8 @@ protected:
 private:
     uint64_t index_ { 0 };
     std::shared_ptr<MemoryFileStorage> buffer_;
+    Mode mode_ { Mode::INVALID };
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE__IO__MEMORY_FILE_H
+#endif // CORE_IO_MEMORY_FILE_H

@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DEFAULT_MATERIAL_PACKING_COMMON_H
-#define SHADERS__COMMON__3D_DEFAULT_MATERIAL_PACKING_COMMON_H
+#ifndef SHADERS_COMMON_3D_DEFAULT_MATERIAL_PACKING_COMMON_H
+#define SHADERS_COMMON_3D_DEFAULT_MATERIAL_PACKING_COMMON_H
 
 #include "3d/shaders/common/3d_dm_structures_common.h"
 #include "render/shaders/common/render_compatibility_common.h"
@@ -182,4 +182,4 @@ void GetUnpackVelocityAndNormal(in vec4 packed, out vec2 velocity, out vec3 norm
 
 #endif
 
-#endif // SHADERS__COMMON__3D_DEFAULT_MATERIAL_PACKING_COMMON_H
+#endif // SHADERS_COMMON_3D_DEFAULT_MATERIAL_PACKING_COMMON_H

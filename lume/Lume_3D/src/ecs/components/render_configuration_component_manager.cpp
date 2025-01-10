@@ -20,7 +20,7 @@
 #include "ComponentTools/base_manager.inl"
 
 #define IMPLEMENT_MANAGER
-#include "PropertyTools/property_macros.h"
+#include <core/property_tools/property_macros.h>
 
 CORE_BEGIN_NAMESPACE()
 using CORE3D_NS::RenderConfigurationComponent;
@@ -31,27 +31,16 @@ DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowQuality);
 DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowSmoothness);
 
 // Declare their metadata
-BEGIN_ENUM(SceneShadowTypeMetaData, RenderConfigurationComponent::SceneShadowType)
-DECL_ENUM(RenderConfigurationComponent::SceneShadowType, PCF, "PCF (Percentage Closer Filtering)")
-DECL_ENUM(RenderConfigurationComponent::SceneShadowType, VSM, "VSM (Variance Shadow Maps)")
-END_ENUM(SceneShadowTypeMetaData, RenderConfigurationComponent::SceneShadowType)
+ENUM_TYPE_METADATA(RenderConfigurationComponent::SceneShadowType, ENUM_VALUE(PCF, "PCF (Percentage Closer Filtering)"),
+    ENUM_VALUE(VSM, "VSM (Variance Shadow Maps)"))
 
-BEGIN_ENUM(SceneShadowQualityMetaData, RenderConfigurationComponent::SceneShadowQuality)
-DECL_ENUM(RenderConfigurationComponent::SceneShadowQuality, LOW, "Low")
-DECL_ENUM(RenderConfigurationComponent::SceneShadowQuality, NORMAL, "Normal")
-DECL_ENUM(RenderConfigurationComponent::SceneShadowQuality, HIGH, "High")
-DECL_ENUM(RenderConfigurationComponent::SceneShadowQuality, ULTRA, "Ultra")
-END_ENUM(SceneShadowQualityMetaData, RenderConfigurationComponent::SceneShadowQuality)
+ENUM_TYPE_METADATA(RenderConfigurationComponent::SceneShadowQuality, ENUM_VALUE(LOW, "Low"),
+    ENUM_VALUE(NORMAL, "Normal"), ENUM_VALUE(HIGH, "High"), ENUM_VALUE(ULTRA, "Ultra"))
 
-BEGIN_ENUM(SceneShadowSmoothnessMetaData, RenderConfigurationComponent::SceneShadowSmoothness)
-DECL_ENUM(RenderConfigurationComponent::SceneShadowSmoothness, HARD, "Hard")
-DECL_ENUM(RenderConfigurationComponent::SceneShadowSmoothness, NORMAL, "Normal")
-DECL_ENUM(RenderConfigurationComponent::SceneShadowSmoothness, SOFT, "Soft")
-END_ENUM(SceneShadowSmoothnessMetaData, RenderConfigurationComponent::SceneShadowSmoothness)
+ENUM_TYPE_METADATA(RenderConfigurationComponent::SceneShadowSmoothness, ENUM_VALUE(HARD, "Hard"),
+    ENUM_VALUE(NORMAL, "Normal"), ENUM_VALUE(SOFT, "Soft"))
 
-BEGIN_ENUM(SceneRenderingFlagBitsMetaData, RenderConfigurationComponent::SceneRenderingFlagBits)
-DECL_ENUM(RenderConfigurationComponent::SceneRenderingFlagBits, CREATE_RNGS_BIT, "Create RNGs")
-END_ENUM(SceneRenderingFlagBitsMetaData, RenderConfigurationComponent::SceneRenderingFlagBits)
+ENUM_TYPE_METADATA(RenderConfigurationComponent::SceneRenderingFlagBits, ENUM_VALUE(CREATE_RNGS_BIT, "Create RNGs"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -66,27 +55,26 @@ using CORE_NS::PropertyFlags;
 
 class RenderConfigurationComponentManager final
     : public BaseManager<RenderConfigurationComponent, IRenderConfigurationComponentManager> {
-    BEGIN_PROPERTY(RenderConfigurationComponent, ComponentMetadata)
+    BEGIN_PROPERTY(RenderConfigurationComponent, componentMetaData_)
 #include <3d/ecs/components/render_configuration_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
 
 public:
     explicit RenderConfigurationComponentManager(IEcs& ecs)
         : BaseManager<RenderConfigurationComponent, IRenderConfigurationComponentManager>(
-              ecs, CORE_NS::GetName<RenderConfigurationComponent>())
+              ecs, CORE_NS::GetName<RenderConfigurationComponent>(), 1U)
     {}
 
     ~RenderConfigurationComponentManager() = default;
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

@@ -50,9 +50,10 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
-
     void ParseRenderNodeInputs();
+    void UpdateRenderTargets();
+
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
     struct JsonInputs {

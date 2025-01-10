@@ -127,7 +127,7 @@ void GenerateCubeGeometry(float width, float height, float depth, Geometry<uint1
         vertices.emplace_back(v2.x * width, v2.y * height, v2.z * depth);
 
         const Math::Vec3 normal = Math::Normalize(Math::Cross((v1 - v0), (v2 - v0)));
-        normals.insert(normals.end(), 3u, normal);
+        normals.append(3u, normal);
 
         uvs.emplace_back(
             CUBE_UV[CUBE_UV_INDICES[(vertexIndex + 0u) % 6u]].x, CUBE_UV[CUBE_UV_INDICES[(vertexIndex + 0u) % 6u]].y);
@@ -273,9 +273,6 @@ void GenerateConeGeometry(float radius, float length, uint32_t sectors, Geometry
 
         const uint32_t v0 = 0;
         const uint32_t v1 = startVertex + idx;
-        if (sectors == 0) {
-            return;
-        }
         const uint32_t v2 = startVertex + ((idx + 1) % sectors);
 
         indices.push_back(v0);

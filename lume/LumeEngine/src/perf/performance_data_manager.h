@@ -13,11 +13,10 @@
  * limitations under the License.
  */
 
-#ifndef CORE__PERF__PERFORMANCE_DATA_MANAGER_H
-#define CORE__PERF__PERFORMANCE_DATA_MANAGER_H
+#ifndef CORE_PERF_PERFORMANCE_DATA_MANAGER_H
+#define CORE_PERF_PERFORMANCE_DATA_MANAGER_H
 
 #include <cstdint>
-#include <map>
 #include <mutex>
 
 #include <base/containers/fixed_string.h>
@@ -27,22 +26,25 @@
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
+#include <core/intf_logger.h>
 #include <core/namespace.h>
 #include <core/perf/intf_performance_data_manager.h>
+#include <core/perf/intf_performance_trace.h>
+#include <core/plugin/intf_plugin_register.h>
 
 CORE_BEGIN_NAMESPACE()
 // if CORE_DEV_ENABLED defined the manager methods are empty
-
+class PerformanceDataManagerFactory;
 /** PerformanceDataManager.
  * Internally synchronized global singleton for timings.
  */
 class PerformanceDataManager final : public IPerformanceDataManager {
 public:
     struct InternalData;
-    using TypeDataSet = std::map<BASE_NS::fixed_string<TIMING_DATA_NAME_LENGTH>, InternalData>;
+    using TypeDataSet = BASE_NS::unordered_map<BASE_NS::fixed_string<TIMING_DATA_NAME_LENGTH>, InternalData>;
 
     ~PerformanceDataManager();
-    explicit PerformanceDataManager(const BASE_NS::string_view category);
+    PerformanceDataManager(const BASE_NS::string_view category, PerformanceDataManagerFactory& factory);
 
     PerformanceDataManager(const PerformanceDataManager&) = delete;
     PerformanceDataManager& operator=(const PerformanceDataManager&) = delete;
@@ -69,7 +71,7 @@ public:
 
 private:
     const BASE_NS::string category_;
-
+    PerformanceDataManagerFactory& factory_;
 #if (CORE_PERF_ENABLED == 1)
     mutable std::mutex dataMutex_;
 
@@ -77,8 +79,26 @@ private:
 #endif
 };
 
+class PerformanceTraceLogger final : public ILogger::IOutput {
+    PerformanceDataManagerFactory* factory_;
+    void Write(ILogger::LogLevel logLevel, BASE_NS::string_view filename, int lineNumber,
+        BASE_NS::string_view message) override;
+
+private:
+    friend class PerformanceDataManagerFactory;
+    explicit PerformanceTraceLogger(PerformanceDataManagerFactory* factory) : factory_(factory) {}
+    ~PerformanceTraceLogger() override = default;
+    void Destroy() override
+    {
+        delete this;
+    }
+};
+
 class PerformanceDataManagerFactory final : public IPerformanceDataManagerFactory {
 public:
+    explicit PerformanceDataManagerFactory(IPluginRegister& registry);
+    ~PerformanceDataManagerFactory() override;
+
     IPerformanceDataManager* Get(const BASE_NS::string_view category) override;
     BASE_NS::vector<IPerformanceDataManager*> GetAllCategories() const override;
 
@@ -87,13 +107,26 @@ public:
     IInterface* GetInterface(const BASE_NS::Uid& uid) override;
     void Ref() override;
     void Unref() override;
+    struct RegisteredPerformanceTrace {
+        BASE_NS::Uid uid;
+        IPerformanceTrace::Ptr instance;
+    };
+
+    BASE_NS::array_view<const RegisteredPerformanceTrace> GetPerformanceTraces() const;
+    IPerformanceTrace* GetFirstPerformanceTrace() const override;
+    void SetPerformanceTrace(const BASE_NS::Uid& uid, IPerformanceTrace::Ptr&& trace);
+    void RemovePerformanceTrace(const BASE_NS::Uid& uid);
+    ILogger::IOutput::Ptr GetLogger();
 
 private:
 #if (CORE_PERF_ENABLED == 1)
     mutable std::mutex mutex_;
     BASE_NS::unordered_map<BASE_NS::string, BASE_NS::unique_ptr<PerformanceDataManager>> managers_;
 #endif
+    BASE_NS::vector<RegisteredPerformanceTrace> perfTraces_;
 };
+
+IPerformanceTrace::Ptr CreatePerfTraceTracy(PluginToken);
 CORE_END_NAMESPACE()
 
-#endif // CORE__UTIL__PERFORMANCE_DATA_MANAGER_H
+#endif // CORE_UTIL_PERFORMANCE_DATA_MANAGER_H

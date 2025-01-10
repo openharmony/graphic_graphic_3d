@@ -53,6 +53,16 @@ public:
      */
     const PipelineLayout& GetPipelineLayout() const;
 
+    /** Get optional render slot.
+     * @return A render slot (optional)
+     */
+    BASE_NS::string_view GetRenderSlot() const;
+
+    /** Get optional render slot.
+     * @return A render slot (optional)
+     */
+    bool GetDefaultRenderSlot() const;
+
     /** Loads pipeline layout from json string.
      * @param jsonString A string containing valid json as content.
      * @return A structure containing result for the parsing operation.
@@ -69,6 +79,8 @@ public:
 private:
     PipelineLayout pipelineLayout_;
     BASE_NS::string uri_;
+    BASE_NS::string renderSlotName_;
+    bool renderSlotDefaultPl_ { false };
 };
 RENDER_END_NAMESPACE()
 

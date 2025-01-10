@@ -12,6 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef GLES_FUNCTIONS_H
+#define GLES_FUNCTIONS_H
 
 #if RENDER_HAS_GLES_BACKEND
 
@@ -22,7 +24,7 @@
 #include <GLES3/gl32.h>
 #include <GLES2/gl2ext.h>
 // clang-format on
-#define declare(a, b) extern a b;
+#define declare(a, b) extern "C" { extern a b; }
 #endif
 
 #if defined(_WIN32)
@@ -41,7 +43,7 @@ declare(PFNGLBLENDEQUATIONSEPARATEIPROC, glBlendEquationSeparatei);
 declare(PFNGLREADNPIXELSPROC, glReadnPixels)
 #endif
 
-    declare(PFNGLBUFFERSTORAGEEXTPROC, glBufferStorageEXT);
+declare(PFNGLBUFFERSTORAGEEXTPROC, glBufferStorageEXT);
 
 declare(PFNGLEGLIMAGETARGETTEXTURE2DOESPROC, glEGLImageTargetTexture2DOES);
 
@@ -70,7 +72,7 @@ declare(PFNGLGETQUERYOBJECTUI64VEXTPROC, glGetQueryObjectui64vEXT);
 #ifndef declare
 #include <gl/glcorearb.h>
 #include <gl/glext.h>
-#define declare(a, b) extern a b;
+#define declare(a, b) extern "C" { extern a b; }
 #endif
 
 declare(PFNGLDRAWBUFFERSPROC, glDrawBuffers);
@@ -78,6 +80,7 @@ declare(PFNGLPUSHDEBUGGROUPPROC, glPushDebugGroup);
 declare(PFNGLPOPDEBUGGROUPPROC, glPopDebugGroup);
 declare(PFNGLACTIVETEXTUREPROC, glActiveTexture);
 declare(PFNGLATTACHSHADERPROC, glAttachShader);
+declare(PFNGLDETACHSHADERPROC, glDetachShader);
 declare(PFNGLBINDBUFFERPROC, glBindBuffer);
 declare(PFNGLBINDBUFFERRANGEPROC, glBindBufferRange);
 declare(PFNGLBINDFRAMEBUFFERPROC, glBindFramebuffer);
@@ -115,6 +118,7 @@ declare(PFNGLPROGRAMUNIFORM1FVPROC, glProgramUniform1fv);
 declare(PFNGLPROGRAMUNIFORM2FVPROC, glProgramUniform2fv);
 declare(PFNGLPROGRAMUNIFORM4FVPROC, glProgramUniform4fv);
 declare(PFNGLPROGRAMUNIFORMMATRIX4FVPROC, glProgramUniformMatrix4fv);
+declare(PFNGLPROGRAMBINARYPROC, glProgramBinary);
 declare(PFNGLCULLFACEPROC, glCullFace);
 declare(PFNGLDEBUGMESSAGECALLBACKPROC, glDebugMessageCallback);
 declare(PFNGLDEBUGMESSAGECONTROLPROC, glDebugMessageControl);
@@ -161,6 +165,7 @@ declare(PFNGLGETINTEGER64VPROC, glGetInteger64v);
 declare(PFNGLGETINTEGERI_VPROC, glGetIntegeri_v);
 declare(PFNGLGETPROGRAMINFOLOGPROC, glGetProgramInfoLog);
 declare(PFNGLGETPROGRAMIVPROC, glGetProgramiv);
+declare(PFNGLGETPROGRAMBINARYPROC, glGetProgramBinary);
 declare(PFNGLGETACTIVEUNIFORMBLOCKIVPROC, glGetActiveUniformBlockiv);
 declare(PFNGLGETACTIVEUNIFORMBLOCKNAMEPROC, glGetActiveUniformBlockName);
 declare(PFNGLUNIFORMBLOCKBINDINGPROC, glUniformBlockBinding);
@@ -209,6 +214,7 @@ declare(PFNGLBUFFERSTORAGEPROC, glBufferStorage);
 declare(PFNGLCOPYIMAGESUBDATAPROC, glCopyImageSubData);
 
 declare(PFNGLTEXSTORAGE2DMULTISAMPLEPROC, glTexStorage2DMultisample);
+declare(PFNGLTEXSTORAGE3DMULTISAMPLEPROC, glTexStorage3DMultisample);
 
 declare(PFNGLGENQUERIESPROC, glGenQueries);
 declare(PFNGLDELETEQUERIESPROC, glDeleteQueries);
@@ -261,3 +267,4 @@ declare(PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC, glFramebufferTextureMultiviewOV
 #pragma(error, "Neither GL or GLES is enabled in GLFunctions.h")
 #endif
 #undef declare
+#endif /* GLES_FUNCTIONS_H */

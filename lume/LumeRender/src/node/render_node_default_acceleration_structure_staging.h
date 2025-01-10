@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
-#define RENDER_RENDER__NODE__RENDER_NODE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#ifndef RENDER_NODE_RENDER_NODE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#define RENDER_NODE_RENDER_NODE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
 
 #include <base/containers/string.h>
 #include <base/util/uid.h>
@@ -44,7 +44,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "377f5d6c-3951-4a0b-9d5b-7ef8d5e6f235" };
-    static constexpr char const* TYPE_NAME = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING";
+    static constexpr const char* TYPE_NAME = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS =
         IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_EXPLICIT_VULKAN;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -52,7 +52,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    void ExecuteFrameProcessInstanceData(RenderDataStoreDefaultAccelerationStructureStaging* dataStore);
+    void ExecuteFrameProcessInstanceData(RenderDataStoreDefaultAccelerationStructureStaging& dataStore);
 
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
@@ -60,4 +60,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_RENDER__NODE__RENDER_NODE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#endif // RENDER_NODE_RENDER_NODE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H

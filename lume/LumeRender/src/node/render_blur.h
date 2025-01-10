@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_BLUR_H
-#define RENDER_RENDER__NODE__RENDER_BLUR_H
+#ifndef RENDER_NODE_RENDER_BLUR_H
+#define RENDER_NODE_RENDER_BLUR_H
 
 #include <base/containers/string.h>
 #include <base/containers/vector.h>
@@ -43,18 +43,17 @@ public:
         uint32_t blurType { CORE_BLUR_TYPE_RGBA };
     };
     void Init(IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo);
-    void PreExecute(IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo,
-        const PostProcessConfiguration& ppConfig);
+    void PreExecute(IRenderNodeContextManager& renderNodeContextMgr, const BlurInfo& blurInfo);
     void Execute(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
         const PostProcessConfiguration& ppConfig);
 
-    DescriptorCounts GetDescriptorCounts() const;
+    static DescriptorCounts GetDescriptorCounts();
 
 private:
     void RenderData(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
         const RenderPass& renderPassBase, const PostProcessConfiguration& ppConfig);
-    void RenderGaussian(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
-        const RenderPass& renderPassBase, const PostProcessConfiguration& ppConfig);
+    void RenderGaussian(
+        IRenderCommandList& cmdList, const RenderPass& renderPassBase, const PostProcessConfiguration& ppConfig);
 
     void UpdateGlobalSet(IRenderCommandList& cmdList);
     void CreateTargets(IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::Math::UVec2 baseSize);

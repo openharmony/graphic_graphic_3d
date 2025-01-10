@@ -28,6 +28,10 @@ namespace {
 #if (RENDER_VALIDATION_ENABLED == 1)
 constexpr uint64_t HANDLE_ID_SIZE { RES_HANDLE_ID_MASK >> RES_HANDLE_ID_SHIFT };
 #endif
+
+PLUGIN_STATIC_ASSERT((RES_HANDLE_ADDITIONAL_INFO_MASK >> RES_HANDLE_ADDITIONAL_INFO_SHIFT) >
+                     RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_DYNAMIC_ADDITIONAL_STATE);
+PLUGIN_STATIC_ASSERT(RES_HANDLE_GENERATION_MASK == RENDER_HANDLE_GENERATION_MASK);
 } // namespace
 
 RenderHandle CreateGpuResourceHandle(const RenderHandleType type, const RenderHandleInfoFlags infoFlags,
@@ -82,6 +86,15 @@ RenderHandle CreateHandle(
 {
     RenderHandle handle = CreateHandle(type, index, generationIndex);
     handle.id |= (((uint64_t)additionalData << RES_HANDLE_ADDITIONAL_INFO_SHIFT) & RES_HANDLE_ADDITIONAL_INFO_MASK);
+    return handle;
+}
+
+RenderHandle CreateHandle(const RenderHandleType type, const uint32_t index, const uint32_t generationIndex,
+    const uint32_t additionalData, const uint32_t additionalIndex)
+{
+    RenderHandle handle = CreateHandle(type, index, generationIndex);
+    handle.id |= (((uint64_t)additionalData << RES_HANDLE_ADDITIONAL_INFO_SHIFT) & RES_HANDLE_ADDITIONAL_INFO_MASK);
+    handle.id |= (((uint64_t)additionalIndex << RES_HANDLE_ADDITIONAL_INDEX_SHIFT) & RES_HANDLE_ADDITIONAL_INDEX_MASK);
     return handle;
 }
 

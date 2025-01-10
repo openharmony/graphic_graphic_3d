@@ -18,6 +18,7 @@
 
 #include <cstddef>
 
+#include <render/device/intf_shader_manager.h>
 #include <render/namespace.h>
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
@@ -46,7 +47,7 @@ public:
 
     /** Creates new compute psos on demand and caches
      * @param shaderHandle Handle to shader resource
-     * @param pipelineLayoutHandle A valid handle to pipeline layout
+     * @param pipelineLayout Pipeline layout handle
      * @param shaderSpecialization Shader specialization
      * @return Compute pso handle
      */
@@ -60,6 +61,14 @@ public:
      * @return Compute pso handle
      */
     virtual RenderHandle GetComputePsoHandle(const RenderHandle shader, const PipelineLayout& pipelineLayout,
+        const ShaderSpecializationConstantDataView& shaderSpecialization) = 0;
+
+    /** Creates new compute psos on demand and caches
+     * @param shaderData Handle to shader resources
+     * @param shaderSpecialization Shader specialization
+     * @return Compute pso handle
+     */
+    virtual RenderHandle GetComputePsoHandle(const IShaderManager::ShaderData& shaderData,
         const ShaderSpecializationConstantDataView& shaderSpecialization) = 0;
 
     /** Creates new graphics psos on demand and caches. Prefer using this method.
@@ -108,6 +117,19 @@ public:
      */
     virtual RenderHandle GetGraphicsPsoHandle(const RenderHandle shaderHandle, const GraphicsState& graphicsState,
         const PipelineLayout& pipelineLayout, const VertexInputDeclarationView& vertexInputDeclarationView,
+        const ShaderSpecializationConstantDataView& shaderSpecialization,
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) = 0;
+
+    /** Creates new graphics psos on demand and caches.
+     * Add additional dynamic states and atleast prefer using dynamic viewport and dynamic scissor
+     * for less graphics pipelines
+     * All inputs are copied, ie. no need to store them
+     * @param shaderData Shader related data
+     * @param shaderSpecialization Shader specialization
+     * @param dynamicStates Dynamic state enums
+     * @return Graphics pso handle
+     */
+    virtual RenderHandle GetGraphicsPsoHandle(const IShaderManager::GraphicsShaderData& shaderData,
         const ShaderSpecializationConstantDataView& shaderSpecialization,
         const BASE_NS::array_view<const DynamicStateEnum> dynamicStates) = 0;
 

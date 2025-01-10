@@ -1,0 +1,8 @@
+EXPORTS
+	;../../lib/RelWithDebInfo/AGPEngine.lib
+	?GetPluginRegister@Core@@YAAEAVIPluginRegister@1@XZ
+	?CreatePluginRegistry@Core@@YAXAEBUPlatformCreateInfo@1@@Z
+	?GetVersion@Core@@YA?AV?$basic_string_view@D@Base@@XZ
+	?GetVersionRev@Core@@YA?AV?$basic_string_view@D@Base@@XZ
+	?GetVersionBranch@Core@@YA?AV?$basic_string_view@D@Base@@XZ
+	?IsDebugBuild@Core@@YA_NXZ

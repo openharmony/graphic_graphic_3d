@@ -33,7 +33,7 @@ struct GpuSemaphorePlatformDataGles final {
 class GpuSemaphoreGles final : public GpuSemaphore {
 public:
     explicit GpuSemaphoreGles(Device& device);
-    GpuSemaphoreGles(Device& device, const uint64_t handle);
+    GpuSemaphoreGles(Device& device, uint64_t handle);
     ~GpuSemaphoreGles() override;
 
     uint64_t GetHandle() const override;

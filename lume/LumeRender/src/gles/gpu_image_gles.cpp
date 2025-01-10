@@ -25,7 +25,6 @@
 
 #include "gles/device_gles.h"
 #include "gles/gl_functions.h"
-#include "gles/swapchain_gles.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
@@ -132,9 +131,16 @@ void GenerateImageStorage(DeviceGLES& device, const GpuImageDesc& desc, GpuImage
         }
         case CORE_IMAGE_VIEW_TYPE_2D_ARRAY: {
             PLUGIN_ASSERT_MSG(desc.layerCount <= 256, "layerCount > 256 for 2D Array!");
-            plat.type = GL_TEXTURE_2D_ARRAY;
-            device.TexStorage3D(plat.image, plat.type, desc.mipCount, plat.internalFormat,
-                { desc.width, desc.height, desc.layerCount });
+            if (sampleCount > 1 && device.HasExtension("GL_EXT_multiview_texture_multisample")) {
+                plat.type = GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
+                // must use fixed sample locations so that renderbuffer/texture fbos work.
+                device.TexStorage3DMultisample(plat.image, plat.type, sampleCount, plat.internalFormat,
+                    { desc.width, desc.height, desc.layerCount }, true);
+            } else {
+                plat.type = GL_TEXTURE_2D_ARRAY;
+                device.TexStorage3D(plat.image, plat.type, desc.mipCount, plat.internalFormat,
+                    { desc.width, desc.height, desc.layerCount });
+            }
             break;
         }
         case CORE_IMAGE_VIEW_TYPE_3D: {
@@ -178,6 +184,9 @@ GpuImageGLES::GpuImageGLES(Device& device, const GpuImageDesc& desc)
             plat_ = GetPlatformData(device_, BASE_FORMAT_R16G16B16A16_SFLOAT);
         }
     }
+    const bool isArray =
+        (desc_.imageViewType == CORE_IMAGE_VIEW_TYPE_1D_ARRAY || desc_.imageViewType == CORE_IMAGE_VIEW_TYPE_2D_ARRAY ||
+            desc_.imageViewType == CORE_IMAGE_VIEW_TYPE_CUBE_ARRAY);
     const bool isSrc = (desc_.usageFlags & CORE_IMAGE_USAGE_TRANSFER_SRC_BIT);
     const bool isDst = (desc_.usageFlags & CORE_IMAGE_USAGE_TRANSFER_DST_BIT);
     const bool isSample = (desc_.usageFlags & CORE_IMAGE_USAGE_SAMPLED_BIT);
@@ -186,7 +195,7 @@ GpuImageGLES::GpuImageGLES(Device& device, const GpuImageDesc& desc)
     // could check for bool isDepth = (desc_.usageFlags & CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
     // could check for bool isTrans = (desc_.usageFlags & CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
     const bool isInput = (desc_.usageFlags & CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
-    if ((!isSrc) && (!isDst) && (!isSample) && (!isStorage) && (!isInput)) {
+    if ((!isArray) && (!isSrc) && (!isDst) && (!isSample) && (!isStorage) && (!isInput)) {
         // Use render buffers for "non-input,non-compute,non-texture,no src/dst transfer" images
         // ie. temporary render targets
         glGenRenderbuffers(1, &plat_.renderBuffer);

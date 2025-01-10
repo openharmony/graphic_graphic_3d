@@ -75,7 +75,7 @@ void RenderNodeDefaultLights::InitNode(IRenderNodeContextManager& renderNodeCont
                                CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                                (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
                                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                               sizeof(uint32_t) * RenderLightHelper::DEFAULT_CLUSTER_INDEX_COUNT,
+                               sizeof(uint32_t) * CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT,
                            });
     if (lightBufferHandle_ && lightClusterBufferHandle_) {
         IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();

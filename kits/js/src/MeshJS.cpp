@@ -12,27 +12,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "MeshJS.h"
 
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
-#include <scene_plugin/api/camera_uid.h>
-#include <scene_plugin/interface/intf_camera.h>
-#include <scene_plugin/interface/intf_scene.h>
+#include <scene/interface/intf_camera.h>
+#include <scene/interface/intf_scene.h>
+#include <scene/interface/intf_mesh.h>
 
+#include "SceneJS.h"
 void* MeshJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == MeshJS::ID) {
+    if (id == MeshJS::ID)
         return this;
-    }
     return SceneResourceImpl::GetInstanceImpl(id);
 }
-void MeshJS::DisposeNative()
+void MeshJS::DisposeNative(void*)
 {
     // do nothing for now..
-    LOG_F("MeshJS::DisposeNative");
+    LOG_V("MeshJS::DisposeNative");
+    NapiApi::Object obj = scene_.GetObject();
+    auto* tro = obj.Native<TrueRootObject>();
+    if (tro) {
+        SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+        if (sceneJS) {
+            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+        }
+    }
     scene_.Reset();
 }
 void MeshJS::Init(napi_env env, napi_value exports)
@@ -62,43 +69,52 @@ MeshJS::MeshJS(napi_env e, napi_callback_info i) : BaseObject<MeshJS>(e, i), Sce
         // okay internal create. we will receive the object after.
         return;
     }
-    NapiApi::Object scene = fromJs.Arg<0>();
-    scene_ = scene;
+    scene_ = fromJs.Arg<0>().valueOrDefault();
     if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        CORE_LOG_F("INVALID SCENE!");
+        LOG_F("INVALID SCENE!");
+    }
+    {
+        // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
+        NapiApi::Object meJs(fromJs.This());
+        NapiApi::Object scene = fromJs.Arg<0>();
+        auto* tro = scene.Native<TrueRootObject>();
+        if (tro) {
+            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+            if (sceneJS) {
+                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+            }
+        }
     }
 }
 MeshJS::~MeshJS()
 {
-    LOG_F("MeshJS -- ");
+    LOG_V("MeshJS -- ");
 }
 
 napi_value MeshJS::GetSubmesh(NapiApi::FunctionContext<>& ctx)
 {
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     auto node = interface_pointer_cast<SCENE_NS::IMesh>(GetThisNativeObject(ctx));
     if (!node) {
         // return undefined.. as no actual node.
-        napi_value undef;
-        napi_get_undefined(ctx, &undef);
-        return undef;
+        return ctx.GetUndefined();
     }
 
-    BASE_NS::vector<SCENE_NS::ISubMesh::Ptr> subs;
-    ExecSyncTask([node, &subs]() {
-        subs = node->SubMeshes()->GetValue();
-        return META_NS::IAny::Ptr {};
-    });
+    BASE_NS::vector<SCENE_NS::ISubMesh::Ptr> subs = node->GetSubmeshes().GetResult();
 
+    NapiApi::Env env(ctx.Env());
     napi_value tmp;
-    auto status = napi_create_array_with_length(ctx, subs.size(), &tmp);
+    auto status = napi_create_array_with_length(env, subs.size(), &tmp);
     size_t i = 0;
-    for (const auto& node : subs) {
-        NapiApi::Object argJS(ctx);
-        napi_value args[] = { scene_.GetValue(), argJS };
+    for (const auto& subMesh : subs) {
+        NapiApi::Object argJS(env);
+        napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
 
-        napi_value val = CreateFromNativeInstance(
-            ctx, interface_pointer_cast<META_NS::IObject>(node), false, BASE_NS::countof(args), args);
-        status = napi_set_element(ctx, tmp, i++, val);
+        auto subobj = interface_pointer_cast<META_NS::IObject>(subMesh);
+        auto val = CreateFromNativeInstance(ctx.Env(), subobj, true, BASE_NS::countof(args), args);
+        status = napi_set_element(ctx.Env(), tmp, i++, val.ToNapiValue());
     }
 
     return tmp;
@@ -106,74 +122,71 @@ napi_value MeshJS::GetSubmesh(NapiApi::FunctionContext<>& ctx)
 
 napi_value MeshJS::GetAABB(NapiApi::FunctionContext<>& ctx)
 {
-    napi_value undef;
-    napi_get_undefined(ctx, &undef);
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     auto node = interface_pointer_cast<SCENE_NS::IMesh>(GetThisNativeObject(ctx));
     if (!node) {
         // return undefined.. as no actual node.
-        return undef;
+        return ctx.GetUndefined();
     }
-    BASE_NS::Math::Vec3 aabmin;
-    BASE_NS::Math::Vec3 aabmax;
-    ExecSyncTask([node, &aabmin, &aabmax]() {
-        aabmin = node->AABBMin()->GetValue();
-        aabmax = node->AABBMax()->GetValue();
-        return META_NS::IAny::Ptr {};
-    });
-    NapiApi::Object res(ctx);
+    BASE_NS::Math::Vec3 aabmin, aabmax;
+    aabmin = node->AABBMin()->GetValue();
+    aabmax = node->AABBMax()->GetValue();
+    NapiApi::Env env(ctx.Env());
+    NapiApi::Object res(env);
 
-    NapiApi::Object min(ctx);
-    min.Set("x", NapiApi::Value<float> { ctx, aabmin.x });
-    min.Set("y", NapiApi::Value<float> { ctx, aabmin.y });
-    min.Set("z", NapiApi::Value<float> { ctx, aabmin.z });
+    NapiApi::Object min(env);
+    min.Set("x", NapiApi::Value<float> { env, aabmin.x });
+    min.Set("y", NapiApi::Value<float> { env, aabmin.y });
+    min.Set("z", NapiApi::Value<float> { env, aabmin.z });
     res.Set("aabbMin", min);
 
-    NapiApi::Object max(ctx);
-    max.Set("x", NapiApi::Value<float> { ctx, aabmax.x });
-    max.Set("y", NapiApi::Value<float> { ctx, aabmax.y });
-    max.Set("z", NapiApi::Value<float> { ctx, aabmax.z });
+    NapiApi::Object max(env);
+    max.Set("x", NapiApi::Value<float> { env, aabmax.x });
+    max.Set("y", NapiApi::Value<float> { env, aabmax.y });
+    max.Set("z", NapiApi::Value<float> { env, aabmax.z });
     res.Set("aabbMax", max);
-    return res;
+    return res.ToNapiValue();
 }
 
 napi_value MeshJS::GetMaterialOverride(NapiApi::FunctionContext<>& ctx)
 {
-    napi_value undef;
-    napi_get_undefined(ctx, &undef);
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
     auto sm = interface_pointer_cast<SCENE_NS::IMesh>(GetThisNativeObject(ctx));
     if (!sm) {
         // return undefined.. as submesh bound.
-        return undef;
+        return ctx.GetUndefined();
     }
     META_NS::IObject::Ptr obj;
-    ExecSyncTask([sm, &obj]() {
-        auto material = sm->MaterialOverride()->GetValue();
-        obj = interface_pointer_cast<META_NS::IObject>(material);
-        return META_NS::IAny::Ptr {};
-    });
+    auto material = sm->MaterialOverride()->GetValue();
+    obj = interface_pointer_cast<META_NS::IObject>(material);
 
     if (obj == nullptr) {
         return ctx.GetUndefined();
     }
     if (auto cached = FetchJsObj(obj)) {
         // always return the same js object.
-        return cached;
+        return cached.ToNapiValue();
     }
-    napi_value args[] = { ctx.This() };
-    return CreateFromNativeInstance(ctx, obj, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
+    napi_value args[] = { ctx.This().ToNapiValue() };
+    return CreateFromNativeInstance(
+        ctx.Env(), obj, false /*these are owned by the scene*/, BASE_NS::countof(args), args)
+        .ToNapiValue();
 }
 
 void MeshJS::SetMaterialOverride(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    if (!validateSceneRef()) {
+        return;
+    }
     auto sm = interface_pointer_cast<SCENE_NS::IMesh>(GetThisNativeObject(ctx));
     if (!sm) {
-        // return undefined.. as no actual node.
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
     auto new_material = GetNativeMeta<SCENE_NS::IMaterial>(obj);
-    ExecSyncTask([sm, &new_material]() {
-        sm->MaterialOverride()->SetValue(new_material);
-        return META_NS::IAny::Ptr {};
-    });
+    sm->MaterialOverride()->SetValue(new_material);
 }

@@ -16,11 +16,9 @@
 #include "io/memory_file.h"
 
 #include <cstdint>
-#include <cstring>
 #include <memory>
 
 #include <base/containers/allocator.h>
-#include <base/containers/vector.h>
 #include <base/namespace.h>
 #include <core/io/intf_file.h>
 #include <core/log.h>
@@ -40,17 +38,22 @@ uint64_t MemoryFileStorage::Write(uint64_t index, const void* buffer, uint64_t c
     return 0;
 }
 
-MemoryFile::MemoryFile(std::shared_ptr<MemoryFileStorage>&& buffer) : buffer_(move(buffer)) {}
+MemoryFile::MemoryFile(std::shared_ptr<MemoryFileStorage>&& buffer, Mode mode)
+    : buffer_(BASE_NS::move(buffer)), mode_(mode)
+{}
 
 IFile::Mode MemoryFile::GetMode() const
 {
-    return IFile::Mode::READ_ONLY;
+    return mode_;
 }
 
 void MemoryFile::Close() {}
 
 uint64_t MemoryFile::Read(void* buffer, uint64_t count)
 {
+    if (mode_ == Mode::INVALID) {
+        return {};
+    }
     uint64_t toRead = count;
     if ((index_ + toRead) > buffer_->GetStorage().size()) {
         toRead = buffer_->GetStorage().size() - index_;
@@ -73,8 +76,21 @@ uint64_t MemoryFile::Read(void* buffer, uint64_t count)
 
 uint64_t MemoryFile::Write(const void* buffer, uint64_t count)
 {
-    buffer_->Resize(size_t(count));
-    return buffer_->Write(0, buffer, count);
+    if (mode_ == Mode::READ_WRITE) {
+        buffer_->Resize(size_t(count));
+        return buffer_->Write(0, buffer, count);
+    }
+    return {};
+}
+
+uint64_t MemoryFile::Append(const void* buffer, uint64_t count, uint64_t /*chunkSize*/)
+{
+    if (mode_ == Mode::READ_WRITE) {
+        auto exSize = buffer_->Size();
+        buffer_->Resize(exSize + count);
+        return buffer_->Write(exSize, buffer, count);
+    }
+    return {};
 }
 
 uint64_t MemoryFile::GetLength() const

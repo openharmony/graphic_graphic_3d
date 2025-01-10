@@ -43,9 +43,9 @@ ohos_shared_library(LIB_CORE3D) {
   public_deps = [
     ":lume_3d_plugin_src",
     "${LUME_CORE3D_PATH}:libAGP3D",
-    "${LUME_CORE_PATH}:lume_component_help_src",
   ]
 
+  relative_install_dir = "graphics3d"
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

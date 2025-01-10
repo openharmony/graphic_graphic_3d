@@ -35,11 +35,7 @@
 
 RENDER_BEGIN_NAMESPACE()
 class Device;
-class GpuAccelerationStructure;
-class GpuBufferManager;
-class GpuImageManager;
 class GpuSampler;
-class GpuSamplerManager;
 class GpuResourceCache;
 class GpuResourceManagerBase;
 template<typename ResourceType, typename CreateInfoType>
@@ -84,9 +80,9 @@ struct StagingCopyStruct {
     RenderHandleReference dstHandle;
 
     /** Begin index */
-    uint32_t beginIndex { 0 };
+    uint32_t beginIndex { 0U };
     /** Count */
-    uint32_t count { 0 };
+    uint32_t count { 0U };
 
     /** Staging data */
     BASE_NS::vector<uint8_t> stagingData;
@@ -96,8 +92,10 @@ struct StagingCopyStruct {
     /** Optional format for scaling */
     BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
 
+    /** Staging buffer byteoffset. */
+    uint32_t stagingBufferByteOffset { 0U };
     /** Staging buffer bytesize. */
-    uint32_t stagingBufferByteSize { 0u };
+    uint32_t stagingBufferByteSize { 0U };
 
     /** Invalid operation which should be ignored. Might be a copy that has been removed during processing. */
     bool invalidOperation { false };
@@ -136,6 +134,8 @@ struct StagingConsumeStruct {
     /** Direct CPU copy to buffer */
     BASE_NS::vector<StagingCopyStruct> cpuToBuffer;
 
+    /** buffer copies and buffer image copies can have baked in staging buffer offset */
+
     /** Buffer copies */
     BASE_NS::vector<BufferCopy> bufferCopies;
     /** Buffer image copies */
@@ -145,6 +145,11 @@ struct StagingConsumeStruct {
 
     /** Scaling image data */
     ScalingImageDataStruct scalingImageData;
+
+    /** Staging buffer */
+    RenderHandle stagingBuffer;
+    /** Staging buffer byte size */
+    uint32_t stagingByteSize { 0U };
 };
 
 /** Per frame work loop:
@@ -186,7 +191,7 @@ struct StagingConsumeStruct {
  */
 class GpuResourceManager final : public IGpuResourceManager {
 public:
-    static GpuBufferDesc GetStagingBufferDesc(const uint32_t byteSize);
+    static GpuBufferDesc GetStagingBufferDesc(uint32_t byteSize);
 
     enum GpuResourceManagerFlagBits : uint32_t {
         /** Use direct copy with integrated GPUs were device memory is always host visible.
@@ -207,40 +212,42 @@ public:
     GpuResourceManager& operator=(const GpuResourceManager&) = delete;
 
     RenderHandleReference Get(const RenderHandle& handle) const override;
+    RenderHandle GetRawHandle(const RenderHandle& handle) const override;
 
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuBufferDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuBufferDesc& desc,
-        const BASE_NS::array_view<const uint8_t> data) override;
+    RenderHandleReference GetOrCreate(BASE_NS::string_view name, const GpuBufferDesc& desc) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuBufferDesc& desc) override;
+    RenderHandleReference Create(
+        BASE_NS::string_view name, const GpuBufferDesc& desc, BASE_NS::array_view<const uint8_t> data) override;
 
-    RenderHandleReference Create(const GpuBufferDesc& desc, const BASE_NS::array_view<const uint8_t> data) override;
+    RenderHandleReference Create(const GpuBufferDesc& desc, BASE_NS::array_view<const uint8_t> data) override;
     RenderHandleReference Create(const RenderHandleReference& replacedHandle, const GpuBufferDesc& desc) override;
     RenderHandleReference Create(const GpuBufferDesc& desc) override;
 
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuImageDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuImageDesc& desc,
-        const BASE_NS::array_view<const uint8_t> data) override;
+    RenderHandleReference GetOrCreate(BASE_NS::string_view name, const GpuImageDesc& desc) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuImageDesc& desc) override;
+    RenderHandleReference Create(
+        BASE_NS::string_view name, const GpuImageDesc& desc, BASE_NS::array_view<const uint8_t> data) override;
     RenderHandleReference Create(const RenderHandleReference& replacedHandle, const GpuImageDesc& desc) override;
     RenderHandleReference Create(
-        const BASE_NS::string_view name, const GpuImageDesc& desc, CORE_NS::IImageContainer::Ptr image) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuImageDesc& desc,
-        const BASE_NS::array_view<const uint8_t> data,
-        const BASE_NS::array_view<const BufferImageCopy> bufferImageCopies) override;
+        BASE_NS::string_view name, const GpuImageDesc& desc, CORE_NS::IImageContainer::Ptr image) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuImageDesc& desc,
+        BASE_NS::array_view<const uint8_t> data, BASE_NS::array_view<const BufferImageCopy> bufferImageCopies) override;
 
     /* Create a GpuImage with unique image name from external texture. Immediate resource creation not deferred. */
-    RenderHandleReference CreateView(const BASE_NS::string_view name, const GpuImageDesc& desc,
+    RenderHandleReference CreateView(BASE_NS::string_view name, const GpuImageDesc& desc,
         const BackendSpecificImageDesc& backendSpecificData) override;
     /* Create gpu image view for platform resource. Immediate creation not deferred. */
     RenderHandleReference CreateView(
-        const BASE_NS::string_view name, const GpuImageDesc& desc, const GpuImagePlatformData& gpuImagePlatformData);
+        BASE_NS::string_view name, const GpuImageDesc& desc, const GpuImagePlatformData& gpuImagePlatformData);
 
     RenderHandleReference Create(const GpuImageDesc& desc) override;
-    RenderHandleReference Create(const GpuImageDesc& desc, const BASE_NS::array_view<const uint8_t> data) override;
-    RenderHandleReference Create(const GpuImageDesc& desc, const BASE_NS::array_view<const uint8_t> data,
-        const BASE_NS::array_view<const BufferImageCopy> bufferImageCopies) override;
+    RenderHandleReference Create(const GpuImageDesc& desc, BASE_NS::array_view<const uint8_t> data) override;
+    RenderHandleReference Create(const GpuImageDesc& desc, BASE_NS::array_view<const uint8_t> data,
+        BASE_NS::array_view<const BufferImageCopy> bufferImageCopies) override;
     RenderHandleReference Create(const GpuImageDesc& desc, CORE_NS::IImageContainer::Ptr image) override;
 
     RenderHandleReference Create(const GpuAccelerationStructureDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuAccelerationStructureDesc& desc) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuAccelerationStructureDesc& desc) override;
     RenderHandleReference Create(
         const RenderHandleReference& replacedHandle, const GpuAccelerationStructureDesc& desc) override;
 
@@ -251,23 +258,28 @@ public:
     */
     void RemapGpuImageHandle(const RenderHandle& clientHandle, const RenderHandle& clientHandleGpuResource);
 
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuSamplerDesc& desc) override;
+    RenderHandleReference GetOrCreate(BASE_NS::string_view name, const GpuSamplerDesc& desc) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuSamplerDesc& desc) override;
     RenderHandleReference Create(const RenderHandleReference& replacedHandle, const GpuSamplerDesc& desc) override;
     RenderHandleReference Create(const GpuSamplerDesc& desc) override;
 
     RenderHandleReference CreateSwapchainImage(
-        const RenderHandleReference& replacedHandle, const BASE_NS::string_view name, const GpuImageDesc& desc);
+        const RenderHandleReference& replacedHandle, BASE_NS::string_view name, const GpuImageDesc& desc);
 
     /** Does not have GPU backed data. Will be remapped to other handle */
     RenderHandleReference CreateShallowHandle(const GpuImageDesc& desc);
 
-    RenderHandleReference GetBufferHandle(const BASE_NS::string_view name) const override;
-    RenderHandleReference GetImageHandle(const BASE_NS::string_view name) const override;
-    RenderHandleReference GetSamplerHandle(const BASE_NS::string_view name) const override;
+    RenderHandleReference GetBufferHandle(BASE_NS::string_view name) const override;
+    RenderHandleReference GetImageHandle(BASE_NS::string_view name) const override;
+    RenderHandleReference GetSamplerHandle(BASE_NS::string_view name) const override;
 
-    RenderHandle GetBufferRawHandle(const BASE_NS::string_view name) const;
-    RenderHandle GetImageRawHandle(const BASE_NS::string_view name) const;
-    RenderHandle GetSamplerRawHandle(const BASE_NS::string_view name) const;
+    bool HasBuffer(BASE_NS::string_view name) const override;
+    bool HasImage(BASE_NS::string_view name) const override;
+    bool HasSampler(BASE_NS::string_view name) const override;
+
+    RenderHandle GetBufferRawHandle(BASE_NS::string_view name) const;
+    RenderHandle GetImageRawHandle(BASE_NS::string_view name) const;
+    RenderHandle GetSamplerRawHandle(BASE_NS::string_view name) const;
 
     GpuBufferDesc GetBufferDescriptor(const RenderHandleReference& handle) const override;
     GpuImageDesc GetImageDescriptor(const RenderHandleReference& handle) const override;
@@ -295,6 +307,8 @@ public:
 
     bool HasStagingData() const;
     StagingConsumeStruct ConsumeStagingData();
+    void MapRenderTimeGpuBuffers();
+    void UnmapRenderTimeGpuBuffers() const;
 
     struct StateDestroyConsumeStruct {
         // gpu image or gpu buffers
@@ -353,25 +367,47 @@ public:
 
     FormatProperties GetFormatProperties(const RenderHandleReference& handle) const override;
     FormatProperties GetFormatProperties(const RenderHandle& handle) const;
-    FormatProperties GetFormatProperties(const BASE_NS::Format format) const override;
+    FormatProperties GetFormatProperties(BASE_NS::Format format) const override;
 
     GpuImageDesc CreateGpuImageDesc(const CORE_NS::IImageContainer::ImageDesc& desc) const override;
 
     BASE_NS::string GetName(const RenderHandle& handle) const;
     BASE_NS::string GetName(const RenderHandleReference& handle) const override;
 
-    BASE_NS::vector<RenderHandleReference> GetGpuBufferHandles() const override;
-    BASE_NS::vector<RenderHandleReference> GetGpuImageHandles() const override;
-    BASE_NS::vector<RenderHandleReference> GetGpuSamplerHandles() const override;
+    BASE_NS::vector<RenderHandleReference> GetBufferHandles() const override;
+    BASE_NS::vector<RenderHandleReference> GetImageHandles() const override;
+    BASE_NS::vector<RenderHandleReference> GetSamplerHandles() const override;
 
-    void SetDefaultGpuBufferCreationFlags(const BufferUsageFlags usageFlags) override;
-    void SetDefaultGpuImageCreationFlags(const ImageUsageFlags usageFlags) override;
+    BASE_NS::vector<RenderHandle> GetRawBufferHandles() const;
+    BASE_NS::vector<RenderHandle> GetRawImageHandles() const;
+    BASE_NS::vector<RenderHandle> GetRawSamplerHandles() const;
+
+    void SetDefaultGpuBufferCreationFlags(BufferUsageFlags usageFlags) override;
+    void SetDefaultGpuImageCreationFlags(ImageUsageFlags usageFlags) override;
 
     IGpuResourceCache& GetGpuResourceCache() const override;
 
     ImageAspectFlags GetImageAspectFlags(const RenderHandle& handle) const;
     ImageAspectFlags GetImageAspectFlags(const RenderHandleReference& handle) const override;
-    ImageAspectFlags GetImageAspectFlags(const BASE_NS::Format format) const override;
+    ImageAspectFlags GetImageAspectFlags(BASE_NS::Format format) const override;
+
+    BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const override;
+    BASE_NS::Format GetColorSpaceFormat(
+        BASE_NS::Format format, BASE_NS::ColorSpaceFlags colorSpaceFlags) const override;
+
+    SurfaceTransformFlags GetSurfaceTransformFlags(const RenderHandleReference& handle) const override;
+    SurfaceTransformFlags GetSurfaceTransformFlags(const RenderHandle& handle) const;
+
+    RenderHandle ReserveRenderTimeGpuBuffer(uint32_t byteSize);
+    IRenderNodeGpuResourceManager::MappedGpuBufferData AcquireRenderTimeGpuBuffer(RenderHandle handle) const;
+
+    enum class RenderTimeState : uint8_t {
+        UNDEFINED = 0,
+        RENDER_PRE_EXECUTE = 1,
+        RENDER_EXECUTE = 2,
+        RENDER_BACKEND = 3,
+    };
+    void SetState(RenderTimeState rts);
 
 private:
     Device& device_;
@@ -471,6 +507,9 @@ private:
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
         BASE_NS::vector<RenderHandle> debugTagAllocations {};
 #endif
+        void HandleRemoved(uint32_t arrayIndex, const OperationDescription& operation);
+        void HandleAlloc(uint32_t allocationIndex, const OperationDescription& operation);
+        bool HandleDealloc(uint32_t allocationIndex, const OperationDescription& operation, bool isFrameEnd);
     };
     PerManagerStore bufferStore_ { RenderHandleType::GPU_BUFFER };
     PerManagerStore imageStore_ { RenderHandleType::GPU_IMAGE };
@@ -493,58 +532,62 @@ private:
         AllocType allocType { AllocType::ALLOC };
     };
 
-    void HandlePendingAllocationsImpl(const bool isEndFrame);
+    void HandlePendingAllocationsImpl(bool isFrameEnd);
+    void HandleStorePendingAllocations(bool isFrameEnd, PerManagerStore& store);
     void Destroy(const RenderHandle& handle);
     // Destroy staging buffers. Not thread safe. Called from gpu resource manager
     void DestroyFrameStaging();
 
     // needs to be locked when called
     StoreAllocationData CreateBuffer(
-        const BASE_NS::string_view name, const RenderHandle& replacedHandle, const GpuBufferDesc& desc);
+        BASE_NS::string_view name, const RenderHandle& replacedHandle, const GpuBufferDesc& desc);
     // needs to be locked when called
     StoreAllocationData CreateImage(
-        const BASE_NS::string_view name, const RenderHandle& replacedHandle, const GpuImageDesc& desc);
+        BASE_NS::string_view name, const RenderHandle& replacedHandle, const GpuImageDesc& desc);
     RenderHandleReference CreateStagingBuffer(const GpuBufferDesc& desc);
     // needs to be locked when called
     StoreAllocationData CreateAccelerationStructure(
-        const BASE_NS::string_view name, const RenderHandle& replacedHandle, const GpuAccelerationStructureDesc& desc);
+        BASE_NS::string_view name, const RenderHandle& replacedHandle, const GpuAccelerationStructureDesc& desc);
 
-    RenderHandle CreateClientHandle(const RenderHandleType type, const ResourceDescriptor& resourceDescriptor,
-        const uint64_t handleId, const uint32_t hasNameId, const uint32_t additionalInfoFlags);
+    static RenderHandle CreateClientHandle(RenderHandleType type, const ResourceDescriptor& resourceDescriptor,
+        uint64_t handleId, uint32_t hasNameId, uint32_t additionalInfoFlags);
 
     // needs to be locked when called
     StoreAllocationData StoreAllocation(PerManagerStore& store, const StoreAllocationInfo& info);
 
-    void CreateGpuResource(const OperationDescription& op, const uint32_t arrayIndex,
-        const RenderHandleType resourceType, const uintptr_t preCreateData);
+    void CreateGpuResource(
+        const OperationDescription& op, uint32_t arrayIndex, RenderHandleType resourceType, uintptr_t preCreateData);
 
     // needs to be locked when called
-    void DestroyGpuResource(const OperationDescription& operation, const uint32_t arrayIndex,
-        const RenderHandleType resourceType, PerManagerStore& store);
+    static void DestroyGpuResource(const OperationDescription& operation, uint32_t arrayIndex,
+        RenderHandleType resourceType, PerManagerStore& store);
 
-    RenderHandleReference GetHandle(const PerManagerStore& store, const BASE_NS::string_view name) const;
-    RenderHandle GetRawHandle(const PerManagerStore& store, const BASE_NS::string_view name) const;
+    static RenderHandleReference GetHandle(const PerManagerStore& store, BASE_NS::string_view name);
+    static RenderHandleReference GetHandleNoLock(const PerManagerStore& store, BASE_NS::string_view name);
+    static RenderHandle GetRawHandle(const PerManagerStore& store, BASE_NS::string_view name);
+    static bool HasNamedResource(const PerManagerStore& store, BASE_NS::string_view name);
 
-    EngineResourceHandle GetGpuHandle(const PerManagerStore& store, const RenderHandle& clientHandle) const;
+    static EngineResourceHandle GetGpuHandle(const PerManagerStore& store, const RenderHandle& clientHandle);
 
     // destroydHandle store needs to be locked, staging locked inside and bufferstore if not already locked
     void RemoveStagingOperations(const OperationDescription& destroyAlloc);
     // needs to be locked outside
     void Destroy(PerManagerStore& store, const RenderHandle& handle);
     // needs to be locked when called
-    void DestroyImmediate(PerManagerStore& store, const RenderHandle& handle);
+    static void DestroyImmediate(PerManagerStore& store, const RenderHandle& handle);
 
-    void HandlePendingRemappings(const BASE_NS::vector<RemapDescription>& pendingShallowRemappings,
+    static void HandlePendingRemappings(const BASE_NS::vector<RemapDescription>& pendingShallowRemappings,
         BASE_NS::vector<EngineResourceHandle>& gpuHandles);
 
-    PendingData CommitPendingData(PerManagerStore& store);
+    static PendingData CommitPendingData(PerManagerStore& store);
 
     // needs to be locked when called
-    uint32_t GetPendingOptionalResourceIndex(
-        const PerManagerStore& store, const RenderHandle& handle, const BASE_NS::string_view name);
+    static uint32_t GetPendingOptionalResourceIndex(
+        const PerManagerStore& store, const RenderHandle& handle, BASE_NS::string_view name);
 
     // locked inside
-    BASE_NS::vector<RenderHandleReference> GetHandles(const PerManagerStore& store) const;
+    static BASE_NS::vector<RenderHandleReference> GetHandles(const PerManagerStore& store);
+    static BASE_NS::vector<RenderHandle> GetRawHandles(const PerManagerStore& store);
 
     void DebugPrintValidCounts();
 
@@ -564,6 +607,27 @@ private:
     // combined with bitwise OR image usage flags
     ImageUsageFlags defaultImageUsageFlags_ { 0u };
 
+    struct RenderTimeReservedGpuBuffer {
+        // not threaded usage
+        RenderHandle baseHandle;
+        RenderHandleReference handle;
+
+        void* mappedData { nullptr };
+        uint32_t neededByteSize { 0U };
+        uint32_t storedByteSize { 0U };
+
+        struct SingleValue {
+            uint32_t byteOffset { 0U };
+            uint32_t byteSize { 0U };
+        };
+
+        BASE_NS::vector<SingleValue> values;
+        BASE_NS::vector<SingleValue> executeValues;
+    };
+    RenderTimeReservedGpuBuffer renderTimeReservedGpuBuffer_;
+
+    RenderTimeState renderTimeState_ { RenderTimeState::UNDEFINED };
+
     // ogl object name tagging not supported ATM
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     void ProcessDebugTags();
@@ -573,34 +637,35 @@ private:
 class RenderNodeGpuResourceManager final : public IRenderNodeGpuResourceManager {
 public:
     explicit RenderNodeGpuResourceManager(GpuResourceManager& gpuResourceManager);
-    ~RenderNodeGpuResourceManager();
+    ~RenderNodeGpuResourceManager() override;
 
     RenderHandleReference Get(const RenderHandle& handle) const override;
+    RenderHandle GetRawHandle(const RenderHandle& handle) const override;
 
     RenderHandleReference Create(const GpuBufferDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuBufferDesc& desc) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuBufferDesc& desc) override;
     RenderHandleReference Create(const RenderHandleReference& handle, const GpuBufferDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuBufferDesc& desc,
-        const BASE_NS::array_view<const uint8_t> data) override;
+    RenderHandleReference Create(
+        BASE_NS::string_view name, const GpuBufferDesc& desc, BASE_NS::array_view<const uint8_t> data) override;
 
     RenderHandleReference Create(const GpuImageDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuImageDesc& desc) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuImageDesc& desc) override;
     RenderHandleReference Create(const RenderHandleReference& handle, const GpuImageDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuImageDesc& desc,
-        const BASE_NS::array_view<const uint8_t> data) override;
+    RenderHandleReference Create(
+        BASE_NS::string_view name, const GpuImageDesc& desc, BASE_NS::array_view<const uint8_t> data) override;
 
     RenderHandleReference Create(const GpuSamplerDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuSamplerDesc& desc) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuSamplerDesc& desc) override;
     RenderHandleReference Create(const RenderHandleReference& handle, const GpuSamplerDesc& desc) override;
 
     RenderHandleReference Create(const GpuAccelerationStructureDesc& desc) override;
-    RenderHandleReference Create(const BASE_NS::string_view name, const GpuAccelerationStructureDesc& desc) override;
+    RenderHandleReference Create(BASE_NS::string_view name, const GpuAccelerationStructureDesc& desc) override;
     RenderHandleReference Create(
         const RenderHandleReference& handle, const GpuAccelerationStructureDesc& desc) override;
 
-    RenderHandle GetBufferHandle(const BASE_NS::string_view name) const override;
-    RenderHandle GetImageHandle(const BASE_NS::string_view name) const override;
-    RenderHandle GetSamplerHandle(const BASE_NS::string_view name) const override;
+    RenderHandle GetBufferHandle(BASE_NS::string_view name) const override;
+    RenderHandle GetImageHandle(BASE_NS::string_view name) const override;
+    RenderHandle GetSamplerHandle(BASE_NS::string_view name) const override;
 
     GpuBufferDesc GetBufferDescriptor(const RenderHandle& handle) const override;
     GpuImageDesc GetImageDescriptor(const RenderHandle& handle) const override;
@@ -624,14 +689,27 @@ public:
     bool IsSwapchain(const RenderHandle& handle) const override;
 
     FormatProperties GetFormatProperties(const RenderHandle& handle) const override;
-    FormatProperties GetFormatProperties(const BASE_NS::Format format) const override;
+    FormatProperties GetFormatProperties(BASE_NS::Format format) const override;
 
     BASE_NS::string GetName(const RenderHandle& handle) const override;
+
+    BASE_NS::vector<RenderHandle> GetBufferHandles() const override;
+    BASE_NS::vector<RenderHandle> GetImageHandles() const override;
+    BASE_NS::vector<RenderHandle> GetSamplerHandles() const override;
 
     IGpuResourceCache& GetGpuResourceCache() const override;
 
     ImageAspectFlags GetImageAspectFlags(const RenderHandle& handle) const override;
-    ImageAspectFlags GetImageAspectFlags(const BASE_NS::Format format) const override;
+    ImageAspectFlags GetImageAspectFlags(BASE_NS::Format format) const override;
+
+    BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const override;
+    BASE_NS::Format GetColorSpaceFormat(
+        BASE_NS::Format format, BASE_NS::ColorSpaceFlags colorSpaceFlags) const override;
+
+    SurfaceTransformFlags GetSurfaceTransformFlags(const RenderHandle& handle) const override;
+
+    RenderHandle ReserveGpuBuffer(uint32_t byteSize) override;
+    MappedGpuBufferData AcquireGpubuffer(RenderHandle handle) override;
 
 private:
     GpuResourceManager& gpuResourceMgr_;

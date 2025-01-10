@@ -4,7 +4,26 @@
         "type": "shader"
     },
     "category": "3D/Material",
-    "baseShader": "3dshaders://shader/core3d_dm_fw.shader",
+    "materialMetadata" : [
+        {
+            "name" : "MaterialComponent",
+            "properties" : {
+                "textures" : [
+                    { "name" : "baseColor", "displayName" : "Base Color" },
+                    { "name" : "normal", "displayName" : "Normal Map" },
+                    { "name" : "material", "displayName" : "Material" },
+                    { "name" : "emissive", "displayName" : "Emissive" },
+                    { "name" : "ambientOcclusion", "displayName" : "Ambient Occlusion" },
+                    { "name" : "clearcoat", "displayName" : "Clearcoat" },
+                    { "name" : "clearcoatRoughness", "displayName" : "Clearcoat Roughness" },
+                    { "name" : "clearcoatNormal", "displayName" : "Clearcoat Normal" },
+                    { "name" : "sheen", "displayName" : "Sheen" },
+                    { "name" : "transmission", "displayName" : "Transmission" },
+                    { "name" : "specular", "displayName" : "Specular" }
+                ]
+            }
+        }
+    ],
     "shaders": [
         {
             "displayName": "Default",
@@ -41,27 +60,7 @@
                         }
                     ]
                 }
-            },
-            "materialMetadata" : [
-                {
-                    "name" : "MaterialComponent",
-                    "properties" : {
-                        "textures" : [
-                            { "name" : "baseColor", "displayName" : "Base Color" },
-                            { "name" : "normal", "displayName" : "Normal Map" },
-                            { "name" : "material", "displayName" : "Material" },
-                            { "name" : "emissive", "displayName" : "Emissive" },
-                            { "name" : "ambientOcclusion", "displayName" : "Ambient Occlusion" },
-                            { "name" : "clearcoat", "displayName" : "Clearcoat" },
-                            { "name" : "clearcoatRoughness", "displayName" : "Clearcoat Roughness" },
-                            { "name" : "clearcoatNormal", "displayName" : "Clearcoat Normal" },
-                            { "name" : "sheen", "displayName" : "Sheen" },
-                            { "name" : "transmission", "displayName" : "Transmission" },
-                            { "name" : "specular", "displayName" : "Specular" }
-                        ]
-                    }
-                }
-            ]
+            }
         },
         {
             "displayName": "Default Translucent",
@@ -105,27 +104,7 @@
                         }
                     ]
                 }
-            },
-            "materialMetadata" : [
-                {
-                    "name" : "MaterialComponent",
-                    "properties" : {
-                        "textures" : [
-                            { "name" : "baseColor", "displayName" : "Base Color" },
-                            { "name" : "normal", "displayName" : "Normal Map" },
-                            { "name" : "material", "displayName" : "Material" },
-                            { "name" : "emissive", "displayName" : "Emissive" },
-                            { "name" : "ambientOcclusion", "displayName" : "Ambient Occlusion" },
-                            { "name" : "clearcoat", "displayName" : "Clearcoat" },
-                            { "name" : "clearcoatRoughness", "displayName" : "Clearcoat Roughness" },
-                            { "name" : "clearcoatNormal", "displayName" : "Clearcoat Normal" },
-                            { "name" : "sheen", "displayName" : "Sheen" },
-                            { "name" : "transmission", "displayName" : "Transmission" },
-                            { "name" : "specular", "displayName" : "Specular" }
-                        ]
-                    }
-                }
-            ]
+            }
         },
         {
             "displayName": "Default Deferred",
@@ -171,27 +150,7 @@
                         }
                     ]
                 }
-            },
-            "materialMetadata": [
-                {
-                    "name": "MaterialComponent",
-                    "properties": {
-                        "textures": [
-                            { "name": "baseColor", "displayName": "Base Color" },
-                            { "name": "normal", "displayName": "Normal Map" },
-                            { "name": "material", "displayName": "Material" },
-                            { "name": "emissive", "displayName": "Emissive" },
-                            { "name": "ambientOcclusion", "displayName": "Ambient Occlusion" },
-                            { "name": "clearcoat", "displayName": "Clearcoat" },
-                            { "name": "clearcoatRoughness", "displayName": "Clearcoat Roughness" },
-                            { "name": "clearcoatNormal", "displayName": "Clearcoat Normal" },
-                            { "name": "sheen", "displayName": "Sheen" },
-                            { "name": "transmission", "displayName": "Transmission" },
-                            { "name": "specular", "displayName": "Specular" }
-                        ]
-                    }
-                }
-            ]
+            }
         },
         {
             "displayName": "Default Multiview",
@@ -228,27 +187,7 @@
                         }
                     ]
                 }
-            },
-            "materialMetadata" : [
-                {
-                    "name" : "MaterialComponent",
-                    "properties" : {
-                        "textures" : [
-                            { "name" : "baseColor", "displayName" : "Base Color" },
-                            { "name" : "normal", "displayName" : "Normal Map" },
-                            { "name" : "material", "displayName" : "Material" },
-                            { "name" : "emissive", "displayName" : "Emissive" },
-                            { "name" : "ambientOcclusion", "displayName" : "Ambient Occlusion" },
-                            { "name" : "clearcoat", "displayName" : "Clearcoat" },
-                            { "name" : "clearcoatRoughness", "displayName" : "Clearcoat Roughness" },
-                            { "name" : "clearcoatNormal", "displayName" : "Clearcoat Normal" },
-                            { "name" : "sheen", "displayName" : "Sheen" },
-                            { "name" : "transmission", "displayName" : "Transmission" },
-                            { "name" : "specular", "displayName" : "Specular" }
-                        ]
-                    }
-                }
-            ]
+            }
         },
         {
             "displayName": "Default Deferred Multiview",
@@ -294,27 +233,7 @@
                         }
                     ]
                 }
-            },
-            "materialMetadata": [
-                {
-                    "name": "MaterialComponent",
-                    "properties": {
-                        "textures": [
-                            { "name": "baseColor", "displayName": "Base Color" },
-                            { "name": "normal", "displayName": "Normal Map" },
-                            { "name": "material", "displayName": "Material" },
-                            { "name": "emissive", "displayName": "Emissive" },
-                            { "name": "ambientOcclusion", "displayName": "Ambient Occlusion" },
-                            { "name": "clearcoat", "displayName": "Clearcoat" },
-                            { "name": "clearcoatRoughness", "displayName": "Clearcoat Roughness" },
-                            { "name": "clearcoatNormal", "displayName": "Clearcoat Normal" },
-                            { "name": "sheen", "displayName": "Sheen" },
-                            { "name": "transmission", "displayName": "Transmission" },
-                            { "name": "specular", "displayName": "Specular" }
-                        ]
-                    }
-                }
-            ]
+            }
         }
     ]
 }

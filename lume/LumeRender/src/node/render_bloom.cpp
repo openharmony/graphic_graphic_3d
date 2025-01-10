@@ -31,6 +31,7 @@
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_util.h>
 
+#include "default_engine_constants.h"
 #include "util/log.h"
 
 // shaders
@@ -79,6 +80,8 @@ void RenderBloom::PreExecute(IRenderNodeContextManager& renderNodeContextMgr, co
 void RenderBloom::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList,
     const PostProcessConfiguration& ppConfig)
 {
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderBloom", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
+
     bloomEnabled_ = false;
     BloomConfiguration bloomConfiguration;
     if (ppConfig.enableFlags & PostProcessConfiguration::ENABLE_BLOOM_BIT) {
@@ -86,6 +89,8 @@ void RenderBloom::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRend
         bloomConfiguration.thresholdSoft = ppConfig.bloomConfiguration.thresholdSoft;
         bloomConfiguration.amountCoefficient = ppConfig.bloomConfiguration.amountCoefficient;
         bloomConfiguration.dirtMaskCoefficient = ppConfig.bloomConfiguration.dirtMaskCoefficient;
+        bloomConfiguration.scatter = ppConfig.bloomConfiguration.scatter;
+        bloomConfiguration.scaleFactor = ppConfig.bloomConfiguration.scaleFactor;
 
         bloomEnabled_ = true;
     }
@@ -113,20 +118,26 @@ void RenderBloom::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRend
         // .z = amountCoefficient, will multiply the colors from the bloom textures when combined with original color
         // target
         bloomConfiguration.amountCoefficient,
-        // .w = -will multiply the dirt mask effect
-        bloomConfiguration.dirtMaskCoefficient);
+        // .w = scatter value (in .w dirt mask coefficient is used in combine)
+        bloomConfiguration.scatter);
+    scaleFactor_ = Math::min(1.0f, bloomConfiguration.scaleFactor);
 
     const bool validBinders = binders_.globalSet0.get() != nullptr;
     if (validBinders) {
+        const float scaleFactor = Math::max(0.01f, scaleFactor_);
+        const auto fTexCount = static_cast<float>(targets_.tex1.size());
+        frameScaleMaxCount_ = static_cast<size_t>(Math::min(fTexCount, fTexCount * scaleFactor));
+        frameScaleMaxCount_ = Math::max(frameScaleMaxCount_, size_t(1));
+
         if (bloomInfo_.useCompute) {
             ComputeBloom(renderNodeContextMgr, cmdList);
         } else {
-            GraphicsBloom(renderNodeContextMgr, cmdList);
+            GraphicsBloom(cmdList);
         }
     }
 }
 
-DescriptorCounts RenderBloom::GetDescriptorCounts() const
+DescriptorCounts RenderBloom::GetDescriptorCounts()
 {
     // NOTE: when added support for various bloom target counts, might need to be calculated for max
     return DescriptorCounts { {
@@ -217,7 +228,7 @@ void RenderBloom::ComputeDownscale(const PushConstant& pc, IRenderCommandList& c
 
     RenderHandle sets[2u] {};
     sets[0u] = binders_.globalSet0->GetDescriptorSetHandle();
-    for (size_t i = 1; i < targets_.tex1.size(); ++i) {
+    for (size_t i = 1; i < frameScaleMaxCount_; ++i) {
         {
             auto& binder = *binders_.downscale[i];
             sets[1u] = binder.GetDescriptorSetHandle();
@@ -253,7 +264,7 @@ void RenderBloom::ComputeUpscale(const PushConstant& pc, IRenderCommandList& cmd
     RenderHandle sets[2u] {};
     sets[0u] = binders_.globalSet0->GetDescriptorSetHandle();
 
-    for (size_t i = targets_.tex1.size() - 1; i != 0; --i) {
+    for (size_t i = frameScaleMaxCount_ - 1; i != 0; --i) {
         {
             auto& binder = *binders_.upscale[i];
             sets[1u] = binder.GetDescriptorSetHandle();
@@ -315,7 +326,7 @@ void RenderBloom::ComputeCombine(const PushConstant& pc, IRenderCommandList& cmd
     cmdList.Dispatch((targetSize.x + tgs.x - 1) / tgs.x, (targetSize.y + tgs.y - 1) / tgs.y, 1);
 }
 
-void RenderBloom::GraphicsBloom(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList)
+void RenderBloom::GraphicsBloom(IRenderCommandList& cmdList)
 {
     RenderPass renderPass;
     renderPass.renderPassDesc.attachmentCount = 1;
@@ -387,7 +398,7 @@ void RenderBloom::RenderDownscale(RenderPass& renderPass, const PushConstant& pc
 
     RenderHandle sets[2u] {};
     sets[0u] = binders_.globalSet0->GetDescriptorSetHandle();
-    for (size_t idx = 1; idx < targets_.tex1.size(); ++idx) {
+    for (size_t idx = 1; idx < frameScaleMaxCount_; ++idx) {
         const auto targetSize = targets_.tex1Size[idx];
         const ViewportDesc viewportDesc { 0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y) };
         const ScissorDesc scissorDesc = { 0, 0, targetSize.x, targetSize.y };
@@ -424,8 +435,6 @@ void RenderBloom::RenderDownscale(RenderPass& renderPass, const PushConstant& pc
 void RenderBloom::RenderUpscale(RenderPass& renderPass, const PushConstant& pc, IRenderCommandList& cmdList)
 {
     RenderPass renderPassUpscale = renderPass;
-    renderPassUpscale.subpassDesc.inputAttachmentCount = 1;
-    renderPassUpscale.subpassDesc.inputAttachmentIndices[0] = 0;
     renderPassUpscale.renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPassUpscale.renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
 
@@ -433,10 +442,10 @@ void RenderBloom::RenderUpscale(RenderPass& renderPass, const PushConstant& pc, 
     sets[0u] = binders_.globalSet0->GetDescriptorSetHandle();
     PLUGIN_ASSERT(targets_.tex1.size() == targets_.tex2.size());
     RenderHandle input;
-    if (targets_.tex1.size() >= 1) {
-        input = targets_.tex1[targets_.tex1.size() - 1].GetHandle();
+    if (frameScaleMaxCount_ >= 1) {
+        input = targets_.tex1[frameScaleMaxCount_ - 1].GetHandle();
     }
-    for (size_t idx = targets_.tex1.size() - 1; idx != 0; --idx) {
+    for (size_t idx = frameScaleMaxCount_ - 1; idx != 0; --idx) {
         const auto targetSize = targets_.tex1Size[idx - 1];
         const ViewportDesc viewportDesc { 0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y) };
         const ScissorDesc scissorDesc = { 0, 0, targetSize.x, targetSize.y };
@@ -686,7 +695,7 @@ void RenderBloom::CreateComputePsos(IRenderNodeContextManager& renderNodeContext
 }
 
 std::pair<RenderHandle, const PipelineLayout&> RenderBloom::CreateAndReflectRenderPso(
-    IRenderNodeContextManager& renderNodeContextMgr, const string_view shader, const RenderPass& renderPass)
+    IRenderNodeContextManager& renderNodeContextMgr, const string_view shader)
 {
     const auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     const RenderHandle shaderHandle = shaderMgr.GetShaderHandle(shader.data());
@@ -755,8 +764,8 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
     constexpr uint32_t localSet = 1u;
     // the first one creates the global set as well
     {
-        const auto [pso, pipelineLayout] = CreateAndReflectRenderPso(
-            renderNodeContextMgr, "rendershaders://shader/bloom_downscale_threshold.shader", renderPass);
+        const auto [pso, pipelineLayout] =
+            CreateAndReflectRenderPso(renderNodeContextMgr, "rendershaders://shader/bloom_downscale_threshold.shader");
         psos_.downscaleAndThreshold = pso;
 
         const auto& gBinds = pipelineLayout.descriptorSetLayouts[globalSet].bindings;
@@ -766,8 +775,8 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
         binders_.downscaleAndThreshold = dSetMgr.CreateDescriptorSetBinder(dSetMgr.CreateDescriptorSet(lBinds), lBinds);
     }
     {
-        const auto [pso, pipelineLayout] = CreateAndReflectRenderPso(
-            renderNodeContextMgr, "rendershaders://shader/bloom_downscale.shader", renderPass);
+        const auto [pso, pipelineLayout] =
+            CreateAndReflectRenderPso(renderNodeContextMgr, "rendershaders://shader/bloom_downscale.shader");
         psos_.downscale = pso;
         const auto& binds = pipelineLayout.descriptorSetLayouts[localSet].bindings;
         for (uint32_t idx = 0; idx < TARGET_COUNT; ++idx) {
@@ -776,7 +785,7 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
     }
     {
         const auto [pso, pipelineLayout] =
-            CreateAndReflectRenderPso(renderNodeContextMgr, "rendershaders://shader/bloom_upscale.shader", renderPass);
+            CreateAndReflectRenderPso(renderNodeContextMgr, "rendershaders://shader/bloom_upscale.shader");
         psos_.upscale = pso;
         const auto& binds = pipelineLayout.descriptorSetLayouts[localSet].bindings;
         for (uint32_t idx = 0; idx < TARGET_COUNT; ++idx) {
@@ -785,7 +794,7 @@ void RenderBloom::CreateRenderPsos(IRenderNodeContextManager& renderNodeContextM
     }
     {
         const auto [pso, pipelineLayout] =
-            CreateAndReflectRenderPso(renderNodeContextMgr, "rendershaders://shader/bloom_combine.shader", renderPass);
+            CreateAndReflectRenderPso(renderNodeContextMgr, "rendershaders://shader/bloom_combine.shader");
         psos_.combine = pso;
         const auto& binds = pipelineLayout.descriptorSetLayouts[localSet].bindings;
         binders_.combine = dSetMgr.CreateDescriptorSetBinder(dSetMgr.CreateDescriptorSet(binds), binds);

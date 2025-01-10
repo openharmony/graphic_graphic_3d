@@ -49,7 +49,7 @@ struct RenderDataDefaultMaterial {
     static constexpr uint32_t MATERIAL_TEXTURE_COUNT { 11u };
 
     /** max default material custom resources */
-    static constexpr uint32_t MAX_MATERIAL_CUSTOM_RESOURCE_COUNT { 4u };
+    static constexpr uint32_t MAX_MATERIAL_CUSTOM_RESOURCE_COUNT { 8u };
 
     /** max default material custom resources */
     static constexpr uint32_t MAX_MESH_USER_VEC4_COUNT { 8u };
@@ -57,10 +57,18 @@ struct RenderDataDefaultMaterial {
     /** max default material custom resources */
     static constexpr uint32_t MAX_MATERIAL_CUSTOM_PROPERTY_BYTE_SIZE { 256u };
 
+    /** default depth rendering related important flags for render material flags */
+    static constexpr uint32_t RENDER_MATERIAL_DEPTH_FLAGS {
+        RenderMaterialFlagBits::RENDER_MATERIAL_GPU_INSTANCING_BIT
+    };
+    /** default depth rendering related important flags for submesh flags */
+    static constexpr uint32_t RENDER_SUBMESH_DEPTH_FLAGS { RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT };
+
     /** Input material uniforms
      * There's no conversion happening to these, so pre-multiplications etc needs to happen prior
      */
     struct InputMaterialUniforms {
+        // the factor values are not the same default values as in MaterialComponent
         struct TextureData {
             BASE_NS::Math::Vec4 factor { 0.0f, 0.0f, 0.0f, 0.0f };
             BASE_NS::Math::Vec2 translation { 0.0f, 0.0f };
@@ -68,9 +76,8 @@ struct RenderDataDefaultMaterial {
             BASE_NS::Math::Vec2 scale { 1.0f, 1.0f };
         };
         TextureData textureData[MATERIAL_TEXTURE_COUNT];
-        // separate values which is pushed to shader
-        // alpha cutoff
-        float alphaCutoff { 0.5f };
+        // separate values which is pushed to shader alpha cutoff
+        float alphaCutoff { 1.0f };
         // texcoord set bits, selection for uv0 or uv1
         uint32_t texCoordSetBits { 0u };
         // texcoord transform set bits
@@ -134,18 +141,26 @@ struct RenderDataDefaultMaterial {
         MaterialPackedUniforms transforms;
     };
 
-    /** Material handles
+    /** Material handles with handle reference (used as inputs)
      */
-    struct MaterialHandles {
+    struct MaterialHandlesWithHandleReference {
         /** Source images for different texture types */
         RENDER_NS::RenderHandleReference images[MATERIAL_TEXTURE_COUNT];
         /** Samplers for different texture types */
         RENDER_NS::RenderHandleReference samplers[MATERIAL_TEXTURE_COUNT];
     };
-
-    /** Material shader
+    /** Material handles with raw handles
      */
-    struct MaterialShader {
+    struct MaterialHandles {
+        /** Source images for different texture types */
+        RENDER_NS::RenderHandle images[MATERIAL_TEXTURE_COUNT];
+        /** Samplers for different texture types */
+        RENDER_NS::RenderHandle samplers[MATERIAL_TEXTURE_COUNT];
+    };
+
+    /** Material shader with handle references (used as inputs)
+     */
+    struct MaterialShaderWithHandleReference {
         /** Shader to be used. (If invalid, a default is chosen by the default material renderer) */
         RENDER_NS::RenderHandleReference shader;
         /** Shader graphics state to be used. (If invalid, a default is chosen by the default material renderer) */
@@ -159,15 +174,23 @@ struct RenderDataDefaultMaterial {
         RenderMaterialType materialType { RenderMaterialType::METALLIC_ROUGHNESS };
         /** Render extra rendering flags */
         RenderExtraRenderingFlags extraMaterialRenderingFlags { 0u };
-        /** Render material flags */
-        RenderMaterialFlags renderMaterialFlags { 0u };
+        /** Render material flags, same as MaterialComponent */
+        RenderMaterialFlags renderMaterialFlags { RENDER_MATERIAL_SHADOW_RECEIVER_BIT |
+                                                  RENDER_MATERIAL_SHADOW_CASTER_BIT |
+                                                  RENDER_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT |
+                                                  RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT };
 
         /** Custom render slot id */
         uint32_t customRenderSlotId { ~0u };
         /** Material shader */
-        MaterialShader materialShader;
+        MaterialShaderWithHandleReference materialShader;
         /** Depth shader */
-        MaterialShader depthShader;
+        MaterialShaderWithHandleReference depthShader;
+
+        /** Render sort layer id. Valid values are 0 - 63 */
+        uint8_t renderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+        /** Render sort layer id. Valid values are 0 - 255 */
+        uint8_t renderSortLayerOrder { 0 };
     };
 
     /** Submesh material flags
@@ -185,6 +208,8 @@ struct RenderDataDefaultMaterial {
 
         /** 32 bit hash based on the variables above */
         uint32_t renderHash { 0u };
+        /** 32 bit hash based on the variables above targeted for default depth rendering hashing */
+        uint32_t renderDepthHash { 0u };
     };
 
     struct SlotMaterialData {
@@ -195,9 +220,9 @@ struct RenderDataDefaultMaterial {
         /** Render material flags */
         RenderMaterialFlags renderMaterialFlags { 0u };
         /** Custom shader handle or invalid handle */
-        RENDER_NS::RenderHandleReference shader;
+        RENDER_NS::RenderHandle shader;
         /** Custom graphics state handle or invalid handle */
-        RENDER_NS::RenderHandleReference gfxState;
+        RENDER_NS::RenderHandle gfxState;
     };
 
     /** Object counts for rendering.
@@ -209,8 +234,10 @@ struct RenderDataDefaultMaterial {
         uint32_t submeshCount { 0u };
         /** Skin count */
         uint32_t skinCount { 0u };
-        /** Material count */
+        /** Material count (frame material count) */
         uint32_t materialCount { 0u };
+        /** Unique material count */
+        uint32_t uniqueMaterialCount { 0u };
     };
 
     /** Per mesh skin joint matrices.
@@ -229,12 +256,12 @@ struct RenderDataDefaultMaterial {
          * With default material build-in render nodes must have compatible pipeline layout.
          * With custom render slots and custom render nodes can be anything.
          */
-        RENDER_NS::RenderHandleReference shaderHandle;
+        RENDER_NS::RenderHandle shaderHandle;
 
         /** handle count */
         uint32_t resourceHandleCount { 0u };
         /** invalid handles if not given */
-        RENDER_NS::RenderHandleReference resourceHandles[MAX_MATERIAL_CUSTOM_RESOURCE_COUNT];
+        RENDER_NS::RenderHandle resourceHandles[MAX_MATERIAL_CUSTOM_RESOURCE_COUNT];
     };
 
     /** Material slot types. Where
@@ -247,20 +274,13 @@ struct RenderDataDefaultMaterial {
         /** Basic depth slot for shadows and depth pre-pass */
         SLOT_TYPE_DEPTH = 2,
     };
-
-    /** Material indices.
-     */
-    struct MaterialIndices {
-        /** Material index */
-        uint32_t materialIndex { ~0u };
-        /** Material custom resource index */
-        uint32_t materialCustomResourceIndex { ~0u };
-    };
 };
 
 /** @ingroup group_render_irenderdatastoredefaultmaterial */
 /** RenderDataStoreDefaultMaterial interface.
  * Not internally syncronized.
+ * Default material can be fetched with material id
+ * 0xFFFFffff and 0xFFFFFFFFffffffff
  */
 class IRenderDataStoreDefaultMaterial : public RENDER_NS::IRenderDataStore {
 public:
@@ -274,19 +294,21 @@ public:
      */
     virtual uint32_t AddMeshData(const RenderMeshData& meshData) = 0;
 
-    /** Add material and get material index.
-     * @param materialUniforms input uniform data.
+    /** Update (or create) rendering material data.
+     * Automatic hashing with id. (E.g. material entity id)
+     * Final rendering material flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
+     * @param id Material component id. In typical ECS usage material entity id.
+     * @param materialUniforms input material uniforms.
      * @param materialHandles raw GPU resource handles.
      * @param materialData Material data.
-     * @param customPropertyData Custom property data per material.
-     * @return Material index for submesh to use.
+     * @return Returns material index.
      */
-    virtual uint32_t AddMaterialData(const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
-        const RenderDataDefaultMaterial::MaterialHandles& materialHandles,
-        const RenderDataDefaultMaterial::MaterialData& materialData,
-        const BASE_NS::array_view<const uint8_t> customPropertyData) = 0;
+    virtual uint32_t UpdateMaterialData(const uint64_t id,
+        const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+        const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference& materialHandles,
+        const RenderDataDefaultMaterial::MaterialData& materialData) = 0;
 
-    /** Add material and get material index.
+    /** Update (or create) rendering material data.
      * Automatic hashing with id. (E.g. material entity id)
      * Final rendering material flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
      * @param id Material component id. In typical ECS usage material entity id.
@@ -294,76 +316,107 @@ public:
      * @param materialHandles raw GPU resource handles.
      * @param materialData Material data.
      * @param customPropertyData Custom property data per material.
-     * @return Material index for submesh to use.
+     * @return Returns material index.
      */
-    virtual uint32_t AddMaterialData(const uint64_t id,
+    virtual uint32_t UpdateMaterialData(const uint64_t id,
         const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
-        const RenderDataDefaultMaterial::MaterialHandles& materialHandles,
+        const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference& materialHandles,
         const RenderDataDefaultMaterial::MaterialData& materialData,
         const BASE_NS::array_view<const uint8_t> customPropertyData) = 0;
 
-    /** Reserve space for instanceCount materials.
+    /** Update (or create) rendering material data.
+     * Automatic hashing with id. (E.g. material entity id)
+     * Final rendering material flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
      * @param id Material component id. In typical ECS usage material entity id.
-     * @param instanceCount How many submesh instances will be will be draw.
-     * @return Material index for the first submesh instance.
-     */
-    virtual uint32_t AllocateMaterials(uint64_t id, uint32_t instanceCount) = 0;
-
-    /** Add material with preallocated index.
-     * @param materialIndex Index to first submesh material (from AllocateMaterials).
-     * @param materialInstanceIndex Offset to submesh instance's material.
-     * @param materialInstanceCount How many times is the material data duplicated.
      * @param materialUniforms input material uniforms.
      * @param materialHandles raw GPU resource handles.
      * @param materialData Material data.
      * @param customPropertyData Custom property data per material.
+     * @param customBindings Custom bindings data per material.
+     * @return Returns material index.
      */
-    virtual void AddInstanceMaterialData(uint32_t materialIndex, uint32_t materialInstanceIndex,
-        uint32_t materialInstanceCount, const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
-        const RenderDataDefaultMaterial::MaterialHandles& materialHandles,
+    virtual uint32_t UpdateMaterialData(const uint64_t id,
+        const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+        const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference& materialHandles,
         const RenderDataDefaultMaterial::MaterialData& materialData,
-        const BASE_NS::array_view<const uint8_t> customPropertyData) = 0;
+        const BASE_NS::array_view<const uint8_t> customPropertyData,
+        const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> customBindings) = 0;
 
-    /** Add material with preallocated index. Material handles and material data is not passed as inputs.
-     * Use for inputting material GPU instances (the shader data and material GPU image handles cannot change)
-     * @param materialIndex Index to first submesh material (from AllocateMaterials).
-     * @param materialInstanceIndex Offset to submesh instance's material.
-     * @param materialInstanceCount How many times is the material data duplicated.
+    /** Destroy material rendering data explicitly.
+     * NOTE: The references for the resources might be zero already at this point.
+     * In typical cases should be automatically called by some ECS system when material is destroyed
+     * @param id Material component id. In typical ECS usage material entity id.
+     */
+    virtual void DestroyMaterialData(const uint64_t id) = 0;
+
+    /** Destroy material rendering data explicitly.
+     * NOTE: The references for the resources might be zero already at this point.
+     * In typical cases should be automatically called by some ECS system when material is destroyed
+     * @param ids Array view of material component ids. In typical ECS usage material entity id.
+     */
+    virtual void DestroyMaterialData(const BASE_NS::array_view<uint64_t> ids) = 0;
+
+    /** Add material and get material index and frame offset
+     * @param id Material component id. In typical ECS usage material entity id.
+     * @return RenderFrameMaterialIndices material index and frame offset
+     */
+    virtual RenderFrameMaterialIndices AddFrameMaterialData(uint64_t id) = 0;
+
+    /** Add material and get material index and frame offset
+     * @param id Material component id. In typical ECS usage material entity id.
+     * @param instanceCount Instance count of the same material.
+     * @return RenderFrameMaterialIndices material index and frame offset
+     */
+    virtual RenderFrameMaterialIndices AddFrameMaterialData(uint64_t id, uint32_t instanceCount) = 0;
+
+    /** Add material and get material index and frame offset
+     * Automatic hashing with id. (E.g. material entity id)
+     * Final rendering material flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
+     * @param id Material component id. In typical ECS usage material entity id.
+     * @return RenderFrameMaterialIndices material index and frame offset
+     */
+    virtual RenderFrameMaterialIndices AddFrameMaterialData(BASE_NS::array_view<const uint64_t> ids) = 0;
+
+    /** Add material without an id to be rendered this frame.
+     * Prefer using id based material updates.
+     * The data is automatically cleared after the rendering has been processed.
      * @param materialUniforms input material uniforms.
+     * @param materialHandles raw GPU resource handles.
+     * @param materialData Material data.
      * @param customPropertyData Custom property data per material.
+     * @param customBindings Custom bindings data per material.
      */
-    virtual void AddInstanceMaterialData(uint32_t materialIndex, uint32_t materialInstanceIndex,
-        uint32_t materialInstanceCount, const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
-        const BASE_NS::array_view<const uint8_t> customPropertyData) = 0;
+    virtual RenderFrameMaterialIndices AddFrameMaterialData(
+        const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+        const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference& materialHandles,
+        const RenderDataDefaultMaterial::MaterialData& materialData,
+        const BASE_NS::array_view<const uint8_t> customPropertyData,
+        const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> customBindings) = 0;
 
-    /** Get material index if already created with the same id.
-     * It's beneficial to use unique materials and use as few of them as possible (there will be copying and such).
-     * @param id Material component id. In typical ECS usage material entity id.
-     * @return Material index for submesh to use. (if no material created with the id
-     * RenderSceneDataConstants::INVALID_INDEX is returned)
+    /** Add material instance data and get material index and frame offset
+     * Final rendering material flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
+     * @param materialIndex Material index (from get material index or update).
+     * @param frameOffset Frame offset for the base instance material.
+     * @param instanceIndex Offset to base frame offset for this instance.
+     * @return Material frame offset index for submesh to use.
      */
-    virtual uint32_t GetMaterialIndex(const uint64_t id) const = 0;
+    virtual RenderFrameMaterialIndices AddFrameMaterialInstanceData(
+        uint32_t materialIndex, uint32_t frameOffset, uint32_t instanceIndex) = 0;
 
-    /** Get material custom resource index if already created for the same material.
+    /** Get material index.
+     * Default material can be fetched with material id
+     * 0xFFFFffff and 0xFFFFFFFFffffffff
      * @param id Material component id. In typical ECS usage material entity id.
-     * @return Material custom resource index for submesh to use. (if no material custorm resource created with the id
-     * RenderSceneDataConstants::INVALID_INDEX is returned)
+     * @return Material index to material array.
      */
-    virtual uint32_t GetMaterialCustomResourceIndex(const uint64_t id) const = 0;
+    virtual uint32_t GetMaterialIndex(uint64_t id) const = 0;
 
-    /** Get material indices.
-     * @param id Material component id. In typical ECS usage material entity id.
-     * @return Material indices.
+    /** Get material frame indices for material arrays.
+     * Returns all the material offsets which have been added.
+     * Same material index might be in these offset multiple times due to instancing.
+     * @return Material indices to material arrays.
      */
-    virtual RenderDataDefaultMaterial::MaterialIndices GetMaterialIndices(const uint64_t id) const = 0;
-
-    /** Get material indices.
-     * @param id Material component id. In typical ECS usage material entity id.
-     * @paran instanceCount Expected instance count for the material id.
-     * @return Material indices.
-     */
-    virtual RenderDataDefaultMaterial::MaterialIndices GetMaterialIndices(
-        uint64_t id, uint32_t instanceCount) const = 0;
+    virtual BASE_NS::array_view<const uint32_t> GetMaterialFrameIndices() const = 0;
 
     /** Add skin joint matrices and get an index for render submesh.
      * If skinJointMatrices.size() != previousSkinJointMatrices.size()
@@ -376,30 +429,16 @@ public:
     virtual uint32_t AddSkinJointMatrices(const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> skinJointMatrices,
         const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> prevSkinJointMatrices) = 0;
 
-    /** Add custom material resources. (Extra resources on top of default material resources)
-     * With built-in default material render nodes, the resources are mapped to user
-     * defined custom pipeline layout to the single descriptor set which is after default material descriptor sets.
-     * The pipeline layout must be compatible.
-     * Invalid GPU resource handles are ignored.
-     * Automatic hashing with id. (E.g. material entity id)
-     * @param bindings Valid GPU resource handles. (<= MAX_MATERIAL_CUSTOM_RESOURCE_COUNT)
-     * @param id Material component id. In typical ECS usage material entity id.
-     * @return Index for custom material resources. (if no bindings are given
-     * RenderSceneDataConstants::INVALID_INDEX is returned)
-     */
-    virtual uint32_t AddMaterialCustomResources(
-        const uint64_t id, const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> bindings) = 0;
-
     /** Add submeshes safely with default material to rendering. Render slots are evaluated automatically.
      * @param submesh Submesh.
      */
-    virtual void AddSubmesh(const RenderSubmesh& submesh) = 0;
+    virtual void AddSubmesh(const RenderSubmeshWithHandleReference& submesh) = 0;
 
     /** Add submeshes safely with default material to rendering.
      * @param submesh Submesh.
      * @param renderSlotAndShaders All the render slots where the submesh is handled.
      */
-    virtual void AddSubmesh(const RenderSubmesh& submesh,
+    virtual void AddSubmesh(const RenderSubmeshWithHandleReference& submesh,
         const BASE_NS::array_view<const RENDER_NS::IShaderManager::RenderSlotData> renderSlotAndShaders) = 0;
 
     /** Set render slots for material types.
@@ -472,6 +511,25 @@ public:
 
     /** Generate render hash (32 bits as RenderDataDefaultMaterial::SubmeshMaterialFlags::renderHash) */
     virtual uint32_t GenerateRenderHash(const RenderDataDefaultMaterial::SubmeshMaterialFlags& flags) const = 0;
+
+    /** Add debug materials for all slot submeshes to be rendered this frame.
+     * The data is automatically cleared after the rendering has been processed.
+     * This should mainly be used for debugging purposes.
+     * @param toSlotId the (debug) render slot which we add a single material for e.g. debugging.
+     * @param fromSlotIds the common render slots with submeshes which we are rendering with additional materials.
+     * @param materialUniforms input material uniforms.
+     * @param materialHandles raw GPU resource handles.
+     * @param materialData Material data.
+     * @param customPropertyData Custom property data per material.
+     * @param customBindings Custom bindings data per material.
+     */
+    virtual RenderFrameMaterialIndices AddRenderSlotSubmeshesFrameMaterialData(const uint32_t toSlotId,
+        BASE_NS::array_view<const uint32_t> fromSlotIds,
+        const RenderDataDefaultMaterial::InputMaterialUniforms& materialUniforms,
+        const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference& materialHandles,
+        const RenderDataDefaultMaterial::MaterialData& materialData,
+        const BASE_NS::array_view<const uint8_t> customPropertyData,
+        const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> customBindings) = 0;
 
 protected:
     IRenderDataStoreDefaultMaterial() = default;

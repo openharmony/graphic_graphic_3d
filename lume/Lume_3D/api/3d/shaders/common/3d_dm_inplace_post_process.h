@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SHADERS__COMMON__3D_DM_INPLACE_POST_PROCESS_H
-#define SHADERS__COMMON__3D_DM_INPLACE_POST_PROCESS_H
+#ifndef SHADERS_COMMON_3D_DM_INPLACE_POST_PROCESS_H
+#define SHADERS_COMMON_3D_DM_INPLACE_POST_PROCESS_H
 
 // DECLARATIONS_CORE_POST_PROCESS
 #include "render/shaders/common/render_post_process_blocks.h"
@@ -41,4 +41,4 @@ void InplacePostProcess(in vec2 fragUv, inout vec4 color)
 
 #endif
 
-#endif // SHADERS__COMMON__3D_DM_INPLACE_POST_PROCESS_H
+#endif // SHADERS_COMMON_3D_DM_INPLACE_POST_PROCESS_H

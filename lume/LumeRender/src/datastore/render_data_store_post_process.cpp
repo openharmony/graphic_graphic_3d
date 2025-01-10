@@ -15,7 +15,6 @@
 
 #include "render_data_store_post_process.h"
 
-#include <cinttypes>
 #include <cstdint>
 
 #include <base/containers/fixed_string.h>
@@ -77,85 +76,85 @@ void AppendValues(
 {
     if (type == "vec4") {
         if ((offset + ALIGNMENT_OF_VEC4) <= maxByteSize) {
-            Math::Vec4* val = reinterpret_cast<Math::Vec4*>(data + offset);
+            auto* val = reinterpret_cast<Math::Vec4*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC4, ALIGNMENT_OF_VEC4);
         }
     } else if (type == "uvec4") {
         if ((offset + ALIGNMENT_OF_VEC4) <= maxByteSize) {
-            Math::UVec4* val = reinterpret_cast<Math::UVec4*>(data + offset);
+            auto* val = reinterpret_cast<Math::UVec4*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC4, ALIGNMENT_OF_VEC4);
         }
     } else if (type == "ivec4") {
         if ((offset + ALIGNMENT_OF_VEC4) <= maxByteSize) {
-            Math::IVec4* val = reinterpret_cast<Math::IVec4*>(data + offset);
+            auto* val = reinterpret_cast<Math::IVec4*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC4, ALIGNMENT_OF_VEC4);
         }
     } else if (type == "vec3") {
         if ((offset + ALIGNMENT_OF_VEC3) <= maxByteSize) {
-            Math::Vec3* val = reinterpret_cast<Math::Vec3*>(data + offset);
+            auto* val = reinterpret_cast<Math::Vec3*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC3, ALIGNMENT_OF_VEC3);
         }
     } else if (type == "uvec3") {
         if ((offset + ALIGNMENT_OF_VEC3) <= maxByteSize) {
-            Math::UVec3* val = reinterpret_cast<Math::UVec3*>(data + offset);
+            auto* val = reinterpret_cast<Math::UVec3*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC3, ALIGNMENT_OF_VEC3);
         }
     } else if (type == "ivec3") {
         if ((offset + ALIGNMENT_OF_VEC3) <= maxByteSize) {
-            Math::IVec3* val = reinterpret_cast<Math::IVec3*>(data + offset);
+            auto* val = reinterpret_cast<Math::IVec3*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC3, ALIGNMENT_OF_VEC3);
         }
     } else if (type == "vec2") {
         if ((offset + ALIGNMENT_OF_VEC2) <= maxByteSize) {
-            Math::Vec2* val = reinterpret_cast<Math::Vec2*>(data + offset);
+            auto* val = reinterpret_cast<Math::Vec2*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC2, ALIGNMENT_OF_VEC2);
         }
     } else if (type == "uvec2") {
         if ((offset + ALIGNMENT_OF_VEC2) <= maxByteSize) {
-            Math::UVec2* val = reinterpret_cast<Math::UVec2*>(data + offset);
+            auto* val = reinterpret_cast<Math::UVec2*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC2, ALIGNMENT_OF_VEC2);
         }
     } else if (type == "ivec2") {
         if ((offset + ALIGNMENT_OF_VEC2) <= maxByteSize) {
-            Math::IVec2* val = reinterpret_cast<Math::IVec2*>(data + offset);
+            auto* val = reinterpret_cast<Math::IVec2*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC2, ALIGNMENT_OF_VEC2);
         }
     } else if (type == "float") {
         if ((offset + ALIGNMENT_OF_FLOAT) <= maxByteSize) {
-            float* val = reinterpret_cast<float*>(data + offset);
+            auto* val = reinterpret_cast<float*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_FLOAT, ALIGNMENT_OF_FLOAT);
         }
     } else if (type == "uint") {
         if ((offset + ALIGNMENT_OF_FLOAT) <= maxByteSize) {
-            uint32_t* val = reinterpret_cast<uint32_t*>(data + offset);
+            auto* val = reinterpret_cast<uint32_t*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_FLOAT, ALIGNMENT_OF_FLOAT);
         }
     } else if (type == "int") {
         if ((offset + ALIGNMENT_OF_FLOAT) <= maxByteSize) {
-            int32_t* val = reinterpret_cast<int32_t*>(data + offset);
+            auto* val = reinterpret_cast<int32_t*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_FLOAT, ALIGNMENT_OF_FLOAT);
         }
     } else if (type == "mat3x3") {
         if ((offset + ALIGNMENT_OF_MAT3X3) <= maxByteSize) {
-            Math::Mat3X3* val = reinterpret_cast<Math::Mat3X3*>(data + offset);
+            auto* val = reinterpret_cast<Math::Mat3X3*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_MAT3X3, ALIGNMENT_OF_MAT3X3);
         }
     } else if (type == "mat4x4") {
         if ((offset + ALIGNMENT_OF_MAT4X4) <= maxByteSize) {
-            Math::Mat4X4* val = reinterpret_cast<Math::Mat4X4*>(data + offset);
+            auto* val = reinterpret_cast<Math::Mat4X4*>(data + offset);
             FromJson(*value, *val);
             offset = GetAlignment(offset + SIZE_OF_MAT4X4, ALIGNMENT_OF_MAT4X4);
         }
@@ -171,7 +170,23 @@ RenderDataStorePostProcess::RenderDataStorePostProcess(const IRenderContext& ren
     : renderContext_(renderContext), name_(name)
 {}
 
-RenderDataStorePostProcess::~RenderDataStorePostProcess() {}
+void RenderDataStorePostProcess::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStorePostProcess::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStorePostProcess::GetRefCount()
+{
+    return refcnt_;
+}
 
 void RenderDataStorePostProcess::Create(const string_view name)
 {
@@ -195,7 +210,7 @@ void RenderDataStorePostProcess::Create(
 
     if (auto iter = allPostProcesses_.find(name); iter != allPostProcesses_.end()) {
         auto& postProcesses = iter->second.postProcesses;
-        const uint32_t ppCount = static_cast<uint32_t>(postProcesses.size());
+        const auto ppCount = static_cast<uint32_t>(postProcesses.size());
         uint32_t ppIndex = ~0u;
         for (uint32_t idx = 0; idx < ppCount; ++idx) {
             if (postProcesses[idx].name == ppName) {
@@ -229,9 +244,8 @@ void RenderDataStorePostProcess::Destroy(const string_view name)
 
     if ((!name.empty()) && allPostProcesses_.contains(name)) {
         allPostProcesses_.erase(name);
-        if (IRenderDataStorePod* dataStorePod = static_cast<IRenderDataStorePod*>(
-                renderContext_.GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_POD_NAME));
-            dataStorePod) {
+        if (refcnt_ptr<IRenderDataStorePod> dataStorePod =
+                renderContext_.GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_POD_NAME)) {
             dataStorePod->DestroyPod(RENDER_DATA_STORE_POST_PROCESS_TYPE_NAME, name);
         }
     } else {
@@ -281,7 +295,7 @@ void RenderDataStorePostProcess::Set(
 
     if (auto iter = allPostProcesses_.find(name); iter != allPostProcesses_.end()) {
         auto& postProcesses = iter->second.postProcesses;
-        const uint32_t ppCount = static_cast<uint32_t>(postProcesses.size());
+        const auto ppCount = static_cast<uint32_t>(postProcesses.size());
         for (uint32_t idx = 0; idx < ppCount; ++idx) {
             if (postProcesses[idx].name == ppName) {
                 SetImpl(vars, idx, iter->second);
@@ -344,9 +358,8 @@ RenderDataStorePostProcess::PostProcess RenderDataStorePostProcess::Get(
 void RenderDataStorePostProcess::CreateFromPod(const string_view name)
 {
     // create base post process render data store
-    if (IRenderDataStorePod* dataStorePod = static_cast<IRenderDataStorePod*>(
-            renderContext_.GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_POD_NAME));
-        dataStorePod) {
+    if (refcnt_ptr<IRenderDataStorePod> dataStorePod =
+            renderContext_.GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_POD_NAME)) {
         PLUGIN_STATIC_ASSERT(
             countof(PostProcessConstants::POST_PROCESS_NAMES) == PostProcessConstants::POST_PROCESS_COUNT);
         auto& postProcessRef = allPostProcesses_[name];
@@ -486,7 +499,7 @@ void RenderDataStorePostProcess::GetShaderProperties(
                                     value = &dataObject.value;
                                 }
                             }
-                            uint8_t* factorData = reinterpret_cast<uint8_t*>(&vars.factor);
+                            auto* factorData = reinterpret_cast<uint8_t*>(&vars.factor);
                             AppendValues(MAX_GLOBAL_FACTOR_BYTE_SIZE, type, value, offset, factorData);
                         }
                     }
@@ -525,14 +538,8 @@ void RenderDataStorePostProcess::GetShaderProperties(
 }
 
 // for plugin / factory interface
-IRenderDataStore* RenderDataStorePostProcess::Create(IRenderContext& renderContext, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStorePostProcess::Create(IRenderContext& renderContext, const char* name)
 {
-    // engine not used
-    return new RenderDataStorePostProcess(renderContext, name);
-}
-
-void RenderDataStorePostProcess::Destroy(IRenderDataStore* aInstance)
-{
-    delete static_cast<RenderDataStorePostProcess*>(aInstance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStorePostProcess(renderContext, name));
 }
 RENDER_END_NAMESPACE()

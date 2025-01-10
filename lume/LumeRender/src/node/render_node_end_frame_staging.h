@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_NODE_END_FRAME_STAGING_H
-#define RENDER_RENDER__NODE__RENDER_NODE_END_FRAME_STAGING_H
+#ifndef RENDER_NODE_RENDER_NODE_END_FRAME_STAGING_H
+#define RENDER_NODE_RENDER_NODE_END_FRAME_STAGING_H
 
 #include <base/util/uid.h>
 #include <render/device/intf_gpu_resource_manager.h>
@@ -47,7 +47,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "02c59da6-d425-41cd-a2ef-66c79e1233a7" };
-    static constexpr char const* TYPE_NAME = "CORE_RN_END_FRAME_STAGING";
+    static constexpr const char* TYPE_NAME = "CORE_RN_END_FRAME_STAGING";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -61,4 +61,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_RENDER__NODE__RENDER_NODE_END_FRAME_STAGING_H
+#endif // RENDER_NODE_RENDER_NODE_END_FRAME_STAGING_H

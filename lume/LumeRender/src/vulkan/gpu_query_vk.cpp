@@ -30,9 +30,8 @@ GpuQueryVk::GpuQueryVk(Device& device, const GpuQueryDesc& desc) : device_(devic
     plats_.resize(device_.GetCommandBufferingCount() + 1);
 
     constexpr VkQueryPoolCreateFlags createFlags { 0 };
-    const VkQueryType queryType = (VkQueryType)desc_.queryType;
-    const VkQueryPipelineStatisticFlags pipelineStatisticsFlags =
-        (VkQueryPipelineStatisticFlags)desc_.queryPipelineStatisticsFlags;
+    const auto queryType = (VkQueryType)desc_.queryType;
+    const auto pipelineStatisticsFlags = (VkQueryPipelineStatisticFlags)desc_.queryPipelineStatisticsFlags;
     const VkQueryPoolCreateInfo createInfo {
         VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, // sType
         nullptr,                                  // pNext

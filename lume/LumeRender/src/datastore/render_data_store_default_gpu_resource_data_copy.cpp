@@ -20,13 +20,10 @@
 
 #include <base/containers/vector.h>
 #include <render/datastore/intf_render_data_store_default_gpu_resource_data_copy.h>
-#include <render/device/gpu_resource_desc.h>
-#include <render/device/intf_device.h>
 #include <render/intf_render_context.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
-#include "device/gpu_resource_handle_util.h"
 #include "device/gpu_resource_manager.h"
 #include "device/gpu_resource_util.h"
 #include "util/log.h"
@@ -36,8 +33,8 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 RenderDataStoreDefaultGpuResourceDataCopy::RenderDataStoreDefaultGpuResourceDataCopy(
     IRenderContext& renderContext, const string_view name)
-    : device_(renderContext.GetDevice()),
-      gpuResourceMgr_(static_cast<GpuResourceManager&>(device_.GetGpuResourceManager())), name_(name)
+    : device_(renderContext.GetDevice()), gpuResourceMgr_((GpuResourceManager&)device_.GetGpuResourceManager()),
+      name_(name)
 {}
 
 void RenderDataStoreDefaultGpuResourceDataCopy::PostRenderBackend()
@@ -63,6 +60,24 @@ void RenderDataStoreDefaultGpuResourceDataCopy::Clear()
     // data cannot be cleared
 }
 
+void RenderDataStoreDefaultGpuResourceDataCopy::Ref()
+{
+    refcnt_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void RenderDataStoreDefaultGpuResourceDataCopy::Unref()
+{
+    if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        delete this;
+    }
+}
+
+int32_t RenderDataStoreDefaultGpuResourceDataCopy::GetRefCount()
+{
+    return refcnt_;
+}
+
 void RenderDataStoreDefaultGpuResourceDataCopy::AddCopyOperation(const GpuResourceDataCopy& copyOp)
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -81,13 +96,9 @@ void RenderDataStoreDefaultGpuResourceDataCopy::AddCopyOperation(const GpuResour
 }
 
 // for plugin / factory interface
-IRenderDataStore* RenderDataStoreDefaultGpuResourceDataCopy::Create(IRenderContext& renderContext, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultGpuResourceDataCopy::Create(
+    IRenderContext& renderContext, const char* name)
 {
-    return new RenderDataStoreDefaultGpuResourceDataCopy(renderContext, name);
-}
-
-void RenderDataStoreDefaultGpuResourceDataCopy::Destroy(IRenderDataStore* instance)
-{
-    delete static_cast<RenderDataStoreDefaultGpuResourceDataCopy*>(instance);
+    return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultGpuResourceDataCopy(renderContext, name));
 }
 RENDER_END_NAMESPACE()

@@ -16,13 +16,13 @@
 #include "local_matrix_system.h"
 
 #include <ComponentTools/component_query.h>
-#include <PropertyTools/property_api_impl.inl>
 
 #include <3d/ecs/components/local_matrix_component.h>
 #include <3d/ecs/components/transform_component.h>
 #include <base/math/matrix_util.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/namespace.h>
+#include <core/property_tools/property_api_impl.inl>
 
 #include "property/property_handle.h"
 

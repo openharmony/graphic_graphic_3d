@@ -20,7 +20,6 @@
 #include <charconv>
 #include <cstdint>
 #include <optional>
-#include <string_view>
 
 #include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
@@ -31,11 +30,11 @@
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
-#include <core/perf/intf_performance_data_manager.h>
 
 #include "gltf/data.h"
 #include "gltf/gltf2_util.h"
 #include "util/json_util.h"
+#include "util/log.h"
 
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
@@ -295,28 +294,26 @@ bool ParseOptionalNumberArray(LoadResult& loadResult, vector<T>& out, const json
     const string_view name, vector<T> defaultValue, uint32_t minSize = 0,
     uint32_t maxSize = std::numeric_limits<int>::max())
 {
-    if (auto it = jsonObject.find(name); it) {
-        auto& values = *it;
-        if (values.is_array()) {
-            out.reserve(values.array_.size());
-            for (const auto& item : values.array_) {
-                if (item.is_number()) {
-                    out.push_back(item.as_number<T>());
-
-                    if (out.size() > maxSize) {
-                        return true;
-                    }
-                } else {
-                    RETURN_WITH_ERROR(loadResult, "expected array of numbers");
-                }
-            }
-
-            if (out.size() >= minSize) {
-                return true;
-            }
-        } else {
-            RETURN_WITH_ERROR(loadResult, "expected array");
+    const auto* it = jsonObject.find(name);
+    if (!it) {
+        out = defaultValue;
+        return true;
+    }
+    if (!it->is_array()) {
+        RETURN_WITH_ERROR(loadResult, "expected array");
+    }
+    const auto view =
+        array_view(it->array_.data(), BASE_NS::Math::min(static_cast<uint32_t>(it->array_.size()), maxSize));
+    out.reserve(view.size());
+    for (const auto& item : view) {
+        if (!item.is_number()) {
+            RETURN_WITH_ERROR(loadResult, "expected array of numbers");
         }
+        out.push_back(item.as_number<T>());
+    }
+
+    if (out.size() >= minSize) {
+        return true;
     }
 
     out = defaultValue;
@@ -436,7 +433,7 @@ std::optional<int> BufferViewByteOffset(
     } else if (offset < 0) {
         SetError(loadResult, "bufferView.byteOffset isn't valid offset");
         return std::nullopt;
-    } else if (!buffer || !(*buffer) || !byteLength || ((*buffer)->byteLength < (size_t)(offset + *byteLength))) {
+    } else if (!buffer || !(*buffer) || !byteLength || ((*buffer)->byteLength < (size_t(offset) + *byteLength))) {
         SetError(loadResult, "bufferView.byteLength is larger than buffer.byteLength");
         return std::nullopt;
     }
@@ -482,16 +479,17 @@ bool ParseBufferView(LoadResult& loadResult, const json::value& jsonData)
 
     const auto result = byteLength && buffer && offset && stride && target;
 
-    auto view = make_unique<BufferView>();
     if (result) {
+        auto view = make_unique<BufferView>();
         view->buffer = *buffer;
         view->byteLength = size_t(*byteLength);
         view->byteOffset = size_t(*offset);
         view->byteStride = size_t(*stride);
         view->target = *target;
+        loadResult.data->bufferViews.push_back(move(view));
+    } else {
+        loadResult.data->bufferViews.emplace_back();
     }
-
-    loadResult.data->bufferViews.push_back(move(view));
 
     return result;
 }
@@ -559,7 +557,7 @@ std::optional<uint32_t> AccessorByteOffset(
     uint32_t byteOffset;
     if (!ParseOptionalNumber<uint32_t>(loadResult, byteOffset, jsonData, "byteOffset", 0)) {
         return false;
-    } else if (!bufferView || (!(*bufferView)) || (*bufferView)->byteLength <= byteOffset) {
+    } else if (bufferView && (*bufferView) && ((*bufferView)->byteLength <= byteOffset)) {
         SetError(loadResult, "Accessor.byteOffset isn't valid offset");
         return std::nullopt;
     }
@@ -680,11 +678,16 @@ std::optional<Sparse> AccessorSparse(LoadResult& loadResult, const json::value& 
 }
 
 bool ValidateAccessor(LoadResult& loadResult, ComponentType componentType, uint32_t count, DataType dataType,
-    const BufferView* bufferView, uint32_t byteOffset, const vector<float>& min, const vector<float>& max)
+    const BufferView* bufferView, uint32_t byteOffset, const array_view<const float> min,
+    const array_view<const float> max)
 {
     if (const size_t elementSize = GetComponentsCount(dataType) * GetComponentByteSize(componentType); elementSize) {
         if (bufferView) {
             // check count against buffer size
+            if (byteOffset > bufferView->byteLength) {
+                SetError(loadResult, "Accessor.byteOffset is invalid");
+                return false;
+            }
             const auto bufferSize = bufferView->byteLength - byteOffset;
             const auto elementCount = bufferSize / elementSize;
 
@@ -711,6 +714,15 @@ bool ValidateAccessor(LoadResult& loadResult, ComponentType componentType, uint3
     return true;
 }
 
+template<typename T>
+array_view<const T> GetView(const std::optional<vector<T>>& potential)
+{
+    if (potential.has_value()) {
+        return array_view<const float>(potential.value());
+    }
+    return {};
+}
+
 bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
 {
     const auto componentType = AccessorComponentType(loadResult, jsonData);
@@ -724,11 +736,33 @@ bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
     auto min = AccessorMin(loadResult, jsonData);
     auto sparse = AccessorSparse(loadResult, jsonData);
 
+    const auto minView = GetView(min);
+    const auto maxView = GetView(max);
+
     bool result = true;
     if (!ValidateAccessor(loadResult, componentType.value_or(ComponentType::INVALID), count.value_or(0U),
-            datatype.value_or(DataType::INVALID), bufferView.value_or(nullptr), byteOffset.value_or(0U),
-            min.value_or(vector<float> {}), max.value_or(vector<float> {}))) {
+        datatype.value_or(DataType::INVALID), bufferView.value_or(nullptr), byteOffset.value_or(0U), minView,
+            maxView)) {
         result = false;
+    }
+    if (count && sparse) {
+        const auto& sparseRef = *sparse;
+        if (sparseRef.count > *count) {
+            SetError(loadResult, "Accessor.sparse.count is invalid");
+            return false;
+        }
+        if (!ValidateAccessor(loadResult, sparseRef.indices.componentType, sparseRef.count, DataType::SCALAR,
+            sparseRef.indices.bufferView, sparseRef.indices.byteOffset, array_view<const float> {},
+                array_view<const float> {})) {
+            SetError(loadResult, "Accessor.sparse.indices is invalid");
+            return false;
+        }
+        if (!ValidateAccessor(loadResult, componentType.value_or(ComponentType::INVALID), sparseRef.count,
+            datatype.value_or(DataType::INVALID), sparseRef.values.bufferView, sparseRef.values.byteOffset, minView,
+            maxView)) {
+            SetError(loadResult, "Accessor.sparse.values is invalid");
+            return false;
+        }
     }
 
     auto accessor = make_unique<Accessor>();
@@ -1862,18 +1896,21 @@ bool ImageBasedLightSpecularImages(
 {
     const auto parseCubeMipLevel = [&specularImages](LoadResult& loadResult, const json::value& mipLevelJson) -> bool {
         ImageBasedLight::CubemapMipLevel mipLevel;
-        if (mipLevelJson.is_array()) {
+        static constexpr size_t requiredLevels = 6U;
+        if (mipLevelJson.is_array() && (mipLevelJson.array_.size() == requiredLevels)) {
             mipLevel.reserve(mipLevelJson.array_.size());
             std::transform(mipLevelJson.array_.begin(), mipLevelJson.array_.end(), std::back_inserter(mipLevel),
                 [](const json::value& item) {
                     return item.is_number() ? item.as_number<size_t>() : GLTF_INVALID_INDEX;
                 });
         }
-
-        if (mipLevel.size() != 6) {
+        if (mipLevel.size() != requiredLevels) {
             return false;
         }
-
+        if (std::any_of(mipLevel.cbegin(), mipLevel.cend(),
+                [images = loadResult.data->images.size()](const size_t& index) { return index >= images; })) {
+            return false;
+        }
         specularImages.push_back(move(mipLevel));
         return true;
     };
@@ -2171,17 +2208,20 @@ bool FinalizeNodes(LoadResult& loadResult)
 
     for (const auto& node : nodes) {
         for (auto index : node->tmpChildren) {
-            if (index < nodes.size()) {
-                auto childNode = nodes[index].get();
-                assert(!childNode->parent &&
-                       "Currently only single parent supported (GLTF spec reserves option to have multiple)");
-                childNode->parent = node.get(); // since parent owns childs, and we don't want ref-loops, pass a
-                                                // raw pointer instead
-                node->children.push_back(childNode);
-            } else {
+            if (index >= nodes.size()) {
                 SetError(loadResult, "Invalid node index");
                 result = false;
+                continue;
             }
+            auto childNode = nodes[index].get();
+            if (childNode->parent) {
+                SetError(loadResult, "Node has multiple parents");
+                result = false;
+                continue;
+            }
+            // since parent owns childs, and we don't want ref-loops, pass a raw pointer instead
+            childNode->parent = node.get();
+            node->children.push_back(childNode);
         }
 
         if (node->tmpSkin != GLTF_INVALID_INDEX && node->tmpSkin < loadResult.data->skins.size()) {
@@ -2682,75 +2722,24 @@ bool ParseGLTF(LoadResult& loadResult, const json::value& jsonData)
     if (!GltfAsset(loadResult, jsonData) || !GltfRequiredExtension(loadResult, jsonData)) {
         return false;
     }
-
-    bool result = true;
-    if (!GltfUsedExtension(loadResult, jsonData)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "buffers", ParseBuffer)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "bufferViews", ParseBufferView)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "accessors", ParseAccessor)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "images", ParseImage)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "samplers", ParseSampler)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "textures", ParseTexture)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "materials", ParseMaterial)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "meshes", ParseMesh)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "cameras", ParseCamera)) {
-        result = false;
-    }
-
-    if (!GltfExtension(loadResult, jsonData)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "nodes", ParseNode)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "skins", ParseSkin)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "animations", ParseAnimation)) {
-        result = false;
-    }
-
-    if (!GltfExtras(loadResult, jsonData)) {
-        result = false;
-    }
-
-    if (!FinalizeNodes(loadResult)) {
-        result = false;
-    }
-
-    if (!ForEachObjectInArray(loadResult, jsonData, "scenes", ParseScene)) {
-        result = false;
-    }
+    // parse through all types of objects regardles of errors. result will be false is any of the steps failed.
+    bool result = GltfUsedExtension(loadResult, jsonData);
+    result = ForEachObjectInArray(loadResult, jsonData, "buffers", ParseBuffer) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "bufferViews", ParseBufferView) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "accessors", ParseAccessor) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "images", ParseImage) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "samplers", ParseSampler) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "textures", ParseTexture) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "materials", ParseMaterial) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "meshes", ParseMesh) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "cameras", ParseCamera) && result;
+    result = GltfExtension(loadResult, jsonData) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "nodes", ParseNode) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "skins", ParseSkin) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "animations", ParseAnimation) && result;
+    result = GltfExtras(loadResult, jsonData) && result;
+    result = FinalizeNodes(loadResult) && result;
+    result = ForEachObjectInArray(loadResult, jsonData, "scenes", ParseScene) && result;
 
     if (!std::all_of(loadResult.data->skins.begin(), loadResult.data->skins.end(),
             [&loadResult](auto const& skin) { return JointsInSameScene(*skin, loadResult); })) {
@@ -2784,7 +2773,7 @@ void LoadGLTF(LoadResult& loadResult, IFile& file)
     if (file.Read(raw.data(), byteLength) != byteLength) {
         return;
     }
-    CORE_CPU_PERF_BEGIN(jkson, "glTF", "Load", "jkatteluson::parse");
+    CORE_CPU_PERF_BEGIN(jkson, "CORE3D", "LoadGLTF", "json::parse", CORE3D_PROFILER_DEFAULT_COLOR);
     json::value jsonObject = json::parse(raw.data());
     CORE_CPU_PERF_END(jkson);
     if (!jsonObject) {
@@ -2870,7 +2859,7 @@ LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
 {
     LoadResult result;
 
-    CORE_CPU_PERF_SCOPE("glTF", "LoadGLTF()", uri);
+    CORE_CPU_PERF_SCOPE("CORE3D", "LoadGLTF()", uri, CORE3D_PROFILER_DEFAULT_COLOR);
 
     IFile::Ptr file = fileManager.OpenFile(uri);
     if (!file) {
@@ -2928,6 +2917,10 @@ LoadResult LoadGLTF(IFileManager& fileManager, array_view<uint8_t const> data)
     auto const tmpFileName = "memory://" + to_string((uintptr_t)data.data()) + ext;
     {
         auto tmpFile = fileManager.CreateFile(tmpFileName);
+        if (!tmpFile) {
+            result.success = false;
+            return result;
+        }
         // NOTE: not ideal as this actually copies the data
         // alternative would be to cast to MemoryFile and give the array_view to the file
         tmpFile->Write(data.data(), data.size());

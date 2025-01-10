@@ -1,35 +1,22 @@
 /*
  * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
- *
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
-
- * * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations
- * under the License.
+ * limitations under the License.
  */
 
 #include "ohos_file.h"
 
 #include <cstdint>
 
-#ifdef __has_include
-#if __has_include(<filesystem>)
-#include <filesystem>
-#define HAS_FILESYSTEM
-#endif
-#endif
-
-#ifndef HAS_FILESYSTEM
 #include <cerrno>
 #include <dirent.h>
 
@@ -40,7 +27,6 @@
 #endif
 #include <climits>
 #define CORE_MAX_PATH PATH_MAX
-#endif
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
@@ -70,6 +56,14 @@ void OhosResMgr::UpdateResManager(const PlatformHapInfo& hapInfo)
         resourceManager_ = resourceMgrIter->second;
         return;
     }
+
+    if (hapInfo.resourceManager != nullptr) {
+        resourceManagers_[key] = hapInfo.resourceManager;
+        resourceManager_ = hapInfo.resourceManager;
+        CORE_LOG_D("resource manager has ready by new api");
+        return;
+    }
+
     std::shared_ptr<OHOS::Global::Resource::ResourceManager>
         newResMgr(OHOS::Global::Resource::CreateResourceManager());
     auto resRet = newResMgr->AddResource(hapInfo.hapPath.c_str());
@@ -204,14 +198,18 @@ uint64_t OhosFile::Read(void* buffer, uint64_t count)
         CORE_ASSERT_MSG(false, "Unable to read chunks bigger than (SIZE_MAX) bytes.");
         return 0;
     }
-    if (CloneData(buffer, static_cast<size_t>(count), &(buffer_->GetStorage()[index_]),
-                static_cast<size_t>(toRead))) {
+    if (CloneData(buffer, static_cast<size_t>(count), &(buffer_->GetStorage()[index_]), static_cast<size_t>(toRead))) {
         index_ += toRead;
     }
     return toRead;
 }
 
 uint64_t OhosFile::Write(const void* buffer, uint64_t count)
+{
+    return 0;
+}
+
+uint64_t OhosFile::Append(const void* buffer, uint64_t count, uint64_t flushSize)
 {
     return 0;
 }

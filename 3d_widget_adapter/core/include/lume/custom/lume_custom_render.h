@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -48,6 +48,7 @@ struct CustomRenderInput {
     CORE_NS::IEcs::Ptr ecs_;
     uint32_t width_ { 0U };
     uint32_t height_ { 0U };
+    bool useMultiSwapChain_ { false };
 };
 
 class LumeCustomRender {
@@ -75,11 +76,34 @@ public:
         widthScale_ = widthScale;
         heightScale_ = heightScale;
     }
+    
+    const std::string& GetSwapchainName() const
+    {
+        return swapchainName_;
+    }
+
+    const std::string& GetInputBufferName() const
+    {
+        return inputBufferName_;
+    }
+
+    const std::string& GetResolutionBufferName() const
+    {
+        return resolutionBufferName_;
+    }
+
+    bool GetUseBasisEngine()
+    {
+        return useBasisEngine_; // get useBasisEngine_ of the customRender instance
+    }
+
 protected:
     float widthScale_ = 1.0f;
     float heightScale_ = 1.0f;
-    uint32_t width_ = 0U;
+    uint32_t width_ = 0U;;
     uint32_t height_ = 0U;
+    bool useMultiSwapChain_ = false;
+    bool useBasisEngine_ = false; // set to true by ProductBasis if in rain or snow scene, which uses physics engine
 
 private:
     const RENDER_NS::RenderHandleReference GetRenderHandle();
@@ -94,7 +118,7 @@ private:
     CORE_NS::IEngine::Ptr engine_;
     CORE3D_NS::IGraphicsContext::Ptr graphicsContext_;
     RENDER_NS::IRenderContext::Ptr renderContext_;
-    RENDER_NS::IRenderDataStoreDefaultStaging* renderDataStoreDefaultStaging_ { nullptr };
+    BASE_NS::refcnt_ptr<RENDER_NS::IRenderDataStoreDefaultStaging> renderDataStoreDefaultStaging_ { nullptr };
 
     RENDER_NS::RenderHandleReference shaderInputBufferHandle_;
     RENDER_NS::RenderHandleReference resolutionBufferHandle_;
@@ -120,6 +144,10 @@ private:
     const char* const IMAGE_NAME = "IMAGE";
     const char* const INPUT_BUFFER = "INPUT_BUFFER";
     const char* const RESOLUTION_BUFFER = "RESOLUTION_BUFFER";
+
+    std::string swapchainName_ = RENDER_DATA_STORE_DEFAULT_STAGING;
+    std::string inputBufferName_ = INPUT_BUFFER;
+    std::string resolutionBufferName_ = RESOLUTION_BUFFER;
 };
 
 } // namespace name

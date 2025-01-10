@@ -18,6 +18,7 @@
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
+#include <base/util/color.h>
 #include <core/plugin/intf_class_factory.h>
 #include <render/device/intf_device.h>
 #include <render/namespace.h>
@@ -61,22 +62,39 @@ struct VersionInfo {
 struct RenderCreateInfo {
     /** Create info flag bits to setup configuration flags */
     enum CreateInfoFlagBits : uint32_t {
-        /** Request double buffered render data stores for better multi-threading options */
-        DOUBLE_BUFFERED_RENDER_DATA_STORES = 0x00000001,
         /** Request separate render frame backend (backend graphics API control) */
-        SEPARATE_RENDER_FRAME_BACKEND = 0x00000002,
+        CREATE_INFO_SEPARATE_RENDER_FRAME_BACKEND_BIT = 0x00000002,
         /** Request separate render frame present (backend graphics API presentation) */
-        SEPARATE_RENDER_FRAME_PRESENT = 0x00000004,
+        CREATE_INFO_SEPARATE_RENDER_FRAME_PRESENT_BIT = 0x00000004,
     };
     /** Container for render create info flag bits */
     using CreateInfoFlags = uint32_t;
+    /** Thread pool create info */
+    struct ThreadPoolCreateInfo {
+        /** Coefficient to hardware registered number of cores
+         * With 1.0f and maxCount { ~0U }, the maximum number of core tasks are in use
+         */
+        float threadCountCoefficient { 0.5f };
+        /** Minimum count of threads in the thread pool.
+         * The renderer should have at least 4 threads to parallelize correctly.
+         */
+        uint32_t minCount { 4U };
+        /** Maximum count of threads in the thread pool.
+         * The renderer thread count should not exceed the expected task count.
+         */
+        uint32_t maxCount { ~0U };
+    };
 
     /** Application version info */
     VersionInfo applicationInfo;
     /** Device create info */
     DeviceCreateInfo deviceCreateInfo;
     /** Creation flags */
-    CreateInfoFlags createFlags { 0 };
+    CreateInfoFlags createFlags { 0U };
+    /** Threadpool create info */
+    ThreadPoolCreateInfo threadPoolCreateInfo;
+    /** Color space flags (defaults to linear) */
+    BASE_NS::ColorSpaceFlags colorSpaceFlags { 0U };
 };
 
 /**
@@ -108,8 +126,14 @@ public:
     /** Get engine */
     virtual CORE_NS::IEngine& GetEngine() const = 0;
 
+    /** Get color space flags */
+    virtual BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const = 0;
+
     /** Get version */
     virtual BASE_NS::string_view GetVersion() = 0;
+
+    /** Writes current pipelines to disk if cache:// location exists. */
+    virtual void WritePipelineCache() const = 0;
 
 protected:
     IRenderContext() = default;

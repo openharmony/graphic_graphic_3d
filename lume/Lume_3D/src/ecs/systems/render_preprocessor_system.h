@@ -17,12 +17,13 @@
 #define CORE3D_ECS_RENDER_PREPROCESSOR_SYSTEM_H
 
 #include <ComponentTools/component_query.h>
-#include <PropertyTools/property_api_impl.h>
 #include <limits>
 
 #include <3d/ecs/systems/intf_render_preprocessor_system.h>
 #include <3d/intf_graphics_context.h>
 #include <base/math/vector.h>
+#include <core/ecs/intf_ecs.h>
+#include <core/property_tools/property_api_impl.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/intf_render_context.h>
 
@@ -42,14 +43,17 @@ class IRenderDataStoreMorph;
 class IJointMatricesComponentManager;
 class ILayerComponentManager;
 class IMaterialComponentManager;
+class IMaterialExtensionComponentManager;
 class IMeshComponentManager;
 class INodeComponentManager;
 class IRenderMeshComponentManager;
+class IRenderHandleComponentManager;
 class ISkinComponentManager;
 class IWorldMatrixComponentManager;
 class IPicking;
+struct MaterialComponent;
 
-class RenderPreprocessorSystem final : public IRenderPreprocessorSystem {
+class RenderPreprocessorSystem final : public IRenderPreprocessorSystem, CORE_NS::IEcs::ComponentListener {
 public:
     explicit RenderPreprocessorSystem(CORE_NS::IEcs& ecs);
     ~RenderPreprocessorSystem() override;
@@ -105,9 +109,15 @@ public:
     };
 
 private:
+    void OnComponentEvent(EventType type, const CORE_NS::IComponentManager& componentManager,
+        BASE_NS::array_view<const CORE_NS::Entity> entities) override;
+    void HandleMaterialEvents();
     void SetDataStorePointers(RENDER_NS::IRenderDataStoreManager& manager);
     void CalculateSceneBounds();
     void GatherSortData();
+    void UpdateMaterialProperties();
+    void UpdateSingleMaterial(CORE_NS::Entity matEntity, const MaterialComponent* materialHandle);
+    MaterialProperties* GetMaterialProperties(CORE_NS::Entity matEntity);
 
     CORE_NS::IEcs& ecs_;
     IGraphicsContext* graphicsContext_ { nullptr };
@@ -115,6 +125,7 @@ private:
     IJointMatricesComponentManager* jointMatricesManager_ { nullptr };
     ILayerComponentManager* layerManager_ { nullptr };
     IMaterialComponentManager* materialManager_ { nullptr };
+    IRenderHandleComponentManager* renderHandleManager_ { nullptr };
     IMeshComponentManager* meshManager_ { nullptr };
     INodeComponentManager* nodeManager_ { nullptr };
     IRenderMeshComponentManager* renderMeshManager_ { nullptr };
@@ -132,22 +143,27 @@ private:
     };
     CORE_NS::PropertyApiImpl<IRenderPreprocessorSystem::Properties> RENDER_PREPROCESSOR_SYSTEM_PROPERTIES;
 
-    IRenderDataStoreDefaultCamera* dsCamera_ { nullptr };
-    IRenderDataStoreDefaultLight* dsLight_ { nullptr };
-    IRenderDataStoreDefaultMaterial* dsMaterial_ { nullptr };
-    IRenderDataStoreDefaultScene* dsScene_ { nullptr };
-    IRenderDataStoreMorph* dsMorph_ { nullptr };
+    BASE_NS::refcnt_ptr<IRenderDataStoreDefaultCamera> dsCamera_;
+    BASE_NS::refcnt_ptr<IRenderDataStoreDefaultLight> dsLight_;
+    BASE_NS::refcnt_ptr<IRenderDataStoreDefaultMaterial> dsMaterial_;
+    BASE_NS::refcnt_ptr<IRenderDataStoreDefaultScene> dsScene_;
+    BASE_NS::refcnt_ptr<IRenderDataStoreMorph> dsMorph_;
 
     IPicking* picking_ = nullptr;
 
     CORE_NS::ComponentQuery renderableQuery_;
+    uint32_t jointGeneration_ { 0U };
     uint32_t layerGeneration_ { 0U };
     uint32_t materialGeneration_ { 0U };
     uint32_t meshGeneration_ { 0U };
     uint32_t nodeGeneration_ { 0U };
     uint32_t renderMeshGeneration_ { 0U };
     uint32_t worldMatrixGeneration_ { 0U };
+
+    BASE_NS::vector<CORE_NS::Entity> materialModifiedEvents_;
+    BASE_NS::vector<CORE_NS::Entity> materialDestroyedEvents_;
     BASE_NS::vector<MaterialProperties> materialProperties_;
+
     BASE_NS::vector<SortData> meshComponents_;
 
     BASE_NS::vector<CORE_NS::Entity> renderMeshComponents_;
@@ -155,10 +171,12 @@ private:
     BASE_NS::array_view<const CORE_NS::Entity> instancingAllowed_;
     BASE_NS::array_view<const CORE_NS::Entity> rest_;
     struct RenderMeshAaabb {
+        CORE_NS::Entity entity;
         Aabb meshAabb;
         BASE_NS::vector<Aabb> submeshAabbs;
+        bool shadowCaster { true };
     };
-    BASE_NS::unordered_map<CORE_NS::Entity, RenderMeshAaabb> renderMeshAabbs_;
+    BASE_NS::vector<RenderMeshAaabb> renderMeshAabbs_;
     Sphere boundingSphere_;
 };
 CORE3D_END_NAMESPACE()

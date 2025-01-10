@@ -29,10 +29,10 @@ public:
     RenderLightHelper() = default;
     ~RenderLightHelper() = default;
 
-    // NOTE: temporary, no cluster calculations yet
-    static constexpr uint32_t DEFAULT_CLUSTER_INDEX_COUNT { 256u };
     // offset to DefaultMaterialSingleLightStruct
     static constexpr uint32_t LIGHT_LIST_OFFSET { 16u * 6u };
+
+    static constexpr bool ENABLE_CLUSTERED_LIGHTING { false };
 
     struct LightCounts {
         uint32_t directionalLightCount { 0u };

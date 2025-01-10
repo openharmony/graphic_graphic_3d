@@ -46,7 +46,7 @@ ClearcoatShadingVariables GetUnpackedAndSampledClearcoat(const uint instanceIdx,
     const float cc = GetUnpackClearcoat(instanceIdx);
     const float ccRoughness = GetUnpackClearcoatRoughness(instanceIdx);
     ClearcoatShadingVariables ccsv;
-    ccsv.cc = GetClearcoatSample(inUv) * cc; // 0.0 - 1.0
+    ccsv.cc = clamp(GetClearcoatSample(inUv) * cc, 0.0, 1.0); // 0.0 - 1.0
     ccsv.ccNormal = ccNormal;
     ccsv.ccRoughness = GetClearcoatRoughnessSample(inUv, instanceIdx) * ccRoughness; // CORE_BRDF_MIN_ROUGHNESS - 1.0
     // geometric correction doesn't behave that well with clearcoat due to it being basically 0 roughness

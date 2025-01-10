@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef CORE__IO__ROFS_FILESYSTEM_H
-#define CORE__IO__ROFS_FILESYSTEM_H
+#ifndef CORE_IO_ROFS_FILESYSTEM_H
+#define CORE_IO_ROFS_FILESYSTEM_H
 
 #include <cstddef>
 #include <cstdint>
@@ -42,13 +42,15 @@ public:
     RoFileSystem& operator=(RoFileSystem const&) = delete;
 
     IDirectory::Entry GetEntry(BASE_NS::string_view uri) override;
-    IFile::Ptr OpenFile(BASE_NS::string_view path) override;
+    IFile::Ptr OpenFile(BASE_NS::string_view path, IFile::Mode mode) override;
     IFile::Ptr CreateFile(BASE_NS::string_view path) override;
     bool DeleteFile(BASE_NS::string_view path) override;
+    bool FileExists(BASE_NS::string_view path) const override;
 
     IDirectory::Ptr OpenDirectory(BASE_NS::string_view path) override;
     IDirectory::Ptr CreateDirectory(BASE_NS::string_view path) override;
     bool DeleteDirectory(BASE_NS::string_view path) override;
+    bool DirectoryExists(BASE_NS::string_view path) const override;
 
     bool Rename(BASE_NS::string_view fromPath, BASE_NS::string_view toPath) override;
 
@@ -66,4 +68,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE__IO__ROFS_FILESYSTEM_H
+#endif // CORE_IO_ROFS_FILESYSTEM_H

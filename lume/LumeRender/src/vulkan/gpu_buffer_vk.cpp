@@ -17,7 +17,6 @@
 
 #include <cinttypes>
 #include <cstdint>
-#include <cstring>
 #include <vulkan/vulkan_core.h>
 
 #include <base/math/mathf.h>
@@ -30,13 +29,11 @@
 #include <render/namespace.h>
 
 #include "device/device.h"
-#include "device/gpu_buffer.h"
 #include "device/gpu_resource_desc_flag_validation.h"
 #include "util/log.h"
 #include "vulkan/device_vk.h"
 #include "vulkan/gpu_memory_allocator_vk.h"
 #include "vulkan/validate_vk.h"
-
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
@@ -187,7 +184,7 @@ void GpuBufferVk::CreateBufferImpl()
     PLUGIN_ASSERT_MSG(
         (isRingBuffer_ && isPersistantlyMapped_) || !isRingBuffer_, "dynamic ring buffer needs persistent mapping");
 
-    VkMemoryPropertyFlags memoryPropertyFlags = static_cast<VkMemoryPropertyFlags>(desc_.memoryPropertyFlags);
+    auto memoryPropertyFlags = static_cast<VkMemoryPropertyFlags>(desc_.memoryPropertyFlags);
     const VkMemoryPropertyFlags requiredFlags =
         (memoryPropertyFlags & (~(VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
                                    CORE_MEMORY_PROPERTY_PROTECTED_BIT)));
@@ -206,9 +203,9 @@ void GpuBufferVk::CreateBufferImpl()
     AllocateMemory(requiredFlags, preferredFlags);
 
     if (PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator(); gpuMemAllocator) {
-        const VkMemoryPropertyFlags memFlags =
+        const auto memFlags =
             (VkMemoryPropertyFlags)gpuMemAllocator->GetMemoryTypeProperties(mem_.allocationInfo.memoryType);
-        isMappable_ = (memFlags & VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ? true : false;
+        isMappable_ = (memFlags & VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
 #if (RENDER_PERF_ENABLED == 1)
         RecordAllocation(*gpuMemAllocator, desc_, plat_.fullByteSize);
 #endif

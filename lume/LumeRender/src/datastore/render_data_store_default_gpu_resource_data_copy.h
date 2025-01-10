@@ -16,9 +16,11 @@
 #ifndef RENDER_DATA_STORE_RENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H
 #define RENDER_DATA_STORE_RENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H
 
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 
+#include <base/containers/refcnt_ptr.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
@@ -35,28 +37,20 @@ RenderDataStoreDefaultGpuResourceDataCopy implementation.
 */
 class RenderDataStoreDefaultGpuResourceDataCopy final : public IRenderDataStoreDefaultGpuResourceDataCopy {
 public:
-    RenderDataStoreDefaultGpuResourceDataCopy(IRenderContext& renderContext, const BASE_NS::string_view name);
+    RenderDataStoreDefaultGpuResourceDataCopy(IRenderContext& renderContext, BASE_NS::string_view name);
     ~RenderDataStoreDefaultGpuResourceDataCopy() override = default;
 
-    void CommitFrameData() override {};
-    void PreRender() override {};
-    void PostRender() override {};
-    void PreRenderBackend() override {};
+    // IRenderDataStore
+    void PreRender() override {}
+    void PostRender() override {}
+    void PreRenderBackend() override {}
     // Do copy operation in end frame.
     void PostRenderBackend() override;
     void Clear() override;
     uint32_t GetFlags() const override
     {
         return 0;
-    };
-
-    void AddCopyOperation(const GpuResourceDataCopy& copyOp) override;
-
-    // for plugin / factory interface
-    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultGpuResourceDataCopy";
-
-    static IRenderDataStore* Create(IRenderContext& renderContext, char const* name);
-    static void Destroy(IRenderDataStore* instance);
+    }
 
     BASE_NS::string_view GetTypeName() const override
     {
@@ -73,6 +67,18 @@ public:
         return UID;
     }
 
+    void Ref() override;
+    void Unref() override;
+    int32_t GetRefCount() override;
+
+    // IRenderDataStoreDefaultGpuResourceDataCopy
+    void AddCopyOperation(const GpuResourceDataCopy& copyOp) override;
+
+    // for plugin / factory interface
+    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultGpuResourceDataCopy";
+
+    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(IRenderContext& renderContext, const char* name);
+
 private:
     IDevice& device_;
     GpuResourceManager& gpuResourceMgr_;
@@ -80,8 +86,10 @@ private:
 
     mutable std::mutex mutex_;
 
-    bool waitForIdle_ { false };
     BASE_NS::vector<GpuResourceDataCopy> copyData_;
+    bool waitForIdle_ { false };
+
+    std::atomic_int32_t refcnt_ { 0 };
 };
 RENDER_END_NAMESPACE()
 

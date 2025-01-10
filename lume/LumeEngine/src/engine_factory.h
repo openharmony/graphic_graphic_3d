@@ -44,7 +44,6 @@ public:
 
     // IEngineFactory
     IEngine::Ptr Create(const EngineCreateInfo& engineCreateInfo) override;
-    uint32_t refcnt_ { 0 };
 };
 CORE_END_NAMESPACE()
 

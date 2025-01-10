@@ -15,19 +15,14 @@
 
 #include "render_node_end_frame_staging.h"
 
-#include <algorithm>
-#include <cinttypes>
-#include <cstring>
-
 #include <render/datastore/intf_render_data_store_manager.h>
-#include <render/device/intf_gpu_resource_manager.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
 #include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 
 #include "datastore/render_data_store_default_staging.h"
-#include "util/log.h"
+#include "default_engine_constants.h"
 
 using namespace BASE_NS;
 
@@ -54,7 +49,7 @@ void RenderNodeEndFrameStaging::ExecuteFrame(IRenderCommandList& cmdList)
     bool hasData = gpuResourceMgrImpl.HasStagingData();
 
     StagingConsumeStruct renderDataStoreStaging;
-    if (RenderDataStoreDefaultStaging* dataStoreDefaultStaging =
+    if (auto* dataStoreDefaultStaging =
             static_cast<RenderDataStoreDefaultStaging*>(renderDataStoreMgr.GetRenderDataStore(dataStoreNameStaging_));
         dataStoreDefaultStaging) {
         hasData = hasData || dataStoreDefaultStaging->HasEndStagingData();
@@ -66,11 +61,13 @@ void RenderNodeEndFrameStaging::ExecuteFrame(IRenderCommandList& cmdList)
         return;
     }
 
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderEndFrameStaging", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
+
     const StagingConsumeStruct staging = {};
     // images
     renderStaging.CopyStagingToImages(cmdList, gpuResourceMgr, staging, renderDataStoreStaging);
-    renderStaging.CopyImagesToBuffers(cmdList, gpuResourceMgr, staging, renderDataStoreStaging);
-    renderStaging.CopyImagesToImages(cmdList, gpuResourceMgr, staging, renderDataStoreStaging);
+    renderStaging.CopyImagesToBuffers(cmdList, staging, renderDataStoreStaging);
+    renderStaging.CopyImagesToImages(cmdList, staging, renderDataStoreStaging);
     // buffers
     renderStaging.CopyBuffersToBuffers(cmdList, staging, renderDataStoreStaging);
 }

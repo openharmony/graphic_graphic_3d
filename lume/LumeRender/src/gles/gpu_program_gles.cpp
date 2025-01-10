@@ -16,7 +16,6 @@
 #include "gles/gpu_program_gles.h"
 
 #include <algorithm>
-#include <cmath>
 
 #include <base/containers/fixed_string.h>
 #include <base/containers/unordered_map.h>
@@ -38,9 +37,9 @@ namespace {
 // 16 samplers and 16 textures = 256 combinations
 // this is actually not enugh. since there can be 32 sampled images (16 in vertex and 16 in fragment) + 32 samplers (16
 // in vertex and 16 in fragment)
-static constexpr uint32_t MAX_FINAL_BIND_MAP_A { 16 };
-static constexpr uint32_t MAX_FINAL_BIND_MAP_B { 16 };
-static constexpr uint32_t MAX_FINAL_BINDS { MAX_FINAL_BIND_MAP_A * MAX_FINAL_BIND_MAP_B };
+constexpr uint32_t MAX_FINAL_BIND_MAP_A { 16 };
+constexpr uint32_t MAX_FINAL_BIND_MAP_B { 16 };
+constexpr uint32_t MAX_FINAL_BINDS { MAX_FINAL_BIND_MAP_A * MAX_FINAL_BIND_MAP_B };
 
 struct BindMaps {
     uint8_t maxImageBinding { 0 };   // next free imagetexture unit
@@ -128,6 +127,17 @@ void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
                 const GLuint elementIndex = glGetProgramResourceIndex(program, GL_UNIFORM_BLOCK, tmp.c_str());
                 glGetProgramResourceiv(program, GL_UNIFORM_BLOCK, elementIndex, (GLsizei)countof(block_props),
                     block_props, (GLsizei)sizeof(inUse2), &len, inUse2);
+                /*
+                 * we could do this optimization, but currently no way to signal backend that array element is not in
+                 * use.
+                 * if (inUse2[0]) {
+                 *     uint8_t& fi = map.uniformBindingSets.map[BIND_MAP_4_4(t.iSet, t.iBind)];
+                 *     fi = ++map.uniformBindingSets.maxBind;
+                 *     glUniformBlockBinding(program, i, (GLuint)(fi - 1));
+                 * } else {
+                 *     mark as unused. no need to bind.
+                 * }
+                 */
                 glUniformBlockBinding(program, i, (GLuint)(fi - 1 + i));
                 ++map.maxUniformBinding;
             }
@@ -350,9 +360,7 @@ constexpr const string_view IMAGE_KEYS[] = { " image2D ", " iimage2D ", " uimage
     " uimageBuffer " };
 constexpr const string_view SPECIAL_BINDING = "binding = 11";
 
-template<typename ProgramPlatformData>
-void PostProcessSource(
-    BindMaps& map, ProgramPlatformData& plat, const ShaderModulePlatformDataGLES& modPlat, string& source)
+void PostProcessSource(BindMaps& map, const ShaderModulePlatformDataGLES& modPlat, string& source)
 {
     // Special handling for shader storage blocks and images...
     // We expect spirv_cross to generate them with certain pattern..
@@ -539,7 +547,6 @@ GpuShaderProgramGLES::~GpuShaderProgramGLES()
 GpuShaderProgramGLES::GpuShaderProgramGLES(Device& device, const GpuShaderProgramCreateData& createData)
     : GpuShaderProgram(), device_((DeviceGLES&)device)
 {
-    PLUGIN_ASSERT(createData.vertShaderModule);
     // combine vertex and fragment shader data
     if (createData.vertShaderModule && createData.fragShaderModule) {
         plat_.vertShaderModule_ = static_cast<const ShaderModuleGLES*>(createData.vertShaderModule);
@@ -565,16 +572,16 @@ GpuShaderProgramGLES::GpuShaderProgramGLES(Device& device, const GpuShaderProgra
     }
 }
 
-void GpuShaderProgramGLES::FilterInputs(GpuShaderProgramGLES& ret) const
+void GpuShaderProgramGLES::FilterInputs(GpuShaderProgramGLES& ret)
 {
     GLint inputs;
     uint32_t inputLocations[Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES];
     enum propertyIndices { LOCATION = 0, VERTEX_REF = 1, FRAGMENT_REF = 2, MAX_INDEX };
     const GLenum inputProps[] = { GL_LOCATION, GL_REFERENCED_BY_VERTEX_SHADER, GL_REFERENCED_BY_FRAGMENT_SHADER };
-    static constexpr GLsizei PropertyCount = static_cast<GLsizei>(countof(inputProps));
+    constexpr auto PropertyCount = static_cast<GLsizei>(countof(inputProps));
     static_assert(PropertyCount == MAX_INDEX);
     GLint values[PropertyCount];
-    const GLuint program = static_cast<GLuint>(ret.plat_.program);
+    const auto program = static_cast<GLuint>(ret.plat_.program);
     glGetProgramInterfaceiv(program, GL_PROGRAM_INPUT, GL_ACTIVE_RESOURCES, &inputs);
     uint32_t inputsInUse = 0;
     for (GLint i = 0; i < inputs; i++) {
@@ -634,20 +641,28 @@ unique_ptr<GpuShaderProgramGLES> GpuShaderProgramGLES::Specialize(const ShaderSp
     // Special handling for shader storage blocks and images...
     BindMaps map {};
 
-    PLUGIN_ASSERT(plat_.vertShaderModule_);
+    if (!(plat_.vertShaderModule_ && plat_.fragShaderModule_)) {
+        PLUGIN_LOG_E("Invalid shader module");
+        return nullptr;
+    }
     string vertSource = plat_.vertShaderModule_->GetGLSL(specData);
-    PLUGIN_ASSERT_MSG(!vertSource.empty(), "Trying to specialize a program with no vert source");
+    if (vertSource.empty()) {
+        PLUGIN_LOG_W("Trying to specialize a program with no vert source");
+        return nullptr;
+    }
     const auto& vertPlat = static_cast<const ShaderModulePlatformDataGLES&>(plat_.vertShaderModule_->GetPlatformData());
-    PostProcessSource(map, ret->plat_, vertPlat, vertSource);
+    PostProcessSource(map, vertPlat, vertSource);
 
     // Patch OVR_multiview num_views
     PatchMultiview(views, vertSource);
 
-    PLUGIN_ASSERT(plat_.fragShaderModule_);
     string fragSource = plat_.fragShaderModule_->GetGLSL(specData);
-    PLUGIN_ASSERT_MSG(!fragSource.empty(), "Trying to specialize a program with no frag source");
+    if (fragSource.empty()) {
+        PLUGIN_LOG_W("Trying to specialize a program with no frag source");
+        return nullptr;
+    }
     const auto& fragPlat = static_cast<const ShaderModulePlatformDataGLES&>(plat_.fragShaderModule_->GetPlatformData());
-    PostProcessSource(map, ret->plat_, fragPlat, fragSource);
+    PostProcessSource(map, fragPlat, fragSource);
 
     // if there are oes binds, patches the string (fragSource)
     PatchOesBinds(oesBinds, fragPlat, fragSource);
@@ -655,6 +670,7 @@ unique_ptr<GpuShaderProgramGLES> GpuShaderProgramGLES::Specialize(const ShaderSp
     // Compile / Cache binary
     ret->plat_.program = device_.CacheProgram(vertSource, fragSource, string_view());
     if (ret->plat_.program == 0) {
+        PLUGIN_LOG_E("Invalid shader shader program");
         return nullptr;
     }
     // build the map tables..
@@ -700,7 +716,6 @@ GpuComputeProgramGLES::GpuComputeProgramGLES(Device& device) : GpuComputeProgram
 GpuComputeProgramGLES::GpuComputeProgramGLES(Device& device, const GpuComputeProgramCreateData& createData)
     : GpuComputeProgram(), device_((DeviceGLES&)device)
 {
-    PLUGIN_ASSERT(createData.compShaderModule);
     if (createData.compShaderModule) {
         plat_.module_ = static_cast<const ShaderModuleGLES*>(createData.compShaderModule);
         reflection_.pipelineLayout = plat_.module_->GetPipelineLayout();
@@ -729,13 +744,11 @@ GpuComputeProgramGLES::~GpuComputeProgramGLES()
 
 const GpuComputeProgramPlatformDataGL& GpuComputeProgramGLES::GetPlatformData() const
 {
-    PLUGIN_ASSERT(plat_.program);
     return plat_;
 }
 
 const ComputeShaderReflection& GpuComputeProgramGLES::GetReflection() const
 {
-    PLUGIN_ASSERT(plat_.module_);
     return reflection_;
 }
 
@@ -750,16 +763,22 @@ unique_ptr<GpuComputeProgramGLES> GpuComputeProgramGLES::Specialize(
     ret->reflection_.shaderSpecializationConstantView.constants = ret->constants_;
     // Special handling for shader storage blocks and images...
     BindMaps map {};
-    PLUGIN_ASSERT(plat_.module_);
+
+    if (!plat_.module_) {
+        PLUGIN_LOG_E("Invalid shader module");
+        return nullptr;
+    }
     string compSource = plat_.module_->GetGLSL(specData);
-    PLUGIN_ASSERT_MSG(!compSource.empty(), "Trying to specialize a program with no source");
+    if (compSource.empty()) {
+        PLUGIN_LOG_W("Trying to specialize a program with no source");
+    }
     const auto& plat = static_cast<const ShaderModulePlatformDataGLES&>(plat_.module_->GetPlatformData());
-    PostProcessSource(map, ret->plat_, plat, compSource);
+    PostProcessSource(map, plat, compSource);
     // Compile / Cache binary
     ret->plat_.program = device_.CacheProgram(string_view(), string_view(), compSource);
-    PLUGIN_ASSERT(ret->plat_.program);
     if (ret->plat_.program == 0) {
         // something went wrong.
+        PLUGIN_LOG_E("Invalid shader program");
         return nullptr;
     }
     // build the map tables..

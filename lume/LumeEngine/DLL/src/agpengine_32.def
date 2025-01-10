@@ -1,0 +1,8 @@
+EXPORTS
+	;../../lib/Debug/AGPEngine.lib
+	?GetVersion@Core@@YA?AV?$basic_string_view@D@Base@@XZ
+	?GetVersionRev@Core@@YA?AV?$basic_string_view@D@Base@@XZ
+	?GetVersionBranch@Core@@YA?AV?$basic_string_view@D@Base@@XZ
+	?IsDebugBuild@Core@@YA_NXZ
+	?GetPluginRegister@Core@@YAAAVIPluginRegister@1@XZ
+	?CreatePluginRegistry@Core@@YAXABUPlatformCreateInfo@1@@Z

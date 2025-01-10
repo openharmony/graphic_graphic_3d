@@ -44,6 +44,14 @@
                 "type": "graphics",
                 "index": 0
             }
+        },
+        {
+            "typeName": "RenderNodeDefaultEnvironmentBlender",
+            "nodeName": "CORE3D_RN_SCENE_ENVIRONMENT_CUBEMAP_BLENDER",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
         }
     ]
 }

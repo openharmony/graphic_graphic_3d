@@ -90,10 +90,23 @@ public:
      */
     virtual IResult::Ptr Push(ITask::Ptr task) = 0;
 
+    /** Adds a task with a dependency to be executed.
+     * @param task Pointer to a task instance.
+     * @param dependencies Pointers to task instances which must be ready before 'task' can start.
+     * @return Pointer to a result instance which can be waited
+     */
+    virtual IResult::Ptr Push(ITask::Ptr task, BASE_NS::array_view<const ITask* const> dependencies) = 0;
+
     /** Adds a task to be executed.
      * @param task Pointer to a task instance.
      */
     virtual void PushNoWait(ITask::Ptr task) = 0;
+
+    /** Adds a task with a dependency to be executed.
+     * @param task Pointer to a task instance.
+     * @param dependencies Pointers to task instances which must be ready before 'task' can start.
+     */
+    virtual void PushNoWait(ITask::Ptr task, BASE_NS::array_view<const ITask* const> dependencies) = 0;
 
     /** Get the number of threads this pool has.
      * @return Total number of threads in the pool.

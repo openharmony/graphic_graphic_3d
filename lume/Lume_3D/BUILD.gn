@@ -51,6 +51,8 @@ config("lume_3d_config") {
   if (CORE3D_EMBEDDED_ASSETS_ENABLED) {
     defines += [ "CORE3D_EMBEDDED_ASSETS_ENABLED=1" ]
   }
+
+  cflags = [ "-Wno-braced-scalar-init" ]
 }
 
 ohos_source_set("lume_3d_src") {
@@ -71,6 +73,7 @@ ohos_source_set("lume_3d_src") {
     "src/ecs/components/animation_state_component_manager.cpp",
     "src/ecs/components/animation_track_component_manager.cpp",
     "src/ecs/components/camera_component_manager.cpp",
+    "src/ecs/components/dynamic_environment_blender_manager.cpp",
     "src/ecs/components/environment_component_manager.cpp",
     "src/ecs/components/fog_component_manager.cpp",
     "src/ecs/components/initial_transform_component.h",
@@ -81,7 +84,6 @@ ohos_source_set("lume_3d_src") {
     "src/ecs/components/light_component_manager.cpp",
     "src/ecs/components/local_matrix_component_manager.cpp",
     "src/ecs/components/material_component_manager.cpp",
-    "src/ecs/components/material_extension_component_manager.cpp",
     "src/ecs/components/mesh_component_manager.cpp",
     "src/ecs/components/morph_component_manager.cpp",
     "src/ecs/components/name_component_manager.cpp",
@@ -89,8 +91,10 @@ ohos_source_set("lume_3d_src") {
     "src/ecs/components/physical_camera_component_manager.cpp",
     "src/ecs/components/planar_reflection_component_manager.cpp",
     "src/ecs/components/post_process_component_manager.cpp",
+    "src/ecs/components/post_process_configuration_component_manager.cpp",
+    "src/ecs/components/previous_joint_matrices_component.h",
     "src/ecs/components/previous_joint_matrices_component_manager.cpp",
-    "src/ecs/components/previous_world_matrix_component_manager.cpp",
+    "src/ecs/components/reflection_probe_component_manager.cpp",
     "src/ecs/components/render_configuration_component_manager.cpp",
     "src/ecs/components/render_handle_component_manager.cpp",
     "src/ecs/components/render_mesh_batch_component_manager.cpp",
@@ -113,6 +117,7 @@ ohos_source_set("lume_3d_src") {
     "src/ecs/systems/node_system.cpp",
     "src/ecs/systems/node_system.h",
     "src/ecs/systems/render_preprocessor_system.cpp",
+    "src/ecs/systems/render_preprocessor_system.h",
     "src/ecs/systems/render_system.cpp",
     "src/ecs/systems/render_system.h",
     "src/ecs/systems/skinning_system.cpp",
@@ -131,13 +136,11 @@ ohos_source_set("lume_3d_src") {
     "src/gltf/gltf2_util.h",
     "src/graphics_context.cpp",
     "src/graphics_context.h",
-    "src/loader/json_util.h",
     "src/plugin/static_plugin.cpp",
     "version.cpp",
 
     #"src/plugin/static_registry.cpp",
 
-    "src/ecs/components/post_process_configuration_component_manager.cpp",
     "src/property/property_handle.cpp",
     "src/property/property_handle.h",
     "src/render/datastore/render_data_store_default_camera.cpp",
@@ -150,11 +153,7 @@ ohos_source_set("lume_3d_src") {
     "src/render/datastore/render_data_store_default_scene.h",
     "src/render/datastore/render_data_store_morph.cpp",
     "src/render/datastore/render_data_store_morph.h",
-    "src/render/node/render_copy_helper.cpp",
-    "src/render/node/render_copy_helper.h",
     "src/render/node/render_light_helper.h",
-    "src/render/node/render_node_camera_cubemap.cpp",
-    "src/render/node/render_node_camera_cubemap.h",
     "src/render/node/render_node_camera_single_post_process.cpp",
     "src/render/node/render_node_camera_single_post_process.h",
     "src/render/node/render_node_create_default_camera_gpu_images.cpp",
@@ -169,6 +168,8 @@ ohos_source_set("lume_3d_src") {
     "src/render/node/render_node_default_depth_render_slot.h",
     "src/render/node/render_node_default_env.cpp",
     "src/render/node/render_node_default_env.h",
+    "src/render/node/render_node_default_environment_blender.cpp",
+    "src/render/node/render_node_default_environment_blender.h",
     "src/render/node/render_node_default_lights.cpp",
     "src/render/node/render_node_default_lights.h",
     "src/render/node/render_node_default_material_deferred_shading.cpp",
@@ -186,6 +187,7 @@ ohos_source_set("lume_3d_src") {
     "src/render/render_node_scene_util.cpp",
     "src/render/render_node_scene_util.h",
     "src/util/component_util_functions.h",
+    "src/util/json_util.h",
     "src/util/linear_allocator.h",
     "src/util/mesh_builder.cpp",
     "src/util/mesh_builder.h",
@@ -203,6 +205,7 @@ ohos_source_set("lume_3d_src") {
     "src/util/uri_lookup.cpp",
     "src/util/uri_lookup.h",
   ]
+  deps = [ "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper" ]
 
   external_deps = [ "c_utils:utils" ]
   part_name = "graphic_3d"
@@ -212,7 +215,7 @@ ohos_source_set("lume_3d_src") {
 lume_compile_shader("lume_3d_compile_shader") {
   script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
   outputs = [ "$target_gen_dir" ]
-  tool_path = "$target_gen_dir"
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/LumeShaderCompiler"
   dest_gen_path = "$target_gen_dir/assets"
   asset_path = rebase_path("./assets/3d", root_build_dir)
   shader_path = "${dest_gen_path}/shaders"
@@ -234,7 +237,7 @@ lume_rofs("lume_3d_rofs") {
 
   outputs = "${target_gen_dir}/assets/${output_obj}"
 
-  tool_path = "$target_gen_dir"
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/lumeassetcompiler"
   root = "/"
   bin_name = "BINARY_DATA_FOR_3D"
   size_name = "SIZE_OF_DATA_FOR_3D"

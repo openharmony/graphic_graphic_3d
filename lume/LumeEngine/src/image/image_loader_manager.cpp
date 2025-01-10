@@ -16,10 +16,8 @@
 #include "image_loader_manager.h"
 
 #include <algorithm>
-#include <cstring>
 
 #include <base/containers/array_view.h>
-#include <base/containers/iterator.h>
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
@@ -57,10 +55,12 @@ ImageLoaderManager::ImageLoaderManager(IFileManager& fileManager) : fileManager_
     }
     GetPluginRegister().AddListener(*this);
 }
+
 ImageLoaderManager::~ImageLoaderManager()
 {
     GetPluginRegister().RemoveListener(*this);
 }
+
 void ImageLoaderManager::RegisterImageLoader(IImageLoader::Ptr imageLoader)
 {
     if (!imageLoader) {
@@ -75,7 +75,7 @@ void ImageLoaderManager::RegisterImageLoader(IImageLoader::Ptr imageLoader)
 
 ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(const string_view uri, uint32_t loadFlags)
 {
-    CORE_CPU_PERF_SCOPE("Image", "loadImage()", uri);
+    CORE_CPU_PERF_SCOPE("CORE", "LoadImage()", uri, CORE_PROFILER_DEFAULT_COLOR);
 
     // Load 12 bytes (maximum header size of currently implemented file types)
     IFile::Ptr file = fileManager_.OpenFile(uri);
@@ -88,7 +88,7 @@ ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(const string_view u
 
 ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(IFile& file, uint32_t loadFlags)
 {
-    CORE_CPU_PERF_SCOPE("Image", "loadImage()", "file");
+    CORE_CPU_PERF_SCOPE("CORE", "LoadImage(file)", "", CORE_PROFILER_DEFAULT_COLOR);
 
     const uint64_t byteLength = 12u;
 
@@ -112,16 +112,11 @@ ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(IFile& file, uint32
 ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(
     array_view<const uint8_t> imageFileBytes, uint32_t loadFlags)
 {
-    CORE_CPU_PERF_SCOPE("Image", "loadImage(bytes)", "memory");
-    if (imageFileBytes.empty()) {
-        return ResultFailure("Image loader can't load from empty buffer.");
-    }
-    for (auto it=imageLoaders_.cbegin(); it!=imageLoaders_.cend(); ++it) { // this works fine!
-        const auto& loader = *it;
-        if (loader.instance) {
-            if (loader.instance->CanLoad(imageFileBytes)) {
-                return loader.instance->Load(imageFileBytes, loadFlags);
-            }
+    CORE_CPU_PERF_SCOPE("CORE", "LoadImage(bytes)", "", CORE_PROFILER_DEFAULT_COLOR);
+
+    for (auto& loader : imageLoaders_) {
+        if (loader.instance && loader.instance->CanLoad(imageFileBytes)) {
+            return loader.instance->Load(imageFileBytes, loadFlags);
         }
     }
 
@@ -130,7 +125,7 @@ ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(
 
 ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::LoadAnimatedImage(const string_view uri, uint32_t loadFlags)
 {
-    CORE_CPU_PERF_SCOPE("Image", "loadAnimatedImage()", uri);
+    CORE_CPU_PERF_SCOPE("CORE", "LoadAnimatedImage()", uri, CORE_PROFILER_DEFAULT_COLOR);
 
     // Load 12 bytes (maximum header size of currently implemented file types)
     IFile::Ptr file = fileManager_.OpenFile(uri);
@@ -143,7 +138,7 @@ ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::LoadAnimatedImage(con
 
 ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::LoadAnimatedImage(IFile& file, uint32_t loadFlags)
 {
-    CORE_CPU_PERF_SCOPE("Image", "loadAnimatedImage()", "file");
+    CORE_CPU_PERF_SCOPE("CORE", "LoadAnimatedImage(file)", "", CORE_PROFILER_DEFAULT_COLOR);
 
     const uint64_t byteLength = 12u;
 
@@ -166,7 +161,7 @@ ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::LoadAnimatedImage(IFi
 ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::LoadAnimatedImage(
     array_view<const uint8_t> imageFileBytes, uint32_t loadFlags)
 {
-    CORE_CPU_PERF_SCOPE("Image", "loadAnimatedImage(bytes)", "memory");
+    CORE_CPU_PERF_SCOPE("CORE", "LoadAnimatedImage(bytes)", "", CORE_PROFILER_DEFAULT_COLOR);
 
     for (auto& loader : imageLoaders_) {
         if (loader.instance->CanLoad(imageFileBytes)) {
@@ -236,6 +231,7 @@ vector<IImageLoaderManager::ImageType> ImageLoaderManager::GetSupportedTypes() c
     }
     return allTypes;
 }
+
 void ImageLoaderManager::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typeInfos)
 {
     for (const auto* typeInfo : typeInfos) {
@@ -251,10 +247,12 @@ void ImageLoaderManager::OnTypeInfoEvent(EventType type, array_view<const ITypeI
                 }
             } else if (type == EventType::REMOVED) {
                 imageLoaders_.erase(std::remove_if(imageLoaders_.begin(), imageLoaders_.end(),
-                    [&uid = imageLoaderInfo->uid](const RegisteredImageLoader& loader) { return loader.uid == uid; }),
+                    [&uid = imageLoaderInfo->uid](
+                        const RegisteredImageLoader& loader) { return loader.uid == uid; }),
                     imageLoaders_.cend());
             }
         }
     }
 }
+
 CORE_END_NAMESPACE()

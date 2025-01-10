@@ -40,9 +40,8 @@ constexpr const bool CORE_ENABLE_VULKAN_PHYSICAL_DEVICE_PRINT = true;
 uint32_t GetInstanceApiVersion()
 {
     uint32_t apiVersion = VK_VERSION_1_0;
-    PFN_vkEnumerateInstanceVersion vkEnumerateInstanceVersionFunc =
-        (PFN_vkEnumerateInstanceVersion) reinterpret_cast<void*>(
-            vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion"));
+    auto vkEnumerateInstanceVersionFunc = (PFN_vkEnumerateInstanceVersion) reinterpret_cast<void*>(
+        vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion"));
     if (vkEnumerateInstanceVersionFunc) {
         const VkResult result = vkEnumerateInstanceVersionFunc(&apiVersion);
         if (result != VK_SUCCESS) {
@@ -80,6 +79,7 @@ inline void LogQueueFamilyProperties(
     }
 }
 
+#ifndef NDEBUG
 string GetMemoryPropertyFlagsStr(const VkMemoryType memoryType)
 {
     const uint32_t flags = memoryType.propertyFlags;
@@ -115,9 +115,15 @@ void LogPhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& p
             physicalDeviceMemoryProperties.memoryHeaps[physicalDeviceMemoryProperties.memoryTypes[idx].heapIndex].size);
     }
 }
+#endif
 
-static vector<VkQueueFamilyProperties> GetQueueFamilieProperties(VkPhysicalDevice physicalDevice)
+vector<VkQueueFamilyProperties> GetQueueFamilieProperties(VkPhysicalDevice physicalDevice)
 {
+    if (!physicalDevice) {
+        PLUGIN_LOG_E("Invalid Vulkan physical device");
+        return {};
+    }
+
     uint32_t queueFamilyPropertyCount = 0u;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, // physicalDevice
         &queueFamilyPropertyCount,                           // pQueueFamilyPropertyCount
@@ -136,12 +142,12 @@ struct SuitableQueueVk {
     uint32_t queueCount { 0u };
 };
 
-static SuitableQueueVk FindSuitableQueue(
+SuitableQueueVk FindSuitableQueue(
     const vector<VkQueueFamilyProperties>& queueFamilyProperties, const QueueProperties& queueProperties)
 {
     for (uint32_t idx = 0; idx < queueFamilyProperties.size(); ++idx) {
         if (queueProperties.explicitFlags) {
-            if (!(queueFamilyProperties[idx].queueFlags == queueProperties.requiredFlags)) {
+            if (queueFamilyProperties[idx].queueFlags != queueProperties.requiredFlags) {
                 continue;
             }
         } else {
@@ -353,9 +359,8 @@ VkDebugReportCallbackEXT CreateFunctionsVk::CreateDebugCallback(
 {
     VkDebugReportCallbackEXT debugReport { VK_NULL_HANDLE };
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
-    PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
-        (PFN_vkCreateDebugReportCallbackEXT) reinterpret_cast<void*>(
-            vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
+    auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT) reinterpret_cast<void*>(
+        vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
     if (!vkCreateDebugReportCallbackEXT) {
         PLUGIN_LOG_W("Missing VK_EXT_debug_report extension");
         return debugReport;
@@ -389,7 +394,7 @@ void CreateFunctionsVk::DestroyDebugCallback(VkInstance instance, VkDebugReportC
     if (!debugReport) {
         return;
     }
-    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
+    auto vkDestroyDebugReportCallbackEXT =
         (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
     if (!vkDestroyDebugReportCallbackEXT) {
         PLUGIN_LOG_W("Missing VK_EXT_debug_report extension");
@@ -404,9 +409,8 @@ VkDebugUtilsMessengerEXT CreateFunctionsVk::CreateDebugMessenger(
 {
     VkDebugUtilsMessengerEXT debugMessenger { VK_NULL_HANDLE };
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
-    PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT =
-        (PFN_vkCreateDebugUtilsMessengerEXT) reinterpret_cast<void*>(
-            vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
+    auto vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT) reinterpret_cast<void*>(
+        vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
     if (!vkCreateDebugUtilsMessengerEXT) {
         PLUGIN_LOG_W("Missing VK_EXT_debug_utils extension");
         return debugMessenger;
@@ -439,7 +443,7 @@ void CreateFunctionsVk::DestroyDebugMessenger(VkInstance instance, VkDebugUtilsM
         return;
     }
 
-    PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT =
+    auto vkDestroyDebugUtilsMessengerEXT =
         (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (!vkDestroyDebugUtilsMessengerEXT) {
         PLUGIN_LOG_W("Missing VK_EXT_debug_utils extension");
@@ -469,9 +473,8 @@ PhysicalDeviceWrapper CreateFunctionsVk::GetWrapper(VkPhysicalDevice physicalDev
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemoryProperties);
     if constexpr (CORE_ENABLE_VULKAN_PHYSICAL_DEVICE_PRINT) {
         LogPhysicalDeviceProperties(physicalDeviceProperties);
-        for (uint32_t idx = 0; idx < extensions.size(); ++idx) {
-            PLUGIN_LOG_V(
-                "physical device extension: %s %u", extensions[idx].extensionName, extensions[idx].specVersion);
+        for (auto& extension : extensions) {
+            PLUGIN_LOG_V("physical device extension: %s %u", extension.extensionName, extension.specVersion);
         }
 #ifndef NDEBUG
         LogPhysicalDeviceMemoryProperties(physicalDeviceMemoryProperties);
@@ -485,6 +488,11 @@ PhysicalDeviceWrapper CreateFunctionsVk::GetWrapper(VkPhysicalDevice physicalDev
 PhysicalDeviceWrapper CreateFunctionsVk::CreatePhysicalDevice(
     VkInstance instance, QueueProperties const& queueProperties)
 {
+    if (!instance) {
+        PLUGIN_LOG_E("Invalid Vulkan instance.");
+        return {};
+    }
+
     uint32_t physicalDeviceCount = 0;
     VALIDATE_VK_RESULT(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr));
 
@@ -496,6 +504,9 @@ PhysicalDeviceWrapper CreateFunctionsVk::CreatePhysicalDevice(
     PLUGIN_UNUSED(result);
     PLUGIN_ASSERT_MSG((result == VK_SUCCESS || result == VK_INCOMPLETE), "vulkan device enumeration failed");
 
+    if (physicalDevices.empty()) {
+        return {};
+    }
     const VkPhysicalDevice physicalDevice = physicalDevices[0];
 
     uint32_t queueFamilyPropertyCount = 0;
@@ -535,8 +546,10 @@ DeviceWrapper CreateFunctionsVk::CreateDevice(VkInstance instance, VkPhysicalDev
     const VkPhysicalDeviceFeatures2* physicalDeviceFeatures2, const vector<LowLevelQueueInfo>& availableQueues,
     const vector<string_view>& preferredDeviceExtensions)
 {
-    PLUGIN_ASSERT_MSG(instance, "null instance in CreateDevice()");
-    PLUGIN_ASSERT_MSG(physicalDevice, "null physical device in CreateDevice()");
+    if ((!instance) || (!physicalDevice)) {
+        PLUGIN_LOG_E("Invalid instance and/or physical device.");
+        return {};
+    }
 
     DeviceWrapper deviceWrapper;
 
@@ -580,8 +593,8 @@ DeviceWrapper CreateFunctionsVk::CreateDevice(VkInstance instance, VkPhysicalDev
     }
     if constexpr (CORE_ENABLE_VULKAN_PHYSICAL_DEVICE_PRINT) {
         PLUGIN_LOG_D("enabled extensions:");
-        for (uint32_t idx = 0; idx < extensions.size(); ++idx) {
-            PLUGIN_LOG_D("%s", extensions[idx]);
+        for (auto& extension : extensions) {
+            PLUGIN_LOG_D("%s", extension);
         }
     }
 
@@ -615,8 +628,7 @@ void CreateFunctionsVk::DestroySurface(VkInstance instance, VkSurfaceKHR surface
 {
     PLUGIN_ASSERT_MSG(instance, "null instance in DestroySurface()");
     PLUGIN_ASSERT_MSG(surface, "null surface in DestroySurface()");
-    PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR =
-        (PFN_vkDestroySurfaceKHR)vkGetInstanceProcAddr(instance, "vkDestroySurfaceKHR");
+    auto vkDestroySurfaceKHR = (PFN_vkDestroySurfaceKHR)vkGetInstanceProcAddr(instance, "vkDestroySurfaceKHR");
     if (!vkDestroySurfaceKHR) {
         PLUGIN_LOG_E("Missing VK_KHR_surface extension");
         return;

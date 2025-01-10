@@ -236,8 +236,6 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
 #endif
     InitCreateBinders();
 
-    renderCopy_.Init(renderNodeContextMgr, {});
-
     RegisterOutputs();
 }
 
@@ -275,8 +273,6 @@ void RenderNodeCameraSinglePostProcess::ExecuteFrame(IRenderCommandList& cmdList
 
     if (ppLocalConfig_.variables.enabled && valid_) {
         ExecuteSinglePostProcess(cmdList);
-    } else if (jsonInputs_.defaultOutputImage == DefaultOutputImage::INPUT_OUTPUT_COPY) {
-        renderCopy_.Execute(*renderNodeContextMgr_, cmdList);
     }
 }
 
@@ -570,12 +566,6 @@ void RenderNodeCameraSinglePostProcess::InitCreateBinders()
     INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
     {
         DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
-        if (jsonInputs_.defaultOutputImage == DefaultOutputImage::INPUT_OUTPUT_COPY) {
-            const DescriptorCounts copyDc = renderCopy_.GetDescriptorCounts();
-            for (const auto& ref : copyDc.counts) {
-                dc.counts.push_back(ref);
-            }
-        }
         descriptorSetMgr.ResetAndReserve(dc);
     }
 
@@ -590,7 +580,6 @@ void RenderNodeCameraSinglePostProcess::InitCreateBinders()
     }
     if ((!RenderHandleUtil::IsValid(shader_)) || (!RenderHandleUtil::IsValid(psoHandle_))) {
         valid_ = false;
-        CORE_LOG_E("RN:%s needs a valid shader handle", renderNodeContextMgr_->GetName().data());
     }
 }
 
