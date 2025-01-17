@@ -26,7 +26,7 @@
           "graphic_surface",
           "hitrace",
           "init",
-	  "ipc",
+	        "ipc",
           "bounds_checking_function",
           "resource_management",
           "napi",
