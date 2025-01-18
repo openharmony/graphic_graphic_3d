@@ -131,7 +131,9 @@ napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
     }
 
     BASE_NS::string name;
-    if (auto node = interface_pointer_cast<META_NS::IObject>(GetThisNativeObject(ctx))) {
+    if (auto named = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
+        name = named->Name()->GetValue();
+    } else if (auto node = interface_pointer_cast<META_NS::IObject>(GetThisNativeObject(ctx))) {
         name = node->GetName();
     }
     return ctx.GetString(name);
