@@ -213,7 +213,6 @@ void RegisterEngineAccess()
     RegisterEngineAccessImpl<MotionBlurConfiguration>();
     RegisterEngineAccessImpl<TaaConfiguration>();
     RegisterEngineAccessImpl<TonemapConfiguration>();
-    RegisterEngineAccessImpl<TonemapConfiguration>();
     RegisterEngineAccessImpl<VignetteConfiguration>();
 
     RegisterEngineAccessImpl<BASE_NS::vector<Submesh>>();
@@ -238,7 +237,6 @@ void UnregisterEngineAccess()
     UnregisterEngineAccessImpl<FxaaConfiguration>();
     UnregisterEngineAccessImpl<MotionBlurConfiguration>();
     UnregisterEngineAccessImpl<TaaConfiguration>();
-    UnregisterEngineAccessImpl<TonemapConfiguration>();
     UnregisterEngineAccessImpl<TonemapConfiguration>();
     UnregisterEngineAccessImpl<VignetteConfiguration>();
 

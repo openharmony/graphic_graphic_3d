@@ -104,10 +104,6 @@ public:
 private:
     META_NS::EventHandler bitmapHandler_;
     IRenderTarget::Ptr renderTarget_;
-
-private: // locked access
-    mutable std::shared_mutex mutex_;
-    bool isActive_ = true;
 };
 
 SCENE_END_NAMESPACE()
