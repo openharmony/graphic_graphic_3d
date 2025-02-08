@@ -72,14 +72,14 @@ BASE_NS::string CameraComponent::GetName() const
 }
 Future<bool> CameraComponent::SetActive(bool active)
 {
-    return object_->GetScene()->AddTask([=] {
-        bool ret = EnableCamera(object_, active);
-        if (ret) {
-            std::unique_lock lock { mutex_ };
-            isActive_ = active;
-        }
-        return ret;
-    });
+    auto flags = SceneFlags()->GetValue();
+    if (active) {
+        flags |= static_cast<uint32_t>(CameraSceneFlag::ACTIVE_RENDER_BIT);
+    } else {
+        flags &= ~static_cast<uint32_t>(CameraSceneFlag::ACTIVE_RENDER_BIT | CameraSceneFlag::MAIN_CAMERA_BIT);
+    }
+    SceneFlags()->SetValue(flags);
+    return SyncProperty(object_->GetScene(), SceneFlags());
 }
 Future<bool> CameraComponent::SetRenderTarget(const IRenderTarget::Ptr& target)
 {
@@ -101,8 +101,7 @@ Future<bool> CameraComponent::SetRenderTarget(const IRenderTarget::Ptr& target)
 }
 bool CameraComponent::IsActive() const
 {
-    std::shared_lock lock { mutex_ };
-    return isActive_;
+    return SceneFlags()->GetValue() & static_cast<uint32_t>(CameraSceneFlag::ACTIVE_RENDER_BIT);
 }
 void CameraComponent::NotifyRenderTargetChanged()
 {
