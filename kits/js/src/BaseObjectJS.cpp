@@ -17,6 +17,7 @@
 #include <meta/interface/intf_metadata.h>
 #include <meta/interface/property/construct_property.h>
 #include <scene/interface/intf_mesh.h>
+#include <scene/interface/intf_light.h>
 
 // this class is used to store a reference to a JS object in the metaobject.
 class JSWrapperState : public CORE_NS::IInterface {
@@ -235,6 +236,49 @@ NapiApi::Object StoreJsObj(const META_NS::IObject::Ptr& obj, NapiApi::Object jso
     napi_get_null(jsobj.GetEnv(), &val);
     return { jsobj.GetEnv(), val };
 }
+
+BASE_NS::string GetConstructorName(const META_NS::IObject::Ptr& obj)
+{
+    BASE_NS::string name { obj->GetClassName() };
+    // specialize/remap class names & interfaces.
+    if (name == "Bitmap") {
+        name = "Image";
+    } else if (name == "Tonemap") {
+        name = "ToneMappingSettings";
+    } else if (name == "PostProcess") {
+        name = "PostProcessSettings";
+    } else if (name == "Material") {
+        // ok
+    } else if (name == "Shader") {
+        // possible specialization?
+    } else if (name == "EcsAnimation") {
+        name = "Animation";
+    } else if (name == "MeshNode") {
+        name = "Geometry";
+    } else if (name == "CameraNode") {
+        name = "Camera";
+    } else if (name == "LightNode") {
+        SCENE_NS::ILight* lgt = interface_cast<SCENE_NS::ILight>(obj);
+        if (lgt == nullptr) {
+            LOG_E("lgt is null");
+            return name;
+        }
+        auto type = lgt->Type()->GetValue();
+        if (type == Scene::LightType::DIRECTIONAL) {
+            name = "DirectionalLight";
+        } else if (type == Scene::LightType::POINT) {
+            name = "PointLight";
+        } else if (type == Scene::LightType::SPOT) {
+            name = "SpotLight";
+        } else {
+            name = "Node";
+        }
+    } else if (name.ends_with("Node")) {
+        name = "Node";
+    }
+    return name;
+}
+
 NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::Ptr& obj,
     bool strong, uint32_t argc, napi_value* argv, BASE_NS::string_view pname)
 {
@@ -250,37 +294,7 @@ NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::P
         return nodeJS;
     }
     // no js object. create it.
-    BASE_NS::string name { obj->GetClassName() };
-    // specialize/remap class names & interfaces.
-    if (name == "Bitmap") {
-        name = "Image";
-    } else if (name == "Tonemap") {
-        name = "ToneMappingSettings";
-    } else if (name == "PostProcess") {
-        name = "PostProcessSettings";
-    } else if (name == "Material") {
-        // okay. specialize then...
-        SCENE_NS::IMaterial* mat = interface_cast<SCENE_NS::IMaterial>(obj);
-        if (auto shdr = mat->MaterialShader()->GetValue()) {
-            name = "ShaderMaterial";
-        } else {
-            // hide other material types..
-            return {};
-        }
-    } else if (name == "Shader") {
-        // possible specialization?
-    } else if (name == "EcsAnimation") {
-        name = "Animation";
-    } else if (name == "MeshNode") {
-        name = "Geometry";
-    } else if (name == "CameraNode") {
-        name = "Camera";
-    } else if (name == "LightNode") {
-        name = "Light";
-    } else if (name.ends_with("Node")) {
-        name = "Node";
-    }
-
+    auto name = GetConstructorName(obj);
     MakeNativeObjectParam(env, obj, argc, argv);
 
     nodeJS = CreateJsObj(env, name, obj, strong, argc, argv);
