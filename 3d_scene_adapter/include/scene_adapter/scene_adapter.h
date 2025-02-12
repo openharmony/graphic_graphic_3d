@@ -68,6 +68,7 @@ public:
     void OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
     void RenderFrame(bool needsSyncPaint = false) override;
     void Deinit() override {};
+    void SetNeedsRepaint(bool needsRepaint);
     bool NeedsRepaint() override;
     virtual void SetSceneObj(META_NS::IObject::Ptr pt);
 

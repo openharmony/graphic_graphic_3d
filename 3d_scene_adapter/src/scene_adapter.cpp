@@ -452,6 +452,11 @@ bool SceneAdapter::NeedsRepaint()
     return needsRepaint_;
 }
 
+void SceneAdapter::SetNeedsRepaint(bool needsRepaint)
+{
+    needsRepaint_ = needsRepaint;
+}
+
 void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj, RENDER_NS::RenderHandleReference swapchain)
 {
     WIDGET_LOGD("attach swapchain");

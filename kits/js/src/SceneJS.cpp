@@ -69,6 +69,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<NapiApi::FunctionContext<BASE_NS::string>, SceneJS, &SceneJS::GetNode>("getNodeByPath"),
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::GetResourceFactory>("getResourceFactory"),
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::Dispose>("destroy"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::RenderFrame>("renderFrame"),
         
         // SceneResourceFactory methods
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateCamera>("createCamera"),
@@ -378,6 +379,18 @@ napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
         ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>(BASE_NS::move(fun)));
 
     return MakePromise(ctx, data);
+}
+
+napi_value SceneJS::RenderFrame(NapiApi::FunctionContext<>& ctx)
+{
+#ifdef __SCENE_ADAPTER__
+    auto sceneAdapter = std::static_pointer_cast<OHOS::Render3D::SceneAdapter>(scene_);
+    if (sceneAdapter) {
+        sceneAdapter->SetNeedsRepaint(false);
+        sceneAdapter->RenderFrame(false);
+    }
+#endif
+    return {};
 }
 
 napi_value SceneJS::Dispose(NapiApi::FunctionContext<>& ctx)
