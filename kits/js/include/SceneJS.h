@@ -61,6 +61,7 @@ private:
     // JS methods
     napi_value GetNode(NapiApi::FunctionContext<BASE_NS::string>& ctx);
     napi_value GetResourceFactory(NapiApi::FunctionContext<>& ctx);
+    napi_value RenderFrame(NapiApi::FunctionContext<>& ctx);
 
     napi_value CreateCamera(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateLight(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx);
