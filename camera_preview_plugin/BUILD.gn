@@ -1,0 +1,170 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+declare_args() {
+  CAM_PREVIEW_EMBEDDED_ASSETS_ENABLED = true
+  CAM_PREVIEW_ROFS = "campreviewrofs"
+}
+
+config("campreview_api") {
+  include_dirs = [ "api" ]
+
+  defines = []
+
+  if (BUILDTYPE == "Release") {
+    defines += [ "PLUGIN_LOG_NO_DEBUG=0" ]
+  }
+
+  if (BUILDTYPE == "MinSizeRel") {
+    defines += [ "PLUGIN_LOG_NO_DEBUG=0" ]
+  }
+
+  if (BUILDTYPE == "RelWithDebInfo") {
+    defines += [ "PLUGIN_LOG_NO_DEBUG=0" ]
+  }
+
+  if (LUME_OHOS_BUILD) {
+    defines += [ "__OHOS_PLATFORM__" ]
+  }
+
+  cflags = [
+    "-Wno-nullability-completeness",
+    "-Wno-ignored-qualifiers",
+    "-Wno-switch",
+  ]
+}
+
+config("campreview_config") {
+  if (CAM_PREVIEW_EMBEDDED_ASSETS_ENABLED) {
+    defines = [
+      "CAM_PREVIEW_EMBEDDED_ASSETS_ENABLED=1",
+      "CORE_PLUGIN=1",
+    ]
+  }
+
+  cflags = [
+    "-Wno-nullability-completeness",
+    "-Wno-ignored-qualifiers",
+    "-Wno-switch",
+  ]
+
+  defines += [
+    "RENDER_HAS_GLES_BACKEND=1",
+    "RENDER_HAS_VULKAN_BACKEND=1",
+    "VMA_STATS_STRING_ENABLED=0",
+    "VMA_STATIC_VULKAN_FUNCTIONS=0",
+  ]
+}
+
+lume_compile_shader("cam_preview_compile_shader") {
+  script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
+  outputs = [ "$target_gen_dir" ]
+  tool_path = "$target_gen_dir/../lume/LumeBinaryCompile/LumeShaderCompiler"
+  dest_gen_path = "$target_gen_dir/assets"
+  asset_path = rebase_path("./assets", root_build_dir)
+  shader_path = "${dest_gen_path}/shaders"
+  include_path = rebase_path("${LUME_CORE3D_PATH}/api", root_build_dir)
+  render_include_path = "${LUME_PATH}/${RENDER_DIR_NAME}/api/"
+  compileShader_deps =
+      [ "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile" ]
+}
+
+lume_rofs("CAM_PREVIEW_ROFS") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${CAM_PREVIEW_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${CAM_PREVIEW_ROFS}_64.o"
+  }
+
+  outputs = "${target_gen_dir}/assets/${output_obj}"
+
+  tool_path = "$target_gen_dir/../lume/LumeBinaryCompile/lumeassetcompiler"
+  root = "/"
+  bin_name = "CAM_PREVIEW_BIN"
+  size_name = "CAM_PREVIEW_BIN_SIZE"
+  base_name = CAM_PREVIEW_ROFS
+  script = "${LUME_CORE_PATH}/tools/CompilerAsset.sh"
+  copy_path = "$target_gen_dir/assets"
+  compileShader_deps = [
+    ":cam_preview_compile_shader",
+    "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+  ]
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
+}
+
+source_set("campreview_rofs_obj") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${CAM_PREVIEW_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${CAM_PREVIEW_ROFS}_64.o"
+  }
+
+  sources = [ "${target_gen_dir}/assets/${output_obj}" ]
+  deps = [ ":CAM_PREVIEW_ROFS" ]
+}
+
+ohos_source_set("campreview_src") {
+  sources = [ "src/component_dll.cpp" ]
+  include_dirs = [ "api" ]
+
+  configs = [
+    ":campreview_api",
+    ":campreview_config",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_default",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+  ]
+
+  deps = []
+
+  external_deps = [
+    "c_utils:utils",
+    "hilog:libhilog",
+    "hitrace:hitrace_meter",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_static_library("libCamPreview") {
+  public_deps = [
+    ":campreview_src",
+    "${LUME_CORE_PATH}:lume_component_help_src",
+  ]
+
+  if (CAM_PREVIEW_EMBEDDED_ASSETS_ENABLED) {
+    deps = [ ":campreview_rofs_obj" ]
+  }
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library(LIB_CAM_PREVIEW) {
+  public_deps = [ ":libCamPreview" ]
+  relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
