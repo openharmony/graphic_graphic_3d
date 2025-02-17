@@ -41,8 +41,6 @@ public:
 
 private:
     ECS_SERIALIZER_NS::IEntityCollection::Ptr entities_;
-    ECS_SERIALIZER_NS::IEcsAssetManager::Ptr manager_;
-    ECS_SERIALIZER_NS::IEcsAssetLoader::Ptr loader_;
 };
 
 SCENE_END_NAMESPACE()
