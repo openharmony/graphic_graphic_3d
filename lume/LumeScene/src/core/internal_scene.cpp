@@ -15,6 +15,7 @@
 
 #include "internal_scene.h"
 
+#include <chrono>
 #include <cinttypes>
 #include <scene/ext/intf_converting_value.h>
 #include <scene/ext/intf_create_entity.h>
