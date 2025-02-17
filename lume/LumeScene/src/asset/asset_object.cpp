@@ -35,14 +35,23 @@ bool AssetObject::Load(const IScene::Ptr& sc, BASE_NS::string_view uri)
 
     if (!entities_) {
         entities_ = CreateEntityCollection(*ecs.GetNativeEcs(), "scene", {});
+        if (!entities_) {
+            CORE_LOG_E("Failed to create entity collection");
+            return false;
+        }
     }
-    if (!manager_) {
-        manager_ = CreateEcsAssetManager(scene->GetGraphicsContext());
+    auto manager = CreateEcsAssetManager(scene->GetGraphicsContext());
+    if (!manager) {
+        CORE_LOG_E("Failed to create ecs asset manager");
+        return false;
     }
-    if (!loader_) {
-        loader_ = CreateEcsAssetLoader(*manager_, scene->GetGraphicsContext(), *entities_, uri, {});
+    auto loader = CreateEcsAssetLoader(*manager, scene->GetGraphicsContext(), *entities_, uri, {});
+    if (!loader) {
+        CORE_LOG_E("Failed to create ecs asset loader");
+        return false;
     }
-    loader_->LoadAsset();
+    
+    loader->LoadAsset();
 
     if (entities_->GetEntityCount() == 0) {
         CORE_LOG_E("Entity count is zero in loaded scene");
