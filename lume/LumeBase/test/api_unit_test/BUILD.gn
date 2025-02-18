@@ -62,8 +62,10 @@ ohos_unittest("lume_base_test") {
     "src/containers/byte_array_test.cpp",
     "src/containers/iterator_test.cpp",
     "src/containers/ptr_test.cpp",
+    "src/containers/string_test.cpp",
     "src/containers/string_view_test.cpp",
     "src/containers/unordered_map_test.cpp",
+    "src/util/base64_test.cpp",
   ]
 
   external_deps = [
