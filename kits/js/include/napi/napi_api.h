@@ -1307,6 +1307,10 @@ NapiApi::Function GetJSConstructor(napi_env env, const BASE_NS::string_view jsNa
 BASE_NS::string FetchResourceOrUri(napi_env e, napi_value arg);
 BASE_NS::string FetchResourceOrUri(NapiApi::FunctionContext<>& ctx);
 
+// Instance data
+napi_status SetInstanceData(napi_env env, void* data, napi_finalize finalizeCb, void* finalizeHint);
+napi_status GetInstanceData(napi_env env, void** data);
+
 // little helper macros
 
 // declare NAPI_API_JS_NAME ...
@@ -1334,7 +1338,7 @@ BASE_NS::string FetchResourceOrUri(NapiApi::FunctionContext<>& ctx);
         auto status = napi_define_class(env, NAPI_API_JS_NAME_STRING, NAPI_AUTO_LENGTH,                     \
             BaseObject::ctor<NAPI_API_CLASS_NAME>(), nullptr, node_props.size(), node_props.data(), &func); \
         NapiApi::MyInstanceState* mis;                                                                      \
-        napi_get_instance_data(env, (void**)&mis);                                                          \
+        GetInstanceData(env, (void**)&mis);                                                                 \
         mis->StoreCtor(NAPI_API_JS_NAME_STRING, func);                                                      \
     }
 
