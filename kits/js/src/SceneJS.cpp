@@ -383,6 +383,11 @@ napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
 
 napi_value SceneJS::RenderFrame(NapiApi::FunctionContext<>& ctx)
 {
+    if (ctx.ArgCount() > 1) {
+        CORE_LOG_E("render frame %d", __LINE__);
+        return ctx.GetUndefined();
+    }
+    bool res = true;
 #ifdef __SCENE_ADAPTER__
     auto sceneAdapter = std::static_pointer_cast<OHOS::Render3D::SceneAdapter>(scene_);
     if (sceneAdapter) {
@@ -390,7 +395,7 @@ napi_value SceneJS::RenderFrame(NapiApi::FunctionContext<>& ctx)
         sceneAdapter->RenderFrame(false);
     }
 #endif
-    return {};
+    return ctx.GetBoolean(res);
 }
 
 napi_value SceneJS::Dispose(NapiApi::FunctionContext<>& ctx)

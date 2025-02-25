@@ -99,6 +99,7 @@ class FunctionContext {
     napi_value args[sizeof...(Types) + 1] {};
     napi_env env_ { nullptr };
     napi_callback_info info_ { nullptr };
+    size_t argCount_ { 0 };
 
 public:
     template<typename First, typename... Rest>
@@ -130,22 +131,21 @@ public:
             return;
         }
         napi_status status;
-        size_t arg_count;
         if constexpr (sizeof...(Types) == 0) {
             // dont care about args now. or void args
             env_ = env;
             info_ = info;
-            status = napi_get_cb_info(env, info, &arg_count, nullptr, &jsThis, &data_);
+            status = napi_get_cb_info(env, info, &argCount_, nullptr, &jsThis, &data_);
         }
         if constexpr (sizeof...(Types) > 0) {
             // check arg count first
-            status = napi_get_cb_info(env, info, &arg_count, nullptr, nullptr, nullptr);
-            if (argc != arg_count) {
+            status = napi_get_cb_info(env, info, &argCount_, nullptr, nullptr, nullptr);
+            if (argc != argCount_) {
                 // non matching arg count. fail
                 return;
             }
 
-            status = napi_get_cb_info(env, info, &arg_count, args, &jsThis, &data_);
+            status = napi_get_cb_info(env, info, &argCount_, args, &jsThis, &data_);
             env_ = env;
             if (!validate<Types...>(0)) {
                 // non matching types in context!
@@ -213,6 +213,11 @@ public:
         if constexpr (sizeof...(Types) == 0) {
             return;
         }
+    }
+
+    size_t ArgCount() const
+    {
+        return argCount_;
     }
 
     // these could be forwarder to env..
