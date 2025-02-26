@@ -59,7 +59,7 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    GetInstanceData(env, (void**)&mis);
     mis->StoreCtor("Environment", func);
 
     NapiApi::Object exp(env, exports);

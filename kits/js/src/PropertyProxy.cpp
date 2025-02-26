@@ -110,7 +110,7 @@ PropertyProxy::~PropertyProxy()
 void PropertyProxy::Create(napi_env env, const BASE_NS::string jsName)
 {
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    GetInstanceData(env, (void**)&mis);
     auto ref = NapiApi::Object(env, mis->getRef());
     auto cl = ref.Get(jsName.c_str());
     if (cl) {

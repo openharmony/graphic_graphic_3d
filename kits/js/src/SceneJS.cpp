@@ -89,7 +89,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
     napi_set_named_property(env, exports, "Scene", func);
 
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    GetInstanceData(env, (void**)&mis);
     mis->StoreCtor("Scene", func);
 }
 class AsyncStateBase {
@@ -1093,3 +1093,38 @@ void SceneJS::ReleaseStrongDispose(uintptr_t token)
         strongDisposables_.erase(it->first); 
     }
 }
+
+#ifdef __OHOS_PLATFORM__
+// This will circumvent the broken napi_set_instance_data and napi_get_instance_data implementations
+// on ohos platform
+static void* g_instanceData = nullptr;
+
+napi_status SetInstanceData(napi_env env, void* data, napi_finalize finalizeCb, void* finalizeHint)
+{
+    g_instanceData = data;
+    return napi_ok;
+}
+
+napi_status GetInstanceData(napi_env env, void** data)
+{
+    if (data) {
+        *data = g_instanceData;
+    }
+
+    return napi_ok;
+}
+
+#else // __OHOS_PLATFORM__
+
+napi_status SetInstanceData(napi_env env, void* data, napi_finalize finalizeCb, void* finalizeHint)
+{
+    return napi_set_instance_data(env, data, finalizeCb, finalizeHint);
+}
+
+napi_status GetInstanceData(napi_env env, void** data)
+{
+    return napi_get_instance_data(env, data);
+}
+
+#endif // __OHOS_PLATFORM__
+

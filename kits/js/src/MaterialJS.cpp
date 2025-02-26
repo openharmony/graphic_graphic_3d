@@ -40,7 +40,7 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
         env, class_name, NAPI_AUTO_LENGTH, ctor, nullptr, node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    GetInstanceData(env, (void**)&mis);
     mis->StoreCtor(class_name, func);
 
     NapiApi::Object exp(env, exports);

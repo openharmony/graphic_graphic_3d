@@ -60,7 +60,7 @@ static napi_value Export(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis = new NapiApi::MyInstanceState(env, Storage);
 
-    auto status = napi_set_instance_data(
+    auto status = SetInstanceData(
         env,
         mis,
         [](napi_env env, void *finalize_data, void *finalize_hint) {
