@@ -300,7 +300,7 @@ public:
         }
     }
 
-    void reset(nullptr_t /* p */ = nullptr) noexcept
+    void reset(nullptr_t = nullptr) noexcept
     {
         reset(pointer());
     }

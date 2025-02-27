@@ -96,7 +96,6 @@ inline void GatherEntityReferences(BASE_NS::vector<CORE_NS::Entity*>& entities,
                 GatherEntityReferences(entities, entityReferences, containerProperty, ptr);
             }
         }
-
     } else if (!property.metaData.memberProperties.empty()) {
         // Custom type (struct). Process sub properties recursively.
         for (size_t i = 0; i < property.count; i++) {

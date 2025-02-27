@@ -712,7 +712,6 @@ bool EcsSerializer::WriteProperty(
             }
             jsonOut = move(array);
             return true;
-
         } else {
             // This is a "non trivial container".
             const auto count = container.size(offset);

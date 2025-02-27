@@ -562,6 +562,9 @@ PluginToken CreatePlugin3D(IRenderContext& context)
 
 void DestroyPlugin3D(PluginToken token)
 {
+    if (token == nullptr) {
+        return;
+    }
     Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
     IFileManager& fileManager = state->renderContext.GetEngine().GetFileManager();
 

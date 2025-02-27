@@ -20,7 +20,7 @@
 #include <base/containers/string_view.h>
 
 bool LoadCoreLibrary(BASE_NS::string_view libraryFile = {});
-void UnloadCoreLibrary();
+void UnloadCoreLibrary(void);
 BASE_NS::string GetCoreBinaryPath();
 
 //
@@ -86,7 +86,6 @@ bool LoadCoreLibrary(BASE_NS::string_view libraryFile)
     CORE_NS::CreatePluginRegistry =
         decltype(CORE_NS::CreatePluginRegistry)(GetProcAddress(g_agpEngineHandle, MAKEINTRESOURCE(1)));
 #endif // CORE_DYNAMIC
-
 #elif defined(__ANDROID__)
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
     __android_log_write(android_LogPriority::ANDROID_LOG_INFO, "core", "CORE_DYNAMIC");
@@ -134,7 +133,7 @@ bool LoadCoreLibrary(BASE_NS::string_view libraryFile)
     return true;
 }
 
-void UnloadCoreLibrary()
+void UnloadCoreLibrary(void)
 {
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
 #if defined(_WIN32)

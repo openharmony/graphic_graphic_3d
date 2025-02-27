@@ -480,6 +480,10 @@ napi_value CameraJS::Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::
         bool SetResult() override
         {
             auto* rootObject = static_cast<CameraJS*>(this_.GetObject().Native<TrueRootObject>());
+            if (rootObject == nullptr) {
+                LOG_E("rootObject is nullptr");
+                return false;
+            }
             result_ = rootObject->Raycast(this_.GetEnv(), coordArg_.GetObject(), optionArg_.GetObject());
             return (bool)result_;
         }

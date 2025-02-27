@@ -48,7 +48,7 @@ public:
 
     static uint64_t HashCacheGpuImageDesc(const CacheGpuImageDesc& desc);
 
-    void BeginFrame(uint64_t frameCount);
+    void BeginFrame(const uint64_t frameCount);
 
     struct ImageData {
         RenderHandleReference handle;

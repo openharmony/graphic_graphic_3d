@@ -514,13 +514,14 @@ public:
     // clean-up if needed
     void AfterRenderNodeExecuteFrame();
 
-    void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
-    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
-        uint32_t firstInstance) override;
+    void Draw(const uint32_t vertexCount, const uint32_t instanceCount,
+        const uint32_t firstVertex, const uint32_t firstInstance) override;
+    void DrawIndexed(const uint32_t indexCount, const uint32_t instanceCount, const uint32_t firstIndex,
+        const int32_t vertexOffset, const uint32_t firstInstance) override;
     void DrawIndirect(RenderHandle bufferHandle, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
     void DrawIndexedIndirect(RenderHandle bufferHandle, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
 
-    void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) override;
+    void Dispatch(const uint32_t groupCountX, const uint32_t groupCountY, const uint32_t groupCountZ) override;
     void DispatchIndirect(RenderHandle bufferHandle, uint32_t offset) override;
 
     void BindPipeline(RenderHandle psoHandle) override;
@@ -586,11 +587,11 @@ public:
     // dynamic states
     void SetDynamicStateViewport(const ViewportDesc& viewportDesc) override;
     void SetDynamicStateScissor(const ScissorDesc& scissorDesc) override;
-    void SetDynamicStateLineWidth(float lineWidth) override;
+    void SetDynamicStateLineWidth(const float lineWidth) override;
     void SetDynamicStateDepthBias(
-        float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) override;
+        const float depthBiasConstantFactor, const float depthBiasClamp, const float depthBiasSlopeFactor) override;
     void SetDynamicStateBlendConstants(BASE_NS::array_view<const float> blendConstants) override;
-    void SetDynamicStateDepthBounds(float minDepthBounds, float maxDepthBounds) override;
+    void SetDynamicStateDepthBounds(const float minDepthBounds, const float maxDepthBounds) override;
     void SetDynamicStateStencilCompareMask(StencilFaceFlags faceMask, uint32_t compareMask) override;
     void SetDynamicStateStencilWriteMask(StencilFaceFlags faceMask, uint32_t writeMask) override;
     void SetDynamicStateStencilReference(StencilFaceFlags faceMask, uint32_t reference) override;
@@ -621,7 +622,7 @@ private:
     // add barrier/synchronization point where descriptor resources need to be synchronized
     // on gfx this happens before BeginRenderPass()
     // on compute this happens before Dispatch -methods
-    void AddBarrierPoint(RenderCommandType renderCommandType);
+    void AddBarrierPoint(const RenderCommandType renderCommandType);
 
     bool ProcessInputAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
         RenderPassAttachmentResourceStates& subpassResourceStates);

@@ -57,6 +57,7 @@ inline void FillTriplet(uint8_t* dst, const uint8_t*& src, signed left)
     switch (left) {
         case 2:
             *dst++ = *src++;
+            [[fallthrough]];
         case 1:
             *dst++ = *src++;
     }

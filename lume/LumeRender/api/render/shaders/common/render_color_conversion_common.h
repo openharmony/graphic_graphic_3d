@@ -37,7 +37,7 @@
 float CalcLuma(const vec3 color)
 {
     // Rec. 601 luma
-    return 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+    return 0.299 * color.r + 0.587 * color.g + 0.114 * color.b; // 0.299:param  0.587:param  0.114:param
 }
 
 /**
@@ -46,7 +46,7 @@ float CalcLuma(const vec3 color)
 float CalcLumaFxaa(const vec3 color)
 {
     // Rec. 601 luma based approximation
-    return color.g * (0.587 / 0.299) + color.r;
+    return color.g * (0.587 / 0.299) + color.r; // 0.587:param  0.299:param
 }
 
 /**

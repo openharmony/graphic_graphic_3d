@@ -101,11 +101,13 @@ void EnvironmentJS::DisposeNative(void* scene)
             // if we still have javascript scene reference, detach from it.
             // (if not, then scene has died and we are detaching already)
             NapiApi::Object sceneJs = scene_.GetObject();
-            if (sceneJs) {
-                napi_value null;
-                napi_get_null(sceneJs.GetEnv(), &null);
-                sceneJs.Set("environment", null);
+            if (!sceneJs) {
+                LOG_E("sceneJs is nullptr");
+                return;
             }
+            napi_value null;
+            napi_get_null(sceneJs.GetEnv(), &null);
+            sceneJs.Set("environment", null);
             IScene::Ptr s = interface_pointer_cast<IScene>(sceneJS->GetNativeObject());
             if (s) {
                 env->EnvironmentImage()->SetValue(nullptr);
@@ -151,13 +153,14 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
 
     NapiApi::Object meJs(fromJs.This());
     auto* tro = scene_.GetObject().Native<TrueRootObject>();
-    if (tro) {
-        auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-        }
+    if (!tro) {
+        LOG_E("tro is nullptr");
+        return;
     }
-
+    auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+    if (sceneJS) {
+        sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+    }
     IScene::Ptr scene = interface_pointer_cast<IScene>(tro->GetNativeObject());
 
     NapiApi::Value<BASE_NS::string> name;

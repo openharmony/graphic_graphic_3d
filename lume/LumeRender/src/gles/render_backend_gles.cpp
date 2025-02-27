@@ -2555,8 +2555,9 @@ const BASE_NS::array_view<Binder>* RenderBackendGLES::BindPipeline()
             pushConstants = &sd.pushConstants;
         }
     }
-
-    SetPushConstants(program, *pushConstants);
+    if (pushConstants) {
+        SetPushConstants(program, *pushConstants);
+    }
     if (flipLocation != Gles::INVALID_LOCATION) {
         const float flip = (renderingToDefaultFbo_) ? (-1.f) : (1.f);
         glProgramUniform1fv(program, flipLocation, 1, &flip);

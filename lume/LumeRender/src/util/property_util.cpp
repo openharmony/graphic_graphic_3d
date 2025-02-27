@@ -489,14 +489,14 @@ CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
                         DestroyHelper(*resource);
                     }
                 }
-		   break;
+		            break;
                 case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                     PLUGIN_ASSERT(meta.size == IMAGE_HANDLE_REF_BYTE_SIZE);
                     if (auto* resource = (BindableImageWithHandleReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
                 }
-                break;
+                    break;
                 case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
                     PLUGIN_ASSERT(meta.size == SAMPLER_HANDLE_REF_BYTE_SIZE);
                     if (auto* resource = (BindableSamplerWithHandleReference*)(data_.data() + meta.offset); resource) {
@@ -597,13 +597,16 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
     switch (typeDecl) {
         case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
             byteSize = BUFFER_HANDLE_REF_BYTE_SIZE;
-        } break;
+        }
+            break;
         case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
             byteSize = IMAGE_HANDLE_REF_BYTE_SIZE;
-        } break;
+        }
+            break;
         case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
             byteSize = SAMPLER_HANDLE_REF_BYTE_SIZE;
-        } break;
+        }
+            break;
     }
     if ((byteSize > 0) && reserved) {
         metaStrings_.push_back({ string { propertyName }, string { displayName } });
@@ -626,15 +629,15 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
             case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableBufferWithHandleReference;
             }
-            break;
+                break;
             case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableImageWithHandleReference;
             }
-            break;
+                break;
             case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableSamplerWithHandleReference;
             }
-            break;
+                break;
         }
     } else {
         CORE_LOG_W("unsupported property addition for custom property binding container");

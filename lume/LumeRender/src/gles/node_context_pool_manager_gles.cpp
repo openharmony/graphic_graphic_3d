@@ -783,7 +783,7 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
     }
     uint32_t arrayIndex = 0;
     if (auto const pos = std::find_if(framebufferCache_.framebuffers.begin(), framebufferCache_.framebuffers.end(),
-            [](auto const& framebuffer) { return framebuffer.fbos.empty(); });
+        [](auto const& framebuffer) { return framebuffer.fbos.empty(); });
         pos != framebufferCache_.framebuffers.end()) {
         arrayIndex = (uint32_t)std::distance(framebufferCache_.framebuffers.begin(), pos);
         *pos = move(fb);

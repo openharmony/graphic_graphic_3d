@@ -687,19 +687,19 @@ void ShaderPipelineBinder::BindPropertyBindings()
                 case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                     BindBuffer(sb.set, sb.binding, bindingProperties->GetValue<BindableBufferWithHandleReference>(idx));
                 }
-                break;
+                    break;
                 case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                     BindImage(sb.set, sb.binding, bindingProperties->GetValue<BindableImageWithHandleReference>(idx));
                 }
-                break;
+                    break;
                 case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
                     BindSampler(
                         sb.set, sb.binding, bindingProperties->GetValue<BindableSamplerWithHandleReference>(idx));
                 }
-                break;
+                    break;
                 default: {
                 }
-                break;
+                    break;
             }
         }
     }

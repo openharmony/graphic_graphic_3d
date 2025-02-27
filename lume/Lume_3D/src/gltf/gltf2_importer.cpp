@@ -698,9 +698,9 @@ IMeshBuilder::Submesh CreatePrimitiveImportInfo(const GLTFImportResult& importRe
         info.tangents = primitive.targets.size() > 0;
     }
     if (const auto pos = std::find_if(primitive.attributes.begin(), primitive.attributes.end(),
-            [](const GLTF2::Attribute& attribute) {
-                return attribute.attribute.type == GLTF2::AttributeType::POSITION;
-            });
+        [](const GLTF2::Attribute& attribute) {
+            return attribute.attribute.type == GLTF2::AttributeType::POSITION;
+        });
         pos != primitive.attributes.end()) {
         info.vertexCount = pos->accessor->count;
     }
@@ -798,7 +798,7 @@ void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<
         }
 
         // Set AABB.
-        if (position.min.size() == 3 && position.max.size() == 3) {
+        if (position.min.size() == 3 && position.max.size() == 3) { // 3:size
             const Math::Vec3 min = { position.min[0], position.min[1], position.min[2] };
             const Math::Vec3 max = { position.max[0], position.max[1], position.max[2] };
             result.meshBuilder->SetAABB(primitiveIndex, min, max);
@@ -1267,7 +1267,7 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
 
         const size_t dataSizeInBytes = animationFrameDataResult.elementSize * animationFrameDataResult.elementCount;
         if (!CloneData(destination.data(), destination.size() * sizeof(T), animationFrameDataResult.data.data(),
-                dataSizeInBytes)) {
+            dataSizeInBytes)) {
             CORE_LOG_E("Copying of raw framedata failed.");
         }
     } else {
@@ -1290,7 +1290,7 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
 
         const size_t dataSizeInBytes = animationFrameDataResult.elementSize * animationFrameDataResult.elementCount;
         if (!CloneData(destination.data(), destination.size() * sizeof(bool), animationFrameDataResult.data.data(),
-                dataSizeInBytes)) {
+            dataSizeInBytes)) {
             CORE_LOG_E("Copying of raw framedata failed.");
         }
     } else {
@@ -1793,7 +1793,7 @@ void CreateTransform(IEcs& ecs, const GLTF2::Node& node, const Entity entity)
         Math::Vec4 perspective;
 
         if (!Math::Decompose(
-                node.matrix, component->scale, component->rotation, component->position, skew, perspective)) {
+            node.matrix, component->scale, component->rotation, component->position, skew, perspective)) {
             component->position = { 0.f, 0.f, 0.f };
             component->rotation = { 0.f, 0.f, 0.f, 1.f };
             component->scale = { 1.f, 1.f, 1.f };

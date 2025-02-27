@@ -241,7 +241,7 @@ public:
 
     const ImageFormat& GetGlImageFormat(BASE_NS::Format format) const;
 
-    void SwapBuffers(const SwapchainGLES&);
+    void SwapBuffers(const SwapchainGLES& swapchain);
 
 private:
     enum BufferBindId : uint32_t {
