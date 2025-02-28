@@ -110,7 +110,7 @@ public:
     // Generally set once to true when device is created.
     // Set to false e.g. when device is lost.
     // Set and Get uses atomics if needed by the platform.
-    void SetDeviceStatus(bool status);
+    void SetDeviceStatus(const bool status);
     bool GetDeviceStatus() const;
 
     // (re-)create swapchain

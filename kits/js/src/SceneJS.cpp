@@ -271,6 +271,10 @@ napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
                     argsIn.Set("name", "DefaultEnv");
 
                     auto* tro = static_cast<SceneJS*>(jsscene.Native<TrueRootObject>());
+                    if (tro == nullptr) {
+                        LOG_E("tro is nullptr");
+                        return false;
+                    }
                     auto res = tro->CreateEnvironment(jsscene, argsIn);
                     res.Set("backgroundType", NapiApi::Value<uint32_t>(env_, 1)); // image.. but with null.
                     jsscene.Set("environment", res);
@@ -625,6 +629,10 @@ napi_value SceneJS::CreateEnvironment(NapiApi::FunctionContext<NapiApi::Object>&
         bool SetResult() override
         {
             auto* tro = static_cast<SceneJS*>(this_.GetObject().Native<TrueRootObject>());
+            if (tro == nullptr) {
+                LOG_E("tro is nullptr");
+                return false;
+            }
             result_ = tro->CreateEnvironment(this_.GetObject(), args_.GetObject()).ToNapiValue();
             return true;
         };

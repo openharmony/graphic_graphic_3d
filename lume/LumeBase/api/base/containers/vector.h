@@ -692,7 +692,10 @@ public:
             return;
         }
         difference_type cnt = last - first;
-        const auto newSize = static_cast<size_type>(size_ + cnt);
+        if (cnt < 0) {
+            return;
+        }
+        const auto newSize = size_ + static_cast<size_type>(cnt);
         pointer tmp = allocate_if_needed(newSize);
         if (tmp != data_) {
             pointer begin = data_;
@@ -713,7 +716,10 @@ public:
             return;
         }
         difference_type cnt = last - first;
-        const auto newSize = static_cast<size_type>(size_ + cnt);
+        if (cnt < 0) {
+            return;
+        }
+        const auto newSize = size_ + static_cast<size_type>(cnt);
         pointer tmp = allocate_if_needed(newSize);
         if (tmp != data_) {
             pointer begin = data_;

@@ -1673,6 +1673,9 @@ void DeviceGLES::UseProgram(uint32_t program)
 void DeviceGLES::BindBuffer(uint32_t target, uint32_t buffer)
 {
     const uint32_t targetId = GenericTargetToTargetId(target);
+    if (targetId >= MAX_BUFFER_TARGET_ID) {
+        return;
+    }
     auto& state = bufferBound_[targetId];
     if ((!state.bound) || (state.buffer != buffer)) {
         state.bound = true;
@@ -1684,6 +1687,9 @@ void DeviceGLES::BindBuffer(uint32_t target, uint32_t buffer)
 void DeviceGLES::BindBufferRange(uint32_t target, uint32_t binding, uint32_t buffer, uint64_t offset, uint64_t size)
 {
     const uint32_t targetId = IndexedTargetToTargetId(target);
+    if (targetId >= MAX_BUFFER_BIND_ID || binding >= MAX_BINDING_VALUE) {
+        return;
+    }
     auto& slot = boundBuffers_[targetId][binding];
 
     if ((slot.cached == false) || (slot.buffer != buffer) || (slot.offset != offset) || (slot.size != size)) {
@@ -1801,6 +1807,9 @@ void DeviceGLES::SetActiveTextureUnit(uint32_t textureUnit)
 void DeviceGLES::BindTexture(uint32_t textureUnit, uint32_t target, uint32_t texture)
 {
     const uint32_t targetId = TextureTargetToTargetId(target);
+    if (textureUnit >= MAX_TEXTURE_UNITS || targetId >= MAX_TEXTURE_TARGET_ID) {
+        return;
+    }
 #if RENDER_HAS_GLES_BACKEND
     if (target == GL_TEXTURE_EXTERNAL_OES) {
         // Work around for oes textures needing a bind to zero to update.
@@ -1921,12 +1930,12 @@ void DeviceGLES::CompressedTexSubImage3D(uint32_t image, uint32_t target, uint32
 const DeviceGLES::ImageFormat& DeviceGLES::GetGlImageFormat(const Format format) const
 {
     if (const auto pos = std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), format,
-            [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
+        [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
         (pos != supportedFormats_.end()) && (pos->coreFormat == format)) {
         return *pos;
     }
     if (const auto pos = std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
-            [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
+        [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
         (pos != std::end(IMAGE_FORMATS_FALLBACK)) && (pos->coreFormat == format)) {
         PLUGIN_LOG_I("using fallback for format %u", format);
         return *pos;

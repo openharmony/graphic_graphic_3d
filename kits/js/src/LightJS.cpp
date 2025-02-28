@@ -83,7 +83,10 @@ void BaseLight::Create(napi_env e, napi_callback_info i)
     SCENE_NS::ILight::Ptr node = scn->CreateNode<SCENE_NS::ILight>(nodePath, SCENE_NS::ClassId::LightNode).GetResult();
 
     TrueRootObject* instance = GetThisRootObject(fromJs);
-
+    if (instance == nullptr) {
+        LOG_E("instance is nullptr");
+        return;
+    }
     instance->SetNativeObject(interface_pointer_cast<META_NS::IObject>(node), false);
     node.reset();
 

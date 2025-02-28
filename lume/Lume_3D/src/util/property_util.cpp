@@ -499,11 +499,11 @@ CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
                         DestroyHelper(*resource);
                     }
                 }
-                break;
+                    break;
                 default: {
                     CORE_LOG_E("custom property binding destruction error");
                 }
-                break;
+                    break;
             }
         }
     }
@@ -607,7 +607,10 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
         switch (meta.type) {
             case PropertyType::ENTITY_REFERENCE_T: {
                 new (data_.data() + meta.offset) EntityReference;
-            } break;
+            }
+                break;
+            default:
+                break;
         }
     } else {
         CORE_LOG_W("unsupported property addition for custom property binding container");
@@ -659,6 +662,8 @@ size_t GetPropertyTypeAlignment(const PropertyTypeDecl& propertyType)
     switch (propertyType) {
         case PropertyType::ENTITY_REFERENCE_T:
             align = ENTITY_REFERENCE_BYTE_SIZE;
+            break;
+        default:
             break;
     }
     return align;

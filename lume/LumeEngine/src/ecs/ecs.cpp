@@ -368,9 +368,10 @@ Entity Ecs::CloneEntity(const Entity entity)
     if (entityManager_.IsAlive(entity)) {
         for (auto& cm : managerOrder_) {
             const auto id = cm->GetComponentId(entity);
-            if (id != IComponentManager::INVALID_COMPONENT_ID) {
+            auto data = cm->GetData(id);
+            if (data && id != IComponentManager::INVALID_COMPONENT_ID) {
                 cm->Create(clonedEntity);
-                cm->SetData(clonedEntity, *cm->GetData(id));
+                cm->SetData(clonedEntity, *data);
             }
         }
     }

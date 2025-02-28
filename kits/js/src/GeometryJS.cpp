@@ -25,8 +25,9 @@
 
 void* GeometryJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == GeometryJS::ID)
+    if (id == GeometryJS::ID) {
         return this;
+    }
     return NodeImpl::GetInstanceImpl(id);
 }
 void GeometryJS::DisposeNative(void*)

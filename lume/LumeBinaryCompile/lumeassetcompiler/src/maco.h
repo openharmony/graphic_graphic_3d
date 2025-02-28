@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_LUNE_ASSET_COMPILER_H
+#ifndef OHOS_LUME_ASSET_COMPILER_H
 #define OHOS_LUME_ASSET_COMPILER_H
 enum : uint32_t {
     LC_SEGMENT_64 = 0x19,

@@ -1418,10 +1418,10 @@ void MaterialComponentManager::ComponentHandle::BindBindingProperties()
                         }
                     }
                 }
-                break;
+                    break;
                 default: {
                 }
-                break;
+                    break;
             }
             bindingIdx++;
         }

@@ -83,27 +83,42 @@ void Font::DrawString(const BASE_NS::string_view string, const FontDefs::RenderD
 
 BASE_NS::Math::Vec2 Font::MeasureString(const BASE_NS::string_view string)
 {
-    return GetData()->MeasureString(string);
+    if (auto data = GetData()) {
+        return data->MeasureString(string);
+    }
+    return {};
 }
 
 FontMetrics Font::GetMetrics()
 {
-    return GetData()->GetMetrics();
+    if (auto data = GetData()) {
+        return data->GetMetrics();
+    }
+    return {};
 }
 
 GlyphMetrics Font::GetGlyphMetrics(uint32_t glyphIndex)
 {
-    return GetData()->GetGlyphMetrics(glyphIndex);
+    if (auto data = GetData()) {
+        return data->GetGlyphMetrics(glyphIndex);
+    }
+    return {};
 }
 
 BASE_NS::vector<GlyphContour> Font::GetGlyphContours(uint32_t glyphIndex)
 {
-    return GetData()->GetGlyphContours(glyphIndex);
+    if (auto data = GetData()) {
+        return data->GetGlyphContours(glyphIndex);
+    }
+    return {};
 }
 
 GlyphInfo Font::GetGlyphInfo(uint32_t glyphIndex)
 {
-    return GetData()->GetGlyphInfo(glyphIndex);
+    if (auto data = GetData()) {
+        return data->GetGlyphInfo(glyphIndex);
+    }
+    return {};
 }
 
 uint32_t Font::GetGlyphIndex(uint32_t code)

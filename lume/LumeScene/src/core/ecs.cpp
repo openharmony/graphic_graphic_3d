@@ -71,6 +71,10 @@ Manager* Ecs::GetCoreManager()
 bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
 {
     using namespace CORE_NS;
+    if (!scene) {
+        CORE_LOG_E("invalid scene");
+        return false;
+    }
     scene_ = scene;
     auto& context = scene->GetRenderContext();
     auto& engine = context.GetEngine();
@@ -109,9 +113,13 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
     if (animationComponentManager) {
         animationQuery.reset(new CORE_NS::ComponentQuery());
         animationQuery->SetEcsListenersEnabled(true);
-        const ComponentQuery::Operation operations[] = { 
-	    { *nodeComponentManager, ComponentQuery::Operation::OPTIONAL },
-            { *nameComponentManager, ComponentQuery::Operation::OPTIONAL } 
+        const ComponentQuery::Operation operations[] = {
+        {
+            *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
+        },
+        {
+            *nameComponentManager, ComponentQuery::Operation::OPTIONAL
+        }
 	};
         animationQuery->SetupQuery(*animationComponentManager, operations);
     }
@@ -120,8 +128,12 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
         meshQuery.reset(new CORE_NS::ComponentQuery());
         meshQuery->SetEcsListenersEnabled(true);
         const ComponentQuery::Operation operations[] = {
-	    { *nodeComponentManager, ComponentQuery::Operation::OPTIONAL },
-            { *nameComponentManager, ComponentQuery::Operation::OPTIONAL }
+        {
+            *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
+        },
+        {
+            *nameComponentManager, ComponentQuery::Operation::OPTIONAL
+        }
 	};
         meshQuery->SetupQuery(*meshComponentManager, operations);
     }
@@ -130,9 +142,15 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
         materialQuery.reset(new CORE_NS::ComponentQuery());
         materialQuery->SetEcsListenersEnabled(true);
         const ComponentQuery::Operation operations[] = {
-	    { *nodeComponentManager, ComponentQuery::Operation::OPTIONAL },
-            { *nameComponentManager, ComponentQuery::Operation::OPTIONAL },
-            { *uriComponentManager, ComponentQuery::Operation::OPTIONAL }
+        {
+            *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
+        },
+        {
+            *nameComponentManager, ComponentQuery::Operation::OPTIONAL
+        },
+        {
+            *uriComponentManager, ComponentQuery::Operation::OPTIONAL
+        }
 	};
         materialQuery->SetupQuery(*materialComponentManager, operations);
     }

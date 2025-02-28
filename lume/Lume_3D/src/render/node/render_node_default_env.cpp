@@ -207,7 +207,9 @@ void RenderNodeDefaultEnv::ExecuteFrame(IRenderCommandList& cmdList)
     if (currentScene_.camera.environment.backgroundType != RenderCamera::Environment::BG_TYPE_NONE) {
         if (currentScene_.camera.layerMask & currentScene_.camera.environment.layerMask) {
             UpdatePostProcessConfiguration();
-            RenderData(*dataStoreCamera, cmdList);
+            if (dataStoreCamera) {
+                RenderData(*dataStoreCamera, cmdList);
+            }
         }
     }
 

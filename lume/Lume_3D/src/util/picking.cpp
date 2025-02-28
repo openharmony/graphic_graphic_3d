@@ -109,7 +109,6 @@ bool IntersectTriangle(const Math::Vec3 triangle[3], const Math::Vec3 start, con
 
     const Math::Vec3 pvec = Math::Cross(direction, v0v2);
     const float det = Math::Dot(v0v1, pvec);
-
     // ray and triangle are parallel and backface culling
     if (det < Math::EPSILON) {
         hitDistance = 0.f;

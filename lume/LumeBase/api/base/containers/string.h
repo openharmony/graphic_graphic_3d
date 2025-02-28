@@ -520,22 +520,23 @@ public:
         }
         const auto newSize = oldSize + n;
         if (newSize > capacity()) {
-            const auto oldPtr = data();
-            const auto ptr = allocator_.alloc(newSize + 1);
-            CloneData(ptr, newSize * sizeof(value_type), oldPtr, pos * sizeof(value_type));
-            CloneData(ptr + pos + n, (newSize - pos - n) * sizeof(value_type), oldPtr + pos,
-                (oldSize - pos) * sizeof(value_type));
-            CloneData(ptr + pos, (newSize - pos) * sizeof(value_type), str, n * sizeof(value_type));
-            ptr[newSize] = '\0';
+            if (const auto ptr = allocator_.alloc(newSize + 1)) {
+                const auto oldPtr = data();
+                CloneData(ptr, newSize * sizeof(value_type), oldPtr, pos * sizeof(value_type));
+                CloneData(ptr + pos + n, (newSize - pos - n) * sizeof(value_type), oldPtr + pos,
+                    (oldSize - pos) * sizeof(value_type));
+                CloneData(ptr + pos, (newSize - pos) * sizeof(value_type), str, n * sizeof(value_type));
+                ptr[newSize] = '\0';
 
-            if (!is_short()) {
-                allocator_.free(oldPtr);
+                if (!is_short()) {
+                    allocator_.free(oldPtr);
+                }
+
+                data_.longString.capacity = newSize;
+                data_.longString.size = newSize;
+                data_.longString.begin = ptr;
+                set_short(false);
             }
-
-            data_.longString.capacity = newSize;
-            data_.longString.size = newSize;
-            data_.longString.begin = ptr;
-            set_short(false);
         } else {
             auto ptr = data();
             if (pos < oldSize) {

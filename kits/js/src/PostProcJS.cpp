@@ -153,6 +153,10 @@ PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject<PostProcJS
     NapiApi::Object cameraJS = fromJs.Arg<0>();
     camera_ = { cameraJS };
     auto* rootobject = cameraJS.Native<TrueRootObject>();
+    if (rootobject == nullptr)  {
+        LOG_E("rootobject is nullptr");
+        return;
+    }
     auto postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(
         static_cast<CameraJS*>(rootobject)->CreateObject(SCENE_NS::ClassId::PostProcess));
 

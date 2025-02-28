@@ -612,7 +612,6 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
 
         // check if present (not locked inside)
         handle = GetHandleNoLock(store, name);
-
         // create
         if (!handle) {
             if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
@@ -837,7 +836,6 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
         const auto lock = std::lock_guard(store.clientMutex);
         // check if present (not locked inside)
         handle = GetHandleNoLock(store, name);
-
         if (!handle) {
             handle = CreateImage(name, {}, desc).handle;
         }

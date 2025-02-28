@@ -64,6 +64,9 @@ CORE_NS::PluginToken CreatePlugin(RENDER_NS::IRenderContext& context)
 
 void DestroyPlugin(CORE_NS::PluginToken token)
 {
+    if (token == nullptr) {
+        return;
+    }
     RenderPluginState* state = static_cast<RenderPluginState*>(token);
     auto& registry = *state->context_.GetInterface<CORE_NS::IClassRegister>();
     registry.UnregisterInterfaceType(state->interfaceInfo_);
