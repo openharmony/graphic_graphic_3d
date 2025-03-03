@@ -36,7 +36,7 @@ static napi_value Export(napi_env env, napi_value exports)
     sceneAdapter_->LoadPluginsAndInit();
 
     NapiApi::MyInstanceState *mis;
-    napi_get_instance_data(env, (void **)&mis);
+    GetInstanceData(env, (void **)&mis);
     if (mis) {
         // should not happen?
         WIDGET_LOGW("scene.napi reloaded!");
@@ -45,7 +45,7 @@ static napi_value Export(napi_env env, napi_value exports)
         napi_value Storage;
         napi_create_object(env, &Storage);
         mis = new NapiApi::MyInstanceState(env, Storage);
-        auto status = napi_set_instance_data(
+        auto status = SetInstanceData(
             env,
             mis,
             [](napi_env env, void *finalize_data, void *finalize_hint) {

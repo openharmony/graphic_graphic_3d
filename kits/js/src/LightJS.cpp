@@ -130,7 +130,7 @@ void BaseLight::Init(const char* class_name, napi_env env, napi_value exports,
     auto status = napi_define_class(env, class_name, NAPI_AUTO_LENGTH, ctor, nullptr, np.size(), np.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    GetInstanceData(env, (void**)&mis);
     mis->StoreCtor(class_name, func);
 }
 void BaseLight::Finalize(napi_env env, TrueRootObject* tro)

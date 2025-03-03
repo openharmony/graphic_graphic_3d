@@ -40,7 +40,7 @@ void SceneComponentJS::Init(napi_env env, napi_value exports)
         nullptr, props.size(), props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    GetInstanceData(env, (void**)&mis);
     mis->StoreCtor("SceneComponent", func);
 }
 

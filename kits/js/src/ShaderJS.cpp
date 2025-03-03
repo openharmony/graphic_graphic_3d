@@ -40,7 +40,7 @@ void ShaderJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, reinterpret_cast<void**>(&mis));
+    GetInstanceData(env, reinterpret_cast<void**>(&mis));
     mis->StoreCtor("Shader", func);
 }
 

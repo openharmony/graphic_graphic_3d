@@ -166,7 +166,7 @@ void ObjectPropertyProxy::Create(napi_env env, const BASE_NS::string jsName)
         obj_ = NapiApi::StrongRef { NapiApi::Object(env) };
     } else {
         NapiApi::MyInstanceState* mis;
-        napi_get_instance_data(env, reinterpret_cast<void**>(&mis));
+        GetInstanceData(env, reinterpret_cast<void**>(&mis));
         auto ref = NapiApi::Object(env, mis->getRef());
         auto cl = ref.Get(jsName.c_str());
         if (cl) {

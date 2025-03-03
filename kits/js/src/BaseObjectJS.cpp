@@ -153,7 +153,7 @@ void TrueRootObject::Finalize(napi_env env)
 NapiApi::Function GetJSConstructor(napi_env env, const BASE_NS::string_view jsName)
 {
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    GetInstanceData(env, (void**)&mis);
     return NapiApi::Function(env, mis->FetchCtor(jsName));
 }
 NapiApi::Object CreateJsObj(napi_env env, const BASE_NS::string_view jsName, META_NS::IObject::Ptr real, bool strong,

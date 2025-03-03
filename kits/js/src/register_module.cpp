@@ -34,7 +34,7 @@ void RegisterClasses(napi_env env, napi_value exports)
 {
     napi_value zero, one;
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, reinterpret_cast<void**>(&mis));
+    GetInstanceData(env, reinterpret_cast<void**>(&mis));
 
     napi_create_double(env, 0.0, &zero);
     napi_create_double(env, 1.0, &one);
