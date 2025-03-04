@@ -33,7 +33,7 @@ void RegisterClasses(napi_env env, napi_value exports)
     napi_value zero;
     napi_value one;
     NapiApi::MyInstanceState* mis;
-    napi_get_instance_data(env, (void**)&mis);
+    GetInstanceData(env, (void**)&mis);
 
     status = napi_create_double(env, 0.0, &zero);
     status = napi_create_double(env, 1.0, &one);
