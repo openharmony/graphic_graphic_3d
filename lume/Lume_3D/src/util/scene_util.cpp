@@ -178,8 +178,8 @@ void SceneUtil::UpdateCameraViewport(IEcs& ecs, Entity entity, const Math::UVec2
         }
         CameraComponent& cameraComponent = *cameraHandle;
         cameraComponent.aspect = (renderResolution.y > 0U)
-                                    ? (static_cast<float>(renderResolution.x) / static_cast<float>(renderResolution.y))
-                                    : 1.0f;
+                                     ? (static_cast<float>(renderResolution.x) / static_cast<float>(renderResolution.y))
+                                     : 1.0f;
         cameraComponent.renderResolution[0] = renderResolution.x;
         cameraComponent.renderResolution[1] = renderResolution.y;
     }

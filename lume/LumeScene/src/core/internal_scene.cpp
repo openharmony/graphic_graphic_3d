@@ -41,7 +41,7 @@ SCENE_BEGIN_NAMESPACE()
 InternalScene::InternalScene(const IScene::Ptr& scene, META_NS::ITaskQueue::Ptr engine, META_NS::ITaskQueue::Ptr app,
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> context)
     : scene_(scene), engineQueue_(BASE_NS::move(engine)), appQueue_(BASE_NS::move(app)),
-    renderContext_(BASE_NS::move(context))
+      renderContext_(BASE_NS::move(context))
 {
     graphicsContext3D_ = CORE_NS::CreateInstance<CORE3D_NS::IGraphicsContext>(
         *renderContext_->GetInterface<CORE_NS::IClassFactory>(), CORE3D_NS::UID_GRAPHICS_CONTEXT);
@@ -540,15 +540,18 @@ bool InternalScene::SetRenderMode(RenderMode mode)
         mode == RenderMode::IF_DIRTY ? CORE_NS::IEcs::RENDER_IF_DIRTY : CORE_NS::IEcs::RENDER_ALWAYS);
     return true;
 }
+
 RenderMode InternalScene::GetRenderMode() const
 {
     return mode_;
 }
+
 void InternalScene::RenderFrame()
 {
     std::unique_lock lock { mutex_ };
     pendingRender_ = true;
 }
+
 bool InternalScene::HasPendingRender() const
 {
     std::unique_lock lock { mutex_ };

@@ -49,7 +49,6 @@ constexpr const string_view CAM_SCENE_PRE_PASS_STR = "3drendernodegraphs://core3
 constexpr const string_view CAM_SCENE_DEFERRED_STR = "3drendernodegraphs://core3d_rng_cam_scene_deferred.rng";
 constexpr const string_view CAM_SCENE_POST_PROCESS_STR = "3drendernodegraphs://core3d_rng_cam_scene_post_process.rng";
 
-
 constexpr const string_view RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_STR = "RenderNodeDefaultCameraController";
 constexpr const string_view RENDER_NODE_DEFAULT_MATERIAL_RENDER_SLOT_STR = "RenderNodeDefaultMaterialRenderSlot";
 
@@ -144,7 +143,7 @@ void FillCameraDescsData(const RenderCamera& renderCamera, const string& customC
                 if (!config->string_.empty()) {
                     const bool rpp = HasRenderDataStorePostProcess(*dataStore);
                     auto renderDataStore = rpp ? GetPostProcess(renderCamera.postProcessName)
-                                            : GetPodPostProcess(renderCamera.postProcessName);
+                                               : GetPodPostProcess(renderCamera.postProcessName);
                     jsonVal["renderDataStore"] = move(renderDataStore);
                 }
             }
@@ -167,7 +166,7 @@ void FillCameraPostProcessDescsData(const RenderCamera& renderCamera, const uint
                 if (config->is_string() && (!config->string_.empty())) {
                     const bool rpp = customPostProcess || HasRenderDataStorePostProcess(*dataStore);
                     auto renderDataStore = rpp ? GetPostProcess(renderCamera.postProcessName)
-                                            : GetPodPostProcess(renderCamera.postProcessName);
+                                               : GetPodPostProcess(renderCamera.postProcessName);
                     jsonVal["renderDataStore"] = move(renderDataStore);
                 }
             }
