@@ -140,7 +140,7 @@ ohos_source_set("widget_adapter_source") {
 
   defines += [
     "CORE_HAS_GLES_BACKEND=1",
-    "CORE_HAS_VULKAN_BACKEND=1"
+    "CORE_HAS_VULKAN_BACKEND=1",
   ]
 
   configs = [
@@ -148,9 +148,7 @@ ohos_source_set("widget_adapter_source") {
     ":lume3d_config",
   ]
 
-  public_configs = [
-    ":widget_adapter_config"
-  ]
+  public_configs = [ ":widget_adapter_config" ]
 
   external_deps = []
 

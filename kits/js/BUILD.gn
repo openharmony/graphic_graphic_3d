@@ -136,14 +136,14 @@ ohos_source_set("napi_source") {
     "src/Vec2Proxy.cpp",
     "src/Vec3Proxy.cpp",
     "src/Vec4Proxy.cpp",
-    "src/native_module_export.cpp",
-    "src/nodejstaskqueue.cpp",
-    "src/register_module.cpp",
     "src/geometry_definition/CubeJS.cpp",
     "src/geometry_definition/CustomJS.cpp",
     "src/geometry_definition/GeometryDefinition.cpp",
     "src/geometry_definition/PlaneJS.cpp",
-    "src/geometry_definition/SphereJS.cpp"
+    "src/geometry_definition/SphereJS.cpp",
+    "src/native_module_export.cpp",
+    "src/nodejstaskqueue.cpp",
+    "src/register_module.cpp",
   ]
 
   include_dirs = [ "../../3d_widget_adapter/include/ohos" ]

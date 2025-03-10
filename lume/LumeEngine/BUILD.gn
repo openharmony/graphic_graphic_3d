@@ -258,9 +258,7 @@ ohos_source_set("lume_engine_src") {
     "resource_management:global_resmgr",
   ]
 
-  external_deps += [
-    "zlib:shared_libz",
-  ]
+  external_deps += [ "zlib:shared_libz" ]
 
   if (LUME_OHOS_BUILD) {
     external_deps += [ "hilog:libhilog" ]

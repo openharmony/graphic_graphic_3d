@@ -13,32 +13,31 @@
  * limitations under the License.
  */
 
- #ifndef MESH_RESOURCE_JS_H
- #define MESH_RESOURCE_JS_H
- 
- #include <napi_api.h>
- 
- #include "BaseObjectJS.h"
- #include "SceneResourceImpl.h"
- 
- class MeshResourceJS : public BaseObject<MeshResourceJS>, public SceneResourceImpl {
- public:
-     static constexpr uint32_t ID = 140;
- 
-     MeshResourceJS(napi_env, napi_callback_info);
-     ~MeshResourceJS() override = default;
- 
-     static void Init(napi_env env, napi_value exports);
- 
-     virtual void* GetInstanceImpl(uint32_t id) override;
- 
-     NapiApi::StrongRef GetGeometryDefinition() const;
- 
- private:
-     void DisposeNative(void*) override;
-     // This is a temporary solution. When IMeshResource is implemented, this can be removed.
-     NapiApi::StrongRef geometryDefinition_ {};
- };
- 
- #endif
- 
+#ifndef MESH_RESOURCE_JS_H
+#define MESH_RESOURCE_JS_H
+
+#include <napi_api.h>
+
+#include "BaseObjectJS.h"
+#include "SceneResourceImpl.h"
+
+class MeshResourceJS : public BaseObject<MeshResourceJS>, public SceneResourceImpl {
+public:
+    static constexpr uint32_t ID = 140;
+
+    MeshResourceJS(napi_env, napi_callback_info);
+    ~MeshResourceJS() override = default;
+
+    static void Init(napi_env env, napi_value exports);
+
+    virtual void* GetInstanceImpl(uint32_t id) override;
+
+    NapiApi::StrongRef GetGeometryDefinition() const;
+
+private:
+    void DisposeNative(void*) override;
+    // This is a temporary solution. When IMeshResource is implemented, this can be removed.
+    NapiApi::StrongRef geometryDefinition_ {};
+};
+
+#endif
