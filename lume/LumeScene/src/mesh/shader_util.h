@@ -13,29 +13,28 @@
  * limitations under the License.
  */
 
- #ifndef SCENE_SRC_MESH_SHADER_UTIL_H
- #define SCENE_SRC_MESH_SHADER_UTIL_H
- 
- #include <scene/ext/named_scene_object.h>
- #include <scene/interface/intf_shader_util.h>
- 
- #include <meta/ext/implementation_macros.h>
- #include <meta/ext/object.h>
- 
- SCENE_BEGIN_NAMESPACE()
- 
- class ShaderUtil : public META_NS::IntroduceInterfaces<META_NS::BaseObject, IShaderUtil> {
-     META_OBJECT(ShaderUtil, ClassId::ShaderUtil, IntroduceInterfaces)
- public:
-     Future<IShader::Ptr> CreateDefaultShader() const override;
- 
-     bool Build(const META_NS::IMetadata::Ptr&) override;
- 
- private:
-     IInternalScene::WeakPtr scene_;
- };
- 
- SCENE_END_NAMESPACE()
- 
- #endif
- 
+#ifndef SCENE_SRC_MESH_SHADER_UTIL_H
+#define SCENE_SRC_MESH_SHADER_UTIL_H
+
+#include <scene/ext/named_scene_object.h>
+#include <scene/interface/intf_shader_util.h>
+
+#include <meta/ext/implementation_macros.h>
+#include <meta/ext/object.h>
+
+SCENE_BEGIN_NAMESPACE()
+
+class ShaderUtil : public META_NS::IntroduceInterfaces<META_NS::BaseObject, IShaderUtil> {
+    META_OBJECT(ShaderUtil, ClassId::ShaderUtil, IntroduceInterfaces)
+public:
+    Future<IShader::Ptr> CreateDefaultShader() const override;
+
+    bool Build(const META_NS::IMetadata::Ptr&) override;
+
+private:
+    IInternalScene::WeakPtr scene_;
+};
+
+SCENE_END_NAMESPACE()
+
+#endif

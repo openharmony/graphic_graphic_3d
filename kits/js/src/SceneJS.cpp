@@ -124,60 +124,60 @@ using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 
 void SceneJS::Init(napi_env env, napi_value exports)
 {
-using namespace NapiApi;
-// clang-format off
-auto loadFun = [](napi_env e, napi_callback_info cb) -> napi_value {
-    FunctionContext<> fc(e, cb);
-    return SceneJS::Load(fc);
-};
+    using namespace NapiApi;
+    // clang-format off
+    auto loadFun = [](napi_env e, napi_callback_info cb) -> napi_value {
+        FunctionContext<> fc(e, cb);
+        return SceneJS::Load(fc);
+    };
 
-napi_property_descriptor props[] = {
-    // static methods
-    napi_property_descriptor{ "load", nullptr, loadFun, nullptr, nullptr, nullptr,
-        (napi_property_attributes)(napi_static|napi_default_method)},
-    // properties
-    GetSetProperty<uint32_t, SceneJS, &SceneJS::GetRenderMode, &SceneJS::SetRenderMode>("renderMode"),
-    GetSetProperty<NapiApi::Object, SceneJS, &SceneJS::GetEnvironment, &SceneJS::SetEnvironment>("environment"),
-    GetProperty<NapiApi::Array, SceneJS, &SceneJS::GetAnimations>("animations"),
-    // animations
-    GetProperty<BASE_NS::string, SceneJS, &SceneJS::GetRoot>("root"),
-    // scene methods
-    Method<NapiApi::FunctionContext<BASE_NS::string>, SceneJS, &SceneJS::GetNode>("getNodeByPath"),
-    Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::GetResourceFactory>("getResourceFactory"),
-    Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::Dispose>("destroy"),
+    napi_property_descriptor props[] = {
+        // static methods
+        napi_property_descriptor{ "load", nullptr, loadFun, nullptr, nullptr, nullptr,
+            (napi_property_attributes)(napi_static|napi_default_method)},
+        // properties
+        GetSetProperty<uint32_t, SceneJS, &SceneJS::GetRenderMode, &SceneJS::SetRenderMode>("renderMode"),
+        GetSetProperty<NapiApi::Object, SceneJS, &SceneJS::GetEnvironment, &SceneJS::SetEnvironment>("environment"),
+        GetProperty<NapiApi::Array, SceneJS, &SceneJS::GetAnimations>("animations"),
+        // animations
+        GetProperty<BASE_NS::string, SceneJS, &SceneJS::GetRoot>("root"),
+        // scene methods
+        Method<NapiApi::FunctionContext<BASE_NS::string>, SceneJS, &SceneJS::GetNode>("getNodeByPath"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::GetResourceFactory>("getResourceFactory"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::Dispose>("destroy"),
 
-    // SceneResourceFactory methods
-    Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateCamera>("createCamera"),
-    Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>, SceneJS, &SceneJS::CreateLight>("createLight"),
-    Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateNode>("createNode"),
-    Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateTextNode>("createTextNode"),
-    Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>,
-        SceneJS, &SceneJS::CreateMaterial>("createMaterial"),
-    Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateShader>("createShader"),
-    Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateImage>("createImage"),
-    Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateEnvironment>("createEnvironment"),
-    Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateScene>("createScene"),
+        // SceneResourceFactory methods
+        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateCamera>("createCamera"),
+        Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>, SceneJS, &SceneJS::CreateLight>("createLight"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateNode>("createNode"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateTextNode>("createTextNode"),
+        Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>,
+            SceneJS, &SceneJS::CreateMaterial>("createMaterial"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateShader>("createShader"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateImage>("createImage"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateEnvironment>("createEnvironment"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateScene>("createScene"),
 
-    Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
-        &SceneJS::ImportNode>("importNode"),
-    Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
-        &SceneJS::ImportScene>("importScene"),
-    Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::RenderFrame>("renderFrame"),
+        Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
+            &SceneJS::ImportNode>("importNode"),
+        Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
+            &SceneJS::ImportScene>("importScene"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::RenderFrame>("renderFrame"),
 
-    Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateMeshResource>("createMesh"),
-    Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateGeometry>("createGeometry")
-};
-// clang-format on
+        Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateMeshResource>("createMesh"),
+        Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateGeometry>("createGeometry")
+    };
+    // clang-format on
 
-napi_value func;
-auto status = napi_define_class(env, "Scene", NAPI_AUTO_LENGTH, BaseObject::ctor<SceneJS>(), nullptr,
-    sizeof(props) / sizeof(props[0]), props, &func);
+    napi_value func;
+    auto status = napi_define_class(env, "Scene", NAPI_AUTO_LENGTH, BaseObject::ctor<SceneJS>(), nullptr,
+        sizeof(props) / sizeof(props[0]), props, &func);
 
-napi_set_named_property(env, exports, "Scene", func);
+    napi_set_named_property(env, exports, "Scene", func);
 
-NapiApi::MyInstanceState* mis;
-GetInstanceData(env, reinterpret_cast<void**>(&mis));
-mis->StoreCtor("Scene", func);
+    NapiApi::MyInstanceState* mis;
+    GetInstanceData(env, reinterpret_cast<void**>(&mis));
+    mis->StoreCtor("Scene", func);
 }
 
 void SceneJS::RegisterEnums(NapiApi::Object exports)

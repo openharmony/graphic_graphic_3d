@@ -13,45 +13,44 @@
  * limitations under the License.
  */
 
- #include "shader_util.h"
+#include "shader_util.h"
 
- #include <scene/ext/intf_ecs_context.h>
- #include <scene/ext/intf_render_resource.h>
- #include <scene/ext/util.h>
- 
- #include <3d/render/default_material_constants.h>
- #include <render/device/intf_shader_manager.h>
- 
- SCENE_BEGIN_NAMESPACE()
- 
- bool ShaderUtil::Build(const META_NS::IMetadata::Ptr& d)
- {
-     IInternalScene::Ptr p;
-     if (Super::Build(d)) {
-         p = GetInterfaceBuildArg<IInternalScene>(d, "Scene");
-         scene_ = p;
-     }
-     return p != nullptr;
- }
- 
- Future<IShader::Ptr> ShaderUtil::CreateDefaultShader() const
- {
-     if (auto scene = scene_.lock()) {
-         return scene->AddTask([=] {
-             auto& shaderMgr = scene->GetRenderContext().GetDevice().GetShaderManager();
-             auto renderSlotId =
-                 shaderMgr.GetRenderSlotId(CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
-             auto rsd = shaderMgr.GetRenderSlotData(renderSlotId);
- 
-             auto shader = META_NS::GetObjectRegistry().Create<IShader>(ClassId::Shader);
-             if (auto i = interface_cast<IRenderResource>(shader)) {
-                 i->SetRenderHandle(scene, rsd.shader);
-             }
-             return shader;
-         });
-     }
-     return {};
- }
- 
- SCENE_END_NAMESPACE()
- 
+#include <scene/ext/intf_ecs_context.h>
+#include <scene/ext/intf_render_resource.h>
+#include <scene/ext/util.h>
+
+#include <3d/render/default_material_constants.h>
+#include <render/device/intf_shader_manager.h>
+
+SCENE_BEGIN_NAMESPACE()
+
+bool ShaderUtil::Build(const META_NS::IMetadata::Ptr& d)
+{
+    IInternalScene::Ptr p;
+    if (Super::Build(d)) {
+        p = GetInterfaceBuildArg<IInternalScene>(d, "Scene");
+        scene_ = p;
+    }
+    return p != nullptr;
+}
+
+Future<IShader::Ptr> ShaderUtil::CreateDefaultShader() const
+{
+    if (auto scene = scene_.lock()) {
+        return scene->AddTask([=] {
+            auto& shaderMgr = scene->GetRenderContext().GetDevice().GetShaderManager();
+            auto renderSlotId =
+                shaderMgr.GetRenderSlotId(CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
+            auto rsd = shaderMgr.GetRenderSlotData(renderSlotId);
+
+            auto shader = META_NS::GetObjectRegistry().Create<IShader>(ClassId::Shader);
+            if (auto i = interface_cast<IRenderResource>(shader)) {
+                i->SetRenderHandle(scene, rsd.shader);
+            }
+            return shader;
+        });
+    }
+    return {};
+}
+
+SCENE_END_NAMESPACE()
