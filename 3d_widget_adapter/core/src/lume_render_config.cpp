@@ -31,7 +31,7 @@ LumeRenderConfig& LumeRenderConfig::GetInstance()
         renderConfig.renderBackend_ = OHOS::system::GetParameter("AGP_BACKEND_CONFIG", "vulkan");
 
         renderConfig.systemGraph_ = OHOS::system::GetParameter("AGP_MOTPHYS_SYSTEM_RNG",
-                    "rofs3D://systemGraph.json");
+                    "rofs3D://motphysGraph.json");
 
         renderConfig.initialized_ = true;
     }

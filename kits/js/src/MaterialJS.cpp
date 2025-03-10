@@ -288,3 +288,272 @@ void BaseMaterial::SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     renderSort_ = NapiApi::StrongRef(renderSortJS);
 }
+
+void MaterialJS::Init(napi_env env, napi_value exports)
+{
+#define MRADDPROP(index, name)                           \
+    NapiApi::GetSetProperty<NapiApi::Object, MaterialJS, \
+        &MaterialJS::GetMaterialProperty<index>, \
+        &MaterialJS::SetMaterialProperty<index>>(name)
+
+    BASE_NS::vector<napi_property_descriptor> props = {
+        NapiApi::GetSetProperty<NapiApi::Object, MaterialJS, &MaterialJS::GetColorShader,
+            &MaterialJS::SetColorShader>("colorShader"),
+        MRADDPROP(0, "baseColor"),
+        MRADDPROP(1, "normal"),
+        MRADDPROP(2, "material"),
+        MRADDPROP(3, "emissive"),
+        MRADDPROP(4, "ambientOcclusion"),
+        MRADDPROP(5, "clearCoat"),
+        MRADDPROP(6, "clearCoatRoughness"),
+        MRADDPROP(7, "clearCoatNormal"),
+        MRADDPROP(8, "sheen"),
+        MRADDPROP(10, "specular")
+    };
+    #undef MRADDPROP
+
+    BaseMaterial::Init("Material", env, exports, BaseObject::ctor<MaterialJS>(), props);
+}
+
+MaterialJS::MaterialJS(napi_env e, napi_callback_info i)
+    : BaseObject<MaterialJS>(e, i), BaseMaterial(BaseMaterial::MaterialType::METALLIC_ROUGHNESS)
+{
+    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
+    NapiApi::Object meJs(fromJs.This());
+
+    NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene... (do i need it here?)
+    NapiApi::Object args = fromJs.Arg<1>();  // other args
+
+    scene_ = scene;
+    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+        LOG_F("INVALID SCENE!");
+    }
+
+    auto* tro = scene.Native<TrueRootObject>();
+    if (tro) {
+        auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+        if (sceneJS) {
+            sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+        }
+    }
+
+    auto metaobj = GetNativeObjectParam<META_NS::IObject>(args); // Should be IMaterial
+    if (auto material = interface_cast<SCENE_NS::IMaterial>(metaobj)) {
+        materialType_ = META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::CUSTOM ?
+            MaterialType::SHADER : MaterialType::METALLIC_ROUGHNESS;
+    }
+    SetNativeObject(metaobj, true);
+    StoreJsObj(metaobj, meJs);
+
+    BASE_NS::string name;
+    if (auto prm = args.Get<BASE_NS::string>("name"); prm.IsDefined()) {
+        name = prm;
+    } else {
+        if (auto named = interface_cast<META_NS::IObject>(metaobj)) {
+            name = named->GetName();
+        }
+    }
+    meJs.Set("name", name);
+}
+
+MaterialJS::~MaterialJS() {}
+void* MaterialJS::GetInstanceImpl(uint32_t id)
+{
+    if (id == MaterialJS::ID)
+        return this;
+    return BaseMaterial::GetInstanceImpl(id);
+}
+void MaterialJS::DisposeNative(void*)
+{
+    NapiApi::Object obj = scene_.GetObject();
+    if (obj) {
+        auto* tro = obj.Native<TrueRootObject>();
+        if (tro) {
+            auto sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
+            if (sceneJS) {
+                sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+            }
+        }
+    }
+    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject())) {
+        SetNativeObject(nullptr, false);
+        SetNativeObject(nullptr, true);
+        if (obj) {
+            material->MaterialShader()->SetValue(nullptr);
+        }
+    } else {
+        SetNativeObject(nullptr, false);
+    }
+    shaderBind_.reset();
+    shader_.Reset();
+
+    BaseMaterial::DisposeNative(this);
+}
+void MaterialJS::Finalize(napi_env env)
+{
+    BaseObject::Finalize(env);
+}
+void MaterialJS::SetColorShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    if (!validateSceneRef()) {
+        // owning scene has been destroyed.
+        // the material etc should also be gone.
+        // but there is a possible issue where the native object is still alive.
+
+        // most likely could happen if scene.dispose is not called
+        // but all references to the scene have been released,
+        // and garbage collection may or may not have been done yet. (or is partially done)
+        // if the scene is garbage collected then all the resources should be disposed.
+        return;
+    }
+
+    NapiApi::Object shaderJS = ctx.Arg<0>();
+    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject());
+    if (!material) {
+        // material destroyed, just make sure we have no shader reference anymore.
+        shader_.Reset();
+        return;
+    }
+    auto shader = GetNativeMeta<SCENE_NS::IShader>(shaderJS);
+    materialType_ = shader ? MaterialType::SHADER : MaterialType::METALLIC_ROUGHNESS;
+    META_NS::SetValue(material->Type(), shader ? SCENE_NS::MaterialType::CUSTOM :
+        SCENE_NS::MaterialType::METALLIC_ROUGHNESS);
+
+    // bind it to material (in native)
+    material->MaterialShader()->SetValue(shader);
+
+    if (!shader) {
+        shader_.Reset();
+        return;
+    }
+
+    // construct a "bound" shader object from the "non bound" one.
+    NapiApi::Env env(ctx.Env());
+    NapiApi::Object parms(env);
+    napi_value args[] = {
+        scene_.GetValue(),  // bind the new instance of the shader to this javascript scene object
+        parms.ToNapiValue() // other constructor parameters
+    };
+
+    parms.Set("name", shaderJS.Get("name"));
+    parms.Set("Material", ctx.This()); // js material object that we are bound to.
+
+    shaderBind_ = META_NS::GetObjectRegistry().Create(META_NS::ClassId::Object);
+    interface_cast<META_NS::IMetadata>(shaderBind_)
+        ->AddProperty(META_NS::ConstructProperty<IntfPtr>(
+            "shader", nullptr, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE));
+    interface_cast<META_NS::IMetadata>(shaderBind_)
+        ->GetProperty<IntfPtr>("shader")
+        ->SetValue(interface_pointer_cast<CORE_NS::IInterface>(shader));
+
+    auto argc = BASE_NS::countof(args);
+    auto argv = args;
+    MakeNativeObjectParam(env, shaderBind_, argc, argv);
+    auto result = CreateJsObj(env, "Shader", shaderBind_, false, argc, argv);
+    shader_ = NapiApi::StrongRef(StoreJsObj(shaderBind_, result));
+}
+napi_value MaterialJS::GetColorShader(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+
+    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject());
+    if (!material) {
+        // material destroyed, just make sure we have no shader reference anymore.
+        shader_.Reset();
+        return ctx.GetNull();
+    }
+
+    if (shader_.IsEmpty()) {
+        // no shader set yet..
+        // see if we have one on the native side.
+        // and create the "bound shader" object from it.
+
+        // check native side..
+        SCENE_NS::IShader::Ptr shader = material->MaterialShader()->GetValue();
+        if (!shader) {
+            // no shader in native also.
+            return ctx.GetNull();
+        }
+
+        // construct a "bound" shader object from the "non bound" one.
+        NapiApi::Env env(ctx.Env());
+        NapiApi::Object parms(env);
+        napi_value args[] = {
+            scene_.GetValue(),  // bind the new instance of the shader to this javascript scene object
+            parms.ToNapiValue() // other constructor parameters
+        };
+
+        if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+            LOG_F("INVALID SCENE!");
+        }
+        parms.Set("Material", ctx.This()); // js material object that we are bound to.
+
+        shaderBind_ = META_NS::GetObjectRegistry().Create(META_NS::ClassId::Object);
+        interface_cast<META_NS::IMetadata>(shaderBind_)
+            ->AddProperty(META_NS::ConstructProperty<IntfPtr>(
+                "shader", nullptr, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE));
+        interface_cast<META_NS::IMetadata>(shaderBind_)
+            ->GetProperty<IntfPtr>("shader")
+            ->SetValue(interface_pointer_cast<CORE_NS::IInterface>(shader));
+
+        auto argc = BASE_NS::countof(args);
+        auto argv = args;
+        MakeNativeObjectParam(env, shaderBind_, argc, argv);
+        auto result = CreateJsObj(env, "Shader", shaderBind_, false, argc, argv);
+        shader_ = NapiApi::StrongRef(StoreJsObj(shaderBind_, result));
+    }
+    return shader_.GetValue();
+}
+
+template<size_t Index>
+napi_value MaterialJS::GetMaterialProperty(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
+    if (!material || !material->Textures()) {
+        return ctx.GetUndefined();
+    }
+    SCENE_NS::ITexture::Ptr texture = material->Textures()->GetValueAt(Index);
+    if (!texture) {
+        return ctx.GetUndefined();
+    }
+
+    auto obj = interface_pointer_cast<META_NS::IObject>(texture);
+    if (auto cached = FetchJsObj(obj)) {
+        // always return the same js object.
+        return cached.ToNapiValue();
+    }
+
+    napi_value args[] = { ctx.This().ToNapiValue() };
+    MakeNativeObjectParam(ctx.GetEnv(), texture, BASE_NS::countof(args), args);
+
+    auto result = CreateJsObj(ctx.GetEnv(), "MaterialProperty", obj, true, BASE_NS::countof(args), args);
+    auto materialPropertyJs = StoreJsObj(obj, result);
+    return materialPropertyJs.ToNapiValue();
+}
+template<size_t Index>
+void MaterialJS::SetMaterialProperty(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+    auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
+    if (!material || !material->Textures()) {
+        return;
+    }
+    SCENE_NS::ITexture::Ptr texture = material->Textures()->GetValueAt(Index);
+    if (!texture) {
+        return;
+    }
+
+    NapiApi::Object arg = ctx.Arg<0>();
+    if (auto etex = GetNativeObjectParam<SCENE_NS::ITexture>(arg)) {
+        // Copy the exposed data from the given texture
+        META_NS::SetValue(texture->Image(), META_NS::GetValue(etex->Image()));
+        META_NS::SetValue(texture->Factor(), META_NS::GetValue(etex->Factor()));
+    }
+}

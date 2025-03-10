@@ -527,6 +527,11 @@ bool SceneAdapter::NeedsRepaint()
     return needsRepaint_;
 }
 
+void SceneAdapter::SetNeedsRepaint(bool needsRepaint)
+{
+    needsRepaint_ = needsRepaint;
+}
+
 void SceneAdapter::Deinit()
 {
     if (!engineThread) {
@@ -536,6 +541,9 @@ void SceneAdapter::Deinit()
     auto func = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
         if (bitmap_) {
             auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+            if (!scene) {
+                return META_NS::IAny::Ptr {};
+            }
             if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
                 i->SetRenderHandle(scene->GetInternalScene(), swapchainHandle_);
             }

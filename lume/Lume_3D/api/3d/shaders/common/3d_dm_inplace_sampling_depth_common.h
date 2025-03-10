@@ -20,7 +20,7 @@
  * Needs to be included after the descriptor sets are bound.
  */
 
-uint GetInstanceIndex()
+uint GetInstanceIndex(void)
 {
     uint instanceIdx = 0U;
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_GPU_INSTANCING_BIT) == CORE_MATERIAL_GPU_INSTANCING_BIT) {

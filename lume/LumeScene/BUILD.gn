@@ -14,7 +14,7 @@
 import("//build/ohos.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
-config("lume_scenewidget_config1") {
+config("lume_scenewidget_config") {
   include_dirs = [
     "include",
     "src",
@@ -56,9 +56,9 @@ config("lume_scenewidget_config1") {
   ]
 }
 
-ohos_source_set("lume_scenewidget_src1") {
+ohos_source_set("lume_scenewidget_src") {
   configs = [
-    ":lume_scenewidget_config1",
+    ":lume_scenewidget_config",
     "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
     "${LUME_RENDER_PATH}:lume_render_api",
     "${LUME_CORE_PATH}:lume_base_api",
@@ -167,6 +167,8 @@ ohos_source_set("lume_scenewidget_src1") {
     "src/mesh/mesh_resource.h",
     "src/mesh/shader.cpp",
     "src/mesh/shader.h",
+    "src/mesh/shader_util.cpp",
+    "src/mesh/shader_util.h",
     "src/mesh/submesh.cpp",
     "src/mesh/submesh.h",
     "src/mesh/texture.cpp",
@@ -215,7 +217,7 @@ ohos_source_set("lume_scenewidget_src1") {
 
 #ohos_static_library("libSceneWidget") {
 #  public_deps = [
-#    ":lume_scenewidget_src1",
+#    ":lume_scenewidget_src",
 #  ]
 #  part_name = "graphic_3d"
 #  subsystem_name = "graphic"
@@ -223,7 +225,7 @@ ohos_source_set("lume_scenewidget_src1") {
 
 ohos_shared_library("libPluginSceneWidget") {
   deps = [
-    ":lume_scenewidget_src1",
+    ":lume_scenewidget_src",
     "${LUME_SERIALIZER_PATH}:EcsSerializer",
   ]
   relative_install_dir = "graphics3d"

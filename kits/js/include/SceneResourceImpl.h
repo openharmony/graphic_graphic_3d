@@ -53,6 +53,11 @@ public:
          * The resource is a Image.
          */
         IMAGE = 7,
+
+        /**
+         * The resource is a MeshResource.
+         */
+        MESH_RESOURCE = 8,
     };
     SceneResourceImpl(SceneResourceType type);
     virtual ~SceneResourceImpl();

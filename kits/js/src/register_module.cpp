@@ -13,22 +13,28 @@
  * limitations under the License.
  */
 
-#include "AnimationJS.h"
-#include "CameraJS.h"
-#include "EnvironmentJS.h"
-#include "GeometryJS.h"
-#include "ImageJS.h"
-#include "LightJS.h"
-#include "MaterialJS.h"
-#include "MeshJS.h"
-#include "NodeJS.h"
-#include "PostProcJS.h"
-#include "SceneComponentJS.h"
-#include "SceneJS.h"
-#include "ShaderJS.h"
-#include "SubMeshJS.h"
-#include "ToneMapJS.h"
-#include "TextNodeJS.h"
+ #include "AnimationJS.h"
+ #include "CameraJS.h"
+ #include "EnvironmentJS.h"
+ #include "GeometryJS.h"
+ #include "ImageJS.h"
+ #include "LightJS.h"
+ #include "MaterialJS.h"
+ #include "MaterialPropertyJS.h"
+ #include "MeshJS.h"
+ #include "MeshResourceJS.h"
+ #include "NodeJS.h"
+ #include "PostProcJS.h"
+ #include "SceneComponentJS.h"
+ #include "SceneJS.h"
+ #include "ShaderJS.h"
+ #include "SubMeshJS.h"
+ #include "TextNodeJS.h"
+ #include "ToneMapJS.h"
+ #include "geometry_definition/CubeJS.h"
+ #include "geometry_definition/CustomJS.h"
+ #include "geometry_definition/PlaneJS.h"
+ #include "geometry_definition/SphereJS.h"
 
 void RegisterClasses(napi_env env, napi_value exports)
 {
@@ -130,18 +136,28 @@ void RegisterClasses(napi_env env, napi_value exports)
     DirectionalLightJS::Init(env, scene3dNS);
     SpotLightJS::Init(env, scene3dNS);
     GeometryJS::Init(env, scene3dNS);
+    GeometryDefinition::CubeJS::Init(env, scene3dNS);
+    GeometryDefinition::CustomJS::Init(env, scene3dNS);
+    GeometryDefinition::PlaneJS::Init(env, scene3dNS);
     MeshJS::Init(env, scene3dNS);
+    MeshResourceJS::Init(env, scene3dNS);
     SubMeshJS::Init(env, scene3dNS);
-    ShaderMaterialJS::Init(env, scene3dNS);
+    MaterialJS::Init(env, scene3dNS);
+
     ImageJS::Init(env, scene3dNS);
     PostProcJS::Init(env, scene3dNS);
     ToneMapJS::Init(env, scene3dNS);
     ShaderJS::Init(env, scene3dNS);
+    GeometryDefinition::SphereJS::Init(env, scene3dNS);
     AnimationJS::Init(env, scene3dNS);
     SceneComponentJS::Init(env, scene3dNS);
     TextNodeJS::Init(env, scene3dNS);
+    MaterialPropertyJS::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
+    GeometryDefinition::CustomJS::RegisterEnums({ env, scene3dNS });
+    GeometryDefinition::RegisterEnums({ env, scene3dNS });
     NodeImpl::RegisterEnums({ env, scene3dNS });
     SceneResourceImpl::RegisterEnums({ env, scene3dNS });
+    SceneJS::RegisterEnums({ env, scene3dNS });
 }

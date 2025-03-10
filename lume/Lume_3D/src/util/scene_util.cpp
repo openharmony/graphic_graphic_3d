@@ -90,7 +90,7 @@ Math::Mat4X4 CalculateProjectionMatrix(const CameraComponent& cameraComponent, b
                 aspect = cameraComponent.aspect;
             } else if (cameraComponent.renderResolution.y > 0U) {
                 aspect = static_cast<float>(cameraComponent.renderResolution.x) /
-                         static_cast<float>(cameraComponent.renderResolution.y);
+                        static_cast<float>(cameraComponent.renderResolution.y);
             }
             auto persProj =
                 Math::PerspectiveRhZo(cameraComponent.yFov, aspect, cameraComponent.zNear, cameraComponent.zFar);
@@ -103,7 +103,7 @@ Math::Mat4X4 CalculateProjectionMatrix(const CameraComponent& cameraComponent, b
                 aspect = cameraComponent.aspect;
             } else if (cameraComponent.renderResolution.y > 0U) {
                 aspect = static_cast<float>(cameraComponent.renderResolution.x) /
-                         static_cast<float>(cameraComponent.renderResolution.y);
+                        static_cast<float>(cameraComponent.renderResolution.y);
             }
             // with offset 0.5, the camera should offset half the screen
             const float scale = tan(cameraComponent.yFov * 0.5f) * cameraComponent.zNear;
@@ -178,8 +178,8 @@ void SceneUtil::UpdateCameraViewport(IEcs& ecs, Entity entity, const Math::UVec2
         }
         CameraComponent& cameraComponent = *cameraHandle;
         cameraComponent.aspect = (renderResolution.y > 0U)
-                                     ? (static_cast<float>(renderResolution.x) / static_cast<float>(renderResolution.y))
-                                     : 1.0f;
+                                    ? (static_cast<float>(renderResolution.x) / static_cast<float>(renderResolution.y))
+                                    : 1.0f;
         cameraComponent.renderResolution[0] = renderResolution.x;
         cameraComponent.renderResolution[1] = renderResolution.y;
     }
@@ -244,8 +244,8 @@ void SceneUtil::CameraLookAt(
     for (Entity node = getParent(entity); EntityUtil::IsValid(node); node = getParent(node)) {
         if (auto parentTransformHandle = tcm->Read(node)) {
             parentWorld = Math::Trs(parentTransformHandle->position, parentTransformHandle->rotation,
-                              parentTransformHandle->scale) *
-                          parentWorld;
+                            parentTransformHandle->scale) *
+                        parentWorld;
         }
     }
 
@@ -489,7 +489,7 @@ vector<Entity> CreateJointMapping(
         const auto pos = std::find(dstJointNamesBegin, dstJointNamesEnd, srcJointName);
         srcToDstJointMapping.push_back(
             (pos != dstJointNamesEnd) ? dstJointEntities[static_cast<size_t>(std::distance(dstJointNamesBegin, pos))]
-                                      : Entity {});
+                                    : Entity {});
         if (pos == dstJointNamesEnd) {
             CORE_LOG_W("Target skin missing joint %s", srcJointName.data());
         }
@@ -515,8 +515,8 @@ vector<Entity> UpdateTracks(IEcs& ecs, array_view<EntityReference> targetTracks,
             &trackTargets, scale](const EntityReference& srcTrackEntity) {
             const auto srcTrackId = animationTrackManager->GetComponentId(srcTrackEntity);
             const auto srcTargetEntity = (srcTrackId != IComponentManager::INVALID_COMPONENT_ID)
-                                             ? animationTrackManager->Read(srcTrackId)->target
-                                             : Entity {};
+                                            ? animationTrackManager->Read(srcTrackId)->target
+                                            : Entity {};
             if (EntityUtil::IsValid(srcTargetEntity)) {
                 // check that the src track target is one of the src joints
                 if (const auto pos = std::find(srcJointEntities.begin(), srcJointEntities.end(), srcTargetEntity);
@@ -821,8 +821,8 @@ CORE_NS::EntityReference CreateReflectionProbeCamera(
     cc.customColorTargets.push_back(envEntityRef);
     cc.customDepthTarget = depthEntityRef;
     cc.pipelineFlags = CameraComponent::PipelineFlagBits::CUBEMAP_BIT |
-                       CameraComponent::PipelineFlagBits::CLEAR_COLOR_BIT |
-                       CameraComponent::PipelineFlagBits::CLEAR_DEPTH_BIT;
+                    CameraComponent::PipelineFlagBits::CLEAR_COLOR_BIT |
+                    CameraComponent::PipelineFlagBits::CLEAR_DEPTH_BIT;
     cc.renderingPipeline = CameraComponent::RenderingPipeline::LIGHT_FORWARD;
     cc.sceneFlags |= CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT;
     cc.projection = CameraComponent::Projection::PERSPECTIVE;
@@ -918,7 +918,7 @@ void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHan
     } else if (std::any_of(std::begin(TYPES), std::end(TYPES),
         [&current = property.type](const uint64_t type) {
             return type == current;
-	})) {
+    })) {
         // One of the basic types so no further processing needed.
     } else if (property.metaData.containerMethods) {
         auto& containerProperty = property.metaData.containerMethods->property;
@@ -1150,3 +1150,4 @@ vector<Entity> SceneUtil::Clone(IEcs& destination, const IEcs& source) const
     return result.newEntities;
 }
 CORE3D_END_NAMESPACE()
+ 

@@ -60,6 +60,12 @@ bool EcsAnimation::SetEcsObject(const IEcsObject::Ptr& obj)
 }
 void EcsAnimation::Init()
 {
+    Name()->SetValue(GetName());
+    Name()->OnChanged()->AddHandler(META_NS::MakeCallback<META_NS::IOnChanged>([&] {
+        if (auto obj = GetEcsObject()) {
+            obj->SetName(Name()->GetValue());
+        }
+    }), intptr_t(this));
     META_ACCESS_PROPERTY(Valid)->SetValue(true);
     anim_->RepeatCount()->SetValue(0);
     anim_->Time()->OnChanged()->AddHandler(

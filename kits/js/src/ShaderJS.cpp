@@ -110,7 +110,15 @@ void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
 
     napi_env e = inputs.GetEnv();
     auto* tro = material.Native<TrueRootObject>();
+    if (!tro) {
+        LOG_F("tro is null");
+        return;
+    }
     auto mat = interface_pointer_cast<SCENE_NS::IMaterial>(tro->GetNativeObject());
+    if (!mat) {
+        LOG_F("mat is null");
+        return;
+    }
 
     BASE_NS::vector<napi_property_descriptor> inputProps;
 

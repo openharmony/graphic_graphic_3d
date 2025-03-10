@@ -88,6 +88,7 @@ config("napi_config") {
     defines += [
       "__OHOS_PLATFORM__",
       "__SCENE_ADAPTER__",
+      "__NAPI_CALL_TF_WITH_PRIORITY__",
     ]
   }
 
@@ -115,7 +116,9 @@ ohos_source_set("napi_source") {
     "src/ImageJS.cpp",
     "src/LightJS.cpp",
     "src/MaterialJS.cpp",
+    "src/MaterialPropertyJS.cpp",
     "src/MeshJS.cpp",
+    "src/MeshResourceJS.cpp",
     "src/NodeImpl.cpp",
     "src/NodeJS.cpp",
     "src/PostProcJS.cpp",
@@ -127,7 +130,6 @@ ohos_source_set("napi_source") {
     "src/SceneJS.cpp",
     "src/SceneResourceImpl.cpp",
     "src/ShaderJS.cpp",
-    "src/ShaderMaterialJS.cpp",
     "src/SubMeshJS.cpp",
     "src/TextNodeJS.cpp",
     "src/ToneMapJS.cpp",
@@ -137,6 +139,11 @@ ohos_source_set("napi_source") {
     "src/native_module_export.cpp",
     "src/nodejstaskqueue.cpp",
     "src/register_module.cpp",
+    "src/geometry_definition/CubeJS.cpp",
+    "src/geometry_definition/CustomJS.cpp",
+    "src/geometry_definition/GeometryDefinition.cpp",
+    "src/geometry_definition/PlaneJS.cpp",
+    "src/geometry_definition/SphereJS.cpp"
   ]
 
   include_dirs = [ "../../3d_widget_adapter/include/ohos" ]
@@ -156,6 +163,7 @@ ohos_source_set("napi_source") {
     "c_utils:utils",
     "graphic_2d:EGL",
     "graphic_2d:GLESv3",
+    "graphic_surface:surface",
     "hilog:libhilog",
     "hitrace:hitrace_meter",
     "init:libbegetutil",

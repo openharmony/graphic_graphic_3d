@@ -31,6 +31,7 @@ public:
     virtual void OnWindowChange(const WindowChangeInfo& windowChangeInfo) = 0;
     virtual void RenderFrame(bool needsSyncPaint = false) = 0;
     virtual void Deinit() = 0;
+    void SetNeedsRepaint(bool needsRepaint);
     virtual bool NeedsRepaint() = 0;
     virtual ~ISceneAdapter() = default;
 };

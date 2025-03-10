@@ -98,3 +98,23 @@ void ColorProxy::SetValue(NapiApi::Object obj)
         SetValue({ r, g, b, a });
     }
 }
+
+BASE_NS::Color ColorProxy::ToNative(NapiApi::Object colorJs, bool& success)
+{
+    auto r = colorJs.Get<float>("r");
+    auto g = colorJs.Get<float>("g");
+    auto b = colorJs.Get<float>("b");
+    auto a = colorJs.Get<float>("a");
+    success = r.IsValid() && g.IsValid() && b.IsValid() && a.IsValid();
+    return BASE_NS::Color { r, g, b, a };
+}
+
+NapiApi::Object ColorProxy::ToNapiObject(BASE_NS::Color color, napi_env env)
+{
+    auto colorJs = NapiApi::Object(env);
+    colorJs.Set("r", NapiApi::Value<float>(env, color.x));
+    colorJs.Set("g", NapiApi::Value<float>(env, color.y));
+    colorJs.Set("b", NapiApi::Value<float>(env, color.z));
+    colorJs.Set("a", NapiApi::Value<float>(env, color.w));
+    return colorJs;
+}

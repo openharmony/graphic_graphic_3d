@@ -17,11 +17,19 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
+#include <scene/ext/intf_internal_scene.h>
 #include <scene/interface/intf_camera.h>
-#include <scene/interface/intf_scene.h>
+#include <scene/interface/intf_create_mesh.h>
 #include <scene/interface/intf_mesh.h>
+#include <scene/interface/intf_mesh_resource.h>
+#include <scene/interface/intf_scene.h>
 
+#include "MeshResourceJS.h"
 #include "SceneJS.h"
+#include "geometry_definition/CubeJS.h"
+#include "geometry_definition/CustomJS.h"
+#include "geometry_definition/PlaneJS.h"
+#include "geometry_definition/SphereJS.h"
 
 void* GeometryJS::GetInstanceImpl(uint32_t id)
 {
@@ -77,34 +85,85 @@ void GeometryJS::Init(napi_env env, napi_value exports)
 GeometryJS::GeometryJS(napi_env e, napi_callback_info i) : BaseObject<GeometryJS>(e, i), NodeImpl(NodeImpl::GEOMETRY)
 {
     LOG_V("GeometryJS ++ ");
-    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
-    if (!fromJs) {
-        // okay internal create. we will receive the object after.
-        return;
-    }
-    scene_ = fromJs.Arg<0>().valueOrDefault();
-    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
-    if (scn == nullptr) {
-        // hmm..
-        LOG_F("Invalid scene for GeometryJS!");
-        return;
-    }
-    {
-        // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
-        NapiApi::Object meJs(fromJs.This());
-        NapiApi::Object scene = fromJs.Arg<0>();
-        auto* tro = scene.Native<TrueRootObject>();
-        if (tro) {
-            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-            }
+
+    // Resolve overload with 2 or 3 given args.
+    if (auto ctx = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> { e, i }) {
+        Construct(e, ctx.This(), ctx.Arg<0>(), ctx.Arg<1>());
+    } else if (auto ctx = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object, NapiApi::Object> { e, i }) {
+        // Manual creation with an extra arg.
+        if (Construct(e, ctx.This(), ctx.Arg<0>(), ctx.Arg<1>()) == ConstructionState::LACKS_NATIVE) {
+            CreateNativeObject(e, ctx.This(), ctx.Arg<1>(), ctx.Arg<2>()); // 2: index
         }
+    } else {
+        LOG_E("Bad args given for GeometryJS constructor");
+        return;
     }
 }
+
 GeometryJS::~GeometryJS()
 {
     LOG_V("GeometryJS -- ");
+}
+
+GeometryJS::ConstructionState GeometryJS::Construct(
+    napi_env env, NapiApi::Object meJs, NapiApi::Object scene, NapiApi::Object sceneNodeParameters)
+{
+    if (!GetNativeMeta<SCENE_NS::IScene>(scene)) {
+        LOG_F("Invalid scene for GeometryJS!");
+        return ConstructionState::FAILED;
+    }
+    scene_ = NapiApi::WeakRef { env, scene.ToNapiValue() };
+
+    // Add the dispose hook to scene so that the Geometry node is disposed when scene is disposed.
+    if (auto tro = scene.Native<TrueRootObject>()) {
+        if (auto sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID))) {
+            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+        }
+    }
+
+    if (const auto name = sceneNodeParameters.Get<BASE_NS::string>("name"); name.IsValid()) {
+        meJs.Set("name", name);
+    }
+
+    auto nativeObject = GetNativeObjectParam<META_NS::IObject>(sceneNodeParameters);
+    if (nativeObject) {
+        StoreJsObj(nativeObject, meJs);
+        return ConstructionState::FINISHED;
+    }
+    return ConstructionState::LACKS_NATIVE;
+}
+
+void GeometryJS::CreateNativeObject(
+    napi_env env, NapiApi::Object meJs, NapiApi::Object sceneNodeParameters, NapiApi::Object meshResourceParam)
+{
+    auto name = BASE_NS::string {};
+    auto path = BASE_NS::string {};
+    if (auto param = sceneNodeParameters.Get("name")) {
+        name = NapiApi::Value<BASE_NS::string>(env, param).valueOrDefault("");
+    }
+    if (auto param = sceneNodeParameters.Get("path")) {
+        path = NapiApi::Value<BASE_NS::string>(env, param).valueOrDefault("");
+    }
+
+    auto nodePath = BASE_NS::string {};
+    if (!path.empty()) {
+        nodePath = path;
+    } else if (!name.empty()) {
+        // Use the name as path. Create the node directly under root.
+        nodePath = name;
+    }
+
+    auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
+    // Node creation can fail e.g. due to a bad path. Then we're going to have a null Geometry object.
+    auto meshNode = scene->CreateNode(nodePath, SCENE_NS::ClassId::MeshNode).GetResult();
+    if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(meshNode)) {
+        const auto resource = static_cast<MeshResourceJS*>(meshResourceParam.Native<TrueRootObject>());
+        const auto mesh = CreateMesh(env, resource);
+        access->SetMesh(mesh).GetResult();
+    }
+    // Always set regardless of success.
+    SetNativeObject(interface_pointer_cast<META_NS::IObject>(meshNode), false);
+    StoreJsObj(GetNativeObject(), meJs);
 }
 
 napi_value GeometryJS::GetMesh(NapiApi::FunctionContext<>& ctx)
@@ -140,4 +199,37 @@ napi_value GeometryJS::GetMesh(NapiApi::FunctionContext<>& ctx)
         return {};
     }
     return StoreJsObj(mesh, nodeJS, "_JSWMesh").ToNapiValue();
+}
+
+SCENE_NS::IMesh::Ptr GeometryJS::CreateMesh(napi_env env, MeshResourceJS* meshResource)
+{
+    auto mesh = SCENE_NS::IMesh::Ptr {};
+    if (!meshResource) {
+        return mesh;
+    }
+    auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
+    const auto tro = meshResource->GetGeometryDefinition().GetObject().Native<TrueRootObject>();
+    if (!scene || !tro) {
+        return mesh;
+    }
+
+    const auto meshCreator = scene->CreateObject<SCENE_NS::ICreateMesh>(SCENE_NS::ClassId::MeshCreator).GetResult();
+    // Name and material aren't set here. Name is set in the constructor. Material needs to be manually set later.
+    auto meshConfig = SCENE_NS::MeshConfig {};
+    using namespace GeometryDefinition;
+    if (const auto cube = static_cast<CubeJS*>(tro->GetInstanceImpl(CubeJS::ID))) {
+        const auto size { cube->GetSize() };
+        mesh = meshCreator->CreateCube(meshConfig, size.x, size.y, size.z).GetResult();
+    } else if (const auto plane = static_cast<PlaneJS*>(tro->GetInstanceImpl(PlaneJS::ID))) {
+        const auto size { plane->GetSize() };
+        mesh = meshCreator->CreatePlane(meshConfig, size.x, size.y).GetResult();
+    } else if (const auto sphere = static_cast<SphereJS*>(tro->GetInstanceImpl(SphereJS::ID))) {
+        const auto segmentCount { sphere->GetSegmentCount() };
+        mesh = meshCreator->CreateSphere({}, sphere->GetRadius(), segmentCount, segmentCount).GetResult();
+    } else if (const auto custom = static_cast<CustomJS*>(tro->GetInstanceImpl(CustomJS::ID))) {
+        mesh = meshCreator->Create(meshConfig, custom->ToNative()).GetResult();
+    } else {
+        LOG_E("Unknown geometry type for mesh creation");
+    }
+    return mesh;
 }

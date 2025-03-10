@@ -15,6 +15,7 @@
 #ifndef MESH_JS_H
 #define MESH_JS_H
 #include <meta/interface/intf_object.h>
+#include <scene/interface/intf_mesh.h>
 
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
@@ -27,6 +28,9 @@ public:
     ~MeshJS() override;
     virtual void* GetInstanceImpl(uint32_t) override;
 
+    // Update the cached submesh at the index and sync all submeshes to scene. Return true for success.
+    bool UpdateSubmesh(uint32_t index, SCENE_NS::ISubMesh::Ptr newSubmesh);
+
 private:
     void DisposeNative(void*) override;
     napi_value GetSubmesh(NapiApi::FunctionContext<>& ctx);
@@ -34,5 +38,7 @@ private:
 
     napi_value GetMaterialOverride(NapiApi::FunctionContext<>& ctx);
     void SetMaterialOverride(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
+    BASE_NS::vector<SCENE_NS::ISubMesh::Ptr> subs_;
 };
 #endif

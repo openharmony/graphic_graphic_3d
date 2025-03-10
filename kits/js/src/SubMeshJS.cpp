@@ -22,6 +22,7 @@
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_mesh.h>
 
+#include "MeshJS.h"
 #include "SceneJS.h"
 void* SubMeshJS::GetInstanceImpl(uint32_t id)
 {
@@ -100,12 +101,14 @@ void SubMeshJS::Init(napi_env env, napi_value exports)
 SubMeshJS::SubMeshJS(napi_env e, napi_callback_info i) : BaseObject<SubMeshJS>(e, i)
 {
     LOG_V("SubMeshJS ++ ");
-    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
+    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object, uint32_t> fromJs(e, i);
     if (!fromJs) {
         // okay internal create. we will receive the object after.
         return;
     }
     scene_ = fromJs.Arg<0>().valueOrDefault();
+    parentMesh_ = fromJs.Arg<1>().valueOrDefault();
+    indexInParent_ = fromJs.Arg<2>().valueOrDefault(); // 2: idx
     if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
         LOG_F("INVALID SCENE!");
     }
@@ -210,5 +213,21 @@ void SubMeshJS::SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         if (cur != new_material) {
             sm->Material()->SetValue(new_material);
         }
+    }
+    UpdateParentMesh();
+}
+
+void SubMeshJS::UpdateParentMesh()
+{
+    auto success = false;
+    if (auto self = interface_pointer_cast<SCENE_NS::ISubMesh>(GetNativeObject())) {
+        if (auto tro = parentMesh_.GetObject().Native<TrueRootObject>()) {
+            if (auto mesh = static_cast<MeshJS*>(tro->GetInstanceImpl(MeshJS::ID))) {
+                success = mesh->UpdateSubmesh(indexInParent_, self);
+            }
+        }
+    }
+    if (!success) {
+        LOG_E("Unable to update submesh change to scene");
     }
 }

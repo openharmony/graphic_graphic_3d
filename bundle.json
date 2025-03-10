@@ -26,6 +26,7 @@
           "graphic_surface",
           "hitrace",
           "init",
+          "input",
 	        "ipc",
           "bounds_checking_function",
           "resource_management",
@@ -38,9 +39,11 @@
           "vulkan-loader",
           "vulkan-headers",
           "skia",
-          "freetype"
+          "freetype",
+          "zlib"
         ],
         "third_party": [
+          "skia"
         ]
       },
       "build": {

@@ -63,8 +63,6 @@ public:
     const CORE3D_NS::ISceneNode* FindNodeParent(BASE_NS::string_view path) const;
 
     bool SetNodeParentAndName(CORE_NS::Entity ent, BASE_NS::string_view name, const CORE3D_NS::ISceneNode* parent);
-    bool SetRenderMode(RenderMode);
-    RenderMode GetRenderMode() const;
 
     BASE_NS::string GetPath(const CORE3D_NS::ISceneNode* node) const;
     bool IsNodeEntity(CORE_NS::Entity ent) const;

@@ -38,7 +38,12 @@ private:
     napi_value GetMaterial(NapiApi::FunctionContext<>& ctx);
     void SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
+    void UpdateParentMesh();
+
     BASE_NS::unique_ptr<Vec3Proxy> aabbMin_, aabbMax_;
     NapiApi::WeakRef scene_;
+
+    NapiApi::WeakRef parentMesh_;
+    uint32_t indexInParent_ { 0 };
 };
 #endif
