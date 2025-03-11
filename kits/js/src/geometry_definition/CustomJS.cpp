@@ -103,7 +103,13 @@ napi_value CustomJS::GetVertices(NapiApi::FunctionContext<>& ctx)
 
 napi_value CustomJS::GetIndices(NapiApi::FunctionContext<>& ctx)
 {
-    return ArrayToJs(ctx, indices_);
+    NapiApi::Array array(ctx.Env(), indices_.size());
+    size_t index = 0;
+    for (const auto& nativeItem : indices_) {
+        array.Set(index, nativeItem);
+        index++;
+    }
+    return array;
 }
 
 napi_value CustomJS::GetNormals(NapiApi::FunctionContext<>& ctx)
@@ -189,12 +195,6 @@ void CustomJS::ArrayToNative(NapiApi::FunctionContext<NapiApi::Array>& ctx, BASE
         newItems.emplace_back(item);
     }
     target.swap(newItems);
-}
-
-template<>
-NapiApi::Object CustomJS::ToJs(NapiApi::FunctionContext<>& ctx, const uint32_t& nativeItem)
-{
-    return NapiApi::Object { ctx.Env(), ctx.GetNumber(nativeItem) };
 }
 
 template<>
