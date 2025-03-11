@@ -21,6 +21,7 @@
 
 #include "component_factory.h"
 #include "core/internal_scene.h"
+#include "core/log.h"
 #include "render_configuration.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -52,6 +53,11 @@ bool SceneObject::Build(const META_NS::IMetadata::Ptr& d)
         internal_ = in;
         in->SetSelf(internal_);
         AddBuiltinComponentFactories(internal_);
+        auto customSystemGraphUri = d->GetProperty<BASE_NS::string>("customSystemGraphUri");
+        if (customSystemGraphUri) {
+            internal_->SetSystemGraphUri(customSystemGraphUri->GetValue());
+            CORE_LOG_E("customSystemGraphUri %s", customSystemGraphUri->GetValue().c_str());
+        }
         res = internal_->Initialize();
     }
     return res;

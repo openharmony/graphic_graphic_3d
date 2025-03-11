@@ -24,6 +24,9 @@ public:
     ~ColorProxy() override;
     void SetValue(NapiApi::Object obj) override;
 
+    static BASE_NS::Color ToNative(NapiApi::Object vec4, bool& success);
+    static NapiApi::Object ToNapiObject(BASE_NS::Color color, napi_env env);
+
 private:
     void SetValue(const BASE_NS::Color& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;

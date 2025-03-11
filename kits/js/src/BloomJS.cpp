@@ -300,6 +300,7 @@ void BloomConfiguration::SetScatter(NapiApi::FunctionContext<float>& ctx)
 void BloomConfiguration::SetScaleFactor(NapiApi::FunctionContext<float>& ctx)
 {
     scaleFactor_ = ctx.Arg<0>();
+    scaleFactor_ = (scaleFactor_ < 1e-6) ? 1e-6 : scaleFactor_;
     if (bloom_) {
         bloom_->ScaleFactor()->SetValue(scaleFactor_);
         if (postproc_) {

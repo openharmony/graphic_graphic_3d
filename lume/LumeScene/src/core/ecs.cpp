@@ -80,13 +80,12 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
     auto& engine = context.GetEngine();
 
     ecs = engine.CreateEcs();
-    SetRenderMode(RenderMode::ALWAYS);
+    ecs->SetRenderMode(CORE_NS::IEcs::RENDER_ALWAYS);
 
     auto* factory = GetInstance<ISystemGraphLoaderFactory>(UID_SYSTEM_GRAPH_LOADER);
     auto systemGraphLoader = factory->Create(engine.GetFileManager());
-
     // Use default graph.
-    systemGraphLoader->Load("rofs3D://systemGraph.json", *ecs);
+    systemGraphLoader->Load(scene->GetSystemGraphUri().c_str(), *ecs);
 
     InitPreprocesor(*ecs, context);
     ecs->Initialize();
@@ -114,13 +113,13 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
         animationQuery.reset(new CORE_NS::ComponentQuery());
         animationQuery->SetEcsListenersEnabled(true);
         const ComponentQuery::Operation operations[] = {
-        {
-            *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
-        },
-        {
-            *nameComponentManager, ComponentQuery::Operation::OPTIONAL
-        }
-	};
+            {
+                *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
+            },
+            {
+                *nameComponentManager, ComponentQuery::Operation::OPTIONAL
+            }
+        };
         animationQuery->SetupQuery(*animationComponentManager, operations);
     }
 
@@ -128,13 +127,13 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
         meshQuery.reset(new CORE_NS::ComponentQuery());
         meshQuery->SetEcsListenersEnabled(true);
         const ComponentQuery::Operation operations[] = {
-        {
-            *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
-        },
-        {
-            *nameComponentManager, ComponentQuery::Operation::OPTIONAL
-        }
-	};
+            {
+                *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
+            },
+            {
+                *nameComponentManager, ComponentQuery::Operation::OPTIONAL
+            }
+        };
         meshQuery->SetupQuery(*meshComponentManager, operations);
     }
 
@@ -142,16 +141,16 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
         materialQuery.reset(new CORE_NS::ComponentQuery());
         materialQuery->SetEcsListenersEnabled(true);
         const ComponentQuery::Operation operations[] = {
-        {
-            *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
-        },
-        {
-            *nameComponentManager, ComponentQuery::Operation::OPTIONAL
-        },
-        {
-            *uriComponentManager, ComponentQuery::Operation::OPTIONAL
-        }
-	};
+            {
+                *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
+            },
+            {
+                *nameComponentManager, ComponentQuery::Operation::OPTIONAL
+            },
+            {
+                *uriComponentManager, ComponentQuery::Operation::OPTIONAL
+            }
+        };
         materialQuery->SetupQuery(*materialComponentManager, operations);
     }
     nodeSystem = GetSystem<CORE3D_NS::INodeSystem>(*ecs);
@@ -310,16 +309,6 @@ void Ecs::RemoveNode(CORE_NS::Entity ent)
     if (auto n = nodeSystem->GetNode(ent)) {
         n->SetParent(nodeSystem->GetRootNode());
     }
-}
-bool Ecs::SetRenderMode(RenderMode mode)
-{
-    ecs->SetRenderMode(mode == RenderMode::ALWAYS ? CORE_NS::IEcs::RENDER_ALWAYS : CORE_NS::IEcs::RENDER_IF_DIRTY);
-    return true;
-}
-RenderMode Ecs::GetRenderMode() const
-{
-    auto m = ecs->GetRenderMode();
-    return m == CORE_NS::IEcs::RENDER_ALWAYS ? RenderMode::ALWAYS : RenderMode::IF_DIRTY;
 }
 
 void Ecs::AddDefaultComponents(CORE_NS::Entity ent) const

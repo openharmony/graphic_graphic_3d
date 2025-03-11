@@ -91,6 +91,17 @@ MeshJS::~MeshJS()
     LOG_V("MeshJS -- ");
 }
 
+bool MeshJS::UpdateSubmesh(uint32_t index, SCENE_NS::ISubMesh::Ptr newSubmesh)
+{
+    if (index < subs_.size()) {
+        subs_[index] = newSubmesh;
+        if (auto mesh = interface_pointer_cast<SCENE_NS::IMesh>(GetNativeObject())) {
+            return mesh->SetSubmeshes(subs_).GetResult();
+        }
+    }
+    return false;
+}
+
 napi_value MeshJS::GetSubmesh(NapiApi::FunctionContext<>& ctx)
 {
     if (!validateSceneRef()) {
@@ -102,15 +113,14 @@ napi_value MeshJS::GetSubmesh(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    BASE_NS::vector<SCENE_NS::ISubMesh::Ptr> subs = node->GetSubmeshes().GetResult();
+    subs_ = node->GetSubmeshes().GetResult();
 
     NapiApi::Env env(ctx.Env());
     napi_value tmp;
-    auto status = napi_create_array_with_length(env, subs.size(), &tmp);
-    size_t i = 0;
-    for (const auto& subMesh : subs) {
-        NapiApi::Object argJS(env);
-        napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+    auto status = napi_create_array_with_length(env, subs_.size(), &tmp);
+    uint32_t i = 0;
+    for (const auto& subMesh : subs_) {
+        napi_value args[] = { scene_.GetValue(), ctx.This().ToNapiValue(), env.GetNumber(i) };
 
         auto subobj = interface_pointer_cast<META_NS::IObject>(subMesh);
         auto val = CreateFromNativeInstance(ctx.Env(), subobj, true, BASE_NS::countof(args), args);

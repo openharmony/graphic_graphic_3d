@@ -46,6 +46,8 @@ public:
         const RenderScene& renderScene, const uint32_t flags) const override;
     RENDER_NS::RenderNodeGraphDesc GetRenderNodeGraphDesc(
         const RenderScene& renderScene, const BASE_NS::string& rngFile, const uint32_t flags) const override;
+    void UseCustomRng(const BASE_NS::string& uri) override;
+    void UseCustomRngGroup(const CustomRngGroup& rngGroup) override;
 
 private:
     void InitRenderNodeGraphs();

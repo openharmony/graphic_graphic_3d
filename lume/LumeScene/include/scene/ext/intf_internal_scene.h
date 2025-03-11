@@ -16,6 +16,8 @@
 #ifndef SCENE_EXT_IINTERNAL_SCENE_H
 #define SCENE_EXT_IINTERNAL_SCENE_H
 
+#include "3d/namespace.h"
+#include "3d/util/intf_render_util.h"
 #include <scene/ext/intf_internal_camera.h>
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_node.h>
@@ -80,6 +82,12 @@ public:
 
     virtual bool SetRenderMode(RenderMode) = 0;
     virtual RenderMode GetRenderMode() const = 0;
+    virtual void SetSystemGraphUri(const BASE_NS::string& uri) = 0;
+    virtual BASE_NS::string GetSystemGraphUri() = 0;
+
+    virtual void AppendCustomRenderNodeGraph(RENDER_NS::RenderHandleReference rng) = 0;
+    virtual void RenderFrame() = 0;
+    virtual bool HasPendingRender() const = 0;
 
 public:
     template<typename Func>

@@ -49,6 +49,9 @@ constexpr const string_view CAM_SCENE_PRE_PASS_STR = "3drendernodegraphs://core3
 constexpr const string_view CAM_SCENE_DEFERRED_STR = "3drendernodegraphs://core3d_rng_cam_scene_deferred.rng";
 constexpr const string_view CAM_SCENE_POST_PROCESS_STR = "3drendernodegraphs://core3d_rng_cam_scene_post_process.rng";
 
+constexpr const string_view RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_STR = "RenderNodeDefaultCameraController";
+constexpr const string_view RENDER_NODE_DEFAULT_MATERIAL_RENDER_SLOT_STR = "RenderNodeDefaultMaterialRenderSlot";
+
 RenderNodeGraphDesc LoadRenderNodeGraph(IRenderNodeGraphLoader& rngLoader, const string_view rng)
 {
     IRenderNodeGraphLoader::LoadResult lr = rngLoader.Load(rng);
@@ -56,6 +59,15 @@ RenderNodeGraphDesc LoadRenderNodeGraph(IRenderNodeGraphLoader& rngLoader, const
         CORE_LOG_E("error loading render node graph: %s - error: %s", rng.data(), lr.error.data());
     }
     return lr.desc;
+}
+
+inline RenderNodeDesc GetDefaultCameraControllerNode()
+{
+    RenderNodeDesc rnd;
+    rnd.typeName = RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_STR;
+    rnd.nodeName = "CORE3D_RN_CAM_CTRL";
+    rnd.nodeJson = "{\"typeName\" : \"RenderNodeDefaultCameraController\",\"nodeName\" : \"CORE3D_RN_CAM_CTRL\"}";
+    return rnd;
 }
 
 inline json::standalone_value GetPodPostProcess(const string_view name)
@@ -98,6 +110,27 @@ inline string GetSceneName(const RenderScene& scene)
 
 void FillCameraDescsData(const RenderCamera& renderCamera, const string& customCameraName, RenderNodeGraphDesc& desc)
 {
+    // check for render compatibility for render node graph RenderNodeDefaultCameraController
+    if (!renderCamera.customRenderNodeGraphFile.empty()) {
+        bool forceInject = true;
+        for (const auto& rnRef : desc.nodes) {
+            if (rnRef.typeName == RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_STR) {
+                forceInject = false;
+                break;
+            }
+        }
+        if (forceInject) {
+            for (size_t nodeIdx = 0; nodeIdx < desc.nodes.size(); ++nodeIdx) {
+                if (desc.nodes[nodeIdx].typeName == RENDER_NODE_DEFAULT_MATERIAL_RENDER_SLOT_STR) {
+                    desc.nodes.insert(desc.nodes.begin() + int64_t(nodeIdx), GetDefaultCameraControllerNode());
+#if (CORE3D_DEV_ENABLED == 1)
+                    CORE_LOG_W("Injecting camera RenderNodeDefaultCameraController render node for compatibility");
+#endif
+                    break;
+                }
+            }
+        }
+    }
     for (auto& rnRef : desc.nodes) {
         json::standalone_value jsonVal = CORE_NS::json::parse(rnRef.nodeJson.data());
         jsonVal["customCameraId"] = renderCamera.id; // cam id
@@ -370,4 +403,31 @@ RenderNodeGraphDesc RenderUtil::GetRenderNodeGraphDesc(
     }
     return desc;
 }
+
+void RenderUtil::UseCustomRng(const BASE_NS::string& uri)
+{
+    IRenderNodeGraphManager& rngm = context_.GetRenderNodeGraphManager();
+    IRenderNodeGraphLoader& rngl = rngm.GetRenderNodeGraphLoader();
+    rngdCamLwrp_ = LoadRenderNodeGraph(rngl, uri);
+}
+
+void RenderUtil::UseCustomRngGroup(const CustomRngGroup& rngGroup)
+{
+    // Future: provide all kinds of custom rngs
+    IRenderNodeGraphManager& rngm = context_.GetRenderNodeGraphManager();
+    IRenderNodeGraphLoader& rngl = rngm.GetRenderNodeGraphLoader();
+    if (!rngGroup.lwrp.empty()) {
+        rngdCamLwrp_ = LoadRenderNodeGraph(rngl, rngGroup.lwrp);
+    }
+    if (!rngGroup.lwrpMsaa.empty()) {
+        rngdCamLwrpMsaa_ = LoadRenderNodeGraph(rngl, rngGroup.lwrpMsaa);
+    }
+    if (!rngGroup.hdrp.empty()) {
+        rngdCamHdr_ = LoadRenderNodeGraph(rngl, rngGroup.hdrp);
+    }
+    if (!rngGroup.hdrpMsaa.empty()) {
+        rngdCamHdrMsaa_ = LoadRenderNodeGraph(rngl, rngGroup.hdrpMsaa);
+    }
+}
+
 CORE3D_END_NAMESPACE()

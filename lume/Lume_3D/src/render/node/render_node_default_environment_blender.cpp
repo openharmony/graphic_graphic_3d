@@ -101,15 +101,19 @@ void RenderNodeDefaultEnvironmentBlender::PreExecuteFrame()
     const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
     const auto* dataStoreCamera =
         static_cast<IRenderDataStoreDefaultCamera*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameCamera));
-    if (dataStoreCamera && (!dataStoreCamera->HasBlendEnvironments())) {
+    const auto* dataStoreScene =
+        static_cast<IRenderDataStoreDefaultScene*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameScene));
+    valid_ = (dataStoreScene && dataStoreCamera);
+    if (!valid_) {
+        return;
+    }
+
+    if (!dataStoreCamera->HasBlendEnvironments()) {
         // need to clear targets
         envTargetData_ = {};
         return; // early out
     }
 
-    const auto* dataStoreScene =
-        static_cast<IRenderDataStoreDefaultScene*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameScene));
-    valid_ = (dataStoreScene && dataStoreCamera);
     hasBlendEnvironments_ = true;
 
     // create possible targets

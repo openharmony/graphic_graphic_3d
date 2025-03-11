@@ -17,6 +17,7 @@
 
 #include "LightJS.h"
 #include "MaterialJS.h"
+#include "MeshResourceJS.h"
 #include "NodeJS.h"
 #include "PromiseBase.h"
 static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
@@ -30,10 +31,11 @@ static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" 
 #include <meta/interface/property/property_events.h>
 #include <scene/ext/intf_render_resource.h>
 #include <scene/interface/intf_material.h>
+#include <scene/interface/intf_mesh_resource.h>
+#include <scene/interface/intf_node_import.h>
 #include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_scene_manager.h>
-#include <scene/interface/intf_node_import.h>
 
 #include <core/image/intf_image_loader_manager.h>
 #include <core/intf_engine.h>
@@ -41,6 +43,7 @@ static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" 
 #include <render/intf_render_context.h>
 
 #ifdef __SCENE_ADAPTER__
+#include <parameters.h>
 #include "3d_widget_adapter_log.h"
 #include "scene_adapter/scene_adapter.h"
 #endif
@@ -133,6 +136,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
         napi_property_descriptor{ "load", nullptr, loadFun, nullptr, nullptr, nullptr,
             (napi_property_attributes)(napi_static|napi_default_method)},
         // properties
+        GetSetProperty<uint32_t, SceneJS, &SceneJS::GetRenderMode, &SceneJS::SetRenderMode>("renderMode"),
         GetSetProperty<NapiApi::Object, SceneJS, &SceneJS::GetEnvironment, &SceneJS::SetEnvironment>("environment"),
         GetProperty<NapiApi::Array, SceneJS, &SceneJS::GetAnimations>("animations"),
         // animations
@@ -152,11 +156,16 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateShader>("createShader"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateImage>("createImage"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateEnvironment>("createEnvironment"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateScene>("createScene"),
 
         Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
-	    &SceneJS::ImportNode>("importNode"),
+            &SceneJS::ImportNode>("importNode"),
         Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
-	    &SceneJS::ImportScene>("importScene")
+            &SceneJS::ImportScene>("importScene"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::RenderFrame>("renderFrame"),
+
+        Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateMeshResource>("createMesh"),
+        Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateGeometry>("createGeometry")
     };
     // clang-format on
 
@@ -171,12 +180,36 @@ void SceneJS::Init(napi_env env, napi_value exports)
     mis->StoreCtor("Scene", func);
 }
 
+void SceneJS::RegisterEnums(NapiApi::Object exports)
+{
+    napi_value v;
+    NapiApi::Object en(exports.GetEnv());
+
+    napi_create_uint32(en.GetEnv(), static_cast<uint32_t>(SCENE_NS::RenderMode::IF_DIRTY), &v);
+    en.Set("RENDER_WHEN_DIRTY", v);
+    napi_create_uint32(en.GetEnv(), static_cast<uint32_t>(SCENE_NS::RenderMode::ALWAYS), &v);
+    en.Set("RENDER_CONTINUOUSLY", v);
+    napi_create_uint32(en.GetEnv(), static_cast<uint32_t>(SCENE_NS::RenderMode::MANUAL), &v);
+    en.Set("RENDER_MANUALLY", v);
+
+    exports.Set("RenderMode", en);
+}
+
+
 BASE_NS::string FetchResourceOrUri(napi_env e, napi_value arg)
 {
     napi_valuetype type;
     napi_typeof(e, arg, &type);
     if (type == napi_string) {
-        return NapiApi::Value<BASE_NS::string>(e, arg);
+        BASE_NS::string uri = NapiApi::Value<BASE_NS::string>(e, arg);
+        // check if there is a protocol
+        auto t = uri.find("://");
+        if (t == BASE_NS::string::npos) {
+            // no proto . so use default
+            // set system file as default format
+            uri.insert(0, "file://");
+        }
+        return uri;
     }
     if (type == napi_object) {
         NapiApi::Object resource(e, arg);
@@ -214,7 +247,7 @@ BASE_NS::string FetchResourceOrUri(NapiApi::FunctionContext<>& ctx)
         auto t = uri.find("://");
         if (t == BASE_NS::string::npos) {
             // no proto . so use default
-            uri.insert(0, "OhosRawFile:///");
+            uri.insert(0, "file://");
         }
     } else if (resourceContext) {
         // get it from resource then
@@ -239,8 +272,7 @@ napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
 {
     BASE_NS::string uri = FetchResourceOrUri(ctx);
     if (uri.empty()) {
-        // unsupported input..
-        return {};
+        uri = "scene://empty";
     }
     // make sure slashes are correct.. *eh*
     for (;;) {
@@ -321,6 +353,8 @@ napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
                     if (!rc) {
                         LOG_F("No render config");
                     }
+                    // Make sure there's a valid root node
+                    scene->GetInternalScene()->GetEcsContext().CreateUnnamedRootNode();
                     // LEGACY COMPATIBILITY start
                     Fixnames(scene);
                     // LEGACY COMPATIBILITY end
@@ -333,6 +367,23 @@ napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
         promise->Reject();
     }
     return jsPromise;
+}
+
+napi_value SceneJS::RenderFrame(NapiApi::FunctionContext<>& ctx)
+{
+    if (ctx.ArgCount() > 1) {
+        CORE_LOG_E("render frame %d", __LINE__);
+        return ctx.GetUndefined();
+    }
+    bool res = true;
+#ifdef __SCENE_ADAPTER__
+    auto sceneAdapter = std::static_pointer_cast<OHOS::Render3D::SceneAdapter>(scene_);
+    if (sceneAdapter) {
+        sceneAdapter->SetNeedsRepaint(false);
+        sceneAdapter->RenderFrame(false);
+    }
+#endif
+    return ctx.GetBoolean(res);
 }
 
 napi_value SceneJS::Dispose(NapiApi::FunctionContext<>& ctx)
@@ -786,13 +837,13 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
             };
 
             if (type_ == BaseMaterial::SHADER) {
-                MakeNativeObjectParam(env_, material_, BASE_NS::countof(args), args);
-                NapiApi::Object materialJS(GetJSConstructor(env_, "ShaderMaterial"), BASE_NS::countof(args), args);
-                result_ = materialJS.ToNapiValue();
-            } else {
-                // fail..
-                material_.reset();
+                META_NS::SetValue(material_->Type(), SCENE_NS::MaterialType::CUSTOM);
             }
+
+            MakeNativeObjectParam(env_, material_, BASE_NS::countof(args), args);
+            NapiApi::Object materialJS(GetJSConstructor(env_, "Material"), BASE_NS::countof(args), args);
+            result_ = materialJS.ToNapiValue();
+
             return true;
         };
     };
@@ -807,6 +858,11 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
     }
 
     promise->scene_ = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject());
+    if (!promise->scene_) {
+        CORE_LOG_E("promise->scene_ is null.");
+        promise->Reject();
+        return jsPromise;
+    }
 
     // create an engine task and complete it there..
     auto fun = [promise]() {
@@ -821,6 +877,11 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
         ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>(BASE_NS::move(fun)));
 
     return jsPromise;
+}
+
+napi_value SceneJS::CreateScene(NapiApi::FunctionContext<>& ctx)
+{
+    return Load(ctx);
 }
 
 napi_value SceneJS::ImportNode(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx)
@@ -898,6 +959,90 @@ napi_value SceneJS::ImportScene(NapiApi::FunctionContext<BASE_NS::string, NapiAp
     return ctx.GetNull();
 }
 
+napi_value SceneJS::GetRenderMode(NapiApi::FunctionContext<>& ctx)
+{
+    auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
+    if (!scene) {
+        return ctx.GetUndefined();
+    }
+    return ctx.GetNumber(uint32_t(scene->GetRenderMode().GetResult()));
+}
+
+void SceneJS::SetRenderMode(NapiApi::FunctionContext<uint32_t>& ctx)
+{
+    auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
+    if (!scene) {
+        return;
+    }
+    uint32_t v = ctx.Arg<0>();
+    if (v >= static_cast<uint32_t>(SCENE_NS::RenderMode::IF_DIRTY) &&
+        v <= static_cast<uint32_t>(SCENE_NS::RenderMode::MANUAL)) {
+        scene->SetRenderMode(static_cast<SCENE_NS::RenderMode>(v)).Wait();
+    }
+}
+
+napi_value SceneJS::CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx)
+{
+    struct Promise : public PromiseBase {
+        using PromiseBase::PromiseBase;
+        NapiApi::StrongRef this_;
+        NapiApi::StrongRef resourceParams_;
+        NapiApi::StrongRef geometry_;
+        bool SetResult() override
+        {
+            napi_value args[] = { this_.GetValue(), resourceParams_.GetValue(), geometry_.GetValue() };
+            auto meshResource = NapiApi::Object(GetJSConstructor(env_, "MeshResource"), BASE_NS::countof(args), args);
+            result_ = meshResource.ToNapiValue();
+            return (bool)result_;
+        }
+    };
+    auto promise = new Promise(ctx.Env());
+    auto jsPromise = promise->ToNapiValue();
+    promise->this_ = NapiApi::StrongRef(ctx.This());
+    promise->resourceParams_ = NapiApi::StrongRef(ctx.Arg<0>());
+    promise->geometry_ = NapiApi::StrongRef(ctx.Arg<1>());
+
+    auto func = [promise]() {
+        promise->SettleLater();
+        return false;
+    };
+    auto task = META_NS::MakeCallback<META_NS::ITaskQueueTask>(BASE_NS::move(func));
+    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddTask(task);
+
+    return jsPromise;
+}
+
+napi_value SceneJS::CreateGeometry(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx)
+{
+    struct Promise : public PromiseBase {
+        using PromiseBase::PromiseBase;
+        NapiApi::StrongRef this_;
+        NapiApi::StrongRef nodeParams_;
+        NapiApi::StrongRef meshResource_;
+        SCENE_NS::IScene::Ptr scene_;
+        bool SetResult() override
+        {
+            napi_value args[] = { this_.GetValue(), nodeParams_.GetValue(), meshResource_.GetValue() };
+            result_ = NapiApi::Object(GetJSConstructor(env_, "Geometry"), BASE_NS::countof(args), args).ToNapiValue();
+            return (bool)result_;
+        }
+    };
+    auto promise = new Promise(ctx.Env());
+    auto jsPromise = promise->ToNapiValue();
+    promise->this_ = NapiApi::StrongRef(ctx.This());
+    promise->nodeParams_ = NapiApi::StrongRef(ctx.Arg<0>());
+    promise->meshResource_ = NapiApi::StrongRef(ctx.Arg<1>());
+
+    auto func = [promise]() {
+        promise->SettleLater();
+        return false;
+    };
+    auto task = META_NS::MakeCallback<META_NS::ITaskQueueTask>(BASE_NS::move(func));
+    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddTask(task);
+
+    return jsPromise;
+}
+
 napi_value SceneJS::CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
     struct Promise : public PromiseBase {
@@ -932,6 +1077,11 @@ napi_value SceneJS::CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     promise->this_ = NapiApi::StrongRef(ctx.This());
     promise->args_ = NapiApi::StrongRef(ctx.Arg<0>());
     promise->scene_ = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject());
+    if (!promise->scene_) {
+        CORE_LOG_E("promise->scene_ is null.");
+        promise->Reject();
+        return jsPromise;
+    }
 
     NapiApi::Object parms = ctx.Arg<0>();
     if (parms) {
@@ -941,7 +1091,7 @@ napi_value SceneJS::CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     auto fun = [promise]() {
         promise->shader_ = META_NS::GetObjectRegistry().Create<SCENE_NS::IShader>(SCENE_NS::ClassId::Shader);
-        if (!promise->shader_->LoadShader(promise->scene_, promise->uri_).GetResult()) {
+        if (!promise->shader_ || !promise->shader_->LoadShader(promise->scene_, promise->uri_).GetResult()) {
             LOG_W("Failed to load shader: %s", promise->uri_.c_str());
         }
         promise->SettleLater();
@@ -1023,6 +1173,11 @@ napi_value SceneJS::CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     promise->this_ = NapiApi::StrongRef(ctx.This());
     promise->args_ = NapiApi::StrongRef(ctx.Arg<0>());
     promise->scene_ = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject());
+    if (!promise->scene_) {
+        CORE_LOG_E("promise->scene_ is null.");
+        promise->Reject();
+        return jsPromise;
+    }
 
     NapiApi::Object args = ctx.Arg<0>();
     if (args) {
@@ -1180,4 +1335,3 @@ napi_status GetInstanceData(napi_env env, void** data)
 }
 
 #endif // __OHOS_PLATFORM__
-

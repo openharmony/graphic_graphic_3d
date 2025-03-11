@@ -105,11 +105,12 @@ GraphicsTask::~GraphicsTask()
     if (loop_.joinable()) {
         loop_.join();
     }
+    WIDGET_LOGI("~GraphicsTask() end");
 }
 
 void GraphicsTask::Start()
 {
-    WIDGET_LOGD("GraphicsTask::Start start");
+    WIDGET_LOGI("GraphicsTask::Start start");
 
     if (!exit_) {
         return;

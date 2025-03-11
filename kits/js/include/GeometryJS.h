@@ -15,8 +15,10 @@
 #ifndef GEOMETRY_JS_H
 #define GEOMETRY_JS_H
 #include <meta/interface/intf_object.h>
+#include <scene/interface/intf_mesh.h>
 
 #include "BaseObjectJS.h"
+#include "MeshResourceJS.h"
 #include "NodeImpl.h"
 
 class GeometryJS : public BaseObject<GeometryJS>, public NodeImpl {
@@ -28,7 +30,13 @@ public:
     virtual void* GetInstanceImpl(uint32_t) override;
 
 private:
+    enum class ConstructionState { LACKS_NATIVE, FINISHED, FAILED };
+    ConstructionState Construct(
+        napi_env env, NapiApi::Object meJs, NapiApi::Object scene, NapiApi::Object sceneNodeParameters);
+    void CreateNativeObject(
+        napi_env env, NapiApi::Object meJs, NapiApi::Object sceneNodeParameters, NapiApi::Object meshResourceParam);
     void DisposeNative(void*) override;
     napi_value GetMesh(NapiApi::FunctionContext<>& ctx);
+    SCENE_NS::IMesh::Ptr CreateMesh(napi_env env, MeshResourceJS* meshResource);
 };
 #endif

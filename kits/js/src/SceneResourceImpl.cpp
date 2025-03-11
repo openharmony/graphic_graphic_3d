@@ -45,6 +45,7 @@ void SceneResourceImpl::RegisterEnums(NapiApi::Object exports)
     DECL_ENUM(SceneResourceType, ANIMATION);
     DECL_ENUM(SceneResourceType, SHADER);
     DECL_ENUM(SceneResourceType, IMAGE);
+    DECL_ENUM(SceneResourceType, MESH_RESOURCE);
 #undef DECL_ENUM
 
     exports.Set("SceneResourceType", SceneResourceType);

@@ -500,8 +500,7 @@ public:
             return;
         }
         napi_status status { napi_ok };
-        size_t arg_count { 0 };
-        status = napi_get_cb_info(env, info, &arg_count, nullptr, &jsThis_, &data_);
+        status = napi_get_cb_info(env, info, &argCount_, nullptr, &jsThis_, &data_);
         if (status != napi_ok) {
             return;
         }
@@ -509,7 +508,7 @@ public:
         info_ = info;
         if constexpr (sizeof...(Types) > 0) {
             // validate arg count first
-            if (argc != arg_count) {
+            if (argc != argCount_) {
                 // non matching arg count. fail
                 jsThis_ = nullptr;
                 data_ = nullptr;
@@ -518,7 +517,7 @@ public:
             }
 
             // get the arguments
-            status = napi_get_cb_info(env, info, &arg_count, args, nullptr, nullptr);
+            status = napi_get_cb_info(env, info, &argCount_, args, nullptr, nullptr);
             if (!validate<Types...>(0)) {
                 // non matching types in context!
                 jsThis_ = nullptr;
@@ -587,6 +586,11 @@ public:
         }
     }
 
+    size_t ArgCount() const
+    {
+        return argCount_;
+    }
+
     napi_value GetUndefined()
     {
         return env_.GetUndefined();
@@ -627,6 +631,7 @@ private:
     napi_value args[sizeof...(Types) + 1] {};
     NapiApi::Env env_ { nullptr };
     napi_callback_info info_ { nullptr };
+    size_t argCount_ { 0 };
 };
 
 class Array {

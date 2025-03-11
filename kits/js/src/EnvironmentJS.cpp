@@ -162,6 +162,10 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
         sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
     IScene::Ptr scene = interface_pointer_cast<IScene>(tro->GetNativeObject());
+    if (!scene) {
+        LOG_F("scene is null.");
+        return;
+    }
 
     NapiApi::Value<BASE_NS::string> name;
     NapiApi::Object args = fromJs.Arg<1>();

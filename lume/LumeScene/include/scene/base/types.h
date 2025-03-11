@@ -27,7 +27,15 @@ SCENE_BEGIN_NAMESPACE()
 
 using META_NS::Future;
 
-enum class RenderMode { IF_DIRTY, ALWAYS };
+enum class RenderMode {
+    /// Render a frame if something changed in the scene (When calling internal scene update)
+    IF_DIRTY,
+    /// Always render new frame even if nothing changed
+    ALWAYS,
+    /// Only render a frame if explicitly requested
+    MANUAL
+};
+
 SCENE_END_NAMESPACE()
 
 META_TYPE(SCENE_NS::RenderMode);

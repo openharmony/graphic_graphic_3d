@@ -50,6 +50,7 @@
 #include "mesh/mesh_creator.h"
 #include "mesh/mesh_resource.h"
 #include "mesh/shader.h"
+#include "mesh/shader_util.h"
 #include "mesh/submesh.h"
 #include "mesh/texture.h"
 #include "node/camera_node.h"
@@ -122,6 +123,7 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<RenderConfiguration>();
     META_NS::RegisterObjectType<Material>();
     META_NS::RegisterObjectType<Shader>();
+    META_NS::RegisterObjectType<ShaderUtil>();
     META_NS::RegisterObjectType<SubMesh>();
     META_NS::RegisterObjectType<Mesh>();
     META_NS::RegisterObjectType<MeshCreator>();
@@ -168,6 +170,7 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<RenderConfiguration>();
     META_NS::UnregisterObjectType<Material>();
     META_NS::UnregisterObjectType<Shader>();
+    META_NS::UnregisterObjectType<ShaderUtil>();
     META_NS::UnregisterObjectType<SubMesh>();
     META_NS::UnregisterObjectType<Mesh>();
     META_NS::UnregisterObjectType<MeshCreator>();

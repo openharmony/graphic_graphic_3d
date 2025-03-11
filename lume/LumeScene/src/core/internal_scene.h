@@ -96,6 +96,12 @@ public:
 
     bool SetRenderMode(RenderMode) override;
     RenderMode GetRenderMode() const override;
+    void SetSystemGraphUri(const BASE_NS::string& uri) override;
+    BASE_NS::string GetSystemGraphUri() override;
+
+    void AppendCustomRenderNodeGraph(RENDER_NS::RenderHandleReference rng) override;
+    void RenderFrame() override;
+    bool HasPendingRender() const override;
 
 public:
     NodeHits CastRay(
@@ -117,6 +123,7 @@ private:
     void NotifyRenderingCameras();
 
     NodeHits MapHitResults(const BASE_NS::vector<CORE3D_NS::RayCastResult>& res, const RayCastOptions& options) const;
+    bool UpdateSyncProperties(bool resetPending);
 
 private:
     IScene::WeakPtr scene_;
@@ -136,9 +143,13 @@ private:
     uint64_t firstTime_ { ~0u };
     uint64_t previousFrameTime_ { ~0u };
     uint64_t deltaTime_ { 1u };
+    RenderMode mode_ { RenderMode::ALWAYS };
+    BASE_NS::string systemGraph_ = "rofs3D://systemGraph.json";
+    BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderNodeGraphs_;
 
 private: // locked bits
     mutable std::shared_mutex mutex_;
+    bool pendingRender_ {};
     BASE_NS::unordered_map<void*, IEcsObject::WeakPtr> syncs_;
 };
 

@@ -94,6 +94,18 @@ struct LightingFlagsConverter {
 };
 } // namespace
 
+CORE_NS::Entity Material::CreateEntity(const IInternalScene::Ptr& scene)
+{
+    const auto& ecs = scene->GetEcsContext().GetNativeEcs();
+    const auto materialManager = CORE_NS::GetManager<CORE3D_NS::IMaterialComponentManager>(*ecs);
+    if (!materialManager) {
+        return {};
+    }
+    auto ent = ecs->GetEntityManager().Create();
+    materialManager->Create(ent);
+    return ent;
+}
+
 bool Material::SetEcsObject(const IEcsObject::Ptr& obj)
 {
     if (Super::SetEcsObject(obj)) {

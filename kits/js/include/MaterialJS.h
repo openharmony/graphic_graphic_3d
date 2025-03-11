@@ -33,6 +33,8 @@ protected:
     void* GetInstanceImpl(uint32_t);
     void DisposeNative(TrueRootObject*);
 
+    MaterialType materialType_;
+
 private:
     napi_value GetMaterialType(NapiApi::FunctionContext<>& ctx);
     napi_value GetShadowReceiver(NapiApi::FunctionContext<>& ctx);
@@ -46,17 +48,16 @@ private:
     napi_value GetRenderSort(NapiApi::FunctionContext<>& ctx);
     void SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
-    MaterialType materialType_;
     NapiApi::StrongRef blend_;
     NapiApi::StrongRef renderSort_;
 };
 
-class ShaderMaterialJS : BaseObject<ShaderMaterialJS>, BaseMaterial {
+class MaterialJS : BaseObject<MaterialJS>, BaseMaterial {
 public:
     static constexpr uint32_t ID = 31;
     static void Init(napi_env env, napi_value exports);
-    ShaderMaterialJS(napi_env, napi_callback_info);
-    ~ShaderMaterialJS() override;
+    MaterialJS(napi_env, napi_callback_info);
+    ~MaterialJS() override;
 
 private:
     void* GetInstanceImpl(uint32_t) override;
@@ -65,6 +66,11 @@ private:
 
     napi_value GetColorShader(NapiApi::FunctionContext<>& ctx);
     void SetColorShader(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
+    template<size_t Index>
+    napi_value GetMaterialProperty(NapiApi::FunctionContext<>& ctx);
+    template<size_t Index>
+    void SetMaterialProperty(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     META_NS::IObject::Ptr shaderBind_;
 

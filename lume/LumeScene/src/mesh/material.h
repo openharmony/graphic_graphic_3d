@@ -16,17 +16,18 @@
 #ifndef SCENE_SRC_MESH_MATERIAL_H
 #define SCENE_SRC_MESH_MATERIAL_H
 
+#include <scene/ext/intf_create_entity.h>
 #include <scene/ext/named_scene_object.h>
 #include <scene/interface/intf_material.h>
 
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 
-#include "../component/material_component.h"
+#include "component/material_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-class Material : public META_NS::IntroduceInterfaces<NamedSceneObject, IMaterial> {
+class Material : public META_NS::IntroduceInterfaces<NamedSceneObject, IMaterial, ICreateEntity> {
     META_OBJECT(Material, ClassId::Material, IntroduceInterfaces)
 
 public:
@@ -53,6 +54,8 @@ public:
 
     META_NS::IMetadata::Ptr GetCustomProperties() const override;
     META_NS::IProperty::Ptr GetCustomProperty(BASE_NS::string_view name) const override;
+
+    CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
 
 private:
     bool ConstructTextures(const META_NS::IProperty::Ptr& p);

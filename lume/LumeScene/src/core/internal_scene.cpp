@@ -34,6 +34,8 @@
 #include "../ecs_animation.h"
 #include "ecs_object.h"
 
+#include <3d/util/intf_render_util.h>
+
 SCENE_BEGIN_NAMESPACE()
 
 InternalScene::InternalScene(const IScene::Ptr& scene, META_NS::ITaskQueue::Ptr engine, META_NS::ITaskQueue::Ptr app,
@@ -68,6 +70,9 @@ void InternalScene::Uninitialize()
     nodes_.clear();
 
     ecs_->Uninitialize();
+    if (graphicsContext3D_) {
+        graphicsContext3D_->GetRenderContext().GetRenderer().RenderFrame({});
+    }
 }
 
 META_NS::ITaskQueue::Ptr InternalScene::GetEngineTaskQueue() const
@@ -360,11 +365,20 @@ void InternalScene::SchedulePropertyUpdate(const IEcsObject::Ptr& obj)
 
 void InternalScene::SyncProperties()
 {
+    UpdateSyncProperties(false);
+}
+
+bool InternalScene::UpdateSyncProperties(bool resetPending)
+{
+    bool pending = false;
     BASE_NS::unordered_map<void*, IEcsObject::WeakPtr> syncs;
     {
         std::unique_lock lock { mutex_ };
-        // workaround for unordered_map bug where move op= doesn't clear the shift_amount.
-        syncs = BASE_NS::unordered_map<void*, IEcsObject::WeakPtr>(BASE_NS::move(syncs_));
+        syncs = BASE_NS::move(syncs_);
+        pending = pendingRender_;
+        if (resetPending) {
+            pendingRender_ = false;
+        }
     }
 
     for (auto&& v : syncs) {
@@ -372,14 +386,16 @@ void InternalScene::SyncProperties()
             o->SyncProperties();
         }
     }
+    return pending;
 }
 
 void InternalScene::Update()
 {
-    SyncProperties();
+    using namespace std::chrono;
+    bool pending = UpdateSyncProperties(true);
 
     ecs_->ecs->ProcessEvents();
-    using namespace std::chrono;
+
     const auto currentTime =
         static_cast<uint64_t>(duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count());
 
@@ -393,14 +409,20 @@ void InternalScene::Update()
     }
     previousFrameTime_ = currentTime;
     const uint64_t totalTime = currentTime - firstTime_;
-    bool needsRender = false;
-    {
-        needsRender = ecs_->ecs->Update(totalTime, deltaTime);
-    }
+
+    bool needsRender = ecs_->ecs->Update(totalTime, deltaTime);
+
     ecs_->ecs->ProcessEvents();
 
-    if (needsRender) {
+    if ((needsRender && mode_ != RenderMode::MANUAL) || pending) {
         auto renderHandles = graphicsContext3D_->GetRenderNodeGraphs(*ecs_->ecs);
+        BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderHandles;
+        if (!customRenderNodeGraphs_.empty()) {
+            customRenderHandles.insert(customRenderHandles.begin(), renderHandles.begin(), renderHandles.end());
+            customRenderHandles.insert(
+                customRenderHandles.end(), customRenderNodeGraphs_.begin(), customRenderNodeGraphs_.end());
+            renderHandles = move(customRenderHandles);
+        }
         if (!renderHandles.empty()) {
             // The scene needs to be rendered.
             RENDER_NS::IRenderer& renderer = renderContext_->GetRenderer();
@@ -510,13 +532,30 @@ void InternalScene::RemoveRenderingCamera(const IInternalCamera::Ptr& camera)
         }
     }
 }
+
 bool InternalScene::SetRenderMode(RenderMode mode)
 {
-    return ecs_->SetRenderMode(mode);
+    mode_ = mode;
+    ecs_->ecs->SetRenderMode(
+        mode == RenderMode::IF_DIRTY ? CORE_NS::IEcs::RENDER_IF_DIRTY : CORE_NS::IEcs::RENDER_ALWAYS);
+    return true;
 }
+
 RenderMode InternalScene::GetRenderMode() const
 {
-    return ecs_->GetRenderMode();
+    return mode_;
+}
+
+void InternalScene::RenderFrame()
+{
+    std::unique_lock lock { mutex_ };
+    pendingRender_ = true;
+}
+
+bool InternalScene::HasPendingRender() const
+{
+    std::unique_lock lock { mutex_ };
+    return pendingRender_;
 }
 
 NodeHits InternalScene::MapHitResults(
@@ -581,4 +620,18 @@ BASE_NS::Math::Vec3 InternalScene::WorldPositionToScreen(
     return result;
 }
 
+void InternalScene::AppendCustomRenderNodeGraph(RENDER_NS::RenderHandleReference rng)
+{
+    customRenderNodeGraphs_.push_back(rng);
+}
+
+void InternalScene::SetSystemGraphUri(const BASE_NS::string& uri)
+{
+    systemGraph_ = uri;
+}
+
+BASE_NS::string InternalScene::GetSystemGraphUri()
+{
+    return systemGraph_;
+}
 SCENE_END_NAMESPACE()

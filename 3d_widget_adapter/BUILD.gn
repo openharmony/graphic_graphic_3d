@@ -138,12 +138,10 @@ ohos_source_set("widget_adapter_source") {
     "//foundation/graphic/graphic_2d/rosen/modules/",
   ]
 
-  if (defined(global_parts_info.graphic_graphics_3d_ext)) {
-    include_dirs += [
-      "../mbasis_vfx_plugin/api/",
-      "../mbasis_vfx_plugin/app/product/include",
-    ]
-  }
+  defines += [
+    "CORE_HAS_GLES_BACKEND=1",
+    "CORE_HAS_VULKAN_BACKEND=1",
+  ]
 
   configs = [
     ":widget_adapter_config",
@@ -152,16 +150,7 @@ ohos_source_set("widget_adapter_source") {
 
   public_configs = [ ":widget_adapter_config" ]
 
-  if (defined(use_new_skia) && use_new_skia) {
-    deps = []
-    external_deps = [ "skia:skia_canvaskit" ]
-  } else {
-    deps = [ "$ace_flutter_engine_root/skia:ace_skia_ohos" ]
-    external_deps = []
-  }
-  if (defined(use_rosen_drawing) && use_rosen_drawing) {
-    defines += [ "USE_ROSEN_DRAWING" ]
-  }
+  external_deps = []
 
   if (current_os == "ohos") {
     sources += [

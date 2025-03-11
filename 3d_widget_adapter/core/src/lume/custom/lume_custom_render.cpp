@@ -72,24 +72,20 @@ void LumeCustomRender::Initialize(const CustomRenderInput& input)
 void LumeCustomRender::RegistorShaderPath(const std::string &shaderPath)
 {
     WIDGET_LOGD("lume custom render registor shader path");
-    std::string shaderPathDir;
-    {
-        auto tempPath = const_cast<std::string&>(shaderPath);
-        auto index = tempPath.find_last_of("/");
-        auto strSize = tempPath.size();
-        if (index != std::string::npos && index != (strSize - 1)) {
-            auto fileName = tempPath.substr(index + 1);
-            auto suffixIndex = fileName.find_last_of(".");
-            if (suffixIndex != std::string::npos) {
-                tempPath = tempPath.substr(0, index);
-                auto dirIndex = tempPath.find_last_of("/");
-                tempPath = (dirIndex != std::string::npos) ? tempPath.substr(0, dirIndex) : tempPath;
-            }
+    // for old deprecated
+    auto tempPath = shaderPath;
+    auto index = tempPath.find_last_of("/");
+    auto strSize = tempPath.size();
+    if (index != std::string::npos && index != (strSize - 1)) {
+        auto fileName = tempPath.substr(index + 1);
+        auto suffixIndex = fileName.find_last_of(".");
+        if (suffixIndex != std::string::npos) {
+            tempPath = tempPath.substr(0, index);
+            auto dirIndex = tempPath.find_last_of("/");
+            tempPath = (dirIndex != std::string::npos) ? tempPath.substr(0, dirIndex) : tempPath;
         }
-        auto shaderPathDir = const_cast<const std::string &>(tempPath);
     }
-
-    engine_->GetFileManager().RegisterPath("shaders", shaderPathDir.c_str(), false);
+    engine_->GetFileManager().RegisterPath("shaders", tempPath.c_str(), false);
     static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc{ "shaders://" };
     renderContext_->GetDevice().GetShaderManager().LoadShaderFiles(desc);
     renderContext_->GetDevice().GetShaderManager().LoadShaderFile(shaderPath.c_str());
@@ -252,7 +248,8 @@ std::string GetFileNameFromPath(const std::string &path)
 {
     size_t found = path.find_last_of("/\\");
     size_t foundEnd = path.rfind(".rng");
-    if (found > 0U && foundEnd >= (found + 1U) && found != std::string::npos && foundEnd != std::string::npos) {
+    if (found > 0U && foundEnd >= (found + 1U) &&
+        found != std::string::npos && foundEnd != std::string::npos) {
         return path.substr(found + 1, foundEnd - found - 1);
     }
     return path;

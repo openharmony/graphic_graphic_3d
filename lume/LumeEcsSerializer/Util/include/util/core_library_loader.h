@@ -35,10 +35,9 @@ BASE_NS::string GetCoreBinaryPath();
 
 #ifdef _WIN32
 #include <windows.h>
-#elif defined(__ANDROID__)
+#elif defined(__ANDRD__)
 #include <dlfcn.h>
-#include <android/log.h>
-#elif defined(__APPLE__)
+#elif defined(__APLE__)
 #include <dlfcn.h>
 #endif
 
@@ -55,9 +54,9 @@ BASE_NS::string GetCoreBinaryPath();
 namespace {
 #if defined(_WIN32)
 HMODULE g_agpEngineHandle = nullptr;
-#elif defined(__ANDROID__)
+#elif defined(__ANDRD__)
 auto g_EngineLibrary = BASE_NS::unique_ptr<void, decltype(&dlclose)>(nullptr, dlclose);
-#elif defined(__APPLE__)
+#elif defined(__APLE__)
 auto g_EngineLibrary = BASE_NS::unique_ptr<void, decltype(&dlclose)>(nullptr, dlclose);
 #endif
 } // namespace
@@ -86,9 +85,8 @@ bool LoadCoreLibrary(BASE_NS::string_view libraryFile)
     CORE_NS::CreatePluginRegistry =
         decltype(CORE_NS::CreatePluginRegistry)(GetProcAddress(g_agpEngineHandle, MAKEINTRESOURCE(1)));
 #endif // CORE_DYNAMIC
-#elif defined(__ANDROID__)
+#elif defined(__ANDRD__)
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
-    __android_log_write(android_LogPriority::ANDROID_LOG_INFO, "core", "CORE_DYNAMIC");
     if (!CORE_NS::CreatePluginRegistry) {
         if (libraryFile.empty()) {
             g_EngineLibrary.reset(dlopen("libAGPEngineDLL.so", RTLD_LAZY));
@@ -97,8 +95,6 @@ bool LoadCoreLibrary(BASE_NS::string_view libraryFile)
         }
 
         if (!g_EngineLibrary) {
-            __android_log_print(
-                android_LogPriority::ANDROID_LOG_ERROR, "core", "failed to load engine %s", dlerror());
             return false;
         }
         CORE_NS::CreatePluginRegistry = reinterpret_cast<decltype(CORE_NS::CreatePluginRegistry)>(
@@ -106,10 +102,8 @@ bool LoadCoreLibrary(BASE_NS::string_view libraryFile)
         CORE_NS::GetPluginRegister = reinterpret_cast<decltype(CORE_NS::GetPluginRegister)>(
             dlsym(g_EngineLibrary.get(), "_ZN4Core17GetPluginRegisterEv"));
     }
-#else
-    __android_log_write(android_LogPriority::ANDROID_LOG_INFO, "core", "!CORE_DYNAMIC");
 #endif // CORE_DYNAMIC
-#elif defined(__APPLE__)
+#elif defined(__APLE__)
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
     if (!CORE_NS::CreatePluginRegistry) {
         if (libraryFile.empty()) {
@@ -128,7 +122,7 @@ bool LoadCoreLibrary(BASE_NS::string_view libraryFile)
             dlsym(g_EngineLibrary.get(), "_ZN4Core17GetPluginRegisterEv"));
     }
 #endif // CORE_DYNAMIC
-#endif // __APPLE__
+#endif // __APLE__
 
     return true;
 }
@@ -141,13 +135,13 @@ void UnloadCoreLibrary(void)
         FreeLibrary(g_agpEngineHandle);
     }
     g_agpEngineHandle = nullptr;
-#elif defined(__ANDROID__)
-    // NOTE: dlclose has issues on android so not calling it for now.
+#elif defined(__ANDRD__)
+    // NOTE: dlclose has issues on andrd so not calling it for now.
     g_EngineLibrary.reset();
-#elif defined(__APPLE__)
+#elif defined(__APLE__)
     dlclose(g_EngineLibrary.get());
     g_EngineLibrary.reset();
-#endif // __ANDROID__ || __APPLE__
+#endif // __ANDRD__ || __APLE__
 
     CORE_NS::GetPluginRegister = nullptr;
     CORE_NS::CreatePluginRegistry = nullptr;
@@ -182,10 +176,10 @@ BASE_NS::string GetCoreBinaryPath()
     }
     path.resize(pos + 1);
 
-#elif defined(__ANDROID__)
-    // What to return as the binary path on android.
+#elif defined(__ANDRD__)
+    // What to return as the binary path on andrd.
     BASE_NS::string path;
-#elif defined(__APPLE__)
+#elif defined(__APLE__)
     BASE_NS::string path;
     if (CORE_NS::GetPluginRegister) {
         Dl_info info {};

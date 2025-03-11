@@ -244,8 +244,7 @@ void SceneUtil::CameraLookAt(
     for (Entity node = getParent(entity); EntityUtil::IsValid(node); node = getParent(node)) {
         if (auto parentTransformHandle = tcm->Read(node)) {
             parentWorld = Math::Trs(parentTransformHandle->position, parentTransformHandle->rotation,
-                              parentTransformHandle->scale) *
-                          parentWorld;
+                parentTransformHandle->scale) * parentWorld;
         }
     }
 
@@ -918,7 +917,7 @@ void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHan
     } else if (std::any_of(std::begin(TYPES), std::end(TYPES),
         [&current = property.type](const uint64_t type) {
             return type == current;
-	})) {
+        })) {
         // One of the basic types so no further processing needed.
     } else if (property.metaData.containerMethods) {
         auto& containerProperty = property.metaData.containerMethods->property;
