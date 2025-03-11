@@ -42,9 +42,7 @@
           "freetype",
           "zlib"
         ],
-        "third_party": [
-          "skia"
-        ]
+        "third_party": []
       },
       "build": {
         "sub_component": [

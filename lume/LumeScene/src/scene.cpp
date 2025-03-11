@@ -36,21 +36,6 @@ SceneObject::~SceneObject()
     }
 }
 
-#ifdef __PHYSICS_MODULE__
-static auto GetPhysicsHookedRngs(const META_NS::IMetadata::Ptr& d)
-{
-    auto customRngLwrpUri = d->GetProperty<BASE_NS::string>("customRngLwrpUri") ?
-        d->GetProperty<BASE_NS::string>("customRngLwrpUri")->GetValue() : "";
-    auto customRngLwrpMsaaUri = d->GetProperty<BASE_NS::string>("customRngLwrpMsaaUri") ?
-        d->GetProperty<BASE_NS::string>("customRngLwrpMsaaUri")->GetValue() : "";
-    auto customRngHdrpUri = d->GetProperty<BASE_NS::string>("customRngHdrpUri") ?
-        d->GetProperty<BASE_NS::string>("customRngHdrpUri")->GetValue() : "";
-    auto customRngHdrpMsaaUri = d->GetProperty<BASE_NS::string>("customRngHdrpMsaaUri") ?
-        d->GetProperty<BASE_NS::string>("customRngHdrpMsaaUri")->GetValue() : "";
-    return std::make_tuple(customRngLwrpUri, customRngLwrpMsaaUri, customRngHdrpUri, customRngHdrpMsaaUri);
-}
-#endif
-
 bool SceneObject::Build(const META_NS::IMetadata::Ptr& d)
 {
     bool res = Super::Build(d);
@@ -73,15 +58,6 @@ bool SceneObject::Build(const META_NS::IMetadata::Ptr& d)
             internal_->SetSystemGraphUri(customSystemGraphUri->GetValue());
             CORE_LOG_E("customSystemGraphUri %s", customSystemGraphUri->GetValue().c_str());
         }
-#ifdef __PHYSICS_MODULE__
-        auto [customRngLwrpUri, customRngLwrpMsaaUri, customRngHdrpUri, customRngHdrpMsaaUri] = GetPhysicsHookedRngs(d);
-        if (!(customRngLwrpUri.empty() && customRngLwrpMsaaUri.empty() &&
-            customRngHdrpUri.empty() && customRngHdrpMsaaUri.empty())) {
-            // physics module rng
-            internal_->SetCustomRngGroupUri({customRngLwrpUri, customRngLwrpMsaaUri,
-                customRngHdrpUri, customRngHdrpMsaaUri});
-        }
-#endif
         res = internal_->Initialize();
     }
     return res;

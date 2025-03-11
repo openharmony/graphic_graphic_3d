@@ -99,12 +99,6 @@ public:
     void SetSystemGraphUri(const BASE_NS::string& uri) override;
     BASE_NS::string GetSystemGraphUri() override;
 
-#ifdef __PHYSICS_MODULE__
-    void SetCustomRngGroup() override;
-    void SetCustomRngGroupUri(const Core3D::IRenderUtil::CustomRngGroup& rngGroup) override;
-    const Core3D::IRenderUtil::CustomRngGroup& GetCustomRngGroupUri() const override;
-#endif
-
     void AppendCustomRenderNodeGraph(RENDER_NS::RenderHandleReference rng) override;
     void RenderFrame() override;
     bool HasPendingRender() const override;
@@ -152,9 +146,6 @@ private:
     RenderMode mode_ { RenderMode::ALWAYS };
     BASE_NS::string systemGraph_ = "rofs3D://systemGraph.json";
     BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderNodeGraphs_;
-#ifdef __PHYSICS_MODULE__
-    Core3D::IRenderUtil::CustomRngGroup customRngGroup_;
-#endif
 
 private: // locked bits
     mutable std::shared_mutex mutex_;

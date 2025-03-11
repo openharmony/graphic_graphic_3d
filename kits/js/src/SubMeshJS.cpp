@@ -220,13 +220,16 @@ void SubMeshJS::SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 void SubMeshJS::UpdateParentMesh()
 {
     auto success = false;
-    if (auto self = interface_pointer_cast<SCENE_NS::ISubMesh>(GetNativeObject())) {
-        if (auto tro = parentMesh_.GetObject().Native<TrueRootObject>()) {
-            if (auto mesh = static_cast<MeshJS*>(tro->GetInstanceImpl(MeshJS::ID))) {
-                success = mesh->UpdateSubmesh(indexInParent_, self);
-            }
-        }
+    auto self = interface_pointer_cast<SCENE_NS::ISubMesh>(GetNativeObject());
+    auto tro = parentMesh_.GetObject().Native<TrueRootObject>();
+    if (!self || !tro) {
+        LOG_E("self or tro is null");
+        return;
     }
+    if (auto mesh = static_cast<MeshJS*>(tro->GetInstanceImpl(MeshJS::ID))) {
+        success = mesh->UpdateSubmesh(indexInParent_, self);
+    }
+
     if (!success) {
         LOG_E("Unable to update submesh change to scene");
     }

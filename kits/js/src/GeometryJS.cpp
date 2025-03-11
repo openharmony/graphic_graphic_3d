@@ -154,6 +154,10 @@ void GeometryJS::CreateNativeObject(
     }
 
     auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
+    if (!scene) {
+        LOG_E("scene in null");
+        return;
+    }
     // Node creation can fail e.g. due to a bad path. Then we're going to have a null Geometry object.
     auto meshNode = scene->CreateNode(nodePath, SCENE_NS::ClassId::MeshNode).GetResult();
     if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(meshNode)) {

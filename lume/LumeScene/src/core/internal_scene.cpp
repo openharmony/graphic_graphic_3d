@@ -625,24 +625,6 @@ void InternalScene::AppendCustomRenderNodeGraph(RENDER_NS::RenderHandleReference
     customRenderNodeGraphs_.push_back(rng);
 }
 
-#ifdef __PHYSICS_MODULE__
-void InternalScene::SetCustomRngGroup()
-{
-    auto& renderUtil = graphicsContext3D_->GetRenderUtil();
-    renderUtil.UseCustomRngGroup(customRngGroup_);
-}
-
-void InternalScene::SetCustomRngGroupUri(const Core3D::IRenderUtil::CustomRngGroup& rngGroup)
-{
-    customRngGroup_ = rngGroup;
-}
-
-const Core3D::IRenderUtil::CustomRngGroup& InternalScene::GetCustomRngGroupUri() const
-{
-    return customRngGroup_;
-}
-#endif
-
 void InternalScene::SetSystemGraphUri(const BASE_NS::string& uri)
 {
     systemGraph_ = uri;

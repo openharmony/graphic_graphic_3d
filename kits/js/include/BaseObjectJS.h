@@ -258,5 +258,5 @@ auto GetNativeObjectParam(NapiApi::Object args)
     }
     return ret;
 }
-void DebugNativesHavingJS(void);
+void DebugNativesHavingJS();
 #endif

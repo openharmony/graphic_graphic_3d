@@ -156,13 +156,6 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
     nodeSystem = GetSystem<CORE3D_NS::INodeSystem>(*ecs);
     picking = GetInstance<CORE3D_NS::IPicking>(*context.GetInterface<IClassRegister>(), CORE3D_NS::UID_PICKING);
 
-#ifdef __PHYSICS_MODULE__
-    const auto& rngGroup = scene->GetCustomRngGroupUri();
-    if (!(rngGroup.lwrp.empty() && rngGroup.lwrpMsaa.empty() &&
-        rngGroup.hdrp.empty() && rngGroup.hdrpMsaa.empty())) {
-        scene->SetCustomRngGroup();
-    }
-#endif
     if (!EcsListener::Initialize(*this)) {
         CORE_LOG_E("failed to initialize ecs listener");
         return false;
