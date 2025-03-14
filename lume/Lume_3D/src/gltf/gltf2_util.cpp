@@ -830,7 +830,7 @@ string_view ValidatePrimitiveAttributeQuatization(
     if (attributeIndex < countof(ATTRIBUTE_VALIDATION_Q)) {
         auto& validation = ATTRIBUTE_VALIDATION_Q[attributeIndex];
         if (std::none_of(validation.dataTypes.begin(), validation.dataTypes.end(),
-            [accessorType](const DataType& validType) { return validType == accessorType; })) {
+                [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
         } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
             [accessorComponentType](

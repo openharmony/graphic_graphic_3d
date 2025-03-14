@@ -1422,6 +1422,10 @@ void CollectRes(
             imageName.resize(imageName.capacity() - 1);
             const auto nameLen =
                 snprintf(imageName.data(), imageName.size(), "s%u_b%u", imageBinding.set, imageBinding.bind);
+            if (nameLen < 0) {
+                LUME_LOG_E("Could not get imageName, error");
+                return;
+            }
             imageName.resize(nameLen);
         }
         const auto samplerBinding = GetBinding(compiler, remap.sampler_id);
@@ -1429,6 +1433,10 @@ void CollectRes(
             samplerName.resize(samplerName.capacity() - 1);
             const auto nameLen =
                 snprintf(samplerName.data(), samplerName.size(), "s%u_b%u", samplerBinding.set, samplerBinding.bind);
+            if (nameLen < 0) {
+                LUME_LOG_E("Could not get sampleName, error");
+                return;
+            }
             samplerName.resize(nameLen);
         }
 

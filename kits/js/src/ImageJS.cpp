@@ -63,7 +63,8 @@ void ImageJS::DisposeNative(void* sc)
             SetNativeObject(nullptr, false);
             SetNativeObject(nullptr, true);
             if (obj) {
-                BASE_NS::string uri = FetchResourceOrUri(uri_.GetEnv(), uri_.GetObject().ToNapiValue());
+                BASE_NS::string uri;
+                uri = FetchResourceOrUri(uri_.GetEnv(), uri_.GetObject().ToNapiValue());
                 ExecSyncTask([uri, sceneJS]() -> META_NS::IAny::Ptr {
                     if (sceneJS) {
                         sceneJS->StoreBitmap(uri, nullptr);

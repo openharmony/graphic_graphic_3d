@@ -390,9 +390,9 @@ public:
             auto& exportImage = imageArray.emplace_back(make_unique<Image>());
             // sorted for find performance
             if (const auto pos = std::lower_bound(resourceEnties.begin(), resourceEnties.end(), gpuImageHandle,
-                [](ResourceEntity const& info, const RenderHandleReference& gpuImageHandle) {
-                    return info.handle < gpuImageHandle;
-                });
+                    [](ResourceEntity const& info, const RenderHandleReference& gpuImageHandle) {
+                        return info.handle < gpuImageHandle;
+                    });
                 pos != resourceEnties.end() && pos->handle == gpuImageHandle) {
                 if (auto id = uriManager.GetComponentId(pos->entity); id != IComponentManager::INVALID_COMPONENT_ID) {
                     exportImage->uri = uriManager.Get(id).uri;
@@ -445,7 +445,7 @@ std::pair<Data*, size_t> ResolveGltfAndResourceIndex(
 
         size_t resourceIndex = GLTF_INVALID_INDEX;
         if (const auto result = std::from_chars(
-            resourceIndexString.data(), resourceIndexString.data() + resourceIndexString.size(), resourceIndex);
+                resourceIndexString.data(), resourceIndexString.data() + resourceIndexString.size(), resourceIndex);
             result.ec != std::errc()) {
             return { nullptr, GLTF_INVALID_INDEX };
         }
@@ -773,18 +773,15 @@ Accessor* AnimationOutput(const IAnimationOutputComponentManager& outputManager,
             case AnimationPath::SCALE: {
                 accessor.count = static_cast<uint32_t>(outputData.size() / sizeof(Math::Vec3));
                 accessor.type = DataType::VEC3;
-            }
-                break;
+            } break;
             case AnimationPath::ROTATION: {
                 accessor.count = static_cast<uint32_t>(outputData.size() / sizeof(Math::Vec4));
                 accessor.type = DataType::VEC4;
-            }
-                break;
+            } break;
             case AnimationPath::WEIGHTS: {
                 accessor.count = static_cast<uint32_t>(outputData.size() / sizeof(float));
                 accessor.type = DataType::SCALAR;
-            }
-                break;
+            } break;
             default:
                 return nullptr;
         }
@@ -2216,7 +2213,7 @@ void SaveGLB(const Data& data, IFile& file, string_view versionString)
         return;
     }
     if (const auto pad = (jsonString.size() % 4); pad) {
-        jsonString.append(4 - pad, ' '); // 4:param
+        jsonString.append(4 - pad, ' ');
     }
 
     const auto jsonSize = static_cast<uint32_t>(jsonString.size());

@@ -168,7 +168,6 @@ ohos_source_set("lume_scenewidget_src") {
     "src/mesh/shader.cpp",
     "src/mesh/shader.h",
     "src/mesh/shader_util.cpp",
-    "src/mesh/shader_util.h",
     "src/mesh/submesh.cpp",
     "src/mesh/submesh.h",
     "src/mesh/texture.cpp",

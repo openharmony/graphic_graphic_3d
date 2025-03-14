@@ -1299,8 +1299,8 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
     }
 }
 
-bool BuildAnimationInput(GLTF2::Data const& data, IFileManager& fileManager, GLTFImportResult& result,
-    GLTF2::Accessor& inputAccessor, AnimationInputComponent& inputComponent)
+bool BuildAnimationInput(GLTF2::Data const& data, IFileManager& fileManager, GLTF2::Accessor& inputAccessor,
+    AnimationInputComponent& inputComponent)
 {
     const GLTF2::GLTFLoadDataResult animationInputDataResult = LoadData(inputAccessor);
     if (animationInputDataResult.success) {
@@ -1325,8 +1325,8 @@ void AppendAnimationOutputData(uint64_t outputTypeHash, const GLTF2::GLTFLoadDat
     outputComponent.data.append(dataView.cbegin(), dataView.cend());
 }
 
-bool BuildAnimationOutput(GLTF2::Data const& data, IFileManager& fileManager, GLTFImportResult& result,
-    GLTF2::Accessor& outputAccessor, GLTF2::AnimationPath path, AnimationOutputComponent& outputComponent)
+bool BuildAnimationOutput(GLTF2::Data const& data, IFileManager& fileManager, GLTF2::Accessor& outputAccessor,
+    GLTF2::AnimationPath path, AnimationOutputComponent& outputComponent)
 {
     const GLTF2::GLTFLoadDataResult animationOutputDataResult = LoadData(outputAccessor);
     if (animationOutputDataResult.success) {
@@ -2321,6 +2321,7 @@ struct GLTF2Importer::ImporterTask {
     enum class State { Queued, Gather, Import, Finished };
 
     string name;
+    string errors;
     uint64_t id;
     bool success { true };
 
@@ -2998,6 +2999,7 @@ void GLTF2Importer::HandleGatherTasks()
                     result_.success = false;
                     result_.error += error + '\n';
                 }
+                result_.error += task->errors;
             }
         }
     }
@@ -3010,11 +3012,10 @@ void GLTF2Importer::PrepareBufferTasks()
     auto task = make_unique<ImporterTask>();
     task->name = "Load buffers";
     task->phase = ImportPhase::BUFFERS;
-    task->gather = [this]() -> bool {
+    task->gather = [this, t = task.get()]() -> bool {
         BufferLoadResult result = LoadBuffers(data_, engine_.GetFileManager());
-        result_.success = result_.success && result.success;
-        result_.error += result.error;
-        return result_.success;
+        t->errors += result.error;
+        return result.success;
     };
     QueueTask(BASE_NS::move(task));
 
@@ -3093,8 +3094,8 @@ void GLTF2Importer::QueueImage(size_t i, string&& uri, string&& name)
                 ImportTexture(t->data.uri, move(result.image), *t->data.staging, importer->gpuResourceManager_);
         } else {
             CORE_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), result.error);
-            importer->result_.error += result.error;
-            importer->result_.error += '\n';
+            t->errors += result.error;
+            t->errors += '\n';
         }
 
         return true;
@@ -3337,8 +3338,7 @@ void GLTF2Importer::PrepareMeshTasks()
         if (EntityUtil::IsValid(meshEntity)) {
             // Already exists.
             result_.data.meshes[i] = ecs_->GetEntityManager().GetReferenceCounted(meshEntity);
-            CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
-            continue;
+            CORE_LOG_E("Resource already exists, DO NOT skipping ('%s')", uri.c_str());
         }
 
         auto task = make_unique<GatheredDataTask<GatherMeshDataResult>>();
@@ -3398,7 +3398,7 @@ GLTF2Importer::PrepareAnimationInputTask(
         task->name = "Import animation input";
         task->phase = ImportPhase::ANIMATION_SAMPLERS;
         task->gather = [this, accessor = track.sampler->input, t = task.get()]() -> bool {
-            return BuildAnimationInput(*data_, engine_.GetFileManager(), result_, *accessor, t->data.component);
+            return BuildAnimationInput(*data_, engine_.GetFileManager(), *accessor, t->data.component);
         };
         task->import = [em = &ecs_->GetEntityManager(), animationInputManager, t = task.get()]() -> bool {
             t->data.entity = em->CreateReferenceCounted();
@@ -3426,7 +3426,7 @@ GLTF2Importer::PrepareAnimationOutputTask(
         task->name = "Import animation output";
         task->phase = ImportPhase::ANIMATION_SAMPLERS;
         task->gather = [this, accessor = track.sampler->output, path = track.channel.path, t = task.get()]() -> bool {
-            return BuildAnimationOutput(*data_, engine_.GetFileManager(), result_, *accessor, path, t->data.component);
+            return BuildAnimationOutput(*data_, engine_.GetFileManager(), *accessor, path, t->data.component);
         };
         task->import = [em = &ecs_->GetEntityManager(), animationOutputManager, t = task.get()]() -> bool {
             t->data.entity = em->CreateReferenceCounted();

@@ -305,7 +305,7 @@ NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::P
     }
     return StoreJsObj(obj, nodeJS, pname);
 }
-void DebugNativesHavingJS()
+void DebugNativesHavingJS(void)
 {
     for (auto&& v : META_NS::GetObjectRegistry().GetAllObjectInstances()) {
         if (auto i = interface_cast<META_NS::IMetadata>(v)) {

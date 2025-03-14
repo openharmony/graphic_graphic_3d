@@ -85,6 +85,12 @@ public:
     virtual void SetSystemGraphUri(const BASE_NS::string& uri) = 0;
     virtual BASE_NS::string GetSystemGraphUri() = 0;
 
+#ifdef __PHYSICS_MODULE__
+    virtual void SetCustomRngGroup() = 0;
+    virtual void SetCustomRngGroupUri(const Core3D::IRenderUtil::CustomRngGroup& rngGroup) = 0;
+    virtual const Core3D::IRenderUtil::CustomRngGroup& GetCustomRngGroupUri() const = 0;
+#endif
+
     virtual void AppendCustomRenderNodeGraph(RENDER_NS::RenderHandleReference rng) = 0;
     virtual void RenderFrame() = 0;
     virtual bool HasPendingRender() const = 0;
