@@ -18,7 +18,7 @@ import("//foundation/arkui/ace_engine/ace_config.gni")
 import("//foundation/graphic/graphic_2d/graphic_config.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
-module_output_path = "graphic_3d/3d_widget_adapter_test"
+module_output_path = "graphic_3d/graphic_3d/3d_widget_adapter_test"
 
 ohos_unittest("3d_widget_adpater_test") {
   module_out_path = module_output_path
