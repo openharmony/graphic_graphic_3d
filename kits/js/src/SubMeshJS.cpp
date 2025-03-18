@@ -137,7 +137,8 @@ napi_value SubMeshJS::GetAABB(NapiApi::FunctionContext<>& ctx)
         // return undefined.. as no actual node.
         return ctx.GetUndefined();
     }
-    BASE_NS::Math::Vec3 aabmin, aabmax;
+    BASE_NS::Math::Vec3 aabmin;
+    BASE_NS::Math::Vec3 aabmax;
     aabmin = node->AABBMin()->GetValue();
     aabmax = node->AABBMax()->GetValue();
     NapiApi::Env env(ctx.Env());

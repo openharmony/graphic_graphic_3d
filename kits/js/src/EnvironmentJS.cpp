@@ -61,7 +61,8 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
 
     NapiApi::Object exp(env, exports);
 
-    napi_value eType, v;
+    napi_value eType;
+    napi_value v;
     napi_create_object(env, &eType);
 #define DECL_ENUM(enu, x)                                      \
     napi_create_uint32(env, EnvironmentBackgroundType::x, &v); \

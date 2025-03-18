@@ -61,7 +61,8 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
     mis->StoreCtor(class_name, func);
 
     NapiApi::Object exp1(env, exports);
-    napi_value eType1, v1;
+    napi_value eType1;
+    napi_value v1;
     napi_create_object(env, &eType1);
 #define DECL_ENUM(enu, x)                         \
     napi_create_uint32(env, MaterialType::x, &v1); \
@@ -73,7 +74,8 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
     exp1.Set("MaterialType", eType1);
 
     NapiApi::Object exp2(env, exports);
-    napi_value eType2, v2;
+    napi_value eType2;
+    napi_value v2;
     napi_create_object(env, &eType2);
 #define DECL_ENUM(enu, x)                         \
     napi_create_uint32(env, CullMode::x, &v2); \
