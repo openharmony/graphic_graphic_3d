@@ -26,6 +26,8 @@ config("lume3d_config") {
     "${LUME_CORE3D_PATH}/api",
     "${LUME_META_PATH}/include",
     "${LUME_SCENE_PATH}/include",
+    "${LUME_FONT_PATH}/include",
+    "//foundation/graphic/graphic_3d/camera_preview_plugin/api/",
   ]
 
   if (current_os == "ohos") {
@@ -37,7 +39,11 @@ config("lume3d_config") {
       "${LUME_JPG_PATH}/api",
     ]
   }
-  configs = []
+  configs = [
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_ROOT}/LumeFont:lume_font_api",
+    "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
+  ]
 
   cflags = [
     "-Wall",
@@ -88,6 +94,12 @@ config("scene_adapter_config") {
   if (KIT_3D_ENABLE) {
     defines = [ "KIT_3D_ENABLE=$KIT_3D_ENABLE" ]
   }
+  if (current_os == "ohos") {
+    defines += [
+      "__OHOS_PLATFORM__",
+      "__SCENE_ADAPTER__",
+    ]
+  }
 }
 
 group("sceneAdapterInterface") {
@@ -116,12 +128,10 @@ ohos_source_set("scene_adapter_source") {
   ]
 
   external_deps = [
-    "ability_runtime:ability_context_native",
     "ability_runtime:ability_manager",
     "ability_runtime:app_context",
     "ability_runtime:data_ability_helper",
     "ability_runtime:napi_base_context",
-    "ability_runtime:napi_common",
     "bundle_framework:appexecfwk_base",
     "bundle_framework:appexecfwk_core",
     "c_utils:utils",
@@ -129,11 +139,14 @@ ohos_source_set("scene_adapter_source") {
     "graphic_2d:GLESv3",
     "graphic_2d:librender_service_client",
     "graphic_surface:surface",
+    "graphic_surface:sync_fence",
     "hilog:libhilog",
     "hitrace:hitrace_meter",
     "init:libbegetutil",
+    "input:libmmi-client",
     "ipc:ipc_single",
     "napi:ace_napi",
+    "vulkan-headers:vulkan_headers",
   ]
   defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
 

@@ -62,7 +62,8 @@
           "//foundation/graphic/graphic_3d/lume/LumeScene:libPluginSceneWidget",
           "//foundation/graphic/graphic_3d/kits/js:libscene",
           "//foundation/graphic/graphic_3d/lume/LumeFont:libPluginFont",
-          "//foundation/graphic/graphic_3d/lume/Lume_3DText:libPluginAGP3DText"
+          "//foundation/graphic/graphic_3d/lume/Lume_3DText:libPluginAGP3DText",
+          "//foundation/graphic/graphic_3d/camera_preview_plugin:libPluginCamPreview"
         ],
         "inner_kits": [
           {
