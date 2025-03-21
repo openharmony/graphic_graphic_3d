@@ -49,7 +49,7 @@ uint32_t GetGeneration(const Entity& e)
 
 Entity MakeEntityId(uint32_t g, uint32_t i)
 {
-    return { (static_cast<uint64_t>(g) << 32l) | i };
+    return { (static_cast<uint64_t>(g) << 32L) | i };
 }
 } // namespace
 
