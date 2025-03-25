@@ -941,7 +941,8 @@ void EnsureDynamicArraySize(IPropertyHandle* propertyHandle, string_view propert
         return;
     }
 
-    string arrayPath, arrayIndex;
+    string arrayPath;
+    string arrayIndex;
     arrayPath = propertyPath.substr(0, separatorPosition);
     arrayIndex = propertyPath.substr(separatorPosition + 1, separatorEndPosition - separatorPosition - 1);
 
