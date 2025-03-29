@@ -31,6 +31,9 @@ using namespace CORE_NS;
 
 namespace JPGPlugin {
 namespace {
+constexpr uint32_t MAX_IMAGE_EXTENT { 32767U };
+constexpr int IMG_SIZE_LIMIT_2GB = std::numeric_limits<int>::max();
+
 uint8_t g_sRgbPremultiplyLookup[256u * 256u] = { 0 };
 
 void InitializeSRGBTable()
@@ -359,11 +362,20 @@ public:
             height = cinfo.output_height;
             channels = static_cast<uint32_t>(cinfo.output_components);
             is16bpc = cinfo.data_precision > 8; // 8: index
+            if (channels <= 0 || channels > 4) { // 0: invalid channel num, 4: RGBA
+                jpeg_destroy_decompress(&cinfo);
+                return ResultFailure("Invalid number of color channels.");
+            }
 
+            const size_t imageSize = width * height * channels;
+            if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
+                jpeg_destroy_decompress(&cinfo);
+                return ResultFailure("Image too large.");
+            }
             // allocate space for the whole image and and array of row pointers. libjpg writes data to each row pointer.
             // alternative would be to use a different api which writes only one row and feed it the correct address
             // every time.
-            image = BASE_NS::make_unique<uint8_t[]>(width * height * channels);
+            image = BASE_NS::make_unique<uint8_t[]>(imageSize);
             rows = BASE_NS::make_unique<uint8_t* []>(height);
             // fill rows depending on should there be a vertical flip or not.
             auto row = rows.get();

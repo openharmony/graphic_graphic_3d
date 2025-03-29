@@ -47,9 +47,6 @@ private:
     void SetAlphaCutoff(NapiApi::FunctionContext<float>& ctx);
     napi_value GetRenderSort(NapiApi::FunctionContext<>& ctx);
     void SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-
-    NapiApi::StrongRef blend_;
-    NapiApi::StrongRef renderSort_;
 };
 
 class MaterialJS : BaseObject<MaterialJS>, BaseMaterial {

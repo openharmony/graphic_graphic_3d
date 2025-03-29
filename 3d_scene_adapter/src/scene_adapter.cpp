@@ -236,8 +236,8 @@ bool SceneAdapter::LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreate
         return false;
     }
     WIDGET_LOGD("load engine suceess!");
-    
-    const BASE_NS::Uid DefaultPluginList[] {
+
+    BASE_NS::vector<BASE_NS::Uid> DefaultPluginVector = {
         CAM_PREVIEW_NS::UID_CAMERA_PREVIEW_PLUGIN,
         SCENE_NS::UID_SCENE_PLUGIN,
 #if defined(USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN) && USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN
@@ -245,6 +245,7 @@ bool SceneAdapter::LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreate
         PNGPlugin::UID_PNG_PLUGIN,
 #endif
     };
+    const BASE_NS::array_view<BASE_NS::Uid> DefaultPluginList(DefaultPluginVector.data(), DefaultPluginVector.size());
     CORE_NS::CreatePluginRegistry(platformCreateInfo);
     if (!CORE_NS::GetPluginRegister().LoadPlugins(DefaultPluginList)) {
         WIDGET_LOGE("fail to load scene widget plugin");
@@ -459,6 +460,14 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
             }
         };
         swapchainHandle_ = device.CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
+        if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
+            auto cams = scene->GetCameras().GetResult();
+            if (!cams.empty()) {
+                for (auto c : cams) {
+                    AttachSwapchain(interface_pointer_cast<META_NS::IObject>(c));
+                }
+            }
+        }
         return META_NS::IAny::Ptr {};
     });
 
@@ -471,13 +480,17 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
 
 void SceneAdapter::CreateRenderFunction()
 {
+    propSyncSync_ = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
+        PropSync();
+        return META_NS::IAny::Ptr {};
+    });
     // Task used for oneshot renders
-    singleFrameAsync = META_NS::MakeCallback<META_NS::ITaskQueueTask>([this]() {
+    singleFrameAsync_ = META_NS::MakeCallback<META_NS::ITaskQueueTask>([this]() {
         RenderFunction();
         return 0;
     });
     // Task used for oneshot synchronous renders
-    singleFrameSync = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
+    singleFrameSync_ = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
         RenderFunction();
         return META_NS::IAny::Ptr {};
     });
@@ -538,6 +551,19 @@ void SceneAdapter::ShutdownPluginRegistry()
     CORE_NS::GetVersion = nullptr;
 }
 
+void SceneAdapter::PropSync()
+{
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    if (!scene) {
+        return;
+    }
+    auto internal = scene->GetInternalScene();
+    if (!internal) {
+        return;
+    }
+    internal->SyncProperties();
+}
+
 void SceneAdapter::RenderFunction()
 {
     WIDGET_SCOPED_TRACE("SceneAdapter::RenderFunction");
@@ -550,11 +576,11 @@ void SceneAdapter::RenderFunction()
         auto cams = scene->GetCameras().GetResult();
         if (!cams.empty()) {
             for (auto c : cams) {
-                AttachSwapchain(interface_pointer_cast<META_NS::IObject>(c), swapchainHandle_);
+                AttachSwapchain(interface_pointer_cast<META_NS::IObject>(c));
             }
         }
     }
-    scene->GetInternalScene()->Update();
+    scene->GetInternalScene()->Update(false);
     bool receiveBuffer = receiveBuffer_;
     receiveBuffer_ = false;
 
@@ -628,10 +654,19 @@ void SceneAdapter::RenderFrame(bool needsSyncPaint)
         renderTask = nullptr;
     }
 
-    if (!needsSyncPaint && singleFrameAsync) {
-        renderTask = engineThread->AddTask(singleFrameAsync);
-    } else if (singleFrameSync) {
-        engineThread->AddWaitableTask(singleFrameSync)->Wait();
+    if (!singleFrameAsync_ || !singleFrameSync_ || !propSyncSync_) {
+        CreateRenderFunction();
+    }
+
+    if (propSyncSync_) {
+        WIDGET_SCOPED_TRACE("SceneAdapter::propSyncSync_");
+        engineThread->AddWaitableTask(propSyncSync_)->Wait();
+    }
+
+    if (!needsSyncPaint && singleFrameAsync_) {
+        renderTask = engineThread->AddTask(singleFrameAsync_);
+    } else if (singleFrameSync_) {
+        engineThread->AddWaitableTask(singleFrameSync_)->Wait();
     } else {
         WIDGET_LOGE("No render function available.");
     }
@@ -671,14 +706,18 @@ void SceneAdapter::Deinit()
     engineThread->AddWaitableTask(func)->Wait();
 
     sceneWidgetObj_.reset();
-    singleFrameAsync.reset();
-    singleFrameSync.reset();
+    singleFrameAsync_.reset();
+    singleFrameSync_.reset();
+    propSyncSync_.reset();
     needsRepaint_ = false;
 }
 
-void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj, RENDER_NS::RenderHandleReference swapchain)
+void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
 {
     WIDGET_LOGI("attach swapchain");
+    if (!swapchainHandle_) {
+        return;
+    }
     auto node = interface_cast<SCENE_NS::INode>(cameraObj);
     if (node == nullptr) {
         WIDGET_LOGE("cast cameraObj failed in AttachSwapchain.");
@@ -691,7 +730,6 @@ void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj, RENDER_NS::R
     }
 
     bitmap_ = META_NS::GetObjectRegistry().Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap);
-    const auto &info = textureLayer_->GetTextureInfo();
     if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
         i->SetRenderHandle(scene->GetInternalScene(), swapchainHandle_);
     }

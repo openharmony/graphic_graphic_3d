@@ -53,7 +53,6 @@ public:
          * The resource is a Image.
          */
         IMAGE = 7,
-
         /**
          * The resource is a MeshResource.
          */

@@ -84,6 +84,8 @@ public:
     void Ref() override;
     void Unref() override;
 
+    void EnablePrimitiveRestart(size_t index);
+
     struct BufferHandles {
         RENDER_NS::RenderHandleReference vertexBuffer;
     };

@@ -31,6 +31,7 @@ public:
 
     void RegisterEcsObject(const IEcsObject::Ptr&);
     void DeregisterEcsObject(const IEcsObject::ConstPtr&);
+    void DeregisterEcsObject(CORE_NS::Entity);
 
     IEcsObject::Ptr FindEcsObject(CORE_NS::Entity ent) const;
 

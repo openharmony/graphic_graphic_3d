@@ -168,6 +168,9 @@ INode::Ptr InternalScene::ConstructNodeImpl(CORE_NS::Entity ent, INode::Ptr node
     auto& r = META_NS::GetObjectRegistry();
 
     auto eobj = ecs_->GetEcsObject(ent);
+    if (!eobj) {
+        return nullptr;
+    }
     AttachComponents(node, eobj, ent);
 
     if (!acc->SetEcsObject(eobj)) {
@@ -287,29 +290,70 @@ INode::Ptr InternalScene::FindNode(BASE_NS::string_view path, META_NS::ObjectId 
     return nullptr;
 }
 
-void InternalScene::RecursiveRemoveNodes(const INode::Ptr& node)
+void InternalScene::ReleaseChildNodes(const IEcsObject::Ptr& eobj)
+{
+    if (auto n = ecs_->GetNode(eobj->GetEntity())) {
+        for (auto&& c : n->GetChildren()) {
+            auto it = nodes_.find(c->GetEntity());
+            if (it != nodes_.end()) {
+                auto nn = it->second;
+                ReleaseNode(BASE_NS::move(nn), true);
+            }
+        }
+    }
+}
+
+bool InternalScene::ReleaseNode(INode::Ptr&& node, bool recursive)
 {
     if (node) {
         IEcsObject::Ptr eobj;
         if (auto acc = interface_cast<IEcsObjectAccess>(node)) {
             eobj = acc->GetEcsObject();
-            nodes_.erase(eobj->GetEntity());
         }
-        for (auto& n : node->GetChildren().GetResult()) {
-            RecursiveRemoveNodes(n);
-        }
+        node.reset();
         if (eobj) {
-            ecs_->RemoveEcsObject(eobj);
+            auto it = nodes_.find(eobj->GetEntity());
+            if (it != nodes_.end()) {
+                // are we the only owner?
+                if (it->second.use_count() == 1) {
+                    node = BASE_NS::move(it->second);
+                    nodes_.erase(it);
+                }
+            }
+            if (recursive) {
+                ReleaseChildNodes(eobj);
+            }
+            if (node) {
+                ecs_->RemoveEcsObject(eobj);
+                return true;
+            }
         }
     }
+    return false;
 }
 
-void InternalScene::ReleaseNode(const INode::Ptr& node)
+void InternalScene::RemoveNodesRecursively(CORE_NS::Entity ent)
 {
-    RecursiveRemoveNodes(node);
-    if (auto acc = interface_cast<IEcsObjectAccess>(node)) {
-        ecs_->RemoveNode(acc->GetEcsObject()->GetEntity());
+    if (auto n = ecs_->GetNode(ent)) {
+        for (auto&& c : n->GetChildren()) {
+            RemoveNodesRecursively(c->GetEntity());
+        }
     }
+    nodes_.erase(ent);
+    ecs_->RemoveEntity(ent);
+}
+
+bool InternalScene::RemoveNode(const INode::Ptr& node)
+{
+    if (node) {
+        if (auto acc = interface_cast<IEcsObjectAccess>(node)) {
+            if (auto eobj = acc->GetEcsObject()) {
+                RemoveNodesRecursively(eobj->GetEntity());
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 BASE_NS::vector<INode::Ptr> InternalScene::GetChildren(const IEcsObject::Ptr& obj) const
@@ -331,6 +375,9 @@ bool InternalScene::RemoveChild(
     if (auto node = ecs_->GetNode(object->GetEntity())) {
         if (auto childNode = ecs_->GetNode(child->GetEntity())) {
             ret = node->RemoveChild(*childNode);
+            if (ret) {
+                childNode->SetEnabled(false);
+            }
         }
     }
     return ret;
@@ -344,6 +391,7 @@ bool InternalScene::AddChild(const BASE_NS::shared_ptr<IEcsObject>& object, cons
             if (auto childNode = ecs_->GetNode(ecsobj->GetEntity())) {
                 if (node->InsertChild(index, *childNode)) {
                     nodes_[ecsobj->GetEntity()] = child;
+                    childNode->SetEnabled(true);
                     ret = true;
                 }
             }
@@ -389,10 +437,17 @@ bool InternalScene::UpdateSyncProperties(bool resetPending)
     return pending;
 }
 
-void InternalScene::Update()
+void InternalScene::Update(bool syncProperties)
 {
     using namespace std::chrono;
-    bool pending = UpdateSyncProperties(true);
+    bool pending;
+    if (syncProperties) {
+        pending = UpdateSyncProperties(true);
+    } else {
+        std::unique_lock lock { mutex_ };
+        pending = pendingRender_;
+        pendingRender_ = false;
+    }
 
     ecs_->ecs->ProcessEvents();
 
@@ -540,18 +595,15 @@ bool InternalScene::SetRenderMode(RenderMode mode)
         mode == RenderMode::IF_DIRTY ? CORE_NS::IEcs::RENDER_IF_DIRTY : CORE_NS::IEcs::RENDER_ALWAYS);
     return true;
 }
-
 RenderMode InternalScene::GetRenderMode() const
 {
     return mode_;
 }
-
 void InternalScene::RenderFrame()
 {
     std::unique_lock lock { mutex_ };
     pendingRender_ = true;
 }
-
 bool InternalScene::HasPendingRender() const
 {
     std::unique_lock lock { mutex_ };

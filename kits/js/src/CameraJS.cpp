@@ -22,12 +22,17 @@
 #include <scene/interface/intf_raycast.h>
 #include <scene/interface/intf_scene.h>
 
+#ifdef __SCENE_ADAPTER__
+#include "scene_adapter/scene_adapter.h"
+#endif
+
 #include "PromiseBase.h"
 #include "Raycast.h"
 #include "SceneJS.h"
 #include "Vec2Proxy.h"
 #include "Vec3Proxy.h"
 static constexpr uint32_t ACTIVE_RENDER_BIT = 1; //  CameraComponent::ACTIVE_RENDER_BIT  comes from lume3d...
+const float CAM_INDEX_RENDER = 15.7f;
 
 void* CameraJS::GetInstanceImpl(uint32_t id)
 {
@@ -35,19 +40,14 @@ void* CameraJS::GetInstanceImpl(uint32_t id)
         return this;
     return NodeImpl::GetInstanceImpl(id);
 }
-void CameraJS::DisposeNative(void*)
+void CameraJS::DisposeNative(void* sc)
 {
     if (!disposed_) {
         LOG_V("CameraJS::DisposeNative");
         disposed_ = true;
 
-        NapiApi::Object obj = scene_.GetObject();
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
+        if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
+            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
         // make sure we release postProc settings
@@ -75,7 +75,7 @@ void CameraJS::DisposeNative(void*)
             if (auto camnode = interface_pointer_cast<SCENE_NS::INode>(cam)) {
                 cam->SetActive(false);
                 if (auto scene = camnode->GetScene()) {
-                    scene->ReleaseNode(camnode);
+                    scene->ReleaseNode(BASE_NS::move(camnode), false);
                 }
             }
         }
@@ -130,12 +130,8 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject<CameraJS>(e, i
     }
 
     NapiApi::Object meJs(fromJs.This());
-    auto* tro = scene.Native<TrueRootObject>();
-    if (tro) {
-        auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-        }
+    if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+        sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
 
     NapiApi::Object args = fromJs.Arg<1>();
@@ -197,6 +193,7 @@ void CameraJS::Finalize(napi_env env)
             camera->SetActive(false);
         }
     }
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
     BaseObject<CameraJS>::Finalize(env);
 }
 CameraJS::~CameraJS()

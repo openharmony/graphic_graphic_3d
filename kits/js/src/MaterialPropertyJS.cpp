@@ -70,9 +70,8 @@ MaterialPropertyJS::~MaterialPropertyJS()
 }
 void* MaterialPropertyJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == MaterialPropertyJS::ID) {
+    if (id == MaterialPropertyJS::ID)
         return this;
-    }
     return nullptr;
 }
 napi_value MaterialPropertyJS::Dispose(NapiApi::FunctionContext<>& ctx)

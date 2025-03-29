@@ -31,21 +31,26 @@ void* SubMeshJS::GetInstanceImpl(uint32_t id)
     // no id will match
     return nullptr;
 }
-void SubMeshJS::DisposeNative(void*)
+void SubMeshJS::DisposeNative(void* scn)
 {
-    // do nothing for now..
+    if (disposed_) {
+        return;
+    }
+    disposed_ = true;
     LOG_V("SubMeshJS::DisposeNative");
-    NapiApi::Object obj = scene_.GetObject();
-    auto* tro = obj.Native<TrueRootObject>();
-    if (tro) {
-        SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-        }
+    if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
+        sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
     aabbMin_.reset();
     aabbMax_.reset();
+    parentMesh_.Reset();
     scene_.Reset();
+}
+
+void SubMeshJS::Finalize(napi_env env)
+{
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
+    BaseObject::Finalize(env);
 }
 
 napi_value SubMeshJS::Dispose(NapiApi::FunctionContext<>& ctx)
@@ -64,13 +69,7 @@ napi_value SubMeshJS::Dispose(NapiApi::FunctionContext<>& ctx)
             }
         }
         if (!ptr) {
-            NapiApi::Object obj = scene_.GetObject();
-            if (obj) {
-                auto* tro = obj.Native<TrueRootObject>();
-                if (tro) {
-                    ptr = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-                }
-            }
+            ptr = GetJsWrapper<SceneJS>(scene_.GetObject());
         }
         SetNativeObject(nullptr, true);
         instance->DisposeNative(ptr);
@@ -116,12 +115,8 @@ SubMeshJS::SubMeshJS(napi_env e, napi_callback_info i) : BaseObject<SubMeshJS>(e
         // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
         NapiApi::Object meJs(fromJs.This());
         NapiApi::Object scene = fromJs.Arg<0>();
-        auto* tro = scene.Native<TrueRootObject>();
-        if (tro) {
-            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-            }
+        if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
         }
     }
 }
@@ -220,16 +215,11 @@ void SubMeshJS::SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 void SubMeshJS::UpdateParentMesh()
 {
     auto success = false;
-    auto self = interface_pointer_cast<SCENE_NS::ISubMesh>(GetNativeObject());
-    auto tro = parentMesh_.GetObject().Native<TrueRootObject>();
-    if (!self || !tro) {
-        LOG_E("self or tro is null");
-        return;
+    if (auto self = interface_pointer_cast<SCENE_NS::ISubMesh>(GetNativeObject())) {
+        if (auto mesh = GetJsWrapper<MeshJS>(parentMesh_.GetObject())) {
+            success = mesh->UpdateSubmesh(indexInParent_, self);
+        }
     }
-    if (auto mesh = static_cast<MeshJS*>(tro->GetInstanceImpl(MeshJS::ID))) {
-        success = mesh->UpdateSubmesh(indexInParent_, self);
-    }
-
     if (!success) {
         LOG_E("Unable to update submesh change to scene");
     }

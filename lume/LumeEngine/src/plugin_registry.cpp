@@ -336,7 +336,7 @@ bool PluginRegistry::LoadPlugins(const array_view<const Uid> pluginUids)
         auto end = plugins.end();
         for (const Uid& uid : toLoad) {
             if (auto pos = std::find_if(
-                    begin, end, [uid](const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uid; });
+                begin, end, [uid](const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uid; });
                 pos != end) {
                 std::rotate(begin, pos, end);
                 ++begin;
@@ -395,7 +395,7 @@ void PluginRegistry::UnloadPlugins(const array_view<const Uid> pluginUids)
                                const array_view<const Uid>& pluginUids, auto& recurseRef) -> void {
                 for (const auto& uid : pluginUids) {
                     if (auto pos = std::find_if(plugins.begin(), plugins.end(),
-                            [uid](const IPlugin* pl) { return pl && pl->version.uid == uid; });
+                        [uid](const IPlugin* pl) { return pl && pl->version.uid == uid; });
                         pos != plugins.end()) {
                         const auto index = static_cast<size_t>(std::distance(plugins.begin(), pos));
                         if (--pluginDatas[index].refcnt <= 0) {
@@ -472,7 +472,7 @@ array_view<const ITypeInfo* const> PluginRegistry::GetTypeInfos(const Uid& typeU
 void PluginRegistry::AddListener(ITypeInfoListener& listener)
 {
     if (std::none_of(typeInfoListeners_.begin(), typeInfoListeners_.end(),
-            [adding = &listener](const auto& current) { return current == adding; })) {
+        [adding = &listener](const auto& current) { return current == adding; })) {
         typeInfoListeners_.push_back(&listener);
     }
 }
@@ -655,7 +655,7 @@ void PluginRegistry::RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, bo
         CORE_LOG_D("\tVersion Info: %s", plugin.version.GetVersionString());
     }
     if (std::any_of(plugins_.begin(), plugins_.end(),
-            [&plugin](const IPlugin* pl) { return strcmp(plugin.name, pl->name) == 0; })) {
+        [&plugin](const IPlugin* pl) { return strcmp(plugin.name, pl->name) == 0; })) {
         CORE_LOG_W("\tSkipping duplicate plugin: %s!", plugin.name);
         return;
     }
@@ -671,7 +671,7 @@ void PluginRegistry::RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, bo
     plugins_.push_back(&plugin);
     for (const auto& dependency : plugin.pluginDependencies) {
         if (auto pos = std::find_if(plugins_.begin(), plugins_.end(),
-                [dependency](const IPlugin* plugin) { return plugin->version.uid == dependency; });
+            [dependency](const IPlugin* plugin) { return plugin->version.uid == dependency; });
             pos != plugins_.end()) {
             const auto index = static_cast<size_t>(std::distance(plugins_.begin(), pos));
             ++pluginDatas_[index].refcnt;

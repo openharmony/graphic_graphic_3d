@@ -35,6 +35,7 @@ public:
     NapiApi::StrongRef GetGeometryDefinition() const;
 
 private:
+    void Finalize(napi_env env) override;
     void DisposeNative(void*) override;
     // This is a temporary solution. When IMeshResource is implemented, this can be removed.
     NapiApi::StrongRef geometryDefinition_ {};

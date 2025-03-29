@@ -415,7 +415,7 @@ constexpr const FormatProperties& GetFormatSpec(Format format)
         [](const FormatProperties& lhs, const FormatProperties& rhs) { return lhs.format < rhs.format; }));
 #endif
     if (auto pos = LowerBound(std::begin(DATA_FORMATS), std::end(DATA_FORMATS), format,
-            [](const FormatProperties& element, Format value) { return element.format < value; });
+        [](const FormatProperties& element, Format value) { return element.format < value; });
         (pos != std::end(DATA_FORMATS)) && (pos->format == format)) {
         return *pos;
     }
@@ -1267,7 +1267,7 @@ void MeshBuilder::SetJointData(
         MeshComponent::Submesh& submeshDesc = submeshes_[submeshIndex];
         const SubmeshExt& submesh = submeshInfos_[submeshIndex];
         if (const auto* indexAttributeDesc = GetVertexAttributeDescription(
-                MeshComponent::Submesh::DM_VB_JOI, vertexInputDeclaration_.attributeDescriptions);
+            MeshComponent::Submesh::DM_VB_JOI, vertexInputDeclaration_.attributeDescriptions);
             indexAttributeDesc) {
             if (const VertexInputDeclaration::VertexInputBindingDescription* bindingDesc = GetVertexBindingeDescription(
                     indexAttributeDesc->binding, vertexInputDeclaration_.bindingDescriptions);
@@ -1283,7 +1283,7 @@ void MeshBuilder::SetJointData(
             }
         }
         if (const auto* weightAttributeDesc = GetVertexAttributeDescription(
-                MeshComponent::Submesh::DM_VB_JOW, vertexInputDeclaration_.attributeDescriptions);
+            MeshComponent::Submesh::DM_VB_JOW, vertexInputDeclaration_.attributeDescriptions);
             weightAttributeDesc) {
             if (const VertexInputDeclaration::VertexInputBindingDescription* bindingDesc = GetVertexBindingeDescription(
                     weightAttributeDesc->binding, vertexInputDeclaration_.bindingDescriptions);
@@ -1643,6 +1643,16 @@ void MeshBuilder::Unref()
 {
     if (--refCount_ == 0) {
         delete this;
+    }
+}
+
+void MeshBuilder::EnablePrimitiveRestart(size_t index)
+{
+    if (index < submeshInfos_.size()) {
+        submeshInfos_[index].info.inputAssembly.enablePrimitiveRestart = true;
+    }
+    if (index < submeshes_.size()) {
+        submeshes_[index].inputAssembly.enablePrimitiveRestart = true;
     }
 }
 

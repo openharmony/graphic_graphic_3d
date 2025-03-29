@@ -36,6 +36,7 @@ private:
     void CreateNativeObject(
         napi_env env, NapiApi::Object meJs, NapiApi::Object sceneNodeParameters, NapiApi::Object meshResourceParam);
     void DisposeNative(void*) override;
+    void Finalize(napi_env env) override;
     napi_value GetMesh(NapiApi::FunctionContext<>& ctx);
     SCENE_NS::IMesh::Ptr CreateMesh(napi_env env, MeshResourceJS* meshResource);
 };

@@ -182,7 +182,7 @@ NapiApi::Object FetchJsObj(const META_NS::IObject::Ptr& obj, BASE_NS::string_vie
 
     // access hidden property.
     if (auto AppMeta = interface_pointer_cast<IMetadata>(obj)) {
-        if (auto wrapper = AppMeta->GetProperty<SharedPtrIInterface>(name)) {
+        if (auto wrapper = AppMeta->GetProperty<SharedPtrIInterface>(name, MetadataQuery::EXISTING)) {
             // The native object already contains a JS object.
             return interface_cast<JSWrapperState>(wrapper->GetValue())->GetObject();
         }

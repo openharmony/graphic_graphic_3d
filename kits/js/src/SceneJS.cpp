@@ -165,7 +165,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::RenderFrame>("renderFrame"),
 
         Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateMeshResource>("createMesh"),
-        Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateGeometry>("createGeometry")
+        Method<FunctionContext<Object, Object>, SceneJS, &SceneJS::CreateGeometry>("createGeometry"),
     };
     // clang-format on
 
@@ -475,7 +475,7 @@ void* SceneJS::GetInstanceImpl(uint32_t id)
 }
 void SceneJS::Finalize(napi_env env)
 {
-    // hmm.. do i need to do something BEFORE the object gets deleted..
+    DisposeNative(nullptr);
     BaseObject<SceneJS>::Finalize(env);
 }
 
@@ -596,9 +596,12 @@ napi_value SceneJS::GetRoot(NapiApi::FunctionContext<>& ctx)
         NapiApi::Object argJS(ctx.GetEnv());
         napi_value args[] = { sceneRef.GetObject().ToNapiValue(), argJS.ToNapiValue() };
 
-        return CreateFromNativeInstance(
-            ctx.GetEnv(), obj, false /*these are owned by the scene*/, BASE_NS::countof(args), args)
-            .ToNapiValue();
+        auto js = CreateFromNativeInstance(
+            ctx.GetEnv(), obj, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
+        if (auto nm = GetJsWrapper<NodeImpl>(js)) {
+            nm->Attached(true);
+        }
+        return js.ToNapiValue();
     }
     return ctx.GetUndefined();
 }
@@ -1019,7 +1022,6 @@ napi_value SceneJS::CreateGeometry(NapiApi::FunctionContext<NapiApi::Object, Nap
         NapiApi::StrongRef this_;
         NapiApi::StrongRef nodeParams_;
         NapiApi::StrongRef meshResource_;
-        SCENE_NS::IScene::Ptr scene_;
         bool SetResult() override
         {
             napi_value args[] = { this_.GetValue(), nodeParams_.GetValue(), meshResource_.GetValue() };

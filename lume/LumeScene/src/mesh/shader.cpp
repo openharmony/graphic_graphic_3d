@@ -15,6 +15,8 @@
 
 #include "shader.h"
 
+#include <algorithm>
+#include <3d/render/default_material_constants.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
 #include <meta/api/make_callback.h>
@@ -37,42 +39,52 @@ bool Shader::SetRenderHandleImpl(const IInternalScene::Ptr& scene, RENDER_NS::Re
 bool Shader::SetRenderHandle(
     const IInternalScene::Ptr& scene, RENDER_NS::RenderHandleReference handle, CORE_NS::EntityReference ent)
 {
-    if (handle.GetHandleType() != RENDER_NS::RenderHandleType::COMPUTE_SHADER_STATE_OBJECT &&
-        handle.GetHandleType() != RENDER_NS::RenderHandleType::SHADER_STATE_OBJECT) {
-        CORE_LOG_E("Invalid type for shader handle");
-        return false;
-    }
+    return SetShaderState(scene, handle, ent, {}, {});
+}
+
+bool Shader::SetShaderState(const IInternalScene::Ptr& scene, RENDER_NS::RenderHandleReference handle,
+    CORE_NS::EntityReference ent, RENDER_NS::RenderHandleReference ghandle, CORE_NS::EntityReference gstate)
+{
     {
         std::shared_lock lock { mutex_ };
-        if (handle.GetHandle() == handle_.GetHandle() && entity_ == ent && graphicsState_) {
+        if (handle_.GetHandle() == handle.GetHandle() && entity_ == ent && graphicsState_ == gstate &&
+            graphicsStateHandle_.GetHandle() == ghandle.GetHandle()) {
             return true;
         }
     }
 
-    CORE_NS::EntityReference gstate;
     RENDER_NS::IShaderManager::IdDesc desc;
-    RENDER_NS::RenderHandleReference ghandle;
     scene
         ->AddTask([&] {
-            if (!ent) {
-                ent = HandleFromRenderResource(scene, handle);
-            }
-            auto& shaderManager = scene->GetRenderContext().GetDevice().GetShaderManager();
+            auto& shaderMgr = scene->GetRenderContext().GetDevice().GetShaderManager();
+
             if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
                     scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
-                ghandle = shaderManager.GetGraphicsStateHandleByShaderHandle(handle);
-                if (ghandle) {
-                    auto& entityManager = scene->GetEcsContext().GetNativeEcs()->GetEntityManager();
-                    gstate = CORE3D_NS::GetOrCreateEntityReference(entityManager, *rhman, ghandle);
+                auto renderSlotId =
+                    shaderMgr.GetRenderSlotId(CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
+                auto rsd = shaderMgr.GetRenderSlotData(renderSlotId);
+
+                if (handle) {
+                    if (!ent) {
+                        ent = HandleFromRenderResource(scene, handle);
+                    }
+                    desc = shaderMgr.GetIdDesc(handle);
+                } else {
+                    desc = shaderMgr.GetIdDesc(rsd.shader);
+                }
+                if (!ghandle) {
+                    ghandle = UpdateGraphicsState(scene, shaderMgr.GetGraphicsState(rsd.graphicsState));
+                }
+                if (!gstate) {
+                    gstate = HandleFromRenderResource(scene, ghandle);
+                }
+                if (auto m = rhman->Write(gstate)) {
+                    m->reference = ghandle;
                 }
             }
-            desc = shaderManager.GetIdDesc(handle);
         })
         .Wait();
 
-    if (!ent) {
-        return false;
-    }
     {
         std::unique_lock lock { mutex_ };
         handle_ = handle;
@@ -91,7 +103,7 @@ RENDER_NS::RenderHandleReference Shader::GetRenderHandle() const
     std::shared_lock lock { mutex_ };
     return handle_;
 }
-CORE_NS::EntityReference Shader::GetEntity() const
+CORE_NS::Entity Shader::GetEntity() const
 {
     std::shared_lock lock { mutex_ };
     return entity_;
@@ -118,7 +130,7 @@ Future<bool> Shader::LoadShader(const IScene::Ptr& s, BASE_NS::string_view uri)
             auto handle = man.GetShaderHandle(path);
             if (handle) {
                 // t: notify in correct thread
-                SetRenderHandle(inter, handle, {});
+                SetShaderState(inter, handle, {}, man.GetGraphicsStateHandleByShaderHandle(handle), {});
             }
             return static_cast<bool>(handle);
         });
@@ -138,23 +150,34 @@ RENDER_NS::RenderHandleReference Shader::GetGraphicsStateHandle() const
     return graphicsStateHandle_;
 }
 
-void Shader::UpdateGraphicsState(
-    const IInternalScene::Ptr& scene, RENDER_NS::RenderHandleReference h, const RENDER_NS::GraphicsState& gs)
+static BASE_NS::string_view GetRenderSlot(const RENDER_NS::GraphicsState& gs)
+{
+    return std::any_of(gs.colorBlendState.colorAttachments,
+        gs.colorBlendState.colorAttachments + gs.colorBlendState.colorAttachmentCount,
+        [](const RENDER_NS::GraphicsState::ColorBlendState::Attachment& attachment) {
+            return attachment.enableBlend;
+        })
+        ? CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT
+        : CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE;
+}
+
+RENDER_NS::RenderHandleReference Shader::UpdateGraphicsState(
+    const IInternalScene::Ptr& scene, const RENDER_NS::GraphicsState& gs)
 {
     auto& man = scene->GetRenderContext().GetDevice().GetShaderManager();
-    RENDER_NS::IShaderManager::GraphicsStateVariantCreateInfo vinfo {};
-    vinfo.variant = BASE_NS::string(BASE_NS::to_string(intptr_t(this)));
-    auto handle = man.CreateGraphicsState({ Uri()->GetValue(), gs }, vinfo);
-    if (h.GetHandle() != handle.GetHandle()) {
-        std::shared_lock lock { mutex_ };
+    RENDER_NS::IShaderManager::GraphicsStateVariantCreateInfo vinfo { GetRenderSlot(gs) };
+    auto handle = man.CreateGraphicsState({ BASE_NS::string(BASE_NS::to_string(intptr_t(this))), gs }, vinfo);
+    std::unique_lock lock { mutex_ };
+    if (graphicsStateHandle_.GetHandle() != handle.GetHandle()) {
         if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
                 scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
+            graphicsStateHandle_ = handle;
             if (auto m = rhman->Write(graphicsState_)) {
-                m->reference = handle;
+                m->reference = graphicsStateHandle_;
             }
         }
-        graphicsStateHandle_ = handle;
     }
+    return graphicsStateHandle_;
 }
 
 Future<CullModeFlags> Shader::GetCullMode() const
@@ -181,7 +204,7 @@ Future<bool> Shader::SetCullMode(CullModeFlags cullMode)
                 auto& man = inter->GetRenderContext().GetDevice().GetShaderManager();
                 auto gs = man.GetGraphicsState(h);
                 gs.rasterizationState.cullModeFlags = static_cast<RENDER_NS::CullModeFlags>(cullMode);
-                UpdateGraphicsState(inter, h, gs);
+                UpdateGraphicsState(inter, gs);
             }
             return static_cast<bool>(h);
         });
@@ -212,13 +235,22 @@ Future<bool> Shader::EnableBlend(bool enableBlend)
         return inter->AddTask([=] {
             auto h = GetGraphicsStateHandle();
             if (h) {
-                auto& man = inter->GetRenderContext().GetDevice().GetShaderManager();
-                auto gs = man.GetGraphicsState(h);
+                auto& shaderMgr = inter->GetRenderContext().GetDevice().GetShaderManager();
+                auto oldgs = shaderMgr.GetGraphicsState(h);
+                auto renderSlotId = shaderMgr.GetRenderSlotId(
+                    enableBlend ? CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT
+                                : CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
+                auto rsd = shaderMgr.GetRenderSlotData(renderSlotId);
+
+                auto gs = shaderMgr.GetGraphicsState(rsd.graphicsState);
+                gs.rasterizationState.cullModeFlags = oldgs.rasterizationState.cullModeFlags;
+
                 if (gs.colorBlendState.colorAttachmentCount == 0) {
                     gs.colorBlendState.colorAttachmentCount = 1;
                 }
                 gs.colorBlendState.colorAttachments[0].enableBlend = enableBlend;
-                UpdateGraphicsState(inter, h, gs);
+
+                UpdateGraphicsState(inter, gs);
             }
             return static_cast<bool>(h);
         });

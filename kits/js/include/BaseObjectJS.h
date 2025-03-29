@@ -259,4 +259,13 @@ auto GetNativeObjectParam(NapiApi::Object args)
     return ret;
 }
 void DebugNativesHavingJS(void);
+
+template<class T>
+inline T* GetJsWrapper(NapiApi::Object o)
+{
+    if (auto* tro = o.Native<TrueRootObject>()) {
+        return static_cast<T*>(tro->GetInstanceImpl(T::ID));
+    }
+    return nullptr;
+}
 #endif

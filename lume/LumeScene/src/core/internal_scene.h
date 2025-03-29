@@ -57,7 +57,8 @@ public:
     INode::Ptr CreateNode(BASE_NS::string_view path, META_NS::ObjectId id) override;
     INode::Ptr FindNode(BASE_NS::string_view path, META_NS::ObjectId id) const override;
     INode::Ptr FindNode(CORE_NS::Entity ent, META_NS::ObjectId id) const override;
-    void ReleaseNode(const INode::Ptr& node) override;
+    bool ReleaseNode(INode::Ptr&& node, bool recursive) override;
+    bool RemoveNode(const INode::Ptr& node) override;
     META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id) override;
     BASE_NS::vector<INode::Ptr> GetChildren(const IEcsObject::Ptr&) const override;
     bool RemoveChild(
@@ -83,7 +84,7 @@ public:
     BASE_NS::shared_ptr<IScene> GetScene() const override;
     void SchedulePropertyUpdate(const IEcsObject::Ptr& obj) override;
     void SyncProperties() override;
-    void Update() override;
+    void Update(bool syncProperties = true) override;
 
     void RegisterComponent(const BASE_NS::Uid&, const IComponentFactory::Ptr&) override;
     void UnregisterComponent(const BASE_NS::Uid&) override;
@@ -119,11 +120,12 @@ private:
     IComponent::Ptr CreateComponent(CORE_NS::IComponentManager* m, const IEcsObject::Ptr& ecsObject) const;
     void AttachComponents(const INode::Ptr& node, const IEcsObject::Ptr& ecsObject, CORE_NS::Entity ent) const;
     META_NS::ObjectId DeducePrimaryNodeType(CORE_NS::Entity ent) const;
-    void RecursiveRemoveNodes(const INode::Ptr& node);
     void NotifyRenderingCameras();
 
     NodeHits MapHitResults(const BASE_NS::vector<CORE3D_NS::RayCastResult>& res, const RayCastOptions& options) const;
     bool UpdateSyncProperties(bool resetPending);
+    void ReleaseChildNodes(const IEcsObject::Ptr& eobj);
+    void RemoveNodesRecursively(CORE_NS::Entity);
 
 private:
     IScene::WeakPtr scene_;

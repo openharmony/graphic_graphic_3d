@@ -38,32 +38,33 @@ void* GeometryJS::GetInstanceImpl(uint32_t id)
     }
     return NodeImpl::GetInstanceImpl(id);
 }
-void GeometryJS::DisposeNative(void*)
+void GeometryJS::DisposeNative(void* scn)
 {
-    if (!disposed_) {
-        LOG_V("GeometryJS::DisposeNative");
-        disposed_ = true;
-
-        NapiApi::Object obj = scene_.GetObject();
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
-        }
-
-        if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
-            // reset the native object refs
-            SetNativeObject(nullptr, false);
-            SetNativeObject(nullptr, true);
-
-            if (auto scene = node->GetScene()) {
-                scene->ReleaseNode(node);
-            }
-        }
-        scene_.Reset();
+    if (disposed_) {
+        return;
     }
+    LOG_V("GeometryJS::DisposeNative");
+    disposed_ = true;
+
+    SceneJS* sceneJS = static_cast<SceneJS*>(scn);
+    if (sceneJS) {
+        sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+    }
+
+    if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
+        if (!IsAttached()) {
+            if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(node)) {
+                access->SetMesh(nullptr).Wait();
+            }
+            if (auto scene = node->GetScene()) {
+                scene->RemoveNode(BASE_NS::move(node)).Wait();
+            }
+        }
+        // reset the native object refs
+        SetNativeObject(nullptr, false);
+        SetNativeObject(nullptr, true);
+    }
+    scene_.Reset();
 }
 void GeometryJS::Init(napi_env env, napi_value exports)
 {
@@ -99,12 +100,16 @@ GeometryJS::GeometryJS(napi_env e, napi_callback_info i) : BaseObject<GeometryJS
         return;
     }
 }
-
 GeometryJS::~GeometryJS()
 {
     LOG_V("GeometryJS -- ");
 }
 
+void GeometryJS::Finalize(napi_env env)
+{
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
+    BaseObject::Finalize(env);
+}
 GeometryJS::ConstructionState GeometryJS::Construct(
     napi_env env, NapiApi::Object meJs, NapiApi::Object scene, NapiApi::Object sceneNodeParameters)
 {
@@ -115,10 +120,8 @@ GeometryJS::ConstructionState GeometryJS::Construct(
     scene_ = NapiApi::WeakRef { env, scene.ToNapiValue() };
 
     // Add the dispose hook to scene so that the Geometry node is disposed when scene is disposed.
-    if (auto tro = scene.Native<TrueRootObject>()) {
-        if (auto sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID))) {
-            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-        }
+    if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
 
     if (const auto name = sceneNodeParameters.Get<BASE_NS::string>("name"); name.IsValid()) {
@@ -154,10 +157,6 @@ void GeometryJS::CreateNativeObject(
     }
 
     auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
-    if (!scene) {
-        LOG_E("scene in null");
-        return;
-    }
     // Node creation can fail e.g. due to a bad path. Then we're going to have a null Geometry object.
     auto meshNode = scene->CreateNode(nodePath, SCENE_NS::ClassId::MeshNode).GetResult();
     if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(meshNode)) {

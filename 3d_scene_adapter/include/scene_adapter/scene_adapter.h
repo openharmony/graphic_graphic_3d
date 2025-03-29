@@ -69,7 +69,7 @@ class TextureLayer;
 class SceneAdapter : public ISceneAdapter {
 public:
     SceneAdapter();
-    bool LoadPluginsAndInit() override;
+    bool LoadPluginsAndInit() override; // it should be static function
     std::shared_ptr<TextureLayer> CreateTextureLayer() override;
     void OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
     void RenderFrame(bool needsSyncPaint = false) override;
@@ -84,14 +84,15 @@ public:
 
 protected:
     static bool LoadEngineLib();
-    bool LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo);
-    bool InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo);
-    void AttachSwapchain(META_NS::IObject::Ptr camera, RENDER_NS::RenderHandleReference swapchain);
+    static bool LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo);
+    static bool InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo);
+    void AttachSwapchain(META_NS::IObject::Ptr camera);
     void RenderFunction();
     void CreateRenderFunction();
     void UpdateSurfaceBuffer();
     void InitEnvironmentResource(const uint32_t bufferSize);
     int32_t CreateFenceFD(const RENDER_NS::IRenderFrameUtil::SignalData &signalData, RENDER_NS::IDevice &device);
+    void PropSync();
 
     META_NS::IObject::Ptr sceneWidgetObj_;
 
@@ -107,8 +108,9 @@ protected:
     bool needsRepaint_ = true;
     bool receiveBuffer_ = false;
     bool initCamRNG_ = false;
-    META_NS::ITaskQueueTask::Ptr singleFrameAsync;
-    META_NS::ITaskQueueWaitableTask::Ptr singleFrameSync;
+    META_NS::ITaskQueueTask::Ptr singleFrameAsync_;
+    META_NS::ITaskQueueWaitableTask::Ptr singleFrameSync_;
+    META_NS::ITaskQueueWaitableTask::Ptr propSyncSync_;
 
     SurfaceBufferInfo sfBufferInfo_;
 };

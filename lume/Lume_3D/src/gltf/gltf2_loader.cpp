@@ -123,7 +123,7 @@ void DecodeUri(string& uri)
     string::size_type pos = 0;
     while ((pos = uri.find('%', pos)) != string::npos) {
         // there should be at least two characters after '%'
-        if ((pos + 2) < uri.size()) {
+        if ((pos + 2) < uri.size()) { // 2: param
             // start converting after '%'
             const auto begin = uri.data() + (pos + 1);
             // convert up to two characters
@@ -134,7 +134,7 @@ void DecodeUri(string& uri)
                 // replace '%' with the hex value converted to char
                 *(begin - 1) = static_cast<char>(val);
                 // remove the encoding
-                uri.erase(pos + 1, 2);
+                uri.erase(pos + 1, 2); // 2: param
             }
         }
         pos++;
@@ -444,7 +444,7 @@ std::optional<int> BufferViewByteStride(LoadResult& loadResult, const json::valu
 {
     // "default": 0 "minimum": 4, "maximum": 252, "multipleOf":
     int stride;
-    if (!ParseOptionalNumber<int>(loadResult, stride, jsonData, "byteStride", 0)) {
+    if (!ParseOptionalNumber<int>(loadResult, stride, jsonData, "byteStride", 0)) { // 4: minimum 252: maximum
         return std::nullopt;
     } else if ((stride < 4 && stride != 0) || stride > 252 || (stride % 4)) {
         SetError(loadResult, "bufferView.byteStride isn't valid stride");
@@ -458,7 +458,7 @@ std::optional<BufferTarget> BufferViewTarget(LoadResult& loadResult, const json:
     // "default": NOT_DEFINED if set then ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER
     int target;
     if (!ParseOptionalNumber<int>(
-            loadResult, target, jsonData, "target", static_cast<int>(BufferTarget::NOT_DEFINED))) {
+        loadResult, target, jsonData, "target", static_cast<int>(BufferTarget::NOT_DEFINED))) {
         return std::nullopt;
     } else if (target != static_cast<int>(BufferTarget::NOT_DEFINED) &&
                target != static_cast<int>(BufferTarget::ARRAY_BUFFER) &&
@@ -742,7 +742,7 @@ bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
     bool result = true;
     if (!ValidateAccessor(loadResult, componentType.value_or(ComponentType::INVALID), count.value_or(0U),
         datatype.value_or(DataType::INVALID), bufferView.value_or(nullptr), byteOffset.value_or(0U), minView,
-            maxView)) {
+        maxView)) {
         result = false;
     }
     if (count && sparse) {
@@ -753,7 +753,7 @@ bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
         }
         if (!ValidateAccessor(loadResult, sparseRef.indices.componentType, sparseRef.count, DataType::SCALAR,
             sparseRef.indices.bufferView, sparseRef.indices.byteOffset, array_view<const float> {},
-                array_view<const float> {})) {
+            array_view<const float> {})) {
             SetError(loadResult, "Accessor.sparse.indices is invalid");
             return false;
         }
@@ -813,7 +813,7 @@ bool ParseTextureInfo(LoadResult& loadResult, TextureInfo& info, const json::val
                 }
 
                 if (!ParseOptionalNumber(
-                        loadResult, info.transform.texCoordIndex, textureTransform, "texCoord", GLTF_INVALID_INDEX)) {
+                    loadResult, info.transform.texCoordIndex, textureTransform, "texCoord", GLTF_INVALID_INDEX)) {
                     return false;
                 }
                 return true;
@@ -830,31 +830,31 @@ bool ParseMetallicRoughness(LoadResult& loadResult, const json::value& jsonData,
 {
     if (auto roughnessJson = jsonData.find("pbrMetallicRoughness"); roughnessJson) {
         if (!ParseOptionalMath(loadResult, metallicRoughness.baseColorFactor, *roughnessJson, "baseColorFactor",
-                metallicRoughness.baseColorFactor)) {
+            metallicRoughness.baseColorFactor)) {
             return false;
         }
 
         if (!ParseObject(loadResult, *roughnessJson, "baseColorTexture",
-                [&metallicRoughness](LoadResult& loadResult, const json::value& baseJson) -> bool {
-                    return ParseTextureInfo(loadResult, metallicRoughness.baseColorTexture, baseJson);
-                })) {
+            [&metallicRoughness](LoadResult& loadResult, const json::value& baseJson) -> bool {
+                return ParseTextureInfo(loadResult, metallicRoughness.baseColorTexture, baseJson);
+            })) {
             return false;
         }
 
         if (!ParseObject(loadResult, *roughnessJson, "metallicRoughnessTexture",
-                [&metallicRoughness](LoadResult& loadResult, const json::value& baseJson) -> bool {
-                    return ParseTextureInfo(loadResult, metallicRoughness.metallicRoughnessTexture, baseJson);
-                })) {
+            [&metallicRoughness](LoadResult& loadResult, const json::value& baseJson) -> bool {
+                return ParseTextureInfo(loadResult, metallicRoughness.metallicRoughnessTexture, baseJson);
+            })) {
             return false;
         }
 
         if (!ParseOptionalNumber<float>(loadResult, metallicRoughness.metallicFactor, *roughnessJson, "metallicFactor",
-                metallicRoughness.metallicFactor)) {
+            metallicRoughness.metallicFactor)) {
             return false;
         }
 
         if (!ParseOptionalNumber<float>(loadResult, metallicRoughness.roughnessFactor, *roughnessJson,
-                "roughnessFactor", metallicRoughness.roughnessFactor)) {
+            "roughnessFactor", metallicRoughness.roughnessFactor)) {
             return false;
         }
     }
@@ -1061,7 +1061,7 @@ bool ParseOcclusionTexture(LoadResult& loadResult, const json::value& jsonData, 
         }
 
         if (!ParseOptionalNumber<float>(
-                loadResult, occlusionTexture.strength, *occlusionJson, "strength", occlusionTexture.strength)) {
+            loadResult, occlusionTexture.strength, *occlusionJson, "strength", occlusionTexture.strength)) {
             return false;
         }
     }
@@ -1086,12 +1086,12 @@ bool ParseMaterialExtras(LoadResult& loadResult, const json::value& jsonData, Ma
 #if defined(GLTF2_EXTRAS_CLEAR_COAT_MATERIAL)
         const auto parseClearCoat = [&material](LoadResult& loadResult, const json::value& materialJson) -> bool {
             if (!ParseOptionalNumber<float>(
-                    loadResult, material.clearcoat.factor, materialJson, "factor", material.clearcoat.factor)) {
+                loadResult, material.clearcoat.factor, materialJson, "factor", material.clearcoat.factor)) {
                 return false;
             }
 
             if (!ParseOptionalNumber<float>(loadResult, material.clearcoat.roughness, materialJson, "roughness",
-                    material.clearcoat.roughness)) {
+                material.clearcoat.roughness)) {
                 return false;
             }
 
@@ -1186,7 +1186,7 @@ bool ParseKhrMaterialsPbrSpecularGlossiness(LoadResult& loadResult, const json::
         material.type = Material::Type::SpecularGlossiness;
 
         if (!ParseOptionalMath(loadResult, material.specularGlossiness.diffuseFactor, *specGlossJson, "diffuseFactor",
-                material.specularGlossiness.diffuseFactor)) {
+            material.specularGlossiness.diffuseFactor)) {
             return false;
         }
 
@@ -1198,12 +1198,12 @@ bool ParseKhrMaterialsPbrSpecularGlossiness(LoadResult& loadResult, const json::
         }
 
         if (!ParseOptionalMath(loadResult, material.specularGlossiness.specularFactor, *specGlossJson, "specularFactor",
-                material.specularGlossiness.specularFactor)) {
+            material.specularGlossiness.specularFactor)) {
             return false;
         }
 
         if (!ParseOptionalNumber<float>(
-                loadResult, material.specularGlossiness.glossinessFactor, *specGlossJson, "glossinessFactor", 1.0f)) {
+            loadResult, material.specularGlossiness.glossinessFactor, *specGlossJson, "glossinessFactor", 1.0f)) {
             return false;
         }
 
@@ -1390,7 +1390,7 @@ bool ParseMaterial(LoadResult& loadResult, const json::value& jsonData)
     }
 
     if (!ParseOptionalString(
-            loadResult, material->name, jsonData, "name", "material_" + to_string(loadResult.data->materials.size()))) {
+        loadResult, material->name, jsonData, "name", "material_" + to_string(loadResult.data->materials.size()))) {
         result = false;
     }
 
@@ -1413,7 +1413,7 @@ bool ParseMaterial(LoadResult& loadResult, const json::value& jsonData)
     }
 
     if (!ParseOptionalNumber<float>(
-            loadResult, material->alphaCutoff, jsonData, "alphaCutoff", material->alphaCutoff)) {
+        loadResult, material->alphaCutoff, jsonData, "alphaCutoff", material->alphaCutoff)) {
         result = false;
     }
 
@@ -1472,7 +1472,7 @@ bool PrimitiveAttributes(LoadResult& loadResult, const json::value& jsonData, Me
             }
         }
         if (std::none_of(meshPrimitive.attributes.begin(), meshPrimitive.attributes.end(),
-                [](const Attribute& attr) { return attr.attribute.type == AttributeType::POSITION; })) {
+            [](const Attribute& attr) { return attr.attribute.type == AttributeType::POSITION; })) {
             RETURN_WITH_ERROR(loadResult, "Primitive must have POSITION attribute.");
         }
     } else {

@@ -31,6 +31,11 @@ MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
         return;
     }
     scene_ = fromJs.Arg<0>().valueOrDefault();
+    // Add the dispose hook to scene so that the MeshResourceJS is disposed when scene is disposed.
+    if (auto sceneJS = GetJsWrapper<SceneJS>(scene_.GetObject())) {
+        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), fromJs.This());
+    }
+
     if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
         LOG_F("INVALID SCENE!");
     }
@@ -69,7 +74,7 @@ void MeshResourceJS::Init(napi_env env, napi_value exports)
 
 void* MeshResourceJS::GetInstanceImpl(uint32_t id)
 {
-    return (id == MeshResourceJS::ID) ? this : nullptr;
+    return (id == MeshResourceJS::ID) ? this : SceneResourceImpl::GetInstanceImpl(id);
 }
 
 NapiApi::StrongRef MeshResourceJS::GetGeometryDefinition() const
@@ -77,7 +82,28 @@ NapiApi::StrongRef MeshResourceJS::GetGeometryDefinition() const
     return geometryDefinition_;
 }
 
-void MeshResourceJS::DisposeNative(void*)
+void MeshResourceJS::DisposeNative(void* scene)
 {
+    if (disposed_) {
+        return;
+    }
+    disposed_ = true;
+    if (auto node = interface_pointer_cast<SCENE_NS::IMeshResource>(GetNativeObject())) {
+        // reset the native object refs
+        SetNativeObject(nullptr, false);
+        SetNativeObject(nullptr, true);
+    }
+    geometryDefinition_.Reset();
+    
+    if (auto* sceneJS = static_cast<SceneJS*>(scene)) {
+        sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+    }
+
     scene_.Reset();
+}
+
+void MeshResourceJS::Finalize(napi_env env)
+{
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
+    BaseObject::Finalize(env);
 }
