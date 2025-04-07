@@ -30,8 +30,8 @@
 
 #include <meta/api/engine/util.h>
 
-#include "../component/generic_component.h"
-#include "../ecs_animation.h"
+#include "component/generic_component.h"
+#include "ecs_animation.h"
 #include "ecs_object.h"
 
 #include <3d/util/intf_render_util.h>

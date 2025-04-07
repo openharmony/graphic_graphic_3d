@@ -21,7 +21,7 @@
 
 #include <meta/api/make_callback.h>
 
-#include "../converting_value.h"
+#include "converting_value.h"
 
 SCENE_BEGIN_NAMESPACE()
 namespace {

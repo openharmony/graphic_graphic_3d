@@ -22,7 +22,7 @@
 #include <meta/interface/intf_containable.h>
 #include <meta/interface/serialization/intf_serializable.h>
 
-#include "../object.h"
+#include "object.h"
 #include "animation_state.h"
 #include "staggered_animation_state.h"
 

@@ -20,7 +20,7 @@
 #include <meta/ext/serialization/serializer.h>
 #include <meta/interface/property/intf_stack_resetable.h>
 
-#include "../any.h"
+#include "any.h"
 #include "dependencies.h"
 
 META_BEGIN_NAMESPACE()
