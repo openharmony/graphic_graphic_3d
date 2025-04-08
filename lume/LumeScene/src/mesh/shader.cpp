@@ -19,7 +19,7 @@
 
 #include <meta/api/make_callback.h>
 
-#include "../util.h"
+#include "util.h"
 
 SCENE_BEGIN_NAMESPACE()
 

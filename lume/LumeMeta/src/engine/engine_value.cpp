@@ -17,7 +17,7 @@
 
 #include <core/property/intf_property_api.h>
 
-#include "../any.h"
+#include "any.h"
 META_BEGIN_NAMESPACE()
 
 namespace Internal {

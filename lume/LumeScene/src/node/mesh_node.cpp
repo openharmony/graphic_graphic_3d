@@ -21,7 +21,7 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/property/array_property.h>
 
-#include "../mesh/submesh.h"
+#include "mesh/submesh.h"
 
 SCENE_BEGIN_NAMESPACE()
 

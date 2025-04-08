@@ -22,7 +22,7 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 
-#include "../component/mesh_component.h"
+#include "component/mesh_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 

@@ -26,7 +26,7 @@
 #include <meta/interface/intf_object_factory.h>
 #include <meta/interface/serialization/intf_ser_node.h>
 
-#include "../base_object.h"
+#include "base_object.h"
 
 META_BEGIN_NAMESPACE()
 namespace Serialization {
