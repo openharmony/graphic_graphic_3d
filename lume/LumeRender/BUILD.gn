@@ -36,7 +36,6 @@ config("lume_render_api") {
 
   if (RENDER_BUILD_VULKAN) {
     defines += [ "RENDER_HAS_VULKAN_BACKEND=1" ]
-    configs += [ "//third_party/vulkan-headers:vulkan_headers_config" ]
   }
 }
 
@@ -104,9 +103,6 @@ config("lume_render_config") {
       defines += [ "RENDER_VULKAN_VALIDATION_ENABLE_WARNINGS=0" ]
       include_dirs += [ "src/vulkan/ohos" ]
     }
-
-    # this should be replaced with a proper component definitions and configs/deps. (just like vulkan-headers:vulkan_headers_config)
-    defines += [ "PATH_TO_VMA=\"../../../../../../../third_party/skia/third_party/vulkanmemoryallocator/include/vk_mem_alloc.h\"" ]
   }
 
   ldflags = [ "-Wl,--undefined=AGPRender_StaticPlugin" ]
@@ -381,7 +377,10 @@ ohos_source_set("lume_render_src") {
       "src/vulkan/swapchain_vk.h",
       "src/vulkan/validate_vk.h",
     ]
-    external_deps += [ "vulkan-loader:vulkan_loader" ]
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+    ]
   }
 
   if (LUME_OHOS_BUILD) {
@@ -405,6 +404,7 @@ ohos_source_set("lume_render_src") {
   external_deps += [
     "c_utils:utils",
     "graphic_surface:surface",
+    "skia:skia_canvaskit"
   ]
 
   part_name = "graphic_3d"
