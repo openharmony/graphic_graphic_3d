@@ -80,7 +80,7 @@ EngineResourceHandle UnpackNewHandle(
     } else {
         const uint64_t genIndex =
             (InvalidateWithGeneration(handle).id & RenderHandleUtil::RES_HANDLE_GENERATION_MASK) >>
-            RenderHandleUtil::RES_HANDLE_GENERATION_MASK;
+            RenderHandleUtil::RES_HANDLE_GENERATION_SHIFT;
         const uint32_t gpuGenIndex = uint32_t(genIndex) + 1;
         return RenderHandleUtil::CreateEngineResourceHandle(type, arrayIndex, gpuGenIndex);
     }
