@@ -66,6 +66,9 @@ ohos_source_set("lume_plugin_jpg_src") {
     "${LUME_CORE_PATH}:lume_base_api",
     "${LUME_CORE_PATH}:lume_engine_api",
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

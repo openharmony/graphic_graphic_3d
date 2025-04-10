@@ -35,7 +35,7 @@ ohos_source_set("runtime_utils_src") {
 
   deps = []
 
-  external_deps = []
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
@@ -110,6 +110,7 @@ ohos_source_set("ecs_serializer_src") {
   ]
 
   external_deps = [
+    "bounds_checking_function:libsec_shared"
     #    "c_utils:utils",
   ]
   part_name = "graphic_3d"
