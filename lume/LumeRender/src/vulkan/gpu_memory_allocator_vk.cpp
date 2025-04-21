@@ -43,11 +43,9 @@
 #define VMA_NOT_NULL
 #endif
 #define VMA_IMPLEMENTATION
-#ifdef PATH_TO_VMA
-#include PATH_TO_VMA
-#else
-#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
-#endif
+
+#include "third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #elif defined(__clang__)

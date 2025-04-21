@@ -18,7 +18,7 @@
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/util.h>
 
-#include "../core/ecs.h"
+#include "core/ecs.h"
 
 SCENE_BEGIN_NAMESPACE()
 

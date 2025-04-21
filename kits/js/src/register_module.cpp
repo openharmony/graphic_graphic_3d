@@ -38,7 +38,8 @@
 
 void RegisterClasses(napi_env env, napi_value exports)
 {
-    napi_value zero, one;
+    napi_value zero;
+    napi_value one;
     NapiApi::MyInstanceState* mis;
     GetInstanceData(env, reinterpret_cast<void**>(&mis));
 

@@ -22,7 +22,7 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 
-#include "../component/postprocess_component.h"
+#include "component/postprocess_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 

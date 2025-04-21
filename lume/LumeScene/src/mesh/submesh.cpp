@@ -15,7 +15,7 @@
 
 #include "submesh.h"
 
-#include "../util.h"
+#include "util.h"
 
 SCENE_BEGIN_NAMESPACE()
 

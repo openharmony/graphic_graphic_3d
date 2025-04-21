@@ -19,11 +19,9 @@
 // vulkan_core must be before vk_mem_alloc
 // clang-format off
 #include <vulkan/vulkan_core.h>
-#ifdef PATH_TO_VMA
-#include PATH_TO_VMA
-#else
-#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
-#endif
+
+#include "third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
+
 // clang-format on
 #include <cstddef>
 #include <cstdint>

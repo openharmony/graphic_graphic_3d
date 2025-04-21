@@ -21,10 +21,10 @@
 
 #include <meta/interface/intf_event.h>
 #include <meta/interface/resource/intf_dynamic_resource.h>
-#include "../core/camera.h"
-#include "../core/intf_internal_raycast.h"
-#include "../entity_converting_value.h"
-#include "../postprocess/postprocess.h"
+#include "core/camera.h"
+#include "core/intf_internal_raycast.h"
+#include "entity_converting_value.h"
+#include "postprocess/postprocess.h"
 
 META_TYPE(CORE3D_NS::CameraComponent::TargetUsage)
 

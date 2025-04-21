@@ -93,6 +93,8 @@ ohos_source_set("lume_font_src") {
   external_deps = [
     "c_utils:utils",
     "freetype:freetype_static",
+    "libpng:libpng",
+    "zlib:libz",
   ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"

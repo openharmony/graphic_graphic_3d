@@ -394,7 +394,8 @@ public:
         }
         napi_strict_equals(env_, object_, other, &equal);
         // make it a bit more strict by checking wrapping
-        void *l, *r;
+        void *l = nullptr;
+        void *r = nullptr;
         napi_unwrap(env_, object_, &l);
         napi_unwrap(env_, other, &r);
         if (l || r) {

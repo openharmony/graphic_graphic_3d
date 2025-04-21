@@ -1941,7 +1941,9 @@ int CompilerMain(int argc, char* argv[])
 
     // Main loop.
     while (params->monitorChanges) {
-        std::vector<std::string> addedFiles, removedFiles, modifiedFiles;
+        std::vector<std::string> addedFiles;
+        std::vector<std::string> removedFiles;
+        std::vector<std::string> modifiedFiles;
         fileMonitor.ScanModifications(addedFiles, removedFiles, modifiedFiles);
         modifiedFiles = FilterByExtension(modifiedFiles, supportedFileTypes);
 

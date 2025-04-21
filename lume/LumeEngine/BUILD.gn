@@ -20,7 +20,6 @@ declare_args() {
 
 config("lume_base_api") {
   include_dirs = [ "${LUME_BASE_PATH}/api" ]
-  configs = [ "//third_party/bounds_checking_function:libsec_public_config" ]
   defines = [
     "BASE_TESTS_ENABLED=0",
     "BASE_WARNINGS_AS_ERRORS=0",
@@ -129,7 +128,6 @@ config("lume_engine_config") {
     "${LUME_CORE_PATH}/3rdparty/",
     "${LUME_CORE_PATH}/src/",
     "${LUME_CORE_PATH}/asserts/",
-    "//commonlibrary/c_utils/base/include",
     "${STB_IMAGE_PATH}",
   ]
 
@@ -257,7 +255,10 @@ ohos_source_set("lume_engine_src") {
     "resource_management:global_resmgr",
   ]
 
-  external_deps += [ "zlib:shared_libz" ]
+  external_deps += [
+    "zlib:shared_libz",
+    "bounds_checking_function:libsec_shared"
+  ]
 
   if (LUME_OHOS_BUILD) {
     external_deps += [ "hilog:libhilog" ]
@@ -334,6 +335,10 @@ ohos_source_set("lume_component_help_src") {
     "ecshelper/ComponentTools/component_query.cpp",
     "ecshelper/ComponentTools/component_query.h",
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 ohos_static_library("libComponentHelper") {

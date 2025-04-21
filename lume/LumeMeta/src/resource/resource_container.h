@@ -17,7 +17,7 @@
 
 #include <meta/interface/resource/intf_resource_container.h>
 
-#include "../container/object_flat_container.h"
+#include "container/object_flat_container.h"
 
 META_BEGIN_NAMESPACE()
 

@@ -41,6 +41,10 @@ ohos_source_set("lume_engine_ecshelper") {
     "${LUME_CORE_PATH}:lume_base_api",
     ":lume_engine_ecshelper_config",
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 #ohos_shared_library("libAGPDLL") {

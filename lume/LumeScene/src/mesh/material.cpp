@@ -22,7 +22,7 @@
 #include <meta/api/engine/util.h>
 #include <meta/api/make_callback.h>
 
-#include "../entity_converting_value.h"
+#include "entity_converting_value.h"
 #include "meta/interface/engine/intf_engine_value_manager.h"
 #include "texture.h"
 

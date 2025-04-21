@@ -16,7 +16,7 @@
 #ifndef OHOS_RENDER_3D_GEOMETRY_H
 #define OHOS_RENDER_3D_GEOMETRY_H
 
-#include "../vec3.h"
+#include "data_type/vec3.h"
 #include <string>
 
 namespace OHOS::Render3D {
