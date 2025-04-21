@@ -18,55 +18,48 @@
 #include <Vec3Proxy.h>
 #include <napi_api.h>
 
-#include "BaseObjectJS.h"
-
 namespace GeometryDefinition {
 
-CubeJS::CubeJS(napi_env env, napi_callback_info info) : GeometryDefinition<CubeJS>(env, info, GeometryType::CUBE) {}
+CubeJS::CubeJS(const BASE_NS::Math::Vec3& size) : GeometryDefinition(), size_(size) {}
 
 void CubeJS::Init(napi_env env, napi_value exports)
 {
-    BASE_NS::vector<napi_property_descriptor> props;
-    using namespace NapiApi;
-    GetPropertyDescs(props);
-    props.push_back(GetSetProperty<Object, CubeJS, &CubeJS::GetSize, &CubeJS::SetSize>("size"));
+    auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
+        napi_value thisVar = nullptr;
+        napi_get_cb_info(env, info, nullptr, nullptr, &thisVar, nullptr);
+        NapiApi::Object { env, thisVar }.Set("size", NapiApi::Object(GetJSConstructor(env, "Vec3"), 0, {}));
+        return thisVar;
+    };
+    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::CUBE); };
 
-    const auto name = "CubeGeometry";
-    const auto constructor = BaseObject::ctor<CubeJS>();
-    napi_value jsConstructor;
-    napi_define_class(env, name, NAPI_AUTO_LENGTH, constructor, nullptr, props.size(), props.data(), &jsConstructor);
-    napi_set_named_property(env, exports, name, jsConstructor);
-
-    NapiApi::MyInstanceState* mis {};
-    GetInstanceData(env, (void**)&mis);
-    mis->StoreCtor(name, jsConstructor);
+    napi_value undefined;
+    napi_get_undefined(env, &undefined);
+    const auto props = BASE_NS::vector<napi_property_descriptor> {
+        // clang-format off
+        { "geometryType", nullptr, nullptr, getType, nullptr, nullptr,   napi_default_jsproperty, nullptr },
+        { "size",         nullptr, nullptr, nullptr, nullptr, undefined, napi_default_jsproperty, nullptr },
+        // clang-format on
+    };
+    DefineClass(env, exports, "CubeGeometry", props, ctor);
 }
 
-void* CubeJS::GetInstanceImpl(uint32_t id)
+GeometryDefinition* CubeJS::FromJs(NapiApi::Object& jsDefinition)
 {
-    return (id == CubeJS::ID) ? this : nullptr;
-}
-
-BASE_NS::Math::Vec3 CubeJS::GetSize() const
-{
-    return size_;
-}
-
-napi_value CubeJS::GetSize(NapiApi::FunctionContext<>& ctx)
-{
-    return Vec3Proxy::ToNapiObject(size_, ctx.Env()).ToNapiValue();
-}
-
-void CubeJS::SetSize(NapiApi::FunctionContext<NapiApi::Object>& ctx)
-{
-    NapiApi::Object jsSize = ctx.Arg<0>();
-    bool conversionOk = false;
-    const auto size = Vec3Proxy::ToNative(jsSize, conversionOk);
-    if (conversionOk) {
-        size_ = size;
-    } else {
-        LOG_E("Invalid size given for a CubeJS");
+    if (NapiApi::Object jsSize = jsDefinition.Get<NapiApi::Object>("size")) {
+        bool conversionOk = false;
+        const auto size = Vec3Proxy::ToNative(jsSize, conversionOk);
+        if (conversionOk) {
+            return new CubeJS(size);
+        }
     }
+    LOG_E("Unable to create CubeJS: Invalid JS object given");
+    return {};
+}
+
+SCENE_NS::IMesh::Ptr CubeJS::CreateMesh(
+    const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const
+{
+    return creator->CreateCube(config, size_.x, size_.y, size_.z).GetResult();
 }
 
 } // namespace GeometryDefinition

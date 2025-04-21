@@ -15,80 +15,53 @@
 
 #include "geometry_definition/SphereJS.h"
 
-#include <Vec2Proxy.h>
 #include <napi_api.h>
-
-#include "BaseObjectJS.h"
 
 namespace GeometryDefinition {
 
-SphereJS::SphereJS(napi_env env, napi_callback_info info)
-    : GeometryDefinition<SphereJS>(env, info, GeometryType::SPHERE)
+SphereJS::SphereJS(float radius, uint32_t segmentCount)
+    : GeometryDefinition(), radius_(radius), segmentCount_(segmentCount)
 {}
 
 void SphereJS::Init(napi_env env, napi_value exports)
 {
-    BASE_NS::vector<napi_property_descriptor> props;
-    using namespace NapiApi;
-    GetPropertyDescs(props);
-    props.push_back(GetSetProperty<float, SphereJS, &SphereJS::GetRadius, &SphereJS::SetRadius>("radius"));
-    props.push_back(
-        GetSetProperty<uint32_t, SphereJS, &SphereJS::GetSegmentCount, &SphereJS::SetSegmentCount>("segmentCount"));
+    auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
+        return NapiApi::FunctionContext(env, info).This().ToNapiValue();
+    };
+    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::SPHERE); };
 
-    const auto name = "SphereGeometry";
-    const auto constructor = BaseObject::ctor<SphereJS>();
-    napi_value jsConstructor;
-    napi_define_class(env, name, NAPI_AUTO_LENGTH, constructor, nullptr, props.size(), props.data(), &jsConstructor);
-    napi_set_named_property(env, exports, name, jsConstructor);
-
-    NapiApi::MyInstanceState* mis {};
-    GetInstanceData(env, (void**)&mis);
-    mis->StoreCtor(name, jsConstructor);
+    napi_value zeroFloat, zeroInt;
+    napi_create_double(env, 0.0, &zeroFloat);
+    napi_create_uint32(env, 0, &zeroInt);
+    const auto props = BASE_NS::vector<napi_property_descriptor> {
+        // clang-format off
+        { "geometryType", nullptr, nullptr, getType, nullptr, nullptr,   napi_default_jsproperty, nullptr },
+        { "radius",       nullptr, nullptr, nullptr, nullptr, zeroFloat, napi_default_jsproperty, nullptr },
+        { "segmentCount", nullptr, nullptr, nullptr, nullptr, zeroInt,   napi_default_jsproperty, nullptr },
+        // clang-format on
+    };
+    DefineClass(env, exports, "SphereGeometry", props, ctor);
 }
 
-void* SphereJS::GetInstanceImpl(uint32_t id)
+GeometryDefinition* SphereJS::FromJs(NapiApi::Object& jsDefinition)
 {
-    return (id == SphereJS::ID) ? this : nullptr;
-}
-
-float SphereJS::GetRadius() const
-{
-    return radius_;
-}
-
-uint32_t SphereJS::GetSegmentCount() const
-{
-    return segmentCount_;
-}
-
-napi_value SphereJS::GetRadius(NapiApi::FunctionContext<>& ctx)
-{
-    return ctx.GetNumber(radius_);
-}
-
-napi_value SphereJS::GetSegmentCount(NapiApi::FunctionContext<>& ctx)
-{
-    return ctx.GetNumber(segmentCount_);
-}
-
-void SphereJS::SetRadius(NapiApi::FunctionContext<float>& ctx)
-{
-    auto radius = double {};
-    if (napi_get_value_double(ctx.Env(), ctx.Arg<0>().ToNapiValue(), &radius) == napi_ok) {
-        radius_ = static_cast<float>(radius);
-    } else {
-        LOG_E("Invalid radius given for a SphereJS");
+    if (auto radius = jsDefinition.Get<float>("radius"); radius.IsValid()) {
+        // It's fine for radius to be negative. Then we will just have an inside-out sphere.
+        // Check valid segmentCount range with a signed type to avoid underflow. Internally we use uint32_t.
+        if (auto segmentCount = jsDefinition.Get<int64_t>("segmentCount"); segmentCount.IsValid()) {
+            if (segmentCount >= 0) {
+                return new SphereJS(radius, segmentCount);
+            }
+        }
     }
+    LOG_E("Unable to create SphereJS: Invalid JS object given");
+    return {};
 }
 
-void SphereJS::SetSegmentCount(NapiApi::FunctionContext<uint32_t>& ctx)
+SCENE_NS::IMesh::Ptr SphereJS::CreateMesh(
+    const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const
 {
-    auto count = uint32_t {};
-    if (napi_get_value_uint32(ctx.Env(), ctx.Arg<0>().ToNapiValue(), &count) == napi_ok) {
-        segmentCount_ = count;
-    } else {
-        LOG_E("Invalid segment count given for a SphereJS");
-    }
+    return creator->CreateSphere(config, radius_, segmentCount_, segmentCount_).GetResult();
 }
 
 } // namespace GeometryDefinition

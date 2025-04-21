@@ -49,6 +49,7 @@ static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" 
 #endif
 
 // LEGACY COMPATIBILITY start
+#include <geometry_definition/GeometryDefinition.h>
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/intf_ecs_object.h>
 #include <scene/ext/intf_ecs_object_access.h>
@@ -990,10 +991,9 @@ napi_value SceneJS::CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object,
         using PromiseBase::PromiseBase;
         NapiApi::StrongRef this_;
         NapiApi::StrongRef resourceParams_;
-        NapiApi::StrongRef geometry_;
         bool SetResult() override
         {
-            napi_value args[] = { this_.GetValue(), resourceParams_.GetValue(), geometry_.GetValue() };
+            napi_value args[] = { this_.GetValue(), resourceParams_.GetValue() };
             auto meshResource = NapiApi::Object(GetJSConstructor(env_, "MeshResource"), BASE_NS::countof(args), args);
             result_ = meshResource.ToNapiValue();
             return (bool)result_;
@@ -1002,8 +1002,18 @@ napi_value SceneJS::CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object,
     auto promise = new Promise(ctx.Env());
     auto jsPromise = promise->ToNapiValue();
     promise->this_ = NapiApi::StrongRef(ctx.This());
-    promise->resourceParams_ = NapiApi::StrongRef(ctx.Arg<0>());
-    promise->geometry_ = NapiApi::StrongRef(ctx.Arg<1>());
+    NapiApi::Object resourceParams = ctx.Arg<0>();
+    promise->resourceParams_ = NapiApi::StrongRef(resourceParams);
+
+    auto geometry = GeometryDefinition::GeometryDefinition::FromJs(ctx.Arg<1>());
+    if (!geometry) {
+        promise->Reject();
+        return jsPromise;
+    }
+    napi_value geometryNapiValue;
+    // Piggyback the native geometry definition inside the resource param. Need to ditch smart pointers for the ride.
+    napi_create_external(ctx.Env(), geometry.release(), nullptr, nullptr, &geometryNapiValue);
+    resourceParams.Set("GeometryDefinition", geometryNapiValue);
 
     auto func = [promise]() {
         promise->SettleLater();

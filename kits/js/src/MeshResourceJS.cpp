@@ -15,6 +15,7 @@
 
 #include "MeshResourceJS.h"
 
+#include <scene/interface/intf_create_mesh.h>
 #include <scene/interface/intf_mesh_resource.h>
 #include <scene/interface/intf_scene.h>
 
@@ -23,7 +24,7 @@
 MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
     : BaseObject<MeshResourceJS>(e, i), SceneResourceImpl(SceneResourceType::MESH_RESOURCE)
 {
-    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object, NapiApi::Object> fromJs(e, i);
+    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
 
     if (!fromJs) {
@@ -46,6 +47,7 @@ MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
         nativeObj = META_NS::GetObjectRegistry().Create<META_NS::IObject>(SCENE_NS::ClassId::MeshResource);
     }
 
+    // TODO: Name remains undefined. This has no effect. There are prop problems with other SceneResourceImpls as well.
     auto name = BASE_NS::string {};
     if (auto nameParam = resourceParams.Get<BASE_NS::string>("name"); nameParam.IsDefined()) {
         name = nameParam;
@@ -59,7 +61,9 @@ MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
     SetNativeObject(nativeObj, false);
     StoreJsObj(nativeObj, meJs);
 
-    geometryDefinition_ = NapiApi::StrongRef { fromJs.Arg<2>() };
+    GeometryDefinition::GeometryDefinition* geomDef {};
+    napi_get_value_external(e, resourceParams.Get("GeometryDefinition"), (void**)&geomDef);
+    geometryDefinition_.reset(geomDef);
 }
 
 void MeshResourceJS::Init(napi_env env, napi_value exports)
@@ -77,9 +81,17 @@ void* MeshResourceJS::GetInstanceImpl(uint32_t id)
     return (id == MeshResourceJS::ID) ? this : SceneResourceImpl::GetInstanceImpl(id);
 }
 
-NapiApi::StrongRef MeshResourceJS::GetGeometryDefinition() const
+SCENE_NS::IMesh::Ptr MeshResourceJS::CreateMesh()
 {
-    return geometryDefinition_;
+    auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
+    if (!scene || !geometryDefinition_) {
+        return {};
+    }
+
+    const auto meshCreator = scene->CreateObject<SCENE_NS::ICreateMesh>(SCENE_NS::ClassId::MeshCreator).GetResult();
+    // Name and material aren't set here. Name is set in the constructor. Material needs to be manually set later.
+    auto meshConfig = SCENE_NS::MeshConfig {};
+    return geometryDefinition_->CreateMesh(meshCreator, meshConfig);
 }
 
 void MeshResourceJS::DisposeNative(void* scene)
@@ -93,8 +105,8 @@ void MeshResourceJS::DisposeNative(void* scene)
         SetNativeObject(nullptr, false);
         SetNativeObject(nullptr, true);
     }
-    geometryDefinition_.Reset();
-    
+    geometryDefinition_.reset();
+
     if (auto* sceneJS = static_cast<SceneJS*>(scene)) {
         sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }

@@ -77,85 +77,85 @@ void AppendValues(
     if (type == "vec4") {
         if ((offset + ALIGNMENT_OF_VEC4) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::Vec4*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC4, ALIGNMENT_OF_VEC4);
         }
     } else if (type == "uvec4") {
         if ((offset + ALIGNMENT_OF_VEC4) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::UVec4*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC4, ALIGNMENT_OF_VEC4);
         }
     } else if (type == "ivec4") {
         if ((offset + ALIGNMENT_OF_VEC4) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::IVec4*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC4, ALIGNMENT_OF_VEC4);
         }
     } else if (type == "vec3") {
         if ((offset + ALIGNMENT_OF_VEC3) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::Vec3*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC3, ALIGNMENT_OF_VEC3);
         }
     } else if (type == "uvec3") {
         if ((offset + ALIGNMENT_OF_VEC3) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::UVec3*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC3, ALIGNMENT_OF_VEC3);
         }
     } else if (type == "ivec3") {
         if ((offset + ALIGNMENT_OF_VEC3) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::IVec3*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC3, ALIGNMENT_OF_VEC3);
         }
     } else if (type == "vec2") {
         if ((offset + ALIGNMENT_OF_VEC2) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::Vec2*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC2, ALIGNMENT_OF_VEC2);
         }
     } else if (type == "uvec2") {
         if ((offset + ALIGNMENT_OF_VEC2) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::UVec2*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC2, ALIGNMENT_OF_VEC2);
         }
     } else if (type == "ivec2") {
         if ((offset + ALIGNMENT_OF_VEC2) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::IVec2*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_VEC2, ALIGNMENT_OF_VEC2);
         }
     } else if (type == "float") {
         if ((offset + ALIGNMENT_OF_FLOAT) <= maxByteSize) {
             auto* val = reinterpret_cast<float*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_FLOAT, ALIGNMENT_OF_FLOAT);
         }
     } else if (type == "uint") {
         if ((offset + ALIGNMENT_OF_FLOAT) <= maxByteSize) {
             auto* val = reinterpret_cast<uint32_t*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_FLOAT, ALIGNMENT_OF_FLOAT);
         }
     } else if (type == "int") {
         if ((offset + ALIGNMENT_OF_FLOAT) <= maxByteSize) {
             auto* val = reinterpret_cast<int32_t*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_FLOAT, ALIGNMENT_OF_FLOAT);
         }
     } else if (type == "mat3x3") {
         if ((offset + ALIGNMENT_OF_MAT3X3) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::Mat3X3*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_MAT3X3, ALIGNMENT_OF_MAT3X3);
         }
     } else if (type == "mat4x4") {
         if ((offset + ALIGNMENT_OF_MAT4X4) <= maxByteSize) {
             auto* val = reinterpret_cast<Math::Mat4X4*>(data + offset);
-            FromJson(*value, *val);
+            SafeFromJsonValue(value, *val);
             offset = GetAlignment(offset + SIZE_OF_MAT4X4, ALIGNMENT_OF_MAT4X4);
         }
     } else {

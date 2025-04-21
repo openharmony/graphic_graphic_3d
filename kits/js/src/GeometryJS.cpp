@@ -19,17 +19,13 @@
 #include <meta/interface/intf_task_queue_registry.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/interface/intf_camera.h>
-#include <scene/interface/intf_create_mesh.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_mesh_resource.h>
 #include <scene/interface/intf_scene.h>
 
 #include "MeshResourceJS.h"
 #include "SceneJS.h"
-#include "geometry_definition/CubeJS.h"
-#include "geometry_definition/CustomJS.h"
-#include "geometry_definition/PlaneJS.h"
-#include "geometry_definition/SphereJS.h"
+#include "geometry_definition/GeometryDefinition.h"
 
 void* GeometryJS::GetInstanceImpl(uint32_t id)
 {
@@ -161,14 +157,13 @@ void GeometryJS::CreateNativeObject(
     auto meshNode = scene->CreateNode(nodePath, SCENE_NS::ClassId::MeshNode).GetResult();
     if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(meshNode)) {
         const auto resource = static_cast<MeshResourceJS*>(meshResourceParam.Native<TrueRootObject>());
-        const auto mesh = CreateMesh(env, resource);
+        const auto mesh = resource->CreateMesh();
         access->SetMesh(mesh).GetResult();
     }
     // Always set regardless of success.
     SetNativeObject(interface_pointer_cast<META_NS::IObject>(meshNode), false);
     StoreJsObj(GetNativeObject(), meJs);
 }
-
 napi_value GeometryJS::GetMesh(NapiApi::FunctionContext<>& ctx)
 {
     if (!validateSceneRef()) {
@@ -202,37 +197,4 @@ napi_value GeometryJS::GetMesh(NapiApi::FunctionContext<>& ctx)
         return {};
     }
     return StoreJsObj(mesh, nodeJS, "_JSWMesh").ToNapiValue();
-}
-
-SCENE_NS::IMesh::Ptr GeometryJS::CreateMesh(napi_env env, MeshResourceJS* meshResource)
-{
-    auto mesh = SCENE_NS::IMesh::Ptr {};
-    if (!meshResource) {
-        return mesh;
-    }
-    auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
-    const auto tro = meshResource->GetGeometryDefinition().GetObject().Native<TrueRootObject>();
-    if (!scene || !tro) {
-        return mesh;
-    }
-
-    const auto meshCreator = scene->CreateObject<SCENE_NS::ICreateMesh>(SCENE_NS::ClassId::MeshCreator).GetResult();
-    // Name and material aren't set here. Name is set in the constructor. Material needs to be manually set later.
-    auto meshConfig = SCENE_NS::MeshConfig {};
-    using namespace GeometryDefinition;
-    if (const auto cube = static_cast<CubeJS*>(tro->GetInstanceImpl(CubeJS::ID))) {
-        const auto size { cube->GetSize() };
-        mesh = meshCreator->CreateCube(meshConfig, size.x, size.y, size.z).GetResult();
-    } else if (const auto plane = static_cast<PlaneJS*>(tro->GetInstanceImpl(PlaneJS::ID))) {
-        const auto size { plane->GetSize() };
-        mesh = meshCreator->CreatePlane(meshConfig, size.x, size.y).GetResult();
-    } else if (const auto sphere = static_cast<SphereJS*>(tro->GetInstanceImpl(SphereJS::ID))) {
-        const auto segmentCount { sphere->GetSegmentCount() };
-        mesh = meshCreator->CreateSphere({}, sphere->GetRadius(), segmentCount, segmentCount).GetResult();
-    } else if (const auto custom = static_cast<CustomJS*>(tro->GetInstanceImpl(CustomJS::ID))) {
-        mesh = meshCreator->Create(meshConfig, custom->ToNative()).GetResult();
-    } else {
-        LOG_E("Unknown geometry type for mesh creation");
-    }
-    return mesh;
 }
