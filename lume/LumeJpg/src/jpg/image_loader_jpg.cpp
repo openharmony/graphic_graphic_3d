@@ -449,11 +449,11 @@ public:
         if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
             imageFileBytes[2] == 0xff && // 2: idx
             ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' && // 3,6,7: idx
-                imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // 8,9: idx JFIF
-                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' && // 3,6,7: idx
-                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // 8,9: idx Exif
-                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' && // 3,6,7: idx
-                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // 8,9: idx ICC_PROFILE
+            imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // 8,9: idx JFIF
+            (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' && // 3,6,7: idx
+            imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // 8,9: idx Exif
+            (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' && // 3,6,7: idx
+            imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // 8,9: idx ICC_PROFILE
             return true;
         }
 

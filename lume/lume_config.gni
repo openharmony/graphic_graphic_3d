@@ -46,7 +46,7 @@ declare_args() {
   METAOBJECT_DIR_NAME = "metaobject"
   SCENEWIDGETPLUGIN_DIR_NAME = "scenewidgetplugin"
   ECS_HELPER = "ecshelper"
-  CAM_PREVIEW_DIR_NAME = "camera_preview_plugin"
+  CAM_PREIVEW_DIR_NAME = "camera_preview_plugin"
 }
 
 declare_args() {

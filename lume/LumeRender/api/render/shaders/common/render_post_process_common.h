@@ -46,7 +46,8 @@ float getChromaCoeff(const vec2 uv, CORE_RELAXEDP const float chromaCoefficient)
  */
 float RandomDither(vec2 st)
 {
-    return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453); // 12.9898: param  78.233: param 43758.5453: param
+    return
+        fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453); // 12.9898: param 78.233: param 43758.5453: param
 }
 
 #endif

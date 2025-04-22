@@ -30,7 +30,8 @@ void SphereJS::Init(napi_env env, napi_value exports)
     };
     auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::SPHERE); };
 
-    napi_value zeroFloat, zeroInt;
+    napi_value zeroFloat = nullptr;
+    napi_value zeroInt = nullptr;
     napi_create_double(env, 0.0, &zeroFloat);
     napi_create_uint32(env, 0, &zeroInt);
     const auto props = BASE_NS::vector<napi_property_descriptor> {

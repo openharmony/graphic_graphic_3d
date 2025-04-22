@@ -444,9 +444,9 @@ std::optional<int> BufferViewByteStride(LoadResult& loadResult, const json::valu
 {
     // "default": 0 "minimum": 4, "maximum": 252, "multipleOf":
     int stride;
-    if (!ParseOptionalNumber<int>(loadResult, stride, jsonData, "byteStride", 0)) { // 4: minimum 252: maximum
+    if (!ParseOptionalNumber<int>(loadResult, stride, jsonData, "byteStride", 0)) {
         return std::nullopt;
-    } else if ((stride < 4 && stride != 0) || stride > 252 || (stride % 4)) {
+    } else if ((stride < 4 && stride != 0) || stride > 252 || (stride % 4)) { // 4: minimum 252: maximum
         SetError(loadResult, "bufferView.byteStride isn't valid stride");
         return std::nullopt;
     }

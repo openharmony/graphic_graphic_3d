@@ -170,7 +170,7 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject<CameraJS>(e, i
     }
 
     // Create actual camera object.
-    SCENE_NS::ICamera::Ptr node;
+    SCENE_NS::ICamera::Ptr node = nullptr;
     node = scn->CreateNode<SCENE_NS::ICamera>(nodePath, SCENE_NS::ClassId::CameraNode).GetResult();
     node->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
     node->SetActive(false);
@@ -314,7 +314,7 @@ napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        SCENE_NS::IPostProcess::Ptr postproc;
+        SCENE_NS::IPostProcess::Ptr postproc = nullptr;
         postproc = camera->PostProcess()->GetValue();
         if (!postproc) {
             // early out.
