@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -59,8 +59,7 @@ void DestroyImageLoaderManager(IImageLoaderManager* inst)
 
 BASE_NS::unique_ptr<IImageLoaderManager, void (*)(IImageLoaderManager*)> CreateImageLoaderManager()
 {
-    ImageLoaderManager* ret = new ImageLoaderManager(
-        g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager());
+    ImageLoaderManager* ret = new ImageLoaderManager(context.sceneInit_->GetEngineInstance().engine_->GetFileManager());
     return BASE_NS::unique_ptr<IImageLoaderManager, void (*)(IImageLoaderManager*)>(ret, DestroyImageLoaderManager);
 }
 
@@ -170,9 +169,14 @@ public:
     void TearDown() override {}
 };
 
-HWTEST_F(ImageManagerTest, basicLoadImage, TestSize.Level1)
+/**
+ * @tc.name: BasicLoadImage
+ * @tc.desc: test BasicLoadImage
+ * @tc.type: FUNC
+ */
+HWTEST_F(ImageManagerTest, BasicLoadImage, TestSize.Level1)
 {
-    auto& files = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
+    auto& files = context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
 
     auto imageManager = CreateImageLoaderManager();
     ASSERT_TRUE(imageManager != nullptr);
@@ -349,7 +353,12 @@ void checkImageData(const char* aTest, const IImageContainer& aImage, uint32_t a
 }
 } // namespace
 
-HWTEST_F(ImageManagerTest, loadImages, TestSize.Level1)
+/**
+ * @tc.name: LoadImages
+ * @tc.desc: test LoadImages
+ * @tc.type: FUNC
+ */
+HWTEST_F(ImageManagerTest, LoadImages, TestSize.Level1)
 {
     using namespace CORE_NS;
 
@@ -491,13 +500,23 @@ void TestInvalidFiles(const string_view dirUri)
 }
 } // namespace
 
-HWTEST_F(ImageManagerTest, invalidImages, TestSize.Level1)
+/**
+ * @tc.name: InvalidImages
+ * @tc.desc: test InvalidImages
+ * @tc.type: FUNC
+ */
+HWTEST_F(ImageManagerTest, InvalidImages, TestSize.Level1)
 {
-    TestInvalidFiles("file:///data/local/ktx-test/ktx/invalid/header/");
-    TestInvalidFiles("file:///data/local/ktx-test/ktx/invalid/pixeldata/");
+    TestInvalidFiles("file:///data/local/test_data/image/ktx-test/ktx/invalid/header/");
+    TestInvalidFiles("file:///data/local/test_data/image/ktx-test/ktx/invalid/pixeldata/");
 }
 
-HWTEST_F(ImageManagerTest, imageNotLoaded, TestSize.Level1)
+/**
+ * @tc.name: ImageNotLoaded
+ * @tc.desc: test ImageNotLoaded
+ * @tc.type: FUNC
+ */
+HWTEST_F(ImageManagerTest, ImageNotLoaded, TestSize.Level1)
 {
     auto imageManager = CreateImageLoaderManager();
     ASSERT_TRUE(imageManager != nullptr);
@@ -511,13 +530,13 @@ HWTEST_F(ImageManagerTest, imageNotLoaded, TestSize.Level1)
 
     {
         // File is not an image 1.
-        string_view filename = "file:///data/local/test_data/source.txt";
+        string_view filename = "file:///data/local/test_data/image/source.txt";
         auto result = imageManager->LoadImage(filename, 0);
         ASSERT_FALSE(result.success);
     }
     {
         // File is not an image 2.
-        string_view filename = "file:///data/local/test_data/source.txt";
+        string_view filename = "file:///data/local/test_data/image/source.txt";
         auto result = imageManager->LoadImage(filename, 0);
         ASSERT_FALSE(result.success);
     }

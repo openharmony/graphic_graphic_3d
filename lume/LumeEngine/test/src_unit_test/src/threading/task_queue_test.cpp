@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -113,7 +113,7 @@ bool SceneCreate(TestContext &context)
     ecs.Initialize();
 
     using namespace SCENE_NS;
-#if SCENE_META_FUZZ
+#if SCENE_META_TEST
     auto fun = [&context]() {
         auto &obr = META_NS::GetObjectRegistry();
 
@@ -184,7 +184,12 @@ public:
     void TearDown() override {}
 };
 
-HWTEST_F(TaskQueueTest, testExecutionOrder, TestSize.Level1)
+/**
+ * @tc.name: TestExecutionOrder
+ * @tc.desc: test TestExecutionOrder
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestExecutionOrder, TestSize.Level1)
 {
     SequentialTaskQueue queue(nullptr);
 
@@ -201,7 +206,12 @@ HWTEST_F(TaskQueueTest, testExecutionOrder, TestSize.Level1)
     g_storage.CheckValidity(5);
 }
 
-HWTEST_F(TaskQueueTest, testHierarchy, TestSize.Level1)
+/**
+ * @tc.name: TestHierarchy
+ * @tc.desc: test TestHierarchy
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestHierarchy, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(4U);
@@ -247,7 +257,12 @@ HWTEST_F(TaskQueueTest, testHierarchy, TestSize.Level1)
     g_storage.CheckValidity(9);
 }
 
-HWTEST_F(TaskQueueTest, testParallelWithDependencies, TestSize.Level1)
+/**
+ * @tc.name: TestParallelWithDependencies
+ * @tc.desc: test TestParallelWithDependencies
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestParallelWithDependencies, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(4);
@@ -279,7 +294,12 @@ HWTEST_F(TaskQueueTest, testParallelWithDependencies, TestSize.Level1)
     g_storage.CheckValidity(3);
 }
 
-HWTEST_F(TaskQueueTest, testBlocking, TestSize.Level1)
+/**
+ * @tc.name: TestBlocking
+ * @tc.desc: test TestBlocking
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestBlocking, TestSize.Level1)
 {
     // Reserve 1 core for long running operations and 3 for quick operations.
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
@@ -322,7 +342,12 @@ HWTEST_F(TaskQueueTest, testBlocking, TestSize.Level1)
     g_storage.CheckValidity(7);
 }
 
-HWTEST_F(TaskQueueTest, testPrematureDestruction, TestSize.Level1)
+/**
+ * @tc.name: TestPrematureDestruction
+ * @tc.desc: test TestPrematureDestruction
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestPrematureDestruction, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(4);
@@ -339,7 +364,12 @@ HWTEST_F(TaskQueueTest, testPrematureDestruction, TestSize.Level1)
     }
 }
 
-HWTEST_F(TaskQueueTest, testDispatcherSync, TestSize.Level1)
+/**
+ * @tc.name: TestDispatcherSync
+ * @tc.desc: test TestDispatcherSync
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestDispatcherSync, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(4);
@@ -380,7 +410,12 @@ HWTEST_F(TaskQueueTest, testDispatcherSync, TestSize.Level1)
     queue.Clear();
 }
 
-HWTEST_F(TaskQueueTest, testDispatcherAsync, TestSize.Level1)
+/**
+ * @tc.name: TestDispatcherAsync
+ * @tc.desc: test TestDispatcherAsync
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestDispatcherAsync, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(4);
@@ -447,7 +482,12 @@ HWTEST_F(TaskQueueTest, testDispatcherAsync, TestSize.Level1)
     EXPECT_TRUE(threadPool->Push(nullptr) != nullptr);
 }
 
-HWTEST_F(TaskQueueTest, testSequentialMethods, TestSize.Level1)
+/**
+ * @tc.name: TestSequentialMethods
+ * @tc.desc: test TestSequentialMethods
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestSequentialMethods, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(1);
@@ -462,7 +502,12 @@ HWTEST_F(TaskQueueTest, testSequentialMethods, TestSize.Level1)
     sq.Remove(1);
 }
 
-HWTEST_F(TaskQueueTest, testDispatcherOverMultipleFrames, TestSize.Level1)
+/**
+ * @tc.name: TestDispatcherOverMultipleFrames
+ * @tc.desc: test TestDispatcherOverMultipleFrames
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestDispatcherOverMultipleFrames, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(4);
@@ -500,7 +545,12 @@ HWTEST_F(TaskQueueTest, testDispatcherOverMultipleFrames, TestSize.Level1)
     g_storage.CheckValidity(10);
 }
 
-HWTEST_F(TaskQueueTest, multithreadIo, TestSize.Level1)
+/**
+ * @tc.name: MultithreadIo
+ * @tc.desc: test MultithreadIo
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, MultithreadIo, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(4);
@@ -540,7 +590,12 @@ HWTEST_F(TaskQueueTest, multithreadIo, TestSize.Level1)
     g_storage.CheckValidity(1);
 }
 
-HWTEST_F(TaskQueueTest, testThreadPool, TestSize.Level1)
+/**
+ * @tc.name: TestThreadPool
+ * @tc.desc: test TestThreadPool
+ * @tc.type: FUNC
+ */
+HWTEST_F(TaskQueueTest, TestThreadPool, TestSize.Level1)
 {
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
     auto threadPool = factory->CreateThreadPool(4U);

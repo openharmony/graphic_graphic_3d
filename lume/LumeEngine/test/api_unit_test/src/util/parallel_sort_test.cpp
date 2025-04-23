@@ -13,15 +13,17 @@
  * limitations under the License.
  */
 
+#include <ComponentTools/base_manager.h>
+
 #include <gtest/gtest.h>
 
-#include "util/linear_allocator.h"
+#include <base/containers/vector.h>
+#include <core/util/parallel_sort.h>
 
 #include "TestRunner.h"
 
-using namespace CORE_NS;
 using namespace BASE_NS;
-using namespace testing;
+using namespace CORE_NS;
 using namespace testing::ext;
 
 namespace {
@@ -58,7 +60,7 @@ bool SceneCreate(TestContext &context)
         WIDGET_LOGE("fail to get ecs");
         return false;
     }
-    auto factory = GetInstance<ISystemGraphLoaderFactory>(UID_SYSTEM_GRAPH_LOADER);
+    auto factory = GetInstance<Core::ISystemGraphLoaderFactory>(UID_SYSTEM_GRAPH_LOADER);
     auto systemGraphLoader = factory->Create(context.sceneInit_->GetEngineInstance().engine_->GetFileManager());
     systemGraphLoader->Load("rofs3D://systemGraph.json", *(context.ecs_));
     auto& ecs = *(context.ecs_);
@@ -123,7 +125,7 @@ bool SceneCreate(TestContext &context)
 }
 } // namespace
 
-class UtilLinearAllocatorTest : public testing::Test {
+class ParallelSortTest : public testing::Test {
 public:
     static void SetUpTestSuite()
     {
@@ -138,92 +140,36 @@ public:
 };
 
 /**
- * @tc.name: Allocate
- * @tc.desc: test Allocate
+ * @tc.name: validateParallelSort
+ * @tc.desc: test validateParallelSort
  * @tc.type: FUNC
  */
-HWTEST_F(UtilLinearAllocatorTest, Allocate, TestSize.Level1)
+HWTEST_F(ParallelSortTest, validateParallelSort, TestSize.Level1)
 {
-    {
-        constexpr size_t size = 1024u;
-        auto allocator = make_unique<LinearAllocator>(size);
+    auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
+    auto ecs = g_context.ecs_;
+    ASSERT_TRUE(ecs);
 
-        for (size_t i = 0; i < 10; ++i) {
-            auto ptr = allocator->Allocate(16);
-            ASSERT_TRUE(ptr);
-        }
+    Core::IThreadPool::Ptr threadPool = ecs->GetThreadPool();
+    ASSERT_TRUE(threadPool);
 
-        auto ptr = allocator->Allocate(size);
-        ASSERT_FALSE(ptr);
+    const int dataSize = 1000;
+
+    BASE_NS::vector<int> dataForStdSort;
+    BASE_NS::vector<int> dataForParallelSort;
+
+    for (int ii = dataSize; ii > 0; ii--) {
+        dataForParallelSort.push_back(ii);
+        dataForStdSort.push_back(ii);
     }
-}
 
-/**
- * @tc.name: AlignedAllocate
- * @tc.desc: test AlignedAllocate
- * @tc.type: FUNC
- */
-HWTEST_F(UtilLinearAllocatorTest, AlignedAllocate, TestSize.Level1)
-{
-    constexpr size_t size = 1024u;
-    auto allocator = make_unique<LinearAllocator>(size);
+    // std::sort
+    std::sort(dataForStdSort.begin(), dataForStdSort.end());
 
-    auto ptr = (ptrdiff_t)allocator->Allocate(1);
-    ASSERT_TRUE(ptr);
+    // ParallelSort
+    CORE_NS::ParallelSort(dataForParallelSort.begin(), dataForParallelSort.end(), threadPool.get());
 
-    auto ptr2 = (ptrdiff_t)allocator->Allocate(1);
-    ASSERT_TRUE(ptr2);
-    ASSERT_TRUE((ptr + 1) == ptr2);
-
-    constexpr size_t alignment = 256u;
-    auto ptr3 = (ptrdiff_t)allocator->Allocate(1, alignment);
-    ASSERT_TRUE(ptr3);
-    ASSERT_TRUE((ptr3 & (alignment - 1)) == 0);
-
-    auto ptr4 = (ptrdiff_t)allocator->Allocate(1);
-    ASSERT_TRUE(ptr4);
-
-    auto ptr5 = (ptrdiff_t)allocator->Allocate(1, alignment);
-    ASSERT_TRUE(ptr5);
-    ASSERT_TRUE((ptr5 & (alignment - 1)) == 0);
-}
-
-/**
- * @tc.name: AlignedAllocator
- * @tc.desc: test AlignedAllocator
- * @tc.type: FUNC
- */
-HWTEST_F(UtilLinearAllocatorTest, AlignedAllocator, TestSize.Level1)
-{
-    constexpr size_t size = 1024u;
-    constexpr size_t alignment = 4096u;
-
-    auto allocator = make_unique<LinearAllocator>(size, alignment);
-
-    auto ptr = (ptrdiff_t)allocator->Allocate(16);
-    ASSERT_TRUE(ptr);
-    ASSERT_TRUE((ptr & (alignment - 1)) == 0);
-}
-
-/**
- * @tc.name: Reset
- * @tc.desc: test Reset
- * @tc.type: FUNC
- */
-HWTEST_F(UtilLinearAllocatorTest, Reset, TestSize.Level1)
-{
-    constexpr size_t size = 1024u;
-    auto allocator = make_unique<LinearAllocator>(size);
-
-    constexpr size_t bigAllocation = 1000u;
-    auto ptr = allocator->Allocate(bigAllocation);
-    ASSERT_TRUE(ptr);
-
-    ASSERT_FALSE(allocator->Allocate(bigAllocation));
-
-    allocator->Reset();
-
-    auto ptr2 = allocator->Allocate(bigAllocation);
-    ASSERT_TRUE(ptr2);
-    ASSERT_TRUE(ptr == ptr2);
+    for (int ii = 0; ii < dataSize; ii++) {
+        ASSERT_EQ(dataForStdSort[ii], dataForParallelSort[ii]);
+    }
 }

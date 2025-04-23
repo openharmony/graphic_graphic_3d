@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -142,6 +142,11 @@ public:
     void TearDown() override {}
 };
 
+/**
+ * @tc.name: JsonUtil
+ * @tc.desc: test JsonUtil
+ * @tc.type: FUNC
+ */
 HWTEST_F(UtilJsonTest, JsonUtil, TestSize.Level1)
 {
     BASE_NS::string_view str { "{\"number\":1984, \"boolean\": true, \"charstr\": \"abc\"}" };
@@ -174,7 +179,12 @@ HWTEST_F(UtilJsonTest, JsonUtil, TestSize.Level1)
     }
 }
 
-HWTEST_F(UtilJsonTest, frustumTest, TestSize.Level1)
+/**
+ * @tc.name: FrustumTest
+ * @tc.desc: test FrustumTest
+ * @tc.type: FUNC
+ */
+HWTEST_F(UtilJsonTest, FrustumTest, TestSize.Level1)
 {
     CORE_NS::FrustumUtil f;
     const CORE_NS::FrustumUtil conF;

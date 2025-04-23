@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,11 +37,11 @@ struct Thing {
 };
 
 namespace {
-struct FuzzContext {
+struct TestContext {
     std::shared_ptr<ISceneInit> sceneInit_ = nullptr;
     CORE_NS::IEcs::Ptr ecs_;
 };
-static FuzzContext g_context;
+static TestContext g_context;
 
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
@@ -50,14 +50,14 @@ static constexpr BASE_NS::Uid APP_THREAD{"b2e8cef3-453a-4651-b564-5190f8b5190d"}
 static constexpr BASE_NS::Uid IO_QUEUE{"be88e9a0-9cd8-45ab-be48-937953dc258f"};
 static constexpr BASE_NS::Uid JS_RELEASE_THREAD{"3784fa96-b25b-4e9c-bbf1-e897d36f73af"};
 
-bool SceneDispose(FuzzContext &context)
+bool SceneDispose(TestContext &context)
 {
     context.ecs_ = nullptr;
     context.sceneInit_ = nullptr;
     return true;
 }
 
-bool SceneCreate(FuzzContext &context)
+bool SceneCreate(TestContext &context)
 {
     context.sceneInit_ = CreateTestScene();
     context.sceneInit_->LoadPluginsAndInit();
@@ -77,7 +77,7 @@ bool SceneCreate(FuzzContext &context)
     ecs.Initialize();
 
     using namespace SCENE_NS;
-#if SCENE_META_FUZZ
+#if SCENE_META_TEST
     auto fun = [&context]() {
         auto &obr = META_NS::GetObjectRegistry();
 
@@ -231,6 +231,11 @@ public:
     void TearDown() override {}
 };
 
+/**
+ * @tc.name: MakeScopedHandle
+ * @tc.desc: test MakeScopedHandle
+ * @tc.type: FUNC
+ */
 HWTEST_F(PropertyTest, MakeScopedHandle, TestSize.Level1)
 {
     Thing thing;
@@ -288,6 +293,11 @@ HWTEST_F(PropertyTest, MakeScopedHandle, TestSize.Level1)
     }
 }
 
+/**
+ * @tc.name: GetSetPropertyValue
+ * @tc.desc: test GetSetPropertyValue
+ * @tc.type: FUNC
+ */
 HWTEST_F(PropertyTest, GetSetPropertyValue, TestSize.Level1)
 {
     Thing thing;
