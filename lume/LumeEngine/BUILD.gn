@@ -256,8 +256,8 @@ ohos_source_set("lume_engine_src") {
   ]
 
   external_deps += [
+    "bounds_checking_function:libsec_shared",
     "zlib:shared_libz",
-    "bounds_checking_function:libsec_shared"
   ]
 
   if (LUME_OHOS_BUILD) {
