@@ -118,11 +118,7 @@ napi_value SceneResourceImpl::GetObjectType(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    uint32_t type = -1; // return -1 if the resource does not exist anymore
-    if (GetThisNativeObject(ctx)) {
-        type = type_;
-    }
-    return ctx.GetNumber(type);
+    return ctx.GetNumber(type_);
 }
 
 napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
