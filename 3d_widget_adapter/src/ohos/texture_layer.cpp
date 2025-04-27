@@ -15,13 +15,13 @@
 
 #include "texture_layer.h"
 
-#include <include/gpu/GrBackendSurface.h>
-#ifndef NEW_SKIA
-#include <include/gpu/GrContext.h>
+#ifdef USE_M133_SKIA
+#include "include/gpu/ganesh/GrBackendSurface.h"
+#include "include/gpu/ganesh/gl/GrGLInterface.h"
 #else
-#include <include/gpu/GrDirectContext.h>
+#include "include/gpu/GrBackendSurface.h"
+#include "include/gpu/gl/GrGLInterface.h"
 #endif
-#include <include/gpu/gl/GrGLInterface.h>
 #include <native_buffer.h>
 #include <render_service_base/include/pipeline/rs_recording_canvas.h>
 #include <render_service_base/include/property/rs_properties_def.h>
