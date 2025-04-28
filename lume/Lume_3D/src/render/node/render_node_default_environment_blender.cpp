@@ -107,7 +107,6 @@ void RenderNodeDefaultEnvironmentBlender::PreExecuteFrame()
     if (!valid_) {
         return;
     }
-
     if (!dataStoreCamera->HasBlendEnvironments()) {
         // need to clear targets
         envTargetData_ = {};

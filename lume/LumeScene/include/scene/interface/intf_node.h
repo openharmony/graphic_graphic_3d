@@ -32,12 +32,13 @@ public:
     META_PROPERTY(bool, Enabled)
 
     virtual BASE_NS::string GetName() const = 0;
+    virtual Future<bool> SetName(const BASE_NS::string&) = 0;
     virtual Future<BASE_NS::string> GetPath() const = 0;
     virtual Future<INode::Ptr> GetParent() const = 0;
     virtual Future<BASE_NS::vector<INode::Ptr>> GetChildren() const = 0;
-    virtual Future<bool> RemoveChild(const INode::Ptr&) = 0;
+
     virtual Future<bool> AddChild(const INode::Ptr& child, size_t index = -1) = 0;
-    virtual Future<bool> SetName(const BASE_NS::string&) = 0;
+    virtual Future<bool> RemoveChild(const INode::Ptr&) = 0;
 
     virtual BASE_NS::shared_ptr<IScene> GetScene() const = 0;
 };

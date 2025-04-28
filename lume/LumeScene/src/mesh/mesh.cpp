@@ -178,6 +178,9 @@ bool Mesh::SetEcsObject(const IEcsObject::Ptr& obj)
             if (auto acc = interface_cast<IEcsObjectAccess>(p)) {
                 if (acc->SetEcsObject(obj)) {
                     SetInternalMesh(p);
+                    if (auto scene = obj->GetScene()) {
+                        meshEntity_ = scene->GetEcsContext().GetEntityReference(obj->GetEntity());
+                    }
                 }
             }
         }

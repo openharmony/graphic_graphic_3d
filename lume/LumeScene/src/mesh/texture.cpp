@@ -134,6 +134,12 @@ bool Texture::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::str
                i->PushValue(META_NS::IValue::Ptr(
                    new RenderResourceValue<IBitmap>(ep, { object_->GetScene(), ClassId::Bitmap })));
     }
+    if (p->GetName() == "Sampler") {
+        auto ep = object_->CreateEngineProperty(cpath).GetResult();
+        auto i = interface_cast<META_NS::IStackProperty>(p);
+        return ep && i &&
+               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<SamplerConverter>(ep, { object_->GetScene() })));
+    }
     return AttachEngineProperty(p, cpath);
 }
 

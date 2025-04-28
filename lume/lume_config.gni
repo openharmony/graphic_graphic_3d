@@ -40,10 +40,12 @@ declare_args() {
   LIB_CORE3D = "libPluginAGP3D"
   LIB_JPG = "libPluginAGPJpg"
   LIB_PNG = "libPluginAGPPng"
+  LIB_CAM_PREVIEW = "libPluginCamPreview"
   LIB_VULKAN_3D = "//third_party/vulkan-loader:vulkan_loader"
   METAOBJECT_DIR_NAME = "metaobject"
   SCENEWIDGETPLUGIN_DIR_NAME = "scenewidgetplugin"
   ECS_HELPER = "ecshelper"
+  CAM_PREIVEW_DIR_NAME = "camera_preview_plugin"
 }
 
 declare_args() {

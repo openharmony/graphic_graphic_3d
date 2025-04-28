@@ -115,7 +115,7 @@ float dGGXAnisotropic(float at, float ab, float NoH, float ToH, float BoH, float
     vec3 d = vec3(ab * ToH, at * BoH, a2 * NoH);
     float d2 = dot(d, d);
     if (d2 == 0.0f) {
-        return 0.0; 
+        return 0.0;
     }
     float w2 = a2 / d2;
     return a2 * w2 * w2 * (1.0 / CORE_BRDF_PI);

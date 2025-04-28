@@ -262,7 +262,7 @@ bool CopyDirectoryContents(CORE_NS::IFileManager& fileManager, string_view sourc
 
 bool SaveTextFile(CORE_NS::IFileManager& fileManager, string_view fileUri, string_view fileContents)
 {
-    // TODO: the safest way to save files would be to save to a temp file and rename.
+    // the safest way to save files would be to save to a temp file and rename.
     auto file = fileManager.CreateFile(fileUri);
     if (file) {
         file->Write(fileContents.data(), fileContents.length());
@@ -309,7 +309,7 @@ void ReplaceTextInFilesImpl(CORE_NS::IFileManager& fileManager, BASE_NS::string_
                         isPlaintext = true;
                     }
                 }
-                // TODO: odds of getting a match in a binary just by chance seem pretty slim so perhaps this check
+                // odds of getting a match in a binary just by chance seem pretty slim so perhaps this check
                 // could be omitted, but I suppose that depends on the length of the tag we're replacing
                 if (isPlaintext) {
                     auto inFilePath = PathUtil::ResolvePath(folderUri, entry.name);

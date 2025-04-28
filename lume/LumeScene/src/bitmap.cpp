@@ -35,11 +35,6 @@ bool Bitmap::SetRenderHandle(
         if (handle_.GetHandle() == handle.GetHandle() && entity_ == ent) {
             return true;
         }
-        if (ent) {
-            handle_ = handle;
-            entity_ = ent;
-            return true;
-        }
     }
 
     RENDER_NS::GpuImageDesc desc;
@@ -70,7 +65,7 @@ RENDER_NS::RenderHandleReference Bitmap::GetRenderHandle() const
     std::shared_lock lock { mutex_ };
     return handle_;
 }
-CORE_NS::EntityReference Bitmap::GetEntity() const
+CORE_NS::Entity Bitmap::GetEntity() const
 {
     std::shared_lock lock { mutex_ };
     return entity_;

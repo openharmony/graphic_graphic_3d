@@ -37,7 +37,7 @@ class EcsObject : public META_NS::IntroduceInterfaces<META_NS::MetaObject, IEcsO
 public:
     BASE_NS::string GetName() const override;
     IInternalScene::Ptr GetScene() const override;
-    CORE_NS::EntityReference GetEntity() const override;
+    CORE_NS::Entity GetEntity() const override;
     META_NS::IEngineValueManager::Ptr GetEngineValueManager() override;
 
     Future<bool> AddAllEngineProperties(const META_NS::IMetadata::Ptr& object, BASE_NS::string_view component) override;
@@ -64,7 +64,7 @@ protected:
 
 private:
     IInternalScene::WeakPtr scene_;
-    CORE_NS::EntityReference entity_;
+    CORE_NS::Entity entity_;
     META_NS::IEngineValueManager::Ptr valueManager_;
     // locked access
     mutable std::shared_mutex mutex_;

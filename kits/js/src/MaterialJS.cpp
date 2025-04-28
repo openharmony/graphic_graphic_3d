@@ -103,8 +103,6 @@ void BaseMaterial::DisposeNative(TrueRootObject* tro)
         tro->SetNativeObject(nullptr, false);
         tro->SetNativeObject(nullptr, true);
     }
-    renderSort_.Reset();
-    blend_.Reset();
     scene_.Reset();
 }
 napi_value BaseMaterial::GetMaterialType(NapiApi::FunctionContext<>& ctx)
@@ -173,6 +171,9 @@ void BaseMaterial::SetCullMode(NapiApi::FunctionContext<uint32_t>& ctx)
     if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx))) {
         if (auto shader = META_NS::GetValue(material->MaterialShader())) {
             shader->SetCullMode(cullMode);
+            // need to forcefully refresh the material, otherwise renderer will ignore the change
+            auto val = META_NS::GetValue(material->MaterialShader());
+            META_NS::SetValue(material->MaterialShader(), val);
         }
     }
 }
@@ -184,23 +185,19 @@ napi_value BaseMaterial::GetBlend(NapiApi::FunctionContext<>& ctx)
 
     auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
     if (!material) {
-        blend_.Reset();
         return ctx.GetUndefined();
     }
 
     auto shader = META_NS::GetValue(material->MaterialShader());
     if (!shader) {
-        blend_.Reset();
         return ctx.GetUndefined();
     }
 
     bool enableBlend = shader->IsBlendEnabled().GetResult();
 
-    if (blend_.IsEmpty()) {
-        return ctx.GetUndefined();
-    }
-
-    return blend_.GetValue();
+    NapiApi::Object blendObjectJS(ctx.Env());
+    blendObjectJS.Set("enabled", ctx.GetBoolean(enableBlend));
+    return blendObjectJS.ToNapiValue();
 }
 void BaseMaterial::SetBlend(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
@@ -210,14 +207,11 @@ void BaseMaterial::SetBlend(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
     if (!material) {
-        // material destroyed, just make sure we have no shader reference anymore.
-        blend_.Reset();
         return;
     }
 
     auto shader = META_NS::GetValue(material->MaterialShader());
     if (!shader) {
-        blend_.Reset();
         return;
     }
 
@@ -225,7 +219,9 @@ void BaseMaterial::SetBlend(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     bool enableBlend = blendObjectJS.Get<bool>("enabled");
     shader->EnableBlend(enableBlend);
 
-    blend_ = NapiApi::StrongRef(blendObjectJS);
+    // need to forcefully refresh the material, otherwise renderer will ignore the change
+    auto val = META_NS::GetValue(material->MaterialShader());
+    META_NS::SetValue(material->MaterialShader(), val);
 }
 napi_value BaseMaterial::GetAlphaCutoff(NapiApi::FunctionContext<>& ctx)
 {
@@ -257,17 +253,15 @@ napi_value BaseMaterial::GetRenderSort(NapiApi::FunctionContext<>& ctx)
 
     auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
     if (!material) {
-        renderSort_.Reset();
         return ctx.GetUndefined();
     }
 
     auto renderSort = META_NS::GetValue(material->RenderSort());
 
-    if (renderSort_.IsEmpty()) {
-        return ctx.GetUndefined();
-    }
-
-    return renderSort_.GetValue();
+    NapiApi::Object renderSortJS(ctx.Env());
+    renderSortJS.Set("renderSortLayer", ctx.GetNumber(renderSort.renderSortLayer));
+    renderSortJS.Set("renderSortLayerOrder", ctx.GetNumber(renderSort.renderSortLayerOrder));
+    return renderSortJS.ToNapiValue();
 }
 void BaseMaterial::SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
@@ -277,8 +271,6 @@ void BaseMaterial::SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetThisNativeObject(ctx));
     if (!material) {
-        // material destroyed, just make sure we have no shader reference anymore.
-        renderSort_.Reset();
         return;
     }
 
@@ -287,8 +279,6 @@ void BaseMaterial::SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     renderSort.renderSortLayer = renderSortJS.Get<uint32_t>("renderSortLayer");
     renderSort.renderSortLayerOrder = renderSortJS.Get<uint32_t>("renderSortLayerOrder");
     META_NS::SetValue(material->RenderSort(), renderSort);
-
-    renderSort_ = NapiApi::StrongRef(renderSortJS);
 }
 
 void MaterialJS::Init(napi_env env, napi_value exports)
@@ -331,12 +321,8 @@ MaterialJS::MaterialJS(napi_env e, napi_callback_info i)
         LOG_F("INVALID SCENE!");
     }
 
-    auto* tro = scene.Native<TrueRootObject>();
-    if (tro) {
-        auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-        }
+    if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
 
     auto metaobj = GetNativeObjectParam<META_NS::IObject>(args); // Should be IMaterial
@@ -365,27 +351,17 @@ void* MaterialJS::GetInstanceImpl(uint32_t id)
         return this;
     return BaseMaterial::GetInstanceImpl(id);
 }
-void MaterialJS::DisposeNative(void*)
+void MaterialJS::DisposeNative(void* scn)
 {
-    NapiApi::Object obj = scene_.GetObject();
-    if (obj) {
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            auto sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
-        }
+    if (disposed_) {
+        return;
     }
-    if (auto material = interface_pointer_cast<SCENE_NS::IMaterial>(GetNativeObject())) {
-        SetNativeObject(nullptr, false);
-        SetNativeObject(nullptr, true);
-        if (obj) {
-            material->MaterialShader()->SetValue(nullptr);
-        }
-    } else {
-        SetNativeObject(nullptr, false);
+    disposed_ = true;
+    if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
+        sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
+    SetNativeObject(nullptr, false);
+    SetNativeObject(nullptr, true);
     shaderBind_.reset();
     shader_.Reset();
 
@@ -393,6 +369,7 @@ void MaterialJS::DisposeNative(void*)
 }
 void MaterialJS::Finalize(napi_env env)
 {
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
     BaseObject::Finalize(env);
 }
 void MaterialJS::SetColorShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)

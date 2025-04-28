@@ -127,7 +127,7 @@ void RenderBloom::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRend
         const float scaleFactor = Math::max(0.01f, scaleFactor_);
         const auto fTexCount = static_cast<float>(targets_.tex1.size());
         frameScaleMaxCount_ = static_cast<size_t>(Math::min(fTexCount, fTexCount * scaleFactor));
-        frameScaleMaxCount_ = Math::max(frameScaleMaxCount_, size_t(1));
+        frameScaleMaxCount_ = Math::max(frameScaleMaxCount_, size_t(2)); // 2: count
 
         if (bloomInfo_.useCompute) {
             ComputeBloom(renderNodeContextMgr, cmdList);

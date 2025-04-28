@@ -16,6 +16,7 @@
 #include "PostProcJS.h"
 
 #include <meta/api/make_callback.h>
+#include <meta/api/util.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/property/property_events.h>
@@ -153,7 +154,7 @@ PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject<PostProcJS
     NapiApi::Object cameraJS = fromJs.Arg<0>();
     camera_ = { cameraJS };
     auto* rootobject = cameraJS.Native<TrueRootObject>();
-    if (rootobject == nullptr)  {
+    if (rootobject == nullptr) {
         LOG_E("rootobject is nullptr");
         return;
     }
@@ -247,11 +248,9 @@ void PostProcJS::SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 napi_value PostProcJS::GetToneMapping(NapiApi::FunctionContext<>& ctx)
 {
     if (auto postproc = interface_cast<SCENE_NS::IPostProcess>(GetNativeObject())) {
-        SCENE_NS::ITonemap::Ptr tone = postproc->Tonemap()->GetValue();
-        if (!tone->Enabled()->GetValue()) {
-            tone.reset();
-        }
-        if (!tone) {
+        SCENE_NS::ITonemap::Ptr tone = META_NS::GetValue(postproc->Tonemap());
+        if ((!tone) || (!META_NS::GetValue(tone->Enabled(), false))) {
+            // no tonemap object or tonemap disabled.
             return ctx.GetUndefined();
         }
         auto obj = interface_pointer_cast<META_NS::IObject>(tone);

@@ -489,7 +489,7 @@ CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
                         DestroyHelper(*resource);
                     }
                 }
-		            break;
+                    break;
                 case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                     PLUGIN_ASSERT(meta.size == IMAGE_HANDLE_REF_BYTE_SIZE);
                     if (auto* resource = (BindableImageWithHandleReference*)(data_.data() + meta.offset); resource) {

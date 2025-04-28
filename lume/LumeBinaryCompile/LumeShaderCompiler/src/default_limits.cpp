@@ -104,7 +104,7 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /*.maxAtomicCounterBindings = */ 1,
     /*.maxVertexAtomicCounterBuffers = */ 0, // From OpenGLES 3.1 Table 6.41.
 
-                                             // ARB_shader_atomic_counters.
+    // ARB_shader_atomic_counters.
     /*.maxTessControlAtomicCounterBuffers = */ 0,
     /*.maxTessEvaluationAtomicCounterBuffers = */ 0,
     /*.maxGeometryAtomicCounterBuffers = */ 0,
@@ -141,7 +141,7 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /* .maxDualSourceDrawBuffersEXT = */ 1,
     // This is the glslang TLimits structure.
     // It defines whether or not the following features are enabled.
-    // We want them to all be enabled.z
+    // We want them to all be enabled.
     /*.limits = */
     {
         /*.nonInductiveForLoops = */ 1,

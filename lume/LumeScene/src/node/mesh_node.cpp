@@ -21,6 +21,7 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/property/array_property.h>
 
+#include "ecs_component/entity_owner_component.h"
 #include "../mesh/submesh.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -40,8 +41,9 @@ CORE_NS::Entity MeshNode::CreateEntity(const IInternalScene::Ptr& scene)
 {
     const auto& ecs = scene->GetEcsContext().GetNativeEcs();
     const auto renderMeshManager = CORE_NS::GetManager<CORE3D_NS::IRenderMeshComponentManager>(*ecs);
+    const auto ownerManager = CORE_NS::GetManager<IEntityOwnerComponentManager>(*ecs);
     const auto meshManager = CORE_NS::GetManager<CORE3D_NS::IMeshComponentManager>(*ecs);
-    if (!renderMeshManager || !meshManager) {
+    if (!renderMeshManager || !meshManager || !ownerManager) {
         return {};
     }
     const auto entity = ecs->GetEntityManager().Create();
@@ -53,6 +55,14 @@ CORE_NS::Entity MeshNode::CreateEntity(const IInternalScene::Ptr& scene)
     }
     handle->mesh = ecs->GetEntityManager().Create();
     meshManager->Create(handle->mesh);
+    ownerManager->Create(entity);
+    const auto ownerHandle = ownerManager->Write(entity);
+    if (!ownerHandle) {
+        ecs->GetEntityManager().Destroy(entity);
+        ecs->GetEntityManager().Destroy(handle->mesh);
+        return {};
+    }
+    ownerHandle->entity = ecs->GetEntityManager().GetReferenceCounted(handle->mesh);
     return entity;
 }
 bool MeshNode::Init(IInternalRenderMesh::Ptr rmesh)
@@ -100,6 +110,18 @@ Future<bool> MeshNode::SetSubmeshes(const BASE_NS::vector<ISubMesh::Ptr>& s)
     return {};
 }
 
+void MeshNode::SetOwnedEntity(CORE_NS::Entity ent)
+{
+    if (auto obj = GetEcsObject()) {
+        auto ecs = obj->GetScene()->GetEcsContext().GetNativeEcs();
+        auto ownerManager = CORE_NS::GetManager<IEntityOwnerComponentManager>(*ecs);
+        if (ownerManager) {
+            if (auto ownerHandle = ownerManager->Write(obj->GetEntity())) {
+                ownerHandle->entity = ecs->GetEntityManager().GetReferenceCounted(ent);
+            }
+        }
+    }
+}
 Future<bool> MeshNode::SetMesh(const IMesh::Ptr& m)
 {
     if (auto obj = GetEcsObject()) {
@@ -115,6 +137,7 @@ Future<bool> MeshNode::SetMesh(const IMesh::Ptr& m)
                     if (!att.empty()) {
                         att.front()->Mesh()->SetValue(obj->GetEntity());
                         mesh_ = mesh;
+                        SetOwnedEntity(obj->GetEntity());
                         return true;
                     }
                 }

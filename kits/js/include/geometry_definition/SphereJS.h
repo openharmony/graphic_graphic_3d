@@ -16,37 +16,26 @@
 #ifndef GEOMETRY_DEFINITION_SPHERE_JS_H
 #define GEOMETRY_DEFINITION_SPHERE_JS_H
 
-#include <meta/interface/intf_object.h>
 #include <napi_api.h>
+#include <scene/interface/intf_create_mesh.h>
 
-#include <base/math/vector.h>
-
-#include "BaseObjectJS.h"
 #include "geometry_definition/GeometryDefinition.h"
 
 namespace GeometryDefinition {
 
-class SphereJS : public GeometryDefinition<SphereJS> {
+class SphereJS : public GeometryDefinition {
 public:
-    static constexpr uint32_t ID = 153;
-
-    explicit SphereJS(napi_env, napi_callback_info);
     ~SphereJS() override = default;
+    static GeometryDefinition* FromJs(NapiApi::Object& jsDefinition);
+    virtual SCENE_NS::IMesh::Ptr CreateMesh(
+        const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const override;
 
     static void Init(napi_env env, napi_value exports);
 
-    virtual void* GetInstanceImpl(uint32_t id) override;
-
-    float GetRadius() const;
-    uint32_t GetSegmentCount() const;
-
 private:
-    napi_value GetRadius(NapiApi::FunctionContext<>& ctx);
-    napi_value GetSegmentCount(NapiApi::FunctionContext<>& ctx);
-    void SetRadius(NapiApi::FunctionContext<float>& ctx);
-    void SetSegmentCount(NapiApi::FunctionContext<uint32_t>& ctx);
-    float radius_ { 0 };
-    uint32_t segmentCount_ { 0 };
+    explicit SphereJS(float radius, uint32_t segmentCount);
+    float radius_;
+    uint32_t segmentCount_;
 };
 
 } // namespace GeometryDefinition

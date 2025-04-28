@@ -16,6 +16,7 @@
 #include "ecs.h"
 
 #include <algorithm>
+#include <random>
 #include <scene/ext/util.h>
 
 #include <3d/ecs/components/environment_component.h>
@@ -29,33 +30,42 @@
 
 SCENE_BEGIN_NAMESPACE()
 
+static bool SetPreprocesor(CORE3D_NS::IRenderPreprocessorSystem& system, BASE_NS::string_view tag)
+{
+    BASE_NS::string dataStorePrefix = "renderDataStore: " + tag;
+
+    auto sceneDataStore = dataStorePrefix + "-RenderDataStoreDefaultScene";
+    auto cameraDataStore = dataStorePrefix + "-RenderDataStoreDefaultCamera";
+    auto lightDataStore = dataStorePrefix + "-RenderDataStoreDefaultLight";
+    auto materialDataStore = dataStorePrefix + "-RenderDataStoreDefaultMaterial";
+    auto morphDataStore = dataStorePrefix + "-RenderDataStoreMorph";
+
+    if (auto prop = system.GetProperties()) {
+        {
+            CORE_NS::ScopedHandle<CORE3D_NS::IRenderPreprocessorSystem::Properties> p(prop);
+            p->dataStorePrefix = dataStorePrefix;
+            p->dataStoreScene = sceneDataStore;
+            p->dataStoreCamera = cameraDataStore;
+            p->dataStoreLight = lightDataStore;
+            p->dataStoreMaterial = materialDataStore;
+            p->dataStoreMorph = morphDataStore;
+        }
+        system.SetProperties(*prop);
+        return true;
+    }
+    return false;
+}
+
 static bool InitPreprocesor(const CORE_NS::IEcs& ecs, RENDER_NS::IRenderContext& context)
 {
-    auto renderPreprocessorSystem = CORE_NS::GetSystem<CORE3D_NS::IRenderPreprocessorSystem>(ecs);
-
-    BASE_NS::string dataStorePrefix = "renderDataStore: " + BASE_NS::string(BASE_NS::to_string(intptr_t(&ecs)));
-
-    auto& renderDataStoreManager = context.GetRenderDataStoreManager();
-
-    auto sceneDataStore = dataStorePrefix + "RenderDataStoreDefaultScene";
-    auto cameraDataStore = dataStorePrefix + "RenderDataStoreDefaultCamera";
-    auto lightDataStore = dataStorePrefix + "RenderDataStoreDefaultLight";
-    auto materialDataStore = dataStorePrefix + "RenderDataStoreDefaultMaterial";
-    auto morphDataStore = dataStorePrefix + "RenderDataStoreMorph";
-
-    if (renderPreprocessorSystem) {
-        CORE3D_NS::IRenderPreprocessorSystem::Properties props;
-        props.dataStorePrefix = dataStorePrefix;
-        props.dataStoreScene = sceneDataStore;
-        props.dataStoreCamera = cameraDataStore;
-        props.dataStoreLight = lightDataStore;
-        props.dataStoreMaterial = materialDataStore;
-        props.dataStoreMorph = morphDataStore;
-
-        *CORE_NS::ScopedHandle<CORE3D_NS::IRenderPreprocessorSystem::Properties>(
-            renderPreprocessorSystem->GetProperties()) = props;
+    auto system = CORE_NS::GetSystem<CORE3D_NS::IRenderPreprocessorSystem>(ecs);
+    if (system) {
+        std::random_device rd;
+        std::mt19937_64 gen(rd());
+        return SetPreprocesor(*system,
+            BASE_NS::string(BASE_NS::to_string(uintptr_t(&ecs))) + "_" + BASE_NS::string(BASE_NS::to_string(gen())));
     }
-    return renderPreprocessorSystem != nullptr;
+    return false;
 }
 
 template<typename Manager>
@@ -155,6 +165,13 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
     }
     nodeSystem = GetSystem<CORE3D_NS::INodeSystem>(*ecs);
     picking = GetInstance<CORE3D_NS::IPicking>(*context.GetInterface<IClassRegister>(), CORE3D_NS::UID_PICKING);
+
+    entityOwnerComponentManager =
+        static_cast<IEntityOwnerComponentManager*>(ecs->CreateComponentManager(ENTITY_OWNER_COMPONENT_TYPE_INFO));
+    if (!entityOwnerComponentManager) {
+        return false;
+    }
+    components_[entityOwnerComponentManager->GetName()] = entityOwnerComponentManager;
 
     if (!EcsListener::Initialize(*this)) {
         CORE_LOG_E("failed to initialize ecs listener");
@@ -268,6 +285,16 @@ void Ecs::RemoveEcsObject(const IEcsObject::ConstPtr& obj)
     DeregisterEcsObject(obj);
 }
 
+bool Ecs::RemoveEntity(CORE_NS::Entity ent)
+{
+    bool res = CORE_NS::EntityUtil::IsValid(ent);
+    if (res) {
+        DeregisterEcsObject(ent);
+        ecs->GetEntityManager().Destroy(ent);
+    }
+    return res;
+}
+
 bool Ecs::CreateUnnamedRootNode()
 {
     if (rootNode_) {
@@ -304,11 +331,10 @@ const CORE3D_NS::ISceneNode* Ecs::GetNode(CORE_NS::Entity ent) const
 {
     return nodeSystem->GetNode(ent);
 }
-void Ecs::RemoveNode(CORE_NS::Entity ent)
+
+CORE_NS::EntityReference Ecs::GetEntityReference(CORE_NS::Entity ent)
 {
-    if (auto n = nodeSystem->GetNode(ent)) {
-        n->SetParent(nodeSystem->GetRootNode());
-    }
+    return ecs->GetEntityManager().GetReferenceCounted(ent);
 }
 
 void Ecs::AddDefaultComponents(CORE_NS::Entity ent) const
@@ -327,7 +353,7 @@ void Ecs::AddDefaultComponents(CORE_NS::Entity ent) const
     create(worldMatrixComponentManager);
 }
 
-CORE_NS::EntityReference CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild)
+CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild)
 {
     IInternalScene::Ptr localScene = parent.GetScene();
     IInternalScene::Ptr extScene = extChild.GetScene();
@@ -340,10 +366,10 @@ CORE_NS::EntityReference CopyExternalAsChild(const IEcsObject& parent, const IEc
     auto ent = util.Clone(*localScene->GetEcsContext().GetNativeEcs(), parent.GetEntity(),
         *extScene->GetEcsContext().GetNativeEcs(), extChild.GetEntity());
 
-    return localScene->GetEcsContext().GetNativeEcs()->GetEntityManager().GetReferenceCounted(ent);
+    return ent;
 }
 
-static CORE_NS::EntityReference ReparentOldRoot(
+static CORE_NS::Entity ReparentOldRoot(
     IInternalScene::Ptr scene, const IEcsObject& parent, const BASE_NS::vector<CORE_NS::Entity>& entities)
 {
     auto nodeSystem = CORE_NS::GetSystem<CORE3D_NS::INodeSystem>(*scene->GetEcsContext().GetNativeEcs());
@@ -367,10 +393,10 @@ static CORE_NS::EntityReference ReparentOldRoot(
     } else {
         CORE_LOG_W("Failed to find old root when import scene");
     }
-    return scene->GetEcsContext().GetNativeEcs()->GetEntityManager().GetReferenceCounted(node->GetEntity());
+    return node->GetEntity();
 }
 
-CORE_NS::EntityReference CopyExternalAsChild(const IEcsObject& parent, const IScene& scene)
+CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IScene& scene)
 {
     IInternalScene::Ptr localScene = parent.GetScene();
     IInternalScene::Ptr extScene = scene.GetInternalScene();

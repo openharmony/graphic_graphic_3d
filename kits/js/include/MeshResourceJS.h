@@ -20,6 +20,7 @@
 
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
+#include "geometry_definition/GeometryDefinition.h"
 
 class MeshResourceJS : public BaseObject<MeshResourceJS>, public SceneResourceImpl {
 public:
@@ -32,12 +33,13 @@ public:
 
     virtual void* GetInstanceImpl(uint32_t id) override;
 
-    NapiApi::StrongRef GetGeometryDefinition() const;
+    SCENE_NS::IMesh::Ptr CreateMesh();
 
 private:
+    void Finalize(napi_env env) override;
     void DisposeNative(void*) override;
     // This is a temporary solution. When IMeshResource is implemented, this can be removed.
-    NapiApi::StrongRef geometryDefinition_ {};
+    BASE_NS::unique_ptr<GeometryDefinition::GeometryDefinition> geometryDefinition_;
 };
 
 #endif

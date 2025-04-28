@@ -120,7 +120,7 @@ ColorInfo GetColorInfo(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR
     PLUGIN_ASSERT_MSG(ci.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR, "colorspace not correct");
 
     PLUGIN_ASSERT_MSG(ci.format != VK_FORMAT_UNDEFINED, "colorformat not correct");
-    PLUGIN_LOG_D("swapchainColorFormat: %u swapchainColorSpace %u", ci.format, ci.colorSpace);
+    PLUGIN_LOG_E("swapchainColorFormat: %u swapchainColorSpace %u", ci.format, ci.colorSpace);
 
     return ci;
 }
@@ -282,7 +282,7 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             (surfaceCapabilities.maxImageCount == 0)
                 ? (Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount))
                 : (Math::min(surfaceCapabilities.maxImageCount,
-                    Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
+                   Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
         PLUGIN_LOG_D("swapchainImageCount: %u", imageCount);
 
         const VkSurfaceTransformFlagsKHR swapchainTransform =
