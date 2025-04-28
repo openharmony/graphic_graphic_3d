@@ -86,10 +86,10 @@ __attribute__((used)) const CORE_NS::IPlugin* const g_staticPluginListDataRef = 
 #else
 
 #if _MSC_VER
-static const CORE_NS::IPlugin* const *g_staticPluginList = nullptr;
+static const CORE_NS::IPlugin* const* g_staticPluginList = nullptr;
 static size_t g_staticPluginListCount = 0;
 #else
-__attribute__((visibility("hidden"))) static const CORE_NS::IPlugin* const *g_staticPluginList = nullptr;
+__attribute__((visibility("hidden"))) static const CORE_NS::IPlugin* const* g_staticPluginList = nullptr;
 __attribute__((visibility("hidden"))) static size_t g_staticPluginListCount = 0;
 #endif
 

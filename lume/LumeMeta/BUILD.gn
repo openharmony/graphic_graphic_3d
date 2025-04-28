@@ -14,7 +14,7 @@
 import("//build/ohos.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
-config("lume_metaobject_config1") {
+config("lume_metaobject_config") {
   include_dirs = [
     "3rdparty/",
     "src/",
@@ -52,9 +52,9 @@ config("lume_metaobject_config1") {
   ]
 }
 
-ohos_source_set("lume_metaobject_src1") {
+ohos_source_set("lume_metaobject_src") {
   public_configs = [
-    ":lume_metaobject_config1",
+    ":lume_metaobject_config",
     "${LUME_RENDER_PATH}:lume_render_api",
     "${LUME_CORE_PATH}:lume_base_api",
     "${LUME_CORE_PATH}:lume_engine_api",
@@ -211,7 +211,7 @@ ohos_source_set("lume_metaobject_src1") {
 }
 
 ohos_static_library("libMetaObject") {
-  public_deps = [ ":lume_metaobject_src1" ]
+  public_deps = [ ":lume_metaobject_src" ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

@@ -26,8 +26,9 @@ SCENE_BEGIN_NAMESPACE()
 class IEcsResource : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IEcsResource, "4a605fe0-b0bf-4627-8f42-5e7d473e91ba")
 public:
-    virtual CORE_NS::EntityReference GetEntity() const = 0;
+    virtual CORE_NS::Entity GetEntity() const = 0;
 };
+
 class IEcsObject : public IEcsResource {
     META_INTERFACE(IEcsResource, IEcsObject, "5576c6f2-364b-497f-b342-4fffeb022e53")
 public:

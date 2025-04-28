@@ -109,15 +109,14 @@ void EnvironmentJS::DisposeNative(void* scene)
             napi_value null;
             napi_get_null(sceneJs.GetEnv(), &null);
             sceneJs.Set("environment", null);
-            IScene::Ptr s = interface_pointer_cast<IScene>(sceneJS->GetNativeObject());
-            if (s) {
-                env->EnvironmentImage()->SetValue(nullptr);
-                env->RadianceImage()->SetValue(nullptr);
-                auto en = interface_pointer_cast<SCENE_NS::INode>(env);
-                s->ReleaseNode(en);
-                en.reset();
-                env.reset();
-                s.reset();
+            if (sceneJS) {
+                IScene::Ptr s = interface_pointer_cast<IScene>(sceneJS->GetNativeObject());
+                if (s) {
+                    env->EnvironmentImage()->SetValue(nullptr);
+                    env->RadianceImage()->SetValue(nullptr);
+                    env.reset();
+                    s.reset();
+                }
             }
         }
     }
@@ -131,8 +130,7 @@ void* EnvironmentJS::GetInstanceImpl(uint32_t id)
 }
 void EnvironmentJS::Finalize(napi_env env)
 {
-    // hmm.. do i need to do something BEFORE the object gets deleted..
-    DisposeNative(nullptr);
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
     BaseObject<EnvironmentJS>::Finalize(env);
 }
 
@@ -153,19 +151,12 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
     }
 
     NapiApi::Object meJs(fromJs.This());
-    auto* tro = scene_.GetObject().Native<TrueRootObject>();
-    if (!tro) {
-        LOG_E("tro is nullptr");
-        return;
-    }
-    auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-    if (sceneJS) {
+    if (auto sceneJS = GetJsWrapper<SceneJS>(scene_.GetObject())) {
         sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
-    IScene::Ptr scene = interface_pointer_cast<IScene>(tro->GetNativeObject());
-    if (!scene) {
-        LOG_F("scene is null.");
-        return;
+    IScene::Ptr scene;
+    if (auto* tro = scene_.GetObject().Native<TrueRootObject>()) {
+        scene = interface_pointer_cast<IScene>(tro->GetNativeObject());
     }
 
     NapiApi::Value<BASE_NS::string> name;
@@ -184,7 +175,9 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
 
     if (!env) {
         BASE_NS::string_view n = nameS; /*nodepath actually*/
-        env = scene->CreateObject<SCENE_NS::IEnvironment>(SCENE_NS::ClassId::Environment).GetResult();
+        if (scene) {
+            env = scene->CreateObject<SCENE_NS::IEnvironment>(SCENE_NS::ClassId::Environment).GetResult();
+        }
     }
 
     // process constructor args

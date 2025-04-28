@@ -339,7 +339,7 @@ vec4 BlurRGBADof(
         vec2 currOffset = vec2(CORE_BLUR_OFFSETS[idx]) * dir.xy;
 
         samples[idx * 2 - 1] = // 2 : index
-	    textureLod(sampler2D(tex, sampl), (vec2(fragCoord) + currOffset) * invTexSize, 0);
+            textureLod(sampler2D(tex, sampl), (vec2(fragCoord) + currOffset) * invTexSize, 0);
         weight += samples[idx * 2 - 1].a; // 2 : index
         samples[idx * 2] = textureLod(sampler2D(tex, sampl), (vec2(fragCoord) - currOffset) * invTexSize, 0); // 2: idx
         weight += samples[idx * 2].a; // 2 : idx

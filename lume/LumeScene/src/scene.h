@@ -53,7 +53,8 @@ public:
     Future<INode::Ptr> GetRootNode() const override;
     Future<INode::Ptr> CreateNode(const BASE_NS::string_view path, META_NS::ObjectId id) override;
     Future<INode::Ptr> FindNode(BASE_NS::string_view path, META_NS::ObjectId id) const override;
-    Future<void> ReleaseNode(const INode::Ptr& node) override;
+    Future<bool> ReleaseNode(INode::Ptr&& node, bool recursive) override;
+    Future<bool> RemoveNode(const INode::Ptr& node) override;
 
     using Super::CreateObject;
     Future<META_NS::IObject::Ptr> CreateObject(META_NS::ObjectId id) override;

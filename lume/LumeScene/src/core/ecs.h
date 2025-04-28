@@ -44,6 +44,7 @@
 #include <core/intf_engine.h>
 #include <render/intf_render_context.h>
 
+#include "../ecs_component/entity_owner_component_info.h"
 #include "ecs_listener.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -57,7 +58,6 @@ public:
 
     CORE3D_NS::ISceneNode* GetNode(CORE_NS::Entity ent);
     const CORE3D_NS::ISceneNode* GetNode(CORE_NS::Entity ent) const;
-    void RemoveNode(CORE_NS::Entity ent);
 
     const CORE3D_NS::ISceneNode* FindNode(BASE_NS::string_view path) const;
     const CORE3D_NS::ISceneNode* FindNodeParent(BASE_NS::string_view path) const;
@@ -66,6 +66,7 @@ public:
 
     BASE_NS::string GetPath(const CORE3D_NS::ISceneNode* node) const;
     bool IsNodeEntity(CORE_NS::Entity ent) const;
+    bool RemoveEntity(CORE_NS::Entity ent);
 
 public:
     bool CreateUnnamedRootNode() override;
@@ -81,6 +82,7 @@ public:
     IEcsObject::Ptr GetEcsObject(CORE_NS::Entity) override;
     void RemoveEcsObject(const IEcsObject::ConstPtr&) override;
     CORE_NS::Entity GetRootEntity() const override;
+    CORE_NS::EntityReference GetEntityReference(CORE_NS::Entity) override;
 
 public:
     CORE_NS::IEcs::Ptr ecs;
@@ -105,6 +107,7 @@ public:
     CORE3D_NS::ILocalMatrixComponentManager* localMatrixComponentManager {};
     CORE3D_NS::IWorldMatrixComponentManager* worldMatrixComponentManager {};
 
+    SCENE_NS::IEntityOwnerComponentManager* entityOwnerComponentManager {};
     TEXT3D_NS::ITextComponentManager* textComponentManager {};
     BASE_NS::unique_ptr<CORE_NS::ComponentQuery> meshQuery {};
     BASE_NS::unique_ptr<CORE_NS::ComponentQuery> materialQuery {};
@@ -123,8 +126,8 @@ private:
     BASE_NS::unordered_map<BASE_NS::string, CORE_NS::IComponentManager*> components_;
 };
 
-CORE_NS::EntityReference CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild);
-CORE_NS::EntityReference CopyExternalAsChild(const IEcsObject& parent, const IScene& extScene);
+CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild);
+CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IScene& extScene);
 
 SCENE_END_NAMESPACE()
 

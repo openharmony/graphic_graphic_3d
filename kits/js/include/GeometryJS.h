@@ -15,7 +15,6 @@
 #ifndef GEOMETRY_JS_H
 #define GEOMETRY_JS_H
 #include <meta/interface/intf_object.h>
-#include <scene/interface/intf_mesh.h>
 
 #include "BaseObjectJS.h"
 #include "MeshResourceJS.h"
@@ -36,7 +35,7 @@ private:
     void CreateNativeObject(
         napi_env env, NapiApi::Object meJs, NapiApi::Object sceneNodeParameters, NapiApi::Object meshResourceParam);
     void DisposeNative(void*) override;
+    void Finalize(napi_env env) override;
     napi_value GetMesh(NapiApi::FunctionContext<>& ctx);
-    SCENE_NS::IMesh::Ptr CreateMesh(napi_env env, MeshResourceJS* meshResource);
 };
 #endif

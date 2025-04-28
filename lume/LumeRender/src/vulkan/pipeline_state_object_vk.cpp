@@ -510,13 +510,14 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
         VK_NULL_HANDLE,                                  // basePipelineHandle
         0,                                               // basePipelineIndex
     };
-
+    PLUGIN_LOG_E("CreateGraphicsPipelines Start");
     VALIDATE_VK_RESULT(vkCreateGraphicsPipelines(vkDevice, // device
         devicePlatVk.pipelineCache,                        // pipelineCache
         1,                                                 // createInfoCount
         &graphicsPipelineCreateInfo,                       // pCreateInfos
         nullptr,                                           // pAllocator
         &plat_.pipeline));                                 // pPipelines
+    PLUGIN_LOG_E("CreateGraphicsPipelines End");
 
     // NOTE: direct destruction here
     for (uint32_t idx = 0; idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++idx) {

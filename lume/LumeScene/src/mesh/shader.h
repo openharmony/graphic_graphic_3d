@@ -29,7 +29,7 @@
 SCENE_BEGIN_NAMESPACE()
 
 class Shader : public META_NS::IntroduceInterfaces<META_NS::MetaObject, IShader, IRenderResource, IEcsResource,
-                   IGraphicsState, META_NS::IDynamicResource, META_NS::INamed> {
+                   IGraphicsState, META_NS::IDynamicResource, META_NS::INamed, IShaderState> {
     META_OBJECT(Shader, ClassId::Shader, IntroduceInterfaces)
 public:
     META_BEGIN_STATIC_DATA()
@@ -46,8 +46,11 @@ public:
 
     bool SetRenderHandle(const IInternalScene::Ptr& scene, RENDER_NS::RenderHandleReference handle,
         CORE_NS::EntityReference ent) override;
+    bool SetShaderState(const IInternalScene::Ptr& scene, RENDER_NS::RenderHandleReference handle,
+        CORE_NS::EntityReference ent, RENDER_NS::RenderHandleReference ghandle,
+        CORE_NS::EntityReference gstate) override;
     RENDER_NS::RenderHandleReference GetRenderHandle() const override;
-    CORE_NS::EntityReference GetEntity() const override;
+    CORE_NS::Entity GetEntity() const override;
 
     bool SetGraphicsState(CORE_NS::EntityReference) override;
     CORE_NS::EntityReference GetGraphicsState() const override;
@@ -66,8 +69,8 @@ private:
     IInternalScene::Ptr GetScene() const;
 
     RENDER_NS::RenderHandleReference GetGraphicsStateHandle() const;
-    void UpdateGraphicsState(
-        const IInternalScene::Ptr& scene, RENDER_NS::RenderHandleReference h, const RENDER_NS::GraphicsState& gs);
+    RENDER_NS::RenderHandleReference UpdateGraphicsState(
+        const IInternalScene::Ptr& scene, const RENDER_NS::GraphicsState& gs);
 
 private:
     mutable std::shared_mutex mutex_;

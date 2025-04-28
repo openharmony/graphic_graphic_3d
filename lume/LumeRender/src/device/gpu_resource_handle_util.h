@@ -65,7 +65,7 @@ static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_MASK { 0xFFFF000000000000 
 static constexpr uint64_t RES_HANDLE_ID_SHIFT { 4 }; // 4 : param
 static constexpr uint64_t RES_HANDLE_TYPE_SHIFT { 0 };
 static constexpr uint64_t RES_HANDLE_GENERATION_SHIFT { 24 }; // 24 : param
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT { 32 }; // 32 : param 
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT { 32 }; // 32 : param
 static constexpr uint64_t RES_HANDLE_HAS_NAME_SHIFT { 44 }; // 44 : param
 static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_SHIFT { 48 }; // 48 : param
 

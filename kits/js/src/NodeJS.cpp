@@ -48,12 +48,8 @@ NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject<NodeJS>(e, i), Nod
         // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
         NapiApi::Object meJs(fromJs.This());
         NapiApi::Object scene = fromJs.Arg<0>();
-        auto* tro = scene.Native<TrueRootObject>();
-        if (tro) {
-            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-            }
+        if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
         }
     }
 
@@ -117,21 +113,21 @@ void* NodeJS::GetInstanceImpl(uint32_t id)
     return NodeImpl::GetInstanceImpl(id);
 }
 
-void NodeJS::DisposeNative(void*)
+void NodeJS::DisposeNative(void* sc)
 {
     if (!disposed_) {
         LOG_V("NodeJS::DisposeNative");
         disposed_ = true;
 
-        NapiApi::Object obj = scene_.GetObject();
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
+        if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
+            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
         scene_.Reset();
     }
+}
+void NodeJS::Finalize(napi_env env)
+{
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
+    BaseObject::Finalize(env);
 }

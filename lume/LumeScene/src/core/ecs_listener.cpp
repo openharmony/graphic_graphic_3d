@@ -36,7 +36,11 @@ void EcsListener::RegisterEcsObject(const IEcsObject::Ptr& p)
 }
 void EcsListener::DeregisterEcsObject(const IEcsObject::ConstPtr& p)
 {
-    objects_.erase(p->GetEntity());
+    DeregisterEcsObject(p->GetEntity());
+}
+void EcsListener::DeregisterEcsObject(CORE_NS::Entity ent)
+{
+    objects_.erase(ent);
 }
 IEcsObject::Ptr EcsListener::FindEcsObject(CORE_NS::Entity ent) const
 {
@@ -50,6 +54,9 @@ void EcsListener::OnEntityEvent(
     for (auto&& ent : entities) {
         if (auto obj = interface_pointer_cast<IEcsEventListener>(FindEcsObject(ent))) {
             obj->OnEntityEvent(type);
+        }
+        if (type == CORE_NS::IEcs::EntityListener::EventType::DESTROYED) {
+            DeregisterEcsObject(ent);
         }
     }
 }

@@ -33,7 +33,7 @@ fi
 
 compile_shader()
 {
-	echo "Lume4 Compile shader $1 $2 $3 $4"
+    echo "Lume4 Compile shader $1 $2 $3 $4"
     if [ -d "$DEST_GEN_PATH" ]; then
         rm -rf $DEST_GEN_PATH
         echo "Clean Output"

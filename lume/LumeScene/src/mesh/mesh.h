@@ -61,6 +61,7 @@ private:
 
 protected:
     mutable std::mutex mutex_;
+    CORE_NS::EntityReference meshEntity_;
     IInternalMesh::Ptr mesh_;
     BASE_NS::vector<CORE_NS::Entity> submeshMaterials_;
 };

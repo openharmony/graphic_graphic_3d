@@ -31,6 +31,7 @@ public:
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
     void DisposeNative(void*) override;
+    void Finalize(napi_env env) override;
     napi_value GetName(NapiApi::FunctionContext<>& ctx);
     void SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx);
     napi_value GetAABB(NapiApi::FunctionContext<>& ctx);

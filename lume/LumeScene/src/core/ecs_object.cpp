@@ -37,7 +37,7 @@ bool EcsObject::Build(const META_NS::IMetadata::Ptr& d)
                 META_NS::GetObjectRegistry().Create<META_NS::IEngineValueManager>(META_NS::ClassId::EngineValueManager);
             valueManager_->SetNotificationQueue(s->GetAppTaskQueue());
             scene_ = s;
-            entity_ = s->GetEcsContext().GetNativeEcs()->GetEntityManager().GetReferenceCounted(ent);
+            entity_ = ent;
 
             if (auto m = static_cast<CORE3D_NS::INameComponentManager*>(
                     s->GetEcsContext().FindComponent<CORE3D_NS::NameComponent>())) {
@@ -47,7 +47,7 @@ bool EcsObject::Build(const META_NS::IMetadata::Ptr& d)
             }
         }
     }
-    return valueManager_ != nullptr;
+    return valueManager_ != nullptr && CORE_NS::EntityUtil::IsValid(entity_);
 }
 
 BASE_NS::string EcsObject::GetName() const
@@ -87,7 +87,7 @@ IInternalScene::Ptr EcsObject::GetScene() const
     return scene_.lock();
 }
 
-CORE_NS::EntityReference EcsObject::GetEntity() const
+CORE_NS::Entity EcsObject::GetEntity() const
 {
     return entity_;
 }

@@ -123,7 +123,7 @@ void DecodeUri(string& uri)
     string::size_type pos = 0;
     while ((pos = uri.find('%', pos)) != string::npos) {
         // there should be at least two characters after '%'
-        if ((pos + 2) < uri.size()) { // 2:param
+        if ((pos + 2) < uri.size()) { // 2: param
             // start converting after '%'
             const auto begin = uri.data() + (pos + 1);
             // convert up to two characters
@@ -134,7 +134,7 @@ void DecodeUri(string& uri)
                 // replace '%' with the hex value converted to char
                 *(begin - 1) = static_cast<char>(val);
                 // remove the encoding
-                uri.erase(pos + 1, 2); // 2:param
+                uri.erase(pos + 1, 2); // 2: param
             }
         }
         pos++;
@@ -446,7 +446,7 @@ std::optional<int> BufferViewByteStride(LoadResult& loadResult, const json::valu
     int stride;
     if (!ParseOptionalNumber<int>(loadResult, stride, jsonData, "byteStride", 0)) {
         return std::nullopt;
-    } else if ((stride < 4 && stride != 0) || stride > 252 || (stride % 4)) { //4:minimum  252:maximum
+    } else if ((stride < 4 && stride != 0) || stride > 252 || (stride % 4)) { // 4: minimum 252: maximum
         SetError(loadResult, "bufferView.byteStride isn't valid stride");
         return std::nullopt;
     }

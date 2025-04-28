@@ -101,12 +101,8 @@ void BaseLight::Create(napi_env e, napi_callback_info i)
     {
         // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
         NapiApi::Object scene = fromJs.Arg<0>();
-        auto* tro = scene.Native<TrueRootObject>();
-        if (tro) {
-            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-            }
+        if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
         }
     }
 }
@@ -133,10 +129,6 @@ void BaseLight::Init(const char* class_name, napi_env env, napi_value exports,
     GetInstanceData(env, (void**)&mis);
     mis->StoreCtor(class_name, func);
 }
-void BaseLight::Finalize(napi_env env, TrueRootObject* tro)
-{
-    tro->Finalize(env);
-}
 void* BaseLight::GetInstanceImpl(uint32_t id)
 {
     if (id == BaseLight::ID)
@@ -144,17 +136,12 @@ void* BaseLight::GetInstanceImpl(uint32_t id)
     return NodeImpl::GetInstanceImpl(id);
 }
 
-void BaseLight::DisposeNative(TrueRootObject* tro)
+void BaseLight::DisposeNative(void* scn, TrueRootObject* tro)
 {
     LOG_V("BaseLight::DisposeNative");
 
-    NapiApi::Object obj = scene_.GetObject();
-    auto* stro = obj.Native<TrueRootObject>();
-    if (stro) {
-        SceneJS* sceneJS = static_cast<SceneJS*>(stro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-        }
+    if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
+        sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
     colorProxy_.reset();
@@ -164,7 +151,7 @@ void BaseLight::DisposeNative(TrueRootObject* tro)
         tro->SetNativeObject(nullptr, true);
         if (auto node = interface_pointer_cast<SCENE_NS::INode>(light)) {
             if (auto scene = node->GetScene()) {
-                scene->ReleaseNode(node);
+                scene->ReleaseNode(BASE_NS::move(node), false);
             }
         }
     }
@@ -306,12 +293,17 @@ void* SpotLightJS::GetInstanceImpl(uint32_t id)
         return this;
     return BaseLight::GetInstanceImpl(id);
 }
-void SpotLightJS::DisposeNative(void*)
+void SpotLightJS::DisposeNative(void* scn)
 {
-    BaseLight::DisposeNative(this);
+    if (disposed_) {
+        return;
+    }
+    BaseLight::DisposeNative(scn, this);
+    disposed_ = true;
 }
 void SpotLightJS::Finalize(napi_env env)
 {
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
     BaseObject<SpotLightJS>::Finalize(env);
 }
 
@@ -329,12 +321,17 @@ void* PointLightJS::GetInstanceImpl(uint32_t id)
         return this;
     return BaseLight::GetInstanceImpl(id);
 }
-void PointLightJS::DisposeNative(void*)
+void PointLightJS::DisposeNative(void* scn)
 {
-    BaseLight::DisposeNative(this);
+    if (disposed_) {
+        return;
+    }
+    BaseLight::DisposeNative(scn, this);
+    disposed_ = true;
 }
 void PointLightJS::Finalize(napi_env env)
 {
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
     BaseObject<PointLightJS>::Finalize(env);
 }
 void PointLightJS::Init(napi_env env, napi_value exports)
@@ -357,12 +354,17 @@ void* DirectionalLightJS::GetInstanceImpl(uint32_t id)
         return this;
     return BaseLight::GetInstanceImpl(id);
 }
-void DirectionalLightJS::DisposeNative(void*)
+void DirectionalLightJS::DisposeNative(void* scn)
 {
-    BaseLight::DisposeNative(this);
+    if (disposed_) {
+        return;
+    }
+    BaseLight::DisposeNative(scn, this);
+    disposed_ = true;
 }
 void DirectionalLightJS::Finalize(napi_env env)
 {
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
     BaseObject<DirectionalLightJS>::Finalize(env);
 }
 

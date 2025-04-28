@@ -32,6 +32,7 @@ public:
 
 private:
     void DisposeNative(void*) override;
+    void Finalize(napi_env env) override;
 
 private:
     napi_value GetText(NapiApi::FunctionContext<>& ctx);

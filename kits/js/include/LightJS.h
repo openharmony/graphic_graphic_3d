@@ -46,8 +46,7 @@ public:
 protected:
     void Create(napi_env e, napi_callback_info i);
     void* GetInstanceImpl(uint32_t id);
-    void DisposeNative(TrueRootObject*);
-    void Finalize(napi_env env, TrueRootObject*);
+    void DisposeNative(void* /*scenejs*/, TrueRootObject*);
 
 private:
     napi_value GetlightType(NapiApi::FunctionContext<>& ctx);

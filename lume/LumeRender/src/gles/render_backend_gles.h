@@ -74,7 +74,7 @@ public:
 
 private:
     void RenderSingleCommandList(const RenderCommandContext& renderCommandCtx);
-    static void RenderProcessEndCommandLists(
+    void RenderProcessEndCommandLists(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
 
     void RenderCommandDraw(const RenderCommandWithType&);

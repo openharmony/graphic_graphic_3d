@@ -17,7 +17,6 @@
 
 #include <cmath>
 #include <glcorearb.h>
-
 namespace Gles {
 namespace {
 constexpr const GLenum UINT_TYPES[5][5] = { { 0, 0, 0, 0, 0 }, { 0, GL_UNSIGNED_INT, 0, 0, 0 },
@@ -208,7 +207,10 @@ void SetSpecMacro(spirv_cross::CompilerGLSL& compiler, const char* name, uint32_
     if (vc.self != invalid.self) {
         const uint32_t constantId = compiler.get_decoration(vc.self, spv::Decoration::DecorationSpecId);
         char buf[1024];
-        snprintf(buf, sizeof(buf), "#define SPIRV_CROSS_CONSTANT_ID_%u %uu", constantId, value);
+        auto ret = snprintf(buf, sizeof(buf), "#define SPIRV_CROSS_CONSTANT_ID_%u %uu", constantId, value);
+        if (ret < 0) {
+            return;
+        }
         compiler.add_header_line(buf);
     }
 }
@@ -241,13 +243,40 @@ void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantRefl
             t.matrixStride = compiler.type_struct_member_matrix_stride(structType, bi);
         }
 
-        if (memberType.basetype == spirv_cross::SPIRType::UInt) {
-            t.type = UINT_TYPES[memberType.vecsize][memberType.columns];
-        } else if (memberType.basetype == spirv_cross::SPIRType::Float) {
-            t.type = FLOAT_TYPES[memberType.vecsize][memberType.columns];
-        } else if (memberType.basetype == spirv_cross::SPIRType::Struct) {
-            ProcessStruct(compiler, t, memberTypeId, reflections);
-            continue;
+        switch (memberType.basetype) {
+            case spirv_cross::SPIRType::Struct:
+                ProcessStruct(compiler, t, memberTypeId, reflections);
+                continue;
+                break;
+            case spirv_cross::SPIRType::UInt:
+                t.type = UINT_TYPES[memberType.vecsize][memberType.columns];
+                break;
+            case spirv_cross::SPIRType::Float:
+                t.type = FLOAT_TYPES[memberType.vecsize][memberType.columns];
+                break;
+
+            case spirv_cross::SPIRType::Unknown:
+            case spirv_cross::SPIRType::Void:
+            case spirv_cross::SPIRType::Boolean:
+            case spirv_cross::SPIRType::SByte:
+            case spirv_cross::SPIRType::UByte:
+            case spirv_cross::SPIRType::Short:
+            case spirv_cross::SPIRType::UShort:
+            case spirv_cross::SPIRType::Int:
+            case spirv_cross::SPIRType::Int64:
+            case spirv_cross::SPIRType::UInt64:
+            case spirv_cross::SPIRType::AtomicCounter:
+            case spirv_cross::SPIRType::Half:
+            case spirv_cross::SPIRType::Double:
+            case spirv_cross::SPIRType::Image:
+            case spirv_cross::SPIRType::SampledImage:
+            case spirv_cross::SPIRType::Sampler:
+            case spirv_cross::SPIRType::AccelerationStructure:
+            case spirv_cross::SPIRType::RayQuery:
+            case spirv_cross::SPIRType::ControlPointArray:
+            case spirv_cross::SPIRType::Interpolant:
+            case spirv_cross::SPIRType::Char:
+                break;
         }
         assert((t.type != 0) && "Unhandled Type!");
         const int32_t res = FindConstant(reflections, t);

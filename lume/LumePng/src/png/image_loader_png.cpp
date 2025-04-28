@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -31,6 +31,8 @@ using namespace CORE_NS;
 
 namespace PNGPlugin {
 namespace {
+constexpr uint32_t MAX_IMAGE_EXTENT { 32767U };
+constexpr int IMG_SIZE_LIMIT_2GB = std::numeric_limits<int>::max();
 uint8_t g_sRgbPremultiplyLookup[256u * 256u] = { 0 };
 
 void InitializeSRGBTable()
@@ -397,11 +399,20 @@ public:
             height = png_get_image_height(png, info);
             channels = png_get_channels(png, info);
             is16bpc = png_get_bit_depth(png, info) == 16; // 16: index
+            if (channels <= 0 || channels > 4) { // 0: invalid channel num, 4: RGBA
+                png_destroy_read_struct(&png, &info, nullptr);
+                return ResultFailure("Invalid number of color channels.");
+            }
 
+            const size_t imageSize = width * height * channels;
+            if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
+                png_destroy_read_struct(&png, &info, nullptr);
+                return ResultFailure("Image too large.");
+            }
             // allocate space for the whole image and and array of row pointers. libpng writes data to each row pointer.
             // alternative would be to use a different api which writes only one row and feed it the correct address
             // every time.
-            image = BASE_NS::make_unique<uint8_t[]>(width * height * channels);
+            image = BASE_NS::make_unique<uint8_t[]>(imageSize);
             rows = BASE_NS::make_unique<png_byte* []>(height);
             // fill rows depending on should there be a vertical flip or not.
             auto row = rows.get();

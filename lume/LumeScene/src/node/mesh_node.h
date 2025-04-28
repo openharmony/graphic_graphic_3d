@@ -44,6 +44,8 @@ public:
 
 public:
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
+    void SetOwnedEntity(CORE_NS::Entity ent);
+
 private:
     bool Init(IInternalRenderMesh::Ptr);
     bool Init(IEcsObject::Ptr);

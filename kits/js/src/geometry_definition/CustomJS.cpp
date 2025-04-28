@@ -21,36 +21,42 @@
 #include <napi_api.h>
 #include <scene/interface/intf_create_mesh.h>
 
-#include "BaseObjectJS.h"
-
 namespace GeometryDefinition {
 
-CustomJS::CustomJS(napi_env env, napi_callback_info info)
-    : GeometryDefinition<CustomJS>(env, info, GeometryType::CUSTOM)
-{}
+CustomJS::CustomJS() : GeometryDefinition() {}
 
 void CustomJS::Init(napi_env env, napi_value exports)
 {
-    BASE_NS::vector<napi_property_descriptor> props;
-    using namespace NapiApi;
-    GetPropertyDescs(props);
-    props.push_back(GetSetProperty<uint32_t, CustomJS, &CustomJS::GetTopology, &CustomJS::SetTopology>("topology"));
-    props.push_back(
-        GetSetProperty<NapiApi::Array, CustomJS, &CustomJS::GetVertices, &CustomJS::SetVertices>("vertices"));
-    props.push_back(GetSetProperty<NapiApi::Array, CustomJS, &CustomJS::GetIndices, &CustomJS::SetIndices>("indices"));
-    props.push_back(GetSetProperty<NapiApi::Array, CustomJS, &CustomJS::GetNormals, &CustomJS::SetNormals>("normals"));
-    props.push_back(GetSetProperty<NapiApi::Array, CustomJS, &CustomJS::GetUvs, &CustomJS::SetUvs>("uvs"));
-    props.push_back(GetSetProperty<NapiApi::Array, CustomJS, &CustomJS::GetColors, &CustomJS::SetColors>("colors"));
+    auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
+        napi_value self;
+        napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr);
+        auto selfObj = NapiApi::Object { env, self };
+        for (auto&& propertyName : { "vertices", "indices", "normals", "uvs", "colors" }) {
+            napi_value array;
+            napi_create_array(env, &array);
+            const auto arrayObj = NapiApi::Object(env, array);
+            selfObj.Set(propertyName, arrayObj);
+        }
+        return self;
+    };
 
-    const auto name = "CustomGeometry";
-    const auto constructor = BaseObject::ctor<CustomJS>();
-    napi_value jsConstructor;
-    napi_define_class(env, name, NAPI_AUTO_LENGTH, constructor, nullptr, props.size(), props.data(), &jsConstructor);
-    napi_set_named_property(env, exports, name, jsConstructor);
-
-    NapiApi::MyInstanceState* mis {};
-    GetInstanceData(env, (void**)&mis);
-    mis->StoreCtor(name, jsConstructor);
+    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::CUSTOM); };
+    napi_value topology;
+    napi_create_uint32(env, PrimitiveTopology::TRIANGLE_LIST, &topology);
+    napi_value undefined;
+    napi_get_undefined(env, &undefined);
+    const auto props = BASE_NS::vector<napi_property_descriptor> {
+        // clang-format off
+        { "geometryType", nullptr, nullptr, getType, nullptr, nullptr,   napi_default_jsproperty, nullptr },
+        { "topology",     nullptr, nullptr, nullptr, nullptr, topology,  napi_default_jsproperty, nullptr },
+        { "vertices",     nullptr, nullptr, nullptr, nullptr, undefined, napi_default_jsproperty, nullptr },
+        { "indices",      nullptr, nullptr, nullptr, nullptr, undefined, napi_default_jsproperty, nullptr },
+        { "normals",      nullptr, nullptr, nullptr, nullptr, undefined, napi_default_jsproperty, nullptr },
+        { "uvs",          nullptr, nullptr, nullptr, nullptr, undefined, napi_default_jsproperty, nullptr },
+        { "colors",       nullptr, nullptr, nullptr, nullptr, undefined, napi_default_jsproperty, nullptr },
+        // clang-format on
+    };
+    DefineClass(env, exports, "CustomGeometry", props, ctor);
 }
 
 void CustomJS::RegisterEnums(NapiApi::Object exports)
@@ -70,157 +76,86 @@ void CustomJS::RegisterEnums(NapiApi::Object exports)
     exports.Set("PrimitiveTopology", PrimitiveTopology);
 }
 
-void* CustomJS::GetInstanceImpl(uint32_t id)
+GeometryDefinition* CustomJS::FromJs(NapiApi::Object jsDefinition)
 {
-    return (id == CustomJS::ID) ? this : nullptr;
+    auto newObj = new CustomJS();
+    if (newObj->SetTopology(jsDefinition)
+        // clang-format off
+        && ArrayToNative(jsDefinition, "vertices", newObj->vertices_)
+        && ArrayToNative(jsDefinition, "indices",  newObj->indices_)
+        && ArrayToNative(jsDefinition, "normals",  newObj->normals_)
+        && ArrayToNative(jsDefinition, "uvs",      newObj->uvs_)
+        && ArrayToNative(jsDefinition, "colors",   newObj->colors_)
+        // clang-format on
+    ) {
+        return newObj;
+    } else {
+        delete newObj;
+        LOG_E("Unable to create CustomJS: Invalid JS object given");
+    }
+    return {};
 }
 
-SCENE_NS::CustomMeshData CustomJS::ToNative() const
+SCENE_NS::IMesh::Ptr CustomJS::CreateMesh(
+    const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const
 {
-    return SCENE_NS::CustomMeshData { GetTopology(), vertices_, indices_, normals_, uvs_, colors_ };
+    const auto meshData = SCENE_NS::CustomMeshData { GetTopology(), vertices_, indices_, normals_, uvs_, colors_ };
+    return creator->Create(config, meshData).GetResult();
 }
 
 SCENE_NS::PrimitiveTopology CustomJS::GetTopology() const
 {
     if (topology_ == PrimitiveTopology::TRIANGLE_LIST) {
         return SCENE_NS::PrimitiveTopology::TRIANGLE_LIST;
-    } else if (topology_ == PrimitiveTopology::TRIANGLE_STRIP) {
+    } else {
         return SCENE_NS::PrimitiveTopology::TRIANGLE_STRIP;
     }
-    LOG_E("Invalid primitive topology set for CustomGeometry");
-    return {};
 }
 
-napi_value CustomJS::GetTopology(NapiApi::FunctionContext<>& ctx)
+bool CustomJS::SetTopology(NapiApi::Object& jsDefinition)
 {
-    return ctx.GetNumber(topology_);
-}
-
-napi_value CustomJS::GetVertices(NapiApi::FunctionContext<>& ctx)
-{
-    return ArrayToJs(ctx, vertices_);
-}
-
-napi_value CustomJS::GetIndices(NapiApi::FunctionContext<>& ctx)
-{
-    NapiApi::Array array(ctx.Env(), indices_.size());
-    size_t index = 0;
-    for (const auto& nativeItem : indices_) {
-        array.Set(index, nativeItem);
-        index++;
+    if (auto value = jsDefinition.Get<uint32_t>("topology"); value.IsValid()) {
+        uint32_t newTopology = value;
+        if (newTopology <= PrimitiveTopology::TRIANGLE_STRIP) {
+            topology_ = static_cast<PrimitiveTopology>(newTopology);
+            return true;
+        }
     }
-    return array;
-}
-
-napi_value CustomJS::GetNormals(NapiApi::FunctionContext<>& ctx)
-{
-    return ArrayToJs(ctx, normals_);
-}
-
-napi_value CustomJS::GetUvs(NapiApi::FunctionContext<>& ctx)
-{
-    return ArrayToJs(ctx, uvs_);
-}
-
-napi_value CustomJS::GetColors(NapiApi::FunctionContext<>& ctx)
-{
-    return ArrayToJs(ctx, colors_);
-}
-
-void CustomJS::SetTopology(NapiApi::FunctionContext<uint32_t>& ctx)
-{
-    auto count = uint32_t {};
-    if (napi_get_value_uint32(ctx.Env(), ctx.Arg<0>().ToNapiValue(), &count) == napi_ok) {
-        topology_ = static_cast<PrimitiveTopology>(count);
-    } else {
-        LOG_E("Invalid primitive topology given to CustomGeometry");
-    }
-}
-
-void CustomJS::SetVertices(NapiApi::FunctionContext<NapiApi::Array>& ctx)
-{
-    ArrayToNative(ctx, vertices_);
-}
-
-void CustomJS::SetIndices(NapiApi::FunctionContext<NapiApi::Array>& ctx)
-{
-    ArrayToNative(ctx, indices_);
-}
-
-void CustomJS::SetNormals(NapiApi::FunctionContext<NapiApi::Array>& ctx)
-{
-    ArrayToNative(ctx, normals_);
-}
-
-void CustomJS::SetUvs(NapiApi::FunctionContext<NapiApi::Array>& ctx)
-{
-    ArrayToNative(ctx, uvs_);
-}
-
-void CustomJS::SetColors(NapiApi::FunctionContext<NapiApi::Array>& ctx)
-{
-    ArrayToNative(ctx, colors_);
+    LOG_E("Invalid primitive topology given to CustomGeometry");
+    return false;
 }
 
 template<typename ItemType>
-NapiApi::Array CustomJS::ArrayToJs(NapiApi::FunctionContext<>& ctx, const BASE_NS::vector<ItemType>& source)
+bool CustomJS::ArrayToNative(NapiApi::Object& obj, const BASE_NS::string& arrayName, BASE_NS::vector<ItemType>& target)
 {
-    NapiApi::Array array(ctx.Env(), source.size());
-    size_t index = 0;
-    for (const auto& nativeItem : source) {
-        array.Set(index, ToJs(ctx, nativeItem));
-        index++;
-    }
-    return array;
-}
-
-template<typename ItemType>
-void CustomJS::ArrayToNative(NapiApi::FunctionContext<NapiApi::Array>& ctx, BASE_NS::vector<ItemType>& target)
-{
-    const auto jsItems = NapiApi::Array { ctx.Arg<0>() };
+    NapiApi::Array jsArray = obj.Get<NapiApi::Array>(arrayName);
     auto newItems = BASE_NS::vector<ItemType> {};
-    newItems.reserve(jsItems.Count());
-    for (auto i = 0; i < jsItems.Count(); i++) {
-        const auto jsItem = jsItems.Get_value(i);
+    const auto length = jsArray.Count();
+    newItems.reserve(length);
+    for (auto i = 0; i < length; i++) {
+        const auto jsItem = jsArray.Get_value(i);
         if (!jsItem) {
             LOG_E("Invalid array given to CustomGeometry");
-            return;
+            return false;
         }
         auto conversionOk { false };
-        const auto item = ToNative<ItemType>(ctx.GetEnv(), jsItem, conversionOk);
+        newItems.emplace_back(ToNative<ItemType>(obj.GetEnv(), jsItem, conversionOk));
         if (!conversionOk) {
             LOG_E("Invalid array given to CustomGeometry");
-            return;
+            return false;
         }
-        newItems.emplace_back(item);
     }
     target.swap(newItems);
-}
-
-template<>
-NapiApi::Object CustomJS::ToJs(NapiApi::FunctionContext<>& ctx, const BASE_NS::Math::Vec2& nativeItem)
-{
-    return Vec2Proxy::ToNapiObject(nativeItem, ctx.Env());
-}
-
-template<>
-NapiApi::Object CustomJS::ToJs(NapiApi::FunctionContext<>& ctx, const BASE_NS::Math::Vec3& nativeItem)
-{
-    return Vec3Proxy::ToNapiObject(nativeItem, ctx.Env());
-}
-
-template<>
-NapiApi::Object CustomJS::ToJs(NapiApi::FunctionContext<>& ctx, const BASE_NS::Color& nativeItem)
-{
-    return ColorProxy::ToNapiObject(nativeItem, ctx.Env());
+    return true;
 }
 
 template<>
 uint32_t CustomJS::ToNative(napi_env env, napi_value jsItem, bool& conversionOk)
 {
-    auto native = uint32_t {};
-    conversionOk = (napi_get_value_uint32(env, jsItem, &native) == napi_ok);
-    return native;
+    auto tmpSigned = int64_t {};
+    conversionOk = (napi_get_value_int64(env, jsItem, &tmpSigned) == napi_ok);
+    conversionOk &= 0 <= tmpSigned && tmpSigned <= UINT32_MAX;
+    return static_cast<uint32_t>(tmpSigned);
 }
 
 template<>

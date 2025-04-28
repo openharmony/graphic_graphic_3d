@@ -17,6 +17,13 @@
 
 #include <algorithm>
 
+#if RENDER_HAS_GLES_BACKEND
+#define EGL_EGLEXT_PROTOTYPES
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#undef EGL_EGLEXT_PROTOTYPES
+#endif
+
 #include <base/containers/fixed_string.h>
 #include <render/datastore/render_data_store_render_pods.h> // NodeGraphBackbufferConfiguration...
 #include <render/namespace.h>
@@ -937,7 +944,20 @@ void RenderBackendGLES::RenderProcessEndCommandLists(
                     if (const auto* gs = (const GpuSemaphoreGles*)externalSemaphores[sigIdx].get(); gs) {
                         auto& plat = const_cast<GpuSemaphorePlatformDataGles&>(gs->GetPlatformData());
                         // NOTE: currently could create only one GPU sync
+#if RENDER_HAS_GLES_BACKEND
+                        const auto disp =
+                            static_cast<const DevicePlatformDataGLES &>(device_.GetEglState().GetPlatformData())
+                                .display;
+                        EGLSyncKHR sync = eglCreateSyncKHR(disp, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+                        if (sync == EGL_NO_SYNC_KHR) {
+                            PLUGIN_LOG_E("eglCreateSyncKHR fail");
+                        }
+#elif RENDER_HAS_GL_BACKEND
                         GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+#else
+                        uint64_t sync = 0;
+                        PLUGIN_LOG_E("no supported backend to create fence");
+#endif
                         plat.sync = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(sync));
                         externalSignals[sigIdx].gpuSignalResourceHandle = plat.sync;
                         externalSignals[sigIdx].signaled = true;
@@ -2555,6 +2575,7 @@ const BASE_NS::array_view<Binder>* RenderBackendGLES::BindPipeline()
             pushConstants = &sd.pushConstants;
         }
     }
+
     if (pushConstants) {
         SetPushConstants(program, *pushConstants);
     }
@@ -2634,7 +2655,7 @@ void RenderBackendGLES::BindResources()
                 static_cast<GLint>((mipLevel != PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS) ? mipLevel : 0U));
             glTexParameteri(type, GL_TEXTURE_MAX_LEVEL,
                 static_cast<GLint>((mipLevel != PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS) ?
-		mipLevel : 1000U)); // 1000 : param
+		        mipLevel : 1000U)); // 1000 : param
         };
 
 #if (RENDER_VALIDATION_ENABLED == 1)

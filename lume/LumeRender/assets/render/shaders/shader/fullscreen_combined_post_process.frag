@@ -53,4 +53,8 @@ void main(void)
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_VIGNETTE], inUv, outColor.rgb, outColor.rgb);
     PostProcessColorConversionBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], outColor.rgb, outColor.rgb);
+    // ai assistant hack to keep the same behavior, need to delete
+    if (outColor.w > 0) {
+        outColor.xyz = outColor.xyz * outColor.w;
+    }
 }

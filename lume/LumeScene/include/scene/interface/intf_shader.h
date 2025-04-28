@@ -18,6 +18,7 @@
 
 #include <scene/base/namespace.h>
 #include <scene/base/types.h>
+#include <scene/ext/intf_internal_scene.h>
 #include <scene/interface/intf_scene.h>
 
 #include <render/device/intf_shader_manager.h>
@@ -72,6 +73,12 @@ public:
     virtual CORE_NS::EntityReference GetGraphicsState() const = 0;
 };
 
+class IShaderState : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IShaderState, "44b20afb-4e96-41de-a765-df9dd07799de")
+public:
+    virtual bool SetShaderState(const IInternalScene::Ptr& scene, RENDER_NS::RenderHandleReference handle,
+        CORE_NS::EntityReference ent, RENDER_NS::RenderHandleReference ghandle, CORE_NS::EntityReference gstate) = 0;
+};
 META_REGISTER_CLASS(Shader, "56d686b8-7a33-4608-b12a-1a170381bcfd", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
 SCENE_END_NAMESPACE()
