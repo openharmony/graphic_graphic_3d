@@ -16,52 +16,37 @@
 #ifndef GEOMETRY_DEFINITION_CUSTOM_JS_H
 #define GEOMETRY_DEFINITION_CUSTOM_JS_H
 
-#include <meta/interface/intf_object.h>
 #include <napi_api.h>
 #include <scene/interface/intf_create_mesh.h>
 
 #include <base/math/vector.h>
 
-#include "BaseObjectJS.h"
 #include "geometry_definition/GeometryDefinition.h"
 
 namespace GeometryDefinition {
 
-class CustomJS : public GeometryDefinition<CustomJS> {
+class CustomJS : public GeometryDefinition {
 public:
-    static constexpr uint32_t ID = 150;
     enum PrimitiveTopology {
         TRIANGLE_LIST = 0,
         TRIANGLE_STRIP = 1,
     };
 
-    explicit CustomJS(napi_env, napi_callback_info);
     ~CustomJS() override = default;
+    static GeometryDefinition* FromJs(NapiApi::Object jsDefinition);
+    virtual SCENE_NS::IMesh::Ptr CreateMesh(
+        const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const override;
 
     static void Init(napi_env env, napi_value exports);
     static void RegisterEnums(NapiApi::Object exports);
 
-    virtual void* GetInstanceImpl(uint32_t id) override;
-
-    SCENE_NS::CustomMeshData ToNative() const;
-
 private:
-    // Note: This converts to the internal type. The underlying integer values don't match
+    explicit CustomJS();
+
+    // Note: This converts to the internal type. The underlying integer values don't match.
     SCENE_NS::PrimitiveTopology GetTopology() const;
-    napi_value GetTopology(NapiApi::FunctionContext<>& ctx);
-    napi_value GetVertices(NapiApi::FunctionContext<>& ctx);
-    napi_value GetIndices(NapiApi::FunctionContext<>& ctx);
-    napi_value GetNormals(NapiApi::FunctionContext<>& ctx);
-    napi_value GetUvs(NapiApi::FunctionContext<>& ctx);
-    napi_value GetColors(NapiApi::FunctionContext<>& ctx);
 
-    void SetTopology(NapiApi::FunctionContext<uint32_t>& ctx);
-    void SetVertices(NapiApi::FunctionContext<NapiApi::Array>& ctx);
-    void SetIndices(NapiApi::FunctionContext<NapiApi::Array>& ctx);
-    void SetNormals(NapiApi::FunctionContext<NapiApi::Array>& ctx);
-    void SetUvs(NapiApi::FunctionContext<NapiApi::Array>& ctx);
-    void SetColors(NapiApi::FunctionContext<NapiApi::Array>& ctx);
-
+    bool SetTopology(NapiApi::Object& jsDefinition);
     PrimitiveTopology topology_ { PrimitiveTopology::TRIANGLE_LIST };
     BASE_NS::vector<BASE_NS::Math::Vec3> vertices_;
     BASE_NS::vector<uint32_t> indices_;
@@ -70,14 +55,10 @@ private:
     BASE_NS::vector<BASE_NS::Color> colors_;
 
     template<typename ItemType>
-    static NapiApi::Array ArrayToJs(NapiApi::FunctionContext<>& ctx, const BASE_NS::vector<ItemType>& source);
-    template<typename ItemType>
-    static void ArrayToNative(NapiApi::FunctionContext<NapiApi::Array>& ctx, BASE_NS::vector<ItemType>& target);
-
+    static bool ArrayToNative(
+        NapiApi::Object& obj, const BASE_NS::string& arrayName, BASE_NS::vector<ItemType>& target);
     template<typename ItemType>
     static ItemType ToNative(napi_env env, napi_value jsItem, bool& conversionOk);
-    template<typename ItemType>
-    static NapiApi::Object ToJs(NapiApi::FunctionContext<>& ctx, const ItemType& nativeItem);
 };
 
 } // namespace GeometryDefinition

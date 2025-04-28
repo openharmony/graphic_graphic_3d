@@ -108,5 +108,13 @@ inline void FromJson(const JsonType& jsonData, T& output)
 {
     FromJson(jsonData, output.data);
 }
+
+template<class JsonType, typename T>
+inline void SafeFromJsonValue(const JsonType* jsonData, T& output)
+{
+    if (jsonData) {
+        FromJson(*jsonData, output);
+    }
+}
 RENDER_END_NAMESPACE()
 #endif // RENDER_UTIL_JSON_UTIL_H

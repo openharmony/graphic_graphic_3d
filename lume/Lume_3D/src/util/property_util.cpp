@@ -117,6 +117,22 @@ constexpr MetaData GetMetaData(const PropertyTypeDecl& typeDecl)
     }
     return {};
 }
+
+template<typename T>
+inline void SafeFromJsonValue(const json::value* value, T& val)
+{
+    if (value) {
+        FromJson(*value, val);
+    }
+}
+
+template<typename T>
+inline void DestroyHelper(T& t)
+{
+    {
+        t.~T();
+    }
+}
 } // namespace
 
 CustomPropertyPodContainer::CustomPropertyPodContainer(CustomPropertyWriteSignal& writeSignal, size_t reserveByteSize)
@@ -393,14 +409,6 @@ size_t CustomPropertyPodHelper::GetPropertyTypeAlignment(const PropertyTypeDecl&
     return align;
 }
 
-template<typename T>
-inline void SafeFromJsonValue(const json::value* value, T& val)
-{
-    if (value) {
-        FromJson(*value, val);
-    }
-}
-
 void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl& propertyType, const json::value* value,
     CustomPropertyPodContainer& customProperties, const size_t offset)
 {
@@ -442,7 +450,7 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
     } else if (propertyType == PropertyType::FLOAT_T) {
         float val {};
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
     } else if (propertyType == PropertyType::UINT32_T) {
         uint32_t val {};
@@ -472,14 +480,6 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
 }
 
 // bindings
-
-template<typename T>
-inline void DestroyHelper(T& t)
-{
-    {
-        t.~T();
-    }
-}
 
 CustomPropertyBindingContainer::CustomPropertyBindingContainer(CustomPropertyWriteSignal& writeSignal)
     : writeSignal_(&writeSignal)

@@ -14,7 +14,7 @@ import("//build/ohos.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 declare_args() {
-  CORE_LOG_ENABLED = false
+  CORE_LOG_ENABLED = true
   CORE_ROFS = "rofs"
 }
 
@@ -256,8 +256,8 @@ ohos_source_set("lume_engine_src") {
   ]
 
   external_deps += [
+    "bounds_checking_function:libsec_shared",
     "zlib:shared_libz",
-    "bounds_checking_function:libsec_shared"
   ]
 
   if (LUME_OHOS_BUILD) {

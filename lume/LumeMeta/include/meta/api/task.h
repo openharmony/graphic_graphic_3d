@@ -25,7 +25,7 @@
 META_BEGIN_NAMESPACE()
 
 template<typename Func>
-IAny::Ptr InvokeWaitableTaskFunction(const Func& func)
+IAny::Ptr InvokeWaitableTaskFunction(Func&& func)
 {
     using Result = BASE_NS::remove_reference_t<decltype(func())>;
     if constexpr (!BASE_NS::is_same_v<Result, void>) {

@@ -31,6 +31,9 @@ using namespace CORE_NS;
 
 namespace JPGPlugin {
 namespace {
+constexpr uint32_t MAX_IMAGE_EXTENT { 32767U };
+constexpr int IMG_SIZE_LIMIT_2GB = std::numeric_limits<int>::max();
+
 uint8_t g_sRgbPremultiplyLookup[256u * 256u] = { 0 };
 
 void InitializeSRGBTable()
@@ -359,11 +362,20 @@ public:
             height = cinfo.output_height;
             channels = static_cast<uint32_t>(cinfo.output_components);
             is16bpc = cinfo.data_precision > 8; // 8: index
+            if (channels <= 0 || channels > 4) { // 0: invalid channel num, 4: RGBA
+                jpeg_destroy_decompress(&cinfo);
+                return ResultFailure("Invalid number of color channels.");
+            }
 
+            const size_t imageSize = width * height * channels;
+            if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
+                jpeg_destroy_decompress(&cinfo);
+                return ResultFailure("Image too large.");
+            }
             // allocate space for the whole image and and array of row pointers. libjpg writes data to each row pointer.
             // alternative would be to use a different api which writes only one row and feed it the correct address
             // every time.
-            image = BASE_NS::make_unique<uint8_t[]>(width * height * channels);
+            image = BASE_NS::make_unique<uint8_t[]>(imageSize);
             rows = BASE_NS::make_unique<uint8_t* []>(height);
             // fill rows depending on should there be a vertical flip or not.
             auto row = rows.get();
@@ -435,13 +447,13 @@ public:
         // Check for JPEG / JFIF / Exif / ICC_PROFILE tag
         // 10：size
         if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
-            imageFileBytes[2] == 0xff && // 2: index
-            ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
-              imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
-             (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
-              imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
-             (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
-              imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
+            imageFileBytes[2] == 0xff && // 2: idx
+            ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' && // 3,6,7: idx
+            imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // 8,9: idx JFIF
+            (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' && // 3,6,7: idx
+            imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // 8,9: idx Exif
+            (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' && // 3,6,7: idx
+            imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // 8,9: idx ICC_PROFILE
             return true;
         }
 

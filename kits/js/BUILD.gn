@@ -88,7 +88,7 @@ config("napi_config") {
     defines += [
       "__OHOS_PLATFORM__",
       "__SCENE_ADAPTER__",
-      "__NAPI_CALL_TF_WITH_PRIORITY__",
+      "__PHYSICS_MODULE__",
     ]
   }
 

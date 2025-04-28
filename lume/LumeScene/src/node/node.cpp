@@ -29,7 +29,7 @@ bool Node::Build(const META_NS::IMetadata::Ptr& d)
 
 BASE_NS::string Node::GetName() const
 {
-    return object_ ? BASE_NS::string(EntityName(object_->GetPath())) : "";
+    return object_ ? object_->GetName() : "";
 }
 
 bool Node::SetEcsObject(const IEcsObject::Ptr& o)
@@ -45,7 +45,10 @@ IEcsObject::Ptr Node::GetEcsObject() const
 
 IScene::Ptr Node::GetScene() const
 {
-    return object_->GetScene()->GetScene();
+    if (auto s = object_->GetScene()) {
+        return s->GetScene();
+    }
+    return nullptr;
 }
 
 Future<INode::Ptr> Node::GetParent() const
@@ -110,7 +113,7 @@ Future<INode::Ptr> Node::ImportChild(const INode::ConstPtr& node)
         if (auto s = object_->GetScene()) {
             return s->AddTask([=] {
                 auto ent = CopyExternalAsChild(*object_, *eobj);
-                return ent ? s->FindNode(ent, {}) : nullptr;
+                return CORE_NS::EntityUtil::IsValid(ent) ? s->FindNode(ent, {}) : nullptr;
             });
         }
     }
@@ -122,7 +125,7 @@ Future<INode::Ptr> Node::ImportChildScene(const IScene::ConstPtr& scene, const B
     if (auto s = object_->GetScene()) {
         return s->AddTask([=] {
             auto ent = CopyExternalAsChild(*object_, *scene);
-            auto node = ent ? s->FindNode(ent, {}) : nullptr;
+            auto node = CORE_NS::EntityUtil::IsValid(ent) ? s->FindNode(ent, {}) : nullptr;
             if (node) {
                 node->SetName(nodeName);
             }

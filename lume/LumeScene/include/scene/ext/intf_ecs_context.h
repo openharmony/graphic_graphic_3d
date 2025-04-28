@@ -44,6 +44,7 @@ public:
     virtual IEcsObject::Ptr GetEcsObject(CORE_NS::Entity) = 0;
     virtual void RemoveEcsObject(const IEcsObject::ConstPtr&) = 0;
     virtual CORE_NS::Entity GetRootEntity() const = 0;
+    virtual CORE_NS::EntityReference GetEntityReference(CORE_NS::Entity) = 0;
 };
 
 SCENE_END_NAMESPACE()

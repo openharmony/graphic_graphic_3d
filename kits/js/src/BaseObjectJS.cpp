@@ -182,7 +182,7 @@ NapiApi::Object FetchJsObj(const META_NS::IObject::Ptr& obj, BASE_NS::string_vie
 
     // access hidden property.
     if (auto AppMeta = interface_pointer_cast<IMetadata>(obj)) {
-        if (auto wrapper = AppMeta->GetProperty<SharedPtrIInterface>(name)) {
+        if (auto wrapper = AppMeta->GetProperty<SharedPtrIInterface>(name, MetadataQuery::EXISTING)) {
             // The native object already contains a JS object.
             return interface_cast<JSWrapperState>(wrapper->GetValue())->GetObject();
         }
@@ -305,7 +305,7 @@ NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::P
     }
     return StoreJsObj(obj, nodeJS, pname);
 }
-void DebugNativesHavingJS()
+void DebugNativesHavingJS(void)
 {
     for (auto&& v : META_NS::GetObjectRegistry().GetAllObjectInstances()) {
         if (auto i = interface_cast<META_NS::IMetadata>(v)) {

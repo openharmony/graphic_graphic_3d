@@ -16,7 +16,7 @@
 #ifndef META_ENGINE_INTERFACE_ENGINE_VALUE_H
 #define META_ENGINE_INTERFACE_ENGINE_VALUE_H
 
-#include <core/ecs/entity_reference.h>
+#include <core/ecs/entity.h>
 #include <core/ecs/intf_component_manager.h>
 #include <core/property/intf_property_handle.h>
 
@@ -42,7 +42,7 @@ public:
 
 struct EnginePropertyHandle {
     CORE_NS::IComponentManager* manager {};
-    CORE_NS::EntityReference entity;
+    CORE_NS::Entity entity;
     // in case the property path contains IPropertyHandle*, we need to keep pointer to the most
     // recent value having such handle, so that we are able to update the handle properly
     IValue::Ptr parentValue;
@@ -57,7 +57,7 @@ struct EnginePropertyHandle {
 
     explicit operator bool() const
     {
-        return (manager && entity) || parentValue;
+        return (manager && CORE_NS::EntityUtil::IsValid(entity)) || parentValue;
     }
 };
 

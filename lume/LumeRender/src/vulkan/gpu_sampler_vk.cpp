@@ -97,8 +97,8 @@ GpuSamplerVk::~GpuSamplerVk()
         ((const DeviceVk&)device_)
             .GetExtFunctions()
             .vkDestroySamplerYcbcrConversion(device, // device
-            samplerConversion_,                      // ycbcrConversion
-            nullptr);                                // pAllocator
+                samplerConversion_,                  // ycbcrConversion
+                nullptr);                            // pAllocator
     }
     vkDestroySampler(device, // device
         plat_.sampler,       // sampler

@@ -1646,6 +1646,16 @@ void MeshBuilder::Unref()
     }
 }
 
+void MeshBuilder::EnablePrimitiveRestart(size_t index)
+{
+    if (index < submeshInfos_.size()) {
+        submeshInfos_[index].info.inputAssembly.enablePrimitiveRestart = true;
+    }
+    if (index < submeshes_.size()) {
+        submeshes_[index].inputAssembly.enablePrimitiveRestart = true;
+    }
+}
+
 // Private methods
 MeshBuilder::BufferEntities MeshBuilder::CreateBuffers(IEcs& ecs) const
 {

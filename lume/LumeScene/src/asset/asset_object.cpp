@@ -50,7 +50,7 @@ bool AssetObject::Load(const IScene::Ptr& sc, BASE_NS::string_view uri)
         CORE_LOG_E("Failed to create ecs asset loader");
         return false;
     }
-    
+
     loader->LoadAsset();
 
     if (entities_->GetEntityCount() == 0) {

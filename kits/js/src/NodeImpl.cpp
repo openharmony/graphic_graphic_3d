@@ -423,8 +423,12 @@ napi_value NodeImpl::GetParent(NapiApi::FunctionContext<>& ctx)
     NapiApi::Object argJS(env);
     napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
 
-    return CreateFromNativeInstance(env, interface_pointer_cast<META_NS::IObject>(parent),
-        false /*these are owned by the scene*/, BASE_NS::countof(args), args).ToNapiValue();
+    auto js = CreateFromNativeInstance(env, interface_pointer_cast<META_NS::IObject>(parent),
+        false /*these are owned by the scene*/, BASE_NS::countof(args), args);
+    if (auto nm = GetJsWrapper<NodeImpl>(js)) {
+        nm->Attached(true);
+    }
+    return js.ToNapiValue();
 }
 
 napi_value NodeImpl::GetChildContainer(NapiApi::FunctionContext<>& ctx)
@@ -470,6 +474,9 @@ napi_value NodeImpl::GetChild(NapiApi::FunctionContext<uint32_t>& ctx)
         cached =
             CreateFromNativeInstance(env, child, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
     }
+    if (auto nm = GetJsWrapper<NodeImpl>(cached)) {
+        nm->Attached(true);
+    }
     return cached.ToNapiValue();
 }
 
@@ -505,6 +512,9 @@ napi_value NodeImpl::AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     auto metaobj = GetThisNativeObject(ctx);
     if (auto parent = interface_cast<SCENE_NS::INode>(metaobj)) {
+        if (auto nm = GetJsWrapper<NodeImpl>(childJS)) {
+            nm->Attached(true);
+        }
         parent->AddChild(childNode);
         childNode->Enabled()->SetValue(true);
     }
@@ -557,6 +567,9 @@ napi_value NodeImpl::InsertChildAfter(NapiApi::FunctionContext<NapiApi::Object, 
                 }
             }
         }
+        if (auto nm = GetJsWrapper<NodeImpl>(childJS)) {
+            nm->Attached(true);
+        }
         parent->AddChild(childNode, index).GetResult();
         childNode->Enabled()->SetValue(true);
     }
@@ -605,6 +618,9 @@ napi_value NodeImpl::RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     auto metaobj = GetThisNativeObject(ctx);
     if (auto parent = interface_cast<SCENE_NS::INode>(metaobj)) {
+        if (auto nm = GetJsWrapper<NodeImpl>(childJS)) {
+            nm->Attached(false);
+        }
         parent->RemoveChild(childNode).GetResult();
         childNode->Enabled()->SetValue(false);
     }
@@ -621,6 +637,11 @@ napi_value NodeImpl::ClearChildren(NapiApi::FunctionContext<>& ctx)
     BASE_NS::vector<SCENE_NS::INode::Ptr> removedNodes;
     if (auto parent = interface_cast<SCENE_NS::INode>(metaobj)) {
         for (auto node : parent->GetChildren().GetResult()) {
+            if (auto childJS = FetchJsObj(node)) {
+                if (auto nm = GetJsWrapper<NodeImpl>(childJS)) {
+                    nm->Attached(false);
+                }
+            }
             parent->RemoveChild(node).GetResult();
             node->Enabled()->SetValue(false);
             removedNodes.emplace_back(BASE_NS::move(node));
@@ -678,8 +699,12 @@ napi_value NodeImpl::GetNodeByPath(NapiApi::FunctionContext<BASE_NS::string>& ct
     NapiApi::Object argJS(env);
     napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
 
-    return CreateFromNativeInstance(env, child, false /*these are owned by the scene*/, BASE_NS::countof(args), args)
-        .ToNapiValue();
+    auto js =
+        CreateFromNativeInstance(env, child, false /*these are owned by the scene*/, BASE_NS::countof(args), args);
+    if (auto nm = GetJsWrapper<NodeImpl>(js)) {
+        nm->Attached(true);
+    }
+    return js.ToNapiValue();
 }
 napi_value NodeImpl::GetComponent(NapiApi::FunctionContext<BASE_NS::string>& ctx)
 {
@@ -713,4 +738,13 @@ napi_value NodeImpl::GetComponent(NapiApi::FunctionContext<BASE_NS::string>& ctx
         }
     }
     return ctx.GetUndefined();
+}
+
+bool NodeImpl::IsAttached()
+{
+    return attached_;
+}
+void NodeImpl::Attached(bool attached)
+{
+    attached_ = attached;
 }

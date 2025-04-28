@@ -39,7 +39,8 @@ public:
     virtual Future<INode::Ptr> GetRootNode() const = 0;
     virtual Future<INode::Ptr> CreateNode(BASE_NS::string_view path, META_NS::ObjectId id = {}) = 0;
     virtual Future<INode::Ptr> FindNode(BASE_NS::string_view path, META_NS::ObjectId id = {}) const = 0;
-    virtual Future<void> ReleaseNode(const INode::Ptr& node) = 0;
+    virtual Future<bool> ReleaseNode(INode::Ptr&& node, bool recursive) = 0;
+    virtual Future<bool> RemoveNode(const INode::Ptr& node) = 0;
 
     template<class T>
     Future<typename T::Ptr> CreateNode(BASE_NS::string_view path, META_NS::ObjectId id = {})

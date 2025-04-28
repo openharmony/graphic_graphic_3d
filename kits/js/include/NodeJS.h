@@ -29,6 +29,7 @@ public:
 
 private:
     void DisposeNative(void*) override;
+    void Finalize(napi_env) override;
 };
 
 #endif

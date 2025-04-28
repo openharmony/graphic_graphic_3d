@@ -16,9 +16,10 @@
 #ifndef SCENE_JS_H
 #define SCENE_JS_H
 #include <meta/api/threading/mutex.h>
-#include <meta/interface/intf_object.h>
 #include <meta/interface/animation/intf_animation.h>
+#include <meta/interface/intf_object.h>
 #include <scene/interface/intf_bitmap.h>
+#include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_scene.h>
 
 #include <base/containers/unordered_map.h>
@@ -70,7 +71,6 @@ private:
     // JS methods
     napi_value GetNode(NapiApi::FunctionContext<BASE_NS::string>& ctx);
     napi_value GetResourceFactory(NapiApi::FunctionContext<>& ctx);
-    napi_value RenderFrame(NapiApi::FunctionContext<>& ctx);
 
     napi_value CreateCamera(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateLight(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx);
@@ -87,6 +87,8 @@ private:
 
     napi_value ImportNode(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx);
     napi_value ImportScene(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx);
+
+    napi_value RenderFrame(NapiApi::FunctionContext<>& ctx);
 
     // static js method
     static napi_value Load(NapiApi::FunctionContext<>& ctx);

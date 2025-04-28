@@ -14,7 +14,7 @@ import("//build/ohos.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 declare_args() {
-  RENDER_LOG_ENABLED = false
+  RENDER_LOG_ENABLED = true
   RENDER_VALIDATION_ENABLED = false
   RENDER_BUILD_GLES = true
   RENDER_BUILD_VULKAN = true
@@ -404,7 +404,7 @@ ohos_source_set("lume_render_src") {
   external_deps += [
     "c_utils:utils",
     "graphic_surface:surface",
-    "skia:skia_canvaskit"
+    "skia:skia_canvaskit",
   ]
 
   part_name = "graphic_3d"

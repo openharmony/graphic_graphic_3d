@@ -49,9 +49,15 @@ public:
     bool SetRenderHandle(const IInternalScene::Ptr& scene, RENDER_NS::RenderHandleReference handle,
         CORE_NS::EntityReference ent) override;
     RENDER_NS::RenderHandleReference GetRenderHandle() const override;
-    CORE_NS::EntityReference GetEntity() const override;
+    CORE_NS::Entity GetEntity() const override;
 
     void Refresh() override {}
+
+    BASE_NS::string GetName() const override
+    {
+        return META_NS::GetValue(Name());
+    }
+
 private:
     mutable std::shared_mutex mutex_;
     RENDER_NS::RenderHandleReference handle_;

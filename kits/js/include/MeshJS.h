@@ -33,6 +33,7 @@ public:
 
 private:
     void DisposeNative(void*) override;
+    void Finalize(napi_env env) override;
     napi_value GetSubmesh(NapiApi::FunctionContext<>& ctx);
     napi_value GetAABB(NapiApi::FunctionContext<>& ctx);
 

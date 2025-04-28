@@ -28,18 +28,18 @@ void* MeshJS::GetInstanceImpl(uint32_t id)
         return this;
     return SceneResourceImpl::GetInstanceImpl(id);
 }
-void MeshJS::DisposeNative(void*)
+void MeshJS::DisposeNative(void* scn)
 {
-    // do nothing for now..
-    LOG_V("MeshJS::DisposeNative");
-    NapiApi::Object obj = scene_.GetObject();
-    auto* tro = obj.Native<TrueRootObject>();
-    if (tro) {
-        SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-        }
+    if (disposed_) {
+        return;
     }
+    disposed_ = true;
+
+    LOG_V("MeshJS::DisposeNative");
+    if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
+        sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+    }
+    subs_.clear();
     scene_.Reset();
 }
 void MeshJS::Init(napi_env env, napi_value exports)
@@ -77,12 +77,8 @@ MeshJS::MeshJS(napi_env e, napi_callback_info i) : BaseObject<MeshJS>(e, i), Sce
         // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
         NapiApi::Object meJs(fromJs.This());
         NapiApi::Object scene = fromJs.Arg<0>();
-        auto* tro = scene.Native<TrueRootObject>();
-        if (tro) {
-            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-            }
+        if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
         }
     }
 }
@@ -90,7 +86,11 @@ MeshJS::~MeshJS()
 {
     LOG_V("MeshJS -- ");
 }
-
+void MeshJS::Finalize(napi_env env)
+{
+    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
+    BaseObject::Finalize(env);
+}
 bool MeshJS::UpdateSubmesh(uint32_t index, SCENE_NS::ISubMesh::Ptr newSubmesh)
 {
     if (index < subs_.size()) {

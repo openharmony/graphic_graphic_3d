@@ -94,8 +94,7 @@ struct RenderResourceConverter {
         auto p = META_NS::GetPointer<Interface>(any);
         if (auto scene = scene_.lock()) {
             if (v) {
-                auto f = scene->AddTask([&] { return ObjectWithRenderHandle<Interface>(scene, v, p, id_); });
-                p = f.GetResult();
+                p = scene->AddTask([&] { return ObjectWithRenderHandle<Interface>(scene, v, p, id_); }).GetResult();
             } else {
                 p = nullptr;
             }
@@ -108,7 +107,7 @@ struct RenderResourceConverter {
         CORE_NS::EntityReference ent;
         if (auto scene = scene_.lock()) {
             if (auto i = interface_cast<IEcsResource>(v)) {
-                ent = i->GetEntity();
+                scene->AddTask([&] { ent = scene->GetEcsContext().GetEntityReference(i->GetEntity()); }).Wait();
             }
         }
         return ent;

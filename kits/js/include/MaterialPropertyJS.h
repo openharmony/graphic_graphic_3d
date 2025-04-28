@@ -12,11 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef MATERIAL_PROPERTY_JS_H
-#define MATERIAL_PROPERTY_JS_H
-
-#include <meta/interface/intf_object.h>
-
+#ifndef _MATERIAL_PROPERTY_JS_H_
+#define _MATERIAL_PROPERTY_JS_H_
 #include <meta/interface/intf_object.h>
 
 #include "BaseObjectJS.h"

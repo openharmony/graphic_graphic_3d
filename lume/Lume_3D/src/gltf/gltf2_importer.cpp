@@ -74,6 +74,7 @@
 
 #include "gltf/gltf2_util.h"
 #include "util/log.h"
+#include "util/mesh_builder.h"
 #include "util/mesh_util.h"
 #include "util/string_util.h"
 #include "util/uri_lookup.h"
@@ -452,7 +453,7 @@ struct GatherMeshDataResult {
     /** In case of import error, contains the description of the error. */
     string error;
 
-    IMeshBuilder::Ptr meshBuilder;
+    BASE_NS::refcnt_ptr<MeshBuilder> meshBuilder;
 };
 
 void ConvertLoadResultToFloat(GLTF2::GLTFLoadDataResult& data, float scale = 0.f)
@@ -473,29 +474,38 @@ void ConvertLoadResultToFloat(GLTF2::GLTFLoadDataResult& data, float scale = 0.f
 }
 
 template<typename T>
-void Validate(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount)
+void Validate(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount, bool& primitiveRestart)
 {
     const auto elementCount = Math::min(indices.elementCount, indices.data.size_in_bytes() / sizeof(T));
     auto source = array_view(static_cast<const T*>(static_cast<const void*>(indices.data.data())), elementCount);
-    if (std::any_of(source.begin(), source.end(), [vertexCount](const auto& value) { return value >= vertexCount; })) {
+    primitiveRestart = false;
+    if (std::any_of(source.begin(), source.end(), [vertexCount, &primitiveRestart](const auto& value) {
+            // spec prohibits "maximum possible value for component type", but still some models use it for primitive
+            // restart.
+            if (value == std::numeric_limits<T>::max()) {
+                primitiveRestart = true;
+                return false;
+            }
+            return (value >= vertexCount);
+        })) {
         indices.success = false;
         indices.error += "Indices out-of-range.\n";
     }
 }
 
-void ValidateIndices(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount)
+void ValidateIndices(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount, bool& primitiveRestart)
 {
     switch (indices.componentType) {
         case GLTF2::ComponentType::UNSIGNED_BYTE: {
-            Validate<uint8_t>(indices, vertexCount);
+            Validate<uint8_t>(indices, vertexCount, primitiveRestart);
             break;
         }
         case GLTF2::ComponentType::UNSIGNED_SHORT: {
-            Validate<uint16_t>(indices, vertexCount);
+            Validate<uint16_t>(indices, vertexCount, primitiveRestart);
             break;
         }
         case GLTF2::ComponentType::UNSIGNED_INT: {
-            Validate<uint32_t>(indices, vertexCount);
+            Validate<uint32_t>(indices, vertexCount, primitiveRestart);
             break;
         }
 
@@ -733,21 +743,27 @@ string GatherErrorStrings(size_t primitiveIndex, const GLTF2::GLTFLoadDataResult
     return error;
 }
 
-GLTF2::GLTFLoadDataResult LoadIndices(GatherMeshDataResult& result, const GLTF2::MeshPrimitive& primitive,
-    IndexType indexType, uint32_t loadedVertexCount)
+struct IndicesResult {
+    GLTF2::GLTFLoadDataResult loadDataResult;
+    bool primitiveRestart { false };
+};
+
+IndicesResult LoadIndices(GatherMeshDataResult& result, const GLTF2::MeshPrimitive& primitive, IndexType indexType,
+    uint32_t loadedVertexCount)
 {
+    IndicesResult indicesLoadResult;
     GLTF2::GLTFLoadDataResult loadDataResult;
     if (primitive.indices) {
-        if (auto indicesLoadResult = LoadData(*primitive.indices); indicesLoadResult.success) {
-            ValidateIndices(indicesLoadResult, loadedVertexCount);
-            loadDataResult = move(indicesLoadResult);
+        if (indicesLoadResult.loadDataResult = LoadData(*primitive.indices); indicesLoadResult.loadDataResult.success) {
+            ValidateIndices(indicesLoadResult.loadDataResult, loadedVertexCount, indicesLoadResult.primitiveRestart);
         }
-        if (!loadDataResult.success) {
-            result.error += loadDataResult.error;
+        if (!indicesLoadResult.loadDataResult.success) {
+            result.error += indicesLoadResult.loadDataResult.error;
             result.success = false;
+            indicesLoadResult.loadDataResult = {};
         }
     }
-    return loadDataResult;
+    return indicesLoadResult;
 }
 
 void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<const GLTF2::MeshPrimitive> primitives)
@@ -786,19 +802,23 @@ void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<
         result.meshBuilder->SetVertexData(primitiveIndex, positions, normals, texcoords0, texcoords1, tangents, colors);
 
         // Process indices.
-        GLTF2::GLTFLoadDataResult indices = LoadIndices(result, primitive, importInfo.indexType, loadedVertexCount);
-        if (!indices.data.empty()) {
+        IndicesResult indices = LoadIndices(result, primitive, importInfo.indexType, loadedVertexCount);
+        if (!indices.loadDataResult.data.empty()) {
+            const auto elementSize = indices.loadDataResult.elementSize;
             const IMeshBuilder::DataBuffer data {
-                (indices.elementSize == sizeof(uint32_t))
+                (elementSize == sizeof(uint32_t))
                     ? BASE_FORMAT_R32_UINT
-                    : ((indices.elementSize == sizeof(uint16_t)) ? BASE_FORMAT_R16_UINT : BASE_FORMAT_R8_UINT),
-                static_cast<uint32_t>(indices.elementSize), { indices.data }
+                    : ((elementSize == sizeof(uint16_t)) ? BASE_FORMAT_R16_UINT : BASE_FORMAT_R8_UINT),
+                static_cast<uint32_t>(elementSize), { indices.loadDataResult.data }
             };
             result.meshBuilder->SetIndexData(primitiveIndex, data);
+            if (indices.primitiveRestart) {
+                result.meshBuilder->EnablePrimitiveRestart(primitiveIndex);
+            }
         }
 
         // Set AABB.
-        if (position.min.size() == 3 && position.max.size() == 3) { // 3:size
+        if (position.min.size() == 3 && position.max.size() == 3) { // 3: size
             const Math::Vec3 min = { position.min[0], position.min[1], position.min[2] };
             const Math::Vec3 max = { position.max[0], position.max[1], position.max[2] };
             result.meshBuilder->SetAABB(primitiveIndex, min, max);
@@ -841,7 +861,7 @@ GatherMeshDataResult GatherMeshData(const GLTF2::Mesh& mesh, const GLTFImportRes
         shaderManager.GetVertexInputDeclarationView(shaderManager.GetVertexInputDeclarationHandle(
             DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD));
 
-    result.meshBuilder = CreateInstance<IMeshBuilder>(*context, UID_MESH_BUILDER);
+    result.meshBuilder.reset(static_cast<MeshBuilder*>(CreateInstance<IMeshBuilder>(*context, UID_MESH_BUILDER).get()));
     result.meshBuilder->Initialize(vertexInputDeclaration, mesh.primitives.size());
 
     // Create primitive import info for mesh builder.
@@ -1299,8 +1319,8 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
     }
 }
 
-bool BuildAnimationInput(GLTF2::Data const& data, IFileManager& fileManager, GLTFImportResult& result,
-    GLTF2::Accessor& inputAccessor, AnimationInputComponent& inputComponent)
+bool BuildAnimationInput(GLTF2::Data const& data, IFileManager& fileManager, GLTF2::Accessor& inputAccessor,
+    AnimationInputComponent& inputComponent)
 {
     const GLTF2::GLTFLoadDataResult animationInputDataResult = LoadData(inputAccessor);
     if (animationInputDataResult.success) {
@@ -1325,8 +1345,8 @@ void AppendAnimationOutputData(uint64_t outputTypeHash, const GLTF2::GLTFLoadDat
     outputComponent.data.append(dataView.cbegin(), dataView.cend());
 }
 
-bool BuildAnimationOutput(GLTF2::Data const& data, IFileManager& fileManager, GLTFImportResult& result,
-    GLTF2::Accessor& outputAccessor, GLTF2::AnimationPath path, AnimationOutputComponent& outputComponent)
+bool BuildAnimationOutput(GLTF2::Data const& data, IFileManager& fileManager, GLTF2::Accessor& outputAccessor,
+    GLTF2::AnimationPath path, AnimationOutputComponent& outputComponent)
 {
     const GLTF2::GLTFLoadDataResult animationOutputDataResult = LoadData(outputAccessor);
     if (animationOutputDataResult.success) {
@@ -2321,6 +2341,7 @@ struct GLTF2Importer::ImporterTask {
     enum class State { Queued, Gather, Import, Finished };
 
     string name;
+    string errors;
     uint64_t id;
     bool success { true };
 
@@ -2998,6 +3019,7 @@ void GLTF2Importer::HandleGatherTasks()
                     result_.success = false;
                     result_.error += error + '\n';
                 }
+                result_.error += task->errors;
             }
         }
     }
@@ -3010,11 +3032,10 @@ void GLTF2Importer::PrepareBufferTasks()
     auto task = make_unique<ImporterTask>();
     task->name = "Load buffers";
     task->phase = ImportPhase::BUFFERS;
-    task->gather = [this]() -> bool {
+    task->gather = [this, t = task.get()]() -> bool {
         BufferLoadResult result = LoadBuffers(data_, engine_.GetFileManager());
-        result_.success = result_.success && result.success;
-        result_.error += result.error;
-        return result_.success;
+        t->errors += result.error;
+        return result.success;
     };
     QueueTask(BASE_NS::move(task));
 
@@ -3093,8 +3114,8 @@ void GLTF2Importer::QueueImage(size_t i, string&& uri, string&& name)
                 ImportTexture(t->data.uri, move(result.image), *t->data.staging, importer->gpuResourceManager_);
         } else {
             CORE_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), result.error);
-            importer->result_.error += result.error;
-            importer->result_.error += '\n';
+            t->errors += result.error;
+            t->errors += '\n';
         }
 
         return true;
@@ -3398,7 +3419,7 @@ GLTF2Importer::PrepareAnimationInputTask(
         task->name = "Import animation input";
         task->phase = ImportPhase::ANIMATION_SAMPLERS;
         task->gather = [this, accessor = track.sampler->input, t = task.get()]() -> bool {
-            return BuildAnimationInput(*data_, engine_.GetFileManager(), result_, *accessor, t->data.component);
+            return BuildAnimationInput(*data_, engine_.GetFileManager(), *accessor, t->data.component);
         };
         task->import = [em = &ecs_->GetEntityManager(), animationInputManager, t = task.get()]() -> bool {
             t->data.entity = em->CreateReferenceCounted();
@@ -3426,7 +3447,7 @@ GLTF2Importer::PrepareAnimationOutputTask(
         task->name = "Import animation output";
         task->phase = ImportPhase::ANIMATION_SAMPLERS;
         task->gather = [this, accessor = track.sampler->output, path = track.channel.path, t = task.get()]() -> bool {
-            return BuildAnimationOutput(*data_, engine_.GetFileManager(), result_, *accessor, path, t->data.component);
+            return BuildAnimationOutput(*data_, engine_.GetFileManager(), *accessor, path, t->data.component);
         };
         task->import = [em = &ecs_->GetEntityManager(), animationOutputManager, t = task.get()]() -> bool {
             t->data.entity = em->CreateReferenceCounted();

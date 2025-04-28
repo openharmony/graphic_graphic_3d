@@ -41,7 +41,7 @@ public:
 
     int UpdateGlyph(bool sdf, FT_Size ftSize, uint32_t glyphIndex, FontDefs::Glyph& glyph);
 
-    uint32_t GetGlyphIndex(uint32_t code);
+    uint32_t GetGlyphIndex(uint32_t utfCode);
 
 private:
     friend class FontBuffer;

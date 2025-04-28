@@ -44,6 +44,7 @@
 #include "component/transform_component.h"
 #include "core/ecs_object.h"
 #include "ecs_animation.h"
+#include "ecs_component/entity_owner_component_info.h"
 #include "environment.h"
 #include "mesh/material.h"
 #include "mesh/mesh.h"
@@ -86,6 +87,7 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     // Initializing dynamic plugin.
     // Plugin registry access via the provided registry instance which is saved here.
     gPluginRegistry = &pluginRegistry;
+    pluginRegistry.RegisterTypeInfo(ENTITY_OWNER_COMPONENT_TYPE_INFO);
 
     RegisterEngineAccess();
 
@@ -183,6 +185,8 @@ static void UnregisterInterfaces(PluginToken)
 
     // remove all weak refs still in the object registry referring to scene
     META_NS::GetObjectRegistry().Purge();
+
+    GetPluginRegister().UnregisterTypeInfo(ENTITY_OWNER_COMPONENT_TYPE_INFO);
 }
 static const char* VersionString()
 {

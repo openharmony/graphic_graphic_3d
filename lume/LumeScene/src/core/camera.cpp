@@ -45,7 +45,7 @@ bool UpdateCameraRenderTarget(const IEcsObject::Ptr& camera, const IRenderTarget
     if (auto ecs = GetEcs(camera)) {
         CORE_NS::EntityReference ent;
         if (auto resource = interface_cast<IEcsResource>(target)) {
-            ent = resource->GetEntity();
+            ent = ecs->GetEntityReference(resource->GetEntity());
         } else if (target) {
             ent = HandleFromRenderResource(camera->GetScene(), target->GetRenderHandle());
         }

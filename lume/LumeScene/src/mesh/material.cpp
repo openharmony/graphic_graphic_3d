@@ -29,7 +29,9 @@
 SCENE_BEGIN_NAMESPACE()
 namespace {
 struct ShaderConverter {
-    ShaderConverter(const IInternalScene::Ptr& scene) : scene_(scene) {}
+    ShaderConverter(const IInternalScene::Ptr& scene, META_NS::Property<CORE3D_NS::MaterialComponent::Shader> p)
+        : scene_(scene), p_(p)
+    {}
 
     using SourceType = IShader::Ptr;
     using TargetType = CORE3D_NS::MaterialComponent::Shader;
@@ -40,12 +42,28 @@ struct ShaderConverter {
         if (auto scene = scene_.lock()) {
             scene
                 ->AddTask([&] {
-                    p = v.shader ? ObjectWithRenderHandle<IShader>(scene, v.shader, p, ClassId::Shader) : nullptr;
+                    if (!p) {
+                        p = interface_pointer_cast<IShader>(scene->CreateObject(ClassId::Shader));
+                    }
+                    if (auto i = interface_cast<IShaderState>(p)) {
+                        if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
+                                scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
+                            i->SetShaderState(scene, rhman->GetRenderHandleReference(v.shader), v.shader,
+                                rhman->GetRenderHandleReference(v.graphicsState), v.graphicsState);
+
+                            if (auto ig = interface_cast<IGraphicsState>(p)) {
+                                auto s = ig->GetGraphicsState();
+                                if (s != v.graphicsState) {
+                                    auto copy = v;
+                                    copy.graphicsState = s;
+
+                                    p_.GetUnlockedAccess().SetValue(copy);
+                                }
+                            }
+                        }
+                    }
                 })
                 .Wait();
-            if (auto i = interface_cast<IGraphicsState>(p)) {
-                i->SetGraphicsState(v.graphicsState);
-            }
         }
         return p;
     }
@@ -54,7 +72,7 @@ struct ShaderConverter {
         TargetType res;
         if (auto scene = scene_.lock()) {
             if (auto i = interface_cast<IEcsResource>(v)) {
-                res.shader = i->GetEntity();
+                res.shader = scene->GetEcsContext().GetEntityReference(i->GetEntity());
             }
             if (auto i = interface_cast<IGraphicsState>(v)) {
                 res.graphicsState = i->GetGraphicsState();
@@ -65,6 +83,7 @@ struct ShaderConverter {
 
 private:
     IInternalScene::WeakPtr scene_;
+    META_NS::Property<CORE3D_NS::MaterialComponent::Shader> p_;
 };
 struct RenderSortConverter {
     using SourceType = SCENE_NS::RenderSort;
@@ -135,7 +154,8 @@ bool Material::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::st
         auto ep = object_->CreateEngineProperty(path).GetResult();
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, { object_->GetScene() })));
+               i->PushValue(
+                   META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, { object_->GetScene(), ep })));
     }
     if (name == "Textures") {
         return ConstructTextures(p);

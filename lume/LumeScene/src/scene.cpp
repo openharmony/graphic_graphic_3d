@@ -111,9 +111,14 @@ Future<META_NS::IObject::Ptr> SceneObject::CreateObject(META_NS::ObjectId id)
     return internal_->AddTask([=] { return internal_->CreateObject(id); });
 }
 
-Future<void> SceneObject::ReleaseNode(const INode::Ptr& node)
+Future<bool> SceneObject::ReleaseNode(INode::Ptr&& node, bool recursive)
 {
-    return internal_->AddTask([=] { return internal_->ReleaseNode(node); });
+    return internal_->AddTask(
+        [=, n = BASE_NS::move(node)]() mutable { return internal_->ReleaseNode(BASE_NS::move(n), recursive); });
+}
+Future<bool> SceneObject::RemoveNode(const INode::Ptr& node)
+{
+    return internal_->AddTask([=] { return internal_->RemoveNode(node); });
 }
 
 Future<BASE_NS::vector<ICamera::Ptr>> SceneObject::GetCameras() const

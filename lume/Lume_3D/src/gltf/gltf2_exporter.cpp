@@ -2216,7 +2216,7 @@ void SaveGLB(const Data& data, IFile& file, string_view versionString)
         return;
     }
     if (const auto pad = (jsonString.size() % 4); pad) {
-        jsonString.append(4 - pad, ' '); // 4:param
+        jsonString.append(4 - pad, ' '); // 4: param
     }
 
     const auto jsonSize = static_cast<uint32_t>(jsonString.size());
