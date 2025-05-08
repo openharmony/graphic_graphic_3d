@@ -23,10 +23,7 @@ ohos_unittest("3d_widget_adpater_test") {
 
   sources = [ "3d_widget_adapter_test.cpp" ]
 
-  include_dirs = [
-    "${ACE_ROOT}",
-    "${ACE_ROOT}/frameworks",
-  ]
+  include_dirs = []
 
   deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
   external_deps = [

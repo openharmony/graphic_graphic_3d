@@ -17,7 +17,6 @@ declare_args() {
   #BUILDTYPE="RelWithDebInfo"
   BUILDTYPE = "Release"
 
-  ACE_ROOT = "//foundation/arkui/ace_engine"
   LUME_PATH = "foundation/graphic/graphic_3d/lume/"
 
   BASE_DIR_NAME = "LumeBase"
