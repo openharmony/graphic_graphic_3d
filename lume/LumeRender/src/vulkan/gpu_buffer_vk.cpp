@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -67,6 +67,18 @@ GpuResourceMemoryVk GetPlatMemory(const VmaAllocationInfo& allocationInfo, const
     };
 }
 
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+inline uint64_t GetBufferDeviceAddress(const VkDevice device, const VkBuffer buffer)
+{
+    const VkBufferDeviceAddressInfo addressInfo {
+        VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // sType
+        nullptr,                                      // pNext
+        buffer,                                       // buffer
+    };
+    return vkGetBufferDeviceAddress(device, &addressInfo);
+}
+#endif
+
 #if (RENDER_PERF_ENABLED == 1)
 void RecordAllocation(
     PlatformGpuMemoryAllocator& gpuMemAllocator, const GpuBufferDesc& desc, const int64_t alignedByteSize)
@@ -75,10 +87,12 @@ void RecordAllocation(
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
 
-        pdm->UpdateData("AllGpuBuffers", "GPU_BUFFER", alignedByteSize);
+        pdm->UpdateData("AllGpuBuffers", "GPU_BUFFER", alignedByteSize,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
         const string poolDebugName = gpuMemAllocator.GetBufferPoolDebugName(desc);
         if (!poolDebugName.empty()) {
-            pdm->UpdateData(poolDebugName, "GPU_BUFFER", alignedByteSize);
+            pdm->UpdateData(poolDebugName, "GPU_BUFFER", alignedByteSize,
+                CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
         }
     }
 }
@@ -149,6 +163,15 @@ GpuBufferVk::GpuBufferVk(Device& device, const GpuAccelerationStructureDesc& des
 #endif
 }
 
+GpuBufferVk::GpuBufferVk(Device& device, const BackendSpecificBufferDesc& desc)
+    : device_(device), desc_(GetBufferDescFromHwBufferDesc(static_cast<const BufferDescVk&>(desc).platformHwBuffer))
+{
+    plat_.platformHwBuffer = static_cast<const BufferDescVk&>(desc).platformHwBuffer;
+    if (plat_.platformHwBuffer) {
+        CreatePlatformHwBuffer();
+    }
+}
+
 GpuBufferVk::~GpuBufferVk()
 {
     if (isMapped_) {
@@ -167,13 +190,18 @@ GpuBufferVk::~GpuBufferVk()
         }
     }
 #endif
-
-    if (PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator(); gpuMemAllocator) {
-        gpuMemAllocator->DestroyBuffer(plat_.buffer, mem_.allocation);
+    if (ownsResources_) {
+        if (PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator(); gpuMemAllocator) {
+            gpuMemAllocator->DestroyBuffer(plat_.buffer, mem_.allocation);
 #if (RENDER_PERF_ENABLED == 1)
-        RecordAllocation(*gpuMemAllocator, desc_, -static_cast<int64_t>(plat_.fullByteSize));
+            RecordAllocation(*gpuMemAllocator, desc_, -static_cast<int64_t>(plat_.fullByteSize));
 #endif
+        }
     }
+    if (plat_.platformHwBuffer) {
+        DestroyPlatformHwBuffer();
+    }
+
 #if (RENDER_DEBUG_GPU_RESOURCE_IDS == 1)
     PLUGIN_LOG_E("gpu buffer id <: 0x%" PRIxPTR, (uintptr_t)plat_.buffer);
 #endif
@@ -201,6 +229,13 @@ void GpuBufferVk::CreateBufferImpl()
     plat_.usage = static_cast<VkBufferUsageFlags>(desc_.usageFlags);
 
     AllocateMemory(requiredFlags, preferredFlags);
+
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    if (plat_.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+        const DevicePlatformDataVk& devicePlat = (const DevicePlatformDataVk&)device_.GetPlatformData();
+        plat_.deviceAddress = GetBufferDeviceAddress(devicePlat.device, plat_.buffer);
+    }
+#endif
 
     if (PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator(); gpuMemAllocator) {
         const auto memFlags =

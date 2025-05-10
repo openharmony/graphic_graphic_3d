@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -34,6 +34,72 @@ struct IndexBuffer;
 struct VertexBuffer;
 struct ImageBlit;
 
+class IDevice;
+class ILowLevelDevice;
+struct RenderBackendRecordingState;
+
+/** RenderBackendCommand
+ * Can be used exact command buffer position or with backend positions.
+ */
+class IRenderBackendCommand : public CORE_NS::IInterface {
+public:
+    static constexpr auto UID = BASE_NS::Uid("5a9bf1e7-bb10-4011-9b45-83fc7103b49e");
+
+    using Ptr = BASE_NS::refcnt_ptr<IRenderBackendCommand>;
+
+    /** ExecuteBackendCommand method to be implemented
+     * @device ILowLevelDevice which can be casted to backend device
+     * @recordingState A recording state
+     */
+    virtual void ExecuteBackendCommand(
+        const ILowLevelDevice& device, const RenderBackendRecordingState& recordingState) = 0;
+
+protected:
+    IRenderBackendCommand() = default;
+    virtual ~IRenderBackendCommand() = default;
+
+    IRenderBackendCommand(const IRenderBackendCommand&) = delete;
+    IRenderBackendCommand& operator=(const IRenderBackendCommand&) = delete;
+    IRenderBackendCommand(IRenderBackendCommand&&) = delete;
+    IRenderBackendCommand& operator=(IRenderBackendCommand&&) = delete;
+};
+
+/** RenderBackendPositionCommand
+ * Can be used in selected positions.
+ */
+class IRenderBackendPositionCommand : public CORE_NS::IInterface {
+public:
+    static constexpr auto UID = BASE_NS::Uid("8feb91da-97ee-4a18-be6f-c5d5074bad8f");
+
+    using Ptr = BASE_NS::refcnt_ptr<IRenderBackendPositionCommand>;
+
+    /** ExecuteBackendCommand method to be implemented
+     * @device IDevice, low level device accessable through device.GetLowLevelDevice()
+     */
+    virtual void ExecuteBackendCommand(const IDevice& device) = 0;
+
+protected:
+    IRenderBackendPositionCommand() = default;
+    virtual ~IRenderBackendPositionCommand() = default;
+
+    IRenderBackendPositionCommand(const IRenderBackendPositionCommand&) = delete;
+    IRenderBackendPositionCommand& operator=(const IRenderBackendPositionCommand&) = delete;
+    IRenderBackendPositionCommand(IRenderBackendPositionCommand&&) = delete;
+    IRenderBackendPositionCommand& operator=(IRenderBackendPositionCommand&&) = delete;
+};
+
+/** RenderBackendCommandPosition
+ * To position non-command list commands.
+ * The ordering is render node (render command list)
+ */
+enum class RenderBackendCommandPosition : uint32_t {
+    /** Execute command before automatic backend presentation */
+    BEFORE_PRESENTATION = 0,
+    /** Execute command after automatic backend presentation */
+    AFTER_PRESENTATION = 1,
+    /** Execute command before automatic backend acquire */
+    BEFORE_ACQUIRE = 2,
+};
 /** @ingroup group_render_irendercommandlist */
 /** Call methods to add render commands to a render command list.
  * Render command list is unique for every render node.
@@ -320,10 +386,17 @@ public:
      * @param aabbs Geometry aabbs
      * @param instances Geometry instances
      */
-    virtual void BuildAccelerationStructures(const AccelerationStructureBuildGeometryData& geometry,
-        const BASE_NS::array_view<const AccelerationStructureGeometryTrianglesData> triangles,
-        const BASE_NS::array_view<const AccelerationStructureGeometryAabbsData> aabbs,
-        const BASE_NS::array_view<const AccelerationStructureGeometryInstancesData> instances) = 0;
+    virtual void BuildAccelerationStructures(const AsBuildGeometryData& geometry,
+        const BASE_NS::array_view<const AsGeometryTrianglesData> triangles,
+        const BASE_NS::array_view<const AsGeometryAabbsData> aabbs,
+        const BASE_NS::array_view<const AsGeometryInstancesData> instances) = 0;
+
+    /** Copy acceleration structure instances to instance data
+     * @param destination Buffer handle with offset
+     * @param instances Instances which will copied to the buffer
+     */
+    virtual void CopyAccelerationStructureInstances(
+        const BufferOffset& destination, BASE_NS::array_view<const AsInstance> instances) = 0;
 
     /** Clear color image.
      * This should only be needed when initializing images to some values.
@@ -395,11 +468,24 @@ public:
     virtual void SetDynamicStateFragmentShadingRate(
         const Size2D& fragmentSize, const FragmentShadingRateCombinerOps& combinerOps) = 0;
 
-    /** Set execute backend frame position. The position where the method is ran.
+    /** [[DEPRECATED]] Set execute backend frame position. The position where the method is ran.
      * Often this might be the only command in the render command list, when using backend nodes.
      * This can be set only once during render command list setup per frame.
      */
-    virtual void SetExecuteBackendFramePosition() = 0;
+    // [[DEPRECATED]] use SetExecuteBackendCommand(...)
+    [[deprecated]] virtual void SetExecuteBackendFramePosition() = 0;
+
+    /** Set execute backend command. The command will be run in this position when backend is run.
+     * @param backendCommand A command / method which is run during the backend phase.
+     */
+    virtual void SetExecuteBackendCommand(IRenderBackendCommand::Ptr backendCommand) = 0;
+
+    /** Set backend command to a specific frame position.
+     * @param backendCommand A command / method which is run during the backend phase.
+     * @param backendCommandPosition A command / method which is run during the backend phase.
+     */
+    virtual void SetBackendCommand(
+        IRenderBackendPositionCommand::Ptr backendCommand, RenderBackendCommandPosition backendCommandPosition) = 0;
 
     /** Begin render debug marker (works only when RENDER_DEBUG_MARKERS_ENABLED is 1)
      * Can be visualized with different graphics tools.

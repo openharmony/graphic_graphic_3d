@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Definition of IProxyObject interface
+ * Author: Lauri Jaaskela
+ * Create: 2022-10-10
  */
 
 #ifndef META_INTERFACE_IPROXY_OBJECT_H
@@ -72,6 +64,11 @@ public:
      * @brief returns the property if it is a proxy
      */
     virtual IProperty::ConstPtr GetProxyProperty(BASE_NS::string_view) const = 0;
+    /**
+     * @brief Default value binds object's property to another object's source property instead to target's property
+     * with same name. If property does not exists yet default value binding is created when property is requested and
+     * if source property exists in target object
+     */
     virtual void AddInternalProxy(BASE_NS::string_view proxyPropertyName, BASE_NS::string_view sourcePropertyName) = 0;
 };
 

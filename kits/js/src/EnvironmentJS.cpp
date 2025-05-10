@@ -56,13 +56,13 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("Environment", func);
 
     NapiApi::Object exp(env, exports);
 
-    napi_value eType;
-    napi_value v;
+    napi_value eType = nullptr;
+    napi_value v = nullptr;
     napi_create_object(env, &eType);
 #define DECL_ENUM(enu, x)                                      \
     napi_create_uint32(env, EnvironmentBackgroundType::x, &v); \
@@ -87,6 +87,7 @@ void EnvironmentJS::DisposeNative(void* scene)
     if (!disposed_) {
         LOG_V("EnvironmentJS::DisposeNative");
         disposed_ = true;
+
         SceneJS* sceneJS { static_cast<SceneJS*>(scene) };
         if (sceneJS) {
             sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
@@ -95,23 +96,18 @@ void EnvironmentJS::DisposeNative(void* scene)
         specularFactor_.reset();
         environmentFactor_.reset();
         if (auto env = interface_pointer_cast<IEnvironment>(GetNativeObject())) {
-            // reset the native object refs
-            SetNativeObject(nullptr, false);
-            SetNativeObject(nullptr, true);
+            UnsetNativeObject();
 
             // if we still have javascript scene reference, detach from it.
             // (if not, then scene has died and we are detaching already)
             NapiApi::Object sceneJs = scene_.GetObject();
-            if (!sceneJs) {
-                LOG_E("sceneJs is nullptr");
-                return;
+            if (sceneJs) {
+                napi_value null = nullptr;
+                napi_get_null(sceneJs.GetEnv(), &null);
+                sceneJs.Set("environment", null);
             }
-            napi_value null;
-            napi_get_null(sceneJs.GetEnv(), &null);
-            sceneJs.Set("environment", null);
             if (sceneJS) {
-                IScene::Ptr s = interface_pointer_cast<IScene>(sceneJS->GetNativeObject());
-                if (s) {
+                if (auto s = interface_pointer_cast<IScene>(sceneJS->GetNativeObject())) {
                     env->EnvironmentImage()->SetValue(nullptr);
                     env->RadianceImage()->SetValue(nullptr);
                     env.reset();
@@ -130,12 +126,13 @@ void* EnvironmentJS::GetInstanceImpl(uint32_t id)
 }
 void EnvironmentJS::Finalize(napi_env env)
 {
-    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
-    BaseObject<EnvironmentJS>::Finalize(env);
+    // hmm.. do i need to do something BEFORE the object gets deleted..
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    BaseObject::Finalize(env);
 }
 
 EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
-    : BaseObject<EnvironmentJS>(e, i), SceneResourceImpl(SceneResourceImpl::ENVIRONMENT)
+    : BaseObject(e, i), SceneResourceImpl(SceneResourceImpl::ENVIRONMENT)
 {
     LOG_V("EnvironmentJS ++");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
@@ -146,17 +143,19 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
     }
 
     scene_ = fromJs.Arg<0>().valueOrDefault();
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+    if (!scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
 
     NapiApi::Object meJs(fromJs.This());
-    if (auto sceneJS = GetJsWrapper<SceneJS>(scene_.GetObject())) {
+    if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
         sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
-    IScene::Ptr scene;
-    if (auto* tro = scene_.GetObject().Native<TrueRootObject>()) {
-        scene = interface_pointer_cast<IScene>(tro->GetNativeObject());
+
+    if (!meJs.GetNative<IEnvironment>()) {
+        LOG_E("Cannot finish creating an environment: Native environment object missing");
+        assert(false);
+        return;
     }
 
     NapiApi::Value<BASE_NS::string> name;
@@ -164,27 +163,6 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
     if (auto prm = args.Get("name")) {
         name = NapiApi::Value<BASE_NS::string>(e, prm);
     }
-
-    BASE_NS::string nameS = name;
-    if (nameS.empty()) {
-        // create "unique" name
-        nameS = BASE_NS::to_string(reinterpret_cast<uint64_t>(this));
-    }
-    IEnvironment::Ptr env = GetNativeMeta<IEnvironment>(meJs);
-    // Construct native object (if needed)
-
-    if (!env) {
-        BASE_NS::string_view n = nameS; /*nodepath actually*/
-        if (scene) {
-            env = scene->CreateObject<SCENE_NS::IEnvironment>(SCENE_NS::ClassId::Environment).GetResult();
-        }
-    }
-
-    // process constructor args
-    SetNativeObject(interface_pointer_cast<META_NS::IObject>(env), true);
-    StoreJsObj(interface_pointer_cast<META_NS::IObject>(env), meJs);
-    env.reset();
-
     if (name.IsDefined()) {
         // set the name of the object. if we were given one
         meJs.Set("name", name);
@@ -250,14 +228,8 @@ napi_value EnvironmentJS::GetEnvironmentImage(NapiApi::FunctionContext<>& ctx)
 
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
         SCENE_NS::IBitmap::Ptr image = environment->EnvironmentImage()->GetValue();
-        auto obj = interface_pointer_cast<META_NS::IObject>(image);
-
-        if (auto cached = FetchJsObj(obj)) {
-            return cached.ToNapiValue();
-        }
-
         napi_value args[] = { scene_.GetValue(), NapiApi::Object(ctx.GetEnv()).ToNapiValue() };
-        return CreateFromNativeInstance(ctx.Env(), obj, false, BASE_NS::countof(args), args).ToNapiValue();
+        return CreateFromNativeInstance(ctx.Env(), image, PtrType::WEAK, args).ToNapiValue();
     }
     return ctx.GetNull();
 }
@@ -269,7 +241,7 @@ void EnvironmentJS::SetEnvironmentImage(NapiApi::FunctionContext<NapiApi::Object
     }
     NapiApi::Object imageJS = ctx.Arg<0>();
     SCENE_NS::IBitmap::Ptr image;
-    if (auto nat = imageJS.Native<TrueRootObject>()) {
+    if (auto nat = imageJS.GetRoot()) {
         image = interface_pointer_cast<SCENE_NS::IBitmap>(nat->GetNativeObject());
     }
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
@@ -285,14 +257,8 @@ napi_value EnvironmentJS::GetRadianceImage(NapiApi::FunctionContext<>& ctx)
 
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
         SCENE_NS::IBitmap::Ptr image = environment->RadianceImage()->GetValue();
-        auto obj = interface_pointer_cast<META_NS::IObject>(image);
-
-        if (auto cached = FetchJsObj(obj)) {
-            return cached.ToNapiValue();
-        }
-
         napi_value args[] = { scene_.GetValue(), NapiApi::Object(ctx.GetEnv()).ToNapiValue() };
-        return CreateFromNativeInstance(ctx.GetEnv(), obj, false, BASE_NS::countof(args), args).ToNapiValue();
+        return CreateFromNativeInstance(ctx.GetEnv(), image, PtrType::WEAK, args).ToNapiValue();
     }
     return ctx.GetNull();
 }
@@ -305,7 +271,7 @@ void EnvironmentJS::SetRadianceImage(NapiApi::FunctionContext<NapiApi::Object>& 
 
     NapiApi::Object imageJS = ctx.Arg<0>();
     SCENE_NS::IBitmap::Ptr image;
-    if (auto nat = imageJS.Native<TrueRootObject>()) {
+    if (auto nat = imageJS.GetRoot()) {
         image = interface_pointer_cast<SCENE_NS::IBitmap>(nat->GetNativeObject());
     }
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
@@ -372,7 +338,7 @@ napi_value EnvironmentJS::GetIndirectDiffuseFactor(NapiApi::FunctionContext<>& c
         return ctx.GetUndefined();
     }
 
-    auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
+    auto node = ctx.This().GetNative<SCENE_NS::IEnvironment>();
     if (!node) {
         return ctx.GetUndefined();
     }
@@ -387,7 +353,7 @@ void EnvironmentJS::SetIndirectDiffuseFactor(NapiApi::FunctionContext<NapiApi::O
     if (!validateSceneRef()) {
         return;
     }
-    auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
+    auto node = ctx.This().GetNative<SCENE_NS::IEnvironment>();
     if (!node) {
         return;
     }
@@ -403,7 +369,7 @@ napi_value EnvironmentJS::GetIndirectSpecularFactor(NapiApi::FunctionContext<>& 
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
     }
-    auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
+    auto node = ctx.This().GetNative<SCENE_NS::IEnvironment>();
     if (!node) {
         return ctx.GetUndefined();
     }
@@ -418,7 +384,7 @@ void EnvironmentJS::SetIndirectSpecularFactor(NapiApi::FunctionContext<NapiApi::
     if (!validateSceneRef()) {
         return;
     }
-    auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
+    auto node = ctx.This().GetNative<SCENE_NS::IEnvironment>();
     if (!node) {
         return;
     }
@@ -434,7 +400,7 @@ napi_value EnvironmentJS::GetEnvironmentMapFactor(NapiApi::FunctionContext<>& ct
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
     }
-    auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
+    auto node = ctx.This().GetNative<SCENE_NS::IEnvironment>();
     if (!node) {
         return ctx.GetUndefined();
     }
@@ -449,7 +415,7 @@ void EnvironmentJS::SetEnvironmentMapFactor(NapiApi::FunctionContext<NapiApi::Ob
     if (!validateSceneRef()) {
         return;
     }
-    auto node = interface_pointer_cast<SCENE_NS::IEnvironment>(GetThisNativeObject(ctx));
+    auto node = ctx.This().GetNative<SCENE_NS::IEnvironment>();
     if (!node) {
         return;
     }

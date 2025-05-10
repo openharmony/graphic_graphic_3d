@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,6 +14,8 @@
  */
 
 // clang-format off
+
+
 // compile and version specific, warning available since vs 2022
 #if defined(__clang__) || defined(__GNUC__)
 #define W_SUPPRESS_UNUSED _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")

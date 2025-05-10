@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -72,6 +72,33 @@ vec3 TonemapFilmic(vec3 x)
     const vec3 curr = ((x * (a * x + c * b) + d * e) / (x * (a * x + b) + d * f)) - e / f;
     const float whiteScale = 1.0 / TonemapFilmic(w);
     return curr * vec3(whiteScale);
+}
+
+/*
+PBR Neutral tonemapping.
+https://github.com/KhronosGroup/ToneMapping
+Input color is non-negative and resides in the Linear Rec. 709 color space.
+Output color is also Linear Rec. 709, but in the [0, 1] range.
+*/
+vec3 TonemapPbrNeutral(vec3 color)
+{
+    const float startCompression = 0.8 - 0.04;
+    const float desaturation = 0.15;
+
+    float x = min(color.r, min(color.g, color.b));
+    float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+    color -= offset;
+
+    float peak = max(color.r, max(color.g, color.b));
+    if (peak < startCompression)
+        return color;
+
+    const float d = 1. - startCompression;
+    float newPeak = 1. - d * d / (peak + d - startCompression);
+    color *= newPeak / peak;
+
+    float g = 1. - 1. / (desaturation * (peak - newPeak) + 1.);
+    return mix(color, vec3(newPeak), g);
 }
 
 #endif // API_RENDER_SHADERS_COMMON_TONEMAP_COMMON_H

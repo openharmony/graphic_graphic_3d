@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: CSV string resource loader implementation
+ * Author: Lauri Jaaskela
+ * Create: 2022-09-05
  */
 #include "csv_string_resource_loader.h"
 
@@ -91,7 +83,7 @@ IObject::Ptr CsvStringResourceLoader::CreateStringResourceObject(
         return {};
     }
 
-    Object strings;
+    Metadata strings(CreateObjectInstance(META_NS::ClassId::Object));
     const BASE_NS::vector<BASE_NS::string>* keys = nullptr;
 
     // Find the column which contains our keys
@@ -112,16 +104,16 @@ IObject::Ptr CsvStringResourceLoader::CreateStringResourceObject(
         if (&column.second == keys) {
             continue; // ignore the column whose header is <KeyHeaderColumn>
         }
-        Object item;
+        Metadata item(CreateObjectInstance(META_NS::ClassId::Object));
         for (size_t i = 0; i < column.second.size(); i++) {
-            item.Metadata().AddProperty(ConstructProperty<BASE_NS::string>(keys->at(i), column.second[i]));
+            item.AddProperty(ConstructProperty<BASE_NS::string>(keys->at(i), column.second[i]));
         }
-        strings.Metadata().AddProperty(ConstructProperty<IObject::Ptr>(column.first, item));
+        strings.AddProperty(ConstructProperty<IObject::Ptr>(column.first, Object(item)));
     }
 
-    Object object;
-    object.MetaProperty(ConstructProperty<IObject::Ptr>(options.targetPropertyName, strings));
-    return object;
+    Metadata object(CreateObjectInstance(META_NS::ClassId::Object));
+    object.AddProperty(ConstructProperty<IObject::Ptr>(options.targetPropertyName, Object(strings)));
+    return object.GetPtr<IObject>();
 }
 
 CsvStringResourceLoader::CsvContentType CsvStringResourceLoader::ParseCsv(

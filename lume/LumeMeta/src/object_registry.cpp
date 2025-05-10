@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Object registry implementation
+ * Author: Lauri Jaaskela
+ * Create: 2021-09-07
  */
 
 #include "object_registry.h"
@@ -33,6 +25,7 @@
 #include "random.h"
 #include "ref_uri_util.h"
 
+// #define OBJ_REG_LOG(...) CORE_LOG_F(__VA_ARGS__)
 #define OBJ_REG_LOG(...)
 
 /*
@@ -67,6 +60,7 @@ ObjectRegistry::~ObjectRegistry()
     classRegistry_.Clear();
     // Just for sanity.
     GC();
+    // serializationContext_.Uninitialize();
     //  And to make sure all "objects" are unregistered. (we have some that never un-register)
     //  doing it one at a time, because unregister will modify the list..
     bool first = true;
@@ -306,7 +300,7 @@ bool ObjectRegistry::PostCreate(const BASE_NS::Uid& uid, InstanceId instid, cons
         singletons_[uid] = classes.front(); // Store singleton weakref
     }
     if (createInfo.isGloballyAvailable) {
-        CORE_LOG_D("Registering global object: %s [%s]", GetClassName(uid).c_str(), instid.ToString().c_str());
+        CORE_LOG_V("Registering global object: %s [%s]", GetClassName(uid).c_str(), instid.ToString().c_str());
         globalObjects_[instid] = classes.front();
     }
     return true;
@@ -523,7 +517,7 @@ IObjectContext::Ptr ObjectRegistry::GetDefaultObjectContext() const
     if (!defaultContext_) {
         defaultContext_ = context;
     }
-    CORE_ASSERT(defaultContext_);
+    CORE_ASSERT_MSG(defaultContext_, "Failed to create default object context");
     return defaultContext_;
 }
 
@@ -719,7 +713,7 @@ void ObjectRegistry::RegisterAny(BASE_NS::shared_ptr<AnyBuilder> builder)
         CORE_LOG_W("Any already registered [id=%s, type=%s]", builder->GetObjectId().ToString().c_str(),
             builder->GetTypeName().c_str());
     }
-    CORE_LOG_D("Registering Any [%s] for type '%s'", builder->GetObjectId().ToString().c_str(),
+    CORE_LOG_V("Registering Any [%s] for type '%s'", builder->GetObjectId().ToString().c_str(),
         builder->GetTypeName().c_str());
     anyBuilders_[builder->GetObjectId()] = builder;
 }

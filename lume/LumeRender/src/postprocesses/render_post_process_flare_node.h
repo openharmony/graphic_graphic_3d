@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,6 +40,12 @@ public:
 
     using Ptr = BASE_NS::refcnt_ptr<RenderPostProcessFlareNode>;
 
+    struct EffectProperties {
+        bool enabled { true };
+        BASE_NS::Math::Vec3 flarePos { 0.0f, 0.0f, 0.0f };
+        float intensity { 1.0f };
+    };
+
     RenderPostProcessFlareNode();
 
     CORE_NS::IPropertyHandle* GetRenderInputProperties() override;
@@ -59,6 +65,9 @@ public:
     struct NodeOutputs {
         RENDER_NS::BindableImage output;
     };
+
+    NodeInputs nodeInputsData;
+    NodeOutputs nodeOutputsData;
 
 private:
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
@@ -90,8 +99,6 @@ private:
 
     RENDER_NS::RenderHandleReference tempTarget_;
 
-    NodeInputs nodeInputsData_;
-    NodeOutputs nodeOutputsData_;
     CORE_NS::PropertyApiImpl<NodeInputs> inputProperties_;
     CORE_NS::PropertyApiImpl<NodeOutputs> outputProperties_;
 
@@ -99,7 +106,8 @@ private:
 
     RENDER_NS::DescriptorCounts descriptorCounts_;
     bool valid_ { false };
-    bool enabled_ { false };
+
+    EffectProperties effectProperties_;
 };
 RENDER_END_NAMESPACE()
 

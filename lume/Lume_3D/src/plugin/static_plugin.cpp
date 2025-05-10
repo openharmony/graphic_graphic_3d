@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include <3d/ecs/components/dynamic_environment_blender_component.h>
 #include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/fog_component.h>
+#include <3d/ecs/components/graphics_state_component.h>
 #include <3d/ecs/components/joint_matrices_component.h>
 #include <3d/ecs/components/layer_component.h>
 #include <3d/ecs/components/light_component.h>
@@ -46,12 +47,15 @@
 #include <3d/ecs/components/skin_joints_component.h>
 #include <3d/ecs/components/transform_component.h>
 #include <3d/ecs/components/uri_component.h>
+#include <3d/ecs/components/water_ripple_component.h>
+#include <3d/ecs/components/weather_component.h>
 #include <3d/ecs/components/world_matrix_component.h>
 #include <3d/ecs/systems/intf_morphing_system.h>
 #include <3d/ecs/systems/intf_node_system.h>
 #include <3d/ecs/systems/intf_render_preprocessor_system.h>
 #include <3d/ecs/systems/intf_render_system.h>
 #include <3d/ecs/systems/intf_skinning_system.h>
+#include <3d/ecs/systems/intf_weather_system.h>
 #include <core/log.h>
 #include <core/namespace.h>
 #include <render/datastore/intf_render_data_store_manager.h>
@@ -66,7 +70,9 @@
 #include "render/datastore/render_data_store_default_material.h"
 #include "render/datastore/render_data_store_default_scene.h"
 #include "render/datastore/render_data_store_morph.h"
+#include "render/datastore/render_data_store_weather.h"
 #include "render/node/render_node_camera_single_post_process.h"
+#include "render/node/render_node_camera_weather.h"
 #include "render/node/render_node_create_default_camera_gpu_images.h"
 #include "render/node/render_node_default_camera_controller.h"
 #include "render/node/render_node_default_camera_post_process_controller.h"
@@ -81,6 +87,7 @@
 #include "render/node/render_node_default_shadow_render_slot.h"
 #include "render/node/render_node_default_shadows_blur.h"
 #include "render/node/render_node_morph.h"
+#include "render/node/render_node_weather_simulation.h"
 
 // Include the declarations directly from engine.
 // NOTE: macro defined by cmake as CORE_STATIC_PLUGIN_HEADER="${CORE_ROOT_DIRECTORY}/src/static_plugin_decl.h"
@@ -101,12 +108,12 @@
         CORE_NS::GetName<type>().data(), MANAGER_FACTORY(type) };                                         \
     }
 
-#define SYSTEM(name, type, deps, readOnlyDeps)                                                                         \
+#define SYSTEM(name, type, deps, readOnlyDeps, afterSystem, beforeSystem)                                              \
     extern ISystem* type##Instance(IEcs&);                                                                             \
     extern void type##Destroy(ISystem*);                                                                               \
     namespace {                                                                                                        \
     static constexpr auto name = SystemTypeInfo { { SystemTypeInfo::UID }, type::UID, CORE_NS::GetName<type>().data(), \
-        SYSTEM_FACTORY(type), deps, readOnlyDeps };                                                                    \
+        SYSTEM_FACTORY(type), deps, readOnlyDeps, afterSystem, beforeSystem };                                         \
     }
 
 CORE3D_BEGIN_NAMESPACE()
@@ -151,19 +158,23 @@ MANAGER(RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, IRenderMeshBatchComponentManager)
 MANAGER(PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO, IPreviousJointMatricesComponentManager);
 MANAGER(REFLECTION_PROBE_COMPONENT_TYPE_INFO, IReflectionProbeComponentManager);
 MANAGER(DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO, IDynamicEnvironmentBlenderComponentManager);
+MANAGER(GRAPHICS_STATE_COMPONENT_TYPE_INFO, IGraphicsStateComponentManager)
+MANAGER(WATER_RIPPLE_COMPONENT_TYPE_INFO, IWaterRippleComponentManager)
+MANAGER(WEATHER_COMPONENT_TYPE_INFO, IWeatherComponentManager)
 
 namespace {
 // Local matrix system dependencies.
-static constexpr Uid LOCAL_MATRIX_SYSTEM_RW_DEPS[] = { LOCAL_MATRIX_COMPONENT_TYPE_INFO.uid };
-static constexpr Uid LOCAL_MATRIX_SYSTEM_R_DEPS[] = { TRANSFORM_COMPONENT_TYPE_INFO.uid };
+constexpr Uid LOCAL_MATRIX_SYSTEM_RW_DEPS[] = { LOCAL_MATRIX_COMPONENT_TYPE_INFO.uid };
+constexpr Uid LOCAL_MATRIX_SYSTEM_R_DEPS[] = { TRANSFORM_COMPONENT_TYPE_INFO.uid };
 
 // Node system dependencies.
-static constexpr Uid NODE_SYSTEM_RW_DEPS[] = { WORLD_MATRIX_COMPONENT_TYPE_INFO.uid, NODE_COMPONENT_TYPE_INFO.uid };
-static constexpr Uid NODE_SYSTEM_R_DEPS[] = { NAME_COMPONENT_TYPE_INFO.uid, TRANSFORM_COMPONENT_TYPE_INFO.uid,
+constexpr Uid NODE_SYSTEM_RW_DEPS[] = { WORLD_MATRIX_COMPONENT_TYPE_INFO.uid, NODE_COMPONENT_TYPE_INFO.uid };
+constexpr Uid NODE_SYSTEM_R_DEPS[] = { NAME_COMPONENT_TYPE_INFO.uid, TRANSFORM_COMPONENT_TYPE_INFO.uid,
     LOCAL_MATRIX_COMPONENT_TYPE_INFO.uid, RSDZ_MODEL_ID_COMPONENT_TYPE_INFO.uid };
 
 // Render preprocessor system dependencies.
-static constexpr Uid RENDER_PREPROCESSOR_SYSTEM_R_DEPS[] = {
+constexpr Uid RENDER_PREPROCESSOR_SYSTEM_RW_DEPS[] = { RENDER_HANDLE_COMPONENT_TYPE_INFO.uid };
+constexpr Uid RENDER_PREPROCESSOR_SYSTEM_R_DEPS[] = {
     JOINT_MATRICES_COMPONENT_TYPE_INFO.uid,
     LAYER_COMPONENT_TYPE_INFO.uid,
     MATERIAL_COMPONENT_TYPE_INFO.uid,
@@ -172,15 +183,15 @@ static constexpr Uid RENDER_PREPROCESSOR_SYSTEM_R_DEPS[] = {
     RENDER_MESH_COMPONENT_TYPE_INFO.uid,
     SKIN_COMPONENT_TYPE_INFO.uid,
     WORLD_MATRIX_COMPONENT_TYPE_INFO.uid,
-    RENDER_HANDLE_COMPONENT_TYPE_INFO.uid,
+    GRAPHICS_STATE_COMPONENT_TYPE_INFO.uid,
 };
 
 // Render system dependencies.
-static constexpr Uid RENDER_SYSTEM_RW_DEPS[] = {
+constexpr Uid RENDER_SYSTEM_RW_DEPS[] = {
     PLANAR_REFLECTION_COMPONENT_TYPE_INFO.uid,
     MATERIAL_COMPONENT_TYPE_INFO.uid,
 };
-static constexpr Uid RENDER_SYSTEM_R_DEPS[] = {
+constexpr Uid RENDER_SYSTEM_R_DEPS[] = {
     NODE_COMPONENT_TYPE_INFO.uid,
     RENDER_MESH_COMPONENT_TYPE_INFO.uid,
     WORLD_MATRIX_COMPONENT_TYPE_INFO.uid,
@@ -204,12 +215,12 @@ static constexpr Uid RENDER_SYSTEM_R_DEPS[] = {
 };
 
 // Animation system dependencies.
-static constexpr Uid ANIMATION_SYSTEM_RW_DEPS[] = {
+constexpr Uid ANIMATION_SYSTEM_RW_DEPS[] = {
     INITIAL_TRANSFORM_COMPONENT_TYPE_INFO.uid,
     ANIMATION_COMPONENT_TYPE_INFO.uid,
     ANIMATION_STATE_COMPONENT_TYPE_INFO.uid,
 };
-static constexpr Uid ANIMATION_SYSTEM_R_DEPS[] = {
+constexpr Uid ANIMATION_SYSTEM_R_DEPS[] = {
     ANIMATION_INPUT_COMPONENT_TYPE_INFO.uid,
     ANIMATION_OUTPUT_COMPONENT_TYPE_INFO.uid,
     ANIMATION_TRACK_COMPONENT_TYPE_INFO.uid,
@@ -218,10 +229,10 @@ static constexpr Uid ANIMATION_SYSTEM_R_DEPS[] = {
 };
 
 // Skinning system dependencies.
-static constexpr Uid SKINNING_SYSTEM_RW_DEPS[] = {
+constexpr Uid SKINNING_SYSTEM_RW_DEPS[] = {
     JOINT_MATRICES_COMPONENT_TYPE_INFO.uid,
 };
-static constexpr Uid SKINNING_SYSTEM_R_DEPS[] = {
+constexpr Uid SKINNING_SYSTEM_R_DEPS[] = {
     SKIN_COMPONENT_TYPE_INFO.uid,
     SKIN_IBM_COMPONENT_TYPE_INFO.uid,
     SKIN_JOINTS_COMPONENT_TYPE_INFO.uid,
@@ -233,7 +244,7 @@ static constexpr Uid SKINNING_SYSTEM_R_DEPS[] = {
 };
 
 // Morph system dependencies.
-static constexpr Uid MORPHING_SYSTEM_R_DEPS[] = {
+constexpr Uid MORPHING_SYSTEM_R_DEPS[] = {
     NODE_COMPONENT_TYPE_INFO.uid,
     MESH_COMPONENT_TYPE_INFO.uid,
     MORPH_COMPONENT_TYPE_INFO.uid,
@@ -241,7 +252,27 @@ static constexpr Uid MORPHING_SYSTEM_R_DEPS[] = {
     RENDER_HANDLE_COMPONENT_TYPE_INFO.uid,
 };
 
-static constexpr ComponentManagerTypeInfo CORE_COMPONENT_TYPE_INFOS[] = { CAMERA_COMPONENT_TYPE_INFO,
+// Weather system dependencies.
+constexpr Uid WEATHER_SYSTEM_RW_DEPS[] = {
+    RENDER_HANDLE_COMPONENT_TYPE_INFO.uid,
+    MESH_COMPONENT_TYPE_INFO.uid,
+    RENDER_MESH_COMPONENT_TYPE_INFO.uid,
+    MATERIAL_COMPONENT_TYPE_INFO.uid,
+    TRANSFORM_COMPONENT_TYPE_INFO.uid,
+    RENDER_CONFIGURATION_COMPONENT_TYPE_INFO.uid,
+    CAMERA_COMPONENT_TYPE_INFO.uid,
+    ENVIRONMENT_COMPONENT_TYPE_INFO.uid,
+    WATER_RIPPLE_COMPONENT_TYPE_INFO.uid,
+    WEATHER_COMPONENT_TYPE_INFO.uid,
+};
+
+constexpr Uid WEATHER_SYSTEM_R_DEPS[] = {
+    WATER_RIPPLE_COMPONENT_TYPE_INFO.uid,
+    WEATHER_COMPONENT_TYPE_INFO.uid,
+    TRANSFORM_COMPONENT_TYPE_INFO.uid,
+};
+
+constexpr ComponentManagerTypeInfo CORE_COMPONENT_TYPE_INFOS[] = { CAMERA_COMPONENT_TYPE_INFO,
     INITIAL_TRANSFORM_COMPONENT_TYPE_INFO, PHYSICAL_CAMERA_COMPONENT_TYPE_INFO, LIGHT_COMPONENT_TYPE_INFO,
     LOCAL_MATRIX_COMPONENT_TYPE_INFO, NODE_COMPONENT_TYPE_INFO, WORLD_MATRIX_COMPONENT_TYPE_INFO,
     RENDER_MESH_COMPONENT_TYPE_INFO, TRANSFORM_COMPONENT_TYPE_INFO, RENDER_CONFIGURATION_COMPONENT_TYPE_INFO,
@@ -253,19 +284,28 @@ static constexpr ComponentManagerTypeInfo CORE_COMPONENT_TYPE_INFOS[] = { CAMERA
     ENVIRONMENT_COMPONENT_TYPE_INFO, FOG_COMPONENT_TYPE_INFO, RENDER_HANDLE_COMPONENT_TYPE_INFO,
     POST_PROCESS_COMPONENT_TYPE_INFO, POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO, LAYER_COMPONENT_TYPE_INFO,
     RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO,
-    REFLECTION_PROBE_COMPONENT_TYPE_INFO, DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO };
+    REFLECTION_PROBE_COMPONENT_TYPE_INFO, DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO,
+    GRAPHICS_STATE_COMPONENT_TYPE_INFO, WATER_RIPPLE_COMPONENT_TYPE_INFO, WEATHER_COMPONENT_TYPE_INFO };
 } // namespace
 
-SYSTEM(LOCAL_MATRIX_SYSTEM_TYPE_INFO, LocalMatrixSystem, LOCAL_MATRIX_SYSTEM_RW_DEPS, LOCAL_MATRIX_SYSTEM_R_DEPS);
-SYSTEM(NODE_SYSTEM_TYPE_INFO, INodeSystem, NODE_SYSTEM_RW_DEPS, NODE_SYSTEM_R_DEPS);
-SYSTEM(RENDER_PREPROCESSOR_SYSTEM_TYPE_INFO, IRenderPreprocessorSystem, {}, RENDER_PREPROCESSOR_SYSTEM_R_DEPS);
-SYSTEM(RENDER_SYSTEM_TYPE_INFO, IRenderSystem, RENDER_SYSTEM_RW_DEPS, RENDER_SYSTEM_R_DEPS);
-SYSTEM(ANIMATION_SYSTEM_TYPE_INFO, IAnimationSystem, ANIMATION_SYSTEM_RW_DEPS, ANIMATION_SYSTEM_R_DEPS);
-SYSTEM(SKINNING_SYSTEM_TYPE_INFO, ISkinningSystem, SKINNING_SYSTEM_RW_DEPS, SKINNING_SYSTEM_R_DEPS);
-SYSTEM(MORPHING_SYSTEM_TYPE_INFO, IMorphingSystem, {}, MORPHING_SYSTEM_R_DEPS);
+SYSTEM(ANIMATION_SYSTEM_TYPE_INFO, IAnimationSystem, ANIMATION_SYSTEM_RW_DEPS, ANIMATION_SYSTEM_R_DEPS, {},
+    LocalMatrixSystem::UID);
+SYSTEM(LOCAL_MATRIX_SYSTEM_TYPE_INFO, LocalMatrixSystem, LOCAL_MATRIX_SYSTEM_RW_DEPS, LOCAL_MATRIX_SYSTEM_R_DEPS,
+    IAnimationSystem::UID, INodeSystem::UID);
+SYSTEM(NODE_SYSTEM_TYPE_INFO, INodeSystem, NODE_SYSTEM_RW_DEPS, NODE_SYSTEM_R_DEPS, LocalMatrixSystem::UID,
+    IRenderPreprocessorSystem::UID);
+SYSTEM(SKINNING_SYSTEM_TYPE_INFO, ISkinningSystem, SKINNING_SYSTEM_RW_DEPS, SKINNING_SYSTEM_R_DEPS, INodeSystem::UID,
+    IRenderPreprocessorSystem::UID);
+SYSTEM(RENDER_PREPROCESSOR_SYSTEM_TYPE_INFO, IRenderPreprocessorSystem, RENDER_PREPROCESSOR_SYSTEM_RW_DEPS,
+    RENDER_PREPROCESSOR_SYSTEM_R_DEPS, INodeSystem::UID, {});
+SYSTEM(MORPHING_SYSTEM_TYPE_INFO, IMorphingSystem, {}, MORPHING_SYSTEM_R_DEPS, INodeSystem::UID, IRenderSystem::UID);
+SYSTEM(WEATHER_SYSTEM_TYPE_INFO, IWeatherSystem, WEATHER_SYSTEM_RW_DEPS, WEATHER_SYSTEM_R_DEPS, INodeSystem::UID,
+    IRenderSystem::UID);
+SYSTEM(RENDER_SYSTEM_TYPE_INFO, IRenderSystem, RENDER_SYSTEM_RW_DEPS, RENDER_SYSTEM_R_DEPS,
+    IRenderPreprocessorSystem::UID, {});
 
 namespace {
-static constexpr SystemTypeInfo CORE_SYSTEM_TYPE_INFOS[] = {
+constexpr SystemTypeInfo CORE_SYSTEM_TYPE_INFOS[] = {
     LOCAL_MATRIX_SYSTEM_TYPE_INFO,
     NODE_SYSTEM_TYPE_INFO,
     RENDER_PREPROCESSOR_SYSTEM_TYPE_INFO,
@@ -273,6 +313,7 @@ static constexpr SystemTypeInfo CORE_SYSTEM_TYPE_INFOS[] = {
     ANIMATION_SYSTEM_TYPE_INFO,
     SKINNING_SYSTEM_TYPE_INFO,
     MORPHING_SYSTEM_TYPE_INFO,
+    WEATHER_SYSTEM_TYPE_INFO,
 };
 
 template<typename RenderType>
@@ -286,18 +327,20 @@ template<typename RenderType>
 constexpr auto FillRenderNodeTypeInfo()
 {
     return RenderNodeTypeInfo { { RenderNodeTypeInfo::UID }, RenderType::UID, RenderType::TYPE_NAME, RenderType::Create,
-        RenderType::Destroy };
+        RenderType::Destroy, IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT,
+        IRenderNode::ClassType::CLASS_TYPE_NODE, {}, {} };
 }
 
-static constexpr RenderDataStoreTypeInfo CORE_RENDER_DATA_STORE_INFOS[] = {
+constexpr RenderDataStoreTypeInfo CORE_RENDER_DATA_STORE_INFOS[] = {
     FillRenderDataStoreTypeInfo<RenderDataStoreDefaultCamera>(),
     FillRenderDataStoreTypeInfo<RenderDataStoreDefaultLight>(),
     FillRenderDataStoreTypeInfo<RenderDataStoreDefaultMaterial>(),
     FillRenderDataStoreTypeInfo<RenderDataStoreDefaultScene>(),
     FillRenderDataStoreTypeInfo<RenderDataStoreMorph>(),
+    FillRenderDataStoreTypeInfo<RenderDataStoreWeather>(),
 };
 
-static constexpr RenderNodeTypeInfo CORE_RENDER_NODE_TYPE_INFOS[] = {
+constexpr RenderNodeTypeInfo CORE_RENDER_NODE_TYPE_INFOS[] = {
     FillRenderNodeTypeInfo<RenderNodeCreateDefaultCameraGpuImages>(),
     FillRenderNodeTypeInfo<RenderNodeDefaultCameraController>(),
     FillRenderNodeTypeInfo<RenderNodeDefaultCameraPostProcessController>(),
@@ -313,6 +356,8 @@ static constexpr RenderNodeTypeInfo CORE_RENDER_NODE_TYPE_INFOS[] = {
     FillRenderNodeTypeInfo<RenderNodeMorph>(),
     FillRenderNodeTypeInfo<RenderNodeCameraSinglePostProcess>(),
     FillRenderNodeTypeInfo<RenderNodeDefaultEnvironmentBlender>(),
+    FillRenderNodeTypeInfo<RenderNodeCameraWeather>(),
+    FillRenderNodeTypeInfo<RenderNodeWeatherSimulation>(),
 };
 } // namespace
 

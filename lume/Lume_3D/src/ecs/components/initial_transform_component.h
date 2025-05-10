@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -78,7 +78,7 @@ BEGIN_COMPONENT(IInitialTransformComponentManager, InitialTransformComponent)
         VALUE(0))
     DEFINE_PROPERTY(Data, initialData, "Initial Data",
         CORE_NS::PropertyFlags::IS_HIDDEN | CORE_NS::PropertyFlags::NO_SERIALIZE |
-            CORE_NS::PropertyFlags::IS_READONLY,)
+            CORE_NS::PropertyFlags::IS_READONLY, )
 END_COMPONENT(IInitialTransformComponentManager, InitialTransformComponent, "3949c596-435b-4210-8a90-c8976c7168a4")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()

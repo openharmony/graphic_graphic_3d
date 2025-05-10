@@ -1,22 +1,8 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 #ifndef SCENE_SRC_COMPONENT_ENVIRONMENT_COMPONENT_H
 #define SCENE_SRC_COMPONENT_ENVIRONMENT_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 #include <scene/interface/intf_environment.h>
 
 #include <meta/ext/object.h>
@@ -26,7 +12,7 @@ SCENE_BEGIN_NAMESPACE()
 META_REGISTER_CLASS(
     EnvironmentComponent, "0dc6c2ca-ed0e-4ee5-bdde-91eeb7a67b91", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class EnvironmentComponent : public META_NS::IntroduceInterfaces<ComponentFwd, IEnvironment> {
+class EnvironmentComponent : public META_NS::IntroduceInterfaces<Component, IEnvironment> {
     META_OBJECT(EnvironmentComponent, ClassId::EnvironmentComponent, IntroduceInterfaces)
 
 public:
@@ -44,9 +30,8 @@ public:
         IEnvironment, BASE_NS::Math::Quat, EnvironmentRotation, "EnvironmentComponent.environmentRotation")
     SCENE_STATIC_ARRAY_PROPERTY_DATA(
         IEnvironment, BASE_NS::Math::Vec3, IrradianceCoefficients, "EnvironmentComponent.irradianceCoefficients")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(
-        IEnvironment, IBitmap::Ptr, RadianceImage, "EnvironmentComponent.radianceCubemap")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IEnvironment, IBitmap::Ptr, EnvironmentImage, "EnvironmentComponent.envMap")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IEnvironment, IImage::Ptr, RadianceImage, "EnvironmentComponent.radianceCubemap")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IEnvironment, IImage::Ptr, EnvironmentImage, "EnvironmentComponent.envMap")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(EnvBackgroundType, Background)
@@ -57,8 +42,8 @@ public:
     META_IMPLEMENT_PROPERTY(float, EnvironmentMapLodLevel)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Quat, EnvironmentRotation)
     META_IMPLEMENT_ARRAY_PROPERTY(BASE_NS::Math::Vec3, IrradianceCoefficients)
-    META_IMPLEMENT_PROPERTY(IBitmap::Ptr, RadianceImage)
-    META_IMPLEMENT_PROPERTY(IBitmap::Ptr, EnvironmentImage)
+    META_IMPLEMENT_PROPERTY(IImage::Ptr, RadianceImage)
+    META_IMPLEMENT_PROPERTY(IImage::Ptr, EnvironmentImage)
 
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
 

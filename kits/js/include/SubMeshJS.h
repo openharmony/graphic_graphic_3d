@@ -20,7 +20,7 @@
 #include "BaseObjectJS.h"
 #include "Vec3Proxy.h"
 
-class SubMeshJS : public BaseObject<SubMeshJS> {
+class SubMeshJS : public BaseObject {
 public:
     static constexpr uint32_t ID = 50;
     static void Init(napi_env env, napi_value exports);
@@ -38,8 +38,6 @@ private:
 
     napi_value GetMaterial(NapiApi::FunctionContext<>& ctx);
     void SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-
-    void UpdateParentMesh();
 
     BASE_NS::unique_ptr<Vec3Proxy> aabbMin_, aabbMax_;
     NapiApi::WeakRef scene_;

@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Typed Property interface
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-11-13
  */
 
 #ifndef META_INTERFACE_PROPERTY_CONSTRUCT_PROPERTY_H
@@ -51,6 +43,14 @@ struct PropertyType<ValuePtr<T, ClassInfo>> {
 template<typename T>
 using PropertyType_v = typename PropertyType<T>::Type; // NOLINT(readability-identifier-naming)
 
+/**
+ * @brief Construct property
+ * @param obr Object registry instance
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return Typed property
+ */
 template<typename T>
 Property<T> ConstructProperty(IObjectRegistry& obr, BASE_NS::string_view name, const T& value = {},
     ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -64,7 +64,13 @@ Property<T> ConstructProperty(IObjectRegistry& obr, BASE_NS::string_view name, c
     }
     return p;
 }
-
+/**
+ * @brief Construct property
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return Typed property
+ */
 template<typename T, typename = BASE_NS::enable_if_t<!BASE_NS::is_convertible_v<T*, ValuePtrBase*>>>
 Property<T> ConstructProperty(
     BASE_NS::string_view name, const T& value = {}, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -72,6 +78,13 @@ Property<T> ConstructProperty(
     return ConstructProperty(GetObjectRegistry(), name, value, flags);
 }
 
+/**
+ * @brief Construct property for value pointer type
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return Typed property
+ */
 template<typename T, typename Param = typename T::TypePtr>
 Property<typename T::TypePtr> ConstructProperty(
     BASE_NS::string_view name, const Param& value = {}, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -94,6 +107,13 @@ Property<typename T::TypePtr> ConstructProperty(
     return p;
 }
 
+/**
+ * @brief Construct property with default IAny value
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return Typed property
+ */
 template<typename T>
 Property<PropertyType_v<T>> ConstructPropertyAny(
     BASE_NS::string_view name, const IAny& value, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -105,6 +125,13 @@ Property<PropertyType_v<T>> ConstructPropertyAny(
     return p;
 }
 
+/**
+ * @brief Construct property using IAny as type for the property
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return typeless property
+ */
 inline IProperty::Ptr ConstructPropertyAny(
     BASE_NS::string_view name, const IAny& value, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
 {

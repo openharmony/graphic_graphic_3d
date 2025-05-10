@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,7 +37,8 @@ void RecordAllocation(const int64_t alignedByteSize)
     if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
-        pdm->UpdateData("AllGpuImages", "GPU_IMAGE", alignedByteSize);
+        pdm->UpdateData("AllGpuImages", "GPU_IMAGE", alignedByteSize,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
     }
 }
 #endif

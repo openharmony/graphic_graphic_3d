@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -112,8 +112,8 @@ public:
     Entity GetEntityWithReference(const RenderHandleReference& handle) const override
     {
         if (const auto pos = std::find_if(components_.begin(), components_.end(),
-            [handle = handle.GetHandle()](
-                const BaseComponentHandle& component) { return component.data_.reference.GetHandle() == handle; });
+                [handle = handle.GetHandle()](
+                    const BaseComponentHandle& component) { return component.data_.reference.GetHandle() == handle; });
             pos != components_.end()) {
             return pos->entity_;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,27 +33,39 @@ RENDER_BEGIN_NAMESPACE()
 class IGpuResourceManager;
 class IRenderContext;
 
-struct AccelerationStructureBuildConsumeStruct {
+struct AsConsumeStruct {
+    enum class OperationType : uint8_t {
+        UNDEFINED_OP = 0,
+        BUILD_OP = 1,
+        INSTANCE_COPY_OP = 2,
+    };
+    struct AsData {
+        OperationType operationType { OperationType::UNDEFINED_OP };
+        uint32_t index { 0U };
+    };
+
+    struct CopyTarget {
+        BufferOffsetWithHandleReference bufferOffset;
+        uint32_t startIndex { 0u };
+        uint32_t count { 0u };
+    };
     struct Geom {
-        StagingAccelerationStructureBuildGeometryData data;
+        AsBuildGeometryDataWithHandleReference data;
         GeometryType geometryType { CORE_GEOMETRY_TYPE_TRIANGLES };
         uint32_t startIndex { 0u };
         uint32_t count { 0u };
     };
-    BASE_NS::vector<Geom> geometry;
-    BASE_NS::vector<StagingAccelerationStructureGeometryTrianglesData> triangles;
-    BASE_NS::vector<StagingAccelerationStructureGeometryAabbsData> aabbs;
-    BASE_NS::vector<StagingAccelerationStructureGeometryInstancesData> instances;
-};
 
-struct AccelerationStructureInstanceConsumeStruct {
-    struct Target {
-        StagingAccelerationStructureBufferOffset bufferOffset;
-        uint32_t startIndex { 0u };
-        uint32_t count { 0u };
-    };
-    BASE_NS::vector<Target> copyInfo;
-    BASE_NS::vector<StagingAccelerationStructureInstance> instances;
+    BASE_NS::vector<Geom> geometry;
+    BASE_NS::vector<AsGeometryTrianglesDataWithHandleReference> geomTriangles;
+    BASE_NS::vector<AsGeometryAabbsDataWithHandleReference> geomAabbs;
+    BASE_NS::vector<AsGeometryInstancesDataWithHandleReference> geomInstances;
+
+    BASE_NS::vector<CopyTarget> instanceCopyInfo;
+    BASE_NS::vector<AsInstanceWithHandleReference> instanceCopyData;
+
+    // actual indices and info to data
+    BASE_NS::vector<AsData> data;
 };
 
 /**
@@ -96,19 +108,18 @@ public:
     int32_t GetRefCount() override;
 
     // IRenderDataStoreDefaultAccelerationStructureStaging
-    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
-        BASE_NS::array_view<const StagingAccelerationStructureGeometryTrianglesData> geometries) override;
-    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
-        BASE_NS::array_view<const StagingAccelerationStructureGeometryInstancesData> geometries) override;
-    void BuildAccelerationStructure(const StagingAccelerationStructureBuildGeometryData& buildData,
-        BASE_NS::array_view<const StagingAccelerationStructureGeometryAabbsData> geometries) override;
+    void BuildAccelerationStructure(const AsBuildGeometryDataWithHandleReference& buildData,
+        BASE_NS::array_view<const AsGeometryTrianglesDataWithHandleReference> geometries) override;
+    void BuildAccelerationStructure(const AsBuildGeometryDataWithHandleReference& buildData,
+        BASE_NS::array_view<const AsGeometryInstancesDataWithHandleReference> geometries) override;
+    void BuildAccelerationStructure(const AsBuildGeometryDataWithHandleReference& buildData,
+        BASE_NS::array_view<const AsGeometryAabbsDataWithHandleReference> geometries) override;
 
-    void CopyAccelerationStructureInstanceData(const RenderHandleReference& buffer, uint32_t offset,
-        BASE_NS::array_view<const StagingAccelerationStructureInstance> instances) override;
+    void CopyAccelerationStructureInstanceData(const BufferOffsetWithHandleReference& dstBuffer,
+        BASE_NS::array_view<const AsInstanceWithHandleReference> instances) override;
 
     bool HasStagingData() const;
-    AccelerationStructureBuildConsumeStruct ConsumeStagingBuildData();
-    AccelerationStructureInstanceConsumeStruct ConsumeStagingInstanceData();
+    AsConsumeStruct ConsumeStagingData();
 
     // for plugin / factory interface
     static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultAccelerationStructureStaging";
@@ -119,11 +130,9 @@ private:
     IGpuResourceManager& gpuResourceMgr_;
     const BASE_NS::string name_;
 
-    AccelerationStructureBuildConsumeStruct stagingBuild_;
-    AccelerationStructureInstanceConsumeStruct stagingInstance_;
+    AsConsumeStruct staging_;
     // in pre render data moved here
-    AccelerationStructureBuildConsumeStruct frameStagingBuild_;
-    AccelerationStructureInstanceConsumeStruct frameStagingInstance_;
+    AsConsumeStruct frameStaging_;
 
     mutable std::mutex mutex_;
 

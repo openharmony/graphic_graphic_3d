@@ -1,16 +1,7 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Description: Uid related types
+ * Author: Mikael Kilpeläinen
  */
 #ifndef META_BASE_IDS_H
 #define META_BASE_IDS_H
@@ -66,16 +57,19 @@ protected:
     BASE_NS::Uid id_;
 };
 
+/// Type id class, for plain types and interfaces
 class TypeId : public IdBase<TypeId> {
 public:
     using IdBase<TypeId>::IdBase;
 };
 
+/// Object id class, for concrete class types
 class ObjectId : public IdBase<ObjectId> {
 public:
     using IdBase<ObjectId>::IdBase;
 };
 
+/// Instance id class, for object instances
 class InstanceId : public IdBase<InstanceId> {
 public:
     using IdBase<InstanceId>::IdBase;
@@ -84,11 +78,15 @@ public:
 META_TYPE(META_NS::TypeId);
 META_TYPE(META_NS::ObjectId);
 META_TYPE(META_NS::InstanceId);
+
+/// Get type id for Type
 template<typename Type>
 inline constexpr TypeId GetTypeId()
 {
     return UidFromType<Type>();
 }
+
+/// Get type id for array with element Type
 template<typename Type>
 inline constexpr TypeId GetArrayTypeId()
 {

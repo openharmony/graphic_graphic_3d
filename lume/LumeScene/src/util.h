@@ -1,17 +1,3 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 #ifndef SCENE_SRC_UTIL_H
 #define SCENE_SRC_UTIL_H
@@ -59,10 +45,10 @@ typename Interface::Ptr ObjectWithRenderHandle(
     if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
             scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
         if (!p && id.IsValid()) {
-            p = META_NS::GetObjectRegistry().Create<Interface>(id);
+            p = interface_pointer_cast<Interface>(scene->CreateObject(id));
         }
         if (auto i = interface_cast<IRenderResource>(p)) {
-            i->SetRenderHandle(scene, rhman->GetRenderHandleReference(entRef), entRef);
+            i->SetRenderHandle(rhman->GetRenderHandleReference(entRef));
         }
     }
     return p;
@@ -71,13 +57,7 @@ typename Interface::Ptr ObjectWithRenderHandle(
 inline CORE_NS::EntityReference HandleFromRenderResource(
     const IInternalScene::Ptr& scene, const RENDER_NS::RenderHandleReference& handle)
 {
-    CORE_NS::EntityReference ent;
-    if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
-            scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
-        ent = CORE3D_NS::GetOrCreateEntityReference(
-            scene->GetEcsContext().GetNativeEcs()->GetEntityManager(), *rhman, handle);
-    }
-    return ent;
+    return scene->GetEcsContext().GetRenderHandleEntity(handle);
 }
 
 template<typename Interface>

@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Typed Property interface
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-11-13
  */
 
 #ifndef META_INTERFACE_TYPED_PROPERTY_H
@@ -48,51 +40,52 @@ public:
     Property(const Property<PType>& p) : Property(p.GetProperty())
     {}
 
+    /// Check if valid
     bool IsValid() const
     {
         return p_ != nullptr;
     }
-
+    /// Returns true if valid
     explicit operator bool() const
     {
         return IsValid();
     }
-
+    /// Locked access to the property functionality
     TypedPropertyLock<Type> operator->() const
     {
         return GetLockedAccess();
     }
-
+    /// Get locked access to the property functionality
     TypedPropertyLock<Type> GetLockedAccess() const
     {
         return TypedPropertyLock<Type>(NOCHECK, p_.get());
     }
-
+    /// Get unlocked access to the property functionality
     PropertyInterface<Type> GetUnlockedAccess() const
     {
         return PropertyInterface<Type>(p_.get());
     }
-
+    /// Convert to const pointer of IProperty
     operator IProperty::ConstPtr() const
     {
         return p_;
     }
-
+    /// Convert to pointer of IProperty
     operator IProperty::Ptr()
     {
         return p_;
     }
-
+    /// Convert to const weak pointer of IProperty
     operator IProperty::ConstWeakPtr() const
     {
         return p_;
     }
-
+    /// Convert to weak pointer of IProperty
     operator IProperty::WeakPtr()
     {
         return p_;
     }
-
+    /// Get underlying property
     PropertyType GetProperty() const
     {
         return p_;

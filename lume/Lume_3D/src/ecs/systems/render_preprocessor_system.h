@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,6 +40,7 @@ class IRenderDataStoreDefaultLight;
 class IRenderDataStoreDefaultMaterial;
 class IRenderDataStoreDefaultScene;
 class IRenderDataStoreMorph;
+class IGraphicsStateComponentManager;
 class IJointMatricesComponentManager;
 class ILayerComponentManager;
 class IMaterialComponentManager;
@@ -71,9 +72,17 @@ public:
 
     const CORE_NS::IEcs& GetECS() const override;
 
-    BASE_NS::array_view<const CORE_NS::Entity> GetRenderBatchMeshEntities() const;
-    BASE_NS::array_view<const CORE_NS::Entity> GetInstancingAllowedEntities() const;
-    BASE_NS::array_view<const CORE_NS::Entity> GetInstancingDisabledEntities() const;
+    // for RenderSystem >
+    struct SceneData {
+        uint32_t sceneId;
+        BASE_NS::array_view<const CORE_NS::Entity> renderBatchComponents;
+        BASE_NS::array_view<const CORE_NS::Entity> instancingAllowed;
+        BASE_NS::array_view<const CORE_NS::Entity> rest;
+    };
+    BASE_NS::array_view<const SceneData> GetSceneData() const;
+    BASE_NS::array_view<const CORE_NS::Entity> GetRenderBatchMeshEntities(uint32_t sceneId) const;
+    BASE_NS::array_view<const CORE_NS::Entity> GetInstancingAllowedEntities(uint32_t sceneId) const;
+    BASE_NS::array_view<const CORE_NS::Entity> GetInstancingDisabledEntities(uint32_t sceneId) const;
 
     struct Aabb {
         BASE_NS::Math::Vec3 min { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
@@ -92,8 +101,10 @@ public:
         float radius {};
     };
     Sphere GetBoundingSphere() const;
+    // for RenderSystem <
 
     struct SortData {
+        uint32_t sceneId;
         CORE_NS::IComponentManager::ComponentId renderMeshId;
         CORE_NS::Entity mesh;
         CORE_NS::Entity batch;
@@ -112,16 +123,20 @@ private:
     void OnComponentEvent(EventType type, const CORE_NS::IComponentManager& componentManager,
         BASE_NS::array_view<const CORE_NS::Entity> entities) override;
     void HandleMaterialEvents();
+    void HandleMeshEvents();
+    void HandleGraphicsStateEvents() noexcept;
     void SetDataStorePointers(RENDER_NS::IRenderDataStoreManager& manager);
     void CalculateSceneBounds();
     void GatherSortData();
     void UpdateMaterialProperties();
     void UpdateSingleMaterial(CORE_NS::Entity matEntity, const MaterialComponent* materialHandle);
     MaterialProperties* GetMaterialProperties(CORE_NS::Entity matEntity);
+    bool CheckIfDefaultDataStoreNames() const;
 
     CORE_NS::IEcs& ecs_;
     IGraphicsContext* graphicsContext_ { nullptr };
     RENDER_NS::IRenderContext* renderContext_ { nullptr };
+    IGraphicsStateComponentManager* graphicsStateManager_ { nullptr };
     IJointMatricesComponentManager* jointMatricesManager_ { nullptr };
     ILayerComponentManager* layerManager_ { nullptr };
     IMaterialComponentManager* materialManager_ { nullptr };
@@ -152,24 +167,27 @@ private:
     IPicking* picking_ = nullptr;
 
     CORE_NS::ComponentQuery renderableQuery_;
+    uint32_t graphicsStateGeneration_ { 0U };
     uint32_t jointGeneration_ { 0U };
     uint32_t layerGeneration_ { 0U };
-    uint32_t materialGeneration_ { 0U };
-    uint32_t meshGeneration_ { 0U };
     uint32_t nodeGeneration_ { 0U };
     uint32_t renderMeshGeneration_ { 0U };
     uint32_t worldMatrixGeneration_ { 0U };
 
+    BASE_NS::vector<CORE_NS::Entity> graphicsStateModifiedEvents_;
     BASE_NS::vector<CORE_NS::Entity> materialModifiedEvents_;
     BASE_NS::vector<CORE_NS::Entity> materialDestroyedEvents_;
     BASE_NS::vector<MaterialProperties> materialProperties_;
 
+    BASE_NS::vector<CORE_NS::Entity> meshModifiedEvents_;
+    BASE_NS::vector<CORE_NS::Entity> meshDestroyedEvents_;
+
     BASE_NS::vector<SortData> meshComponents_;
 
     BASE_NS::vector<CORE_NS::Entity> renderMeshComponents_;
-    BASE_NS::array_view<const CORE_NS::Entity> renderBatchComponents_;
-    BASE_NS::array_view<const CORE_NS::Entity> instancingAllowed_;
-    BASE_NS::array_view<const CORE_NS::Entity> rest_;
+
+    BASE_NS::vector<SceneData> renderMeshComponentsPerScene_;
+
     struct RenderMeshAaabb {
         CORE_NS::Entity entity;
         Aabb meshAabb;

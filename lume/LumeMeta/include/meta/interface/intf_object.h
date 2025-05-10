@@ -1,28 +1,21 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Definition of IObject interface
+ * Author: Lauri Jääskelä
+ * Create: 2021-09-20
  */
 
 #ifndef META_INTERFACE_IOBJECT_H
 #define META_INTERFACE_IOBJECT_H
 
-#include <core/plugin/intf_interface.h>
+#include <core/log.h>
 
 #include <meta/base/bit_field.h>
 #include <meta/base/ids.h>
+#include <meta/base/interface_macros.h>
+#include <meta/base/interface_traits.h>
 #include <meta/base/meta_types.h>
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/base/types.h>
 
 META_BEGIN_NAMESPACE()
@@ -97,6 +90,21 @@ public:
     {
         return interface_pointer_cast<Interface>(GetSelf());
     }
+};
+
+/**
+ * @brief The IResetableObject interface can be implemented by objects whose state can be reset to a default state.
+ *        Usually this means that any properties are reset to a default value and the object's state is returned
+ *        to an initial state.
+ * @note  Depending on the implementation, the default state may be different between calls.
+ */
+class IResetableObject : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IResetableObject, "1f4954f7-6823-4a9f-b9c7-b5d62b231791")
+public:
+    /**
+     * @brief Resets the target object to a default state.
+     */
+    virtual void ResetObject() = 0;
 };
 
 inline IObject::Ptr IObject::Resolve(const RefUri& uri) const

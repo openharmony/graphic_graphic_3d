@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Description: Object data container
+ * Author: Mikael Kilpeläinen
+ * Create: 2024-09-02
  */
 #ifndef META_SRC_OBJECT_DATA_CONTAINER_H
 #define META_SRC_OBJECT_DATA_CONTAINER_H
@@ -45,6 +37,7 @@ public: // IMetadata
     BASE_NS::vector<IEvent::ConstPtr> GetEvents() const override;
 
     BASE_NS::vector<MetadataInfo> GetAllMetadatas(MetadataType types) const override;
+    MetadataInfo GetMetadata(MetadataType type, BASE_NS::string_view name) const override;
 
     using IMetadata::GetProperty;
     IProperty::Ptr GetProperty(BASE_NS::string_view name, MetadataQuery) override;

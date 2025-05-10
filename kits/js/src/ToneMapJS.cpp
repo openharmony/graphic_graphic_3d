@@ -28,7 +28,7 @@
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 using namespace SCENE_NS;
-SCENE_NS::TonemapType ConvertTo(ToneMapJS::ToneMappingType typeI)
+SCENE_NS::TonemapType ToNative(ToneMapJS::ToneMappingType typeI)
 {
     SCENE_NS::TonemapType type;
     switch (typeI) {
@@ -48,7 +48,7 @@ SCENE_NS::TonemapType ConvertTo(ToneMapJS::ToneMappingType typeI)
     }
     return type;
 }
-ToneMapJS::ToneMappingType ConvertFrom(SCENE_NS::TonemapType typeI)
+ToneMapJS::ToneMappingType ToJs(SCENE_NS::TonemapType typeI)
 {
     ToneMapJS::ToneMappingType type;
     switch (typeI) {
@@ -69,10 +69,11 @@ ToneMapJS::ToneMappingType ConvertFrom(SCENE_NS::TonemapType typeI)
     return type;
 }
 
-SCENE_NS::TonemapType ConvertTo(uint32_t typeI)
+SCENE_NS::TonemapType ToneMapJS::ToNativeType(uint32_t typeI)
 {
-    return ConvertTo(static_cast<ToneMapJS::ToneMappingType>(typeI));
+    return ToNative(static_cast<ToneMapJS::ToneMappingType>(typeI));
 }
+
 void ToneMapJS::Init(napi_env env, napi_value exports)
 {
     using namespace NapiApi;
@@ -90,13 +91,12 @@ void ToneMapJS::Init(napi_env env, napi_value exports)
         nullptr, node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("ToneMappingSettings", func);
 
     NapiApi::Object exp(env, exports);
 
-    napi_value eType;
-    napi_value v;
+    napi_value eType, v;
     napi_create_object(env, &eType);
 #define DECL_ENUM(enu, x)                            \
     napi_create_uint32(env, ToneMappingType::x, &v); \
@@ -120,13 +120,28 @@ void ToneMapJS::DisposeNative(void*)
     if (!disposed_) {
         disposed_ = true;
         LOG_V("ToneMapJS::DisposeNative");
-        if (auto tmp = interface_pointer_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-            // reset the native object refs
-            SetNativeObject(nullptr, false);
-            SetNativeObject(nullptr, true);
-        }
+        UnsetNativeObject();
     }
 }
+void ToneMapJS::UnbindFromNative()
+{
+    // We don't use a property proxy, so update members manually.
+    if (auto toneMap = GetNativeObject<SCENE_NS::ITonemap>()) {
+        type_ = ToJs(toneMap->Type()->GetValue());
+        exposure_ = toneMap->Exposure()->GetValue();
+    }
+    UnsetNativeObject();
+}
+
+void ToneMapJS::BindToNative(SCENE_NS::ITonemap::Ptr native)
+{
+    SetNativeObject(interface_pointer_cast<META_NS::IObject>(native), PtrType::WEAK);
+    if (auto toneMap = GetNativeObject<SCENE_NS::ITonemap>()) {
+        toneMap->Type()->SetValue(ToNative(type_));
+        toneMap->Exposure()->SetValue(exposure_);
+    }
+}
+
 void* ToneMapJS::GetInstanceImpl(uint32_t id)
 {
     if (id == ToneMapJS::ID)
@@ -136,45 +151,36 @@ void* ToneMapJS::GetInstanceImpl(uint32_t id)
 void ToneMapJS::Finalize(napi_env env)
 {
     DisposeNative(nullptr);
-    BaseObject<ToneMapJS>::Finalize(env);
+    BaseObject::Finalize(env);
 }
 
-ToneMapJS::ToneMapJS(napi_env e, napi_callback_info i) : BaseObject<ToneMapJS>(e, i)
+ToneMapJS::ToneMapJS(napi_env e, napi_callback_info i)
+    : BaseObject(e, i), type_(DEFAULT_TYPE), exposure_(DEFAULT_EXPOSURE)
 {
     LOG_V("ToneMapJS ++");
-    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
-    if (!fromJs) {
-        // no arguments. so internal create.
-        // expecting caller to finish
+    auto tonemap = GetNativeObject<SCENE_NS::ITonemap>();
+    if (!tonemap) {
+        LOG_E("Cannot finish creating a tonemap: Native tonemap object missing");
+        assert(false);
         return;
     }
 
-    // postprocess that we bind to..
-    NapiApi::Object postProcJS = fromJs.Arg<0>();
-    auto postproc = GetNativeMeta<SCENE_NS::IPostProcess>(postProcJS);
-
-    NapiApi::Object toneMapArgs = fromJs.Arg<1>();
-
-    // now, based on parameters, initialize the object
-    // so it is a tonemap
-    float exposure = toneMapArgs.Get<float>("exposure").valueOrDefault(0.7);
-    SCENE_NS::TonemapType type =
-        ConvertTo(toneMapArgs.Get<uint32_t>("type").valueOrDefault(ToneMappingType::ACES));
-
-    auto tonemap = GetNativeObjectParam<SCENE_NS::ITonemap>(toneMapArgs);
-    if (!tonemap) {
-        tonemap = META_NS::GetObjectRegistry().Create<SCENE_NS::ITonemap>(SCENE_NS::ClassId::Tonemap);
+    // We accept 0 and 1 arg calls. If we get 0, do nothing so original tonemap stays unchanged.
+    NapiApi::FunctionContext<NapiApi::Object> ctx(e, i);
+    if (!ctx) {
+        if (ctx.ArgCount() != 0) {
+            LOG_E("Cannot finish creating a tonemap: Invalid args given");
+            assert(false);
+        }
+        return;
     }
-    tonemap->Type()->SetValue(type);
-    tonemap->Exposure()->SetValue(exposure);
+
+    NapiApi::Object toneMapArgs = ctx.Arg<0>();
+    exposure_ = toneMapArgs.Get<float>("exposure").valueOrDefault(exposure_);
+    type_ = static_cast<ToneMappingType>(toneMapArgs.Get<uint32_t>("type").valueOrDefault(type_));
+    tonemap->Type()->SetValue(ToNative(type_));
+    tonemap->Exposure()->SetValue(exposure_);
     tonemap->Enabled()->SetValue(true);
-    postproc->Tonemap()->SetValue(tonemap);
-    auto obj = interface_pointer_cast<META_NS::IObject>(tonemap);
-    //  process constructor args..
-    NapiApi::Object meJs(fromJs.This());
-    // weak ref, due to the ToneMap class being owned by the postprocess.
-    SetNativeObject(obj, false);
-    StoreJsObj(obj, meJs);
 }
 
 ToneMapJS::~ToneMapJS()
@@ -188,37 +194,36 @@ ToneMapJS::~ToneMapJS()
 
 napi_value ToneMapJS::GetType(NapiApi::FunctionContext<>& ctx)
 {
-    SCENE_NS::TonemapType type = SCENE_NS::TonemapType::ACES; // default
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        type = toneMap->Type()->GetValue();
+        type_ = ToJs(toneMap->Type()->GetValue());
     }
 
-    auto typeI = ConvertFrom(type);
-    return ctx.GetNumber(static_cast<uint32_t>(typeI));
+    return ctx.GetNumber(static_cast<uint32_t>(type_));
 }
+
 void ToneMapJS::SetType(NapiApi::FunctionContext<uint32_t>& ctx)
 {
-    auto type = ConvertTo(ctx.Arg<0>());
+    const auto nativeType = ToNativeType(ctx.Arg<0>());
+    type_ = ToJs(nativeType);
 
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        toneMap->Type()->SetValue(type);
+        toneMap->Type()->SetValue(nativeType);
     }
 }
 
 napi_value ToneMapJS::GetExposure(NapiApi::FunctionContext<>& ctx)
 {
-    float exp = 0.0;
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        exp = toneMap->Exposure()->GetValue();
+        exposure_ = toneMap->Exposure()->GetValue();
     }
 
-    return ctx.GetNumber(exp);
+    return ctx.GetNumber(exposure_);
 }
 
 void ToneMapJS::SetExposure(NapiApi::FunctionContext<float>& ctx)
 {
-    float exp = ctx.Arg<0>();
+    exposure_ = ctx.Arg<0>();
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        toneMap->Exposure()->SetValue(exp);
+        toneMap->Exposure()->SetValue(exposure_);
     }
 }

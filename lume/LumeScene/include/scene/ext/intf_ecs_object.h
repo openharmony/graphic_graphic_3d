@@ -1,20 +1,6 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
-#ifndef SCENE_EXT_ECS_OBJECT_H
-#define SCENE_EXT_ECS_OBJECT_H
+#ifndef SCENE_EXT_IECS_OBJECT_H
+#define SCENE_EXT_IECS_OBJECT_H
 
 #include <scene/ext/intf_internal_scene.h>
 
@@ -34,15 +20,24 @@ class IEcsObject : public IEcsResource {
 public:
     virtual BASE_NS::string GetPath() const = 0;
     virtual BASE_NS::string GetName() const = 0;
-
     virtual IInternalScene::Ptr GetScene() const = 0;
     virtual META_NS::IEngineValueManager::Ptr GetEngineValueManager() = 0;
 
     virtual bool SetName(const BASE_NS::string& name) = 0;
-    virtual Future<bool> AddAllEngineProperties(
-        const META_NS::IMetadata::Ptr& object, BASE_NS::string_view component) = 0;
-    virtual Future<bool> AttachEngineProperty(const META_NS::IProperty::Ptr&, BASE_NS::string_view component) = 0;
-    virtual Future<META_NS::IProperty::Ptr> CreateEngineProperty(BASE_NS::string_view path) = 0;
+
+    /**
+     * @brief Add all engine properties that the component defines. Construct new properties if they don't exist yet.
+     * @param object Add properties to this object. Must not be a null pointer.
+     * @param component The name of the component. If empty, add all properties from all components the object has.
+     * @return True if all properties were created, false otherwise.
+     */
+    virtual Future<bool> AddAllProperties(const META_NS::IMetadata::Ptr& object, BASE_NS::string_view component) = 0;
+    virtual Future<bool> AttachProperty(const META_NS::IProperty::Ptr&, BASE_NS::string_view path) = 0;
+    virtual Future<META_NS::IProperty::Ptr> CreateProperty(BASE_NS::string_view path) = 0;
+    virtual Future<META_NS::IProperty::Ptr> CreateProperty(const META_NS::IEngineValue::Ptr&) = 0;
+    virtual Future<bool> AttachProperty(const META_NS::IProperty::Ptr&, const META_NS::IEngineValue::Ptr&) = 0;
+
+    virtual Future<bool> SetActive(bool active) = 0;
 
     virtual void SyncProperties() = 0;
 };

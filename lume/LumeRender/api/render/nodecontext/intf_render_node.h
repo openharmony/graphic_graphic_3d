@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -80,16 +80,16 @@ public:
     virtual void InitNode(IRenderNodeContextManager& renderNodeContextMgr) = 0;
 
     /** Sequential, called before ExecuteFrame every frame.
-     * Create/destroy gpu resources here if needed. Prefer not doing any other work.
-     * Re-creation of descriptor sets should be done here as well.
-     * IRenderNodeGpuResourceManager keeps track of created resources
-     * -> do not explicitly destroy if not needed.
+     * Create/destroy gpu resources here which needs to be referenced in other render nodes.
+     * Prefer not doing much work here.
+     * Re-creation of global descriptor sets should be done here as well.
      */
     virtual void PreExecuteFrame() = 0;
 
     /** Parallel, called every frame after every PreExecuteFrame.
      * Is not run if HasExecuteFrameWork() returns false.
-     * Do NOT create gpu resources here.
+     * Do NOT create gpu resources here which are shared with other render nodes.
+     * Local GPU resources can be created here.
      * @param cmdList Render command list for rendering/compute calls.
      */
     virtual void ExecuteFrame(IRenderCommandList& cmdList) = 0;

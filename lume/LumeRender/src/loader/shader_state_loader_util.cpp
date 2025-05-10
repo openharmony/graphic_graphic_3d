@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -349,6 +349,9 @@ ShaderStateResult LoadStates(const json::value& jsonData)
                     SafeGetJsonValue(state, "renderSlot", ssr.res.error, variant.renderSlot);
                     SafeGetJsonValue(
                         state, "renderSlotDefaultShaderState", ssr.res.error, variant.renderSlotDefaultState);
+                    if (!variant.renderSlotDefaultState) {
+                        SafeGetJsonValue(state, "renderSlotDefault", ssr.res.error, variant.renderSlotDefaultState);
+                    }
                     SafeGetJsonBitfield<GraphicsStateFlagBits>(state, "stateFlags", ssr.res.error, variant.stateFlags);
                     ssr.states.variantData.push_back(move(variant));
                 }

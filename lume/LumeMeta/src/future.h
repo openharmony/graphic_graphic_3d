@@ -1,23 +1,18 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Future/Promise implementation
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-02-14
  */
 
 #ifndef META_SRC_FUTURE_H
 #define META_SRC_FUTURE_H
 
+#include <condition_variable>
 #include <mutex>
 #include <thread>
+
+#include <base/containers/shared_ptr.h>
 
 #include <meta/base/interface_macros.h>
 #include <meta/base/namespace.h>
@@ -88,7 +83,7 @@ private:
 
 class ContinuationQueueTask : public IntroduceInterfaces<ITaskQueueTask> {
 public:
-    explicit ContinuationQueueTask(IFutureContinuation::Ptr task) : task_(BASE_NS::move(task)) {}
+    ContinuationQueueTask(IFutureContinuation::Ptr task) : task_(BASE_NS::move(task)) {}
 
     void SetParam(IAny::Ptr arg)
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -116,10 +116,8 @@ void CreateSpecInfos(
 
 void SortSets(PipelineLayout& pipelineLayout)
 {
-    pipelineLayout.descriptorSetCount = 0;
     for (auto& currSet : pipelineLayout.descriptorSetLayouts) {
         if (currSet.set != PipelineLayoutConstants::INVALID_INDEX) {
-            pipelineLayout.descriptorSetCount++;
             std::sort(currSet.bindings.begin(), currSet.bindings.end(),
                 [](auto const& lhs, auto const& rhs) { return (lhs.binding < rhs.binding); });
         }

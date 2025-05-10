@@ -1,18 +1,3 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 
 #include "importer.h"
 
@@ -43,6 +28,24 @@ InstanceId Importer::ConvertInstanceId(const InstanceId& id) const
     return it != mapInstanceIds_.end() ? it->second : id;
 }
 
+BASE_NS::unordered_map<InstanceId, InstanceId> Importer::GetInstanceIdMapping() const
+{
+    BASE_NS::unordered_map<InstanceId, InstanceId> map;
+    for (auto&& v : mapInstanceIds_) {
+        map[v.second] = v.first;
+    }
+    return map;
+}
+
+void Importer::SetResourceManager(CORE_NS::IResourceManager::Ptr p)
+{
+    resources_ = BASE_NS::move(p);
+}
+void Importer::SetUserContext(IObject::Ptr p)
+{
+    userContext_ = BASE_NS::move(p);
+}
+
 bool Importer::IsRegisteredObjectType(const ObjectId& oid) const
 {
     return registry_.GetObjectFactory(oid) != nullptr;
@@ -52,11 +55,12 @@ bool Importer::IsRegisteredObjectOrPropertyType(const ObjectId& oid) const
 {
     return IsRegisteredObjectType(oid) || registry_.GetPropertyRegister().IsPropertyRegistered(oid);
 }
+
 IObject::Ptr Importer::Import(const ISerNode::ConstPtr& tree)
 {
     IObject::Ptr object;
     if (auto root = interface_cast<IRootNode>(tree)) {
-        importVersion_ = root->GetSerializerVersion();
+        metadata_ = root->GetMetadata();
         object = ImportObject(root->GetObject());
         if (object) {
             // resolve deferred ref uris
@@ -109,21 +113,34 @@ IObject::Ptr Importer::ImportRef(const RefUri& ref)
     return nullptr;
 }
 
+void Importer::MapInstance(const InstanceId& iid, const IObject::ConstPtr& object)
+{
+    if (auto instance = interface_cast<IObjectInstance>(object)) {
+        if (iid.IsValid()) {
+            auto& mi = mapInstanceIds_[iid];
+            if (mi.IsValid()) {
+                CORE_LOG_D("re-mapping object [%s] -> [%s]", iid.ToString().c_str(),
+                    instance->GetInstanceId().ToString().c_str());
+            } else {
+                CORE_LOG_D("mapping object [%s] -> [%s]", iid.ToString().c_str(),
+                    instance->GetInstanceId().ToString().c_str());
+            }
+            mi = instance->GetInstanceId();
+        }
+    }
+}
+
 IObject::Ptr Importer::ImportObject(const IObjectNode::ConstPtr& node, IObject::Ptr object)
 {
     IObject::Ptr result;
     if (object) {
-        if (auto instance = interface_cast<IObjectInstance>(object)) {
-            if (auto iid = node->GetInstanceId(); iid.IsValid()) {
-                CORE_LOG_D("importing object [%s] -> [%s]", iid.ToString().c_str(),
-                    instance->GetInstanceId().ToString().c_str());
-                mapInstanceIds_[iid] = instance->GetInstanceId();
-            }
-        }
+        auto iid = node->GetInstanceId();
+        MapInstance(iid, object);
         if (auto ser = interface_cast<ISerializable>(object)) {
-            ImportContext context(*this, object, interface_pointer_cast<IMapNode>(node->GetMembers()));
+            ImportContext context(
+                *this, node->GetObjectName(), object, iid, interface_pointer_cast<IMapNode>(node->GetMembers()));
             if (ser->Import(context)) {
-                result = object;
+                result = context.GetObject();
             } else {
                 CORE_LOG_W("Failed to import object [type=%s]", node->GetObjectId().ToString().c_str());
             }
@@ -394,8 +411,8 @@ ReturnError Importer::ImportWeakPtrInAny(const ISerNode::ConstPtr& node, const I
 ReturnError Importer::ImportAny(const IObjectNode::ConstPtr& node, const IAny::Ptr& any)
 {
     if (auto ser = interface_cast<ISerializable>(any)) {
-        ImportContext context(
-            *this, interface_pointer_cast<IObject>(any), interface_pointer_cast<IMapNode>(node->GetMembers()));
+        ImportContext context(*this, node->GetObjectName(), interface_pointer_cast<IObject>(any), node->GetInstanceId(),
+            interface_pointer_cast<IMapNode>(node->GetMembers()));
         if (ser->Import(context)) {
             return GenericError::SUCCESS;
         }
@@ -514,5 +531,32 @@ ReturnError ImportContext::ImportFromNode(const ISerNode::ConstPtr& node, IAny& 
     return importer_.ImportFromNode(node, entity);
 }
 
+CORE_NS::IInterface* ImportContext::Context() const
+{
+    return importer_.GetInterface(CORE_NS::IInterface::UID);
+}
+IObject::Ptr ImportContext::UserContext() const
+{
+    return importer_.GetUserContext();
+}
+ReturnError ImportContext::SubstituteThis(IObject::Ptr obj)
+{
+    ReturnError res = GenericError::FAIL;
+    if (obj) {
+        object_ = BASE_NS::move(obj);
+        // re-map the instance
+        importer_.MapInstance(iid_, object_);
+        res = GenericError::SUCCESS;
+    }
+    return res;
+}
+BASE_NS::string ImportContext::GetName() const
+{
+    return name_;
+}
+SerMetadata ImportContext::GetMetadata() const
+{
+    return importer_.GetMetadata();
+}
 } // namespace Serialization
 META_END_NAMESPACE()

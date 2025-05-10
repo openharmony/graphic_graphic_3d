@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -461,21 +461,21 @@ public:
         }
 
         // Check for PNG
-        if ((imageFileBytes.size() >= 8) && imageFileBytes[0] == 137 && imageFileBytes[1] == 80 && // 8,137,80 : param
-            imageFileBytes[2] == 78 && imageFileBytes[3] == 71 && imageFileBytes[4] == 13 && // 2,78,3,71,4,13 : param
-            imageFileBytes[5] == 10 && imageFileBytes[6] == 26 && imageFileBytes[7] == 10) { // 5,10,6,26,7,10 : param
+        if ((imageFileBytes.size() >= 8) && imageFileBytes[0] == 137 && imageFileBytes[1] == 80 &&
+            imageFileBytes[2] == 78 && imageFileBytes[3] == 71 && imageFileBytes[4] == 13 && imageFileBytes[5] == 10 &&
+            imageFileBytes[6] == 26 && imageFileBytes[7] == 10) {
             return true;
         }
 
         // Check for JPEG / JFIF / Exif / ICC_PROFILE tag
         if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
-            imageFileBytes[2] == 0xff && // 2 : idx
-            ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' && // 3,6,7: idx
-                imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // 8,9 :idx JFIF
-                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' && // 3,6,7 : idx
-                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // 8,9 : idx Exif
-                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' && // 3,6,7 : idx
-                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // 8,9 : idx ICC_PROFILE
+            imageFileBytes[2] == 0xff &&
+            ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
+                 imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
+                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
+                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
+                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
+                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
             return true;
         }
 

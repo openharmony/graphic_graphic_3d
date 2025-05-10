@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,8 +46,6 @@ public:
         const RenderScene& renderScene, const uint32_t flags) const override;
     RENDER_NS::RenderNodeGraphDesc GetRenderNodeGraphDesc(
         const RenderScene& renderScene, const BASE_NS::string& rngFile, const uint32_t flags) const override;
-    void UseCustomRng(const BASE_NS::string& uri) override;
-    void UseCustomRngGroup(const CustomRngGroup& rngGroup) override;
 
 private:
     void InitRenderNodeGraphs();

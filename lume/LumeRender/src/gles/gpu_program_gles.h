@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,19 +33,34 @@ struct PushConstantReflection;
 struct OES_Bind {
     uint8_t set { 0 }, bind { 0 };
 };
-struct Binder {
-    uint32_t set;
-    uint32_t bind;
-    DescriptorType type;
-    // [descriptorarrayindex][glindices] for separate sample/image case, there can be multiple texture units to bind to,
-    // for other resources the second(inner) vector length is always 1.
-    BASE_NS::vector<BASE_NS::vector<uint32_t>> id;
+struct Slice {
+    uint16_t index;
+    uint16_t count;
 };
-
+struct Binder {
+    uint16_t set;
+    uint16_t bind;
+    DescriptorType type;
+    // index/count pair into descriptorIndexIds. count equals descriptor set count.
+    Slice descriptors;
+};
+struct Resources {
+    // descriptor set bindings used by the shader.
+    BASE_NS::vector<Binder> resourceList;
+    // index/count pairs into ids. separate images/samplers can be bound to multiple units in which case count is
+    // greater than one.
+    BASE_NS::vector<Slice> descriptorIndexIds;
+    BASE_NS::vector<uint8_t> ids;
+};
+struct ResourcesView {
+    BASE_NS::array_view<Binder> resourceList;
+    BASE_NS::array_view<Slice> descriptorIndexIds;
+    BASE_NS::array_view<uint8_t> ids;
+};
 struct GpuShaderProgramPlatformDataGL final {
     uint32_t program { 0 };
     int32_t flipLocation { Gles::INVALID_LOCATION };
-    BASE_NS::array_view<Binder> resourceList;
+    ResourcesView resourcesView;
     BASE_NS::array_view<Gles::PushConstantReflection> pushConstants;
     int32_t inputs[Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES] {};
     const ShaderModuleGLES* vertShaderModule_ { nullptr };
@@ -76,7 +91,8 @@ private:
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;
     ShaderReflection reflection_;
 
-    BASE_NS::vector<Binder> resourceList;
+    Resources resources_;
+
     BASE_NS::vector<Gles::PushConstantReflection> pushConstants;
     // copy of specialization data used..
     BASE_NS::vector<uint32_t> specializedWith;
@@ -85,7 +101,7 @@ private:
 struct GpuComputeProgramPlatformDataGL final {
     uint32_t program { 0 };
     int32_t flipLocation { Gles::INVALID_LOCATION };
-    BASE_NS::array_view<Binder> resourceList;
+    ResourcesView resourcesView;
     BASE_NS::array_view<Gles::PushConstantReflection> pushConstants;
     const ShaderModuleGLES* module_ { nullptr };
 };
@@ -107,7 +123,7 @@ private:
     GpuComputeProgramPlatformDataGL plat_;
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;
     ComputeShaderReflection reflection_;
-    BASE_NS::vector<Binder> resourceList;
+    Resources resources_;
     BASE_NS::vector<Gles::PushConstantReflection> pushConstants;
 };
 RENDER_END_NAMESPACE()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -44,6 +44,8 @@ BEGIN_COMPONENT(ILightComponentManager, LightComponent)
     DEFINE_PROPERTY(float, intensity, "Intensity", 0, VALUE(1.0f))
 
     /** Range, distance cutoff for points and spots.
+     * Safe range is calculated automatically if the value is default (0.0)
+     * Do not modify if one wants the default bahaviour
      */
     DEFINE_PROPERTY(float, range, "Range", 0, VALUE(0.0f))
 

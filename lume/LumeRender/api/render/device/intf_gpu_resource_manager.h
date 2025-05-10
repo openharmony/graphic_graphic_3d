@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -111,6 +111,16 @@ public:
      *  @return Returns A valid resource handle if the creation was successfull.
      */
     virtual RenderHandleReference Create(const GpuBufferDesc& desc) = 0;
+
+    /** Create an unnamed GpuBuffer.
+     * NOTE: the external buffer resource is not owned and not deleted by the manager when the handle is destroyed
+     * (e.g. if using hw buffers the hw buffer reference is released)
+     *  @param name Name of buffer
+     *  @param backendSpecificData Backend specific description
+     *  @return Returns A valid resource handle if the creation was successfull.
+     */
+    virtual RenderHandleReference Create(
+        const BASE_NS::string_view name, const BackendSpecificBufferDesc& backendSpecificData) = 0;
 
     /** Get or create a GpuImage with unique image name.
      * Keeps the data locked. Can be used to create resource only if it's not created already with unique name / uri.

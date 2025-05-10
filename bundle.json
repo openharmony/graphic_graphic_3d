@@ -27,7 +27,7 @@
           "hitrace",
           "init",
           "input",
-	        "ipc",
+          "ipc",
           "bounds_checking_function",
           "resource_management",
           "napi",
@@ -40,7 +40,8 @@
           "vulkan-headers",
           "skia",
           "freetype",
-          "zlib"
+          "zlib",
+          "bounds_checking_function"
         ],
         "third_party": []
       },

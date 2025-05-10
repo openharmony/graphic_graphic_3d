@@ -14,12 +14,16 @@
             "typeName": "NodeSystem"
         },
         {
+            "typeName": "WeatherSystem",
+            "optional": true
+        },
+        {
             "typeName": "TextSystem",
             "optional": true
         },
         {
             "typeName": "SkinningSystem"
-        },  
+        },
         {
             "typeName": "RenderPreprocessorSystem"
         },

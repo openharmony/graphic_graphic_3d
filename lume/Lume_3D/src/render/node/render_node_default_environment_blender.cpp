@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -155,7 +155,9 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteFrame(IRenderCommandList& cmdLi
     const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
     const auto* dataStoreCamera =
         static_cast<IRenderDataStoreDefaultCamera*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameCamera));
-    if (valid_ && dataStoreCamera) {
+    const auto* dataStoreScene =
+        static_cast<IRenderDataStoreDefaultScene*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameScene));
+    if (valid_ && dataStoreCamera && dataStoreScene) {
         CORE_ASSERT(dataStoreCamera->HasBlendEnvironments());
         UpdateImageData();
         InitializeShaderData();

@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Description: meta engine value manager
+ * Author: Mikael Kilpeläinen
+ * Create: 2024-02-19
  */
 
 #ifndef META_ENGINE_INTERFACE_ENGINE_DATA_H
@@ -20,12 +12,25 @@
 
 META_BEGIN_NAMESPACE()
 
+/**
+ * @brief Interface to access and register engine values
+ */
 class IEngineData : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IEngineData, "542b7e13-21bd-4c9c-8d3f-a9527732216c")
 public:
+    /**
+     * @brief Get engine access for core type
+     * @param type Core type for engine value
+     */
     virtual IEngineInternalValueAccess::Ptr GetInternalValueAccess(const CORE_NS::PropertyTypeDecl& type) const = 0;
+    /**
+     * @brief Register engine access for core type
+     */
     virtual void RegisterInternalValueAccess(
         const CORE_NS::PropertyTypeDecl& type, IEngineInternalValueAccess::Ptr) = 0;
+    /**
+     * @brief Unregister engine access for core type
+     */
     virtual void UnregisterInternalValueAccess(const CORE_NS::PropertyTypeDecl& type) = 0;
 };
 

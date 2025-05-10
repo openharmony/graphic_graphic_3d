@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,10 +32,10 @@ CORE3D_BEGIN_NAMESPACE()
 BEGIN_COMPONENT(IAnimationOutputComponentManager, AnimationOutputComponent)
     /** Type hash of the keyframe data. If the property targetted by AnimationTrack
      * doesn't match with this type information (PropertyTypeDecl::compareHash), the track will be skipped. */
-    DEFINE_PROPERTY(uint64_t, type, "Keyframe Datatype Hash", 0,)
+    DEFINE_PROPERTY(uint64_t, type, "Keyframe Datatype Hash", 0, )
     /** Keyframe data. Data is stored as byte array but actual data type is specified in AnimationOutputComponent::type.
      */
-    DEFINE_PROPERTY(BASE_NS::vector<uint8_t>, data, "Keyframe Data", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<uint8_t>, data, "Keyframe Data", 0, )
 
 END_COMPONENT(IAnimationOutputComponentManager, AnimationOutputComponent, "aefd2f02-9178-46d1-8ef2-81a262f0a212")
 #if !defined(IMPLEMENT_MANAGER)

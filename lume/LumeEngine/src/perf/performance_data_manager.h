@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -56,6 +56,9 @@ public:
 
     void UpdateData(
         const BASE_NS::string_view subCategory, const BASE_NS::string_view name, const int64_t microSeconds) override;
+    void UpdateData(const BASE_NS::string_view subCategory, const BASE_NS::string_view name, const int64_t value,
+        PerformanceTimingData::DataType type) override;
+
     void ResetData() override;
     BASE_NS::vector<PerformanceData> GetData() const override;
 
@@ -86,7 +89,7 @@ class PerformanceTraceLogger final : public ILogger::IOutput {
 
 private:
     friend class PerformanceDataManagerFactory;
-    explicit PerformanceTraceLogger(PerformanceDataManagerFactory* factory) : factory_(factory) {}
+    PerformanceTraceLogger(PerformanceDataManagerFactory* factory) : factory_(factory) {}
     ~PerformanceTraceLogger() override = default;
     void Destroy() override
     {

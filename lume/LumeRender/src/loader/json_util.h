@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -68,11 +68,18 @@ struct JsonContext {
 
 inline bool ParseHex(BASE_NS::string_view str, uint32_t& val)
 {
-    errno = 0;
-    char* end;
-    constexpr const int hexadecimalBase = 16;
-    val = std::strtoul(str.data(), &end, hexadecimalBase);
-    return !(end != (str.end().ptr()) || errno != 0);
+    if (!str.empty()) {
+        errno = 0;
+        char* end;
+        constexpr const int hexadecimalBase = 16;
+        const unsigned long result = std::strtoul(str.data(), &end, hexadecimalBase);
+        if ((result <= UINT32_MAX) && (end == str.end().ptr()) && (errno == 0)) {
+            val = result;
+            return true;
+        }
+    }
+    val = 0U;
+    return false;
 }
 
 template<class JsonType, class T, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>, bool> = true>
@@ -180,7 +187,7 @@ void SafeGetJsonMask(
         } else if (mask->is_number()) {
             output = mask->template as_number<uint32_t>();
         } else {
-            error += "Failed to read value: " + element + " (" + CORE_NS::json::to_string(*mask) + ")";
+            error += "Failed to read value: " + element + " (" + CORE_NS::json::to_string(*mask) + ')';
         }
     }
 }

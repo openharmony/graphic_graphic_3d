@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,15 +43,14 @@ public:
         return RenderPostProcessFlareNode::UID;
     }
 
-    struct EffectProperties {
-        bool enabled { true };
-        BASE_NS::Math::Vec3 flarePos { 0.0f, 0.0f, 0.0f };
-        float intensity { 1.0f };
-    };
+    void SetData(BASE_NS::array_view<const uint8_t> data) override;
+    BASE_NS::array_view<const uint8_t> GetData() const override;
+
+    // direct access in render nodes
+    RenderPostProcessFlareNode::EffectProperties propertiesData;
 
 private:
-    EffectProperties propertiesData_;
-    CORE_NS::PropertyApiImpl<EffectProperties> properties_;
+    CORE_NS::PropertyApiImpl<RenderPostProcessFlareNode::EffectProperties> properties_;
 };
 RENDER_END_NAMESPACE()
 

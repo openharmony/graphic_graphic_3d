@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,15 +16,15 @@
 #include "threading/task_queue_factory.h"
 
 #include <algorithm>
-#include <atomic>
 #include <condition_variable>
 #include <cstddef>
 #include <deque>
-#include <memory>
 #include <thread>
 
 #include <base/containers/array_view.h>
+#include <base/containers/atomics.h>
 #include <base/containers/iterator.h>
+#include <base/containers/shared_ptr.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
 #include <base/math/mathf.h>
@@ -110,7 +110,7 @@ public:
         bool done_ { false };
     };
 
-    explicit TaskResult(std::shared_ptr<State>&& future) : future_(BASE_NS::move(future)) {}
+    explicit TaskResult(BASE_NS::shared_ptr<State>&& future) : future_(BASE_NS::move(future)) {}
 
     void Wait() final
     {
@@ -133,7 +133,7 @@ protected:
     }
 
 private:
-    std::shared_ptr<State> future_;
+    BASE_NS::shared_ptr<State> future_;
 };
 
 // -- ThreadPool
@@ -162,11 +162,11 @@ public:
 
     IResult::Ptr Push(ITask::Ptr task) override
     {
-        auto taskState = std::make_shared<TaskResult::State>();
+        auto taskState = BASE_NS::make_shared<TaskResult::State>();
         if (taskState) {
             if (task) {
                 std::lock_guard lock(mutex_);
-                q_.push_back(std::make_shared<Task>(BASE_NS::move(task), taskState));
+                q_.push_back(BASE_NS::make_shared<Task>(BASE_NS::move(task), taskState));
                 cv_.notify_one();
             } else {
                 // mark as done if the there was no function.
@@ -181,21 +181,21 @@ public:
         if (dependencies.empty()) {
             return Push(BASE_NS::move(task));
         }
-        auto taskState = std::make_shared<TaskResult::State>();
+        auto taskState = BASE_NS::make_shared<TaskResult::State>();
         if (taskState) {
             if (task) {
-                BASE_NS::vector<std::weak_ptr<Task>> deps;
+                BASE_NS::vector<BASE_NS::weak_ptr<Task>> deps;
                 deps.reserve(dependencies.size());
                 {
                     std::lock_guard lock(mutex_);
                     for (const ITask* dep : dependencies) {
                         if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
-                            [dep](const std::shared_ptr<Task>& task) { return task && (*task == dep); });
+                                [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
                             pos != q_.cend()) {
                             deps.push_back(*pos);
                         }
                     }
-                    q_.push_back(std::make_shared<Task>(BASE_NS::move(task), taskState, BASE_NS::move(deps)));
+                    q_.push_back(BASE_NS::make_shared<Task>(BASE_NS::move(task), taskState, BASE_NS::move(deps)));
                     cv_.notify_one();
                 }
             } else {
@@ -210,7 +210,7 @@ public:
     {
         if (task) {
             std::lock_guard lock(mutex_);
-            q_.push_back(std::make_shared<Task>(BASE_NS::move(task)));
+            q_.push_back(BASE_NS::make_shared<Task>(BASE_NS::move(task)));
             cv_.notify_one();
         }
     }
@@ -222,18 +222,18 @@ public:
         }
 
         if (task) {
-            BASE_NS::vector<std::weak_ptr<Task>> deps;
+            BASE_NS::vector<BASE_NS::weak_ptr<Task>> deps;
             deps.reserve(dependencies.size());
             {
                 std::lock_guard lock(mutex_);
                 for (const ITask* dep : dependencies) {
                     if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
-                        [dep](const std::shared_ptr<Task>& task) { return task && (*task == dep); });
+                            [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
                         pos != q_.cend()) {
                         deps.push_back(*pos);
                     }
                 }
-                q_.push_back(std::make_shared<Task>(BASE_NS::move(task), BASE_NS::move(deps)));
+                q_.push_back(BASE_NS::make_shared<Task>(BASE_NS::move(task), BASE_NS::move(deps)));
                 cv_.notify_one();
             }
         }
@@ -263,13 +263,13 @@ public:
 
     void Ref() override
     {
-        refcnt_.fetch_add(1, std::memory_order_relaxed);
+        BASE_NS::AtomicIncrementRelaxed(&refcnt_);
     }
 
     void Unref() override
     {
-        if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
-            std::atomic_thread_fence(std::memory_order_acquire);
+        if (BASE_NS::AtomicDecrementRelease(&refcnt_) == 0) {
+            BASE_NS::AtomicFenceAcquire();
             delete this;
         }
     }
@@ -288,22 +288,22 @@ private:
     // Helper which holds a pointer to a queued task function and the result state.
     struct Task {
         ITask::Ptr function_;
-        std::shared_ptr<TaskResult::State> state_;
-        BASE_NS::vector<std::weak_ptr<Task>> dependencies_;
+        BASE_NS::shared_ptr<TaskResult::State> state_;
+        BASE_NS::vector<BASE_NS::weak_ptr<Task>> dependencies_;
         bool running_ { false };
 
         ~Task() = default;
         Task() = default;
 
-        Task(ITask::Ptr&& function, std::shared_ptr<TaskResult::State> state,
-            BASE_NS::vector<std::weak_ptr<Task>>&& dependencies)
+        Task(ITask::Ptr&& function, BASE_NS::shared_ptr<TaskResult::State> state,
+            BASE_NS::vector<BASE_NS::weak_ptr<Task>>&& dependencies)
             : function_(BASE_NS::move(function)),
               state_(BASE_NS::move(state)), dependencies_ { BASE_NS::move(dependencies) }
         {
             CORE_ASSERT(this->function_ && this->state_);
         }
 
-        Task(ITask::Ptr&& function, std::shared_ptr<TaskResult::State> state)
+        Task(ITask::Ptr&& function, BASE_NS::shared_ptr<TaskResult::State> state)
             : function_(BASE_NS::move(function)), state_(BASE_NS::move(state))
         {
             CORE_ASSERT(this->function_ && this->state_);
@@ -314,7 +314,7 @@ private:
             CORE_ASSERT(this->function_);
         }
 
-        Task(ITask::Ptr&& function, BASE_NS::vector<std::weak_ptr<Task>>&& dependencies)
+        Task(ITask::Ptr&& function, BASE_NS::vector<BASE_NS::weak_ptr<Task>>&& dependencies)
             : function_(BASE_NS::move(function)), dependencies_ { BASE_NS::move(dependencies) }
         {
             CORE_ASSERT(this->function_);
@@ -341,14 +341,15 @@ private:
         // Task can run if it's not already running and there are no dependencies, or all the dependencies are ready.
         inline bool CanRun() const
         {
-            return !running_ && (dependencies_.empty() ||
-                                    std::all_of(std::begin(dependencies_), std::end(dependencies_),
-                                        [](const std::weak_ptr<Task>& dependency) { return dependency.expired(); }));
+            return !running_ &&
+                   (dependencies_.empty() ||
+                       std::all_of(std::begin(dependencies_), std::end(dependencies_),
+                           [](const BASE_NS::weak_ptr<Task>& dependency) { return dependency.expired(); }));
         }
     };
 
     // Looks for a task that can be executed.
-    std::shared_ptr<Task> FindRunnable()
+    BASE_NS::shared_ptr<Task> FindRunnable()
     {
         if (q_.empty()) {
             return {};
@@ -404,7 +405,7 @@ private:
 
         while (true) {
             // Function to process.
-            std::shared_ptr<Task> task;
+            BASE_NS::shared_ptr<Task> task;
             {
                 std::unique_lock lock(mutex_);
 
@@ -430,7 +431,7 @@ private:
                 // After running the task remove it from the queue. Any dependent tasks will see their weak_ptr expire
                 // idicating that the dependency has been completed.
                 if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
-                    [&task](const std::shared_ptr<Task>& queuedTask) { return queuedTask == task; });
+                        [&task](const BASE_NS::shared_ptr<Task>& queuedTask) { return queuedTask == task; });
                     pos != q_.cend()) {
                     q_.erase(pos);
                 }
@@ -438,14 +439,14 @@ private:
 
                 // Get next function.
                 if (auto pos = std::find_if(std::begin(q_), std::end(q_),
-                    [](const std::shared_ptr<Task>& task) { return (task) && (task->CanRun()); });
+                        [](const BASE_NS::shared_ptr<Task>& task) { return (task) && (task->CanRun()); });
                     pos != std::end(q_)) {
                     task = *pos;
                     task->running_ = true;
                     // Check if there are more runnable tasks and notify workers as needed.
                     auto runnable = std::min(static_cast<ptrdiff_t>(threadCount_),
                         std::count_if(pos + 1, std::end(q_),
-                            [](const std::shared_ptr<Task>& task) { return (task) && (task->CanRun()); }));
+                            [](const BASE_NS::shared_ptr<Task>& task) { return (task) && (task->CanRun()); }));
                     while (runnable--) {
                         cv_.notify_one();
                     }
@@ -457,13 +458,13 @@ private:
     size_t threadCount_ { 0 };
     unique_ptr<ThreadContext[]> threads_;
 
-    std::deque<std::shared_ptr<Task>> q_;
+    std::deque<BASE_NS::shared_ptr<Task>> q_;
 
     bool isDone_ { false };
 
     std::mutex mutex_;
     std::condition_variable cv_;
-    std::atomic<int32_t> refcnt_ { 0 };
+    int32_t refcnt_ { 0 };
 };
 } // namespace
 

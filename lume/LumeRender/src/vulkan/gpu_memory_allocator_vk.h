@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,9 +19,11 @@
 // vulkan_core must be before vk_mem_alloc
 // clang-format off
 #include <vulkan/vulkan_core.h>
-
-#include "third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
-
+#ifdef __OHOS__
+#include <third_party/vulkanmemoryallocator/include/vk_mem_alloc.h>
+#else
+#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
+#endif
 // clang-format on
 #include <cstddef>
 #include <cstdint>
@@ -61,6 +63,12 @@ public:
         // set to zero for default (vma default 256 MB)
         uint32_t preferredLargeHeapBlockSize { 32 * 1024 * 1024 };
 
+        enum CreateInfoFlagBits : uint32_t {
+            ENABLE_DEVICE_ADDRESSES_BIT = (1 << 0),
+        };
+        using CreateInfoFlags = uint32_t;
+
+        CreateInfoFlags createFlags { 0U };
         BASE_NS::vector<GpuMemoryAllocatorCustomPool> customPools;
     };
 

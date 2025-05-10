@@ -1,0 +1,472 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// Lume Super Resolution
+// Prepare adjusted (YCoCg) color buffer + disocclusion mask
+
+// includes
+#include "render/shaders/common/render_color_conversion_common.h"
+#include "render/shaders/common/render_post_process_structs_common.h"
+
+// camera data
+struct DefaultCameraMatrixStruct {
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+
+    mat4 viewInv;
+    mat4 projInv;
+    mat4 viewProjInv;
+
+    mat4 viewPrevFrame;
+    mat4 projPrevFrame;
+    mat4 viewProjPrevFrame;
+
+    mat4 shadowViewProj;
+    mat4 shadowViewProjInv;
+
+    // .xy = jitter offset, .zw = jitter offset with baked screen size
+    vec4 jitter;
+    vec4 jitterPrevFrame;
+
+    // .xy = unique id (64-bit), .zw = layer mask (64 bit)
+    uvec4 indices;
+    // .x multi-view camera additional layer count, .yzw 3 multi-view camera indices
+    // yzw are packed, use unpack functions
+    uvec4 multiViewIndices;
+
+    vec4 frustumPlanes[2];
+
+    // .x environment count
+    uvec4 counts;
+    // padding to 256
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
+};
+
+// sets
+// Input Textures
+layout(set = 0, binding = 0, r32ui) uniform readonly uimage2D prevDepthTex;
+layout(set = 0, binding = 1, r16ui) uniform readonly uimage2D dilatedDepthTex;
+layout(set = 0, binding = 2) uniform sampler uSampler;
+layout(set = 0, binding = 3, rg16f) uniform readonly image2D dilatedMotionTex;
+layout(set = 0, binding = 4) uniform texture2D prevDilatedMotionTex;
+layout(set = 0, binding = 5) uniform texture2D colorTex;
+layout(set = 0, binding = 6) uniform texture2D velocityTex;
+
+// Output Textures
+layout(set = 0, binding = 7, rgba16f) uniform writeonly image2D adjustedColorDepthClipTex;
+layout(set = 0, binding = 8, rg16f) uniform writeonly image2D dilatedReactiveMasksTex;
+
+layout(set = 0, binding = 12, std140) uniform uCameraMatrices
+{
+    DefaultCameraMatrixStruct uCameras[16];
+};
+
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
+
+const float cReconstructedDepthBilinearWeightThreshold = 0.00001;
+const float cMotionVectorVelocityEpsilon = 1e-02f;
+const float cKsep = 1.37e-05f;
+const float cMaxSimilarityPowerBias = 6.0f;
+
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+//---------------- Utility Functions ------------------//
+
+ivec2 RenderSize() { return ivec2(uPc.viewportSizeInvSize.x, uPc.viewportSizeInvSize.y); }
+vec2 RenderSizeInv() { return uPc.viewportSizeInvSize.zw; }
+vec2 RenderSizeVec2() { return uPc.viewportSizeInvSize.xy; }
+vec2 DisplaySizeVec2() { return uPc.viewportSizeInvSize.xy; }
+vec2 DisplaySizeInv() { return uPc.viewportSizeInvSize.zw; }
+ivec2 DisplaySize() { return ivec2(uPc.viewportSizeInvSize.xy); }
+
+vec2 GetNearFar()
+{
+    const float a = uCameras[0].proj[2][2];
+    const float b = uCameras[0].proj[3][2];
+    const float near = b / (a - 1.0);
+    const float far = b / (1.0 + a);
+
+    return vec2(near, far);
+}
+
+float GetMaxDistanceInMeters() { return GetNearFar().y; }
+
+vec2 ClampUv(vec2 uv, ivec2 size) {
+    vec2 invSize = vec2(1.0) / vec2(size);
+    return clamp(uv, invSize * 0.5, vec2(1.0) - invSize * 0.5);
+}
+
+vec2 saturate(vec2 x)
+{
+    return clamp(x, 0.0, 1.0);
+}
+
+vec3 saturate(vec3 x)
+{
+    return clamp(x, 0.0, 1.0);
+}
+
+float LoadReconstructedPrevDepth(ivec2 coord) {
+    return uintBitsToFloat(imageLoad(prevDepthTex, coord).r);
+}
+
+float LoadDilatedDepth(ivec2 coord) {
+    uint packed = imageLoad(dilatedDepthTex, coord).r;
+    return float(packed) / 65535.0;
+}
+
+vec2 LoadDilatedMotionVector(ivec2 coord) {
+    return imageLoad(dilatedMotionTex, coord).rg;
+}
+
+vec2 SamplePreviousDilatedMotionUV(vec2 uv) {
+    vec2 clampedUv = ClampUv(uv, RenderSize());
+    return texture(sampler2D(prevDilatedMotionTex, uSampler), clampedUv).rg;
+}
+
+vec2 LoadInputMotionPixels(ivec2 coord) {
+    vec2 uv = (vec2(coord) + 0.5) * RenderSizeInv();
+    return texture(sampler2D(velocityTex, uSampler), uv).rg;
+}
+
+vec3 LoadInputColor(ivec2 coord) {
+    vec2 uv = (vec2(coord) + 0.5) * uPc.viewportSizeInvSize.zw;
+    return max(vec3(0.0), texture(sampler2D(colorTex, uSampler), uv).rgb);
+}
+
+float LoadPreviousDepth(ivec2 coord) { // r32ui -> float
+    return uintBitsToFloat(imageLoad(prevDepthTex, coord).r);
+}
+uint LoadDilatedDepthR16UI(ivec2 coord) { // r16ui
+    return imageLoad(dilatedDepthTex, coord).r;
+}
+vec2 LoadDilatedMotionUV(ivec2 coord) { // rg16f (UV space)
+    return imageLoad(dilatedMotionTex, coord).rg;
+}
+
+float DecodeR16UIToDepth(uint encoded) {
+    return float(encoded) / 65535.0;
+}
+float LoadDilatedDepthProj(ivec2 coord) { // Combined load & decode
+    return DecodeR16UIToDepth(LoadDilatedDepthR16UI(coord));
+}
+
+bool OnScreen(ivec2 pos, ivec2 size) {
+    return (pos.x >= 0 && pos.y >= 0 && pos.x < size.x && pos.y < size.y);
+}
+
+float ProjectionDepthToViewDepth(float projDepth) 
+{
+    vec2 nearFar = GetNearFar();
+    float n = nearFar.x;
+    float f = nearFar.y;
+    if (projDepth >= 1.0 - 0.00001) return f;
+    if (projDepth <= 0.0) return n;
+    return (n * f) / (f * (1.0 - projDepth) + n * projDepth);
+}
+
+float ViewDepthToMeters(float viewDepth) {
+    return viewDepth;
+}
+float ProjectionDepthToMeters(float projDepth) {
+    return ViewDepthToMeters(ProjectionDepthToViewDepth(projDepth));
+}
+
+/*
+Aces tonemapping.
+https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+*/
+vec3 TonemapAces(vec3 x)
+{
+    const float a = 2.51f;
+    const float b = 0.03f;
+    const float c = 2.43f;
+    const float d = 0.59f;
+    const float e = 0.14f;
+    return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+vec3 Tonemap(vec3 rgb)
+{
+    return rgb / (max(max(0.f, rgb.r), max(rgb.g, rgb.b)) + 1.f).xxx;
+}
+
+vec3 InverseTonemap(vec3 rgb)
+{
+    return rgb / max(1e-0001, 1.f - max(rgb.r, max(rgb.g, rgb.b))).xxx;
+}
+
+vec3 GetViewSpacePosition(ivec2 coord, ivec2 size, float projDepth) {
+    vec2 uv = (vec2(coord) + 0.5) / vec2(size);
+    vec2 ndcXY = uv * 2.0 - 1.0;
+    float ndcZ = projDepth * 2.0 - 1.0;
+    vec4 ndcPos = vec4(ndcXY, ndcZ, 1.0);
+    vec4 viewPosHomo = uCameras[0].projInv * ndcPos;
+    if (abs(viewPosHomo.w) < 0.00001) return vec3(0.0);
+    return viewPosHomo.xyz / viewPosHomo.w;
+}
+
+
+struct BilinearSamplingData {
+    ivec2 basePos;
+    ivec2 offsets[4];
+    float weights[4];
+};
+BilinearSamplingData GetBilinearSamplingData(vec2 fUV, ivec2 iSize) {
+    BilinearSamplingData d;
+    vec2 pixelPos = fUV * vec2(iSize);
+    vec2 floorPos = floor(pixelPos - 0.5);
+    vec2 frac = pixelPos - 0.5 - floorPos;
+    d.basePos = ivec2(floorPos);
+    d.offsets[0] = ivec2(0, 0); d.offsets[1] = ivec2(1, 0);
+    d.offsets[2] = ivec2(0, 1); d.offsets[3] = ivec2(1, 1);
+    d.weights[0] = (1.0 - frac.x) * (1.0 - frac.y);
+    d.weights[1] = frac.x * (1.0 - frac.y);
+    d.weights[2] = (1.0 - frac.x) * frac.y;
+    d.weights[3] = frac.x * frac.y;
+    return d;
+}
+
+float PreExposure()
+{
+    return 1.0f;
+}
+
+float Exposure()
+{
+    return 0.7;
+}
+
+vec3 PrepareRgb(vec3 color) 
+{
+    color /= PreExposure();
+    color *= Exposure();
+    return saturate(color);
+}
+
+float EvaluateSurfaceContinuity(ivec2 pos) {
+    float d0_proj = LoadPreviousDepth(pos + ivec2(0, -1));
+    float d1_proj = LoadPreviousDepth(pos + ivec2(0,  0));
+    float d2_proj = LoadPreviousDepth(pos + ivec2(0,  1));
+    float d0_view = ProjectionDepthToViewDepth(d0_proj);
+    float d1_view = ProjectionDepthToViewDepth(d1_proj);
+    float d2_view = ProjectionDepthToViewDepth(d2_proj);
+    // Check using relative threshold
+    bool stepUp   = (d0_view - d1_view) > (d1_view * 0.01);
+    bool stepDown = (d1_view - d2_view) > (d2_view * 0.01);
+    return (stepUp && stepDown) ? 0.0 : 1.0;
+}
+
+float ComputeDepthClipFactor(vec2 reprojectedUv, float currentDilatedDepthProj) {
+    ivec2 size = RenderSize();
+    float currentDilatedDepthView = ProjectionDepthToViewDepth(currentDilatedDepthProj);
+    BilinearSamplingData bilinearInfo = GetBilinearSamplingData(reprojectedUv, size);
+    float accumulatedClipTerm = 0.0;
+    float totalWeight = 0.0;
+
+    for (int i = 0; i < 4; i++) {
+        ivec2 samplePos = bilinearInfo.basePos + bilinearInfo.offsets[i];
+        float weight = bilinearInfo.weights[i];
+        if (weight > cReconstructedDepthBilinearWeightThreshold && OnScreen(samplePos, size)) {
+            float prevDepthProj = LoadPreviousDepth(samplePos);
+            float prevDepthView = ProjectionDepthToViewDepth(prevDepthProj);
+            float depthDiffView = currentDilatedDepthView - prevDepthView;
+
+            if (depthDiffView > 0.0) {
+                float planeDepthProj = max(prevDepthProj, currentDilatedDepthProj);
+                float planeDepthView = ProjectionDepthToViewDepth(planeDepthProj);
+
+                vec3 centerViewPos = GetViewSpacePosition(ivec2(RenderSizeVec2() * 0.5), size, planeDepthProj);
+                vec3 cornerViewPos = GetViewSpacePosition(ivec2(0, 0), size, planeDepthProj);
+                float centerLength = length(centerViewPos);
+                float Kfov = (centerLength > 0.001) ? length(cornerViewPos) / centerLength : 1.0;
+                float halfViewportDiagonal = length(RenderSizeVec2());
+                float depthThresholdView = max(currentDilatedDepthView, prevDepthView);
+                float requiredDepthSeparationView = cKsep * Kfov * halfViewportDiagonal * depthThresholdView;
+                float resolutionFactor = clamp(length(RenderSizeVec2()) / length(vec2(1920.0, 1080.0)), 0.0, 1.0);
+                float power = mix(1.0, 3.0, resolutionFactor);
+                float clipTerm = pow(clamp(requiredDepthSeparationView / depthDiffView, 0.0, 1.0), power);
+
+                accumulatedClipTerm += clipTerm * weight;
+                totalWeight += weight;
+            }
+        }
+    }
+    if (totalWeight <= 0.0) return 0.0;
+    return clamp(1.0 - (accumulatedClipTerm / totalWeight), 0.0, 1.0);
+}
+
+float ComputeMotionDivergence(ivec2 pos) {
+    ivec2 size = RenderSize();
+    float minConvergence = 1.0;
+    vec2 motionCenterPixels = LoadInputMotionPixels(pos);
+    float centerMotionLengthPixels = length(motionCenterPixels);
+    float maxMotionLengthPixels = centerMotionLengthPixels;
+    vec2 motionCenterNorm = vec2(0.0);
+    if (centerMotionLengthPixels > cMotionVectorVelocityEpsilon) {
+        motionCenterNorm = motionCenterPixels / centerMotionLengthPixels;
+    }
+
+    for (int y = -1; y <= 1; ++y) {
+        for (int x = -1; x <= 1; ++x) {
+            ivec2 samplePos = pos + ivec2(x, y);
+            vec2 motionSamplePixels = vec2(0.0);
+            if (OnScreen(samplePos, size)) {
+                motionSamplePixels = LoadInputMotionPixels(samplePos);
+            }
+
+            float sampleMotionLengthPixels = length(motionSamplePixels);
+            maxMotionLengthPixels = max(maxMotionLengthPixels, sampleMotionLengthPixels);
+
+            if (centerMotionLengthPixels > cMotionVectorVelocityEpsilon && sampleMotionLengthPixels > cMotionVectorVelocityEpsilon) {
+                vec2 motionSampleNorm = motionSamplePixels / sampleMotionLengthPixels;
+                minConvergence = min(minConvergence, dot(motionSampleNorm, motionCenterNorm));
+            } else if (centerMotionLengthPixels <= cMotionVectorVelocityEpsilon && sampleMotionLengthPixels <= cMotionVectorVelocityEpsilon) {
+                minConvergence = min(minConvergence, 1.0);
+            } else {
+                 minConvergence = min(minConvergence, 0.0);
+            }
+        }
+    }
+
+    float divergence = clamp(1.0 - minConvergence, 0.0, 1.0);
+    float maxMotionLengthUV = length(maxMotionLengthPixels * RenderSizeInv());
+    divergence *= clamp(maxMotionLengthUV / 0.01, 0.0, 1.0);
+    return divergence;
+}
+
+float ComputeDepthDivergence(ivec2 pos) {
+    ivec2 size = RenderSize();
+    float maxDistMeters = GetMaxDistanceInMeters();
+    float depthMinMeters = maxDistMeters;
+    float depthMaxMeters = 0.0f;
+    bool maxDistFound = false;
+
+    for (int y = -1; y <= 1; ++y) {
+        for (int x = -1; x <= 1; ++x) {
+            ivec2 samplePos = pos + ivec2(x, y);
+            float depthMeters = maxDistMeters;
+            if (OnScreen(samplePos, size)) {
+                 float depthProj = LoadDilatedDepthProj(samplePos);
+                 depthMeters = ProjectionDepthToMeters(depthProj);
+            }
+            if (isinf(depthMeters)) depthMeters = maxDistMeters;
+            depthMeters = min(depthMeters, maxDistMeters);
+
+            maxDistFound = maxDistFound || (abs(depthMeters - maxDistMeters) < 0.01);
+            depthMinMeters = min(depthMinMeters, depthMeters);
+            depthMaxMeters = max(depthMaxMeters, depthMeters);
+        }
+    }
+
+    float divergence = 0.0;
+    if (depthMaxMeters > 0.01) {
+        divergence = (1.0 - depthMinMeters / depthMaxMeters);
+    }
+    if (maxDistFound) {
+        divergence = 0.0;
+    }
+    return clamp(divergence, 0.0, 1.0);
+}
+
+float ComputeTemporalMotionDivergence(ivec2 pos) {
+    vec2 uv = (vec2(pos) + 0.5) * RenderSizeInv();
+    vec2 currentMotionUV = LoadDilatedMotionUV(pos);
+    vec2 currentMotionPixels = currentMotionUV * DisplaySizeVec2();
+    float currentMotionPixelDist = length(currentMotionPixels);
+
+    vec2 reprojectedUv = uv - currentMotionUV;
+    vec2 prevMotionUV = SamplePreviousDilatedMotionUV(reprojectedUv);
+    float prevMotionLengthUV = length(prevMotionUV);
+    float currentMotionLengthUV = length(currentMotionUV);
+
+    float divergence = 0.0;
+    if (currentMotionPixelDist > 1.0) {
+        float motionLengthRatio = 0.0;
+        if (currentMotionLengthUV > 0.0001) {
+            motionLengthRatio = clamp(prevMotionLengthUV / currentMotionLengthUV, 0.0, 1.0);
+        }
+        divergence = 1.0 - motionLengthRatio;
+        float distanceFactor = clamp(pow(currentMotionPixelDist / 20.0, 3.0), 0.0, 1.0);
+        divergence = mix(0.0, divergence, distanceFactor);
+    }
+    return clamp(divergence, 0.0, 1.0);
+}
+
+vec2 PreProcessReactiveMasks(ivec2 pos, float motionDivergenceFactor) 
+{
+    ivec2 size = RenderSize();
+    vec2 finalReactiveFactor = vec2(0.0, motionDivergenceFactor);
+
+    return clamp(finalReactiveFactor, 0.0, 1.0);
+}
+
+vec3 RGBToYCoCg(vec3 fRgb)
+{
+    vec3 fYCoCg;
+
+    fYCoCg = vec3(
+        0.25f * fRgb.r + 0.5f * fRgb.g + 0.25f * fRgb.b,
+        0.5f * fRgb.r - 0.5f * fRgb.b,
+        -0.25f * fRgb.r + 0.5f * fRgb.g - 0.25f * fRgb.b);
+
+    return fYCoCg;
+}
+vec3 ComputePreparedInputColor(ivec2 pos) 
+{
+    vec3 rgb = LoadInputColor(pos);
+    rgb = PrepareRgb(rgb);
+    rgb = Tonemap(rgb);
+    return RGBToYCoCg(rgb);
+}
+
+
+#define cTgs 16
+
+
+layout(local_size_x = cTgs, local_size_y = cTgs, local_size_z = 1) in;
+void main()
+{
+    const ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 size = RenderSize();
+
+
+    if (gid.x >= int(uPc.viewportSizeInvSize.x)
+     || gid.y >= int(uPc.viewportSizeInvSize.y)) {
+        return;
+    }
+
+    vec2 uv = (vec2(gid) + 0.5) * RenderSizeInv();
+    vec2 dilatedMotionUV = LoadDilatedMotionUV(gid);
+    uint dilatedDepthEncoded = LoadDilatedDepthR16UI(gid);
+    float dilatedDepthProj = DecodeR16UIToDepth(dilatedDepthEncoded);
+
+    vec2 reprojectedUv = uv - dilatedMotionUV; 
+    float depthClipFactor = ComputeDepthClipFactor(reprojectedUv, dilatedDepthProj);
+    float continuityFactor = EvaluateSurfaceContinuity(gid);
+    depthClipFactor *= continuityFactor;
+
+    vec3 preparedColorYCoCg = ComputePreparedInputColor(gid);
+
+    float motionDivergence = ComputeMotionDivergence(gid);
+    float depthDivergence = ComputeDepthDivergence(gid);
+    float temporalMotionDivergence = ComputeTemporalMotionDivergence(gid);
+
+    float combinedTemporalDivergence = clamp(temporalMotionDivergence - depthDivergence, 0.0, 1.0);
+    float finalMotionDivergenceFactor = max(motionDivergence, combinedTemporalDivergence);
+
+    vec2 dilatedReactiveFactors = PreProcessReactiveMasks(gid, finalMotionDivergenceFactor);
+
+   vec4 outputColorClip = vec4(preparedColorYCoCg, depthClipFactor);
+
+    imageStore(adjustedColorDepthClipTex, gid,outputColorClip);
+
+    imageStore(dilatedReactiveMasksTex, gid, vec4(dilatedReactiveFactors,0.0f,0.0f));
+}

@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Stack Property value/modifier resetable
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-10-18
  */
 
 #ifndef META_INTERFACE_PROPERTY_STACK_RESETABLE_H
@@ -36,9 +28,20 @@ inline ResetResult operator|(ResetResult l, ResetResult r)
 
 META_REGISTER_INTERFACE(IStackResetable, "b3f9bdc6-6b6f-43ff-b727-86f21e4e0c8d")
 
+/**
+ * @brief Interface to control what resetting property value does
+ *
+ * When ResetValue for property is called, the values and modifiers that has implemented with interface
+ * can alter the result. This allows to have sticky values or modifiers which are not removed when resetting.
+ */
 class IStackResetable : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IStackResetable)
 public:
+    /**
+     * @brief Function that is evaluated on ResetValue of property
+     * @param defaultValue The default value of the property
+     * @return Result of the evaluation
+     */
     virtual ResetResult ProcessOnReset(const IAny& defaultValue) = 0;
 };
 

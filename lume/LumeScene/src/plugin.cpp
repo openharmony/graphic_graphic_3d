@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: "plugin registrations"
+ * Author: Jani Kattelus
+ * Create: 2021-09-14
  */
 
 // clang-format off
@@ -28,8 +20,8 @@
 
 #include <meta/base/plugin.h>
 
+#include "application_context.h"
 #include "asset/asset_object.h"
-#include "bitmap.h"
 #include "component/animation_component.h"
 #include "component/camera_component.h"
 #include "component/environment_component.h"
@@ -43,15 +35,11 @@
 #include "component/text_component.h"
 #include "component/transform_component.h"
 #include "core/ecs_object.h"
-#include "ecs_animation.h"
 #include "ecs_component/entity_owner_component_info.h"
-#include "environment.h"
-#include "mesh/material.h"
 #include "mesh/mesh.h"
 #include "mesh/mesh_creator.h"
 #include "mesh/mesh_resource.h"
-#include "mesh/shader.h"
-#include "mesh/shader_util.h"
+#include "mesh/sampler.h"
 #include "mesh/submesh.h"
 #include "mesh/texture.h"
 #include "node/camera_node.h"
@@ -63,8 +51,27 @@
 #include "postprocess/postprocess.h"
 #include "postprocess/tonemap.h"
 #include "render_configuration.h"
+#include "render_context.h"
+#include "resource/ecs_animation.h"
+#include "resource/environment.h"
+#include "resource/image.h"
+#include "resource/material.h"
+#include "resource/render_resource_manager.h"
+#include "resource/shader.h"
+#include "resource/types/animation_type.h"
+#include "resource/types/environment_type.h"
+#include "resource/types/gltf_scene_type.h"
+#include "resource/types/image_type.h"
+#include "resource/types/material_type.h"
+#include "resource/types/postprocess_type.h"
+#include "resource/types/scene_type.h"
+#include "resource/types/shader_type.h"
 #include "scene.h"
 #include "scene_manager.h"
+#include "serialization/external_node.h"
+#include "serialization/scene_exporter.h"
+#include "serialization/scene_importer.h"
+#include "serialization/scene_ser.h"
 
 static CORE_NS::IPluginRegister* gPluginRegistry { nullptr };
 
@@ -77,8 +84,14 @@ CORE_END_NAMESPACE()
 
 SCENE_BEGIN_NAMESPACE()
 
+namespace Internal {
 void RegisterEngineAccess();
 void UnregisterEngineAccess();
+void RegisterAnys();
+void UnRegisterAnys();
+void RegisterSerializers();
+void UnRegisterSerializers();
+} // namespace Internal
 
 using namespace CORE_NS;
 
@@ -87,9 +100,12 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     // Initializing dynamic plugin.
     // Plugin registry access via the provided registry instance which is saved here.
     gPluginRegistry = &pluginRegistry;
+
     pluginRegistry.RegisterTypeInfo(ENTITY_OWNER_COMPONENT_TYPE_INFO);
 
-    RegisterEngineAccess();
+    Internal::RegisterAnys();
+    Internal::RegisterEngineAccess();
+    Internal::RegisterSerializers();
 
     META_NS::RegisterObjectType<SceneManager>();
     META_NS::RegisterObjectType<SceneObject>();
@@ -113,9 +129,10 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<RenderMeshComponent>();
     META_NS::RegisterObjectType<NodeComponent>();
     META_NS::RegisterObjectType<TextComponent>();
+    META_NS::RegisterObjectType<MorphComponent>();
 
     META_NS::RegisterObjectType<EcsObject>();
-    META_NS::RegisterObjectType<Bitmap>();
+    META_NS::RegisterObjectType<Image>();
     META_NS::RegisterObjectType<Bloom>();
     META_NS::RegisterObjectType<Tonemap>();
     META_NS::RegisterObjectType<PostProcess>();
@@ -125,14 +142,33 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<RenderConfiguration>();
     META_NS::RegisterObjectType<Material>();
     META_NS::RegisterObjectType<Shader>();
-    META_NS::RegisterObjectType<ShaderUtil>();
     META_NS::RegisterObjectType<SubMesh>();
     META_NS::RegisterObjectType<Mesh>();
     META_NS::RegisterObjectType<MeshCreator>();
     META_NS::RegisterObjectType<MeshResource>();
     META_NS::RegisterObjectType<Texture>();
+    META_NS::RegisterObjectType<Sampler>();
 
     META_NS::RegisterObjectType<AssetObject>();
+
+    META_NS::RegisterObjectType<AnimationResourceType>();
+    META_NS::RegisterObjectType<SceneResourceType>();
+    META_NS::RegisterObjectType<GltfSceneResourceType>();
+    META_NS::RegisterObjectType<ImageResourceType>();
+    META_NS::RegisterObjectType<ShaderResourceType>();
+    META_NS::RegisterObjectType<EnvironmentResourceType>();
+    META_NS::RegisterObjectType<MaterialResourceType>();
+    META_NS::RegisterObjectType<PostProcessResourceType>();
+    META_NS::RegisterObjectType<SceneNodeSer>();
+    META_NS::RegisterObjectType<SceneExternalNodeSer>();
+    META_NS::RegisterObjectType<ExternalAttachment>();
+    META_NS::RegisterObjectType<SceneExporter>();
+    META_NS::RegisterObjectType<SceneImporter>();
+    META_NS::RegisterObjectType<RenderResourceManager>();
+    META_NS::RegisterObjectType<ExternalNode>();
+
+    META_NS::RegisterObjectType<ApplicationContext>();
+    META_NS::RegisterObjectType<RenderContext>();
 
     return {};
 }
@@ -160,9 +196,10 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<RenderMeshComponent>();
     META_NS::UnregisterObjectType<NodeComponent>();
     META_NS::UnregisterObjectType<TextComponent>();
+    META_NS::UnregisterObjectType<MorphComponent>();
 
     META_NS::UnregisterObjectType<EcsObject>();
-    META_NS::UnregisterObjectType<Bitmap>();
+    META_NS::UnregisterObjectType<Image>();
     META_NS::UnregisterObjectType<Bloom>();
     META_NS::UnregisterObjectType<Tonemap>();
     META_NS::UnregisterObjectType<PostProcess>();
@@ -172,16 +209,37 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<RenderConfiguration>();
     META_NS::UnregisterObjectType<Material>();
     META_NS::UnregisterObjectType<Shader>();
-    META_NS::UnregisterObjectType<ShaderUtil>();
     META_NS::UnregisterObjectType<SubMesh>();
     META_NS::UnregisterObjectType<Mesh>();
     META_NS::UnregisterObjectType<MeshCreator>();
     META_NS::UnregisterObjectType<MeshResource>();
     META_NS::UnregisterObjectType<Texture>();
+    META_NS::UnregisterObjectType<Sampler>();
 
     META_NS::UnregisterObjectType<AssetObject>();
 
-    UnregisterEngineAccess();
+    META_NS::UnregisterObjectType<AnimationResourceType>();
+    META_NS::UnregisterObjectType<SceneResourceType>();
+    META_NS::UnregisterObjectType<GltfSceneResourceType>();
+    META_NS::UnregisterObjectType<ImageResourceType>();
+    META_NS::UnregisterObjectType<ShaderResourceType>();
+    META_NS::UnregisterObjectType<EnvironmentResourceType>();
+    META_NS::UnregisterObjectType<MaterialResourceType>();
+    META_NS::UnregisterObjectType<PostProcessResourceType>();
+    META_NS::UnregisterObjectType<SceneNodeSer>();
+    META_NS::UnregisterObjectType<SceneExternalNodeSer>();
+    META_NS::UnregisterObjectType<ExternalAttachment>();
+    META_NS::UnregisterObjectType<SceneExporter>();
+    META_NS::UnregisterObjectType<SceneImporter>();
+    META_NS::UnregisterObjectType<RenderResourceManager>();
+    META_NS::UnregisterObjectType<ExternalNode>();
+
+    META_NS::UnregisterObjectType<ApplicationContext>();
+    META_NS::UnregisterObjectType<RenderContext>();
+
+    Internal::UnRegisterSerializers();
+    Internal::UnregisterEngineAccess();
+    Internal::UnRegisterAnys();
 
     // remove all weak refs still in the object registry referring to scene
     META_NS::GetObjectRegistry().Purge();

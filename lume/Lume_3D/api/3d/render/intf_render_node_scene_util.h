@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,8 @@
 
 #include <3d/render/render_data_defines_3d.h>
 #include <base/containers/array_view.h>
+#include <base/containers/string.h>
+#include <base/containers/string_view.h>
 #include <base/containers/vector.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/render_data_structures.h>
@@ -108,6 +110,14 @@ public:
      */
     virtual SceneRenderDataStores GetSceneRenderDataStores(
         const RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, BASE_NS::string_view sceneDataStoreName) = 0;
+
+    /** Get scene based render data store name.
+     * @param sceneRds Scene render data store names.
+     * @param dataStoreName Base render data store names.
+     * @return Scene name of the render data store. (Typically scene data store prefix + data store name)
+     */
+    virtual BASE_NS::string GetSceneRenderDataStore(
+        const SceneRenderDataStores& sceneRds, BASE_NS::string_view dataStoreName) = 0;
 
     /** Fills viewport description matching the given camera.
      * @param camera Render camera whos resolution and viewport are used.

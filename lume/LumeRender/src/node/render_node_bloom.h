@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,13 +16,15 @@
 #ifndef RENDER_NODE_RENDER_NODE_BLOOM_H
 #define RENDER_NODE_RENDER_NODE_BLOOM_H
 
+#include <postprocesses/render_post_process_bloom_node.h>
+
 #include <base/util/uid.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_render_node.h>
+#include <render/nodecontext/intf_render_post_process.h>
+#include <render/nodecontext/intf_render_post_process_node.h>
 #include <render/render_data_structures.h>
-
-#include "node/render_bloom.h"
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
@@ -54,8 +56,8 @@ private:
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     void ParseRenderNodeInputs();
+    void CreatePostProcessInterface();
     void ProcessPostProcessConfiguration(const IRenderNodeRenderDataStoreManager& dataStoreMgr);
-    void UpdatePostProcessData(const PostProcessConfiguration& postProcessConfiguration);
 
     // Json resources which might need re-fetching
     struct JsonInputs {
@@ -68,9 +70,13 @@ private:
     RenderNodeHandles::InputRenderPass inputRenderPass_;
     RenderNodeHandles::InputResources inputResources_;
 
-    RenderBloom renderBloom_;
+    struct PostProcessInterfaces {
+        IRenderPostProcess::Ptr postProcess;
+        IRenderPostProcessNode::Ptr postProcessNode;
+    };
+    PostProcessInterfaces ppRenderBloomInterface_;
+
     PostProcessConfiguration ppConfig_;
-    RenderHandleReference postProcessUbo_;
 
     bool valid_ { false };
 };

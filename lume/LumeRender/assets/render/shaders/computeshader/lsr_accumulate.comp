@@ -1,0 +1,916 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// Lume Super Resolution
+// Accumulate pass
+
+// includes
+#include "common/bloom_common.h"
+#include "render/shaders/common/render_color_conversion_common.h"
+#include "render/shaders/common/render_post_process_structs_common.h"
+
+// camera data
+struct DefaultCameraMatrixStruct {
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+
+    mat4 viewInv;
+    mat4 projInv;
+    mat4 viewProjInv;
+
+    mat4 viewPrevFrame;
+    mat4 projPrevFrame;
+    mat4 viewProjPrevFrame;
+
+    mat4 shadowViewProj;
+    mat4 shadowViewProjInv;
+
+    // .xy = jitter offset, .zw = jitter offset with baked screen size
+    vec4 jitter;
+    vec4 jitterPrevFrame;
+
+    // .xy = unique id (64-bit), .zw = layer mask (64 bit)
+    uvec4 indices;
+    // .x multi-view camera additional layer count, .yzw 3 multi-view camera indices
+    // yzw are packed, use unpack functions
+    uvec4 multiViewIndices;
+
+    vec4 frustumPlanes[2];
+
+    // .x environment count
+    uvec4 counts;
+    // padding to 256
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
+};
+
+// sets
+layout(set = 0, binding = 2) uniform sampler uSampler;
+
+layout(set = 0, binding = 0) uniform texture2D adjustedColorDepthClipTex; // rgba16f
+layout(set = 0, binding = 1) uniform texture2D dilatedReactiveMaskTex;    // rg16f
+layout(set = 0, binding = 3, r8) uniform image2D newLocksMask;            // r8
+layout(set = 0, binding = 4, rg16f) uniform image2D dilatedMotionTex;
+
+layout(set = 0, binding = 5) uniform texture2D historyColorReactiveTex; // rgba16f
+layout(set = 0, binding = 6) uniform texture2D historyLockStatusTex;    // rg16f
+layout(set = 0, binding = 7, rgba8) uniform image2D historyLumaTex;          // rgba16f
+
+layout(set = 0, binding = 8, rgba16f) uniform writeonly image2D out_HistoryColorReactive;
+layout(set = 0, binding = 9, rg16f) uniform writeonly image2D out_HistoryLockStatus;
+layout(set = 0, binding = 10, rgba8) uniform writeonly image2D out_HistoryLuma;
+
+layout(set = 0, binding = 11, rgba16f) uniform writeonly image2D out_FinalColor;
+layout(set = 0, binding = 13, r16f) uniform image2D luminanceTex; // r16
+
+// Push constants
+struct AccumulatePassPushConstant {
+    vec4 displaySizeInvSize;
+    vec4 viewportSizeInvSize;
+    float exposure;
+    uint frameIndex;
+    uint jitterSequenceLength;
+    float avgLanczosWeightPerFrame;
+    float maxAccumulationLanczosWeight;
+};
+
+struct AccumulateOutputs {
+    vec4 fColorAndWeight;
+    vec2 fLockStatus;
+    vec4 fLumaHistory;
+    vec3 fColor;
+};
+
+layout(push_constant, std430) uniform uPushConstantBlock
+{
+    AccumulatePassPushConstant uPc;
+};
+
+layout(set = 0, binding = 12, std140) uniform uCameraMatrices
+{
+    DefaultCameraMatrixStruct uCameras[16];
+};
+
+// --- Constants ---
+const float LSR_EPSILON = 1e-05f;
+const float LSR_FLT_MAX = 3.402823466e+38f;
+const int iLanczos2SampleCount = 9;
+const float fUpsampleLanczosWeightScale = 1.0f / 9.0f;
+
+const int LUMA_N_MINUS_1 = 0;
+const int LUMA_N_MINUS_2 = 1;
+const int LUMA_N_MINUS_3 = 2;
+const int LUMA_N_MINUS_4 = 3;
+
+const int LSR_LOCK_LIFETIME_REMAINING = 0;
+const int LSR_LOCK_TEMPORAL_LUMA = 1;
+
+// Luma instability variables
+const float kUnorm8Step     = 1.0 / 255.0;
+const float kInvUnorm8Step  = 255.0;
+
+//---------------- Utility & Helper Functions ------------------//
+
+ivec2 DisplaySize()
+{
+    return ivec2(uPc.displaySizeInvSize.xy);
+}
+vec2 DisplaySizeVec2()
+{
+    return uPc.displaySizeInvSize.xy;
+}
+vec2 InvDisplaySize()
+{
+    return uPc.displaySizeInvSize.zw;
+}
+ivec2 RenderSize()
+{
+    return ivec2(uPc.viewportSizeInvSize.xy);
+}
+vec2 RenderSizeVec2()
+{
+    return uPc.viewportSizeInvSize.xy;
+}
+vec2 InvRenderSize()
+{
+    return uPc.viewportSizeInvSize.zw;
+}
+vec2 UpscaleFactor()
+{
+    return DisplaySizeVec2() * InvRenderSize();
+}
+vec2 DownscaleFactor()
+{
+    return uPc.viewportSizeInvSize.xy * uPc.displaySizeInvSize.zw;
+}
+float Exposure()
+{
+    return 0.7f;
+}
+float PreviousFramePreExposure()
+{
+    return 1.0f;
+}
+uint FrameIndex()
+{
+    return 1;
+}
+vec2 JitterPixels()
+{
+    return uCameras[0].jitter.xy;
+}
+vec2 JitterUV()
+{
+    return uCameras[0].jitter.zw;
+}
+// vec2 JitterUV() { return vec2(0); }
+// vec2 JitterPrevUV() { return vec2(0); }
+
+uint JitterSequenceLength()
+{
+    return 16;
+}
+float AverageLanczosWeightPerFrame()
+{
+    return 1.0 / 9.0;
+}
+float MaxAccumulationLanczosWeight()
+{
+    return 0.95;
+}
+
+float saturate(float x)
+{
+    return clamp(x, 0.0, 1.0);
+}
+vec2 saturate(vec2 x)
+{
+    return clamp(x, 0.0, 1.0);
+}
+
+vec3 saturate(vec3 x)
+{
+    return clamp(x, 0.0, 1.0);
+}
+
+bool IsUvInside(vec2 uv)
+{
+    return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
+}
+
+vec2 ClampUv(vec2 uv)
+{
+    return clamp(uv, vec2(0.0), vec2(1.0));
+}
+
+vec3 Tonemap(vec3 rgb)
+{
+    return rgb / (max(max(0.f, rgb.r), max(rgb.g, rgb.b)) + 1.f).xxx;
+}
+
+vec3 InverseTonemap(vec3 rgb)
+{
+    return rgb / max(1e-0001, 1.f - max(rgb.r, max(rgb.g, rgb.b))).xxx;
+}
+
+// --- Sampling Functions ---
+
+struct CatmullRomSamples9Tap {
+    vec2 UV[3];
+    vec2 Weight[3];
+    float FinalMultiplier;
+};
+
+CatmullRomSamples9Tap Get2DCatmullRom9Kernel(vec2 uv, vec2 size, vec2 invSize)
+{
+    CatmullRomSamples9Tap catmullSamples;
+    vec2 samplePos = uv * size;
+    vec2 texPos1 = floor(samplePos - 0.5f) + 0.5f;
+    vec2 f = samplePos - texPos1;
+
+    vec2 w0 = f * (-0.5f + f * (1.0f - 0.5f * f));
+    vec2 w1 = 1.0f + f * f * (-2.5f + 1.5f * f);
+    vec2 w2 = f * (0.5f + f * (2.0f - 1.5f * f));
+    vec2 w3 = f * f * (-0.5f + 0.5f * f);
+
+    catmullSamples.Weight[0] = w0;
+    catmullSamples.Weight[1] = w1 + w2;
+    catmullSamples.Weight[2] = w3;
+
+    vec2 offset12 = w2 / (w1 + w2);
+
+    // Compute the final UV coordinates we'll use for sampling the texture
+    catmullSamples.UV[0] = texPos1 - 1.0;
+    catmullSamples.UV[1] = texPos1 + 2.0;
+    catmullSamples.UV[2] = texPos1 + offset12;
+
+    catmullSamples.UV[0] *= invSize;
+    catmullSamples.UV[1] *= invSize;
+    catmullSamples.UV[2] *= invSize;
+    return catmullSamples;
+}
+
+// 1D Lanczos 2 Kernel function
+float Lanczos2(float x)
+{
+    x = abs(x);
+    if (x < LSR_EPSILON)
+        return 1.0;
+    if (x >= 2.0)
+        return 0.0;
+
+    float PI = 3.141592653589793;
+    float pix = PI * x;
+    float pix2 = PI * x * 0.5;
+
+    float s1 = sin(pix) / max(pix, LSR_EPSILON);
+    float s2 = sin(pix2) / max(pix2, LSR_EPSILON);
+
+    return s1 * s2;
+}
+
+vec4 SampleHistoryColorKernel(vec2 fUvSample)
+{
+    CatmullRomSamples9Tap samples = Get2DCatmullRom9Kernel(fUvSample, DisplaySize(), InvDisplaySize());
+
+    vec4 fColor = vec4(0.0f);
+
+    vec4 fColor00 = texture(sampler2D(historyColorReactiveTex, uSampler), samples.UV[0]);
+    fColor += fColor00 * samples.Weight[0].x * samples.Weight[0].y;
+    vec4 fColor20 = texture(sampler2D(historyColorReactiveTex, uSampler), vec2(samples.UV[2].x, samples.UV[0].y));
+    fColor += fColor20 * samples.Weight[1].x * samples.Weight[0].y;
+    fColor += texture(sampler2D(historyColorReactiveTex, uSampler), vec2(samples.UV[1].x, samples.UV[0].y)) *
+              samples.Weight[2].x * samples.Weight[0].y;
+
+    vec4 fColor02 = texture(sampler2D(historyColorReactiveTex, uSampler), vec2(samples.UV[0].x, samples.UV[2].y));
+    fColor += texture(sampler2D(historyColorReactiveTex, uSampler), vec2(samples.UV[0].x, samples.UV[2].y)) *
+              samples.Weight[0].x * samples.Weight[1].y;
+    vec4 fColor22 = texture(sampler2D(historyColorReactiveTex, uSampler), samples.UV[2]);
+    fColor += fColor22 * samples.Weight[1].x * samples.Weight[1].y;
+    fColor += texture(sampler2D(historyColorReactiveTex, uSampler), vec2(samples.UV[1].x, samples.UV[2].y)) *
+              samples.Weight[2].x * samples.Weight[1].y;
+
+    fColor += texture(sampler2D(historyColorReactiveTex, uSampler), vec2(samples.UV[0].x, samples.UV[1].y)) *
+              samples.Weight[0].x * samples.Weight[2].y;
+    fColor += texture(sampler2D(historyColorReactiveTex, uSampler), vec2(samples.UV[2].x, samples.UV[1].y)) *
+              samples.Weight[1].x * samples.Weight[2].y;
+    fColor += texture(sampler2D(historyColorReactiveTex, uSampler), samples.UV[1]) * samples.Weight[2].x *
+              samples.Weight[2].y;
+
+    const vec4 fDeringingSamples[4] = { fColor00, fColor20, fColor02, fColor22 };
+
+    vec4 fDeringingMin = fDeringingSamples[0];
+    vec4 fDeringingMax = fDeringingSamples[0];
+
+    for (int iSampleIndex = 1; iSampleIndex < 4; ++iSampleIndex) {
+        fDeringingMin = min(fDeringingMin, fDeringingSamples[iSampleIndex]);
+        fDeringingMax = max(fDeringingMax, fDeringingSamples[iSampleIndex]);
+    }
+    fColor = clamp(fColor, fDeringingMin, fDeringingMax);
+
+    return fColor;
+}
+
+vec4 SampleAdjustedColorDepthClip(vec2 uv_render_jittered)
+{
+    return texture(sampler2D(adjustedColorDepthClipTex, uSampler), uv_render_jittered);
+}
+vec2 SampleDilatedReactiveMasks(vec2 uv_render_jittered)
+{
+    if (!IsUvInside(uv_render_jittered)) {
+        return vec2(0.0);
+    }
+    return texture(sampler2D(dilatedReactiveMaskTex, uSampler), uv_render_jittered).rg;
+}
+
+float LoadLuminance(ivec2 render_coord)
+{
+    return imageLoad(luminanceTex, render_coord).r;
+}
+
+float LoadNewLockRequest(ivec2 coord_display)
+{
+    return imageLoad(newLocksMask, coord_display).r;
+}
+vec2 LoadMotionVector(vec2 uv_render)
+{
+    ivec2 coord = ivec2(uv_render * RenderSize());
+    return imageLoad(dilatedMotionTex, coord).rg;
+}
+vec2 SampleHistoryLockStatus(vec2 uv_display)
+{
+    return texture(sampler2D(historyLockStatusTex, uSampler), uv_display).rg;
+}
+vec4 SampleHistoryLuma(vec2 uv_display)
+{
+    ivec2 pixel = ivec2(uv_display * DisplaySize() + 0.5);
+    return imageLoad(historyLumaTex, pixel);
+}
+
+// --- Data Structs ---
+struct LockState {
+    bool newLock;
+    bool wasLockedPrevFrame;
+};
+
+struct RectificationBox {
+    vec3 boxCenter;         // Weighted average color (Linear RGB)
+    vec3 boxVec;            // Standard deviation (Linear RGB)
+    vec3 aabbMin;           // Min bounds (Linear RGB)
+    vec3 aabbMax;           // Max bounds (Linear RGB)
+    float fBoxCenterWeight; // Total weight used for averaging
+    // Add sum of squares for proper variance calculation
+    vec3 weightedColorSum;
+    vec3 weightedColorSqSum;
+};
+
+struct AccumulationPassCommonParams {
+    ivec2 iPxHrPos;    // Integer coordinate at Display Res
+    vec2 fHrUv;        // Float UV at Display Res (pixel center)
+    vec2 fLrUv_Sample; // Float UV for sampling Render Res textures (with jitter)
+    vec2 fMotionVector;
+    float fHrVelocity;            // Pixel space velocity magnitude (Display Res)
+    vec2 fReprojectedHrUv;        // UV in previous frame's Display Res space
+    bool bIsExistingSample;       // Was fReprojectedHrUv on screen?
+    bool bIsNewSample;            // Should discard history? (First frame or !bIsExistingSample)
+    float fDilatedReactiveFactor; // Reactive mask X value
+    float fAccumulationMask;      // Reactive mask Y value (Composition/Motion)
+    float fDepthClipFactor;       // Depth clip value
+};
+
+float Lanczos2ApproxSqNoClamp(float x2)
+{
+    float a = (2.0f / 5.0f) * x2 - 1;
+    float b = (1.0f / 4.0f) * x2 - 1;
+    return ((25.0f / 16.0f) * a * a - (25.0f / 16.0f - 1)) * (b * b);
+}
+
+float Lanczos2ApproxSq(float x2)
+{
+    x2 = min(x2, 4.0f);
+    return Lanczos2ApproxSqNoClamp(x2);
+}
+
+void RectificationBoxReset(inout RectificationBox rectificationBox)
+{
+    rectificationBox.fBoxCenterWeight = 0.0f;
+    rectificationBox.boxCenter = vec3(0.0);
+    rectificationBox.boxVec = vec3(0.0);
+    rectificationBox.aabbMin = vec3(LSR_FLT_MAX);
+    rectificationBox.aabbMax = vec3(-LSR_FLT_MAX);
+}
+
+void RectificationBoxAddInitialSample(
+    inout RectificationBox rectificationBox, const vec3 colorSample, const float fSampleWeight)
+{
+    rectificationBox.aabbMin = colorSample;
+    rectificationBox.aabbMax = colorSample;
+
+    vec3 weightedSample = colorSample * fSampleWeight;
+    rectificationBox.boxCenter = weightedSample;
+    rectificationBox.boxVec = colorSample * weightedSample;
+    rectificationBox.fBoxCenterWeight = fSampleWeight;
+}
+
+void RectificationBoxAddSample(
+    bool bInitialSample, inout RectificationBox rectificationBox, const vec3 colorSample, const float fSampleWeight)
+{
+    if (bInitialSample) {
+        RectificationBoxAddInitialSample(rectificationBox, colorSample, fSampleWeight);
+    } else {
+        rectificationBox.aabbMin = min(rectificationBox.aabbMin, colorSample);
+        rectificationBox.aabbMax = max(rectificationBox.aabbMax, colorSample);
+
+        vec3 weightedSample = colorSample * fSampleWeight;
+        rectificationBox.boxCenter += weightedSample;
+        rectificationBox.boxVec += colorSample * weightedSample;
+        rectificationBox.fBoxCenterWeight += fSampleWeight;
+    }
+}
+
+void RectificationBoxComputeVarianceBoxData(inout RectificationBox rectificationBox)
+{
+    rectificationBox.fBoxCenterWeight =
+        (abs(rectificationBox.fBoxCenterWeight) > float(LSR_EPSILON) ? rectificationBox.fBoxCenterWeight : 1.0);
+    rectificationBox.boxCenter /= rectificationBox.fBoxCenterWeight;
+    rectificationBox.boxVec /= rectificationBox.fBoxCenterWeight;
+
+    vec3 stdDev = sqrt(abs(rectificationBox.boxVec - rectificationBox.boxCenter * rectificationBox.boxCenter));
+    rectificationBox.boxVec = stdDev;
+}
+
+// --- Reprojection Related ---
+vec2 GetMotionVector(ivec2 iPxHrPos, vec2 fHrUv)
+{
+    vec2 uv_render = fHrUv;// * DownscaleFactor();
+    uv_render = ClampUv(uv_render);
+    if (!IsUvInside(uv_render)) {
+        return vec2(0.0);
+    }
+    return LoadMotionVector(uv_render);
+}
+
+float GetPxHrVelocity(vec2 motionVector)
+{
+    float vel = length(motionVector);
+    if (vel < 0.01)
+        vel = 0;
+    else
+        vel = length(motionVector * DisplaySizeVec2());
+    return vel;
+}
+
+void ComputeReprojectedUVs(vec2 fHrUv, vec2 motionVector, out vec2 fReprojectedHrUv, out bool bIsExistingSample)
+{
+    fReprojectedHrUv = fHrUv - motionVector;
+    bIsExistingSample = IsUvInside(fReprojectedHrUv);
+}
+
+void ReprojectHistoryColor(
+    vec2 fReprojectedHrUv, out vec3 historyColorYCoCg, out float temporalReactiveFactor, out bool bInMotionLastFrame)
+{
+    vec4 historySample = SampleHistoryColorKernel(fReprojectedHrUv);
+
+    float alpha = historySample.a;
+    bInMotionLastFrame = (alpha < 0.0);
+    temporalReactiveFactor = abs(alpha);
+
+    historyColorYCoCg = historySample.rgb;
+}
+
+LockState ReprojectHistoryLockStatus(vec2 fReprojectedHrUv, ivec2 iPxHrPos, out vec2 reprojectedLockStatus)
+{
+    LockState state;
+
+    float newLockRequest = LoadNewLockRequest(iPxHrPos);
+    state.newLock = (newLockRequest > (127.0 / 255.0));
+
+    reprojectedLockStatus = SampleHistoryLockStatus(fReprojectedHrUv);
+
+    // Check if previous frame was locked based on Lifetime Remaining
+    state.wasLockedPrevFrame = (reprojectedLockStatus[LSR_LOCK_LIFETIME_REMAINING] > 0.0f);
+
+    return state;
+}
+
+AccumulationPassCommonParams InitParams(ivec2 iPxHrPos)
+{
+    AccumulationPassCommonParams params;
+    params.iPxHrPos = iPxHrPos;
+    params.fHrUv = (vec2(iPxHrPos) + 0.5) * InvDisplaySize();
+    vec2 jitterUV = JitterUV();
+
+    vec2 renderUvBase = params.fHrUv;
+    params.fLrUv_Sample = renderUvBase + jitterUV;
+    params.fLrUv_Sample = clamp(params.fLrUv_Sample, vec2(0), vec2(1));
+
+    vec2 sampledMV = GetMotionVector(iPxHrPos, params.fHrUv); // Samples render-res MV texture
+    params.fMotionVector = sampledMV / DownscaleFactor();
+    params.fHrVelocity = GetPxHrVelocity(params.fMotionVector);
+    ComputeReprojectedUVs(params.fHrUv, params.fMotionVector, params.fReprojectedHrUv, params.bIsExistingSample);
+    // Init factors
+    params.fDilatedReactiveFactor = 0.0;
+    params.fAccumulationMask = 0.0;
+    params.fDepthClipFactor = 0.0;
+    params.bIsNewSample = false;
+    return params;
+}
+
+void InitReactiveMaskFactors(inout AccumulationPassCommonParams params)
+{
+    vec2 dilatedMasks = SampleDilatedReactiveMasks(params.fLrUv_Sample);
+    params.fDilatedReactiveFactor = dilatedMasks.x;
+    params.fAccumulationMask = dilatedMasks.y;
+}
+void InitDepthClipFactors(inout AccumulationPassCommonParams params)
+{
+    params.fDepthClipFactor = saturate(SampleAdjustedColorDepthClip(params.fLrUv_Sample).a);
+}
+void initIsNewSample(inout AccumulationPassCommonParams params)
+{
+    bool bIsResetFrame = (0 == FrameIndex());
+    params.bIsNewSample = (!params.bIsExistingSample || bIsResetFrame);
+}
+
+// --- Lock Status Update ---
+void KillLock(inout vec2 lockStatus)
+{
+    lockStatus[LSR_LOCK_LIFETIME_REMAINING] = 0;
+}
+void InitializeNewLockSample(out vec2 lockStatus)
+{
+    lockStatus = vec2(0.0);
+}
+
+float MinDividedByMax(float a, float b)
+{
+    return min(a, b) / max(max(a, b), LSR_EPSILON);
+}
+
+float GetShadingChangeLuma(ivec2 iPxHrPos, vec2 fUvCoord)
+{
+    ivec2 size = imageSize(luminanceTex);
+    ivec2 coord = clamp(ivec2(fUvCoord * size), ivec2(0), size - ivec2(1));
+    return LoadLuminance(coord);
+}
+
+void UpdateLockStatus(const AccumulationPassCommonParams params, inout float fReactiveFactor, LockState lockState,
+    inout vec2 fLockStatus, out float fLockContributionThisFrame, out float fLuminanceDiff)
+{
+    float fShadingChangeLuma = GetShadingChangeLuma(params.iPxHrPos, params.fHrUv);
+
+    fLockStatus[LSR_LOCK_TEMPORAL_LUMA] =
+        (fLockStatus[LSR_LOCK_TEMPORAL_LUMA] == 0.0) ? fShadingChangeLuma : fLockStatus[LSR_LOCK_TEMPORAL_LUMA];
+
+    float fPrevLuma = fLockStatus[LSR_LOCK_TEMPORAL_LUMA];
+
+    fLuminanceDiff = 1.0 - MinDividedByMax(fPrevLuma, fShadingChangeLuma);
+
+    if (lockState.newLock) {
+        fLockStatus[LSR_LOCK_TEMPORAL_LUMA] = fShadingChangeLuma;
+        fLockStatus[LSR_LOCK_LIFETIME_REMAINING] = (fLockStatus[LSR_LOCK_LIFETIME_REMAINING] != 0.0) ? 2.0 : 1.0;
+    } else if (fLockStatus[LSR_LOCK_LIFETIME_REMAINING] <= 1.0) {
+        fLockStatus[LSR_LOCK_TEMPORAL_LUMA] = mix(fLockStatus[LSR_LOCK_TEMPORAL_LUMA], fShadingChangeLuma, 0.5);
+    } else {
+        if (fLuminanceDiff > 0.2)
+            KillLock(fLockStatus);
+    }
+
+    fReactiveFactor = max(fReactiveFactor, saturate((fLuminanceDiff - 0.1) * 10.0));
+
+    fLockStatus[LSR_LOCK_LIFETIME_REMAINING] *= (1.0 - fReactiveFactor);
+    fLockStatus[LSR_LOCK_LIFETIME_REMAINING] *= saturate(1.0 - params.fAccumulationMask);
+    fLockStatus[LSR_LOCK_LIFETIME_REMAINING] *= float(params.fDepthClipFactor < 0.1);
+
+    float lifetimeC = saturate(fLockStatus[LSR_LOCK_LIFETIME_REMAINING] - 1.0);
+    float shadingC = saturate(MinDividedByMax(fLockStatus[LSR_LOCK_TEMPORAL_LUMA], fShadingChangeLuma));
+    fLockContributionThisFrame = saturate(saturate(lifetimeC * 4.0) * shadingC);
+}
+
+// --- Luma Instability ---
+float ComputeLumaInstabilityFactor(const AccumulationPassCommonParams params,
+                                   RectificationBox clippingBox,
+                                   float thisFrameReactiveFactor,
+                                   float luminanceDiff,
+                                   inout AccumulateOutputs result)
+{
+    float currentLuma = clippingBox.boxCenter.x;            // linear 0-1
+    currentLuma = saturate(currentLuma);
+    currentLuma = floor(currentLuma * kInvUnorm8Step + 0.5) * kUnorm8Step;
+
+    bool sampleHistory =
+        (max(max(params.fDepthClipFactor,
+                 params.fAccumulationMask),
+                 luminanceDiff) < 0.1) &&
+        (!params.bIsNewSample);
+
+    vec4 history = sampleHistory
+                 ? SampleHistoryLuma(params.fReprojectedHrUv)
+                 : vec4(0.0);
+
+    float d0      = currentLuma - history[LUMA_N_MINUS_1];
+    float minDiff = abs(d0);
+
+    if (minDiff >= kUnorm8Step)
+    {
+        for (int i = LUMA_N_MINUS_2; i <= LUMA_N_MINUS_4; ++i)
+        {
+            float di = currentLuma - history[i];
+            if (sign(d0) == sign(di))
+                minDiff = min(minDiff, abs(di));
+        }
+
+        float boxFactor =
+            pow(saturate(clippingBox.boxVec.x / 0.1), 6.0);
+
+        float instability = float(minDiff != abs(d0)) * boxFactor;
+        instability       = float(instability > kUnorm8Step);
+
+        instability      *= 1.0 - max(params.fAccumulationMask,
+                                      pow(thisFrameReactiveFactor, 1.0 / 6.0));
+
+        history.rgb = history.gba;
+        history.a   = currentLuma;
+
+        result.fLumaHistory = history;
+        return instability * float(history[LUMA_N_MINUS_4] != 0.0);
+    }
+
+    history.rgb = history.gba;
+    history.a   = currentLuma;
+    result.fLumaHistory = history;
+    return 0.0;
+}
+
+void FinalizeLockStatus(
+    const AccumulationPassCommonParams params, vec2 fLockStatus, float fUpsampledWeight, inout AccumulateOutputs result)
+{
+    vec2 hrMotionVectorUV = params.fMotionVector;
+    vec2 fEstimatedUvNextFrame = params.fHrUv + hrMotionVectorUV;
+
+    if (!IsUvInside(fEstimatedUvNextFrame)) {
+        KillLock(fLockStatus);
+    } else {
+        const float fAverageWeightPerFrame = (1.0 / 9.0) * 0.74;
+
+        float fLifetimeDecreaseMaxTotalWeight =
+            max(LSR_EPSILON, float(JitterSequenceLength()) * fAverageWeightPerFrame);
+
+        float fLifetimeDecrease = (fUpsampledWeight / fLifetimeDecreaseMaxTotalWeight);
+
+        fLockStatus[LSR_LOCK_LIFETIME_REMAINING] =
+            max(0.0f, fLockStatus[LSR_LOCK_LIFETIME_REMAINING] - fLifetimeDecrease);
+    }
+
+    result.fLockStatus = fLockStatus;
+}
+
+// --- Accumulation Weight --
+//-------------------------------------------------------------------------------------------------
+// Upsample Functions (Adapted from ARM ASR)
+//-------------------------------------------------------------------------------------------------
+void Deringing(RectificationBox clippingBox, inout vec3 fColor)
+{
+    fColor = clamp(fColor, clippingBox.aabbMin, clippingBox.aabbMax);
+}
+
+float GetUpsampleLanczosWeight(vec2 fSrcSampleOffset, float fKernelWeight)
+{
+    vec2 fSrcSampleOffsetBiased = fSrcSampleOffset * fKernelWeight;
+    return Lanczos2ApproxSq(dot(fSrcSampleOffsetBiased, fSrcSampleOffsetBiased));
+}
+
+float ComputeMaxKernelWeight()
+{
+    const float fKernelSizeBias = 1.0f;
+    vec2 dsFactor = DownscaleFactor();
+    vec2 invDsFactor = (dsFactor.x > LSR_EPSILON && dsFactor.y > LSR_EPSILON) ? (vec2(1.0) / dsFactor) : vec2(1.0);
+    float fKernelWeight = 1.0f + (invDsFactor.x - 1.0f) * fKernelSizeBias;
+    return min(1.99f, fKernelWeight);
+}
+
+vec3 ComputeBaseAccumulationWeight(const AccumulationPassCommonParams params, float fThisFrameReactiveFactor,
+    bool bInMotionLastFrame, float fUpsampledWeight, LockState lockState)
+{
+    float fBaseAccumulation = MaxAccumulationLanczosWeight() * float(params.bIsExistingSample) *
+                              (1.0f - fThisFrameReactiveFactor) * (1.0f - params.fDepthClipFactor);
+
+    float motionFactor1 = max(float(bInMotionLastFrame), saturate(params.fHrVelocity * 10.0f));
+    fBaseAccumulation = min(fBaseAccumulation, mix(fBaseAccumulation, fUpsampledWeight * 10.0f, motionFactor1));
+
+    float motionFactor2 = saturate(params.fHrVelocity / 20.0f);
+    fBaseAccumulation = min(fBaseAccumulation, mix(fBaseAccumulation, fUpsampledWeight, motionFactor2));
+
+    return vec3(fBaseAccumulation);
+}
+
+vec4 ComputeUpsampledColorAndWeight(
+    const AccumulationPassCommonParams params, inout RectificationBox clippingBox, float fReactiveFactor)
+{
+    vec2 fDstOutputPos = vec2(params.iPxHrPos) + vec2(0.5);
+    vec2 fSrcOutputPos = fDstOutputPos * DownscaleFactor();
+    ivec2 iSrcInputPos = ivec2(floor(fSrcOutputPos));
+    vec2 fSrcUnjitteredPos = vec2(iSrcInputPos) + vec2(0.5);
+    vec2 fBaseSampleOffset = fSrcUnjitteredPos - fSrcOutputPos;
+
+    float fKernelReactiveFactor = max(fReactiveFactor, float(params.bIsNewSample));
+    float fKernelBiasMax = ComputeMaxKernelWeight() * (1.0 - fKernelReactiveFactor);
+    float fKernelBiasMin = max(1.0, (1.0 + fKernelBiasMax) * 0.3);
+    float fKernelBiasFactor = max(0.0, max(0.25 * params.fDepthClipFactor, fKernelReactiveFactor));
+    float fKernelBias = mix(fKernelBiasMax, fKernelBiasMin, fKernelBiasFactor);
+
+    float fRectificationCurveBias = mix(-2.0, -3.0, clamp(params.fHrVelocity / 50.0, 0.0, 1.0));
+
+    vec4 fColorAndWeight = vec4(0.0);
+
+    RectificationBoxReset(clippingBox);
+
+    const ivec2 sampleOffsets[iLanczos2SampleCount] = { ivec2(-1, -1), ivec2(0, -1), ivec2(1, -1), ivec2(-1, 0),
+        ivec2(0, 0), ivec2(1, 0), ivec2(-1, 1), ivec2(0, 1), ivec2(1, 1) };
+    vec3 fSamplesRGB[iLanczos2SampleCount];
+
+    for (int idx = 0; idx < iLanczos2SampleCount; idx++) {
+        ivec2 neighborCoord = iSrcInputPos + sampleOffsets[idx];
+        vec2 neighborUV_unjittered = (vec2(neighborCoord) + 0.5) * InvRenderSize();
+        vec2 neighborUV_sampling = neighborUV_unjittered - JitterUV();
+        vec3 rgb = yCoCgToRgb(SampleAdjustedColorDepthClip(ClampUv(neighborUV_unjittered)).rgb);
+        fSamplesRGB[idx] = InverseTonemap(rgb);
+    }
+
+    for (int idx = 0; idx < iLanczos2SampleCount; idx++) {
+        vec2 fSrcSampleOffsetPixels = fBaseSampleOffset + vec2(sampleOffsets[idx]);
+        float fSampleWeight = GetUpsampleLanczosWeight(fSrcSampleOffsetPixels, fKernelBias);
+        fColorAndWeight.rgb += fSamplesRGB[idx] * fSampleWeight;
+        fColorAndWeight.a += fSampleWeight;
+        float fBoxSampleWeight = exp(fRectificationCurveBias * dot(fSrcSampleOffsetPixels, fSrcSampleOffsetPixels));
+        RectificationBoxAddSample(idx == 0, clippingBox, fSamplesRGB[idx], fBoxSampleWeight);
+    }
+
+    RectificationBoxComputeVarianceBoxData(clippingBox);
+
+    if (fColorAndWeight.a > LSR_EPSILON) {
+        fColorAndWeight.rgb /= fColorAndWeight.a;
+        fColorAndWeight.a *= fUpsampleLanczosWeightScale;
+        Deringing(clippingBox, fColorAndWeight.rgb);
+    } else {
+        fColorAndWeight.w = 0;
+    }
+
+    return fColorAndWeight;
+}
+
+void RectifyHistory(const AccumulationPassCommonParams params, RectificationBox clippingBox,
+    inout vec3 fHistoryColorYCoCg, inout vec3 fAccumulation, float fLockContributionThisFrame,
+    float fThisFrameReactiveFactor, float fLumaInstabilityFactor)
+{
+    float fScaleFactorInfluence = min(20.0f, pow(1.0f / (DownscaleFactor().x * DownscaleFactor().y), 3.0f));
+    float fVelocityFactor = clamp(params.fHrVelocity / 20.0f, 0.0f, 1.0f);
+    float fBoxScaleT = max(params.fDepthClipFactor, max(params.fAccumulationMask, fVelocityFactor));
+    float fBoxScale = mix(fScaleFactorInfluence, 1.0f, fBoxScaleT);
+
+    vec3 fScaledBoxVec = clippingBox.boxVec * fBoxScale;
+    vec3 boxMin = clippingBox.boxCenter - fScaledBoxVec;
+    vec3 boxMax = clippingBox.boxCenter + fScaledBoxVec;
+    boxMin = max(clippingBox.aabbMin, boxMin);
+    boxMax = min(clippingBox.aabbMax, boxMax);
+    //boxMin = InverseTonemap(boxMin);
+    //boxMax = InverseTonemap(boxMax);
+    vec3 colRgb = yCoCgToRgb(fHistoryColorYCoCg);
+
+    if (any(greaterThan(boxMin, colRgb)) || any(greaterThan(colRgb, boxMax))) {
+        vec3 fClampedHistoryColor = clamp(colRgb, boxMin, boxMax);
+        vec3 fHistoryContribution = max(fLumaInstabilityFactor, fLockContributionThisFrame).xxx;
+
+        float fReactiveFactor = params.fDilatedReactiveFactor;
+        float fReactiveContribution = 1.0 - pow(fReactiveFactor, 1.0 / 2.0);
+        fHistoryContribution *= fReactiveContribution;
+
+        colRgb = mix(fClampedHistoryColor, colRgb, saturate(fHistoryContribution));
+
+        const vec3 fAccumulationMin = min(fAccumulation, vec3(0.1f));
+        fAccumulation = mix(fAccumulationMin, fAccumulation, saturate(fHistoryContribution));
+    }
+    fHistoryColorYCoCg = rgbToYCoCg(colRgb);
+}
+
+void Accumulate(const AccumulationPassCommonParams params, inout vec3 fHistoryColorYCoCg, vec3 fAccumulation,
+    vec4 fUpsampledColorAndWeight)
+{
+    vec3 newYCoCg = rgbToYCoCg(fUpsampledColorAndWeight.xyz);
+    fAccumulation  = max(vec3(LSR_EPSILON), fAccumulation + fUpsampledColorAndWeight.www);
+    vec3 a  = fUpsampledColorAndWeight.www / fAccumulation;
+    fHistoryColorYCoCg = mix(fHistoryColorYCoCg, newYCoCg, a);
+}
+
+// --- Output Color/Factor Preparation ---
+vec3 UnprepareRgb(vec3 colorYCoCg)
+{
+    vec3 colorRGB = yCoCgToRgb(colorYCoCg);
+    //colorRGB = InverseTonemap(colorRGB);
+    colorRGB /= Exposure();
+    return max(vec3(0.0), colorRGB);
+}
+
+float ComputeTemporalReactiveFactor(const AccumulationPassCommonParams params, float thisFrameReactiveFactor)
+{
+    float fNewFactor = min(0.99f, thisFrameReactiveFactor);
+    fNewFactor = max(fNewFactor, mix(fNewFactor, 0.4f, clamp(params.fHrVelocity, 0.0f, 1.0f)));
+    fNewFactor = max(fNewFactor * fNewFactor, max(params.fDepthClipFactor * 0.1f, params.fDilatedReactiveFactor));
+    fNewFactor = params.bIsNewSample ? 1.0f : fNewFactor;
+    if (clamp(params.fHrVelocity * 10.0f, 0.0f, 1.0f) >= 1.0f) {
+        fNewFactor = max(LSR_EPSILON, fNewFactor) * -1.0f;
+    }
+    return fNewFactor;
+}
+
+AccumulateOutputs AccumulatePass(ivec2 iPxHrPos)
+{
+    AccumulationPassCommonParams params = InitParams(iPxHrPos);
+
+    vec3 fHistoryColorYCoCg = vec3(0.0);
+    vec2 fLockStatus = vec2(0.0);
+    InitializeNewLockSample(fLockStatus);
+    float fTemporalReactiveFactor = 0.0f;
+    bool bInMotionLastFrame = false;
+    LockState lockState;
+    lockState.newLock = false;
+    lockState.wasLockedPrevFrame = false;
+
+    initIsNewSample(params);
+    bool bUseHistory = !params.bIsNewSample; //&& uPc.frameIndex > 0;
+
+    AccumulateOutputs results;
+
+    if (bUseHistory) {
+        ReprojectHistoryColor(params.fReprojectedHrUv, fHistoryColorYCoCg, fTemporalReactiveFactor, bInMotionLastFrame);
+        lockState = ReprojectHistoryLockStatus(params.fReprojectedHrUv, iPxHrPos, fLockStatus);
+    } else {
+        lockState.newLock = (LoadNewLockRequest(iPxHrPos) > (127.0 / 255.0));
+        lockState.wasLockedPrevFrame = false;
+    }
+
+    InitReactiveMaskFactors(params);
+    InitDepthClipFactors(params);
+
+    float fThisFrameReactiveFactor = max(params.fDilatedReactiveFactor, fTemporalReactiveFactor);
+
+    float fLuminanceDiff = 0.0f;
+    float fLockContributionThisFrame = 0.0f;
+    UpdateLockStatus(
+        params, fThisFrameReactiveFactor, lockState, fLockStatus, fLockContributionThisFrame, fLuminanceDiff);
+
+    RectificationBox clippingBox;
+    vec4 fUpsampledColorAndWeight = ComputeUpsampledColorAndWeight(params, clippingBox, fThisFrameReactiveFactor);
+
+    FinalizeLockStatus(params, fLockStatus, fUpsampledColorAndWeight.w, results);
+
+    float fLumaInstabilityFactor =
+        ComputeLumaInstabilityFactor(params, clippingBox, fThisFrameReactiveFactor, fLuminanceDiff, results);
+    vec3 fAccumulation = ComputeBaseAccumulationWeight(
+        params, fThisFrameReactiveFactor, bInMotionLastFrame, fUpsampledColorAndWeight.w, lockState);
+
+    vec3 fFinalColorYCoCg;
+    if (params.bIsNewSample) {
+        fFinalColorYCoCg = rgbToYCoCg(fUpsampledColorAndWeight.xyz);
+    } else {
+        RectifyHistory(params, clippingBox, fHistoryColorYCoCg, fAccumulation, fLockContributionThisFrame,
+            fThisFrameReactiveFactor, fLumaInstabilityFactor);
+        Accumulate(params, fHistoryColorYCoCg, fAccumulation, fUpsampledColorAndWeight);
+        fFinalColorYCoCg = fHistoryColorYCoCg;
+    }
+
+    vec3 fFinalColorLinearRGB = UnprepareRgb(fFinalColorYCoCg);
+
+    float fOutputTemporalReactiveFactor = ComputeTemporalReactiveFactor(params, fThisFrameReactiveFactor);
+
+    results.fColorAndWeight = vec4(fFinalColorYCoCg, fOutputTemporalReactiveFactor);
+    results.fColor = fFinalColorLinearRGB;
+
+    return results;
+}
+
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
+
+#define cTgs 8
+
+layout(local_size_x = cTgs, local_size_y = cTgs, local_size_z = 1) in;
+void main()
+{
+    const ivec2 iPxHrPos = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 displaySize = DisplaySize();
+    if (iPxHrPos.x >= displaySize.x || iPxHrPos.y >= displaySize.y) {
+        return;
+    }
+
+    AccumulateOutputs results = AccumulatePass(iPxHrPos);
+
+    // --- Write Outputs ---
+    imageStore(out_HistoryColorReactive, iPxHrPos, results.fColorAndWeight);          // Store YCoCg + Reactive
+    imageStore(out_HistoryLockStatus, iPxHrPos, vec4(results.fLockStatus, 0.0, 0.0)); // Store Trust(1), Lifetime(0)
+    imageStore(out_HistoryLuma, iPxHrPos, results.fLumaHistory);
+    imageStore(out_FinalColor, iPxHrPos, vec4(results.fColor, 1.0));
+    imageStore(newLocksMask, iPxHrPos, vec4(0.0));
+}

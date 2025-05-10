@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,9 +43,11 @@
 #define VMA_NOT_NULL
 #endif
 #define VMA_IMPLEMENTATION
-
-#include "third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
-
+#ifdef __OHOS__
+#include <third_party/vulkanmemoryallocator/include/vk_mem_alloc.h>
+#else
+#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
+#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #elif defined(__clang__)
@@ -120,9 +122,12 @@ void LogStats(VmaAllocator aAllocator)
             stats.blockBytes += budget.statistics.blockBytes;
             stats.allocationBytes += budget.statistics.allocationBytes;
         }
-        pdm->UpdateData("VMA Memory", "AllGraphicsMemory", int64_t(stats.blockBytes));
-        pdm->UpdateData("VMA Memory", "GraphicsMemoryInUse", int64_t(stats.allocationBytes));
-        pdm->UpdateData("VMA Memory", "GraphicsMemoryNotInUse", int64_t(stats.blockBytes - stats.allocationBytes));
+        pdm->UpdateData("VMA Memory", "AllGraphicsMemory", int64_t(stats.blockBytes),
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
+        pdm->UpdateData("VMA Memory", "GraphicsMemoryInUse", int64_t(stats.allocationBytes),
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
+        pdm->UpdateData("VMA Memory", "GraphicsMemoryNotInUse", int64_t(stats.blockBytes - stats.allocationBytes),
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
     }
 }
 #endif
@@ -189,8 +194,10 @@ PlatformGpuMemoryAllocator::PlatformGpuMemoryAllocator(VkInstance instance, VkPh
         VmaAllocatorCreateFlags vmaCreateFlags =
             VmaAllocatorCreateFlagBits::VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT;
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-        vmaCreateFlags |= VmaAllocatorCreateFlagBits::VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-        vulkanApiVersion = VK_API_VERSION_1_2;
+        if (createInfo.createFlags & GpuMemoryAllocatorCreateInfo::CreateInfoFlagBits::ENABLE_DEVICE_ADDRESSES_BIT) {
+            vmaCreateFlags |= VmaAllocatorCreateFlagBits::VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+            vulkanApiVersion = VK_API_VERSION_1_2;
+        }
 #endif
         VmaVulkanFunctions funs = GetVmaVulkanFunctions(instance, device);
         VmaAllocatorCreateInfo allocatorInfo = {};

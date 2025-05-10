@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,7 +28,7 @@ DECLARE_PROPERTY_TYPE(EnvironmentComponent::Background);
 
 // Declare their metadata
 ENUM_TYPE_METADATA(EnvironmentComponent::Background, ENUM_VALUE(NONE, "None"), ENUM_VALUE(IMAGE, "Image"),
-    ENUM_VALUE(CUBEMAP, "Cubemap"), ENUM_VALUE(EQUIRECTANGULAR, "Equirectangular"))
+    ENUM_VALUE(CUBEMAP, "Cubemap"), ENUM_VALUE(EQUIRECTANGULAR, "Equirectangular"), ENUM_VALUE(SKY, "Sky"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()

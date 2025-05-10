@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -95,6 +95,11 @@ struct DefaultMaterialMaterialConstants {
     static constexpr const BASE_NS::string_view MATERIAL_SET0_GLOBAL_DESCRIPTOR_SET_PREFIX_NAME {
         "CORE3D_DM_MATERIAL_SET0_GLOBAL_DESC_SET"
     };
+
+    /** Default material global set 0 set prefix name, one need to combine with:
+     * scene name + PREFIX_NAME
+     */
+    static constexpr const BASE_NS::string_view MATERIAL_TLAS_PREFIX_NAME { "CORE3D_DM_MATERIAL_TLAS" };
 };
 
 /** Default material shader related constants. (Must be matched in relevant json and c-code files) */
@@ -109,6 +114,8 @@ struct DefaultMaterialShaderConstants {
     static constexpr const BASE_NS::string_view RENDER_SLOT_DEPTH { "CORE3D_RS_DM_DEPTH" };
     /** VSM shadow render slot with color buffer target. Handles VSM shadows and states */
     static constexpr const BASE_NS::string_view RENDER_SLOT_DEPTH_VSM { "CORE3D_RS_DM_DEPTH_VSM" };
+    /** Default environment render slot */
+    static constexpr const BASE_NS::string_view RENDER_SLOT_FORWARD_ENVIRONMENT { "CORE3D_RS_DM_ENV" };
 
     /** Default forward vertex input declaration */
     static constexpr const BASE_NS::string_view VERTEX_INPUT_DECLARATION_FORWARD {

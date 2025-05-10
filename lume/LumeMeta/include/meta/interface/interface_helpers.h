@@ -1,27 +1,19 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Interface helpers
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-02-24
  */
 
 #ifndef META_INTERFACE_EXT_INTERFACE_HELPERS_H
 #define META_INTERFACE_EXT_INTERFACE_HELPERS_H
 
+#include <base/containers/atomics.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/vector.h>
 #include <base/util/uid.h>
 #include <core/plugin/intf_interface.h>
 
-#include <meta/base/atomics.h>
 #include <meta/base/namespace.h>
 #include <meta/base/type_traits.h>
 #include <meta/interface/intf_lifecycle.h>
@@ -295,11 +287,11 @@ public:
 
     void Ref() override
     {
-        CORE_NS::AtomicIncrement(&refcnt_);
+        BASE_NS::AtomicIncrement(&refcnt_);
     }
     void Unref() override
     {
-        if (CORE_NS::AtomicDecrement(&refcnt_) == 0) {
+        if (BASE_NS::AtomicDecrement(&refcnt_) == 0) {
             if constexpr (HAS_ILIFECYCLE<Interfaces...>) {
                 if (auto i = this->GetInterface(ILifecycle::UID)) {
                     static_cast<ILifecycle*>(i)->Destroy();
@@ -372,7 +364,6 @@ public:
         return BASE_NS::vector<BASE_NS::Uid>();
     }
 };
-
 
 META_END_NAMESPACE()
 

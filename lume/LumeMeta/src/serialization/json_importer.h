@@ -1,22 +1,14 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+ * Description: Exporter
+ * Author: Mikael Kilpeläinen
+ * Create: 2024-01-03
  */
 
 #ifndef META_SRC_SERIALIZATION_JSON_IMPORTER_H
 #define META_SRC_SERIALIZATION_JSON_IMPORTER_H
 
-#include "base_object.h"
+#include "../base_object.h"
 #include "importer.h"
 
 META_BEGIN_NAMESPACE()
@@ -26,13 +18,24 @@ class JsonImporter : public IntroduceInterfaces<BaseObject, IFileImporter> {
     META_OBJECT(JsonImporter, ClassId::JsonImporter, IntroduceInterfaces)
 public:
     JsonImporter();
+
+    IObject::Ptr Import(const ISerNode::ConstPtr& tree) override;
     IObject::Ptr Import(CORE_NS::IFile& input) override;
     ISerNode::Ptr ImportAsTree(CORE_NS::IFile& input) override;
+
     BASE_NS::vector<ISerTransformation::Ptr> GetTransformations() const override;
     void SetTransformations(BASE_NS::vector<ISerTransformation::Ptr>) override;
+
+    BASE_NS::unordered_map<InstanceId, InstanceId> GetInstanceIdMapping() const override;
+    void SetResourceManager(CORE_NS::IResourceManager::Ptr) override;
+    void SetUserContext(IObject::Ptr) override;
+    SerMetadata GetMetadata() const override;
+
 private:
     ISerNode::Ptr Transform(ISerNode::Ptr tree, const Version& ver);
+
 private:
+    Importer imp_;
     BASE_NS::vector<ISerTransformation::Ptr> transformations_;
 };
 

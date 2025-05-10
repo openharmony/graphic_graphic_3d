@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -67,7 +67,7 @@ public:
      */
     virtual ISceneNode* GetParent() const = 0;
 
-    /** Set parent of this node.
+    /** Set parent of this node. Node will inherit the scene ID from the new parent.
      *  @param node Parent to be set for this node.
      */
     virtual void SetParent(ISceneNode const& node) = 0;
@@ -99,14 +99,15 @@ public:
      */
     virtual ISceneNode* GetChild(BASE_NS::string_view const& name) = 0;
 
-    /** Add the given node as a child of this node. The node will be placed last in the child list.
+    /** Add the given node as a child of this node. The node will be placed last in the child list. The node will be
+     * placed in the same scene as this node.
      * @param node Node to add
      * @return true if node could be added
      */
     virtual bool AddChild(ISceneNode& node) = 0;
 
     /** Add the given node as a child of this node. The node will be inserted to the given index, or last if the index
-     * is out of bounds.
+     * is out of bounds. The node will be placed in the same scene as this node.
      * @param index Insert location.
      * @param node Node to add.
      * @return true if node could be added.
@@ -178,25 +179,33 @@ public:
      */
     virtual BASE_NS::Math::Vec3 GetPosition() const = 0;
 
-    /** Get nodes rotation data
+    /** Get node's rotation data
      */
     virtual BASE_NS::Math::Quat GetRotation() const = 0;
 
-    /** Get nodes scale data
+    /** Get node's scale data
      */
     virtual BASE_NS::Math::Vec3 GetScale() const = 0;
 
-    /** Set nodes scale data
+    /** Set node's scale data
      */
     virtual void SetScale(const BASE_NS::Math::Vec3& scale) = 0;
 
-    /** Set nodes position data
+    /** Set node's position data
      */
     virtual void SetPosition(const BASE_NS::Math::Vec3& position) = 0;
 
-    /** Set nodes rotation data
+    /** Set node's rotation data
      */
     virtual void SetRotation(const BASE_NS::Math::Quat& rotation) = 0;
+
+    /** Get node's scene ID.
+     */
+    virtual uint32_t GetSceneId() const = 0;
+
+    /** Set node's scene ID. All the nodes under this node will also move to the same scene.
+     */
+    virtual void SetSceneId(uint32_t sceneId) = 0;
 };
 
 /** @ingroup group_ecs_systems_inode */

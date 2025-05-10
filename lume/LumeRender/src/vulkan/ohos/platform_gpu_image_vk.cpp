@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -50,55 +50,58 @@ VkSamplerCreateInfo CreateYcbcrSamplerCreateInfo()
 void GpuImageVk::CreatePlatformHwBuffer()
 {
     const DeviceVk& deviceVk = (const DeviceVk&)device_;
-    const PlatformDeviceExtensions& deviceExtensions = deviceVk.GetPlatformDeviceExtensions();
-    if ((hwBuffer_ != 0) && deviceExtensions.externalMemoryHardwareBuffer) {
-        const PlatformHardwareBufferUtil::HardwareBufferProperties hwBufferProperties =
-            PlatformHardwareBufferUtil::QueryHwBufferFormatProperties(deviceVk, hwBuffer_);
-        if (hwBufferProperties.allocationSize > 0) {
-            PlatformHardwareBufferUtil::HardwareBufferImage hwBufferImage =
-                PlatformHardwareBufferUtil::CreateHwPlatformImage(deviceVk, hwBufferProperties, desc_, hwBuffer_);
-            PLUGIN_ASSERT((hwBufferImage.image != VK_NULL_HANDLE) && ((hwBufferImage.deviceMemory != VK_NULL_HANDLE)));
-            plat_.image = hwBufferImage.image;
-            mem_.allocationInfo.deviceMemory = hwBufferImage.deviceMemory;
+    if (!plat_.platformHwBuffer || !deviceVk.GetPlatformDeviceExtensions().externalMemoryHardwareBuffer) {
+        return;
+    }
+    const PlatformHardwareBufferUtil::HardwareBufferProperties hwBufferProperties =
+        PlatformHardwareBufferUtil::QueryHwBufferFormatProperties(deviceVk, plat_.platformHwBuffer);
+    plat_.format = hwBufferProperties.format;
+    desc_.format = static_cast<BASE_NS::Format>(hwBufferProperties.format);
+    if (hwBufferProperties.allocationSize > 0) {
+        PlatformHardwareBufferUtil::HardwareBufferImage hwBufferImage =
+            PlatformHardwareBufferUtil::CreateHwPlatformImage(
+                deviceVk, hwBufferProperties, desc_, plat_.platformHwBuffer);
+        PLUGIN_ASSERT((hwBufferImage.image != VK_NULL_HANDLE) && ((hwBufferImage.deviceMemory != VK_NULL_HANDLE)));
+        plat_.image = hwBufferImage.image;
+        mem_.allocationInfo.deviceMemory = hwBufferImage.deviceMemory;
 
-            if (plat_.format == VK_FORMAT_UNDEFINED) {
-                // with external format, chained conversion info is needed
-                VkSamplerYcbcrConversionCreateInfo ycbcrConversionCreateInfo;
-                PlatformHardwareBufferUtil::FillYcbcrConversionInfo(hwBufferProperties, ycbcrConversionCreateInfo);
+        if (plat_.format == VK_FORMAT_UNDEFINED) {
+            // with external format, chained conversion info is needed
+            VkSamplerYcbcrConversionCreateInfo ycbcrConversionCreateInfo;
+            PlatformHardwareBufferUtil::FillYcbcrConversionInfo(hwBufferProperties, ycbcrConversionCreateInfo);
 
-                VkExternalFormatOHOS externalFormat {
-                    VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_OHOS, // sType
-                    nullptr,                                // pNext
-                    hwBufferProperties.externalFormat,      // externalFormat
-                };
-                ycbcrConversionCreateInfo.pNext = &externalFormat;
+            VkExternalFormatOHOS externalFormat {
+                VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_OHOS, // sType
+                nullptr,                                // pNext
+                hwBufferProperties.externalFormat,      // externalFormat
+            };
+            ycbcrConversionCreateInfo.pNext = &externalFormat;
 
-                const DevicePlatformDataVk& devicePlat = (const DevicePlatformDataVk&)device_.GetPlatformData();
-                const VkDevice vkDevice = devicePlat.device;
+            const DevicePlatformDataVk& devicePlat = (const DevicePlatformDataVk&)device_.GetPlatformData();
+            const VkDevice vkDevice = devicePlat.device;
 
-                VALIDATE_VK_RESULT(deviceVk.GetExtFunctions().vkCreateSamplerYcbcrConversion(
-                    vkDevice, &ycbcrConversionCreateInfo, nullptr, &platConversion_.samplerConversion));
+            VALIDATE_VK_RESULT(deviceVk.GetExtFunctions().vkCreateSamplerYcbcrConversion(
+                vkDevice, &ycbcrConversionCreateInfo, nullptr, &platConversion_.samplerConversion));
 
-                const VkSamplerYcbcrConversionInfo yCbcrConversionInfo {
-                    VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO, // sType
-                    nullptr,                                         // pNext
-                    platConversion_.samplerConversion,               // conversion
-                };
+            const VkSamplerYcbcrConversionInfo yCbcrConversionInfo {
+                VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO, // sType
+                nullptr,                                         // pNext
+                platConversion_.samplerConversion,               // conversion
+            };
 
-                VkSamplerCreateInfo samplerCreateInfo = CreateYcbcrSamplerCreateInfo();
-                samplerCreateInfo.pNext = &yCbcrConversionInfo;
-                VALIDATE_VK_RESULT(vkCreateSampler(vkDevice, // device
-                    &samplerCreateInfo,                      // pCreateInfo
-                    nullptr,                                 // pAllocator
-                    &platConversion_.sampler));              // pSampler
+            VkSamplerCreateInfo samplerCreateInfo = CreateYcbcrSamplerCreateInfo();
+            samplerCreateInfo.pNext = &yCbcrConversionInfo;
+            VALIDATE_VK_RESULT(vkCreateSampler(vkDevice, // device
+                &samplerCreateInfo,                      // pCreateInfo
+                nullptr,                                 // pAllocator
+                &platConversion_.sampler));              // pSampler
 
-                CreateVkImageViews(VK_IMAGE_ASPECT_COLOR_BIT, &yCbcrConversionInfo);
-            } else {
-                CreateVkImageViews(VK_IMAGE_ASPECT_COLOR_BIT, nullptr);
-            }
+            CreateVkImageViews(VK_IMAGE_ASPECT_COLOR_BIT, &yCbcrConversionInfo);
         } else {
-            hwBuffer_ = 0;
+            CreateVkImageViews(VK_IMAGE_ASPECT_COLOR_BIT, nullptr);
         }
+    } else {
+        plat_.platformHwBuffer = 0;
     }
 }
 

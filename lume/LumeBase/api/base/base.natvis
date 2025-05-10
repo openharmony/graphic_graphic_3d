@@ -123,4 +123,23 @@
       <DisplayString>"{(uint32_t)(data[0]&gt;&gt;32U),nvoXb}-{(uint16_t)(data[0]&gt;&gt;16),nvoXb}-{(uint16_t)(data[0]),nvoXb}-{(uint16_t)(data[1]&gt;&gt;48U),nvoXb}-{(uint16_t)((data[1]&lt;&lt;16U)&gt;&gt;48U),nvoXb}{(uint32_t)(data[1]),nvoXb}"</DisplayString>
   </Type>
 
+  <Type Name="Base::shared_ptr&lt;*&gt;">
+    <DisplayString Condition="pointer_ != nullptr">Base::shared_ptr ({pointer_})</DisplayString>
+    <DisplayString Condition="pointer_ == nullptr">null</DisplayString>
+	<Expand>
+        <Item Name="[Pointer Value]" Condition="pointer_ != nullptr">*pointer_</Item>
+		<Item Name="[Strong Count]" Condition="control_ != nullptr">control_->strongCount_</Item>
+		<Item Name="[Weak Count]" Condition="control_ != nullptr">control_->weakCount_</Item>
+	</Expand>
+  </Type>
+
+  <Type Name="Base::weak_ptr&lt;*&gt;">
+	<DisplayString Condition="pointer_ != nullptr">Base::weak_ptr ({pointer_})</DisplayString>
+	<DisplayString Condition="pointer_ == nullptr">null</DisplayString>
+	<Expand>
+      <Item Name="[Pointer Value]" Condition="pointer_ != nullptr">*pointer_</Item>
+      <Item Name="[Strong Count]" Condition="control_ != nullptr">control_->strongCount_</Item>
+      <Item Name="[Weak Count]" Condition="control_ != nullptr">control_->weakCount_</Item>
+	</Expand>
+  </Type>
 </AutoVisualizer>

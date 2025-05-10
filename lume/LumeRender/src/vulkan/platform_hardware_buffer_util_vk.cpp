@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -150,6 +150,17 @@ void FillYcbcrConversionInfo(
         hardcodedFilter,                                        // chromaFilter
         false,                                                  // forceExplicitReconstruction
     };
+}
+
+void DestroyHwPlatformBuffer(const DeviceVk& deviceVk, VkBuffer buffer, VkDeviceMemory deviceMemory)
+{
+    VkDevice device = ((const DevicePlatformDataVk&)deviceVk.GetPlatformData()).device;
+    vkDestroyBuffer(device, // device
+        buffer,             // buffer
+        nullptr);           // pAllocator
+    vkFreeMemory(device,    // device
+        deviceMemory,       // memory
+        nullptr);           // pAllocator
 }
 } // namespace PlatformHardwareBufferUtil
 RENDER_END_NAMESPACE()

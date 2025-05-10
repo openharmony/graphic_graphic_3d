@@ -121,7 +121,6 @@ set(Api_Sources
 
     core/resources/intf_resource.h
     core/resources/intf_resource_manager.h
-    core/resources/intf_serializable.h
 
     core/threading/intf_thread_pool.h
 

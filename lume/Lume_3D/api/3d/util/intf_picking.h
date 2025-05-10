@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -165,7 +165,7 @@ public:
      * @param ecs EntityComponentSystem where hit test is done.
      * @param camera Camera entity to be used for the hit test.
      * @param screenPos screen coordinates for hit test. Where (0, 0) is the upper left corner of the screen and (1, 1)
-     * the lower left corner.
+     * the lower right corner.
      * @return Array of raycast results that describe node that was hit and distance to intersection (ordered by
      * distance).
      */
@@ -178,7 +178,7 @@ public:
      * @param ecs EntityComponentSystem where hit test is done.
      * @param camera Camera entity to be used for the hit test.
      * @param screenPos screen coordinates for hit test. Where (0, 0) is the upper left corner of the screen and (1, 1)
-     * the lower left corner.
+     * the lower right corner.
      * @param layerMask Layer mask for limiting the returned result.
      * @return Array of raycast results that describe node that was hit and distance to intersection (ordered by
      * distance).
@@ -191,7 +191,7 @@ public:
      * @param ecs EntityComponentSystem where hit test is done.
      * @param camera Camera entity to be used for the hit test.
      * @param screenPos screen coordinates for hit test. Where (0, 0) is the upper left corner of the screen and (1, 1)
-     * the lower left corner.
+     * the lower right corner.
      * @param triangles Triangle list where every triangle is defined by 3 corner vertices. Must be TRIANGLE_LIST.
      * @return Array of ray-triangle cast results.
      */

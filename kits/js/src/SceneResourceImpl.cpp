@@ -84,7 +84,7 @@ bool SceneResourceImpl::validateSceneRef()
 napi_value SceneResourceImpl::Dispose(NapiApi::FunctionContext<>& ctx)
 {
     // Dispose of the native object. (makes the js object invalid)
-    if (TrueRootObject* instance = GetThisRootObject(ctx)) {
+    if (TrueRootObject* instance = ctx.This().GetRoot()) {
         // see if we have "scenejs" as ext (prefer one given as argument)
         napi_status stat;
         SceneJS* ptr { nullptr };
@@ -97,13 +97,7 @@ napi_value SceneResourceImpl::Dispose(NapiApi::FunctionContext<>& ctx)
             }
         }
         if (!ptr) {
-            NapiApi::Object obj = scene_.GetObject();
-            if (obj) {
-                auto* tro = obj.Native<TrueRootObject>();
-                if (tro) {
-                    ptr = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-                }
-            }
+            ptr = scene_.GetObject().GetJsWrapper<SceneJS>();
         }
         instance->DisposeNative(ptr);
     }
@@ -118,7 +112,11 @@ napi_value SceneResourceImpl::GetObjectType(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    return ctx.GetNumber(type_);
+    uint32_t type = -1; // return -1 if the resource does not exist anymore
+    if (ctx.This().GetNative()) {
+        type = type_;
+    }
+    return ctx.GetNumber(type);
 }
 
 napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
@@ -128,9 +126,9 @@ napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
     }
 
     BASE_NS::string name;
-    if (auto named = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
+    if (auto named = ctx.This().GetNative<META_NS::INamed>()) {
         name = named->Name()->GetValue();
-    } else if (auto node = interface_pointer_cast<META_NS::IObject>(GetThisNativeObject(ctx))) {
+    } else if (auto node = ctx.This().GetNative()) {
         name = node->GetName();
     }
     return ctx.GetString(name);
@@ -141,7 +139,7 @@ void SceneResourceImpl::SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx)
         return;
     }
     BASE_NS::string name = ctx.Arg<0>();
-    if (auto named = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
+    if (auto named = ctx.This().GetNative<META_NS::INamed>()) {
         named->Name()->SetValue(name);
     } else {
         LOG_E("renaming resource not implemented, trying to name (%d) to '%s'", type_, name.c_str());

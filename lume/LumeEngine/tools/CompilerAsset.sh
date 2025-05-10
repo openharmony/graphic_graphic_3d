@@ -24,15 +24,22 @@ SIZE_NAME=$6
 BASE_NAME=$7
 COPY_PATH=$8
 OUTPUT_OBJ=$9
+FILE_EXTENSIONS=${10}
+
+if [ -z "$FILE_EXTENSIONS" ]; then
+    FILE_EXTENSIONS=".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles"
+else
+    FILE_EXTENSIONS="${FILE_EXTENSIONS//\"/}"
+fi
 
 compile_asset()
 {
-	echo "Lume5 Compile asset $1 $2 $3 $4 $5 $6 $7 $8 $9"
+	echo "Lume5 Compile asset $1 $2 $3 $4 $5 $6 $7 $8 $9 $FILE_EXTENSIONS"
     if [ ! -f "$TEST_COMPILER_PATH"/LumeAssetCompiler ]; then
          echo "lume engine assert compiler not exist"
     fi
-    $TEST_COMPILER_PATH/LumeAssetCompiler -linux $CPU_TYPE -extensions ".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles" $ASSETS_PATH $ROOT_PATH $BIN_NAME $SIZE_NAME $BASE_NAME
+    $TEST_COMPILER_PATH/LumeAssetCompiler -linux $CPU_TYPE -extensions $FILE_EXTENSIONS $ASSETS_PATH $ROOT_PATH $BIN_NAME $SIZE_NAME $BASE_NAME
     mv $OUTPUT_OBJ $COPY_PATH
 }
 
-compile_asset $COMPILER_PATH $CPU_TYPE $ASSETS_PATH $ROOT_PATH $BIN_NAME $SIZE_NAME $BASE_NAME $COPY_PATH $OUTPUT_OBJ
+compile_asset $COMPILER_PATH $CPU_TYPE $ASSETS_PATH $ROOT_PATH $BIN_NAME $SIZE_NAME $BASE_NAME $COPY_PATH $OUTPUT_OBJ $FILE_EXTENSIONS

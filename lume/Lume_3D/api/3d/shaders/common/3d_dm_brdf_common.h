@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -60,7 +60,7 @@ float dCharlie(float roughness, float NoH)
 {
     const float invR = 1.0 / roughness;
     const float cos2h = NoH * NoH;
-    const float sin2h = 1.0 - cos2h; // NOTE: should max to fp16
+    const float sin2h = 1.0 - cos2h;                                     // NOTE: should max to fp16
     return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * CORE_BRDF_PI); // 2.0: parm 0.5: parm
 }
 
@@ -114,9 +114,6 @@ float dGGXAnisotropic(float at, float ab, float NoH, float ToH, float BoH, float
     float a2 = at * ab;
     vec3 d = vec3(ab * ToH, at * BoH, a2 * NoH);
     float d2 = dot(d, d);
-    if (d2 == 0.0f) {
-        return 0.0;
-    }
     float w2 = a2 / d2;
     return a2 * w2 * w2 * (1.0 / CORE_BRDF_PI);
 }

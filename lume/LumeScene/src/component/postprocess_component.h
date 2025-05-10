@@ -1,22 +1,8 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 #ifndef SCENE_SRC_COMPONENT_POSTPROCESS_COMPONENT_H
 #define SCENE_SRC_COMPONENT_POSTPROCESS_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 
 #include <3d/ecs/components/post_process_component.h>
 
@@ -56,7 +42,7 @@ public:
 META_REGISTER_CLASS(
     PostProcessComponent, "c1e6b17f-14bf-41f6-a045-50f0838828b6", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class PostProcessComponent : public META_NS::IntroduceInterfaces<ComponentFwd, IInternalPostProcess> {
+class PostProcessComponent : public META_NS::IntroduceInterfaces<Component, IInternalPostProcess> {
     META_OBJECT(PostProcessComponent, ClassId::PostProcessComponent, IntroduceInterfaces)
 
 public:

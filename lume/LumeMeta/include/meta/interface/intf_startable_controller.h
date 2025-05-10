@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: IStartableController interface
+ * Author: Lauri Jaaskela
+ * Create: 2023-09-21
  */
 
 #ifndef META_INTERFACE_ISTARTABLE_CONTROLLER_H
@@ -19,6 +11,7 @@
 #include <meta/base/interface_macros.h>
 #include <meta/interface/interface_macros.h>
 #include <meta/interface/intf_startable.h>
+#include <meta/interface/intf_task_queue.h>
 
 META_BEGIN_NAMESPACE()
 
@@ -87,6 +80,11 @@ public:
      */
     virtual bool SetStartableQueueId(
         const BASE_NS::Uid& startStartableQueueId, const BASE_NS::Uid& stopStartableQueueId) = 0;
+    /**
+     * @see SetStartableQueueId
+     */
+    virtual bool SetStartableQueue(
+        const META_NS::ITaskQueue::Ptr& startStartableQueue, const META_NS::ITaskQueue::Ptr& stopStartableQueue) = 0;
     /**
      * @brief Starts all StartBehavior::AUTOMATIC startables
      */

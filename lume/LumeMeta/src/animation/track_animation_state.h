@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Track animation state implementations
+ * Author: Lauri Jaaskela
+ * Create: 2023-12-20
  */
 
 #ifndef META_SRC_ANIMATION_TRACK_ANIMATION_STATE_H
@@ -71,9 +63,10 @@ public:
     /**
      * @brief Jump to given keyframe
      * @param index Index to jump to.
+     * @param progress Current progress
      * @return Current index of the track animation after jump.
      */
-    uint32_t JumpTo(size_t index);
+    uint32_t JumpTo(size_t index, float progress);
     /** Add a keyframe at given index */
     size_t AddKeyframe(float timestamp, const IAny::ConstPtr& value);
     /** Remove a keyframe at given index */
@@ -88,7 +81,9 @@ private:
     bool ValidateValues();
     float GetCurrentTrackProgress(float progress) const noexcept;
     bool IsInCurrentRange(float progress) const noexcept;
+    void SetPrePostFrameValues(float progress);
 
+private:
     IArrayAny::Ptr keyframeArray_; // Keyframe values
     IAny::Ptr currentValue_;       // Latest evaluated value (between trackStart_ and trackEnd_)
     IAny::Ptr trackStart_;         // Current keyframe value

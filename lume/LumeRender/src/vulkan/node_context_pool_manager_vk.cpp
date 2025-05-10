@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -75,8 +75,8 @@ inline void HashRenderPassCompatibility(uint64_t& hash, const RenderPassDesc& re
     for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
         const LowLevelRenderPassCompatibilityDescVk::Attachment& atCompatibilityDesc =
             renderPassCompatibilityDesc.attachments[idx];
-        HashCombine(hash, static_cast<uint64_t>(atCompatibilityDesc.format),
-            static_cast<uint64_t>(atCompatibilityDesc.sampleCountFlags));
+        HashCombine(hash, (static_cast<uint64_t>(atCompatibilityDesc.format) << 32ULL) |
+                              (static_cast<uint64_t>(atCompatibilityDesc.sampleCountFlags)));
         // render pass needs have matching stage masks (creates often different hash at first frame)
         // soft reset in render graph tries to prevent too many render passes
         HashCombine(hash, static_cast<uint64_t>(intputResourceStates.states[idx].pipelineStageFlags));
@@ -94,8 +94,8 @@ inline void HashRenderPassLayouts(
     uint64_t& hash, const RenderPassDesc& renderPassDesc, const RenderPassImageLayouts& renderPassImageLayouts)
 {
     for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
-        HashCombine(hash, renderPassImageLayouts.attachmentInitialLayouts[idx],
-            renderPassImageLayouts.attachmentFinalLayouts[idx]);
+        HashCombine(hash, (static_cast<uint64_t>(renderPassImageLayouts.attachmentInitialLayouts[idx]) << 32ULL) |
+                              (static_cast<uint64_t>(renderPassImageLayouts.attachmentFinalLayouts[idx])));
     }
 }
 
@@ -115,8 +115,9 @@ inline void HashFramebuffer(
         if (const GpuImageVk* image = gpuResourceMgr.GetImage<GpuImageVk>(clientHandle); image) {
             imageId = VulkanHandleCast<uint64_t>(image->GetPlatformData().image);
         }
-        HashCombine(
-            hash, gpuHandle.id, imageId, static_cast<uint64_t>(atDesc.layer), static_cast<uint64_t>(atDesc.mipLevel));
+        const uint64_t perAttachmentData[2U] { gpuHandle.id, imageId };
+        HashCombine(hash, FNV1aHash(perAttachmentData),
+            ((static_cast<uint64_t>(atDesc.layer) << 32ULL) | static_cast<uint64_t>(atDesc.mipLevel)));
     }
 }
 

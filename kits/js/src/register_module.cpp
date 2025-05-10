@@ -23,8 +23,11 @@
 #include "MaterialPropertyJS.h"
 #include "MeshJS.h"
 #include "MeshResourceJS.h"
+#include "MorpherJS.h"
 #include "NodeJS.h"
 #include "PostProcJS.h"
+#include "RenderContextJS.h"
+#include "SamplerJS.h"
 #include "SceneComponentJS.h"
 #include "SceneJS.h"
 #include "ShaderJS.h"
@@ -38,10 +41,10 @@
 
 void RegisterClasses(napi_env env, napi_value exports)
 {
-    napi_value zero;
-    napi_value one;
+    napi_value zero = nullptr;
+    napi_value one = nullptr;
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, reinterpret_cast<void**>(&mis));
+    NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
 
     napi_create_double(env, 0.0, &zero);
     napi_create_double(env, 1.0, &one);
@@ -49,9 +52,11 @@ void RegisterClasses(napi_env env, napi_value exports)
     auto defaultCtor = [](napi_env env, napi_callback_info info) -> napi_value {
         return NapiApi::FunctionContext(env, info).This().ToNapiValue();
     };
+
     // Declare color class
     {
         /// Color
+
         // clang-format off
             napi_property_descriptor desc4[] = {
                 {"r", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
@@ -68,6 +73,7 @@ void RegisterClasses(napi_env env, napi_value exports)
     // Declare math classes.. "simply" for now.
     {
         /// Vec2
+
         // clang-format off
             napi_property_descriptor desc2[] = {
                 {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
@@ -80,6 +86,7 @@ void RegisterClasses(napi_env env, napi_value exports)
         mis->StoreCtor("Vec2", vec2_class);
 
         /// Vec3
+
         // clang-format off
             napi_property_descriptor desc3[] = {
                 {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
@@ -93,6 +100,7 @@ void RegisterClasses(napi_env env, napi_value exports)
         mis->StoreCtor("Vec3", vec3_class);
 
         /// Vec4
+
         // clang-format off
             napi_property_descriptor desc4[] = {
                 {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
@@ -107,6 +115,7 @@ void RegisterClasses(napi_env env, napi_value exports)
         mis->StoreCtor("Vec4", vec4_class);
 
         /// Quaternion
+
         // clang-format off
             napi_property_descriptor qdesc[] = {
                 {"x", nullptr, nullptr, nullptr, nullptr, zero, napi_default_jsproperty, nullptr},
@@ -134,19 +143,21 @@ void RegisterClasses(napi_env env, napi_value exports)
     GeometryDefinition::CustomJS::Init(env, scene3dNS);
     GeometryDefinition::PlaneJS::Init(env, scene3dNS);
     MeshJS::Init(env, scene3dNS);
+    MorpherJS::Init(env, scene3dNS);
     MeshResourceJS::Init(env, scene3dNS);
     SubMeshJS::Init(env, scene3dNS);
     MaterialJS::Init(env, scene3dNS);
-
     ImageJS::Init(env, scene3dNS);
     PostProcJS::Init(env, scene3dNS);
     ToneMapJS::Init(env, scene3dNS);
+    SamplerJS::Init(env, scene3dNS);
     ShaderJS::Init(env, scene3dNS);
     GeometryDefinition::SphereJS::Init(env, scene3dNS);
     AnimationJS::Init(env, scene3dNS);
     SceneComponentJS::Init(env, scene3dNS);
     TextNodeJS::Init(env, scene3dNS);
     MaterialPropertyJS::Init(env, scene3dNS);
+    RenderContextJS::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
     GeometryDefinition::CustomJS::RegisterEnums({ env, scene3dNS });
@@ -154,4 +165,5 @@ void RegisterClasses(napi_env env, napi_value exports)
     NodeImpl::RegisterEnums({ env, scene3dNS });
     SceneResourceImpl::RegisterEnums({ env, scene3dNS });
     SceneJS::RegisterEnums({ env, scene3dNS });
+    SamplerJS::RegisterEnums({ env, scene3dNS });
 }

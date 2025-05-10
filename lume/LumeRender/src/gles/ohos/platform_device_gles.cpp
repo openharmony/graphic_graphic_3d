@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 #include "gles/device_gles.h"
 #include "gles/egl_functions.h"
 #include "gles/gl_functions.h"
+#include "gles/gpu_buffer_gles.h"
 #include "gles/gpu_image_gles.h"
 #include "util/log.h"
 
@@ -62,6 +63,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
             image = CreateGpuImageView(finalDesc, data);
 
             eglDestroyImageKHR(dsp, eglImage);
+            OH_NativeWindow_DestroyNativeWindowBuffer(nativeWindowBufferPtr);
         }
     }
 #endif
@@ -79,5 +81,43 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
     }
 #endif
     return image;
+}
+
+BASE_NS::unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const BackendSpecificBufferDesc& desc)
+{
+    PLUGIN_ASSERT(IsActive());
+#if RENDER_HAS_GLES_BACKEND
+    if (backendType_ == DeviceBackendType::OPENGLES) {
+        if (!glBufferStorageExternalEXT) {
+            return {};
+        }
+        const auto& tmp = static_cast<const BufferDescGLES&>(desc);
+        if (!tmp.platformHwBuffer) {
+            return {};
+        }
+
+        auto* nativeBufferPtr = reinterpret_cast<OH_NativeBuffer*>(tmp.platformHwBuffer);
+        auto nativeWindowBufferPtr = OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer(nativeBufferPtr);
+        if (!nativeWindowBufferPtr) {
+            PLUGIN_LOG_E("OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer failed %d", eglGetError());
+            return {};
+        }
+
+        const GpuBufferDesc finalDesc = GetBufferDescFromHwBufferDesc(tmp.platformHwBuffer);
+        GpuBufferPlatformDataGL platformData {};
+        platformData.alignedBindByteSize = finalDesc.byteSize;
+        platformData.alignedByteSize = finalDesc.byteSize;
+        platformData.bindMemoryByteSize = finalDesc.byteSize;
+        platformData.eglClientBuffer = reinterpret_cast<uintptr_t>(nativeWindowBufferPtr);
+        auto buffer = BASE_NS::make_unique<GpuBufferGLES>(*this, finalDesc, platformData);
+        OH_NativeWindow_DestroyNativeWindowBuffer(nativeWindowBufferPtr);
+        return buffer;
+    }
+#endif
+#if RENDER_HAS_GL_BACKEND
+    if (backendType_ == DeviceBackendType::OPENGL) {
+    }
+#endif
+    return {};
 }
 RENDER_END_NAMESPACE()

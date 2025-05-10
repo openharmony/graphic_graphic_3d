@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #ifndef API_3D_RENDER_RENDER_DATA_DEFINES_H
 #define API_3D_RENDER_RENDER_DATA_DEFINES_H
 
+#include <cfloat>
 #include <cstdint>
 
 #include <3d/ecs/components/mesh_component.h>
@@ -149,12 +150,20 @@ struct RenderMeshData {
     uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
 
     /** layer mask. */
-    uint64_t layerMask { 1 };
-    /** Unused offset. */
-    uint64_t additional { 0 };
+    uint64_t layerMask { RenderSceneDataConstants::DEFAULT_LAYER_MASK };
+    /** scene ID */
+    uint64_t sceneId { 0U };
 
     /** Custom data. */
     BASE_NS::Math::UVec4 customData[RenderSceneDataConstants::MESH_CUSTOM_DATA_VEC4_COUNT] {};
+};
+
+/** Render min and max AABB
+ */
+struct RenderMinAndMax {
+    BASE_NS::Math::Vec3 minAabb { FLT_MAX, FLT_MAX, FLT_MAX };
+    BASE_NS::Math::Vec3 maxAabb { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+#undef CORE_FMAX
 };
 
 /** Render frame material indices
@@ -269,6 +278,41 @@ enum RenderExtraRenderingFlagBits : uint32_t {
 /** Container for extra material rendering flag bits */
 using RenderExtraRenderingFlags = uint32_t;
 
+/** Additional info for processed render mesh data */
+struct RenderFrameObjectInfo {
+    /** Render material flags from processing */
+    RenderMaterialFlags renderMaterialFlags { 0U };
+};
+
+/** Render mesh batch data
+ */
+struct RenderMeshBatchData {
+    /** AABB */
+    RenderMinAndMax aabb;
+    /** Additional material flags. */
+    RenderMaterialFlags materialFlags { 0U };
+};
+
+/** Render mesh AABB data
+ */
+struct RenderMeshAabbData {
+    /** AABB */
+    RenderMinAndMax aabb;
+    /** Submesh AABBs */
+    BASE_NS::array_view<const RenderMinAndMax> submeshAabb;
+};
+
+/** Render mesh skin data
+ */
+struct RenderMeshSkinData {
+    /** AABB */
+    RenderMinAndMax aabb;
+    /** Skin joint matrices */
+    BASE_NS::array_view<const BASE_NS::Math::Mat4X4> skinJointMatrices;
+    /** Skin joint previous frame matrices */
+    BASE_NS::array_view<const BASE_NS::Math::Mat4X4> prevSkinJointMatrices;
+};
+
 struct RenderSubmeshBuffersWithHandleReference {
     /** Index buffer */
     RenderIndexBuffer indexBuffer;
@@ -330,6 +374,9 @@ struct RenderSubmeshBounds {
 struct RenderSubmeshLayers {
     /** Layer mask. */
     uint64_t layerMask { RenderSceneDataConstants::DEFAULT_LAYER_MASK };
+
+    /** Scene ID. */
+    uint32_t sceneId { 0U };
 
     /** Mesh render sort layer id. Valid values are 0 - 63 */
     uint8_t meshRenderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
@@ -395,6 +442,51 @@ struct RenderSubmesh {
     RenderSubmeshBuffers buffers;
 };
 
+/** Render submesh with handle references */
+struct RenderSubmeshDataWithHandleReference {
+    /** Submesh flags */
+    RenderSubmeshFlags submeshFlags { 0U };
+
+    /** Mesh render sort layer id. Valid values are 0 - 63 */
+    uint8_t meshRenderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+    /** Mesh render sort layer id. Valid values are 0 - 255 */
+    uint8_t meshRenderSortLayerOrder { 0 };
+
+    /** AABB min */
+    BASE_NS::Math::Vec3 aabbMin { 0.0f, 0.0f, 0.0f };
+    /** AABB max */
+    BASE_NS::Math::Vec3 aabbMax { 0.0f, 0.0f, 0.0f };
+
+    /** Draw command */
+    RenderDrawCommand drawCommand;
+
+    /** buffers for rendering with handle references */
+    RenderSubmeshBuffersWithHandleReference buffers;
+
+    /** basic material id -> invalid uses the default material */
+    uint64_t materialId { RenderSceneDataConstants::INVALID_ID };
+
+    /** additional materials for multi-pass */
+    BASE_NS::array_view<const uint64_t> additionalMaterials;
+};
+
+/** Render mesh data
+ * In default material pipeline created by:
+ * RenderMeshComponent creates RenderMeshData for every mesh.
+ */
+struct MeshDataWithHandleReference {
+    /** 64 bit id for mesh instance. MeshComponent entity. */
+    uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
+
+    /** AABB min (local) */
+    BASE_NS::Math::Vec3 aabbMin { 0.0f, 0.0f, 0.0f };
+    /** AABB max (local) */
+    BASE_NS::Math::Vec3 aabbMax { 0.0f, 0.0f, 0.0f };
+
+    /** Submeshes */
+    BASE_NS::vector<RenderSubmeshDataWithHandleReference> submeshes;
+};
+
 /** Render light */
 struct RenderLight {
     /** Light usage flag bits */
@@ -440,6 +532,9 @@ struct RenderLight {
     uint32_t shadowCameraIndex { ~0u };
     /** Filled by the data store */
     uint32_t shadowIndex { ~0u };
+
+    /** Scene ID */
+    uint32_t sceneId { 0U };
 };
 
 /** Render camera */
@@ -532,11 +627,15 @@ struct RenderCamera {
             BG_TYPE_CUBEMAP = 2,
             /** Equirectangular */
             BG_TYPE_EQUIRECTANGULAR = 3,
+            /** Sky */
+            BG_TYPE_SKY = 4,
         };
         /** Environment flags */
         enum EnvironmentFlagBits : uint32_t {
             /** Main scene environment. From render configuration component */
             ENVIRONMENT_FLAG_MAIN_BIT = (1 << 0),
+            /** Camera based weather render node enabled (e.g. clouds) */
+            ENVIRONMENT_FLAG_CAMERA_WEATHER_BIT = (1 << 1),
         };
         using EnvironmentFlags = uint32_t;
 
@@ -655,6 +754,9 @@ struct RenderCamera {
     Flags flags { 0u };
     /** Shader flags for camera */
     ShaderFlags shaderFlags { 0u };
+
+    /** Which scene the camera belongs to. */
+    uint32_t sceneId { 0U };
 
     /** Flags for camera render pipeline */
     RenderPipelineType renderPipelineType { RenderPipelineType::FORWARD };

@@ -1,18 +1,3 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 
 #include "json_importer.h"
 
@@ -28,6 +13,12 @@ META_BEGIN_NAMESPACE()
 namespace Serialization {
 
 JsonImporter::JsonImporter() : transformations_ { CreateShared<MetaMigrateV1>() } {}
+
+IObject::Ptr JsonImporter::Import(const ISerNode::ConstPtr& tree)
+{
+    return imp_.Import(tree);
+}
+
 ISerNode::Ptr JsonImporter::ImportAsTree(CORE_NS::IFile& input)
 {
     ISerNode::Ptr tree;
@@ -38,8 +29,6 @@ ISerNode::Ptr JsonImporter::ImportAsTree(CORE_NS::IFile& input)
         tree = json.Process(data);
         if (tree) {
             tree = Transform(tree, json.GetVersion());
-                /// debug
-                ///
         }
     }
     return tree;
@@ -48,8 +37,7 @@ ISerNode::Ptr JsonImporter::ImportAsTree(CORE_NS::IFile& input)
 IObject::Ptr JsonImporter::Import(CORE_NS::IFile& input)
 {
     if (auto tree = ImportAsTree(input)) {
-        Importer imp;
-        return imp.Import(tree);
+        return Import(tree);
     }
     return nullptr;
 }
@@ -68,6 +56,7 @@ ISerNode::Ptr JsonImporter::Transform(ISerNode::Ptr tree, const Version& ver)
         }
     }
 #ifdef _DEBUG
+    // --- debug
     if (transformed) {
         JsonOutput backend;
         auto json = backend.Process(tree);
@@ -78,9 +67,11 @@ ISerNode::Ptr JsonImporter::Transform(ISerNode::Ptr tree, const Version& ver)
         auto f = CORE_NS::GetPluginRegister().GetFileManager().CreateFile("file://./rewrite.json");
         f->Write(json.c_str(), json.size());
     }
+    // ---
 #endif
     return tree;
 }
+
 BASE_NS::vector<ISerTransformation::Ptr> JsonImporter::GetTransformations() const
 {
     return transformations_;
@@ -89,5 +80,22 @@ void JsonImporter::SetTransformations(BASE_NS::vector<ISerTransformation::Ptr> t
 {
     transformations_ = BASE_NS::move(t);
 }
+BASE_NS::unordered_map<InstanceId, InstanceId> JsonImporter::GetInstanceIdMapping() const
+{
+    return imp_.GetInstanceIdMapping();
+}
+void JsonImporter::SetResourceManager(CORE_NS::IResourceManager::Ptr p)
+{
+    imp_.SetResourceManager(BASE_NS::move(p));
+}
+void JsonImporter::SetUserContext(IObject::Ptr p)
+{
+    imp_.SetUserContext(BASE_NS::move(p));
+}
+SerMetadata JsonImporter::GetMetadata() const
+{
+    return imp_.GetMetadata();
+}
+
 } // namespace Serialization
 META_END_NAMESPACE()

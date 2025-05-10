@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <memory>
 
+#include <base/containers/shared_ptr.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
@@ -59,7 +60,7 @@ private:
 /** Read-only memory file. */
 class MemoryFile final : public IFile {
 public:
-    MemoryFile(std::shared_ptr<MemoryFileStorage>&& buffer, Mode mode);
+    MemoryFile(BASE_NS::shared_ptr<MemoryFileStorage>&& buffer, Mode mode);
 
     ~MemoryFile() override = default;
 
@@ -87,7 +88,7 @@ protected:
 
 private:
     uint64_t index_ { 0 };
-    std::shared_ptr<MemoryFileStorage> buffer_;
+    BASE_NS::shared_ptr<MemoryFileStorage> buffer_;
     Mode mode_ { Mode::INVALID };
 };
 CORE_END_NAMESPACE()

@@ -1,69 +1,67 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 #ifndef SCENE_SRC_MESH_MESH_H
 #define SCENE_SRC_MESH_MESH_H
 
 #include <mutex>
+#include <scene/ext/ecs_lazy_property.h>
 #include <scene/ext/intf_create_entity.h>
-#include <scene/ext/named_scene_object.h>
 #include <scene/interface/intf_mesh.h>
 
+#include <meta/api/event_handler.h>
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
+#include <meta/ext/resource/resource.h>
 #include <meta/interface/intf_owner.h>
 
-#include "component/mesh_component.h"
+#include "../component/mesh_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-class Mesh : public META_NS::IntroduceInterfaces<NamedSceneObject, IMesh, ICreateEntity, META_NS::IPropertyOwner> {
+class Mesh : public META_NS::IntroduceInterfaces<NamedSceneObject, IMesh, ICreateEntity, CORE_NS::IResource> {
     META_OBJECT(Mesh, ClassId::Mesh, IntroduceInterfaces)
 public:
+    void Destroy() override;
+
     META_BEGIN_STATIC_DATA()
-    META_STATIC_PROPERTY_DATA(IMesh, IMaterial::Ptr, MaterialOverride)
+    META_STATIC_FORWARDED_PROPERTY_DATA(IMesh, BASE_NS::Math::Vec3, AABBMin)
+    META_STATIC_FORWARDED_PROPERTY_DATA(IMesh, BASE_NS::Math::Vec3, AABBMax)
+    SCENE_STATIC_DYNINIT_ARRAY_PROPERTY_DATA(IMesh, ISubMesh::Ptr, SubMeshes, "")
     META_END_STATIC_DATA()
 
-    META_IMPLEMENT_PROPERTY(IMaterial::Ptr, MaterialOverride)
     META_FORWARD_READONLY_PROPERTY(BASE_NS::Math::Vec3, AABBMin, mesh_->AABBMin())
     META_FORWARD_READONLY_PROPERTY(BASE_NS::Math::Vec3, AABBMax, mesh_->AABBMax())
-
-    Future<BASE_NS::vector<ISubMesh::Ptr>> GetSubmeshes() const override;
-    Future<bool> SetSubmeshes(const BASE_NS::vector<ISubMesh::Ptr>&) override;
+    META_IMPLEMENT_READONLY_ARRAY_PROPERTY(ISubMesh::Ptr, SubMeshes)
 
 public:
     bool SetEcsObject(const IEcsObject::Ptr&) override;
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
+    bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
+
+public: // IResource (empty implementation as placeholder, needed to initialize API Mesh resource with IMesh::Ptr
+    CORE_NS::ResourceType GetResourceType() const override
+    {
+        return {};
+    }
+    CORE_NS::ResourceId GetResourceId() const override
+    {
+        return {};
+    }
 
 private:
-    void OnPropertyChanged(const META_NS::IProperty&) override;
-
     void SetInternalMesh(IInternalMesh::Ptr m);
     BASE_NS::vector<CORE3D_NS::MeshComponent::Submesh> ConstructComponentSubmeshes(
         const BASE_NS::vector<ISubMesh::Ptr>& submeshes) const;
-    void ApplyMaterialOverride(BASE_NS::vector<CORE3D_NS::MeshComponent::Submesh>& submeshes, bool forceStore = false);
-    void RestoreOriginalMaterials(BASE_NS::vector<CORE3D_NS::MeshComponent::Submesh>& submeshes);
-    void OnMaterialOverrideChanged();
 
     IEcsObject::Ptr GetMeshEcsObject() const;
+    void RecalculateAABB();
+    bool UpdateSubmeshes(META_NS::ArrayProperty<ISubMesh::Ptr> prop);
+    void RefreshSubmeshes(const BASE_NS::vector<ISubMesh::Ptr>& subs);
 
 protected:
     mutable std::mutex mutex_;
     CORE_NS::EntityReference meshEntity_;
     IInternalMesh::Ptr mesh_;
-    BASE_NS::vector<CORE_NS::Entity> submeshMaterials_;
+    META_NS::EventHandler submeshEvent_;
 };
 
 SCENE_END_NAMESPACE()

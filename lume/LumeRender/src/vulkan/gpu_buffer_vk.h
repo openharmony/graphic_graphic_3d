@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -41,6 +41,8 @@ class GpuBufferVk final : public GpuBuffer {
 public:
     GpuBufferVk(Device& device, const GpuBufferDesc& desc);
     GpuBufferVk(Device& device, const GpuAccelerationStructureDesc& desc);
+    GpuBufferVk(Device& device, const BackendSpecificBufferDesc& desc);
+
     ~GpuBufferVk() override;
 
     const GpuBufferDesc& GetDesc() const override;
@@ -55,6 +57,8 @@ public:
 private:
     void AllocateMemory(VkMemoryPropertyFlags requiredFlags, VkMemoryPropertyFlags preferredFlags);
     void CreateBufferImpl();
+    void CreatePlatformHwBuffer();
+    void DestroyPlatformHwBuffer();
 
     Device& device_;
 
@@ -69,6 +73,9 @@ private:
     bool isRingBuffer_ { false };
     bool isAccelerationStructure_ { false };
     uint32_t bufferingCount_ { 1u };
+
+    // in normal situations owns all the vulkan resources
+    bool ownsResources_ { true };
 
     // debug assert usage only
     mutable bool isMapped_ { false };

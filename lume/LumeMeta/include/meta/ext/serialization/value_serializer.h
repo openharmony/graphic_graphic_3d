@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+ * Description: Helper to create value serializers
+ * Author: Mikael Kilpeläinen
+ * Create: 2024-01-15
  */
 
 #ifndef META_EXT_SERIALIZATION_VALUE_SERIALIZER_H
@@ -27,6 +19,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Helper class to use export/import functions to construct value serializer
 template<typename Type, typename ExportFunc, typename ImportFunc>
 struct ValueSerializer : IntroduceInterfaces<IValueSerializer> {
     ValueSerializer(ExportFunc e, ImportFunc i) : export_(BASE_NS::move(e)), import_(BASE_NS::move(i)) {}

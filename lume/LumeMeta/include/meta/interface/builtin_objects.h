@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Built-in object class ids.
+ * Author: Jani Kattelus
+ * Create: 2022-05-25
  */
 
 #ifndef META_INTERFACE_BUILTIN_OBJECTS_H
@@ -34,7 +26,6 @@ META_REGISTER_CLASS(ProxyObject, "bd2164e1-b1b6-472a-8783-7787c7de9b36", ObjectC
 META_REGISTER_CLASS(ObjectContainer, "e25ec91e-f5cb-4afa-b277-a16c19da2e4a", ObjectCategoryBits::CONTAINER)
 META_REGISTER_CLASS(ObjectFlatContainer, "30f501c2-7b62-44a4-911b-9b0ff2c850c4", ObjectCategoryBits::CONTAINER)
 META_REGISTER_CLASS(AttachmentContainer, "d03551ab-8ef4-4b0b-98ba-f0edd2db6ba2", ObjectCategoryBits::CONTAINER)
-META_REGISTER_CLASS(ResourceContainer, "d86402a2-1a05-4d6e-9c31-f5979f3fa017", ObjectCategoryBits::CONTAINER)
 META_REGISTER_CLASS(ObjectDataContainer, "699f6e94-a988-406d-af8b-8a4fa88a3485", ObjectCategoryBits::CONTAINER)
 META_REGISTER_CLASS(ContainerObserver, "a13844ca-9830-4dd2-8ecc-625563bcc5b0", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(ObjectHierarchyObserver, "48cb1bb4-dd0a-44a5-a530-c2073e3a70df", ObjectCategoryBits::NO_CATEGORY)
@@ -135,9 +126,16 @@ META_REGISTER_CLASS(MetaMigrateV1, "6a6cddfc-3788-4948-8d04-6acca3d120fb", Objec
 
 META_REGISTER_CLASS(Bind, "27513ec5-8415-4491-b3f4-51205936cc5d", ObjectCategoryBits::NO_CATEGORY)
 
+META_REGISTER_CLASS(ObjectName, "5f03a3e1-32b8-4f69-9e9f-4d9d1a4f7728", ObjectCategoryBits::NO_CATEGORY)
+
 // engine support
 META_REGISTER_CLASS(EngineValueManager, "a63723d0-7755-4ca3-a9d6-983df6e12cff", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(EngineInputPropertyManager, "10a81469-07c2-4cab-b8a5-3249e415cb5a", ObjectCategoryBits::NO_CATEGORY)
+
+META_REGISTER_CLASS(FileResourceManager, "ac0475e4-7f9d-4762-8c2a-1cfcc6a9b061", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(ObjectResource, "22d5ef8e-d625-4563-927f-435a460c3c90", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(ObjectResourceType, "8f9a3b1c-a4a1-4c68-b386-3eb9ac3c8e66", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(ResourcePlaceholder, "a83cf98c-1c51-4666-bed2-a806e9a69dbb", ObjectCategoryBits::NO_CATEGORY)
 
 META_END_NAMESPACE()
 

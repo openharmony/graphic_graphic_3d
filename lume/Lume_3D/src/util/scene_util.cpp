@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -58,6 +58,7 @@
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
 #include <core/property/property_types.h>
+#include <core/util/intf_frustum_util.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/intf_render_context.h>
@@ -224,7 +225,7 @@ void SceneUtil::UpdateCameraViewport(
 }
 
 void SceneUtil::CameraLookAt(
-    IEcs& ecs, Entity entity, const Math::Vec3& eye, const Math::Vec3& target, const Math::Vec3& up)
+    IEcs& ecs, Entity entity, const Math::Vec3& eye, const Math::Vec3& target, const Math::Vec3& up) const
 {
     auto ncm = GetManager<INodeComponentManager>(ecs);
     auto tcm = GetManager<ITransformComponentManager>(ecs);
@@ -244,7 +245,8 @@ void SceneUtil::CameraLookAt(
     for (Entity node = getParent(entity); EntityUtil::IsValid(node); node = getParent(node)) {
         if (auto parentTransformHandle = tcm->Read(node)) {
             parentWorld = Math::Trs(parentTransformHandle->position, parentTransformHandle->rotation,
-                parentTransformHandle->scale) * parentWorld;
+                              parentTransformHandle->scale) *
+                          parentWorld;
         }
     }
 
@@ -295,7 +297,7 @@ Entity SceneUtil::CreateLight(
 
     LightComponent lc = lightComponent;
     lc.shadowEnabled = (lc.type != LightComponent::Type::POINT) && lc.shadowEnabled;
-    lc.range = ComponentUtilFunctions::CalculateSafeLightRange(lc.range, lc.intensity);
+    // NOTE: range is calculated automatically by the render system if the value is default 0.0
     lcm->Set(light, lc);
 
     return light;
@@ -915,9 +917,7 @@ void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHan
             entityRefFunc(ptr);
         }
     } else if (std::any_of(std::begin(TYPES), std::end(TYPES),
-        [&current = property.type](const uint64_t type) {
-            return type == current;
-        })) {
+                   [&current = property.type](const uint64_t type) { return type == current; })) {
         // One of the basic types so no further processing needed.
     } else if (property.metaData.containerMethods) {
         auto& containerProperty = property.metaData.containerMethods->property;
@@ -1038,7 +1038,7 @@ void UpdateEntities(
     for (const auto& property : data->Owner()->MetaData()) {
         FindEntities(
             property, base + property.offset,
-            [oldToNew, data, &updatedProperties](Entity* entity) {
+            [&oldToNew, data, &updatedProperties](Entity* entity) {
                 if (updatedProperties.count(reinterpret_cast<uintptr_t>(entity))) {
                     return;
                 }
@@ -1051,7 +1051,7 @@ void UpdateEntities(
                     CORE_LOG_D("couldn't find %s", to_hex(entity->id).data());
                 }
             },
-            [oldToNew, data, &updatedProperties, &em](EntityReference* entity) {
+            [&oldToNew, data, &updatedProperties, &em](EntityReference* entity) {
                 if (updatedProperties.count(reinterpret_cast<uintptr_t>(entity))) {
                     return;
                 }
@@ -1147,5 +1147,30 @@ vector<Entity> SceneUtil::Clone(IEcs& destination, const IEcs& source) const
 
     auto result = CloneEntities(destination, source, GatherEntities(source));
     return result.newEntities;
+}
+
+bool SceneUtil::IsSphereInsideCameraFrustum(
+    const IEcs& ecs, Entity cameraEntity, const Math::Vec3 center, const float radius) const
+{
+    if (!EntityUtil::IsValid(cameraEntity)) {
+        return false;
+    }
+    auto* frustumUtil = GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
+    auto* cameraMgr = GetManager<ICameraComponentManager>(ecs);
+    auto* worldMatrixMgr = GetManager<IWorldMatrixComponentManager>(ecs);
+    if (!frustumUtil || !cameraMgr || !worldMatrixMgr) {
+        return false;
+    }
+    auto cameraHandle = cameraMgr->Read(cameraEntity);
+    auto worldMatrixHandle = worldMatrixMgr->Read(cameraEntity);
+    if (!cameraHandle || !worldMatrixHandle) {
+        return false;
+    }
+    float determinant = 0.0f;
+    const Math::Mat4X4 view = Math::Inverse(worldMatrixHandle->matrix, determinant);
+    bool isCameraNegative = determinant < 0.0f;
+    const Math::Mat4X4 proj = CameraMatrixUtil::CalculateProjectionMatrix(*cameraHandle, isCameraNegative);
+    const Frustum frustum = frustumUtil->CreateFrustum(proj * view);
+    return frustumUtil->SphereFrustumCollision(frustum, center, radius);
 }
 CORE3D_END_NAMESPACE()

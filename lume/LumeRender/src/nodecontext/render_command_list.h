@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -83,6 +83,7 @@ enum class RenderCommandType : uint32_t {
     PUSH_CONSTANT,
 
     BUILD_ACCELERATION_STRUCTURE,
+    COPY_ACCELERATION_STRUCTURE_INSTANCES,
 
     CLEAR_COLOR_IMAGE,
 
@@ -133,6 +134,7 @@ constexpr const char* COMMAND_NAMES[] = {
     "PushConstant",
 
     "BuildAccelerationStructures",
+    "CopyAccelerationStructureInstances",
 
     "ClearColorImage",
 
@@ -157,6 +159,12 @@ constexpr const char* COMMAND_NAMES[] = {
 };
 static_assert(BASE_NS::countof(COMMAND_NAMES) == (static_cast<uint32_t>(RenderCommandType::COUNT)));
 #endif
+
+// special command which is not tied to a command list
+struct ProcessBackendCommand {
+    IRenderBackendPositionCommand::Ptr command;
+    RenderBackendCommandPosition backendCommandPosition;
+};
 
 enum class RenderPassBeginType : uint32_t {
     RENDER_PASS_BEGIN,
@@ -362,24 +370,22 @@ struct RenderCommandCopyImage {
 };
 
 struct RenderCommandBuildAccelerationStructure {
-    AccelerationStructureType type { AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL };
-    BuildAccelerationStructureFlags flags { 0 };
-    BuildAccelerationStructureMode mode {
-        BuildAccelerationStructureMode::CORE_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD
-    };
-    RenderHandle srcAccelerationStructure;
-    RenderHandle dstAccelerationStructure;
+    AsBuildGeometryData geometry;
 
-    RenderHandle scratchBuffer;
-    uint32_t scratchOffset { 0u };
+    AsGeometryTrianglesData* trianglesData { nullptr };
+    AsGeometryAabbsData* aabbsData { nullptr };
+    AsGeometryInstancesData* instancesData { nullptr };
 
-    AccelerationStructureGeometryTrianglesData* trianglesData { nullptr };
-    AccelerationStructureGeometryAabbsData* aabbsData { nullptr };
-    AccelerationStructureGeometryInstancesData* instancesData { nullptr };
+    BASE_NS::array_view<AsGeometryTrianglesData> trianglesView;
+    BASE_NS::array_view<AsGeometryAabbsData> aabbsView;
+    BASE_NS::array_view<AsGeometryInstancesData> instancesView;
+};
 
-    BASE_NS::array_view<AccelerationStructureGeometryTrianglesData> trianglesView;
-    BASE_NS::array_view<AccelerationStructureGeometryAabbsData> aabbsView;
-    BASE_NS::array_view<AccelerationStructureGeometryInstancesData> instancesView;
+struct RenderCommandCopyAccelerationStructureInstances {
+    BufferOffset destination;
+
+    AsInstance* instancesData { nullptr };
+    BASE_NS::array_view<AsInstance> instancesView;
 };
 
 struct RenderCommandClearColorImage {
@@ -445,6 +451,7 @@ struct RenderCommandWriteTimestamp {
 
 struct RenderCommandExecuteBackendFramePosition {
     uint64_t id { 0 };
+    IRenderBackendCommand* command { nullptr };
 };
 
 #if (RENDER_DEBUG_MARKERS_ENABLED == 1)
@@ -514,14 +521,13 @@ public:
     // clean-up if needed
     void AfterRenderNodeExecuteFrame();
 
-    void Draw(const uint32_t vertexCount, const uint32_t instanceCount,
-        const uint32_t firstVertex, const uint32_t firstInstance) override;
-    void DrawIndexed(const uint32_t indexCount, const uint32_t instanceCount, const uint32_t firstIndex,
-        const int32_t vertexOffset, const uint32_t firstInstance) override;
+    void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
+    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
+        uint32_t firstInstance) override;
     void DrawIndirect(RenderHandle bufferHandle, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
     void DrawIndexedIndirect(RenderHandle bufferHandle, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
 
-    void Dispatch(const uint32_t groupCountX, const uint32_t groupCountY, const uint32_t groupCountZ) override;
+    void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) override;
     void DispatchIndirect(RenderHandle bufferHandle, uint32_t offset) override;
 
     void BindPipeline(RenderHandle psoHandle) override;
@@ -576,10 +582,12 @@ public:
     void BindDescriptorSets(
         uint32_t firstSet, BASE_NS::array_view<const BindDescriptorSetData> descriptorSetData) override;
 
-    void BuildAccelerationStructures(const AccelerationStructureBuildGeometryData& geometry,
-        BASE_NS::array_view<const AccelerationStructureGeometryTrianglesData> triangles,
-        BASE_NS::array_view<const AccelerationStructureGeometryAabbsData> aabbs,
-        BASE_NS::array_view<const AccelerationStructureGeometryInstancesData> instances) override;
+    void BuildAccelerationStructures(const AsBuildGeometryData& geometry,
+        BASE_NS::array_view<const AsGeometryTrianglesData> triangles,
+        BASE_NS::array_view<const AsGeometryAabbsData> aabbs,
+        BASE_NS::array_view<const AsGeometryInstancesData> instances) override;
+    void CopyAccelerationStructureInstances(
+        const BufferOffset& destinationBufferHandle, BASE_NS::array_view<const AsInstance> instances) override;
 
     void ClearColorImage(
         RenderHandle handle, ClearColorValue color, BASE_NS::array_view<const ImageSubresourceRange> ranges) override;
@@ -587,11 +595,11 @@ public:
     // dynamic states
     void SetDynamicStateViewport(const ViewportDesc& viewportDesc) override;
     void SetDynamicStateScissor(const ScissorDesc& scissorDesc) override;
-    void SetDynamicStateLineWidth(const float lineWidth) override;
+    void SetDynamicStateLineWidth(float lineWidth) override;
     void SetDynamicStateDepthBias(
-        const float depthBiasConstantFactor, const float depthBiasClamp, const float depthBiasSlopeFactor) override;
+        float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) override;
     void SetDynamicStateBlendConstants(BASE_NS::array_view<const float> blendConstants) override;
-    void SetDynamicStateDepthBounds(const float minDepthBounds, const float maxDepthBounds) override;
+    void SetDynamicStateDepthBounds(float minDepthBounds, float maxDepthBounds) override;
     void SetDynamicStateStencilCompareMask(StencilFaceFlags faceMask, uint32_t compareMask) override;
     void SetDynamicStateStencilWriteMask(StencilFaceFlags faceMask, uint32_t writeMask) override;
     void SetDynamicStateStencilReference(StencilFaceFlags faceMask, uint32_t reference) override;
@@ -599,6 +607,10 @@ public:
         const Size2D& fragmentSize, const FragmentShadingRateCombinerOps& combinerOps) override;
 
     void SetExecuteBackendFramePosition() override;
+    void SetExecuteBackendCommand(IRenderBackendCommand::Ptr backendCommand) override;
+    void SetBackendCommand(IRenderBackendPositionCommand::Ptr backendCommand,
+        RenderBackendCommandPosition backendCommandPosition) override;
+    BASE_NS::array_view<ProcessBackendCommand> GetProcessBackendCommands();
 
     void BeginDebugMarker(BASE_NS::string_view name) override;
     void BeginDebugMarker(BASE_NS::string_view name, BASE_NS::Math::Vec4 color) override;
@@ -622,7 +634,7 @@ private:
     // add barrier/synchronization point where descriptor resources need to be synchronized
     // on gfx this happens before BeginRenderPass()
     // on compute this happens before Dispatch -methods
-    void AddBarrierPoint(const RenderCommandType renderCommandType);
+    void AddBarrierPoint(RenderCommandType renderCommandType);
 
     bool ProcessInputAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
         RenderPassAttachmentResourceStates& subpassResourceStates);
@@ -687,7 +699,7 @@ private:
     // true if valid multi-queue gpu resource transfers are created in render node graph
     bool validReleaseAcquire_ { false };
     // true if has any global descriptor set bindings, needed for global descriptor set dependencies
-    bool hasGlobalDescriptorSetBindings_ { false };
+    bool hadGlobalDescriptorSetBindings_ { false };
 
     // true if render pass has been begun with subpasscount > 1 and not all subpasses given
     bool hasMultiRpCommandListSubpasses_ { false };
@@ -716,6 +728,11 @@ private:
     // store all descriptor set handles which are updated to this list
     BASE_NS::vector<RenderHandle> descriptorSetHandlesForUpdates_;
 
+    // stores all backend commands, ptr used in command list
+    BASE_NS::vector<IRenderBackendCommand::Ptr> backendCommands_;
+    // process backend commands
+    BASE_NS::vector<ProcessBackendCommand> processBackendCommands_;
+
     // linear allocator for render command list commands
     LinearAllocatorStruct allocator_;
 
@@ -723,6 +740,7 @@ private:
     // need to end at some point
     struct DebugMarkerStack {
         uint32_t stackCounter { 0U };
+        uint32_t commandCount { 0U }; // to prevent command list backend processing with only debug markers
     };
     DebugMarkerStack debugMarkerStack_;
 #endif

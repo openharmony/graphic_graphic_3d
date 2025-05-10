@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -361,18 +361,100 @@ void GenerateTorusGeometry(
 } // namespace
 
 template<typename IndexType>
+void CalculateTangentBitangent(const array_view<const IndexType>& indices,
+    const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec2>& uvs,
+    array_view<Math::Vec3> outTan, array_view<Math::Vec3> outBitan)
+{
+    const auto indexCount = (indices.size() / 3U) * 3U;
+    for (size_t i = 0; i < indexCount; i += 3U) {
+        const IndexType aa = indices[i + 0U];
+        const IndexType bb = indices[i + 1U];
+        const IndexType cc = indices[i + 2U];
+
+        const Math::Vec2& uv1 = uvs[aa];
+        const Math::Vec2& uv2 = uvs[bb];
+        const Math::Vec2& uv3 = uvs[cc];
+
+        const auto st1 = uv2 - uv1;
+        const auto st2 = uv3 - uv1;
+
+        auto d = Math::Cross(st1, st2);
+        if (Math::abs(d) < Math::EPSILON) {
+            d = Math::EPSILON;
+        }
+        const float r = 1.0f / d;
+
+        const Math::Vec3& v1 = positions[aa];
+        const Math::Vec3& v2 = positions[bb];
+        const Math::Vec3& v3 = positions[cc];
+
+        const auto e1 = v2 - v1;
+        const auto e2 = v3 - v1;
+
+        const Math::Vec3 sdir { (e1 * st2.y - e2 * st1.y) * r };
+        outTan[aa] += sdir;
+        outTan[bb] += sdir;
+        outTan[cc] += sdir;
+
+        const Math::Vec3 tdir { (e2 * st1.x - e1 * st2.x) * r };
+
+        outBitan[aa] += tdir;
+        outBitan[bb] += tdir;
+        outBitan[cc] += tdir;
+    }
+}
+void CalculateFinalTangent(const array_view<const Math::Vec3>& normals, array_view<const Math::Vec3> tan,
+    array_view<const Math::Vec3> bitan, array_view<Math::Vec4>& outTangents)
+{
+    for (size_t i = 0; i < normals.size(); i++) {
+        const Math::Vec3& n = normals[i];
+        const Math::Vec3& t = tan[i];
+
+        // Gram-Schmidt orthogonalize
+        const Math::Vec3 tmp = Math::Normalize(t - n * Math::Dot(n, t));
+
+        // Calculate handedness
+        const float w = (Math::Dot(Math::Cross(n, t), bitan[i]) < 0.0F) ? 1.0F : -1.0F;
+
+        outTangents[i] = Math::Vec4(tmp.x, tmp.y, tmp.z, w);
+    }
+}
+
+template<typename IndexType>
 void CalculateTangentImpl(const array_view<const IndexType>& indices, const array_view<const Math::Vec3>& positions,
     const array_view<const Math::Vec3>& normals, const array_view<const Math::Vec2>& uvs,
     array_view<Math::Vec4>& outTangents)
 {
+    if (indices.size() < 3U) {
+        return;
+    }
+
     // http://www.terathon.com/code/tangent.html
     vector<Math::Vec3> tan(positions.size(), { 0, 0, 0 });
     vector<Math::Vec3> bitan(positions.size(), { 0, 0, 0 });
 
-    for (size_t i = 0; i < indices.size(); i += 3u) {
-        const IndexType aa = indices[i + 0u];
-        const IndexType bb = indices[i + 1u];
-        const IndexType cc = indices[i + 2u];
+    CalculateTangentBitangent(indices, positions, uvs, tan, bitan);
+    CalculateFinalTangent(normals, tan, bitan, outTangents);
+}
+
+template<typename IndexType>
+void CalculateTangentImplStrip(const array_view<const IndexType>& indices,
+    const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec3>& normals,
+    const array_view<const Math::Vec2>& uvs, array_view<Math::Vec4>& outTangents)
+{
+    if (indices.size() < 3U) {
+        return;
+    }
+    // http://www.terathon.com/code/tangent.html
+    vector<Math::Vec3> tan(positions.size(), { 0, 0, 0 });
+    vector<Math::Vec3> bitan(positions.size(), { 0, 0, 0 });
+
+    CalculateTangentBitangent(array_view(indices.data(), 3U), positions, uvs, tan, bitan);
+
+    for (size_t i = 2U; i < indices.size(); ++i) {
+        const IndexType aa = (i % 2U) ? indices[i - 1U] : indices[i - 2U];
+        const IndexType bb = (i % 2U) ? indices[i - 2U] : indices[i - 1U];
+        const IndexType cc = indices[i];
 
         const Math::Vec2& uv1 = uvs[aa];
         const Math::Vec2& uv2 = uvs[bb];
@@ -405,40 +487,40 @@ void CalculateTangentImpl(const array_view<const IndexType>& indices, const arra
         bitan[bb] += tdir;
         bitan[cc] += tdir;
     }
-
-    for (size_t i = 0; i < positions.size(); i++) {
-        const Math::Vec3& n = normals[i];
-        const Math::Vec3& t = tan[i];
-
-        // Gram-Schmidt orthogonalize
-        const Math::Vec3 tmp = Math::Normalize(t - n * Math::Dot(n, t));
-
-        // Calculate handedness
-        const float w = (Math::Dot(Math::Cross(n, t), bitan[i]) < 0.0F) ? 1.0F : -1.0F;
-
-        outTangents[i] = Math::Vec4(tmp.x, tmp.y, tmp.z, w);
-    }
+    CalculateFinalTangent(normals, tan, bitan, outTangents);
 }
 
 void MeshUtil::CalculateTangents(const array_view<const uint32_t>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec3>& normals,
-    const array_view<const Math::Vec2>& uvs, array_view<Math::Vec4> outTangents)
+    const array_view<const Math::Vec2>& uvs, PrimitiveTopology topology, array_view<Math::Vec4> outTangents)
 {
-    CalculateTangentImpl<uint32_t>(indices, positions, normals, uvs, outTangents);
+    if (topology == PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP) {
+        CalculateTangentImplStrip(indices, positions, normals, uvs, outTangents);
+    } else {
+        CalculateTangentImpl(indices, positions, normals, uvs, outTangents);
+    }
 }
 
 void MeshUtil::CalculateTangents(const array_view<const uint16_t>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec3>& normals,
-    const array_view<const Math::Vec2>& uvs, array_view<Math::Vec4> outTangents)
+    const array_view<const Math::Vec2>& uvs, PrimitiveTopology topology, array_view<Math::Vec4> outTangents)
 {
-    CalculateTangentImpl<uint16_t>(indices, positions, normals, uvs, outTangents);
+    if (topology == PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP) {
+        CalculateTangentImplStrip(indices, positions, normals, uvs, outTangents);
+    } else {
+        CalculateTangentImpl(indices, positions, normals, uvs, outTangents);
+    }
 }
 
 void MeshUtil::CalculateTangents(const array_view<const uint8_t>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec3>& normals,
-    const array_view<const Math::Vec2>& uvs, array_view<Math::Vec4> outTangents)
+    const array_view<const Math::Vec2>& uvs, PrimitiveTopology topology, array_view<Math::Vec4> outTangents)
 {
-    CalculateTangentImpl<uint8_t>(indices, positions, normals, uvs, outTangents);
+    if (topology == PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP) {
+        CalculateTangentImplStrip(indices, positions, normals, uvs, outTangents);
+    } else {
+        CalculateTangentImpl(indices, positions, normals, uvs, outTangents);
+    }
 }
 
 template<typename T>
@@ -493,7 +575,8 @@ Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Enti
         constexpr auto normalsView = array_view(PLANE_NORM);
         constexpr auto uvsView = array_view(PLANE_UV);
 
-        CalculateTangents(indicesView, positionsView, normalsView, uvsView, tangents);
+        CalculateTangents(indicesView, positionsView, normalsView, uvsView,
+            PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
     }
 
     IMeshBuilder::Submesh submesh;
@@ -530,7 +613,8 @@ Entity MeshUtil::GenerateSphereMesh(
     GenerateSphereGeometry(radius, rings, sectors, { vertices, normals, uvs, indices });
 
     vector<Math::Vec4> tangents(vertices.size());
-    CalculateTangents(indices, vertices, normals, uvs, tangents);
+    CalculateTangents(
+        indices, vertices, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
     IMeshBuilder::Submesh submesh;
     submesh.material = material;
@@ -573,7 +657,8 @@ Entity MeshUtil::GenerateConeMesh(
     submesh.tangents = true;
 
     vector<Math::Vec4> tangents(vertices.size());
-    CalculateTangents(indices, vertices, normals, uvs, tangents);
+    CalculateTangents(
+        indices, vertices, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
     auto builder = InitializeBuilder(submesh);
 
@@ -602,7 +687,8 @@ Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Enti
     GenerateTorusGeometry(majorRadius, minorRadius, majorSectors, minorSectors, { vertices, normals, uvs, indices });
 
     vector<Math::Vec4> tangents(vertices.size());
-    CalculateTangents(indices, vertices, normals, uvs, tangents);
+    CalculateTangents(
+        indices, vertices, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
     IMeshBuilder::Submesh submesh;
     submesh.material = material;
@@ -638,7 +724,8 @@ Entity MeshUtil::GenerateCubeMesh(
     GenerateCubeGeometry(width, height, depth, { positions, normals, uvs, indices });
 
     vector<Math::Vec4> tangents(positions.size());
-    CalculateTangents(indices, positions, normals, uvs, tangents);
+    CalculateTangents(
+        indices, positions, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
     IMeshBuilder::Submesh submesh;
     submesh.material = material;

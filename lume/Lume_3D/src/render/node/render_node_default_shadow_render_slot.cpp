@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -56,9 +56,11 @@ constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT
 static constexpr uint32_t UBO_OFFSET_ALIGNMENT { 256u };
 static constexpr uint32_t MAX_SHADOW_ATLAS_WIDTH { 8192u };
 
-inline uint64_t HashShaderAndSubmesh(const uint64_t shaderDataHash, const uint32_t renderHash)
+inline uint64_t HashShaderAndSubmesh(
+    const uint64_t shaderDataHash, const uint32_t renderHash, const GraphicsState::InputAssembly& ia)
 {
-    uint64_t hash = (uint64_t)renderHash;
+    const uint64_t iaHash = uint32_t(ia.enablePrimitiveRestart) | (ia.primitiveTopology << 1U);
+    uint64_t hash = (iaHash << 32) | (uint64_t)renderHash;
     HashCombine(hash, shaderDataHash);
     return hash;
 }
@@ -372,9 +374,10 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
             selectableShaders.basicState };
         ssd.hash = (ssd.shader.id << 32U) | (ssd.gfxState.id & 0xFFFFffff);
         HashCombine(ssd.hash, ((ssd.defaultShader.id << 32U) | (ssd.defaultShaderState.id & 0xFFFFffff)));
-        ssd.hash = HashShaderAndSubmesh(ssd.hash, currMaterialFlags.renderDepthHash);
+        ssd.hash = HashShaderAndSubmesh(ssd.hash, currMaterialFlags.renderDepthHash, currSubmesh.buffers.inputAssembly);
         if (ssd.hash != boundShaderHash) {
-            const PsoCreationValue psoVal = GetSubmeshPso(ssd, currMaterialFlags, currSubmesh.submeshFlags);
+            const PsoCreationValue psoVal =
+                GetSubmeshPso(ssd, currSubmesh.buffers.inputAssembly, currMaterialFlags, currSubmesh.submeshFlags);
             if (psoVal.psoHandle.id != boundPsoHandle.id) {
                 boundShaderHash = ssd.hash;
                 boundPsoHandle = psoVal.psoHandle;
@@ -501,9 +504,27 @@ void RenderNodeDefaultShadowRenderSlot::CreateDefaultShaderData()
     }
 }
 
+namespace {
+// updates graphics state based on params
+inline GraphicsState GetNewGraphicsState(const IRenderNodeShaderManager& shaderMgr, const RenderHandle& handle,
+    const bool inverseWinding, const bool customInputAssembly, const GraphicsState::InputAssembly& ia)
+{
+    // we create a new graphics state based on current
+    GraphicsState gfxState = shaderMgr.GetGraphicsState(handle);
+    // update state
+    if (inverseWinding) {
+        gfxState.rasterizationState.frontFace = FrontFace::CORE_FRONT_FACE_CLOCKWISE;
+    }
+    if (customInputAssembly) {
+        gfxState.inputAssembly = ia;
+    }
+    return gfxState;
+}
+} // namespace
+
 RenderNodeDefaultShadowRenderSlot::PsoCreationValue RenderNodeDefaultShadowRenderSlot::CreateNewPso(
-    const ShaderStateData& ssd, const ShaderSpecializationConstantDataView& specialization,
-    const RenderSubmeshFlags submeshFlags)
+    const ShaderStateData& ssd, const GraphicsState::InputAssembly& ia,
+    const ShaderSpecializationConstantDataView& specialization, const RenderSubmeshFlags submeshFlags)
 {
     const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
     RenderHandle currShader;
@@ -542,15 +563,15 @@ RenderNodeDefaultShadowRenderSlot::PsoCreationValue RenderNodeDefaultShadowRende
 
     auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
     RenderHandle psoHandle;
+    const bool inverseWinding = IsInverseWinding(submeshFlags);
+    const bool customIa = (ia.primitiveTopology != CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM) || (ia.enablePrimitiveRestart);
     // ATM pipeline layout setup to shader is not forced. Use default if not an extra set.
-    if (IsInverseWinding(submeshFlags)) {
-        // we create a new graphics state with inverse winding
-        GraphicsState gfxState = shaderMgr.GetGraphicsState(currState);
-        gfxState.rasterizationState.frontFace = FrontFace::CORE_FRONT_FACE_CLOCKWISE;
+    if (inverseWinding || customIa) {
+        const GraphicsState state = GetNewGraphicsState(shaderMgr, currState, inverseWinding, customIa, ia);
         const PipelineLayout& pl = shaderMgr.GetPipelineLayout(currPl);
         const VertexInputDeclarationView vidv = shaderMgr.GetVertexInputDeclarationView(currVid);
         psoHandle = psoMgr.GetGraphicsPsoHandle(
-            currShader, gfxState, pl, vidv, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            currShader, state, pl, vidv, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
     } else {
         psoHandle = psoMgr.GetGraphicsPsoHandle(
             currShader, currState, currPl, currVid, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
@@ -565,8 +586,8 @@ RenderNodeDefaultShadowRenderSlot::PsoCreationValue RenderNodeDefaultShadowRende
 }
 
 RenderNodeDefaultShadowRenderSlot::PsoCreationValue RenderNodeDefaultShadowRenderSlot::GetSubmeshPso(
-    const ShaderStateData& ssd, const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
-    const RenderSubmeshFlags submeshFlags)
+    const ShaderStateData& ssd, const GraphicsState::InputAssembly& ia,
+    const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags, const RenderSubmeshFlags submeshFlags)
 {
     if (const auto dataIter = allShaderData_.shaderIdToData.find(ssd.hash);
         dataIter != allShaderData_.shaderIdToData.cend()) {
@@ -601,7 +622,7 @@ RenderNodeDefaultShadowRenderSlot::PsoCreationValue RenderNodeDefaultShadowRende
                                                           maxSpecializations },
         { specializationFlags, maxSpecializations } };
 
-    return CreateNewPso(ssd, spec, submeshFlags);
+    return CreateNewPso(ssd, ia, spec, submeshFlags);
 }
 
 RenderPass RenderNodeDefaultShadowRenderSlot::CreateRenderPass(const ShadowBuffers& buffers)
@@ -714,7 +735,7 @@ void RenderNodeDefaultShadowRenderSlot::UpdateGeneralDataUniformBuffers(
             dataStruct.indices = { light.shadowCameraIndex, 0u, 0u, 0u };
             auto* currData = data + UBO_OFFSET_ALIGNMENT * shadowPassIndex;
             if (!CloneData(
-                currData, size_t(dataEnd - currData), &dataStruct, sizeof(DefaultMaterialGeneralDataStruct))) {
+                    currData, size_t(dataEnd - currData), &dataStruct, sizeof(DefaultMaterialGeneralDataStruct))) {
                 CORE_LOG_E("generalData ubo copying failed.");
             }
         }

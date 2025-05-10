@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -90,6 +90,7 @@ void RenderNodeRenderPostProcessesGeneric::PreExecuteFrame()
                     // match the id for client-side properties
                     if (ppNodeRef.id == ppRef.id) {
                         rpp = &ppRef.postProcess;
+                        break;
                     }
                 }
                 if (rpp) {
@@ -123,12 +124,36 @@ void RenderNodeRenderPostProcessesGeneric::PreExecuteFrame()
     RenderPassDesc::RenderArea renderArea =
         GetImageRenderArea(renderNodeContextMgr_->GetGpuResourceManager(), builtInVariables_.output);
     allPostProcesses_.postProcessCount = 0U;
+
+    const RenderHandle output =
+        RenderHandleUtil::IsValid(builtInVariables_.output) ? builtInVariables_.output : builtInVariables_.defOutput;
+    BindableImage biInput;
+    biInput.handle =
+        RenderHandleUtil::IsValid(builtInVariables_.input) ? builtInVariables_.input : builtInVariables_.defInput;
+    BindableImage biOutput;
+    biOutput.handle = output;
+
     // pre-execute in correct order
-    for (const auto& ppRef : allPostProcesses_.pipeline.postProcesses) {
+    const auto ppCount = static_cast<uint32_t>(allPostProcesses_.pipeline.postProcesses.size());
+    for (uint32_t ppIndex = 0; ppIndex < ppCount; ++ppIndex) {
+        const auto& ppRef = allPostProcesses_.pipeline.postProcesses[ppIndex];
         for (auto& ppNodeRef : allPostProcesses_.postProcessNodeInstances) {
             if (ppNodeRef.ppNode && (ppNodeRef.id == ppRef.id)) {
+                auto& ppNode = *ppNodeRef.ppNode;
+
+                CORE_NS::SetPropertyValue(ppNode.GetRenderInputProperties(), "input", biInput);
+                // try to force the final target for the final post process
+                // the effect might not accept this and then we need an extra blit in the end
+                if (ppIndex == (ppCount - 1U)) {
+                    CORE_NS::SetPropertyValue(ppNode.GetRenderOutputProperties(), "output", biOutput);
+                }
+
                 ppNodeRef.ppNode->SetRenderAreaRequest({ renderArea });
                 ppNodeRef.ppNode->PreExecute();
+
+                // take output and route to next input
+                biInput = CORE_NS::GetPropertyValue<BindableImage>(ppNode.GetRenderOutputProperties(), "output");
+
                 allPostProcesses_.postProcessCount++;
                 break;
             }

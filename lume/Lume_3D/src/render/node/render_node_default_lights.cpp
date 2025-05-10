@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -117,9 +117,9 @@ void RenderNodeDefaultLights::ExecuteFrame(IRenderCommandList& cmdList)
             // NOTE: do not read data from mapped buffer (i.e. do not use mapped buffer as input to anything)
             RenderLightHelper::LightCounts lightCounts;
             const uint32_t lightCount = std::min(CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT, (uint32_t)lights.size());
-            vector<RenderLightHelper::SortData> sortedFlags = RenderLightHelper::SortLights(lights, lightCount);
-
-            const RenderCamera camera = validCamera ? cameras[sceneCameraIdx] : RenderCamera {};
+            const uint32_t sceneId = validCamera ? cameras[sceneCameraIdx].sceneId : 0U;
+            vector<RenderLightHelper::SortData> sortedFlags =
+                RenderLightHelper::SortLights(lights, lightCount, sceneId);
 
             auto* singleLightStruct =
                 reinterpret_cast<DefaultMaterialSingleLightStruct*>(data + RenderLightHelper::LIGHT_LIST_OFFSET);

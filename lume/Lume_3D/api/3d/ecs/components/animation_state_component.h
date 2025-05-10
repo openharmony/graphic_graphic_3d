@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -41,7 +41,7 @@ BEGIN_COMPONENT(IAnimationStateComponentManager, AnimationStateComponent)
     using Flags = uint8_t;
 #endif
     // Animated entities (matches tracks).
-    DEFINE_PROPERTY(BASE_NS::vector<TrackState>, trackStates, "", CORE_NS::PropertyFlags::IS_HIDDEN,)
+    DEFINE_PROPERTY(BASE_NS::vector<TrackState>, trackStates, "", CORE_NS::PropertyFlags::IS_HIDDEN, )
 
     /** Playback time. */
     DEFINE_PROPERTY(float, time, "Playback Time", 0, VALUE(0.0f))

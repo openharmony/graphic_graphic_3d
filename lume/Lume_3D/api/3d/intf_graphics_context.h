@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -53,7 +53,13 @@ public:
      */
     struct CreateInfo {
         /** Create info flag bits to setup configuration flags */
-        enum CreateInfoFlagBits : uint32_t {};
+        enum CreateInfoFlagBits : uint32_t {
+            /** Explicitly enable acceleration structures
+             * Enables meshes to build BLAS
+             * Enables render side to handle TLAS
+             */
+            ENABLE_ACCELERATION_STRUCTURES_BIT = (1U << 0U),
+        };
         /** Container for create info flag bits */
         using CreateInfoFlags = uint32_t;
 
@@ -102,10 +108,10 @@ public:
      */
     virtual IRenderUtil& GetRenderUtil() const = 0;
 
-    /** Get color space flags
-     * @return Color space flags given in Init.
+    /** Get create info
+     * @return Create info.
      */
-    virtual BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const = 0;
+    virtual CreateInfo GetCreateInfo() const = 0;
 
 protected:
     IGraphicsContext() = default;

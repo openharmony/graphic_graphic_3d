@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -104,7 +104,7 @@ private:
 
     void UpdateGeneralDataUniformBuffers(const IRenderDataStoreDefaultLight& dataStoreLight);
     void CreateDefaultShaderData();
-    PsoCreationValue CreateNewPso(const ShaderStateData& ssd,
+    PsoCreationValue CreateNewPso(const ShaderStateData& ssd, const RENDER_NS::GraphicsState::InputAssembly& ia,
         const RENDER_NS::ShaderSpecializationConstantDataView& specialization, const RenderSubmeshFlags submeshFlags);
     RENDER_NS::RenderPass CreateRenderPass(const ShadowBuffers& buffers);
     void ProcessSlotSubmeshes(const IRenderDataStoreDefaultCamera& dataStoreCamera,
@@ -113,7 +113,7 @@ private:
     void UpdateCurrentScene(
         const IRenderDataStoreDefaultScene& dataStoreScene, const IRenderDataStoreDefaultLight& dataStoreLight);
 
-    PsoCreationValue GetSubmeshPso(const ShaderStateData& ssd,
+    PsoCreationValue GetSubmeshPso(const ShaderStateData& ssd, const RENDER_NS::GraphicsState::InputAssembly& ia,
         const RenderDataDefaultMaterial::SubmeshMaterialFlags& submeshMaterialFlags,
         const RenderSubmeshFlags submeshFlags);
 

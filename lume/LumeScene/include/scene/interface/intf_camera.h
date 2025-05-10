@@ -1,22 +1,8 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #ifndef SCENE_INTERFACE_ICAMERA_H
 #define SCENE_INTERFACE_ICAMERA_H
 
 #include <scene/base/types.h>
+#include <scene/interface/intf_input_receiver.h>
 #include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_render_target.h>
 
@@ -216,7 +202,7 @@ public:
     /**
      * @brief Clear color value. Clears the color buffer(s) if clearFlags set.
      */
-    META_PROPERTY(BASE_NS::Color, ClearColor)
+    META_PROPERTY(BASE_NS::Math::Vec4, ClearColor)
 
     /**
      * @brief Clear depth value. Clears the depth buffer(s) if clearFlags set.
@@ -245,6 +231,12 @@ public:
     virtual Future<bool> SetActive(bool active = true) = 0;
     virtual bool IsActive() const = 0;
     virtual Future<bool> SetRenderTarget(const IRenderTarget::Ptr&) = 0;
+
+    /**
+     * @brief Send an input event to all attachments of the camera which implement IInputReceiver.
+     * @param event The event to send.
+     */
+    virtual void SendInputEvent(PointerEvent& event) = 0;
 };
 
 META_REGISTER_CLASS(CameraNode, "3782e343-7e5e-4bee-af14-7f7deaa806f2", META_NS::ObjectCategoryBits::NO_CATEGORY)

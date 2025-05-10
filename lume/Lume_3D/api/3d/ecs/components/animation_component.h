@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -52,7 +52,7 @@ BEGIN_COMPONENT(IAnimationComponentManager, AnimationComponent)
     /** Playback speed. Negative speed plays the animation in reverse. */
     DEFINE_PROPERTY(float, speed, "Playback Speed", 0, VALUE(1.f))
     /** Tracks for this animation. */
-    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::EntityReference>, tracks, "Track Entities", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::EntityReference>, tracks, "Track Entities", 0, )
 
 END_COMPONENT(IAnimationComponentManager, AnimationComponent, "65f8a318-8931-4bc8-8476-02863937b1fa")
 #if !defined(IMPLEMENT_MANAGER)

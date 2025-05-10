@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Bit field types
+ * Author: Lauri Jaaskela
+ * Create: 2023-05-02
  */
 
 #ifndef META_BASE_BIT_FIELD_H
@@ -252,7 +244,6 @@ template<class EnumType, class TopEnumBitField, size_t Offset, size_t Count>
 class SubEnumBitField : public EnumBitField<EnumType, typename TopEnumBitField::BaseValueType, Offset, Count> {
     using Super = EnumBitField<EnumType, typename TopEnumBitField::BaseValueType, Offset, Count>;
     static_assert(
-        // 8: bits size
         Offset + Count < sizeof(typename TopEnumBitField::BaseValueType) * 8, "invalid bit offset and/or count");
 
 public:

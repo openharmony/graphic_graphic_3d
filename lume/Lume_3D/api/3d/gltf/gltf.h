@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -332,6 +332,18 @@ public:
     virtual CORE_NS::Entity ImportGltfScene(size_t sceneIndex, const IGLTFData& gltfData,
         const GLTFResourceData& gltfImportData, CORE_NS::IEcs& ecs, CORE_NS::Entity rootEntity = {},
         GltfSceneImportFlags flags = CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL) = 0;
+
+    /** Import glTF scene to Ecs using pre-imported glTF resources.
+     *  @param sceneIndex Index of scene to import.
+     *  @param gltfData Pre-loaded glTF data.
+     *  @param gltfImportData Structure that contains glTF resource handles related to imported glTF.
+     *  @param ecs Ecs structure that receives the imported entities and components.
+     *  @param sceneId Scene ID assigned to all the imported nodes.
+     *  @param flags Import flags to filter out which components are imported.
+     *  @return Scene root entity.
+     */
+    virtual CORE_NS::Entity ImportGltfScene(size_t sceneIndex, const IGLTFData& gltfData,
+        const GLTFResourceData& gltfImportData, CORE_NS::IEcs& ecs, uint32_t sceneId, GltfSceneImportFlags flags) = 0;
 
 protected:
     IGltf2() = default;

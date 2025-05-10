@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,6 +30,7 @@ struct RenderBackendRecordingState;
  *
  * Render backend node methods are never called by the API user.
  * Renderer backend calls the methods in correct pipeline positions automatically.
+ * [[DEPRECATED]] Use IRenderBackendCommand
  */
 class IRenderBackendNode : public IRenderNode {
 public:

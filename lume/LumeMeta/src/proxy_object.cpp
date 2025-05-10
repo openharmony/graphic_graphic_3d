@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Proxy Object implementation
+ * Author: Lauri Jaaskela/Mikael Kilpeläinen
+ * Create: 2022-10-17
  */
 
 #include "proxy_object.h"
@@ -43,6 +35,7 @@ bool ProxyObject::Build(const IMetadata::Ptr& data)
         if (!meta_) {
             return false;
         }
+
         Dynamic()->OnChanged()->AddHandler(META_NS::MakeCallback<META_NS::IOnChanged>([this]() {
             if (Dynamic()->GetValue()) {
                 ListenTargetChanges();
@@ -156,19 +149,25 @@ void ProxyObject::RefreshProperties()
         RemoveAllProxyProperties();
         return;
     }
+
     updating_ = true;
 
     auto propertiesToRemove = BASE_NS::vector<BASE_NS::string>();
     auto propertiesToAdd = BASE_NS::vector<BASE_NS::string>();
+
     for (auto&& property : proxyProperties_) {
         const auto& name = property.first;
         META_NS::IProperty::Ptr sourceProperty;
+
         if (auto internalSourceName = internalBindings_.find(name); internalSourceName != internalBindings_.end()) {
             auto targetSourceProperty = interface_cast<IMetadata>(GetTarget())->GetProperty(internalSourceName->second);
+
             if (targetSourceProperty) {
                 propertiesToAdd.push_back(name);
                 continue;
             }
+            // internal binding source is bind to target property, so target property needs to exist
+            // if not then we need to find property with same name as internal bind property
             internalBindings_.erase(internalSourceName);
             sourceProperty = interface_cast<IMetadata>(GetTarget())->GetProperty(name);
             if (!sourceProperty) {
@@ -185,18 +184,21 @@ void ProxyObject::RefreshProperties()
         }
         auto& valueBind = proxyProperties_.find(name)->second;
         const auto bindingResult = valueBind.Bind(sourceProperty);
+        // it is possible that property was removed, but property with same name (but different type) was added
         if (!bindingResult) {
             propertiesToRemove.push_back(name);
             propertiesToAdd.push_back(name);
         }
     }
+
     for (const auto& remove : propertiesToRemove) {
         RemoveProxyProperty(remove);
-        }
+    }
     for (const auto& name : propertiesToAdd) {
         AddProxyProperty(name);
     }
     updating_ = false;
+
     UpdateSerializeState();
 }
 
@@ -402,34 +404,41 @@ void ProxyObject::RemoveProxyProperty(const BASE_NS::string& name)
     proxyProperties_.erase(name);
     internalBindings_.erase(name);
 }
+
 void ProxyObject::RemoveAllProxyProperties()
 {
     for (const auto& p : meta_->GetProperties()) {
         RemoveProxyProperty(p->GetName());
     }
 }
+
 void ProxyObject::AddInternalProxy(BASE_NS::string_view propertyPropertyName, BASE_NS::string_view sourcePropertyName)
 {
     auto internalSourceProperty = GetProperty(sourcePropertyName);
     if (!internalSourceProperty) {
         return;
     }
+
     if (internalBindings_.contains(propertyPropertyName)) {
         if (internalBindings_[propertyPropertyName] == sourcePropertyName) {
             return;
         }
         internalBindings_.erase(propertyPropertyName);
     }
+
     internalBindings_.insert({ BASE_NS::string(propertyPropertyName), BASE_NS::string(sourcePropertyName) });
+
     if (proxyProperties_.contains(propertyPropertyName)) {
         proxyProperties_.erase(propertyPropertyName);
     }
     auto bindProperty = meta_->GetProperty(propertyPropertyName);
     if (!bindProperty) {
+        // if given property does not exist we create it when user ask for proxy property
         return;
     }
     proxyProperties_.insert({ propertyPropertyName, DefaultValueBind(bindProperty, internalSourceProperty) });
 }
+
 } // namespace Internal
 
 META_END_NAMESPACE()

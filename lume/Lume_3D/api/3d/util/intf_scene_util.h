@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -85,7 +85,7 @@ public:
      * @param up Desired up vector of the entity.
      */
     virtual void CameraLookAt(CORE_NS::IEcs& ecs, CORE_NS::Entity entity, const BASE_NS::Math::Vec3& eye,
-        const BASE_NS::Math::Vec3& target, const BASE_NS::Math::Vec3& up) = 0;
+        const BASE_NS::Math::Vec3& target, const BASE_NS::Math::Vec3& up) const = 0;
 
     /** Create a light. Creates a new ecs light based on inputs.
      * For shadow lights a ecs camera is created and sane default values are calculated.
@@ -197,6 +197,16 @@ public:
      * @return Vector containing all the clones.
      */
     virtual BASE_NS::vector<CORE_NS::Entity> Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source) const = 0;
+
+    /** Test is sphere inside the camera's view frustum.
+     * @param ecs Entity component system containing the camera instance.
+     * @param cameraEntity Camera entity.
+     * @param center Center of the sphere.
+     * @param radius Radius of the sphere.
+     * @return Boolean TRUE if sphere is inside partially or fully. FALSE otherwise.
+     */
+    virtual bool IsSphereInsideCameraFrustum(
+        const CORE_NS::IEcs& ecs, CORE_NS::Entity cameraEntity, BASE_NS::Math::Vec3 center, float radius) const = 0;
 
 protected:
     ISceneUtil() = default;

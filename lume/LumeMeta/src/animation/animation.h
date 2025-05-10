@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Description: Base animation implementation
+ * Author: Lauri Jaaskela
+ * Create: 2023-12-20
  */
 #ifndef META_SRC_ANIMATION_H
 #define META_SRC_ANIMATION_H
@@ -22,7 +14,7 @@
 #include <meta/interface/intf_containable.h>
 #include <meta/interface/serialization/intf_serializable.h>
 
-#include "object.h"
+#include "../object.h"
 #include "animation_state.h"
 #include "staggered_animation_state.h"
 
@@ -146,7 +138,7 @@ public:
     META_BEGIN_STATIC_DATA()
     META_STATIC_PROPERTY_DATA(INamed, BASE_NS::string, Name)
     META_STATIC_PROPERTY_DATA(IAttachment, IObject::WeakPtr, DataContext)
-    META_STATIC_PROPERTY_DATA(IAttachment, IAttach::WeakPtr, AttachedTo)
+    META_STATIC_PROPERTY_DATA(IAttachment, IAttach::WeakPtr, AttachedTo, {}, DEFAULT_PROPERTY_FLAGS_NO_SER)
     META_STATIC_PROPERTY_DATA(IAnimation, bool, Enabled, true)
     META_STATIC_PROPERTY_DATA(IAnimation, bool, Valid, {}, DEFAULT_PROPERTY_FLAGS_NO_SER)
     META_STATIC_PROPERTY_DATA(IAnimation, TimeSpan, TotalDuration, {}, DEFAULT_PROPERTY_FLAGS_NO_SER)
@@ -400,7 +392,8 @@ protected: // IModifier
     bool IsCompatible(const TypeId& id) const override
     {
         if (auto p = GetTargetProperty()) {
-            return META_NS::IsCompatible(p.property->GetValue(), id);
+            PropertyLock lock { p.property };
+            return META_NS::IsCompatible(lock->GetValueAny(), id);
         }
         return false;
     }
@@ -411,7 +404,8 @@ protected:
     {
         GetState().UpdateTotalDuration();
         auto p = GetTargetProperty();
-        GetState().SetInterpolator(p ? p.property->GetTypeId() : TypeId {});
+        PropertyLock lock { p.property };
+        GetState().SetInterpolator(lock ? lock->GetTypeId() : TypeId {});
         SetValue(Super::META_ACCESS_PROPERTY(Valid), p);
         return GenericError::SUCCESS;
     }
@@ -429,7 +423,8 @@ protected:
     void PropertyChanged()
     {
         auto p = GetTargetProperty();
-        this->GetState().SetInterpolator(p ? p.property->GetTypeId() : TypeId {});
+        PropertyLock lock { p.property };
+        this->GetState().SetInterpolator(lock ? lock->GetTypeId() : TypeId {});
         SetValue(Super::META_ACCESS_PROPERTY(Valid), p);
         OnPropertyChanged(p, property_.lock());
         property_ = p.stack;

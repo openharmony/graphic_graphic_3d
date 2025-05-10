@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,12 +46,11 @@ vec3 unpackIblRadiance(vec4 envColorRgbd)
 vec3 unpackIblIrradianceSH(vec3 n, vec4 sh[CORE_DEFAULT_MATERIAL_MAX_SH_VEC3_VALUE_COUNT])
 {
     // use 3 bands spherical harmonics
-    return max(vec3(0.0), sh[0].xyz
-        + sh[1].xyz * n.y + sh[2].xyz * n.z + sh[3].xyz * n.x // 1: index 2: index 3:index
-        + sh[4].xyz * (n.x * n.y) + sh[5].xyz * (n.z * n.y) + // 4: index 5: index
-        // 6: index 7: index 3.0: parm
-        sh[6].xyz * ((3.0 * n.z * n.z) - 1.0) + sh[7].xyz * (n.x * n.z) +
-        sh[8].xyz * (n.x * n.x - n.y * n.y)); // 8: index
+    return max(vec3(0.0), sh[0].xyz + sh[1].xyz * n.y + sh[2].xyz * n.z + sh[3].xyz * n.x // 1: index 2: index 3:index
+                              + sh[4].xyz * (n.x * n.y) + sh[5].xyz * (n.z * n.y) +       // 4: index 5: index
+                              // 6: index 7: index 3.0: parm
+                              sh[6].xyz * ((3.0 * n.z * n.z) - 1.0) + sh[7].xyz * (n.x * n.z) +
+                              sh[8].xyz * (n.x * n.x - n.y * n.y)); // 8: index
 }
 
 // https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile

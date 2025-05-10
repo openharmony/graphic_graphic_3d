@@ -14,7 +14,17 @@
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+layout(set = 0, binding = 0, std140) uniform uGlobalStructData
+{
+    GlobalPostProcessStruct uGlobalData;
+};
+
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
 
 layout(set = 1, binding = 0) uniform sampler2D uImgSampler;
 layout(set = 1, binding = 1) uniform sampler2D uBloomSampler;
@@ -28,6 +38,8 @@ layout(location = 0) out vec4 outColor;
 
 //>DECLARATIONS_CORE_POST_PROCESS
 #include "render/shaders/common/render_post_process_blocks.h"
+
+#define TIME_SCALE 0.07f
 
 /*
  * fragment shader for post process and tonemapping
@@ -46,15 +58,13 @@ void main(void)
     PostProcessTonemapBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_TONEMAP], outColor.rgb, outColor.rgb);
     const float tickDelta = uGlobalData.renderTimings.y; // tick delta time (ms)
-    const vec2 vecCoeffs = inUv.xy * tickDelta;
+    const vec2 vecCoeffs =
+        inUv.xy +
+        TIME_SCALE * tickDelta; // Offset uv randomly by a small number based on delta time to create temporal noise
     PostProcessDitherBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_DITHER], vecCoeffs, outColor.rgb, outColor.rgb);
     PostProcessVignetteBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_VIGNETTE], inUv, outColor.rgb, outColor.rgb);
     PostProcessColorConversionBlock(
-        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], outColor.rgb, outColor.rgb);
-    // ai assistant hack to keep the same behavior, need to delete
-    if (outColor.w > 0) {
-        outColor.xyz = outColor.xyz * outColor.w;
-    }
+        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], outColor.rgba, outColor.rgba);
 }

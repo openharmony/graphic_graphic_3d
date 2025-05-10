@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Description: JSON output for serialization
+ * Author: Mikael Kilpeläinen
+ * Create: 2024-01-08
  */
 
 #ifndef META_SRC_SERIALIZATION_BACKEND_JSON_INPUT_H
@@ -22,7 +14,7 @@
 #include <meta/interface/builtin_objects.h>
 #include <meta/interface/serialization/intf_ser_input.h>
 
-#include "base_object.h"
+#include "../../base_object.h"
 
 META_BEGIN_NAMESPACE()
 
@@ -52,15 +44,15 @@ public:
 
     Version GetVersion() const
     {
-        return version_;
+        return metaVersion_;
     }
 
 private:
     void SetMetaV1Compatibility();
 
 private:
-    Version version_;
-    Version exporterVersion_;
+    Version metaVersion_;
+    SerMetadata metadata_;
 };
 
 } // namespace Serialization

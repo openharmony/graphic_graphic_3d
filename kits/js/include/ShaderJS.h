@@ -23,7 +23,7 @@
 #include "PropertyProxy.h"
 #include "SceneResourceImpl.h"
 
-class ShaderJS : BaseObject<ShaderJS>, SceneResourceImpl {
+class ShaderJS : BaseObject, SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 40;
     static void Init(napi_env env, napi_value exports);

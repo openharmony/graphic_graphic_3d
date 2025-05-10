@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,7 +40,15 @@
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
 #include "nodecontext/pipeline_descriptor_set_binder.h"
+#include "postprocesses/render_post_process_bloom.h"
+#include "postprocesses/render_post_process_blur.h"
+#include "postprocesses/render_post_process_combined.h"
+#include "postprocesses/render_post_process_dof.h"
 #include "postprocesses/render_post_process_flare.h"
+#include "postprocesses/render_post_process_fxaa.h"
+#include "postprocesses/render_post_process_motion_blur.h"
+#include "postprocesses/render_post_process_taa.h"
+#include "postprocesses/render_post_process_upscale.h"
 #include "util/log.h"
 
 // shaders
@@ -53,14 +61,9 @@ using namespace CORE_NS;
 RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
-
-constexpr uint32_t UBO_OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
-constexpr uint32_t MAX_POST_PROCESS_EFFECT_COUNT { 8 };
-constexpr uint32_t POST_PROCESS_UBO_BYTE_SIZE { sizeof(GlobalPostProcessStruct) +
-                                                sizeof(LocalPostProcessStruct) * MAX_POST_PROCESS_EFFECT_COUNT };
-
-constexpr uint32_t GL_LAYER_CANNOT_OPT_FLAGS =
-    PostProcessConfiguration::ENABLE_BLOOM_BIT | PostProcessConfiguration::ENABLE_TAA_BIT;
+constexpr uint32_t GL_LAYER_CANNOT_OPT_FLAGS = PostProcessConfiguration::ENABLE_BLOOM_BIT |
+                                               PostProcessConfiguration::ENABLE_TAA_BIT |
+                                               PostProcessConfiguration::ENABLE_DOF_BIT;
 
 constexpr string_view INPUT_COLOR = "color";
 constexpr string_view INPUT_DEPTH = "depth";
@@ -68,14 +71,9 @@ constexpr string_view INPUT_VELOCITY = "velocity";
 constexpr string_view INPUT_HISTORY = "history";
 constexpr string_view INPUT_HISTORY_NEXT = "history_next";
 
-constexpr string_view COMBINED_SHADER_NAME = "rendershaders://shader/fullscreen_combined_post_process.shader";
-constexpr string_view COMBINED_LAYER_SHADER_NAME =
-    "rendershaders://shader/fullscreen_combined_post_process_layer.shader";
-constexpr string_view FXAA_SHADER_NAME = "rendershaders://shader/fullscreen_fxaa.shader";
-constexpr string_view TAA_SHADER_NAME = "rendershaders://shader/fullscreen_taa.shader";
-constexpr string_view DOF_BLUR_SHADER_NAME = "rendershaders://shader/depth_of_field_blur.shader";
-constexpr string_view DOF_SHADER_NAME = "rendershaders://shader/depth_of_field.shader";
 constexpr string_view COPY_SHADER_NAME = "rendershaders://shader/fullscreen_copy.shader";
+
+const bool ENABLE_UPSCALER = false;
 
 RenderPass CreateRenderPass(const IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandle input)
 {
@@ -92,17 +90,6 @@ RenderPass CreateRenderPass(const IRenderNodeGpuResourceManager& gpuResourceMgr,
     rp.subpassDesc.colorAttachmentIndices[0u] = 0u;
     rp.subpassStartIndex = 0u;
     return rp;
-}
-
-RenderHandleReference CreatePostProcessDataUniformBuffer(
-    IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
-{
-    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
-    PLUGIN_STATIC_ASSERT(sizeof(LocalPostProcessStruct) == UBO_OFFSET_ALIGNMENT);
-    return gpuResourceMgr.Create(
-        handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, POST_PROCESS_UBO_BYTE_SIZE });
 }
 
 void FillTmpImageDesc(GpuImageDesc& desc)
@@ -144,7 +131,6 @@ void RenderNodePostProcessUtil::Init(
         gpuResourceMgr.GetSamplerHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_CLAMP);
     samplers_.mipLinear =
         gpuResourceMgr.GetSamplerHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP);
-    ubos_.postProcess = CreatePostProcessDataUniformBuffer(gpuResourceMgr, ubos_.postProcess);
 
     InitCreateShaderResources();
 
@@ -162,6 +148,41 @@ void RenderNodePostProcessUtil::Init(
         validInputs_ = false;
     }
 
+    // call post process interface inits before descriptor set allocation
+    {
+        if (ppLensFlareInterface_.postProcessNode) {
+            ppLensFlareInterface_.postProcessNode->Init(ppLensFlareInterface_.postProcess, *renderNodeContextMgr_);
+        }
+        if (ENABLE_UPSCALER) {
+            if (ppRenderUpscaleInterface_.postProcessNode) {
+                ppRenderUpscaleInterface_.postProcessNode->Init(
+                    ppRenderUpscaleInterface_.postProcess, *renderNodeContextMgr_);
+            }
+        }
+        if (ppRenderBlurInterface_.postProcessNode) {
+            ppRenderBlurInterface_.postProcessNode->Init(ppRenderBlurInterface_.postProcess, *renderNodeContextMgr_);
+        }
+        if (ppRenderTaaInterface_.postProcessNode) {
+            ppRenderTaaInterface_.postProcessNode->Init(ppRenderTaaInterface_.postProcess, *renderNodeContextMgr_);
+        }
+        if (ppRenderFxaaInterface_.postProcessNode) {
+            ppRenderFxaaInterface_.postProcessNode->Init(ppRenderFxaaInterface_.postProcess, *renderNodeContextMgr_);
+        }
+        if (ppRenderDofInterface_.postProcessNode) {
+            ppRenderDofInterface_.postProcessNode->Init(ppRenderDofInterface_.postProcess, *renderNodeContextMgr_);
+        }
+        if (ppRenderMotionBlurInterface_.postProcessNode) {
+            ppRenderMotionBlurInterface_.postProcessNode->Init(
+                ppRenderMotionBlurInterface_.postProcess, *renderNodeContextMgr_);
+        }
+        if (ppRenderBloomInterface_.postProcessNode) {
+            ppRenderBloomInterface_.postProcessNode->Init(ppRenderBloomInterface_.postProcess, *renderNodeContextMgr_);
+        }
+        if (ppRenderCombinedInterface_.postProcessNode) {
+            ppRenderCombinedInterface_.postProcessNode->Init(
+                ppRenderCombinedInterface_.postProcess, *renderNodeContextMgr_);
+        }
+    }
     {
         vector<DescriptorCounts> descriptorCounts;
         descriptorCounts.reserve(16U);
@@ -171,49 +192,41 @@ void RenderNodePostProcessUtil::Init(
             { CORE_DESCRIPTOR_TYPE_SAMPLER, 8u },
             { CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8u },
         } });
-        descriptorCounts.push_back(renderBloom_.GetDescriptorCounts());
-        descriptorCounts.push_back(renderBlur_.GetDescriptorCounts());
-        descriptorCounts.push_back(renderBloom_.GetDescriptorCounts());
-        descriptorCounts.push_back(renderMotionBlur_.GetDescriptorCounts());
-        descriptorCounts.push_back(renderCopy_.GetRenderDescriptorCounts());
         descriptorCounts.push_back(renderCopyLayer_.GetRenderDescriptorCounts());
-        descriptorCounts.push_back(renderNodeUtil.GetDescriptorCounts(combineData_.sd.pipelineLayoutData));
-        descriptorCounts.push_back(renderNodeUtil.GetDescriptorCounts(combineDataLayer_.sd.pipelineLayoutData));
-        descriptorCounts.push_back(renderNodeUtil.GetDescriptorCounts(fxaaData_.sd.pipelineLayoutData));
-        descriptorCounts.push_back(renderNodeUtil.GetDescriptorCounts(taaData_.sd.pipelineLayoutData));
-        descriptorCounts.push_back(renderNodeUtil.GetDescriptorCounts(dofBlurData_.sd.pipelineLayoutData));
-        descriptorCounts.push_back(renderNearBlur_.GetDescriptorCounts());
-        descriptorCounts.push_back(renderFarBlur_.GetDescriptorCounts());
-        descriptorCounts.push_back(renderNodeUtil.GetDescriptorCounts(dofData_.sd.pipelineLayoutData));
         descriptorCounts.push_back(renderNodeUtil.GetDescriptorCounts(copyData_.sd.pipelineLayoutData));
+        // interfaces
+        if (ppRenderBlurInterface_.postProcessNode) {
+            descriptorCounts.push_back(ppRenderBlurInterface_.postProcessNode->GetRenderDescriptorCounts());
+        }
+        if (ppRenderTaaInterface_.postProcessNode) {
+            descriptorCounts.push_back(ppRenderTaaInterface_.postProcessNode->GetRenderDescriptorCounts());
+        }
+        if (ppRenderFxaaInterface_.postProcessNode) {
+            descriptorCounts.push_back(ppRenderFxaaInterface_.postProcessNode->GetRenderDescriptorCounts());
+        }
+        if (ppRenderDofInterface_.postProcessNode) {
+            descriptorCounts.push_back(ppRenderDofInterface_.postProcessNode->GetRenderDescriptorCounts());
+        }
+        if (ppRenderMotionBlurInterface_.postProcessNode) {
+            descriptorCounts.push_back(ppRenderMotionBlurInterface_.postProcessNode->GetRenderDescriptorCounts());
+        }
+        if (ppRenderBloomInterface_.postProcessNode) {
+            descriptorCounts.push_back(ppRenderBloomInterface_.postProcessNode->GetRenderDescriptorCounts());
+        }
+        if (ppRenderCombinedInterface_.postProcess) {
+            descriptorCounts.push_back(ppRenderCombinedInterface_.postProcessNode->GetRenderDescriptorCounts());
+        }
+        if (ppRenderUpscaleInterface_.postProcess && ENABLE_UPSCALER) {
+            descriptorCounts.push_back(ppRenderUpscaleInterface_.postProcessNode->GetRenderDescriptorCounts());
+        }
         renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(descriptorCounts);
     }
-    // bloom does not do combine, and does not render to output with this combined post process
+
     ProcessPostProcessConfiguration();
-    {
-        const RenderBloom::BloomInfo bloomInfo { images_.input, {}, ubos_.postProcess.GetHandle(),
-            ppConfig_.bloomConfiguration.useCompute };
-        renderBloom_.Init(renderNodeContextMgr, bloomInfo);
-    }
-    {
-        RenderBlur::BlurInfo blurInfo { images_.output, ubos_.postProcess.GetHandle(), false,
-            CORE_BLUR_TYPE_DOWNSCALE_RGBA, CORE_BLUR_TYPE_RGBA_DOF };
-        renderBlur_.Init(renderNodeContextMgr, blurInfo);
-        renderNearBlur_.Init(renderNodeContextMgr, blurInfo);
-        renderFarBlur_.Init(renderNodeContextMgr, blurInfo);
-    }
-    {
-        RenderMotionBlur::MotionBlurInfo motionBlurInfo {};
-        renderMotionBlur_.Init(renderNodeContextMgr, motionBlurInfo);
-    }
-    renderCopy_.Init(renderNodeContextMgr);
+
     if (deviceBackendType_ != DeviceBackendType::VULKAN) {
         // prepare for possible layer copy
         renderCopyLayer_.Init(renderNodeContextMgr);
-    }
-
-    if (ppLensFlareInterface_.postProcessNode) {
-        ppLensFlareInterface_.postProcessNode->Init(ppLensFlareInterface_.postProcess, *renderNodeContextMgr_);
     }
 
     InitCreateBinders();
@@ -356,30 +369,72 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
     if (validInputsForTaa_ &&
         (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_TAA_BIT)) {
         postTaaBloomInput = images_.historyNext;
+        if (ppRenderTaaInterface_.postProcessNode && ppRenderTaaInterface_.postProcess) {
+            // copy properties to new property post process
+            RenderPostProcessTaa& pp = static_cast<RenderPostProcessTaa&>(*ppRenderTaaInterface_.postProcess);
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.taaConfiguration = ppConfig_.taaConfiguration;
+
+            RenderPostProcessTaaNode& ppNode =
+                static_cast<RenderPostProcessTaaNode&>(*ppRenderTaaInterface_.postProcessNode);
+            ppNode.nodeInputsData.input = images_.input;
+            ppNode.nodeOutputsData.output = images_.historyNext;
+            ppNode.nodeInputsData.depth = images_.depth;
+            ppNode.nodeInputsData.velocity = images_.velocity;
+            ppNode.nodeInputsData.history = images_.history;
+            ppNode.PreExecute();
+        }
     }
 
+    if (ENABLE_UPSCALER) {
+        if (ppRenderUpscaleInterface_.postProcessNode && ppRenderUpscaleInterface_.postProcess) {
+            RenderPostProcessUpscale& pp =
+                static_cast<RenderPostProcessUpscale&>(*ppRenderUpscaleInterface_.postProcess);
+
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.ratio = 1.0f;
+
+            RenderPostProcessUpscaleNode& ppNode =
+                static_cast<RenderPostProcessUpscaleNode&>(*ppRenderUpscaleInterface_.postProcessNode);
+
+            ppNode.nodeInputsData.input = postTaaBloomInput;
+            ppNode.nodeInputsData.depth = images_.depth;
+            ppNode.nodeInputsData.velocity = images_.velocity;
+            ppNode.PreExecute();
+        }
+    }
     // NOTE: separate flare with new post process interface
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_LENS_FLARE_BIT) {
         if (ppLensFlareInterface_.postProcessNode && ppLensFlareInterface_.postProcess) {
             // copy properties to new property post process
-            IPropertyHandle* props = ppLensFlareInterface_.postProcess->GetProperties();
-            CORE_NS::SetPropertyValue(props, "flarePos", ppConfig_.lensFlareConfiguration.flarePosition);
-            CORE_NS::SetPropertyValue(props, "intensity", ppConfig_.lensFlareConfiguration.intensity);
+            RenderPostProcessFlare& pp = static_cast<RenderPostProcessFlare&>(*ppLensFlareInterface_.postProcess);
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.flarePos = ppConfig_.lensFlareConfiguration.flarePosition;
+            pp.propertiesData.intensity = ppConfig_.lensFlareConfiguration.intensity;
 
-            auto& ppNode = *ppLensFlareInterface_.postProcessNode;
-            CORE_NS::SetPropertyValue(ppNode.GetRenderInputProperties(), "input", postTaaBloomInput);
+            RenderPostProcessFlareNode& ppNode =
+                static_cast<RenderPostProcessFlareNode&>(*ppLensFlareInterface_.postProcessNode);
+            ppNode.nodeInputsData.input = postTaaBloomInput;
             ppNode.PreExecute();
         }
     }
 
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT) {
-        const RenderBloom::BloomInfo bloomInfo { postTaaBloomInput, {}, ubos_.postProcess.GetHandle(),
-            ppConfig_.bloomConfiguration.useCompute };
-        renderBloom_.PreExecute(*renderNodeContextMgr_, bloomInfo, ppConfig_);
+        if (ppRenderBloomInterface_.postProcessNode && ppRenderBloomInterface_.postProcess) {
+            // copy properties to new property post process
+            RenderPostProcessBloom& pp = static_cast<RenderPostProcessBloom&>(*ppRenderBloomInterface_.postProcess);
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.bloomConfiguration = ppConfig_.bloomConfiguration;
+
+            RenderPostProcessBloomNode& ppNode =
+                static_cast<RenderPostProcessBloomNode&>(*ppRenderBloomInterface_.postProcessNode);
+            ppNode.nodeInputsData.input = postTaaBloomInput;
+            ppNode.PreExecute();
+        }
     }
 
     // needs to evaluate what is the final effect, where we will use the final target
-    // the final target (output) might a swapchain which cannot be sampled
+    // the final target (output) might be a swapchain which cannot be sampled
     framePostProcessInOut_.clear();
     // after bloom or TAA
     BindableImage input = postTaaBloomInput;
@@ -415,34 +470,106 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
 
     uint32_t ppIdx = 0U;
     if (postProcessNeeded && (!sameInputOutput)) {
+        if (ppRenderCombinedInterface_.postProcessNode && ppRenderCombinedInterface_.postProcess) {
+            RenderPostProcessCombined& pp =
+                static_cast<RenderPostProcessCombined&>(*ppRenderCombinedInterface_.postProcess);
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.postProcessConfiguration = ppConfig_;
+            pp.propertiesData.glOptimizedLayerCopyEnabled = glOptimizedLayerCopyEnabled_;
+
+            RenderPostProcessCombinedNode& ppNode =
+                static_cast<RenderPostProcessCombinedNode&>(*ppRenderCombinedInterface_.postProcessNode);
+            ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
+            ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
+            ppNode.nodeInputsData.dirtMask.handle = images_.dirtMask;
+            RenderHandle bloomImage = aimg_.black;
+            if ((ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT) &&
+                ppRenderBloomInterface_.postProcessNode) {
+                bloomImage = static_cast<RenderPostProcessBloomNode*>(ppRenderBloomInterface_.postProcessNode.get())
+                                 ->GetFinalTarget();
+            }
+            ppNode.nodeInputsData.bloomFinalTarget.handle = bloomImage;
+            ppNode.PreExecute();
+        }
         ppIdx++;
     }
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_FXAA_BIT) {
+        if (ppRenderFxaaInterface_.postProcessNode && ppRenderFxaaInterface_.postProcess) {
+            // copy properties to new property post process
+            RenderPostProcessFxaa& pp = static_cast<RenderPostProcessFxaa&>(*ppRenderFxaaInterface_.postProcess);
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.fxaaConfiguration = ppConfig_.fxaaConfiguration;
+            pp.propertiesData.targetSize = ti_.targetSize;
+
+            RenderPostProcessFxaaNode& ppNode =
+                static_cast<RenderPostProcessFxaaNode&>(*ppRenderFxaaInterface_.postProcessNode);
+            ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
+            ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
+            ppNode.PreExecute();
+        }
         ppIdx++;
     }
     if (motionBlurEnabled) {
-        const auto& inOut = framePostProcessInOut_[ppIdx++];
-        const RenderMotionBlur::MotionBlurInfo info { inOut.input.handle, inOut.output.handle, images_.velocity.handle,
-            images_.depth.handle, ubos_.postProcess.GetHandle(),
-            sizeof(GlobalPostProcessStruct) + PP_MB_IDX * UBO_OFFSET_ALIGNMENT, outputSize_ };
-        renderMotionBlur_.PreExecute(*renderNodeContextMgr_, info, ppConfig_);
+        if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_MOTION_BLUR_BIT) {
+            if (ppRenderMotionBlurInterface_.postProcessNode && ppRenderMotionBlurInterface_.postProcess) {
+                RenderPostProcessMotionBlur& pp =
+                    static_cast<RenderPostProcessMotionBlur&>(*ppRenderMotionBlurInterface_.postProcess);
+                pp.propertiesData.enabled = true;
+                pp.propertiesData.motionBlurConfiguration = ppConfig_.motionBlurConfiguration;
+                pp.propertiesData.size = outputSize_;
+
+                RenderPostProcessMotionBlurNode& ppNode =
+                    static_cast<RenderPostProcessMotionBlurNode&>(*ppRenderMotionBlurInterface_.postProcessNode);
+                ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
+                ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
+                ppNode.nodeInputsData.velocity = images_.velocity;
+                ppNode.nodeInputsData.depth = images_.depth;
+
+                ppNode.PreExecute();
+            }
+        }
+        ppIdx++;
     }
 
     if (dofEnabled) {
         auto nearMip = GetMipImage(input.handle);
-        RenderBlur::BlurInfo blurInfo { nearMip, ubos_.postProcess.GetHandle(), false, CORE_BLUR_TYPE_DOWNSCALE_RGBA,
-            CORE_BLUR_TYPE_RGBA_DOF };
-        renderNearBlur_.PreExecute(*renderNodeContextMgr_, blurInfo);
+        auto farMip = GetMipImage(nearMip.handle);
+        if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_DOF_BIT) {
+            if (ppRenderDofInterface_.postProcessNode && ppRenderDofInterface_.postProcess) {
+                // copy properties to new property post process
+                RenderPostProcessDof& pp = static_cast<RenderPostProcessDof&>(*ppRenderDofInterface_.postProcess);
+                pp.propertiesData.enabled = true;
+                pp.propertiesData.dofConfiguration = ppConfig_.dofConfiguration;
+                pp.propertiesData.mipImages[0] = ti_.mipImages[0];
+                pp.propertiesData.mipImages[1] = ti_.mipImages[1];
+                pp.propertiesData.nearMip = nearMip;
+                pp.propertiesData.farMip = farMip;
 
-        blurInfo.blurTarget = GetMipImage(nearMip.handle);
-        renderFarBlur_.PreExecute(*renderNodeContextMgr_, blurInfo);
+                RenderPostProcessDofNode& ppNode =
+                    static_cast<RenderPostProcessDofNode&>(*ppRenderDofInterface_.postProcessNode);
+                ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
+                ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
+                ppNode.nodeInputsData.depth = images_.depth;
+
+                ppNode.PreExecute();
+            }
+        }
         ppIdx++;
     }
 
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLUR_BIT) {
         const auto& inOut = framePostProcessInOut_[ppIdx++];
-        RenderBlur::BlurInfo blurInfo { inOut.output, ubos_.postProcess.GetHandle(), false };
-        renderBlur_.PreExecute(*renderNodeContextMgr_, blurInfo);
+        if (ppRenderBlurInterface_.postProcessNode && ppRenderBlurInterface_.postProcess) {
+            // copy properties to new property post process
+            RenderPostProcessBlur& pp = static_cast<RenderPostProcessBlur&>(*ppRenderBlurInterface_.postProcess);
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.blurConfiguration = ppConfig_.blurConfiguration;
+
+            RenderPostProcessBlurNode& ppNode =
+                static_cast<RenderPostProcessBlurNode&>(*ppRenderBlurInterface_.postProcessNode);
+            ppNode.nodeInputsData.input = inOut.output;
+            ppNode.PreExecute();
+        }
     }
 
     PLUGIN_ASSERT(ppIdx == framePostProcessInOut_.size());
@@ -463,8 +590,6 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
 
     RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderPostProcess", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
 
-    UpdatePostProcessData(ppConfig_);
-
     // prepare for possible layer copy if not using optimized paths for layers
     if ((deviceBackendType_ != DeviceBackendType::VULKAN) &&
         (images_.input.layer != PipelineStateConstants::GPU_IMAGE_ALL_LAYERS) && (!glOptimizedLayerCopyEnabled_)) {
@@ -479,21 +604,30 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
 
     if (validInputsForTaa_ &&
         (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_TAA_BIT)) {
-        ExecuteTAA(cmdList, { images_.input, images_.historyNext });
+        if (ppRenderTaaInterface_.postProcessNode && ppRenderTaaInterface_.postProcess) {
+            // inputs set in pre-execute
+            ppRenderTaaInterface_.postProcessNode->Execute(cmdList);
+        }
+    }
+
+    if (validInputsForUpscale_ && ENABLE_UPSCALER) {
+        ppRenderUpscaleInterface_.postProcessNode->Execute(cmdList);
     }
 
     // NOTE: separate flare with new post process interface
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_LENS_FLARE_BIT) {
         if (ppLensFlareInterface_.postProcessNode) {
-            auto& ppNode = *ppLensFlareInterface_.postProcessNode;
             // inputs set in pre-execute
-            ppNode.Execute(cmdList);
+            ppLensFlareInterface_.postProcessNode->Execute(cmdList);
         }
     }
 
     // ppConfig_ is already up-to-date from PreExecuteFrame
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT) {
-        renderBloom_.Execute(*renderNodeContextMgr_, cmdList, ppConfig_);
+        if (ppRenderBloomInterface_.postProcessNode && ppRenderBloomInterface_.postProcess) {
+            // inputs set in pre-execute
+            ppRenderBloomInterface_.postProcessNode->Execute(cmdList);
+        }
     }
 
     // post process
@@ -519,30 +653,38 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
 #endif
     uint32_t ppIdx = 0U;
     if (postProcessNeeded && (!sameInputOutput)) {
-        ExecuteCombine(cmdList, framePostProcessInOut_[ppIdx++]);
+        if (ppRenderCombinedInterface_.postProcessNode && ppRenderCombinedInterface_.postProcess) {
+            ppRenderCombinedInterface_.postProcessNode->Execute(cmdList);
+            ppIdx++;
+        }
     }
 
     if (fxaaEnabled) {
-        ExecuteFXAA(cmdList, framePostProcessInOut_[ppIdx++]);
+        if (ppRenderFxaaInterface_.postProcessNode && ppRenderFxaaInterface_.postProcess) {
+            ppRenderFxaaInterface_.postProcessNode->Execute(cmdList);
+            ppIdx++;
+        }
     }
 
     if (motionBlurEnabled) {
-        const auto& inOut = framePostProcessInOut_[ppIdx++];
-        RenderMotionBlur::MotionBlurInfo info { inOut.input.handle, inOut.output.handle, images_.velocity.handle,
-            images_.depth.handle, ubos_.postProcess.GetHandle(),
-            sizeof(GlobalPostProcessStruct) + PP_MB_IDX * UBO_OFFSET_ALIGNMENT, outputSize_ };
-        renderMotionBlur_.Execute(*renderNodeContextMgr_, cmdList, info, ppConfig_);
+        ppIdx++;
+        if (ppRenderMotionBlurInterface_.postProcessNode && ppRenderMotionBlurInterface_.postProcess) {
+            ppRenderMotionBlurInterface_.postProcessNode->Execute(cmdList);
+        }
     }
     if (dofEnabled) {
-        const auto& inOut = framePostProcessInOut_[ppIdx++];
-        ExecuteDof(cmdList, inOut);
+        ppIdx++;
+        if (ppRenderDofInterface_.postProcessNode && ppRenderDofInterface_.postProcess) {
+            ppRenderDofInterface_.postProcessNode->Execute(cmdList);
+        }
     }
 
     // post blur
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLUR_BIT) {
         ppIdx++;
-        // NOTE: add ppConfig
-        renderBlur_.Execute(*renderNodeContextMgr_, cmdList, ppConfig_);
+        if (ppRenderBlurInterface_.postProcessNode && ppRenderBlurInterface_.postProcess) {
+            ppRenderBlurInterface_.postProcessNode->Execute(cmdList);
+        }
     }
 
     PLUGIN_ASSERT(ppIdx == framePostProcessInOut_.size());
@@ -552,337 +694,6 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
     if ((!postProcessNeeded) && (!sameInputOutput)) {
         ExecuteBlit(cmdList, { images_.input, images_.output });
     }
-}
-
-void RenderNodePostProcessUtil::ExecuteCombine(IRenderCommandList& cmdList, const InputOutput& inOut)
-{
-    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderCombine", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
-
-    const RenderHandle bloomImage =
-        (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT)
-            ? renderBloom_.GetFinalTarget()
-            : aimg_.black;
-
-    auto& effect = glOptimizedLayerCopyEnabled_ ? combineDataLayer_ : combineData_;
-    const RenderPass renderPass = CreateRenderPass(renderNodeContextMgr_->GetGpuResourceManager(), inOut.output.handle);
-    if (!RenderHandleUtil::IsValid(effect.pso)) {
-        auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-        const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-        const RenderHandle graphicsStateHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(effect.sd.shader);
-        effect.pso = psoMgr.GetGraphicsPsoHandle(effect.sd.shader, graphicsStateHandle, effect.sd.pipelineLayout, {},
-            {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
-    }
-
-    cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
-    cmdList.BindPipeline(effect.pso);
-
-    {
-        RenderHandle sets[2U] {};
-        DescriptorSetLayoutBindingResources resources[2U] {};
-        {
-            const RenderHandle ubo = ubos_.postProcess.GetHandle();
-            PLUGIN_ASSERT(binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_COMBINED_IDX]);
-            auto& binder = *binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_COMBINED_IDX];
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            binder.BindBuffer(binding, ubo, 0);
-            binder.BindBuffer(++binding, ubo, sizeof(GlobalPostProcessStruct) + PP_COMBINED_IDX * UBO_OFFSET_ALIGNMENT);
-            sets[0U] = binder.GetDescriptorSetHandle();
-            resources[0U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        {
-            auto& binder = *binders_.combineBinder;
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            BindableImage mainInput = inOut.input;
-            mainInput.samplerHandle = samplers_.linear;
-            binder.BindImage(binding++, mainInput);
-            binder.BindImage(binding++, bloomImage, samplers_.linear);
-            binder.BindImage(binding++, images_.dirtMask, samplers_.linear);
-            sets[1U] = binder.GetDescriptorSetHandle();
-            resources[1U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        cmdList.UpdateDescriptorSets(sets, resources);
-        cmdList.BindDescriptorSets(0u, sets);
-    }
-
-    // dynamic state
-    cmdList.SetDynamicStateViewport(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultViewport(renderPass));
-    cmdList.SetDynamicStateScissor(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultScissor(renderPass));
-
-    if (effect.sd.pipelineLayoutData.pushConstant.byteSize > 0U) {
-        const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
-        const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-        const float layer = glOptimizedLayerCopyEnabled_ ? float(inOut.input.layer) : 0.0f;
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-            { layer, 0.0f, 0.0f, 0.0f } };
-        cmdList.PushConstantData(effect.sd.pipelineLayoutData.pushConstant, arrayviewU8(pc));
-    }
-
-    cmdList.Draw(3u, 1u, 0u, 0u);
-    cmdList.EndRenderPass();
-}
-
-void RenderNodePostProcessUtil::ExecuteFXAA(IRenderCommandList& cmdList, const InputOutput& inOut)
-{
-    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderFXAA", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
-
-    auto renderPass = CreateRenderPass(renderNodeContextMgr_->GetGpuResourceManager(), inOut.output.handle);
-    if (!RenderHandleUtil::IsValid(fxaaData_.pso)) {
-        auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-        const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-        const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(fxaaData_.sd.shader);
-        fxaaData_.pso = psoMgr.GetGraphicsPsoHandle(fxaaData_.sd.shader, gfxHandle, fxaaData_.sd.pipelineLayout, {}, {},
-            { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
-    }
-
-    cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
-    cmdList.BindPipeline(fxaaData_.pso);
-
-    {
-        RenderHandle sets[2U] {};
-        DescriptorSetLayoutBindingResources resources[2U] {};
-        {
-            const RenderHandle ubo = ubos_.postProcess.GetHandle();
-            PLUGIN_ASSERT(binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_FXAA_IDX]);
-            auto& binder = *binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_FXAA_IDX];
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            binder.BindBuffer(binding, ubo, 0u);
-            binder.BindBuffer(++binding, ubo, sizeof(GlobalPostProcessStruct) + PP_FXAA_IDX * UBO_OFFSET_ALIGNMENT);
-            sets[0U] = binder.GetDescriptorSetHandle();
-            resources[0U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        {
-            auto& binder = *binders_.fxaaBinder;
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            binder.BindImage(binding, inOut.input);
-            binder.BindSampler(++binding, samplers_.linear);
-            sets[1U] = binder.GetDescriptorSetHandle();
-            resources[1U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        cmdList.UpdateDescriptorSets(sets, resources);
-        cmdList.BindDescriptorSets(0u, sets);
-    }
-
-    if (fxaaData_.sd.pipelineLayoutData.pushConstant.byteSize > 0U) {
-        const LocalPostProcessPushConstantStruct pc { ti_.targetSize,
-            PostProcessConversionHelper::GetFactorFxaa(ppConfig_) };
-        cmdList.PushConstantData(fxaaData_.sd.pipelineLayoutData.pushConstant, arrayviewU8(pc));
-    }
-
-    // dynamic state
-    cmdList.SetDynamicStateViewport(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultViewport(renderPass));
-    cmdList.SetDynamicStateScissor(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultScissor(renderPass));
-
-    cmdList.Draw(3u, 1u, 0u, 0u);
-    cmdList.EndRenderPass();
-}
-
-void RenderNodePostProcessUtil::ExecuteTAA(IRenderCommandList& cmdList, const InputOutput& inOut)
-{
-    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderTAA", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
-
-    auto renderPass = CreateRenderPass(renderNodeContextMgr_->GetGpuResourceManager(), inOut.output.handle);
-    if (!RenderHandleUtil::IsValid(taaData_.pso)) {
-        const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-        auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-        const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(taaData_.sd.shader);
-        taaData_.pso = psoMgr.GetGraphicsPsoHandle(taaData_.sd.shader, gfxHandle, taaData_.sd.pipelineLayout, {}, {},
-            { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
-    }
-
-    cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
-    cmdList.BindPipeline(taaData_.pso);
-
-    {
-        RenderHandle sets[2U] {};
-        DescriptorSetLayoutBindingResources resources[2U] {};
-        {
-            const RenderHandle ubo = ubos_.postProcess.GetHandle();
-            PLUGIN_ASSERT(binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_TAA_IDX]);
-            auto& binder = *binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_TAA_IDX];
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            binder.BindBuffer(binding++, ubo, 0u);
-            binder.BindBuffer(binding++, ubo, sizeof(GlobalPostProcessStruct) + PP_TAA_IDX * UBO_OFFSET_ALIGNMENT);
-            sets[0U] = binder.GetDescriptorSetHandle();
-            resources[0U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        {
-            auto& binder = *binders_.taaBinder;
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            binder.BindImage(binding, images_.depth.handle);
-            binder.BindImage(++binding, inOut.input.handle);
-            binder.BindImage(++binding, images_.velocity.handle);
-            binder.BindImage(++binding, images_.history.handle);
-            binder.BindSampler(++binding, samplers_.linear);
-            sets[1U] = binder.GetDescriptorSetHandle();
-            resources[1U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        cmdList.UpdateDescriptorSets(sets, resources);
-        cmdList.BindDescriptorSets(0U, sets);
-    }
-
-    if (taaData_.sd.pipelineLayoutData.pushConstant.byteSize > 0U) {
-        const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
-        const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-            PostProcessConversionHelper::GetFactorTaa(ppConfig_) };
-        cmdList.PushConstantData(taaData_.sd.pipelineLayoutData.pushConstant, arrayviewU8(pc));
-    }
-
-    // dynamic state
-    cmdList.SetDynamicStateViewport(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultViewport(renderPass));
-    cmdList.SetDynamicStateScissor(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultScissor(renderPass));
-
-    cmdList.Draw(3u, 1u, 0u, 0u);
-    cmdList.EndRenderPass();
-}
-
-void RenderNodePostProcessUtil::ExecuteDofBlur(IRenderCommandList& cmdList, const InputOutput& inOut)
-{
-    RenderPass rp;
-    {
-        const GpuImageDesc desc =
-            renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(ti_.mipImages[0U].GetHandle());
-        rp.renderPassDesc.attachmentCount = 2u;
-        rp.renderPassDesc.attachmentHandles[0u] = ti_.mipImages[0U].GetHandle();
-        rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
-        rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-        rp.renderPassDesc.attachmentHandles[1u] = ti_.mipImages[1U].GetHandle();
-        rp.renderPassDesc.attachments[1u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
-        rp.renderPassDesc.attachments[1u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-        rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
-
-        rp.renderPassDesc.subpassCount = 1u;
-        rp.subpassDesc.colorAttachmentCount = 2u;
-        rp.subpassDesc.colorAttachmentIndices[0u] = 0u;
-        rp.subpassDesc.colorAttachmentIndices[1u] = 1u;
-        rp.subpassStartIndex = 0u;
-    }
-    if (!RenderHandleUtil::IsValid(dofBlurData_.pso)) {
-        auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-        const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-        const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(dofBlurData_.sd.shader);
-        dofBlurData_.pso = psoMgr.GetGraphicsPsoHandle(dofBlurData_.sd.shader, gfxHandle,
-            dofBlurData_.sd.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
-    }
-    cmdList.BeginRenderPass(rp.renderPassDesc, rp.subpassStartIndex, rp.subpassDesc);
-    cmdList.BindPipeline(dofBlurData_.pso);
-
-    {
-        RenderHandle sets[2U] {};
-        DescriptorSetLayoutBindingResources resources[2U] {};
-        {
-            // NOTE: this updated descriptor set is used in dof
-            const RenderHandle ubo = ubos_.postProcess.GetHandle();
-            PLUGIN_ASSERT(binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_DOF_IDX]);
-            auto& binder = *binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_DOF_IDX];
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            binder.BindBuffer(binding, ubo, 0u);
-            binder.BindBuffer(++binding, ubo, sizeof(GlobalPostProcessStruct) + PP_DOF_IDX * UBO_OFFSET_ALIGNMENT);
-            sets[0U] = binder.GetDescriptorSetHandle();
-            resources[0U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        {
-            auto& binder = *binders_.dofBlurBinder;
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            BindableImage input = inOut.input;
-            input.samplerHandle = samplers_.mipLinear;
-            binder.BindImage(binding, input);
-            BindableImage depth = images_.depth;
-            depth.samplerHandle = samplers_.nearest;
-            binder.BindImage(++binding, depth);
-            sets[1U] = binder.GetDescriptorSetHandle();
-            resources[1U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        cmdList.UpdateDescriptorSets(sets, resources);
-        cmdList.BindDescriptorSets(0U, sets);
-    }
-
-    {
-        const float fWidth = static_cast<float>(rp.renderPassDesc.renderArea.extentWidth);
-        const float fHeight = static_cast<float>(rp.renderPassDesc.renderArea.extentHeight);
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
-        cmdList.PushConstantData(dofBlurData_.sd.pipelineLayoutData.pushConstant, arrayviewU8(pc));
-    }
-
-    // dynamic state
-    cmdList.SetDynamicStateViewport(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultViewport(rp));
-    cmdList.SetDynamicStateScissor(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultScissor(rp));
-
-    cmdList.Draw(3u, 1u, 0u, 0u);
-    cmdList.EndRenderPass();
-    const auto maxMipLevel = ppConfig_.blurConfiguration.maxMipLevel;
-    ppConfig_.blurConfiguration.maxMipLevel = static_cast<uint32_t>(Math::round(ppConfig_.dofConfiguration.nearBlur));
-    renderNearBlur_.Execute(*renderNodeContextMgr_, cmdList, ppConfig_);
-    ppConfig_.blurConfiguration.maxMipLevel = static_cast<uint32_t>(Math::round(ppConfig_.dofConfiguration.farBlur));
-    renderFarBlur_.Execute(*renderNodeContextMgr_, cmdList, ppConfig_);
-    ppConfig_.blurConfiguration.maxMipLevel = maxMipLevel;
-}
-
-void RenderNodePostProcessUtil::ExecuteDof(IRenderCommandList& cmdList, const InputOutput& inOut)
-{
-    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderDoF", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
-
-    // NOTE: updates set 0 for dof
-    ExecuteDofBlur(cmdList, inOut);
-
-    auto renderPass = CreateRenderPass(renderNodeContextMgr_->GetGpuResourceManager(), inOut.output.handle);
-    if (!RenderHandleUtil::IsValid(dofData_.pso)) {
-        auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-        const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-        const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(dofData_.sd.shader);
-        dofData_.pso = psoMgr.GetGraphicsPsoHandle(dofData_.sd.shader, gfxHandle, dofData_.sd.pipelineLayout, {}, {},
-            { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
-    }
-
-    cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
-    cmdList.BindPipeline(dofData_.pso);
-
-    RenderHandle sets[2u] {};
-    {
-        // NOTE: descriptor set updated by DOF blur
-        PLUGIN_ASSERT(binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_DOF_IDX]);
-        auto& binder = *binders_.globalSet0[POST_PROCESS_UBO_INDICES::PP_DOF_IDX];
-        sets[0u] = binder.GetDescriptorSetHandle();
-    }
-    {
-        auto& binder = *binders_.dofBinder;
-        binder.ClearBindings();
-        uint32_t binding = 0u;
-        BindableImage input = inOut.input;
-        input.samplerHandle = samplers_.mipLinear;
-        binder.BindImage(binding, input);
-        binder.BindImage(++binding, ti_.mipImages[0U].GetHandle(), samplers_.mipLinear);
-        binder.BindImage(++binding, ti_.mipImages[1U].GetHandle(), samplers_.mipLinear);
-        BindableImage depth = images_.depth;
-        depth.samplerHandle = samplers_.nearest;
-        binder.BindImage(++binding, depth);
-
-        cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-        sets[1u] = binder.GetDescriptorSetHandle();
-    }
-    cmdList.BindDescriptorSets(0u, sets);
-
-    if (dofData_.sd.pipelineLayoutData.pushConstant.byteSize > 0U) {
-        const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
-        const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
-        cmdList.PushConstantData(dofData_.sd.pipelineLayoutData.pushConstant, arrayviewU8(pc));
-    }
-
-    // dynamic state
-    cmdList.SetDynamicStateViewport(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultViewport(renderPass));
-    cmdList.SetDynamicStateScissor(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultScissor(renderPass));
-
-    cmdList.Draw(3u, 1u, 0u, 0u);
-    cmdList.EndRenderPass();
 }
 
 void RenderNodePostProcessUtil::ExecuteBlit(IRenderCommandList& cmdList, const InputOutput& inOut)
@@ -933,55 +744,6 @@ void RenderNodePostProcessUtil::ExecuteBlit(IRenderCommandList& cmdList, const I
     }
 }
 
-void RenderNodePostProcessUtil::UpdatePostProcessData(const PostProcessConfiguration& postProcessConfiguration)
-{
-    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-    const RenderPostProcessConfiguration rppc =
-        renderNodeContextMgr_->GetRenderNodeUtil().GetRenderPostProcessConfiguration(postProcessConfiguration);
-    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
-    if (auto* const data = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.postProcess.GetHandle())); data) {
-        const auto* dataEnd = data + POST_PROCESS_UBO_BYTE_SIZE;
-        if (!CloneData(data, size_t(dataEnd - data), &rppc, sizeof(RenderPostProcessConfiguration))) {
-            PLUGIN_LOG_E("post process ubo copying failed.");
-        }
-        {
-            auto* localData = data + (sizeof(RenderPostProcessConfiguration) + PP_TAA_IDX * UBO_OFFSET_ALIGNMENT);
-            auto factor = PostProcessConversionHelper::GetFactorTaa(postProcessConfiguration);
-            CloneData(localData, size_t(dataEnd - localData), &factor, sizeof(factor));
-        }
-        {
-            auto* localData = data + (sizeof(RenderPostProcessConfiguration) + PP_BLOOM_IDX * UBO_OFFSET_ALIGNMENT);
-            auto factor = PostProcessConversionHelper::GetFactorBloom(postProcessConfiguration);
-            CloneData(localData, size_t(dataEnd - localData), &factor, sizeof(factor));
-        }
-        {
-            auto* localData = data + (sizeof(RenderPostProcessConfiguration) + PP_BLUR_IDX * UBO_OFFSET_ALIGNMENT);
-            auto factor = PostProcessConversionHelper::GetFactorBlur(postProcessConfiguration);
-            CloneData(localData, size_t(dataEnd - localData), &factor, sizeof(factor));
-        }
-        {
-            auto* localData = data + (sizeof(RenderPostProcessConfiguration) + PP_FXAA_IDX * UBO_OFFSET_ALIGNMENT);
-            auto factor = PostProcessConversionHelper::GetFactorFxaa(postProcessConfiguration);
-            CloneData(localData, size_t(dataEnd - localData), &factor, sizeof(factor));
-        }
-        {
-            auto* localData = data + (sizeof(RenderPostProcessConfiguration) + PP_DOF_IDX * UBO_OFFSET_ALIGNMENT);
-            auto factors = PostProcessConversionHelper::GetFactorDof(postProcessConfiguration);
-            CloneData(localData, size_t(dataEnd - localData), &factors, sizeof(factors));
-            localData += sizeof(factors);
-            factors = PostProcessConversionHelper::GetFactorDof2(postProcessConfiguration);
-            CloneData(localData, size_t(dataEnd - localData), &factors, sizeof(factors));
-        }
-        {
-            auto* localData = data + (sizeof(RenderPostProcessConfiguration) + PP_MB_IDX * UBO_OFFSET_ALIGNMENT);
-            auto factor = PostProcessConversionHelper::GetFactorMotionBlur(postProcessConfiguration);
-            CloneData(localData, size_t(dataEnd - localData), &factor, sizeof(factor));
-        }
-
-        gpuResourceMgr.UnmapBuffer(ubos_.postProcess.GetHandle());
-    }
-}
-
 void RenderNodePostProcessUtil::ProcessPostProcessConfiguration()
 {
     if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
@@ -1006,58 +768,15 @@ void RenderNodePostProcessUtil::ProcessPostProcessConfiguration()
 void RenderNodePostProcessUtil::InitCreateShaderResources()
 {
     const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-
-    combineData_ = {};
-    combineDataLayer_ = {};
     copyData_ = {};
-    fxaaData_ = {};
-    taaData_ = {};
-    dofData_ = {};
-    dofBlurData_ = {};
 
-    combineData_.sd = shaderMgr.GetShaderDataByShaderName(COMBINED_SHADER_NAME);
-    combineDataLayer_.sd = shaderMgr.GetShaderDataByShaderName(COMBINED_LAYER_SHADER_NAME);
     copyData_.sd = shaderMgr.GetShaderDataByShaderName(COPY_SHADER_NAME);
-    fxaaData_.sd = shaderMgr.GetShaderDataByShaderName(FXAA_SHADER_NAME);
-    taaData_.sd = shaderMgr.GetShaderDataByShaderName(TAA_SHADER_NAME);
-    dofData_.sd = shaderMgr.GetShaderDataByShaderName(DOF_SHADER_NAME);
-    dofBlurData_.sd = shaderMgr.GetShaderDataByShaderName(DOF_BLUR_SHADER_NAME);
 }
 
 void RenderNodePostProcessUtil::InitCreateBinders()
 {
     INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
-    {
-        constexpr uint32_t globalSetIdx = 0u;
-        constexpr uint32_t localSetIdx = 1u;
 
-        for (uint32_t idx = 0; idx < POST_PROCESS_UBO_INDICES::PP_COUNT_IDX; ++idx) {
-            binders_.globalSet0[idx] = descriptorSetMgr.CreateDescriptorSetBinder(
-                descriptorSetMgr.CreateDescriptorSet(globalSetIdx, combineData_.sd.pipelineLayoutData),
-                combineData_.sd.pipelineLayoutData.descriptorSetLayouts[globalSetIdx].bindings);
-        }
-
-        binders_.combineBinder = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetMgr.CreateDescriptorSet(localSetIdx, combineData_.sd.pipelineLayoutData),
-            combineData_.sd.pipelineLayoutData.descriptorSetLayouts[localSetIdx].bindings);
-        binders_.combineLayerBinder = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetMgr.CreateDescriptorSet(localSetIdx, combineDataLayer_.sd.pipelineLayoutData),
-            combineDataLayer_.sd.pipelineLayoutData.descriptorSetLayouts[localSetIdx].bindings);
-
-        binders_.fxaaBinder = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetMgr.CreateDescriptorSet(localSetIdx, fxaaData_.sd.pipelineLayoutData),
-            fxaaData_.sd.pipelineLayoutData.descriptorSetLayouts[localSetIdx].bindings);
-        binders_.taaBinder = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetMgr.CreateDescriptorSet(localSetIdx, taaData_.sd.pipelineLayoutData),
-            taaData_.sd.pipelineLayoutData.descriptorSetLayouts[localSetIdx].bindings);
-
-        binders_.dofBlurBinder = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetMgr.CreateDescriptorSet(localSetIdx, dofBlurData_.sd.pipelineLayoutData),
-            dofBlurData_.sd.pipelineLayoutData.descriptorSetLayouts[localSetIdx].bindings);
-        binders_.dofBinder = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetMgr.CreateDescriptorSet(localSetIdx, dofData_.sd.pipelineLayoutData),
-            dofData_.sd.pipelineLayoutData.descriptorSetLayouts[localSetIdx].bindings);
-    }
     binders_.copyBinder = descriptorSetMgr.CreateDescriptorSetBinder(
         descriptorSetMgr.CreateDescriptorSet(0u, copyData_.sd.pipelineLayoutData),
         copyData_.sd.pipelineLayoutData.descriptorSetLayouts[0u].bindings);
@@ -1162,21 +881,48 @@ void RenderNodePostProcessUtil::UpdateImageData()
         images_.dirtMask = aimg_.black; // default dirt mask
     }
 
-    validInputsForDof_ = validDepth;
     validInputsForTaa_ = validDepth && validHistory; // TAA can be used without velocities
+    validInputsForDof_ = validDepth;
     validInputsForMb_ = validVelocity;
+    validInputsForUpscale_ = validDepth && validVelocity;
 }
 
 void RenderNodePostProcessUtil::CreatePostProcessInterfaces()
 {
     auto* renderClassFactory = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassFactory>();
     if (renderClassFactory) {
-        ppLensFlareInterface_.postProcess =
-            CreateInstance<IRenderPostProcess>(*renderClassFactory, RenderPostProcessFlare::UID);
-        if (ppLensFlareInterface_.postProcess) {
-            ppLensFlareInterface_.postProcessNode = CreateInstance<IRenderPostProcessNode>(
-                *renderClassFactory, ppLensFlareInterface_.postProcess->GetRenderPostProcessNodeUid());
+        auto CreatePostProcessInterface = [&](const auto uid, auto& pp, auto& ppNode) {
+            if (pp = CreateInstance<IRenderPostProcess>(*renderClassFactory, uid); pp) {
+                ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, pp->GetRenderPostProcessNodeUid());
+            }
+        };
+
+        CreatePostProcessInterface(
+            RenderPostProcessFlare::UID, ppLensFlareInterface_.postProcess, ppLensFlareInterface_.postProcessNode);
+        if (ENABLE_UPSCALER) {
+            CreatePostProcessInterface(RenderPostProcessUpscale::UID, ppRenderUpscaleInterface_.postProcess,
+                ppRenderUpscaleInterface_.postProcessNode);
         }
+        CreatePostProcessInterface(
+            RenderPostProcessBlur::UID, ppRenderBlurInterface_.postProcess, ppRenderBlurInterface_.postProcessNode);
+
+        CreatePostProcessInterface(
+            RenderPostProcessBloom::UID, ppRenderBloomInterface_.postProcess, ppRenderBloomInterface_.postProcessNode);
+
+        CreatePostProcessInterface(
+            RenderPostProcessTaa::UID, ppRenderTaaInterface_.postProcess, ppRenderTaaInterface_.postProcessNode);
+
+        CreatePostProcessInterface(
+            RenderPostProcessFxaa::UID, ppRenderFxaaInterface_.postProcess, ppRenderFxaaInterface_.postProcessNode);
+
+        CreatePostProcessInterface(
+            RenderPostProcessDof::UID, ppRenderDofInterface_.postProcess, ppRenderDofInterface_.postProcessNode);
+
+        CreatePostProcessInterface(RenderPostProcessMotionBlur::UID, ppRenderMotionBlurInterface_.postProcess,
+            ppRenderMotionBlurInterface_.postProcessNode);
+
+        CreatePostProcessInterface(RenderPostProcessCombined::UID, ppRenderCombinedInterface_.postProcess,
+            ppRenderCombinedInterface_.postProcessNode);
     }
 }
 
