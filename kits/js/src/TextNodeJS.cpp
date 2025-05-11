@@ -26,13 +26,18 @@
 #include <render/implementation_uids.h>
 
 #include "SceneJS.h"
+#include "ParamParsing.h"
 
 namespace {
 void PrintFontsFromNode(const SCENE_NS::INode::Ptr& someNode)
 {
     if (auto ecsAccess = interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(someNode)) {
-        if (auto engineClassRegister = ecsAccess->GetEcsObject()->
-	    GetScene()->GetEcsContext().GetNativeEcs()->GetClassFactory().GetInterface<CORE_NS::IClassRegister>()) {
+        if (auto engineClassRegister = ecsAccess->GetEcsObject()
+                                           ->GetScene()
+                                           ->GetEcsContext()
+                                           .GetNativeEcs()
+                                           ->GetClassFactory()
+                                           .GetInterface<CORE_NS::IClassRegister>()) {
             if (auto* renderClassRegister = CORE_NS::GetInstance<CORE_NS::IClassRegister>(
                     *engineClassRegister, RENDER_NS::UID_RENDER_CONTEXT)) {
                 auto fontManager =
@@ -46,6 +51,31 @@ void PrintFontsFromNode(const SCENE_NS::INode::Ptr& someNode)
             }
         }
     }
+}
+
+BASE_NS::string GetDefaultFont(const SCENE_NS::INode::Ptr& node)
+{
+    BASE_NS::string defaultFont = "";
+    if (auto ecsAccess = interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(node)) {
+        if (auto engineClassRegister = ecsAccess->GetEcsObject()
+                ->GetScene()
+                ->GetEcsContext()
+                .GetNativeEcs()
+                ->GetClassFactory()
+                .GetInterface<CORE_NS::IClassRegister>()) {
+            if (auto* renderClassRegister = CORE_NS::GetInstance<CORE_NS::IClassRegister>(
+                    *engineClassRegister, RENDER_NS::UID_RENDER_CONTEXT)) {
+                auto fontManager =
+                    CORE_NS::GetInstance<FONT_NS::IFontManager>(*renderClassRegister, FONT_NS::UID_FONT_MANAGER);
+
+                auto typeFaces = fontManager->GetTypeFaces();
+                if (!typeFaces.empty()) {
+                    defaultFont = typeFaces.begin()->name;
+                }
+            }
+        }
+    }
+    return defaultFont;
 }
 } // anonymous namespace
 
@@ -66,11 +96,11 @@ void TextNodeJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("TextNode", func);
 }
 
-TextNodeJS::TextNodeJS(napi_env e, napi_callback_info i) : BaseObject<TextNodeJS>(e, i), NodeImpl(NodeImpl::TEXT)
+TextNodeJS::TextNodeJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(NodeImpl::TEXT)
 {
     LOG_V("TextNodeJS ++");
 
@@ -85,62 +115,28 @@ TextNodeJS::TextNodeJS(napi_env e, napi_callback_info i) : BaseObject<TextNodeJS
         // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
         NapiApi::Object meJs(fromJs.This());
         NapiApi::Object scene = fromJs.Arg<0>();
-        auto* tro = scene.Native<TrueRootObject>();
-        if (tro) {
-            auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-            }
+        if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
+            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
         }
     }
 
     // java script call.. with arguments
     scene_ = fromJs.Arg<0>().valueOrDefault();
-    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
+    auto scn = scene_.GetObject().GetNative<SCENE_NS::IScene>();
     if (scn == nullptr) {
         // hmm..
         LOG_F("Invalid scene for TextNodeJS!");
         return;
     }
-    NapiApi::Object args = fromJs.Arg<1>();
-
-    auto obj = GetNativeObjectParam<META_NS::IObject>(args);
-    if (obj) {
-        StoreJsObj(obj, fromJs.This());
+    if (!GetNativeObject()) {
+        LOG_E("Cannot finish creating a text node: Native text node object missing");
+        assert(false);
         return;
     }
 
-    // collect parameters
-    NapiApi::Value<BASE_NS::string> name;
-    NapiApi::Value<BASE_NS::string> path;
-    if (auto prm = args.Get("name")) {
-        name = NapiApi::Value<BASE_NS::string>(e, prm);
-    }
-    if (auto prm = args.Get("path")) {
-        path = NapiApi::Value<BASE_NS::string>(e, prm);
-    }
-
-    BASE_NS::string nodePath;
-
-    if (path.IsDefined()) {
-        // create using path
-        nodePath = path.valueOrDefault("");
-    } else if (name.IsDefined()) {
-        // use the name as path (creates under root)
-        nodePath = name.valueOrDefault("");
-    }
-
-    // Create actual node object.
-    SCENE_NS::INode::Ptr node = scn->CreateNode(nodePath, Scene::ClassId::TextNode).GetResult();
-
-    SetNativeObject(interface_pointer_cast<META_NS::IObject>(node), false);
-    node.reset();
-    NapiApi::Object meJs(fromJs.This());
-    StoreJsObj(GetNativeObject(), meJs);
-
-    if (name.IsDefined()) {
-        // set the name of the object. if we were given one
-        meJs.Set("name", name);
+    auto sceneNodeParameters = NapiApi::Object { fromJs.Arg<1>() };
+    if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
+        fromJs.This().Set("name", name);
     }
 }
 
@@ -156,23 +152,22 @@ void* TextNodeJS::GetInstanceImpl(uint32_t id)
     return NodeImpl::GetInstanceImpl(id);
 }
 
-void TextNodeJS::DisposeNative(void*)
+void TextNodeJS::DisposeNative(void* sc)
 {
     if (!disposed_) {
         LOG_V("TextNodeJS::DisposeNative");
         disposed_ = true;
 
-        NapiApi::Object obj = scene_.GetObject();
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
+        if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
+            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
-
         scene_.Reset();
     }
+}
+
+void TextNodeJS::Finalize(napi_env env) {
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    BaseObject::Finalize(env);
 }
 
 napi_value TextNodeJS::GetText(NapiApi::FunctionContext<>& ctx)
@@ -182,12 +177,11 @@ napi_value TextNodeJS::GetText(NapiApi::FunctionContext<>& ctx)
     }
 
     BASE_NS::string name;
-    auto native = GetThisNativeObject(ctx);
-    auto object = interface_pointer_cast<META_NS::IObject>(native);
+    auto native = ctx.This().GetNative();
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
-    if (!object || !node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p %p", native.get(), object.get(), node.get(), text.get());
+    if (!node || !text) {
+        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
         return ctx.GetUndefined();
     }
 
@@ -204,10 +198,15 @@ void TextNodeJS::SetText(NapiApi::FunctionContext<BASE_NS::string>& ctx)
 
     BASE_NS::string text = ctx.Arg<0>();
 
-    if (auto textNode = interface_pointer_cast<SCENE_NS::IText>(GetThisNativeObject(ctx))) {
+    if (auto textNode = ctx.This().GetNative<SCENE_NS::IText>()) {
         textNode->Text()->SetValue(text);
-        if (auto node = interface_pointer_cast<SCENE_NS::INode>(textNode)) {
+        auto node = interface_pointer_cast<SCENE_NS::INode>(textNode);
+        auto fontFamily = META_NS::GetValue(textNode->FontFamily());
+        if (node) {
             PrintFontsFromNode(node);
+            if (fontFamily.empty()) {
+                META_NS::SetValue(textNode->FontFamily(), GetDefaultFont(node));
+            }
         }
     } else {
         LOG_W("Unable to set text value to TextNode");
@@ -220,12 +219,11 @@ napi_value TextNodeJS::GetFont(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    auto native = GetThisNativeObject(ctx);
-    auto object = interface_pointer_cast<META_NS::IObject>(native);
+    auto native = ctx.This().GetNative();
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
-    if (!object || !node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p %p", native.get(), object.get(), node.get(), text.get());
+    if (!node || !text) {
+        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
         return ctx.GetUndefined();
     }
 
@@ -242,8 +240,8 @@ void TextNodeJS::SetFont(NapiApi::FunctionContext<BASE_NS::string>& ctx)
 
     BASE_NS::string font = ctx.Arg<0>();
 
-    if (auto textNode = interface_pointer_cast<SCENE_NS::IText>(GetThisNativeObject(ctx))) {
-        textNode->FontFamily()->SetValue(font);
+    if (auto textNode = ctx.This().GetNative<SCENE_NS::IText>()) {
+        META_NS::SetValue(textNode->FontFamily(), font);
     } else {
         LOG_W("Unable to set font to TextNode");
     }
@@ -255,12 +253,11 @@ napi_value TextNodeJS::GetColor(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    auto native = GetThisNativeObject(ctx);
-    auto object = interface_pointer_cast<META_NS::IObject>(native);
+    auto native = ctx.This().GetNative();
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
-    if (!object || !node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p %p", native.get(), object.get(), node.get(), text.get());
+    if (!node || !text) {
+        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
         return ctx.GetUndefined();
     }
 
@@ -277,12 +274,11 @@ void TextNodeJS::SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         return;
     }
 
-    auto native = GetThisNativeObject(ctx);
-    auto object = interface_pointer_cast<META_NS::IObject>(native);
+    auto native = ctx.This().GetNative();
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
-    if (!object || !node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p %p", native.get(), object.get(), node.get(), text.get());
+    if (!node || !text) {
+        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
         return;
     }
 
@@ -299,12 +295,11 @@ napi_value TextNodeJS::GetFontSize(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    auto native = GetThisNativeObject(ctx);
-    auto object = interface_pointer_cast<META_NS::IObject>(native);
+    auto native = ctx.This().GetNative();
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
-    if (!object || !node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p %p", native.get(), object.get(), node.get(), text.get());
+    if (!node || !text) {
+        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
         return ctx.GetUndefined();
     }
 
@@ -321,7 +316,7 @@ void TextNodeJS::SetFontSize(NapiApi::FunctionContext<float>& ctx)
 
     float fontSize = ctx.Arg<0>();
 
-    if (auto textNode = interface_pointer_cast<SCENE_NS::IText>(GetThisNativeObject(ctx))) {
+    if (auto textNode = ctx.This().GetNative<SCENE_NS::IText>()) {
         textNode->FontSize()->SetValue(fontSize);
     } else {
         LOG_W("Unable to set font size to TextNode");

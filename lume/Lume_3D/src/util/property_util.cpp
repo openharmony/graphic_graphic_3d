@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -116,6 +116,22 @@ constexpr MetaData GetMetaData(const PropertyTypeDecl& typeDecl)
             return PropertyType::MetaDataFrom<Math::Mat4X4>();
     }
     return {};
+}
+
+template<typename T>
+inline void SafeFromJsonValue(const json::value* value, T& val)
+{
+    if (value) {
+        FromJson(*value, val);
+    }
+}
+
+template<typename T>
+inline void DestroyHelper(T& t)
+{
+    {
+        t.~T();
+    }
 }
 } // namespace
 
@@ -393,14 +409,6 @@ size_t CustomPropertyPodHelper::GetPropertyTypeAlignment(const PropertyTypeDecl&
     return align;
 }
 
-template<typename T>
-inline void SafeFromJsonValue(const json::value* value, T& val)
-{
-    if (value) {
-        FromJson(*value, val);
-    }
-}
-
 void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl& propertyType, const json::value* value,
     CustomPropertyPodContainer& customProperties, const size_t offset)
 {
@@ -442,7 +450,7 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
     } else if (propertyType == PropertyType::FLOAT_T) {
         float val {};
-        FromJson(*value, val);
+        SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
     } else if (propertyType == PropertyType::UINT32_T) {
         uint32_t val {};
@@ -473,14 +481,6 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
 
 // bindings
 
-template<typename T>
-inline void DestroyHelper(T& t)
-{
-    {
-        t.~T();
-    }
-}
-
 CustomPropertyBindingContainer::CustomPropertyBindingContainer(CustomPropertyWriteSignal& writeSignal)
     : writeSignal_(&writeSignal)
 {}
@@ -498,12 +498,10 @@ CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
                     if (EntityReference* resource = (EntityReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
-                }
-                    break;
+                } break;
                 default: {
                     CORE_LOG_E("custom property binding destruction error");
-                }
-                    break;
+                } break;
             }
         }
     }
@@ -607,10 +605,7 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
         switch (meta.type) {
             case PropertyType::ENTITY_REFERENCE_T: {
                 new (data_.data() + meta.offset) EntityReference;
-            }
-                break;
-            default:
-                break;
+            } break;
         }
     } else {
         CORE_LOG_W("unsupported property addition for custom property binding container");
@@ -662,8 +657,6 @@ size_t GetPropertyTypeAlignment(const PropertyTypeDecl& propertyType)
     switch (propertyType) {
         case PropertyType::ENTITY_REFERENCE_T:
             align = ENTITY_REFERENCE_BYTE_SIZE;
-            break;
-        default:
             break;
     }
     return align;

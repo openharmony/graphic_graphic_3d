@@ -27,7 +27,7 @@
           "hitrace",
           "init",
           "input",
-	        "ipc",
+          "ipc",
           "bounds_checking_function",
           "resource_management",
           "napi",
@@ -40,7 +40,8 @@
           "vulkan-headers",
           "skia",
           "freetype",
-          "zlib"
+          "zlib",
+          "bounds_checking_function"
         ],
         "third_party": []
       },
@@ -62,7 +63,8 @@
           "//foundation/graphic/graphic_3d/lume/LumeScene:libPluginSceneWidget",
           "//foundation/graphic/graphic_3d/kits/js:libscene",
           "//foundation/graphic/graphic_3d/lume/LumeFont:libPluginFont",
-          "//foundation/graphic/graphic_3d/lume/Lume_3DText:libPluginAGP3DText"
+          "//foundation/graphic/graphic_3d/lume/Lume_3DText:libPluginAGP3DText",
+          "//foundation/graphic/graphic_3d/camera_preview_plugin:libPluginCamPreview"
         ],
         "inner_kits": [
           {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -42,6 +42,7 @@
 #include "gles/pipeline_state_object_gles.h"
 #include "gles/render_frame_sync_gles.h"
 #include "gles/swapchain_gles.h"
+#include "nodecontext/pipeline_descriptor_set_binder.h"
 #include "nodecontext/render_command_list.h"
 #include "nodecontext/render_node_graph_node_store.h" // RenderCommandFrameData
 #include "util/log.h"
@@ -61,47 +62,9 @@ static constexpr uint32_t GREEN_INDEX = 1;
 static constexpr uint32_t BLUE_INDEX = 2;
 static constexpr uint32_t ALPHA_INDEX = 3;
 static constexpr uint32_t CUBEMAP_LAYERS = 6;
-struct Bind {
-    DescriptorType descriptorType { CORE_DESCRIPTOR_TYPE_MAX_ENUM };
-    struct BufferType {
-        uint32_t bufferId;
-        uint32_t offset;
-        uint32_t size;
-    };
-    struct ImageType {
-        GpuImageGLES* image;
-        uint32_t mode;
-        uint32_t mipLevel;
-    };
-    struct SamplerType {
-        uint32_t samplerId;
-    };
-    struct Resource {
-        union {
-            Bind::BufferType buffer { 0, 0, 0 };
-            Bind::ImageType image;
-        };
-        SamplerType sampler { 0 };
-    };
-    vector<Resource> resources;
-};
 } // namespace Gles
-namespace {
-constexpr RenderHandleType GetRenderHandleType(const DescriptorType descriptorType)
-{
-    if (descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLER) {
-        return RenderHandleType::GPU_SAMPLER;
-    } else if (((descriptorType >= CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
-                   (descriptorType <= CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE)) ||
-               (descriptorType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
-        return RenderHandleType::GPU_IMAGE;
-    } else if ((descriptorType >= CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) &&
-               (descriptorType <= CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-        return RenderHandleType::GPU_BUFFER;
-    }
-    return RenderHandleType::UNDEFINED;
-}
 
+namespace {
 constexpr GLenum LAYER_ID[] = { GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
     GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
     GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0 };
@@ -530,10 +493,15 @@ BlitData SetupBlit(DeviceGLES& device_, const BufferImageCopy& bufferImageCopy, 
     const auto& imageOffset = bufferImageCopy.imageOffset;
     PLUGIN_UNUSED(imageOffset);
     const auto& imageExtent = bufferImageCopy.imageExtent;
+    auto width = (!bufferImageCopy.bufferImageHeight || bufferImageCopy.bufferRowLength)
+                     ? bufferImageCopy.imageExtent.width
+                     : bufferImageCopy.bufferRowLength;
+    auto height = (!bufferImageCopy.bufferImageHeight || bufferImageCopy.bufferRowLength)
+                      ? bufferImageCopy.imageExtent.height
+                      : bufferImageCopy.bufferImageHeight;
     // size is calculated for single layer / slice
-    const uint64_t size = static_cast<uint64_t>(iPlat.bytesperpixel) *
-                          static_cast<uint64_t>(bufferImageCopy.bufferImageHeight) *
-                          static_cast<uint64_t>(bufferImageCopy.bufferRowLength);
+    const uint64_t size =
+        static_cast<uint64_t>(iPlat.bytesperpixel) * static_cast<uint64_t>(width) * static_cast<uint64_t>(height);
     uintptr_t data = bufferImageCopy.bufferOffset;
     if constexpr (usePixelUnpackBuffer) {
         const auto& plat = srcGpuBuffer.GetPlatformData();
@@ -736,22 +704,6 @@ constexpr GLbitfield CommonBarrierBits(AccessFlags accessFlags, RenderHandleType
     // GL_ATOMIC_COUNTER_BARRIER_BIT is not used at the moment
     return barriers;
 }
-
-constexpr uint32_t GetArrayOffset(
-    const DescriptorSetLayoutBindingResourcesHandler& data, const DescriptorSetLayoutBindingResource& res)
-{
-    const RenderHandleType type = GetRenderHandleType(res.binding.descriptorType);
-    if (type == RenderHandleType::GPU_BUFFER) {
-        return data.buffers[res.resourceIndex].desc.arrayOffset;
-    }
-    if (type == RenderHandleType::GPU_IMAGE) {
-        return data.images[res.resourceIndex].desc.arrayOffset;
-    }
-    if (type == RenderHandleType::GPU_SAMPLER) {
-        return data.samplers[res.resourceIndex].desc.arrayOffset;
-    }
-    return 0u;
-}
 } // namespace
 
 RenderBackendGLES::RenderBackendGLES(Device& device, GpuResourceManager& gpuResourceManager)
@@ -852,15 +804,14 @@ void RenderBackendGLES::ResetState()
     activeRenderPass_ = {};
     currentSubPass_ = 0;
     currentFrameBuffer_ = nullptr;
-    scissorBoxUpdated_ = viewportDepthRangeUpdated_ = viewportUpdated_ = true;
     inRenderpass_ = 0;
+    descriptorUpdate_ = false;
+    vertexBufferUpdate_ = false;
+    indexBufferUpdate_ = false;
 }
 
 void RenderBackendGLES::ResetBindings()
 {
-    for (auto& b : boundObjects_) {
-        b.dirty = true;
-    }
     boundComputePipeline_ = nullptr;
     boundGraphicsPipeline_ = nullptr;
     currentPsoHandle_ = {};
@@ -904,6 +855,10 @@ void RenderBackendGLES::Render(
 
     // Reset bindings.
     ResetState();
+
+    // Update global descset if needed
+    UpdateGlobalDescriptorSets();
+
     for (const auto& ref : renderCommandFrameData.renderCommandContexts) {
         // Reset bindings between command lists..
         ResetBindings();
@@ -963,6 +918,10 @@ void RenderBackendGLES::RenderSingleCommandList(const RenderCommandContext& rend
 
     managers_.poolMgr->BeginBackendFrame();
     managers_.psoMgr->BeginBackendFrame();
+
+    // update cmd list context descriptor sets
+    UpdateCommandListDescriptorSets(*renderCommandCtx.renderCommandList, *renderCommandCtx.nodeContextDescriptorSetMgr);
+
 #if (RENDER_PERF_ENABLED == 1) || (RENDER_DEBUG_MARKERS_ENABLED == 1)
     const auto& debugName = renderCommandCtx.debugName;
 #endif
@@ -1028,6 +987,7 @@ void RenderBackendGLES::RenderCommandBindPipeline(const RenderCommandWithType& r
     } else if (renderCmd.pipelineBindPoint == PipelineBindPoint::CORE_PIPELINE_BIND_POINT_GRAPHICS) {
         BindGraphicsPipeline(renderCmd);
     }
+    descriptorUpdate_ = true;
     currentPsoHandle_ = renderCmd.psoHandle;
 }
 
@@ -1035,71 +995,33 @@ void RenderBackendGLES::BindComputePipeline(const struct RenderCommandBindPipeli
 {
     const auto* pso = static_cast<const ComputePipelineStateObjectGLES*>(
         managers_.psoMgr->GetComputePso(renderCmd.psoHandle, nullptr));
-    if (pso) {
-        const auto& data = static_cast<const PipelineStateObjectPlatformDataGL&>(pso->GetPlatformData());
-        // Setup descriptorset bind cache..
-        SetupCache(data.pipelineLayout);
-    }
     boundComputePipeline_ = pso;
     boundGraphicsPipeline_ = nullptr;
-}
+    boundComputeProgram_ = nullptr;
+    boundShaderProgram_ = nullptr;
+    if (!boundComputePipeline_) {
+        return;
+    }
 
-void RenderBackendGLES::SetupCache(const PipelineLayout& pipelineLayout)
-{
-    // based on pipeline layout. (note that compatible sets should "save state")
-    for (uint32_t set = 0; set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++set) {
-        // mark unmatching sets dirty (all for now)
-        // resize the cache stuffs.
-        const auto& s = pipelineLayout.descriptorSetLayouts[set];
-        if (s.set == PipelineLayoutConstants::INVALID_INDEX) {
-            boundObjects_[set].dirty = true;
-#if RENDER_HAS_GLES_BACKEND
-            boundObjects_[set].oesBinds.clear();
+    // Push constants and "fliplocation" uniform (ie. uniform state) should be only updated if changed...
+    const auto& pipelineData =
+        static_cast<const PipelineStateObjectPlatformDataGL&>(boundComputePipeline_->GetPlatformData());
+    if (!pipelineData.computeShader) {
+        return;
+    }
+    boundComputeProgram_ = pipelineData.computeShader;
+    const auto& sd = static_cast<const GpuComputeProgramPlatformDataGL&>(pipelineData.computeShader->GetPlatformData());
+    const uint32_t program = sd.program;
+#if (RENDER_PERF_ENABLED == 1)
+    if (device_.BoundProgram() != program) {
+        ++perfCounters_.bindProgram;
+    }
 #endif
-            boundObjects_[set].resources.clear();
-            continue;
-        }
-        PLUGIN_ASSERT(s.set == set);
+    device_.UseProgram(program);
 
-        uint32_t maxB = 0;
-        // NOTE: compatibility optimizations?
-        // NOTE: we expect bindings to be sorted.
-        if (s.bindings.back().binding == s.bindings.size() - 1U) {
-            // since the last binding matches the size, expect it to be continuous.
-            maxB = static_cast<uint32_t>(s.bindings.size());
-        } else {
-            // Sparse binding.
-            // NOTE: note sparse sets will waste memory here. (see notes in
-            // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkDescriptorSetLayoutBinding.html)
-            for (const auto& bind : s.bindings) {
-                maxB = Math::max(maxB, bind.binding);
-            }
-            maxB += 1U; // zero based bindings..
-        }
-        if (boundObjects_[set].resources.size() != maxB) {
-            // resource count change.. (so it's dirty then)
-            boundObjects_[set].dirty = true;
-#if RENDER_HAS_GLES_BACKEND
-            boundObjects_[set].oesBinds.clear();
-#endif
-            boundObjects_[set].resources.clear(); // clear because we don't care what it had before.
-            boundObjects_[set].resources.resize(maxB);
-        }
-
-        for (const auto& b : s.bindings) {
-            auto& o = boundObjects_[set].resources[b.binding];
-            // ignore b.shaderStageFlags for now.
-            if ((o.resources.size() != b.descriptorCount) || (o.descriptorType != b.descriptorType)) {
-                // mark set dirty, since "not matching"
-                o.resources.clear();
-                o.resources.resize(b.descriptorCount);
-                o.descriptorType = b.descriptorType;
-                boundObjects_[set].dirty = true;
-#if RENDER_HAS_GLES_BACKEND
-                boundObjects_[set].oesBinds.clear();
-#endif
-            }
-        }
+    if (sd.flipLocation != Gles::INVALID_LOCATION) {
+        const float flip = (renderingToDefaultFbo_) ? (-1.f) : (1.f);
+        glProgramUniform1fv(program, sd.flipLocation, 1, &flip);
     }
 }
 
@@ -1108,23 +1030,51 @@ void RenderBackendGLES::BindGraphicsPipeline(const struct RenderCommandBindPipel
     const auto* pso = static_cast<const GraphicsPipelineStateObjectGLES*>(
         managers_.psoMgr->GetGraphicsPso(renderCmd.psoHandle, activeRenderPass_.renderPassDesc,
             activeRenderPass_.subpasses, activeRenderPass_.subpassStartIndex, 0, nullptr, nullptr));
-    if (pso) {
-        const auto& data = static_cast<const PipelineStateObjectPlatformDataGL&>(pso->GetPlatformData());
-        dynamicStateFlags_ = data.dynamicStateFlags;
-        DoGraphicsState(data.graphicsState);
-        // NOTE: Deprecate (default viewport/scissor should be set from default targets at some point)
-        if (!IS_BIT(dynamicStateFlags_, CORE_DYNAMIC_STATE_VIEWPORT)) {
-            SetViewport(renderArea_, ViewportDesc { 0.0f, 0.0f, static_cast<float>(renderArea_.extentWidth),
-                                         static_cast<float>(renderArea_.extentHeight), 0.0f, 1.0f });
-        }
-        if (!IS_BIT(dynamicStateFlags_, CORE_DYNAMIC_STATE_SCISSOR)) {
-            SetScissor(renderArea_, ScissorDesc { 0, 0, renderArea_.extentWidth, renderArea_.extentHeight });
-        }
-        // Setup descriptorset bind cache..
-        SetupCache(data.pipelineLayout);
-    }
     boundComputePipeline_ = nullptr;
     boundGraphicsPipeline_ = pso;
+    boundComputeProgram_ = nullptr;
+    boundShaderProgram_ = nullptr;
+    if (!boundGraphicsPipeline_ || !currentFrameBuffer_) {
+        return;
+    }
+
+    const auto& pipelineData = static_cast<const PipelineStateObjectPlatformDataGL&>(pso->GetPlatformData());
+    dynamicStateFlags_ = pipelineData.dynamicStateFlags;
+    DoGraphicsState(pipelineData.graphicsState);
+    // NOTE: Deprecate (default viewport/scissor should be set from default targets at some point)
+    if (!IS_BIT(dynamicStateFlags_, CORE_DYNAMIC_STATE_VIEWPORT)) {
+        SetViewport(ViewportDesc { 0.0f, 0.0f, static_cast<float>(renderArea_.extentWidth),
+            static_cast<float>(renderArea_.extentHeight), 0.0f, 1.0f });
+    }
+    if (!IS_BIT(dynamicStateFlags_, CORE_DYNAMIC_STATE_SCISSOR)) {
+        SetScissor(ScissorDesc { 0, 0, renderArea_.extentWidth, renderArea_.extentHeight });
+    }
+    const GpuShaderProgramGLES* shader = pipelineData.graphicsShader;
+    if (!shader) {
+        return;
+    }
+    boundShaderProgram_ = shader;
+    const auto& sd = static_cast<const GpuShaderProgramPlatformDataGL&>(shader->GetPlatformData());
+    // Push constants and "fliplocation" uniform (ie. uniform state) should be only updated if changed...
+    if (!scissorEnabled_) {
+        scissorEnabled_ = true;
+        glEnable(GL_SCISSOR_TEST); // Always enabled
+    }
+    uint32_t program = sd.program;
+#if (RENDER_PERF_ENABLED == 1)
+    if (device_.BoundProgram() != program) {
+        ++perfCounters_.bindProgram;
+    }
+#endif
+    device_.UseProgram(program);
+    device_.BindVertexArray(pipelineData.vao);
+    vertexBufferUpdate_ = true;
+    indexBufferUpdate_ = true;
+
+    if (sd.flipLocation != Gles::INVALID_LOCATION) {
+        const float flip = (renderingToDefaultFbo_) ? (-1.f) : (1.f);
+        glProgramUniform1fv(program, sd.flipLocation, 1, &flip);
+    }
 }
 
 void RenderBackendGLES::RenderCommandDraw(const RenderCommandWithType& ref)
@@ -1136,6 +1086,17 @@ void RenderBackendGLES::RenderCommandDraw(const RenderCommandWithType& ref)
     }
     PLUGIN_ASSERT(boundComputePipeline_ == nullptr);
     BindResources();
+    if (vertexBufferUpdate_ && boundShaderProgram_) {
+        vertexBufferUpdate_ = false;
+        const auto& pipelineData =
+            static_cast<const PipelineStateObjectPlatformDataGL&>(boundGraphicsPipeline_->GetPlatformData());
+        const auto& sd = static_cast<const GpuShaderProgramPlatformDataGL&>(boundShaderProgram_->GetPlatformData());
+        BindVertexInputs(pipelineData.vertexInputDeclaration, array_view<const int32_t>(sd.inputs, countof(sd.inputs)));
+    }
+    if (indexBufferUpdate_) {
+        indexBufferUpdate_ = false;
+        device_.BindElementBuffer(boundIndexBuffer_.id);
+    }
     const auto type = GetPrimFromTopology(topology_);
     const auto instanceCount = static_cast<GLsizei>(renderCmd.instanceCount);
     // firstInstance is not supported yet, need to set the SPIRV_Cross generated uniform
@@ -1201,6 +1162,17 @@ void RenderBackendGLES::RenderCommandDrawIndirect(const RenderCommandWithType& r
         return;
     }
     PLUGIN_ASSERT(boundComputePipeline_ == nullptr);
+    if (vertexBufferUpdate_ && boundShaderProgram_) {
+        vertexBufferUpdate_ = false;
+        const auto& pipelineData =
+            static_cast<const PipelineStateObjectPlatformDataGL&>(boundGraphicsPipeline_->GetPlatformData());
+        const auto& sd = static_cast<const GpuShaderProgramPlatformDataGL&>(boundShaderProgram_->GetPlatformData());
+        BindVertexInputs(pipelineData.vertexInputDeclaration, array_view<const int32_t>(sd.inputs, countof(sd.inputs)));
+    }
+    if (indexBufferUpdate_) {
+        indexBufferUpdate_ = false;
+        device_.BindElementBuffer(boundIndexBuffer_.id);
+    }
     BindResources();
     if (const GpuBufferGLES* gpuBuffer = gpuResourceMgr_.GetBuffer<GpuBufferGLES>(renderCmd.argsHandle); gpuBuffer) {
         const auto& plat = gpuBuffer->GetPlatformData();
@@ -1272,12 +1244,11 @@ void RenderBackendGLES::RenderCommandDispatchIndirect(const RenderCommandWithTyp
 
 void RenderBackendGLES::ClearScissorInit(const RenderPassDesc::RenderArea& aArea)
 {
-    resetScissor_ = false;           // need to reset scissor state after clear?
-    clearScissorSet_ = true;         // need to setup clear scissors before clear?
-    clearScissor_ = aArea;           // area to be cleared
-    if (scissorPrimed_) {            // have scissors been set yet?
-        if ((!scissorBoxUpdated_) && // if there is a pending scissor change, ignore the scissorbox.
-            (clearScissor_.offsetX == scissorBox_.offsetX) && (clearScissor_.offsetY == scissorBox_.offsetY) &&
+    resetScissor_ = false;   // need to reset scissor state after clear?
+    clearScissorSet_ = true; // need to setup clear scissors before clear?
+    clearScissor_ = aArea;   // area to be cleared
+    if (scissorPrimed_) {    // have scissors been set yet?
+        if ((clearScissor_.offsetX == scissorBox_.offsetX) && (clearScissor_.offsetY == scissorBox_.offsetY) &&
             (clearScissor_.extentWidth == scissorBox_.extentWidth) &&
             (clearScissor_.extentHeight == scissorBox_.extentHeight)) {
             // Current scissors match clearscissor area, so no need to set it again.
@@ -1303,13 +1274,16 @@ void RenderBackendGLES::ClearScissorReset()
             // scissors have not been set yet, so use clearbox as current cache state (and don't change scissor
             // setting)
             scissorPrimed_ = true;
+            glScissor(static_cast<GLint>(clearScissor_.offsetX), static_cast<GLint>(clearScissor_.offsetY),
+                static_cast<GLsizei>(clearScissor_.extentWidth), static_cast<GLsizei>(clearScissor_.extentHeight));
             scissorBox_.offsetX = clearScissor_.offsetX;
             scissorBox_.offsetY = clearScissor_.offsetY;
             scissorBox_.extentHeight = clearScissor_.extentHeight;
             scissorBox_.extentWidth = clearScissor_.extentWidth;
         } else {
             // Restore scissor box to cached state. (update scissors when needed, since clearBox != scissorBox)
-            scissorBoxUpdated_ = true; // ie. request to update scissor state.
+            glScissor(static_cast<GLint>(scissorBox_.offsetX), static_cast<GLint>(scissorBox_.offsetY),
+                static_cast<GLsizei>(scissorBox_.extentWidth), static_cast<GLsizei>(scissorBox_.extentHeight));
         }
     }
 }
@@ -1446,6 +1420,18 @@ void RenderBackendGLES::DoSubPass(uint32_t subPass)
         SetState(GL_RASTERIZER_DISCARD, GL_TRUE);
     }
     ClearScissorReset();
+
+    if (viewportPending_) {
+        viewportPending_ = false;
+        // Handle top-left / bottom-left origin conversion
+        auto y = static_cast<GLint>(viewport_.y);
+        const auto h = static_cast<GLsizei>(viewport_.height);
+        if (renderingToDefaultFbo_) {
+            const auto fh = static_cast<GLint>(currentFrameBuffer_->height);
+            y = fh - (y + h);
+        }
+        glViewport(static_cast<GLint>(viewport_.x), y, static_cast<GLsizei>(viewport_.width), h);
+    }
 }
 
 void RenderBackendGLES::ScanPasses(const RenderPassDesc& rpd)
@@ -1453,7 +1439,11 @@ void RenderBackendGLES::ScanPasses(const RenderPassDesc& rpd)
     for (uint32_t sub = 0; sub < rpd.subpassCount; sub++) {
         const auto& currentSubPass = activeRenderPass_.subpasses[sub];
         for (uint32_t ci = 0; ci < currentSubPass.resolveAttachmentCount; ci++) {
-            uint32_t resolveTo = currentSubPass.resolveAttachmentIndices[ci];
+            const uint32_t resolveTo = currentSubPass.resolveAttachmentIndices[ci];
+            if (!attachmentImage_[resolveTo]) {
+                PLUGIN_LOG_ONCE_E(to_string(resolveTo), "Missing attachment %u", resolveTo);
+                continue;
+            }
             if (attachmentFirstUse_[resolveTo] == 0xFFFFFFFF) {
                 attachmentFirstUse_[resolveTo] = sub;
             }
@@ -1513,7 +1503,7 @@ void RenderBackendGLES::RenderCommandBeginRenderPass(const RenderCommandWithType
                 cpm.FilterRenderPass(activeRenderPass_);
             }
             currentFrameBuffer_ = cpm.GetFramebuffer(cpm.GetFramebufferHandle(activeRenderPass_));
-            if (currentFrameBuffer_ == nullptr) {
+            if (!currentFrameBuffer_) {
                 // Completely invalid state in backend.
                 commandListValid_ = false;
                 --inRenderpass_;
@@ -1541,6 +1531,11 @@ void RenderBackendGLES::RenderCommandBeginRenderPass(const RenderCommandWithType
         case RenderPassBeginType::RENDER_PASS_SUBPASS_BEGIN: {
             currentSubPass_ = renderCmd.subpassStartIndex;
             PLUGIN_ASSERT(currentSubPass_ < activeRenderPass_.renderPassDesc.subpassCount);
+            if (!currentFrameBuffer_) {
+                // Completely invalid state in backend.
+                commandListValid_ = false;
+                return;
+            }
             DoSubPass(activeRenderPass_.subpassStartIndex);
         } break;
 
@@ -1649,8 +1644,8 @@ uint32_t RenderBackendGLES::ResolveMSAA(const RenderPassDesc& rpd, const RenderP
             static_cast<GLint>(currentFrameBuffer_->height), mask, GL_NEAREST);
     } else {
         // Layers need to be resolved one by one. Create temporary FBOs and go through the layers.
-        GLuint frameBuffers[2U]; // 2 : size
-        glGenFramebuffers(2, frameBuffers); // 2 : size
+        GLuint frameBuffers[2U];
+        glGenFramebuffers(2, frameBuffers);
         device_.BindReadFrameBuffer(frameBuffers[0U]);
         device_.BindWriteFrameBuffer(frameBuffers[1U]);
 
@@ -1673,7 +1668,7 @@ uint32_t RenderBackendGLES::ResolveMSAA(const RenderPassDesc& rpd, const RenderP
             viewMask >>= 1U;
             ++layer;
         }
-        glDeleteFramebuffers(2, frameBuffers); // 2 : buffer size
+        glDeleteFramebuffers(2, frameBuffers);
 
         // invalidation exepcts to find the actual FBOs
         device_.BindReadFrameBuffer(currentFrameBuffer_->fbos[currentSubPass_].fbo);
@@ -1720,7 +1715,7 @@ void RenderBackendGLES::RenderCommandBindVertexBuffers(const RenderCommandWithTy
     const auto& renderCmd = *static_cast<const struct RenderCommandBindVertexBuffers*>(ref.rc);
     PLUGIN_ASSERT(renderCmd.vertexBufferCount > 0);
     PLUGIN_ASSERT(renderCmd.vertexBufferCount <= PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
-    if (!boundGraphicsPipeline_) {
+    if (!boundGraphicsPipeline_ || !boundShaderProgram_) {
         return;
     }
     vertexAttribBinds_ = renderCmd.vertexBufferCount;
@@ -1737,6 +1732,7 @@ void RenderBackendGLES::RenderCommandBindVertexBuffers(const RenderCommandWithTy
             vertexAttribBindSlots_[i].offset = 0;
         }
     }
+    vertexBufferUpdate_ = true;
 }
 
 void RenderBackendGLES::RenderCommandBindIndexBuffer(const RenderCommandWithType& ref)
@@ -1751,6 +1747,7 @@ void RenderBackendGLES::RenderCommandBindIndexBuffer(const RenderCommandWithType
         boundIndexBuffer_.type = renderCmd.indexBuffer.indexType;
         boundIndexBuffer_.id = plat.buffer;
     }
+    indexBufferUpdate_ = true;
 }
 
 void RenderBackendGLES::RenderCommandBlitImage(const RenderCommandWithType& ref)
@@ -2023,153 +2020,44 @@ void RenderBackendGLES::RenderCommandBarrierPoint(const RenderCommandWithType& r
     }
 }
 
-Gles::Bind& RenderBackendGLES::SetupBind(const DescriptorSetLayoutBinding& binding, vector<Gles::Bind>& resources)
+void RenderBackendGLES::UpdateGlobalDescriptorSets()
 {
-    PLUGIN_ASSERT(binding.binding < resources.size());
-    auto& obj = resources[binding.binding];
-    PLUGIN_ASSERT(obj.resources.size() == binding.descriptorCount);
-    PLUGIN_ASSERT(obj.descriptorType == binding.descriptorType);
-    return obj;
-}
+    auto& descriptorSetMgr = static_cast<DescriptorSetManagerGles&>(device_.GetDescriptorSetManager());
 
-void RenderBackendGLES::BindSampler(const BindableSampler& res, Gles::Bind& obj, uint32_t index)
-{
-    const auto* gpuSampler = gpuResourceMgr_.GetSampler<GpuSamplerGLES>(res.handle);
-    if (gpuSampler) {
-        const auto& plat = gpuSampler->GetPlatformData();
-        obj.resources[index].sampler.samplerId = plat.sampler;
-    } else {
-        obj.resources[index].sampler.samplerId = 0;
+    // Update global descset if needed
+    const auto& allDescSets = descriptorSetMgr.GetUpdateDescriptorSetHandles();
+    if (allDescSets.empty()) {
+        return;
     }
-}
-
-void RenderBackendGLES::BindImage(
-    const BindableImage& res, const GpuResourceState& resState, Gles::Bind& obj, uint32_t index)
-{
-    const AccessFlags accessFlags = resState.accessFlags;
-    auto* gpuImage = gpuResourceMgr_.GetImage<GpuImageGLES>(res.handle);
-    auto& ref = obj.resources[index];
-    ref.image.image = gpuImage;
-    const bool read = IS_BIT(accessFlags, CORE_ACCESS_SHADER_READ_BIT);
-    const bool write = IS_BIT(accessFlags, CORE_ACCESS_SHADER_WRITE_BIT);
-    if (read && write) {
-        ref.image.mode = GL_READ_WRITE;
-    } else if (read) {
-        ref.image.mode = GL_READ_ONLY;
-    } else if (write) {
-        ref.image.mode = GL_WRITE_ONLY;
-    } else {
-        // no read and no write?
-        ref.image.mode = GL_READ_WRITE;
-    }
-    ref.image.mipLevel = res.mip;
-}
-
-void RenderBackendGLES::BindImageSampler(
-    const BindableImage& res, const GpuResourceState& resState, Gles::Bind& obj, uint32_t index)
-{
-    BindImage(res, resState, obj, index);
-    BindSampler(BindableSampler { res.samplerHandle }, obj, index);
-}
-
-void RenderBackendGLES::BindBuffer(const BindableBuffer& res, Gles::Bind& obj, uint32_t dynamicOffset, uint32_t index)
-{
-    const auto* gpuBuffer = gpuResourceMgr_.GetBuffer<GpuBufferGLES>(res.handle);
-    if (gpuBuffer) {
-        const auto& plat = gpuBuffer->GetPlatformData();
-        const uint32_t baseOffset = res.byteOffset;
-        obj.resources[index].buffer.offset = baseOffset + plat.currentByteOffset + dynamicOffset;
-        obj.resources[index].buffer.size = std::min(plat.bindMemoryByteSize - baseOffset, res.byteSize);
-        obj.resources[index].buffer.bufferId = plat.buffer;
-    } else {
-        obj.resources[index].buffer.offset = 0;
-        obj.resources[index].buffer.size = 0;
-        obj.resources[index].buffer.bufferId = 0;
-    }
-}
-
-void RenderBackendGLES::ProcessBindings(const struct RenderCommandBindDescriptorSets& renderCmd,
-    const DescriptorSetLayoutBindingResourcesHandler& data, uint32_t set)
-{
-    BindState& bind = boundObjects_[set];
-    vector<Gles::Bind>& resources = bind.resources;
-#if RENDER_HAS_GLES_BACKEND
-    bind.oesBinds.clear();
-#endif
-    const auto& dynamicOffsets = renderCmd.descriptorSetDynamicOffsets[set];
-    const auto& buffers = data.buffers;
-    const auto& images = data.images;
-    const auto& samplers = data.samplers;
-    uint32_t currDynamic = 0U;
-    for (const auto& res : data.bindings) {
-        if (res.binding.binding >= resources.size()) {
+    for (const auto& descHandle : allDescSets) {
+        if (RenderHandleUtil::GetHandleType(descHandle) != RenderHandleType::DESCRIPTOR_SET) {
             continue;
         }
-        auto& obj = SetupBind(res.binding, resources);
-#if RENDER_HAS_GLES_BACKEND
-        bool hasOes = false;
-#endif
-        const bool hasArrOffset = (res.binding.descriptorCount > 1);
-        const uint32_t arrayOffset = hasArrOffset ? GetArrayOffset(data, res) : 0;
-        for (uint32_t index = 0; index < res.binding.descriptorCount; index++) {
-            const uint32_t resIdx = (index == 0) ? res.resourceIndex : (arrayOffset + index - 1);
-            [[maybe_unused]] GpuImageGLES* image = nullptr;
-            switch (res.binding.descriptorType) {
-                case CORE_DESCRIPTOR_TYPE_SAMPLER: {
-                    const auto& bRes = samplers[resIdx].desc;
-                    BindSampler(bRes.resource, obj, index);
-                    break;
-                }
-                case CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                case CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-                case CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
-                    const auto& bRes = images[resIdx].desc;
-                    BindImage(bRes.resource, bRes.state, obj, index);
-                    image = obj.resources[index].image.image;
-                    break;
-                }
-                case CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
-                    const auto& bRes = images[resIdx].desc;
-                    BindImageSampler(bRes.resource, bRes.state, obj, index);
-                    image = obj.resources[index].image.image;
-                    break;
-                }
-                case CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                case CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
-                    const auto& bRes = buffers[resIdx].desc;
-                    uint32_t dynamicOffset = 0;
-                    if (currDynamic < dynamicOffsets.dynamicOffsetCount) {
-                        dynamicOffset = dynamicOffsets.dynamicOffsets[currDynamic];
-                        currDynamic++;
-                    }
-                    BindBuffer(bRes.resource, obj, dynamicOffset, index);
-                    break;
-                }
-                case CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                case CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER: {
-                    const auto& bRes = buffers[resIdx].desc;
-                    BindBuffer(bRes.resource, obj, 0, index);
-                    break;
-                }
-                case CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                case CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                case CORE_DESCRIPTOR_TYPE_MAX_ENUM:
-                default:
-                    PLUGIN_ASSERT_MSG(false, "Unhandled descriptor type");
-                    break;
-            }
-#if RENDER_HAS_GLES_BACKEND
-            if ((image) && (image->GetPlatformData().type == GL_TEXTURE_EXTERNAL_OES)) {
-                hasOes = true;
-            }
-#endif
-        }
-#if RENDER_HAS_GLES_BACKEND
-        if (hasOes) {
-            bind.oesBinds.push_back(OES_Bind { (uint8_t)set, (uint8_t)res.binding.binding });
-        }
-#endif
+        descriptorSetMgr.UpdateDescriptorSetGpuHandle(descHandle);
     }
+#if RENDER_HAS_GLES_BACKEND
+    oesBindingsChanged_ = true;
+    oesBinds_.clear();
+#endif
+}
+
+void RenderBackendGLES::UpdateCommandListDescriptorSets(
+    const RenderCommandList& renderCommandList, NodeContextDescriptorSetManager& ncdsm)
+{
+    const auto& allDescSets = renderCommandList.GetUpdateDescriptorSetHandles();
+    if (allDescSets.empty()) {
+        return;
+    }
+    for (const auto& descHandle : allDescSets) {
+        if (RenderHandleUtil::GetHandleType(descHandle) != RenderHandleType::DESCRIPTOR_SET) {
+            continue;
+        }
+        ncdsm.UpdateDescriptorSetGpuHandle(descHandle);
+    }
+#if RENDER_HAS_GLES_BACKEND
+    oesBindingsChanged_ = true;
+    oesBinds_.clear();
+#endif
 }
 
 void RenderBackendGLES::RenderCommandBindDescriptorSets(const RenderCommandWithType& ref)
@@ -2181,16 +2069,46 @@ void RenderBackendGLES::RenderCommandBindDescriptorSets(const RenderCommandWithT
     const auto& renderCmd = *static_cast<const struct RenderCommandBindDescriptorSets*>(ref.rc);
     PLUGIN_ASSERT_MSG(renderCmd.psoHandle == currentPsoHandle_, "psoHandle mismatch");
 
-    const auto& aNcdsm = *managers_.descriptorSetMgr;
-    for (uint32_t idx = renderCmd.firstSet; idx < renderCmd.firstSet + renderCmd.setCount; ++idx) {
-        PLUGIN_ASSERT_MSG(idx < Gles::ResourceLimits::MAX_SETS, "Invalid descriptorset index");
-        const auto descriptorSetHandle = renderCmd.descriptorSetHandles[idx];
-        PLUGIN_ASSERT(RenderHandleUtil::IsValid(descriptorSetHandle));
-        const auto& data = aNcdsm.GetCpuDescriptorSetData(descriptorSetHandle);
-        boundObjects_[idx].dirty = true; // mark the set as "changed"
-        ProcessBindings(renderCmd, data, idx);
-        // (note, nothing actually gets bound yet.. just the bind cache is updated)
+    const auto lastSet = renderCmd.firstSet + renderCmd.setCount;
+    if ((renderCmd.firstSet >= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) ||
+        (lastSet > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT)) {
+        return;
     }
+    std::copy(renderCmd.descriptorSetHandles + renderCmd.firstSet, renderCmd.descriptorSetHandles + lastSet,
+        descriptorSetHandles_ + renderCmd.firstSet);
+    auto* dst = descriptorSetDynamicOffsets_ + renderCmd.firstSet;
+    for (const auto& src : array_view(renderCmd.descriptorSetDynamicOffsets + renderCmd.firstSet,
+             renderCmd.descriptorSetDynamicOffsets + lastSet)) {
+        dst->dynamicOffsetCount = src.dynamicOffsetCount;
+        std::copy(src.dynamicOffsets, src.dynamicOffsets + src.dynamicOffsetCount, dst->dynamicOffsets);
+        ++dst;
+    }
+    firstSet_ = static_cast<uint16_t>(renderCmd.firstSet);
+    setCount_ = static_cast<uint16_t>(renderCmd.setCount);
+    descriptorUpdate_ = true;
+
+#if RENDER_HAS_GLES_BACKEND
+    oesBinds_.clear();
+    oesBindingsChanged_ = true;
+    const auto& ncdsm = *static_cast<NodeContextDescriptorSetManagerGles*>(managers_.descriptorSetMgr);
+    for (uint32_t set = firstSet_; set < setCount_; ++set) {
+        const auto& descHandle = descriptorSetHandles_[set];
+        if (!ncdsm.HasPlatformConversionBindings(descHandle)) {
+            continue;
+        }
+        const auto& resources = ncdsm.GetResources(descHandle);
+        for (uint32_t binding = 0U, count = resources.size(); binding < count; ++binding) {
+            auto& bind = resources[binding];
+            if ((bind.descriptorType == CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
+                (bind.descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
+                (bind.descriptorType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
+                if (bind.resources[0].image.mode & Gles::EXTERNAL_BIT) {
+                    oesBinds_.push_back(OES_Bind { set, binding });
+                }
+            }
+        }
+    }
+#endif
 }
 
 void RenderBackendGLES::SetPushConstant(uint32_t program, const Gles::PushConstantReflection& pc, const void* data)
@@ -2261,7 +2179,7 @@ void RenderBackendGLES::SetPushConstants(uint32_t program, const array_view<Gles
 void RenderBackendGLES::RenderCommandPushConstant(const RenderCommandWithType& ref)
 {
     PLUGIN_ASSERT(ref.type == RenderCommandType::PUSH_CONSTANT);
-    if (!boundComputePipeline_ && !boundGraphicsPipeline_) {
+    if (!boundComputeProgram_ && !boundShaderProgram_) {
         return;
     }
     const auto& renderCmd = *static_cast<const struct RenderCommandPushConstant*>(ref.rc);
@@ -2270,6 +2188,14 @@ void RenderBackendGLES::RenderCommandPushConstant(const RenderCommandWithType& r
         PLUGIN_ASSERT_MSG(renderCmd.psoHandle == currentPsoHandle_, "psoHandle mismatch");
         boundProgram_.setPushConstants = true;
         boundProgram_.pushConstants = renderCmd;
+        if (boundComputeProgram_) {
+            const auto& sd =
+                static_cast<const GpuComputeProgramPlatformDataGL&>(boundComputeProgram_->GetPlatformData());
+            SetPushConstants(sd.program, sd.pushConstants);
+        } else {
+            const auto& sd = static_cast<const GpuShaderProgramPlatformDataGL&>(boundShaderProgram_->GetPlatformData());
+            SetPushConstants(sd.program, sd.pushConstants);
+        }
     }
 }
 
@@ -2306,7 +2232,7 @@ void RenderBackendGLES::RenderCommandDynamicStateViewport(const RenderCommandWit
     PLUGIN_ASSERT(ref.type == RenderCommandType::DYNAMIC_STATE_VIEWPORT);
     const auto& renderCmd = *static_cast<const struct RenderCommandDynamicStateViewport*>(ref.rc);
     const ViewportDesc& vd = renderCmd.viewportDesc;
-    SetViewport(renderArea_, vd);
+    SetViewport(vd);
 }
 
 void RenderBackendGLES::RenderCommandDynamicStateScissor(const RenderCommandWithType& ref)
@@ -2314,7 +2240,7 @@ void RenderBackendGLES::RenderCommandDynamicStateScissor(const RenderCommandWith
     PLUGIN_ASSERT(ref.type == RenderCommandType::DYNAMIC_STATE_SCISSOR);
     const auto& renderCmd = *static_cast<const struct RenderCommandDynamicStateScissor*>(ref.rc);
     const ScissorDesc& sd = renderCmd.scissorDesc;
-    SetScissor(renderArea_, sd);
+    SetScissor(sd);
 }
 
 void RenderBackendGLES::RenderCommandDynamicStateLineWidth(const RenderCommandWithType& ref)
@@ -2452,7 +2378,7 @@ void RenderBackendGLES::BindVertexInputs(
 {
     // update bindings for the VAO.
     // process with attribute descriptions to only bind the needed vertex buffers
-    // NOTE: that there are or might be extran bindings in the decldata.bindingDescriptions,
+    // NOTE: that there are or might be extra bindings in the decldata.bindingDescriptions,
     // but we only bind the ones needed for the shader
     const uint32_t minBinding = Math::min(vertexAttribBinds_, decldata.attributeDescriptionCount);
     for (uint32_t i = 0; i < minBinding; ++i) {
@@ -2486,207 +2412,250 @@ void RenderBackendGLES::BindVertexInputs(
     }
 }
 
-const BASE_NS::array_view<Binder>* RenderBackendGLES::BindPipeline()
+void RenderBackendGLES::BindSampler(const array_view<const Gles::Bind::Resource> resources, const Binder& binder,
+    const array_view<const Slice> descriptorIndex, const array_view<const uint8_t> ids)
 {
-    const array_view<Binder>* resourceList = nullptr;
-    const array_view<Gles::PushConstantReflection>* pushConstants = nullptr;
-    int32_t flipLocation = Gles::INVALID_LOCATION;
-    uint32_t program = 0;
-    // Push constants and "fliplocation" uniform (ie. uniform state) should be only updated if changed...
-    if (currentFrameBuffer_) { // mCurrentFrameBuffer is only set if graphics pipeline is bound..
-        PLUGIN_ASSERT(boundComputePipeline_ == nullptr);
-        PLUGIN_ASSERT(boundGraphicsPipeline_);
-        if (!boundGraphicsPipeline_) {
-            return resourceList;
-        }
-        const auto& pipelineData =
-            static_cast<const PipelineStateObjectPlatformDataGL&>(boundGraphicsPipeline_->GetPlatformData());
-        const GpuShaderProgramGLES* shader = pipelineData.graphicsShader;
-#if RENDER_HAS_GLES_BACKEND
-        if (!oesBinds_.empty()) {
-            // okay, oes vector contains the set/bind to which an OES texture is bounds
-            // ask for a compatible program from the boundGraphicsPipeline_
-            shader = boundGraphicsPipeline_->GetOESProgram(oesBinds_);
-        }
-#endif
-        if (!shader) {
-            return resourceList;
-        }
-        const auto& sd = static_cast<const GpuShaderProgramPlatformDataGL&>(shader->GetPlatformData());
-        program = sd.program;
-
-        FlushViewportScissors();
-        if (!scissorEnabled_) {
-            scissorEnabled_ = true;
-            glEnable(GL_SCISSOR_TEST); // Always enabled
-        }
-#if (RENDER_PERF_ENABLED == 1)
-        if (device_.BoundProgram() != program) {
-            ++perfCounters_.bindProgram;
-        }
-#endif
-        device_.UseProgram(program);
-        device_.BindVertexArray(pipelineData.vao);
-        BindVertexInputs(pipelineData.vertexInputDeclaration, array_view<const int32_t>(sd.inputs, countof(sd.inputs)));
-        device_.BindElementBuffer(boundIndexBuffer_.id);
-        resourceList = &sd.resourceList;
-        flipLocation = sd.flipLocation;
-        pushConstants = &sd.pushConstants;
-    } else {
-        PLUGIN_ASSERT(boundGraphicsPipeline_ == nullptr);
-        PLUGIN_ASSERT(boundComputePipeline_);
-        if (!boundComputePipeline_) {
-            return resourceList;
-        }
-        const auto& pipelineData =
-            static_cast<const PipelineStateObjectPlatformDataGL&>(boundComputePipeline_->GetPlatformData());
-        if (pipelineData.computeShader) {
-            const auto& sd =
-                static_cast<const GpuComputeProgramPlatformDataGL&>(pipelineData.computeShader->GetPlatformData());
-            program = sd.program;
-#if (RENDER_PERF_ENABLED == 1)
-            if (device_.BoundProgram() != program) {
-                ++perfCounters_.bindProgram;
-            }
-#endif
-            device_.UseProgram(program);
-            resourceList = &sd.resourceList;
-            flipLocation = sd.flipLocation;
-            pushConstants = &sd.pushConstants;
-        }
-    }
-    if (pushConstants) {
-        SetPushConstants(program, *pushConstants);
-    }
-    if (flipLocation != Gles::INVALID_LOCATION) {
-        const float flip = (renderingToDefaultFbo_) ? (-1.f) : (1.f);
-        glProgramUniform1fv(program, flipLocation, 1, &flip);
-    }
-    return resourceList;
-}
-
-void RenderBackendGLES::BindResources()
-{
-#if RENDER_HAS_GLES_BACKEND
-    // scan all sets here to see if any of the sets has oes.
-    // we don't actually need to rebuild this info every time.
-    // should "emulate" the gpu descriptor sets better. (and store this information along with the other bind cache
-    // data there)
-    oesBinds_.clear();
-    for (const auto& state : boundObjects_) {
-        const auto& oes = state.oesBinds;
-        if (!oes.empty()) {
-            oesBinds_.append(oes.begin(), oes.end());
-        }
-    }
-#endif
-    const auto* resourceList = BindPipeline();
-    if (!resourceList) {
-        return;
-    }
-    for (const auto& r : *resourceList) {
-        PLUGIN_ASSERT(r.set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
-        if (r.bind >= static_cast<uint32_t>(boundObjects_[r.set].resources.size())) {
+    const auto end = Math::min(resources.size(), descriptorIndex.size());
+    for (uint32_t index = 0; index < end; ++index) {
+        const auto& idRange = descriptorIndex[index];
+        if ((size_t(idRange.index) + idRange.count) > ids.size()) {
             continue;
         }
-        const auto& res = boundObjects_[r.set].resources[r.bind];
-        PLUGIN_ASSERT(res.resources.size() == r.id.size());
-        auto resType = res.descriptorType;
-        if (resType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
-            resType = CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        } else if (resType == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-            resType = CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        }
-
-        // a few helpers for updating perf counters and binding the sampler/texture/buffer
-        auto bindSampler = [this](uint32_t textureUnit, uint32_t samplerId) {
+        const auto samplerId = resources[index].sampler.samplerId;
+        for (const auto& id : array_view(ids.data() + idRange.index, idRange.count)) {
+            const auto textureUnit = index + id;
 #if (RENDER_PERF_ENABLED == 1)
             if (device_.BoundSampler(textureUnit) != samplerId) {
                 ++perfCounters_.bindSampler;
             }
 #endif
             device_.BindSampler(textureUnit, samplerId);
-        };
-        auto bindTexture = [this](uint32_t textureUnit, const GpuImagePlatformDataGL& dplat) {
-#if (RENDER_PERF_ENABLED == 1)
-            if (device_.BoundTexture(textureUnit, dplat.type) != dplat.image) {
-                ++perfCounters_.bindTexture;
-            }
-#endif
-            device_.BindTexture(textureUnit, dplat.type, dplat.image);
-        };
-        auto bindTextureImage = [this](uint32_t textureUnit, const Gles::Bind::ImageType& image,
-                                    const GpuImagePlatformDataGL& dplat) {
-            uint32_t level = (image.mipLevel != PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS) ? image.mipLevel : 0U;
-            device_.BindImageTexture(textureUnit, dplat.image, level, false, 0, image.mode, dplat.internalFormat);
-        };
-        auto bindBuffer = [this](uint32_t target, uint32_t binding, const Gles::Bind::BufferType& buffer) {
-#if (RENDER_PERF_ENABLED == 1)
-            if (device_.BoundBuffer(target) != buffer.bufferId) {
-                ++perfCounters_.bindBuffer;
-            }
-#endif
-            device_.BindBufferRange(target, binding, buffer.bufferId, buffer.offset, buffer.size);
-        };
-        auto setMipLevel = [](const uint32_t type, const uint32_t mipLevel) {
-            // either force the defined mip level or use defaults.
-            glTexParameteri(type, GL_TEXTURE_BASE_LEVEL,
-                static_cast<GLint>((mipLevel != PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS) ? mipLevel : 0U));
-            glTexParameteri(type, GL_TEXTURE_MAX_LEVEL,
-                static_cast<GLint>((mipLevel != PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS) ?
-		mipLevel : 1000U)); // 1000 : param
-        };
-
-#if (RENDER_VALIDATION_ENABLED == 1)
-        if (resType != r.type) {
-            PLUGIN_LOG_ONCE_E(
-                "backend_desc_type_mismatch_gles", "RENDER_VALIDATION: shader / pipeline descriptor type mismatch");
         }
+    }
+}
+
+void RenderBackendGLES::BindTexture(array_view<const Gles::Bind::Resource> resources, const Binder& binder,
+    BASE_NS::array_view<const Slice> descriptorIndex, BASE_NS::array_view<const uint8_t> ids,
+    DescriptorType descriptorType)
+{
+    const auto end = Math::min(resources.size(), descriptorIndex.size());
+    for (uint32_t index = 0; index < end; ++index) {
+        const auto& idRange = descriptorIndex[index];
+        if ((size_t(idRange.index) + idRange.count) > ids.size()) {
+            continue;
+        }
+        const auto& imgType = resources[index].image;
+        if (!imgType.image) {
+            continue;
+        }
+        auto& plat = imgType.image->GetPlatformData();
+        for (const auto& id : array_view(ids.data() + idRange.index, idRange.count)) {
+            const auto textureUnit = index + id;
+            uint32_t samplerId = UINT32_MAX;
+            if (descriptorType == CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                samplerId = resources[index].sampler.samplerId;
+            } else if (descriptorType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
+                samplerId = 0U;
+            }
+            if (samplerId != UINT32_MAX) {
+#if (RENDER_PERF_ENABLED == 1)
+                if (device_.BoundSampler(textureUnit) != samplerId) {
+                    ++perfCounters_.bindSampler;
+                }
 #endif
-
-        for (uint32_t index = 0; index < res.resources.size(); index++) {
-            const auto& obj = res.resources[index];
-            for (const auto& id : r.id[index]) {
-                const auto binding = index + id;
-                if (resType == CORE_DESCRIPTOR_TYPE_SAMPLER) {
-                    bindSampler(binding, obj.sampler.samplerId);
-                } else if ((resType == CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
-                           (resType == CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
-                           (resType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
-                    if (resType == CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-                        bindSampler(binding, obj.sampler.samplerId);
-                    } else if (resType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
-                        bindSampler(binding, 0U);
-                    }
-                    if (obj.image.image) {
-                        auto& dplat = obj.image.image->GetPlatformData();
-                        bindTexture(binding, dplat);
-
-                        // NOTE: the last setting is active, can not have different miplevels bound from single
-                        // resource.
-                        // Check and update (if needed) the forced miplevel.
-                        if (dplat.mipLevel != obj.image.mipLevel) {
-                            // NOTE: we are actually modifying the texture object bound above
-                            const_cast<GpuImagePlatformDataGL&>(dplat).mipLevel = obj.image.mipLevel;
-                            setMipLevel(dplat.type, dplat.mipLevel);
-                        }
-                    }
-                } else if (resType == CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-                    if (obj.image.image) {
-                        auto& dplat = obj.image.image->GetPlatformData();
-                        bindTextureImage(binding, obj.image, dplat);
-                    }
-                } else if (resType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
-                    bindBuffer(GL_UNIFORM_BUFFER, binding, obj.buffer);
-                } else if (resType == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
-                    bindBuffer(GL_SHADER_STORAGE_BUFFER, binding, obj.buffer);
+                device_.BindSampler(textureUnit, samplerId);
+            }
+            const auto baseLevel =
+                (imgType.mipLevel != PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS) ? imgType.mipLevel : 0U;
+            if (descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                device_.BindImageTexture(
+                    textureUnit, plat.image, baseLevel, false, 0, imgType.mode & 0xFFFF, plat.internalFormat);
+            } else {
+#if (RENDER_PERF_ENABLED == 1)
+                if (device_.BoundTexture(textureUnit, plat.type) != plat.image) {
+                    ++perfCounters_.bindTexture;
+                }
+#endif
+                device_.BindTexture(textureUnit, plat.type, plat.image);
+                // NOTE: the last setting is active, can not have different miplevels bound from single
+                // resource.
+                // Check and update (if needed) the forced miplevel.
+                if (plat.mipLevel != imgType.mipLevel) {
+                    // NOTE: we are actually modifying the texture object bound above
+                    const_cast<GpuImagePlatformDataGL&>(plat).mipLevel = imgType.mipLevel;
+                    // either force the defined mip level or use defaults.
+                    const auto maxLevel = static_cast<GLint>(
+                        (plat.mipLevel != PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS) ? plat.mipLevel : 1000U);
+                    glTexParameteri(plat.type, GL_TEXTURE_BASE_LEVEL, static_cast<GLint>(baseLevel));
+                    glTexParameteri(plat.type, GL_TEXTURE_MAX_LEVEL, maxLevel);
                 }
             }
         }
     }
-    // mark all bound.
-    for (auto& b : boundObjects_) {
-        b.dirty = false;
+}
+
+void RenderBackendGLES::BindBuffer(array_view<const Gles::Bind::Resource> resources, const Binder& binder,
+    BASE_NS::array_view<const Slice> descriptorIndex, BASE_NS::array_view<const uint8_t> ids,
+    DescriptorType descriptorType)
+{
+    uint32_t target = 0U;
+    if ((descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
+        (descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)) {
+        target = GL_UNIFORM_BUFFER;
+    } else if ((descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
+               (descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+        target = GL_SHADER_STORAGE_BUFFER;
+    }
+    const auto end = Math::min(resources.size(), descriptorIndex.size());
+    for (uint32_t index = 0; index < end; index++) {
+        const auto& idRange = descriptorIndex[index];
+        if ((size_t(idRange.index) + idRange.count) > ids.size()) {
+            continue;
+        }
+        const auto& obj = resources[index];
+        uint32_t dynOffset = 0U;
+        if (auto& currentOffsets = descriptorSetDynamicOffsets_[binder.set]; currentOffsets.dynamicOffsetCount) {
+            auto& currentIndex = dynamicOffsetIndices_[binder.bind];
+            if (currentIndex < currentOffsets.dynamicOffsetCount) {
+                dynOffset = currentOffsets.dynamicOffsets[currentIndex];
+            } else {
+                PLUGIN_LOG_E("outofoffsets");
+            }
+        }
+
+        for (const auto& id : array_view(ids.data() + idRange.index, idRange.count)) {
+            const auto binding = index + id;
+#if (RENDER_PERF_ENABLED == 1)
+            if (device_.BoundBuffer(target) != obj.buffer.bufferId) {
+                ++perfCounters_.bindBuffer;
+            }
+#endif
+            device_.BindBufferRange(
+                target, binding, obj.buffer.bufferId, obj.buffer.offset + dynOffset, obj.buffer.size);
+        }
+    }
+}
+
+void RenderBackendGLES::BindResources()
+{
+    if (!descriptorUpdate_) {
+        return;
+    }
+    descriptorUpdate_ = false;
+    const ResourcesView* shaderBindings = nullptr;
+    if (boundComputeProgram_) {
+        shaderBindings =
+            &static_cast<const GpuComputeProgramPlatformDataGL&>(boundComputeProgram_->GetPlatformData()).resourcesView;
+    } else if (boundShaderProgram_) {
+#if RENDER_HAS_GLES_BACKEND
+        if (oesBindingsChanged_) {
+            oesBindingsChanged_ = false;
+
+            // ask for a compatible program from the boundGraphicsPipeline_
+            auto shader = boundGraphicsPipeline_->GetOESProgram(oesBinds_);
+            if (!shader) {
+                return;
+            }
+            if (boundShaderProgram_ != shader) {
+                boundShaderProgram_ = shader;
+                const auto& sd = static_cast<const GpuShaderProgramPlatformDataGL&>(shader->GetPlatformData());
+                // Push constants and "fliplocation" uniform (ie. uniform state) should be only updated if changed...
+                const uint32_t program = sd.program;
+#if (RENDER_PERF_ENABLED == 1)
+                if (device_.BoundProgram() != program) {
+                    ++perfCounters_.bindProgram;
+                }
+#endif
+                device_.UseProgram(program);
+                if (sd.flipLocation != Gles::INVALID_LOCATION) {
+                    const float flip = (renderingToDefaultFbo_) ? (-1.f) : (1.f);
+                    glProgramUniform1fv(program, sd.flipLocation, 1, &flip);
+                }
+            }
+        }
+#endif
+        shaderBindings =
+            &static_cast<const GpuShaderProgramPlatformDataGL&>(boundShaderProgram_->GetPlatformData()).resourcesView;
+    }
+    if (!shaderBindings) {
+        return;
+    }
+
+    const auto& ncdsm = *static_cast<NodeContextDescriptorSetManagerGles*>(managers_.descriptorSetMgr);
+    uint32_t currentSet = UINT32_MAX;
+    array_view<const Gles::Bind> descriptorSetResources;
+    // with some bookkeeping might be possible to go through only descriptor sets based on previous
+    // RenderCommandBindDescriptorSets instead of all sets.
+    for (auto& binder : (shaderBindings->resourceList)) {
+        // binders are in set - binding order. when set changes get the resources for the current set and gather dynamic
+        // offsets
+        if (binder.set != currentSet) {
+            currentSet = binder.set;
+            descriptorSetResources = ncdsm.GetResources(descriptorSetHandles_[binder.set]);
+
+            // descriptorSetDynamicOffsets_ are only for dynamic buffers. figure out which index should be used for
+            // which binding.
+            dynamicOffsetIndices_.resize(descriptorSetResources.size());
+            uint32_t index = 0U;
+            std::transform(descriptorSetResources.cbegin(), descriptorSetResources.cend(),
+                dynamicOffsetIndices_.begin(), [&index](const Gles::Bind& bind) {
+                    if ((bind.descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+                        (bind.descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+                        return index++;
+                    }
+                    return 0U;
+                });
+        }
+        if (binder.bind >= descriptorSetResources.size()) {
+            PLUGIN_LOG_W(
+                "Desctiptor count mismatch pipeline %u, binding %zu", binder.bind, descriptorSetResources.size());
+            continue;
+        }
+        auto& curRes = descriptorSetResources[binder.bind];
+#if RENDER_VALIDATION_ENABLED
+        if (binder.descriptors.count != curRes.resources.size()) {
+            PLUGIN_LOG_W(
+                "Desctiptor size mismatch pipeline %u, binding %zu", binder.descriptors.count, curRes.resources.size());
+        }
+
+        auto descriptorType = curRes.descriptorType;
+        if (descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+            descriptorType = CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        } else if (descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+            descriptorType = CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        }
+        if (binder.type != descriptorType) {
+            PLUGIN_LOG_W("Desctiptor TYPE mismatch pipeline %x, binding %x", binder.type, descriptorType);
+        }
+#endif
+        auto descriptorIndex =
+            array_view(shaderBindings->descriptorIndexIds.data() + binder.descriptors.index, binder.descriptors.count);
+        switch (curRes.descriptorType) {
+            case CORE_DESCRIPTOR_TYPE_SAMPLER: {
+                BindSampler(curRes.resources, binder, descriptorIndex, shaderBindings->ids);
+                break;
+            }
+
+            case CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            case CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+            case CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            case CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
+                BindTexture(curRes.resources, binder, descriptorIndex, shaderBindings->ids, curRes.descriptorType);
+                break;
+            }
+            case CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            case CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            case CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+            case CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
+                BindBuffer(curRes.resources, binder, descriptorIndex, shaderBindings->ids, curRes.descriptorType);
+                break;
+            }
+            case CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+            case CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+            case CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
+            case CORE_DESCRIPTOR_TYPE_MAX_ENUM:
+                break;
+        }
     }
 }
 
@@ -2789,7 +2758,7 @@ void RenderBackendGLES::CopyPerfTimeStamp(const string_view name, PerfDataSet& p
 #else
             glGetQueryObjectui64v(platData.queryObject, GL_QUERY_RESULT, &gpuNanoSeconds);
 #endif
-            static uint64_t NANOSECONDS_TO_MICROSECONDS = 1000; // 1000 : size
+            static uint64_t NANOSECONDS_TO_MICROSECONDS = 1000;
             gpuMicroSeconds = static_cast<int64_t>(gpuNanoSeconds / NANOSECONDS_TO_MICROSECONDS);
             if (gpuMicroSeconds > UINT32_MAX) {
                 gpuMicroSeconds = 0;
@@ -2811,17 +2780,28 @@ void RenderBackendGLES::CopyPerfTimeStamp(const string_view name, PerfDataSet& p
 #if (RENDER_GPU_TIMESTAMP_QUERIES_ENABLED == 1)
         perfData->UpdateData(name, "Backend_Gpu", gpuMicroSeconds);
 #endif
-        perfData->UpdateData(name, "Backend_Count_Triangle", perfCounters_.triangleCount);
-        perfData->UpdateData(name, "Backend_Count_InstanceCount", perfCounters_.instanceCount);
-        perfData->UpdateData(name, "Backend_Count_Draw", perfCounters_.drawCount);
-        perfData->UpdateData(name, "Backend_Count_DrawIndirect", perfCounters_.drawIndirectCount);
-        perfData->UpdateData(name, "Backend_Count_Dispatch", perfCounters_.dispatchCount);
-        perfData->UpdateData(name, "Backend_Count_DispatchIndirect", perfCounters_.dispatchIndirectCount);
-        perfData->UpdateData(name, "Backend_Count_RenderPass", perfCounters_.renderPassCount);
-        perfData->UpdateData(name, "Backend_Count_BindProgram", perfCounters_.bindProgram);
-        perfData->UpdateData(name, "Backend_Count_BindSample", perfCounters_.bindSampler);
-        perfData->UpdateData(name, "Backend_Count_BindTexture", perfCounters_.bindTexture);
-        perfData->UpdateData(name, "Backend_Count_BindBuffer", perfCounters_.bindBuffer);
+        perfData->UpdateData(name, "Backend_Count_Triangle", perfCounters_.triangleCount,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_InstanceCount", perfCounters_.instanceCount,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_Draw", perfCounters_.drawCount,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_DrawIndirect", perfCounters_.drawIndirectCount,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_Dispatch", perfCounters_.dispatchCount,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_DispatchIndirect", perfCounters_.dispatchIndirectCount,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_RenderPass", perfCounters_.renderPassCount,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_BindProgram", perfCounters_.bindProgram,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_BindSample", perfCounters_.bindSampler,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_BindTexture", perfCounters_.bindTexture,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+        perfData->UpdateData(name, "Backend_Count_BindBuffer", perfCounters_.bindBuffer,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
         framePerfCounters_.drawCount += perfCounters_.drawCount;
         framePerfCounters_.drawIndirectCount += perfCounters_.drawIndirectCount;
         framePerfCounters_.dispatchCount += perfCounters_.dispatchCount;
@@ -3121,92 +3101,59 @@ void RenderBackendGLES::DoGraphicsState(const GraphicsState& graphicsState)
     UpdateBlendState(graphicsState);
 }
 
-void RenderBackendGLES::SetViewport(const RenderPassDesc::RenderArea& ra, const ViewportDesc& vd)
+void RenderBackendGLES::SetViewport(const ViewportDesc& vd)
 {
-    // NOTE: viewportdesc is in floats?!?
-    bool forceV = false;
-    bool forceD = false;
-    if (!viewportPrimed_) {
-        viewportPrimed_ = true;
-        forceV = true;
-        forceD = true;
-    }
-    if ((vd.x != viewport_.x) || (vd.y != viewport_.y) || (vd.width != viewport_.width) ||
-        (vd.height != viewport_.height)) {
-        forceV = true;
-    }
-    if ((vd.minDepth != viewport_.minDepth) || (vd.maxDepth != viewport_.maxDepth)) {
-        forceD = true;
-    }
+    const bool viewportPrimed = BASE_NS::exchange(viewportPrimed_, true);
+    const bool updateV = (!viewportPrimed) || ((vd.x != viewport_.x) || (vd.y != viewport_.y) ||
+                                                  (vd.width != viewport_.width) || (vd.height != viewport_.height));
+    const bool updateD =
+        (!viewportPrimed) || ((vd.minDepth != viewport_.minDepth) || (vd.maxDepth != viewport_.maxDepth));
 
-    if (forceV) {
+    if (updateV) {
         viewport_.x = vd.x;
         viewport_.y = vd.y;
         viewport_.width = vd.width;
         viewport_.height = vd.height;
-        viewportUpdated_ = true;
+        // Handle top-left / bottom-left origin conversion
+        auto y = static_cast<GLint>(vd.y);
+        const auto h = static_cast<GLsizei>(vd.height);
+        if (renderingToDefaultFbo_) {
+            if (currentFrameBuffer_) {
+                const auto fh = static_cast<GLint>(currentFrameBuffer_->height);
+                y = fh - (y + h);
+                glViewport(static_cast<GLint>(vd.x), y, static_cast<GLsizei>(vd.width), h);
+            } else {
+                viewportPending_ = true;
+            }
+        } else {
+            glViewport(static_cast<GLint>(vd.x), y, static_cast<GLsizei>(vd.width), h);
+        }
     }
-    if (forceD) {
+    if (updateD) {
         viewport_.minDepth = vd.minDepth;
         viewport_.maxDepth = vd.maxDepth;
-        viewportDepthRangeUpdated_ = true;
+        glDepthRangef(vd.minDepth, vd.maxDepth);
     }
 }
 
-void RenderBackendGLES::SetScissor(const RenderPassDesc::RenderArea& ra, const ScissorDesc& sd)
+void RenderBackendGLES::SetScissor(const ScissorDesc& sd)
 {
     // NOTE: scissordesc is in floats?!?
-    bool force = false;
-    if (!scissorPrimed_) {
-        scissorPrimed_ = true;
-        force = true;
-    }
-    if ((sd.offsetX != scissorBox_.offsetX) || (sd.offsetY != scissorBox_.offsetY) ||
-        (sd.extentWidth != scissorBox_.extentWidth) || (sd.extentHeight != scissorBox_.extentHeight)) {
-        force = true;
-    }
-    if (force) {
+    const bool scissorPrimed = BASE_NS::exchange(scissorPrimed_, true);
+    const bool updateS =
+        (!scissorPrimed) ||
+        ((sd.offsetX != scissorBox_.offsetX) || (sd.offsetY != scissorBox_.offsetY) ||
+            (sd.extentWidth != scissorBox_.extentWidth) || (sd.extentHeight != scissorBox_.extentHeight));
+    if (updateS) {
         scissorBox_ = sd;
-        scissorBoxUpdated_ = true;
-    }
-}
-
-void RenderBackendGLES::FlushViewportScissors()
-{
-    if (!currentFrameBuffer_) {
-        return;
-    }
-    bool force = false;
-    if (scissorViewportSetDefaultFbo_ != renderingToDefaultFbo_) {
-        force = true;
-        scissorViewportSetDefaultFbo_ = renderingToDefaultFbo_;
-    }
-    if ((viewportUpdated_) || (force)) {
-        viewportUpdated_ = false;
         // Handle top-left / bottom-left origin conversion
-        PLUGIN_ASSERT(currentFrameBuffer_);
-        auto y = static_cast<GLint>(viewport_.y);
-        const auto h = static_cast<GLsizei>(viewport_.height);
+        auto y = static_cast<GLint>(sd.offsetY);
+        const auto h = static_cast<GLsizei>(sd.extentHeight);
         if (renderingToDefaultFbo_) {
             const auto fh = static_cast<GLint>(currentFrameBuffer_->height);
             y = fh - (y + h);
         }
-        glViewport(static_cast<GLint>(viewport_.x), y, static_cast<GLsizei>(viewport_.width), h);
-    }
-    if ((scissorBoxUpdated_) || (force)) {
-        scissorBoxUpdated_ = false;
-        // Handle top-left / bottom-left origin conversion
-        auto y = static_cast<GLint>(scissorBox_.offsetY);
-        const auto h = static_cast<GLsizei>(scissorBox_.extentHeight);
-        if (renderingToDefaultFbo_) {
-            const auto fh = static_cast<GLint>(currentFrameBuffer_->height);
-            y = fh - (y + h);
-        }
-        glScissor(static_cast<GLint>(scissorBox_.offsetX), y, static_cast<GLsizei>(scissorBox_.extentWidth), h);
-    }
-    if (viewportDepthRangeUpdated_) {
-        viewportDepthRangeUpdated_ = false;
-        glDepthRangef(viewport_.minDepth, viewport_.maxDepth);
+        glScissor(static_cast<GLint>(sd.offsetX), y, static_cast<GLsizei>(sd.extentWidth), h);
     }
 }
 RENDER_END_NAMESPACE()

@@ -135,7 +135,6 @@ ohos_source_set("widget_adapter_source") {
   include_dirs = [
     "core/include",
     "core/include/lume",
-    "//foundation/graphic/graphic_2d/rosen/modules/",
   ]
 
   defines += [
@@ -167,6 +166,7 @@ ohos_source_set("widget_adapter_source") {
     external_deps += [
       "graphic_surface:surface",
       "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
     ]
 
     external_deps += [

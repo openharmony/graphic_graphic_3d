@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -118,7 +118,9 @@ template<typename DataStoreType>
 refcnt_ptr<IRenderDataStore> CreateDataStore(IRenderDataStoreManager& renderDataStoreManager, const string_view name)
 {
     refcnt_ptr<IRenderDataStore> renderDataStore = renderDataStoreManager.Create(DataStoreType::UID, name.data());
-    PLUGIN_ASSERT(renderDataStore);
+    if (!renderDataStore) {
+        PLUGIN_LOG_E("Render data store creation failed (%s)", name.data());
+    }
     return renderDataStore;
 }
 
@@ -394,9 +396,10 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
     RENDER_CPU_PERF_SCOPE("RenderContext::Init", "");
 
     createInfo_ = createInfo;
-    device_ = CreateDevice(createInfo_.deviceCreateInfo);
+    device_ = CreateDevice(createInfo_);
     if ((!device_) || (!device_->GetDeviceStatus())) {
         PLUGIN_LOG_E("Device not created successfully, invalid render interface.");
+        device_ = {};
         return RenderResultCode::RENDER_ERROR;
     } else {
         device_->Activate();
@@ -511,12 +514,17 @@ IRenderUtil& RenderContext::GetRenderUtil() const
     return *renderUtil_;
 }
 
+bool RenderContext::ValidMembers() const
+{
+    return (device_ && renderer_ && renderDataStoreMgr_ && renderNodeGraphMgr_ && renderUtil_);
+}
+
 void RenderContext::RegisterDefaultPaths()
 {
     // Already handeled during plugin registration. If own filemanager instance is used then these are needed.
 #if (RENDER_EMBEDDED_ASSETS_ENABLED == 1)
     // Create render:// protocol that points to embedded asset files.
-    PLUGIN_LOG_D("Registered render asset path: 'rofsRndr://render/'");
+    PLUGIN_LOG_D("Registered core asset path: 'rofsRndr://render/'");
     fileManager_->RegisterPath("render", "rofsRndr://render/", false);
 #endif
     for (const auto& idx : RENDER_DATA_PATHS) {
@@ -524,24 +532,24 @@ void RenderContext::RegisterDefaultPaths()
     }
 }
 
-unique_ptr<Device> RenderContext::CreateDevice(const DeviceCreateInfo& createInfo)
+unique_ptr<Device> RenderContext::CreateDevice(const RenderCreateInfo& createInfo)
 {
-    switch (createInfo.backendType) {
+    switch (createInfo.deviceCreateInfo.backendType) {
         case DeviceBackendType::OPENGL:
 #if (RENDER_HAS_GL_BACKEND)
-            return CreateDeviceGL(*this, createInfo);
+            return CreateDeviceGL(*this);
 #else
             return nullptr;
 #endif
         case DeviceBackendType::OPENGLES:
 #if (RENDER_HAS_GLES_BACKEND)
-            return CreateDeviceGLES(*this, createInfo);
+            return CreateDeviceGLES(*this);
 #else
             return nullptr;
 #endif
         case DeviceBackendType::VULKAN:
 #if (RENDER_HAS_VULKAN_BACKEND)
-            return CreateDeviceVk(*this, createInfo);
+            return CreateDeviceVk(*this);
 #else
             return nullptr;
 #endif
@@ -554,11 +562,6 @@ unique_ptr<Device> RenderContext::CreateDevice(const DeviceCreateInfo& createInf
 IEngine& RenderContext::GetEngine() const
 {
     return engine_;
-}
-
-BASE_NS::ColorSpaceFlags RenderContext::GetColorSpaceFlags() const
-{
-    return createInfo_.colorSpaceFlags;
 }
 
 string_view RenderContext::GetVersion()

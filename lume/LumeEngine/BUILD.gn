@@ -11,20 +11,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import("//build/ohos.gni")
-import("//foundation/graphic/graphic_2d/graphic_config.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 declare_args() {
-  CORE_LOG_ENABLED = false
+  CORE_LOG_ENABLED = true
   CORE_ROFS = "rofs"
 }
 
 config("lume_base_api") {
-  include_dirs = [ "${LUME_BASE_PATH}/api" ]
-  configs = [ "//third_party/bounds_checking_function:libsec_public_config" ]
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+  ]
+  configs = [
+    "//third_party/bounds_checking_function:libsec_public_config",
+  ]
   defines = [
     "BASE_TESTS_ENABLED=0",
-    "BASE_WARNINGS_AS_ERRORS=0",
+    "BASE_WARNINGS_AS_ERRORS=0"
   ]
 
   if (CORE_LOG_ENABLED) {
@@ -38,20 +41,19 @@ config("lume_base_api") {
       "CORE_LOG_DEBUG=0",
     ]
   }
+
 }
 
 config("lume_engine_api") {
-  include_dirs = [ "${LUME_CORE_PATH}/api" ]
+  include_dirs = [
+    "api",
+  ]
 
   if (LUME_OHOS_BUILD) {
-    include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos/" ]
+    include_dirs += [
+      "api/platform/ohos/",
+    ]
   }
-
-  #sources = [
-  #   "${LUME_CORE_PATH}/api/core/property_tools/property_api_impl.inl",
-  #  "${LUME_CORE_PATH}/api/core/property_tools/property_data.cpp",
-  #   "${LUME_CORE_PATH}/api/core/property_tools/core_metadata.inl",
-  # ]
 
   defines = [
     "CORE_BUILD_BASE=1",
@@ -61,13 +63,19 @@ config("lume_engine_api") {
   ]
 
   if (BUILDTYPE == "Release") {
-    defines += [ "CORE_LOG_NO_DEBUG=0" ]
+    defines += [
+      "CORE_LOG_NO_DEBUG=0",
+    ]
   }
   if (BUILDTYPE == "MinSizeRel") {
-    defines += [ "CORE_LOG_NO_DEBUG=0" ]
+    defines += [
+      "CORE_LOG_NO_DEBUG=0"
+    ]
   }
   if (BUILDTYPE == "RelWithDebInfo") {
-    defines += [ "CORE_LOG_NO_DEBUG=0" ]
+    defines += [
+      "CORE_LOG_NO_DEBUG=0"
+    ]
   }
 }
 
@@ -86,7 +94,7 @@ config("lume_default") {
     "-fdata-sections",
     "-fno-asynchronous-unwind-tables",
     "-fno-unwind-tables",
-    "-fno-exceptions",
+    "-fno-exceptions"
   ]
 
   cflags_cc = [
@@ -99,7 +107,7 @@ config("lume_default") {
     "-fvisibility-inlines-hidden",
     "-fno-asynchronous-unwind-tables",
     "-fno-unwind-tables",
-    "-fno-exceptions",
+    "-fno-exceptions"
   ]
 
   ldflags = [
@@ -115,13 +123,15 @@ config("lume_default") {
   }
 
   if (LUME_OHOS_BUILD) {
-    defines = [ "__OHOS_PLATFORM__" ]
+    defines = [
+      "__OHOS_PLATFORM__",
+    ]
   }
 
   defines += [
     "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}",
     "LIB_RENDER=${LIB_RENDER}",
-    "LIB_CORE3D=${LIB_CORE3D}",
+    "LIB_CORE3D=${LIB_CORE3D}"
   ]
 }
 
@@ -149,93 +159,97 @@ config("lume_engine_config") {
     "CORE_PUBLIC=__attribute__((visibility(\"default\")))",
     "USE_STB_IMAGE=$USE_STB_IMAGE",
     "USE_LIB_PNG_JPEG=$USE_LIB_PNG_JPEG",
-    "CORE_EMBEDDED_ASSETS_ENABLED=1",
+    "CORE_EMBEDDED_ASSETS_ENABLED=1"
   ]
 }
 
 ohos_source_set("lume_engine_src") {
   sources = [
-    "src/ecs/ecs.cpp",
-    "src/ecs/entity_manager.cpp",
-    "src/ecs/entity_manager.h",
-    "src/engine.cpp",
-    "src/engine.h",
-    "src/engine_factory.cpp",
-    "src/engine_factory.h",
-    "src/image/image_loader_manager.cpp",
-    "src/image/image_loader_manager.h",
-    "src/image/loaders/gl_util.h",
-    "src/image/loaders/image_loader_ktx.cpp",
-    "src/image/loaders/image_loader_ktx.h",
-    "src/io/dev/file_monitor.cpp",
-    "src/io/dev/file_monitor.h",
-    "src/io/file_manager.cpp",
-    "src/io/file_manager.h",
-    "src/io/filesystem_api.cpp",
-    "src/io/memory_file.cpp",
-    "src/io/memory_file.h",
-    "src/io/memory_filesystem.cpp",
-    "src/io/memory_filesystem.h",
-    "src/io/path_tools.cpp",
-    "src/io/path_tools.h",
-    "src/io/proxy_directory.cpp",
-    "src/io/proxy_directory.h",
-    "src/io/proxy_filesystem.cpp",
-    "src/io/proxy_filesystem.h",
-    "src/io/rofs_filesystem.cpp",
-    "src/io/rofs_filesystem.h",
-    "src/io/std_directory.cpp",
-    "src/io/std_directory.h",
-    "src/io/std_file.cpp",
-    "src/io/std_file.h",
-    "src/io/std_filesystem.cpp",
-    "src/io/std_filesystem.h",
-    "src/loader/json_util.h",
-    "src/loader/system_graph_loader.cpp",
-    "src/loader/system_graph_loader.h",
-    "src/log/logger.cpp",
-    "src/log/logger.h",
-    "src/log/logger_output.cpp",
-    "src/log/logger_output.h",
-    "src/os/platform.h",
-    "src/perf/performance_data_manager.cpp",
-    "src/perf/performance_data_manager.h",
-    "src/plugin_registry.cpp",
-    "src/plugin_registry.h",
-    "src/resources/resource_manager.cpp",
-    "src/resources/resource_manager.h",
-    "src/static_plugin_decl.h",
-    "src/threading/dispatcher_impl.cpp",
-    "src/threading/dispatcher_impl.h",
-    "src/threading/dispatcher_task_queue.cpp",
-    "src/threading/dispatcher_task_queue.h",
-    "src/threading/parallel_impl.cpp",
-    "src/threading/parallel_impl.h",
-    "src/threading/parallel_task_queue.cpp",
-    "src/threading/parallel_task_queue.h",
-    "src/threading/sequential_impl.cpp",
-    "src/threading/sequential_impl.h",
-    "src/threading/sequential_task_queue.cpp",
-    "src/threading/sequential_task_queue.h",
-    "src/threading/task_queue.cpp",
-    "src/threading/task_queue.h",
-    "src/threading/task_queue_factory.cpp",
-    "src/threading/task_queue_factory.h",
-    "src/util/frustum_util.cpp",
-    "src/util/frustum_util.h",
-    "src/util/linear_allocator.h",
-    "src/util/string_util.h",
-    "src/version.cpp",
+      "api/core/property_tools/property_data.cpp",
+      "src/ecs/ecs.cpp",
+      "src/ecs/entity_manager.cpp",
+      "src/ecs/entity_manager.h",
+      "src/engine.cpp",
+      "src/engine.h",
+      "src/engine_factory.cpp",
+      "src/engine_factory.h",
+      "src/image/image_loader_manager.cpp",
+      "src/image/image_loader_manager.h",
+      "src/image/loaders/gl_util.h",
+      "src/image/loaders/image_loader_ktx.cpp",
+      "src/image/loaders/image_loader_ktx.h",
+      "src/io/dev/file_monitor.cpp",
+      "src/io/dev/file_monitor.h",
+      "src/io/filesystem_api.cpp",
+      "src/io/file_manager.cpp",
+      "src/io/file_manager.h",
+      "src/io/memory_file.cpp",
+      "src/io/memory_file.h",
+      "src/io/memory_filesystem.cpp",
+      "src/io/memory_filesystem.h",
+      "src/io/path_tools.cpp",
+      "src/io/path_tools.h",
+      "src/io/proxy_directory.cpp",
+      "src/io/proxy_directory.h",
+      "src/io/proxy_filesystem.cpp",
+      "src/io/proxy_filesystem.h",
+      "src/io/rofs_filesystem.cpp",
+      "src/io/rofs_filesystem.h",
+      "src/io/std_directory.cpp",
+      "src/io/std_directory.h",
+      "src/io/std_file.cpp",
+      "src/io/std_file.h",
+      "src/io/std_filesystem.cpp",
+      "src/io/std_filesystem.h",
+      "src/loader/json_util.h",
+      "src/loader/system_graph_loader.cpp",
+      "src/loader/system_graph_loader.h",
+      "src/log/logger.cpp",
+      "src/log/logger.h",
+      "src/log/logger_output.cpp",
+      "src/log/logger_output.h",
+      "src/os/intf_library.h",
+      "src/os/platform.h",
+      "src/perf/performance_data_manager.cpp",
+      "src/perf/performance_data_manager.h",
+      "src/plugin_registry.cpp",
+      "src/plugin_registry.h",
+      "src/static_plugin_decl.h",
+      "src/threading/dispatcher_impl.cpp",
+      "src/threading/dispatcher_impl.h",
+      "src/threading/dispatcher_task_queue.cpp",
+      "src/threading/dispatcher_task_queue.h",
+      "src/threading/parallel_impl.cpp",
+      "src/threading/parallel_impl.h",
+      "src/threading/parallel_task_queue.cpp",
+      "src/threading/parallel_task_queue.h",
+      "src/threading/sequential_impl.cpp",
+      "src/threading/sequential_impl.h",
+      "src/threading/sequential_task_queue.cpp",
+      "src/threading/sequential_task_queue.h",
+      "src/threading/task_queue.cpp",
+      "src/threading/task_queue.h",
+      "src/threading/task_queue_factory.cpp",
+      "src/threading/task_queue_factory.h",
+      "src/util/frustum_util.cpp",
+      "src/util/frustum_util.h",
+      "src/util/linear_allocator.h",
+      "src/util/string_util.h",
+      "src/version.cpp",
   ]
 
   # platform source
   if (LUME_OHOS_BUILD) {
     sources += [
       "src/os/ohos/library_ohos.cpp",
+      "src/os/ohos/library_ohos.h",
       "src/os/ohos/logger_output.cpp",
       "src/os/ohos/ohos_file.cpp",
+      "src/os/ohos/ohos_file.h",
       "src/os/ohos/ohos_filesystem.cpp",
+      "src/os/ohos/ohos_filesystem.h",
       "src/os/ohos/platform_ohos.cpp",
+      "src/os/ohos/platform_ohos.h",
     ]
   }
 
@@ -258,8 +272,6 @@ ohos_source_set("lume_engine_src") {
     "resource_management:global_resmgr",
   ]
 
-  external_deps += [ "zlib:shared_libz" ]
-
   if (LUME_OHOS_BUILD) {
     external_deps += [ "hilog:libhilog" ]
   }
@@ -267,8 +279,9 @@ ohos_source_set("lume_engine_src") {
   subsystem_name = "graphic"
 }
 
-lume_rofs("lume_engine_rofs") {
-  output_obj = ""
+lume_rofs("lume_engine_rofs")
+{
+  output_obj= ""
   if (target_cpu == "arm") {
     output_obj = "${CORE_ROFS}_32.o"
   }
@@ -287,8 +300,7 @@ lume_rofs("lume_engine_rofs") {
   script = "./tools/CompilerAsset.sh"
   copy_path = "$target_gen_dir/assets"
   file_extension = ""
-  compileShader_deps =
-      [ "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile" ]
+  compileShader_deps=["${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile"]
 }
 
 source_set("lume_engine_rofs_obj") {
@@ -301,24 +313,60 @@ source_set("lume_engine_rofs_obj") {
     output_obj = "${CORE_ROFS}_64.o"
   }
 
-  sources = [ "${target_gen_dir}/assets/${output_obj}" ]
-  deps = [ ":lume_engine_rofs" ]
+  sources = [
+    "${target_gen_dir}/assets/${output_obj}"
+  ]
+  deps = [
+    ":lume_engine_rofs"
+  ]
 }
 
 ohos_static_library("libAGPEngine") {
   deps = [
-    ":lume_engine_rofs_obj",
     ":lume_engine_src",
+    ":lume_engine_rofs_obj"
+  ] 
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+
+}
+
+config("lume_component_help_config") {
+  include_dirs = [
+    "ecshelper",
+  ]
+
+  cflags = [
+    "-Wno-unused-function",
+  ]
+}
+
+ohos_shared_library("AGPBaseApi") {
+  public_configs = [
+    ":lume_base_api"
   ]
 
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
 
-config("lume_component_help_config") {
-  include_dirs = [ "ecshelper" ]
+ohos_shared_library("AGPEngineApi") {
+  public_configs = [
+    ":lume_engine_api"
+  ]
 
-  cflags = [ "-Wno-unused-function" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("AGPEcshelperApi") {
+  public_configs = [
+    ":lume_component_help_config"
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 ohos_source_set("lume_component_help_src") {
@@ -329,16 +377,17 @@ ohos_source_set("lume_component_help_src") {
   ]
 
   sources = [
-    "api/core/property_tools/property_data.cpp",
-    "ecshelper/ComponentTools/base_manager.h",
     "ecshelper/ComponentTools/base_manager.inl",
-    "ecshelper/ComponentTools/component_query.cpp",
+    "ecshelper/ComponentTools/base_manager.h",
     "ecshelper/ComponentTools/component_query.h",
+    "ecshelper/ComponentTools/component_query.cpp",
   ]
 }
 
 ohos_static_library("libComponentHelper") {
-  deps = [ ":lume_component_help_src" ]
+  deps = [
+    ":lume_component_help_src",
+  ]
 
   part_name = "graphic_3d"
   subsystem_name = "graphic"

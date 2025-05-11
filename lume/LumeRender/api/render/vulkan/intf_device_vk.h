@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -120,6 +120,9 @@ struct ImageDescVk final : BackendSpecificImageDesc {
 struct BufferDescVk : BackendSpecificBufferDesc {
     /** Buffer */
     VkBuffer buffer { VK_NULL_HANDLE };
+
+    /** Platform specific hardware buffer */
+    uintptr_t platformHwBuffer { 0u };
 };
 
 /** Low level vk memory access. (Usable only with low level engine use-cases) */
@@ -156,8 +159,14 @@ struct GpuBufferPlatformDataVk final : public GpuBufferPlatformData {
     /* Usage flags */
     VkBufferUsageFlags usage { 0 };
 
+    /* Device address */
+    uint64_t deviceAddress { 0 };
+
     /* Memory */
     GpuResourceMemoryVk memory;
+
+    /** Platform specific hardware buffer */
+    uintptr_t platformHwBuffer { 0u };
 };
 
 /** Low level vk image access. (Usable only with low level engine use-cases) */
@@ -190,6 +199,9 @@ struct GpuImagePlatformDataVk final : public GpuImagePlatformData {
 
     /* Memory */
     GpuResourceMemoryVk memory;
+
+    /** Platform specific hardware buffer */
+    uintptr_t platformHwBuffer { 0u };
 };
 
 /** Low level vk sampler access. (Usable only with low level engine use-cases) */

@@ -1,18 +1,3 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 
 #define JSON_IMPL
 #include "json_output.h"
@@ -29,7 +14,6 @@
 META_BEGIN_NAMESPACE()
 
 namespace Serialization {
-
 
 META_REGISTER_CLASS(Visitor, "2838202a-b362-4715-96ed-59f19334b3ac", ObjectCategoryBits::NO_CATEGORY)
 
@@ -62,7 +46,7 @@ private:
                 if (!n.GetObjectClassName().empty()) {
                     object.emplace_back("$className", json_value::string(n.GetObjectClassName()));
                 }
-                if (!n.GetObjectName().empty() && n.GetObjectName() != n.GetInstanceId().ToString()) {
+                if (!n.GetObjectName().empty()) {
                     object.emplace_back("$name", json_value::string(n.GetObjectName()));
                 }
                 if (n.GetInstanceId().IsValid()) {
@@ -136,8 +120,9 @@ json_value MetadataObject(const IRootNode& root)
 {
     json_value::object object;
     object.emplace_back("meta-version", json_value::string(META_VERSION.ToString()));
-    object.emplace_back("version", json_value::string(root.GetVersion().ToString()));
-    object.emplace_back("exporter-version", json_value::string(root.GetSerializerVersion().ToString()));
+    for (auto&& v : root.GetMetadata()) {
+        object.emplace_back(BASE_NS::string(v.key), json_value::string(v.data));
+    }
     return object;
 }
 

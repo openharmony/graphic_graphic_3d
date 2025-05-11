@@ -1,18 +1,3 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 
 #include "property.h"
 
@@ -25,11 +10,11 @@ BASE_NS::string PropertyBase::GetName() const
 {
     return name_;
 }
-IObject::WeakPtr PropertyBase::GetOwner() const
+IOwner::WeakPtr PropertyBase::GetOwner() const
 {
     return owner_;
 }
-void PropertyBase::SetOwner(IObject::Ptr owner)
+void PropertyBase::SetOwner(IOwner::Ptr owner)
 {
     owner_ = owner;
 }
@@ -41,14 +26,14 @@ AnyReturnValue PropertyBase::SetValue(const IAny& value)
 {
     auto res = SetInternalValue(value);
     if (res == AnyReturn::SUCCESS) {
-        CallOnChanged();
+        CallOnChanged(false);
     }
     return res;
 }
 const IAny& PropertyBase::GetValue() const
 {
     auto v = GetData();
-    CORE_ASSERT(v);
+    CORE_ASSERT_MSG(v, "Internal any not set");
     return *v;
 }
 bool PropertyBase::IsCompatible(const TypeId& id) const
@@ -73,13 +58,24 @@ IEvent::Ptr PropertyBase::EventOnChanged(MetadataQuery q) const
 }
 void PropertyBase::NotifyChange() const
 {
-    CallOnChanged();
+    CallOnChanged(false);
 }
-void PropertyBase::CallOnChanged() const
+void PropertyBase::InvokeOnChanged(
+    const BASE_NS::shared_ptr<OnChangedEvent>& onChanged, const IOwner::WeakPtr& owner) const
 {
-    pendingInvoke_ = locked_ != 0;
-    if (!locked_ && onChanged_) {
-        onChanged_->Invoke();
+    if (auto ow = interface_pointer_cast<IPropertyOwner>(owner)) {
+        ow->OnPropertyChanged(*this);
+    }
+    if (onChanged) {
+        onChanged->Invoke();
+    }
+}
+void PropertyBase::CallOnChanged(bool forcePending) const
+{
+    bool pending = forcePending || locked_ != 0;
+    SetPendingInvoke(pending);
+    if (!pending) {
+        InvokeOnChanged(onChanged_, owner_);
     }
 }
 void PropertyBase::Lock() const
@@ -90,19 +86,14 @@ void PropertyBase::Lock() const
 void PropertyBase::Unlock() const
 {
     BASE_NS::shared_ptr<OnChangedEvent> invoke;
-    IPropertyOwner::Ptr owner {};
-    if (--locked_ == 0 && pendingInvoke_) {
+    IOwner::WeakPtr owner {};
+    if (--locked_ == 0 && HasPendingInvoke()) {
         invoke = onChanged_;
-        pendingInvoke_ = false;
-        owner = interface_pointer_cast<IPropertyOwner>(owner_);
+        SetPendingInvoke(false);
+        owner = owner_;
     }
     mutex_.unlock();
-    if (owner) {
-        owner->OnPropertyChanged(*this);
-    }
-    if (invoke) {
-        invoke->Invoke();
-    }
+    InvokeOnChanged(invoke, owner);
 }
 void PropertyBase::LockShared() const
 {
@@ -114,7 +105,7 @@ void PropertyBase::UnlockShared() const
 }
 bool PropertyBase::Attaching(const IAttach::Ptr& target, const IObject::Ptr&)
 {
-    owner_ = interface_pointer_cast<IObject>(target);
+    owner_ = interface_pointer_cast<IOwner>(target);
     return true;
 }
 bool PropertyBase::Detaching(const IAttach::Ptr&)

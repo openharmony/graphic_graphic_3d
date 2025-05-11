@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -240,6 +240,14 @@ public:
      *  @return Scene root entity.
      */
     virtual CORE_NS::Entity ImportScene(size_t sceneIndex, CORE_NS::Entity parentEntity, SceneImportFlags flags) = 0;
+
+    /** Import scene to ECS using pre-imported resources.
+     *  @param sceneIndex Index of scene to import.
+     *  @param sceneId Scene ID assigned to all the imported nodes.
+     *  @param flags Import flags to filter out which components are imported.
+     *  @return Scene root entity.
+     */
+    virtual CORE_NS::Entity ImportScene(size_t sceneIndex, uint32_t sceneId, SceneImportFlags flags) = 0;
 
 protected:
 };

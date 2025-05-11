@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,15 +43,15 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr CTMap<BlendOp, const char*, 5U> blendOpToString { {
-    PairLike<BlendOp, const char*> { CORE_BLEND_OP_ADD, "add" },
+constexpr CTMap<BlendOp, const char*, 5U> blendOpToString { { PairLike<BlendOp, const char*> {
+                                                                  CORE_BLEND_OP_ADD, "add" },
     PairLike<BlendOp, const char*> { CORE_BLEND_OP_SUBTRACT, "subtract" },
     PairLike<BlendOp, const char*> { CORE_BLEND_OP_REVERSE_SUBTRACT, "reverse_subtract" },
     PairLike<BlendOp, const char*> { CORE_BLEND_OP_MIN, "min" },
     PairLike<BlendOp, const char*> { CORE_BLEND_OP_MAX, "max" } } };
 
-constexpr CTMap<BlendFactor, const char*, 19U> blendFactorToString { {
-    PairLike<BlendFactor, const char*> { CORE_BLEND_FACTOR_ZERO, "zero" },
+constexpr CTMap<BlendFactor, const char*, 19U> blendFactorToString { { PairLike<BlendFactor, const char*> {
+                                                                           CORE_BLEND_FACTOR_ZERO, "zero" },
     PairLike<BlendFactor, const char*> { CORE_BLEND_FACTOR_ONE, "one" },
     PairLike<BlendFactor, const char*> { CORE_BLEND_FACTOR_SRC_COLOR, "src_color" },
     PairLike<BlendFactor, const char*> { CORE_BLEND_FACTOR_ONE_MINUS_SRC_COLOR, "one_minus_src_color" },
@@ -71,8 +71,8 @@ constexpr CTMap<BlendFactor, const char*, 19U> blendFactorToString { {
     PairLike<BlendFactor, const char*> { CORE_BLEND_FACTOR_SRC1_ALPHA, "src1_alpha" },
     PairLike<BlendFactor, const char*> { CORE_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA, "one_minus_src1_alpha" } } };
 
-constexpr CTMap<Format, const char*, 192U> formatToString { {
-    PairLike<Format, const char*> { BASE_FORMAT_UNDEFINED, "undefined" },
+constexpr CTMap<Format, const char*, 192U> formatToString { { PairLike<Format, const char*> {
+                                                                  BASE_FORMAT_UNDEFINED, "undefined" },
     PairLike<Format, const char*> { BASE_FORMAT_R4G4_UNORM_PACK8, "r4g4_unorm_pack8" },
     PairLike<Format, const char*> { BASE_FORMAT_R4G4B4A4_UNORM_PACK16, "r4g4b4a4_unorm_pack16" },
     PairLike<Format, const char*> { BASE_FORMAT_B4G4R4A4_UNORM_PACK16, "b4g4r4a4_unorm_pack16" },
@@ -265,8 +265,8 @@ constexpr CTMap<Format, const char*, 192U> formatToString { {
     PairLike<Format, const char*> { BASE_FORMAT_G8_B8R8_2PLANE_422_UNORM, "g8_b8r8_2plane_422_unorm" },
     PairLike<Format, const char*> { BASE_FORMAT_G8_B8_R8_3PLANE_444_UNORM, "g8_b8_r8_3plane_444_unorm" } } };
 
-constexpr CTMap<StencilOp, const char*, 8U> stencilOpToString { {
-    PairLike<StencilOp, const char*> { CORE_STENCIL_OP_KEEP, "keep" },
+constexpr CTMap<StencilOp, const char*, 8U> stencilOpToString { { PairLike<StencilOp, const char*> {
+                                                                      CORE_STENCIL_OP_KEEP, "keep" },
     PairLike<StencilOp, const char*> { CORE_STENCIL_OP_ZERO, "zero" },
     PairLike<StencilOp, const char*> { CORE_STENCIL_OP_REPLACE, "replace" },
     PairLike<StencilOp, const char*> { CORE_STENCIL_OP_INCREMENT_AND_CLAMP, "increment_and_clamp" },
@@ -275,8 +275,8 @@ constexpr CTMap<StencilOp, const char*, 8U> stencilOpToString { {
     PairLike<StencilOp, const char*> { CORE_STENCIL_OP_INCREMENT_AND_WRAP, "increment_and_wrap" },
     PairLike<StencilOp, const char*> { CORE_STENCIL_OP_DECREMENT_AND_WRAP, "decrement_and_wrap" } } };
 
-constexpr CTMap<CompareOp, const char*, 8U> compareOpToString { {
-    PairLike<CompareOp, const char*> { CORE_COMPARE_OP_NEVER, "never" },
+constexpr CTMap<CompareOp, const char*, 8U> compareOpToString { { PairLike<CompareOp, const char*> {
+                                                                      CORE_COMPARE_OP_NEVER, "never" },
     PairLike<CompareOp, const char*> { CORE_COMPARE_OP_LESS, "less" },
     PairLike<CompareOp, const char*> { CORE_COMPARE_OP_EQUAL, "equal" },
     PairLike<CompareOp, const char*> { CORE_COMPARE_OP_LESS_OR_EQUAL, "less_or_equal" },
@@ -285,8 +285,8 @@ constexpr CTMap<CompareOp, const char*, 8U> compareOpToString { {
     PairLike<CompareOp, const char*> { CORE_COMPARE_OP_GREATER_OR_EQUAL, "greater_or_equal" },
     PairLike<CompareOp, const char*> { CORE_COMPARE_OP_ALWAYS, "always" } } };
 
-constexpr CTMap<LogicOp, const char*, 16U> logicOpToString { {
-    PairLike<LogicOp, const char*> { CORE_LOGIC_OP_CLEAR, "clear" },
+constexpr CTMap<LogicOp, const char*, 16U> logicOpToString { { PairLike<LogicOp, const char*> {
+                                                                   CORE_LOGIC_OP_CLEAR, "clear" },
     PairLike<LogicOp, const char*> { CORE_LOGIC_OP_AND, "and" },
     PairLike<LogicOp, const char*> { CORE_LOGIC_OP_AND_REVERSE, "and_reverse" },
     PairLike<LogicOp, const char*> { CORE_LOGIC_OP_COPY, "copy" },
@@ -635,11 +635,14 @@ IShaderManager::ShaderOutWriteResult SavePipelineLayouts(const IShaderManager::S
     pipelineLayoutJson["combatibility_info"]["type"] = "pipelinelayout";
     pipelineLayoutJson["descriptorSetLayouts"] = json::standalone_value::array();
 
-    for (uint32_t j = 0; j < saveInfo.layout.descriptorSetCount; ++j) {
+    for (const auto& descriptorSetLayout : saveInfo.layout.descriptorSetLayouts) {
+        if (descriptorSetLayout.set == PipelineLayoutConstants::INVALID_INDEX) {
+            continue;
+        }
         json::standalone_value descriptorSetJson = json::standalone_value::object();
-        descriptorSetJson["set"] = saveInfo.layout.descriptorSetLayouts[j].set;
+        descriptorSetJson["set"] = descriptorSetLayout.set;
         descriptorSetJson["bindings"] = json::standalone_value::array();
-        for (const auto& binding : saveInfo.layout.descriptorSetLayouts[j].bindings) {
+        for (const auto& binding : descriptorSetLayout.bindings) {
             json::standalone_value bindingJson = json::standalone_value::object();
             bindingJson["binding"] = binding.binding;
             bindingJson["descriptorType"] = descriptorTypeToString.at(binding.descriptorType);

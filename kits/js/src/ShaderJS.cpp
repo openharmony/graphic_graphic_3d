@@ -17,6 +17,7 @@
 
 #include <meta/api/util.h>
 #include <scene/ext/intf_internal_scene.h>
+#include <scene/interface/intf_image.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_scene.h>
 
@@ -40,12 +41,12 @@ void ShaderJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, reinterpret_cast<void**>(&mis));
+    NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
     mis->StoreCtor("Shader", func);
 }
 
 ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
-    : BaseObject<ShaderJS>(e, i), SceneResourceImpl(SceneResourceImpl::SHADER)
+    : BaseObject(e, i), SceneResourceImpl(SceneResourceImpl::SHADER)
 {
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
@@ -53,34 +54,12 @@ ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
     NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene...
     NapiApi::Object args = fromJs.Arg<1>();  // other args
     scene_ = { scene };
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+    if (!scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
 
-    auto* tro = scene.Native<TrueRootObject>();
-    if (tro) {
-        auto* sceneJS = ((SceneJS*)tro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-        }
-    }
-
-    // check if we got the NativeObject as parameter. (meta object created when bound to material..)
-    auto metaobj = GetNativeObjectParam<META_NS::IMetadata>(args);
-
-    StoreJsObj(interface_pointer_cast<META_NS::IObject>(metaobj), meJs);
-
-    // check if it's a SCENE_NS::IShader (can only be set on instances created createShader, these are the "template"
-    // shaders.)
-    auto shader = interface_pointer_cast<SCENE_NS::IShader>(metaobj);
-    if (shader) {
-        // we should not be bound to a material then.. this is a place holder object.
-        SetNativeObject(interface_pointer_cast<META_NS::IObject>(shader), true);
-    } else {
-        // should be bound to a material..
-        // so the shader should be stored as a parameter..
-        SetNativeObject(interface_pointer_cast<META_NS::IObject>(metaobj), true);
-        shader = interface_pointer_cast<SCENE_NS::IShader>(metaobj->GetProperty<IntfPtr>("shader")->GetValue());
+    if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
+        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
 
     NapiApi::Object material = args.Get<NapiApi::Object>("Material"); // see if we SHOULD be bound to a material.
@@ -92,7 +71,7 @@ ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
     if (auto prm = args.Get<BASE_NS::string>("name"); prm.IsDefined()) {
         name = prm;
     } else {
-        if (auto named = interface_cast<META_NS::IObject>(metaobj)) {
+        if (const auto named = GetNativeObject()) {
             name = named->GetName();
         }
     }
@@ -109,16 +88,8 @@ void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
     NapiApi::Object inputs(meJs.GetEnv());
 
     napi_env e = inputs.GetEnv();
-    auto* tro = material.Native<TrueRootObject>();
-    if (!tro) {
-        LOG_F("tro is null");
-        return;
-    }
+    auto* tro = material.GetRoot();
     auto mat = interface_pointer_cast<SCENE_NS::IMaterial>(tro->GetNativeObject());
-    if (!mat) {
-        LOG_F("mat is null");
-        return;
-    }
 
     BASE_NS::vector<napi_property_descriptor> inputProps;
 
@@ -146,7 +117,7 @@ void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
                 inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
             }
 
-            if (proxt = BASE_NS::shared_ptr { new BitmapProxy(scene_.GetObject(), inputs, t->Image()) }) {
+            if (proxt = BASE_NS::shared_ptr { new ImageProxy(scene_.GetObject(), inputs, t->Image()) }) {
                 auto n = (name.empty() ? BASE_NS::string_view("") : name + BASE_NS::string_view("_")) +
                          t->Image()->GetName();
                 const auto& res = proxies_.insert_or_assign(n, proxt);
@@ -165,7 +136,7 @@ void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
     }
     if (customProperties) {
         BASE_NS::shared_ptr<CORE_NS::IInterface> intsc;
-        if (auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+        if (auto scene = scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
             if (auto ints = scene->GetInternalScene()) {
                 intsc = interface_pointer_cast<CORE_NS::IInterface>(ints);
             }
@@ -219,28 +190,17 @@ void ShaderJS::DisposeNative(void* in)
 {
     if (!disposed_) {
         disposed_ = true;
-
         UnbindInputs();
+        UnsetNativeObject();
 
-        // release native object.
-        SetNativeObject(nullptr, false);
-        SetNativeObject(nullptr, true);
-        NapiApi::Object obj = scene_.GetObject();
-        if (obj) {
-            auto* tro = obj.Native<TrueRootObject>();
-            if (tro) {
-                SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-                if (sceneJS) {
-                    sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-                }
-            }
+        if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
+            sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
-
         scene_.Reset();
     }
 }
 void ShaderJS::Finalize(napi_env env)
 {
-    DisposeNative(nullptr);
-    BaseObject<ShaderJS>::Finalize(env);
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    BaseObject::Finalize(env);
 }

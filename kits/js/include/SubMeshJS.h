@@ -20,7 +20,7 @@
 #include "BaseObjectJS.h"
 #include "Vec3Proxy.h"
 
-class SubMeshJS : public BaseObject<SubMeshJS> {
+class SubMeshJS : public BaseObject {
 public:
     static constexpr uint32_t ID = 50;
     static void Init(napi_env env, napi_value exports);
@@ -31,14 +31,13 @@ public:
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
     void DisposeNative(void*) override;
+    void Finalize(napi_env env) override;
     napi_value GetName(NapiApi::FunctionContext<>& ctx);
     void SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx);
     napi_value GetAABB(NapiApi::FunctionContext<>& ctx);
 
     napi_value GetMaterial(NapiApi::FunctionContext<>& ctx);
     void SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-
-    void UpdateParentMesh();
 
     BASE_NS::unique_ptr<Vec3Proxy> aabbMin_, aabbMax_;
     NapiApi::WeakRef scene_;

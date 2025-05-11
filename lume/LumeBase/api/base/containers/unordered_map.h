@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include <cstdint>
 
 #include <base/containers/iterator.h>
+#include <base/containers/pair.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
@@ -29,16 +30,9 @@
 BASE_BEGIN_NAMESPACE()
 template<class T>
 class unordered_map_iterator;
+
 template<class T>
 class const_unordered_map_iterator;
-
-template<class T1, class T2>
-struct pair {
-    using first_type = T1;
-    using second_type = T2;
-    first_type first;
-    second_type second;
-};
 
 #ifdef BASE_STD_COMPATIBILITY
 using forward_iterator_tag = std::forward_iterator_tag; // yeah. we need this for std compatibility.

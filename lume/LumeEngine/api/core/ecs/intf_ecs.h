@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -224,6 +224,11 @@ public:
     /** Gets entity manager for ECS.
      */
     virtual const IEntityManager& GetEntityManager() const = 0;
+
+    /** Get unique ECS id. The id is created when the ECS is created with the engine.
+     * @return Unique ECS id.
+     */
+    virtual uint64_t GetId() const = 0;
 
     using Ptr = BASE_NS::refcnt_ptr<IEcs>;
 

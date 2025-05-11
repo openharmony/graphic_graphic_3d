@@ -29,8 +29,10 @@ config("lume3d_config") {
     "${LUME_SCENE_PATH}/include",
   ]
 
-  if (current_os == "ohos") {
-    include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
+  if (current_os == "ohos" ) {
+    include_dirs += [
+      "${LUME_CORE_PATH}/api/platform/ohos",
+    ]
   }
 
   configs = [
@@ -82,107 +84,132 @@ config("lume3d_config") {
 }
 
 config("napi_config") {
-  defines = []
-
-  if (current_os == "ohos") {
-    defines += [
-      "__OHOS_PLATFORM__",
-      "__SCENE_ADAPTER__",
-      "__NAPI_CALL_TF_WITH_PRIORITY__",
+    defines = [
     ]
-  }
 
-  include_dirs = [
-    "include",
-    "include/napi",
-  ]
+    if (current_os == "ohos" ) {
+        defines += [
+          "__OHOS_PLATFORM__",
+          "__SCENE_ADAPTER__"
+        ]
+    }
 
-  cflags = [
-    "-Wno-unused-but-set-variable",
-    "-Wno-unused-lambda-capture",
-    "-Wno-unused-variable",
-  ]
+    include_dirs = [
+        "include",
+        "include/napi",
+    ]
+
+    cflags = [
+      "-Wno-unused-but-set-variable",
+      "-Wno-unused-lambda-capture",
+      "-Wno-unused-variable"
+    ]
 }
 
 ohos_source_set("napi_source") {
-  sources = [
-    "src/AnimationJS.cpp",
-    "src/BaseObjectJS.cpp",
-    "src/BloomJS.cpp",
-    "src/CameraJS.cpp",
-    "src/ColorProxy.cpp",
-    "src/EnvironmentJS.cpp",
-    "src/GeometryJS.cpp",
-    "src/ImageJS.cpp",
-    "src/LightJS.cpp",
-    "src/MaterialJS.cpp",
-    "src/MaterialPropertyJS.cpp",
-    "src/MeshJS.cpp",
-    "src/MeshResourceJS.cpp",
-    "src/NodeImpl.cpp",
-    "src/NodeJS.cpp",
-    "src/PostProcJS.cpp",
-    "src/PromiseBase.cpp",
-    "src/PropertyProxy.cpp",
-    "src/QuatProxy.cpp",
-    "src/Raycast.cpp",
-    "src/SceneComponentJS.cpp",
-    "src/SceneJS.cpp",
-    "src/SceneResourceImpl.cpp",
-    "src/ShaderJS.cpp",
-    "src/SubMeshJS.cpp",
-    "src/TextNodeJS.cpp",
-    "src/ToneMapJS.cpp",
-    "src/Vec2Proxy.cpp",
-    "src/Vec3Proxy.cpp",
-    "src/Vec4Proxy.cpp",
-    "src/geometry_definition/CubeJS.cpp",
-    "src/geometry_definition/CustomJS.cpp",
-    "src/geometry_definition/GeometryDefinition.cpp",
-    "src/geometry_definition/PlaneJS.cpp",
-    "src/geometry_definition/SphereJS.cpp",
-    "src/native_module_export.cpp",
-    "src/nodejstaskqueue.cpp",
-    "src/register_module.cpp",
-  ]
+    sources = [
+      "src/AnimationJS.cpp",
+      "src/ArrayPropertyProxy.cpp",
+      "src/BaseObjectJS.cpp",
+      "src/BloomJS.cpp",
+      "src/CameraJS.cpp",
+      "src/ColorProxy.cpp",
+      "src/DisposeContainer.cpp",
+      "src/EnvironmentJS.cpp",
+      "src/GeometryJS.cpp",
+      "src/geometry_definition/CubeJS.cpp",
+      "src/geometry_definition/CustomJS.cpp",
+      "src/geometry_definition/GeometryDefinition.cpp",
+      "src/geometry_definition/PlaneJS.cpp",
+      "src/geometry_definition/SphereJS.cpp",
+      "src/ImageJS.cpp",
+      "src/JsObjectCache.cpp",
+      "src/LightJS.cpp",
+      "src/MaterialJS.cpp",
+      "src/MaterialPropertyJS.cpp",
+      "src/MeshJS.cpp",
+      "src/MeshResourceJS.cpp",
+      "src/MorpherJS.cpp",
+      "src/napi/array.cpp",
+      "src/napi/env.cpp",
+      "src/napi/function.cpp",
+      "src/napi/object.cpp",
+      "src/napi/strong_ref.cpp",
+      "src/napi/utils.cpp",
+      "src/napi/value.cpp",
+      "src/napi/weak_ref.cpp",
+      "src/native_module_export.cpp",
+      "src/NodeImpl.cpp",
+      "src/NodeJS.cpp",
+      "src/nodejstaskqueue.cpp",
+      "src/ParamParsing.cpp",
+      "src/PostProcJS.cpp",
+      "src/Promise.cpp",
+      "src/PropertyProxy.cpp",
+      "src/QuatProxy.cpp",
+      "src/Raycast.cpp",
+      "src/register_module.cpp",
+      "src/RenderContextJS.cpp",
+      "src/SamplerJS.cpp",
+      "src/SceneComponentJS.cpp",
+      "src/SceneJS.cpp",
+      "src/SceneResourceImpl.cpp",
+      "src/ShaderJS.cpp",
+      "src/SubMeshJS.cpp",
+      "src/TextNodeJS.cpp",
+      "src/ToneMapJS.cpp",
+      "src/TrueRootObject.cpp",
+      "src/Vec2Proxy.cpp",
+      "src/Vec3Proxy.cpp",
+      "src/Vec4Proxy.cpp",
+    ]
 
-  include_dirs = [ "../../3d_widget_adapter/include/ohos" ]
+    include_dirs = [
+      "../../3d_widget_adapter/include/ohos"
+    ]
 
-  defines = []
+    defines = [
+    ]
 
-  configs = [
-    ":lume3d_config",
-    "../../3d_scene_adapter:scene_adapter_config",
-  ]
+    configs = [
+      ":lume3d_config",
+      "../../3d_scene_adapter:scene_adapter_config",
+    ]
 
-  public_configs = [ ":napi_config" ]
+    public_configs = [
+      ":napi_config",
+    ]
 
-  deps = [ "../../3d_widget_adapter:lib3dWidgetAdapter" ]
+    deps = [
+      "../../3d_widget_adapter:lib3dWidgetAdapter"
+    ]
 
-  external_deps = [
-    "c_utils:utils",
-    "graphic_2d:EGL",
-    "graphic_2d:GLESv3",
-    "graphic_surface:surface",
-    "hilog:libhilog",
-    "hitrace:hitrace_meter",
-    "init:libbegetutil",
-    "napi:ace_napi",
-  ]
+    external_deps = [
+      "napi:ace_napi",
+      "c_utils:utils",
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3",
+      "hilog:libhilog",
+      "hitrace:hitrace_meter",
+      "init:libbegetutil",
+      "graphic_surface:surface",
+    ]
 
-  part_name = "graphic_3d"
-  subsystem_name = "graphic"
+    part_name = "graphic_3d"
+    subsystem_name = "graphic"
 }
 
 group("napiInterface") {
-  public_configs = [ ":napi_config" ]
+    public_configs = [ ":napi_config" ] 
 }
 
 ohos_shared_library("libscene") {
-  deps = [ ":napi_source" ]
-  external_deps = [ "hilog:libhilog" ]
-  public_configs = [ ":napi_config" ]
-  relative_install_dir = "module/graphics"
-  part_name = "graphic_3d"
-  subsystem_name = "graphic"
+    deps = [
+      ":napi_source",
+    ]
+    external_deps = [ "hilog:libhilog" ]
+    public_configs = [":napi_config"]
+    relative_install_dir = "module/graphics"
+    part_name = "graphic_3d"
+    subsystem_name = "graphic"
 }

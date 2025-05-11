@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,12 +22,12 @@
 #include <render/nodecontext/intf_render_node.h>
 #include <render/render_data_structures.h>
 
+#include "datastore/render_data_store_default_acceleration_structure_staging.h"
+
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
 class IRenderNodeContextManager;
 struct RenderNodeGraphInputs;
-
-class RenderDataStoreDefaultAccelerationStructureStaging;
 
 class RenderNodeDefaultAccelerationStructureStaging final : public IRenderNode {
 public:
@@ -52,11 +52,23 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    void ExecuteFrameProcessInstanceData(RenderDataStoreDefaultAccelerationStructureStaging& dataStore);
+    void ExecuteFrameProcessInstanceData(
+        IRenderCommandList& cmdList, const AsConsumeStruct& fullData, const AsConsumeStruct::AsData& data);
+    void ExecuteFrameProcessGeometryData(
+        IRenderCommandList& cmdList, const AsConsumeStruct& fullData, const AsConsumeStruct::AsData& data);
+    void ExecuteFrameProcessScratch(const AsConsumeStruct& fullData);
 
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     BASE_NS::string dsName_;
+
+    // helper vector
+    BASE_NS::vector<AsInstance> asInstanceHelper_;
+    BASE_NS::vector<uint32_t> scratchOffsetHelper_;
+    uint32_t frameScratchOffsetIndex_ { 0U };
+
+    RenderHandleReference scratchBuffer_;
+    RenderHandle rawScratchBuffer_;
 };
 RENDER_END_NAMESPACE()
 

@@ -1,18 +1,3 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #ifndef META_INTERFACE_DETAIL_ENUM_H
 #define META_INTERFACE_DETAIL_ENUM_H
 
@@ -34,13 +19,69 @@ BASE_NS::array_view<const META_NS::EnumValue> GetValues(const EnumValue<Enum>* c
 template<typename T>
 using EnumCompatType = BASE_NS::conditional_t<BASE_NS::is_unsigned_v<BASE_NS::underlying_type_t<T>>, uint64_t, int64_t>;
 
-template<typename EnumType>
-class Enum
-    : public IntroduceInterfaces<
-          MultiTypeAny<typename EnumType::Type, StaticCastConv, EnumCompatType<typename EnumType::Type>>, IEnum> {
+template<typename Type>
+class EnumBase : public MultiTypeAny<Type, StaticCastConv, EnumCompatType<Type>> {
 public:
-    using Super = IntroduceInterfaces<
-        MultiTypeAny<typename EnumType::Type, StaticCastConv, EnumCompatType<typename EnumType::Type>>, IEnum>;
+    explicit EnumBase(Type v = {})
+    {
+        InternalSetValue(v);
+    }
+
+    using IAny::Clone;
+    IAny::Ptr Clone(const AnyCloneOptions& options) const override;
+
+private:
+    AnyReturnValue InternalSetValue(const Type& value) override
+    {
+        if (value != value_) {
+            value_ = value;
+            return AnyReturn::SUCCESS;
+        }
+        return AnyReturn::NOTHING_TO_DO;
+    }
+    const Type& InternalGetValue() const override
+    {
+        return value_;
+    }
+
+    Type value_ {};
+};
+
+template<typename Type>
+class ArrayEnumBase : public ArrayMultiTypeAnyBase<Type> {
+    using Super = ArrayMultiTypeAnyBase<Type>;
+
+public:
+    using Super::Super;
+
+    const BASE_NS::array_view<const TypeId> GetItemCompatibleTypes(CompatibilityDirection dir) const override
+    {
+        return EnumBase<Type>::StaticGetCompatibleTypes(dir);
+    }
+
+    IAny::Ptr Clone(const AnyCloneOptions& options) const override
+    {
+        if (options.role == TypeIdRole::ITEM) {
+            return IAny::Ptr(new EnumBase<Type>);
+        }
+        return IAny::Ptr(new ArrayEnumBase {
+            options.value == CloneValueType::COPY_VALUE ? this->value_ : typename Super::ArrayType {} });
+    }
+};
+
+template<typename Type>
+IAny::Ptr EnumBase<Type>::Clone(const AnyCloneOptions& options) const
+{
+    if (options.role == TypeIdRole::ARRAY) {
+        return IAny::Ptr(new ArrayEnumBase<Type>());
+    }
+    return IAny::Ptr(new EnumBase { options.value == CloneValueType::COPY_VALUE ? this->value_ : Type {} });
+}
+
+template<typename EnumType>
+class Enum : public IntroduceInterfaces<EnumBase<typename EnumType::Type>, IEnum> {
+public:
+    using Super = IntroduceInterfaces<EnumBase<typename EnumType::Type>, IEnum>;
     using Type = typename EnumType::Type;
     using RealType = BASE_NS::underlying_type_t<Type>;
 
@@ -135,9 +176,9 @@ private:
 };
 
 template<typename EnumType>
-class ArrayEnum : public ArrayMultiTypeAnyBase<typename EnumType::Type> {
+class ArrayEnum : public ArrayEnumBase<typename EnumType::Type> {
     using Type = typename EnumType::Type;
-    using Super = ArrayMultiTypeAnyBase<Type>;
+    using Super = ArrayEnumBase<Type>;
 
 public:
     using Super::Super;

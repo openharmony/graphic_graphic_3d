@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -36,12 +36,21 @@ class IPerformanceTrace;
 class IPerformanceDataManager : public IInterface {
 public:
     using Ptr = BASE_NS::refcnt_ptr<IPerformanceDataManager>;
-    static constexpr auto UID = BASE_NS::Uid { "9ce7d517-4b7d-400b-bdc5-f449d93479d8" };
+    static constexpr auto UID = BASE_NS::Uid { "aedc8e81-10ce-4c77-8fde-c238100a36ec" };
 
     static constexpr uint32_t TIMING_DATA_POOL_SIZE { 64u };
     static constexpr uint32_t TIMING_DATA_NAME_LENGTH { 64u };
 
     struct PerformanceTimingData {
+        enum class DataType : uint8_t {
+            /** Time in microseconds. */
+            MICROSECONDS,
+            /** Bytes, e.g. memory. */
+            BYTES,
+            /** Number of items, e.g. triangle count. */
+            COUNT,
+        };
+
         /** Latest value. */
         int64_t currentTime { 0 };
         /** Largest value. */
@@ -58,6 +67,10 @@ public:
         int64_t counter { 0 };
         /** Array containing the last TIMING_DATA_POOL_SIZE values. */
         int64_t timings[TIMING_DATA_POOL_SIZE] { 0 };
+        /** Array containing the last TIMING_DATA_POOL_SIZE average values. */
+        int64_t averageTimings[TIMING_DATA_POOL_SIZE] { 0 };
+        /** Type of the values. */
+        DataType type { DataType::MICROSECONDS };
     };
 
     using NameToPerformanceMap =
@@ -98,6 +111,15 @@ public:
      */
     virtual void UpdateData(
         const BASE_NS::string_view subCategory, const BASE_NS::string_view name, const int64_t microSeconds) = 0;
+
+    /** Updates performance timing data.
+     * @param subCategory Name of the subcategory.
+     * @param name Name of the data entry.
+     * @param value Current value.
+     * @param type Type of the current value.
+     */
+    virtual void UpdateData(const BASE_NS::string_view subCategory, const BASE_NS::string_view name,
+        const int64_t value, PerformanceTimingData::DataType type) = 0;
 
     /** Resets all performance data gathered for this category. */
     virtual void ResetData() = 0;

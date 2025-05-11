@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,8 +32,24 @@
 #include "loader/render_data_configuration_loader.h"
 #include "nodecontext/render_node_copy_util.h"
 #include "nodecontext/render_node_post_process_util.h"
+#include "postprocesses/render_post_process_bloom.h"
+#include "postprocesses/render_post_process_bloom_node.h"
+#include "postprocesses/render_post_process_blur.h"
+#include "postprocesses/render_post_process_blur_node.h"
+#include "postprocesses/render_post_process_combined.h"
+#include "postprocesses/render_post_process_combined_node.h"
+#include "postprocesses/render_post_process_dof.h"
+#include "postprocesses/render_post_process_dof_node.h"
 #include "postprocesses/render_post_process_flare.h"
 #include "postprocesses/render_post_process_flare_node.h"
+#include "postprocesses/render_post_process_fxaa.h"
+#include "postprocesses/render_post_process_fxaa_node.h"
+#include "postprocesses/render_post_process_motion_blur.h"
+#include "postprocesses/render_post_process_motion_blur_node.h"
+#include "postprocesses/render_post_process_taa.h"
+#include "postprocesses/render_post_process_taa_node.h"
+#include "postprocesses/render_post_process_upscale.h"
+#include "postprocesses/render_post_process_upscale_node.h"
 
 CORE_BEGIN_NAMESPACE()
 class IEngine;
@@ -80,18 +96,19 @@ public:
     /** Get render data store manager */
     IRenderDataStoreManager& GetRenderDataStoreManager() const override;
 
+    /** Some methods and callbacks might try to use the members before full initialization */
+    bool ValidMembers() const;
+
     /** Get render utilities */
     IRenderUtil& GetRenderUtil() const override;
 
     CORE_NS::IEngine& GetEngine() const override;
 
-    BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const override;
-
     BASE_NS::string_view GetVersion() override;
 
     void WritePipelineCache() const override;
 
-    RenderCreateInfo GetCreateInfo() const;
+    RenderCreateInfo GetCreateInfo() const override;
 
     // IInterface
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
@@ -114,7 +131,7 @@ private:
     void OnTypeInfoEvent(EventType type, BASE_NS::array_view<const CORE_NS::ITypeInfo* const> typeInfos) override;
 
     void RegisterDefaultPaths();
-    BASE_NS::unique_ptr<Device> CreateDevice(const DeviceCreateInfo& createInfo);
+    BASE_NS::unique_ptr<Device> CreateDevice(const RenderCreateInfo& createInfo);
     void WritePipelineCacheInternal(bool activate) const;
 
     RenderPluginState& pluginState_;
@@ -127,13 +144,14 @@ private:
     BASE_NS::unique_ptr<RenderUtil> renderUtil_;
     RenderDataConfigurationLoaderImpl renderDataConfigurationLoader_;
 
-    CORE_NS::InterfaceTypeInfo interfaceInfos_[5U] {
+    using InterfacePtr = CORE_NS::IInterface*;
+    CORE_NS::InterfaceTypeInfo interfaceInfos_[21U] {
         CORE_NS::InterfaceTypeInfo {
             this,
             UID_RENDER_DATA_CONFIGURATION_LOADER,
             CORE_NS::GetName<IRenderDataConfigurationLoader>().data(),
             {}, // nullptr for CreateInstance
-            [](CORE_NS::IClassRegister& registry, CORE_NS::PluginToken token) -> CORE_NS::IInterface* {
+            [](CORE_NS::IClassRegister& registry, CORE_NS::PluginToken token) -> InterfacePtr {
                 if (token) {
                     return &(static_cast<RenderContext*>(token)->renderDataConfigurationLoader_);
                 }
@@ -142,7 +160,7 @@ private:
         },
         CORE_NS::InterfaceTypeInfo {
             this, UID_RENDER_NODE_POST_PROCESS_UTIL, CORE_NS::GetName<IRenderNodePostProcessUtil>().data(),
-            [](CORE_NS::IClassFactory&, CORE_NS::PluginToken token) -> CORE_NS::IInterface* {
+            [](CORE_NS::IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr {
                 if (token) {
                     return new RenderNodePostProcessUtilImpl();
                 }
@@ -154,19 +172,35 @@ private:
             nullptr,
             RenderPostProcessFlare::UID,
             "",
-            [](IClassFactory&, CORE_NS::PluginToken token) -> IInterface* { return new RenderPostProcessFlare(); },
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessFlare(); },
             nullptr,
         },
         CORE_NS::InterfaceTypeInfo {
             nullptr,
             RenderPostProcessFlareNode::UID,
             "",
-            [](IClassFactory&, CORE_NS::PluginToken token) -> IInterface* { return new RenderPostProcessFlareNode(); },
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessFlareNode(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessUpscale::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessUpscale(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessUpscaleNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr {
+                return new RenderPostProcessUpscaleNode();
+            },
             nullptr,
         },
         CORE_NS::InterfaceTypeInfo {
             this, UID_RENDER_NODE_COPY_UTIL, CORE_NS::GetName<IRenderNodeCopyUtil>().data(),
-            [](CORE_NS::IClassFactory&, CORE_NS::PluginToken token) -> CORE_NS::IInterface* {
+            [](CORE_NS::IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr {
                 if (token) {
                     return new RenderNodeCopyUtil();
                 }
@@ -174,6 +208,110 @@ private:
             },
             nullptr, // nullptr for GetInstance
         },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessBlur::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessBlur(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessBlurNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessBlurNode(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessBloom::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessBloom(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessBloomNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessBloomNode(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessTaa::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessTaa(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessTaaNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessTaaNode(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessFxaa::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessFxaa(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessFxaaNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessFxaaNode(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessDof::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessDof(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessDofNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessDofNode(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessMotionBlur::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr {
+                return new RenderPostProcessMotionBlur();
+            },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessMotionBlurNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr {
+                return new RenderPostProcessMotionBlurNode();
+            },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessCombined::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr { return new RenderPostProcessCombined(); },
+            nullptr,
+        },
+        CORE_NS::InterfaceTypeInfo {
+            nullptr,
+            RenderPostProcessCombinedNode::UID,
+            "",
+            [](IClassFactory&, CORE_NS::PluginToken token) -> InterfacePtr {
+                return new RenderPostProcessCombinedNode();
+            },
+            nullptr,
+        }
     };
 
     uint32_t refCount_ { 0 };

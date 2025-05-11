@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #ifndef RENDER_NODE_RENDER_NODE_SINGLE_POST_PROCESS_H
 #define RENDER_NODE_RENDER_NODE_SINGLE_POST_PROCESS_H
 
+#include <base/containers/string.h>
 #include <base/util/uid.h>
 #include <render/datastore/intf_render_data_store_post_process.h>
 #include <render/datastore/render_data_store_render_pods.h>
@@ -26,8 +27,6 @@
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
 
-#include "node/render_bloom.h"
-#include "node/render_blur.h"
 #include "nodecontext/render_node_copy_util.h"
 #include "util/log.h"
 
@@ -126,8 +125,6 @@ private:
     IPipelineDescriptorSetBinder::Ptr pipelineDescriptorSetBinder_;
     IDescriptorSetBinder::Ptr copyBinder_;
 
-    RenderBloom renderBloom_;
-    RenderBlur renderBlur_;
     RenderNodeCopyUtil renderCopy_;
 
     PostProcessConfiguration ppGlobalConfig_;

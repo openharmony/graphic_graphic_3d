@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -63,6 +63,7 @@ public:
         return 0U; // nothing should be done
     }
     uint64_t GetSurfaceHandle() const override;
+    bool IsValid() const override;
 
     uint32_t GetNextImage() const;
 
@@ -74,6 +75,7 @@ private:
     SwapchainPlatformDataGL plat_ {};
     uint32_t flags_ { 0u };
     bool ownsSurface_ { false };
+    bool valid_ { true };
 };
 RENDER_END_NAMESPACE()
 

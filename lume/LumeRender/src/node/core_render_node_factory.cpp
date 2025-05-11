@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -41,17 +41,17 @@ template<class RenderNodeType>
 RenderNodeTypeInfo FillRenderNodeType()
 {
     return { { RenderNodeTypeInfo::UID }, RenderNodeType::UID, RenderNodeType::TYPE_NAME, RenderNodeType::Create,
-        RenderNodeType::Destroy, RenderNodeType::BACKEND_FLAGS, RenderNodeType::CLASS_TYPE };
+        RenderNodeType::Destroy, RenderNodeType::BACKEND_FLAGS, RenderNodeType::CLASS_TYPE, {}, {} };
 }
 
 void RegisterCoreRenderNodes(RenderNodeManager& renderNodeManager)
 {
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeBackBuffer>());
-    renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeBloom>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeCombinedPostProcess>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeComputeGeneric>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeCreateGpuBuffers>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeCreateGpuImages>());
+    renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeBloom>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeEndFrameStaging>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeFullscreenGeneric>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeShaderPassesGeneric>());

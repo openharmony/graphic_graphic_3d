@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -67,6 +67,9 @@ private:
         // typically set 3 (with old compatibility might be the set 1)
         bool customSet { false };
         uint32_t customSetIndex { ~0U };
+
+        RENDER_NS::RenderHandle pl;
+        RENDER_NS::PipelineLayout plData;
     };
 
     void ParseRenderNodeInputs();
@@ -94,6 +97,9 @@ private:
 
         RENDER_NS::RenderNodeGraphInputs::InputRenderPass renderPass;
         bool hasChangeableRenderPassHandles { false };
+
+        uint32_t renderSlotId { ~0u };
+        uint32_t shaderRenderSlotMultiviewId { ~0u };
     };
     JsonInputs jsonInputs_;
     RENDER_NS::RenderNodeHandles::InputRenderPass inputRenderPass_;
@@ -107,7 +113,6 @@ private:
 
     RENDER_NS::IDescriptorSetBinder::Ptr builtInSet3_;
 
-    RENDER_NS::PipelineLayout defaultPipelineLayout_;
     bool enableMultiView_ { false };
 
     struct CurrentScene {
@@ -123,6 +128,7 @@ private:
 
     ShaderData currShaderData_;
     ShaderData defaultShaderData_;
+    RENDER_NS::RenderHandle defaultSkyShader_;
 
     RENDER_NS::RenderPass renderPass_;
     // the base default render node graph from RNG setup

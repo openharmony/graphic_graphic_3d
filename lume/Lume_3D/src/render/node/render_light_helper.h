@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -56,13 +56,19 @@ public:
     };
 
     static BASE_NS::vector<SortData> SortLights(
-        const BASE_NS::array_view<const RenderLight> lights, const uint32_t lightCount)
+        const BASE_NS::array_view<const RenderLight> lights, const uint32_t lightCount, const uint32_t sceneId)
     {
         BASE_NS::vector<SortData> sortedFlags(lightCount);
-        for (uint32_t idx = 0; idx < lightCount; ++idx) {
-            sortedFlags[idx].lightUsageFlags = lights[idx].lightUsageFlags;
-            sortedFlags[idx].index = idx;
+        uint32_t outIdx = 0U;
+        for (uint32_t inIdx = 0U; inIdx < lightCount; ++inIdx) {
+            if (lights[inIdx].sceneId != sceneId) {
+                continue;
+            }
+            sortedFlags[outIdx].lightUsageFlags = lights[inIdx].lightUsageFlags;
+            sortedFlags[outIdx].index = inIdx;
+            ++outIdx;
         }
+        sortedFlags.resize(outIdx);
         std::sort(sortedFlags.begin(), sortedFlags.end(), [](const auto& lhs, const auto& rhs) {
             return ((lhs.lightUsageFlags & 0x7u) < (rhs.lightUsageFlags & 0x7u));
         });

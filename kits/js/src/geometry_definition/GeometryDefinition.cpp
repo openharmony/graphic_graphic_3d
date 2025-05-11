@@ -15,9 +15,15 @@
 
 #include "geometry_definition/GeometryDefinition.h"
 
+#include <geometry_definition/CubeJS.h>
+#include <geometry_definition/CustomJS.h>
+#include <geometry_definition/PlaneJS.h>
+#include <geometry_definition/SphereJS.h>
 #include <napi_api.h>
 
 namespace GeometryDefinition {
+
+GeometryDefinition::GeometryDefinition() {}
 
 void RegisterEnums(NapiApi::Object exports)
 {
@@ -36,6 +42,39 @@ void RegisterEnums(NapiApi::Object exports)
 #undef DECL_ENUM
 
     exports.Set("GeometryType", GeometryType);
+}
+
+BASE_NS::unique_ptr<GeometryDefinition> GeometryDefinition::FromJs(NapiApi::Object jsDefinition)
+{
+    GeometryDefinition* result = nullptr;
+    if (auto value = jsDefinition.Get<uint32_t>("geometryType"); value.IsValid()) {
+        uint32_t type = value;
+        if (type == GeometryType::CUSTOM) {
+            result = CustomJS::FromJs(jsDefinition);
+        } else if (type == GeometryType::CUBE) {
+            result = CubeJS::FromJs(jsDefinition);
+        } else if (type == GeometryType::PLANE) {
+            result = PlaneJS::FromJs(jsDefinition);
+        } else if (type == GeometryType::SPHERE) {
+            result = SphereJS::FromJs(jsDefinition);
+        } else {
+            LOG_E("Can't create a native geometry definition: unsupported geometryType");
+        }
+    } else {
+        LOG_E("Can't create a native geometry definition: geometryType missing");
+    }
+    return BASE_NS::unique_ptr<GeometryDefinition> { result };
+}
+
+void GeometryDefinition::DefineClass(napi_env env, napi_value exports, BASE_NS::string_view name,
+    BASE_NS::vector<napi_property_descriptor> props, napi_callback ctor)
+{
+    napi_value classCtor = nullptr;
+    napi_define_class(env, name.data(), NAPI_AUTO_LENGTH, ctor, nullptr, props.size(), props.data(), &classCtor);
+    NapiApi::MyInstanceState* mis {};
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
+    mis->StoreCtor(name, classCtor);
+    NapiApi::Object { env, exports }.Set(name, classCtor);
 }
 
 } // namespace GeometryDefinition

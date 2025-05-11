@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -79,14 +79,6 @@ void CombinePipelineLayouts(const array_view<const PipelineLayout> inPl, Pipelin
         outPl.pushConstant.shaderStageFlags |= plRef.pushConstant.shaderStageFlags;
         outPl.pushConstant.byteSize = Math::max(outPl.pushConstant.byteSize, plRef.pushConstant.byteSize);
     }
-
-    uint32_t descriptorSetCount = 0;
-    for (const DescriptorSetLayout& currLayout : outPl.descriptorSetLayouts) {
-        if (currLayout.set != PipelineLayoutConstants::INVALID_INDEX) {
-            descriptorSetCount++;
-        }
-    }
-    outPl.descriptorSetCount = descriptorSetCount;
 
     // sort bindings inside sets
     for (DescriptorSetLayout& currSet : outPl.descriptorSetLayouts) {
@@ -218,6 +210,8 @@ uint32_t FormatByteSize(Format format)
         case BASE_FORMAT_A2B10G10R10_SSCALED_PACK32:
         case BASE_FORMAT_A2B10G10R10_UINT_PACK32:
         case BASE_FORMAT_A2B10G10R10_SINT_PACK32:
+        case BASE_FORMAT_B10G11R11_UFLOAT_PACK32:
+        case BASE_FORMAT_E5B9G9R9_UFLOAT_PACK32:
             return 4;
 
         case BASE_FORMAT_R16_UNORM:
@@ -269,14 +263,12 @@ uint32_t FormatByteSize(Format format)
         case BASE_FORMAT_R32G32B32_UINT:
         case BASE_FORMAT_R32G32B32_SINT:
         case BASE_FORMAT_R32G32B32_SFLOAT:
-            return 24;
+            return 12;
 
         case BASE_FORMAT_R32G32B32A32_UINT:
         case BASE_FORMAT_R32G32B32A32_SINT:
         case BASE_FORMAT_R32G32B32A32_SFLOAT:
-        case BASE_FORMAT_B10G11R11_UFLOAT_PACK32:
-        case BASE_FORMAT_E5B9G9R9_UFLOAT_PACK32:
-            return 32;
+            return 16;
 
         case BASE_FORMAT_D16_UNORM:
             return 2;

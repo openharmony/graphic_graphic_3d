@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -36,7 +36,7 @@ struct GpuShaderProgramPlatformDataVk final {
 
 class GpuShaderProgramVk final : public GpuShaderProgram {
 public:
-    explicit GpuShaderProgramVk(const GpuShaderProgramCreateData& aCreateData);
+    GpuShaderProgramVk(const GpuShaderProgramCreateData& aCreateData);
     ~GpuShaderProgramVk() override = default;
 
     const GpuShaderProgramPlatformDataVk& GetPlatformData() const;
@@ -59,7 +59,7 @@ struct GpuComputeProgramPlatformDataVk final {
 
 class GpuComputeProgramVk final : public GpuComputeProgram {
 public:
-    explicit GpuComputeProgramVk(const GpuComputeProgramCreateData& aCreateData);
+    GpuComputeProgramVk(const GpuComputeProgramCreateData& aCreateData);
     ~GpuComputeProgramVk() override = default;
 
     const GpuComputeProgramPlatformDataVk& GetPlatformData() const;

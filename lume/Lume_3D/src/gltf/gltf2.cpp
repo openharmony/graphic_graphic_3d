@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -76,7 +76,18 @@ Entity Gltf2::ImportGltfScene(size_t sceneIndex, const IGLTFData& gltfData, cons
     CORE_ASSERT(renderContext_);
     if (renderContext_) {
         const GLTF2::Data& data = static_cast<const GLTF2::Data&>(gltfData);
-        return ImportScene(renderContext_->GetDevice(), sceneIndex, data, gltfResourceData, ecs, rootEntity, flags);
+        return ImportScene(renderContext_->GetDevice(), sceneIndex, data, gltfResourceData, ecs, rootEntity, 0U, flags);
+    }
+    return {};
+}
+
+Entity Gltf2::ImportGltfScene(const size_t sceneIndex, const IGLTFData& gltfData,
+    const GLTFResourceData& gltfResourceData, IEcs& ecs, const uint32_t level, const GltfSceneImportFlags flags)
+{
+    CORE_ASSERT(renderContext_);
+    if (renderContext_) {
+        const GLTF2::Data& data = static_cast<const GLTF2::Data&>(gltfData);
+        return ImportScene(renderContext_->GetDevice(), sceneIndex, data, gltfResourceData, ecs, {}, level, flags);
     }
     return {};
 }

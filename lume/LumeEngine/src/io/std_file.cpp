@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -31,12 +31,10 @@
 #ifndef HAS_FILESYSTEM
 #include <cerrno>
 #include <dirent.h>
-
 #include <sys/stat.h>
 #ifndef _DIRENT_HAVE_D_TYPE
 #include <sys/types.h>
 #endif
-#include "io/std_directory.h"
 #include <climits>
 #define CORE_MAX_PATH PATH_MAX
 #endif
@@ -46,6 +44,8 @@
 #include <core/io/intf_file.h>
 #include <core/log.h>
 #include <core/namespace.h>
+
+#include "std_directory.h"
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string;

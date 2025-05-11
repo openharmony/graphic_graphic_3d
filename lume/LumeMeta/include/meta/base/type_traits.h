@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: More type traits (as BASE doesn't have it all)
+ * Author: Mikael Kilpelainen
+ * Create: 2022-12-12
  */
 
 #ifndef META_BASE_TYPE_TRAITS_H
@@ -87,12 +79,15 @@ template<typename T, bool = is_enum_v<T>>
 struct RealType {
     using type = T;
 };
+
 template<typename T>
 struct RealType<T, true> {
     using type = BASE_NS::underlying_type_t<T>;
 };
+
 template<typename T>
 using RealType_t = typename RealType<T>::type; // NOLINT(readability-identifier-naming)
+
 META_END_NAMESPACE()
 
 /*

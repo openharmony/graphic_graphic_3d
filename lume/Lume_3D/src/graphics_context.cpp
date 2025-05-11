@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -101,6 +101,7 @@ void LogCore3dBuildInfo()
 {
 #define CORE3D_TO_STRING_INTERNAL(x) #x
 #define CORE3D_TO_STRING(x) CORE3D_TO_STRING_INTERNAL(x)
+
     CORE_LOG_I("CORE3D_VALIDATION_ENABLED=" CORE3D_TO_STRING(CORE3D_VALIDATION_ENABLED));
     CORE_LOG_I("CORE3D_DEV_ENABLED=" CORE3D_TO_STRING(CORE3D_DEV_ENABLED));
 }
@@ -108,6 +109,7 @@ void LogCore3dBuildInfo()
 void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& defaultGpuResources)
 {
     IGpuResourceManager& gpuResourceMgr = device.GetGpuResourceManager();
+
     // default material gpu images
     GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
         Format::BASE_FORMAT_R8G8B8A8_SRGB, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
@@ -115,6 +117,7 @@ void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& default
         MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 0, 2, 2, 1, 1, 1,
         SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
     constexpr uint32_t sizeOfUint32 = sizeof(uint32_t);
+
     desc.format = Format::BASE_FORMAT_R8G8B8A8_UNORM;
     {
         constexpr const uint32_t normalData[4u] = { 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f };
@@ -132,6 +135,7 @@ void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& default
         defaultGpuResources.push_back(
             gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_AO, desc, byteDataView));
     }
+
     // env cubemaps
     desc.imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE;
     desc.format = Format::BASE_FORMAT_R8G8B8A8_SRGB;
@@ -373,9 +377,9 @@ IRenderUtil& GraphicsContext::GetRenderUtil() const
     return *renderUtil_;
 }
 
-ColorSpaceFlags GraphicsContext::GetColorSpaceFlags() const
+GraphicsContext::CreateInfo GraphicsContext::GetCreateInfo() const
 {
-    return createInfo_.colorSpaceFlags;
+    return createInfo_;
 }
 
 const IInterface* GraphicsContext::GetInterface(const Uid& uid) const
@@ -562,9 +566,6 @@ PluginToken CreatePlugin3D(IRenderContext& context)
 
 void DestroyPlugin3D(PluginToken token)
 {
-    if (token == nullptr) {
-        return;
-    }
     Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
     IFileManager& fileManager = state->renderContext.GetEngine().GetFileManager();
 

@@ -133,7 +133,7 @@ public:
     }
 
     template<typename T = ValueConstIter, BASE_NS::enable_if_t<!BASE_NS::is_same_v<ValueIter, T>, bool> = true>
-    operator ConstIterator() const
+    operator Iterator<KeyIter, T, T>() const
     {
         return ConstIterator(keyIter_, valueIter_);
     }

@@ -32,8 +32,5 @@ private:
     void SetValue(const BASE_NS::Math::Vec3& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
-    void UpdateLocalValues() override;
-    void UpdateRemoteValues() override;
-    BASE_NS::Math::Vec3 value;
 };
 #endif

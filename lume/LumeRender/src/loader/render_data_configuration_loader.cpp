@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,6 +39,7 @@ RENDER_JSON_SERIALIZE_ENUM(ColorConversionConfiguration::ConversionFunctionType,
         { 0x7FFFFFFF, nullptr },
         { ColorConversionConfiguration::ConversionFunctionType::CONVERSION_LINEAR, "linear" },
         { ColorConversionConfiguration::ConversionFunctionType::CONVERSION_LINEAR_TO_SRGB, "linear_to_srgb" },
+        { ColorConversionConfiguration::ConversionFunctionType::CONVERSION_MULTIPLY_WITH_ALPHA, "multiply_with_alpha" },
     })
 RENDER_JSON_SERIALIZE_ENUM(DitherConfiguration::DitherType,
     {
@@ -160,8 +161,8 @@ IRenderDataConfigurationLoader::LoadedPostProcess LoadPostProcess(const json::va
                 SafeGetJsonValue(*cIter, "maxMipLevel", err, ppConfig.blurConfiguration.maxMipLevel);
             }
             if (const auto cIter = iter->find("colorConversionConfiguration"); cIter) {
-                SafeGetJsonEnum(*cIter, "conversionFunctionType", err,
-                    ppConfig.colorConversionConfiguration.conversionFunctionType);
+                SafeGetJsonBitfield<ColorConversionConfiguration::ConversionFunctionType>(*cIter,
+                    "conversionFunctionType", err, ppConfig.colorConversionConfiguration.conversionFunctionType);
             }
             if (const auto cIter = iter->find("FxaaConfiguration"); cIter) {
                 SafeGetJsonEnum(*cIter, "sharpness", err, ppConfig.fxaaConfiguration.sharpness);

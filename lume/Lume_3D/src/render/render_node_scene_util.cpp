@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -209,6 +209,11 @@ SceneRenderDataStores RenderNodeSceneUtil::GetSceneRenderDataStores(
     return stores;
 }
 
+string RenderNodeSceneUtil::GetSceneRenderDataStore(const SceneRenderDataStores& sceneRds, const string_view dsName)
+{
+    return string(sceneRds.dataStoreNamePrefix + dsName);
+}
+
 ViewportDesc RenderNodeSceneUtil::CreateViewportFromCamera(const RenderCamera& camera)
 {
     const float fRenderResX = static_cast<float>(camera.renderResolution.x);
@@ -289,21 +294,27 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
     double camSortCoefficient = 1000.0;
     Math::Mat4X4 camView { Math::IDENTITY_4X4 };
     uint64_t camLayerMask { RenderSceneDataConstants::INVALID_ID };
+    uint32_t camLevel { 0U };
     Frustum camFrustum;
     const auto& cameras = dataStoreCamera.GetCameras();
     const uint32_t maxCameraCount = static_cast<uint32_t>(cameras.size());
     RenderSlotCullType rsCullType = renderSlotInfo.cullType;
+    uint32_t camId = RenderSceneDataConstants::INVALID_INDEX;
+    bool cameraEffect = false;
     // process first camera
     if (cameraIndex < maxCameraCount) {
-        camView = cameras[cameraIndex].matrices.view;
-        const float camZFar = Math::max(0.01f, cameras[cameraIndex].zFar);
+        const auto& cam = cameras[cameraIndex];
+        camView = cam.matrices.view;
+        const float camZFar = Math::max(0.01f, cam.zFar);
         // max uint coefficient for sorting
-        camSortCoefficient = double(4294967295.0) / double(camZFar); // 4294967295.0: max double value
-        camLayerMask = cameras[cameraIndex].layerMask;
-        rsCullType = GetRenderSlotBaseCullType(rsCullType, cameras[cameraIndex]);
+        camSortCoefficient = double(4294967295.0) / double(camZFar);
+        camLayerMask = cam.layerMask;
+        camLevel = cam.sceneId;
+        camId = cam.id & 0xFFFFffff;
+        cameraEffect = (camId != RenderSceneDataConstants::INVALID_INDEX);
+        rsCullType = GetRenderSlotBaseCullType(rsCullType, cam);
         if (rsCullType == RenderSlotCullType::VIEW_FRUSTUM_CULL) {
-            camFrustum =
-                frustumUtil->CreateFrustum(cameras[cameraIndex].matrices.proj * cameras[cameraIndex].matrices.view);
+            camFrustum = frustumUtil->CreateFrustum(cam.matrices.proj * cam.matrices.view);
         }
     }
     vector<Frustum> addFrustums;
@@ -332,11 +343,13 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
     for (size_t idx = 0; idx < slotSubmeshIndices.size(); ++idx) {
         const uint32_t submeshIndex = slotSubmeshIndices[idx];
         const auto& submesh = submeshes[submeshIndex];
-        const bool notCulled = (rsCullType != RenderSlotCullType::VIEW_FRUSTUM_CULL) ||
-                               (!IsObjectCulled(*frustumUtil, camFrustum, addFrustums, submesh));
         const auto& submeshMatData = slotSubmeshMatData[idx];
+        const bool notCulled = (cameraEffect && (camId == submeshMatData.cameraId)) ||
+                               ((rsCullType != RenderSlotCullType::VIEW_FRUSTUM_CULL) ||
+                                   (!IsObjectCulled(*frustumUtil, camFrustum, addFrustums, submesh)));
         const bool discardedMat = (submeshMatData.renderMaterialFlags & renderSlotInfo.materialDiscardFlags);
-        if ((camLayerMask & submesh.layers.layerMask) && notCulled && (!discardedMat)) {
+        if ((camLevel == submesh.layers.sceneId) && (camLayerMask & submesh.layers.layerMask) && notCulled &&
+            (!discardedMat)) {
             const Math::Vec4 pos = (camView * Math::Vec4(submesh.bounds.worldCenter, 1.0f));
             const float zVal = Math::abs(pos.z);
             uint64_t sortKey = Math::min(maxUDepth, static_cast<uint64_t>(double(zVal) * camSortCoefficient));
@@ -460,6 +473,12 @@ SceneRenderDataStores RenderNodeSceneUtilImpl::GetSceneRenderDataStores(
     const IRenderNodeContextManager& renderNodeContextMgr, const string_view sceneDataStoreName)
 {
     return RenderNodeSceneUtil::GetSceneRenderDataStores(renderNodeContextMgr, sceneDataStoreName);
+}
+
+BASE_NS::string RenderNodeSceneUtilImpl::GetSceneRenderDataStore(
+    const SceneRenderDataStores& sceneRds, const BASE_NS::string_view dsName)
+{
+    return RenderNodeSceneUtil::GetSceneRenderDataStore(sceneRds, dsName);
 }
 
 ViewportDesc RenderNodeSceneUtilImpl::CreateViewportFromCamera(const RenderCamera& camera)

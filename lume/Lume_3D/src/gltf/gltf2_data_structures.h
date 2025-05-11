@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 
 #include <cstdint>
 
+#include <base/containers/atomics.h>
 #include <base/containers/string.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
@@ -86,8 +87,22 @@ enum class AttributeType : int {
     INVALID = 0xff
 };
 
-enum class RenderMode : int {
-    // WebGL enums
+enum class CompressionMode : int {
+    ATTRIBUTES = 0,
+    TRIANGLES = 1,
+    INDICES = 2,
+    INVALID = 0xff,
+};
+
+enum class CompressionFilter : int {
+    NONE = 0,
+    OCTAHEDRAL = 1,
+    QUATERNION = 2,
+    EXPONENTIAL = 3,
+    INVALID = 0xff,
+};
+
+enum class RenderMode : int { // WebGL enums
     BEGIN = 0,
     POINTS = 0,
     LINES = 1,
@@ -203,6 +218,43 @@ struct BufferView {
 
     // Data for this buffer view.
     const uint8_t* data { nullptr };
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+    struct MeshOptCompression {
+        // [required field], with the index to the buffer.
+        // Note: referenced buffers needs to be loaded first.
+        Buffer* buffer { nullptr };
+        // required, "minimum": 1
+        size_t byteLength = 0;
+        // "default": 0
+        size_t byteOffset = 0;
+        // if parent has byteStride
+        size_t byteStride = 0;
+        // required, The number of elements.
+        size_t count = 0;
+        // required The compression mode.
+        CompressionMode mode = CompressionMode::INVALID;
+        // optional The compression filter
+        CompressionFilter filter = CompressionFilter::NONE;
+
+        // decompressed data for this bufferView.
+        BASE_NS::vector<uint8_t> data;
+        BASE_NS::SpinLock dataLock;
+    } meshoptCompression;
+    BufferView() = default;
+    BufferView(const BufferView& other)
+        : buffer(other.buffer), byteLength(other.byteLength), byteOffset(other.byteOffset),
+          byteStride(other.byteStride), target(other.target), data(other.data)
+    {
+        meshoptCompression.buffer = other.meshoptCompression.buffer;
+        meshoptCompression.byteLength = other.meshoptCompression.byteLength;
+        meshoptCompression.byteOffset = other.meshoptCompression.byteOffset;
+        meshoptCompression.byteStride = other.meshoptCompression.byteStride;
+        meshoptCompression.count = other.meshoptCompression.count;
+        meshoptCompression.mode = other.meshoptCompression.mode;
+        meshoptCompression.filter = other.meshoptCompression.filter;
+        meshoptCompression.data = other.meshoptCompression.data;
+    }
+#endif
 };
 
 struct SparseIndices {

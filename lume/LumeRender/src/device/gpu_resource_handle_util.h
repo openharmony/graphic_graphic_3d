@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -62,12 +62,12 @@ static constexpr uint64_t RES_HANDLE_HAS_NAME_MASK { 0x100000000000 };
 static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_MASK { 0xfff00000000 };
 static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_MASK { 0xFFFF000000000000 };
 
-static constexpr uint64_t RES_HANDLE_ID_SHIFT { 4 }; // 4 : param
+static constexpr uint64_t RES_HANDLE_ID_SHIFT { 4 };
 static constexpr uint64_t RES_HANDLE_TYPE_SHIFT { 0 };
-static constexpr uint64_t RES_HANDLE_GENERATION_SHIFT { 24 }; // 24 : param
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT { 32 }; // 32 : param 
-static constexpr uint64_t RES_HANDLE_HAS_NAME_SHIFT { 44 }; // 44 : param
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_SHIFT { 48 }; // 48 : param
+static constexpr uint64_t RES_HANDLE_GENERATION_SHIFT { 24 };
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT { 32 };
+static constexpr uint64_t RES_HANDLE_HAS_NAME_SHIFT { 44 };
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_SHIFT { 48 };
 
 RenderHandle CreateGpuResourceHandle(
     RenderHandleType type, RenderHandleInfoFlags infoFlags, uint32_t index, uint32_t generationIndex);

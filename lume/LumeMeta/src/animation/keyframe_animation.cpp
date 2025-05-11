@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Keyframe animation implementations
+ * Author: Lauri Jaaskela
+ * Create: 2023-12-20
  */
 
 #include "keyframe_animation.h"
@@ -49,11 +41,14 @@ void KeyframeAnimation::OnAnimationStateChanged(const AnimationStateChangedInfo&
                     // Evaluate current value
                     Evaluate();
                     // Then set the correct keyframe value to the underlying property
-                    p.property->SetValue(*currentValue_);
+                    PropertyLock lock { p.property };
+                    lock->SetValueAny(*currentValue_);
                 }
                 break;
-            case AnimationTargetState::RUNNING:
-                currentValue_ = p.property->GetValue().Clone(false);
+            case AnimationTargetState::RUNNING: {
+                PropertyLock lock { p.property };
+                currentValue_ = lock->GetValueAny().Clone(false);
+            }
                 // Evaluate current value
                 Evaluate();
                 break;
@@ -74,6 +69,10 @@ void KeyframeAnimation::Evaluate()
         META_ACCESS_PROPERTY_VALUE(To), META_ACCESS_PROPERTY_VALUE(Progress), META_ACCESS_PROPERTY_VALUE(Curve) };
     if (GetState().EvaluateValue(data) == AnyReturn::SUCCESS) {
         NotifyChanged();
+        if (auto prop = GetTargetProperty()) {
+            PropertyLock lock { prop.property };
+            prop.stack->EvaluateAndStore();
+        }
     }
 }
 

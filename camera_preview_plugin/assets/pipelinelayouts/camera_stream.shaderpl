@@ -3,6 +3,8 @@
         "version": "22.00",
         "type": "pipelinelayout"
     },
+    "renderSlot": "CORE3D_RS_DM_ENV",
+    "renderSlotDefault": false,
     "descriptorSetLayouts": [
         {
             "set" : 0,

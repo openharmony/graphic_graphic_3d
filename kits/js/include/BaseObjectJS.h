@@ -17,8 +17,10 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_object.h>
 #include <meta/interface/intf_task_queue_registry.h>
-#include <scene/interface/intf_scene.h>
 #include <napi_api.h>
+#include <scene/interface/intf_scene.h>
+
+#include "TrueRootObject.h"
 
 // tasks execute in the engine/render thread.
 static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
@@ -26,37 +28,11 @@ static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c28
 // tasks execute in the javascript mainthread. *NOT IMPLEMENTED*
 static constexpr BASE_NS::Uid JS_THREAD { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
 
-class TrueRootObject {
-public:
-    // Store a reference to a native IObject to the "JSBridge" object
-    // Optionally make the reference strong so that the lifetime is controlled by JS.
-    // for example. scene is kept strongly, and objects owned by scene are weak.
-
-    virtual void SetNativeObject(META_NS::IObject::Ptr real, bool Strong);
-    virtual META_NS::IObject::Ptr GetNativeObject();
-    virtual void* GetInstanceImpl(uint32_t id) = 0;
-
-    virtual void Finalize(napi_env env);
-    virtual void DisposeNative(void*) = 0;
-
-    virtual bool IsStrong() const;
-
-protected:
-    TrueRootObject();
-    virtual ~TrueRootObject() = default;
-    static void destroy(TrueRootObject* object);
-
-private:
-    META_NS::IObject::Ptr obj_;
-    META_NS::IObject::WeakPtr objW_;
-};
-
-template<class FinalObject>
 class BaseObject : public TrueRootObject {
 protected:
     bool disposed_ { false };
     virtual ~BaseObject() {}
-    BaseObject(napi_env env, napi_callback_info info) : TrueRootObject()
+    BaseObject(napi_env env, napi_callback_info info) : TrueRootObject(env, info)
     {
         napi_value thisVar = nullptr;
         napi_get_cb_info(env, info, nullptr, nullptr, &thisVar, nullptr);
@@ -83,37 +59,12 @@ protected:
     }
 };
 
-inline TrueRootObject* GetRootObject(NapiApi::Object o)
-{
-    TrueRootObject* p { nullptr };
-    if (o) {
-        napi_unwrap(o.GetEnv(), o.ToNapiValue(), (void**)&p);
-    }
-    return p;
-}
-
-template<typename... types>
-inline TrueRootObject* GetThisRootObject(NapiApi::FunctionContext<types...>& ctx)
-{
-    return GetRootObject(ctx.This());
-}
-
-template<typename FC>
-inline auto GetThisNativeObject(FC& ctx)
-{
-    TrueRootObject* instance = GetThisRootObject(ctx);
-    if (!instance) {
-        return META_NS::IObject::Ptr {};
-    }
-    return instance->GetNativeObject();
-}
-
 template<typename Object, napi_value (Object::*F)(NapiApi::FunctionContext<>&)>
 static inline napi_value TROGetter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc) {
-        if (TrueRootObject* instance = GetThisRootObject(fc)) {
+        if (TrueRootObject* instance = fc.This().GetRoot()) {
             if (Object* impl = (Object*)instance->GetInstanceImpl(Object::ID)) {
                 return (impl->*F)(fc);
             }
@@ -126,7 +77,7 @@ static inline napi_value TROSetter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext<Type> fc(env, info);
     if (fc) {
-        if (TrueRootObject* instance = GetThisRootObject(fc)) {
+        if (TrueRootObject* instance = fc.This().GetRoot()) {
             if (Object* impl = (Object*)instance->GetInstanceImpl(Object::ID)) {
                 (impl->*F)(fc);
             }
@@ -168,7 +119,7 @@ napi_value TROMethod(napi_env env, napi_callback_info info)
 {
     FC fc(env, info);
     if (fc) {
-        if (TrueRootObject* instance = GetThisRootObject(fc)) {
+        if (TrueRootObject* instance = fc.This().GetRoot()) {
             if (Object* impl = (Object*)instance->GetInstanceImpl(Object::ID)) {
                 return (impl->*F)(fc);
             }
@@ -185,29 +136,30 @@ inline napi_property_descriptor MakeTROMethod(
         nullptr };
 }
 
-template<typename type>
-auto GetNativeMeta(NapiApi::Object obj)
-{
-    if (obj) {
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            return interface_pointer_cast<type>(tro->GetNativeObject());
-        }
-    }
-    return typename type::Ptr {};
-}
-
 //  Create a javascript object that wraps specified IObject.
 //  uses the classid of obj to create correct wrapper.
 //  (if the wrapper already exists, returns a new reference to the wrapper)
-NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::Ptr& obj,
-    bool strong, uint32_t argc, napi_value* argv, BASE_NS::string_view pname = "_JSW");
+NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::Ptr& obj, PtrType ptrType,
+    const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname = "_JSW");
 
-NapiApi::Object CreateJsObj(napi_env env, const BASE_NS::string_view jsName, META_NS::IObject::Ptr real, bool strong,
-    uint32_t argc, napi_value* argv);
+NapiApi::Object CreateFromNativeInstance(napi_env env, const BASE_NS::string& name, const META_NS::IObject::Ptr& obj,
+    PtrType ptrType, const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname = "_JSW");
 
-// check for type.
-bool IsInstanceOf(const NapiApi::Object& obj, const BASE_NS::string_view jsName);
+template<typename ObjectPtr>
+NapiApi::Object CreateFromNativeInstance(napi_env env, const ObjectPtr& obj, PtrType ptrType,
+    const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname = "_JSW")
+{
+    const auto iobj = interface_pointer_cast<META_NS::IObject>(obj);
+    return CreateFromNativeInstance(env, iobj, ptrType, args, pname);
+}
+
+template<typename ObjectPtr>
+NapiApi::Object CreateFromNativeInstance(napi_env env, const BASE_NS::string& name, const ObjectPtr& obj,
+    PtrType ptrType, const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname = "_JSW")
+{
+    const auto iobj = interface_pointer_cast<META_NS::IObject>(obj);
+    return CreateFromNativeInstance(env, name, iobj, ptrType, args, pname);
+}
 
 // run synchronous task in specific tq.
 template<typename func>
@@ -224,39 +176,5 @@ META_NS::IAny::Ptr ExecSyncTask(func&& fun)
 {
     return ExecSyncTask(META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD), BASE_NS::move(fun));
 }
-template<class type>
-void MakeNativeObjectParam(napi_env env, const type& obj, uint32_t argc, napi_value* argv)
-{
-    // okay.. we "know" that arg[1] should be params.. so add the native object there automatically
-    if (argc > 1) {
-        napi_value res;
-        if (auto mobj = interface_pointer_cast<META_NS::IObject>(obj)) {
-            META_NS::IObject::WeakPtr* data = new META_NS::IObject::WeakPtr();
-            *data = mobj;
-            napi_create_external(
-                env, (void*)data,
-                [](napi_env env, void* data, void* finalize_hint) { delete (META_NS::IObject::WeakPtr*)data; }, nullptr,
-                &res);
-            NapiApi::Object arg(env, argv[1]);
-            arg.Set("NativeObject", res);
-        }
-    }
-}
-template<class type>
-auto GetNativeObjectParam(NapiApi::Object args)
-{
-    typename type::Ptr ret;
-    if (auto prm = args.Get("NativeObject")) {
-        META_NS::IObject::WeakPtr* ptr { nullptr };
-        napi_get_value_external(args.GetEnv(), prm, (void**)&ptr);
-        if (ptr) {
-            ret = interface_pointer_cast<type>(*ptr);
-        }
-        napi_value null;
-        napi_get_null(args.GetEnv(), &null);
-        args.Set("NativeObject", null); // hope to release it now.
-    }
-    return ret;
-}
-void DebugNativesHavingJS();
+
 #endif

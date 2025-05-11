@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Data Model interface
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-05-25
  */
 
 #ifndef META_INTERFACE_MODEL_IDATA_MODEL_H
@@ -45,7 +37,7 @@ using IOnDataAdded = META_NS::SimpleEvent<IOnDataAddedInfo, void(DataModelIndex 
 
 struct IOnDataRemovedInfo {
     constexpr static BASE_NS::Uid UID { "3440f5d6-b874-40e6-999c-eee3a4049b94" };
-    constexpr static char const * NAME { "OnDataRemoved" };
+    constexpr static char const* NAME { "OnDataRemoved" };
 };
 
 /**
@@ -56,7 +48,7 @@ using IOnDataRemoved = META_NS::SimpleEvent<IOnDataRemovedInfo, void(DataModelIn
 
 struct IOnDataMovedInfo {
     constexpr static BASE_NS::Uid UID { "7407dcc5-c903-4ceb-a337-23a1ff6f1d76" };
-    constexpr static char const * NAME { "OnDataMoved" };
+    constexpr static char const* NAME { "OnDataMoved" };
 };
 
 /**

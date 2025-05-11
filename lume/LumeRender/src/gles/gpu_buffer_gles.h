@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,11 +35,14 @@ struct GpuBufferPlatformDataGL final : public GpuBufferPlatformData {
     uint32_t currentByteOffset { 0 };
     // alignedByteSize / mapBufferingCount (if no buffering alignedByteSize == bindMemoryByteSize)
     uint32_t bindMemoryByteSize { 0 };
+    // For creating image from EGLClientBuffer
+    uintptr_t eglClientBuffer { 0 };
 };
 
 class GpuBufferGLES final : public GpuBuffer {
 public:
     GpuBufferGLES(Device& device, const GpuBufferDesc& desc);
+    GpuBufferGLES(Device& device, const GpuBufferDesc& desc, const GpuBufferPlatformData& plat);
     ~GpuBufferGLES() override;
 
     const GpuBufferDesc& GetDesc() const override;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,12 +16,10 @@
 #ifndef GEOMETRY_DEFINITION_GEOMETRY_DEFINITION_H
 #define GEOMETRY_DEFINITION_GEOMETRY_DEFINITION_H
 
-#include <meta/interface/intf_object.h>
 #include <napi_api.h>
+#include <scene/interface/intf_create_mesh.h>
 
 #include <base/containers/vector.h>
-
-#include "BaseObjectJS.h"
 
 namespace GeometryDefinition {
 
@@ -30,41 +28,22 @@ enum GeometryType {
     CUBE = 1,
     PLANE = 2,
     SPHERE = 3,
-    INVALID = 4,
 };
 void RegisterEnums(NapiApi::Object exports);
 
-template<class FinalType>
-class GeometryDefinition : public BaseObject<FinalType> {
+class GeometryDefinition {
 public:
-    GeometryDefinition(napi_env env, napi_callback_info info, GeometryType type)
-        : BaseObject<FinalType>(env, info), type_(type)
-    {}
-    virtual ~GeometryDefinition() override = default;
+    virtual ~GeometryDefinition() = default;
+    static BASE_NS::unique_ptr<GeometryDefinition> FromJs(NapiApi::Object jsDefinition);
+    virtual SCENE_NS::IMesh::Ptr CreateMesh(
+        const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const = 0;
 
-    static void GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props)
-    {
-        using namespace NapiApi;
-        props.push_back(GetProperty<uint32_t, GeometryDefinition, &GeometryDefinition::GetType>("geometryType"));
-    }
-
-    void SetNativeObject(META_NS::IObject::Ptr real, bool Strong) override
-    {
-        LOG_E("GeometryDefinitions aren't meant to have a native object");
-    }
+protected:
+    GeometryDefinition();
+    static void DefineClass(napi_env env, napi_value exports, BASE_NS::string_view name,
+        BASE_NS::vector<napi_property_descriptor> props, napi_callback ctor);
 
 private:
-    napi_value GetType(NapiApi::FunctionContext<>& ctx)
-    {
-        return ctx.GetNumber(type_);
-    }
-
-    virtual void DisposeNative(void*) override
-    {
-        this->disposed_ = true;
-    }
-
-    GeometryType type_ { INVALID };
 };
 
 } // namespace GeometryDefinition

@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Property animation implementations
+ * Author: Lauri Jaaskela
+ * Create: 2023-12-20
  */
 
 #include "property_animation.h"
@@ -32,12 +24,35 @@ void PropertyAnimation::Step(const IClock::ConstPtr& clock)
     Super::Step(clock);
 }
 
+void PropertyAnimation::OnAnimationStateChanged(const IAnimationInternal::AnimationStateChangedInfo& info)
+{
+    if (auto p = GetTargetProperty()) {
+        switch (info.state) {
+            case AnimationTargetState::FINISHED:
+                [[fallthrough]];
+            case AnimationTargetState::STOPPED:
+                // Evaluate current value
+                Evaluate();
+                break;
+            case AnimationTargetState::RUNNING:
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 void PropertyAnimation::Evaluate()
 {
     const PropertyAnimationState::EvaluationData data { currentValue_, from_, to_, META_ACCESS_PROPERTY_VALUE(Progress),
         META_ACCESS_PROPERTY_VALUE(Curve) };
     if (GetState().EvaluateValue(data) == AnyReturn::SUCCESS) {
+        evalChanged_ = true;
         NotifyChanged();
+        if (auto prop = GetTargetProperty()) {
+            PropertyLock lock { prop.property };
+            prop.stack->EvaluateAndStore();
+        }
     }
 }
 
@@ -54,7 +69,8 @@ void PropertyAnimation::OnPropertyChanged(const TargetProperty& property, const 
 
 EvaluationResult PropertyAnimation::ProcessOnGet(IAny& value)
 {
-    if (currentValue_ && GetState().IsRunning()) {
+    if (currentValue_ && (evalChanged_ || GetState().IsRunning())) {
+        evalChanged_ = false;
         if (auto result = value.CopyFrom(*currentValue_)) {
             return result == AnyReturn::NOTHING_TO_DO ? EvaluationResult::EVAL_CONTINUE
                                                       : EvaluationResult::EVAL_VALUE_CHANGED;
@@ -73,11 +89,8 @@ EvaluationResult PropertyAnimation::ProcessOnSet(IAny& value, const IAny& curren
         auto& state = GetState();
         // Start animating
         state.Start();
-        // Temp shared_ptr<IAny> which does not delete our source IAny
-        auto tmp = IAny::Ptr(&value, [](auto*) {});
-        // Evaluate the animation with progress=1.f and pass the value down the property stack
-        PropertyAnimationState::EvaluationData data { tmp, from_, to_, 1.f, META_ACCESS_PROPERTY_VALUE(Curve) };
-        state.EvaluateValue(data);
+        // Propagate initial value
+        value.CopyFrom(*from_);
     }
     return EvaluationResult::EVAL_CONTINUE;
 }

@@ -71,7 +71,7 @@ protected:
     napi_threadsafe_function termfun { nullptr };
 };
 
-class AnimationJS : public BaseObject<AnimationJS>, public SceneResourceImpl {
+class AnimationJS : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 70;
     static void Init(napi_env env, napi_value exports);
@@ -109,5 +109,10 @@ private:
     ThreadSafeCallback* OnStartedCB_ { nullptr };
     ThreadSafeCallback* OnFinishedCB_ { nullptr };
     META_NS::AnimationModifiers::ISpeed::Ptr speedModifier_;
+#define USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED 1
+#if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED==1)
+    META_NS::IProperty::Ptr completed_;
+#endif
+    META_NS::Event<META_NS::IEvent> OnCompletedEvent_;
 };
 #endif

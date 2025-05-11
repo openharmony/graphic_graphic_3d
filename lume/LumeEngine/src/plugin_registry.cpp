@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -86,10 +86,10 @@ __attribute__((used)) const CORE_NS::IPlugin* const g_staticPluginListDataRef = 
 #else
 
 #if _MSC_VER
-static const CORE_NS::IPlugin* const *g_staticPluginList = nullptr;
+static const CORE_NS::IPlugin* const* g_staticPluginList = nullptr;
 static size_t g_staticPluginListCount = 0;
 #else
-__attribute__((visibility("hidden"))) static const CORE_NS::IPlugin* const *g_staticPluginList = nullptr;
+__attribute__((visibility("hidden"))) static const CORE_NS::IPlugin* const* g_staticPluginList = nullptr;
 __attribute__((visibility("hidden"))) static size_t g_staticPluginListCount = 0;
 #endif
 
@@ -103,11 +103,21 @@ void RegisterStaticPlugin(const CORE_NS::IPlugin& plugin)
 #endif
 } // namespace StaticPluginRegistry
 
+constexpr bool operator==(const CORE_NS::IPlugin* lhs, const BASE_NS::Uid& rhs) noexcept
+{
+    return lhs->version.uid == rhs;
+}
+
 namespace {
 struct LibPlugin {
     ILibrary::Ptr lib;
     const IPlugin* plugin;
 };
+
+constexpr bool operator==(const CORE_NS::LibPlugin& libPlugin, const BASE_NS::Uid& rhs) noexcept
+{
+    return libPlugin.plugin->version.uid == rhs;
+}
 
 template<typename Container, typename Predicate>
 inline typename Container::const_iterator FindIf(const Container& container, Predicate&& predicate)
@@ -151,57 +161,69 @@ void GatherDynamicPlugins(vector<LibPlugin>& plugins, IFileManager& fileManager)
     CORE_LOG_V("Dynamic plugins:");
     const auto libraryFileExtension = ILibrary::GetFileExtension();
     constexpr string_view pluginRoot { "plugins://" };
-    if (IDirectory::Ptr pluginFiles = fileManager.OpenDirectory(pluginRoot); pluginFiles) {
-        for (const auto& file : pluginFiles->GetEntries()) {
-            const string_view pluginFile = file.name;
-            if (pluginFile.ends_with(libraryFileExtension)) {
-                const string absoluteFile = fileManager.GetEntry(pluginRoot + file.name).name;
-                if (ILibrary::Ptr lib = ILibrary::Load(absoluteFile); lib) {
-                    const IPlugin* plugin = lib->GetPlugin();
-                    if (plugin && (plugin->typeUid == IPlugin::UID)) {
-                        CORE_LOG_V("\t%s", plugin->name);
-                        plugins.push_back({ move(lib), plugin });
-                    }
-                }
+    IDirectory::Ptr pluginFiles = fileManager.OpenDirectory(pluginRoot);
+    if (!pluginFiles) {
+        return;
+    }
+    for (const auto& file : pluginFiles->GetEntries()) {
+        const string_view pluginFile = file.name;
+        if (!pluginFile.ends_with(libraryFileExtension)) {
+            continue;
+        }
+        const string absoluteFile = fileManager.GetEntry(pluginRoot + file.name).name;
+        if (ILibrary::Ptr lib = ILibrary::Load(absoluteFile); lib) {
+            const IPlugin* plugin = lib->GetPlugin();
+            if (plugin && (plugin->typeUid == IPlugin::UID)) {
+                CORE_LOG_V("\t%s", plugin->name);
+                plugins.push_back({ move(lib), plugin });
             }
         }
     }
 }
 
-bool AddDependencies(vector<Uid>& toBeLoaded, array_view<const LibPlugin> availablePlugins,
-    array_view<const IPlugin* const> loadedPlugins, const Uid& uidToLoad)
+bool AddDependencies(vector<Uid>& toBeLoaded, array_view<const LibPlugin> availablePlugins, const Uid& uidToLoad)
 {
     bool found = true;
-    // Only consider plugins which are not already loaded, and not yet in the loading list.
-    if (NoneOf(loadedPlugins, [&uidToLoad](const IPlugin* loaded) { return loaded->version.uid == uidToLoad; }) &&
-        NoneOf(toBeLoaded, [&uidToLoad](const Uid& willLoad) { return willLoad == uidToLoad; })) {
-        if (auto pos = FindIf(availablePlugins,
+    if (auto pos = FindIf(availablePlugins,
             [&uidToLoad](const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uidToLoad; });
-            pos != availablePlugins.end()) {
-            found = AllOf(pos->plugin->pluginDependencies, [&](const Uid& dependency) {
-                return AddDependencies(toBeLoaded, availablePlugins, loadedPlugins, dependency);
-            });
-            if (found) {
-                toBeLoaded.push_back(uidToLoad);
-            } else {
-                CORE_LOG_E("Missing dependencies for: %s", to_string(uidToLoad).data());
-            }
+        pos != availablePlugins.end()) {
+        found = AllOf(pos->plugin->pluginDependencies,
+            [&](const Uid& dependency) { return AddDependencies(toBeLoaded, availablePlugins, dependency); });
+        if (found) {
+            toBeLoaded.push_back(uidToLoad);
         } else {
-            CORE_LOG_E("Plugin not found: %s", to_string(uidToLoad).data());
-            found = false;
+            CORE_LOG_E("Missing dependencies for: %s", to_string(uidToLoad).data());
         }
+    } else {
+        CORE_LOG_E("Plugin not found: %s", to_string(uidToLoad).data());
+        found = false;
     }
     return found;
 }
-void LogMissingPlugins(const array_view<const Uid> requestedPlugins, const array_view<const LibPlugin> availablePlugins)
+
+vector<Uid> GatherRequiredPlugins(const array_view<const Uid> pluginUids, const array_view<const LibPlugin> plugins)
 {
-    CORE_LOG_E("Unable to load plugins:");
-    for (const auto& uid : requestedPlugins) {
-        if (NoneOf(availablePlugins, [uid](const auto& available) { return available.plugin->version.uid == uid; })) {
-            CORE_LOG_E("\t%s", to_string(uid).data());
+    vector<Uid> loadAll(pluginUids.cbegin(), pluginUids.cend());
+    if (pluginUids.empty()) {
+        loadAll.reserve(plugins.size());
+        for (auto& plugin : plugins) {
+            loadAll.push_back(plugin.plugin->version.uid);
         }
     }
+
+    if (loadAll.empty()) {
+        return {};
+    }
+
+    // Gather dependencies of each plugin. toLoad will contain all the dependencies in depth first order.
+    vector<Uid> toLoad;
+    toLoad.reserve(plugins.size());
+    if (!AllOf(loadAll, [&](const Uid& uid) { return AddDependencies(toLoad, plugins, uid); })) {
+        toLoad.clear();
+    }
+    return toLoad;
 }
+
 void Notify(const array_view<IPluginRegister::ITypeInfoListener*> listeners,
     IPluginRegister::ITypeInfoListener::EventType type, array_view<const ITypeInfo* const> typeInfos)
 {
@@ -318,45 +340,55 @@ array_view<const IPlugin* const> PluginRegistry::GetPlugins() const
 bool PluginRegistry::LoadPlugins(const array_view<const Uid> pluginUids)
 {
     // Gather all the available static and dynamic libraries.
-    vector<LibPlugin> plugins;
-    GatherStaticPlugins(plugins);
-    GatherDynamicPlugins(plugins, fileManager_);
+    vector<LibPlugin> availablePlugins;
+    GatherStaticPlugins(availablePlugins);
+    GatherDynamicPlugins(availablePlugins, fileManager_);
 
-    // If a list of UIDs was given remove all except the requires plugins.
-    if (!pluginUids.empty()) {
-        // Gather dependencies of each plugin.
-        vector<Uid> toLoad;
-        toLoad.reserve(plugins.size());
-
-        const bool found =
-            AllOf(pluginUids, [&](const Uid& uid) { return AddDependencies(toLoad, plugins, plugins_, uid); });
-
-        // Order the available plugins to match the to-be-loaded list and remove extras.
-        auto begin = plugins.begin();
-        auto end = plugins.end();
-        for (const Uid& uid : toLoad) {
-            if (auto pos = std::find_if(
-                begin, end, [uid](const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uid; });
-                pos != end) {
-                std::rotate(begin, pos, end);
-                ++begin;
-            }
-        }
-        plugins.erase(begin, end);
-
-        if (!found) {
-            LogMissingPlugins(pluginUids, plugins);
-            return false;
-        }
+    vector<Uid> toLoad = GatherRequiredPlugins(pluginUids, availablePlugins);
+    if (toLoad.empty()) {
+        return false;
     }
 
-    // Now we should have only the desired plugins and can load all of them.
-    CORE_LOG_D("Load plugins:");
+    // Remove duplicates while counting how many times plugins were requested due to dependencies.
+    vector<int32_t> counts;
+    counts.reserve(toLoad.size());
+
+    if (toLoad.size() > 1U) {
+        auto begin = toLoad.begin();
+        auto end = toLoad.end();
+        while ((begin + 1) != end) {
+            auto newEnd = std::remove_if(begin + 1, end, [current = *begin](const Uid& uid) { return uid == current; });
+            auto count = static_cast<int32_t>(std::distance(newEnd, end)) + 1;
+            counts.push_back(count);
+            end = newEnd;
+            ++begin;
+        }
+        toLoad.erase(end, toLoad.cend());
+    }
+    counts.push_back(1);
+
     loading_ = true;
-    for (auto& plugin : plugins) {
-        RegisterPlugin(move(plugin.lib), *plugin.plugin,
-            NoneOf(pluginUids,
-                [&loading = (plugin.plugin->version.uid)](const Uid& userRequest) { return userRequest == loading; }));
+    auto itCounts = counts.cbegin();
+    for (const Uid& uid : toLoad) {
+        const auto currentCount = *itCounts++;
+        // If the plugin was already loaded just increase the reference count.
+        if (auto pos = std::find(plugins_.begin(), plugins_.end(), uid); pos != plugins_.end()) {
+            const auto index = static_cast<size_t>(std::distance(plugins_.begin(), pos));
+            pluginDatas_[index].refcnt += currentCount;
+            continue;
+        }
+
+        auto pos = std::find(availablePlugins.begin(), availablePlugins.end(), uid);
+        if (pos == availablePlugins.end()) {
+            // This shouldn't be possible as toLoad should contain UIDs which are found in plugins.
+            continue;
+        }
+        if (!pos->plugin) {
+            // This shouldn't be possible as GatherStatic/DynamicPlugins should add only valid plugin pointers, lib can
+            // be null.
+            continue;
+        }
+        RegisterPlugin(BASE_NS::move(pos->lib), *(pos->plugin), currentCount);
     }
     loading_ = false;
 
@@ -374,49 +406,43 @@ void PluginRegistry::UnloadPlugins(const array_view<const Uid> pluginUids)
 #if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
     if (perfLoggerId_) {
         if (pluginUids.empty() || std::any_of(pluginUids.cbegin(), pluginUids.cend(),
-            [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
+                                      [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
             logger_.RemoveOutput(perfLoggerId_);
             perfLoggerId_ = 0U;
         }
     }
 #endif
+    // to allow plugins to call UnloadPlugins from unregisterInterfaces, gather unloadable entries into separate
+    // containers to avoid modifying member containers during iteration.
+    decltype(pluginDatas_) removedPluginDatas;
+    decltype(plugins_) removedPlugins;
     if (pluginUids.empty()) {
         while (!pluginDatas_.empty() && !plugins_.empty()) {
-            UnregisterPlugin(*plugins_.back(), pluginDatas_.back().token);
+            removedPlugins.push_back(BASE_NS::move(plugins_.back()));
+            removedPluginDatas.push_back(BASE_NS::move(pluginDatas_.back()));
             plugins_.pop_back();
             pluginDatas_.pop_back();
         }
-        plugins_.clear();
-        pluginDatas_.clear();
     } else {
-        [](array_view<const IPlugin*> plugins, array_view<PluginData> pluginDatas,
-            const array_view<const Uid>& pluginUids) {
-            auto recurse = [](const array_view<const IPlugin*>& plugins, array_view<PluginData>& pluginDatas,
-                               const array_view<const Uid>& pluginUids, auto& recurseRef) -> void {
-                for (const auto& uid : pluginUids) {
-                    if (auto pos = std::find_if(plugins.begin(), plugins.end(),
-                        [uid](const IPlugin* pl) { return pl && pl->version.uid == uid; });
-                        pos != plugins.end()) {
-                        const auto index = static_cast<size_t>(std::distance(plugins.begin(), pos));
-                        if (--pluginDatas[index].refcnt <= 0) {
-                            recurseRef(plugins, pluginDatas, (*pos)->pluginDependencies, recurseRef);
-                        }
-                    }
-                }
-            };
-            recurse(plugins, pluginDatas, pluginUids, recurse);
-        }(plugins_, pluginDatas_, pluginUids);
+        DecreaseRefCounts(pluginUids);
 
-        auto pdIt = pluginDatas_.crbegin();
-        for (auto pos = plugins_.crbegin(), last = plugins_.crend(); pos != last;) {
+        auto pdIt = pluginDatas_.rbegin();
+        for (auto pos = plugins_.rbegin(), last = plugins_.rend(); pos != last;) {
             if (pdIt->refcnt <= 0) {
-                UnregisterPlugin(*(*pos), pdIt->token);
+                removedPlugins.push_back(BASE_NS::move(*pos));
+                removedPluginDatas.push_back(BASE_NS::move(*pdIt));
                 plugins_.erase(pos.base() - 1);
                 pluginDatas_.erase(pdIt.base() - 1);
             }
             ++pos;
             ++pdIt;
         }
+    }
+    // now it's safe to call unregisterInterfaces without messing up the iteration of pluginDatas_ and plugins_.
+    auto dataIt = removedPluginDatas.begin();
+    for (auto plugin : removedPlugins) {
+        UnregisterPlugin(*plugin, dataIt->token);
+        ++dataIt;
     }
 }
 
@@ -472,7 +498,7 @@ array_view<const ITypeInfo* const> PluginRegistry::GetTypeInfos(const Uid& typeU
 void PluginRegistry::AddListener(ITypeInfoListener& listener)
 {
     if (std::none_of(typeInfoListeners_.begin(), typeInfoListeners_.end(),
-        [adding = &listener](const auto& current) { return current == adding; })) {
+            [adding = &listener](const auto& current) { return current == adding; })) {
         typeInfoListeners_.push_back(&listener);
     }
 }
@@ -606,9 +632,7 @@ void PluginRegistry::HandlePerfTracePlugin(const PlatformCreateInfo& platformCre
         if (traceSettings->type == PLATFORM_EXTENSION_TRACE_USER) {
             // Provide a user applied performance tracer from the application
             perfManFactory_.SetPerformanceTrace(
-                {},
-                IPerformanceTrace::Ptr { static_cast<const PlatformTraceInfoUsr*>(traceSettings)->tracer }
-            );
+                {}, IPerformanceTrace::Ptr { static_cast<const PlatformTraceInfoUsr*>(traceSettings)->tracer });
         } else if (traceSettings->type == PLATFORM_EXTENSION_TRACE_EXTENSION) {
             // This load plugin call isn't really that ideal, basically dlopen/LoadLibrary is called all plugins
             // found. The order is undefined, so apotentional risks is that the modules could attempt to use
@@ -648,35 +672,22 @@ void PluginRegistry::HandlePerfTracePlugin(const PlatformCreateInfo& platformCre
 }
 
 // Private members
-void PluginRegistry::RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, bool asDependency)
+void PluginRegistry::RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, const int32_t refCount)
 {
     CORE_LOG_D("\tRegister Plugin: %s %s", plugin.name, to_string(plugin.version.uid).data());
     if (plugin.version.GetVersionString) {
         CORE_LOG_D("\tVersion Info: %s", plugin.version.GetVersionString());
     }
-    if (std::any_of(plugins_.begin(), plugins_.end(),
-        [&plugin](const IPlugin* pl) { return strcmp(plugin.name, pl->name) == 0; })) {
-        CORE_LOG_W("\tSkipping duplicate plugin: %s!", plugin.name);
-        return;
-    }
     // when a plugin is loaded/ registered due a requested plugin depends on it ref count starts from zero and it's
     // expected that some following plugin will place a reference. once that plugin releases its reference the
     // dependency is known to be a candidate for unloading.
-    PluginData pd { move(lib), {}, asDependency ? 0 : 1 };
+    PluginData pd { move(lib), {}, refCount };
     if (plugin.registerInterfaces) {
         pd.token = plugin.registerInterfaces(*static_cast<IPluginRegister*>(this));
     }
 
     pluginDatas_.push_back(move(pd));
     plugins_.push_back(&plugin);
-    for (const auto& dependency : plugin.pluginDependencies) {
-        if (auto pos = std::find_if(plugins_.begin(), plugins_.end(),
-            [dependency](const IPlugin* plugin) { return plugin->version.uid == dependency; });
-            pos != plugins_.end()) {
-            const auto index = static_cast<size_t>(std::distance(plugins_.begin(), pos));
-            ++pluginDatas_[index].refcnt;
-        }
-    }
 }
 
 void PluginRegistry::UnregisterPlugin(const IPlugin& plugin, PluginToken token)
@@ -685,6 +696,19 @@ void PluginRegistry::UnregisterPlugin(const IPlugin& plugin, PluginToken token)
 
     if (plugin.unregisterInterfaces) {
         plugin.unregisterInterfaces(token);
+    }
+}
+
+void PluginRegistry::DecreaseRefCounts(const array_view<const Uid> pluginUids)
+{
+    for (const auto& uid : pluginUids) {
+        if (auto pos = std::find_if(
+                plugins_.begin(), plugins_.end(), [uid](const IPlugin* pl) { return pl && pl->version.uid == uid; });
+            pos != plugins_.end()) {
+            const auto index = static_cast<size_t>(std::distance(plugins_.begin(), pos));
+            --pluginDatas_[index].refcnt;
+            DecreaseRefCounts((*pos)->pluginDependencies);
+        }
     }
 }
 

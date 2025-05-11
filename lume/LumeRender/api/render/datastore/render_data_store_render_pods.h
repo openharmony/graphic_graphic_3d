@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -210,17 +210,17 @@ struct DitherConfiguration {
     enum DitherType {
         /** Interleaved noise */
         INTERLEAVED_NOISE = 0,
-        /** Interleaved noise */
-        TRIANGLE_NOISE = 0,
-        /** Interleaved noise */
-        TRIANGLE_NOISE_RGB = 0,
+        /** Triangle noise */
+        TRIANGLE_NOISE = 1,
+        /** Triangle noise rgb */
+        TRIANGLE_NOISE_RGB = 2,
     };
 
     /* Dither type */
     DitherType ditherType { DitherType::INTERLEAVED_NOISE };
 
     /* Amount coefficient */
-    float amountCoefficient { 0.1f };
+    float amountCoefficient { 1.0f / 255.0f };
 };
 
 struct BlurConfiguration {
@@ -263,6 +263,8 @@ struct TonemapConfiguration {
         TONEMAP_ACES_2020 = 1,
         /** Filmic */
         TONEMAP_FILMIC = 2,
+        /** PBRNeutral */
+        TONEMAP_PBR_NEUTRAL = 3,
     };
 
     /** Tonemap type */
@@ -273,16 +275,19 @@ struct TonemapConfiguration {
 
 /** Opto-electronic conversion functions. */
 struct ColorConversionConfiguration {
-    /** Tonemap type */
+    /** Color conversion flags */
     enum ConversionFunctionType {
         /** Linear -> no conversion in normal situation. */
         CONVERSION_LINEAR = 0,
         /** Linear to sRGB conversion */
-        CONVERSION_LINEAR_TO_SRGB = 1,
+        CONVERSION_LINEAR_TO_SRGB = (1 << 0),
+        /** Multiple rgb with alpha */
+        CONVERSION_MULTIPLY_WITH_ALPHA = (1 << 1),
     };
+    using ColorConversionFlags = uint32_t;
 
-    /** Conversion function type */
-    ConversionFunctionType conversionFunctionType { ConversionFunctionType::CONVERSION_LINEAR };
+    /** Conversion function type flags */
+    ColorConversionFlags conversionFunctionType { ConversionFunctionType::CONVERSION_LINEAR };
 };
 
 /** Fxaa Antialiasing configuration. */

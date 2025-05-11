@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/intf_gpu_resource_manager.h>
+#include <render/intf_render_context.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
@@ -28,30 +29,19 @@
 #include <render/nodecontext/intf_render_node_parser_util.h>
 #include <render/nodecontext/intf_render_node_util.h>
 
+#include "core/plugin/intf_class_factory.h"
 #include "datastore/render_data_store_pod.h"
+#include "postprocesses/render_post_process_bloom.h"
 #include "util/log.h"
 
 // shaders
 #include <render/shaders/common/render_post_process_structs_common.h>
 
 using namespace BASE_NS;
+using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t UBO_OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
-
-RenderHandleReference CreatePostProcessDataUniformBuffer(
-    IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
-{
-    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
-    PLUGIN_STATIC_ASSERT(sizeof(LocalPostProcessStruct) == UBO_OFFSET_ALIGNMENT);
-    return gpuResourceMgr.Create(
-        handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                    sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct) });
-}
-
 inline BindableImage GetBindableImage(const RenderNodeResource& res)
 {
     return BindableImage { res.handle, res.mip, res.layer, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, res.secondHandle };
@@ -64,6 +54,7 @@ void RenderNodeBloom::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 
     renderNodeContextMgr_ = &renderNodeContextMgr;
     ParseRenderNodeInputs();
+    CreatePostProcessInterface();
 
     if (jsonInputs_.renderDataStore.dataStoreName.empty()) {
         PLUGIN_LOG_E("RenderNodeBloom: render data store configuration not set in render node graph");
@@ -74,15 +65,12 @@ void RenderNodeBloom::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
         valid_ = false;
     }
 
-    postProcessUbo_ =
-        CreatePostProcessDataUniformBuffer(renderNodeContextMgr_->GetGpuResourceManager(), postProcessUbo_);
+    if (ppRenderBloomInterface_.postProcessNode) {
+        ppRenderBloomInterface_.postProcessNode->Init(ppRenderBloomInterface_.postProcess, *renderNodeContextMgr_);
+    }
 
-    ProcessPostProcessConfiguration(renderNodeContextMgr_->GetRenderDataStoreManager());
-    renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(RenderBloom::GetDescriptorCounts());
-    const RenderBloom::BloomInfo info { GetBindableImage(inputResources_.customInputImages[0]),
-        GetBindableImage(inputResources_.customOutputImages[0]), postProcessUbo_.GetHandle(),
-        ppConfig_.bloomConfiguration.useCompute };
-    renderBloom_.Init(renderNodeContextMgr, info);
+    renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(
+        ppRenderBloomInterface_.postProcessNode->GetRenderDescriptorCounts());
 }
 
 void RenderNodeBloom::PreExecuteFrame()
@@ -96,12 +84,17 @@ void RenderNodeBloom::PreExecuteFrame()
         inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
     }
     ProcessPostProcessConfiguration(renderNodeContextMgr_->GetRenderDataStoreManager());
-    UpdatePostProcessData(ppConfig_);
 
-    const RenderBloom::BloomInfo info { GetBindableImage(inputResources_.customInputImages[0]),
-        GetBindableImage(inputResources_.customOutputImages[0]), postProcessUbo_.GetHandle(),
-        ppConfig_.bloomConfiguration.useCompute };
-    renderBloom_.PreExecute(*renderNodeContextMgr_, info, ppConfig_);
+    RenderPostProcessBloom& pp = static_cast<RenderPostProcessBloom&>(*ppRenderBloomInterface_.postProcess);
+    pp.propertiesData.bloomConfiguration = ppConfig_.bloomConfiguration;
+    pp.propertiesData.enabled = ((ppConfig_.enableFlags & PostProcessConfiguration::ENABLE_BLOOM_BIT) > 0);
+
+    RenderPostProcessBloomNode& ppNode =
+        static_cast<RenderPostProcessBloomNode&>(*ppRenderBloomInterface_.postProcessNode);
+    ppNode.nodeInputsData.input = GetBindableImage(inputResources_.customInputImages[0]);
+    ppNode.nodeOutputsData.output = GetBindableImage(inputResources_.customOutputImages[0]);
+
+    ppRenderBloomInterface_.postProcessNode->PreExecute();
 }
 
 void RenderNodeBloom::ExecuteFrame(IRenderCommandList& cmdList)
@@ -110,7 +103,25 @@ void RenderNodeBloom::ExecuteFrame(IRenderCommandList& cmdList)
         return;
     }
 
-    renderBloom_.Execute(*renderNodeContextMgr_, cmdList, ppConfig_);
+    ppRenderBloomInterface_.postProcessNode->Execute(cmdList);
+}
+
+void RenderNodeBloom::CreatePostProcessInterface()
+{
+    auto* renderClassFactory = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassFactory>();
+    if (renderClassFactory) {
+        auto CreatePostProcessInterface = [&](const auto uid, auto& pp, auto& ppNode) {
+            if (pp = CreateInstance<IRenderPostProcess>(*renderClassFactory, uid); pp) {
+                ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, pp->GetRenderPostProcessNodeUid());
+            }
+        };
+
+        CreatePostProcessInterface(
+            RenderPostProcessBloom::UID, ppRenderBloomInterface_.postProcess, ppRenderBloomInterface_.postProcessNode);
+    }
+    if (!(ppRenderBloomInterface_.postProcess && ppRenderBloomInterface_.postProcess)) {
+        valid_ = false;
+    }
 }
 
 IRenderNode::ExecuteFlags RenderNodeBloom::GetExecuteFlags() const
@@ -144,21 +155,6 @@ void RenderNodeBloom::ParseRenderNodeInputs()
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
-}
-
-void RenderNodeBloom::UpdatePostProcessData(const PostProcessConfiguration& postProcessConfiguration)
-{
-    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-    const RenderPostProcessConfiguration rppc =
-        renderNodeContextMgr_->GetRenderNodeUtil().GetRenderPostProcessConfiguration(postProcessConfiguration);
-    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
-    if (auto data = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(postProcessUbo_.GetHandle())); data) {
-        const auto* dataEnd = data + sizeof(RenderPostProcessConfiguration);
-        if (!CloneData(data, size_t(dataEnd - data), &rppc, sizeof(RenderPostProcessConfiguration))) {
-            PLUGIN_LOG_E("post process ubo copying failed.");
-        }
-        gpuResourceMgr.UnmapBuffer(postProcessUbo_.GetHandle());
-    }
 }
 
 // for plugin / factory interface

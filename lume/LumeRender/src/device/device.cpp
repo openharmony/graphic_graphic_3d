@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -65,10 +65,6 @@ PLUGIN_STATIC_ASSERT(BASE_NS::Format::BASE_FORMAT_ASTC_12x12_SRGB_BLOCK == 184u)
 PLUGIN_STATIC_ASSERT(BASE_NS::Format::BASE_FORMAT_G8B8G8R8_422_UNORM == 1000156000u);
 
 namespace {
-constexpr uint32_t MIN_BUFFERING_COUNT { 2U };
-// definitely a bit high number, prefer e.g. 3.
-constexpr uint32_t MAX_BUFFERING_COUNT { 6U };
-
 constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_UNDEFINED,
 
@@ -551,15 +547,33 @@ void CreateDepthBuffer(
     swapchainData.additionalDepthBufferHandle = gpuResourceManager.Create(
         DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER_DEPTH, swapchain.GetDescDepthBuffer());
 }
+
+void ConfigureDefaultSwapchainPod(IRenderContext& renderContext, const bool valid)
+{
+    IRenderDataStoreManager& rdsm = renderContext.GetRenderDataStoreManager();
+    refcnt_ptr<IRenderDataStorePod> dataStorePod = rdsm.GetRenderDataStore(RenderDataStorePod::TYPE_NAME);
+    if (dataStorePod) {
+        auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
+        PLUGIN_ASSERT(dataView.size_bytes() == sizeof(NodeGraphBackBufferConfiguration));
+        NodeGraphBackBufferConfiguration ngbbc = *(const NodeGraphBackBufferConfiguration*)dataView.data();
+        StringUtil::CopyStringToArray(DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER, ngbbc.backBufferName,
+            NodeGraphBackBufferConfiguration::CORE_MAX_BACK_BUFFER_NAME_LENGTH);
+        ngbbc.backBufferType = valid ? NodeGraphBackBufferConfiguration::BackBufferType::SWAPCHAIN
+                                     : NodeGraphBackBufferConfiguration::BackBufferType::UNDEFINED;
+        ngbbc.present = valid;
+        dataStorePod->Set("NodeGraphBackBufferConfiguration", arrayviewU8(ngbbc));
+    }
+}
 } // namespace
 
-Device::Device(RenderContext& renderContext, const DeviceCreateInfo& deviceCreateInfo)
-    : renderContext_(renderContext), deviceConfiguration_(deviceCreateInfo.deviceConfiguration)
+Device::Device(RenderContext& renderContext)
+    : renderContext_(renderContext),
+      deviceConfiguration_(renderContext.GetCreateInfo().deviceCreateInfo.deviceConfiguration)
 {
-    if ((deviceConfiguration_.bufferingCount < MIN_BUFFERING_COUNT) ||
-        (deviceConfiguration_.bufferingCount > MAX_BUFFERING_COUNT)) {
-        deviceConfiguration_.bufferingCount =
-            std::clamp(deviceConfiguration_.bufferingCount, MIN_BUFFERING_COUNT, MAX_BUFFERING_COUNT);
+    if ((deviceConfiguration_.bufferingCount < DeviceConstants::MIN_BUFFERING_COUNT) ||
+        (deviceConfiguration_.bufferingCount > DeviceConstants::MAX_BUFFERING_COUNT)) {
+        deviceConfiguration_.bufferingCount = std::clamp(deviceConfiguration_.bufferingCount,
+            DeviceConstants::MIN_BUFFERING_COUNT, DeviceConstants::MAX_BUFFERING_COUNT);
         PLUGIN_LOG_D("buffering count clamped to: %u", deviceConfiguration_.bufferingCount);
     }
     FillColorSpaceLinearFormats(colorSpaceLinearFormats_);
@@ -622,8 +636,10 @@ RenderHandleReference Device::CreateSwapchainImpl(
     auto& swapchainData = swapchains_[swapchainIdx];
     swapchainData = {};
     swapchainData.swapchain = CreateDeviceSwapchain(swapchainCreateInfo);
-    if (!swapchainData.swapchain) {
+    if ((!swapchainData.swapchain) || (!swapchainData.swapchain->IsValid())) {
         Deactivate();
+        ConfigureDefaultSwapchainPod(renderContext_, false);
+        PLUGIN_LOG_E("Invalid swapchain created and cannot be used");
         return {};
     }
 
@@ -670,20 +686,7 @@ RenderHandleReference Device::CreateSwapchainImpl(
     }
 
     // configure automatically backbuffer as swapchain
-    {
-        IRenderDataStoreManager& rdsm = renderContext_.GetRenderDataStoreManager();
-        refcnt_ptr<IRenderDataStorePod> dataStorePod = rdsm.GetRenderDataStore(RenderDataStorePod::TYPE_NAME);
-        if (dataStorePod) {
-            auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
-            PLUGIN_ASSERT(dataView.size_bytes() == sizeof(NodeGraphBackBufferConfiguration));
-            NodeGraphBackBufferConfiguration ngbbc = *(const NodeGraphBackBufferConfiguration*)dataView.data();
-            StringUtil::CopyStringToArray(DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER,
-                ngbbc.backBufferName, NodeGraphBackBufferConfiguration::CORE_MAX_BACK_BUFFER_NAME_LENGTH);
-            ngbbc.backBufferType = NodeGraphBackBufferConfiguration::BackBufferType::SWAPCHAIN;
-            ngbbc.present = true;
-            dataStorePod->Set("NodeGraphBackBufferConfiguration", arrayviewU8(ngbbc));
-        }
-    }
+    ConfigureDefaultSwapchainPod(renderContext_, true);
     if ((defaultSwapchainHandle_.GetHandle() == swapchainData.remappableSwapchainImage.GetHandle()) &&
         (swapchainCreateInfo.swapchainFlags & SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT)) {
         CreateDepthBuffer(*swapchainData.swapchain, *gpuResourceMgr_, swapchainData);
@@ -952,7 +955,7 @@ Format Device::GetFormatOrFallback(const Format inputFormat) const
 
 ColorSpaceFlags Device::GetColorSpaceFlags() const
 {
-    return renderContext_.GetColorSpaceFlags();
+    return renderContext_.GetCreateInfo().colorSpaceFlags;
 }
 
 Format Device::GetColorSpaceFormat(const Format inputFormat, const ColorSpaceFlags flags) const

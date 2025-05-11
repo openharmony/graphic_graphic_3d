@@ -87,9 +87,7 @@ private:
         const IEntityCollection& ec, const CORE_NS::json::value&, const CORE_NS::Property&, uintptr_t)>;
     IPropertySerializer& Add(PropertyToJsonFunc toJson, PropertyFromJsonFunc fromJson);
 
-    //
     // A little wrapper class to create a serializer with functions for writing and readig a value.
-    //
     class SimpleJsonSerializer : public IPropertySerializer {
     public:
         bool ToJson(const IEntityCollection& ec, const CORE_NS::Property& property, uintptr_t offset,
@@ -108,9 +106,7 @@ private:
 
     RENDER_NS::IRenderContext& renderContext_;
 
-    //
     // Mapping from each property type to a apecific serializer.
-    //
     using SerializerMap = BASE_NS::unordered_map<CORE_NS::PropertyTypeDecl, IPropertySerializer*>;
     SerializerMap typetoSerializerMap_;
 
@@ -125,9 +121,7 @@ Type& GetPropertyValue(uintptr_t ptr)
 }
 } // namespace
 
-//
 // EcsSerializer::SimpleJsonSerializer
-//
 bool EcsSerializer::SimpleJsonSerializer::ToJson(
     const IEntityCollection& ec, const Property& property, uintptr_t offset, json::standalone_value& jsonOut) const
 {
@@ -144,9 +138,7 @@ EcsSerializer::SimpleJsonSerializer::SimpleJsonSerializer(PropertyToJsonFunc toJ
     : PropertyToJson(toJson), PropertyFromJson(fromJson)
 {}
 
-//
 // EcsSerializer
-//
 EcsSerializer::EcsSerializer(RENDER_NS::IRenderContext& renderContext) : renderContext_(renderContext) {}
 
 EcsSerializer::IPropertySerializer& EcsSerializer::Add(PropertyToJsonFunc toJson, PropertyFromJsonFunc fromJson)
@@ -290,7 +282,6 @@ bool EntityFromJson(const IEntityCollection& ec, const json::value& jsonIn, Enti
             }
             return false;
         }
-
     } else {
         CORE_LOG_W("Component entity property must be an index to the entities array, an string id, or an object");
         return false;
@@ -389,10 +380,7 @@ bool EntityReferenceFromJson(const IEcsSerializer& ecsSerializer, IRenderContext
 
 void EcsSerializer::SetDefaultSerializers()
 {
-    //
     // Basic types (for types that nlohman knows how to serialize).
-    //
-
     SetSerializer(PropertyType::FLOAT_T, Add(PropertyToJson<float>, PropertyFromJson<float>));
     SetSerializer(PropertyType::DOUBLE_T, Add(PropertyToJson<double>, PropertyFromJson<double>));
 
@@ -420,10 +408,7 @@ void EcsSerializer::SetDefaultSerializers()
 
     SetSerializer(PropertyType::STRING_T, Add(PropertyToJson<string>, PropertyFromJson<string>));
 
-    //
     // Others
-    //
-
     SetSerializer(PropertyType::CHAR_ARRAY_T,
         Add(
             [](const IEntityCollection& /*ec*/, const Property& property, uintptr_t offset,
@@ -668,7 +653,6 @@ bool EcsSerializer::WriteProperty(
     auto serializer = typetoSerializerMap_.find(property.type);
     if (serializer != typetoSerializerMap_.end()) {
         return serializer->second->ToJson(ec, property, offset, jsonOut);
-
     } else if (!property.metaData.enumMetaData.empty()) {
         // Enum type property.
         switch (property.size) {
@@ -687,7 +671,6 @@ bool EcsSerializer::WriteProperty(
             default:
                 return false;
         }
-
     } else if (property.metaData.containerMethods) {
         const auto& container = *property.metaData.containerMethods;
 
@@ -705,7 +688,7 @@ bool EcsSerializer::WriteProperty(
             array.array_.reserve(property.count);
             for (size_t i = 0; i < property.count; i++) {
                 uintptr_t ptr = offset + i * container.property.size;
-                // TODO: return false if any recurseive call fails?
+                // return false if any recurseive call fails?
                 json::standalone_value elementJson;
                 WriteProperty(ec, container.property, ptr, elementJson);
                 array.array_.push_back(move(elementJson));
@@ -742,7 +725,6 @@ bool EcsSerializer::WriteProperty(
             jsonOut = move(array);
             return true;
         }
-
     } else if (!property.metaData.memberProperties.empty()) {
         // Struct type property (ie. has sub properties).
         json::standalone_value object = json::standalone_value::object();
@@ -792,10 +774,10 @@ bool EcsSerializer::GatherExternalCollections(
 IoUtil::SerializationResult EcsSerializer::ReadEntityCollection(
     IEntityCollection& ec, const json::value& jsonIn, string_view contextUri) const
 {
-    // TODO: Move version check to be separately so it can be done before gathering the dependencies.
+    // Move version check to be separately so it can be done before gathering the dependencies.
     // NOTE: Only comparing the major version.
     const auto minor = IoUtil::CompatibilityRange::IGNORE_VERSION;
-    // TODO: Type name was changed to be in line with engine naming. Allow the old type name for a while.
+    // Type name was changed to be in line with engine naming. Allow the old type name for a while.
     const IoUtil::CompatibilityRange validVersions[] {
         { VERSION_MAJOR, VERSION_MAJOR, minor, minor, ec.GetType() },
         { VERSION_MAJOR, VERSION_MAJOR, minor, minor, "entity_collection" },
@@ -918,7 +900,7 @@ bool EcsSerializer::ReadComponents(IEntityCollection& ec, const json::value& jso
             if (cm) {
                 ReadComponent(ec, componentJson, entity, *cm);
             } else {
-                // TODO: Maybe we should try to find a matching component by name as a fallback
+                // Maybe we should try to find a matching component by name as a fallback
                 CORE_LOG_W("Unrecognized component found: '%s'", string(key).c_str());
             }
         }
@@ -1037,7 +1019,6 @@ bool EcsSerializer::ReadProperty(
     auto serializer = typetoSerializerMap_.find(property.type);
     if (serializer != typetoSerializerMap_.end()) {
         return serializer->second->FromJson(ec, jsonIn, property, offset);
-
     } else if (!property.metaData.enumMetaData.empty()) {
         // Enum type property.
         if (jsonIn.is_unsigned_int()) {
@@ -1058,7 +1039,6 @@ bool EcsSerializer::ReadProperty(
                     return false;
             }
         }
-
     } else if (property.metaData.containerMethods) {
         // Special handling for byte data encoded as base64.
         if (jsonIn.is_string()) {
@@ -1074,7 +1054,6 @@ bool EcsSerializer::ReadProperty(
                 auto& dstValue = GetPropertyValue<uint8_t[]>(offset);
                 CloneData(dstValue, property.size, &bytes[0], bytes.size());
                 return true;
-
             } else if (property.type == PROPERTYTYPE(vector<uint8_t>)) {
                 GetPropertyValue<vector<uint8_t>>(offset).swap(bytes);
                 return true;
@@ -1092,11 +1071,10 @@ bool EcsSerializer::ReadProperty(
                 }
                 for (size_t i = 0; i < property.count; i++) {
                     uintptr_t ptr = offset + i * property.metaData.containerMethods->property.size;
-                    // TODO: return false if any recurseive call fails?
+                    // return false if any recurseive call fails?
                     ReadProperty(ec, jsonIn.array_.at(i), property.metaData.containerMethods->property, ptr);
                 }
                 return true;
-
             } else if (jsonIn.is_object()) {
                 // Allow "sparse arrays" by using objects with the array index as the key.
                 for (auto& element : jsonIn.object_) {
@@ -1112,7 +1090,6 @@ bool EcsSerializer::ReadProperty(
                 return true;
             }
             return false;
-
         } else {
             // This is a "non trivial container".
             if (jsonIn.is_array()) {
@@ -1123,7 +1100,6 @@ bool EcsSerializer::ReadProperty(
                     ReadProperty(ec, jsonIn.array_.at(i), property.metaData.containerMethods->property, ptr);
                 }
                 return true;
-
             } else if (jsonIn.is_object()) {
                 // Allow "sparse arrays" by using objects with the array index as the key.
                 for (auto& element : jsonIn.object_) {
@@ -1145,19 +1121,18 @@ bool EcsSerializer::ReadProperty(
             }
             return false;
         }
-
     } else if (!property.metaData.memberProperties.empty()) {
         // Struct type property (ie. has sub properties).
         if (jsonIn.is_object()) {
             for (const auto& subProperty : property.metaData.memberProperties) {
-                // TODO: is there a way to not create the string
+                // is there a way to not create the string
                 const string name(subProperty.name);
                 const auto* subJson = jsonIn.find(name);
                 if (subJson) {
                     ReadProperty(ec, *subJson, subProperty, offset + subProperty.offset);
                 }
             }
-            // TODO: return false if any recurseive call fails?
+            // return false if any recurseive call fails?
             return true;
         }
     }

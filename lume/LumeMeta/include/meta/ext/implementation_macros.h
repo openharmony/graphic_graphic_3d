@@ -1,28 +1,22 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Description: implementation macros
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-11-13
  */
 
 #ifndef META_EXT_IMPLEMENTATION_MACROS_H
 #define META_EXT_IMPLEMENTATION_MACROS_H
 
+#include <base/containers/shared_ptr.h>
+
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/ext/event_impl.h>
 #include <meta/ext/object_factory.h>
 #include <meta/interface/interface_macros.h>
 #include <meta/interface/intf_object_flags.h>
 #include <meta/interface/intf_object_registry.h>
+#include <meta/interface/intf_owner.h>
 #include <meta/interface/metadata_query.h>
 #include <meta/interface/property/construct_array_property.h>
 #include <meta/interface/property/construct_property.h>
@@ -42,10 +36,6 @@
 META_BEGIN_NAMESPACE()
 constexpr ObjectFlagBitsValue DEFAULT_PROPERTY_FLAGS = ObjectFlagBitsValue { ObjectFlagBits::SERIALIZE };
 constexpr ObjectFlagBitsValue DEFAULT_PROPERTY_FLAGS_NO_SER = ObjectFlagBitsValue { ObjectFlagBits::NONE };
-struct NoInterface {
-    constexpr static const META_NS::InterfaceInfo INTERFACE_INFO {};
-    constexpr static const BASE_NS::Uid UID {};
-};
 
 template<typename Type>
 IProperty::Ptr CreatePropertyImpl(BASE_NS::string_view name, Internal::MetaValue* def, ObjectFlagBitsValue flags)
@@ -71,17 +61,29 @@ IProperty::Ptr CreatePropertyImpl(BASE_NS::string_view name, Internal::MetaValue
 template<typename Type, uint64_t Flags>
 Internal::MetadataCtor* CreatePropertyConstructor()
 {
-    return [](const BASE_NS::shared_ptr<IOwner>&, const StaticMetadata& d) {
-        return interface_pointer_cast<CORE_NS::IInterface>(
+    return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
+        auto ret = interface_pointer_cast<CORE_NS::IInterface>(
             META_NS::CreatePropertyImpl<Type>(d.name, d.runtimeValue, ObjectFlagBitsValue(Flags)));
+        if (ret) {
+            if (auto ctor = interface_cast<IMetadataOwner>(owner)) {
+                ctor->OnMetadataConstructed(d, *ret);
+            }
+        }
+        return ret;
     };
 }
 
 template<typename Type>
 Internal::MetadataCtor* CreateEventConstructor()
 {
-    return [](const BASE_NS::shared_ptr<IOwner>&, const StaticMetadata& d) {
-        return interface_pointer_cast<CORE_NS::IInterface>(CreateShared<EventImpl<Type>>(d.name));
+    return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
+        auto ret = interface_pointer_cast<CORE_NS::IInterface>(CreateShared<EventImpl<Type>>(d.name));
+        if (ret) {
+            if (auto ctor = interface_cast<IMetadataOwner>(owner)) {
+                ctor->OnMetadataConstructed(d, *ret);
+            }
+        }
+        return ret;
     };
 }
 
@@ -89,8 +91,14 @@ template<typename Interface, auto MemFun>
 Internal::MetadataCtor* CreateFunctionConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
-        return interface_pointer_cast<CORE_NS::IInterface>(
+        auto ret = interface_pointer_cast<CORE_NS::IInterface>(
             CreateFunction(d.name, interface_pointer_cast<Interface>(owner), MemFun, d.runtimeValue));
+        if (ret) {
+            if (auto ctor = interface_cast<IMetadataOwner>(owner)) {
+                ctor->OnMetadataConstructed(d, *ret);
+            }
+        }
+        return ret;
     };
 }
 
@@ -117,6 +125,18 @@ inline StaticObjectMetadata CreateStaticMetadata(const Data& data, const StaticO
     size_t size = META_NS::MetadataArraySize(data);
     bool baseDataSame = size && base && data == base->metadata;
     return StaticObjectMetadata { classInfo, base, aggregate, baseDataSame ? nullptr : data, baseDataSame ? 0 : size };
+}
+
+template<typename T>
+inline uint8_t GetPropertySMDFlags(BASE_NS::shared_ptr<META_NS::IProperty> (T::*)(), int)
+{
+    return 0;
+}
+
+template<typename T>
+inline uint8_t GetPropertySMDFlags(BASE_NS::shared_ptr<const META_NS::IProperty> (T::*)() const, short)
+{
+    return static_cast<uint8_t>(Internal::PropertyFlag::READONLY);
 }
 
 META_END_NAMESPACE()
@@ -197,14 +217,30 @@ public:                                                                         
     META_EXPAND(META_GET_MACRO3_IMPL(__VA_ARGS__, META_IMPLEMENT_OBJECT_BASE_AGGR_NO_CLASSINFO, \
         META_IMPLEMENT_OBJECT_BASE_NO_CLASSINFO)(__VA_ARGS__))
 
+#if 0
+#define META_INTF_CHECK(interface, type, name)                                                \
+    [](const auto* intf) {                                                                    \
+        if constexpr (!BASE_NS::is_same_v<decltype(intf), const META_NS::NoInterface*>) {     \
+            using MyMetaValueType = typename decltype(intf->name())::ValueType;               \
+            static_assert(BASE_NS::is_same_v<META_NS::PropertyType_v<type>, MyMetaValueType>, \
+                "Invalid property data, type not matching");                                  \
+        }                                                                                     \
+        return interface::INTERFACE_INFO;                                                     \
+    }((interface*)nullptr)
+#else
 #define META_INTF_CHECK(interface, type, name) interface::INTERFACE_INFO
+#endif
 
 // todo: check in META_STATIC_PROPERTY_DATA and META_STATIC_EVENT_DATA that name is part of the given interface
 //--- PROPERTY DATA
-#define META_IMPL_PROPERTY_DATA_VALUE_FLAGS(intf, type, name, value, flags)                         \
-    { META_NS::MetadataType::PROPERTY, META_INTF_CHECK(intf, type, name), #name,                    \
+#define META_IMPL_PROPERTY_DATA_VALUE_FLAGS_SMDF(intfuid, type, name, value, flags, smdflags)       \
+    { META_NS::MetadataType::PROPERTY, intfuid, #name,                                              \
         META_NS::CreatePropertyConstructor<type, META_NS::ObjectFlagBitsValue(flags).GetValue()>(), \
-        [] { return META_NS::ConstructAnyHelper<type>(value); } },
+        [] { return META_NS::ConstructAnyHelper<type>(value); }, nullptr, smdflags },
+
+#define META_IMPL_PROPERTY_DATA_VALUE_FLAGS(intf, type, name, value, flags)                               \
+    META_IMPL_PROPERTY_DATA_VALUE_FLAGS_SMDF(META_INTF_CHECK(intf, type, name), type, name, value, flags, \
+        META_NS::GetPropertySMDFlags(&intf::Property##name, 0))
 #define META_IMPL_PROPERTY_DATA_VALUE(intf, type, name, value) \
     META_IMPL_PROPERTY_DATA_VALUE_FLAGS(intf, type, name, value, META_NS::DEFAULT_PROPERTY_FLAGS)
 #define META_IMPL_PROPERTY_DATA(intf, type, name) META_IMPL_PROPERTY_DATA_VALUE(intf, type, name, {})
@@ -229,8 +265,43 @@ public:                                                                         
         META_IMPL_ARRAY_PROPERTY_DATA_VALUE, META_IMPL_ARRAY_PROPERTY_DATA)(__VA_ARGS__))
 //---
 
+//--- Property forwarding
+#define META_STATIC_FORWARDED_PROPERTY_DATA(intf, type, name)                                                  \
+    { META_NS::MetadataType::PROPERTY, intf::INTERFACE_INFO, #name,                                            \
+        [](const BASE_NS::shared_ptr<META_NS::IOwner>& owner, const META_NS::StaticMetadata&) {                \
+            auto i = interface_cast<intf>(owner);                                                              \
+            auto p = interface_pointer_cast<::CORE_NS::IInterface>(i ? i->Property##name() : nullptr);         \
+            return BASE_NS::shared_ptr<::CORE_NS::IInterface>(p, const_cast<::CORE_NS::IInterface*>(p.get())); \
+        },                                                                                                     \
+        [] { return META_NS::ConstructAnyHelper<type>({}); }, nullptr,                                         \
+        uint8_t(uint8_t(META_NS::Internal::StaticMetaFlag::FORWARD) |                                          \
+                META_NS::GetPropertySMDFlags(&intf::Property##name, 0)) },
+
+#define META_STATIC_FORWARDED_ARRAY_PROPERTY_DATA(intf, type, name)                                            \
+    { META_NS::MetadataType::PROPERTY, intf::INTERFACE_INFO, #name,                                            \
+        [](const BASE_NS::shared_ptr<META_NS::IOwner>& owner, const META_NS::StaticMetadata&) {                \
+            auto i = interface_cast<intf>(owner);                                                              \
+            auto p = interface_pointer_cast<::CORE_NS::IInterface>(i ? i->Property##name() : nullptr);         \
+            return BASE_NS::shared_ptr<::CORE_NS::IInterface>(p, const_cast<::CORE_NS::IInterface*>(p.get())); \
+        },                                                                                                     \
+        [] { return META_NS::ConstructArrayAnyHelper<type>({}); }, nullptr,                                    \
+        uint8_t(uint8_t(META_NS::Internal::StaticMetaFlag::FORWARD) |                                          \
+                META_NS::GetPropertySMDFlags(&intf::Property##name, 0)) },
+//---
+
 #define META_STATIC_EVENT_DATA(intf, type, name) \
     { META_NS::MetadataType::EVENT, intf::INTERFACE_INFO, #name, META_NS::CreateEventConstructor<type>(), nullptr },
+
+//--- Event forwarding
+#define META_STATIC_FORWARDED_EVENT_DATA(intf, type, name)                                      \
+    { META_NS::MetadataType::EVENT, intf::INTERFACE_INFO, #name,                                \
+        [](const BASE_NS::shared_ptr<META_NS::IOwner>& owner, const META_NS::StaticMetadata&) { \
+            auto i = interface_cast<intf>(owner);                                               \
+            return interface_pointer_cast<::CORE_NS::IInterface>(                               \
+                i ? i->Event##name(META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST) : nullptr);    \
+        },                                                                                      \
+        nullptr, nullptr, uint8_t(META_NS::Internal::StaticMetaFlag::FORWARD) },
+//---
 
 #define META_STATIC_FUNCTION_DATA(intf, func, ...)                                          \
     { META_NS::MetadataType::FUNCTION, intf::INTERFACE_INFO, #func,                         \
@@ -286,7 +357,7 @@ public:                                                                         
     ::META_NS::IProperty::Ptr Property##name() noexcept override                                              \
     {                                                                                                         \
         ::META_NS::IProperty::Ptr p = this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST); \
-        CORE_ASSERT(p);                                                                                       \
+        CORE_ASSERT_MSG(p, "Failed to get property '" #name "'");                                             \
         return p;                                                                                             \
     }
 
@@ -296,7 +367,7 @@ public:                                                                         
     {                                                                                                       \
         if (!metaProperty##name##_) {                                                                       \
             metaProperty##name##_ = this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST); \
-            CORE_ASSERT(metaProperty##name##_)                                                              \
+            CORE_ASSERT_MSG(metaProperty##name##_, "Failed to get property '" #name "'");                   \
         }                                                                                                   \
         return metaProperty##name##_;                                                                       \
     }
@@ -305,7 +376,7 @@ public:                                                                         
     ::META_NS::IProperty::ConstPtr Property##name() const noexcept override                                        \
     {                                                                                                              \
         ::META_NS::IProperty::ConstPtr p = this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST); \
-        CORE_ASSERT(p);                                                                                            \
+        CORE_ASSERT_MSG(p, "Failed to get property '" #name "'");                                                  \
         return p;                                                                                                  \
     }                                                                                                              \
     META_PRIVATE_ARRAY_PROPERTY_TYPED_IMPL(type, name)
@@ -316,17 +387,19 @@ public:                                                                         
     {                                                                                                       \
         if (!metaProperty##name##_) {                                                                       \
             metaProperty##name##_ = this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST); \
-            CORE_ASSERT(metaProperty##name##_)                                                              \
+            CORE_ASSERT_MSG(metaProperty##name##_, "Failed to get property '" #name "'");                   \
         }                                                                                                   \
         return metaProperty##name##_;                                                                       \
     }                                                                                                       \
     META_PRIVATE_ARRAY_PROPERTY_TYPED_IMPL(type, name)
 
-#define META_IMPLEMENT_ARRAY_PROPERTY(type, name)                                      \
-    META_IMPLEMENT_READONLY_ARRAY_PROPERTY(type, name)                                 \
-    ::META_NS::IProperty::Ptr Property##name() noexcept override                       \
-    {                                                                                  \
-        return this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST); \
+#define META_IMPLEMENT_ARRAY_PROPERTY(type, name)                                                             \
+    META_IMPLEMENT_READONLY_ARRAY_PROPERTY(type, name)                                                        \
+    ::META_NS::IProperty::Ptr Property##name() noexcept override                                              \
+    {                                                                                                         \
+        ::META_NS::IProperty::Ptr p = this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST); \
+        CORE_ASSERT_MSG(p, "Failed to get property '" #name "'");                                             \
+        return p;                                                                                             \
     }
 
 #define META_IMPLEMENT_CACHED_ARRAY_PROPERTY(type, name)                                                    \
@@ -335,6 +408,7 @@ public:                                                                         
     {                                                                                                       \
         if (!metaProperty##name##_) {                                                                       \
             metaProperty##name##_ = this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST); \
+            CORE_ASSERT_MSG(metaProperty##name##_, "Failed to get property '" #name "'");                   \
         }                                                                                                   \
         return metaProperty##name##_;                                                                       \
     }

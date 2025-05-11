@@ -1,17 +1,3 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 #ifndef SCENE_SRC_NODE_LIGHT_NODE_H
 #define SCENE_SRC_NODE_LIGHT_NODE_H
@@ -24,11 +10,25 @@
 SCENE_BEGIN_NAMESPACE()
 
 class LightNode : public META_NS::IntroduceInterfaces<Node, ILight, ICreateEntity> {
-    using Super = IntroduceInterfaces;
-    META_IMPLEMENT_OBJECT_TYPE_INTERFACE(ClassId::LightNode)
-    META_DEFINE_OBJECT_TYPE_INFO(LightNode, ClassId::LightNode)
+    META_OBJECT(LightNode, ClassId::LightNode, IntroduceInterfaces)
 
 public:
+    META_BEGIN_STATIC_DATA()
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, BASE_NS::Color, Color)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, Intensity)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, NearPlane)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, bool, ShadowEnabled)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, ShadowStrength)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, ShadowDepthBias)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, ShadowNormalBias)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, SpotInnerAngle)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, SpotOuterAngle)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, LightType, Type)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, BASE_NS::Math::Vec4, AdditionalFactor)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, uint64_t, LightLayerMask)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, uint64_t, ShadowLayerMask)
+    META_END_STATIC_DATA()
+
     SCENE_USE_COMPONENT_PROPERTY(BASE_NS::Color, Color, "LightComponent")
     SCENE_USE_COMPONENT_PROPERTY(float, Intensity, "LightComponent")
     SCENE_USE_COMPONENT_PROPERTY(float, NearPlane, "LightComponent")

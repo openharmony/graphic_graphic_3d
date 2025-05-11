@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,9 +37,9 @@ public:
     static constexpr BASE_NS::Uid UID { "96c75ea1-802c-426d-8188-af4ff0887e5e" };
     /** Properties */
     struct Properties {
-        /** Data store manager */
-        [[deprecated]] RENDER_NS::IRenderDataStoreManager* dataStoreManager { nullptr };
-        /** Data store name */
+        /** Data store name
+         * Automatically prefixed with render pre-processor system data store prefix.
+         */
         BASE_NS::string dataStoreName;
     };
 

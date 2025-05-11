@@ -18,55 +18,48 @@
 #include <Vec2Proxy.h>
 #include <napi_api.h>
 
-#include "BaseObjectJS.h"
-
 namespace GeometryDefinition {
 
-PlaneJS::PlaneJS(napi_env env, napi_callback_info info) : GeometryDefinition<PlaneJS>(env, info, GeometryType::PLANE) {}
+PlaneJS::PlaneJS(const BASE_NS::Math::Vec2& size) : GeometryDefinition(), size_(size) {}
 
 void PlaneJS::Init(napi_env env, napi_value exports)
 {
-    BASE_NS::vector<napi_property_descriptor> props;
-    using namespace NapiApi;
-    GetPropertyDescs(props);
-    props.push_back(GetSetProperty<Object, PlaneJS, &PlaneJS::GetSize, &PlaneJS::SetSize>("size"));
+    auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
+        napi_value thisVar = nullptr;
+        napi_get_cb_info(env, info, nullptr, nullptr, &thisVar, nullptr);
+        NapiApi::Object { env, thisVar }.Set("size", NapiApi::Object(env, "Vec2", {}));
+        return thisVar;
+    };
+    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::PLANE); };
 
-    const auto name = "PlaneGeometry";
-    const auto constructor = BaseObject::ctor<PlaneJS>();
-    napi_value jsConstructor;
-    napi_define_class(env, name, NAPI_AUTO_LENGTH, constructor, nullptr, props.size(), props.data(), &jsConstructor);
-    napi_set_named_property(env, exports, name, jsConstructor);
-
-    NapiApi::MyInstanceState* mis {};
-    GetInstanceData(env, (void**)&mis);
-    mis->StoreCtor(name, jsConstructor);
+    napi_value undefined;
+    napi_get_undefined(env, &undefined);
+    const auto props = BASE_NS::vector<napi_property_descriptor> {
+        // clang-format off
+        { "geometryType", nullptr, nullptr, getType, nullptr, nullptr,   napi_default_jsproperty, nullptr },
+        { "size",         nullptr, nullptr, nullptr, nullptr, undefined, napi_default_jsproperty, nullptr },
+        // clang-format on
+    };
+    DefineClass(env, exports, "PlaneGeometry", props, ctor);
 }
 
-void* PlaneJS::GetInstanceImpl(uint32_t id)
+GeometryDefinition* PlaneJS::FromJs(NapiApi::Object& jsDefinition)
 {
-    return (id == PlaneJS::ID) ? this : nullptr;
-}
-
-BASE_NS::Math::Vec2 PlaneJS::GetSize() const
-{
-    return size_;
-}
-
-napi_value PlaneJS::GetSize(NapiApi::FunctionContext<>& ctx)
-{
-    return Vec2Proxy::ToNapiObject(size_, ctx.Env()).ToNapiValue();
-}
-
-void PlaneJS::SetSize(NapiApi::FunctionContext<NapiApi::Object>& ctx)
-{
-    NapiApi::Object jsSize = ctx.Arg<0>();
-    bool conversionOk = false;
-    const auto size = Vec2Proxy::ToNative(jsSize, conversionOk);
-    if (conversionOk) {
-        size_ = size;
-    } else {
-        LOG_E("Invalid size given for a PlaneJS");
+    if (NapiApi::Object jsSize = jsDefinition.Get<NapiApi::Object>("size")) {
+        bool conversionOk = false;
+        const auto size = Vec2Proxy::ToNative(jsSize, conversionOk);
+        if (conversionOk) {
+            return new PlaneJS(size);
+        }
     }
+    LOG_E("Unable to create PlaneJS: Invalid JS object given");
+    return {};
+}
+
+SCENE_NS::IMesh::Ptr PlaneJS::CreateMesh(
+    const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const
+{
+    return creator->CreatePlane(config, size_.x, size_.y).GetResult();
 }
 
 } // namespace GeometryDefinition

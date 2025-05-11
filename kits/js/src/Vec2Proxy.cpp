@@ -22,63 +22,49 @@ Vec2Proxy::Vec2Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec2> prop) 
     // hook to the objects members (set custom get/set)
     Hook("x");
     Hook("y");
-    SyncGet();
 }
 Vec2Proxy::~Vec2Proxy()
 {
     Reset();
 }
-void Vec2Proxy::UpdateLocalValues()
-{
-    // executed in javascript thread (locks handled outside)
-    value = META_NS::Property<BASE_NS::Math::Vec2>(prop_)->GetValue();
-}
-void Vec2Proxy::UpdateRemoteValues()
-{
-    // executed in engine thread (locks handled outside)
-    META_NS::Property<BASE_NS::Math::Vec2>(prop_)->SetValue(value);
-}
 void Vec2Proxy::SetValue(const BASE_NS::Math::Vec2& v)
 {
-    Lock();
-    if (value != v) {
-        value = v;
-        ScheduleUpdate();
-    }
-    Unlock();
+    META_NS::SetValue(GetProperty<BASE_NS::Math::Vec2>(), v);
 }
 void Vec2Proxy::SetMemberValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
 {
     // should be executed in the javascript thread.
     NapiApi::FunctionContext<float> info(cb.GetEnv(), cb.GetInfo());
     if (info) {
+        auto p = GetProperty<BASE_NS::Math::Vec2>();
+        auto value = META_NS::GetValue(p);
         float val = info.Arg<0>();
-        Lock();
+        bool changed = false;
         if ((memb == "x") && (val != value.x)) {
             value.x = val;
-            ScheduleUpdate();
+            changed = true;
         } else if ((memb == "y") && (val != value.y)) {
             value.y = val;
-            ScheduleUpdate();
+            changed = true;
         }
-        Unlock();
+        if (changed) {
+            META_NS::SetValue(p, value);
+        }
     }
 }
 napi_value Vec2Proxy::GetMemberValue(const NapiApi::Env cb, BASE_NS::string_view memb)
 {
     // should be executed in the javascript thread.
     float res;
-    Lock();
+    auto value = META_NS::GetValue(GetProperty<BASE_NS::Math::Vec2>());
     if (memb == "x") {
         res = value.x;
     } else if (memb == "y") {
         res = value.y;
     } else {
         // invalid member?
-        Unlock();
         return cb.GetUndefined();
     }
-    Unlock();
     return cb.GetNumber(res);
 }
 

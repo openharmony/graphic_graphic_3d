@@ -1,17 +1,3 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 #include "exporter.h"
 
@@ -38,6 +24,23 @@ bool Exporter::ShouldSerialize(const IAny& any) const
         }
     }
     return true;
+}
+
+void Exporter::SetInstanceIdMapping(BASE_NS::unordered_map<InstanceId, InstanceId> map)
+{
+    mapInstanceIds_ = BASE_NS::move(map);
+}
+void Exporter::SetResourceManager(CORE_NS::IResourceManager::Ptr p)
+{
+    resources_ = BASE_NS::move(p);
+}
+void Exporter::SetUserContext(IObject::Ptr p)
+{
+    userContext_ = BASE_NS::move(p);
+}
+void Exporter::SetMetadata(SerMetadata m)
+{
+    metadata_ = BASE_NS::move(m);
 }
 
 InstanceId Exporter::ConvertInstanceId(const InstanceId& id) const
@@ -78,7 +81,7 @@ ISerNode::Ptr Exporter::Export(const IObject::ConstPtr& object)
                     CORE_LOG_E("Failed to resolve deferred weak ptr export");
                 }
             }
-            res.reset(new RootNode { BASE_NS::move(node), VERSION, EXPORTER_VERSION });
+            res.reset(new RootNode { BASE_NS::move(node), metadata_ });
         }
     }
     return res;
@@ -88,11 +91,15 @@ ISerNode::Ptr Exporter::CreateObjectNode(const IObject::ConstPtr& object, BASE_N
 {
     ISerNode::Ptr res;
     InstanceId iid;
+    BASE_NS::string name = object->GetName();
     if (auto i = interface_cast<IObjectInstance>(object)) {
         iid = ConvertInstanceId(i->GetInstanceId());
     }
-    return ISerNode::Ptr(new ObjectNode(BASE_NS::string(object->GetClassName()), BASE_NS::string(object->GetName()),
-        object->GetClassId(), iid, BASE_NS::move(node)));
+    if (name == iid.ToString()) {
+        name = "";
+    }
+    return ISerNode::Ptr(new ObjectNode(
+        BASE_NS::string(object->GetClassName()), BASE_NS::move(name), object->GetClassId(), iid, BASE_NS::move(node)));
 }
 
 ISerNode::Ptr Exporter::CreateObjectRefNode(const RefUri& ref)
@@ -122,7 +129,10 @@ ReturnError Exporter::ExportObject(const IObject::ConstPtr& object, ISerNode::Pt
             ExportContext context(*this, object);
             err = ser->Export(context);
             if (err) {
-                res = CreateObjectNode(object, context.ExtractNode());
+                res = context.GetSubstitution();
+                if (!res) {
+                    res = CreateObjectNode(object, context.ExtractNode());
+                }
             }
         } else {
             res = AutoExportObject(object);
@@ -294,8 +304,11 @@ ReturnError Exporter::ExportAny(const IAny::ConstPtr& any, ISerNode::Ptr& res)
         ExportContext context(*this, interface_pointer_cast<IObject>(any));
         err = ser->Export(context);
         if (err) {
-            res =
-                ISerNode::Ptr(new ObjectNode(BASE_NS::string("Any"), {}, any->GetClassId(), {}, context.ExtractNode()));
+            res = context.GetSubstitution();
+            if (!res) {
+                res = ISerNode::Ptr(
+                    new ObjectNode(BASE_NS::string("Any"), {}, any->GetClassId(), {}, context.ExtractNode()));
+            }
         }
     } else {
         ISerNode::Ptr node;
@@ -321,7 +334,7 @@ IObject::Ptr Exporter::ResolveUriSegment(const IObject::ConstPtr& ptr, RefUri& u
     }
     if (auto property = interface_cast<IProperty>(ptr)) {
         uri.PushPropertySegment(property->GetName());
-        auto owner = property->GetOwner().lock();
+        auto owner = interface_pointer_cast<IObject>(property->GetOwner());
         if (!owner) {
             CORE_LOG_E("No Owner for property '%s' when exporting weak ptr", property->GetName().c_str());
         }
@@ -433,6 +446,36 @@ BASE_NS::shared_ptr<MapNode> ExportContext::ExtractNode()
 ReturnError ExportContext::ExportToNode(const IAny& entity, ISerNode::Ptr& res)
 {
     return exporter_.ExportToNode(entity, res);
+}
+
+CORE_NS::IInterface* ExportContext::Context() const
+{
+    return exporter_.GetInterface(CORE_NS::IInterface::UID);
+}
+META_NS::IObject::Ptr ExportContext::UserContext() const
+{
+    return exporter_.GetUserContext();
+}
+ReturnError ExportContext::SubstituteThis(ISerNode::Ptr n)
+{
+    ReturnError res = GenericError::FAIL;
+    if (n) {
+        substNode_ = BASE_NS::move(n);
+        // do instance mapping
+        if (auto node = interface_cast<IObjectNode>(substNode_)) {
+            InstanceId iid;
+            if (auto i = interface_cast<IObjectInstance>(object_)) {
+                iid = exporter_.ConvertInstanceId(i->GetInstanceId());
+            }
+            node->SetInstanceId(iid);
+        }
+        res = GenericError::SUCCESS;
+    }
+    return res;
+}
+SerMetadata ExportContext::GetMetadata() const
+{
+    return exporter_.GetMetadata();
 }
 
 } // namespace Serialization

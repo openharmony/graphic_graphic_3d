@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Task queue helpers
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-02-15
  */
 
 #ifndef META_API_TASK_QUEUE_H
@@ -18,6 +10,7 @@
 
 #include <base/containers/type_traits.h>
 
+#include <meta/api/future.h>
 #include <meta/api/task.h>
 #include <meta/interface/detail/any.h>
 #include <meta/interface/interface_helpers.h>
@@ -29,7 +22,8 @@ META_BEGIN_NAMESPACE()
 template<typename Func>
 auto CreateFutureFromResultFunction(Func&& func)
 {
-    auto fut = GetTaskQueueRegistry().ConstructFutureWithValue(InvokeWaitableTaskFunction(func));
+    auto fut =
+        GetTaskQueueRegistry().ConstructFutureWithValue(InvokeWaitableTaskFunction(BASE_NS::forward<Func>(func)));
     return Future<PlainType_t<decltype(func())>>(fut);
 }
 

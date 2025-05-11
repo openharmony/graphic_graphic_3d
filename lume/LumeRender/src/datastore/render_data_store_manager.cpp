@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,25 +39,21 @@ void RenderDataStoreManager::CommitFrameData()
 
     // prepare access for render time access
     for (auto& pendingRef : pendingRenderAccess) {
-        if (pendingRef.destroy) { // remove deferred destruction stores
-            renderAccessStores_.erase(pendingRef.hash);
-        } else {
-            PLUGIN_ASSERT(pendingRef.renderDataStore);
-            renderAccessStores_.insert_or_assign(pendingRef.hash, BASE_NS::move(pendingRef.renderDataStore));
-        }
+        renderAccessStores_.insert_or_assign(pendingRef.hash, BASE_NS::move(pendingRef.renderDataStore));
     }
     pendingRenderAccess.clear();
 
     // all valid stores can be accessed from render access stores without locks
+    // remove unused data stores and gather their hashes so that stores_ can be cleaned up as well.
     for (auto it = renderAccessStores_.begin(); it != renderAccessStores_.end();) {
-        if (it->second->GetRefCount() > 2) { // 2 2 in stores_, renderAccessStores_ and user
+        if (it->second->GetRefCount() > 2) { // in stores_, renderAccessStores_ and user
             ++it;
         } else {
-            pendingRenderAccess.push_back({ it->first, {}, true });
+            pendingRenderAccess.push_back({ it->first, {} });
             it = renderAccessStores_.erase(it);
         }
     }
-    {
+    if (!pendingRenderAccess.empty()) {
         std::lock_guard<std::mutex> lock(mutex_);
         for (const auto& ref : pendingRenderAccess) {
             stores_.erase(ref.hash);
@@ -95,8 +91,6 @@ void RenderDataStoreManager::PostRenderBackend()
     for (const auto& ref : renderAccessStores_) {
         ref.second->PostRenderBackend();
     }
-
-    DeferredDestruction();
 }
 
 BASE_NS::refcnt_ptr<IRenderDataStore> RenderDataStoreManager::GetRenderDataStore(const string_view name) const
@@ -166,7 +160,7 @@ BASE_NS::refcnt_ptr<IRenderDataStore> RenderDataStoreManager::Create(
             dataStore = dataStoreIt.first->second;
         }
 
-        pendingRenderAccess_.push_back({ dataStoreNameHash, dataStore, false });
+        pendingRenderAccess_.push_back({ dataStoreNameHash, dataStore });
         return dataStore;
     } else {
         PLUGIN_LOG_E("render data store type not found (type: %s) (named: %s)", to_string(dataStoreTypeUid).data(),
@@ -178,22 +172,6 @@ BASE_NS::refcnt_ptr<IRenderDataStore> RenderDataStoreManager::Create(
 IRenderDataStoreManager::RenderDataStoreFlags RenderDataStoreManager::GetRenderDataStoreFlags() const
 {
     return renderDataStoreFlags_;
-}
-
-void RenderDataStoreManager::DeferredDestruction()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    for (const auto& destroyRef : deferredDestructionDataStores_) {
-        if (auto const pos = factories_.find(destroyRef.dataStoreHash); pos != factories_.end()) {
-            if (auto const storeIt = pointerToStoreHash_.find(destroyRef.instance);
-                storeIt != pointerToStoreHash_.cend()) {
-                stores_.erase(storeIt->second);
-                pointerToStoreHash_.erase(storeIt);
-            }
-        }
-    }
-    deferredDestructionDataStores_.clear();
 }
 
 void RenderDataStoreManager::AddRenderDataStoreFactory(const RenderDataStoreTypeInfo& typeInfo)
@@ -212,9 +190,14 @@ void RenderDataStoreManager::AddRenderDataStoreFactory(const RenderDataStoreType
 
 void RenderDataStoreManager::RemoveRenderDataStoreFactory(const RenderDataStoreTypeInfo& typeInfo)
 {
+    // stores_ and pointerToStoreHash_ are modified under lock. renderAccessStores_ is assumed to be touched only from
+    // RenderFrame, so this doesn't help. This implies that plugins should be unloaded only while not rendering.
+    std::lock_guard lock(mutex_);
+
     for (auto b = pointerToStoreHash_.begin(), e = pointerToStoreHash_.end(); b != e;) {
         if (b->first->GetUid() == typeInfo.uid) {
             stores_.erase(b->second);
+            renderAccessStores_.erase(b->second);
             b = pointerToStoreHash_.erase(b);
         } else {
             ++b;

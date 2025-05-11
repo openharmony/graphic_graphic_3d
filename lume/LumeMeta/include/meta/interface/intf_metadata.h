@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Definition of IMetadata interface
+ * Author: Jani Kattelus
+ * Create: 2021-08-26
  */
 
 #ifndef META_INTERFACE_IMETADATA_H
@@ -40,12 +32,21 @@ META_REGISTER_INTERFACE(IMetadata, "5ad7917a-e744-48bb-b789-9446d3712cf9")
 struct MetadataInfo {
     MetadataType type {};
     BASE_NS::string name;
+    TypeId interfaceId;
+    bool readOnly {};
     TypeId propertyType;
+    const StaticMetadata* data {};
+
+    bool IsValid() const
+    {
+        return !name.empty();
+    }
 };
 
 inline bool operator==(const MetadataInfo& l, const MetadataInfo& r)
 {
-    return l.type == r.type && l.name == r.name;
+    return l.type == r.type && l.name == r.name && l.interfaceId == r.interfaceId && l.readOnly == r.readOnly &&
+           l.propertyType == r.propertyType;
 }
 inline bool operator!=(const MetadataInfo& l, const MetadataInfo& r)
 {
@@ -74,7 +75,16 @@ public:
     virtual BASE_NS::vector<IEvent::Ptr> GetEvents() = 0;
     virtual BASE_NS::vector<IEvent::ConstPtr> GetEvents() const = 0;
 
+    /**
+     * @brief Get all metadata for requested types
+     * @Note  This combines static metadata and existing runtime data
+     */
     virtual BASE_NS::vector<MetadataInfo> GetAllMetadatas(MetadataType types) const = 0;
+
+    /**
+     * @brief Get metadata for requested entity, the first matching name is returned if type matches
+     */
+    virtual MetadataInfo GetMetadata(MetadataType type, BASE_NS::string_view name) const = 0;
 
     /**
      * @brief Returns the property with a given name.

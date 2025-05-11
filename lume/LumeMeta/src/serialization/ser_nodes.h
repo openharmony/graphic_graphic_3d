@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+ * Description: Exporter
+ * Author: Mikael Kilpeläinen
+ * Create: 2024-01-03
  */
 
 #ifndef META_SRC_SERIALIZATION_SER_NODES_H
@@ -132,13 +124,13 @@ public:
         return members;
     }
 
-    void SetObjectClassName(BASE_NS::string name) override
+    void SetObjectClassName(BASE_NS::string n) override
     {
-        className = BASE_NS::move(name);
+        className = BASE_NS::move(n);
     }
-    void SetObjectName(BASE_NS::string name) override
+    void SetObjectName(BASE_NS::string n) override
     {
-        className = BASE_NS::move(name);
+        name = BASE_NS::move(n);
     }
     void SetObjectId(ObjectId id) override
     {
@@ -170,21 +162,24 @@ class RootNode : public IntroduceInterfaces<BaseObject, IRootNode> {
     META_OBJECT(RootNode, ClassId::RootNode, IntroduceInterfaces)
 public:
     RootNode() = default;
-    RootNode(ISerNode::Ptr obj, const Version& ver, const Version& serVer)
-        : object(BASE_NS::move(obj)), version_(ver), serializerVersion_(serVer)
-    {}
+    RootNode(ISerNode::Ptr obj, SerMetadata m) : object(BASE_NS::move(obj)), metadata(BASE_NS::move(m)) {}
 
-    Version GetSerializerVersion() const override
+    SerMetadata GetMetadata() const override
     {
-        return serializerVersion_;
-    }
-    Version GetVersion() const override
-    {
-        return version_;
+        return metadata;
     }
     ISerNode::Ptr GetObject() const override
     {
         return object;
+    }
+
+    void SetMetadata(SerMetadata v) override
+    {
+        metadata = BASE_NS::move(v);
+    }
+    void SetObject(ISerNode::Ptr obj) override
+    {
+        object = BASE_NS::move(obj);
     }
 
     void Apply(ISerNodeVisitor& v) override
@@ -194,8 +189,7 @@ public:
 
 public:
     ISerNode::Ptr object;
-    Version version_ {};
-    Version serializerVersion_ {};
+    SerMetadata metadata {};
 };
 
 template<typename Type, const META_NS::ClassInfo& ClassInfo>
@@ -264,18 +258,18 @@ struct SupportedType {
 
 // clang-format off
 using SupportedBuiltins = TypeList<
-    SupportedType<bool, BoolNode>,
-    SupportedType<double, DoubleNode>,
-    SupportedType<uint8_t, UIntNode>,
-    SupportedType<uint16_t, UIntNode>,
-    SupportedType<uint32_t, UIntNode>,
-    SupportedType<uint64_t, UIntNode>,
-    SupportedType<int8_t, IntNode>,
-    SupportedType<int16_t, IntNode>,
-    SupportedType<int32_t, IntNode>,
-    SupportedType<int64_t, IntNode>,
+    SupportedType<bool           , BoolNode>,
+    SupportedType<double         , DoubleNode>,
+    SupportedType<uint8_t        , UIntNode>,
+    SupportedType<uint16_t       , UIntNode>,
+    SupportedType<uint32_t       , UIntNode>,
+    SupportedType<uint64_t       , UIntNode>,
+    SupportedType<int8_t         , IntNode>,
+    SupportedType<int16_t        , IntNode>,
+    SupportedType<int32_t        , IntNode>,
+    SupportedType<int64_t        , IntNode>,
     SupportedType<BASE_NS::string, StringNode>,
-    SupportedType<RefUri, RefNode>
+    SupportedType<RefUri         , RefNode>
     >;
 // clang-format on
 

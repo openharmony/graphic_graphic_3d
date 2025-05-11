@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -48,7 +48,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "b42910bb-33c4-4790-a257-3f1837415fce" };
-    static constexpr char const *TYPE_NAME = "RenderNodeDefaultCameras";
+    static constexpr char const* TYPE_NAME = "RenderNodeDefaultCameras";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();

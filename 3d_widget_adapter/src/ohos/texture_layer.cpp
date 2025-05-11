@@ -180,12 +180,15 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
         return nullptr;
     }
 
-    producerSurface_->SetQueueSize(3); // 3 seems ok
+    producerSurface_->SetQueueSize(5); // 5 seems ok
     producerSurface_->SetUserData("SURFACE_STRIDE_ALIGNMENT", "8");
     producerSurface_->SetUserData("SURFACE_FORMAT", std::to_string(GRAPHIC_PIXEL_FMT_RGBA_8888));
     producerSurface_->SetUserData("SURFACE_WIDTH", std::to_string(width));
     producerSurface_->SetUserData("SURFACE_HEIGHT", std::to_string(height));
     auto window = CreateNativeWindowFromSurface(&producerSurface_);
+    if (!window) {
+        WIDGET_LOGE("CreateNativeWindowFromSurface failed");
+    }
 
     return reinterpret_cast<void *>(window);
 }
@@ -217,7 +220,7 @@ void TextureLayerImpl::ConfigWindow(float offsetX, float offsetY, float width, f
 TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
     bool recreateWindow, SurfaceType surfaceType)
 {
-    DestroyRenderTarget();
+    // no DestroyRenderTarget will not cause memory leak / render issue
     surface_ = surfaceType;
     offsetX_ = offsetX;
     offsetY_ = offsetY;
@@ -235,7 +238,7 @@ TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float
 
 TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
 {
-    DestroyRenderTarget();
+    // no DestroyRenderTarget will not cause memory leak / render issue
     surface_ = windowChangeInfo.surfaceType;
     offsetX_ = (int)windowChangeInfo.offsetX;
     offsetY_ = (int)windowChangeInfo.offsetY;

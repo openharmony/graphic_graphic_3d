@@ -16,6 +16,7 @@
 #include "PostProcJS.h"
 
 #include <meta/api/make_callback.h>
+#include <meta/api/util.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/property/property_events.h>
@@ -26,6 +27,7 @@
 
 #include "BloomJS.h"
 #include "CameraJS.h"
+#include "ToneMapJS.h"
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 using namespace SCENE_NS;
@@ -49,7 +51,7 @@ void PostProcJS::Init(napi_env env, napi_value exports)
         nullptr, node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("PostProcessSettings", func);
 }
 
@@ -68,13 +70,7 @@ napi_value PostProcJS::Dispose(NapiApi::FunctionContext<>& ctx)
         }
     }
     if (!ptr) {
-        NapiApi::Object obj = camera_.GetObject();
-        if (obj) {
-            auto* tro = obj.Native<TrueRootObject>();
-            if (tro) {
-                ptr = static_cast<CameraJS*>(tro->GetInstanceImpl(CameraJS::ID));
-            }
-        }
+        ptr = camera_.GetObject().GetJsWrapper<CameraJS>();
     }
 
     DisposeNative(ptr);
@@ -93,6 +89,7 @@ void PostProcJS::DisposeNative(void* cam)
         LOG_V("PostProcJS::DisposeNative");
         // make sure we release toneMap settings
 
+        // Detach this wrapper and its members tonemap and bloom from the native objects.
         if (auto tmjs = toneMap_.GetObject()) {
             NapiApi::Function func = tmjs.Get<NapiApi::Function>("destroy");
             if (func) {
@@ -109,15 +106,8 @@ void PostProcJS::DisposeNative(void* cam)
         }
         bloom_.Reset();
         if (auto post = interface_pointer_cast<IPostProcess>(GetNativeObject())) {
-            // reset the native object refs
-            SetNativeObject(nullptr, false);
-            SetNativeObject(nullptr, true);
-            post->Tonemap()->SetValue(nullptr);
-            auto cameraJS = camera_.GetObject();
-            if (cameraJS) {
-                auto* rootobject = cameraJS.Native<TrueRootObject>();
-                CameraJS* cam = static_cast<CameraJS*>(rootobject);
-
+            UnsetNativeObject();
+            if (const auto cam = camera_.GetObject().GetJsWrapper<CameraJS>()) {
                 ExecSyncTask([cam, post = BASE_NS::move(post)]() {
                     cam->ReleaseObject(interface_pointer_cast<META_NS::IObject>(post));
                     return META_NS::IAny::Ptr {};
@@ -134,12 +124,11 @@ void* PostProcJS::GetInstanceImpl(uint32_t id)
 }
 void PostProcJS::Finalize(napi_env env)
 {
-    // hmm.. do i need to do something BEFORE the object gets deleted..
-    DisposeNative(nullptr);
-    BaseObject<PostProcJS>::Finalize(env);
+    DisposeNative(camera_.GetObject().GetJsWrapper<CameraJS>());
+    BaseObject::Finalize(env);
 }
 
-PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject<PostProcJS>(e, i)
+PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 {
     LOG_V("PostProcJS ++");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
@@ -152,33 +141,24 @@ PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject<PostProcJS
     // camera that we bind to..
     NapiApi::Object cameraJS = fromJs.Arg<0>();
     camera_ = { cameraJS };
-    auto* rootobject = cameraJS.Native<TrueRootObject>();
-    if (rootobject == nullptr)  {
-        LOG_E("rootobject is nullptr");
+
+    auto postproc = GetNativeObject<SCENE_NS::IPostProcess>();
+    if (!postproc) {
+        LOG_E("Error creating PostProcessSettings: No native object given");
+        assert(false);
         return;
     }
-    auto postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(
-        static_cast<CameraJS*>(rootobject)->CreateObject(SCENE_NS::ClassId::PostProcess));
-
-    // create a postprocess object owned by CameraJS.
 
     // process constructor args..
     NapiApi::Object meJs(fromJs.This());
-    // weak ref, as we expect to be owned by the camera.
-    SetNativeObject(interface_pointer_cast<META_NS::IObject>(postproc), false);
-    StoreJsObj(interface_pointer_cast<META_NS::IObject>(postproc), meJs);
     // now, based on parameters, create correct objects.
     if (NapiApi::Object args = fromJs.Arg<1>()) {
         if (auto prm = args.Get("toneMapping")) {
             // enable tonemap.
-            napi_value innerArgs[] = {
-                meJs.ToNapiValue(), // postprocess
-                prm                 // tonemap settings
-            };
-            SCENE_NS::ITonemap::Ptr tone = postproc->Tonemap()->GetValue();
-            MakeNativeObjectParam(e, tone, BASE_NS::countof(innerArgs), innerArgs);
-            NapiApi::Object tonemapJS(
-                GetJSConstructor(e, "ToneMappingSettings"), BASE_NS::countof(innerArgs), innerArgs);
+            napi_value innerArgs[] = { prm };
+            const auto tone = postproc->Tonemap()->GetValue();
+            // The tonemap is a part of the PostProcess object, so we own it. TonemapJS get only a weak ref.
+            const auto tonemapJS = CreateFromNativeInstance(e, tone, PtrType::WEAK, innerArgs);
             meJs.Set("toneMapping", tonemapJS);
         }
         if (auto prm = args.Get("bloom")) {
@@ -206,66 +186,46 @@ void PostProcJS::SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     NapiApi::Object tonemapJS = ctx.Arg<0>();
 
     if (auto currentlySet = toneMap_.GetObject()) {
-        if (tonemapJS.StrictEqual(currentlySet)) { // setting the exactly the same tonemap setting. do nothing.
+        if (tonemapJS.StrictEqual(currentlySet)) {
             return;
         }
-        // dispose the old bound object.. (actually should just convert to unbound state. and release the native object,
-        // which may or may not get disposed.)
-        NapiApi::Function func = currentlySet.Get<NapiApi::Function>("destroy");
-        if (func) {
-            func.Invoke(currentlySet);
+        if (const auto wrapper = currentlySet.GetJsWrapper<ToneMapJS>()) {
+            // Free the old tonemap so it isn't bound to the changes happening in the new one.
+            wrapper->UnbindFromNative();
         }
-        toneMap_.Reset();
+    }
+    auto target = postproc->Tonemap()->GetValue();
+    if (!target) {
+        return;
     }
 
-    TrueRootObject* native { nullptr };
-    SCENE_NS::ITonemap::Ptr tonemap;
-    // does the input parameter already have a bridge..
-    native = tonemapJS.Native<TrueRootObject>();
-    if (!native) {
-        // nope.. so create a new bridge object based on the input.
-        napi_value args[] = {
-            ctx.This().ToNapiValue(),  // postproc..
-            ctx.Arg<0>().ToNapiValue() // "javascript object for values"
-        };
-        NapiApi::Object res(GetJSConstructor(ctx.Env(), "ToneMappingSettings"), BASE_NS::countof(args), args);
-        native = res.Native<TrueRootObject>();
-        tonemapJS = res;
 
-        // creating a new js object does have the side effect of not syncing modifications to input object to affect.
-        // you always need to GET a bound one from post proc to control it..
-        //
-        // we COULD forcefully bind to the input object in this case.
-        // but not sure what possible side effects would that have later on.
+    // TODO: If the new JS tonemap is bound to a native tonemap, we have this problem:
+    // let sharedTonemap = cam1.postprocess.tonemap;
+    // cam2.postprocess.tonemap = sharedTonemap;
+    // sharedTonemap.exposure = 0.5;  // Should set the tonemap of both cameras but won't.
+    auto source = tonemapJS.GetNative<SCENE_NS::ITonemap>();
+    if (tonemapJS.IsNull()) {
+        META_NS::SetValue(target->Enabled(), false);
     } else {
-        tonemap = interface_pointer_cast<SCENE_NS::ITonemap>(native->GetNativeObject());
-        postproc->Tonemap()->SetValue(tonemap);
+        const auto newType = tonemapJS.Get<uint32_t>("type").valueOrDefault(ToneMapJS::DEFAULT_TYPE);
+        const auto newExposure = tonemapJS.Get<float>("exposure").valueOrDefault(ToneMapJS::DEFAULT_EXPOSURE);
+        META_NS::SetValue(target->Type(), ToneMapJS::ToNativeType(newType));
+        META_NS::SetValue(target->Exposure(), newExposure);
+        META_NS::SetValue(target->Enabled(), true);
     }
-    toneMap_ = NapiApi::StrongRef(tonemapJS); // take ownership of the object.
+    toneMap_ = NapiApi::StrongRef(tonemapJS);
 }
 
 napi_value PostProcJS::GetToneMapping(NapiApi::FunctionContext<>& ctx)
 {
     if (auto postproc = interface_cast<SCENE_NS::IPostProcess>(GetNativeObject())) {
-        SCENE_NS::ITonemap::Ptr tone = postproc->Tonemap()->GetValue();
-        if (!tone->Enabled()->GetValue()) {
-            tone.reset();
-        }
-        if (!tone) {
+        SCENE_NS::ITonemap::Ptr tone = META_NS::GetValue(postproc->Tonemap());
+        if ((!tone) || (!META_NS::GetValue(tone->Enabled(), false))) {
+            // no tonemap object or tonemap disabled.
             return ctx.GetUndefined();
         }
-        auto obj = interface_pointer_cast<META_NS::IObject>(tone);
-
-        if (auto cached = FetchJsObj(obj)) {
-            // always return the same js object.
-            return cached.ToNapiValue();
-        }
-
-        napi_value args[] = {
-            ctx.This().ToNapiValue() // postproc..
-        };
-        MakeNativeObjectParam(ctx.GetEnv(), tone, BASE_NS::countof(args), args);
-        auto tonemapJS = CreateFromNativeInstance(ctx.GetEnv(), obj, false, BASE_NS::countof(args), args);
+        auto tonemapJS = CreateFromNativeInstance(ctx.GetEnv(), tone, PtrType::WEAK, {});
         toneMap_ = NapiApi::StrongRef(tonemapJS); // take ownership of the object.
         return tonemapJS.ToNapiValue();
     }
@@ -301,50 +261,43 @@ napi_value PostProcJS::GetBloom(NapiApi::FunctionContext<>& ctx)
 
 void PostProcJS::SetBloom(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    auto postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(GetNativeObject());
+    auto postproc = GetNativeObject<SCENE_NS::IPostProcess>();
     if (!postproc) {
         return;
     }
-    BloomConfiguration* settings = nullptr;
-    NapiApi::Env env(ctx.GetEnv());
-    NapiApi::Object inputObj = ctx.Arg<0>();
+
     bool enabled = false;
-    if (inputObj) {
+    if (const auto bloomJs = NapiApi::Object { ctx.Arg<0>() }) {
         enabled = true;
-        settings = BloomConfiguration::Unwrap(inputObj);
         // is it wrapped?
-        if (settings) {
-            auto boundpost = settings->GetPostProc();
-            if ((boundpost) && (boundpost != postproc)) {
-                // silently fail, we can not use settings object from another postprocess object yet.
-                LOG_F("Tried to attach a bloom setting object that was already bound to another one");
-            } else {
-                // has wrapper, but no native postproc. (or the bound one is the same)
-                // so we can use it.
-                settings->SetPostProc(postproc);
-                // save the reference..
-                bloom_ = BASE_NS::move(NapiApi::StrongRef(inputObj));
+        if (auto wrapper = BloomConfiguration::Unwrap(bloomJs)) {
+            if (const auto newPostProc = wrapper->GetPostProc(); newPostProc != postproc) {
+                // Can't use the wrapper of another postprocess object yet.
+                LOG_F("Tried to attach a bloom wrapper object that was already bound to another one");
+                return;
             }
+            // The new bloom is wrapped, but has no native postproc (or we are already its native).
+            wrapper->SetPostProc(postproc);
+            bloom_ = NapiApi::StrongRef(bloomJs);
         } else {
-            settings = new BloomConfiguration();
-            settings->SetFrom(inputObj);
-            settings->SetPostProc(postproc);
-            bloom_ = settings->Wrap(inputObj);
+            wrapper = new BloomConfiguration();
+            wrapper->SetFrom(bloomJs);
+            wrapper->SetPostProc(postproc);
+            bloom_ = wrapper->Wrap(bloomJs);
         }
     } else {
         // disabling bloom.. get current, and unwrap it.
-        auto oldObj = bloom_.GetObject();
-        settings = BloomConfiguration::Unwrap(oldObj);
-        if (settings) {
+        auto oldBloom = bloom_.GetObject();
+        if (auto oldWrapper = BloomConfiguration::Unwrap(oldBloom)) {
             // detaches native and javascript object.
-            settings->SetPostProc(nullptr); // detach from object
+            oldWrapper->SetPostProc(nullptr); // detach from object
         }
         // release our reference to the current bloom settings (JS)
         bloom_.Reset();
-        enabled = false;
     }
-    if (SCENE_NS::IBloom::Ptr bloom = postproc->Bloom()->GetValue()) {
+
+    if (auto bloom = postproc->Bloom()->GetValue()) {
         bloom->Enabled()->SetValue(enabled);
-        postproc->Bloom()->SetValue(bloom);
+        // TODO: Poke postProc so that the changes to bloom are updated.
     }
 }

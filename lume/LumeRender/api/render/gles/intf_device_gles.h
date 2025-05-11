@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -210,6 +210,11 @@ struct ImageDescGLES : BackendSpecificImageDesc {
 
     /** If non-zero should ba a valid EGLImage handle to be used as the source for the image. */
     uintptr_t eglImage { 0u };
+    /** Platform specific hardware buffer */
+    uintptr_t platformHwBuffer { 0u };
+};
+
+struct BufferDescGLES : BackendSpecificBufferDesc {
     /** Platform specific hardware buffer */
     uintptr_t platformHwBuffer { 0u };
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -83,6 +83,8 @@ public:
 
     void Ref() override;
     void Unref() override;
+
+    void EnablePrimitiveRestart(size_t index);
 
     struct BufferHandles {
         RENDER_NS::RenderHandleReference vertexBuffer;
@@ -173,7 +175,7 @@ private:
     size_t targetDataSize_ = 0;
     BufferHandles bufferHandles_;
     RENDER_NS::RenderHandleReference stagingBuffer_;
-    uint8_t* stagingPtr_ = nullptr;
+    mutable uint8_t* stagingPtr_ = nullptr;
     uint8_t* vertexPtr_ = nullptr;
 
     struct Bounds {
@@ -187,6 +189,7 @@ private:
     mutable BASE_NS::vector<uint8_t> vertexData_;
     BASE_NS::vector<uint8_t> indexData_;
     uint32_t flags_ = 0;
+    bool rtEnabled_ { false };
     uint32_t refCount_ = 0;
 };
 CORE3D_END_NAMESPACE()

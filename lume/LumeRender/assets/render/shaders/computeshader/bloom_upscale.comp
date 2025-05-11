@@ -4,17 +4,23 @@
 
 // includes
 
+#include "render/shaders/common/render_post_process_structs_common.h"
+
 #include "common/bloom_common.h"
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+layout(set = 0, binding = 0, rgba16f /*r11f_g11f_b10f*/) uniform readonly image2D uRTex;
+layout(set = 0, binding = 0, rgba16f /*r11f_g11f_b10f*/) uniform writeonly image2D uWTex;
+layout(set = 0, binding = 1) uniform texture2D uTex;
+layout(set = 0, binding = 2) uniform sampler uSampler;
 
-layout(set = 1, binding = 0, rgba16f /*r11f_g11f_b10f*/) uniform readonly image2D uRTex;
-layout(set = 1, binding = 0, rgba16f /*r11f_g11f_b10f*/) uniform writeonly image2D uWTex;
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
 
-layout(set = 1, binding = 1) uniform texture2D uTex;
-layout(set = 1, binding = 2) uniform sampler uSampler;
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // bloom upscale
@@ -26,9 +32,14 @@ void main()
 {
     // texSizeInvTexSize needs to be the output resolution
     const vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) * uPc.viewportSizeInvSize.zw;
-
-    vec3 color = bloomUpscale(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
-
+    vec3 color = vec3(0.0f);
+    if (uPc.factor.x == CORE_BLOOM_TYPE_NORMAL) {
+        color = BloomUpscale(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    } else if (uPc.factor.x == CORE_BLOOM_TYPE_HORIZONTAL) {
+        color = BloomUpscaleHorizontal(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    } else if (uPc.factor.x == CORE_BLOOM_TYPE_VERTICAL) {
+        color = BloomUpscaleVertical(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+    }
     const ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
     const vec3 baseColor = imageLoad(uRTex, coords).xyz;
     const float scatter = uPc.factor.w;

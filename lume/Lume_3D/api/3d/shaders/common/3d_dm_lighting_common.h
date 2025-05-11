@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -691,6 +691,7 @@ vec3 CalculateLight(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, float N
     float subsurface = mix(backScatter, 1.0, forwardScatter) * (1.0 - ssssv.thickness);
     calculatedColor += ssssv.scatterColor * (subsurface * dLambert());
 
+    // NOTE: apply attenuation to the transmitted light, i.e. uLightData.lights[currLightIdx].attenuation
     return (calculatedColor * uLightData.lights[currLightIdx].color.rgb);
 }
 
@@ -836,6 +837,7 @@ vec3 CalculateLightInplace(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, 
 bool CheckLightLayerMask(uint currLightIdx, uvec2 layers)
 {
     // Check that the light is enabled for this specific object.
+    // NOTE: It seems like the mask bits are in .wz order when it should be .zw?
     const uvec2 lightLayerMask = uLightData.lights[currLightIdx].indices.wz;
     // If any of the layer bits match the light layer mask -> return true (i.e. use this light).
     return (layers & lightLayerMask) != uvec2(0, 0);

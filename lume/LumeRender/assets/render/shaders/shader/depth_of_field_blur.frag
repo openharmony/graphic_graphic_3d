@@ -7,14 +7,27 @@
 
 // includes
 #include "render/shaders/common/render_compatibility_common.h"
-
+#include "render/shaders/common/render_post_process_structs_common.h"
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+//#include "render/shaders/common/render_post_process_layout_common.h"
+struct DofConfig {
+    vec4 factors0;
+    vec4 factors1;
+};
 
-layout(set = 1, binding = 0) uniform sampler2D uTex;
-layout(set = 1, binding = 1) uniform sampler2D uDepth;
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(set = 0, binding = 0) uniform sampler2D uTex;
+layout(set = 0, binding = 1) uniform sampler2D uDepth;
+layout(set = 0, binding = 2, std140) uniform uDofConfigData
+{
+    DofConfig uLocalData;
+};
 
 // in / out
 
@@ -32,18 +45,18 @@ void main(void)
 {
     CORE_RELAXEDP float depth = texture(uDepth,  inUv, 0).r;
 
-    const float linearDepth = LinearDepth(depth, uLocalData.factors[1].z, uLocalData.factors[1].w);
+    const float linearDepth = LinearDepth(depth, uLocalData.factors1.z, uLocalData.factors1.w);
 
-    // uLocalData.factors[0] = nearTransitionStart, focusStart, focusEnd, farTransitionEnd
-    float nearTransitionStart = uLocalData.factors[0].x;
-    float focusStart = uLocalData.factors[0].y;
-    float focusEnd = uLocalData.factors[0].z;
-    float farTransitionEnd = uLocalData.factors[0].w;
+    // uLocalData.factors0 = nearTransitionStart, focusStart, focusEnd, farTransitionEnd
+    float nearTransitionStart = uLocalData.factors0.x;
+    float focusStart = uLocalData.factors0.y;
+    float focusEnd = uLocalData.factors0.z;
+    float farTransitionEnd = uLocalData.factors0.w;
     const float nearTransitionRange = focusStart - nearTransitionStart;
     const float farTransitionRange = farTransitionEnd - focusEnd;
 
-    float nearBlur = uLocalData.factors[1].x;
-    float farBlur = uLocalData.factors[1].y;    
+    float nearBlur = uLocalData.factors1.x;
+    float farBlur = uLocalData.factors1.y;    
 
     vec4 color = textureLod(uTex, inUv, 0);
 

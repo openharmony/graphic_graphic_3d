@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,8 +33,6 @@
 #include <core/plugin/intf_interface_helper.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
-
-#include "resources/resource_manager.h"
 
 BASE_BEGIN_NAMESPACE()
 template<class T1, class T2>
@@ -104,7 +102,8 @@ private:
     BASE_NS::vector<BASE_NS::pair<PluginToken, const IEnginePlugin*>> plugins_;
     BASE_NS::vector<const InterfaceTypeInfo*> interfaceTypeInfos_;
 
-    ResourceManager resourceManager_;
+    // unique counter for ECS objects
+    int32_t ecsCounter_ { 0 };
 };
 CORE_END_NAMESPACE()
 

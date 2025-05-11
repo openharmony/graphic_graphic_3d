@@ -44,9 +44,9 @@ struct OhosDirImpl {
 
 struct PlatformHapInfo {
     PlatformHapInfo(const BASE_NS::string_view hapPath, const BASE_NS::string_view bundleName,
-        const BASE_NS::string_view moduleName,
-        std::shared_ptr<OHOS::Global::Resource::ResourceManager> resManager) : hapPath(hapPath),
-        bundleName(bundleName), moduleName(moduleName), resourceManager(resManager) {}
+        const BASE_NS::string_view moduleName, std::shared_ptr<OHOS::Global::Resource::ResourceManager> resManager)
+        : hapPath(hapPath), bundleName(bundleName), moduleName(moduleName), resourceManager(resManager)
+    {}
     BASE_NS::string hapPath = " ";
     BASE_NS::string bundleName = " ";
     BASE_NS::string moduleName = " ";

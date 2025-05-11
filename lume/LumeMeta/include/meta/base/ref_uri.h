@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Serialization reference uri
+ * Author: Mikael Kilpeläinen
+ * Create: 2022-11-22
  */
 
 #ifndef META_BASE_REF_URI_H
@@ -367,9 +359,9 @@ inline bool RefUri::AddSegment(BASE_NS::string seg)
             return false;
         }
         PushPropertySegment(UnEscapeName(seg));
-    } else if (seg.substr(0, 8) == "@Context") { // 8: length
+    } else if (seg.substr(0, 8) == "@Context") {
         PushObjectContextSegment();
-    } else if (seg.substr(0, 8) == "@Theme") { // 8: length
+    } else if (seg.substr(0, 8) == "@Theme") {
         PushObjectContextSegment();
         PushPropertySegment("Theme");
     } else {
@@ -433,10 +425,10 @@ inline bool RefUri::ParseUid(BASE_NS::string_view& path)
 inline bool RefUri::Parse(BASE_NS::string_view uri)
 {
     // we check the header and size must be at least 5 (at least / after the header)
-    if (uri.size() < 5 || uri.substr(0, 4) != "ref:") { // 5: size 4: length
+    if (uri.size() < 5 || uri.substr(0, 4) != "ref:") {
         return false;
     }
-    uri.remove_prefix(4); // 4: parm
+    uri.remove_prefix(4);
     // see if it is path or valid uid
     if (uri[0] != SEPARATOR_CHAR && !ParseUid(uri)) {
         return false;

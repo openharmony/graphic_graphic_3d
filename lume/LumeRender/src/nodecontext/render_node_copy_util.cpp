@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -57,12 +57,20 @@ RenderPass CreateRenderPass(const IRenderNodeGpuResourceManager& gpuResourceMgr,
     return rp;
 }
 
-RenderHandle CreatePso(
-    IRenderNodeContextManager& renderNodeContextMgr, const RenderHandle& shader, const PipelineLayout& pipelineLayout)
+RenderHandle CreatePso(IRenderNodeContextManager& renderNodeContextMgr, const RenderHandle& shader,
+    const PipelineLayout& pipelineLayout, IDescriptorSetBinder::Ptr& binder)
 {
     auto& psoMgr = renderNodeContextMgr.GetPsoManager();
     const auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     const RenderHandle graphicsStateHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader);
+
+    if (!binder) {
+        // single binder for both
+        INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr.GetDescriptorSetManager();
+        const auto& bindings = pipelineLayout.descriptorSetLayouts[0U].bindings;
+        const RenderHandle descHandle = descriptorSetMgr.CreateDescriptorSet(bindings);
+        binder = descriptorSetMgr.CreateDescriptorSetBinder(descHandle, bindings);
+    }
     return psoMgr.GetGraphicsPsoHandle(
         shader, graphicsStateHandle, pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
 }
@@ -82,13 +90,6 @@ void RenderNodeCopyUtil::Init(IRenderNodeContextManager& renderNodeContextMgr)
         renderData_.shaderLayer = shaderMgr.GetShaderHandle("rendershaders://shader/fullscreen_copy_layer.shader");
         renderData_.pipelineLayoutLayer = shaderMgr.GetReflectionPipelineLayout(renderData_.shaderLayer);
     }
-    {
-        // single binder for both
-        INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr.GetDescriptorSetManager();
-        const auto& bindings = renderData_.pipelineLayout.descriptorSetLayouts[0U].bindings;
-        const RenderHandle descHandle = descriptorSetMgr.CreateDescriptorSet(bindings);
-        binder_ = descriptorSetMgr.CreateDescriptorSetBinder(descHandle, bindings);
-    }
 }
 
 void RenderNodeCopyUtil::PreExecute() {}
@@ -98,8 +99,7 @@ void RenderNodeCopyUtil::Execute(IRenderCommandList& cmdList, const CopyInfo& co
     copyInfo_ = copyInfo;
 
     // extra blit from input to ouput
-    if (RenderHandleUtil::IsGpuImage(copyInfo_.input.handle) && RenderHandleUtil::IsGpuImage(copyInfo_.output.handle) &&
-        binder_) {
+    if (RenderHandleUtil::IsGpuImage(copyInfo_.input.handle) && RenderHandleUtil::IsGpuImage(copyInfo_.output.handle)) {
         RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderCopy", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
 
         auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
@@ -108,13 +108,14 @@ void RenderNodeCopyUtil::Execute(IRenderCommandList& cmdList, const CopyInfo& co
         RenderHandle pso;
         if (copyInfo_.copyType == CopyType::LAYER_COPY) {
             if (!RenderHandleUtil::IsValid(renderData_.psoLayer)) {
-                renderData_.psoLayer =
-                    CreatePso(*renderNodeContextMgr_, renderData_.shaderLayer, renderData_.pipelineLayoutLayer);
+                renderData_.psoLayer = CreatePso(
+                    *renderNodeContextMgr_, renderData_.shaderLayer, renderData_.pipelineLayoutLayer, binder_);
             }
             pso = renderData_.psoLayer;
         } else {
             if (!RenderHandleUtil::IsValid(renderData_.pso)) {
-                renderData_.pso = CreatePso(*renderNodeContextMgr_, renderData_.shader, renderData_.pipelineLayout);
+                renderData_.pso =
+                    CreatePso(*renderNodeContextMgr_, renderData_.shader, renderData_.pipelineLayout, binder_);
             }
             pso = renderData_.pso;
         }

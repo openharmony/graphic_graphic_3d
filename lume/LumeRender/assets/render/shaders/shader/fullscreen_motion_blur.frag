@@ -6,16 +6,24 @@
 
 #include "render/shaders/common/render_color_conversion_common.h"
 #include "render/shaders/common/render_post_process_common.h"
+#include "render/shaders/common/render_post_process_structs_common.h"
 #include "render/shaders/common/render_tonemap_common.h"
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+layout(set = 0, binding = 0) uniform sampler2D uInput;
+layout(set = 0, binding = 1) uniform sampler2D uDepth;
+layout(set = 0, binding = 2) uniform sampler2D uVelocity;
+layout(set = 0, binding = 3) uniform sampler2D uTileVelocity;
+layout(set = 0, binding = 4, std140) uniform uMotionBlurFactor
+{
+    vec4 uMotionBlurFactorData;
+};
 
-layout(set = 1, binding = 0) uniform sampler2D uInput;
-layout(set = 1, binding = 1) uniform sampler2D uDepth;
-layout(set = 1, binding = 2) uniform sampler2D uVelocity;
-layout(set = 1, binding = 3) uniform sampler2D uTileVelocity;
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
 
 // in / out
 
@@ -52,7 +60,7 @@ vec2 GetUnpackTileVelocity(const vec2 uv, const vec2 invSize)
 
 vec4 GetFactor()
 {
-    return uLocalData.factors[0U];
+    return uMotionBlurFactorData;
 }
 
 bool IsVelocityZero(const vec2 velocity)
@@ -103,8 +111,7 @@ void main(void)
     const vec2 maxNeighborVelocity = GetUnpackTileVelocity(X, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
 
     const vec3 baseColor = texture(uInput, X).xyz;
-    if (!IsVelocityZero(maxNeighborVelocity))
-    {
+    if (!IsVelocityZero(maxNeighborVelocity)) {
         if (quality == QUALITY_LOW) {
             vec3 color = vec3(0.0);
             const vec2 baseVelocity = GetUnpackVelocity(X, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
@@ -121,16 +128,15 @@ void main(void)
             // jittering improves ghosting but too much may add artifacts.
             const float jitterMagnitude = 0.5;
             const float jitter = (Rand(X) * 2.0 - 1.0) * jitterMagnitude;
-            
+
             const vec2 xVelocity = GetUnpackVelocity(X, uPc.viewportSizeInvSize.zw) * velocityCoefficient;
             const float xVelocityLen = length(xVelocity);
             const float xDepth = textureLod(uDepth, X, 0).x;
 
             float weight = 1.0 / max(xVelocityLen, 0.5);
             vec3 color = baseColor.rgb * weight;
-            
-            for (int ii = 0; ii < int(fSampleCount); ii++)
-            {
+
+            for (int ii = 0; ii < int(fSampleCount); ii++) {
                 const float tt = mix(-1.0, 1.0, (float(ii) + jitter + 1.0) / (fSampleCount + 1.0));
                 const vec2 offset = maxNeighborVelocity * tt;
                 const vec2 Y = X + offset;
@@ -146,20 +152,18 @@ void main(void)
                 // from bleeding into the foreground.
                 const float yInFrontOfX = yDepth > xDepth ? 0.0 : 1.0;
 
-                const float yWeight = 
+                const float yWeight =
                     yInFrontOfX * ff * CompareCone(offsetLen, yVelocityLen) +
                     bb * CompareCone(offsetLen, xVelocityLen) +
                     (CompareCylinder(offsetLen, yVelocityLen) * CompareCylinder(offsetLen, xVelocityLen) * 2.0);
-                
+
                 weight += yWeight;
                 color += yWeight * textureLod(uInput, Y, 0).rgb;
             }
 
             outColor = vec4(color / weight, 1.0);
         }
-    }
-    else
-    {
+    } else {
         outColor = vec4(baseColor, 1.0);
     }
 }

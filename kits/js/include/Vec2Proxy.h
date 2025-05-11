@@ -30,13 +30,8 @@ public:
     static NapiApi::Object ToNapiObject(BASE_NS::Math::Vec2 vec2, napi_env env);
 
 private:
-    void UpdateLocalValues() override;
-    void UpdateRemoteValues() override;
-
     void SetValue(const BASE_NS::Math::Vec2& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
-
-    BASE_NS::Math::Vec2 value;
 };
 #endif

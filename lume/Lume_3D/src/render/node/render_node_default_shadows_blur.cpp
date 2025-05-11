@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -208,27 +208,16 @@ void RenderNodeDefaultShadowsBlur::RenderData(IRenderCommandList& cmdList, const
         loopCount = 2U;
     }
 
-    RenderHandle sets[2u] {};
-    {
-        auto& binder = *allDescriptorSets_.globalSet;
-        sets[0u] = binder.GetDescriptorSetHandle();
-        binder.ClearBindings();
-        uint32_t binding = 0u;
-        binder.BindBuffer(binding++, bufferHandle_, 0u);
-        binder.BindBuffer(binding++, bufferHandle_, 0u);
-        cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-    }
-
     for (uint32_t idx = 0; idx < loopCount; ++idx) {
         const uint32_t descriptorSetIndex = (drawIdx * loopCount) + idx;
         // horizontal
         renderPass.renderPassDesc.attachmentHandles[0] = outputHandle;
-        RenderBlur(cmdList, renderPass, viewport, scissor, allDescriptorSets_.set1Horizontal[descriptorSetIndex],
+        RenderBlur(cmdList, renderPass, viewport, scissor, allDescriptorSets_.set0Horizontal[descriptorSetIndex],
             texSizeInvTexSize, { 1.0f, 0.0f, 0.0f, 0.0f }, inputHandle);
         ExplicitOutputBarrier(cmdList, inputHandle);
         // vertical
         renderPass.renderPassDesc.attachmentHandles[0] = inputHandle;
-        RenderBlur(cmdList, renderPass, viewport, scissor, allDescriptorSets_.set1Vertical[descriptorSetIndex],
+        RenderBlur(cmdList, renderPass, viewport, scissor, allDescriptorSets_.set0Vertical[descriptorSetIndex],
             texSizeInvTexSize, { 0.0f, 1.0f, 0.0f, 0.0f }, outputHandle);
     }
 }
@@ -237,9 +226,6 @@ void RenderNodeDefaultShadowsBlur::RenderBlur(IRenderCommandList& cmdList, const
     const ViewportDesc& viewport, const ScissorDesc& scissor, const IDescriptorSetBinder::Ptr& binder,
     const Math::Vec4& texSizeInvTexSize, const Math::Vec4& dir, const RenderHandle imageHandle)
 {
-    RenderHandle sets[2u] {};
-    sets[0u] = allDescriptorSets_.globalSet->GetDescriptorSetHandle();
-
     cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
     cmdList.SetDynamicStateViewport(viewport);
     cmdList.SetDynamicStateScissor(scissor);
@@ -247,14 +233,13 @@ void RenderNodeDefaultShadowsBlur::RenderBlur(IRenderCommandList& cmdList, const
 
     {
         auto& bind = *binder;
-        sets[1u] = bind.GetDescriptorSetHandle();
         bind.ClearBindings();
         bind.BindSampler(0, samplerHandle_);
         bind.BindImage(1, imageHandle);
 
         cmdList.UpdateDescriptorSet(bind.GetDescriptorSetHandle(), bind.GetDescriptorSetLayoutBindingResources());
+        cmdList.BindDescriptorSet(0u, bind.GetDescriptorSetHandle());
     }
-    cmdList.BindDescriptorSets(0u, sets);
 
     const LocalPostProcessPushConstantStruct pc { texSizeInvTexSize, dir };
     cmdList.PushConstant(shaderData_.pushConstant, reinterpret_cast<const uint8_t*>(&pc));
@@ -295,7 +280,6 @@ void RenderNodeDefaultShadowsBlur::CreateDescriptorSets()
         const DescriptorCounts dc { {
             { CORE_DESCRIPTOR_TYPE_SAMPLER, descriptorSetCount },
             { CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, descriptorSetCount },
-            { CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2u }, // global set with two ubos
         } };
         descriptorSetMgr.ResetAndReserve(dc);
     }
@@ -303,24 +287,18 @@ void RenderNodeDefaultShadowsBlur::CreateDescriptorSets()
     const auto& reflPipelineLayout =
         renderNodeContextMgr_->GetShaderManager().GetReflectionPipelineLayout(shaderData_.shaderHandle);
     const uint32_t descSetCount = descriptorSetCount / 2u;
-    allDescriptorSets_.set1Horizontal.resize(descSetCount);
-    allDescriptorSets_.set1Vertical.resize(descSetCount);
-    constexpr uint32_t globalSet = 0u;
-    constexpr uint32_t localSet = 1u;
-    {
-        const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(globalSet, reflPipelineLayout);
-        allDescriptorSets_.globalSet = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetHandle, reflPipelineLayout.descriptorSetLayouts[globalSet].bindings);
-    }
+    allDescriptorSets_.set0Horizontal.resize(descSetCount);
+    allDescriptorSets_.set0Vertical.resize(descSetCount);
+    constexpr uint32_t localSet = 0U;
     for (uint32_t idx = 0; idx < descSetCount; ++idx) {
         {
             const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(localSet, reflPipelineLayout);
-            allDescriptorSets_.set1Horizontal[idx] = descriptorSetMgr.CreateDescriptorSetBinder(
+            allDescriptorSets_.set0Horizontal[idx] = descriptorSetMgr.CreateDescriptorSetBinder(
                 descriptorSetHandle, reflPipelineLayout.descriptorSetLayouts[localSet].bindings);
         }
         {
             const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(localSet, reflPipelineLayout);
-            allDescriptorSets_.set1Vertical[idx] = descriptorSetMgr.CreateDescriptorSetBinder(
+            allDescriptorSets_.set0Vertical[idx] = descriptorSetMgr.CreateDescriptorSetBinder(
                 descriptorSetHandle, reflPipelineLayout.descriptorSetLayouts[localSet].bindings);
         }
     }

@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Object container implementation
+ * Author: Lauri Jaaskela
+ * Create: 2023-03-20
  */
 
 #include "object_hierarchy_observer.h"
@@ -27,13 +19,15 @@
 
 META_BEGIN_NAMESPACE()
 
+namespace Internal {
+
 // ContainerChangeListener
 
 ObjectChangeListener::ObjectChangeListener(const IObject::Ptr& object, HierarchyChangeObjectType myType,
-    const IObject::WeakPtr& parent, ObjectHierarchyObserver* observer, HierarchyChangeModeValue mode)
+    const IObject::WeakPtr& parent, Internal::ObjectHierarchyObserver* observer, HierarchyChangeModeValue mode)
     : object_(object), type_(myType), parent_(parent), observer_(observer)
 {
-    CORE_ASSERT(observer_ && object);
+    CORE_ASSERT_MSG(observer_ && object, "ObjectChangeListener constructed with null objects");
     Subscribe(mode);
 }
 
@@ -209,7 +203,6 @@ void ObjectChangeListener::NotifyContentChangeOp()
 }
 
 // ContainerObserver
-
 bool ObjectHierarchyObserver::Build(const IMetadata::Ptr& p)
 {
     bool ret = Super::Build(p);
@@ -347,14 +340,13 @@ void ObjectHierarchyObserver::AddSubscription(
     const IObject::Ptr& object, HierarchyChangeObjectType type, const IObject::WeakPtr& parent)
 {
     auto listener = BASE_NS::make_unique<ObjectChangeListener>(object, type, parent, this, mode_);
-
     {
         std::unique_lock lock(mutex_);
-        if (subscriptions_.find(listener.get()) != subscriptions_.end()) {
+        auto* ptr = listener.get();
+        if (!subscriptions_.insert({ ptr, Subscription(object, BASE_NS::move(listener)) }).second) {
             CORE_LOG_E(
                 "Duplicate event subscription for %s:%s", object->GetClassName().data(), object->GetName().data());
         }
-        subscriptions_.insert({ listener.get(), Subscription(object, BASE_NS::move(listener)) });
     }
 }
 
@@ -448,5 +440,7 @@ bool ObjectHierarchyObserver::Detaching(const META_NS::IAttach::Ptr& target)
     META_ACCESS_PROPERTY(DataContext)->SetValue({});
     return true;
 }
+
+} // namespace Internal
 
 META_END_NAMESPACE()

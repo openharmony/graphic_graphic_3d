@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -107,6 +107,14 @@ template<class JsonType, typename T,
 inline void FromJson(const JsonType& jsonData, T& output)
 {
     FromJson(jsonData, output.data);
+}
+
+template<class JsonType, typename T>
+inline void SafeFromJsonValue(const JsonType* jsonData, T& output)
+{
+    if (jsonData) {
+        FromJson(*jsonData, output);
+    }
 }
 RENDER_END_NAMESPACE()
 #endif // RENDER_UTIL_JSON_UTIL_H

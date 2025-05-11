@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -189,21 +189,7 @@ void RenderNodeSinglePostProcess::InitNode(IRenderNodeContextManager& renderNode
         valid_ = false;
     }
 
-    // special handling for bloom and blur
     RenderHandle output = builtInVariables_.output;
-    if ((builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLOOM_BIT) &&
-        ppLocalConfig_.variables.enabled) {
-        const RenderBloom::BloomInfo bloomInfo { GetBindableImage(builtInVariables_.input),
-            GetBindableImage(builtInVariables_.output), ubos_.postProcess.GetHandle(),
-            ppGlobalConfig_.bloomConfiguration.useCompute };
-        renderBloom_.Init(renderNodeContextMgr, bloomInfo);
-        output = renderBloom_.GetFinalTarget();
-    } else if ((builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLUR_BIT) &&
-               ppLocalConfig_.variables.enabled) {
-        RenderBlur::BlurInfo blurInfo { GetBindableImage(builtInVariables_.output), ubos_.postProcess.GetHandle(),
-            false };
-        renderBlur_.Init(renderNodeContextMgr, blurInfo);
-    }
     renderCopy_.Init(renderNodeContextMgr);
     RegisterOutputs(output);
 }
@@ -218,24 +204,8 @@ void RenderNodeSinglePostProcess::PreExecuteFrame()
 
     ProcessPostProcessConfiguration();
 
-    // special handling for bloom and blur
     RenderHandle output = builtInVariables_.output;
-    if ((builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLOOM_BIT) &&
-        ppLocalConfig_.variables.enabled) {
-        const RenderBloom::BloomInfo bloomInfo { GetBindableImage(builtInVariables_.input),
-            GetBindableImage(builtInVariables_.output), ubos_.postProcess.GetHandle(),
-            ppGlobalConfig_.bloomConfiguration.useCompute };
-        renderBloom_.PreExecute(*renderNodeContextMgr_, bloomInfo, ppGlobalConfig_);
-        output = renderBloom_.GetFinalTarget();
-    } else if ((builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLUR_BIT) &&
-               ppLocalConfig_.variables.enabled) {
-        RenderBlur::BlurInfo blurInfo { GetBindableImage(builtInVariables_.input), ubos_.postProcess.GetHandle(),
-            false };
-        renderBlur_.PreExecute(*renderNodeContextMgr_, blurInfo);
-    }
-    {
-        renderCopy_.PreExecute();
-    }
+    renderCopy_.PreExecute();
     RegisterOutputs(output);
 }
 
@@ -248,15 +218,6 @@ void RenderNodeSinglePostProcess::ExecuteFrame(IRenderCommandList& cmdList)
 
     if (ppLocalConfig_.variables.enabled) {
         // ppConfig_ is already up-to-date from PreExecuteFrame
-        if ((builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLOOM_BIT) &&
-            ppLocalConfig_.variables.enabled) {
-            renderBloom_.Execute(*renderNodeContextMgr_, cmdList, ppGlobalConfig_);
-            return;
-        } else if ((builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLUR_BIT) &&
-                   ppLocalConfig_.variables.enabled) {
-            renderBlur_.Execute(*renderNodeContextMgr_, cmdList, ppGlobalConfig_);
-            return;
-        }
         if (valid_) {
             ExecuteSinglePostProcess(cmdList);
         }
@@ -477,13 +438,9 @@ void RenderNodeSinglePostProcess::InitCreateBinders()
     const IRenderNodeUtil& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
     DescriptorCounts dc;
-    if (builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLOOM_BIT) {
-        dc = RenderBloom::GetDescriptorCounts();
-    } else if (builtInVariables_.postProcessFlag & PostProcessConfiguration::ENABLE_BLUR_BIT) {
-        dc = RenderBlur::GetDescriptorCounts();
-    } else {
-        dc = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
-    }
+
+    dc = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
+
     if (jsonInputs_.defaultOutputImage == DefaultOutputImage::INPUT_OUTPUT_COPY) {
         const DescriptorCounts copyDc = renderCopy_.GetRenderDescriptorCounts();
         for (const auto& ref : copyDc.counts) {

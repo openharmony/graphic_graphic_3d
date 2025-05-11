@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -68,7 +68,7 @@ struct ComponentManagerTypeInfo : public ITypeInfo {
 /** Information needed from the plugin for managing Systems. */
 struct SystemTypeInfo : public ITypeInfo {
     /** TypeInfo UID for system. */
-    static constexpr BASE_NS::Uid UID { "31321549-70db-495c-81e9-6fd1cf30af5e" };
+    static constexpr BASE_NS::Uid UID { "c476a794-9c77-4a3a-a5e4-eb2399899d37" };
 
     using CreateSystemFn = ISystem* (*)(IEcs&);
     using DestroySystemFn = void (*)(ISystem* instance);
@@ -91,6 +91,12 @@ struct SystemTypeInfo : public ITypeInfo {
      * These can be also used to determine which systems can be executed in parallel. Default constructed UID can be
      * used as wild card to indicate dependencies not known at compile time. */
     const BASE_NS::array_view<const BASE_NS::Uid> readOnlyComponentDependencies;
+
+    /** Optional UID of a system which should complete its ISystem::Update before this system starts ISystem::Update. */
+    const BASE_NS::Uid afterSystem;
+    /** Optional UID of a system which should start its ISystem::Update only after this system has completed
+     * ISystem::Update. */
+    const BASE_NS::Uid beforeSystem;
 };
 
 // Plugin token is a plugin defined token to identify instance.

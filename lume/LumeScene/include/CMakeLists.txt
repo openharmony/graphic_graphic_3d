@@ -1,22 +1,26 @@
 #
-# Copyright (C) 2021 Huawei Technologies Co, Ltd.
+# Copyright (C) 2022 Huawei Technologies Co, Ltd.
 #
 
-#
-# Plugin library.
-#
+project(LumeSceneAPI LANGUAGES CXX)
 
-add_library(SceneAPI INTERFACE)
-set_target_properties(SceneAPI PROPERTIES
-    CXX_STANDARD 17
-    CXX_EXTENSIONS off
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN 1)
+#
+# API
+#
+set(PLUGIN_NAME LumeScene)
+add_library(${PLUGIN_NAME}API INTERFACE)
+add_library(${PLUGIN_NAME}::API ALIAS ${PLUGIN_NAME}API)
 
-target_sources(SceneAPI PUBLIC
+target_sources(${PLUGIN_NAME}API PUBLIC
+    scene/api/ecs_scene.h
+    scene/api/external_node.h
+    scene/api/node.h
+    scene/api/post_process.h
+    scene/api/resource.h
+    scene/api/scene.h
     scene/base/namespace.h
     scene/base/types.h
-    scene/ext/component_fwd.h
+    scene/ext/component.h
     scene/ext/component_util.h
     scene/ext/intf_component.h
     scene/ext/intf_component_factory.h
@@ -28,9 +32,10 @@ target_sources(SceneAPI PUBLIC
     scene/ext/intf_internal_camera.h
     scene/ext/intf_internal_scene.h
     scene/ext/util.h
-    scene/interface/intf_bitmap.h
     scene/interface/intf_camera.h
     scene/interface/intf_environment.h
+    scene/interface/intf_image.h
+    scene/interface/intf_input_receiver.h
     scene/interface/intf_layer.h
     scene/interface/intf_light.h
     scene/interface/intf_material.h
@@ -49,11 +54,23 @@ target_sources(SceneAPI PUBLIC
     scene/interface/postprocess/intf_bloom.h
     scene/interface/postprocess/intf_postprocess_effect.h
     scene/interface/postprocess/intf_tonemap.h
+    scene/interface/resource/image_info.h
+    scene/interface/resource/intf_render_resource_manager.h
+    scene/interface/resource/types.h
 )
 
-target_include_directories(SceneAPI INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/)
-add_library(Scene::API ALIAS SceneAPI)
+target_include_directories(${PLUGIN_NAME}API INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/)
 
-get_target_property(API_PATH  Scene::API INTERFACE_INCLUDE_DIRECTORIES)
-get_target_property(API_SOURCES Scene::API INTERFACE_SOURCES)
-source_group(TREE  ${API_PATH} PREFIX "Api Headers" FILES ${API_SOURCES} )
+set_target_properties(${PLUGIN_NAME}API PROPERTIES
+    CXX_STANDARD 17
+    CXX_EXTENSIONS off
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN 1
+)
+
+#
+# IDE project tree
+#
+get_target_property(API_PATH ${PLUGIN_NAME}API INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(API_SOURCES ${PLUGIN_NAME}API INTERFACE_SOURCES)
+source_group(TREE ${API_PATH} FILES ${API_SOURCES})

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,6 +21,8 @@
 
 #include <3d/ecs/components/mesh_component.h>
 #include <3d/ecs/components/render_handle_component.h>
+#include <3d/implementation_uids.h>
+#include <3d/intf_graphics_context.h>
 #include <3d/util/intf_picking.h>
 #include <base/containers/type_traits.h>
 #include <base/math/float_packer.h>
@@ -55,6 +57,17 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 namespace {
+constexpr IMeshBuilder::GpuBufferCreateInfo DEFAULT_BUFFER_CREATE_INFO { 0U,
+    EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
+        EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER,
+    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+
+constexpr BufferUsageFlags RT_BUFFER_USAGE_FLAGS {
+    BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT |
+    BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+};
+
 constexpr uint32_t BUFFER_ALIGN = 0x100; // on Nvidia = 0x20, on Mali and Intel = 0x10, SBO on Mali = 0x100
 constexpr auto POSITION_FORMAT = BASE_FORMAT_R32G32B32_SFLOAT;
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
@@ -67,11 +80,11 @@ constexpr auto TANGENT_FORMAT = BASE_FORMAT_R32G32B32_SFLOAT;
 
 constexpr auto R = 0;
 constexpr auto G = 1;
-constexpr auto B = 2; // 2 : idx
+constexpr auto B = 2;
 
-constexpr auto RG = 2; // 2 : idx
-constexpr auto RGB = 3; // 3 : idx
-constexpr auto RGBA = 4; // 4 : idx
+constexpr auto RG = 2;
+constexpr auto RGB = 3;
+constexpr auto RGBA = 4;
 
 template<typename Container>
 using ContainerValueType = typename remove_reference_t<Container>::value_type;
@@ -136,7 +149,7 @@ struct OutputBuffer {
 };
 
 template<typename T, size_t N, size_t M>
-inline void GatherMin(T (&minimum)[N], const T (&value)[M])
+inline void GatherMin(T (&minimum)[N], const T (&value)[M]) noexcept
 {
     for (size_t i = 0; i < Math::min(N, M); ++i) {
         minimum[i] = Math::min(minimum[i], value[i]);
@@ -144,7 +157,7 @@ inline void GatherMin(T (&minimum)[N], const T (&value)[M])
 }
 
 template<typename T, size_t N, size_t M>
-inline void GatherMax(T (&minimum)[N], const T (&value)[M])
+inline void GatherMax(T (&minimum)[N], const T (&value)[M]) noexcept
 {
     for (size_t i = 0; i < Math::min(N, M); ++i) {
         minimum[i] = Math::max(minimum[i], value[i]);
@@ -155,7 +168,7 @@ inline void GatherMax(T (&minimum)[N], const T (&value)[M])
 template<typename T, typename = enable_if_t<is_signed_v<T>>>
 constexpr inline T Snorm(float v) noexcept
 {
-    const float round = v >= 0.f ? +.5f : -.5f; // 0.5 : half
+    const float round = v >= 0.f ? +.5f : -.5f;
     v = v < -1.f ? -1.f : (v > 1.f ? 1.f : v);
     return static_cast<T>(v * static_cast<float>(std::numeric_limits<T>::max()) + round);
 }
@@ -172,7 +185,7 @@ template<typename T, typename = enable_if_t<is_unsigned_v<T>>>
 constexpr inline T Unorm(float v) noexcept
 {
     v = v < 0.f ? 0.f : (v > 1.f ? 1.f : v);
-    return static_cast<T>(v * static_cast<float>(std::numeric_limits<T>::max()) + 0.5f); // 0.5 : half
+    return static_cast<T>(v * static_cast<float>(std::numeric_limits<T>::max()) + 0.5f);
 }
 
 // unsigned normalized integer to floating point
@@ -186,7 +199,7 @@ constexpr inline float Unorm(T v) noexcept
 template<typename T, typename = enable_if_t<is_signed_v<T>>>
 constexpr inline T Sint(float v) noexcept
 {
-    const float round = v >= 0.f ? +.5f : -.5f; // 0.5 : half
+    const float round = v >= 0.f ? +.5f : -.5f;
     constexpr auto l = static_cast<float>(std::numeric_limits<T>::lowest());
     constexpr auto h = static_cast<float>(std::numeric_limits<T>::max());
     v = v < l ? l : (v > h ? h : v);
@@ -206,7 +219,7 @@ constexpr inline T Uint(float v) noexcept
 {
     constexpr auto h = static_cast<float>(std::numeric_limits<T>::max());
     v = v < 0.f ? 0.f : (v > h ? h : v);
-    return static_cast<T>(v + 0.5f); // 0.5 : half
+    return static_cast<T>(v + 0.5f);
 }
 
 // unsigned integer to floating point
@@ -247,7 +260,7 @@ struct IntegerToInt {
 };
 
 template<typename Converter, size_t components>
-void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements)
+void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements) noexcept
 {
     while (elements--) {
         for (auto i = 0U; i < components; ++i) {
@@ -332,7 +345,7 @@ struct Float {
 };
 
 template<typename SourceFn, typename DestFn, size_t components>
-void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements)
+void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements) noexcept
 {
     while (elements--) {
         for (auto i = 0U; i < components; ++i) {
@@ -363,40 +376,44 @@ static constexpr const FormatProperties DATA_FORMATS[] = {
     { 1, 1, BASE_FORMAT_R8_SNORM, true, true, From<Norm<int8_t>>, To<Norm<int8_t>> },
     { 1, 1, BASE_FORMAT_R8_UINT, false, false, From<Int<uint8_t>>, To<Int<uint8_t>> },
 
-    { 3, 1, BASE_FORMAT_R8G8B8_SNORM, true, false, From<Norm<int8_t>>, To<Norm<int8_t>> }, // 3 : param
+    { 3, 1, BASE_FORMAT_R8G8B8_SNORM, true, false, From<Norm<int8_t>>, To<Norm<int8_t>> },
 
-    { 4, 1, BASE_FORMAT_R8G8B8A8_UNORM, true, false, From<Norm<uint8_t>>, To<Norm<uint8_t>> }, // 4 : param
-    { 4, 1, BASE_FORMAT_R8G8B8A8_SNORM, true, false, From<Norm<int8_t>>, To<Norm<int8_t>> }, // 4 : param
-    { 4, 1, BASE_FORMAT_R8G8B8A8_UINT, false, false, From<Int<uint8_t>>, To<Int<uint8_t>> }, // 4 : param
+    { 4, 1, BASE_FORMAT_R8G8B8A8_UNORM, true, false, From<Norm<uint8_t>>, To<Norm<uint8_t>> },
+    { 4, 1, BASE_FORMAT_R8G8B8A8_SNORM, true, false, From<Norm<int8_t>>, To<Norm<int8_t>> },
+    { 4, 1, BASE_FORMAT_R8G8B8A8_UINT, false, false, From<Int<uint8_t>>, To<Int<uint8_t>> },
 
-    { 1, 2, BASE_FORMAT_R16_UINT, false, false, From<Int<uint16_t>>, To<Int<uint16_t>> }, // 2 : param
+    { 1, 2, BASE_FORMAT_R16_UINT, false, false, From<Int<uint16_t>>, To<Int<uint16_t>> },
 
-    { 2, 2, BASE_FORMAT_R16G16_UNORM, true, false, From<Norm<uint16_t>>, To<Norm<uint16_t>> }, // 2 : param
-    { 2, 2, BASE_FORMAT_R16G16_UINT, false, true, From<Int<uint16_t>>, To<Int<uint16_t>> }, // 2 : param
-    { 2, 2, BASE_FORMAT_R16G16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> }, // 2 : param
+    { 2, 2, BASE_FORMAT_R16G16_UNORM, true, false, From<Norm<uint16_t>>, To<Norm<uint16_t>> },
+    { 2, 2, BASE_FORMAT_R16G16_UINT, false, true, From<Int<uint16_t>>, To<Int<uint16_t>> },
+    { 2, 2, BASE_FORMAT_R16G16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> },
 
-    { 3, 2, BASE_FORMAT_R16G16B16_UINT, true, true, From<Int<uint16_t>>, To<Int<uint16_t>> }, // 3,2 : param
-    { 3, 2, BASE_FORMAT_R16G16B16_SINT, true, true, From<Int<int16_t>>, To<Int<int16_t>> }, // 3,2 : param
-    { 3, 2, BASE_FORMAT_R16G16B16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> }, // 3,2 param
+    { 3, 2, BASE_FORMAT_R16G16B16_SNORM, true, true, From<Norm<int16_t>>, To<Norm<int16_t>> },
+    { 3, 2, BASE_FORMAT_R16G16B16_UINT, true, true, From<Int<uint16_t>>, To<Int<uint16_t>> },
+    { 3, 2, BASE_FORMAT_R16G16B16_SINT, true, true, From<Int<int16_t>>, To<Int<int16_t>> },
+    { 3, 2, BASE_FORMAT_R16G16B16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> },
 
-    { 4, 2, BASE_FORMAT_R16G16B16A16_UNORM, true, true, From<Norm<uint16_t>>, To<Norm<uint16_t>> }, // 4,2 : param
-    { 4, 2, BASE_FORMAT_R16G16B16A16_SNORM, true, true, From<Norm<int16_t>>, To<Norm<int16_t>> }, // 4,2 : param
-    { 4, 2, BASE_FORMAT_R16G16B16A16_UINT, false, false, From<Int<uint16_t>>, To<Int<uint16_t>> }, // 4,2 : param
-    { 4, 2, BASE_FORMAT_R16G16B16A16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> }, // 4, 2 : param
+    { 4, 2, BASE_FORMAT_R16G16B16A16_UNORM, true, true, From<Norm<uint16_t>>, To<Norm<uint16_t>> },
+    { 4, 2, BASE_FORMAT_R16G16B16A16_SNORM, true, true, From<Norm<int16_t>>, To<Norm<int16_t>> },
+    { 4, 2, BASE_FORMAT_R16G16B16A16_UINT, false, false, From<Int<uint16_t>>, To<Int<uint16_t>> },
+    { 4, 2, BASE_FORMAT_R16G16B16A16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> },
 
-    { 1, 4, BASE_FORMAT_R32_UINT, false, false, From<Int<uint32_t>>, To<Int<uint32_t>> }, // 4 : param
-    { 2, 4, BASE_FORMAT_R32G32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> }, // 2,4 : param
-    { 3, 4, BASE_FORMAT_R32G32B32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> }, // 3,4 : param
-    { 4, 4, BASE_FORMAT_R32G32B32A32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> }, // 4 : param
+    { 1, 4, BASE_FORMAT_R32_UINT, false, false, From<Int<uint32_t>>, To<Int<uint32_t>> },
+
+    { 2, 4, BASE_FORMAT_R32G32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> },
+
+    { 3, 4, BASE_FORMAT_R32G32B32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> },
+
+    { 4, 4, BASE_FORMAT_R32G32B32A32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> },
 };
 
 template<class It, class T, class Pred>
-constexpr It LowerBound(It first, const It last, const T& val, Pred pred)
+constexpr It LowerBound(It first, const It last, const T& val, Pred pred) noexcept
 {
     auto count = std::distance(first, last);
 
     while (count > 0) {
-        const auto half = count / 2; // 2 : half
+        const auto half = count / 2;
         const auto mid = std::next(first, half);
         if (pred(*mid, val)) {
             first = mid + 1;
@@ -408,14 +425,14 @@ constexpr It LowerBound(It first, const It last, const T& val, Pred pred)
     return first;
 }
 
-constexpr const FormatProperties& GetFormatSpec(Format format)
+constexpr const FormatProperties& GetFormatSpec(Format format) noexcept
 {
-#if defined(__cpp_lib_constexpr_algorithms) && (__cpp_lib_constexpr_algorithms >= 201806L) // 201806 : id
+#if defined(__cpp_lib_constexpr_algorithms) && (__cpp_lib_constexpr_algorithms >= 201806L)
     static_assert(std::is_sorted(std::begin(DATA_FORMATS), std::end(DATA_FORMATS),
         [](const FormatProperties& lhs, const FormatProperties& rhs) { return lhs.format < rhs.format; }));
 #endif
     if (auto pos = LowerBound(std::begin(DATA_FORMATS), std::end(DATA_FORMATS), format,
-        [](const FormatProperties& element, Format value) { return element.format < value; });
+            [](const FormatProperties& element, Format value) { return element.format < value; });
         (pos != std::end(DATA_FORMATS)) && (pos->format == format)) {
         return *pos;
     }
@@ -423,7 +440,7 @@ constexpr const FormatProperties& GetFormatSpec(Format format)
 }
 
 size_t GetVertexAttributeByteSize(
-    const uint32_t vertexAttributeLocation, const VertexInputDeclarationView& vertexInputDeclaration)
+    const uint32_t vertexAttributeLocation, const VertexInputDeclarationView& vertexInputDeclaration) noexcept
 {
     if (const auto* vertexAttributeDesc =
             GetVertexAttributeDescription(vertexAttributeLocation, vertexInputDeclaration.attributeDescriptions);
@@ -438,7 +455,7 @@ size_t GetVertexAttributeByteSize(
 }
 
 // For each joint 6 values defining the min and max bounds (world space AABB) of the vertices affected by the joint.
-constexpr const size_t JOINT_BOUNDS_COMPONENTS = 6u; // 6 : size
+constexpr const size_t JOINT_BOUNDS_COMPONENTS = 6u;
 
 GpuBufferDesc GetVertexBufferDesc(size_t byteSize, IMeshBuilder::GpuBufferCreateInfo additionalFlags, bool morphTarget)
 {
@@ -483,10 +500,11 @@ MeshBuilder::BufferHandles CreateGpuBuffers(IRenderContext& renderContext, size_
     auto& gpuResourceManager = renderContext.GetDevice().GetGpuResourceManager();
 
     // targetDataSize is zero when there's no morph targets
-    GpuBufferDesc vertexBufferDesc = GetVertexBufferDesc(
+    const GpuBufferDesc vertexBufferDesc = GetVertexBufferDesc(
         vertexDataSize + indexDataSize + jointDataSize + targetDataSize, createInfo, targetDataSize != 0U);
-
-    handles.vertexBuffer = gpuResourceManager.Create(vertexBufferDesc);
+    if (vertexBufferDesc.byteSize) {
+        handles.vertexBuffer = gpuResourceManager.Create(vertexBufferDesc);
+    }
 
     return handles;
 }
@@ -545,7 +563,8 @@ MinAndMax CalculateAabb(array_view<const MeshComponent::Submesh> submeshes)
 struct Conversion {
     BASE_NS::Format srcFormat;
     BASE_NS::Format dstFormat;
-    void (*converter)(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements);
+    void (*converter)(
+        uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements) noexcept;
 };
 
 constexpr Conversion CONVERSIONS[] = {
@@ -557,6 +576,7 @@ constexpr Conversion CONVERSIONS[] = {
     { BASE_FORMAT_R16G16_UNORM, BASE_FORMAT_R16G16_SFLOAT, Convert<Norm<uint16_t>, Float<uint16_t>, RG> },
     { BASE_FORMAT_R16G16_UINT, BASE_FORMAT_R16G16_SFLOAT, Convert<Int<uint16_t>, Float<uint16_t>, RG> },
     { BASE_FORMAT_R16G16_SFLOAT, BASE_FORMAT_R32G32_SFLOAT, Convert<Float<uint16_t>, Float<float>, RG> },
+    { BASE_FORMAT_R16G16B16_SNORM, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Norm<int16_t>, Float<float>, RGB> },
     { BASE_FORMAT_R16G16B16_UINT, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Int<uint16_t>, Float<float>, RGB> },
     { BASE_FORMAT_R16G16B16A16_UNORM, BASE_FORMAT_R8G8B8A8_UNORM, Convert<IntegerNorm<uint16_t, uint8_t>, RGBA> },
     { BASE_FORMAT_R16G16B16A16_SNORM, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Norm<int16_t>, Float<float>, RGB> },
@@ -572,7 +592,7 @@ constexpr Conversion CONVERSIONS[] = {
 };
 
 void GenericConversion(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t count,
-    const FormatProperties& dstFormat, const FormatProperties& srcFormat)
+    const FormatProperties& dstFormat, const FormatProperties& srcFormat) noexcept
 {
     CORE_LOG_V("%u %u", srcData.format, dstData.format);
     auto dstPtr = dstData.buffer.data();
@@ -590,7 +610,7 @@ void GenericConversion(OutputBuffer& dstData, const MeshBuilder::DataBuffer& src
     }
 }
 
-void Fill(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t count)
+void Fill(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t count) noexcept
 {
     if (!count || (dstData.stride > (dstData.buffer.size() / count)) ||
         (srcData.stride > (srcData.buffer.size() / count))) {
@@ -645,28 +665,51 @@ void Fill(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t 
     }
 }
 
-constexpr uint32_t GetPrimitiveTopologyAdvanceCount(const PrimitiveTopology pt)
+constexpr uint32_t GetPrimitiveTopologyAdvanceCount(const PrimitiveTopology pt) noexcept
 {
     if (pt == CORE_PRIMITIVE_TOPOLOGY_POINT_LIST) {
         return 1U;
     } else if ((pt == CORE_PRIMITIVE_TOPOLOGY_LINE_LIST) || (pt == CORE_PRIMITIVE_TOPOLOGY_LINE_STRIP) ||
                (pt == CORE_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY) ||
                (pt == CORE_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY)) {
-        return 2U; // 2 : id
+        return 2U;
     } else if ((pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) || (pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP) ||
                (pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) ||
                (pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY) ||
                (pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY)) {
-        return 3U; // 3 : id
+        return 3U;
     } else {
         // CORE_PRIMITIVE_TOPOLOGY_PATCH_LIST
         // not processed default triangle_list
-        return 3U; // 3 : id
+        return 3U;
     }
 }
 
 template<typename T>
-void SmoothNormal(const PrimitiveTopology pt, array_view<const T> indices, const Math::Vec3* posPtr, Math::Vec3* norPtr)
+inline void CalculateAndAddFaceNormal(const Math::Vec3* posPtr, Math::Vec3* norPtr, T aa, T bb) noexcept
+{
+    const auto& pos1 = posPtr[aa];
+    const auto& pos2 = posPtr[bb];
+    const auto faceNorm = Math::Normalize(pos2 - pos1);
+    norPtr[aa] += faceNorm;
+    norPtr[bb] += faceNorm;
+}
+
+template<typename T>
+inline void CalculateAndAddFaceNormal(const Math::Vec3* posPtr, Math::Vec3* norPtr, T aa, T bb, T cc) noexcept
+{
+    const auto& pos1 = posPtr[aa];
+    const auto& pos2 = posPtr[bb];
+    const auto& pos3 = posPtr[cc];
+    const auto faceNorm = Math::Cross(pos2 - pos1, pos3 - pos1);
+    norPtr[aa] += faceNorm;
+    norPtr[bb] += faceNorm;
+    norPtr[cc] += faceNorm;
+}
+
+template<typename T>
+void SmoothNormal(
+    const PrimitiveTopology pt, array_view<const T> indices, const Math::Vec3* posPtr, Math::Vec3* norPtr) noexcept
 {
     const uint32_t ac = GetPrimitiveTopologyAdvanceCount(pt);
     // not processed for e.g. points with count of 1
@@ -674,34 +717,36 @@ void SmoothNormal(const PrimitiveTopology pt, array_view<const T> indices, const
 #if (CORE3D_VALIDATION_ENABLED == 1)
     bool processed = false;
 #endif
-    if ((ac == 2U) && (indices.size() % 2U == 0U)) { // 2 : id
+    if ((ac == 2U) && (indices.size() % 2U == 0U)) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
         processed = true;
 #endif
-        for (auto i = 0U; i < indices.size(); i += 2U) { // 2 : step
+        for (auto i = 0U; i < indices.size(); i += 2U) {
             const auto aa = indices[i];
             const auto bb = indices[i + 1];
-            const auto& pos1 = posPtr[aa];
-            const auto& pos2 = posPtr[bb];
-            auto faceNorm = Math::Normalize(pos2 - pos1);
-            norPtr[aa] += faceNorm;
-            norPtr[bb] += faceNorm;
+            CalculateAndAddFaceNormal(posPtr, norPtr, aa, bb);
         }
-    } else if ((ac == 3U) && ((indices.size() % 3U) == 0U)) { // 3 : size
+    } else if ((pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) && ((indices.size() % 3U) == 0U)) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
         processed = true;
 #endif
-        for (auto i = 0U; i < indices.size(); i += 3) { // 3 : step
+        for (auto i = 0U; i < indices.size(); i += 3) {
             const auto aa = indices[i];
-            const auto bb = indices[i + 1];
-            const auto cc = indices[i + 2]; // 2 : step
-            const auto& pos1 = posPtr[aa];
-            const auto& pos2 = posPtr[bb];
-            const auto& pos3 = posPtr[cc];
-            auto faceNorm = Math::Cross(pos2 - pos1, pos3 - pos1);
-            norPtr[aa] += faceNorm;
-            norPtr[bb] += faceNorm;
-            norPtr[cc] += faceNorm;
+            const auto bb = indices[i + 1U];
+            const auto cc = indices[i + 2U];
+            CalculateAndAddFaceNormal(posPtr, norPtr, aa, bb, cc);
+        }
+    } else if ((pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP) && (indices.size() > 2U)) {
+        // calculate normal for the first triangle.
+        CalculateAndAddFaceNormal(posPtr, norPtr, indices[0U], indices[1U], indices[2U]);
+
+        // each additional index forms a new triangle with the previous two indices.
+        for (auto i = 2U; i < indices.size(); ++i) {
+            // for every second triangle swap the indices to so that winding order is the same
+            const auto aa = (i % 2U) ? indices[i - 1U] : indices[i - 2U];
+            const auto bb = (i % 2U) ? indices[i - 2U] : indices[i - 1U];
+            const auto cc = indices[i];
+            CalculateAndAddFaceNormal(posPtr, norPtr, aa, bb, cc);
         }
     }
 #if (CORE3D_VALIDATION_ENABLED == 1)
@@ -711,26 +756,61 @@ void SmoothNormal(const PrimitiveTopology pt, array_view<const T> indices, const
 #endif
 }
 
+void FlatNormal(
+    const PrimitiveTopology primitiveTopology, uint32_t vertexCount, const Math::Vec3* posPtr, Math::Vec3* norPtr)
+{
+    if (primitiveTopology == PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP) {
+        if (vertexCount < 3U) {
+            return;
+        }
+        auto i = 0U;
+        {
+            const auto& pos1 = posPtr[i];
+            const auto& pos2 = posPtr[i + 1U];
+            const auto& pos3 = posPtr[i + 2U];
+            const auto faceNorm = Math::Normalize(Math::Cross(pos2 - pos1, pos3 - pos1));
+            norPtr[i] = faceNorm;
+            norPtr[i + 1U] = faceNorm;
+            norPtr[i + 2U] = faceNorm;
+        }
+        i += 2U;
+        for (; i < vertexCount; ++i) {
+            auto aa = (i % 2) ? (i - 1U) : (i - 2U);
+            auto bb = (i % 2) ? (i - 2U) : (i - 1U);
+            const auto& pos1 = posPtr[aa];
+            const auto& pos2 = posPtr[bb];
+            const auto& pos3 = posPtr[i];
+            auto faceNorm = Math::Normalize(Math::Cross(pos2 - pos1, pos3 - pos1));
+            norPtr[aa] = faceNorm;
+            norPtr[bb] = faceNorm;
+            norPtr[i] = faceNorm;
+        }
+    } else {
+        // Round vertex count down so it's divisible by three and we don't over index.
+        vertexCount = (vertexCount / 3U) * 3U;
+        for (auto i = 0U; i < vertexCount; i += 3U) {
+            const auto& pos1 = posPtr[i];
+            const auto& pos2 = posPtr[i + 1U];
+            const auto& pos3 = posPtr[i + 2U];
+            auto faceNorm = Math::Normalize(Math::Cross(pos2 - pos1, pos3 - pos1));
+            norPtr[i] = faceNorm;
+            norPtr[i + 1U] = faceNorm;
+            norPtr[i + 2U] = faceNorm;
+        }
+    }
+}
+
 void GenerateDefaultNormals(vector<uint8_t>& generatedNormals, const IMeshBuilder::DataBuffer& indices,
-    const IMeshBuilder::DataBuffer& positions, uint32_t vertexCount, const PrimitiveTopology primitiveTopology)
+    const IMeshBuilder::DataBuffer& positions, uint32_t vertexCount, const PrimitiveTopology primitiveTopology) noexcept
 {
     auto offset = generatedNormals.size();
     generatedNormals.resize(generatedNormals.size() + sizeof(Math::Vec3) * vertexCount);
     auto* norPtr = reinterpret_cast<Math::Vec3*>(generatedNormals.data() + offset);
     auto* posPtr = reinterpret_cast<const Math::Vec3*>(positions.buffer.data());
-    if (indices.buffer.empty() && GetPrimitiveTopologyAdvanceCount(primitiveTopology) == 3U) { // 3 : count
+    if (indices.buffer.empty() && GetPrimitiveTopologyAdvanceCount(primitiveTopology) == 3U) {
         // Mesh without indices will have flat normals
-        for (auto i = 0U; i < vertexCount; i += 3U) { // 3 : step
-            CORE_ASSERT((i + 2U) < vertexCount); // 2 : step
-            const auto& pos1 = posPtr[i];
-            const auto& pos2 = posPtr[i + 1U];
-            const auto& pos3 = posPtr[i + 2U]; // 2 : step
-            auto faceNorm = Math::Normalize(Math::Cross(pos2 - pos1, pos3 - pos1));
-            norPtr[i] = faceNorm;
-            norPtr[i + 1] = faceNorm;
-            norPtr[i + 2] = faceNorm; // 2:index
-        }
-    } else {
+        FlatNormal(primitiveTopology, vertexCount, posPtr, norPtr);
+    } else if (!indices.buffer.empty()) {
         // With indexed data flat normals would require duplicating shared vertices. Instead calculate smooth
         // normals.
         if (indices.stride == sizeof(uint16_t)) {
@@ -748,7 +828,7 @@ void GenerateDefaultNormals(vector<uint8_t>& generatedNormals, const IMeshBuilde
     }
 }
 
-void GenerateDefaultUvs(vector<uint8_t>& generatedUvs, uint32_t vertexCount)
+void GenerateDefaultUvs(vector<uint8_t>& generatedUvs, uint32_t vertexCount) noexcept
 {
     auto offset = generatedUvs.size();
     generatedUvs.resize(generatedUvs.size() + sizeof(Math::Vec2) * vertexCount);
@@ -758,7 +838,8 @@ void GenerateDefaultUvs(vector<uint8_t>& generatedUvs, uint32_t vertexCount)
 
 void GenerateDefaultTangents(IMeshBuilder::DataBuffer& tangents, vector<uint8_t>& generatedTangents,
     const IMeshBuilder::DataBuffer& indices, const IMeshBuilder::DataBuffer& positions,
-    const IMeshBuilder::DataBuffer& normals, const IMeshBuilder::DataBuffer& uvs, uint32_t vertexCount)
+    const IMeshBuilder::DataBuffer& normals, const IMeshBuilder::DataBuffer& uvs, PrimitiveTopology topology,
+    uint32_t vertexCount) noexcept
 {
     auto offset = generatedTangents.size();
     generatedTangents.resize(generatedTangents.size() + sizeof(Math::Vec4) * vertexCount);
@@ -778,17 +859,17 @@ void GenerateDefaultTangents(IMeshBuilder::DataBuffer& tangents, vector<uint8_t>
     switch (indices.stride) {
         case sizeof(uint8_t): {
             auto indicesView = array_view(reinterpret_cast<const uint8_t*>(indices.buffer.data()), indexCountCount);
-            MeshUtil::CalculateTangents(indicesView, posView, norView, uvsView, outTangents);
+            MeshUtil::CalculateTangents(indicesView, posView, norView, uvsView, topology, outTangents);
             break;
         }
         case sizeof(uint16_t): {
             auto indicesView = array_view(reinterpret_cast<const uint16_t*>(indices.buffer.data()), indexCountCount);
-            MeshUtil::CalculateTangents(indicesView, posView, norView, uvsView, outTangents);
+            MeshUtil::CalculateTangents(indicesView, posView, norView, uvsView, topology, outTangents);
             break;
         }
         case sizeof(uint32_t): {
             auto indicesView = array_view(reinterpret_cast<const uint32_t*>(indices.buffer.data()), indexCountCount);
-            MeshUtil::CalculateTangents(indicesView, posView, norView, uvsView, outTangents);
+            MeshUtil::CalculateTangents(indicesView, posView, norView, uvsView, topology, outTangents);
             break;
         }
         default:
@@ -797,11 +878,8 @@ void GenerateDefaultTangents(IMeshBuilder::DataBuffer& tangents, vector<uint8_t>
 }
 
 std::optional<std::reference_wrapper<const FormatProperties>> Verify(
-    const MeshBuilder::DataBuffer& dataBuffer, const uint32_t vertexCount)
+    const MeshBuilder::DataBuffer& dataBuffer, const uint32_t vertexCount) noexcept
 {
-    if (vertexCount == 0) {
-        return std::nullopt;
-    }
     if (dataBuffer.stride > (dataBuffer.buffer.size() / vertexCount)) {
         return std::nullopt;
     }
@@ -818,7 +896,7 @@ std::optional<std::reference_wrapper<const FormatProperties>> Verify(
 }
 
 inline Math::Vec3 ConvertAttribute(
-    const MeshBuilder::DataBuffer& dataBuffer, const FormatProperties& formatProperties, uint32_t vertexIndex)
+    const MeshBuilder::DataBuffer& dataBuffer, const FormatProperties& formatProperties, uint32_t vertexIndex) noexcept
 {
     Math::Vec3 value;
     auto* ptr = dataBuffer.buffer.data() + dataBuffer.stride * vertexIndex;
@@ -956,7 +1034,17 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
 }
 } // namespace
 
-MeshBuilder::MeshBuilder(IRenderContext& renderContext) : renderContext_(renderContext) {}
+MeshBuilder::MeshBuilder(IRenderContext& renderContext) : renderContext_(renderContext)
+{
+    IGraphicsContext* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(
+        *renderContext.GetInterface<CORE_NS::IClassRegister>(), UID_GRAPHICS_CONTEXT);
+    if (graphicsContext) {
+        const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
+        if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
+            rtEnabled_ = true;
+        }
+    }
+}
 
 // Public interface from IMeshBuilder
 void MeshBuilder::Initialize(const VertexInputDeclarationView& vertexInputDeclaration, size_t submeshCount)
@@ -1033,11 +1121,8 @@ void MeshBuilder::Allocate()
 
     if (flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER) {
         // Create host accessible buffers where data can be written directly.
-        static constexpr IMeshBuilder::GpuBufferCreateInfo flags { 0U,
-            EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
-                EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER,
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+        IMeshBuilder::GpuBufferCreateInfo flags = DEFAULT_BUFFER_CREATE_INFO;
+        flags.usage |= rtEnabled_ ? RT_BUFFER_USAGE_FLAGS : 0U;
         bufferHandles_ =
             CreateGpuBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, flags);
         auto& gpuResourceManager = renderContext_.GetDevice().GetGpuResourceManager();
@@ -1267,7 +1352,7 @@ void MeshBuilder::SetJointData(
         MeshComponent::Submesh& submeshDesc = submeshes_[submeshIndex];
         const SubmeshExt& submesh = submeshInfos_[submeshIndex];
         if (const auto* indexAttributeDesc = GetVertexAttributeDescription(
-            MeshComponent::Submesh::DM_VB_JOI, vertexInputDeclaration_.attributeDescriptions);
+                MeshComponent::Submesh::DM_VB_JOI, vertexInputDeclaration_.attributeDescriptions);
             indexAttributeDesc) {
             if (const VertexInputDeclaration::VertexInputBindingDescription* bindingDesc = GetVertexBindingeDescription(
                     indexAttributeDesc->binding, vertexInputDeclaration_.bindingDescriptions);
@@ -1283,7 +1368,7 @@ void MeshBuilder::SetJointData(
             }
         }
         if (const auto* weightAttributeDesc = GetVertexAttributeDescription(
-            MeshComponent::Submesh::DM_VB_JOW, vertexInputDeclaration_.attributeDescriptions);
+                MeshComponent::Submesh::DM_VB_JOW, vertexInputDeclaration_.attributeDescriptions);
             weightAttributeDesc) {
             if (const VertexInputDeclaration::VertexInputBindingDescription* bindingDesc = GetVertexBindingeDescription(
                     weightAttributeDesc->binding, vertexInputDeclaration_.bindingDescriptions);
@@ -1357,7 +1442,7 @@ void MeshBuilder::SetMorphTargetData(size_t submeshIndex, const DataBuffer& base
             if (!baseTangents.buffer.empty()) {
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
                 OutputBuffer dstData { TANGENT_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, nortan) + 8U, targetSize } }; // 8 : step
+                    { buffer + baseOffset + offsetof(MorphInputData, nortan) + 8U, targetSize } };
 #else
                 OutputBuffer dstData { TANGENT_FORMAT, sizeof(MorphInputData),
                     { buffer + baseOffset + offsetof(MorphInputData, tan), targetSize } };
@@ -1553,8 +1638,16 @@ void MeshBuilder::CreateGpuResources(const GpuBufferCreateInfo& createInfo)
     GenerateMissingAttributes();
 
     if (!(flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER)) {
-        bufferHandles_ = CreateGpuBuffers(
-            renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, createInfo);
+        if (stagingPtr_) {
+            stagingPtr_ = nullptr;
+            auto& gpuResourceManager = renderContext_.GetDevice().GetGpuResourceManager();
+            gpuResourceManager.UnmapBuffer(stagingBuffer_);
+        }
+
+        GpuBufferCreateInfo ci = createInfo;
+        ci.usage |= rtEnabled_ ? RT_BUFFER_USAGE_FLAGS : 0U;
+        bufferHandles_ =
+            CreateGpuBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, ci);
 
         StageToBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, bufferHandles_,
             stagingBuffer_);
@@ -1646,6 +1739,16 @@ void MeshBuilder::Unref()
     }
 }
 
+void MeshBuilder::EnablePrimitiveRestart(size_t index)
+{
+    if (index < submeshInfos_.size()) {
+        submeshInfos_[index].info.inputAssembly.enablePrimitiveRestart = true;
+    }
+    if (index < submeshes_.size()) {
+        submeshes_[index].inputAssembly.enablePrimitiveRestart = true;
+    }
+}
+
 // Private methods
 MeshBuilder::BufferEntities MeshBuilder::CreateBuffers(IEcs& ecs) const
 {
@@ -1656,8 +1759,16 @@ MeshBuilder::BufferEntities MeshBuilder::CreateBuffers(IEcs& ecs) const
     if (bufferHandles_.vertexBuffer) {
         handles = bufferHandles_;
     } else {
+        if (stagingPtr_) {
+            stagingPtr_ = nullptr;
+            auto& gpuResourceManager = renderContext_.GetDevice().GetGpuResourceManager();
+            gpuResourceManager.UnmapBuffer(stagingBuffer_);
+        }
+
+        GpuBufferCreateInfo ci;
+        ci.usage |= rtEnabled_ ? RT_BUFFER_USAGE_FLAGS : 0U;
         handles =
-            CreateGpuBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, {});
+            CreateGpuBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, ci);
         if (!(flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER)) {
             StageToBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, handles,
                 stagingBuffer_);
@@ -1746,8 +1857,8 @@ void MeshBuilder::GenerateMissingAttributes() const
         if (submesh.info.tangents && !submesh.hasTangents) {
             DataBuffer tangentData;
             vector<uint8_t> generatedTangents;
-            GenerateDefaultTangents(
-                tangentData, generatedTangents, indexData, positionData, normalData, uvData, submesh.info.vertexCount);
+            GenerateDefaultTangents(tangentData, generatedTangents, indexData, positionData, normalData, uvData,
+                submesh.info.inputAssembly.primitiveTopology, submesh.info.vertexCount);
 
             auto& acc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_TAN];
             if (WriteData(tangentData, submesh, MeshComponent::Submesh::DM_VB_TAN, acc.offset, acc.byteSize, buffer)) {
@@ -2013,7 +2124,7 @@ void MeshBuilder::CalculateJointBounds(
             pos[j] = positionFormat.toIntermediate(ptr + j * positionFormat.componentByteSize);
         }
 
-        float fWeights[4U]; // 4 : size
+        float fWeights[4U];
         for (auto j = 0U; j < weightFormat.componentCount; ++j) {
             fWeights[j] = weightFormat.toIntermediate(weights + j * weightFormat.componentByteSize);
         }

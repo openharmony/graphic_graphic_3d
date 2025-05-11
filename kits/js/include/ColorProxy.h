@@ -15,12 +15,14 @@
 #ifndef COLOR_PROXY_H
 #define COLOR_PROXY_H
 #include <meta/interface/property/property.h>
+
 #include <base/util/color.h>
 
 #include "PropertyProxy.h"
 class ColorProxy : public ObjectPropertyProxy {
 public:
     ColorProxy(napi_env env, META_NS::Property<BASE_NS::Color> prop);
+    ColorProxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec4> prop);
     ~ColorProxy() override;
     void SetValue(NapiApi::Object obj) override;
 
@@ -29,12 +31,10 @@ public:
 
 private:
     void SetValue(const BASE_NS::Color& v);
+    void SetValue(const BASE_NS::Math::Vec4& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
-
-    BASE_NS::Color value;
-    void UpdateLocalValues() override;
-    void UpdateRemoteValues() override;
+    bool isColorType_ { };
 };
 
 #endif

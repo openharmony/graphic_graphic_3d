@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -64,20 +64,16 @@ public:
 private:
     struct EntityState {
         enum class State : uint32_t {
-            /* Entity is ready for re-use.
-             */
+            // Entity is ready for re-use.
             FREE = 0,
-            /* Entity is alive and active.
-             */
+            // Entity is alive and active.
             ALIVE = 1,
-            /* Entity is alive and de-activated.
-             */
+            // Entity is alive and de-activated.
             INACTIVE = 2,
-            /* Entity is destroyed and waiting for GC
-             */
+            // Entity is destroyed and waiting for GC
             DEAD = 3,
-        } state { 0 };
-        uint32_t generation { 0 };
+        } state { State::FREE };
+        uint32_t generation { 0U };
         BASE_NS::refcnt_ptr<EntityReferenceCounter> counter;
     };
     BASE_NS::vector<EntityState> entities_;

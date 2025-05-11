@@ -5,16 +5,22 @@
 // includes
 
 #include "render/shaders/common/render_color_conversion_common.h"
+#include "render/shaders/common/render_post_process_structs_common.h"
 
 #include "common/bloom_common.h"
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+layout(set = 0, binding = 0, rgba16f/*r11f_g11f_b10f*/) uniform writeonly image2D uWoTex;
+layout(set = 0, binding = 1) uniform texture2D uTex;
+layout(set = 0, binding = 2) uniform sampler uSampler;
 
-layout(set = 1, binding = 0, rgba16f/*r11f_g11f_b10f*/) uniform writeonly image2D uWoTex;
-layout(set = 1, binding = 1) uniform texture2D uTex;
-layout(set = 1, binding = 2) uniform sampler uSampler;
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // bloom threshold downscale
@@ -32,9 +38,9 @@ void main()
     //vec3 color = bloomDownscale(uv, uPc.texSizeInvTexSize.zw, uTex, uSampler);
     vec3 color = vec3(0.0);
     if ((CORE_BLOOM_QUALITY_NORMAL & CORE_POST_PROCESS_FLAGS) == CORE_BLOOM_QUALITY_NORMAL) {
-        color = bloomDownscaleWeighted9(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+        color = BloomDownscaleWeighted9(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
     } else {
-        color = bloomDownscaleWeighted(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+        color = BloomDownscaleWeighted(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
     }
 
     const float luma = CalcLuma(color);

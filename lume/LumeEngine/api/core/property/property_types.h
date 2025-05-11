@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,6 +26,7 @@
 #include <base/math/quaternion.h>
 #include <base/math/vector.h>
 #include <base/namespace.h>
+#include <base/util/color.h>
 #include <base/util/uid.h>
 #include <core/ecs/entity.h>
 #include <core/ecs/entity_reference.h>
@@ -84,6 +85,7 @@ inline constexpr PropertyTypeDecl UID_T = PROPERTYTYPE(BASE_NS::Uid);
 inline constexpr PropertyTypeDecl ENTITY_T = PROPERTYTYPE(Entity);
 inline constexpr PropertyTypeDecl ENTITY_REFERENCE_T = PROPERTYTYPE(EntityReference);
 inline constexpr PropertyTypeDecl STRING_T = PROPERTYTYPE(BASE_NS::string);
+inline constexpr PropertyTypeDecl COLOR_T = PROPERTYTYPE(BASE_NS::Color);
 
 inline constexpr PropertyTypeDecl IVEC2_ARRAY_T = PROPERTYTYPE_ARRAY(BASE_NS::Math::IVec2);
 inline constexpr PropertyTypeDecl IVEC3_ARRAY_T = PROPERTYTYPE_ARRAY(BASE_NS::Math::IVec3);

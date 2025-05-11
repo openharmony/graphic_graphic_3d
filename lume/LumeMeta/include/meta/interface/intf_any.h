@@ -1,22 +1,12 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Any interface
+ * Author: Mikael Kilpeläinen
+ * Create: 2023-10-18
  */
 
 #ifndef META_INTERFACE_ANY_H
 #define META_INTERFACE_ANY_H
-
-#include <core/plugin/intf_interface.h>
 
 #include <meta/base/expected.h>
 #include <meta/base/ids.h>
@@ -107,7 +97,9 @@ class IArrayAny : public IAny {
 public:
     using IndexType = size_t;
 
+    /// Get compatible types for any constructed with Clone for the array item type
     virtual const BASE_NS::array_view<const TypeId> GetItemCompatibleTypes(CompatibilityDirection) const = 0;
+
     virtual AnyReturnValue GetDataAt(size_t index, const TypeId& id, void* data, size_t size) const = 0;
     virtual AnyReturnValue SetDataAt(size_t index, const TypeId& id, const void* data, size_t size) = 0;
     virtual AnyReturnValue SetAnyAt(IndexType index, const IAny& value) = 0;
@@ -180,6 +172,7 @@ inline bool IsItemCompatible(
     }
     return false;
 }
+
 inline bool IsCompatibleWith(
     const IAny& any, const IAny& other, CompatibilityDirection dir = CompatibilityDirection::BOTH)
 {

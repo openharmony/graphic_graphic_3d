@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,17 +46,17 @@ BEGIN_COMPONENT(IAnimationTrackComponentManager, AnimationTrackComponent)
     };
 #endif
     /** Animation target */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, target, "Target Entity", 0,)
+    DEFINE_PROPERTY(CORE_NS::EntityReference, target, "Target Entity", 0, )
     /** Component type to animate */
-    DEFINE_PROPERTY(BASE_NS::Uid, component, "Target Component UID", 0,)
+    DEFINE_PROPERTY(BASE_NS::Uid, component, "Target Component UID", 0, )
     /** Property to animate. */
-    DEFINE_PROPERTY(BASE_NS::string, property, "Target Property", 0,)
+    DEFINE_PROPERTY(BASE_NS::string, property, "Target Property", 0, )
     /** Animation interpolation mode */
-    DEFINE_PROPERTY(Interpolation, interpolationMode, "Interpolation Mode", 0,)
+    DEFINE_PROPERTY(Interpolation, interpolationMode, "Interpolation Mode", 0, )
     /** Animation timestamps */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, timestamps, "Input Component", 0,)
+    DEFINE_PROPERTY(CORE_NS::EntityReference, timestamps, "Input Component", 0, )
     /** Animation data */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, data, "Output Component", 0,)
+    DEFINE_PROPERTY(CORE_NS::EntityReference, data, "Output Component", 0, )
 
 END_COMPONENT(IAnimationTrackComponentManager, AnimationTrackComponent, "42b5784a-44e6-4de1-8892-d0871ebca989")
 #if !defined(IMPLEMENT_MANAGER)

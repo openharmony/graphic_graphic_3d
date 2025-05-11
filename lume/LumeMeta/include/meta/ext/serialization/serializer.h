@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+ * Description: Helpers for serialisation
+ * Author: Mikael Kilpeläinen
+ * Create: 2024-01-10
  */
 
 #ifndef META_EXT_SERIALIZATION_SERIALISER_H
@@ -61,6 +53,7 @@ protected:
     ReturnError state_ { GenericError::SUCCESS };
 };
 
+/// Helper class to export and return the status
 class ExportSerializer : public SerializerBase {
 public:
     ExportSerializer(IExportContext& context) : context_(context) {}
@@ -122,6 +115,7 @@ private:
     IExportContext& context_;
 };
 
+/// Helper class to import and return the status
 class ImportSerializer : public SerializerBase {
 public:
     ImportSerializer(IImportContext& context) : context_(context) {}
@@ -190,6 +184,7 @@ private:
     IImportContext& context_;
 };
 
+/// Helper to use same names and syntax for export and import
 template<typename Context>
 class Serializer {
     Serializer(Context& c);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -53,13 +53,12 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr string_view MULTIVIEW_VARIANT_NAME { "ENV_MV" };
-
 constexpr string_view POST_PROCESS_DATA_STORE_TYPE_NAME { "RenderDataStorePod" };
 constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
 constexpr DynamicStateEnum DYNAMIC_STATES_FSR[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR,
     CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE };
 
+constexpr string_view DEFAULT_SKY_SHADER_NAME { "3dshaders://shader/clouds/core3d_dm_env_sky.shader" };
 // our light weight straight to screen post processes are only interested in these
 static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffU };
 static constexpr uint32_t FIXED_CUSTOM_SET3 { 3U };
@@ -170,13 +169,12 @@ void RenderNodeDefaultEnv::InitNode(IRenderNodeContextManager& renderNodeContext
     rngRenderPass_ = renderNodeContextMgr.GetRenderNodeUtil().CreateRenderPass(inputRenderPass_);
 
     const auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
-    // default pipeline layout
-    {
-        const RenderHandle plHandle =
-            shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_ENV);
-        defaultPipelineLayout_ = shaderMgr.GetPipelineLayout(plHandle);
-    }
-    defaultShaderData_.shader = shaderMgr.GetShaderHandle(DefaultMaterialShaderConstants::ENV_SHADER_NAME);
+
+    const IShaderManager::RenderSlotData shaderRsd = shaderMgr.GetRenderSlotData(jsonInputs_.renderSlotId);
+    defaultShaderData_.shader = shaderRsd.shader.GetHandle();
+    defaultShaderData_.pl = shaderRsd.pipelineLayout.GetHandle();
+    defaultShaderData_.plData = shaderMgr.GetPipelineLayout(defaultShaderData_.pl);
+    defaultSkyShader_ = shaderMgr.GetShaderHandle(DEFAULT_SKY_SHADER_NAME);
 
     CreateDescriptorSets();
 }
@@ -204,12 +202,10 @@ void RenderNodeDefaultEnv::ExecuteFrame(IRenderCommandList& cmdList)
 
     cmdList.BeginRenderPass(renderPass_.renderPassDesc, renderPass_.subpassStartIndex, renderPass_.subpassDesc);
 
-    if (currentScene_.camera.environment.backgroundType != RenderCamera::Environment::BG_TYPE_NONE) {
+    if (dataStoreCamera && currentScene_.camera.environment.backgroundType != RenderCamera::Environment::BG_TYPE_NONE) {
         if (currentScene_.camera.layerMask & currentScene_.camera.environment.layerMask) {
             UpdatePostProcessConfiguration();
-            if (dataStoreCamera) {
-                RenderData(*dataStoreCamera, cmdList);
-            }
+            RenderData(*dataStoreCamera, cmdList);
         }
     }
 
@@ -235,7 +231,11 @@ void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCam
     }
 
     const RenderCamera::Environment& renderEnv = currentScene_.camera.environment;
-    const RenderHandle shaderHandle = renderEnv.shader ? renderEnv.shader.GetHandle() : defaultShaderData_.shader;
+    // sky or basic default
+    const RenderHandle defaultShader = (renderEnv.backgroundType == RenderCamera::Environment::BG_TYPE_SKY)
+                                           ? defaultSkyShader_
+                                           : defaultShaderData_.shader;
+    const RenderHandle shaderHandle = renderEnv.shader ? renderEnv.shader.GetHandle() : defaultShader;
     // check for pso changes
     if ((renderEnv.backgroundType != currentBgType_) || (currShaderData_.shader.id != shaderHandle.id) ||
         (currentCameraShaderFlags_ != currentScene_.cameraShaderFlags) ||
@@ -285,9 +285,14 @@ bool RenderNodeDefaultEnv::UpdateAndBindCustomSet(
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
 
     RenderHandle currPlHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(renderEnv.shader.GetHandle());
+    // NOTE: we only update the set3 so we can use reflection for that
     if (!RenderHandleUtil::IsValid(currPlHandle)) {
         currPlHandle = shaderMgr.GetReflectionPipelineLayoutHandle(renderEnv.shader.GetHandle());
     }
+    if (!RenderHandleUtil::IsValid(currPlHandle)) {
+        currPlHandle = defaultShaderData_.pl;
+    }
+
     uint32_t validResCount = 0;
     for (uint32_t idx = 0; idx < RenderSceneDataConstants::MAX_ENV_CUSTOM_RESOURCE_COUNT; ++idx) {
         if (renderEnv.customResourceHandles[idx]) {
@@ -422,13 +427,17 @@ RenderNodeDefaultEnv::ShaderData RenderNodeDefaultEnv::GetPso(const RenderHandle
         }
 
         const ShaderSpecializationConstantDataView specialization { sscv.constants, flags };
-        RenderHandle plHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(shaderHandle);
-        if (!RenderHandleUtil::IsValid(plHandle)) {
-            plHandle = shaderMgr.GetReflectionPipelineLayoutHandle(shaderHandle);
-        }
+        // NOTE: we cannot use the reflected pipeline layout as it needs to match the real pipeline layout
+        // need to use the default as the set 0 is default material pipeline set
+        RenderHandle plHandle = defaultShaderData_.pl;
+
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderHandle);
         // flag that we need additional custom resource bindings
-        if (shaderHandle != defaultShaderData_.shader) {
+        if (!((shaderHandle == defaultShaderData_.shader) || (shaderHandle == defaultSkyShader_))) {
+            plHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(shaderHandle);
+            if (!RenderHandleUtil::IsValid(plHandle)) {
+                plHandle = shaderMgr.GetReflectionPipelineLayoutHandle(shaderHandle);
+            }
             const auto& plData = shaderMgr.GetPipelineLayout(plHandle);
             if (!plData.descriptorSetLayouts[FIXED_CUSTOM_SET3].bindings.empty()) {
                 sd.customSet = true;
@@ -452,14 +461,14 @@ void RenderNodeDefaultEnv::CreateDescriptorSets()
     {
         // automatic calculation
         const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
-        const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(defaultPipelineLayout_);
+        const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(defaultShaderData_.plData);
         descriptorSetMgr.ResetAndReserve(dc);
     }
     {
         const uint32_t set = 3U;
-        const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, defaultPipelineLayout_);
+        const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, defaultShaderData_.plData);
         builtInSet3_ = descriptorSetMgr.CreateDescriptorSetBinder(
-            descriptorSetHandle, defaultPipelineLayout_.descriptorSetLayouts[set].bindings);
+            descriptorSetHandle, defaultShaderData_.plData.descriptorSetLayouts[set].bindings);
     }
 }
 
@@ -508,6 +517,19 @@ void RenderNodeDefaultEnv::ParseRenderNodeInputs()
         jsonInputs_.nodeFlags = 0;
     }
 
+    const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+    jsonInputs_.renderSlotId = shaderMgr.GetRenderSlotId(parserUtil.GetStringValue(jsonVal, "renderSlot"));
+    jsonInputs_.shaderRenderSlotMultiviewId =
+        shaderMgr.GetRenderSlotId(parserUtil.GetStringValue(jsonVal, "shaderMultiviewRenderSlot"));
+    if (jsonInputs_.renderSlotId == ~0U) {
+        jsonInputs_.renderSlotId =
+            shaderMgr.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_ENVIRONMENT);
+    }
+    if (jsonInputs_.shaderRenderSlotMultiviewId == ~0U) {
+        jsonInputs_.shaderRenderSlotMultiviewId =
+            shaderMgr.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_ENVIRONMENT + "_MV");
+    }
+
     EvaluateFogBits();
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
@@ -533,10 +555,15 @@ void RenderNodeDefaultEnv::ResetRenderSlotData(const bool enableMultiview)
         enableMultiView_ = enableMultiview;
         const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
         defaultShaderData_ = {};
-        defaultShaderData_.shader =
-            enableMultiView_
-                ? shaderMgr.GetShaderHandle(DefaultMaterialShaderConstants::ENV_SHADER_NAME, MULTIVIEW_VARIANT_NAME)
-                : shaderMgr.GetShaderHandle(DefaultMaterialShaderConstants::ENV_SHADER_NAME);
+        const IShaderManager::RenderSlotData shaderRsd = shaderMgr.GetRenderSlotData(jsonInputs_.renderSlotId);
+        defaultShaderData_.shader = shaderRsd.shader.GetHandle();
+        defaultShaderData_.pl = shaderRsd.pipelineLayout.GetHandle();
+        defaultShaderData_.plData = shaderMgr.GetPipelineLayout(defaultShaderData_.pl);
+        if (enableMultiView_) {
+            const IShaderManager::RenderSlotData shaderRsdMv =
+                shaderMgr.GetRenderSlotData(jsonInputs_.shaderRenderSlotMultiviewId);
+            defaultShaderData_.shader = shaderRsdMv.shader.GetHandle();
+        }
     }
 }
 

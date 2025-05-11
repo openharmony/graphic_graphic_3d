@@ -18,6 +18,7 @@
 #include <base/math/matrix.h>
 #include <base/math/quaternion.h>
 #include <base/math/vector.h>
+#include <base/util/color.h>
 #include <base/util/compile_time_hashes.h>
 #include <base/util/uid.h>
 #include <core/ecs/entity.h>
@@ -57,6 +58,7 @@ DECLARE_PROPERTY_TYPE(BASE_NS::Math::Quat);
 DECLARE_PROPERTY_TYPE(BASE_NS::Math::Mat3X3);
 DECLARE_PROPERTY_TYPE(BASE_NS::Math::Mat4X4);
 DECLARE_PROPERTY_TYPE(BASE_NS::Uid);
+DECLARE_PROPERTY_TYPE(BASE_NS::Color);
 DECLARE_PROPERTY_TYPE(Entity);
 DECLARE_PROPERTY_TYPE(EntityReference);
 DECLARE_PROPERTY_TYPE(BASE_NS::string);
@@ -202,11 +204,13 @@ struct DataType<BASE_NS::vector<T>> {
  * @param value A valid enumerator of enumType
  * @param displayName String used as the display name e.g. tooltip.
  */
+// clang-format off
 #define ENUM_VALUE(value, displayName)            \
     CORE_NS::EnumMetaData                         \
     {                                             \
         #value, displayName, (int64_t)Enum::value \
     }
+// clang-format on
 
 /** Defines a MetaDataFrom helper function for an enumeration type. Takes a list of ENUM_VALUE macros which define the
  * metadata for the values of the enum.
@@ -301,7 +305,7 @@ struct DataType<BASE_NS::vector<T>> {
  * in the same scope.
  */
 #define PROPERTY_LIST(dataType, storageName, ...) \
-    using COMPTYPE = dataType;                \
+    using COMPTYPE = dataType;                    \
     static constexpr CORE_NS::Property storageName[] = { __VA_ARGS__ };
 
 // Declare metadata for these basic types..

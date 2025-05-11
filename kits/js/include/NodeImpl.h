@@ -28,6 +28,9 @@ public:
 
     static void RegisterEnums(NapiApi::Object exports);
 
+    bool IsAttached() const;
+    void Attached(bool attached);
+
 protected:
     static void GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props);
     NodeImpl(NodeType type);
@@ -75,6 +78,7 @@ protected:
     napi_value RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
 private:
+    bool attached_ = false;
     NodeType type_;
     BASE_NS::unique_ptr<Vec3Proxy> posProxy_ { nullptr };
     BASE_NS::unique_ptr<Vec3Proxy> sclProxy_ { nullptr };

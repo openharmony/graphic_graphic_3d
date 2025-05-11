@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -99,6 +99,8 @@ uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::ColorBlendState::Attachme
     // blend op values 0 - 4, 0x7 for exact (3 bits)
     hash |= ((static_cast<uint64_t>(state.colorBlendOp) & 0x7) << 24u);
     hash |= ((static_cast<uint64_t>(state.alphaBlendOp) & 0x7) << 28u);
+    // color write mask takes 4 bits
+    hash |= (static_cast<uint64_t>(state.colorWriteMask) << 32u);
     return hash;
 }
 
@@ -521,11 +523,17 @@ RenderHandle ShaderManager::CreateClientData(
         clientHandle = iter->second;
         // we update the frame index if the shader has been (re)loaded
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(clientHandle);
+        const uint32_t gIdx = RenderHandleUtil::GetGenerationIndexPart(clientHandle);
+        clientHandle = RenderHandleUtil::CreateGpuResourceHandle(type, 0, arrayIndex, gIdx);
+        RenderHandleReference rhr =
+            RenderHandleReference(clientHandle, IRenderReferenceCounter::Ptr(new ShaderReferenceCounter()));
         if ((type == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) &&
             (arrayIndex < static_cast<uint32_t>(computeShaderMappings_.clientData.size()))) {
             computeShaderMappings_.clientData[arrayIndex].frameIndex = frameIndex;
+            computeShaderMappings_.clientData[arrayIndex].rhr = move(rhr);
         } else if (arrayIndex < static_cast<uint32_t>(shaderMappings_.clientData.size())) {
             shaderMappings_.clientData[arrayIndex].frameIndex = frameIndex;
+            shaderMappings_.clientData[arrayIndex].rhr = move(rhr);
         }
     } else {
         const uint32_t arrayIndex = (type == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT)
@@ -1064,8 +1072,14 @@ RenderHandleReference ShaderManager::CreateGraphicsState(
     }
 
     uint32_t baseVariantIndex = INVALID_SM_INDEX;
+    uint32_t gIdx = 0U;
     RenderHandleReference rhr;
     if (arrayIndex < graphicsStates_.rhr.size()) {
+        // increase generation for new handle
+        gIdx = RenderHandleUtil::GetGenerationIndexPart(graphicsStates_.rhr[arrayIndex].GetHandle()) + 1U;
+        const RenderHandle handle = RenderHandleUtil::CreateHandle(RenderHandleType::GRAPHICS_STATE, arrayIndex, gIdx);
+        graphicsStates_.rhr[arrayIndex] =
+            RenderHandleReference(handle, IRenderReferenceCounter::Ptr(new ShaderReferenceCounter()));
         rhr = graphicsStates_.rhr[arrayIndex];
         graphicsStates_.graphicsStates[arrayIndex] = createInfo.graphicsState;
         const uint64_t hash = HashGraphicsState(createInfo.graphicsState);
@@ -1078,7 +1092,7 @@ RenderHandleReference ShaderManager::CreateGraphicsState(
         if (!fullName.empty()) {
             graphicsStates_.nameToIndex[fullName] = arrayIndex;
         }
-        const RenderHandle handle = RenderHandleUtil::CreateHandle(RenderHandleType::GRAPHICS_STATE, arrayIndex);
+        const RenderHandle handle = RenderHandleUtil::CreateHandle(RenderHandleType::GRAPHICS_STATE, arrayIndex, gIdx);
         graphicsStates_.rhr.push_back(
             RenderHandleReference(handle, IRenderReferenceCounter::Ptr(new ShaderReferenceCounter())));
         rhr = graphicsStates_.rhr[arrayIndex];
@@ -1346,15 +1360,23 @@ RenderHandleReference ShaderManager::CreateVertexInputDeclaration(const VertexIn
         PLUGIN_ASSERT(nameIter->second < shaderVid_.rhr.size());
         arrayIndex = static_cast<uint32_t>(nameIter->second);
     }
+
+    uint32_t gIdx = 0U;
     if (arrayIndex < static_cast<uint32_t>(shaderVid_.data.size())) {
         // inside core validation due to being very low info for common users
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_I("ShaderManager: re-creating vertex input declaration (name %s)", createInfo.path.data());
 #endif
+        // increase generation for new handle
+        gIdx = RenderHandleUtil::GetGenerationIndexPart(shaderVid_.rhr[arrayIndex].GetHandle()) + 1U;
+        const RenderHandle handle =
+            RenderHandleUtil::CreateHandle(RenderHandleType::VERTEX_INPUT_DECLARATION, arrayIndex, gIdx);
+        shaderVid_.rhr[arrayIndex] =
+            RenderHandleReference(handle, IRenderReferenceCounter::Ptr(new ShaderReferenceCounter()));
     } else { // new
         arrayIndex = static_cast<uint32_t>(shaderVid_.data.size());
         const RenderHandle handle =
-            RenderHandleUtil::CreateHandle(RenderHandleType::VERTEX_INPUT_DECLARATION, arrayIndex);
+            RenderHandleUtil::CreateHandle(RenderHandleType::VERTEX_INPUT_DECLARATION, arrayIndex, gIdx);
         shaderVid_.rhr.push_back(
             RenderHandleReference(handle, IRenderReferenceCounter::Ptr(new ShaderReferenceCounter())));
         shaderVid_.data.push_back(VertexInputDeclarationData {});
@@ -1603,11 +1625,14 @@ RenderHandleReference ShaderManager::CreatePipelineLayout(const PipelineLayoutCr
         }
     }
 
+    uint32_t gIdx = 0U;
     if (arrayIndex < static_cast<uint32_t>(pl_.data.size())) { // replace
         // inside core validation due to being very low info for common users
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_I("ShaderManager: re-creating pipeline layout (name %s)", createInfo.path.data());
 #endif
+        // increase generation for new handle
+        gIdx = RenderHandleUtil::GetGenerationIndexPart(pl_.rhr[arrayIndex].GetHandle()) + 1U;
     } else { // new
         arrayIndex = static_cast<uint32_t>(pl_.data.size());
         pl_.data.push_back(PipelineLayout {});
@@ -1622,17 +1647,13 @@ RenderHandleReference ShaderManager::CreatePipelineLayout(const PipelineLayoutCr
         const PipelineLayout& pipelineLayout = createInfo.pipelineLayout;
         PipelineLayout& ref = pl_.data[arrayIndex];
 #if (RENDER_VALIDATION_ENABLED == 1)
-        if (pipelineLayout.descriptorSetCount > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT ||
-            pipelineLayout.pushConstant.byteSize > PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) {
-            PLUGIN_LOG_W(
-                "Invalid pipeline layout sizes clamped (name:%s). Set count %u <= %u, push constant size %u <= %u",
-                createInfo.path.data(), ref.descriptorSetCount, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT,
-                pipelineLayout.pushConstant.byteSize, PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE);
+        if (pipelineLayout.pushConstant.byteSize > PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) {
+            PLUGIN_LOG_W("Invalid pipeline layout sizes clamped (name:%s). Push constant size %u <= %u",
+                createInfo.path.data(), pipelineLayout.pushConstant.byteSize,
+                PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE);
         }
 #endif
         ref.pushConstant = pipelineLayout.pushConstant;
-        ref.descriptorSetCount =
-            Math::min(PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT, pipelineLayout.descriptorSetCount);
         ref.pushConstant.byteSize =
             Math::min(PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE, pipelineLayout.pushConstant.byteSize);
         uint32_t descriptorSetBitmask = 0;
@@ -1646,7 +1667,7 @@ RenderHandleReference ShaderManager::CreatePipelineLayout(const PipelineLayoutCr
         }
 
         const RenderHandle handle =
-            RenderHandleUtil::CreateHandle(RenderHandleType::PIPELINE_LAYOUT, arrayIndex, 0, descriptorSetBitmask);
+            RenderHandleUtil::CreateHandle(RenderHandleType::PIPELINE_LAYOUT, arrayIndex, gIdx, descriptorSetBitmask);
         pl_.rhr[arrayIndex] = RenderHandleReference(handle, IRenderReferenceCounter::Ptr(new ShaderReferenceCounter()));
         if (createInfo.renderSlotDefault) {
             SetRenderSlotData({ createInfo.renderSlotId, {}, {}, pl_.rhr[arrayIndex], {} });
@@ -1833,7 +1854,7 @@ void ShaderManager::DestroyShader(const RenderHandle handle)
 
     auto eraseIndexData = [](auto& mapStore, const RenderHandle handle) {
         if (auto const pos = std::find_if(
-            mapStore.begin(), mapStore.end(), [handle](auto const& element) { return element.second == handle; });
+                mapStore.begin(), mapStore.end(), [handle](auto const& element) { return element.second == handle; });
             pos != mapStore.end()) {
             mapStore.erase(pos);
         }
@@ -1898,7 +1919,7 @@ void ShaderManager::DestroyGraphicsState(const RenderHandle handle)
 
         auto eraseIndexData = [](auto& mapStore, const uint32_t index) {
             if (auto const pos = std::find_if(
-                mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
+                    mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
                 pos != mapStore.end()) {
                 mapStore.erase(pos);
             }
@@ -1920,7 +1941,7 @@ void ShaderManager::DestroyPipelineLayout(const RenderHandle handle)
 
         auto eraseIndexData = [](auto& mapStore, const uint32_t index) {
             if (auto const pos = std::find_if(
-                mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
+                    mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
                 pos != mapStore.end()) {
                 mapStore.erase(pos);
             }
@@ -1943,7 +1964,7 @@ void ShaderManager::DestroyVertexInputDeclaration(const RenderHandle handle)
 
         auto eraseIndexData = [](auto& mapStore, const uint32_t index) {
             if (auto const pos = std::find_if(
-                mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
+                    mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
                 pos != mapStore.end()) {
                 mapStore.erase(pos);
             }
@@ -2218,10 +2239,8 @@ ShaderManager::CompatibilityFlags ShaderManager::GetCompatibilityFlags(
         const RenderHandle shaderPlHandle = GetPipelineLayoutHandleByShaderHandle(rhs).GetHandle();
         if (RenderHandleUtil::IsValid(shaderPlHandle)) {
             const PipelineLayout rpl = GetReflectionPipelineLayoutRef(rhs);
-            if (rpl.descriptorSetCount > 0) {
-                const PipelineLayout shaderPl = GetPipelineLayout(shaderPlHandle);
-                flags = GetPipelineLayoutCompatibilityFlags(rpl, shaderPl);
-            }
+            const PipelineLayout shaderPl = GetPipelineLayout(shaderPlHandle);
+            flags = GetPipelineLayoutCompatibilityFlags(rpl, shaderPl);
         } else {
             // some shaders do not specify actual pipeline layout, only shader reflection pipeline layout
             flags = 1u;

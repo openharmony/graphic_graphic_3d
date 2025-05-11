@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -47,7 +47,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "46144344-29f8-4fc1-913a-ed5f6f2e20d0" };
-    static constexpr char const *TYPE_NAME = "RenderNodeDefaultCameraController";
+    static constexpr char const* TYPE_NAME = "RenderNodeDefaultCameraController";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -133,6 +133,8 @@ private:
 
         RENDER_NS::RenderHandleReference light;
         RENDER_NS::RenderHandleReference lightCluster;
+
+        RENDER_NS::RenderHandle tlas;
     };
     struct DefaultSamplers {
         RENDER_NS::RenderHandle cubemapHandle;
@@ -168,7 +170,7 @@ private:
 
         RENDER_NS::RenderHandle shaderHandleCluster;
         RENDER_NS::PipelineLayout pipelineLayout;
-        Render::RenderHandle psoHandle;
+        RENDER_NS::RenderHandle psoHandle;
     };
     ClusterBinders clusterBinders_;
 
@@ -199,6 +201,8 @@ private:
     void UpdateGlobalDescriptorSets(RENDER_NS::IRenderCommandList& cmdList);
 
     SceneRenderDataStores stores_;
+    BASE_NS::string dsWeatherName_;
+
     CameraResourceSetup camRes_;
     UboHandles uboHandles_;
     CurrentScene currentScene_;
@@ -206,6 +210,8 @@ private:
     RENDER_NS::RenderHandle defaultCubemap_;
 
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
+
+    bool rtEnabled_ { false };
 };
 CORE3D_END_NAMESPACE()
 

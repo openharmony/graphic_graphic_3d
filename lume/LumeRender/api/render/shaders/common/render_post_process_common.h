@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,7 +46,7 @@ float getChromaCoeff(const vec2 uv, CORE_RELAXEDP const float chromaCoefficient)
  */
 float RandomDither(vec2 st)
 {
-    return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453); // 12.9898:param  78.233:param  43758.5453:param
+    return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
 #endif

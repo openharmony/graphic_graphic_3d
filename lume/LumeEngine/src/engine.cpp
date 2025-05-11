@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,13 +20,14 @@
 #include <cstring>
 
 #include <base/containers/array_view.h>
+#include <base/containers/atomics.h>
 #include <base/containers/iterator.h>
+#include <base/containers/pair.h>
 #include <base/containers/refcnt_ptr.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
-#include <base/containers/unordered_map.h>
 #include <base/namespace.h>
 #include <base/util/errors.h>
 #include <base/util/uid.h>
@@ -93,8 +94,7 @@ inline constexpr uint32_t GetThreadPoolThreadCount(const uint32_t numberOfHwCore
 } // namespace
 
 WARNING_SCOPE_START(W_THIS_USED_BASE_INITIALIZER_LIST)
-Engine::Engine(EngineCreateInfo const& createInfo)
-    : platform_(Platform::Create(createInfo.platformCreateInfo)), resourceManager_(*this)
+Engine::Engine(EngineCreateInfo const& createInfo) : platform_(Platform::Create(createInfo.platformCreateInfo))
 {
     LogEngineBuildInfo();
     auto factory = CORE_NS::GetInstance<IFileSystemApi>(UID_FILESYSTEM_API_FACTORY);
@@ -128,14 +128,16 @@ Engine::~Engine()
     fileManager_.reset();
 }
 
-CORE_NS::IEcs* IEcsInstance(IClassFactory&, const IThreadPool::Ptr&);
+CORE_NS::IEcs* IEcsInstance(IClassFactory&, const IThreadPool::Ptr&, uint64_t ecsId);
 
 IEcs::Ptr Engine::CreateEcs()
 {
     // construct a secondary ecs instance.
     if (auto threadFactory = CORE_NS::GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY); threadFactory) {
         auto threadPool = threadFactory->CreateThreadPool(GetThreadPoolThreadCount(threadFactory->GetNumberOfCores()));
-        return IEcs::Ptr { IEcsInstance(*this, threadPool) };
+        // start from zero
+        const int32_t counter = BASE_NS::AtomicIncrement(&ecsCounter_) - 1;
+        return IEcs::Ptr { IEcsInstance(*this, threadPool, uint64_t(counter)) };
     }
 
     return IEcs::Ptr {};
@@ -143,7 +145,9 @@ IEcs::Ptr Engine::CreateEcs()
 
 IEcs::Ptr Engine::CreateEcs(IThreadPool& threadPool)
 {
-    return IEcs::Ptr { IEcsInstance(*this, IThreadPool::Ptr { &threadPool }) };
+    // start from zero
+    const int32_t counter = BASE_NS::AtomicIncrement(&ecsCounter_) - 1;
+    return IEcs::Ptr { IEcsInstance(*this, IThreadPool::Ptr { &threadPool }, uint64_t(counter)) };
 }
 
 void Engine::Init()
@@ -321,7 +325,7 @@ const IInterface* Engine::GetInterface(const BASE_NS::Uid& uid) const
     if (auto ret = IInterfaceHelper::GetInterface(uid)) {
         return ret;
     }
-    return resourceManager_.GetInterface(uid);
+    return nullptr;
 }
 
 IInterface* Engine::GetInterface(const BASE_NS::Uid& uid)
@@ -329,7 +333,7 @@ IInterface* Engine::GetInterface(const BASE_NS::Uid& uid)
     if (auto ret = IInterfaceHelper::GetInterface(uid)) {
         return ret;
     }
-    return resourceManager_.GetInterface(uid);
+    return nullptr;
 }
 
 void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typeInfos)
@@ -339,9 +343,9 @@ void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> 
             if (info && info->typeUid == IEnginePlugin::UID && static_cast<const IEnginePlugin*>(info)->createPlugin) {
                 auto enginePlugin = static_cast<const IEnginePlugin*>(info);
                 if (std::none_of(plugins_.begin(), plugins_.end(),
-                    [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
-                        return pluginData.second == enginePlugin;
-                    })) {
+                        [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
+                            return pluginData.second == enginePlugin;
+                        })) {
                     auto token = enginePlugin->createPlugin(*this);
                     plugins_.push_back({ token, enginePlugin });
                 }
@@ -354,9 +358,9 @@ void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> 
             }
             auto enginePlugin = static_cast<const IEnginePlugin*>(info);
             if (auto pos = std::find_if(plugins_.cbegin(), plugins_.cend(),
-                [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
-                    return pluginData.second == enginePlugin;
-                });
+                    [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
+                        return pluginData.second == enginePlugin;
+                    });
                 pos != plugins_.cend()) {
                 if (enginePlugin->destroyPlugin) {
                     enginePlugin->destroyPlugin(pos->first);

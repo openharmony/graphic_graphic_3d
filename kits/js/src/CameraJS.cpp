@@ -15,18 +15,20 @@
 #include "CameraJS.h"
 
 #include <meta/api/make_callback.h>
-#include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_raycast.h>
 #include <scene/interface/intf_scene.h>
 
-#include "PromiseBase.h"
+#include "ParamParsing.h"
+#include "Promise.h"
 #include "Raycast.h"
 #include "SceneJS.h"
 #include "Vec2Proxy.h"
 #include "Vec3Proxy.h"
+#include "nodejstaskqueue.h"
+
 static constexpr uint32_t ACTIVE_RENDER_BIT = 1; //  CameraComponent::ACTIVE_RENDER_BIT  comes from lume3d...
 
 void* CameraJS::GetInstanceImpl(uint32_t id)
@@ -35,19 +37,14 @@ void* CameraJS::GetInstanceImpl(uint32_t id)
         return this;
     return NodeImpl::GetInstanceImpl(id);
 }
-void CameraJS::DisposeNative(void*)
+void CameraJS::DisposeNative(void* sc)
 {
     if (!disposed_) {
         LOG_V("CameraJS::DisposeNative");
         disposed_ = true;
 
-        NapiApi::Object obj = scene_.GetObject();
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
+        if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
+            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
         // make sure we release postProc settings
@@ -61,9 +58,7 @@ void CameraJS::DisposeNative(void*)
 
         clearColor_.reset();
         if (auto cam = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-            // reset the native object refs
-            SetNativeObject(nullptr, false);
-            SetNativeObject(nullptr, true);
+            UnsetNativeObject();
 
             auto ptr = cam->PostProcess()->GetValue();
             ReleaseObject(interface_pointer_cast<META_NS::IObject>(ptr));
@@ -75,7 +70,7 @@ void CameraJS::DisposeNative(void*)
             if (auto camnode = interface_pointer_cast<SCENE_NS::INode>(cam)) {
                 cam->SetActive(false);
                 if (auto scene = camnode->GetScene()) {
-                    scene->ReleaseNode(camnode);
+                    scene->ReleaseNode(BASE_NS::move(camnode), false);
                 }
             }
         }
@@ -106,11 +101,11 @@ void CameraJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("Camera", func);
 }
 
-CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject<CameraJS>(e, i), NodeImpl(NodeImpl::CAMERA)
+CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(NodeImpl::CAMERA)
 {
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     if (!fromJs) {
@@ -122,7 +117,7 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject<CameraJS>(e, i
     NapiApi::Object scene = fromJs.Arg<0>();
     scene_ = scene;
 
-    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene);
+    auto scn = scene.GetNative<SCENE_NS::IScene>();
     if (scn == nullptr) {
         // hmm..
         LOG_F("Invalid scene for CameraJS!");
@@ -130,61 +125,19 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject<CameraJS>(e, i
     }
 
     NapiApi::Object meJs(fromJs.This());
-    auto* tro = scene.Native<TrueRootObject>();
-    if (tro) {
-        auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-        }
+    if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
+        sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
 
-    NapiApi::Object args = fromJs.Arg<1>();
-    auto obj = GetNativeObjectParam<META_NS::IObject>(args);
-    if (obj) {
-        // linking to an existing object.
-        SetNativeObject(obj, false);
-        StoreJsObj(obj, meJs);
+    auto node = GetNativeObject<SCENE_NS::ICamera>();
+    if (!node) {
+        LOG_E("Cannot finish creating a camera: Native camera object missing");
+        assert(false);
         return;
     }
 
-    // collect parameters
-    NapiApi::Value<BASE_NS::string> name;
-    NapiApi::Value<BASE_NS::string> path;
-
-    if (auto prm = args.Get("name")) {
-        name = NapiApi::Value<BASE_NS::string>(e, prm);
-    }
-    if (auto prm = args.Get("path")) {
-        path = NapiApi::Value<BASE_NS::string>(e, prm);
-    }
-
-    uint32_t pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD);
-    if (auto prm = args.Get("renderPipeline")) {
-        pipeline = NapiApi::Value<uint32_t>(e, prm);
-    }
-
-    BASE_NS::string nodePath;
-
-    if (path.IsDefined()) {
-        // create using path
-        nodePath = path.valueOrDefault("");
-    } else if (name.IsDefined()) {
-        // use the name as path (creates under root)
-        nodePath = name.valueOrDefault("");
-    }
-
-    // Create actual camera object.
-    SCENE_NS::ICamera::Ptr node =
-        scn->CreateNode<SCENE_NS::ICamera>(nodePath, SCENE_NS::ClassId::CameraNode).GetResult();
-    node->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
-    node->SetActive(false);
-    node->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
-    SetNativeObject(interface_pointer_cast<META_NS::IObject>(node), false);
-    node.reset();
-    StoreJsObj(GetNativeObject(), meJs);
-
-    if (name.IsDefined()) {
-        // set the name of the object. if we were given one
+    auto sceneNodeParameters = NapiApi::Object { fromJs.Arg<1>() };
+    if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
         meJs.Set("name", name);
     }
     meJs.Set("postProcess", fromJs.GetNull());
@@ -197,7 +150,8 @@ void CameraJS::Finalize(napi_env env)
             camera->SetActive(false);
         }
     }
-    BaseObject<CameraJS>::Finalize(env);
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    BaseObject::Finalize(env);
 }
 CameraJS::~CameraJS()
 {
@@ -317,21 +271,18 @@ napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        SCENE_NS::IPostProcess::Ptr postproc = camera->PostProcess()->GetValue();
+        auto postproc = camera->PostProcess()->GetValue();
         if (!postproc) {
-            // early out.
-            return ctx.GetNull();
-        }
-        auto obj = interface_pointer_cast<META_NS::IObject>(postproc);
-        if (auto cached = FetchJsObj(obj)) {
-            // always return the same js object.
-            return cached.ToNapiValue();
+            auto cameraJs = static_cast<CameraJS*>(ctx.This().GetRoot());
+            postproc =
+                interface_pointer_cast<SCENE_NS::IPostProcess>(cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess));
+            camera->PostProcess()->SetValue(postproc);
         }
         NapiApi::Env env(ctx.Env());
         NapiApi::Object parms(env);
         napi_value args[] = { ctx.This().ToNapiValue(), parms.ToNapiValue() };
         // take ownership of the object.
-        postProc_ = NapiApi::StrongRef(CreateFromNativeInstance(env, obj, false, BASE_NS::countof(args), args));
+        postProc_ = NapiApi::StrongRef(CreateFromNativeInstance(env, postproc, PtrType::WEAK, args));
         return postProc_.GetValue();
     }
     return ctx.GetNull();
@@ -363,15 +314,18 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     SCENE_NS::IPostProcess::Ptr postproc;
     if (psp) {
         // see if we have a native backing for the input object..
-        TrueRootObject* native = psp.Native<TrueRootObject>();
+        TrueRootObject* native = psp.GetRoot();
         if (!native) {
             // nope.. so create a new bridged object.
             napi_value args[] = {
                 ctx.This().ToNapiValue(),  // Camera..
                 ctx.Arg<0>().ToNapiValue() // "javascript object for values"
             };
-            psp = { GetJSConstructor(ctx.Env(), "PostProcessSettings"), BASE_NS::countof(args), args };
-            native = psp.Native<TrueRootObject>();
+            auto cameraJs = static_cast<CameraJS*>(ctx.This().GetRoot());
+            auto postproc = cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess);
+            // PostProcessSettings will store a weak ref of its native. We, the camera, own it.
+            psp = CreateFromNativeInstance(ctx.Env(), postproc, PtrType::WEAK, args);
+            native = psp.GetRoot();
         }
         postProc_ = NapiApi::StrongRef(psp);
 
@@ -388,7 +342,7 @@ napi_value CameraJS::GetColor(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetThisNativeObject(ctx));
+    auto camera = ctx.This().GetNative<SCENE_NS::ICamera>();
     if (!camera) {
         return ctx.GetUndefined();
     }
@@ -399,6 +353,7 @@ napi_value CameraJS::GetColor(NapiApi::FunctionContext<>& ctx)
     }
 
     if (clearColor_ == nullptr) {
+        // camera->ClearColor() is of type Vec4, convert to Color on the fly
         clearColor_ = BASE_NS::make_unique<ColorProxy>(ctx.Env(), camera->ClearColor());
     }
     return clearColor_->Value();
@@ -408,7 +363,7 @@ void CameraJS::SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     if (!validateSceneRef()) {
         return;
     }
-    auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetThisNativeObject(ctx));
+    auto camera = ctx.This().GetNative<SCENE_NS::ICamera>();
     if (!camera) {
         return;
     }
@@ -447,118 +402,85 @@ napi_value CameraJS::ScreenToWorld(NapiApi::FunctionContext<NapiApi::Object>& ct
     return ProjectCoords<ProjectionDirection::SCREEN_TO_WORLD>(ctx);
 }
 
-template <CameraJS::ProjectionDirection dir>
+template<CameraJS::ProjectionDirection dir>
 napi_value CameraJS::ProjectCoords(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    NapiApi::StrongRef scene;
     auto inCoordJs = ctx.Arg<0>();
-    auto raycastSelf = SCENE_NS::ICameraRayCast::Ptr {};
-    auto inCoord = BASE_NS::Math::Vec3 {};
-    if (!ExtractRaycastStuff(inCoordJs, scene, raycastSelf, inCoord)) {
+    const auto res = GetRaycastResources<BASE_NS::Math::Vec3>(inCoordJs);
+    if (!res.hasEverything) {
+        LOG_E("%s", res.errorMsg.c_str());
         return {};
     }
+
     auto outCoord = BASE_NS::Math::Vec3 {};
     if constexpr (dir == ProjectionDirection::WORLD_TO_SCREEN) {
-        outCoord = raycastSelf->WorldPositionToScreen(inCoord).GetResult();
+        outCoord = res.raycastSelf->WorldPositionToScreen(res.nativeCoord).GetResult();
     } else {
-        outCoord = raycastSelf->ScreenPositionToWorld(inCoord).GetResult();
+        outCoord = res.raycastSelf->ScreenPositionToWorld(res.nativeCoord).GetResult();
     }
     return Vec3Proxy::ToNapiObject(outCoord, ctx.Env()).ToNapiValue();
 }
 
 napi_value CameraJS::Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx)
 {
-    if (!validateSceneRef()) {
-        return ctx.GetUndefined();
+    const auto env = ctx.Env();
+    auto promise = Promise(env);
+    NapiApi::Object screenCoordJs = ctx.Arg<0>();
+    NapiApi::Object optionsJs = ctx.Arg<1>();
+    auto res = GetRaycastResources<BASE_NS::Math::Vec2>(screenCoordJs);
+    if (!res.hasEverything) {
+        return promise.Reject(res.errorMsg);
     }
 
-    struct Promise : public PromiseBase {
-        using PromiseBase::PromiseBase;
-        NapiApi::StrongRef this_;
-        NapiApi::StrongRef coordArg_;
-        NapiApi::StrongRef optionArg_;
-        bool SetResult() override
-        {
-            auto* rootObject = static_cast<CameraJS*>(this_.GetObject().Native<TrueRootObject>());
-            if (rootObject == nullptr) {
-                LOG_E("rootObject is nullptr");
-                return false;
-            }
-            result_ = rootObject->Raycast(this_.GetEnv(), coordArg_.GetObject(), optionArg_.GetObject());
-            return (bool)result_;
+    auto convertToJs = [promise, scene = BASE_NS::move(res.scene)](SCENE_NS::NodeHits hitResults) mutable {
+        const auto env = promise.Env();
+        napi_value hitList;
+        napi_create_array_with_length(env, hitResults.size(), &hitList);
+        size_t i = 0;
+        for (const auto& hitResult : hitResults) {
+            const auto hitObject = CreateRaycastResult(scene, env, hitResult);
+            napi_set_element(env, hitList, i, hitObject.ToNapiValue());
+            i++;
         }
+        promise.Resolve(hitList);
     };
-    auto promise = new Promise(ctx.Env());
-    auto jsPromise = promise->ToNapiValue();
-    promise->this_ = NapiApi::StrongRef(ctx.This());
-    promise->coordArg_ = NapiApi::StrongRef(ctx.Arg<0>());
-    promise->optionArg_ = NapiApi::StrongRef(ctx.Arg<1>());
 
-    auto func = [promise]() {
-        promise->SettleLater();
-        return false;
-    };
-    auto task = META_NS::MakeCallback<META_NS::ITaskQueueTask>(BASE_NS::move(func));
-    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddTask(task);
-
-    return jsPromise;
-}
-
-napi_value CameraJS::Raycast(napi_env env, NapiApi::Object screenCoordJs, NapiApi::Object optionsJs)
-{
-    auto scene = NapiApi::StrongRef {};
-    auto raycastSelf = SCENE_NS::ICameraRayCast::Ptr {};
-    auto screenCoord = BASE_NS::Math::Vec2 {};
-    if (!ExtractRaycastStuff(screenCoordJs, scene, raycastSelf, screenCoord)) {
-        return {};
-    }
-
-    auto options = ToNativeOptions(env, optionsJs);
-    const auto hitResults = raycastSelf->CastRay(screenCoord, options).GetResult();
-
-    napi_value hitList;
-    napi_create_array_with_length(env, hitResults.size(), &hitList);
-    size_t i = 0;
-    for (const auto& hitResult : hitResults) {
-        auto hitObject = CreateRaycastResult(scene, env, hitResult);
-        napi_set_element(env, hitList, i, hitObject.ToNapiValue());
-        i++;
-    }
-    return hitList;
+    const auto options = ToNativeOptions(env, optionsJs);
+    auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
+    res.raycastSelf->CastRay(res.nativeCoord, options).Then(BASE_NS::move(convertToJs), jsQ);
+    return promise;
 }
 
 template<typename CoordType>
-bool CameraJS::ExtractRaycastStuff(const NapiApi::Object& jsCoord, NapiApi::StrongRef& scene,
-    SCENE_NS::ICameraRayCast::Ptr& raycastSelf, CoordType& nativeCoord)
+CameraJS::RaycastResources<CoordType> CameraJS::GetRaycastResources(const NapiApi::Object& jsCoord)
 {
-    scene = NapiApi::StrongRef { scene_.GetObject() };
-    if (!scene.GetValue()) {
-        LOG_E("Scene is gone");
-        return false;
+    auto res = RaycastResources<CoordType> {};
+    res.scene = NapiApi::StrongRef { scene_.GetObject() };
+    if (!res.scene.GetValue()) {
+        res.errorMsg = "Scene is gone. ";
     }
 
-    raycastSelf = interface_pointer_cast<SCENE_NS::ICameraRayCast>(GetNativeObject());
-    if (!raycastSelf) {
-        LOG_F("Unable to access raycast API");
-        return false;
+    res.raycastSelf = interface_pointer_cast<SCENE_NS::ICameraRayCast>(GetNativeObject());
+    if (!res.raycastSelf) {
+        res.errorMsg.append("Unable to access raycast API. ");
     }
 
-    bool conversionOk = false;
+    auto conversionOk = false;
     if constexpr (BASE_NS::is_same_v<CoordType, BASE_NS::Math::Vec2>) {
-        nativeCoord = Vec2Proxy::ToNative(jsCoord, conversionOk);
-        } else {
-        nativeCoord = Vec3Proxy::ToNative(jsCoord, conversionOk);
+        res.nativeCoord = Vec2Proxy::ToNative(jsCoord, conversionOk);
+    } else {
+        res.nativeCoord = Vec3Proxy::ToNative(jsCoord, conversionOk);
     }
     if (!conversionOk) {
-        LOG_E("Invalid position argument");
-        return false;
+        res.errorMsg.append("Invalid position argument given");
     }
-    return true;
+    res.hasEverything = res.errorMsg.empty();
+    return res;
 }
 
 META_NS::IObject::Ptr CameraJS::CreateObject(const META_NS::ClassInfo& type)
 {
-    if (auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+    if (auto scn = scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
         META_NS::IObject::Ptr obj = scn->CreateObject(type).GetResult();
         if (obj) {
             resources_[(uintptr_t)obj.get()] = obj;

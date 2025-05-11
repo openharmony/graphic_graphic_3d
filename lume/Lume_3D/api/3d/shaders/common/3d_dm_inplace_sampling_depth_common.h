@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,7 +20,7 @@
  * Needs to be included after the descriptor sets are bound.
  */
 
-uint GetInstanceIndex(void)
+uint GetInstanceIndex()
 {
     uint instanceIdx = 0U;
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_GPU_INSTANCING_BIT) == CORE_MATERIAL_GPU_INSTANCING_BIT) {
@@ -39,6 +39,9 @@ uint GetMaterialInstanceIndex(const uint indices)
     }
     return instanceIdx;
 }
+
+// duplicated from:
+// #include "3d/shaders/common/3d_dm_inplace_sampling_common.h"
 
 vec2 GetTransformedUV(const DefaultMaterialUnpackedTexTransformStruct texTransform, const vec2 uvInput)
 {

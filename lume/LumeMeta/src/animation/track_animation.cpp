@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Track animation implementations
+ * Author: Lauri Jaaskela
+ * Create: 2023-12-20
  */
 
 #include "track_animation.h"
@@ -71,7 +63,8 @@ void TrackAnimation::OnAnimationStateChanged(const IAnimationInternal::Animation
                 RemoveModifier(p.stack);
                 // Then set the correct keyframe value to the underlying property
                 if (auto value = GetState().GetCurrentValue()) {
-                    p.property->SetValue(*value);
+                    PropertyLock lock { p.property };
+                    lock->SetValueAny(*value);
                 }
                 break;
             case AnimationTargetState::RUNNING:
@@ -80,6 +73,20 @@ void TrackAnimation::OnAnimationStateChanged(const IAnimationInternal::Animation
                 // Add ourselves to the target property's stack
                 p.stack->AddModifier(GetSelf<IModifier>());
                 break;
+            case AnimationTargetState::PAUSED: {
+                // Evaluate current value
+                Evaluate();
+                // Make sure we are in the target property's stack
+                auto mymod = GetSelf<IModifier>();
+                for (auto&& v : p.stack->GetModifiers({ ITrackAnimation::UID }, false)) {
+                    if (v == mymod) {
+                        mymod.reset();
+                    }
+                }
+                if (mymod) {
+                    p.stack->AddModifier(mymod);
+                }
+            } break;
             default:
                 break;
         }
@@ -146,6 +153,10 @@ void TrackAnimation::Evaluate()
     UpdateCurrentTrack(trackState.first);
     if (status == AnyReturn::SUCCESS) {
         NotifyChanged();
+        if (auto prop = GetTargetProperty()) {
+            PropertyLock lock { prop.property };
+            prop.stack->EvaluateAndStore();
+        }
     }
 }
 
@@ -162,15 +173,16 @@ void TrackAnimation::OnPropertyChanged(const TargetProperty& property, const ISt
         // Property changed while running, clean up previous property's stack
         RemoveModifier(previous);
         if (auto p = interface_cast<IProperty>(previous)) {
-            p->SetValue(*GetState().GetCurrentValue());
+            PropertyLock lock { p };
+            lock->SetValueAny(*GetState().GetCurrentValue());
         }
     }
 
     Initialize();
 
     if (auto p = GetTargetProperty()) {
-        auto& property = p.property;
-        auto& value = property->GetValue();
+        PropertyLock lock { p.property };
+        auto& value = lock->GetValueAny();
         bool alreadyCompatible = value.GetTypeId() == GetState().GetKeyframeItemTypeId();
         if (!alreadyCompatible) {
             IAny::Ptr array {};

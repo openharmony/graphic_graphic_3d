@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,14 +16,14 @@
 #include "entity_manager.h"
 
 #include <algorithm>
-#include <atomic>
 
+#include <base/containers/atomics.h>
 #include <base/containers/generic_iterator.h>
 #include <base/containers/iterator.h>
+#include <base/containers/pair.h>
 #include <base/containers/refcnt_ptr.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
-#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
 #include <core/ecs/entity.h>
@@ -49,7 +49,7 @@ uint32_t GetGeneration(const Entity& e)
 
 Entity MakeEntityId(uint32_t g, uint32_t i)
 {
-    return { (static_cast<uint64_t>(g) << 32L) | i };
+    return { (static_cast<uint64_t>(g) << 32l) | i };
 }
 } // namespace
 
@@ -65,24 +65,24 @@ public:
 
     void Ref() noexcept override
     {
-        refcnt_.fetch_add(1, std::memory_order_relaxed);
+        BASE_NS::AtomicIncrementRelaxed(&refcnt_);
     }
 
     void Unref() noexcept override
     {
-        if (refcnt_.fetch_sub(1, std::memory_order_release) == 0) {
-            std::atomic_thread_fence(std::memory_order_acquire);
+        if (BASE_NS::AtomicDecrementRelease(&refcnt_) == -1) {
+            BASE_NS::AtomicFenceAcquire();
             delete this;
         }
     }
 
     int32_t GetRefCount() const noexcept override
     {
-        return refcnt_.load(std::memory_order_relaxed);
+        return BASE_NS::AtomicReadRelaxed(&refcnt_);
     }
 
 private:
-    std::atomic<int32_t> refcnt_ { -1 };
+    int32_t refcnt_ { -1 };
 };
 
 EntityManager::EntityManager() : EntityManager(64u) {}
@@ -253,12 +253,8 @@ vector<Entity> EntityManager::GetRemovedEntities()
         if (id < entities_.size()) {
             if (entities_[id].generation == GetGeneration(e)) {
                 CORE_ASSERT(entities_[id].state == EntityState::State::DEAD);
-                if (id < entities_.size() - 1) {
-                    entities_[id].state = EntityState::State::FREE;
-                    freeList_.push_back(id);
-                } else {
-                    entities_.resize(entities_.size() - 1);
-                }
+                entities_[id].state = EntityState::State::FREE;
+                freeList_.push_back(id);
             }
         }
     }

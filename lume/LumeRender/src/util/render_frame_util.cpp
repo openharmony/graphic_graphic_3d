@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -150,7 +150,10 @@ void RenderFrameUtil::ProcessFrameInputCopyData(const RenderFrameUtil::CopyData&
         copyDataRef = { {}, dataToBeCopied.frameIndex, dataToBeCopied.handle, dataToBeCopied.copyFlags, {} };
 
         const bool byteBufferCopy = ((dataToBeCopied.copyFlags & IRenderFrameUtil::GPU_BUFFER_ONLY) == 0);
-        const EngineBufferCreationFlags ebcf = byteBufferCopy ? 0U : CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER;
+        const EngineBufferCreationFlags ebcf =
+            byteBufferCopy
+                ? 0U
+                : (CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER | CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE);
         if (type == RenderHandleType::GPU_BUFFER) {
             const GpuBufferDesc desc = gpuResourceMgr.GetBufferDescriptor(dataToBeCopied.handle);
             const uint32_t byteSize = desc.byteSize;

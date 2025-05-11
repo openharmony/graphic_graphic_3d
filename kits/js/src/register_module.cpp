@@ -23,8 +23,11 @@
 #include "MaterialPropertyJS.h"
 #include "MeshJS.h"
 #include "MeshResourceJS.h"
+#include "MorpherJS.h"
 #include "NodeJS.h"
 #include "PostProcJS.h"
+#include "RenderContextJS.h"
+#include "SamplerJS.h"
 #include "SceneComponentJS.h"
 #include "SceneJS.h"
 #include "ShaderJS.h"
@@ -38,18 +41,21 @@
 
 void RegisterClasses(napi_env env, napi_value exports)
 {
-    napi_value zero;
-    napi_value one;
+    napi_value zero = nullptr;
+    napi_value one = nullptr;
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, reinterpret_cast<void**>(&mis));
+    NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
 
     napi_create_double(env, 0.0, &zero);
     napi_create_double(env, 1.0, &one);
 
+    auto defaultCtor = [](napi_env env, napi_callback_info info) -> napi_value {
+        return NapiApi::FunctionContext(env, info).This().ToNapiValue();
+    };
+
     // Declare color class
     {
         /// Color
-        auto colorCtor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
             napi_property_descriptor desc4[] = {
@@ -61,13 +67,12 @@ void RegisterClasses(napi_env env, napi_value exports)
         // clang-format on
         napi_value color_class = nullptr;
         napi_define_class(
-            env, "Color", NAPI_AUTO_LENGTH, colorCtor, nullptr, BASE_NS::countof(desc4), desc4, &color_class);
+            env, "Color", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(desc4), desc4, &color_class);
         mis->StoreCtor("Color", color_class);
     }
     // Declare math classes.. "simply" for now.
     {
         /// Vec2
-        auto vec2Ctor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
             napi_property_descriptor desc2[] = {
@@ -77,11 +82,10 @@ void RegisterClasses(napi_env env, napi_value exports)
         // clang-format on
         napi_value vec2_class = nullptr;
         napi_define_class(
-            env, "Vec2", NAPI_AUTO_LENGTH, vec2Ctor, nullptr, BASE_NS::countof(desc2), desc2, &vec2_class);
+            env, "Vec2", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(desc2), desc2, &vec2_class);
         mis->StoreCtor("Vec2", vec2_class);
 
         /// Vec3
-        auto vec3Ctor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
             napi_property_descriptor desc3[] = {
@@ -92,11 +96,10 @@ void RegisterClasses(napi_env env, napi_value exports)
         // clang-format on
         napi_value vec3_class = nullptr;
         napi_define_class(
-            env, "Vec3", NAPI_AUTO_LENGTH, vec3Ctor, nullptr, BASE_NS::countof(desc3), desc3, &vec3_class);
+            env, "Vec3", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(desc3), desc3, &vec3_class);
         mis->StoreCtor("Vec3", vec3_class);
 
         /// Vec4
-        auto vec4Ctor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
             napi_property_descriptor desc4[] = {
@@ -108,11 +111,10 @@ void RegisterClasses(napi_env env, napi_value exports)
         // clang-format on
         napi_value vec4_class = nullptr;
         napi_define_class(
-            env, "Vec4", NAPI_AUTO_LENGTH, vec4Ctor, nullptr, BASE_NS::countof(desc4), desc4, &vec4_class);
+            env, "Vec4", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(desc4), desc4, &vec4_class);
         mis->StoreCtor("Vec4", vec4_class);
 
         /// Quaternion
-        auto QuatCtor = [](napi_env e, napi_callback_info c) -> napi_value { return {}; };
 
         // clang-format off
             napi_property_descriptor qdesc[] = {
@@ -123,8 +125,8 @@ void RegisterClasses(napi_env env, napi_value exports)
             };
         // clang-format on
         napi_value quaternion_class = nullptr;
-        napi_define_class(
-            env, "Quaternion", NAPI_AUTO_LENGTH, QuatCtor, nullptr, BASE_NS::countof(qdesc), qdesc, &quaternion_class);
+        napi_define_class(env, "Quaternion", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(qdesc), qdesc,
+            &quaternion_class);
         mis->StoreCtor("Quaternion", quaternion_class);
     }
 
@@ -141,19 +143,21 @@ void RegisterClasses(napi_env env, napi_value exports)
     GeometryDefinition::CustomJS::Init(env, scene3dNS);
     GeometryDefinition::PlaneJS::Init(env, scene3dNS);
     MeshJS::Init(env, scene3dNS);
+    MorpherJS::Init(env, scene3dNS);
     MeshResourceJS::Init(env, scene3dNS);
     SubMeshJS::Init(env, scene3dNS);
     MaterialJS::Init(env, scene3dNS);
-
     ImageJS::Init(env, scene3dNS);
     PostProcJS::Init(env, scene3dNS);
     ToneMapJS::Init(env, scene3dNS);
+    SamplerJS::Init(env, scene3dNS);
     ShaderJS::Init(env, scene3dNS);
     GeometryDefinition::SphereJS::Init(env, scene3dNS);
     AnimationJS::Init(env, scene3dNS);
     SceneComponentJS::Init(env, scene3dNS);
     TextNodeJS::Init(env, scene3dNS);
     MaterialPropertyJS::Init(env, scene3dNS);
+    RenderContextJS::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
     GeometryDefinition::CustomJS::RegisterEnums({ env, scene3dNS });
@@ -161,4 +165,5 @@ void RegisterClasses(napi_env env, napi_value exports)
     NodeImpl::RegisterEnums({ env, scene3dNS });
     SceneResourceImpl::RegisterEnums({ env, scene3dNS });
     SceneJS::RegisterEnums({ env, scene3dNS });
+    SamplerJS::RegisterEnums({ env, scene3dNS });
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include <base/containers/vector.h>
 #include <render/namespace.h>
 
+#include "gles/node_context_descriptor_set_manager_gles.h"
 #include "nodecontext/render_command_list.h"
 #include "render_backend.h"
 #if defined(RENDER_PERF_ENABLED) && (RENDER_PERF_ENABLED == 1)
@@ -54,9 +55,10 @@ struct NodeGraphBackBufferConfiguration;
 struct OES_Bind;
 struct RenderCommandContext;
 struct DescriptorSetLayoutBindingResourcesHandler;
+struct ResourcesView;
+struct Slice;
 namespace Gles {
 struct PushConstantReflection;
-struct Bind;
 } // namespace Gles
 /**
 RenderBackGLES.
@@ -134,6 +136,7 @@ private:
         &RenderBackendGLES::RenderCommandBindDescriptorSets,
         &RenderBackendGLES::RenderCommandPushConstant,
         &RenderBackendGLES::RenderCommandUndefined, /* RenderCommandBuildAccelerationStructure */
+        &RenderBackendGLES::RenderCommandUndefined, /* RenderCommandCopyAccelerationStructureInstances */
         &RenderBackendGLES::RenderCommandClearColorImage,
         &RenderBackendGLES::RenderCommandDynamicStateViewport,
         &RenderBackendGLES::RenderCommandDynamicStateScissor,
@@ -154,8 +157,8 @@ private:
     void PrimeDepthStencilState(const GraphicsState& graphicsState);
     void PrimeBlendState(const GraphicsState& graphicsState);
     void DoGraphicsState(const GraphicsState& graphicsState);
-    void SetViewport(const RenderPassDesc::RenderArea& ra, const ViewportDesc& vd);
-    void SetScissor(const RenderPassDesc::RenderArea& ra, const ScissorDesc& sd);
+    void SetViewport(const ViewportDesc& vd);
+    void SetScissor(const ScissorDesc& sd);
 
     void HandleColorAttachments(BASE_NS::array_view<const RenderPassDesc::AttachmentDesc*> colorAttachments);
     void HandleDepthAttachment(const RenderPassDesc::AttachmentDesc& depthAttachment);
@@ -243,25 +246,23 @@ private:
 
     void ResetState();
     void ResetBindings();
-    void SetupCache(const PipelineLayout& pipelineLayout);
-    struct BindState {
-        bool dirty { false };
-#if defined(RENDER_HAS_GLES_BACKEND) && (RENDER_HAS_GLES_BACKEND == 1)
-        BASE_NS::vector<OES_Bind> oesBinds;
-#endif
-        BASE_NS::vector<Gles::Bind> resources;
-    };
-    BindState boundObjects_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
 
-    static Gles::Bind& SetupBind(const DescriptorSetLayoutBinding& res, BASE_NS::vector<Gles::Bind>& resources);
-    void BindSampler(const BindableSampler& res, Gles::Bind& obj, uint32_t index);
-    void BindImage(const BindableImage& res, const GpuResourceState& resState, Gles::Bind& obj, uint32_t index);
-    void BindImageSampler(const BindableImage& res, const GpuResourceState& resState, Gles::Bind& obj, uint32_t index);
-    void BindBuffer(const BindableBuffer& res, Gles::Bind& obj, uint32_t dynamicOffset, uint32_t index);
+    uint16_t firstSet_ { 0U };
+    uint16_t setCount_ { 0U };
+    RenderHandle descriptorSetHandles_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { {}, {}, {}, {} };
+    struct DescriptorSetDynamicOffsets {
+        uint32_t dynamicOffsetCount { 0u };
+        uint32_t dynamicOffsets[PipelineLayoutConstants::MAX_DYNAMIC_DESCRIPTOR_OFFSET_COUNT] {};
+    };
+    DescriptorSetDynamicOffsets descriptorSetDynamicOffsets_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
+    BASE_NS::vector<uint32_t> dynamicOffsetIndices_;
+
+    void UpdateGlobalDescriptorSets();
+    void UpdateCommandListDescriptorSets(
+        const RenderCommandList& renderCommandList, NodeContextDescriptorSetManager& ncdsm);
+
     void BindVertexInputs(
         const VertexInputDeclarationData& decldata, const BASE_NS::array_view<const int32_t>& vertexInputs);
-    void ProcessBindings(const struct RenderCommandBindDescriptorSets& renderCmd,
-        const DescriptorSetLayoutBindingResourcesHandler& data, uint32_t set);
     void ScanPasses(const RenderPassDesc& rpd);
     int32_t InvalidateColor(BASE_NS::array_view<uint32_t> invalidateAttachment, const RenderPassDesc& rpd,
         const RenderPassSubpassDesc& currentSubPass);
@@ -273,13 +274,22 @@ private:
     void UpdateStencilState(const GraphicsState& graphicsState);
     void UpdateDepthStencilState(const GraphicsState& graphicsState);
     void UpdateRasterizationState(const GraphicsState& graphicsState);
-    const BASE_NS::array_view<Binder>* BindPipeline();
+    void BindSampler(BASE_NS::array_view<const Gles::Bind::Resource> resources, const Binder& binder,
+        BASE_NS::array_view<const Slice> descriptorIndex, BASE_NS::array_view<const uint8_t> ids);
+    void BindTexture(BASE_NS::array_view<const Gles::Bind::Resource> resources, const Binder& binder,
+        BASE_NS::array_view<const Slice> descriptorIndex, BASE_NS::array_view<const uint8_t> ids,
+        DescriptorType descriptorType);
+    void BindBuffer(BASE_NS::array_view<const Gles::Bind::Resource> resources, const Binder& binder,
+        BASE_NS::array_view<const Slice> descriptorIndex, BASE_NS::array_view<const uint8_t> ids,
+        DescriptorType descriptorType);
     void BindResources();
     enum StencilSetFlags { SETOP = 1, SETCOMPAREMASK = 2, SETCOMPAREOP = 4, SETREFERENCE = 8, SETWRITEMASK = 16 };
     void SetStencilState(uint32_t frontFlags, const GraphicsState::StencilOpState& front, uint32_t backFlags,
         const GraphicsState::StencilOpState& back);
     const ComputePipelineStateObjectGLES* boundComputePipeline_ = nullptr;
     const GraphicsPipelineStateObjectGLES* boundGraphicsPipeline_ = nullptr;
+    const GpuComputeProgramGLES* boundComputeProgram_ = nullptr;
+    const GpuShaderProgramGLES* boundShaderProgram_ = nullptr;
     RenderHandle currentPsoHandle_;
     RenderPassDesc::RenderArea renderArea_;
     struct RenderCommandBeginRenderPass activeRenderPass_;
@@ -320,18 +330,18 @@ private:
     uint32_t blitImageSourceFbo_ { 0 };
     uint32_t blitImageDestinationFbo_ { 0 };
     uint32_t inRenderpass_ { 0 };
-    bool scissorViewportSetDefaultFbo_ { false };
     bool renderingToDefaultFbo_ { false };
     bool scissorEnabled_ { false };
-    bool scissorBoxUpdated_ { false };
-    bool viewportDepthRangeUpdated_ { false };
-    bool viewportUpdated_ { false };
+    bool viewportPending_ { false };
     bool commandListValid_ { false };
-    void FlushViewportScissors();
+    bool descriptorUpdate_ { false };
+    bool vertexBufferUpdate_ { false };
+    bool indexBufferUpdate_ { false };
 
     void BufferToImageCopy(const struct RenderCommandCopyBufferImage& renderCmd);
     void ImageToBufferCopy(const struct RenderCommandCopyBufferImage& renderCmd);
 #if defined(RENDER_HAS_GLES_BACKEND) && (RENDER_HAS_GLES_BACKEND == 1)
+    bool oesBindingsChanged_ { false };
     BASE_NS::vector<OES_Bind> oesBinds_;
 #endif
 };

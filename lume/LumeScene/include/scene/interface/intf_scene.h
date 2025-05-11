@@ -1,22 +1,9 @@
-/*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 #ifndef SCENE_INTERFACE_ISCENE_H
 #define SCENE_INTERFACE_ISCENE_H
 
 #include <scene/base/types.h>
+#include <scene/ext/intf_component.h>
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_render_configuration.h>
@@ -36,10 +23,45 @@ public:
     META_READONLY_PROPERTY(IRenderConfiguration::Ptr, RenderConfiguration)
 
 public:
+    /**
+     * @brief Get root node for the scene
+     * @return Root node
+     */
     virtual Future<INode::Ptr> GetRootNode() const = 0;
+
+    /**
+     * @brief Add new node to the scene
+     * @param path Path of the node
+     * @param id   Type of the node, defaults to generic node
+     * @return Newly created node
+     */
     virtual Future<INode::Ptr> CreateNode(BASE_NS::string_view path, META_NS::ObjectId id = {}) = 0;
+
+    /**
+     * @brief Find node in scene. This will find node with given type in scene and constructs node object for it
+     * @notice Nodes are cached, the existing node object is returned if there is such
+     * @param path Path of the node
+     * @param id   Type of the node, if not given, the system tries to deduce the node type and falls back to generic
+     * node
+     * @return Found node or null if no such node exists or doesn't match the type
+     */
     virtual Future<INode::Ptr> FindNode(BASE_NS::string_view path, META_NS::ObjectId id = {}) const = 0;
-    virtual Future<void> ReleaseNode(const INode::Ptr& node) = 0;
+
+    /**
+     * @brief Remove the node (and possibly its children) from caches if it is the only instance and stop listening
+     * notifications related to it. This does not affect ECS side.
+     * @notice You have to move the last user instance of node to this function for it to have any effect.
+     * @param node Node to release
+     * @param recursive Should we check all child nodes recursive and try to release them
+     * @return True is the given node was released, otherwise false
+     */
+    virtual Future<bool> ReleaseNode(INode::Ptr&& node, bool recursive) = 0;
+
+    /**
+     * @brief Remove the node (and its children) from the scene (the underlying ecs)
+     * @notice Do not use the node after this!
+     */
+    virtual Future<bool> RemoveNode(const INode::Ptr& node) = 0;
 
     template<class T>
     Future<typename T::Ptr> CreateNode(BASE_NS::string_view path, META_NS::ObjectId id = {})
@@ -67,8 +89,25 @@ public:
     virtual BASE_NS::shared_ptr<IInternalScene> GetInternalScene() const = 0;
 
     virtual void StartAutoUpdate(META_NS::TimeSpan interval) = 0;
+
     virtual Future<bool> SetRenderMode(RenderMode) = 0;
     virtual Future<RenderMode> GetRenderMode() const = 0;
+
+    /**
+     * @brief Returns a component from given node.
+     * @param node Node to query the component from.
+     * @param componentName Name of the component manager to query.
+     * @return The component or nullptr if not found from the node.
+     */
+    virtual IComponent::Ptr GetComponent(const INode::Ptr& node, BASE_NS::string_view componentName) const = 0;
+    /**
+     * @brief Create a new component with given component manager name and attaches it to given node.
+     * @param node The node for which the component should be created.
+     * @param componentName Name of the component manager for the component.
+     * @return If the name is valid, returns a component attached to node with given name.
+     *         If the name is invalid, returns nullptr.
+     */
+    virtual Future<IComponent::Ptr> CreateComponent(const INode::Ptr& node, BASE_NS::string_view componentName) = 0;
 };
 
 META_REGISTER_CLASS(Scene, "ef6321d7-071c-414a-bb3d-55ea6f94688e", META_NS::ObjectCategoryBits::NO_CATEGORY)

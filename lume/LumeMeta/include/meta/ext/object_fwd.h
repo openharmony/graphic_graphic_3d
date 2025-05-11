@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Description: Helper class for implementing IObject interface
+ * Author: Lauri Jaaskela
+ * Create: 2021-09-22
  */
 
 #ifndef META_EXT_OBJECT_FWD_H
@@ -46,6 +38,7 @@ inline void DefaultResult<void>()
         }                                                       \
         return META_NS::DefaultResult<decltype(b->Function)>(); \
     }()
+
 /**
  * @brief A helper macro for classes deriving from BaseObjectFwd. Makes a forwarder for an interface
  *        property implemented by the super class.
@@ -67,7 +60,8 @@ inline void DefaultResult<void>()
 #define META_EXT_CALL_BASE(Interface, Function) META_IMPL_CALL_BASE(Interface, Function)
 
 /**
- * @brief A helper class for implementing a class which implements the full set of object interfaces.
+ * @brief A helper class for implementing a class using "aggregate inheritance" which implements the full set of object
+ * interfaces.
  */
 class ObjectFwd : public IntroduceInterfaces<BaseObjectFwd, IMetadata, IOwner, IAttach> {
     META_OBJECT_NO_CLASSINFO(ObjectFwd, IntroduceInterfaces, ClassId::Object)
@@ -124,6 +118,10 @@ protected:
     BASE_NS::vector<MetadataInfo> GetAllMetadatas(MetadataType types) const override
     {
         return META_EXT_CALL_BASE(IMetadata, GetAllMetadatas(types));
+    }
+    MetadataInfo GetMetadata(MetadataType type, BASE_NS::string_view name) const override
+    {
+        return META_EXT_CALL_BASE(IMetadata, GetMetadata(type, name));
     }
     using IMetadata::GetProperty;
     IProperty::Ptr GetProperty(BASE_NS::string_view name, MetadataQuery q) override

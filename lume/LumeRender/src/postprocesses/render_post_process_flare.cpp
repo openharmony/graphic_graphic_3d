@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,23 +17,48 @@
 
 #include <core/property_tools/property_api_impl.inl>
 
+#include "util/log.h"
+
 using namespace BASE_NS;
 using namespace CORE_NS;
 using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
-DATA_TYPE_METADATA(RenderPostProcessFlare::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+DATA_TYPE_METADATA(RenderPostProcessFlareNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
     MEMBER_PROPERTY(flarePos, "Flare Position", 0), MEMBER_PROPERTY(intensity, "Effect Intensity", 0))
 CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
+
+namespace {
+constexpr size_t PROPERTY_BYTE_SIZE { sizeof(RenderPostProcessFlareNode::EffectProperties) };
+}
+
 RenderPostProcessFlare::RenderPostProcessFlare()
     : properties_(
-          &propertiesData_, array_view(PropertyType::DataType<RenderPostProcessFlare::EffectProperties>::properties))
+          &propertiesData, array_view(PropertyType::DataType<RenderPostProcessFlareNode::EffectProperties>::properties))
 {}
 
 CORE_NS::IPropertyHandle* RenderPostProcessFlare::GetProperties()
 {
     return properties_.GetData();
+}
+
+void RenderPostProcessFlare::SetData(BASE_NS::array_view<const uint8_t> data)
+{
+    if (data.size_bytes() == PROPERTY_BYTE_SIZE) {
+        BASE_NS::CloneData(&propertiesData, PROPERTY_BYTE_SIZE, data.data(), data.size_bytes());
+    }
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (data.size_bytes() != PROPERTY_BYTE_SIZE) {
+        PLUGIN_LOG_ONCE_E("RenderPostProcessFlare_Size_Mismatch",
+            "RENDER_VALIDATION_ENABLED: RenderPostProcessFlare::SetData(), size missmatch (ignored)");
+    }
+#endif
+}
+
+array_view<const uint8_t> RenderPostProcessFlare::GetData() const
+{
+    return { reinterpret_cast<const uint8_t*>(&propertiesData), PROPERTY_BYTE_SIZE };
 }
 RENDER_END_NAMESPACE()

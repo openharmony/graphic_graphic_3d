@@ -16,6 +16,8 @@
 
 #include <scene/interface/intf_scene.h>
 
+#include "ParamParsing.h"
+#include "RenderContextJS.h"
 #include "SceneJS.h"
 
 using namespace SCENE_NS;
@@ -36,7 +38,7 @@ void ImageJS::Init(napi_env env, napi_value exports)
         env, "Image", NAPI_AUTO_LENGTH, BaseObject::ctor<ImageJS>(), nullptr, props.size(), props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("Image", func);
 }
 
@@ -45,36 +47,28 @@ void ImageJS::DisposeNative(void* sc)
     if (!disposed_) {
         disposed_ = true;
         LOG_V("ImageJS::DisposeNative");
+
+        if (sc && resources_) {
+            resources_->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+        }
+
         NapiApi::Object obj = scene_.GetObject();
-        SceneJS* sceneJS = nullptr;
-        if (sc) {
-            sceneJS = static_cast<SceneJS*>(sc);
-        } else {
-            auto* tro = obj.Native<TrueRootObject>();
-            if (tro) {
-                sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            }
-        }
-        if (sc) {
-            sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-        }
-        // reset the native object refs
-        if (auto bitmap = interface_pointer_cast<IBitmap>(GetNativeObject())) {
-            SetNativeObject(nullptr, false);
-            SetNativeObject(nullptr, true);
+
+        if (interface_pointer_cast<IBitmap>(GetNativeObject())) {
             if (obj) {
-                BASE_NS::string uri = FetchResourceOrUri(uri_.GetEnv(), uri_.GetObject().ToNapiValue());
-                ExecSyncTask([uri, sceneJS]() -> META_NS::IAny::Ptr {
-                    if (sceneJS) {
-                        sceneJS->StoreBitmap(uri, nullptr);
+                BASE_NS::string uri = ExtractUri(uri_.GetObject());
+                ExecSyncTask([uri, resources = resources_]() -> META_NS::IAny::Ptr {
+                    if (resources) {
+                        resources->StoreBitmap(uri, nullptr);
                     }
                     return {};
                 });
             }
-        } else {
-            SetNativeObject(nullptr, false);
         }
+
+        UnsetNativeObject();
         scene_.Reset();
+        resources_.reset();
     }
 }
 void* ImageJS::GetInstanceImpl(uint32_t id)
@@ -85,38 +79,40 @@ void* ImageJS::GetInstanceImpl(uint32_t id)
 }
 void ImageJS::Finalize(napi_env env)
 {
-    DisposeNative(nullptr);
-    BaseObject<ImageJS>::Finalize(env);
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    BaseObject::Finalize(env);
 }
 
 ImageJS::ImageJS(napi_env e, napi_callback_info i)
-    : BaseObject<ImageJS>(e, i), SceneResourceImpl(SceneResourceType::IMAGE)
+    : BaseObject(e, i), SceneResourceImpl(SceneResourceType::IMAGE)
 {
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
-    NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene...
-    scene_ = { scene };
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        LOG_F("INVALID SCENE!");
+    NapiApi::Object renderContext = fromJs.Arg<0>(); // access to owning context...
+    scene_ = { renderContext };
+    if (!scene_.GetObject().GetJsWrapper<RenderContextJS>()) {
+        LOG_F("Invalid render context for ImageJS");
     }
 
-    SceneJS* sceneJS = nullptr;
-    auto* tro = scene.Native<TrueRootObject>();
-    if (tro) {
-        sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
+    if (const auto renderContextJs = renderContext.GetJsWrapper<RenderContextJS>()) {
+        resources_ = renderContextJs->GetResources();
+        if (resources_) {
+            resources_->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+        }
     }
+
+    if (!GetNativeObject<SCENE_NS::IBitmap>()) {
+        LOG_E("Cannot finish creating an image: Native image object missing");
+        assert(false);
+        return;
+    }
+
     NapiApi::Object args = fromJs.Arg<1>();
-
-    SCENE_NS::IBitmap::Ptr bitmap;
-
-    // check if we got the NativeObject as parameter.
-    bitmap = GetNativeObjectParam<SCENE_NS::IBitmap>(args);
-
-    if (auto prm = args.Get("uri")) {
+    if (auto prm = args.Get<NapiApi::Object>("uri"); prm.IsValid()) {
         NapiApi::Object resType = args.Get<NapiApi::Object>("uri");
         BASE_NS::string uriType = args.Get<BASE_NS::string>("uri");
 
-        BASE_NS::string uri = FetchResourceOrUri(args.GetEnv(), prm);
+        BASE_NS::string uri = ExtractUri(prm);
         if (!uri.empty()) {
             if (!resType) {
                 // raw string then.. make it  "resource" / "rawfile" if possible.
@@ -139,29 +135,11 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i)
                 SetUri(NapiApi::StrongRef(resType));
             }
         }
-        if (!bitmap) {
-            // if we did not receive it already...
-            if (sceneJS) {
-                bitmap = sceneJS->FetchBitmap(uri);
-            }
-        }
     }
-    if (sceneJS) {
-        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-    }
-    auto obj = interface_pointer_cast<META_NS::IObject>(bitmap);
-    SetNativeObject(obj, false);
-    StoreJsObj(obj, meJs);
 
-    BASE_NS::string name;
-    if (auto prm = args.Get<BASE_NS::string>("name"); prm.IsDefined()) {
-        name = prm;
-    } else {
-        if (auto named = interface_cast<META_NS::IObject>(obj)) {
-            name = named->GetName();
-        }
+    if (const auto name = ExtractName(args); !name.empty()) {
+        meJs.Set("name", name);
     }
-    meJs.Set("name", name);
 }
 
 ImageJS::~ImageJS()

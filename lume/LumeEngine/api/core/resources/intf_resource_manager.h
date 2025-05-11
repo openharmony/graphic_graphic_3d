@@ -16,88 +16,292 @@
 #ifndef API_CORE_RESOURCES_IRESOURCE_MANAGER_H
 #define API_CORE_RESOURCES_IRESOURCE_MANAGER_H
 
+#include <base/containers/shared_ptr.h>
 #include <base/containers/string_view.h>
+#include <core/io/intf_file_manager.h>
 #include <core/io/intf_file_system.h>
 #include <core/plugin/intf_interface.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/resources/intf_resource.h>
 
 CORE_BEGIN_NAMESPACE()
-class IResourceManager : public IInterface {
-public:
-    static constexpr BASE_NS::Uid UID { "6f9f705d-7f9f-4b5c-83ab-45bb2466d974" };
 
-    enum class Status {
-        STATUS_OK,
-        /** URL didn't point to a accessible resource file. */
-        STATUS_FILE_NOT_FOUND,
-        /** Failed to read file. */
-        STATUS_FILE_READ_ERROR,
-        /** Failed to write to file. */
-        STATUS_FILE_WRITE_ERROR,
-        /** Resource file is invalid. */
-        STATUS_INVALID_FILE,
+/**
+ * @brief Base class for defining loading and saving for resource type
+ */
+class IResourceType : public IInterface {
+public:
+    using base = IInterface;
+    static constexpr BASE_NS::Uid UID { "f8553f78-a286-4d5b-9b63-a3aa13477f82" };
+    using Ptr = BASE_NS::shared_ptr<IResourceType>;
+    using ConstPtr = BASE_NS::shared_ptr<const IResourceType>;
+
+    /// Get name of the resource this object can load/save
+    virtual BASE_NS::string GetResourceName() const = 0;
+    /// Get type of the resource this object can load/save
+    virtual ResourceType GetResourceType() const = 0;
+
+    struct StorageInfo {
+        /// Pointer to file containing the options data.
+        IFile* options {};
+        /// Pointer to file containing the payload data.
+        IFile* payload {};
+        /// The resource id.
+        const ResourceId& id;
+        /// Path of the resource payload.
+        BASE_NS::string_view path;
+        /// Resource manager that is loading/saving the resource.
+        ResourceManagerPtr self;
+        /// User provided context for context specific resource types.
+        ResourceContextPtr context;
     };
 
-    /** Imports a resource file into the resource manager. Available resources are grouped based on the file URL.
-     * @param url URL of the file to import.
-     * @return true if the file could be successfully imported.
+    /**
+     * @brief Construct resource from storage information
      */
-    virtual Status Import(BASE_NS::string_view url) = 0;
-
-    /** Get the URIs of the resources included in a resource file.
-     * @param url URL of a previously imported resource file.
-     * @return List of resource URIs available in the resource file pointed by URL.
+    virtual IResource::Ptr LoadResource(const StorageInfo&) const = 0;
+    /**
+     * @brief Save resource payload and/or options
+     * Note: either options or payload pointers can be null if system is only asking
+     *       to save one aspect of the resource
      */
-    virtual BASE_NS::vector<BASE_NS::string> GetResourceUris(BASE_NS::string_view url) const = 0;
-
-    /** Get the URIs of the resources of a certain type included in a resource file.
-     * @param url URL of a previously imported resource file.
-     * @param resourceType Resource type UID.
-     * @return List of resource URIs with a matching type available in the resource file pointed by URL.
+    virtual bool SaveResource(const IResource::ConstPtr&, const StorageInfo&) const = 0;
+    /**
+     * @brief Reload resource by keeping the same object
      */
-    virtual BASE_NS::vector<BASE_NS::string> GetResourceUris(
-        BASE_NS::string_view url, BASE_NS::Uid resourceType) const = 0;
+    virtual bool ReloadResource(const StorageInfo&, const IResource::Ptr&) const = 0;
 
-    /** Get a resource matching the URL. The URL is a combination of a previously imported resource file and the URI of
-     * a resource in that file. The same URL will return a pointer to the same instance.
-     * @param url URL of the resource to import.
-     * @return Pointer to the resource if one matched the given URL.
+protected:
+    IResourceType() = default;
+    virtual ~IResourceType() = default;
+    IResourceType(const IResourceType&) = delete;
+    void operator=(const IResourceType&) = delete;
+};
+
+/**
+ * @brief Resource information
+ */
+struct ResourceInfo {
+    /// Id of the resource
+    CORE_NS::ResourceId id;
+    /// Type of the resource
+    CORE_NS::ResourceType type;
+    /// Path of the resource payload if exists
+    BASE_NS::string path;
+    /// Option of the resource as serialised data
+    BASE_NS::vector<uint8_t> optionData;
+};
+
+/**
+ * @brief Resource loading and saving
+ */
+class IResourceManager : public IInterface {
+public:
+    using base = IInterface;
+    static constexpr BASE_NS::Uid UID { "6f9f705d-7f9f-4b5c-83ab-45bb2466d974" };
+    using Ptr = BASE_NS::shared_ptr<IResourceManager>;
+
+    enum class Result {
+        OK,
+        /** URL didn't point to a accessible resource file. */
+        FILE_NOT_FOUND,
+        /** Failed to read file. */
+        FILE_READ_ERROR,
+        /** Failed to write to file. */
+        FILE_WRITE_ERROR,
+        /** Resource file is invalid. */
+        INVALID_FILE,
+        /** No such resource type. */
+        NO_RESOURCE_TYPE,
+        /** Resource data is missing. */
+        NO_RESOURCE_DATA,
+        /** Exporting failed. */
+        EXPORT_FAILURE
+    };
+
+    /** Interface for observing adding and removing resources. */
+    class IResourceListener {
+    public:
+        using Ptr = BASE_NS::shared_ptr<IResourceListener>;
+        using WeakPtr = BASE_NS::weak_ptr<IResourceListener>;
+
+        enum class EventType {
+            /** Resource has been added. */
+            ADDED,
+            /** Resource was removed. */
+            REMOVED,
+        };
+        /** Called when resources are added or removed.
+         * @param type Event type.
+         * @param ids Resource ids.
+         */
+        virtual void OnResourceEvent(EventType type, const BASE_NS::array_view<const ResourceId>& ids) = 0;
+
+    protected:
+        IResourceListener() = default;
+        virtual ~IResourceListener() = default;
+    };
+
+    /**
+     * @brief Add listener to find out when resources are added and removed
      */
-    virtual IResource::Ptr GetResource(BASE_NS::string_view url) = 0;
-
-    /** Get a resource matching the URI. The same URI will return a pointer to the same instance.
-     * @param groupUri URI which is used to group resources.
-     * @param uri URI of a resource in the resource file.
-     * @return Pointer to the resource if one matched the given URI.
+    virtual void AddListener(const IResourceListener::Ptr&) = 0;
+    /**
+     * @brief Remove previously added listener
      */
-    virtual IResource::Ptr GetResource(BASE_NS::string_view groupUri, BASE_NS::string_view uri) = 0;
-
-    /** Exports all resources added to a group into a resource file. If the target URL doesn't resolve into an
-     * existing file the file will be created. If the target URL resolves into an existing file the file contents will
-     * be overwritten.
-     * @param groupUri URI which is used to select group of resources to export.
+    virtual void RemoveListener(const IResourceListener::Ptr&) = 0;
+    /**
+     * @brief Add resource type that is responsible loading and saving resources for specific type
+     */
+    virtual bool AddResourceType(IResourceType::Ptr) = 0;
+    /**
+     * @brief Remove resource type
+     */
+    virtual bool RemoveResourceType(const ResourceType& type) = 0;
+    /**
+     * @brief Get list of all resource types supported by with manager
+     */
+    virtual BASE_NS::vector<IResourceType::Ptr> GetResourceTypes() const = 0;
+    /**
+     * @brief Imports a resource file into the resource manager.
+     * @note  The imported index is merged with the current one, already existing resource info is overwritten.
+     * @return Result of the import process
+     */
+    virtual Result Import(BASE_NS::string_view url) = 0;
+    /**
+     * @brief Get the resource infos for all resources or for specific group
+     */
+    virtual BASE_NS::vector<ResourceInfo> GetResourceInfos(
+        const BASE_NS::array_view<const MatchingResourceId>& selection) const = 0;
+    BASE_NS::vector<ResourceInfo> GetResourceInfos(BASE_NS::string_view group) const
+    {
+        return GetResourceInfos({ MatchingResourceId(group) });
+    }
+    BASE_NS::vector<ResourceInfo> GetResourceInfos() const
+    {
+        return GetResourceInfos({ MatchingResourceId() });
+    }
+    /**
+     * @brief Get resource info for single resource
+     */
+    virtual ResourceInfo GetResourceInfo(const ResourceId&) const = 0;
+    /**
+     * @brief Get all resource groups
+     */
+    virtual BASE_NS::vector<BASE_NS::string> GetResourceGroups() const = 0;
+    /**
+     * @brief Get a resource matching the resource id.
+     * @param id resource id.
+     * @param context resource context for resources that can only exists in specific context (required to construct
+     * such resources).
+     * @return Resource
+     */
+    virtual IResource::Ptr GetResource(const ResourceId& id, const ResourceContextPtr& context) = 0;
+    IResource::Ptr GetResource(const ResourceId& id)
+    {
+        return GetResource(id, nullptr);
+    }
+    /**
+     * @brief Get all resources in a group
+     * @param selection resources to return.
+     * @param context resource context for resources that can only exists in specific context (required to construct
+     * such resources).
+     */
+    virtual BASE_NS::vector<CORE_NS::IResource::Ptr> GetResources(
+        const BASE_NS::array_view<const MatchingResourceId>& selection, const ResourceContextPtr& context) = 0;
+    BASE_NS::vector<CORE_NS::IResource::Ptr> GetResources(
+        BASE_NS::string_view group, const ResourceContextPtr& context = nullptr)
+    {
+        return GetResources({ MatchingResourceId(group) }, context);
+    }
+    BASE_NS::vector<CORE_NS::IResource::Ptr> GetResources()
+    {
+        return GetResources({ MatchingResourceId() }, nullptr);
+    }
+    /** Exports selected resources into a resource file.
      * @param filePath File to write to.
-     * @return true if the file could be successfully exported.
+     * @param selection Selected resources
+     * @return Result of the export process
      */
-    virtual Status Export(BASE_NS::string_view groupUri, BASE_NS::string_view filePath) = 0;
+    virtual Result Export(
+        BASE_NS::string_view filePath, const BASE_NS::array_view<const MatchingResourceId>& selection) = 0;
+    virtual Result Export(BASE_NS::string_view filePath)
+    {
+        return Export(filePath, { MatchingResourceId {} });
+    }
 
     /** Add a resource into the resource manager.
-     * @param groupUri URI which is used to group resources.
-     * @param resource Resource instance to add.
+     * @param resource Resource object to add
+     * @return true on success
      */
-    virtual void AddResource(BASE_NS::string_view groupUri, const IResource::Ptr& resource) = 0;
-
-    /** Remove a resource from resource manager.
-     * @param groupUri URI of the resource group from which the resource is removed.
-     * @param resource Resource instance to remove.
+    virtual bool AddResource(const IResource::Ptr& resource) = 0;
+    /** Add a resource into the resource manager.
+     * @param resource Resource object to add
+     * @param path Path of the payload
+     * @return true on success
      */
-    virtual void RemoveResource(BASE_NS::string_view groupUri, const IResource::Ptr& resource) = 0;
-
-    /** Remove a group of resources from resource manager.
-     * @param groupUri URI of the resource group to remove.
+    virtual bool AddResource(const IResource::Ptr& resource, BASE_NS::string_view path) = 0;
+    /** Add a resource into the resource manager.
+     * @param id Resource id
+     * @param type Resource type
+     * @param path Path to the resource payload
+     * @param opts Resource options
+     * @return true on success
      */
-    virtual void RemoveResources(BASE_NS::string_view groupUri) = 0;
+    virtual bool AddResource(const ResourceId& id, const ResourceType& type, BASE_NS::string_view path,
+        const IResourceOptions::ConstPtr& opts) = 0;
+    bool AddResource(const ResourceId& id, const ResourceType& type, BASE_NS::string_view path)
+    {
+        return AddResource(id, type, path, nullptr);
+    }
+    /**
+     * @brief Reload resource
+     * @param resource Resource to be reloaded
+     * @param context resource context for resources that can only exists in specific context (required to construct
+     * such resources).
+     * @return true on success
+     */
+    virtual bool ReloadResource(const IResource::Ptr& resource, const ResourceContextPtr& context) = 0;
+    bool ReloadResource(const IResource::Ptr& resource)
+    {
+        return ReloadResource(resource, nullptr);
+    }
+    /**
+     * @brief Rename resource
+     * @param id Resource to rename
+     * @param newId New resource id
+     * @return true on success
+     */
+    virtual bool RenameResource(const ResourceId& id, const ResourceId& newId) = 0;
+    /**
+     * @brief Remove the resource object from cache, the resource is not removed from the index
+     */
+    virtual bool PurgeResource(const ResourceId&) = 0;
+    /**
+     * @brief Remove the resource object from cache for group, the resources are not removed from the index
+     */
+    virtual size_t PurgeGroup(BASE_NS::string_view group) = 0;
+    /**
+     * @brief Remove resource from the index (along the object cache)
+     */
+    virtual bool RemoveResource(const ResourceId&) = 0;
+    /**
+     * @brief Remove all resource in a group from the index (along the object cache)
+     */
+    virtual bool RemoveGroup(BASE_NS::string_view group) = 0;
+    /**
+     * @brief Remove all resources
+     */
+    virtual void RemoveAllResources() = 0;
+    /**
+     * @brief Export resource's payload (if supported for the resource)
+     */
+    virtual Result ExportResourcePayload(const IResource::Ptr& resource) = 0;
+    /**
+     * @brief Set file manager to access files; If not set, default constructed manager is used with "file" filesystem
+     * using the standard file system.
+     */
+    virtual void SetFileManager(CORE_NS::IFileManager::Ptr fileManager) = 0;
 
 protected:
     IResourceManager() = default;

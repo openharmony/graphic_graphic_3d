@@ -16,7 +16,9 @@
 #define IMAGEJS_H
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
-class ImageJS : public BaseObject<ImageJS>, SceneResourceImpl {
+#include "RenderContextJS.h"
+
+class ImageJS : public BaseObject, SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 110;
     static void Init(napi_env env, napi_value exports);
@@ -31,6 +33,9 @@ private:
     // JS properties
     napi_value GetWidth(NapiApi::FunctionContext<>& ctx);
     napi_value GetHeight(NapiApi::FunctionContext<>& ctx);
+
+private:
+    BASE_NS::shared_ptr<RenderResources> resources_;
 };
 
 #endif

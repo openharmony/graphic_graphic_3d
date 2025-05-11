@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -51,7 +51,7 @@ struct PerformanceDataManager::InternalData {
 namespace {
 #if (CORE_PERF_ENABLED == 1)
 void UpdateTimingData(const string_view subCategory, const string_view name, const int64_t microSeconds,
-    PerformanceDataManager::TypeDataSet& dataSet)
+    const PerformanceDataManager::PerformanceTimingData::DataType type, PerformanceDataManager::TypeDataSet& dataSet)
 {
     auto iter = dataSet.find(subCategory);
     if (iter != dataSet.end()) {
@@ -61,11 +61,11 @@ void UpdateTimingData(const string_view subCategory, const string_view name, con
             const int64_t arrayIndex = ref.counter % IPerformanceDataManager::TIMING_DATA_POOL_SIZE;
             ref.counter++;
             ref.currentTime = microSeconds;
-            if (microSeconds < ref.minTime) {
-                ref.minTime = microSeconds;
-            }
             if (microSeconds > ref.maxTime) {
                 ref.maxTime = microSeconds;
+            }
+            if (microSeconds < ref.minTime) {
+                ref.minTime = microSeconds;
             }
             ref.timings[arrayIndex] = microSeconds;
             int64_t frameAverage = 0;
@@ -73,10 +73,12 @@ void UpdateTimingData(const string_view subCategory, const string_view name, con
                 frameAverage += timingsRef;
             }
             ref.averageTime = frameAverage / IPerformanceDataManager::TIMING_DATA_POOL_SIZE;
+            ref.averageTimings[arrayIndex] = ref.averageTime;
             ref.totalTime += ref.currentTime;
             if (ref.totalTime > ref.maxTotalTime) {
                 ref.maxTotalTime = ref.totalTime;
             }
+            ref.type = type;
         } else {
             // new value
             auto& ref = iter->second.data[name];
@@ -88,7 +90,9 @@ void UpdateTimingData(const string_view subCategory, const string_view name, con
                 microSeconds, // totalTime
                 1,            // counter
             };
+            ref.type = type;
             std::fill_n(ref.timings, IPerformanceDataManager::TIMING_DATA_POOL_SIZE, microSeconds);
+            std::fill_n(ref.averageTimings, IPerformanceDataManager::TIMING_DATA_POOL_SIZE, microSeconds);
         }
     } else {
         // new subcategory and new value
@@ -101,7 +105,9 @@ void UpdateTimingData(const string_view subCategory, const string_view name, con
             microSeconds, // totalTime
             1,            // counter
         };
+        ref.type = type;
         std::fill_n(ref.timings, IPerformanceDataManager::TIMING_DATA_POOL_SIZE, microSeconds);
+        std::fill_n(ref.averageTimings, IPerformanceDataManager::TIMING_DATA_POOL_SIZE, microSeconds);
     }
 }
 
@@ -152,7 +158,17 @@ void PerformanceDataManager::UpdateData([[maybe_unused]] const string_view subCa
 {
 #if (CORE_PERF_ENABLED == 1)
     std::lock_guard<std::mutex> lock(dataMutex_);
-    UpdateTimingData(subCategory, name, microSeconds, data_);
+    UpdateTimingData(subCategory, name, microSeconds, PerformanceTimingData::DataType::MICROSECONDS, data_);
+#endif
+}
+
+void PerformanceDataManager::UpdateData([[maybe_unused]] const string_view subCategory,
+    [[maybe_unused]] const string_view name, [[maybe_unused]] const int64_t value,
+    [[maybe_unused]] PerformanceTimingData::DataType type)
+{
+#if (CORE_PERF_ENABLED == 1)
+    std::lock_guard<std::mutex> lock(dataMutex_);
+    UpdateTimingData(subCategory, name, value, type, data_);
 #endif
 }
 
@@ -227,8 +243,7 @@ void PerformanceDataManager::Unref() {}
 PerformanceDataManagerFactory::PerformanceDataManagerFactory(IPluginRegister& registry) {}
 
 void PerformanceDataManagerFactory::SetPerformanceTrace(
-    [[maybe_unused]] const Uid& uid,
-    [[maybe_unused]] IPerformanceTrace::Ptr&& trace)
+    [[maybe_unused]] const Uid& uid, [[maybe_unused]] IPerformanceTrace::Ptr&& trace)
 {
 #if (CORE_PERF_ENABLED == 1)
     perfTraces_.push_back({ uid, BASE_NS::move(trace) });
@@ -239,7 +254,7 @@ void PerformanceDataManagerFactory::RemovePerformanceTrace([[maybe_unused]] cons
 {
 #if (CORE_PERF_ENABLED == 1)
     perfTraces_.erase(std::remove_if(perfTraces_.begin(), perfTraces_.end(),
-        [uid](const RegisteredPerformanceTrace& info) { return info.uid == uid; }),
+                          [uid](const RegisteredPerformanceTrace& info) { return info.uid == uid; }),
         perfTraces_.cend());
 #endif
 }

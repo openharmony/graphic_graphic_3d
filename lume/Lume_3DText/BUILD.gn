@@ -38,16 +38,6 @@ config("lume_3dtext_config") {
     "RENDER_PERF_ENABLED=0",
     "RENDER_DEBUG_MARKERS_ENABLED=0",
     "RENDER_HAS_EXPERIMENTAL=0",
-
-    #"CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
-    #"CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
-    #"CORE3D_SHARED_LIBRARY=1",
-    #"CORE3D_VALIDATION_ENABLED=0",
-    #"CORE3D_TESTS_ENABLED=0",
-    #"CORE3D_DEV_ENABLED=${CORE_DEV_ENABLED}",
-    #"CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
-    #"CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
-    #"CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }"
   ]
   cflags = [
     "-Wno-unused-function",
@@ -75,38 +65,21 @@ ohos_source_set("lume_3dtext_src") {
   configs = [
     ":lume_3dtext_api",
     ":lume_3dtext_config",
-
-    #"${LUME_RENDER_PATH}:lume_render_api",
-    #"${LUME_CORE_PATH}:lume_base_api",
-    #"${LUME_CORE_PATH}:lume_engine_api",
     "${LUME_CORE_PATH}:lume_component_help_config",
-
-    #"${LUME_SERIALIZER_PATH}:ecs_serializer_api",
-    #"${LUME_CORE_PATH}:lume_default"
   ]
 
   sources = [
     "src/ecs/components/text_component_manager.cpp",
     "src/ecs/systems/text_system.cpp",
     "src/plugin/plugin.cpp",
-    "version.cpp",
-
-    #"src/ecs/systems/text_system.h",
+    "version.cpp"
   ]
 
   include_dirs = [
-    #"${LUME_BASE_PATH}/api",
-    #"${LUME_CORE_PATH}/api",
-    #"${LUME_RENDER_PATH}/api",
-    #"${LUME_CORE3D_PATH}/api",
-    #"${LUME_META_PATH}/include"
-    "src",
+    "src"
   ]
 
   deps = [
-    #"${LUME_SERIALIZER_PATH}:EcsSerializer",
-    #"${LUME_META_PATH}:libPluginMetaObject",
-    #"${LUME_CORE_PATH}/ecshelper:libAGPEcshelper"
   ]
   external_deps = [ "c_utils:utils" ]
   part_name = "graphic_3d"

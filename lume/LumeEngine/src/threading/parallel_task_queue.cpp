@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -106,7 +106,7 @@ void ParallelTaskQueue::Execute()
         auto& deps = dependencies.emplace_back();
         for (const auto& dependency : task.dependencies) {
             if (auto pos = std::find_if(tasks_.cbegin(), tasks_.cend(),
-                [dependency](const Entry& entry) { return entry.identifier == dependency; });
+                    [dependency](const Entry& entry) { return entry.identifier == dependency; });
                 pos != tasks_.cend()) {
                 deps.push_back(pos->task.get());
             }

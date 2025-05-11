@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -34,58 +34,59 @@ using BASE_NS::string;
 using BASE_NS::string_view;
 
 namespace {
+unsigned long ContainerIndex(const string_view name, size_t& pos)
+{
+    const char* start = name.substr(pos).data();
+    char* end = nullptr;
+    const unsigned long index = std::strtoul(start, &end, 10); // 10: base
+    // check that conversion stopped at the closing square bracket
+    if (!end || *end != ']') {
+        return ULONG_MAX;
+    }
+    // move past the closing square bracket
+    pos = static_cast<size_t>(end - name.data()) + 1U;
+    return index;
+}
+
+ptrdiff_t ContainerOffset(const uintptr_t baseOffset, const Property& property, const PropertyData::PropertyOffset& ret,
+    const unsigned long index)
+{
+    ptrdiff_t offset = PTRDIFF_MAX;
+    // calculate offset to the index. for arrays a direct offset, but for containers need to get the addess
+    // inside the container and compensate the base and member offsets.
+    auto* containerMethods = property.metaData.containerMethods;
+    if (property.type.isArray && (index < property.count)) {
+        offset = static_cast<ptrdiff_t>(index * containerMethods->property.size);
+    } else if (!property.type.isArray && baseOffset && (index < containerMethods->size(property.offset + baseOffset))) {
+        offset = static_cast<ptrdiff_t>(
+            containerMethods->get(property.offset + baseOffset, index) - baseOffset - ret.offset);
+    }
+    return offset;
+}
+
 bool ParseIndex(const string_view name, const uintptr_t baseOffset, const Property& property,
     array_view<const Property>& properties, size_t& pos, PropertyData::PropertyOffset& ret)
 {
-    // there needs to be at least three characters (e.g. [0]) to be a valid array index. the propery must also be an
-    // array.
-    static constexpr size_t minLength = 3U;
-    if ((pos >= name.size()) || ((name.size() - pos) < minLength) || !property.metaData.containerMethods) {
-        ret = {};
+    const unsigned long index = ContainerIndex(name, pos);
+    if (index == ULONG_MAX) {
         return false;
     }
-    ret.propertyPath = name.substr(0, pos);
-    ++pos;
 
-    const char* start = name.substr(pos).data();
-    char* end = nullptr;
-    const unsigned long index = strtoul(start, &end, 10); // 10: base
-    // check that conversion stopped at the closing square bracket
-    if (!end || *end != ']') {
-        ret = {};
+    // calculate offset to the index.
+    const ptrdiff_t offset = ContainerOffset(baseOffset, property, ret, index);
+    if (offset == PTRDIFF_MAX) {
         return false;
     }
-    // move past the closing square bracket and store the path so far
-    pos = static_cast<size_t>(end - name.data()) + 1U;
-    ret.propertyPath = name.substr(0, pos);
 
     auto* containerMethods = property.metaData.containerMethods;
+    ret.property = &containerMethods->property;
+    ret.offset = static_cast<uintptr_t>(static_cast<ptrdiff_t>(ret.offset) + offset);
+    ret.index = index;
 
-    // calculate offset to the index. for arrays a direct offset, but for containers need to get the addess
-    // inside the container and compensate the base and member offsets.
-    ptrdiff_t offset = PTRDIFF_MAX;
-    if (property.type.isArray && (index < property.count)) {
-        offset = static_cast<ptrdiff_t>(index * containerMethods->property.size);
-    } else if (!property.type.isArray && baseOffset) {
-        if (index < containerMethods->size(property.offset + baseOffset)) {
-            offset = static_cast<ptrdiff_t>(
-                containerMethods->get(property.offset + baseOffset, index) - baseOffset - ret.offset);
-        }
-    }
-
-    if (offset != PTRDIFF_MAX) {
-        ret.property = &containerMethods->property;
-        ret.offset = static_cast<uintptr_t>(static_cast<ptrdiff_t>(ret.offset) + offset);
-        ret.index = index;
-
-        if (pos < name.size() && name[pos] == '.') {
-            ++pos;
-            // continue search from the member properties.
-            properties = containerMethods->property.metaData.memberProperties;
-        }
-    } else {
-        ret = {};
-        return false;
+    if (pos < name.size() && name[pos] == '.') {
+        ++pos;
+        // continue search from the member properties.
+        properties = containerMethods->property.metaData.memberProperties;
     }
     return true;
 }
@@ -93,10 +94,10 @@ bool ParseIndex(const string_view name, const uintptr_t baseOffset, const Proper
 PropertyData::PropertyOffset FindProperty(
     array_view<const Property> properties, const string_view name, const uintptr_t baseOffset)
 {
-    PropertyData::PropertyOffset ret { nullptr, 0U, 0U, {} };
+    PropertyData::PropertyOffset ret { nullptr, 0U, 0U };
 
     // trim down to name without array index or member variable.
-    constexpr const string_view delimiters = ".[";
+    static constexpr string_view delimiters = ".[";
 
     size_t pos = 0U;
     while (pos < name.size()) {
@@ -114,23 +115,32 @@ PropertyData::PropertyOffset FindProperty(
             // remember what property this was
             ret.property = &*property;
             ret.offset += property->offset;
-            ret.index = static_cast<size_t>(std::distance(properties.cbegin(), property));
+            ret.index = static_cast<size_t>(property - properties.cbegin());
 
             // if we have only a name we are done
             if (pos == string_view::npos) {
-                ret.propertyPath = name;
+                break;
             } else if (name[pos] == '.') {
                 // there needs to be at least one character to be a valid name.
                 if ((name.size() - pos) < 2U) {
                     ret = {};
                     break;
                 }
-                ret.propertyPath = name.substr(0, pos);
                 ++pos;
                 // continue search from the member properties.
                 properties = property->metaData.memberProperties;
             } else if (name[pos] == '[') {
+                // there needs to be at least three characters (e.g. [0]) to be a valid array index. the propery must
+                // also be an array.
+                static constexpr size_t minLength = 3U;
+                if (!property->metaData.containerMethods || (pos >= name.size()) || ((name.size() - pos) < minLength)) {
+                    ret = {};
+                    break;
+                }
+                ++pos;
+
                 if (!ParseIndex(name, baseOffset, *property, properties, pos, ret)) {
+                    ret = {};
                     break;
                 }
             }
@@ -173,7 +183,7 @@ PropertyData::PropertyOffset PropertyData::WLock(IPropertyHandle& handle, const 
         }
     }
     WUnlock(handle);
-    return { nullptr, 0U, 0U, {} };
+    return { nullptr, 0U, 0U };
 }
 
 bool PropertyData::WUnlock(const IPropertyHandle& handle) // (releases the datahandle lock, and removes ref)
@@ -214,7 +224,7 @@ PropertyData::PropertyOffset PropertyData::RLock(const IPropertyHandle& handle, 
         }
     }
     RUnlock(handle);
-    return { nullptr, 0U, 0U, {} };
+    return { nullptr, 0U, 0U };
 }
 
 bool PropertyData::RUnlock(const IPropertyHandle& handle) // (releases the datahandle lock, and removes ref)
@@ -246,6 +256,16 @@ PropertyData::PropertyOffset PropertyData::FindProperty(
     const array_view<const Property> properties, const string_view propertyPath)
 {
     return ::FindProperty(properties, propertyPath, 0U);
+}
+
+PropertyData::PropertyOffset PropertyData::FindProperty(const IPropertyHandle& handle, const string_view propertyPath)
+{
+    if (auto owner = handle.Owner()) {
+        const auto baseAddress = reinterpret_cast<uintptr_t>(handle.RLock());
+        handle.RUnlock();
+        return ::FindProperty(owner->MetaData(), propertyPath, baseAddress);
+    }
+    return {};
 }
 
 PropertyData::~PropertyData()

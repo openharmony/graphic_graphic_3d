@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -97,8 +97,8 @@ GpuSamplerVk::~GpuSamplerVk()
         ((const DeviceVk&)device_)
             .GetExtFunctions()
             .vkDestroySamplerYcbcrConversion(device, // device
-            samplerConversion_,                      // ycbcrConversion
-            nullptr);                                // pAllocator
+                samplerConversion_,                  // ycbcrConversion
+                nullptr);                            // pAllocator
     }
     vkDestroySampler(device, // device
         plat_.sampler,       // sampler

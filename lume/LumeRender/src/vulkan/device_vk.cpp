@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -31,6 +31,7 @@
 #include "device/shader_module.h"
 #include "perf/cpu_perf_scope.h"
 #include "platform_vk.h"
+#include "render_context.h"
 #include "util/log.h"
 #include "vulkan/create_functions_vk.h"
 #include "vulkan/gpu_buffer_vk.h"
@@ -234,6 +235,120 @@ void GetPhysicalDeviceDescriptorIndexingFeaturesStructs(ChainObjects& co, ChainW
 
 // ray-tracing
 #if (RENDER_VULKAN_RT_ENABLED == 1)
+void FillAsBuildGeometryTriangles(const AsBuildGeometryInfo& geometry,
+    const array_view<const AsGeometryTrianglesInfo> info, vector<VkAccelerationStructureGeometryKHR>& geometryData,
+    vector<uint32_t>& maxPrimitiveCounts, uint32_t& arrayIndex)
+{
+    for (const auto& ref : info) {
+        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
+            nullptr,                                               // pNext
+            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_TRIANGLES_KHR,     // geometryType
+            {},                                                    // geometry;
+            VkGeometryFlagsKHR(ref.geometryFlags),                 // flags
+        };
+        geometryData[arrayIndex].geometry.triangles = VkAccelerationStructureGeometryTrianglesDataKHR {
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR, // sType
+            nullptr,                                                              // pNext
+            VkFormat(ref.vertexFormat),                                           // vertexFormat
+            {},                                                                   // vertexData
+            VkDeviceSize(ref.vertexStride),                                       // vertexStride
+            ref.maxVertex,                                                        // maxVertex
+            VkIndexType(ref.indexType),                                           // indexType
+            {},                                                                   // indexData
+            {},                                                                   // transformData
+        };
+        maxPrimitiveCounts[arrayIndex] = ref.indexCount / 3u; // triangles;
+        arrayIndex++;
+    }
+}
+
+void FillAsBuildGeometryAabbs(const AsBuildGeometryInfo& geometry, const array_view<const AsGeometryAabbsInfo> info,
+    vector<VkAccelerationStructureGeometryKHR>& geometryData, vector<uint32_t>& maxPrimitiveCounts,
+    uint32_t& arrayIndex)
+{
+    for (const auto& ref : info) {
+        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
+            nullptr,                                               // pNext
+            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_AABBS_KHR,         // geometryType
+            {},                                                    // geometry;
+            VkGeometryFlagsKHR(ref.geometryFlags),                 // flags
+        };
+        geometryData[arrayIndex].geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR {
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR, // sType
+            nullptr,                                                          // pNext
+            {},                                                               // data
+            ref.stride,                                                       // stride
+        };
+        maxPrimitiveCounts[arrayIndex] = 1U;
+        arrayIndex++;
+    }
+}
+
+void FillAsBuildGeometryInstances(const AsBuildGeometryInfo& geometry,
+    const array_view<const AsGeometryInstancesInfo> info, vector<VkAccelerationStructureGeometryKHR>& geometryData,
+    vector<uint32_t>& maxPrimitiveCounts, uint32_t& arrayIndex)
+{
+    for (const auto& ref : info) {
+        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
+            nullptr,                                               // pNext
+            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_INSTANCES_KHR,     // geometryType
+            {},                                                    // geometry;
+            VkGeometryFlagsKHR(ref.geometryFlags),                 // flags
+        };
+        geometryData[arrayIndex].geometry.instances = VkAccelerationStructureGeometryInstancesDataKHR {
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR, // sType
+            nullptr,                                                              // pNext
+            ref.arrayOfPointers,                                                  // arrayOfPointers
+            {},                                                                   // data
+        };
+        maxPrimitiveCounts[arrayIndex] = ref.primitiveCount;
+        arrayIndex++;
+    }
+}
+
+AsBuildSizes GetAsBuildGeometryCombine(const VkDevice device, const DeviceVk::ExtFunctions& extFunctions,
+    const AsBuildGeometryInfo& geometry, const array_view<VkAccelerationStructureGeometryKHR> geometryData,
+    const array_view<uint32_t> maxPrimitiveCounts, const uint32_t arrayIndex)
+{
+    const VkAccelerationStructureBuildGeometryInfoKHR geometryInfoVk {
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR, // sType
+        nullptr,                                                          // pNext
+        VkAccelerationStructureTypeKHR(geometry.type),                    // type
+        VkBuildAccelerationStructureFlagsKHR(geometry.flags),             // flags
+        VkBuildAccelerationStructureModeKHR(geometry.mode),               // mode
+        VK_NULL_HANDLE,                                                   // srcAccelerationStructure
+        VK_NULL_HANDLE,                                                   // dstAccelerationStructure
+        arrayIndex,                                                       // geometryCount
+        geometryData.data(),                                              // pGeometries
+        nullptr,                                                          // ppGeometries
+        {},                                                               // scratchData
+    };
+
+    VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo {
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // sType
+        nullptr,                                                       // pNext
+        0,                                                             // accelerationStructureSize
+        0,                                                             // updateScratchSize
+        0,                                                             // buildScratchSize
+    };
+    if ((arrayIndex > 0) && extFunctions.vkGetAccelerationStructureBuildSizesKHR) {
+        extFunctions.vkGetAccelerationStructureBuildSizesKHR(device, // device
+            VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,         // buildType,
+            &geometryInfoVk,                                         // pBuildInfo
+            maxPrimitiveCounts.data(),                               // pMaxPrimitiveCounts
+            &buildSizesInfo);                                        // pSizeInfo
+    }
+
+    return AsBuildSizes {
+        static_cast<uint32_t>(buildSizesInfo.accelerationStructureSize),
+        static_cast<uint32_t>(buildSizesInfo.updateScratchSize),
+        static_cast<uint32_t>(buildSizesInfo.buildScratchSize),
+    };
+}
+
 static constexpr string_view DEVICE_EXTENSION_ACCELERATION_STRUCTURE { "VK_KHR_acceleration_structure" };
 static constexpr string_view DEVICE_EXTENSION_RAY_QUERY { "VK_KHR_ray_query" };
 static constexpr string_view DEVICE_EXTENSION_DEFERRED_HOST_OPERATIONS { "VK_KHR_deferred_host_operations" };
@@ -332,10 +447,15 @@ constexpr const QueueProperties DEFAULT_QUEUE {
     true,                  // canPresent
 };
 
-PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo GetAllocatorCreateInfo(const BackendExtraVk* backendExtra)
+PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo GetAllocatorCreateInfo(
+    const uint32_t rcFlags, const BackendExtraVk* backendExtra)
 {
     // create default pools
     PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo createInfo;
+    createInfo.createFlags =
+        ((rcFlags & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_RAY_TRACING_BIT) > 0)
+            ? PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo::CreateInfoFlagBits::ENABLE_DEVICE_ADDRESSES_BIT
+            : 0U;
     uint32_t dynamicUboByteSize = 16u * 1024u * 1024u;
     if (backendExtra) {
         const auto& sizes = backendExtra->gpuMemoryAllocatorSizes;
@@ -386,20 +506,28 @@ PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo GetAllocatorCreateInfo(
 
 VkBool32 VKAPI_PTR DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT /* messageTypes */, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* /* pUserData */)
+    void* pUserData)
 {
     if (pCallbackData && pCallbackData->pMessageIdName && pCallbackData->pMessage) {
+        uint32_t fi = 0U;
+        if (RenderContext* rc = reinterpret_cast<RenderContext*>(pUserData); rc) {
+            // might come here prior device creation
+            if (rc->ValidMembers()) {
+                const Device& device = (const Device&)rc->GetDevice();
+                fi = static_cast<uint32_t>(device.GetFrameCount());
+            }
+        }
         if ((VkDebugUtilsMessageSeverityFlagsEXT)messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-            PLUGIN_LOG_E("%s: %s", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+            PLUGIN_LOG_E("FRAME: %u, %s: %s", fi, pCallbackData->pMessageIdName, pCallbackData->pMessage);
         } else if ((VkDebugUtilsMessageSeverityFlagsEXT)messageSeverity &
                    (VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)) {
-            PLUGIN_LOG_W("%s: %s", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+            PLUGIN_LOG_W("FRAME: %u, %s: %s", fi, pCallbackData->pMessageIdName, pCallbackData->pMessage);
         } else if ((VkDebugUtilsMessageSeverityFlagsEXT)messageSeverity &
                    VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-            PLUGIN_LOG_I("%s: %s", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+            PLUGIN_LOG_I("FRAME: %u, %s: %s", fi, pCallbackData->pMessageIdName, pCallbackData->pMessage);
         } else if ((VkDebugUtilsMessageSeverityFlagsEXT)messageSeverity &
                    VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-            PLUGIN_LOG_V("%s: %s", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+            PLUGIN_LOG_V("FRAME: %u, %s: %s", fi, pCallbackData->pMessageIdName, pCallbackData->pMessage);
         }
     }
 
@@ -456,7 +584,8 @@ void CheckValidDepthFormats(const DevicePlatformDataVk& devicePlat, DevicePlatfo
     }
 }
 
-vector<string_view> GetPreferredDeviceExtensions(const BackendExtraVk* backendExtra, DevicePlatformDataVk& plat)
+vector<string_view> GetPreferredDeviceExtensions(
+    const BackendExtraVk* backendExtra, const uint32_t rcFlags, DevicePlatformDataVk& plat)
 {
     vector<string_view> extensions { DEVICE_EXTENSION_SWAPCHAIN };
     extensions.push_back(DEVICE_EXTENSION_CREATE_RENDERPASS2);
@@ -467,11 +596,13 @@ vector<string_view> GetPreferredDeviceExtensions(const BackendExtraVk* backendEx
     extensions.push_back(DEVICE_EXTENSION_FRAGMENT_SHADING_RATE);
 #endif
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    extensions.push_back(DEVICE_EXTENSION_ACCELERATION_STRUCTURE);
-    extensions.push_back(DEVICE_EXTENSION_RAY_TRACING_PIPELINE);
-    extensions.push_back(DEVICE_EXTENSION_RAY_QUERY);
-    extensions.push_back(DEVICE_EXTENSION_PIPELINE_LIBRARY);
-    extensions.push_back(DEVICE_EXTENSION_DEFERRED_HOST_OPERATIONS);
+    if (rcFlags & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_RAY_TRACING_BIT) {
+        extensions.push_back(DEVICE_EXTENSION_ACCELERATION_STRUCTURE);
+        extensions.push_back(DEVICE_EXTENSION_RAY_TRACING_PIPELINE);
+        extensions.push_back(DEVICE_EXTENSION_RAY_QUERY);
+        extensions.push_back(DEVICE_EXTENSION_PIPELINE_LIBRARY);
+        extensions.push_back(DEVICE_EXTENSION_DEFERRED_HOST_OPERATIONS);
+    }
 #endif
     if (plat.deviceApiMinor >= 1) { // enable only for 1.1+
         extensions.push_back(DEVICE_EXTENSION_MULTIVIEW);
@@ -614,21 +745,24 @@ void CreateDefaultVulkanObjects(VkDevice device, DeviceVk::DefaultVulkanObjects&
 }
 void DestroyDefaultVulkanObjects(VkDevice vkDevice, DeviceVk::DefaultVulkanObjects& dvo)
 {
-    PLUGIN_ASSERT(dvo.emptyDescriptorSetLayout);
-    vkDestroyDescriptorSetLayout(vkDevice, // device
-        dvo.emptyDescriptorSetLayout,      // descriptorSetLayout
-        nullptr);                          // pAllocator
+    if (dvo.emptyDescriptorSetLayout) {
+        vkDestroyDescriptorSetLayout(vkDevice, // device
+            dvo.emptyDescriptorSetLayout,      // descriptorSetLayout
+            nullptr);                          // pAllocator
+    }
 }
 } // namespace
 
-DeviceVk::DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createInfo) : Device(renderContext, createInfo)
+DeviceVk::DeviceVk(RenderContext& renderContext)
+    : Device(renderContext), rcFlags_(renderContext.GetCreateInfo().createFlags)
 {
     // assume instance and device will be created internally
     ownInstanceAndDevice_ = true;
 
+    const DeviceCreateInfo& createInfo = renderContext.GetCreateInfo().deviceCreateInfo;
     const auto* backendExtra = static_cast<const BackendExtraVk*>(createInfo.backendConfiguration);
-    // update internal state based the optional backend configuration given by the client. the size of queuProperties
-    // will depend on the enableMultiQueue setting.
+    // update internal state based the optional backend configuration given by the client. the size of
+    // queuProperties will depend on the enableMultiQueue setting.
     const auto queueProperties = CheckExternalConfig(backendExtra);
 
     // these check internally ownInstanceAndDevice_ and skip creation if provided by user
@@ -669,7 +803,6 @@ DeviceVk::DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createI
     CheckValidDepthFormats(plat_, platInternal_);
     FillFormatSupport(plat_.physicalDevice, formatProperties_);
 
-    PLUGIN_ASSERT_MSG(!lowLevelGpuQueues_.graphicsQueues.empty(), "default queue not initialized");
     if (!lowLevelGpuQueues_.graphicsQueues.empty()) {
         lowLevelGpuQueues_.defaultQueue = lowLevelGpuQueues_.graphicsQueues[0];
     } else {
@@ -681,7 +814,7 @@ DeviceVk::DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createI
                               lowLevelGpuQueues_.transferQueues.size());
 
     const PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo allocatorCreateInfo =
-        GetAllocatorCreateInfo(backendExtra);
+        GetAllocatorCreateInfo(rcFlags_, backendExtra);
     platformGpuMemoryAllocator_ = make_unique<PlatformGpuMemoryAllocator>(
         plat_.instance, plat_.physicalDevice, plat_.device, allocatorCreateInfo);
 
@@ -735,7 +868,7 @@ void DeviceVk::CreateInstance()
     RENDER_CPU_PERF_SCOPE("CreateInstance", "");
     const auto instanceWrapper = (plat_.instance == VK_NULL_HANDLE)
                                      ? CreateFunctionsVk::CreateInstance(VersionInfo { "core_renderer", 0, 1, 0 },
-                                                                         VersionInfo { "core_renderer_app", 0, 1, 0 })
+                                           VersionInfo { "core_renderer_app", 0, 1, 0 })
                                      : CreateFunctionsVk::GetWrapper(plat_.instance);
 
     plat_.instance = instanceWrapper.instance;
@@ -743,8 +876,8 @@ void DeviceVk::CreateInstance()
     plat_.deviceApiMajor = instanceWrapper.apiMajor;
     plat_.deviceApiMinor = instanceWrapper.apiMinor;
     if (instanceWrapper.debugUtilsSupported) {
-        debugFunctionUtilities_.debugMessenger =
-            CreateFunctionsVk::CreateDebugMessenger(plat_.instance, DebugMessengerCallback);
+        debugFunctionUtilities_.debugMessenger = CreateFunctionsVk::CreateDebugMessenger(
+            plat_.instance, DebugMessengerCallback, static_cast<RenderContext*>(&renderContext_));
     }
     if (!debugFunctionUtilities_.debugMessenger && instanceWrapper.debugReportSupported) {
         debugFunctionUtilities_.debugCallback =
@@ -794,7 +927,7 @@ void DeviceVk::CreatePhysicalDevice()
 void DeviceVk::CreateDevice(const BackendExtraVk* backendExtra, const vector<LowLevelQueueInfo>& availableQueues)
 {
     RENDER_CPU_PERF_SCOPE("CreateDevice", "");
-    vector<string_view> preferredExtensions = GetPreferredDeviceExtensions(backendExtra, plat_);
+    vector<string_view> preferredExtensions = GetPreferredDeviceExtensions(backendExtra, rcFlags_, plat_);
     PreparePhysicalDeviceFeaturesForEnabling(backendExtra, plat_);
 
     ChainWrapper chainWrapper;
@@ -817,7 +950,9 @@ void DeviceVk::CreateDevice(const BackendExtraVk* backendExtra, const vector<Low
 
     GetPhysicalDeviceYcbcrStructs(chainObjects, chainWrapper);
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    GetPhysicalDeviceRayTracingStructs(chainObjects, chainWrapper);
+    if (rcFlags_ & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_RAY_TRACING_BIT) {
+        GetPhysicalDeviceRayTracingStructs(chainObjects, chainWrapper);
+    }
 #endif
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
     if (CreateFunctionsVk::HasExtension(plat_.physicalDeviceExtensions, DEVICE_EXTENSION_FRAGMENT_SHADING_RATE)) {
@@ -887,7 +1022,9 @@ vector<QueueProperties> DeviceVk::CheckExternalConfig(const BackendExtraVk* back
 
     if (extra.instance != VK_NULL_HANDLE) {
         PLUGIN_LOG_D("trying to use application given vulkan instance, device, and physical device");
-        PLUGIN_ASSERT((extra.instance && extra.physicalDevice && extra.device));
+        if (!(extra.instance && extra.physicalDevice && extra.device)) {
+            PLUGIN_LOG_E("Invalid vulkan instance, physical device, and/or device");
+        }
         plat_.instance = extra.instance;
         plat_.physicalDevice = extra.physicalDevice;
         plat_.device = extra.device;
@@ -963,11 +1100,9 @@ FormatProperties DeviceVk::GetFormatProperties(const Format format) const
     return {};
 }
 
-AccelerationStructureBuildSizes DeviceVk::GetAccelerationStructureBuildSizes(
-    const AccelerationStructureBuildGeometryInfo& geometry,
-    BASE_NS::array_view<const AccelerationStructureGeometryTrianglesInfo> triangles,
-    BASE_NS::array_view<const AccelerationStructureGeometryAabbsInfo> aabbs,
-    BASE_NS::array_view<const AccelerationStructureGeometryInstancesInfo> instances) const
+AsBuildSizes DeviceVk::GetAccelerationStructureBuildSizes(const AsBuildGeometryInfo& geometry,
+    array_view<const AsGeometryTrianglesInfo> triangles, array_view<const AsGeometryAabbsInfo> aabbs,
+    array_view<const AsGeometryInstancesInfo> instances) const
 {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
     const VkDevice device = plat_.device;
@@ -976,99 +1111,13 @@ AccelerationStructureBuildSizes DeviceVk::GetAccelerationStructureBuildSizes(
     vector<VkAccelerationStructureGeometryKHR> geometryData(arraySize);
     vector<uint32_t> maxPrimitiveCounts(arraySize);
     uint32_t arrayIndex = 0;
-    for (const auto& trianglesRef : triangles) {
-        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
-            nullptr,                                               // pNext
-            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_TRIANGLES_KHR,     // geometryType
-            {},                                                    // geometry;
-            VkGeometryFlagsKHR(trianglesRef.geometryFlags),        // flags
-        };
-        geometryData[arrayIndex].geometry.triangles = VkAccelerationStructureGeometryTrianglesDataKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR, // sType
-            nullptr,                                                              // pNext
-            VkFormat(trianglesRef.vertexFormat),                                  // vertexFormat
-            {},                                                                   // vertexData
-            VkDeviceSize(trianglesRef.vertexStride),                              // vertexStride
-            trianglesRef.maxVertex,                                               // maxVertex
-            VkIndexType(trianglesRef.indexType),                                  // indexType
-            {},                                                                   // indexData
-            {},                                                                   // transformData
-        };
-        maxPrimitiveCounts[arrayIndex] = trianglesRef.indexCount / 3u; // triangles;
-        arrayIndex++;
-    }
-    for (const auto& aabbsRef : aabbs) {
-        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
-            nullptr,                                               // pNext
-            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_AABBS_KHR,         // geometryType
-            {},                                                    // geometry;
-            0,                                                     // flags
-        };
-        geometryData[arrayIndex].geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR, // sType
-            nullptr,                                                          // pNext
-            {},                                                               // data
-            aabbsRef.stride,                                                  // stride
-        };
-        maxPrimitiveCounts[arrayIndex] = 1u;
-        arrayIndex++;
-    }
-    for (const auto& instancesRef : instances) {
-        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
-            nullptr,                                               // pNext
-            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_INSTANCES_KHR,     // geometryType
-            {},                                                    // geometry;
-            0,                                                     // flags
-        };
-        geometryData[arrayIndex].geometry.instances = VkAccelerationStructureGeometryInstancesDataKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR, // sType
-            nullptr,                                                              // pNext
-            instancesRef.arrayOfPointers,                                         // arrayOfPointers
-            {},                                                                   // data
-        };
-        maxPrimitiveCounts[arrayIndex] = 1u;
-        arrayIndex++;
-    }
+    FillAsBuildGeometryTriangles(geometry, triangles, geometryData, maxPrimitiveCounts, arrayIndex);
+    FillAsBuildGeometryAabbs(geometry, aabbs, geometryData, maxPrimitiveCounts, arrayIndex);
+    FillAsBuildGeometryInstances(geometry, instances, geometryData, maxPrimitiveCounts, arrayIndex);
 
-    const VkAccelerationStructureBuildGeometryInfoKHR geometryInfoVk {
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR, // sType
-        nullptr,                                                          // pNext
-        VkAccelerationStructureTypeKHR(geometry.type),                    // type
-        VkBuildAccelerationStructureFlagsKHR(geometry.flags),             // flags
-        VkBuildAccelerationStructureModeKHR(geometry.mode),               // mode
-        VK_NULL_HANDLE,                                                   // srcAccelerationStructure
-        VK_NULL_HANDLE,                                                   // dstAccelerationStructure
-        arrayIndex,                                                       // geometryCount
-        geometryData.data(),                                              // pGeometries
-        nullptr,                                                          // ppGeometries
-        {},                                                               // scratchData
-    };
-
-    VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo {
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // sType
-        nullptr,                                                       // pNext
-        0,                                                             // accelerationStructureSize
-        0,                                                             // updateScratchSize
-        0,                                                             // buildScratchSize
-    };
-    if ((arrayIndex > 0) && extFunctions_.vkGetAccelerationStructureBuildSizesKHR) {
-        extFunctions_.vkGetAccelerationStructureBuildSizesKHR(device, // device
-            VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,          // buildType,
-            &geometryInfoVk,                                          // pBuildInfo
-            maxPrimitiveCounts.data(),                                // pMaxPrimitiveCounts
-            &buildSizesInfo);                                         // pSizeInfo
-    }
-
-    return AccelerationStructureBuildSizes {
-        static_cast<uint32_t>(buildSizesInfo.accelerationStructureSize),
-        static_cast<uint32_t>(buildSizesInfo.updateScratchSize),
-        static_cast<uint32_t>(buildSizesInfo.buildScratchSize),
-    };
+    return GetAsBuildGeometryCombine(device, extFunctions_, geometry, geometryData, maxPrimitiveCounts, arrayIndex);
 #else
-    return AccelerationStructureBuildSizes { 0, 0, 0 };
+    return AsBuildSizes { 0, 0, 0 };
 #endif
 }
 
@@ -1251,10 +1300,10 @@ bool DeviceVk::HasDeviceExtension(const string_view extensionName) const
     return extensions_.contains(extensionName);
 }
 
-unique_ptr<Device> CreateDeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createInfo)
+unique_ptr<Device> CreateDeviceVk(RenderContext& renderContext)
 {
     RENDER_CPU_PERF_SCOPE("CreateDeviceVk", "");
-    return make_unique<DeviceVk>(renderContext, createInfo);
+    return make_unique<DeviceVk>(renderContext);
 }
 
 unique_ptr<GpuBuffer> DeviceVk::CreateGpuBuffer(const GpuBufferDesc& desc)
@@ -1267,6 +1316,11 @@ unique_ptr<GpuBuffer> DeviceVk::CreateGpuBuffer(const GpuAccelerationStructureDe
 {
     RENDER_CPU_PERF_SCOPE("CreateGpuBuffer", "");
     return make_unique<GpuBufferVk>(*this, descAccel);
+}
+
+unique_ptr<GpuBuffer> DeviceVk::CreateGpuBuffer(const BackendSpecificBufferDesc& desc)
+{
+    return make_unique<GpuBufferVk>(*this, desc);
 }
 
 unique_ptr<GpuImage> DeviceVk::CreateGpuImage(const GpuImageDesc& desc)
@@ -1474,32 +1528,35 @@ void DeviceVk::CreateExtFunctions()
 #endif
 
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    extFunctions_.vkGetAccelerationStructureBuildSizesKHR =
-        (PFN_vkGetAccelerationStructureBuildSizesKHR)vkGetInstanceProcAddr(
-            plat_.instance, "vkGetAccelerationStructureBuildSizesKHR");
-    if (!extFunctions_.vkGetAccelerationStructureBuildSizesKHR) {
-        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkGetAccelerationStructureBuildSizesKHR");
-    }
-    extFunctions_.vkCmdBuildAccelerationStructuresKHR = (PFN_vkCmdBuildAccelerationStructuresKHR)vkGetInstanceProcAddr(
-        plat_.instance, "vkCmdBuildAccelerationStructuresKHR");
-    if (!extFunctions_.vkCmdBuildAccelerationStructuresKHR) {
-        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkCmdBuildAccelerationStructuresKHR");
-    }
-    extFunctions_.vkCreateAccelerationStructureKHR =
-        (PFN_vkCreateAccelerationStructureKHR)vkGetInstanceProcAddr(plat_.instance, "vkCreateAccelerationStructureKHR");
-    if (!extFunctions_.vkCreateAccelerationStructureKHR) {
-        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkCreateAccelerationStructureKHR");
-    }
-    extFunctions_.vkDestroyAccelerationStructureKHR = (PFN_vkDestroyAccelerationStructureKHR)vkGetInstanceProcAddr(
-        plat_.instance, "vkDestroyAccelerationStructureKHR");
-    if (!extFunctions_.vkDestroyAccelerationStructureKHR) {
-        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkDestroyAccelerationStructureKHR");
-    }
-    extFunctions_.vkGetAccelerationStructureDeviceAddressKHR =
-        (PFN_vkGetAccelerationStructureDeviceAddressKHR)vkGetInstanceProcAddr(
-            plat_.instance, "vkGetAccelerationStructureDeviceAddressKHR");
-    if (!extFunctions_.vkGetAccelerationStructureDeviceAddressKHR) {
-        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkGetAccelerationStructureDeviceAddressKHR");
+    if (rcFlags_ & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_RAY_TRACING_BIT) {
+        extFunctions_.vkGetAccelerationStructureBuildSizesKHR =
+            (PFN_vkGetAccelerationStructureBuildSizesKHR)vkGetInstanceProcAddr(
+                plat_.instance, "vkGetAccelerationStructureBuildSizesKHR");
+        if (!extFunctions_.vkGetAccelerationStructureBuildSizesKHR) {
+            PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkGetAccelerationStructureBuildSizesKHR");
+        }
+        extFunctions_.vkCmdBuildAccelerationStructuresKHR =
+            (PFN_vkCmdBuildAccelerationStructuresKHR)vkGetInstanceProcAddr(
+                plat_.instance, "vkCmdBuildAccelerationStructuresKHR");
+        if (!extFunctions_.vkCmdBuildAccelerationStructuresKHR) {
+            PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkCmdBuildAccelerationStructuresKHR");
+        }
+        extFunctions_.vkCreateAccelerationStructureKHR = (PFN_vkCreateAccelerationStructureKHR)vkGetInstanceProcAddr(
+            plat_.instance, "vkCreateAccelerationStructureKHR");
+        if (!extFunctions_.vkCreateAccelerationStructureKHR) {
+            PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkCreateAccelerationStructureKHR");
+        }
+        extFunctions_.vkDestroyAccelerationStructureKHR = (PFN_vkDestroyAccelerationStructureKHR)vkGetInstanceProcAddr(
+            plat_.instance, "vkDestroyAccelerationStructureKHR");
+        if (!extFunctions_.vkDestroyAccelerationStructureKHR) {
+            PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkDestroyAccelerationStructureKHR");
+        }
+        extFunctions_.vkGetAccelerationStructureDeviceAddressKHR =
+            (PFN_vkGetAccelerationStructureDeviceAddressKHR)vkGetInstanceProcAddr(
+                plat_.instance, "vkGetAccelerationStructureDeviceAddressKHR");
+        if (!extFunctions_.vkGetAccelerationStructureDeviceAddressKHR) {
+            PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkGetAccelerationStructureDeviceAddressKHR");
+        }
     }
 #endif
 }

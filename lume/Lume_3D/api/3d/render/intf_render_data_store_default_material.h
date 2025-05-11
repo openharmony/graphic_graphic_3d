@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -170,8 +170,10 @@ struct RenderDataDefaultMaterial {
     /** Material data
      */
     struct MaterialData {
-        /** Render material type */
-        RenderMaterialType materialType { RenderMaterialType::METALLIC_ROUGHNESS };
+        /** Material shader */
+        MaterialShaderWithHandleReference materialShader;
+        /** Depth shader */
+        MaterialShaderWithHandleReference depthShader;
         /** Render extra rendering flags */
         RenderExtraRenderingFlags extraMaterialRenderingFlags { 0u };
         /** Render material flags, same as MaterialComponent */
@@ -182,10 +184,14 @@ struct RenderDataDefaultMaterial {
 
         /** Custom render slot id */
         uint32_t customRenderSlotId { ~0u };
-        /** Material shader */
-        MaterialShaderWithHandleReference materialShader;
-        /** Depth shader */
-        MaterialShaderWithHandleReference depthShader;
+
+        /** Optional camera id (significant bits) for camera based material
+         * Will render only with a given camera id if set.
+         */
+        uint32_t customCameraId { RenderSceneDataConstants::INVALID_INDEX };
+
+        /** Render material type */
+        RenderMaterialType materialType { RenderMaterialType::METALLIC_ROUGHNESS };
 
         /** Render sort layer id. Valid values are 0 - 63 */
         uint8_t renderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
@@ -213,16 +219,18 @@ struct RenderDataDefaultMaterial {
     };
 
     struct SlotMaterialData {
-        /** Combined sort layer from render submesh */
-        uint16_t combinedRenderSortLayer { 0u };
-        /** Combined of render materials flags hash, material idx, shader id */
-        uint32_t renderSortHash { 0u };
-        /** Render material flags */
-        RenderMaterialFlags renderMaterialFlags { 0u };
         /** Custom shader handle or invalid handle */
         RENDER_NS::RenderHandle shader;
         /** Custom graphics state handle or invalid handle */
         RENDER_NS::RenderHandle gfxState;
+        /** Render material flags */
+        RenderMaterialFlags renderMaterialFlags { 0u };
+        /** Render camera id for camera effect (uses only 32 significant id bits) */
+        uint32_t cameraId { 0u };
+        /** Combined of render materials flags hash, material idx, shader id */
+        uint32_t renderSortHash { 0u };
+        /** Combined sort layer from render submesh */
+        uint16_t combinedRenderSortLayer { 0u };
     };
 
     /** Object counts for rendering.
@@ -288,16 +296,49 @@ public:
 
     ~IRenderDataStoreDefaultMaterial() override = default;
 
-    /** Add mesh data.
+    /** [[DEPRECATED]] Add mesh data.
      * @param meshData All mesh data.
      * @return Mesh index for submesh to use.
      */
     virtual uint32_t AddMeshData(const RenderMeshData& meshData) = 0;
 
+    /** Add frame render mesh data.
+     * @param id Mesh id. In typical ECS usage mesh entity id.
+     * @param meshAabbData render mesh aabb data.
+     * @param meshSkinData render mesh skin data.
+     */
+    virtual void AddFrameRenderMeshData(const RenderMeshData& meshData, const RenderMeshAabbData& meshAabbData,
+        const RenderMeshSkinData& meshSkinData) = 0;
+
+    /** Add frame render mesh data with batching.
+     * @param id Mesh id. In typical ECS usage mesh entity id.
+     * @param meshAabbData array view render mesh aabb data.
+     * @param meshSkinData render mesh skin data.
+     * @param meshBatchData render mesh batch data.
+     */
+    virtual void AddFrameRenderMeshData(BASE_NS::array_view<const RenderMeshData> meshData,
+        const RenderMeshAabbData& meshAabbData, const RenderMeshSkinData& meshSkinData,
+        const RenderMeshBatchData& meshBatchData) = 0;
+
+    /** Update (or create) rendering mesh data.
+     * Automatic hashing with id. (E.g. mesh entity id)
+     * Final rendering flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
+     * @param id Mesh id. In typical ECS usage mesh entity id.
+     * @param meshData Mesh data.
+     */
+    virtual void UpdateMeshData(uint64_t id, const MeshDataWithHandleReference& meshData) = 0;
+
+    /** Destroy mesh rendering data explicitly.
+     * NOTE: The references for the resources might be zero already at this point.
+     * In typical cases should be automatically called by some ECS system when mesh is destroyed
+     * @param id Mesh id. In typical ECS usage mesh entity id.
+     */
+    virtual void DestroyMeshData(uint64_t id) = 0;
+
     /** Update (or create) rendering material data.
      * Automatic hashing with id. (E.g. material entity id)
      * Final rendering material flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
-     * @param id Material component id. In typical ECS usage material entity id.
+     * @param id Material id. In typical ECS usage material entity id.
      * @param materialUniforms input material uniforms.
      * @param materialHandles raw GPU resource handles.
      * @param materialData Material data.
@@ -418,23 +459,13 @@ public:
      */
     virtual BASE_NS::array_view<const uint32_t> GetMaterialFrameIndices() const = 0;
 
-    /** Add skin joint matrices and get an index for render submesh.
-     * If skinJointMatrices.size() != previousSkinJointMatrices.size()
-     * The skinJointMatrices are copied to previous frame buffer.
-     * @param skinJointMatrices All skin joint matrices.
-     * @param prevSkinJointMatrices All skin joint matrices for previous frame.
-     * @return Skin joint matrices index for submesh to use. (if no skin joints are given
-     * RenderSceneDataConstants::INVALID_INDEX is returned)
-     */
-    virtual uint32_t AddSkinJointMatrices(const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> skinJointMatrices,
-        const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> prevSkinJointMatrices) = 0;
-
-    /** Add submeshes safely with default material to rendering. Render slots are evaluated automatically.
+    /** [[DEPRECATED]] Add submeshes safely with default material to rendering. Render slots are evaluated
+     * automatically.
      * @param submesh Submesh.
      */
     virtual void AddSubmesh(const RenderSubmeshWithHandleReference& submesh) = 0;
 
-    /** Add submeshes safely with default material to rendering.
+    /** [[DEPRECATED]] Add submeshes safely with default material to rendering.
      * @param submesh Submesh.
      * @param renderSlotAndShaders All the render slots where the submesh is handled.
      */
@@ -508,6 +539,11 @@ public:
     /** Get custom resource handles */
     virtual BASE_NS::array_view<const RenderDataDefaultMaterial::CustomResourceData>
     GetCustomResourceHandles() const = 0;
+
+    /** Get information about added render mesh objects.
+     * @return Render frame object info.
+     */
+    virtual RenderFrameObjectInfo GetRenderFrameObjectInfo() const = 0;
 
     /** Generate render hash (32 bits as RenderDataDefaultMaterial::SubmeshMaterialFlags::renderHash) */
     virtual uint32_t GenerateRenderHash(const RenderDataDefaultMaterial::SubmeshMaterialFlags& flags) const = 0;

@@ -1,16 +1,8 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Description: Attachment container implementation
+ * Author: Lauri Jaaskela
+ * Create: 2022-09-26
  */
 
 #ifndef META_SRC_ATTACHMENT_CONTAINER_H
@@ -24,7 +16,7 @@
 
 #include "container/flat_container.h"
 
-META_BEGIN_NAMESPACE()
+META_BEGIN_INTERNAL_NAMESPACE()
 
 class AttachmentContainer : public IntroduceInterfaces<MinimalObject, FlatContainer, IAttachmentContainer> {
     using Super = IntroduceInterfaces<MinimalObject, FlatContainer, IAttachmentContainer>;
@@ -77,6 +69,6 @@ private:
     static constexpr IContainer::SizeType N_POS = std::numeric_limits<IContainer::SizeType>::max();
 };
 
-META_END_NAMESPACE()
+META_END_INTERNAL_NAMESPACE()
 
 #endif

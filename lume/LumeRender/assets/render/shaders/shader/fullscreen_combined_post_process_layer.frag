@@ -29,6 +29,8 @@ layout(location = 0) out vec4 outColor;
 //>DECLARATIONS_CORE_POST_PROCESS
 #include "render/shaders/common/render_post_process_blocks.h"
 
+#define TIME_SCALE 0.07f
+
 /*
  * fragment shader for post process and tonemapping
  */
@@ -47,11 +49,13 @@ void main(void)
     PostProcessTonemapBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_TONEMAP], outColor.rgb, outColor.rgb);
     const float tickDelta = uGlobalData.renderTimings.y; // tick delta time (ms)
-    const vec2 vecCoeffs = inUv.xy * tickDelta;
+    const vec2 vecCoeffs =
+        inUv.xy +
+        TIME_SCALE * tickDelta; // Offset uv randomly by a small number based on delta time to create temporal noise
     PostProcessDitherBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_DITHER], vecCoeffs, outColor.rgb, outColor.rgb);
     PostProcessVignetteBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_VIGNETTE], inUv, outColor.rgb, outColor.rgb);
     PostProcessColorConversionBlock(
-        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], outColor.rgb, outColor.rgb);
+        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], outColor.rgba, outColor.rgba);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -586,7 +586,7 @@ AnimationSystem::PropertyEntry FindDynamicProperty(const AnimationTrackComponent
         }
 
         auto c = PropertyData::FindProperty(dynamicProperties->Owner()->MetaData(), propertyName);
-        if (c && c.propertyPath == propertyName) {
+        if (c) {
             entry.property = c.property;
             entry.propertyOffset = c.offset;
         }
@@ -894,8 +894,16 @@ void AnimationSystem::OnComponentEvent(
 void AnimationSystem::OnAnimationComponentsCreated(BASE_NS::array_view<const CORE_NS::Entity> entities)
 {
     for (const auto entity : entities) {
-        stateManager_.Create(entity);
         auto stateHandle = stateManager_.Write(entity);
+        if (!stateHandle) {
+            // create state only if wasn't been created already. state contains the playback position and someone might
+            // have set that already.
+            stateManager_.Create(entity);
+            stateHandle = stateManager_.Write(entity);
+            if (!stateHandle) {
+                continue;
+            }
+        }
         AnimationStateComponent& state = *stateHandle;
         if (auto animationHandle = animationManager_.Read(entity); animationHandle) {
             state.trackStates.reserve(animationHandle->tracks.size());

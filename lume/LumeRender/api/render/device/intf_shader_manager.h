@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -123,7 +123,7 @@ public:
         /* Path, used as a name */
         BASE_NS::string_view path;
         /* Reference to pipeline layout */
-        const PipelineLayout& pipelineLayout;
+        PipelineLayout pipelineLayout;
         /* Render slot id */
         uint32_t renderSlotId { ~0U };
         /* Render slot id */
@@ -132,8 +132,8 @@ public:
     struct GraphicsStateCreateInfo {
         /* Path, used as a name */
         BASE_NS::string_view path;
-        /* Reference to graphics state */
-        const GraphicsState& graphicsState;
+        /* Graphics state */
+        GraphicsState graphicsState;
     };
     struct GraphicsStateVariantCreateInfo {
         /* Render slot for the variant */
@@ -152,8 +152,8 @@ public:
     struct VertexInputDeclarationCreateInfo {
         /* Path, used as a name */
         BASE_NS::string_view path;
-        /* Reference to vertex input declaration view */
-        const VertexInputDeclarationView vertexInputDeclarationView;
+        /* Vertex input declaration view */
+        VertexInputDeclarationView vertexInputDeclarationView;
         /* Render slot id */
         uint32_t renderSlotId { ~0U };
         /* Render slot default */

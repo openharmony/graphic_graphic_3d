@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -59,6 +59,7 @@ class NodeContextPoolManager;
 class ShaderModule;
 class Swapchain;
 class GpuSemaphore;
+struct BackendSpecificBufferDesc;
 struct BackendSpecificImageDesc;
 struct GpuAccelerationStructureDesc;
 struct GpuBufferDesc;
@@ -86,13 +87,9 @@ struct DeviceFormatSupportConstants {
     static constexpr uint32_t ADDITIONAL_FORMAT_BASE_IDX { LINEAR_FORMAT_MAX_COUNT };
 };
 
-struct DeviceConstants {
-    static constexpr uint32_t MAX_SWAPCHAIN_COUNT { 8U };
-};
-
 class Device : public IDevice {
 public:
-    Device(RenderContext& renderContext, const DeviceCreateInfo& deviceCreateInfo);
+    Device(RenderContext& renderContext);
 
     Device(const Device&) = delete;
     Device& operator=(const Device&) = delete;
@@ -110,7 +107,7 @@ public:
     // Generally set once to true when device is created.
     // Set to false e.g. when device is lost.
     // Set and Get uses atomics if needed by the platform.
-    void SetDeviceStatus(const bool status);
+    void SetDeviceStatus(bool status);
     bool GetDeviceStatus() const;
 
     // (re-)create swapchain
@@ -201,6 +198,7 @@ public:
 
     virtual BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuBufferDesc& desc) = 0;
     virtual BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuAccelerationStructureDesc& desc) = 0;
+    virtual BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const BackendSpecificBufferDesc& desc) = 0;
 
     // Create gpu image resources
     virtual BASE_NS::unique_ptr<GpuImage> CreateGpuImage(const GpuImageDesc& desc) = 0;
@@ -283,6 +281,7 @@ protected:
 
 // Plaform specific helper
 GpuImageDesc GetImageDescFromHwBufferDesc(uintptr_t platformHwBuffer);
+GpuBufferDesc GetBufferDescFromHwBufferDesc(uintptr_t platformHwBuffer);
 RENDER_END_NAMESPACE()
 
 #endif // DEVICE_DEVICE_H
