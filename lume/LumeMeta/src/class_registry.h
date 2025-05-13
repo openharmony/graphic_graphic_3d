@@ -15,6 +15,7 @@
 #ifndef META_SRC_CLASS_REGISTRY_H
 #define META_SRC_CLASS_REGISTRY_H
 
+#include <mutex>
 #include <shared_mutex>
 
 #include <base/containers/unordered_map.h>

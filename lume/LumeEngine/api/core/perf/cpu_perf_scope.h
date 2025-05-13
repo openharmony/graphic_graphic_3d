@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -147,7 +147,7 @@ template<int N>
 struct PerformanceTraceSeverity {
     static constexpr bool IsEnabled()
     {
-        if constexpr (N <= 1000) { // 1000 : param
+        if constexpr (N <= 1000) {
             return true;
         } else {
             return false;
@@ -155,8 +155,8 @@ struct PerformanceTraceSeverity {
     }
 };
 
-using PROFILER_DEFAULT = PerformanceTraceSeverity<1000>; // 1000 : param
-using PROFILER_TRACE = PerformanceTraceSeverity<2000>; // 2000 : param
+using PROFILER_DEFAULT = PerformanceTraceSeverity<1000>;
+using PROFILER_TRACE = PerformanceTraceSeverity<2000>;
 
 template<int z = 0, typename x = PROFILER_SUBSYSTEM_DEFAULT, typename y = PROFILER_DEFAULT>
 inline constexpr bool PerformanceTraceEnabled()
@@ -220,6 +220,11 @@ CORE_END_NAMESPACE()
         tracer->Plot(name, val);                                               \
     }
 
+#define CORE_PROFILER_MARK_GLOBAL_FRAME_CHANGED(...)                           \
+    if (auto tracer = CORE_NS::GetTracer<CORE_PROFILER_ARGS(__VA_ARGS__)>()) { \
+        tracer->GlobalFrameChanged();                                          \
+    }
+
 #define CORE_PROFILER_MARK_FRAME_START(name, ...)                              \
     if (auto tracer = CORE_NS::GetTracer<CORE_PROFILER_ARGS(__VA_ARGS__)>()) { \
         tracer->FrameBegin(name);                                              \
@@ -255,6 +260,7 @@ CORE_END_NAMESPACE()
 #define CORE_PROFILER_MESSAGEL(msg, ...)
 #define CORE_PROFILER_MESSAGE(msg, size, ...)
 #define CORE_PROFILER_PLOT(name, val, ...)
+#define CORE_PROFILER_MARK_GLOBAL_FRAME_CHANGED(...)
 #define CORE_PROFILER_MARK_FRAME_START(name, ...)
 #define CORE_PROFILER_MARK_FRAME_END(name, ...)
 #define CORE_PROFILER_ALLOC_N(ptr, size, name, ...)

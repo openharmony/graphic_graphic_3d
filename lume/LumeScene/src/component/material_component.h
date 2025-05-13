@@ -16,7 +16,7 @@
 #ifndef SCENE_SRC_COMPONENT_MATERIAL_COMPONENT_H
 #define SCENE_SRC_COMPONENT_MATERIAL_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 #include <scene/interface/intf_material.h>
 
 #include <3d/ecs/components/material_component.h>
@@ -28,6 +28,20 @@ META_TYPE(CORE3D_NS::MaterialComponent::Shader)
 META_TYPE(CORE3D_NS::MaterialComponent::TextureInfo)
 META_TYPE(CORE3D_NS::MaterialComponent::RenderSort)
 
+META_BEGIN_NAMESPACE()
+template<bool B>
+struct DefaultCompare<CORE3D_NS::MaterialComponent::Shader, B> {
+    using T = CORE3D_NS::MaterialComponent::Shader;
+    static constexpr bool Equal(const T& v1, const T& v2)
+    {
+        return v1.shader == v2.shader && v1.graphicsState == v2.graphicsState;
+    }
+
+    template<typename NewType>
+    using Rebind = DefaultCompare<NewType>;
+};
+META_END_NAMESPACE()
+
 SCENE_BEGIN_NAMESPACE()
 
 class IInternalMaterial : public CORE_NS::IInterface {
@@ -36,6 +50,7 @@ public:
     META_PROPERTY(MaterialType, Type)
     META_PROPERTY(float, AlphaCutoff)
     META_PROPERTY(uint32_t, LightingFlags)
+
     META_PROPERTY(CORE3D_NS::MaterialComponent::RenderSort, RenderSort)
 
     META_PROPERTY(CORE3D_NS::MaterialComponent::Shader, MaterialShader)
@@ -48,11 +63,21 @@ public:
 
     META_ARRAY_PROPERTY(CORE_NS::EntityReference, CustomResources)
     META_PROPERTY(CORE_NS::IPropertyHandle*, CustomProperties)
+
+    struct ActiveTextureSlotInfo {
+        size_t count {};
+        struct TextureSlot {
+            BASE_NS::string name;
+        };
+        BASE_NS::vector<TextureSlot> slots;
+    };
+
+    virtual ActiveTextureSlotInfo GetActiveTextureSlotInfo() = 0;
 };
 
 META_REGISTER_CLASS(MaterialComponent, "bc819033-2a5b-4182-bc7a-365ff8e33822", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class MaterialComponent : public META_NS::IntroduceInterfaces<ComponentFwd, IInternalMaterial> {
+class MaterialComponent : public META_NS::IntroduceInterfaces<Component, IInternalMaterial> {
     META_OBJECT(MaterialComponent, ClassId::MaterialComponent, IntroduceInterfaces)
 
 public:
@@ -98,6 +123,7 @@ public:
 
 public:
     BASE_NS::string GetName() const override;
+    ActiveTextureSlotInfo GetActiveTextureSlotInfo() override;
 };
 
 SCENE_END_NAMESPACE()

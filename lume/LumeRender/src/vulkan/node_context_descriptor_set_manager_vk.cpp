@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,6 +38,18 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
+inline constexpr uint32_t GetDescriptorIndex(const DescriptorType& dt)
+{
+    return (dt == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE) ? (OneFrameDescriptorNeed::ACCELERATION_LOCAL_TYPE)
+                                                               : static_cast<uint32_t>(dt);
+}
+
+inline constexpr VkDescriptorType GetDescriptorTypeVk(const uint32_t& idx)
+{
+    return (idx == OneFrameDescriptorNeed::ACCELERATION_LOCAL_TYPE) ? VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR
+                                                                    : static_cast<VkDescriptorType>(idx);
+}
+
 const VkSampler* GetSampler(const GpuResourceManager& gpuResourceMgr, const RenderHandle handle)
 {
     if (const auto* gpuSampler = static_cast<GpuSamplerVk*>(gpuResourceMgr.GetSampler(handle)); gpuSampler) {
@@ -117,11 +129,16 @@ void CreateCpuDescriptorSetData(const array_view<const DescriptorSetLayoutBindin
         NodeContextDescriptorSetManager::IncreaseDescriptorSetCounts(
             refBinding, descSetData.descriptorCounts, dynamicOffsetCount);
 
-        if (oneFrame &&
-            (static_cast<uint32_t>(refBinding.descriptorType) < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE)) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if (refBinding.descriptorType > DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT &&
+            refBinding.descriptorType != DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE) {
+            PLUGIN_LOG_E("RENDER_VALIDATION: Unhandled descriptor type");
+        }
+#endif
+        const uint32_t descIndex = GetDescriptorIndex(refBinding.descriptorType);
+        if (oneFrame && (descIndex < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE)) {
             PLUGIN_ASSERT(oneFrameDescriptorNeed);
-            oneFrameDescriptorNeed->descriptorCount[refBinding.descriptorType] +=
-                static_cast<uint8_t>(refBinding.descriptorCount);
+            oneFrameDescriptorNeed->descriptorCount[descIndex] += refBinding.descriptorCount;
         }
     }
     newSet.buffers.resize(descSetData.descriptorCounts.bufferCount);
@@ -240,23 +257,20 @@ void CreateGpuDescriptorSetFunc(const Device& device, const uint32_t bufferCount
             (immutableSamplerBitmask != 0) ? LowLevelDescriptorSetVk::DESCRIPTOR_SET_LAYOUT_IMMUTABLE_SAMPLER_BIT : 0u;
         newDescriptorSet.immutableSamplerBitmask = immutableSamplerBitmask;
 
-#if (VK_USE_64_BIT_PTR_DEFINES==1)
-        VkDescriptorPool descriptorPoolVk = nullptr;
-#else
-        // for 32bit openharmony builds on RK3568 boards.
-        VkDescriptorPool descriptorPoolVk = 0;
-#endif
+        VkDescriptorPool descriptorPoolVk = VK_NULL_HANDLE;
         // for platform immutable set we use created additional descriptor pool (currently only used with ycbcr)
         const bool platImmutable = (hasPlatformBindings && (immutableSamplerBitmask != 0));
         if (platImmutable) {
             descriptorPoolVk = descriptorPool.additionalPlatformDescriptorPool;
-#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
-            const auto errorType = "plat_immutable_hwbuffer_" + to_string(idx);
-            PLUGIN_LOG_ONCE_E(
-                errorType, "Platform descriptor set not available, using regular (name:%s)", debugName.c_str());
-#endif
         }
         if (!descriptorPoolVk) {
+#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
+            if (platImmutable) {
+                const auto errorType = "plat_immutable_hwbuffer_" + to_string(idx);
+                PLUGIN_LOG_ONCE_E(
+                    errorType, "Platform descriptor set not available, using regular (name:%s)", debugName.c_str());
+            }
+#endif
             descriptorPoolVk = descriptorPool.descriptorPool;
         }
         PLUGIN_ASSERT(descriptorPoolVk);
@@ -499,7 +513,7 @@ void DescriptorSetManagerVk::CreateDescriptorSets(const uint32_t arrayIndex, con
     }
 }
 
-void DescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const RenderHandle& handle)
+bool DescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const RenderHandle& handle)
 {
     PLUGIN_ASSERT(RenderHandleUtil::GetHandleType(handle) == RenderHandleType::DESCRIPTOR_SET);
 
@@ -512,6 +526,7 @@ void DescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const RenderHandle& ha
         baseSet = descriptorSets_[index].get();
     }
 
+    bool retValue = false;
     if (baseSet && (index < lowLevelDescriptorPools_.size())) {
         LowLevelContextDescriptorPoolVk& descriptorPool = lowLevelDescriptorPools_[index];
         const uint32_t additionalIndex = RenderHandleUtil::GetAdditionalIndexPart(handle);
@@ -530,13 +545,16 @@ void DescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const RenderHandle& ha
                 refCpuSet.gpuDescriptorSetCreated = true;
             }
 
+            // at the moment should be always dirty when coming here from the backend update
             if (refCpuSet.isDirty) {
                 refCpuSet.isDirty = false;
                 // advance to next gpu descriptor set
                 refCpuSet.currentGpuBufferingIndex = (refCpuSet.currentGpuBufferingIndex + 1) % bufferingCount_;
+                retValue = true;
             }
         }
     }
+    return retValue;
 }
 
 const LowLevelDescriptorSetVk* DescriptorSetManagerVk::GetDescriptorSet(const RenderHandle& handle) const
@@ -597,6 +615,8 @@ LowLevelContextDescriptorWriteDataVk& DescriptorSetManagerVk::GetLowLevelDescrip
 {
     return lowLevelDescriptorWriteData_;
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 NodeContextDescriptorSetManagerVk::NodeContextDescriptorSetManagerVk(Device& device)
     : NodeContextDescriptorSetManager(device), device_ { device },
@@ -740,7 +760,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
                 descriptorSetCount++;
                 for (const auto& bindingRef : cpuDescriptorSetRef.bindings) {
                     uint32_t descriptorCount = bindingRef.binding.descriptorCount;
-                    const auto descTypeIndex = static_cast<uint32_t>(bindingRef.binding.descriptorType);
+                    const auto descTypeIndex = GetDescriptorIndex(bindingRef.binding.descriptorType);
                     if (descTypeIndex < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE) {
                         if ((bindingRef.binding.descriptorType ==
                                 DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
@@ -750,7 +770,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
                             constexpr uint32_t descriptorCountMultiplier = 3u;
                             descriptorCount *= descriptorCountMultiplier;
                         }
-                        descriptorCounts[descTypeIndex] += static_cast<uint32_t>(descriptorCount);
+                        descriptorCounts[descTypeIndex] += descriptorCount;
                     }
                 }
             }
@@ -764,7 +784,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
             for (uint32_t idx = 0; idx < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE; ++idx) {
                 const uint32_t count = descriptorCounts[idx];
                 if (count > 0) {
-                    descriptorPoolSizes_.push_back(VkDescriptorPoolSize { (VkDescriptorType)idx, count });
+                    descriptorPoolSizes_.push_back(VkDescriptorPoolSize { GetDescriptorTypeVk(idx), count });
                 }
             }
             if (!descriptorPoolSizes_.empty()) {
@@ -786,7 +806,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
             for (uint32_t idx = 0; idx < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE; ++idx) {
                 const uint32_t count = oneFrameDescriptorNeed_.descriptorCount[idx];
                 if (count > 0) {
-                    descriptorPoolSizes_.push_back(VkDescriptorPoolSize { (VkDescriptorType)idx, count });
+                    descriptorPoolSizes_.push_back(VkDescriptorPoolSize { GetDescriptorTypeVk(idx), count });
                 }
             }
 
@@ -801,7 +821,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
                 if (cpuDescriptorSetRef.hasPlatformConversionBindings) {
                     for (const auto& bindingRef : cpuDescriptorSetRef.bindings) {
                         uint32_t descriptorCount = bindingRef.binding.descriptorCount;
-                        const auto descTypeIndex = static_cast<uint32_t>(bindingRef.binding.descriptorType);
+                        const auto descTypeIndex = GetDescriptorIndex(bindingRef.binding.descriptorType);
                         if (descTypeIndex < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE) {
                             if ((bindingRef.binding.descriptorType ==
                                     DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) &&
@@ -824,7 +844,7 @@ void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
                 for (uint32_t idx = 0; idx < OneFrameDescriptorNeed::DESCRIPTOR_ARRAY_SIZE; ++idx) {
                     const uint32_t count = platConvDescriptorCounts[idx];
                     if (count > 0) {
-                        descriptorPoolSizes_.push_back(VkDescriptorPoolSize { (VkDescriptorType)idx, count });
+                        descriptorPoolSizes_.push_back(VkDescriptorPoolSize { GetDescriptorTypeVk(idx), count });
                     }
                 }
                 if (!descriptorPoolSizes_.empty()) {
@@ -918,7 +938,7 @@ LowLevelContextDescriptorWriteDataVk& NodeContextDescriptorSetManagerVk::GetLowL
     return lowLevelDescriptorWriteData_;
 }
 
-void NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const RenderHandle handle)
+bool NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const RenderHandle handle)
 {
     const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
     uint32_t descSetIdx = GetCpuDescriptorSetIndex(handle);
@@ -927,6 +947,7 @@ void NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const Rende
     auto& cpuDescriptorSets = cpuDescriptorSets_[descSetIdx];
     auto& descriptorPool = descriptorPool_[descSetIdx];
     const uint32_t bufferingCount = (descSetIdx == DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME) ? 1u : bufferingCount_;
+    bool retValue = false;
     if (arrayIndex < (uint32_t)cpuDescriptorSets.size()) {
         CpuDescriptorSet& refCpuSet = cpuDescriptorSets[arrayIndex];
 
@@ -939,12 +960,14 @@ void NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const Rende
             refCpuSet.gpuDescriptorSetCreated = true;
         }
 
+        // at the moment should be always dirty when coming here from the backend update
         if (refCpuSet.isDirty) {
             refCpuSet.isDirty = false;
             // advance to next gpu descriptor set
             if (descSetIdx != DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME) {
                 refCpuSet.currentGpuBufferingIndex = (refCpuSet.currentGpuBufferingIndex + 1) % bufferingCount_;
             }
+            retValue = true;
         }
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -961,6 +984,7 @@ void NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const Rende
         }
     }
 #endif
+    return retValue;
 }
 
 void NodeContextDescriptorSetManagerVk::UpdateCpuDescriptorSetPlatform(

@@ -20,13 +20,14 @@
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/property/property_events.h>
-#include <scene/interface/intf_node.h>
-#include <scene/interface/intf_scene.h>
 #include <scene/ext/intf_component.h>
 #include <scene/ext/util.h>
+#include <scene/interface/intf_node.h>
+#include <scene/interface/intf_scene.h>
 
 #include <render/intf_render_context.h>
 
+#include "SceneJS.h"
 using namespace SCENE_NS;
 
 void SceneComponentJS::Init(napi_env env, napi_value exports)
@@ -40,7 +41,7 @@ void SceneComponentJS::Init(napi_env env, napi_value exports)
         nullptr, props.size(), props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("SceneComponent", func);
 }
 
@@ -65,8 +66,7 @@ void SceneComponentJS::DisposeNative(void*)
         }
         jsProps_.Reset();
 
-        SetNativeObject(nullptr, false);
-        SetNativeObject(nullptr, true);
+        UnsetNativeObject();
 
         scene_.Reset();
     }
@@ -81,10 +81,10 @@ void* SceneComponentJS::GetInstanceImpl(uint32_t id)
 }
 void SceneComponentJS::Finalize(napi_env env)
 {
-    DisposeNative(nullptr);
-    BaseObject<SceneComponentJS>::Finalize(env);
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    BaseObject::Finalize(env);
 }
-SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObject<SceneComponentJS>(e, i)
+SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 {
     LOG_V("SceneComponentJS ++");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
@@ -93,7 +93,7 @@ SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObjec
     }
     scene_ = { NapiApi::Object(fromJs.Arg<0>()) };
     NapiApi::Object node = fromJs.Arg<1>();
-    META_NS::IObject::Ptr native = GetNativeObjectParam<META_NS::IObject>(node);
+    const auto native = GetNativeObject();
 
     NapiApi::Object meJs(fromJs.This());
 
@@ -101,7 +101,7 @@ SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObjec
     meJs.Set("name", name);
     AddProperties(meJs, native);
 
-    SetNativeObject(native, false);
+    SetNativeObject(native, PtrType::WEAK);
 }
 SceneComponentJS::~SceneComponentJS()
 {
@@ -132,5 +132,5 @@ void SceneComponentJS::AddProperties(NapiApi::Object meJs, const META_NS::IObjec
     }
 
     jsProps_ = NapiApi::StrongRef(jsProps);
-    meJs.Set("properties", jsProps_.GetValue());
+    meJs.Set("property", jsProps_.GetValue());
 }

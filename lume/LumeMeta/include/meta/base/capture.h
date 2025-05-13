@@ -16,8 +16,9 @@
 #ifndef META_BASE_CAPTURE_HEADER
 #define META_BASE_CAPTURE_HEADER
 
+#include <base/containers/shared_ptr.h>
+
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 
 META_BEGIN_NAMESPACE()
 

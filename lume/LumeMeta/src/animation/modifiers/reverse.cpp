@@ -12,23 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "reverse.h"
 
 META_BEGIN_NAMESPACE()
 
 namespace AnimationModifiers {
 
-bool Reverse::Build(const IMetadata::Ptr& data)
+bool ReverseModifier::Build(const IMetadata::Ptr& data)
 {
     return true;
 }
 
-bool Reverse::ProcessOnGetDuration(DurationData& duration) const
+bool ReverseModifier::ProcessOnGetDuration(DurationData& duration) const
 {
     return true;
 }
-bool Reverse::ProcessOnStep(StepData& step) const
+bool ReverseModifier::ProcessOnStep(StepData& step) const
 {
     step.progress = 1.f - step.progress;
     step.reverse = !step.reverse;

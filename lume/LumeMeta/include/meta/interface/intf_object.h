@@ -16,13 +16,14 @@
 #ifndef META_INTERFACE_IOBJECT_H
 #define META_INTERFACE_IOBJECT_H
 
-#include <core/plugin/intf_interface.h>
+#include <core/log.h>
 
 #include <meta/base/bit_field.h>
 #include <meta/base/ids.h>
+#include <meta/base/interface_macros.h>
+#include <meta/base/interface_traits.h>
 #include <meta/base/meta_types.h>
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/base/types.h>
 
 META_BEGIN_NAMESPACE()
@@ -97,6 +98,21 @@ public:
     {
         return interface_pointer_cast<Interface>(GetSelf());
     }
+};
+
+/**
+ * @brief The IResetableObject interface can be implemented by objects whose state can be reset to a default state.
+ *        Usually this means that any properties are reset to a default value and the object's state is returned
+ *        to an initial state.
+ * @note  Depending on the implementation, the default state may be different between calls.
+ */
+class IResetableObject : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IResetableObject, "1f4954f7-6823-4a9f-b9c7-b5d62b231791")
+public:
+    /**
+     * @brief Resets the target object to a default state.
+     */
+    virtual void ResetObject() = 0;
 };
 
 inline IObject::Ptr IObject::Resolve(const RefUri& uri) const

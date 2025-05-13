@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -226,7 +226,8 @@ void Logger::RemoveOutput(uint64_t id)
     std::lock_guard<std::mutex> guard(loggerMutex_);
 
     outputs_.erase(std::remove_if(outputs_.begin(), outputs_.end(),
-        [id](const auto& output) { return reinterpret_cast<uint64_t>(output.get()) == id; }), outputs_.end());
+                       [id](const auto& output) { return reinterpret_cast<uint64_t>(output.get()) == id; }),
+        outputs_.end());
 }
 
 const IInterface* Logger::GetInterface(const Uid& uid) const

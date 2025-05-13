@@ -12,20 +12,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "speed.h"
 
 META_BEGIN_NAMESPACE()
 
 namespace AnimationModifiers {
 
-bool SpeedImpl::Build(const IMetadata::Ptr& data)
+bool SpeedModifier::Build(const IMetadata::Ptr& data)
 {
     return speedFactorChanged_.Subscribe(
         META_ACCESS_PROPERTY(SpeedFactor), interface_pointer_cast<IOnChanged>(META_ACCESS_EVENT(OnChanged).GetEvent()));
 }
 
-bool SpeedImpl::ProcessOnGetDuration(DurationData& duration) const
+bool SpeedModifier::ProcessOnGetDuration(DurationData& duration) const
 {
     auto speed = BASE_NS::Math::abs(META_ACCESS_PROPERTY_VALUE(SpeedFactor));
     if (speed > 0.f) {
@@ -35,7 +34,7 @@ bool SpeedImpl::ProcessOnGetDuration(DurationData& duration) const
     }
     return true;
 }
-bool SpeedImpl::ProcessOnStep(StepData& step) const
+bool SpeedModifier::ProcessOnStep(StepData& step) const
 {
     auto speed = BASE_NS::Math::abs(META_ACCESS_PROPERTY_VALUE(SpeedFactor));
     if (speed < 0) {

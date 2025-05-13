@@ -20,6 +20,7 @@
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/intf_internal_scene.h>
+#include <scene/interface/intf_scene.h>
 
 SCENE_BEGIN_NAMESPACE()
 

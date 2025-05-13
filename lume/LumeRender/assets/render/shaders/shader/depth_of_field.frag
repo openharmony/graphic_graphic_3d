@@ -7,22 +7,34 @@
 
 // includes
 #include "render/shaders/common/render_compatibility_common.h"
-
+#include "render/shaders/common/render_post_process_structs_common.h"
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+struct DofConfig {
+    vec4 factors0;
+    vec4 factors1;
+};
 
-layout(set = 1, binding = 0) uniform sampler2D uTex;
-layout(set = 1, binding = 1) uniform sampler2D uNearTex;
-layout(set = 1, binding = 2) uniform sampler2D uFarTex;
-layout(set = 1, binding = 3) uniform sampler2D uDepth;
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(set = 0, binding = 0) uniform sampler2D uTex;
+layout(set = 0, binding = 1) uniform sampler2D uNearTex;
+layout(set = 0, binding = 2) uniform sampler2D uFarTex;
+layout(set = 0, binding = 3) uniform sampler2D uDepth;
+layout(set = 0, binding = 4, std140) uniform uDofConfigData
+{
+    DofConfig uLocalData;
+};
 
 // in / out
 
-layout (location = 0) in vec2 inUv;
+layout(location = 0) in vec2 inUv;
 
-layout (location = 0) out vec4 outColor;
+layout(location = 0) out vec4 outColor;
 
 float LinearDepth(float depth, float near, float far)
 {
@@ -31,7 +43,7 @@ float LinearDepth(float depth, float near, float far)
 
 CORE_RELAXEDP vec4 DepthOfField(vec2 texCoord, vec2 invTexSize, vec4 params1, vec4 params2)
 {
-    const CORE_RELAXEDP float depth = texture(uDepth,  texCoord, 0).r;
+    const CORE_RELAXEDP float depth = texture(uDepth, texCoord, 0).r;
     const float linearDepth = LinearDepth(depth, params2.z, params2.w);
 
     const float nearBlur = params2.x;
@@ -55,5 +67,5 @@ void main(void)
 {
     // nearTransitionStart, focusStart, focusEnd, farTransitionEnd
     // nearBlur, farBlur, nearPlane, farPlane
-    outColor = DepthOfField(inUv, uPc.viewportSizeInvSize.zw, uLocalData.factors[0], uLocalData.factors[1]);
+    outColor = DepthOfField(inUv, uPc.viewportSizeInvSize.zw, uLocalData.factors0, uLocalData.factors1);
 }

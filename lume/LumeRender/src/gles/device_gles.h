@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -89,17 +89,16 @@ public:
         BASE_NS::Math::UVec4 swizzle;
     };
 
-    DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& createInfo);
+    DeviceGLES(RenderContext& renderContext);
     ~DeviceGLES() override;
 
     // From IDevice
     DeviceBackendType GetBackendType() const override;
     const DevicePlatformData& GetPlatformData() const override;
-    AccelerationStructureBuildSizes GetAccelerationStructureBuildSizes(
-        const AccelerationStructureBuildGeometryInfo& geometry,
-        BASE_NS::array_view<const AccelerationStructureGeometryTrianglesInfo> triangles,
-        BASE_NS::array_view<const AccelerationStructureGeometryAabbsInfo> aabbs,
-        BASE_NS::array_view<const AccelerationStructureGeometryInstancesInfo> instances) const override;
+    AsBuildSizes GetAccelerationStructureBuildSizes(const AsBuildGeometryInfo& geometry,
+        BASE_NS::array_view<const AsGeometryTrianglesInfo> triangles,
+        BASE_NS::array_view<const AsGeometryAabbsInfo> aabbs,
+        BASE_NS::array_view<const AsGeometryInstancesInfo> instances) const override;
     FormatProperties GetFormatProperties(BASE_NS::Format format) const override;
     ILowLevelDevice& GetLowLevelDevice() const override;
     // NOTE: can be called from API
@@ -125,6 +124,7 @@ public:
 
     BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuBufferDesc& desc) override;
     BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuAccelerationStructureDesc& desc) override;
+    BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const BackendSpecificBufferDesc& desc) override;
 
     // Create gpu image resources
     BASE_NS::unique_ptr<GpuImage> CreateGpuImage(const GpuImageDesc& desc) override;
@@ -241,7 +241,7 @@ public:
 
     const ImageFormat& GetGlImageFormat(BASE_NS::Format format) const;
 
-    void SwapBuffers(const SwapchainGLES& swapchain);
+    void SwapBuffers(const SwapchainGLES&);
 
 private:
     enum BufferBindId : uint32_t {
@@ -342,7 +342,7 @@ private:
     const DeviceBackendType backendType_ = DeviceBackendType::OPENGL;
     WGLHelpers::WGLState eglState_;
 #else
-#error Core::DeviceBackendType::OPENGL not implemented for this platform yet.
+#error RENDER_NS::DeviceBackendType::OPENGL not implemented for this platform yet.
 #endif
 #endif
 #if RENDER_HAS_GLES_BACKEND
@@ -441,10 +441,10 @@ private:
 };
 
 #if (RENDER_HAS_GL_BACKEND)
-BASE_NS::unique_ptr<Device> CreateDeviceGL(RenderContext& renderContext, DeviceCreateInfo const& createInfo);
+BASE_NS::unique_ptr<Device> CreateDeviceGL(RenderContext& renderContext);
 #endif
 #if (RENDER_HAS_GLES_BACKEND)
-BASE_NS::unique_ptr<Device> CreateDeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& createInfo);
+BASE_NS::unique_ptr<Device> CreateDeviceGLES(RenderContext& renderContext);
 #endif
 RENDER_END_NAMESPACE()
 

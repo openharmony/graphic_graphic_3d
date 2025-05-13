@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #ifndef META_API_PROPERTY_CUSTOM_VALUE_H
 #define META_API_PROPERTY_CUSTOM_VALUE_H
 
@@ -22,6 +21,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Helper that maps IValue GetVAlue/SetValue to corresponding function pointers
 template<typename Type, typename GetFunc, typename SetFunc>
 class CustomValue : public IntroduceInterfaces<IValue> {
 public:
@@ -60,6 +60,7 @@ private:
     mutable Any<Type> any_;
 };
 
+/// Add custom value to property
 template<typename Type, typename GetFunc, typename SetFunc>
 bool AddCustomValue(const IProperty::Ptr& p, GetFunc gf, SetFunc sf)
 {
@@ -70,6 +71,7 @@ bool AddCustomValue(const IProperty::Ptr& p, GetFunc gf, SetFunc sf)
     return false;
 }
 
+/// Add custom value that calls member functions for property
 template<typename Type, typename Obj>
 bool AddGetSetCustomValue(const Property<Type>& p, Obj* obj, Type (Obj::*getf)() const, bool (Obj::*setf)(const Type&))
 {

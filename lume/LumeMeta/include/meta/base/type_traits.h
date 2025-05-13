@@ -87,12 +87,15 @@ template<typename T, bool = is_enum_v<T>>
 struct RealType {
     using type = T;
 };
+
 template<typename T>
 struct RealType<T, true> {
     using type = BASE_NS::underlying_type_t<T>;
 };
+
 template<typename T>
 using RealType_t = typename RealType<T>::type; // NOLINT(readability-identifier-naming)
+
 META_END_NAMESPACE()
 
 /*

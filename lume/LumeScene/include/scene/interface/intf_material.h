@@ -106,7 +106,7 @@ public:
     META_PROPERTY(SCENE_NS::RenderSort, RenderSort)
 
     META_READONLY_ARRAY_PROPERTY(ITexture::Ptr, Textures)
-
+    META_READONLY_PROPERTY(META_NS::IMetadata::Ptr, CustomProperties);
     /**
      * @brief Synchronize custom properties from ECS to engine and return them.
      * @return CustomProperties members whose types registered to the engine, if any. Null pointer otherwise.

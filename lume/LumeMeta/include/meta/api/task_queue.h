@@ -18,6 +18,7 @@
 
 #include <base/containers/type_traits.h>
 
+#include <meta/api/future.h>
 #include <meta/api/task.h>
 #include <meta/interface/detail/any.h>
 #include <meta/interface/interface_helpers.h>
@@ -29,7 +30,8 @@ META_BEGIN_NAMESPACE()
 template<typename Func>
 auto CreateFutureFromResultFunction(Func&& func)
 {
-    auto fut = GetTaskQueueRegistry().ConstructFutureWithValue(InvokeWaitableTaskFunction(func));
+    auto fut =
+        GetTaskQueueRegistry().ConstructFutureWithValue(InvokeWaitableTaskFunction(BASE_NS::forward<Func>(func)));
     return Future<PlainType_t<decltype(func())>>(fut);
 }
 

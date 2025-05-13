@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
 
 #include "gles/device_gles.h"
 #include "gles/gl_functions.h"
+#include "gles/gpu_buffer_gles.h"
 #include "gles/gpu_image_gles.h"
 #include "util/log.h"
 
@@ -50,5 +51,10 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
 #endif
     data.swizzle = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
     return CreateGpuImageView(desc, data);
+}
+
+BASE_NS::unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const BackendSpecificBufferDesc& desc)
+{
+    return {};
 }
 RENDER_END_NAMESPACE()

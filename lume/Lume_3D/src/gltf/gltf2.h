@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -48,7 +48,10 @@ public:
     IGLTF2Importer::Ptr CreateGLTF2Importer(CORE_NS::IEcs& ecs) override;
     IGLTF2Importer::Ptr CreateGLTF2Importer(CORE_NS::IEcs& ecs, CORE_NS::IThreadPool& pool) override;
     CORE_NS::Entity ImportGltfScene(size_t sceneIndex, const IGLTFData& gltfData,
-        const GLTFResourceData& gltfImportData, CORE_NS::IEcs& ecs, CORE_NS::Entity rootEntity,
+        const GLTFResourceData& gltfResourceData, CORE_NS::IEcs& ecs, CORE_NS::Entity rootEntity,
+        GltfSceneImportFlags flags) override;
+    CORE_NS::Entity ImportGltfScene(size_t sceneIndex, const IGLTFData& gltfData,
+        const GLTFResourceData& gltfResourceData, CORE_NS::IEcs& ecs, uint32_t level,
         GltfSceneImportFlags flags) override;
 
     // ISceneLoader

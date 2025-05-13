@@ -71,9 +71,10 @@ public:
     /**
      * @brief Jump to given keyframe
      * @param index Index to jump to.
+     * @param progress Current progress
      * @return Current index of the track animation after jump.
      */
-    uint32_t JumpTo(size_t index);
+    uint32_t JumpTo(size_t index, float progress);
     /** Add a keyframe at given index */
     size_t AddKeyframe(float timestamp, const IAny::ConstPtr& value);
     /** Remove a keyframe at given index */
@@ -88,7 +89,9 @@ private:
     bool ValidateValues();
     float GetCurrentTrackProgress(float progress) const noexcept;
     bool IsInCurrentRange(float progress) const noexcept;
+    void SetPrePostFrameValues(float progress);
 
+private:
     IArrayAny::Ptr keyframeArray_; // Keyframe values
     IAny::Ptr currentValue_;       // Latest evaluated value (between trackStart_ and trackEnd_)
     IAny::Ptr trackStart_;         // Current keyframe value

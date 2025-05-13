@@ -27,13 +27,8 @@ NapiApi::Object CreateRaycastResult(NapiApi::StrongRef scene, napi_env env, SCEN
 {
     auto result = NapiApi::Object { env };
 
-    const auto nativeNode = interface_pointer_cast<META_NS::IObject>(hitResult.node);
-    auto jsNode = FetchJsObj(nativeNode);
-    if (!jsNode) {
-        const bool storeStrongRef = false; // Nodes are owned by the scene.
-        napi_value args[] = { scene.GetValue(), NapiApi::Object { env }.ToNapiValue() };
-        jsNode = CreateFromNativeInstance(env, nativeNode, storeStrongRef, BASE_NS::countof(args), args);
-    }
+    napi_value args[] = { scene.GetValue(), NapiApi::Object { env }.ToNapiValue() };
+    const auto jsNode = CreateFromNativeInstance(env, hitResult.node, PtrType::WEAK, args);
 
     auto centerDistance = napi_value {};
     auto distance = napi_value {};
@@ -51,7 +46,7 @@ SCENE_NS::RayCastOptions ToNativeOptions(napi_env env, NapiApi::Object raycastPa
 {
     auto layerMask = uint64_t {};
     auto jsObj = NapiApi::Object { env, raycastParameters.Get("layerMask") };
-    if (auto rootObject = jsObj.Native<TrueRootObject>()) {
+    if (auto rootObject = jsObj.GetRoot()) {
         // Layer masks are served as Node objects to the JS side.
         if (auto nativeNode = interface_pointer_cast<SCENE_NS::INode>(rootObject->GetNativeObject())) {
             if (auto layerComponent = SCENE_NS::GetComponent<SCENE_NS::ILayer>(nativeNode)) {
@@ -62,7 +57,7 @@ SCENE_NS::RayCastOptions ToNativeOptions(napi_env env, NapiApi::Object raycastPa
 
     auto rootNode = SCENE_NS::INode::ConstPtr {};
     auto anotherjsObj = NapiApi::Object { env, raycastParameters.Get("rootNode") };
-    if (auto rootObject = anotherjsObj.Native<TrueRootObject>()) {
+    if (auto rootObject = anotherjsObj.GetRoot()) {
         rootNode = interface_pointer_cast<SCENE_NS::INode>(rootObject->GetNativeObject());
     }
     return { layerMask, rootNode };

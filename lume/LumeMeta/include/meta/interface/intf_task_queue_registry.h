@@ -16,7 +16,6 @@
 #ifndef META_INTERFACE_ITASKQUEUE_REGISTRY_H
 #define META_INTERFACE_ITASKQUEUE_REGISTRY_H
 
-#include <core/plugin/intf_interface.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 

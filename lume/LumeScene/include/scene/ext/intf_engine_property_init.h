@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SCENE_EXT_INTF_ENGINE_PROPERTY_INIT_H
-#define SCENE_EXT_INTF_ENGINE_PROPERTY_INIT_H
+#ifndef SCENE_EXT_IENGINE_PROPERTY_INIT_H
+#define SCENE_EXT_IENGINE_PROPERTY_INIT_H
 
 #include <scene/base/types.h>
 

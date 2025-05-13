@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -164,9 +164,8 @@ BEGIN_COMPONENT(IMeshComponentManager, MeshComponent)
         /** Sort layer order to describe fine order within sort layer. Valid order 0 - 255 */
         uint8_t renderSortLayerOrder { 0u };
 
-        /** Optional input assembly
-         * If not set the input assembly is used from the graphics state usually defined with the shader or separate
-         * graphics state.
+        /** Optional input assembly. If not set the input assembly is used from the graphics state usually defined with
+         * the shader or separate graphics state.
          */
         RENDER_NS::GraphicsState::InputAssembly inputAssembly { false,
             RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM };

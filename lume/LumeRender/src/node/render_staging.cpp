@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -381,6 +381,10 @@ void RenderStaging::CopyStagingToImages(IRenderCommandList& cmdList,
     const IRenderNodeGpuResourceManager& gpuResourceMgr, const StagingConsumeStruct& stagingData,
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
+    if (stagingData.bufferToImage.empty() && renderDataStoreStagingData.bufferToImage.empty()) {
+        return; // early out to prevent command list commands
+    }
+
     // explicit input barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
@@ -441,6 +445,10 @@ void RenderStaging::CopyStagingToImages(IRenderCommandList& cmdList,
 void RenderStaging::CopyImagesToBuffers(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
+    if (renderDataStoreStagingData.imageToBuffer.empty()) {
+        return; // early out to prevent command list commands
+    }
+
     // explicit input barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
@@ -493,6 +501,10 @@ void RenderStaging::CopyImagesToBuffers(IRenderCommandList& cmdList, const Stagi
 void RenderStaging::CopyImagesToImages(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
+    if (renderDataStoreStagingData.imageToImage.empty()) {
+        return; // early out to prevent command list commands
+    }
+
     // explicit input barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
@@ -557,6 +569,10 @@ void RenderStaging::CopyImagesToImages(IRenderCommandList& cmdList, const Stagin
 void RenderStaging::CopyBuffersToBuffers(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
+    if (stagingData.bufferToBuffer.empty() && renderDataStoreStagingData.bufferToBuffer.empty()) {
+        return; // early out to prevent command list commands
+    }
+
     const auto copyBuffersToBuffers = [](IRenderCommandList& cmdList, const vector<StagingCopyStruct>& bufferToBuffer,
                                           const vector<BufferCopy>& bufferCopies) {
         for (const auto& ref : bufferToBuffer) {
@@ -602,6 +618,10 @@ void RenderStaging::CopyBuffersToBuffers(IRenderCommandList& cmdList, const Stag
 void RenderStaging::ClearImages(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
     const StagingImageClearConsumeStruct& imageClearData)
 {
+    if (imageClearData.clears.empty()) {
+        return; // early out to prevent command list commands
+    }
+
     // explicit input barriers for resources that are not dynamic trackable
     // NOTE: one probably only needs to clear dynamic trackable resources anyhow
     cmdList.BeginDisableAutomaticBarrierPoints();

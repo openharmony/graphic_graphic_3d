@@ -16,7 +16,7 @@
 #ifndef SCENE_SRC_COMPONENT_TEXT_COMPONENT_H
 #define SCENE_SRC_COMPONENT_TEXT_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 #include <scene/interface/intf_text.h>
 
 #include <meta/ext/object.h>
@@ -36,7 +36,7 @@ public:
     META_PROPERTY(SCENE_NS::FontMethod, FontMethod)
 };
 
-class TextComponent : public META_NS::IntroduceInterfaces<ComponentFwd, IInternalText> {
+class TextComponent : public META_NS::IntroduceInterfaces<Component, IInternalText> {
     META_OBJECT(TextComponent, ClassId::TextComponent, IntroduceInterfaces)
 
 public:
@@ -61,4 +61,5 @@ public:
 };
 
 SCENE_END_NAMESPACE()
+
 #endif

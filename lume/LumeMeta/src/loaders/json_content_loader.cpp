@@ -12,11 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "json_content_loader.h"
 
-#include "serialization/importer.h"
-#include "serialization/json_importer.h"
+#include "../serialization/importer.h"
+#include "../serialization/json_importer.h"
 
 META_BEGIN_NAMESPACE()
 

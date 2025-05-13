@@ -51,6 +51,7 @@ struct ArrayChanges {
     BASE_NS::vector<IndexChange> positionChanged;
 };
 
+/// Helper to keep track of array property changes
 template<typename ValueType>
 class ArrayPropertyChangesRecognizer {
 public:

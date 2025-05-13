@@ -37,7 +37,7 @@ protected:
     {
         Super::SetSuperInstance(aggr, super);
         container_ = interface_cast<IContainer>(super);
-        CORE_ASSERT(container_);
+        CORE_ASSERT_MSG(container_, "Invalid super object");
     }
 
 protected: // IContainer

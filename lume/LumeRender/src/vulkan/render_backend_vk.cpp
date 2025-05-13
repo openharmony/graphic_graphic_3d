@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
 
 #include "render_backend_vk.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <vulkan/vulkan_core.h>
@@ -71,17 +72,6 @@ using CORE_NS::IThreadPool;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-#if (RENDER_VULKAN_RT_ENABLED == 1)
-inline uint64_t GetBufferDeviceAddress(const VkDevice device, const VkBuffer buffer)
-{
-    const VkBufferDeviceAddressInfo addressInfo {
-        VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // sType
-        nullptr,                                      // pNext
-        buffer,                                       // buffer
-    };
-    return vkGetBufferDeviceAddress(device, &addressInfo);
-}
-#endif
 #if (RENDER_PERF_ENABLED == 1)
 void CopyPerfCounters(const PerfCounters& src, PerfCounters& dst)
 {
@@ -97,6 +87,16 @@ void CopyPerfCounters(const PerfCounters& src, PerfCounters& dst)
     dst.instanceCount += src.instanceCount;
 }
 #endif
+
+inline void ProcessBackendPositionCommands(IDevice& device, const RenderBackendCommandPosition position,
+    const array_view<const ProcessBackendCommand> commands)
+{
+    for (const auto& ref : commands) {
+        if ((position == ref.backendCommandPosition) && ref.command) {
+            ref.command->ExecuteBackendCommand(device);
+        }
+    }
+}
 } // namespace
 
 // Helper class for running std::function as a ThreadPool task.
@@ -271,9 +271,9 @@ void RenderBackendVk::AcquirePresentationInfo(
                         pi.renderNodeCommandListIndex =
                             static_cast<uint32_t>(renderCommandFrameData.renderCommandContexts.size() - 1);
 
-                        const GpuImageVk* swapImage = gpuResourceMgr_.GetImage<GpuImageVk>(handle);
-                        PLUGIN_ASSERT(swapImage);
-                        pi.swapchainImage = swapImage->GetPlatformData().image;
+                        if (const GpuImageVk* swapImage = gpuResourceMgr_.GetImage<GpuImageVk>(handle); swapImage) {
+                            pi.swapchainImage = swapImage->GetPlatformData().image;
+                        }
                     }
                 }
             }
@@ -287,6 +287,9 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
     if (!queue_) {
         return;
     }
+    // before presentation commands
+    ProcessBackendPositionCommands(device_, RenderBackendCommandPosition::BEFORE_PRESENTATION, processBackendCommands_);
+
     if (!backBufferConfig.swapchainData.empty()) {
         if (device_.HasSwapchain() && presentationData_.present) {
             PLUGIN_STATIC_ASSERT(DeviceConstants::MAX_SWAPCHAIN_COUNT == 8u);
@@ -396,6 +399,12 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
 #endif
         }
     }
+
+    // after presentation backend commands
+    ProcessBackendPositionCommands(device_, RenderBackendCommandPosition::AFTER_PRESENTATION, processBackendCommands_);
+
+    // clear after presentation (also cleared in start of render backend)
+    processBackendCommands_.clear();
 }
 
 void RenderBackendVk::Render(
@@ -410,6 +419,9 @@ void RenderBackendVk::Render(
     commonCpuTimers_.full.Begin();
     commonCpuTimers_.acquire.Begin();
 #endif
+
+    // clear backend commands
+    processBackendCommands_.clear();
 
     commandBufferSubmitter_ = {};
     commandBufferSubmitter_.commandBuffers.resize(renderCommandFrameData.renderCommandContexts.size());
@@ -615,10 +627,26 @@ void RenderBackendVk::RenderProcessCommandLists(
         const MultiRenderPassCommandListData& mrpData = ref.renderCommandList->GetMultiRenderCommandListData();
         PLUGIN_ASSERT(mrpData.subpassCount > 0);
         const uint32_t rcCount = mrpData.subpassCount;
+        if (rcCount > (cmdBufferCount - cmdBufferIdx)) {
+            PLUGIN_LOG_E("Invalid render command context");
+            continue;
+        }
+
+        // add backend position commands
+        const auto& backendCommands = ref.renderCommandList->GetProcessBackendCommands();
+        processBackendCommands_.append(backendCommands.begin(), backendCommands.end());
+
         // add wait for global descriptor sets if needed
         // add safety wait for secondary command lists always (NOTE: needs to further optimized)
-        if (globalDescSetSubmitted &&
-            (mrpData.secondaryCmdLists || ref.renderCommandList->HasGlobalDescriptorSetBindings())) {
+        bool hasGlobalDescriptorSetBindings = false;
+        if (globalDescSetSubmitted) {
+            auto first = renderCommandFrameData.renderCommandContexts.cbegin() + cmdBufferIdx;
+            auto last = first + rcCount;
+            hasGlobalDescriptorSetBindings = std::any_of(first, last, [](const RenderCommandContext& ref) {
+                return ref.renderCommandList->HasGlobalDescriptorSetBindings();
+            });
+        }
+        if (globalDescSetSubmitted && (mrpData.secondaryCmdLists || hasGlobalDescriptorSetBindings)) {
             afterIdentifiers.push_back(globalDescSetTaskId);
         }
         if (mrpData.secondaryCmdLists) {
@@ -626,7 +654,6 @@ void RenderBackendVk::RenderProcessCommandLists(
             for (uint32_t secondIdx = 0; secondIdx < rcCount; ++secondIdx) {
                 const uint64_t submitId = secondaryIdx++;
                 afterIdentifiers.push_back(submitId);
-                PLUGIN_ASSERT((cmdBufferIdx + secondIdx) < cmdBufferCount);
                 queue_->SubmitAfter(afterIdentifiers, submitId,
                     FunctionTask::Create([this, cmdBufferIdx, secondIdx, &renderCommandFrameData]() {
                         const uint32_t currCmdBufferIdx = cmdBufferIdx + secondIdx;
@@ -645,8 +672,7 @@ void RenderBackendVk::RenderProcessCommandLists(
                     MultiRenderCommandListDesc mrcDesc;
                     mrcDesc.multiRenderCommandListCount = rcCount;
                     RenderCommandContext& ref2 = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
-                    const DebugNames debugNames { ref2.debugName,
-                        renderCommandFrameData.renderCommandContexts[cmdBufferIdx].debugName };
+                    const DebugNames debugNames { ref2.debugName, ref2.debugName };
                     RenderPrimaryRenderPass(renderCommandFrameData, ref2, cmdBufferIdx, mrcDesc, debugNames);
                 }));
         } else {
@@ -671,6 +697,9 @@ void RenderBackendVk::RenderProcessCommandLists(
         // idx increase
         cmdBufferIdx += (rcCount > 1) ? rcCount : 1;
     }
+
+    // process before acquire commands here
+    ProcessBackendPositionCommands(device_, RenderBackendCommandPosition::BEFORE_ACQUIRE, processBackendCommands_);
 
     // execute and wait for completion.
     queue_->Execute();
@@ -809,6 +838,7 @@ VkCommandBufferInheritanceInfo RenderBackendVk::RenderGetCommandBufferInheritanc
         LowLevelRenderPassDataVk lowLevelRenderPassData = poolMgrVk.GetRenderPassData(renderCmd);
 
         const uint32_t subpass = renderCmd.subpassStartIndex;
+        // const uint32_t subpass = 0;
         return VkCommandBufferInheritanceInfo {
             VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, // sType
             nullptr,                                           // pNext
@@ -1035,6 +1065,11 @@ void RenderBackendVk::RenderSingleCommandList(RenderCommandContext& renderComman
             }
             case RenderCommandType::BUILD_ACCELERATION_STRUCTURE: {
                 RenderCommand(*static_cast<RenderCommandBuildAccelerationStructure*>(ref.rc), cmdBuffer,
+                    nodeContextPsoMgr, contextPoolMgr, stateCache);
+                break;
+            }
+            case RenderCommandType::COPY_ACCELERATION_STRUCTURE_INSTANCES: {
+                RenderCommand(*static_cast<RenderCommandCopyAccelerationStructureInstances*>(ref.rc), cmdBuffer,
                     nodeContextPsoMgr, contextPoolMgr, stateCache);
                 break;
             }
@@ -1477,10 +1512,8 @@ void RenderBackendVk::RenderCommand(const RenderCommandBindIndexBuffer& renderCm
     const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
     const StateCache& stateCache)
 {
-    const GpuBufferVk* gpuBuffer = gpuResourceMgr_.GetBuffer<GpuBufferVk>(renderCmd.indexBuffer.bufferHandle);
-
-    PLUGIN_ASSERT(gpuBuffer);
-    if (gpuBuffer) {
+    if (const GpuBufferVk* gpuBuffer = gpuResourceMgr_.GetBuffer<GpuBufferVk>(renderCmd.indexBuffer.bufferHandle);
+        gpuBuffer) {
         const GpuBufferPlatformDataVk& plat = gpuBuffer->GetPlatformData();
         const VkBuffer buffer = plat.buffer;
         const VkDeviceSize offset = (VkDeviceSize)renderCmd.indexBuffer.bufferOffset + plat.currentByteOffset;
@@ -1550,9 +1583,6 @@ void RenderBackendVk::RenderCommand(const RenderCommandCopyBuffer& renderCmd, co
 {
     const GpuBufferVk* srcGpuBuffer = gpuResourceMgr_.GetBuffer<GpuBufferVk>(renderCmd.srcHandle);
     const GpuBufferVk* dstGpuBuffer = gpuResourceMgr_.GetBuffer<GpuBufferVk>(renderCmd.dstHandle);
-
-    PLUGIN_ASSERT(srcGpuBuffer);
-    PLUGIN_ASSERT(dstGpuBuffer);
 
     if (srcGpuBuffer && dstGpuBuffer) {
         const VkBuffer srcBuffer = (srcGpuBuffer->GetPlatformData()).buffer;
@@ -2100,7 +2130,9 @@ void RenderBackendVk::UpdateGlobalDescriptorSets()
         }
         const RenderHandle descHandle = allDescSets[descIdx];
         // first update gpu descriptor indices
-        dsMgr.UpdateDescriptorSetGpuHandle(descHandle);
+        if (!dsMgr.UpdateDescriptorSetGpuHandle(descHandle)) {
+            continue; // continue if not dirty
+        }
 
         const LowLevelDescriptorSetVk* descriptorSet = dsMgr.GetDescriptorSet(descHandle);
         const DescriptorSetLayoutBindingResourcesHandler bindingResources = dsMgr.GetCpuDescriptorSetData(descHandle);
@@ -2138,7 +2170,9 @@ void RenderBackendVk::UpdateCommandListDescriptorSets(
 
         const RenderHandle descHandle = allDescSets[descIdx];
         // first update gpu descriptor indices
-        dsMgr.UpdateDescriptorSetGpuHandle(descHandle);
+        if (!dsMgr.UpdateDescriptorSetGpuHandle(descHandle)) {
+            continue; // continue if not dirty
+        }
 
         const LowLevelDescriptorSetVk* descriptorSet = dsMgr.GetDescriptorSet(descHandle);
         const DescriptorSetLayoutBindingResourcesHandler bindingResources = dsMgr.GetCpuDescriptorSetData(descHandle);
@@ -2271,70 +2305,82 @@ void RenderBackendVk::RenderCommand(const RenderCommandPushConstant& renderCmd, 
     }
 }
 
+namespace {
+struct DeviceAddressOffset {
+    uint64_t address;
+    uint64_t offset;
+};
+
+inline constexpr VkDeviceOrHostAddressConstKHR GetValidDeviceAddress(const DeviceAddressOffset& bo, bool& valid)
+{
+    valid = valid && (bo.address != 0);
+    return { bo.address + bo.offset };
+}
+} // namespace
+
 void RenderBackendVk::RenderCommand(const RenderCommandBuildAccelerationStructure& renderCmd,
     const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
     const StateCache& stateCache)
 {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    // NOTE: missing
-    const GpuBufferVk* dst = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(renderCmd.dstAccelerationStructure);
-    const GpuBufferVk* scratchBuffer = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(renderCmd.scratchBuffer);
-    if ((!dst) && (!scratchBuffer)) {
+    const AsBuildGeometryData& geometry = renderCmd.geometry;
+
+    const GpuBufferVk* dst = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(geometry.dstAccelerationStructure);
+    const GpuBufferVk* scratchBuffer = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(geometry.scratchBuffer.handle);
+    if ((!dst) || (!scratchBuffer)) {
         return; // early out
     }
-    const DevicePlatformDataVk& devicePlat = deviceVk_.GetPlatformDataVk();
-    const VkDevice device = devicePlat.device;
 
     const GpuAccelerationStructurePlatformDataVk& dstPlat = dst->GetPlatformDataAccelerationStructure();
     const VkAccelerationStructureKHR dstAs = dstPlat.accelerationStructure;
 
-    // scratch data with user offset
-    const VkDeviceAddress scratchData { GetBufferDeviceAddress(device, scratchBuffer->GetPlatformData().buffer) +
-                                        VkDeviceSize(renderCmd.scratchOffset) };
+    bool validAddresses = true;
 
     const size_t arraySize =
         renderCmd.trianglesView.size() + renderCmd.aabbsView.size() + renderCmd.instancesView.size();
     vector<VkAccelerationStructureGeometryKHR> geometryData(arraySize);
     vector<VkAccelerationStructureBuildRangeInfoKHR> buildRangeInfos(arraySize);
 
-    size_t arrayIndex = 0;
-    for (const auto& trianglesRef : renderCmd.trianglesView) {
+    uint32_t arrayIndex = 0;
+    const bool isTopLevel =
+        (geometry.info.type == AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL);
+    for (const auto& ref : renderCmd.trianglesView) {
         geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
             VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
             nullptr,                                               // pNext
             VkGeometryTypeKHR::VK_GEOMETRY_TYPE_TRIANGLES_KHR,     // geometryType
             {},                                                    // geometry;
-            0,                                                     // flags
+            VkGeometryFlagsKHR(ref.info.geometryFlags),            // flags
         };
         uint32_t primitiveCount = 0;
-        const GpuBufferVk* vb = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(trianglesRef.vertexData.handle);
-        const GpuBufferVk* ib = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(trianglesRef.indexData.handle);
+        const GpuBufferVk* vb = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(ref.vertexData.handle);
+        const GpuBufferVk* ib = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(ref.indexData.handle);
         if (vb && ib) {
-            const VkDeviceOrHostAddressConstKHR vertexData { GetBufferDeviceAddress(
-                device, vb->GetPlatformData().buffer) };
-            const VkDeviceOrHostAddressConstKHR indexData { GetBufferDeviceAddress(
-                device, ib->GetPlatformData().buffer) };
-            VkDeviceOrHostAddressConstKHR transformData {};
-            if (RenderHandleUtil::IsValid(trianglesRef.transformData.handle)) {
-                if (const GpuBufferVk* tr =
-                        gpuResourceMgr_.GetBuffer<const GpuBufferVk>(trianglesRef.transformData.handle);
+            const VkDeviceOrHostAddressConstKHR vertexAddress =
+                GetValidDeviceAddress({ vb->GetPlatformData().deviceAddress, ref.vertexData.offset }, validAddresses);
+            const VkDeviceOrHostAddressConstKHR indexAddress =
+                GetValidDeviceAddress({ ib->GetPlatformData().deviceAddress, ref.indexData.offset }, validAddresses);
+
+            VkDeviceOrHostAddressConstKHR transformAddress {};
+            if (RenderHandleUtil::IsValid(ref.transformData.handle)) {
+                if (const GpuBufferVk* tr = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(ref.transformData.handle);
                     tr) {
-                    transformData.deviceAddress = { GetBufferDeviceAddress(device, ib->GetPlatformData().buffer) };
+                    transformAddress = GetValidDeviceAddress(
+                        { tr->GetPlatformData().deviceAddress, ref.transformData.offset }, validAddresses);
                 }
             }
-            primitiveCount = trianglesRef.info.indexCount / 3u; // triangles
+            primitiveCount = ref.info.indexCount / 3u; // triangles
 
-            geometryData[arrayIndex].flags = VkGeometryFlagsKHR(renderCmd.flags);
             geometryData[arrayIndex].geometry.triangles = VkAccelerationStructureGeometryTrianglesDataKHR {
                 VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR, // sType
                 nullptr,                                                              // pNext
-                VkFormat(trianglesRef.info.vertexFormat),                             // vertexFormat
-                vertexData,                                                           // vertexData
-                VkDeviceSize(trianglesRef.info.vertexStride),                         // vertexStride
-                trianglesRef.info.maxVertex,                                          // maxVertex
-                VkIndexType(trianglesRef.info.indexType),                             // indexType
-                indexData,                                                            // indexData
-                transformData,                                                        // transformData
+                VkFormat(ref.info.vertexFormat),                                      // vertexFormat
+                vertexAddress,                                                        // vertexData
+                VkDeviceSize(ref.info.vertexStride),                                  // vertexStride
+                ref.info.maxVertex,                                                   // maxVertex
+                VkIndexType(ref.info.indexType),                                      // indexType
+                indexAddress,                                                         // indexData
+                transformAddress,                                                     // transformData
             };
         }
         buildRangeInfos[arrayIndex] = {
@@ -2345,25 +2391,26 @@ void RenderBackendVk::RenderCommand(const RenderCommandBuildAccelerationStructur
         };
         arrayIndex++;
     }
-    for (const auto& aabbsRef : renderCmd.aabbsView) {
+    for (const auto& ref : renderCmd.aabbsView) {
         geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
             VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
             nullptr,                                               // pNext
             VkGeometryTypeKHR::VK_GEOMETRY_TYPE_AABBS_KHR,         // geometryType
-            {},                                                    // geometry;
-            0,                                                     // flags
+            {},                                                    // geometry
+            VkGeometryFlagsKHR(ref.info.geometryFlags),            // flags
         };
         VkDeviceOrHostAddressConstKHR deviceAddress { 0 };
-        if (const GpuBufferVk* iPtr = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(aabbsRef.data.handle); iPtr) {
-            deviceAddress.deviceAddress = GetBufferDeviceAddress(device, iPtr->GetPlatformData().buffer);
+        if (const GpuBufferVk* ptr = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(ref.data.handle); ptr) {
+            deviceAddress =
+                GetValidDeviceAddress({ ptr->GetPlatformData().deviceAddress, ref.data.offset }, validAddresses);
         }
-        geometryData[arrayIndex].flags = VkGeometryFlagsKHR(renderCmd.flags);
         geometryData[arrayIndex].geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR {
             VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR, // sType
             nullptr,                                                          // pNext
             deviceAddress,                                                    // data
-            aabbsRef.info.stride,                                             // stride
+            ref.info.stride,                                                  // stride
         };
+
         buildRangeInfos[arrayIndex] = {
             1u, // primitiveCount
             0u, // primitiveOffset
@@ -2372,43 +2419,49 @@ void RenderBackendVk::RenderCommand(const RenderCommandBuildAccelerationStructur
         };
         arrayIndex++;
     }
-    for (const auto& instancesRef : renderCmd.instancesView) {
+    for (const auto& ref : renderCmd.instancesView) {
         geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
             VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
             nullptr,                                               // pNext
             VkGeometryTypeKHR::VK_GEOMETRY_TYPE_INSTANCES_KHR,     // geometryType
             {},                                                    // geometry;
-            0,                                                     // flags
+            VkGeometryFlagsKHR(ref.info.geometryFlags),            // flags
         };
         VkDeviceOrHostAddressConstKHR deviceAddress { 0 };
-        if (const GpuBufferVk* iPtr = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(instancesRef.data.handle); iPtr) {
-            deviceAddress.deviceAddress = GetBufferDeviceAddress(device, iPtr->GetPlatformData().buffer);
+        if (const GpuBufferVk* ptr = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(ref.data.handle); ptr) {
+            deviceAddress.deviceAddress = ptr->GetPlatformData().deviceAddress;
+            deviceAddress =
+                GetValidDeviceAddress({ ptr->GetPlatformData().deviceAddress, ref.data.offset }, validAddresses);
         }
-        geometryData[arrayIndex].flags = VkGeometryFlagsKHR(renderCmd.flags);
         geometryData[arrayIndex].geometry.instances = VkAccelerationStructureGeometryInstancesDataKHR {
             VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR, // sType
             nullptr,                                                              // pNext
-            instancesRef.info.arrayOfPointers,                                    // arrayOfPointers
+            ref.info.arrayOfPointers,                                             // arrayOfPointers
             deviceAddress,                                                        // data
         };
         buildRangeInfos[arrayIndex] = {
-            1u, // primitiveCount
-            0u, // primitiveOffset
-            0u, // firstVertex
-            0u, // transformOffset
+            ref.info.primitiveCount, // primitiveCount
+            0u,                      // primitiveOffset
+            0u,                      // firstVertex
+            0u,                      // transformOffset
         };
         arrayIndex++;
     }
 
+    const VkDeviceOrHostAddressKHR scratchData = { GetValidDeviceAddress(
+        { scratchBuffer->GetPlatformData().deviceAddress, geometry.scratchBuffer.offset }, validAddresses)
+                                                       .deviceAddress };
+
+    const uint32_t geometryCount = isTopLevel ? 1U : arrayIndex;
     const VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo {
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR, // sType
         nullptr,                                                          // pNext
-        VkAccelerationStructureTypeKHR(renderCmd.type),                   // type
-        VkBuildAccelerationStructureFlagsKHR(renderCmd.flags),            // flags
-        VkBuildAccelerationStructureModeKHR(renderCmd.mode),              // mode
+        VkAccelerationStructureTypeKHR(geometry.info.type),               // type
+        VkBuildAccelerationStructureFlagsKHR(geometry.info.flags),        // flags
+        VkBuildAccelerationStructureModeKHR(geometry.info.mode),          // mode
         VK_NULL_HANDLE,                                                   // srcAccelerationStructure
         dstAs,                                                            // dstAccelerationStructure
-        uint32_t(arrayIndex),                                             // geometryCount
+        geometryCount,                                                    // geometryCount
         geometryData.data(),                                              // pGeometries
         nullptr,                                                          // ppGeometries
         scratchData,                                                      // scratchData
@@ -2419,11 +2472,68 @@ void RenderBackendVk::RenderCommand(const RenderCommandBuildAccelerationStructur
         buildRangeInfosPtr[idx] = &buildRangeInfos[idx];
     }
     const DeviceVk::ExtFunctions& extFunctions = deviceVk_.GetExtFunctions();
-    if (extFunctions.vkCmdBuildAccelerationStructuresKHR) {
+    if (validAddresses && extFunctions.vkCmdBuildAccelerationStructuresKHR) {
         extFunctions.vkCmdBuildAccelerationStructuresKHR(cmdBuf.commandBuffer, // commandBuffer
-            1u,                                                                // infoCount
+            1U,                                                                // infoCount
             &buildGeometryInfo,                                                // pInfos
             buildRangeInfosPtr.data());                                        // ppBuildRangeInfos
+    }
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (!validAddresses) {
+        const string tmpStr = "RenderBackendVk::RenderCommandBuildAccelerationStructure_address";
+        PLUGIN_LOG_ONCE_W(
+            tmpStr, "RENDER_VALIDATION: Invalid device addresses in RenderCommandBuildAccelerationStructure");
+    }
+#endif
+#endif
+}
+
+void RenderBackendVk::RenderCommand(const RenderCommandCopyAccelerationStructureInstances& renderCmd,
+    const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
+    const StateCache& stateCache)
+{
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    // NOTE: at the moment just handles barriers and copy here
+    const RenderHandle dstHandle = renderCmd.destination.handle;
+    const GpuBufferDesc dstBufferDesc = gpuResourceMgr_.GetBufferDescriptor(dstHandle);
+    if (uint8_t* dstDataBegin = static_cast<uint8_t*>(gpuResourceMgr_.MapBuffer(dstHandle)); dstDataBegin) {
+        const uint8_t* dstDataEnd = dstDataBegin + dstBufferDesc.byteSize;
+        // add render command offset
+        dstDataBegin += size_t(renderCmd.destination.offset);
+        // loop and copy all instances
+        bool validAddresses = true;
+        for (uint32_t idx = 0; idx < renderCmd.instancesView.size(); ++idx) {
+            const auto& ref = renderCmd.instancesView[idx];
+            uint64_t accelDeviceAddress = 0;
+            if (const GpuBufferVk* ptr = gpuResourceMgr_.GetBuffer<GpuBufferVk>(ref.accelerationStructure); ptr) {
+                accelDeviceAddress = GetValidDeviceAddress(
+                    { ptr->GetPlatformDataAccelerationStructure().deviceAddress, 0 }, validAddresses)
+                                         .deviceAddress;
+            }
+            const auto& tr = ref.transform;
+            // convert 4x3 column to 3x4 row
+            VkAccelerationStructureInstanceKHR instance {
+                { { { tr[0].x, tr[1].x, tr[2].x, tr[3].x }, { tr[0].y, tr[1].y, tr[2].y, tr[3].y },
+                    { tr[0].z, tr[1].z, tr[2].z, tr[3].z } } }, // transform
+                ref.instanceCustomIndex,                        // instanceCustomIndex : 24
+                ref.mask,                                       // mask : 8
+                0U,                                             // instanceShaderBindingTableRecordOffset : 24
+                VkGeometryInstanceFlagsKHR(ref.flags),          // flags : 8
+                accelDeviceAddress,                             // accelerationStructureReference
+            };
+            constexpr size_t byteSize = sizeof(VkAccelerationStructureInstanceKHR);
+            uint8_t* dstData = dstDataBegin + byteSize * idx;
+            CloneData(dstData, size_t(dstDataEnd - dstData), &instance, byteSize);
+        }
+        gpuResourceMgr_.UnmapBuffer(dstHandle);
+
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if (!validAddresses) {
+            const string tmpStr = "RenderBackendVk::RenderCommandCopyAccelerationStructureInstances_address";
+            PLUGIN_LOG_ONCE_W(tmpStr,
+                "RENDER_VALIDATION: Invalid device addresses in RenderCommandCopyAccelerationStructureInstances");
+        }
+#endif
     }
 #endif
 }
@@ -2483,15 +2593,18 @@ void RenderBackendVk::RenderCommand(const RenderCommandDynamicStateViewport& ren
     // handle viewport for surface transform
     const LowLevelRenderPassDataVk& rpd = stateCache.lowLevelRenderPassData;
     if (rpd.surfaceTransformFlags > CORE_SURFACE_TRANSFORM_IDENTITY_BIT) {
-        if (rpd.surfaceTransformFlags == CORE_SURFACE_TRANSFORM_ROTATE_90_BIT) {
+        if ((rpd.surfaceTransformFlags & CORE_SURFACE_TRANSFORM_ROTATE_90_BIT) ==
+            CORE_SURFACE_TRANSFORM_ROTATE_90_BIT) {
             vp.x = static_cast<float>(rpd.framebufferSize.width) - vd.height - vd.y;
             vp.y = vd.x;
             vp.width = vd.height;
             vp.height = vd.width;
-        } else if (rpd.surfaceTransformFlags == CORE_SURFACE_TRANSFORM_ROTATE_180_BIT) {
+        } else if ((rpd.surfaceTransformFlags & CORE_SURFACE_TRANSFORM_ROTATE_180_BIT) ==
+                   CORE_SURFACE_TRANSFORM_ROTATE_180_BIT) {
             vp.x = static_cast<float>(rpd.framebufferSize.width) - vd.width - vd.x;
             vp.y = static_cast<float>(rpd.framebufferSize.height) - vd.height - vd.y;
-        } else if (rpd.surfaceTransformFlags == CORE_SURFACE_TRANSFORM_ROTATE_270_BIT) {
+        } else if ((rpd.surfaceTransformFlags & CORE_SURFACE_TRANSFORM_ROTATE_270_BIT) ==
+                   CORE_SURFACE_TRANSFORM_ROTATE_270_BIT) {
             vp.x = vd.y;
             vp.y = static_cast<float>(rpd.framebufferSize.height) - vd.width - vd.x;
             vp.width = vd.height;
@@ -2518,14 +2631,17 @@ void RenderBackendVk::RenderCommand(const RenderCommandDynamicStateScissor& rend
     // handle scissor for surface transform
     const LowLevelRenderPassDataVk& rpd = stateCache.lowLevelRenderPassData;
     if (rpd.surfaceTransformFlags > CORE_SURFACE_TRANSFORM_IDENTITY_BIT) {
-        if (rpd.surfaceTransformFlags == CORE_SURFACE_TRANSFORM_ROTATE_90_BIT) {
+        if ((rpd.surfaceTransformFlags & CORE_SURFACE_TRANSFORM_ROTATE_90_BIT) ==
+            CORE_SURFACE_TRANSFORM_ROTATE_90_BIT) {
             sc = { { (int32_t)rpd.framebufferSize.width - (int32_t)sc.extent.height - sc.offset.y, sc.offset.x },
                 { sc.extent.height, sc.extent.width } };
-        } else if (rpd.surfaceTransformFlags == CORE_SURFACE_TRANSFORM_ROTATE_180_BIT) {
+        } else if ((rpd.surfaceTransformFlags & CORE_SURFACE_TRANSFORM_ROTATE_180_BIT) ==
+                   CORE_SURFACE_TRANSFORM_ROTATE_180_BIT) {
             sc = { { (int32_t)rpd.framebufferSize.width - (int32_t)sc.extent.width - sc.offset.x,
                        (int32_t)rpd.framebufferSize.height - (int32_t)sc.extent.height - sc.offset.y },
                 { sc.extent.width, sc.extent.height } };
-        } else if (rpd.surfaceTransformFlags == CORE_SURFACE_TRANSFORM_ROTATE_270_BIT) {
+        } else if ((rpd.surfaceTransformFlags & CORE_SURFACE_TRANSFORM_ROTATE_270_BIT) ==
+                   CORE_SURFACE_TRANSFORM_ROTATE_270_BIT) {
             sc = { { sc.offset.y, (int32_t)rpd.framebufferSize.height - (int32_t)sc.extent.width - sc.offset.x },
                 { sc.extent.height, sc.extent.width } };
         }
@@ -2617,7 +2733,20 @@ void RenderBackendVk::RenderCommand(const RenderCommandExecuteBackendFramePositi
     const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
     const StateCache& stateCache)
 {
-    if (stateCache.backendNode) {
+    if (renderCmd.command) {
+        const RenderBackendRecordingStateVk recordingState = {
+            {},
+            cmdBuf.commandBuffer,                              // commandBuffer
+            stateCache.lowLevelRenderPassData.renderPass,      // renderPass
+            stateCache.lowLevelRenderPassData.framebuffer,     // framebuffer
+            stateCache.lowLevelRenderPassData.framebufferSize, // framebufferSize
+            stateCache.lowLevelRenderPassData.subpassIndex,    // subpassIndex
+            stateCache.pipelineLayout,                         // pipelineLayout
+        };
+        const ILowLevelDeviceVk& lowLevelDevice = static_cast<ILowLevelDeviceVk&>(deviceVk_.GetLowLevelDevice());
+        renderCmd.command->ExecuteBackendCommand(lowLevelDevice, recordingState);
+    } else if (stateCache.backendNode) {
+        // legacy support for backend render nodes
         const RenderBackendRecordingStateVk recordingState = {
             {},
             cmdBuf.commandBuffer,                              // commandBuffer
@@ -2851,16 +2980,26 @@ void RenderBackendVk::WritePerfTimeStamp(const LowLevelCommandBufferVk& cmdBuf, 
 namespace {
 void UpdatePerfCounters(IPerformanceDataManager& perfData, const string_view name, const PerfCounters& perfCounters)
 {
-    perfData.UpdateData(name, "Backend_Count_Triangle", perfCounters.triangleCount);
-    perfData.UpdateData(name, "Backend_Count_InstanceCount", perfCounters.instanceCount);
-    perfData.UpdateData(name, "Backend_Count_Draw", perfCounters.drawCount);
-    perfData.UpdateData(name, "Backend_Count_DrawIndirect", perfCounters.drawIndirectCount);
-    perfData.UpdateData(name, "Backend_Count_Dispatch", perfCounters.dispatchCount);
-    perfData.UpdateData(name, "Backend_Count_DispatchIndirect", perfCounters.dispatchIndirectCount);
-    perfData.UpdateData(name, "Backend_Count_BindPipeline", perfCounters.bindPipelineCount);
-    perfData.UpdateData(name, "Backend_Count_RenderPass", perfCounters.renderPassCount);
-    perfData.UpdateData(name, "Backend_Count_UpdateDescriptorSet", perfCounters.updateDescriptorSetCount);
-    perfData.UpdateData(name, "Backend_Count_BindDescriptorSet", perfCounters.bindDescriptorSetCount);
+    perfData.UpdateData(name, "Backend_Count_Triangle", perfCounters.triangleCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_InstanceCount", perfCounters.instanceCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_Draw", perfCounters.drawCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_DrawIndirect", perfCounters.drawIndirectCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_Dispatch", perfCounters.dispatchCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_DispatchIndirect", perfCounters.dispatchIndirectCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_BindPipeline", perfCounters.bindPipelineCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_RenderPass", perfCounters.renderPassCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_UpdateDescriptorSet", perfCounters.updateDescriptorSetCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, "Backend_Count_BindDescriptorSet", perfCounters.bindDescriptorSetCount,
+        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
 }
 } // namespace
 
@@ -2886,7 +3025,8 @@ void RenderBackendVk::CopyPerfTimeStamp(
             static_cast<double>(static_cast<const DevicePlatformDataVk&>(device_.GetPlatformData())
                                     .physicalDeviceProperties.physicalDeviceProperties.limits.timestampPeriod);
         constexpr int64_t nanosToMicrosDivisor { 1000 };
-        gpuMicroSeconds = static_cast<int64_t>((endStamp - startStamp) * timestampPeriod) / nanosToMicrosDivisor;
+        gpuMicroSeconds =
+            static_cast<int64_t>(static_cast<double>(endStamp - startStamp) * timestampPeriod) / nanosToMicrosDivisor;
         constexpr int64_t maxValidMicroSecondValue { 4294967295 };
         if (gpuMicroSeconds > maxValidMicroSecondValue) {
             gpuMicroSeconds = 0;

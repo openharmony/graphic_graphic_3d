@@ -20,10 +20,12 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Serialisation output interface
 class ISerOutput : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ISerOutput, "6ec3b784-34a1-4fd6-964e-4af37de4186b")
 public:
     // todo: have sink interface instead of returning string
+    /// Process serialisation tree to string (e.g. to json string)
     virtual BASE_NS::string Process(const ISerNode::Ptr& tree) = 0;
 };
 

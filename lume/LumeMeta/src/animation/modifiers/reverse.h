@@ -22,14 +22,14 @@
 #include <meta/interface/intf_manual_clock.h>
 #include <meta/interface/object_macros.h>
 
-#include "animation/animation_modifier.h"
+#include "../animation_modifier.h"
 
 META_BEGIN_NAMESPACE()
 
 namespace AnimationModifiers {
 
-class Reverse final : public IntroduceInterfaces<AnimationModifierFwd> {
-    META_OBJECT(Reverse, META_NS::ClassId::ReverseAnimationModifier, IntroduceInterfaces, ClassId::Object)
+class ReverseModifier final : public IntroduceInterfaces<AnimationModifierFwd> {
+    META_OBJECT(ReverseModifier, META_NS::ClassId::ReverseAnimationModifier, IntroduceInterfaces, ClassId::Object)
 public:
     bool Build(const IMetadata::Ptr& data) override;
 

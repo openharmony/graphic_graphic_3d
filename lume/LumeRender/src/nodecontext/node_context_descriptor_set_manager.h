@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -133,17 +133,19 @@ public:
     // get all descriptor sets defined with this name
     BASE_NS::array_view<const RenderHandle> GetDescriptorSetHandles(const BASE_NS::string_view name) const;
 
-    CpuDescriptorSet* GetCpuDescriptorSet(const RenderHandle& handle);
-    DescriptorSetLayoutBindingResourcesHandler GetCpuDescriptorSetData(const RenderHandle& handle);
-    DynamicOffsetDescriptors GetDynamicOffsetDescriptors(const RenderHandle& handle);
-    bool HasDynamicBarrierResources(const RenderHandle& handle);
-    uint32_t GetDynamicOffsetDescriptorCount(const RenderHandle& handle);
+    CpuDescriptorSet* GetCpuDescriptorSet(const RenderHandle& handle) const;
+    DescriptorSetLayoutBindingResourcesHandler GetCpuDescriptorSetData(const RenderHandle& handle) const;
+    DynamicOffsetDescriptors GetDynamicOffsetDescriptors(const RenderHandle& handle) const;
+    bool HasDynamicBarrierResources(const RenderHandle& handle) const;
+    uint32_t GetDynamicOffsetDescriptorCount(const RenderHandle& handle) const;
+
+    bool HasPlatformConversionBindings(const RenderHandle& handle) const;
 
     // Will mark the descriptor set write locked for this frame (no one else can write)
     DescriptorSetUpdateInfoFlags UpdateCpuDescriptorSet(const RenderHandle& handle,
         const DescriptorSetLayoutBindingResources& bindingResources, const GpuQueue& gpuQueue);
     // platform
-    virtual void UpdateDescriptorSetGpuHandle(const RenderHandle& handle) = 0;
+    virtual bool UpdateDescriptorSetGpuHandle(const RenderHandle& handle) = 0;
     virtual void UpdateCpuDescriptorSetPlatform(const DescriptorSetLayoutBindingResources& bindingResources) = 0;
 
     // get all updated handles this frame
@@ -200,7 +202,7 @@ class NodeContextDescriptorSetManager.
 */
 class NodeContextDescriptorSetManager : public INodeContextDescriptorSetManager {
 public:
-    explicit NodeContextDescriptorSetManager(Device& device);
+    NodeContextDescriptorSetManager(Device& device);
     ~NodeContextDescriptorSetManager() override = default;
 
     static constexpr inline bool IsDynamicDescriptor(const DescriptorType descType)
@@ -269,12 +271,15 @@ public:
     // count of dynamic offset needed when binding descriptor set
     uint32_t GetDynamicOffsetDescriptorCount(const RenderHandle handle) const;
 
+    bool HasPlatformConversionBindings(const RenderHandle handle) const;
+
     // update descriptor sets for cpu data (adds correct gpu queue as well)
     DescriptorSetUpdateInfoFlags UpdateCpuDescriptorSet(const RenderHandle handle,
         const DescriptorSetLayoutBindingResources& bindingResources, const GpuQueue& gpuQueue);
     // call from backend before actual graphics api updateDescriptorset()
     // advances the gpu handle to the next available descriptor set (ring buffer)
-    virtual void UpdateDescriptorSetGpuHandle(const RenderHandle handle) = 0;
+    // if returns false, then the update should not be handled in the backend
+    virtual bool UpdateDescriptorSetGpuHandle(const RenderHandle handle) = 0;
     // platform specific updates
     virtual void UpdateCpuDescriptorSetPlatform(const DescriptorSetLayoutBindingResources& bindingResources) = 0;
 
@@ -308,7 +313,7 @@ protected:
 
     DescriptorSetUpdateInfoFlags UpdateCpuDescriptorSetImpl(const uint32_t index,
         const DescriptorSetLayoutBindingResources& bindingResources, const GpuQueue& gpuQueue,
-        BASE_NS::vector<CpuDescriptorSet>& cpuDescriptorSets);
+        BASE_NS::array_view<CpuDescriptorSet> cpuDescriptorSets);
     static DescriptorSetLayoutBindingResourcesHandler GetCpuDescriptorSetDataImpl(
         const uint32_t index, const BASE_NS::vector<CpuDescriptorSet>& cpuDescriptorSet);
     static DynamicOffsetDescriptors GetDynamicOffsetDescriptorsImpl(
@@ -316,6 +321,8 @@ protected:
     static bool HasDynamicBarrierResourcesImpl(
         const uint32_t index, const BASE_NS::vector<CpuDescriptorSet>& cpuDescriptorSet);
     static uint32_t GetDynamicOffsetDescriptorCountImpl(
+        const uint32_t index, const BASE_NS::vector<CpuDescriptorSet>& cpuDescriptorSet);
+    static bool HasPlatformConversionBindingsImpl(
         const uint32_t index, const BASE_NS::vector<CpuDescriptorSet>& cpuDescriptorSet);
 
     BASE_NS::string debugName_;

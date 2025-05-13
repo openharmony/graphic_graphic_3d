@@ -33,6 +33,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Simple base object implementation that has the most common interfaces for objects
 class BaseObject : public IntroduceInterfaces<IObjectInstance, IObjectFlags, IDerived, ILifecycle, IStaticMetadata> {
 public:
     BaseObject() = default;

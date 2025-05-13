@@ -16,5 +16,8 @@
 #include <3d/namespace.h>
 
 CORE3D_BEGIN_NAMESPACE()
-const char* GetVersionInfo() { return "GIT_REVISION: e4b7f5b"; }
+const char* GetVersionInfo()
+{
+    return "GIT_REVISION: e4b7f5b";
+}
 CORE3D_END_NAMESPACE()

@@ -1,0 +1,30 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+#include "common/water_ripple_common.h"
+
+#define MAX_NUM_RIPPLE 8
+
+layout(set = 0, binding = 0, std430) readonly buffer RippleInputBuffer
+{
+    uvec4 inArgs;
+    ivec2 newRipplePositions[MAX_NUM_RIPPLE];
+};
+
+layout(set = 0, binding = 1, rgba32f) uniform image2D RippleEffectTextureSrc;
+layout(set = 0, binding = 2, rgba32f) uniform image2D RippleEffectTextureDst;
+
+layout(local_size_x = WATER_RIPPLE_TGS, local_size_y = WATER_RIPPLE_TGS, local_size_z = 1) in;
+void main()
+{
+    const ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+
+    const ivec2 imageDim = ivec2(inArgs.zw);
+    if (any(greaterThan(xy, imageDim - ivec2(1)))) {
+        return;
+    }
+
+    imageStore(RippleEffectTextureDst, xy, vec4(0));
+    imageStore(RippleEffectTextureSrc, xy, vec4(0));
+}

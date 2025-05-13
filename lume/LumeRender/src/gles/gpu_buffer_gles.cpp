@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,7 +35,8 @@ void RecordAllocation(const int64_t alignedByteSize)
     if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
-        pdm->UpdateData("AllGpuBuffers", "GPU_BUFFER", alignedByteSize);
+        pdm->UpdateData("AllGpuBuffers", "GPU_BUFFER", alignedByteSize,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
     }
 }
 #endif
@@ -68,6 +69,30 @@ constexpr uint32_t MakeFlags(uint32_t requiredFlags)
     }
     return flags;
 }
+
+class ActivateDevice final {
+public:
+    ActivateDevice(DeviceGLES& device) : device_(device), isActive_(device.IsActive())
+    {
+        if (!isActive_) {
+            device_.Activate();
+        }
+    }
+
+    ~ActivateDevice()
+    {
+        if (!isActive_) {
+            device_.Deactivate();
+        }
+    }
+
+    ActivateDevice(const ActivateDevice&) = delete;
+    ActivateDevice(ActivateDevice&&) noexcept = delete;
+
+private:
+    DeviceGLES& device_;
+    bool isActive_ { false };
+};
 } // namespace
 
 GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
@@ -134,6 +159,25 @@ GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
 #endif
 }
 
+GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc, const GpuBufferPlatformData& plat)
+    : device_((DeviceGLES&)device), plat_(static_cast<const GpuBufferPlatformDataGL&>(plat)), desc_(desc),
+      isPersistantlyMapped_((desc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
+                            (desc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT)),
+      // At some point see if other memory property flags should be used.
+      isMappable_(IS_BIT(desc.memoryPropertyFlags, CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
+{
+    PLUGIN_ASSERT(device_.IsActive());
+    glGenBuffers(1, &plat_.buffer);
+    const auto oldBind = device_.BoundBuffer(INIT_TARGET);
+    device_.BindBuffer(INIT_TARGET, plat_.buffer);
+    if (plat_.eglClientBuffer && glBufferStorageExternalEXT) {
+        uint32_t flags = MakeFlags(desc.memoryPropertyFlags);
+        glBufferStorageExternalEXT(INIT_TARGET, 0, plat_.alignedByteSize,
+            reinterpret_cast<GLeglClientBufferEXT>(plat_.eglClientBuffer), flags);
+    }
+    device_.BindBuffer(INIT_TARGET, oldBind);
+}
+
 GpuBufferGLES::~GpuBufferGLES()
 {
     if (plat_.buffer) {
@@ -191,7 +235,8 @@ void* GpuBufferGLES::Map()
             ret = data_ + plat_.currentByteOffset;
         }
     } else {
-        PLUGIN_ASSERT(device_.IsActive());
+        const auto keepActive = ActivateDevice(device_);
+
         const auto oldBind = device_.BoundBuffer(GL_COPY_WRITE_BUFFER);
         device_.BindBuffer(GL_COPY_WRITE_BUFFER, plat_.buffer);
         if (!isRingBuffer_) {
@@ -217,7 +262,8 @@ void GpuBufferGLES::Unmap() const
     isMapped_ = false;
 
     if (!isPersistantlyMapped_) {
-        PLUGIN_ASSERT(device_.IsActive());
+        const auto keepActive = ActivateDevice(device_);
+
         const auto oldBind = device_.BoundBuffer(GL_COPY_WRITE_BUFFER);
         device_.BindBuffer(GL_COPY_WRITE_BUFFER, plat_.buffer);
         glUnmapBuffer(GL_COPY_WRITE_BUFFER);
@@ -241,7 +287,8 @@ void* GpuBufferGLES::MapMemory()
     if (isPersistantlyMapped_) {
         ret = data_;
     } else {
-        PLUGIN_ASSERT(device_.IsActive());
+        const auto keepActive = ActivateDevice(device_);
+
         const auto oldBind = device_.BoundBuffer(GL_COPY_WRITE_BUFFER);
         device_.BindBuffer(GL_COPY_WRITE_BUFFER, plat_.buffer);
         if (!isRingBuffer_) {

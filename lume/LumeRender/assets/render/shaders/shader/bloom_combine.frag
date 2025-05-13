@@ -4,15 +4,22 @@
 
 // includes
 
+#include "render/shaders/common/render_post_process_structs_common.h"
+
 #include "common/bloom_common.h"
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+layout(set = 0, binding = 0) uniform texture2D uTex;
+layout(set = 0, binding = 1) uniform texture2D uTexBloom;
+layout(set = 0, binding = 2) uniform sampler uSampler;
 
-layout(set = 1, binding = 0) uniform texture2D uTex;
-layout(set = 1, binding = 1) uniform texture2D uTexBloom;
-layout(set = 1, binding = 2) uniform sampler uSampler;
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
 
 // in / out
 
@@ -32,6 +39,6 @@ void main()
     // NOTE: more samples (lower resolution)
     const vec3 bloomColor = textureLod(sampler2D(uTexBloom, uSampler), uv, 0).xyz;
 
-    vec3 finalColor = min(bloomCombine(baseColor, bloomColor, uPc.factor), CORE_BLOOM_CLAMP_MAX_VALUE);
+    vec3 finalColor = min(BloomCombine(baseColor, bloomColor, uPc.factor), CORE_BLOOM_CLAMP_MAX_VALUE);
     outColor = vec4(finalColor, 1.0);
 }

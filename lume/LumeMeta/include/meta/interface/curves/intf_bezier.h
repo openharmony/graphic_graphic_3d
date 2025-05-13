@@ -17,11 +17,7 @@
 
 #include <base/math/vector.h>
 
-#include <meta/base/interface_macros.h>
-#include <meta/base/namespace.h>
-#include <meta/base/types.h>
 #include <meta/ext/implementation_macros.h>
-#include <meta/interface/interface_macros.h>
 
 META_BEGIN_NAMESPACE()
 

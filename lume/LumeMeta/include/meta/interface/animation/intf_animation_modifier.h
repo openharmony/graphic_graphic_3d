@@ -20,7 +20,6 @@
 #include <meta/base/namespace.h>
 #include <meta/base/types.h>
 #include <meta/interface/intf_clock.h>
-#include <meta/interface/property/property.h>
 
 META_BEGIN_NAMESPACE()
 

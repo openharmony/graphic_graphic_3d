@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,7 +32,7 @@ CORE3D_BEGIN_NAMESPACE()
 BEGIN_COMPONENT(IAnimationInputComponentManager, AnimationInputComponent)
 
     /** Keyframe timestamps in seconds. */
-    DEFINE_PROPERTY(BASE_NS::vector<float>, timestamps, "Keyframe Timestamps", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<float>, timestamps, "Keyframe Timestamps", 0, )
 
 END_COMPONENT(IAnimationInputComponentManager, AnimationInputComponent, "a6e72690-4e42-47ba-9104-b0d16541838b")
 #if !defined(IMPLEMENT_MANAGER)

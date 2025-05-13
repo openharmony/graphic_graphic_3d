@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -194,13 +194,19 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
         uint8_t renderSortLayerOrder { 0u };
     };
 
-    /** Default material component shader */
+    /** Default material component shader
+     * Render slot processing order:
+     * 1. If graphics state has render slot this defines the render slot
+     * 2. if graphics state did not have render slot then the shader render slot defines the actual render slot
+     */
     struct Shader {
         /** Shader to be used. (If invalid, a default is chosen by the default material renderer)
          * NOTE: the material medata and custom properties are updated when the shader is updated.
          */
         CORE_NS::EntityReference shader;
-        /** Shader graphics state to be used. (If invalid, a default is chosen by the default material renderer) */
+        /** Shader graphics state to be used. (If invalid, a default is chosen by the default material renderer)
+         * If graphics state is given it's render slot is used to define where the material is send for rendering.
+         */
         CORE_NS::EntityReference graphicsState;
     };
 #endif
@@ -229,14 +235,14 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      * NOTE: when material shader is updated the possible material metadata and custom properties are updated
      * NOTE: one needs to reload the shader file(s) with shader manager to get dynamic updated custom property data
      */
-    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0,)
+    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0, )
 
     /** Depth shader. Prefer using automatic selection (or editor selection) if no custom shaders.
      * Needs to match default material layouts and specializations (api/3d/shaders/common).
      * If no default slot given to shader default material shader slots are used automatically.
      * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
      */
-    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0,)
+    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0, )
 
     /** Extra material rendering flags define special rendering hints */
     DEFINE_BITFIELD_PROPERTY(ExtraRenderingFlags, extraRenderingFlags, "ExtraRenderingFlags",
@@ -307,7 +313,7 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
      */
     DEFINE_PROPERTY(
-        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0,)
+        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
 
     /** Per material additional user property data which is passed to shader UBO.
      * Max size is 256 bytes.
@@ -320,7 +326,15 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
 
     /** Render sorting for layers (sorting priority)
      */
-    DEFINE_PROPERTY(RenderSort, renderSort, "Render Sort Layers", 0,)
+    DEFINE_PROPERTY(RenderSort, renderSort, "Render Sort Layers", 0, )
+
+    /** Camera based effect, which will go through all the viewport culling
+     * Designed to be used e.g. when one wants to have a camera (fullscreen) effect with typical material
+     * Can be used only with a single camera, if needed with more cameras the material needs to be duplicated
+     * for all the cameras.
+     * The render sort is still respected.
+     */
+    DEFINE_PROPERTY(CORE_NS::Entity, cameraEntity, "Camera entity for camera effect", 0, )
 
 END_COMPONENT(IMaterialComponentManager, MaterialComponent, "56430c14-cb12-4320-80d3-2bef4f86a041")
 #if !defined(IMPLEMENT_MANAGER)

@@ -17,7 +17,7 @@
 #define POSTPROCJS_H
 #include "BaseObjectJS.h"
 
-class PostProcJS : public BaseObject<PostProcJS> {
+class PostProcJS : public BaseObject {
 public:
     static constexpr uint32_t ID = 20;
     static void Init(napi_env env, napi_value exports);

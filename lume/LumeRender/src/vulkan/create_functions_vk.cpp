@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -405,7 +405,7 @@ void CreateFunctionsVk::DestroyDebugCallback(VkInstance instance, VkDebugReportC
 }
 
 VkDebugUtilsMessengerEXT CreateFunctionsVk::CreateDebugMessenger(
-    VkInstance instance, PFN_vkDebugUtilsMessengerCallbackEXT callbackFunction)
+    VkInstance instance, PFN_vkDebugUtilsMessengerCallbackEXT callbackFunction, RenderContext* renderContext)
 {
     VkDebugUtilsMessengerEXT debugMessenger { VK_NULL_HANDLE };
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
@@ -425,7 +425,7 @@ VkDebugUtilsMessengerEXT CreateFunctionsVk::CreateDebugMessenger(
         VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT, // messageType
         callbackFunction,                                    // pfnUserCallback
-        nullptr                                              // pUserData
+        renderContext,                                       // pUserData
     };
     VALIDATE_VK_RESULT(vkCreateDebugUtilsMessengerEXT(instance, // instance
         &messengerCreateInfo,                                   // pCreateInfo

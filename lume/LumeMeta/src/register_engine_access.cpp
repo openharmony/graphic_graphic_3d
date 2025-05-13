@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include <core/property/scoped_handle.h>
 #include <core/property_tools/core_metadata.inl>
 
@@ -60,6 +59,7 @@ using SingleAndArrayTypes = TypeList<
     >;
 using VectorTypes = TypeList<
     BASE_NS::vector<float>,
+    BASE_NS::vector<BASE_NS::string>,
     BASE_NS::vector<BASE_NS::Math::Mat4X4>,
     BASE_NS::vector<CORE_NS::EntityReference>
     >;

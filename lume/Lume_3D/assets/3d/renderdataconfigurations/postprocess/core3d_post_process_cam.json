@@ -2,7 +2,7 @@
     "version": 1.0,
     "name": "CORE3D_POST_PROCESS_CAM",
     "postProcessConfiguration": {
-        "enableFlags": "bloom | vignette | color_fringe | tonemap",
+        "enableFlags": "bloom | tonemap",
         "bloomConfiguration": {
             "bloomType": "normal",
             "bloomQualityType": "normal",

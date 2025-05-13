@@ -16,12 +16,12 @@
 
 #include "render/shaders/common/render_post_process_layout_common.h"
 
-layout(set = 1, binding = 0) uniform texture2D uTex;
+layout(set = 0, binding = 0) uniform texture2D uTex;
 #if (FXAA_LUMA_GREEN == 0)
-layout(set = 1, binding = 1) uniform texture2D uTexAlpha;
-layout(set = 1, binding = 2) uniform sampler uSampler;
+layout(set = 0, binding = 1) uniform texture2D uTexAlpha;
+layout(set = 0, binding = 2) uniform sampler uSampler;
 #else
-layout(set = 1, binding = 1) uniform sampler uSampler;
+layout(set = 0, binding = 1) uniform sampler uSampler;
 #endif
 
 // in / out

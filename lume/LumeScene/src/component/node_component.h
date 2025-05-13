@@ -16,7 +16,7 @@
 #ifndef SCENE_SRC_COMPONENT_NODE_COMPONENT_H
 #define SCENE_SRC_COMPONENT_NODE_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 
 #include <meta/ext/object.h>
 
@@ -30,7 +30,7 @@ public:
 
 META_REGISTER_CLASS(NodeComponent, "0a222395-21cc-4518-a1ca-0cdca384ba9e", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class NodeComponent : public META_NS::IntroduceInterfaces<ComponentFwd, IInternalNode> {
+class NodeComponent : public META_NS::IntroduceInterfaces<Component, IInternalNode> {
     META_OBJECT(NodeComponent, ClassId::NodeComponent, IntroduceInterfaces)
 
 public:

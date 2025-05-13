@@ -17,7 +17,7 @@
 
 #include <base/util/uid_util.h>
 
-#include "meta/base/interface_utils.h"
+#include <meta/base/interface_utils.h>
 
 META_BEGIN_NAMESPACE()
 

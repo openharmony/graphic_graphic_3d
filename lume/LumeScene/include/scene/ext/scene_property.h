@@ -27,26 +27,23 @@ template<typename Type, bool IsDynamic>
 META_NS::Internal::MetadataCtor* CreateScenePropertyCtor()
 {
     return [](const BASE_NS::shared_ptr<META_NS::IOwner>& owner, const META_NS::StaticMetadata& d) {
-        auto engOwner = interface_cast<IEnginePropertyInit>(owner);
-        if (!engOwner) {
-            CORE_ASSERT("Invalid use of scene property without IEnginePropertyInit");
-            return META_NS::SharedPtrIInterface {};
-        }
-        if (auto prop = META_NS::CreatePropertyImpl<Type>(
-                d.name, d.runtimeValue, META_NS::ObjectFlagBitsValue(META_NS::ObjectFlagBits::NATIVE))) {
-            const char* component = static_cast<const char*>(d.data);
-            if constexpr (IsDynamic) {
-                if (engOwner->InitDynamicProperty(prop, component)) {
-                    return interface_pointer_cast<CORE_NS::IInterface>(prop);
-                }
-            } else {
-                if (engOwner->AttachEngineProperty(prop, component)) {
-                    return interface_pointer_cast<CORE_NS::IInterface>(prop);
+        auto prop = META_NS::CreatePropertyImpl<Type>(d.name, d.runtimeValue,
+            META_NS::ObjectFlagBitsValue(META_NS::ObjectFlagBits::SERIALIZE | META_NS::ObjectFlagBits::NATIVE));
+        if (prop) {
+            if (auto engOwner = interface_cast<IEnginePropertyInit>(owner)) {
+                const char* component = static_cast<const char*>(d.data);
+                if constexpr (IsDynamic) {
+                    if (!engOwner->InitDynamicProperty(prop, component)) {
+                        CORE_LOG_E("Failed to attach to engine property %s [%s]", d.name, component);
+                    }
+                } else {
+                    if (!engOwner->AttachEngineProperty(prop, component)) {
+                        CORE_LOG_E("Failed to attach to engine property %s [%s]", d.name, component);
+                    }
                 }
             }
-            CORE_LOG_E("Failed to attach to engine property %s [%s]", d.name, component);
         }
-        return META_NS::SharedPtrIInterface {};
+        return interface_pointer_cast<CORE_NS::IInterface>(prop);
     };
 }
 
@@ -54,7 +51,7 @@ META_NS::Internal::MetadataCtor* CreateScenePropertyCtor()
 #define SCENE_IMPL_PROPERTY_DATA(intf, type, name, ppath, dynamic)                                                \
     { META_NS::MetadataType::PROPERTY, intf::INTERFACE_INFO, #name,                                               \
         SCENE_NS::CreateScenePropertyCtor<type, dynamic>(), [] { return META_NS::ConstructAnyHelper<type>({}); }, \
-        ppath },
+        ppath, META_NS::GetPropertySMDFlags(&intf::Property##name, 0) },
 
 #define SCENE_STATIC_PROPERTY_DATA(intf, type, name, ppath) SCENE_IMPL_PROPERTY_DATA(intf, type, name, ppath, false)
 #define SCENE_STATIC_DYNINIT_PROPERTY_DATA(intf, type, name, ppath) \
@@ -62,10 +59,11 @@ META_NS::Internal::MetadataCtor* CreateScenePropertyCtor()
 //---
 
 //--- ARRAY PROPERTY DATA
-#define SCENE_IMPL_ARRAY_PROPERTY_DATA(intf, type, name, ppath, dynamic) \
-    { META_NS::MetadataType::PROPERTY, intf::INTERFACE_INFO, #name,      \
-        SCENE_NS::CreateScenePropertyCtor<type[], dynamic>(),            \
-        [] { return META_NS::IAny::Ptr(META_NS::ConstructArrayAnyHelper<type>({})); }, ppath },
+#define SCENE_IMPL_ARRAY_PROPERTY_DATA(intf, type, name, ppath, dynamic)                      \
+    { META_NS::MetadataType::PROPERTY, intf::INTERFACE_INFO, #name,                           \
+        SCENE_NS::CreateScenePropertyCtor<type[], dynamic>(),                                 \
+        [] { return META_NS::IAny::Ptr(META_NS::ConstructArrayAnyHelper<type>({})); }, ppath, \
+        META_NS::GetPropertySMDFlags(&intf::Property##name, 0) },
 
 #define SCENE_STATIC_ARRAY_PROPERTY_DATA(intf, type, name, ppath) \
     SCENE_IMPL_ARRAY_PROPERTY_DATA(intf, type, name, ppath, false)

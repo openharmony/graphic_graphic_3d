@@ -21,10 +21,11 @@
 
 #include <meta/interface/intf_event.h>
 #include <meta/interface/resource/intf_dynamic_resource.h>
-#include "core/camera.h"
-#include "core/intf_internal_raycast.h"
-#include "entity_converting_value.h"
-#include "postprocess/postprocess.h"
+
+#include "../core/camera.h"
+#include "../core/intf_internal_raycast.h"
+#include "../entity_converting_value.h"
+#include "../postprocess/postprocess.h"
 
 META_TYPE(CORE3D_NS::CameraComponent::TargetUsage)
 
@@ -53,14 +54,14 @@ bool CameraComponent::Build(const META_NS::IMetadata::Ptr& d)
 bool CameraComponent::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
     if (p->GetName() == "PostProcess") {
-        auto ep = object_->CreateEngineProperty(path).GetResult();
+        auto ep = object_->CreateProperty(path).GetResult();
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
                i->PushValue(META_NS::IValue::Ptr(
                    new InterfacePtrEntityValue<IPostProcess>(ep, { object_->GetScene(), ClassId::PostProcess })));
     }
     if (p->GetName() == "ColorTargetCustomization") {
-        auto ep = object_->CreateEngineProperty(path).GetResult();
+        auto ep = object_->CreateProperty(path).GetResult();
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i && i->PushValue(META_NS::IValue::Ptr(new ConvertingArrayValue<FormatConverter>(ep)));
     }
@@ -74,9 +75,9 @@ Future<bool> CameraComponent::SetActive(bool active)
 {
     auto flags = SceneFlags()->GetValue();
     if (active) {
-        flags |= static_cast<uint32_t>(CameraSceneFlag::ACTIVE_RENDER_BIT);
+        flags |= uint32_t(CameraSceneFlag::ACTIVE_RENDER_BIT);
     } else {
-        flags &= ~static_cast<uint32_t>(CameraSceneFlag::ACTIVE_RENDER_BIT | CameraSceneFlag::MAIN_CAMERA_BIT);
+        flags &= ~uint32_t(CameraSceneFlag::ACTIVE_RENDER_BIT | CameraSceneFlag::MAIN_CAMERA_BIT);
     }
     SceneFlags()->SetValue(flags);
     return SyncProperty(object_->GetScene(), SceneFlags());
@@ -101,16 +102,48 @@ Future<bool> CameraComponent::SetRenderTarget(const IRenderTarget::Ptr& target)
 }
 bool CameraComponent::IsActive() const
 {
-    return SceneFlags()->GetValue() & static_cast<uint32_t>(CameraSceneFlag::ACTIVE_RENDER_BIT);
+    return uint32_t(SceneFlags()->GetValue()) & uint32_t(CameraSceneFlag::ACTIVE_RENDER_BIT);
 }
 void CameraComponent::NotifyRenderTargetChanged()
 {
     if (renderTarget_ && IsActive()) {
         auto scene = object_->GetScene();
         if (auto dr = interface_pointer_cast<META_NS::IDynamicResource>(renderTarget_)) {
+            // anyone listening?
             if (dr->EventOnResourceChanged(META_NS::MetadataQuery::EXISTING)) {
-                scene->AddTask(
-                    [dr] { META_NS::Invoke<META_NS::IOnChanged>(dr->OnResourceChanged()); }, scene->GetAppTaskQueue());
+                scene->AddTask([dr] { META_NS::Invoke<META_NS::IOnChanged>(dr->OnResourceChanged()); },
+                    scene->GetContext()->GetApplicationQueue());
+            }
+        }
+    }
+}
+
+bool CameraComponent::Attaching(const IAttach::Ptr& target, const IObject::Ptr& dataContext)
+{
+    if (target) {
+        META_NS::IContainer::FindOptions options;
+        options.behavior = META_NS::TraversalType::NO_HIERARCHY;
+        options.uids = { IInputReceiver::UID };
+        options.strict = false;
+        inputReceivers_.SetTarget(target->GetAttachmentContainer(), options);
+    }
+    return true;
+}
+
+bool CameraComponent::Detaching(const IAttach::Ptr& target)
+{
+    inputReceivers_.Reset();
+    return true;
+}
+
+void CameraComponent::SendInputEvent(PointerEvent& event)
+{
+    if (inputReceivers_.HasTarget() && !event.handled) {
+        for (auto&& receiver : inputReceivers_.FindAll()) {
+            receiver->OnInput(event);
+            if (event.handled) {
+                // Stop iteration if event.handled = true
+                return;
             }
         }
     }
@@ -153,4 +186,5 @@ Future<BASE_NS::Math::Vec3> CameraComponent::WorldPositionToScreen(const BASE_NS
         return result;
     });
 }
+
 SCENE_END_NAMESPACE()

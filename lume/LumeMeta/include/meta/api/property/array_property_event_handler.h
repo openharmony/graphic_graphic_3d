@@ -23,6 +23,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Helper to have events with array property element changes
 template<typename ValueType>
 class ArrayPropertyChangedEventHandler {
 public:

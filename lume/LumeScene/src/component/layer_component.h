@@ -16,7 +16,7 @@
 #ifndef SCENE_SRC_COMPONENT_LAYER_COMPONENT_H
 #define SCENE_SRC_COMPONENT_LAYER_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 #include <scene/interface/intf_layer.h>
 
 #include <meta/ext/object.h>
@@ -25,7 +25,7 @@ SCENE_BEGIN_NAMESPACE()
 
 META_REGISTER_CLASS(LayerComponent, "87a0e450-94d8-4bd2-bc33-c37d8772d819", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class LayerComponent : public META_NS::IntroduceInterfaces<ComponentFwd, ILayer> {
+class LayerComponent : public META_NS::IntroduceInterfaces<Component, ILayer> {
     META_OBJECT(LayerComponent, ClassId::LayerComponent, IntroduceInterfaces)
 
 public:

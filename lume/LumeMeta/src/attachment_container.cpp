@@ -17,7 +17,7 @@
 #include <meta/api/make_callback.h>
 #include <meta/api/util.h>
 
-META_BEGIN_NAMESPACE()
+META_BEGIN_INTERNAL_NAMESPACE()
 
 AttachmentContainer::AttachmentContainer()
 {
@@ -131,9 +131,7 @@ bool AttachmentContainer::Attach(
             return true;
         }
         if (auto i = interface_pointer_cast<IAttachable>(attachment)) {
-            // If no data context given, use this as the data context
-            const auto context = dataContext ? dataContext : interface_pointer_cast<IObject>(owner);
-            if (i->Attaching(owner, context)) {
+            if (i->Attaching(owner, dataContext)) {
                 result = Super::Insert(pos, attachment);
                 if (!result) {
                     i->Detaching(owner);
@@ -204,4 +202,4 @@ bool AttachmentContainer::AlreadyAttached(const IObject::Ptr& object)
     return false;
 }
 
-META_END_NAMESPACE()
+META_END_INTERNAL_NAMESPACE()

@@ -72,6 +72,11 @@ public:
      * @brief returns the property if it is a proxy
      */
     virtual IProperty::ConstPtr GetProxyProperty(BASE_NS::string_view) const = 0;
+    /**
+     * @brief Default value binds object's property to another object's source property instead to target's property
+     * with same name. If property does not exists yet default value binding is created when property is requested and
+     * if source property exists in target object
+     */
     virtual void AddInternalProxy(BASE_NS::string_view proxyPropertyName, BASE_NS::string_view sourcePropertyName) = 0;
 };
 

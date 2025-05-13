@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #ifndef API_RENDER_NODECONTEXT_IRENDER_POST_PROCESS_H
 #define API_RENDER_NODECONTEXT_IRENDER_POST_PROCESS_H
 
+#include <base/containers/array_view.h>
 #include <base/util/uid.h>
 #include <core/plugin/intf_interface.h>
 #include <core/property/intf_property_handle.h>
@@ -29,6 +30,8 @@ class IRenderCommandList;
 /** @ingroup group_render_IRenderPostProcess */
 /**
  * Provides interface to access post process properties.
+ * Not thread-safe generally.
+ * The data is fetched in rendering front-end, and the property data set is not dynamic.
  */
 class IRenderPostProcess : public CORE_NS::IInterface {
 public:
@@ -48,6 +51,17 @@ public:
      * @return UID of the render post process node.
      */
     virtual BASE_NS::Uid GetRenderPostProcessNodeUid() = 0;
+
+    /** Set the full property data set. (Faster update without properties)
+     * This will overwrite all the properties.
+     * If the data size does not match the data should not be updated.
+     */
+    virtual void SetData(BASE_NS::array_view<const uint8_t> data) = 0;
+
+    /** Get the full property data set. (Faster data setup e.g. during the rendering)
+     * @return Array view to full property data.
+     */
+    virtual BASE_NS::array_view<const uint8_t> GetData() const = 0;
 
 protected:
     IRenderPostProcess() = default;

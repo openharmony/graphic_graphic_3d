@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SCENE_EXT_ECS_CONTEXT_H
-#define SCENE_EXT_ECS_CONTEXT_H
+#ifndef SCENE_EXT_IECS_CONTEXT_H
+#define SCENE_EXT_IECS_CONTEXT_H
 
 #include <scene/base/namespace.h>
 #include <scene/ext/intf_ecs_object.h>
@@ -44,7 +44,8 @@ public:
     virtual IEcsObject::Ptr GetEcsObject(CORE_NS::Entity) = 0;
     virtual void RemoveEcsObject(const IEcsObject::ConstPtr&) = 0;
     virtual CORE_NS::Entity GetRootEntity() const = 0;
-    virtual CORE_NS::EntityReference GetEntityReference(CORE_NS::Entity) = 0;
+    virtual CORE_NS::Entity GetParent(CORE_NS::Entity ent) const = 0;
+    virtual CORE_NS::EntityReference GetRenderHandleEntity(const RENDER_NS::RenderHandleReference& handle) = 0;
 };
 
 SCENE_END_NAMESPACE()

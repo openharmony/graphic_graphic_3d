@@ -37,8 +37,8 @@
 
 META_BEGIN_NAMESPACE()
 /**
- * @brief A helper class for implementing a class which implements a basic set of object interfaces.
- * @note Usually when inheriting from this template directly SuperClassInfo should be META_NS::ClassId::BaseObject.
+ * @brief A helper class for implementing a class using "aggregate inheritance" which implements a basic set of object
+ * interfaces.
  */
 class BaseObjectFwd : public IntroduceInterfaces<IObjectInstance, IObjectFlags, IDerived, ILifecycle, IStaticMetadata> {
     using Super = IntroduceInterfaces<IObjectInstance, IObjectFlags, IDerived, ILifecycle, IStaticMetadata>;

@@ -41,6 +41,7 @@ void SubMeshJS::DisposeNative(void* scn)
     if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
         sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
+
     aabbMin_.reset();
     aabbMax_.reset();
     parentMesh_.Reset();
@@ -49,14 +50,14 @@ void SubMeshJS::DisposeNative(void* scn)
 
 void SubMeshJS::Finalize(napi_env env)
 {
-    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }
 
 napi_value SubMeshJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
     // Dispose of the native object. (makes the js object invalid)
-    if (TrueRootObject* instance = GetThisRootObject(ctx)) {
+    if (TrueRootObject* instance = ctx.This().GetRoot()) {
         // see if we have "scenejs" as ext (prefer one given as argument)
         napi_status stat;
         SceneJS* ptr { nullptr };
@@ -69,9 +70,9 @@ napi_value SubMeshJS::Dispose(NapiApi::FunctionContext<>& ctx)
             }
         }
         if (!ptr) {
-            ptr = GetJsWrapper<SceneJS>(scene_.GetObject());
+            ptr = scene_.GetObject().GetJsWrapper<SceneJS>();
         }
-        SetNativeObject(nullptr, true);
+        UnsetNativeObject();
         instance->DisposeNative(ptr);
     }
     return ctx.GetUndefined();
@@ -93,11 +94,11 @@ void SubMeshJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("SubMesh", func);
 }
 
-SubMeshJS::SubMeshJS(napi_env e, napi_callback_info i) : BaseObject<SubMeshJS>(e, i)
+SubMeshJS::SubMeshJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 {
     LOG_V("SubMeshJS ++ ");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object, uint32_t> fromJs(e, i);
@@ -107,15 +108,15 @@ SubMeshJS::SubMeshJS(napi_env e, napi_callback_info i) : BaseObject<SubMeshJS>(e
     }
     scene_ = fromJs.Arg<0>().valueOrDefault();
     parentMesh_ = fromJs.Arg<1>().valueOrDefault();
-    indexInParent_ = fromJs.Arg<2>().valueOrDefault(); // 2: idx
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+    indexInParent_ = fromJs.Arg<2>().valueOrDefault();
+    if (!scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
     {
         // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
         NapiApi::Object meJs(fromJs.This());
         NapiApi::Object scene = fromJs.Arg<0>();
-        if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+        if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
             sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
         }
     }
@@ -127,7 +128,7 @@ SubMeshJS::~SubMeshJS()
 
 napi_value SubMeshJS::GetAABB(NapiApi::FunctionContext<>& ctx)
 {
-    auto node = interface_pointer_cast<SCENE_NS::ISubMesh>(GetThisNativeObject(ctx));
+    auto node = ctx.This().GetNative<SCENE_NS::ISubMesh>();
     if (!node) {
         // return undefined.. as no actual node.
         return ctx.GetUndefined();
@@ -156,14 +157,14 @@ napi_value SubMeshJS::GetAABB(NapiApi::FunctionContext<>& ctx)
 napi_value SubMeshJS::GetName(NapiApi::FunctionContext<>& ctx)
 {
     BASE_NS::string name;
-    if (auto node = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
+    if (auto node = ctx.This().GetNative<META_NS::INamed>()) {
         name = node->Name()->GetValue();
     }
     return ctx.GetString(name);
 }
 void SubMeshJS::SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx)
 {
-    if (auto node = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
+    if (auto node = ctx.This().GetNative<META_NS::INamed>()) {
         BASE_NS::string name = ctx.Arg<0>();
         node->Name()->SetValue(name);
     }
@@ -171,57 +172,34 @@ void SubMeshJS::SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx)
 
 napi_value SubMeshJS::GetMaterial(NapiApi::FunctionContext<>& ctx)
 {
-    auto sm = interface_pointer_cast<SCENE_NS::ISubMesh>(GetThisNativeObject(ctx));
+    auto sm = ctx.This().GetNative<SCENE_NS::ISubMesh>();
     if (!sm) {
-        // return undefined..
         return ctx.GetUndefined();
     }
     META_NS::IObject::Ptr obj;
     auto material = sm->Material()->GetValue();
-    obj = interface_pointer_cast<META_NS::IObject>(material);
-    if (auto cached = FetchJsObj(obj)) {
-        // always return the same js object.
-        return cached.ToNapiValue();
-    }
 
-    // No jswrapper for this material , so create it.
     NapiApi::Env env(ctx.Env());
     NapiApi::Object argJS(env);
     napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+    if (!scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
-    auto argc = BASE_NS::countof(args);
-    auto argv = args;
-    return CreateFromNativeInstance(env, obj, true, argc, argv).ToNapiValue();
+    return CreateFromNativeInstance(env, material, PtrType::STRONG, args).ToNapiValue();
 }
 
 void SubMeshJS::SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    auto sm = interface_pointer_cast<SCENE_NS::ISubMesh>(GetThisNativeObject(ctx));
+    auto sm = ctx.This().GetNative<SCENE_NS::ISubMesh>();
     if (!sm) {
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
-    auto new_material = GetNativeMeta<SCENE_NS::IMaterial>(obj);
+    auto new_material = obj.GetNative<SCENE_NS::IMaterial>();
     if (new_material) {
         auto cur = sm->Material()->GetValue();
         if (cur != new_material) {
             sm->Material()->SetValue(new_material);
         }
-    }
-    UpdateParentMesh();
-}
-
-void SubMeshJS::UpdateParentMesh()
-{
-    auto success = false;
-    if (auto self = interface_pointer_cast<SCENE_NS::ISubMesh>(GetNativeObject())) {
-        if (auto mesh = GetJsWrapper<MeshJS>(parentMesh_.GetObject())) {
-            success = mesh->UpdateSubmesh(indexInParent_, self);
-        }
-    }
-    if (!success) {
-        LOG_E("Unable to update submesh change to scene");
     }
 }

@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include "instantiating_object_provider.h"
 
 META_BEGIN_NAMESPACE()

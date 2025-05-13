@@ -279,7 +279,7 @@ vec4 pbrBasic()
 
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) ==
         CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) {
-        const CORE_RELAXEDP float ao = clamp(GetAOSample(inUv, instanceIdx) * GetUnpackAO(instanceIdx), 0.0, 1.0);
+		const CORE_RELAXEDP float ao = clamp(1.0 + GetUnpackAO(instanceIdx) * (GetAOSample(inUv, instanceIdx) - 1.0), 0.0, 1.0);
         // lambert baked into irradianceSample (SH)
         CORE_RELAXEDP vec3 irradiance = GetIrradianceSample(shadingData.N) * shadingData.diffuseColor * ao;
 

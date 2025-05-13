@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -80,9 +80,16 @@ value_t<T> parse(const char* data);
 template<typename T = readonly_tag>
 BASE_NS::string to_string(const value_t<T>& value);
 
+template<typename T = readonly_tag>
+void to_string(BASE_NS::string& out, const value_t<T>& value);
+
 BASE_NS::string unescape(BASE_NS::string_view str);
 
+void unescape(BASE_NS::string& out, BASE_NS::string_view str);
+
 BASE_NS::string escape(BASE_NS::string_view str);
+
+void escape(BASE_NS::string& out, BASE_NS::string_view str);
 
 /** JSON value. */
 template<typename Tag>
@@ -549,6 +556,12 @@ CORE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 namespace json {
+namespace {
+constexpr auto TRUE_STR = BASE_NS::string_view("true");
+constexpr auto FALSE_STR = BASE_NS::string_view("false");
+constexpr auto NULL_STR = BASE_NS::string_view("null");
+constexpr auto UNISTART_STR = BASE_NS::string_view("\\u");
+
 inline bool isWhite(char data)
 {
     return ((data == ' ') || (data == '\n') || (data == '\r') || (data == '\t'));
@@ -776,6 +789,7 @@ void add(value_t<T>& v, value_t<T>&& value)
             break;
     }
 }
+} // namespace
 
 template<typename T>
 value_t<T> parse(const char* data)
@@ -962,11 +976,12 @@ value_t<T> parse(const char* data)
 template value parse(const char*);
 template standalone_value parse(const char*);
 // end of parser
+namespace {
 template<typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::string& string)
 {
     out += '"';
-    out.append(escape(string));
+    escape(out, string);
     out += '"';
 }
 
@@ -981,7 +996,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::object& object)
         }
         append<T>(out, v.key);
         out += ':';
-        out += to_string(v.value);
+        to_string(out, v.value);
     }
     out += '}';
 }
@@ -995,7 +1010,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::array& array)
         if (count++) {
             out += ',';
         }
-        out += to_string(v);
+        to_string(out, v);
     }
     out += ']';
 }
@@ -1015,11 +1030,19 @@ void append(BASE_NS::string& out, const double floatingPoint)
             out.data() + oldSize, newSize + 1 - oldSize, static_cast<size_t>(size), FLOATING_FORMAT_STR, floatingPoint);
     }
 }
+} // namespace
 
 template<typename T>
 BASE_NS::string to_string(const value_t<T>& value)
 {
     BASE_NS::string out;
+    to_string(out, value);
+    return out;
+}
+
+template<typename T>
+void to_string(BASE_NS::string& out, const value_t<T>& value)
+{
     switch (value.type) {
         case type::uninitialized:
             break;
@@ -1050,64 +1073,73 @@ BASE_NS::string to_string(const value_t<T>& value)
 
         case type::boolean:
             if (value.boolean_) {
-                out += "true";
+                out += TRUE_STR;
             } else {
-                out += "false";
+                out += FALSE_STR;
             }
             break;
 
         case type::null:
-            out += "null";
+            out += NULL_STR;
             break;
 
         default:
             break;
     }
-    return out;
 }
 
 template BASE_NS::string to_string(const value& value);
+template void to_string(BASE_NS::string& out, const value& value);
 template BASE_NS::string to_string(const standalone_value& value);
+template void to_string(BASE_NS::string& out, const standalone_value& value);
 
+namespace {
 int codepoint(BASE_NS::string_view str)
 {
     int code = 0;
     for (size_t u = 0U; u < 4U; ++u) {
         const char chr = str[u];
-        code <<= 4U;
+        code <<= 4; // Shift by the size of a single hex character
         code += BASE_NS::HexToDec(chr);
     }
     return code;
 }
+} // namespace
 
 BASE_NS::string unescape(BASE_NS::string_view str)
 {
     BASE_NS::string unescaped;
-    unescaped.reserve(str.size());
+    unescape(unescaped, str);
+    return unescaped;
+}
+
+void unescape(BASE_NS::string& out, BASE_NS::string_view str)
+{
+    out.reserve(out.size() + str.size());
     for (size_t i = 0, end = str.size(); i < end;) {
         auto chr = str[i];
         ++i;
         if (chr != '\\') {
-            unescaped += chr;
+            out += chr;
         } else {
             chr = str[i];
             ++i;
             if (chr == '"') {
-                unescaped += '"'; // Quotation mark
+                out += '"'; // Quotation mark
             } else if (chr == '\\') {
-                unescaped += '\\'; // Reverse solidus
+                out += '\\'; // Reverse solidus
             } else if (chr == '/') {
-                unescaped += '/'; // Solidus.. we do unescape this..
+                out += '/'; // Solidus.. we do unescape this..
             } else if (chr == 'b') {
-                unescaped += '\b'; // Backspace
+                out += '\b'; // Backspace
             } else if (chr == 'f') {
-                unescaped += '\f'; // Formfeed
+                out += '\f'; // Formfeed
             } else if (chr == 'n') {
-                unescaped += '\n'; // Linefeed
+                out += '\n'; // Linefeed
             } else if (chr == 'r') {
-                unescaped += '\r'; // Carriage return
+                out += '\r'; // Carriage return
             } else if (chr == 't') {
-                unescaped += '\t';     // Horizontal tab
+                out += '\t';           // Horizontal tab
             } else if (chr == 'u') {   // Unicode character
                 if ((i + 4U) <= end) { // Expecting 4 hexadecimal values
                     // Read the Unicode code point.
@@ -1134,53 +1166,58 @@ BASE_NS::string unescape(BASE_NS::string_view str)
                     // Convert code point to UTF-8.
                     if (code < 0x80) {
                         // 1-byte characters: 0xxxxxxx (ASCII)
-                        unescaped += static_cast<char>(code);
+                        out += static_cast<char>(code);
                     } else if (code < 0x7ff) {
                         // 2-byte characters: 110xxxxx 10xxxxxx
-                        unescaped += static_cast<char>(0xc0U | (static_cast<unsigned int>(code) >> 6U));
-                        unescaped += static_cast<char>(0x80U | (static_cast<unsigned int>(code) & 0x3fU));
+                        out += static_cast<char>(0xc0U | (static_cast<unsigned int>(code) >> 6U));
+                        out += static_cast<char>(0x80U | (static_cast<unsigned int>(code) & 0x3fU));
                     } else if (code <= 0xffff) {
                         // 3-byte characters: 1110xxxx 10xxxxxx 10xxxxxx
-                        unescaped += static_cast<char>(0xe0U | (static_cast<unsigned int>(code) >> 12u));
-                        unescaped += static_cast<char>(0x80U | ((static_cast<unsigned int>(code) >> 6U) & 0x3FU));
-                        unescaped += static_cast<char>(0x80U | (static_cast<unsigned int>(code) & 0x3Fu));
+                        out += static_cast<char>(0xe0U | (static_cast<unsigned int>(code) >> 12u));
+                        out += static_cast<char>(0x80U | ((static_cast<unsigned int>(code) >> 6U) & 0x3FU));
+                        out += static_cast<char>(0x80U | (static_cast<unsigned int>(code) & 0x3Fu));
                     } else {
                         // 4-byte characters: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-                        unescaped += (static_cast<char>(0xf0U | (static_cast<unsigned int>(code) >> 18U)));
-                        unescaped += (static_cast<char>(0x80U | ((static_cast<unsigned int>(code) >> 12U) & 0x3fU)));
-                        unescaped += (static_cast<char>(0x80U | ((static_cast<unsigned int>(code) >> 6U) & 0x3fU)));
-                        unescaped += (static_cast<char>(0x80U | (static_cast<unsigned int>(code) & 0x3fU)));
+                        out += (static_cast<char>(0xf0U | (static_cast<unsigned int>(code) >> 18U)));
+                        out += (static_cast<char>(0x80U | ((static_cast<unsigned int>(code) >> 12U) & 0x3fU)));
+                        out += (static_cast<char>(0x80U | ((static_cast<unsigned int>(code) >> 6U) & 0x3fU)));
+                        out += (static_cast<char>(0x80U | (static_cast<unsigned int>(code) & 0x3fU)));
                     }
                 }
             }
         }
     }
-    return unescaped;
 }
 
 BASE_NS::string escape(BASE_NS::string_view str)
 {
     BASE_NS::string escaped;
-    escaped.reserve(str.size());
+    escape(escaped, str);
+    return escaped;
+}
+
+void escape(BASE_NS::string& out, BASE_NS::string_view str)
+{
+    out.reserve(out.size() + str.size());
     for (size_t i = 0, end = str.size(); i < end;) {
         auto chr = static_cast<uint8_t>(str[i]);
         ++i;
         if (chr == '"') {
-            escaped += "\\\""; // Quotation mark
+            out += "\\\""; // Quotation mark
         } else if (chr == '\\') {
-            escaped += "\\\\"; // Reverse solidus
+            out += "\\\\"; // Reverse solidus
         } else if (chr == '\b') {
-            escaped += "\\b"; // Backspace
+            out += "\\b"; // Backspace
         } else if (chr == '\f') {
-            escaped += "\\f"; // Formfeed
+            out += "\\f"; // Formfeed
         } else if (chr == '\n') {
-            escaped += "\\n"; // Linefeed
+            out += "\\n"; // Linefeed
         } else if (chr == '\r') {
-            escaped += "\\r"; // Carriage return
+            out += "\\r"; // Carriage return
         } else if (chr == '\t') {
-            escaped += "\\t"; // Horizontal tab
+            out += "\\t"; // Horizontal tab
         } else if (chr < 0x80) {
-            escaped += static_cast<BASE_NS::string::value_type>(chr); // 1-byte characters: 0xxxxxxx (ASCII)
+            out += static_cast<BASE_NS::string::value_type>(chr); // 1-byte characters: 0xxxxxxx (ASCII)
         } else {
             // Unicode
             unsigned code = 0U;
@@ -1217,25 +1254,22 @@ BASE_NS::string escape(BASE_NS::string_view str)
                 // First append the Hi value.
                 code -= 0x10000U;
                 const auto hi = (code >> 10U) + 0xD800U;
-                escaped += '\\';
-                escaped += 'u';
-                escaped += BASE_NS::to_hex(hi);
+                out += UNISTART_STR;
+                out += BASE_NS::to_hex(hi);
 
                 // Calculate the Lo value.
                 code = (code & 0x3FFU) + 0xDC00U;
             }
 
             // Append the codepoint zero padded to four hex values.
-            escaped += '\\';
-            escaped += 'u';
+            out += UNISTART_STR;
             const auto codepoint = BASE_NS::to_hex(code);
             if (codepoint.size() < 4U) {
-                escaped.append(4U - codepoint.size(), '0');
+                out.append(4U - codepoint.size(), '0');
             }
-            escaped += codepoint;
+            out += codepoint;
         }
     }
-    return escaped;
 }
 } // namespace json
 CORE_END_NAMESPACE()

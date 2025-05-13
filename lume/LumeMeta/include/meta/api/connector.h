@@ -15,6 +15,7 @@
 #ifndef META_API_CONNECTOR_H
 #define META_API_CONNECTOR_H
 
+#include <meta/interface/builtin_objects.h>
 #include <meta/interface/intf_attach.h>
 #include <meta/interface/intf_attachment.h>
 #include <meta/interface/intf_connector.h>

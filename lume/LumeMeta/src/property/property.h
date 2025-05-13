@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef META_SRC_PROPERTY_H
 #define META_SRC_PROPERTY_H
 
@@ -47,8 +46,8 @@ public:
 
     BASE_NS::string GetName() const override;
 
-    IObject::WeakPtr GetOwner() const override;
-    void SetOwner(IObject::Ptr owner) override;
+    IOwner::WeakPtr GetOwner() const override;
+    void SetOwner(IOwner::Ptr owner) override;
     void SetSelf(IProperty::Ptr self) override;
 
     AnyReturnValue SetValue(const IAny& value) override;
@@ -71,15 +70,34 @@ public:
 protected:
     virtual IAny::Ptr& GetData() const = 0;
     AnyReturnValue SetInternalValue(const IAny& value);
-    void CallOnChanged() const;
+    void CallOnChanged(bool forcePending) const;
+    void InvokeOnChanged(const BASE_NS::shared_ptr<OnChangedEvent>& onChanged, const IOwner::WeakPtr& owner) const;
+
+    bool HasPendingInvoke() const
+    {
+        return states_ & 0x01;
+    }
+    void SetPendingInvoke(bool v) const
+    {
+        states_ = (states_ & ~0x01) | uint32_t(v);
+    }
+
+    bool HasDefaultValueFlag() const
+    {
+        return states_ & 0x02;
+    }
+    void SetDefaultValueFlag(bool v)
+    {
+        states_ = (states_ & ~0x02) | (uint32_t(v) << 1);
+    }
 
 protected:
     // this has to be recursive because of the usage pattern
     mutable std::recursive_mutex mutex_;
-    mutable size_t locked_ {};
-    mutable bool pendingInvoke_ {};
+    mutable uint32_t locked_ {};
+    mutable uint32_t states_ { 0b10 };
     const BASE_NS::string name_;
-    IObject::WeakPtr owner_;
+    IOwner::WeakPtr owner_;
     IProperty::WeakPtr self_;
     // lazy event, constructed when needed
     mutable BASE_NS::shared_ptr<OnChangedEvent> onChanged_;

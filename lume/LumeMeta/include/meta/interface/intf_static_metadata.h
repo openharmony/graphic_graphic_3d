@@ -21,9 +21,11 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Interface to get registered static metadata for object type
 class IStaticMetadata : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IStaticMetadata, "de9eee18-b2cc-4060-8bd8-5fabd3457e59")
 public:
+    /// Get static metadata
     virtual const StaticObjectMetadata* GetStaticMetadata() const = 0;
 };
 

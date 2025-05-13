@@ -22,7 +22,6 @@
 #include <meta/interface/intf_lockable.h>
 #include <meta/interface/intf_object_registry.h>
 #include <meta/interface/intf_value.h>
-#include <meta/interface/property/intf_property.h>
 #include <meta/interface/property/intf_property_internal.h>
 #include <meta/interface/property/intf_property_register.h>
 #include <meta/interface/property/intf_stack_property.h>
@@ -39,7 +38,7 @@ public:
     {
         return p_->GetName();
     }
-    IObject::WeakPtr GetOwner() const
+    IOwner::WeakPtr GetOwner() const
     {
         return p_->GetOwner();
     }
@@ -324,6 +323,7 @@ class TypedPropertyLock final : public PropertyInterface<Type> {
     {
         return p && p->IsCompatible(META_NS::GetTypeId<BASE_NS::remove_const_t<Type>>());
     }
+
 public:
     TypedPropertyLock(NoCheckT, PropertyType p) : PropertyInterface<Type>(p)
     {
@@ -345,10 +345,12 @@ public:
     {
         return const_cast<TypedPropertyLock*>(this);
     }
+
     bool IsValid() const
     {
         return this->GetProperty() != nullptr;
     }
+
     explicit operator bool() const
     {
         return IsValid();
@@ -380,10 +382,12 @@ public:
     {
         return const_cast<PropertyLock*>(this);
     }
+
     bool IsValid() const
     {
         return this->GetProperty() != nullptr;
     }
+
     explicit operator bool() const
     {
         return IsValid();

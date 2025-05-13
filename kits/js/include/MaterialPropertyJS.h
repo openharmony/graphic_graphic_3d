@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,7 @@
 
 #include "BaseObjectJS.h"
 
-class MaterialPropertyJS : public BaseObject<MaterialPropertyJS> {
+class MaterialPropertyJS : public BaseObject {
 public:
     static constexpr uint32_t ID = 35;
     static void Init(napi_env env, napi_value exports);
@@ -31,9 +31,13 @@ private:
     void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
 
+    NapiApi::StrongRef sampler_;
+
     napi_value GetImage(NapiApi::FunctionContext<>& ctx);
     void SetImage(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value GetFactor(NapiApi::FunctionContext<>& ctx);
     void SetFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    napi_value GetSampler(NapiApi::FunctionContext<>& ctx);
+    void SetSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 };
 #endif

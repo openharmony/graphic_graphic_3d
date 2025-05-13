@@ -20,16 +20,13 @@
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 
-class MeshJS : public BaseObject<MeshJS>, SceneResourceImpl {
+class MeshJS : public BaseObject, SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 120;
     static void Init(napi_env env, napi_value exports);
     MeshJS(napi_env, napi_callback_info);
     ~MeshJS() override;
     virtual void* GetInstanceImpl(uint32_t) override;
-
-    // Update the cached submesh at the index and sync all submeshes to scene. Return true for success.
-    bool UpdateSubmesh(uint32_t index, SCENE_NS::ISubMesh::Ptr newSubmesh);
 
 private:
     void DisposeNative(void*) override;

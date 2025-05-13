@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,7 +29,7 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(ISkinIbmComponentManager, SkinIbmComponent)
 
-    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::Math::Mat4X4>, matrices, "Inverse Bind Matrices", 0,)
+    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::Math::Mat4X4>, matrices, "Inverse Bind Matrices", 0, )
 
 END_COMPONENT(ISkinIbmComponentManager, SkinIbmComponent, "f62fc6d6-de51-42f6-86fd-bed8ce5f3d03")
 #if !defined(IMPLEMENT_MANAGER)

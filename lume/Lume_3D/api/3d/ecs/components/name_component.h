@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,7 +28,7 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(INameComponentManager, NameComponent)
 
-    DEFINE_PROPERTY(BASE_NS::string, name, "Name", 0,)
+    DEFINE_PROPERTY(BASE_NS::string, name, "Name", 0, )
 
 END_COMPONENT(INameComponentManager, NameComponent, "6b432233-bac4-43ff-8c15-983f467052a6")
 #if !defined(IMPLEMENT_MANAGER)

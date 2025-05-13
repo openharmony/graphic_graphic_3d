@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 
 #include <mutex>
 
+#include <base/containers/flat_map.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
 #include <render/datastore/intf_render_data_store_manager.h>
@@ -64,16 +65,9 @@ public:
 private:
     IRenderContext& renderContext_;
 
-    void DeferredDestruction();
-
-    struct DeferredDataStoreDestroy {
-        uint64_t dataStoreHash { 0 };
-        IRenderDataStore* instance { nullptr };
-    };
     struct PendingRenderAccessStore {
         uint64_t hash { 0u };
         BASE_NS::refcnt_ptr<IRenderDataStore> renderDataStore { nullptr };
-        bool destroy { false };
     };
 
     mutable std::mutex mutex_;
@@ -81,11 +75,10 @@ private:
     // the following needs be locked with mutex
     BASE_NS::unordered_map<uint64_t, BASE_NS::refcnt_ptr<IRenderDataStore>> stores_;
     BASE_NS::unordered_map<IRenderDataStore*, uint64_t> pointerToStoreHash_;
-    BASE_NS::vector<DeferredDataStoreDestroy> deferredDestructionDataStores_;
     BASE_NS::vector<PendingRenderAccessStore> pendingRenderAccess_;
 
     // lock not needed for access
-    BASE_NS::unordered_map<uint64_t, BASE_NS::refcnt_ptr<IRenderDataStore>> renderAccessStores_;
+    BASE_NS::flat_map<uint64_t, BASE_NS::refcnt_ptr<IRenderDataStore>> renderAccessStores_;
     BASE_NS::unordered_map<uint64_t, RenderDataStoreTypeInfo> factories_;
 
     RenderDataStoreFlags renderDataStoreFlags_ { 0u };

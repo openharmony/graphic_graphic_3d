@@ -18,7 +18,9 @@
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_scene.h>
 
+#include "ParamParsing.h"
 #include "SceneJS.h"
+
 void NodeJS::Init(napi_env env, napi_value exports)
 {
     BASE_NS::vector<napi_property_descriptor> node_props;
@@ -29,11 +31,11 @@ void NodeJS::Init(napi_env env, napi_value exports)
         node_props.size(), node_props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("Node", func);
 }
 
-NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject<NodeJS>(e, i), NodeImpl(NodeImpl::NODE)
+NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(NodeImpl::NODE)
 {
     LOG_V("NodeJS ++");
 
@@ -48,58 +50,28 @@ NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject<NodeJS>(e, i), Nod
         // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
         NapiApi::Object meJs(fromJs.This());
         NapiApi::Object scene = fromJs.Arg<0>();
-        if (auto sceneJS = GetJsWrapper<SceneJS>(scene)) {
+        if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
             sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
         }
     }
 
     // java script call.. with arguments
     scene_ = fromJs.Arg<0>().valueOrDefault();
-    auto scn = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
+    auto scn = scene_.GetObject().GetNative<SCENE_NS::IScene>();
     if (scn == nullptr) {
         // hmm..
         LOG_F("Invalid scene for NodeJS!");
         return;
     }
-    NapiApi::Object args = fromJs.Arg<1>();
-
-    auto obj = GetNativeObjectParam<META_NS::IObject>(args);
-    if (obj) {
-        StoreJsObj(obj, fromJs.This());
+    if (!GetNativeObject()) {
+        LOG_E("Cannot finish creating a node: Native node object missing");
+        assert(false);
         return;
     }
 
-    // collect parameters
-    NapiApi::Value<BASE_NS::string> name;
-    NapiApi::Value<BASE_NS::string> path;
-    if (auto prm = args.Get("name")) {
-        name = NapiApi::Value<BASE_NS::string>(e, prm);
-    }
-    if (auto prm = args.Get("path")) {
-        path = NapiApi::Value<BASE_NS::string>(e, prm);
-    }
-
-    BASE_NS::string nodePath;
-
-    if (path.IsDefined()) {
-        // create using path
-        nodePath = path.valueOrDefault("");
-    } else if (name.IsDefined()) {
-        // use the name as path (creates under root)
-        nodePath = name.valueOrDefault("");
-    }
-
-    // Create actual node object.
-    SCENE_NS::INode::Ptr node = scn->CreateNode(nodePath).GetResult();
-
-    SetNativeObject(interface_pointer_cast<META_NS::IObject>(node), false);
-    node.reset();
-    NapiApi::Object meJs(fromJs.This());
-    StoreJsObj(GetNativeObject(), meJs);
-
-    if (name.IsDefined()) {
-        // set the name of the object. if we were given one
-        meJs.Set("name", name);
+    auto sceneNodeParameters = NapiApi::Object { fromJs.Arg<1>() };
+    if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
+        fromJs.This().Set("name", name);
     }
 }
 NodeJS::~NodeJS()
@@ -126,8 +98,7 @@ void NodeJS::DisposeNative(void* sc)
         scene_.Reset();
     }
 }
-void NodeJS::Finalize(napi_env env)
-{
-    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
+void NodeJS::Finalize(napi_env env) {
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }

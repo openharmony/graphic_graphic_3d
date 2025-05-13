@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -171,7 +171,7 @@ GlesImplementation::SurfaceInfo ExtractInfo(DeviceGLES& device, const uint64_t s
             PLUGIN_LOG_E("Surface is null");
         }
 #else
-#error Core::DeviceBackendType::OPENGL not implemented for this platform yet.
+#error RENDER_NS::DeviceBackendType::OPENGL not implemented for this platform yet.
 #endif
     }
 #endif
@@ -284,6 +284,9 @@ SwapchainGLES::SwapchainGLES(Device& device, const SwapchainCreateInfo& swapchai
     // Fetch information about the backbuffer.
     // Create pseudo handles (or actual handles, depending if direct backbuffer rendering is enabled or not)
     GlesImplementation::SurfaceInfo info = ExtractInfo(device_, plat_.surface);
+    if (!plat_.surface) {
+        valid_ = false;
+    }
     const Format colorFormat = RgbToFormat(info.red_size, info.green_size, info.blue_size, info.alpha_size, info.srgb);
     PLUGIN_LOG_I("Input surface for swapchain is [%x] %dx%d R:%d G:%d B:%d A:%d D:%d S:%d samples:%d srgb:%s",
         info.configId, info.width, info.height, info.red_size, info.green_size, info.blue_size, info.alpha_size,
@@ -365,5 +368,10 @@ uint32_t SwapchainGLES::GetNextImage() const
 uint64_t SwapchainGLES::GetSurfaceHandle() const
 {
     return (uint64_t)(plat_.surface);
+}
+
+bool SwapchainGLES::IsValid() const
+{
+    return valid_;
 }
 RENDER_END_NAMESPACE()

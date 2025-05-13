@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,9 +29,6 @@
 #include <render/nodecontext/intf_render_post_process_node.h>
 #include <render/render_data_structures.h>
 
-#include "node/render_bloom.h"
-#include "node/render_blur.h"
-#include "node/render_motion_blur.h"
 #include "nodecontext/render_node_copy_util.h"
 
 RENDER_BEGIN_NAMESPACE()
@@ -56,7 +53,6 @@ private:
     void ParseRenderNodeInputs();
     void UpdateImageData();
 
-    void UpdatePostProcessData(const PostProcessConfiguration& postProcessConfiguration);
     void ProcessPostProcessConfiguration();
     void InitCreateShaderResources();
     void InitCreateBinders();
@@ -66,12 +62,7 @@ private:
         BindableImage input;
         BindableImage output;
     };
-    void ExecuteCombine(IRenderCommandList& cmdList, const InputOutput& inOut);
-    void ExecuteFXAA(IRenderCommandList& cmdList, const InputOutput& inOut);
     void ExecuteBlit(IRenderCommandList& cmdList, const InputOutput& inOut);
-    void ExecuteTAA(IRenderCommandList& cmdList, const InputOutput& inOut);
-    void ExecuteDofBlur(IRenderCommandList& cmdList, const InputOutput& inOut);
-    void ExecuteDof(IRenderCommandList& cmdList, const InputOutput& inOut);
 
     // Json resources which might need re-fetching
     struct JsonInputs {
@@ -92,30 +83,24 @@ private:
         IShaderManager::ShaderData sd;
         RenderHandle pso;
     };
-    EffectData fxaaData_;
-    EffectData taaData_;
-    EffectData dofBlurData_;
-    EffectData dofData_;
     EffectData copyData_;
-    EffectData combineData_;
-    // additional optimized layer copy for GL(ES)
-    EffectData combineDataLayer_;
 
-    RenderBloom renderBloom_;
-    RenderBlur renderBlur_;
-    RenderMotionBlur renderMotionBlur_;
-    RenderNodeCopyUtil renderCopy_;
     // additional layer copy
     RenderNodeCopyUtil renderCopyLayer_;
-
-    RenderBlur renderNearBlur_;
-    RenderBlur renderFarBlur_;
 
     struct PostProcessInterfaces {
         IRenderPostProcess::Ptr postProcess;
         IRenderPostProcessNode::Ptr postProcessNode;
     };
     PostProcessInterfaces ppLensFlareInterface_;
+    PostProcessInterfaces ppRenderBlurInterface_;
+    PostProcessInterfaces ppRenderTaaInterface_;
+    PostProcessInterfaces ppRenderFxaaInterface_;
+    PostProcessInterfaces ppRenderDofInterface_;
+    PostProcessInterfaces ppRenderMotionBlurInterface_;
+    PostProcessInterfaces ppRenderBloomInterface_;
+    PostProcessInterfaces ppRenderUpscaleInterface_;
+    PostProcessInterfaces ppRenderCombinedInterface_;
 
     struct AdditionalImageData {
         RenderHandle black;
@@ -126,30 +111,14 @@ private:
 
     IRenderNodePostProcessUtil::PostProcessInfo postProcessInfo_;
 
-    enum POST_PROCESS_UBO_INDICES {
-        PP_TAA_IDX = 0U,
-        PP_BLOOM_IDX,
-        PP_BLUR_IDX,
-        PP_FXAA_IDX,
-        PP_COMBINED_IDX,
-        PP_DOF_IDX,
-        PP_MB_IDX,
-        PP_COUNT_IDX,
-    };
-
-    struct UboHandles {
-        // first 512 aligned is global post process
-        // after (256) we have effect local data
-        RenderHandleReference postProcess;
-    };
-    UboHandles ubos_;
-
     BASE_NS::Math::UVec2 outputSize_ { 0U, 0U };
 
     bool validInputs_ { true };
     bool validInputsForTaa_ { false };
     bool validInputsForDof_ { false };
     bool validInputsForMb_ { false };
+    bool validInputsForUpscale_ { false };
+
     BASE_NS::vector<InputOutput> framePostProcessInOut_;
 
     struct DefaultSamplers {
@@ -195,15 +164,6 @@ private:
     }
 
     struct AllBinders {
-        IDescriptorSetBinder::Ptr globalSet0[POST_PROCESS_UBO_INDICES::PP_COUNT_IDX];
-
-        IDescriptorSetBinder::Ptr combineBinder;
-        IDescriptorSetBinder::Ptr combineLayerBinder;
-        IDescriptorSetBinder::Ptr taaBinder;
-        IDescriptorSetBinder::Ptr fxaaBinder;
-        IDescriptorSetBinder::Ptr dofBlurBinder;
-        IDescriptorSetBinder::Ptr dofBinder;
-
         IDescriptorSetBinder::Ptr copyBinder;
     };
     AllBinders binders_;

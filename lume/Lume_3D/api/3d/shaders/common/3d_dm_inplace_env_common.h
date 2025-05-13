@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -81,7 +81,7 @@ void InplaceEnvironmentBlock(in uint environmentType, in uint cameraIdx, in vec2
 
     if ((environmentType == CORE_BACKGROUND_TYPE_CUBEMAP) ||
         (environmentType == CORE_BACKGROUND_TYPE_EQUIRECTANGULAR)) {
-        vec4 nearPlane = viewProjInv * vec4(uv.x, uv.y, 0.0, 1.0);
+        vec4 nearPlane = viewProjInv * vec4(uv.x, uv.y, 0.9999, 1.0);
         nearPlane.xyz = nearPlane.xyz / nearPlane.w;
 
         const vec3 worldView = mat3(envData.envRotation) * normalize(farPlane.xyz - nearPlane.xyz);

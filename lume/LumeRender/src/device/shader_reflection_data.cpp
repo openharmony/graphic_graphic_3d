@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -138,27 +138,24 @@ constexpr AdditionalDescriptorTypeFlags GetPackedDescriptorTypeFlags(
     return flags;
 }
 
-void ReadDescriptorSetsV0(
-    PipelineLayout& pipelineLayout, const uint8_t*& ptr, const uint8_t* const end, ShaderStageFlags flags)
+bool ReadDescriptorSetsV0(PipelineLayout& pipelineLayout, const uint8_t*& ptr, const uint8_t* const end,
+    const uint32_t descriptorSetCount, ShaderStageFlags flags)
 {
-    for (auto i = 0u; i < pipelineLayout.descriptorSetCount; ++i) {
+    for (auto i = 0u; i < descriptorSetCount; ++i) {
         // there must be at least 2 uint16 per each descriptor set (set and number of bindings)
         if ((end - ptr) < static_cast<ptrdiff_t>(2U * sizeof(uint16_t))) {
-            pipelineLayout.descriptorSetCount = 0U;
-            return;
+            return false;
         }
         // write to correct set location
         const auto set = static_cast<uint32_t>(Read16U(ptr));
         if (set >= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
-            pipelineLayout.descriptorSetCount = 0U;
-            return;
+            return false;
         }
         const auto bindings = static_cast<uint32_t>(Read16U(ptr));
         // each binding needs three 16 bit (binding idx, desc type, desc count).
         static constexpr auto bindingSize = (3U * sizeof(uint16_t));
         if ((end - ptr) < static_cast<ptrdiff_t>(bindings * bindingSize)) {
-            pipelineLayout.descriptorSetCount = 0U;
-            return;
+            return false;
         }
 
         auto& layout = pipelineLayout.descriptorSetLayouts[set];
@@ -176,30 +173,28 @@ void ReadDescriptorSetsV0(
             binding.shaderStageFlags = flags;
         }
     }
+    return true;
 }
 
-void ReadDescriptorSetsV1(
-    PipelineLayout& pipelineLayout, const uint8_t*& ptr, const uint8_t* const end, ShaderStageFlags flags)
+bool ReadDescriptorSetsV1(PipelineLayout& pipelineLayout, const uint8_t*& ptr, const uint8_t* const end,
+    const uint32_t descriptorSetCount, ShaderStageFlags flags)
 {
-    for (auto i = 0u; i < pipelineLayout.descriptorSetCount; ++i) {
+    for (auto i = 0u; i < descriptorSetCount; ++i) {
         // there must be at least 2 uint16 per each descriptor set (set and number of bindings)
         if ((end - ptr) < static_cast<ptrdiff_t>(2U * sizeof(uint16_t))) {
-            pipelineLayout.descriptorSetCount = 0U;
-            return;
+            return false;
         }
         // write to correct set location
         const auto set = static_cast<uint32_t>(Read16U(ptr));
         if (set >= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
-            pipelineLayout.descriptorSetCount = 0U;
-            return;
+            return false;
         }
         const auto bindings = static_cast<uint32_t>(Read16U(ptr));
         // each binding needs three 16 bit (binding idx, desc type, desc count) and two 8 bit values (image dims and
         // flags).
         static constexpr auto bindingSize = (3U * sizeof(uint16_t) + 2U * sizeof(uint8_t));
         if ((end - ptr) < static_cast<ptrdiff_t>(bindings * bindingSize)) {
-            pipelineLayout.descriptorSetCount = 0U;
-            return;
+            return false;
         }
 
         auto& layout = pipelineLayout.descriptorSetLayouts[set];
@@ -216,21 +211,21 @@ void ReadDescriptorSetsV1(
             binding.descriptorCount = static_cast<uint32_t>(Read16U(ptr));
             const auto imageDimension = Read8U(ptr);
             if (imageDimension > uint8_t(ImageDimension::DIMENSION_SUBPASS)) {
-                pipelineLayout.descriptorSetCount = 0U;
-                return;
+                return false;
             }
             const auto imageFlags = Read8U(ptr);
-            if (imageFlags >
+            constexpr auto validFlags =
                 uint8_t(ImageFlags::IMAGE_LOAD_STORE | ImageFlags::IMAGE_SAMPLED | ImageFlags::IMAGE_MULTISAMPLE |
-                        ImageFlags::IMAGE_ARRAY | ImageFlags::IMAGE_DEPTH)) {
-                pipelineLayout.descriptorSetCount = 0U;
-                return;
+                        ImageFlags::IMAGE_ARRAY | ImageFlags::IMAGE_DEPTH);
+            if (imageFlags & ~validFlags) {
+                return false;
             }
             binding.shaderStageFlags = flags;
             binding.additionalDescriptorTypeFlags =
                 GetPackedDescriptorTypeFlags(ImageFlags(imageFlags), ImageDimension(imageDimension));
         }
     }
+    return true;
 }
 } // namespace
 
@@ -257,7 +252,10 @@ bool ShaderReflectionData::IsValid() const
 
 ShaderStageFlags ShaderReflectionData::GetStageFlags() const
 {
-    ShaderStageFlags flags;
+    ShaderStageFlags flags = 0U;
+    if (reflectionData_.size() < sizeof(ReflectionHeader)) {
+        return flags;
+    }
     const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData_.data());
     flags = header.type;
     return flags;
@@ -266,6 +264,10 @@ ShaderStageFlags ShaderReflectionData::GetStageFlags() const
 PipelineLayout ShaderReflectionData::GetPipelineLayout() const
 {
     PipelineLayout pipelineLayout;
+    if (reflectionData_.size() < sizeof(ReflectionHeader)) {
+        return pipelineLayout;
+    }
+
     const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData_.data());
     if (header.offsetPushConstants && (size_[INDEX_PUSH_CONSTANTS] >= sizeof(uint8_t)) &&
         (header.offsetPushConstants + size_t(size_[INDEX_PUSH_CONSTANTS])) <= reflectionData_.size()) {
@@ -282,20 +284,23 @@ PipelineLayout ShaderReflectionData::GetPipelineLayout() const
     }
     auto ptr = reflectionData_.data() + header.offsetDescriptorSets;
     auto endSets = ptr + size_[INDEX_DESCRIPTOR_SETS];
-    pipelineLayout.descriptorSetCount = static_cast<uint32_t>(Read16U(ptr));
-    if (pipelineLayout.descriptorSetCount) {
+    const auto descriptorSetCount = static_cast<uint32_t>(Read16U(ptr));
+    if (descriptorSetCount) {
+        bool descriptorSetsOk = false;
         switch (header.tag[sizeof(REFLECTION_TAG) - 1U]) {
             case 0U:
-                ReadDescriptorSetsV0(pipelineLayout, ptr, endSets, header.type);
+                descriptorSetsOk = ReadDescriptorSetsV0(pipelineLayout, ptr, endSets, descriptorSetCount, header.type);
                 break;
 
             case 1U:
-                ReadDescriptorSetsV1(pipelineLayout, ptr, endSets, header.type);
+                descriptorSetsOk = ReadDescriptorSetsV1(pipelineLayout, ptr, endSets, descriptorSetCount, header.type);
                 break;
 
             default:
-                pipelineLayout.descriptorSetCount = 0U;
                 break;
+        }
+        if (!descriptorSetsOk) {
+            pipelineLayout = {};
         }
     }
     return pipelineLayout;
@@ -304,10 +309,13 @@ PipelineLayout ShaderReflectionData::GetPipelineLayout() const
 BASE_NS::vector<ShaderSpecialization::Constant> ShaderReflectionData::GetSpecializationConstants() const
 {
     BASE_NS::vector<ShaderSpecialization::Constant> constants;
+    if (reflectionData_.size() < sizeof(ReflectionHeader)) {
+        return constants;
+    }
     const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData_.data());
     if (!header.offsetSpecializationConstants || (size_[INDEX_SPECIALIZATION_CONSTANTS] < sizeof(uint32_t)) ||
         (header.offsetSpecializationConstants + size_t(size_[INDEX_SPECIALIZATION_CONSTANTS])) >
-        reflectionData_.size()) {
+            reflectionData_.size()) {
         return constants;
     }
     auto ptr = reflectionData_.data() + header.offsetSpecializationConstants;
@@ -332,6 +340,9 @@ BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription>
 ShaderReflectionData::GetInputDescriptions() const
 {
     BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> inputs;
+    if (reflectionData_.size() < sizeof(ReflectionHeader)) {
+        return inputs;
+    }
     const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData_.data());
     if (!header.offsetInputs || (size_[INDEX_INPUTS] < sizeof(uint16_t)) ||
         (header.offsetInputs + size_t(size_[INDEX_INPUTS])) > reflectionData_.size()) {
@@ -358,6 +369,9 @@ ShaderReflectionData::GetInputDescriptions() const
 BASE_NS::Math::UVec3 ShaderReflectionData::GetLocalSize() const
 {
     BASE_NS::Math::UVec3 sizes;
+    if (reflectionData_.size() < sizeof(ReflectionHeader)) {
+        return sizes;
+    }
     const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData_.data());
     if (header.offsetLocalSize && (size_[INDEX_LOCAL_SIZE] >= sizeof(BASE_NS::Math::UVec3)) &&
         (header.offsetLocalSize + size_t(size_[INDEX_LOCAL_SIZE])) <= reflectionData_.size()) {
@@ -372,6 +386,9 @@ BASE_NS::Math::UVec3 ShaderReflectionData::GetLocalSize() const
 const uint8_t* ShaderReflectionData::GetPushConstants() const
 {
     const uint8_t* ptr = nullptr;
+    if (reflectionData_.size() < sizeof(ReflectionHeader)) {
+        return ptr;
+    }
     const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData_.data());
     // constants on/off is uint8 and byte size of constants is uint16
     if (header.offsetPushConstants && (size_[INDEX_PUSH_CONSTANTS] >= sizeof(uint8_t) + sizeof(uint16_t)) &&

@@ -224,7 +224,6 @@ inline bool operator<(const ClassInfo& lhs, const ClassInfo& rhs) noexcept
 #define META_REGISTER_INTERFACE(...) \
     META_EXPAND(META_GET_MACRO3_IMPL(__VA_ARGS__, META_REGISTER_INTERFACE3, META_REGISTER_INTERFACE2)(__VA_ARGS__))
 
-
 META_END_NAMESPACE()
 
 #endif

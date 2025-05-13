@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+#include <mutex>
 #include <shared_mutex>
 
 #include <meta/api/event_handler.h>
@@ -28,7 +29,7 @@
 
 #include "object.h"
 
-META_BEGIN_NAMESPACE()
+META_BEGIN_INTERNAL_NAMESPACE()
 
 class ContentObject : public IntroduceInterfaces<MetaObject, IContent, IRequiredInterfaces, IIterable> {
     META_OBJECT(ContentObject, ClassId::ContentObject, IntroduceInterfaces)
@@ -36,23 +37,24 @@ public:
     META_BEGIN_STATIC_DATA()
     META_STATIC_PROPERTY_DATA(IContent, IObject::Ptr, Content)
     META_STATIC_PROPERTY_DATA(IContent, bool, ContentSearchable, true)
-    META_STATIC_PROPERTY_DATA(IContent, IContentLoader::Ptr, ContentLoader)
     META_END_STATIC_DATA()
     META_IMPLEMENT_READONLY_PROPERTY(IObject::Ptr, Content)
     META_IMPLEMENT_PROPERTY(bool, ContentSearchable)
-    META_IMPLEMENT_PROPERTY(IContentLoader::Ptr, ContentLoader)
 
     bool SetContent(const IObject::Ptr& content) override
     {
-        META_ACCESS_PROPERTY(ContentLoader)->SetValue(nullptr);
-        return SetContentInternal(content);
+        bool valid = CheckContentRequirements(content);
+        SetValue(META_ACCESS_PROPERTY(Content), valid ? content : nullptr);
+        if (!valid) {
+            CORE_LOG_W("Content does not fulfil interface requirements");
+        }
+        return valid;
     }
 
     bool Build(const IMetadata::Ptr& data) override
     {
         bool ret = Super::Build(data);
         if (ret) {
-            loaderChanged_.Subscribe(META_ACCESS_PROPERTY(ContentLoader), [this] { OnLoaderChanged(); });
             OnSerializeChanged();
         }
         return ret;
@@ -75,22 +77,6 @@ public:
         }
     }
 
-    void OnLoaderChanged()
-    {
-        contentChanged_.Unsubscribe();
-        if (auto dynamic = interface_pointer_cast<IDynamicContentLoader>(META_ACCESS_PROPERTY_VALUE(ContentLoader))) {
-            // If our loader is dynamic (i.e. the content can change), subscribe to change events
-            contentChanged_.Subscribe<IOnChanged>(dynamic->ContentChanged(), [&] { OnContentChanged(); });
-        }
-        OnContentChanged();
-    }
-
-    void OnContentChanged()
-    {
-        const auto loader = META_ACCESS_PROPERTY_VALUE(ContentLoader);
-        SetContentInternal(loader ? loader->Create({}) : nullptr);
-    }
-
     void SetObjectFlags(const ObjectFlagBitsValue& flags) override
     {
         Super::SetObjectFlags(flags);
@@ -110,13 +96,10 @@ public:
             std::unique_lock lock(mutex_);
             requiredInterfaces_ = interfaces;
         }
-        bool valid = false;
         if (const auto content = META_ACCESS_PROPERTY_VALUE(Content)) {
-            valid = CheckContentRequirements(content);
-        }
-        if (!valid) {
-            // We don't have valid content, check if we could create one with our loader
-            OnContentChanged();
+            if (!CheckContentRequirements(content)) {
+                SetContent(nullptr);
+            }
         }
         return true;
     }
@@ -124,16 +107,6 @@ public:
     {
         std::shared_lock lock(mutex_);
         return requiredInterfaces_;
-    }
-
-    bool SetContentInternal(const IObject::Ptr& content)
-    {
-        bool valid = CheckContentRequirements(content);
-        SetValue(META_ACCESS_PROPERTY(Content), valid ? content : nullptr);
-        if (!valid) {
-            CORE_LOG_W("Content does not fulfil interface requirements");
-        }
-        return valid;
     }
 
     bool CheckContentRequirements(const IObject::Ptr& object)
@@ -169,19 +142,13 @@ public:
     }
 
 private:
-    PropertyChangedEventHandler loaderChanged_;
-    EventHandler contentChanged_;
-    BASE_NS::vector<TypeId> requiredInterfaces_;
     mutable std::shared_mutex mutex_;
+    BASE_NS::vector<TypeId> requiredInterfaces_;
 };
-
-namespace Internal {
 
 IObjectFactory::Ptr GetContentObjectFactory()
 {
     return ContentObject::GetFactory();
 }
 
-} // namespace Internal
-
-META_END_NAMESPACE()
+META_END_INTERNAL_NAMESPACE()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -66,6 +66,14 @@ public:
      */
     EntityReference(Entity entity, const IEntityReferenceCounter::Ptr& counter) noexcept
         : entity_(entity), counter_(counter)
+    {}
+
+    /** Construct a reference for tracking the given entity.
+     * @param entity referenced entity
+     * @param counter Reference counter instance.
+     */
+    EntityReference(Entity entity, IEntityReferenceCounter::Ptr&& counter) noexcept
+        : entity_(entity), counter_(BASE_NS::move(counter))
     {}
 
     /** Copy a reference. Reference count will be increased. */

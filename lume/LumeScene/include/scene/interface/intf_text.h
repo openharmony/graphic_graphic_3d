@@ -38,7 +38,7 @@ public:
     META_PROPERTY(float, FontSize)
     META_PROPERTY(float, Font3DThickness)
     META_PROPERTY(SCENE_NS::FontMethod, FontMethod)
-    META_PROPERTY(BASE_NS::Color, TextColor)
+    META_PROPERTY(BASE_NS::Math::Vec4, TextColor)
 };
 
 META_REGISTER_CLASS(TextNode, "fd2f62e8-d91f-4408-b653-038a76b08121", META_NS::ObjectCategoryBits::NO_CATEGORY)

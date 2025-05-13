@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -75,10 +75,9 @@ IFile::Ptr OhosFilesystem::OpenFile(const BASE_NS::string_view path, const IFile
     return IFile::Ptr();
 }
 
-OhosFilesystem::OhosFilesystem(
-    const BASE_NS::string_view hapPath, const BASE_NS::string_view bundleName, const BASE_NS::string_view moduleName,
-    std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager)
-    : hapInfo_({hapPath, bundleName, moduleName, resourceManager})
+OhosFilesystem::OhosFilesystem(const BASE_NS::string_view hapPath, const BASE_NS::string_view bundleName,
+    const BASE_NS::string_view moduleName, std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager)
+    : hapInfo_({ hapPath, bundleName, moduleName, resourceManager })
 {
     resManager_ = BASE_NS::refcnt_ptr<OhosResMgr>(new OhosResMgr(hapInfo_));
     resManager_->UpdateResManager(hapInfo_);

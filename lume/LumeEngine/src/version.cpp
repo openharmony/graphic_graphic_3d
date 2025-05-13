@@ -13,16 +13,31 @@
  * limitations under the License.
  */
 
-#include <core/namespace.h>
 #include <base/containers/string_view.h>
+#include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
-CORE_PUBLIC BASE_NS::string_view GetVersion() { return ""; }
-CORE_PUBLIC BASE_NS::string_view GetVersionRev() { return "f4a6960"; }
-CORE_PUBLIC BASE_NS::string_view GetVersionBranch() { return ""; }
+CORE_PUBLIC BASE_NS::string_view GetVersion()
+{
+    return "";
+}
+CORE_PUBLIC BASE_NS::string_view GetVersionRev()
+{
+    return "f4a6960";
+}
+CORE_PUBLIC BASE_NS::string_view GetVersionBranch()
+{
+    return "";
+}
 #ifdef NDEBUG
-CORE_PUBLIC bool IsDebugBuild() { return true; }
+CORE_PUBLIC bool IsDebugBuild()
+{
+    return true;
+}
 #else
-CORE_PUBLIC bool IsDebugBuild() { return false; }
+CORE_PUBLIC bool IsDebugBuild()
+{
+    return false;
+}
 #endif
 CORE_END_NAMESPACE()

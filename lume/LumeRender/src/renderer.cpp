@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -677,7 +677,7 @@ void Renderer::RenderFrameImpl(const array_view<const RenderHandle> renderNodeGr
     }
 
     // gpu resource allocation and deallocation
-    gpuResourceMgr_.HandlePendingAllocations();
+    gpuResourceMgr_.HandlePendingAllocations(true);
 
     device_.Deactivate();
 
@@ -754,7 +754,9 @@ void Renderer::RenderFrameBackendImpl()
         }
     }
     renderFrameTimeData_.config = config;
-    renderFrameTimeData_.hasBackendWork = (!rcfd.renderCommandContexts.empty());
+    // must run backend if there are descriptor sets to update even if there's nothing to render.
+    renderFrameTimeData_.hasBackendWork = (!rcfd.renderCommandContexts.empty()) ||
+                                          (!device_.GetDescriptorSetManager().GetUpdateDescriptorSetHandles().empty());
 
     device_.Activate();
 
@@ -828,6 +830,7 @@ void Renderer::RenderFramePresentImpl()
     ProcessTimeStampEnd();
     CORE_PROFILER_MARK_FRAME_END(FRAME_MARKER);
 
+    CORE_PROFILER_MARK_GLOBAL_FRAME_CHANGED();
     // set presentation index (before mutexes)
     renderStatus_.presentIndex = renderStatus_.backEndIndex;
     if (separatedRendering_.separatePresent) {
@@ -919,9 +922,9 @@ void Renderer::ExecuteRenderNodes(const array_view<RenderNodeGraphNodeStore*> re
     // lock staging data for this frame
     // NOTE: should be done with double buffering earlier
     gpuResourceMgr_.LockFrameStagingData();
-    // final gpu resource allocation and deallocation before render node execute, and render graph
+    // final gpu resource allocation and deallocation before render node execute
     device_.Activate();
-    gpuResourceMgr_.HandlePendingAllocations();
+    gpuResourceMgr_.HandlePendingAllocations(true);
     gpuResourceMgr_.MapRenderTimeGpuBuffers();
     device_.Deactivate();
 
@@ -942,7 +945,6 @@ void Renderer::ExecuteRenderNodes(const array_view<RenderNodeGraphNodeStore*> re
         queue,
         renderDataStoreMgr_,
         shaderMgr_,
-        // renderConfig_
     };
 
     // multi-threaded render node execution
@@ -951,7 +953,12 @@ void Renderer::ExecuteRenderNodes(const array_view<RenderNodeGraphNodeStore*> re
     // Remove tasks.
     queue->Clear();
 
+    // final gpu resource allocation before render graph
+    device_.Activate();
     gpuResourceMgr_.UnmapRenderTimeGpuBuffers();
+    // do not allow destruction here
+    gpuResourceMgr_.HandlePendingAllocations(false);
+    device_.Deactivate();
 
 #if (RENDER_PERF_ENABLED == 1)
     RENDER_CPU_PERF_END(fullExecuteCpuTimer);

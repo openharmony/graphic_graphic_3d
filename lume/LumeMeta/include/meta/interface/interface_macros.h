@@ -16,8 +16,9 @@
 #ifndef META_INTERFACE_INTERFACE_MACROS_H
 #define META_INTERFACE_INTERFACE_MACROS_H
 
+#include <base/containers/shared_ptr.h>
+
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/interface/event.h>
 #include <meta/interface/metadata_query.h>
 #include <meta/interface/property/array_property.h>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -81,7 +81,6 @@ static constexpr uint64_t PRIMITIVE_TOPOLOGY_MASK { 0xF00000000000ULL };
 static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffu };
 
 static constexpr uint32_t FIXED_CUSTOM_SET3 { 3u };
-static constexpr uint32_t CUSTOM_SET_DESCRIPTOR_SET_COUNT { 4u };
 
 inline void GetMultiViewCameraIndices(
     const IRenderDataStoreDefaultCamera& rds, const RenderCamera& cam, vector<uint32_t>& mvIndices)
@@ -309,10 +308,14 @@ void RenderNodeDefaultMaterialRenderSlot::RenderSubmeshes(IRenderCommandList& cm
     const auto& submeshes = dataStoreMaterial.GetSubmeshes();
     const auto& customResourceHandles = dataStoreMaterial.GetCustomResourceHandles();
     const uint64_t camLayerMask = currentScene_.camera.layerMask;
+    const uint64_t camScene = currentScene_.camera.sceneId;
 
     for (const auto& ssp : sortedSlotSubmeshes_) {
         const uint32_t submeshIndex = ssp.submeshIndex;
         const auto& currSubmesh = submeshes[submeshIndex];
+        if (currSubmesh.layers.sceneId != camScene) {
+            continue;
+        }
         // sorted slot submeshes should already have removed layers if default sorting was used
         if (((camLayerMask & currSubmesh.layers.layerMask) == 0U) ||
             ((jsonInputs_.nodeFlags & RENDER_SCENE_DISCARD_MATERIAL_BIT) &&
@@ -584,7 +587,7 @@ void RenderNodeDefaultMaterialRenderSlot::CreateDefaultShaderData()
     allShaderData_.defaultVidHandle = (shaderRsd.vertexInputDeclaration)
                                           ? shaderRsd.vertexInputDeclaration.GetHandle()
                                           : shaderMgr.GetVertexInputDeclarationHandle(
-                                              DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD);
+                                                DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD);
     if (!allShaderData_.defaultPipelineLayout.descriptorSetLayouts[FIXED_CUSTOM_SET3].bindings.empty()) {
         allShaderData_.defaultPlSet3 = true;
     }
@@ -686,6 +689,7 @@ RenderNodeDefaultMaterialRenderSlot::PsoAndInfo RenderNodeDefaultMaterialRenderS
         const GraphicsState state = GetNewGraphicsState(shaderMgr, currState, inverseWinding, customIa, ia);
         const auto spec = GetShaderSpecView(state, submeshMatFlags, submeshFlags, lightingFlags, camShaderFlags);
         psoHandle = psoMgr.GetGraphicsPsoHandle(currShader, state, pl, vid, spec, GetDynamicStates());
+
     } else {
         // graphics state in default mode
         const GraphicsState& state = shaderMgr.GetGraphicsState(currState);
@@ -869,11 +873,9 @@ const PipelineLayout& RenderNodeDefaultMaterialRenderSlot::GetEvaluatedPipelineL
     auto UpdateCustomPl = [](const DescriptorSetLayout& dsl, PipelineLayout& tmpPl) {
         if (!dsl.bindings.empty()) {
             tmpPl.descriptorSetLayouts[FIXED_CUSTOM_SET3] = dsl;
-            tmpPl.descriptorSetCount = CUSTOM_SET_DESCRIPTOR_SET_COUNT;
             return true;
-        } else {
-            return false;
         }
+        return false;
     };
 
     const bool def3NoShader = ((!RenderHandleUtil::IsValid(currShader)) && (allShaderData_.defaultPlSet3));

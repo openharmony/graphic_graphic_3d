@@ -62,11 +62,6 @@ public:
      *        The default value is true.
      */
     META_PROPERTY(bool, ContentSearchable)
-    /**
-     * @brief If set, the Content property should be automatically populated by using the
-     *        specified IContentLoader.
-     */
-    META_PROPERTY(META_NS::IContentLoader::Ptr, ContentLoader)
 };
 
 META_END_NAMESPACE()

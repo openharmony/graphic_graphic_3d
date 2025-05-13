@@ -9,9 +9,7 @@ layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
 // includes
 
 #include "render/shaders/common/render_color_conversion_common.h"
-
 #include "render/shaders/common/render_post_process_common.h"
-#include "render/shaders/common/render_color_conversion_common.h"
 #include "render/shaders/common/render_tonemap_common.h"
 
 // sets
@@ -70,6 +68,8 @@ void main(void)
         } else if (tonemapType == CORE_POST_PROCESS_TONEMAP_FILMIC) {
             const float exposureEstimate = 6.0f;
             outColor.rgb = TonemapFilmic(x * exposureEstimate);
+        } else if (tonemapType == CORE_POST_PROCESS_TONEMAP_PBR_NEUTRAL) {
+            outColor.rgb = TonemapPbrNeutral(x);
         }
     }
 

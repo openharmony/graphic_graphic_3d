@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,9 +28,9 @@ CORE3D_BEGIN_NAMESPACE()
 /** Component for giving weights to morph targets. */
 BEGIN_COMPONENT(IMorphComponentManager, MorphComponent)
     /** Name of each morph target. */
-    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::string>, morphNames, "", PropertyFlags::IS_HIDDEN,)
+    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::string>, morphNames, "", PropertyFlags::IS_HIDDEN, )
     /** Weight of each morph target. The */
-    DEFINE_PROPERTY(BASE_NS::vector<float>, morphWeights, "@morphNames[*]", PropertyFlags::IS_SLIDER,)
+    DEFINE_PROPERTY(BASE_NS::vector<float>, morphWeights, "@morphNames[*]", PropertyFlags::IS_SLIDER, )
 END_COMPONENT(IMorphComponentManager, MorphComponent, "46f1ddb9-053d-4f54-aaea-ddfca075294f")
 
 #if !defined(IMPLEMENT_MANAGER)

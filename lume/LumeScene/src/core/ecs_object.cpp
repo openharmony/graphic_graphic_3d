@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "ecs_object.h"
 
 #include <scene/ext/intf_ecs_context.h>
@@ -35,16 +34,9 @@ bool EcsObject::Build(const META_NS::IMetadata::Ptr& d)
         if (s && CORE_NS::EntityUtil::IsValid(ent)) {
             valueManager_ =
                 META_NS::GetObjectRegistry().Create<META_NS::IEngineValueManager>(META_NS::ClassId::EngineValueManager);
-            valueManager_->SetNotificationQueue(s->GetAppTaskQueue());
+            valueManager_->SetNotificationQueue(s->GetContext()->GetApplicationQueue());
             scene_ = s;
             entity_ = ent;
-
-            if (auto m = static_cast<CORE3D_NS::INameComponentManager*>(
-                    s->GetEcsContext().FindComponent<CORE3D_NS::NameComponent>())) {
-                if (auto s = m->Read(entity_)) {
-                    name_ = s->name;
-                }
-            }
         }
     }
     return valueManager_ != nullptr && CORE_NS::EntityUtil::IsValid(entity_);
@@ -52,24 +44,14 @@ bool EcsObject::Build(const META_NS::IMetadata::Ptr& d)
 
 BASE_NS::string EcsObject::GetName() const
 {
-    std::shared_lock lock { mutex_ };
-    return name_;
+    return META_NS::GetValue(Name());
 }
 
 bool EcsObject::SetName(const BASE_NS::string& name)
 {
     if (auto s = GetScene()) {
-        if (auto m = static_cast<CORE3D_NS::INameComponentManager*>(
-                s->GetEcsContext().FindComponent<CORE3D_NS::NameComponent>())) {
-            if (auto s = m->Write(entity_)) {
-                s->name = name;
-
-                std::unique_lock lock { mutex_ };
-                name_ = name;
-
-                return true;
-            }
-        }
+        META_NS::SetValue<BASE_NS::string>(Name(), name);
+        return SyncProperty(s, Name()).GetResult();
     }
     return false;
 }
@@ -97,6 +79,18 @@ META_NS::IEngineValueManager::Ptr EcsObject::GetEngineValueManager()
     return valueManager_;
 }
 
+void EcsObject::AddPropertyUpdateHook(const META_NS::IProperty::Ptr& prop)
+{
+    if (prop) {
+        prop->OnChanged()->AddHandler(
+            META_NS::MakeCallback<META_NS::IOnChanged>([ecsobj = BASE_NS::weak_ptr(GetSelf<IEcsObject>())] {
+                if (auto eobj = ecsobj.lock()) {
+                    eobj->GetScene()->SchedulePropertyUpdate(eobj);
+                }
+            }));
+    }
+}
+
 bool EcsObject::AddEngineProperty(META_NS::IMetadata& object, const META_NS::IEngineValue::Ptr& v)
 {
     auto prop = object.GetProperty(v->GetName());
@@ -111,13 +105,7 @@ bool EcsObject::AddEngineProperty(META_NS::IMetadata& object, const META_NS::IEn
             return false;
         }
     }
-    if (prop) {
-        prop->OnChanged()->AddHandler(META_NS::MakeCallback<META_NS::IOnChanged>([this] {
-            if (auto scene = scene_.lock()) {
-                scene->SchedulePropertyUpdate(GetSelf<IEcsObject>());
-            }
-        }));
-    }
+    AddPropertyUpdateHook(prop);
     return true;
 }
 
@@ -143,7 +131,22 @@ void EcsObject::AddAllComponentProperties(META_NS::IMetadata& object)
     }
 }
 
-Future<bool> EcsObject::AddAllEngineProperties(const META_NS::IMetadata::Ptr& object, BASE_NS::string_view cv)
+bool EcsObject::AddAllNamedComponentProperties(META_NS::IMetadata& object, BASE_NS::string_view cv)
+{
+    BASE_NS::vector<CORE_NS::IComponentManager*> managers;
+    if (auto s = GetScene()) {
+        s->GetEcsContext().GetNativeEcs()->GetComponents(entity_, managers);
+        for (auto m : managers) {
+            if (m->GetName() == cv) {
+                AddAllProperties(object, m);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+Future<bool> EcsObject::AddAllProperties(const META_NS::IMetadata::Ptr& object, BASE_NS::string_view cv)
 {
     if (auto scene = scene_.lock()) {
         return scene->AddTask([=, me = BASE_NS::weak_ptr(GetSelf()), component = BASE_NS::string(cv)] {
@@ -153,10 +156,12 @@ Future<bool> EcsObject::AddAllEngineProperties(const META_NS::IMetadata::Ptr& ob
                     return true;
                 }
                 if (auto s = GetScene()) {
-                    if (auto m = s->GetEcsContext().FindComponent(ComponentName(component))) {
+                    auto name = ComponentName(component);
+                    if (auto m = s->GetEcsContext().FindComponent(name)) {
                         AddAllProperties(*object, m);
                         return true;
                     }
+                    return AddAllNamedComponentProperties(*object, name);
                 }
             }
             return false;
@@ -170,15 +175,11 @@ bool EcsObject::AttachEnginePropertyImpl(META_NS::EnginePropertyHandle handle, c
 {
     BASE_NS::vector<META_NS::IEngineValue::Ptr> values;
     if (valueManager_->ConstructValue(
-        handle, FullPropertyName(path), META_NS::EngineValueOptions { component, &values })) {
+            handle, FullPropertyName(path), META_NS::EngineValueOptions { component, &values })) {
         if (!values.empty()) {
             auto ret = META_NS::SetEngineValueToProperty(p, values.front());
             if (ret) {
-                p->OnChanged()->AddHandler(META_NS::MakeCallback<META_NS::IOnChanged>([this] {
-                    if (auto scene = scene_.lock()) {
-                        scene->SchedulePropertyUpdate(GetSelf<IEcsObject>());
-                    }
-                }));
+                AddPropertyUpdateHook(p);
             }
             return ret;
         }
@@ -198,7 +199,7 @@ META_NS::EnginePropertyHandle EcsObject::GetPropertyHandle(BASE_NS::string_view 
     return {};
 }
 
-Future<bool> EcsObject::AttachEngineProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view pv)
+Future<bool> EcsObject::AttachProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view pv)
 {
     if (auto scene = scene_.lock()) {
         return scene->AddTask([=, me = BASE_NS::weak_ptr(GetSelf()), path = BASE_NS::string(pv)] {
@@ -214,7 +215,7 @@ Future<bool> EcsObject::AttachEngineProperty(const META_NS::IProperty::Ptr& p, B
     return {};
 }
 
-Future<META_NS::IProperty::Ptr> EcsObject::CreateEngineProperty(BASE_NS::string_view pv)
+Future<META_NS::IProperty::Ptr> EcsObject::CreateProperty(BASE_NS::string_view pv)
 {
     if (auto scene = scene_.lock()) {
         return scene->AddTask([=, me = BASE_NS::weak_ptr(GetSelf()), path = BASE_NS::string(pv)] {
@@ -223,19 +224,48 @@ Future<META_NS::IProperty::Ptr> EcsObject::CreateEngineProperty(BASE_NS::string_
                 if (auto handle = GetPropertyHandle(component)) {
                     auto name = FullPropertyName(path);
                     if (valueManager_->ConstructValue(
-                        handle, name, META_NS::EngineValueOptions { BASE_NS::string(component) })) {
+                            handle, name, META_NS::EngineValueOptions { BASE_NS::string(component) })) {
                         if (auto p = valueManager_->ConstructProperty(path)) {
-                            p->OnChanged()->AddHandler(META_NS::MakeCallback<META_NS::IOnChanged>([this] {
-                                if (auto scene = scene_.lock()) {
-                                    scene->SchedulePropertyUpdate(GetSelf<IEcsObject>());
-                                }
-                            }));
+                            AddPropertyUpdateHook(p);
                             return p;
                         }
                     }
                 }
             }
             return META_NS::IProperty::Ptr {};
+        });
+    }
+    return {};
+}
+
+Future<META_NS::IProperty::Ptr> EcsObject::CreateProperty(const META_NS::IEngineValue::Ptr& value)
+{
+    if (auto scene = scene_.lock()) {
+        return scene->AddTask([=, me = BASE_NS::weak_ptr(GetSelf())] {
+            if (auto self = me.lock()) {
+                BASE_NS::string pname(SCENE_NS::PropertyName(value->GetName()));
+                if (auto p = META_NS::PropertyFromEngineValue(pname, value)) {
+                    AddPropertyUpdateHook(p);
+                    return p;
+                }
+            }
+            return META_NS::IProperty::Ptr {};
+        });
+    }
+    return {};
+}
+
+Future<bool> EcsObject::AttachProperty(const META_NS::IProperty::Ptr& prop, const META_NS::IEngineValue::Ptr& value)
+{
+    if (auto scene = scene_.lock()) {
+        return scene->AddTask([=, me = BASE_NS::weak_ptr(GetSelf())] {
+            if (auto self = me.lock()) {
+                if (META_NS::SetEngineValueToProperty(prop, value)) {
+                    AddPropertyUpdateHook(prop);
+                    return true;
+                }
+            }
+            return false;
         });
     }
     return {};
@@ -261,6 +291,38 @@ void EcsObject::OnComponentEvent(
     if (type == CORE_NS::IEcs::ComponentListener::EventType::MODIFIED) {
         valueManager_->Sync(META_NS::EngineSyncDirection::AUTO);
     }
+}
+
+bool EcsObject::AttachEngineProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
+{
+    return AttachProperty(p, path).GetResult();
+}
+
+bool EcsObject::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
+{
+    if (p->GetName() == "Name") {
+        if (!AttachEngineProperty(p, path)) {
+            CORE_LOG_D("Failed to attach '%s' to '%s', falling back to normal property", p->GetName().c_str(),
+                BASE_NS::string(path).c_str());
+            // no name component? Fallback to normal property
+        }
+        return true;
+    }
+    return AttachEngineProperty(p, path);
+}
+
+Future<bool> EcsObject::SetActive(bool active)
+{
+    if (auto s = GetScene()) {
+        return s->AddTask([=, me = BASE_NS::weak_ptr(GetSelf<IEcsObject>())] {
+            if (auto self = me.lock()) {
+                s->SetEntityActive(self, active);
+                return true;
+            }
+            return false;
+        });
+    }
+    return {};
 }
 
 SCENE_END_NAMESPACE()

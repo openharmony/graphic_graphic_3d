@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include "connector.h"
 
 #include <meta/ext/serialization/serializer.h>

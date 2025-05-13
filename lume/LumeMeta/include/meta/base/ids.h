@@ -66,16 +66,19 @@ protected:
     BASE_NS::Uid id_;
 };
 
+/// Type id class, for plain types and interfaces
 class TypeId : public IdBase<TypeId> {
 public:
     using IdBase<TypeId>::IdBase;
 };
 
+/// Object id class, for concrete class types
 class ObjectId : public IdBase<ObjectId> {
 public:
     using IdBase<ObjectId>::IdBase;
 };
 
+/// Instance id class, for object instances
 class InstanceId : public IdBase<InstanceId> {
 public:
     using IdBase<InstanceId>::IdBase;
@@ -84,11 +87,15 @@ public:
 META_TYPE(META_NS::TypeId);
 META_TYPE(META_NS::ObjectId);
 META_TYPE(META_NS::InstanceId);
+
+/// Get type id for Type
 template<typename Type>
 inline constexpr TypeId GetTypeId()
 {
     return UidFromType<Type>();
 }
+
+/// Get type id for array with element Type
 template<typename Type>
 inline constexpr TypeId GetArrayTypeId()
 {

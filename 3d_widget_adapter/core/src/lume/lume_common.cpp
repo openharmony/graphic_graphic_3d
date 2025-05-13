@@ -76,7 +76,11 @@
 #include "graphics_manager.h"
 #include "widget_trace.h"
 
+#ifdef USE_M133_SKIA
+#include "include/gpu/vk/VulkanExtensions.h"
+#else
 #include "include/gpu/vk/GrVkExtensions.h"
+#endif
 
 #include "lume_render_config.h"
 

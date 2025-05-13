@@ -13,37 +13,91 @@
  * limitations under the License.
  */
 #include "ColorProxy.h"
+
 ColorProxy::ColorProxy(napi_env env, META_NS::Property<BASE_NS::Color> prop) : ObjectPropertyProxy(prop)
 {
+    isColorType_ = true;
     Create(env, "Color");
     Hook("r");
     Hook("g");
     Hook("b");
     Hook("a");
-    SyncGet();
+}
+ColorProxy::ColorProxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec4> prop) : ObjectPropertyProxy(prop)
+{
+    isColorType_ = false;
+    Create(env, "Color");
+    Hook("r");
+    Hook("g");
+    Hook("b");
+    Hook("a");
 }
 ColorProxy::~ColorProxy()
 {
     Reset();
 }
-void ColorProxy::UpdateLocalValues()
-{
-    // update local values. (runs in engine thread)
-    value = META_NS::Property<BASE_NS::Color>(prop_)->GetValue();
-}
-void ColorProxy::UpdateRemoteValues()
-{
-    // update remote values. (runs in engine thread)
-    META_NS::Property<BASE_NS::Color>(prop_)->SetValue(value);
-}
 void ColorProxy::SetValue(const BASE_NS::Color& v)
 {
-    Lock();
-    if (value != v) {
-        value = v;
-        ScheduleUpdate();
+    if (isColorType_) {
+        META_NS::SetValue(GetProperty<BASE_NS::Color>(), v);
+    } else {
+        META_NS::SetValue(GetProperty<BASE_NS::Math::Vec4>(), BASE_NS::Math::Vec4(v.r, v.g, v.b, v.a));
     }
-    Unlock();
+}
+void ColorProxy::SetValue(const BASE_NS::Math::Vec4& v)
+{
+    if (isColorType_) {
+        META_NS::SetValue(GetProperty<BASE_NS::Color>(), BASE_NS::Color(v.x, v.y, v.z, v.w));
+    } else {
+        META_NS::SetValue(GetProperty<BASE_NS::Math::Vec4>(),v);
+    }
+}
+
+template<class T>
+auto SetColorMemberValue(META_NS::Property<T>& p, BASE_NS::string_view memb, float val)
+{
+    auto value = META_NS::GetValue(p);
+
+    bool changed = false;
+    if ((memb == "r") && (val != value.x)) {
+        value.x = val;
+        changed = true;
+    } else if ((memb == "g") && (val != value.y)) {
+        value.y = val;
+        changed = true;
+    } else if ((memb == "b") && (val != value.z)) {
+        value.z = val;
+        changed = true;
+    } else if ((memb == "a") && (val != value.w)) {
+        value.w = val;
+        changed = true;
+    }
+    if (changed) {
+        META_NS::SetValue(p, value);
+    }
+}
+
+template<class T>
+bool GetColorMemberValue(const NapiApi::Env& info, META_NS::Property<T>& p, BASE_NS::string_view memb, float& value)
+{
+    auto val = META_NS::GetValue(p);
+    if (memb == "r") {
+        value = val.x;
+        return true;
+    }
+    if (memb == "g") {
+        value = val.y;
+        return true;
+    }
+    if (memb == "b") {
+        value = val.z;
+        return true;
+    }
+    if (memb == "a") {
+        value = val.w;
+        return true;
+    } 
+    return false;
 }
 
 void ColorProxy::SetMemberValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
@@ -51,42 +105,27 @@ void ColorProxy::SetMemberValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_
     NapiApi::FunctionContext<float> info(cb);
     if (info) {
         float val = info.Arg<0>();
-        Lock();
-        if ((memb == "r") && (val != value.x)) {
-            value.x = val;
-            ScheduleUpdate();
-        } else if ((memb == "g") && (val != value.y)) {
-            value.y = val;
-            ScheduleUpdate();
-        } else if ((memb == "b") && (val != value.z)) {
-            value.z = val;
-            ScheduleUpdate();
-        } else if ((memb == "a") && (val != value.w)) {
-            value.w = val;
-            ScheduleUpdate();
+        if (isColorType_) {
+            auto p = GetProperty<BASE_NS::Color>();
+            SetColorMemberValue<BASE_NS::Color>(p, memb, val);
+        } else {
+            auto p = GetProperty<BASE_NS::Math::Vec4>();
+            SetColorMemberValue<BASE_NS::Math::Vec4>(p, memb, val);
         }
-        Unlock();
     }
 }
 napi_value ColorProxy::GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb)
 {
     float res;
-    Lock();
-    if (memb == "r") {
-        res = value.x;
-    } else if (memb == "g") {
-        res = value.y;
-    } else if (memb == "b") {
-        res = value.z;
-    } else if (memb == "a") {
-        res = value.w;
+    bool success = false;
+    if (isColorType_) {
+        auto p = GetProperty<BASE_NS::Color>();
+        success = GetColorMemberValue<BASE_NS::Color>(info, p, memb, res);
     } else {
-        // invalid member?
-        Unlock();
-        return info.GetUndefined();
+        auto p = GetProperty<BASE_NS::Math::Vec4>();
+        success = GetColorMemberValue<BASE_NS::Math::Vec4>(info, p, memb, res);
     }
-    Unlock();
-    return info.GetNumber(res);
+    return success ? info.GetNumber(res) : info.GetUndefined();
 }
 void ColorProxy::SetValue(NapiApi::Object obj)
 {
@@ -95,7 +134,7 @@ void ColorProxy::SetValue(NapiApi::Object obj)
     auto b = obj.Get<float>("b");
     auto a = obj.Get<float>("a");
     if (r.IsValid() && g.IsValid() && b.IsValid() && a.IsValid()) {
-        SetValue({ r, g, b, a });
+        SetValue(BASE_NS::Color(r, g, b, a));
     }
 }
 

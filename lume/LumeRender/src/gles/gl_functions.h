@@ -24,7 +24,10 @@
 #include <GLES3/gl32.h>
 #include <GLES2/gl2ext.h>
 // clang-format on
-#define declare(a, b) extern "C" { extern a b; }
+#define declare(a, b) \
+    extern "C" {      \
+    extern a b;       \
+    }
 #endif
 
 #if defined(_WIN32)
@@ -40,11 +43,13 @@ declare(PFNGLENABLEIPROC, glEnablei);
 declare(PFNGLDISABLEIPROC, glDisablei);
 declare(PFNGLBLENDFUNCSEPARATEIPROC, glBlendFuncSeparatei);
 declare(PFNGLBLENDEQUATIONSEPARATEIPROC, glBlendEquationSeparatei);
-declare(PFNGLREADNPIXELSPROC, glReadnPixels)
+declare(PFNGLREADNPIXELSPROC, glReadnPixels);
 #endif
 
+// GL_EXT_buffer_storage
 declare(PFNGLBUFFERSTORAGEEXTPROC, glBufferStorageEXT);
 
+// GL_OES_EGL_image
 declare(PFNGLEGLIMAGETARGETTEXTURE2DOESPROC, glEGLImageTargetTexture2DOES);
 
 #ifndef GL_EXT_multisampled_render_to_texture
@@ -62,17 +67,26 @@ using PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC = void(GL_APIENTRYP)(
 declare(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC, glRenderbufferStorageMultisampleEXT);
 declare(PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC, glFramebufferTexture2DMultisampleEXT);
 
+// GL_OVR_multiview
 declare(PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC, glFramebufferTextureMultiviewOVR);
 
+// GL_OVR_multiview_multisampled_render_to_texture
 declare(PFNGLFRAMEBUFFERTEXTUREMULTISAMPLEMULTIVIEWOVRPROC, glFramebufferTextureMultisampleMultiviewOVR);
 
+// GL_EXT_disjoint_timer_query
 declare(PFNGLGETQUERYOBJECTUI64VEXTPROC, glGetQueryObjectui64vEXT);
+
+// GL_EXT_external_buffer
+declare(PFNGLBUFFERSTORAGEEXTERNALEXTPROC, glBufferStorageExternalEXT);
 #elif RENDER_HAS_GL_BACKEND
 
 #ifndef declare
 #include <gl/glcorearb.h>
 #include <gl/glext.h>
-#define declare(a, b) extern "C" { extern a b; }
+#define declare(a, b) \
+    extern "C" {      \
+    extern a b;       \
+    }
 #endif
 
 declare(PFNGLDRAWBUFFERSPROC, glDrawBuffers);
@@ -242,6 +256,8 @@ declare(PFNGLGETBUFFERPARAMETERI64VPROC, glGetBufferParameteri64v);
 declare(PFNGLGETBUFFERPOINTERVPROC, glGetBufferPointerv);
 
 declare(PFNGLOBJECTLABELPROC, glObjectLabel);
+
+declare(PFNGLBUFFERSTORAGEEXTERNALEXTPROC, glBufferStorageExternalEXT);
 
 // Define the EXT versions, to match GLES.
 #define glBufferStorageEXT glBufferStorage

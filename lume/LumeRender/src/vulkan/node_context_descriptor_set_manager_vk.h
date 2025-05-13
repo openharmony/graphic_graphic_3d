@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,6 +25,7 @@
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
+#include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
 #include "nodecontext/node_context_descriptor_set_manager.h"
 
@@ -49,7 +50,7 @@ struct LowLevelDescriptorSetVk {
 struct LowLevelContextDescriptorPoolVk {
     // buffering count of 3 (max) is used often with vulkan triple buffering
     // gets the real used buffering count from the device
-    static constexpr uint32_t MAX_BUFFERING_COUNT { 3u };
+    static constexpr uint32_t MAX_BUFFERING_COUNT { DeviceConstants::MAX_BUFFERING_COUNT };
 
     VkDescriptorPool descriptorPool { VK_NULL_HANDLE };
     // additional descriptor pool for one frame descriptor sets with platform buffer bindings
@@ -107,8 +108,10 @@ struct PendingDeallocations {
 };
 
 struct OneFrameDescriptorNeed {
-    static constexpr uint32_t DESCRIPTOR_ARRAY_SIZE = CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT + 1;
-    uint8_t descriptorCount[DESCRIPTOR_ARRAY_SIZE] { 0 };
+    // the acceleration structure is the eleventh
+    static constexpr uint32_t ACCELERATION_LOCAL_TYPE { 11U };
+    static constexpr uint32_t DESCRIPTOR_ARRAY_SIZE = CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT + 2U;
+    uint32_t descriptorCount[DESCRIPTOR_ARRAY_SIZE] { 0 };
 };
 
 class DescriptorSetManagerVk final : public DescriptorSetManager {
@@ -121,7 +124,7 @@ public:
 
     void CreateDescriptorSets(const uint32_t arrayIndex, const uint32_t descriptorSetCount,
         const BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings) override;
-    void UpdateDescriptorSetGpuHandle(const RenderHandle& handle) override;
+    bool UpdateDescriptorSetGpuHandle(const RenderHandle& handle) override;
     void UpdateCpuDescriptorSetPlatform(const DescriptorSetLayoutBindingResources& bindingResources) override;
 
     const LowLevelDescriptorSetVk* GetDescriptorSet(const RenderHandle& handle) const;
@@ -165,7 +168,7 @@ public:
     LowLevelContextDescriptorWriteDataVk& GetLowLevelDescriptorWriteData();
 
     // deferred gpu descriptor set creation happens here
-    void UpdateDescriptorSetGpuHandle(RenderHandle handle) override;
+    bool UpdateDescriptorSetGpuHandle(RenderHandle handle) override;
     void UpdateCpuDescriptorSetPlatform(const DescriptorSetLayoutBindingResources& bindingResources) override;
 
 private:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -216,6 +216,7 @@ public:
     CORE_NS::Entity ImportScene(size_t sceneIndex, SceneImportFlags flags) override;
     CORE_NS::Entity ImportScene(size_t sceneIndex, CORE_NS::Entity parentEntity) override;
     CORE_NS::Entity ImportScene(size_t sceneIndex, CORE_NS::Entity parentEntity, SceneImportFlags flags) override;
+    CORE_NS::Entity ImportScene(size_t sceneIndex, uint32_t sceneId, SceneImportFlags flags) override;
 
     // IInterface
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
@@ -229,6 +230,8 @@ public:
     void OnImportProgressed(size_t taskIndex, size_t taskCount) override;
 
 private:
+    void UpdateResults();
+
     CORE_NS::IEcs& ecs_;
     IGraphicsContext* graphicsContext_ { nullptr };
     GLTF2Importer::Ptr importer_;
@@ -241,7 +244,7 @@ private:
 } // namespace GLTF2
 
 CORE_NS::Entity ImportScene(RENDER_NS::IDevice& device, size_t sceneIndex, const GLTF2::Data& data,
-    const GLTFResourceData& gltfResourceData, CORE_NS::IEcs& ecs, CORE_NS::Entity rootEntity,
+    const GLTFResourceData& gltfResourceData, CORE_NS::IEcs& ecs, CORE_NS::Entity rootEntity, uint32_t level,
     GltfSceneImportFlags flags);
 CORE3D_END_NAMESPACE()
 

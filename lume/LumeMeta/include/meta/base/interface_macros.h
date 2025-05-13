@@ -16,6 +16,8 @@
 #ifndef META_BASE_INTERFACE_MACROS_H
 #define META_BASE_INTERFACE_MACROS_H
 
+#include <base/containers/atomics.h>
+
 #include "types.h"
 
 /**
@@ -25,11 +27,11 @@
     int32_t refcnt_ { 0 };                             \
     void Ref() override                                \
     {                                                  \
-        CORE_NS::AtomicIncrement(&refcnt_);            \
+        BASE_NS::AtomicIncrement(&refcnt_);            \
     }                                                  \
     void Unref() override                              \
     {                                                  \
-        if (CORE_NS::AtomicDecrement(&refcnt_) == 0) { \
+        if (BASE_NS::AtomicDecrement(&refcnt_) == 0) { \
             delete this;                               \
         }                                              \
     }
@@ -131,6 +133,6 @@ private:
 #define META_INTERFACE(...) \
     META_EXPAND(META_GET_MACRO3_IMPL(__VA_ARGS__, META_INTERFACE3, META_INTERFACE2)(__VA_ARGS__))
 
-#include <meta/base/shared_ptr.h>
+#include <base/containers/shared_ptr.h>
 
 #endif

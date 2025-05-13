@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -105,6 +105,7 @@ void RenderNodeShaderPassesGeneric::PreExecuteFrame()
     uint32_t uboByteSize = 0U;
     uboByteSize += dsShaderPasses_->GetRenderPropertyBindingInfo().alignedByteSize;
     uboByteSize += dsShaderPasses_->GetComputePropertyBindingInfo().alignedByteSize;
+
     // create the built-in buffer even if the bytesize would be zero
     if ((uboByteSize > uboData_.byteSize) || (uboData_.byteSize == 0U)) {
         uboData_.byteSize = uboByteSize + (OFFSET_ALIGNMENT * OVERESTIMATE_COUNT);
@@ -177,11 +178,8 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameGraphics(IRenderCommandList& cmd
             cmdList.SetDynamicStateScissor(scissorDesc);
             if (ref.renderPass.subpassDesc.fragmentShadingRateAttachmentCount > 0) {
                 cmdList.SetDynamicStateFragmentShadingRate(
-                    { 1u, 1u },
-                    FragmentShadingRateCombinerOps {
-                        CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
-                        CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE
-		    });
+                    { 1u, 1u }, FragmentShadingRateCombinerOps { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
+                                    CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
             }
 
             for (const auto& shaderRef : ref.shaderBinders) {

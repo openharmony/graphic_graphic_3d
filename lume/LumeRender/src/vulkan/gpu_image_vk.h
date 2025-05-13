@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -70,9 +70,12 @@ private:
     GpuImagePlatformDataViewsVk platViews_;
     GpuImagePlatformDataConversion platConversion_;
     GpuImageDesc desc_;
-    uintptr_t hwBuffer_ { 0 };
     // in normal situations owns all the vulkan resources
     bool ownsResources_ { true };
+    // one might create a higher level view without hwbuffer
+    bool ownsImage_ { true };
+    bool ownsImageViews_ { true };
+
     bool destroyImageViewBase_ { false };
 
     struct MemoryAllocation {

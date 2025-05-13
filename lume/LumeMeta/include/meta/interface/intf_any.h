@@ -16,8 +16,6 @@
 #ifndef META_INTERFACE_ANY_H
 #define META_INTERFACE_ANY_H
 
-#include <core/plugin/intf_interface.h>
-
 #include <meta/base/expected.h>
 #include <meta/base/ids.h>
 #include <meta/base/interface_macros.h>
@@ -107,7 +105,9 @@ class IArrayAny : public IAny {
 public:
     using IndexType = size_t;
 
+    /// Get compatible types for any constructed with Clone for the array item type
     virtual const BASE_NS::array_view<const TypeId> GetItemCompatibleTypes(CompatibilityDirection) const = 0;
+
     virtual AnyReturnValue GetDataAt(size_t index, const TypeId& id, void* data, size_t size) const = 0;
     virtual AnyReturnValue SetDataAt(size_t index, const TypeId& id, const void* data, size_t size) = 0;
     virtual AnyReturnValue SetAnyAt(IndexType index, const IAny& value) = 0;
@@ -180,6 +180,7 @@ inline bool IsItemCompatible(
     }
     return false;
 }
+
 inline bool IsCompatibleWith(
     const IAny& any, const IAny& other, CompatibilityDirection dir = CompatibilityDirection::BOTH)
 {

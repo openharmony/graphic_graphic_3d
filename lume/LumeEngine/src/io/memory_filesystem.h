@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,8 +16,7 @@
 #ifndef CORE_IO_MEMORY_FILESYSTEM_H
 #define CORE_IO_MEMORY_FILESYSTEM_H
 
-#include <memory>
-
+#include <base/containers/shared_ptr.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
@@ -63,7 +62,7 @@ protected:
     }
 
 private:
-    BASE_NS::unordered_map<BASE_NS::string, std::weak_ptr<MemoryFileStorage>> memoryFiles_;
+    BASE_NS::unordered_map<BASE_NS::string, BASE_NS::weak_ptr<MemoryFileStorage>> memoryFiles_;
 };
 CORE_END_NAMESPACE()
 

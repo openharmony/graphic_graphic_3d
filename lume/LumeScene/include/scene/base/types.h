@@ -39,4 +39,5 @@ enum class RenderMode {
 SCENE_END_NAMESPACE()
 
 META_TYPE(SCENE_NS::RenderMode);
+
 #endif

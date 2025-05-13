@@ -28,7 +28,7 @@ public:
 
     static void RegisterEnums(NapiApi::Object exports);
 
-    bool IsAttached();
+    bool IsAttached() const;
     void Attached(bool attached);
 
 protected:

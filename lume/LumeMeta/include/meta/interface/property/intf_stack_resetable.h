@@ -36,9 +36,20 @@ inline ResetResult operator|(ResetResult l, ResetResult r)
 
 META_REGISTER_INTERFACE(IStackResetable, "b3f9bdc6-6b6f-43ff-b727-86f21e4e0c8d")
 
+/**
+ * @brief Interface to control what resetting property value does
+ *
+ * When ResetValue for property is called, the values and modifiers that has implemented with interface
+ * can alter the result. This allows to have sticky values or modifiers which are not removed when resetting.
+ */
 class IStackResetable : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IStackResetable)
 public:
+    /**
+     * @brief Function that is evaluated on ResetValue of property
+     * @param defaultValue The default value of the property
+     * @return Result of the evaluation
+     */
     virtual ResetResult ProcessOnReset(const IAny& defaultValue) = 0;
 };
 

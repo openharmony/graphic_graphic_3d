@@ -19,8 +19,8 @@
 #include <core/plugin/intf_interface.h>
 
 #include <meta/base/bit_field.h>
+#include <meta/base/interface_traits.h>
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/base/types.h>
 
 META_BEGIN_NAMESPACE()

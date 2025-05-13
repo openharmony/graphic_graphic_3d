@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -318,9 +318,6 @@ bool SkinningSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
     worldMatrixGeneration_ = worldMatrixManager_.GetGenerationCounter();
 
     const auto threadCount = threadPool_->GetNumberOfThreads();
-    if (threadCount == 0) {
-        return 0;
-    }
     const auto queryResults = componentQuery_.GetResults();
     const auto resultCount = queryResults.size();
     constexpr size_t minTaskSize = 8U;
@@ -415,7 +412,7 @@ void SkinningSystem::CreateInstance(Entity const& skinIbmEntity, Entity const& e
     if (const auto jointsHandle = skinJointsManager_.Read(skinIbmEntity); jointsHandle) {
         const auto joints = array_view(jointsHandle->jointEntities, jointsHandle->count);
         if (!std::all_of(
-            joints.begin(), joints.end(), [](const Entity& entity) { return EntityUtil::IsValid(entity); })) {
+                joints.begin(), joints.end(), [](const Entity& entity) { return EntityUtil::IsValid(entity); })) {
             return;
         }
         if (const auto skinIbmHandle = skinIbmManager_.Read(skinIbmEntity); skinIbmHandle) {

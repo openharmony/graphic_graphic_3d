@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,10 +46,10 @@ BASE_NS::string PlatformOHOS::RegisterDefaultPaths(IFileManager& fileManager) co
     const BASE_NS::string bundleName = plat_.bundleName;
     const BASE_NS::string moduleName = plat_.moduleName;
     auto resManager = plat_.resourceManager;
-    fileManager.RegisterFilesystem("OhosRawFile",
-        IFilesystem::Ptr{new Core::OhosFilesystem(hapPath, bundleName, moduleName, resManager)});
-    CORE_LOG_I("Registered hapFilesystem by Platform: 'hapPath:%s bundleName:%s moduleName:%s'",
-        hapPath.c_str(), bundleName.c_str(), moduleName.c_str());
+    fileManager.RegisterFilesystem(
+        "OhosRawFile", IFilesystem::Ptr { new Core::OhosFilesystem(hapPath, bundleName, moduleName, resManager) });
+    CORE_LOG_I("Registered hapFilesystem by Platform: 'hapPath:%s bundleName:%s moduleName:%s'", hapPath.c_str(),
+        bundleName.c_str(), moduleName.c_str());
     const BASE_NS::string coreDirectory = "file://" + plat_.coreRootPath;
     return coreDirectory;
 }

@@ -15,7 +15,11 @@
 
 #ifndef NAMED_IMPL_H
 #define NAMED_IMPL_H
+
 #include <napi_api.h>
+
+#include <base/containers/vector.h>
+
 class SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 1;
@@ -74,6 +78,7 @@ protected:
     napi_value GetUri(NapiApi::FunctionContext<>& ctx);
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
 
+    // May contain Scene or RenderContext
     NapiApi::WeakRef scene_;
     NapiApi::StrongRef uri_;
 
@@ -82,5 +87,6 @@ protected:
 
 private:
     SceneResourceType type_;
+    BASE_NS::string name_; // Cache for name if object does not support naming
 };
 #endif

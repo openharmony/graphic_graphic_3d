@@ -16,6 +16,7 @@
 #include "container.h"
 
 #include <algorithm>
+#include <mutex>
 
 #include <base/math/mathf.h>
 
@@ -24,7 +25,7 @@
 #include <meta/interface/intf_content.h>
 #include <meta/interface/property/intf_property.h>
 
-META_BEGIN_NAMESPACE()
+META_BEGIN_INTERNAL_NAMESPACE()
 
 IObject::Ptr Container::FindAny(const META_NS::IContainer::FindOptions& options) const
 {
@@ -185,4 +186,4 @@ bool Container::CheckLoop(const IObject::Ptr& object) const
     return true;
 }
 
-META_END_NAMESPACE()
+META_END_INTERNAL_NAMESPACE()

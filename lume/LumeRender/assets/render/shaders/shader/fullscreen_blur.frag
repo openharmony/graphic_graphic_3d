@@ -7,13 +7,19 @@
 // includes
 #include "render/shaders/common/render_compatibility_common.h"
 #include "render/shaders/common/render_blur_common.h"
+#include "render/shaders/common/render_post_process_structs_common.h"
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+layout(set = 0, binding = 0) uniform sampler uSampler;
+layout(set = 0, binding = 1) uniform texture2D uTex;
 
-layout(set = 1, binding = 0) uniform sampler uSampler;
-layout(set = 1, binding = 1) uniform texture2D uTex;
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
 
 // in / out
 

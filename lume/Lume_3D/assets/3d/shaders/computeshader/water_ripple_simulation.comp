@@ -1,0 +1,137 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+#include "common/water_ripple_common.h"
+
+layout(set = 0, binding = 0, std430) readonly buffer RippleInputBuffer
+{
+    DefaultWaterRippleDataStruct rippleArgs;
+};
+
+layout(set = 0, binding = 1, rgba32f) uniform readonly image2D RippleEffectTextureSrc;
+layout(set = 0, binding = 2, rgba32f) uniform writeonly image2D RippleEffectTextureDst;
+
+layout(push_constant, std430) uniform uPCMetadata
+{
+    vec4 uPc;
+};
+
+#ifndef PI
+#define PI 3.141592653589793
+#endif
+
+float GetNewRippleOffset(const ivec2 coord, const ivec2 newRipplePos, const ivec2 imageDim)
+{
+    const float distanceToRipple = length((vec2(coord) - vec2(newRipplePos)) / float(imageDim.x));
+    const float radius = float(rippleArgs.rippleRadius) / float(imageDim.x);
+
+    if (distanceToRipple <= radius && newRipplePos != ivec2(0)) {
+        const float tt = distanceToRipple / radius;
+        const float rippleEffect =
+            pow(1.0 - tt, rippleArgs.turbulenceFactors.y) * sin(rippleArgs.turbulenceFactors.x * tt * 0.5 * PI);
+
+        return -rippleArgs.newRippleDepth * rippleEffect;
+    } else {
+        return 0.0;
+    }
+}
+
+float Rand(const vec2 seed)
+{
+    return fract(sin(dot(seed.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec4 ComputeRipple(
+    const ivec2 coord, const vec4 rippleData, const float deltaTime, const ivec2 imageDim, const ivec2 offset)
+{
+    const float previousRippleHeight = rippleData.x;
+    const float previousVelocity = rippleData.y;
+
+    float newRippleHeight = previousRippleHeight;
+    float velocity = previousVelocity;
+
+    if (rippleArgs.inArgs.x == 1) {
+        float nro = 0;
+
+        for (int ii = 0; ii < MAX_NUM_RIPPLE; ii++) {
+            ivec2 pos;
+            pos.x = (int(rippleArgs.newRipplePositions[ii].x) - offset.x + imageDim.x) % imageDim.x;
+            pos.y = (int(rippleArgs.newRipplePositions[ii].y) - offset.y + imageDim.y) % imageDim.y;
+            const ivec2 ripplePos = ivec2(pos);
+            //const ivec2 ripplePos = ivec2(rippleArgs.newRipplePositions[ii]);
+
+            nro += GetNewRippleOffset(coord, ripplePos, imageDim);
+        }
+
+        // Scale the formation speed based on resolution for normalization.
+        float resolutionScale = 512.0;
+        newRippleHeight += nro * deltaTime * rippleArgs.rippleFormationSpeed * (imageDim.x / resolutionScale);
+        newRippleHeight = clamp(newRippleHeight, -rippleArgs.waterDepth, rippleArgs.waterDepth);
+
+        if (nro != 0) {
+            return vec4(newRippleHeight, 0, 0, 0);
+        }
+    }
+
+    float neighborSum = 0.0;
+    int validNeighborCount = 0;
+
+    const ivec2 offsets[4] = ivec2[4](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1));
+
+    for (int ii = 0; ii < 4; ii++) {
+        const ivec2 neighborCoord = coord + offsets[ii];
+        if (neighborCoord.x >= 0 && neighborCoord.y >= 0 && neighborCoord.x < imageDim.x &&
+            neighborCoord.y < imageDim.y) {
+            neighborSum += imageLoad(RippleEffectTextureSrc, neighborCoord).x;
+            validNeighborCount++;
+        }
+    }
+
+    const float neighborAverageHeight = neighborSum / float(validNeighborCount);
+    velocity += (neighborAverageHeight - previousRippleHeight) * 2.0;
+
+    // add randomness to the damping to make the simulation look less like mercury
+    const float randomVariance = Rand(vec2(coord) + vec2(deltaTime)) * 0.5;
+
+    const float damping = exp(-(DAMPING_COEFF + randomVariance) * deltaTime);
+    velocity *= damping;
+
+    newRippleHeight += velocity;
+    return vec4(clamp(newRippleHeight, -rippleArgs.waterDepth, rippleArgs.waterDepth), velocity, 0, 0);
+}
+
+layout(local_size_x = WATER_RIPPLE_TGS, local_size_y = WATER_RIPPLE_TGS, local_size_z = 1) in;
+void main()
+{
+    const ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 imageDim = ivec2(rippleArgs.inArgs.zw);
+
+    if (any(greaterThan(xy, imageDim - ivec2(1)))) {
+        return;
+    }
+    vec2 planeOffset = vec2(uPc.z, uPc.w);
+    const ivec2 offset = ivec2(planeOffset.x, planeOffset.y);
+    const ivec2 writePos = xy + offset;
+
+    if (any(greaterThan(writePos, imageDim - ivec2(1)))) {
+        return;
+    }
+    const float deltaTime = uPc.x;
+    const vec4 prevBufferValue = imageLoad(RippleEffectTextureSrc, xy);
+
+    const vec2 center = vec2(imageDim) / 2.0;
+
+    const vec2 fromCenter = abs(xy - center);
+    const float dist = max(fromCenter.x, fromCenter.y);
+    
+    // Apply a square vingette to smooth the edges of simulation plane
+    const vec2 borders = rippleArgs.innerOutterRadius * center;
+ 
+    const float vignette = smoothstep(borders.x, borders.y, dist);
+
+    const vec4 heightVelocity = ComputeRipple(xy, prevBufferValue, deltaTime, imageDim, offset);
+    const vec4 finalColor = mix(heightVelocity, vec4(0.0), vignette);
+    
+    imageStore(RippleEffectTextureDst, writePos, finalColor);
+}

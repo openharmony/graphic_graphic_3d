@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include "composite_object_provider.h"
 
 #include <meta/api/iteration.h>

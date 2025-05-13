@@ -46,8 +46,6 @@ public:
     META_PROPERTY(float, Exposure)
 };
 
-META_REGISTER_CLASS(Tonemap, "56c1fc6e-90aa-486d-846e-c9a5c780a90a", META_NS::ObjectCategoryBits::NO_CATEGORY)
-
 SCENE_END_NAMESPACE()
 
 META_TYPE(SCENE_NS::TonemapType)

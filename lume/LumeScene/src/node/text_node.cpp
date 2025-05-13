@@ -17,7 +17,7 @@
 
 #include <scene/interface/intf_material.h>
 
-#include "core/ecs.h"
+#include "../core/ecs.h"
 
 SCENE_BEGIN_NAMESPACE()
 

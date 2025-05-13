@@ -16,8 +16,11 @@
 #ifndef META_SRC_FUTURE_H
 #define META_SRC_FUTURE_H
 
+#include <condition_variable>
 #include <mutex>
 #include <thread>
+
+#include <base/containers/shared_ptr.h>
 
 #include <meta/base/interface_macros.h>
 #include <meta/base/namespace.h>
@@ -88,7 +91,7 @@ private:
 
 class ContinuationQueueTask : public IntroduceInterfaces<ITaskQueueTask> {
 public:
-    explicit ContinuationQueueTask(IFutureContinuation::Ptr task) : task_(BASE_NS::move(task)) {}
+    ContinuationQueueTask(IFutureContinuation::Ptr task) : task_(BASE_NS::move(task)) {}
 
     void SetParam(IAny::Ptr arg)
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -510,14 +510,13 @@ GraphicsPipelineStateObjectVk::GraphicsPipelineStateObjectVk(Device& device, con
         VK_NULL_HANDLE,                                  // basePipelineHandle
         0,                                               // basePipelineIndex
     };
-    PLUGIN_LOG_E("CreateGraphicsPipelines Start");
+
     VALIDATE_VK_RESULT(vkCreateGraphicsPipelines(vkDevice, // device
         devicePlatVk.pipelineCache,                        // pipelineCache
         1,                                                 // createInfoCount
         &graphicsPipelineCreateInfo,                       // pCreateInfos
         nullptr,                                           // pAllocator
         &plat_.pipeline));                                 // pPipelines
-    PLUGIN_LOG_E("CreateGraphicsPipelines End");
 
     // NOTE: direct destruction here
     for (uint32_t idx = 0; idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++idx) {

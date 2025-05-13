@@ -38,11 +38,11 @@ BEGIN_COMPONENT(ITextComponentManager, TextComponent)
         TEXT3D = 2
     };
 #endif
-    DEFINE_PROPERTY(BASE_NS::string, text, "Text", 0,)
-    DEFINE_PROPERTY(BASE_NS::string, fontFamily, "Font Family", 0,)
-    DEFINE_PROPERTY(BASE_NS::string, fontStyle, "Font Style", 0,)
-    DEFINE_PROPERTY(float, fontSize, "Font Size", 0,)
-    DEFINE_PROPERTY(float, font3DThickness, "3D Font Thickness", 0,)
+    DEFINE_PROPERTY(BASE_NS::string, text, "Text", 0, )
+    DEFINE_PROPERTY(BASE_NS::string, fontFamily, "Font Family", 0, )
+    DEFINE_PROPERTY(BASE_NS::string, fontStyle, "Font Style", 0, )
+    DEFINE_PROPERTY(float, fontSize, "Font Size", 0, )
+    DEFINE_PROPERTY(float, font3DThickness, "3D Font Thickness", 0, )
     DEFINE_PROPERTY(FontMethod, fontMethod, "Font Method", 0, FontMethod::RASTER)
 
 END_COMPONENT(ITextComponentManager, TextComponent, "66be0c20-3b2b-44c9-a54c-462235e94003")

@@ -140,9 +140,8 @@ public:
      * @param index The index where the object should be added. If index >= container size, the
      *              object is added at the end of the container.
      * @param object The object to add.
-     * @note  If the object is already in the container, the function will move the object
-     *        to the given index.
-     * @return True if the object is in the container after the operation, false otherwise.
+     * @note  If the object is already in the container, the call fails
+     * @return True if the object was inserted to the container, false otherwise.
      */
     virtual bool Insert(SizeType index, const IObject::Ptr& object) = 0;
     /**

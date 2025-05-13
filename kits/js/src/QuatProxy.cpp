@@ -23,56 +23,46 @@ QuatProxy::QuatProxy(napi_env env, META_NS::Property<BASE_NS::Math::Quat> prop) 
     Hook("y");
     Hook("z");
     Hook("w");
-    SyncGet();
 }
 QuatProxy::~QuatProxy()
 {
     Reset();
 }
-void QuatProxy::UpdateLocalValues()
-{
-    // update local values. (runs in engine thread)
-    value = META_NS::Property<BASE_NS::Math::Quat>(prop_)->GetValue();
-}
-void QuatProxy::UpdateRemoteValues()
-{
-    META_NS::Property<BASE_NS::Math::Quat>(prop_)->SetValue(value);
-}
+
 void QuatProxy::SetValue(const BASE_NS::Math::Quat& v)
 {
-    Lock();
-    if (value != v) {
-        value = v;
-        ScheduleUpdate();
-    }
-    Unlock();
+    META_NS::SetValue(GetProperty<BASE_NS::Math::Quat>(), v);
 }
 void QuatProxy::SetMemberValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
 {
     NapiApi::FunctionContext<float> info(cb);
     if (info) {
+        auto p = GetProperty<BASE_NS::Math::Quat>();
+        auto value = META_NS::GetValue(p);
         float val = info.Arg<0>();
-        Lock();
+        bool changed = false;
         if ((memb == "x") && (val != value.x)) {
             value.x = val;
-            ScheduleUpdate();
+            changed = true;
         } else if ((memb == "y") && (val != value.y)) {
             value.y = val;
-            ScheduleUpdate();
+            changed = true;
         } else if ((memb == "z") && (val != value.z)) {
             value.z = val;
-            ScheduleUpdate();
+            changed = true;
         } else if ((memb == "w") && (val != value.w)) {
             value.w = val;
-            ScheduleUpdate();
+            changed = true;
         }
-        Unlock();
+        if (changed) {
+            META_NS::SetValue(p, value);
+        }
     }
 }
 napi_value QuatProxy::GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb)
 {
     float res;
-    Lock();
+    auto value = META_NS::GetValue(GetProperty<BASE_NS::Math::Quat>());
     if (memb == "x") {
         res = value.x;
     } else if (memb == "y") {
@@ -83,10 +73,8 @@ napi_value QuatProxy::GetMemberValue(const NapiApi::Env info, BASE_NS::string_vi
         res = value.w;
     } else {
         // invalid member?
-        Unlock();
         return info.GetUndefined();
     }
-    Unlock();
     return info.GetNumber(res);
 }
 

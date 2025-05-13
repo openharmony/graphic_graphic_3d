@@ -21,8 +21,8 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/property/array_property.h>
 
-#include "ecs_component/entity_owner_component.h"
-#include "mesh/submesh.h"
+#include "../ecs_component/entity_owner_component.h"
+#include "../mesh/submesh.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -55,6 +55,7 @@ CORE_NS::Entity MeshNode::CreateEntity(const IInternalScene::Ptr& scene)
     }
     handle->mesh = ecs->GetEntityManager().Create();
     meshManager->Create(handle->mesh);
+
     ownerManager->Create(entity);
     const auto ownerHandle = ownerManager->Write(entity);
     if (!ownerHandle) {
@@ -65,7 +66,8 @@ CORE_NS::Entity MeshNode::CreateEntity(const IInternalScene::Ptr& scene)
     ownerHandle->entity = ecs->GetEntityManager().GetReferenceCounted(handle->mesh);
     return entity;
 }
-bool MeshNode::Init(IInternalRenderMesh::Ptr rmesh)
+
+bool MeshNode::Init(const IInternalRenderMesh::Ptr& rmesh)
 {
     auto ent = rmesh->Mesh()->GetValue();
     if (!CORE_NS::EntityUtil::IsValid(ent)) {
@@ -75,7 +77,8 @@ bool MeshNode::Init(IInternalRenderMesh::Ptr rmesh)
     auto res = Init(ecsobj);
     return res;
 }
-bool MeshNode::Init(IEcsObject::Ptr ecsobj)
+
+bool MeshNode::Init(const IEcsObject::Ptr& ecsobj)
 {
     if (!ecsobj) {
         return false;
@@ -89,25 +92,10 @@ bool MeshNode::Init(IEcsObject::Ptr ecsobj)
             return false;
         }
     }
+    if (auto morph = GetAttachments({ IMorpher::UID }, false); !morph.empty()) {
+        Morpher()->SetValue(interface_pointer_cast<IMorpher>(morph.front()));
+    }
     return true;
-}
-
-Future<BASE_NS::vector<ISubMesh::Ptr>> MeshNode::GetSubmeshes() const
-{
-    if (auto obj = GetEcsObject()) {
-        auto scene = obj->GetScene();
-        return scene->AddTask([=] { return mesh_->GetSubmeshes().GetResult(); });
-        // this is not safe, but what can we do. Not allowed to change the submeshes while override is on
-    }
-    return {};
-        }
-Future<bool> MeshNode::SetSubmeshes(const BASE_NS::vector<ISubMesh::Ptr>& s)
-{
-    if (auto obj = GetEcsObject()) {
-        auto scene = obj->GetScene();
-        return scene->AddTask([=] { return mesh_->SetSubmeshes(s).GetResult(); });
-    }
-    return {};
 }
 
 void MeshNode::SetOwnedEntity(CORE_NS::Entity ent)
@@ -122,12 +110,14 @@ void MeshNode::SetOwnedEntity(CORE_NS::Entity ent)
         }
     }
 }
+
 Future<bool> MeshNode::SetMesh(const IMesh::Ptr& m)
 {
     if (auto obj = GetEcsObject()) {
         auto scene = obj->GetScene();
         return scene->AddTask([=] {
             IMesh::Ptr mesh = m;
+            // in case it is mesh node, use the embedded mesh
             if (auto acc = interface_cast<IMeshAccess>(mesh)) {
                 mesh = acc->GetMesh().GetResult();
             }
@@ -135,7 +125,9 @@ Future<bool> MeshNode::SetMesh(const IMesh::Ptr& m)
                 if (auto obj = objacc->GetEcsObject()) {
                     auto att = GetSelf<META_NS::IAttach>()->GetAttachments<IInternalRenderMesh>();
                     if (!att.empty()) {
-                        att.front()->Mesh()->SetValue(obj->GetEntity());
+                        auto prop = att.front()->Mesh();
+                        prop->SetValue(obj->GetEntity());
+                        scene->SyncProperty(prop, META_NS::EngineSyncDirection::TO_ENGINE);
                         mesh_ = mesh;
                         SetOwnedEntity(obj->GetEntity());
                         return true;

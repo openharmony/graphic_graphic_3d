@@ -12,11 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef META_INTERFACE_DETAIL_MULTI_TYPE_ANY_H
 #define META_INTERFACE_DETAIL_MULTI_TYPE_ANY_H
 
-#include <meta/interface/detail/any.h>
+#include <meta/interface/detail/base_any.h>
 
 META_BEGIN_NAMESPACE()
 

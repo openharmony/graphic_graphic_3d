@@ -10,13 +10,16 @@
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+layout(set = 0, binding = 0) uniform texture2D uDepth;
+layout(set = 0, binding = 1) uniform texture2D uColor;
+layout(set = 0, binding = 2) uniform texture2D uVelocity;
+layout(set = 0, binding = 3) uniform texture2D uHistory;
+layout(set = 0, binding = 4) uniform sampler uSampler;
 
-layout(set = 1, binding = 0) uniform texture2D uDepth;
-layout(set = 1, binding = 1) uniform texture2D uColor;
-layout(set = 1, binding = 2) uniform texture2D uVelocity;
-layout(set = 1, binding = 3) uniform texture2D uHistory;
-layout(set = 1, binding = 4) uniform sampler uSampler;
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
 
 // in / out
 

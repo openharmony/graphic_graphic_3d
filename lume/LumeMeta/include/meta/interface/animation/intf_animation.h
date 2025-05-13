@@ -18,7 +18,6 @@
 
 #include <base/containers/vector.h>
 #include <base/math/vector.h>
-#include <core/plugin/intf_interface.h>
 
 #include <meta/base/ids.h>
 #include <meta/base/namespace.h>
@@ -29,9 +28,8 @@
 #include <meta/interface/intf_named.h>
 #include <meta/interface/intf_object.h>
 #include <meta/interface/property/intf_property.h>
+#include <meta/interface/property/property_events.h>
 #include <meta/interface/simple_event.h>
-
-#include "meta/interface/property/property_events.h"
 
 META_BEGIN_NAMESPACE()
 
@@ -215,7 +213,7 @@ public:
 };
 
 /**
- * @brief IPropertyAnimation can be used to define an explicit keyframe animation on a property between two values.
+ * @brief IKeyframeAnimation can be used to define an explicit keyframe animation on a property between two values.
  */
 class IKeyframeAnimation : public ITimedAnimation {
     META_INTERFACE(ITimedAnimation, IKeyframeAnimation, META_NS::InterfaceId::IKeyframeAnimation)

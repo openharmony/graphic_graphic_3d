@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,7 @@
 
 #include <cstdint>
 
+#include <render/device/intf_device.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/intf_render_context.h>
 #include <render/namespace.h>
@@ -35,12 +36,18 @@ RenderDataStoreDefaultAccelerationStructureStaging::~RenderDataStoreDefaultAccel
 void RenderDataStoreDefaultAccelerationStructureStaging::PreRender()
 {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    // get stuff ready for render nodes
-
     std::lock_guard<std::mutex> lock(mutex_);
 
-    frameStagingBuild_ = move(stagingBuild_);
-    frameStagingInstance_ = move(stagingInstance_);
+    // get stuff ready for render nodes
+    frameStaging_ = move(staging_);
+
+    staging_.geometry.clear();
+    staging_.geomTriangles.clear();
+    staging_.geomAabbs.clear();
+    staging_.geomInstances.clear();
+    staging_.instanceCopyInfo.clear();
+    staging_.instanceCopyData.clear();
+    staging_.data.clear();
 #endif
 }
 
@@ -70,21 +77,22 @@ int32_t RenderDataStoreDefaultAccelerationStructureStaging::GetRefCount()
 }
 
 void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStructure(
-    const StagingAccelerationStructureBuildGeometryData& buildData,
-    const BASE_NS::array_view<const StagingAccelerationStructureGeometryTrianglesData> geometries)
+    const AsBuildGeometryDataWithHandleReference& buildData,
+    const BASE_NS::array_view<const AsGeometryTrianglesDataWithHandleReference> geometries)
 {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    std::lock_guard<std::mutex> lock(mutex_);
-
     if (!geometries.empty()) {
-        auto& geoms = stagingBuild_.triangles;
-        const uint32_t startIndex = static_cast<uint32_t>(geoms.size());
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // next op
+        const uint32_t index = static_cast<uint32_t>(staging_.geometry.size());
+        staging_.data.push_back({ AsConsumeStruct::OperationType::BUILD_OP, index });
+
+        auto& prims = staging_.geomTriangles;
+        const uint32_t startIndex = static_cast<uint32_t>(prims.size());
         const uint32_t count = static_cast<uint32_t>(geometries.size());
-        geoms.reserve(startIndex + count);
-        for (const auto& geometriesRef : geometries) {
-            geoms.push_back(geometriesRef);
-        }
-        stagingBuild_.geometry.push_back(AccelerationStructureBuildConsumeStruct::Geom {
+        prims.append(geometries.begin(), geometries.end());
+        staging_.geometry.push_back(AsConsumeStruct::Geom {
             buildData,
             GeometryType::CORE_GEOMETRY_TYPE_TRIANGLES,
             startIndex,
@@ -95,21 +103,22 @@ void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStruct
 }
 
 void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStructure(
-    const StagingAccelerationStructureBuildGeometryData& buildData,
-    const BASE_NS::array_view<const StagingAccelerationStructureGeometryInstancesData> geometries)
+    const AsBuildGeometryDataWithHandleReference& buildData,
+    const BASE_NS::array_view<const AsGeometryInstancesDataWithHandleReference> geometries)
 {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    std::lock_guard<std::mutex> lock(mutex_);
-
     if (!geometries.empty()) {
-        auto& geoms = stagingBuild_.instances;
-        const uint32_t startIndex = static_cast<uint32_t>(geoms.size());
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // next op
+        const uint32_t index = static_cast<uint32_t>(staging_.geometry.size());
+        staging_.data.push_back({ AsConsumeStruct::OperationType::BUILD_OP, index });
+
+        auto& prims = staging_.geomInstances;
+        const uint32_t startIndex = static_cast<uint32_t>(prims.size());
         const uint32_t count = static_cast<uint32_t>(geometries.size());
-        geoms.reserve(startIndex + count);
-        for (const auto& geometriesRef : geometries) {
-            geoms.push_back(geometriesRef);
-        }
-        stagingBuild_.geometry.push_back(AccelerationStructureBuildConsumeStruct::Geom {
+        prims.append(geometries.begin(), geometries.end());
+        staging_.geometry.push_back(AsConsumeStruct::Geom {
             buildData,
             GeometryType::CORE_GEOMETRY_TYPE_INSTANCES,
             startIndex,
@@ -120,21 +129,22 @@ void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStruct
 }
 
 void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStructure(
-    const StagingAccelerationStructureBuildGeometryData& buildData,
-    const BASE_NS::array_view<const StagingAccelerationStructureGeometryAabbsData> geometries)
+    const AsBuildGeometryDataWithHandleReference& buildData,
+    const BASE_NS::array_view<const AsGeometryAabbsDataWithHandleReference> geometries)
 {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    std::lock_guard<std::mutex> lock(mutex_);
-
     if (!geometries.empty()) {
-        auto& geoms = stagingBuild_.aabbs;
-        const uint32_t startIndex = static_cast<uint32_t>(geoms.size());
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // next op
+        const uint32_t index = static_cast<uint32_t>(staging_.geometry.size());
+        staging_.data.push_back({ AsConsumeStruct::OperationType::BUILD_OP, index });
+
+        auto& prims = staging_.geomAabbs;
+        const uint32_t startIndex = static_cast<uint32_t>(prims.size());
         const uint32_t count = static_cast<uint32_t>(geometries.size());
-        geoms.reserve(startIndex + count);
-        for (const auto& geometriesRef : geometries) {
-            geoms.push_back(geometriesRef);
-        }
-        stagingBuild_.geometry.push_back(AccelerationStructureBuildConsumeStruct::Geom {
+        prims.append(geometries.begin(), geometries.end());
+        staging_.geometry.push_back(AsConsumeStruct::Geom {
             buildData,
             GeometryType::CORE_GEOMETRY_TYPE_AABBS,
             startIndex,
@@ -145,22 +155,23 @@ void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStruct
 }
 
 void RenderDataStoreDefaultAccelerationStructureStaging::CopyAccelerationStructureInstanceData(
-    const RenderHandleReference& buffer, const uint32_t offset,
-    const BASE_NS::array_view<const StagingAccelerationStructureInstance> instances)
+    const BufferOffsetWithHandleReference& dstBuffer,
+    const BASE_NS::array_view<const AsInstanceWithHandleReference> instances)
 {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    std::lock_guard<std::mutex> lock(mutex_);
+    if ((!instances.empty()) && dstBuffer.handle) {
+        std::lock_guard<std::mutex> lock(mutex_);
 
-    if ((!instances.empty()) && buffer) {
-        auto& ins = stagingInstance_.instances;
-        const uint32_t startIndex = static_cast<uint32_t>(ins.size());
+        // next op
+        const uint32_t index = static_cast<uint32_t>(staging_.instanceCopyInfo.size());
+        staging_.data.push_back({ AsConsumeStruct::OperationType::INSTANCE_COPY_OP, index });
+
+        auto& prims = staging_.instanceCopyData;
+        const uint32_t startIndex = static_cast<uint32_t>(prims.size());
         const uint32_t count = static_cast<uint32_t>(instances.size());
-        ins.reserve(startIndex + count);
-        for (const auto& instancesRef : instances) {
-            ins.push_back(instancesRef);
-        }
-        stagingInstance_.copyInfo.push_back(AccelerationStructureInstanceConsumeStruct::Target {
-            { buffer, offset },
+        prims.append(instances.begin(), instances.end());
+        staging_.instanceCopyInfo.push_back(AsConsumeStruct::CopyTarget {
+            dstBuffer,
             startIndex,
             count,
         });
@@ -170,23 +181,16 @@ void RenderDataStoreDefaultAccelerationStructureStaging::CopyAccelerationStructu
 
 bool RenderDataStoreDefaultAccelerationStructureStaging::HasStagingData() const
 {
-    if (frameStagingBuild_.geometry.empty() && frameStagingInstance_.copyInfo.empty()) {
+    if (frameStaging_.geometry.empty()) {
         return false;
     } else {
         return true;
     }
 }
 
-AccelerationStructureBuildConsumeStruct RenderDataStoreDefaultAccelerationStructureStaging::ConsumeStagingBuildData()
+AsConsumeStruct RenderDataStoreDefaultAccelerationStructureStaging::ConsumeStagingData()
 {
-    AccelerationStructureBuildConsumeStruct scs = move(frameStagingBuild_);
-    return scs;
-}
-
-AccelerationStructureInstanceConsumeStruct
-RenderDataStoreDefaultAccelerationStructureStaging::ConsumeStagingInstanceData()
-{
-    AccelerationStructureInstanceConsumeStruct scs = move(frameStagingInstance_);
+    AsConsumeStruct scs = move(frameStaging_);
     return scs;
 }
 

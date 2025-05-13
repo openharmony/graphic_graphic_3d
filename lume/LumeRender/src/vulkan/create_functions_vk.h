@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -27,6 +27,7 @@
 RENDER_BEGIN_NAMESPACE()
 struct LowLevelQueueInfo;
 struct VersionInfo;
+class RenderContext;
 
 struct InstanceWrapper {
     VkInstance instance { VK_NULL_HANDLE };
@@ -74,7 +75,7 @@ public:
     static void DestroyDebugCallback(VkInstance instance, VkDebugReportCallbackEXT debugReport);
 
     static VkDebugUtilsMessengerEXT CreateDebugMessenger(
-        VkInstance instance, PFN_vkDebugUtilsMessengerCallbackEXT callbackFunction);
+        VkInstance instance, PFN_vkDebugUtilsMessengerCallbackEXT callbackFunction, RenderContext* renderContext);
     static void DestroyDebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger);
 
     static PhysicalDeviceWrapper CreatePhysicalDevice(VkInstance instance, QueueProperties const& queueProperties);

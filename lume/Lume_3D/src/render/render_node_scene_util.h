@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -47,6 +47,7 @@ public:
     static SceneRenderDataStores GetSceneRenderDataStores(
         const RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
         const BASE_NS::string_view sceneDataStoreName);
+    static BASE_NS::string GetSceneRenderDataStore(const SceneRenderDataStores& sceneRds, BASE_NS::string_view dsName);
 
     static RENDER_NS::ViewportDesc CreateViewportFromCamera(const RenderCamera& camera);
     static RENDER_NS::ScissorDesc CreateScissorFromCamera(const RenderCamera& camera);
@@ -76,6 +77,8 @@ public:
 
     SceneRenderDataStores GetSceneRenderDataStores(const RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
         BASE_NS::string_view sceneDataStoreName) override;
+    BASE_NS::string GetSceneRenderDataStore(
+        const SceneRenderDataStores& sceneRds, BASE_NS::string_view dsName) override;
     RENDER_NS::ViewportDesc CreateViewportFromCamera(const RenderCamera& camera) override;
     RENDER_NS::ScissorDesc CreateScissorFromCamera(const RenderCamera& camera) override;
     void UpdateRenderPassFromCamera(const RenderCamera& camera, RENDER_NS::RenderPass& renderPass) override;

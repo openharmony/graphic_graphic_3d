@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -84,6 +84,7 @@ void ProcessPushConstants(GLuint program, const ShaderModulePlatformDataGLES& pl
 
 void ProcessStorageBlocks(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, const BindMaps& map)
 {
+#if defined(RENDER_VALIDATION_ENABLED) && (RENDER_VALIDATION_ENABLED)
     GLsizei len;
     const GLenum block_props[] = { flag, GL_BUFFER_BINDING };
     GLint inUse[BASE_NS::countof(block_props)] { 0 };
@@ -96,11 +97,13 @@ void ProcessStorageBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
                 (GLsizei)sizeof(inUse), &len, inUse);
             if (inUse[0]) {
                 const uint8_t fi = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
-                PLUGIN_UNUSED(fi);
-                PLUGIN_ASSERT(inUse[1] == (fi - 1));
+                if (inUse[1] != (fi - 1)) {
+                    PLUGIN_LOG_E("Set %d, binding %d mapped to %d, expected %d", t.iSet, t.iBind, inUse[1], (fi - 1));
+                }
             }
         }
     }
+#endif
 }
 
 void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
@@ -332,9 +335,10 @@ void FixBindings(T (&types)[N], binder& map, const TypeOfOther& sbSets, string& 
                                       continue;
                                   }
                                   // expect to find end of declaration, end of line, or _number (case: multiple uniforms
-                                  // with same binding, not actually checking for the number)
+                                  // with same binding, not actually checking for the number). end of line could be LF
+                                  // or CRLF and someone could have left spaces after the name so isspace is reasonable.
                                   if (const char ch = afterType[t.name.size()];
-                                      (ch != ';') && (ch != '\n') && (ch != '_')) {
+                                      !std::isspace(static_cast<unsigned char>(ch)) && (ch != ';') && (ch != '_')) {
                                       continue;
                                   }
                                   // okay.. do it then..
@@ -398,7 +402,7 @@ void PostProcessSource(BindMaps& map, const ShaderModulePlatformDataGLES& modPla
     }
 }
 
-void BuildBindInfos(vector<Binder>& bindinfos, const PipelineLayout& pipelineLayout, BindMaps& map,
+void BuildBindInfos(Resources& resources, const PipelineLayout& pipelineLayout, BindMaps& map,
     const vector<ShaderModulePlatformDataGLES::DoubleBind>& combSets)
 {
     vector<Binder> samplers;
@@ -410,70 +414,88 @@ void BuildBindInfos(vector<Binder>& bindinfos, const PipelineLayout& pipelineLay
         }
         PLUGIN_ASSERT(set == s.set);
         for (const auto& b : s.bindings) {
+            const uint8_t id = map.map[BIND_MAP_4_4(s.set, b.binding)];
+            if (!id) {
+                continue;
+            }
             Binder tmp;
-            tmp.set = s.set;
-            tmp.bind = b.binding;
+            tmp.set = uint16_t(s.set);
+            tmp.bind = uint16_t(b.binding);
             tmp.type = b.descriptorType;
-            tmp.id.resize(b.descriptorCount);
+            tmp.descriptors.index = uint16_t(resources.descriptorIndexIds.size());
+            tmp.descriptors.count = uint16_t(b.descriptorCount);
             bool add = false;
-            for (size_t index = 0; index < b.descriptorCount; index++) {
-                switch (b.descriptorType) {
-                    case CORE_DESCRIPTOR_TYPE_SAMPLER: {
-                        const uint32_t sid = map.map[BIND_MAP_4_4(s.set, b.binding)];
-                        if (sid) {
-                            for (const auto& cs : combSets) {
-                                if ((cs.sSet == s.set) && (cs.sBind == b.binding)) {
-                                    const uint32_t iid = map.map[BIND_MAP_4_4(cs.iSet, cs.iBind)];
-                                    if (iid) {
-                                        uint32_t final = map.finalMap[BIND_MAP_4_4(sid, iid)];
-                                        if (final) {
-                                            tmp.id[index].push_back(final - 1);
-                                            add = true;
-                                        }
-                                    }
-                                }
-                            }
+            resources.descriptorIndexIds.append(tmp.descriptors.count, {});
+            auto descriptorIndex =
+                array_view(resources.descriptorIndexIds.data() + tmp.descriptors.index, tmp.descriptors.count);
+            switch (b.descriptorType) {
+                case CORE_DESCRIPTOR_TYPE_SAMPLER: {
+                    for (const auto& cs : combSets) {
+                        if ((cs.sSet != s.set) || (cs.sBind != b.binding)) {
+                            continue;
                         }
-                        break;
-                    }
-                    case CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE: {
-                        const uint32_t iid = map.map[BIND_MAP_4_4(s.set, b.binding)];
-                        if (iid) {
-                            for (const auto& cs : combSets) {
-                                if ((cs.iSet == s.set) && (cs.iBind == b.binding)) {
-                                    const uint32_t sid = map.map[BIND_MAP_4_4(cs.sSet, cs.sBind)];
-                                    if (sid) {
-                                        uint32_t final = map.finalMap[BIND_MAP_4_4(sid, iid)];
-                                        if (final) {
-                                            tmp.id[index].push_back(final - 1);
-                                            add = true;
-                                        }
-                                    }
-                                }
-                            }
+                        const uint32_t iid = map.map[BIND_MAP_4_4(cs.iSet, cs.iBind)];
+                        if (!iid) {
+                            continue;
                         }
-                        break;
-                    }
-                    case CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-                    case CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-                    case CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-                    case CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                    case CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                    case CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                    case CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER: {
-                        uint32_t id = map.map[BIND_MAP_4_4(s.set, b.binding)];
-                        if (id) {
-                            tmp.id[index].push_back(id - 1);
+                        const uint8_t final = map.finalMap[BIND_MAP_4_4(id, iid)];
+                        if (final) {
+                            for (auto& ids : descriptorIndex) {
+                                if (!ids.count) {
+                                    ids.index = uint16_t(resources.ids.size());
+                                }
+                                ++ids.count;
+                                resources.ids.push_back(final - 1U);
+                            }
                             add = true;
                         }
-                        break;
                     }
-                    case CORE_DESCRIPTOR_TYPE_MAX_ENUM:
-                    default:
-                        PLUGIN_ASSERT_MSG(false, "Unhandled descriptor type");
-                        break;
+                    break;
                 }
+                case CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE: {
+                    for (const auto& cs : combSets) {
+                        if ((cs.iSet != s.set) || (cs.iBind != b.binding)) {
+                            continue;
+                        }
+                        const uint32_t sid = map.map[BIND_MAP_4_4(cs.sSet, cs.sBind)];
+                        if (!sid) {
+                            continue;
+                        }
+                        const uint8_t final = map.finalMap[BIND_MAP_4_4(sid, id)];
+                        if (final) {
+                            for (auto& ids : descriptorIndex) {
+                                if (!ids.count) {
+                                    ids.index = uint16_t(resources.ids.size());
+                                }
+                                ++ids.count;
+                                resources.ids.push_back(final - 1U);
+                            }
+                            add = true;
+                        }
+                    }
+                    break;
+                }
+                case CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                case CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                case CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                case CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                case CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                case CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                case CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER: {
+                    for (auto& ids : descriptorIndex) {
+                        ids.index = uint16_t(resources.ids.size());
+                        ids.count = 1U;
+                        resources.ids.push_back(id - 1U);
+                    }
+                    add = true;
+                    break;
+                }
+                case CORE_DESCRIPTOR_TYPE_MAX_ENUM:
+                default:
+                    PLUGIN_ASSERT_MSG(false, "Unhandled descriptor type");
+                    break;
             }
+
             if (add) {
                 if (b.descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLER) {
                     samplers.push_back(move(tmp));
@@ -484,12 +506,12 @@ void BuildBindInfos(vector<Binder>& bindinfos, const PipelineLayout& pipelineLay
         }
     }
     // add samplers first. helps with oes.
-    bindinfos.reserve(samplers.size() + others.size());
+    resources.resourceList.reserve(samplers.size() + others.size());
     for (auto& s : samplers) {
-        bindinfos.push_back(move(s));
+        resources.resourceList.push_back(move(s));
     }
     for (auto& o : others) {
-        bindinfos.push_back(move(o));
+        resources.resourceList.push_back(move(o));
     }
 }
 
@@ -499,7 +521,7 @@ void PatchOesBinds(
     if (!oesBinds.empty()) {
         // find names of oes binds (we only patch Sampler2D's)
         auto p = fragSource.find("\n", 0);
-        const string_view extension("#extension GL_OES_EGL_image_external_essl3 : enable\n");
+        constexpr string_view extension("#extension GL_OES_EGL_image_external_essl3 : enable\n");
         fragSource.insert(p + 1, extension.data(), extension.size());
         for (const auto& bnd : oesBinds) {
             for (const auto& t : fragPlat.cbSets) {
@@ -696,8 +718,10 @@ unique_ptr<GpuShaderProgramGLES> GpuShaderProgramGLES::Specialize(const ShaderSp
             combSets.push_back(c);
         }
     }
-    BuildBindInfos(ret->resourceList, pipelineLayout, map, combSets);
-    ret->plat_.resourceList = ret->resourceList;
+    BuildBindInfos(ret->resources_, pipelineLayout, map, combSets);
+    ret->plat_.resourcesView.resourceList = ret->resources_.resourceList;
+    ret->plat_.resourcesView.descriptorIndexIds = ret->resources_.descriptorIndexIds;
+    ret->plat_.resourcesView.ids = ret->resources_.ids;
     return ret;
 }
 
@@ -788,8 +812,10 @@ unique_ptr<GpuComputeProgramGLES> GpuComputeProgramGLES::Specialize(
     ret->plat_.flipLocation = glGetUniformLocation(ret->plat_.program, "CORE_FLIP_NDC");
 
     const auto& pipelineLayout = reflection_.pipelineLayout;
-    BuildBindInfos(ret->resourceList, pipelineLayout, map, plat.combSets);
-    ret->plat_.resourceList = ret->resourceList;
+    BuildBindInfos(ret->resources_, pipelineLayout, map, plat.combSets);
+    ret->plat_.resourcesView.resourceList = ret->resources_.resourceList;
+    ret->plat_.resourcesView.descriptorIndexIds = ret->resources_.descriptorIndexIds;
+    ret->plat_.resourcesView.ids = ret->resources_.ids;
     return ret;
 }
 RENDER_END_NAMESPACE()

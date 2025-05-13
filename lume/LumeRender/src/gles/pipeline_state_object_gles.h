@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -50,8 +50,8 @@ public:
         const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
         const VertexInputDeclarationView& vertexInputDeclaration,
         const ShaderSpecializationConstantDataView& specializationConstants,
-        const Base::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
-        const Base::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs);
+        const BASE_NS::array_view<const DynamicStateEnum> dynamicStates, const RenderPassDesc& renderPassDesc,
+        const BASE_NS::array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs);
 
     ~GraphicsPipelineStateObjectGLES() override;
 

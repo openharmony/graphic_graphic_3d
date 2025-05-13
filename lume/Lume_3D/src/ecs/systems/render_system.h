@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -85,6 +85,7 @@ class IGraphicsContext;
 
 struct RenderMeshComponent;
 struct JointMatricesComponent;
+struct PlanarReflectionComponent;
 struct PreviousJointMatricesComponent;
 struct MaterialComponent;
 struct WorldMatrixComponent;
@@ -115,6 +116,7 @@ public:
         CORE_NS::Entity entity; // node, render mesh component
         CORE_NS::Entity mesh;   // mesh component
         uint64_t layerMask { LayerConstants::DEFAULT_LAYER_MASK };
+        uint64_t sceneId { 0U };
         CORE_NS::IComponentManager::ComponentId jointId { CORE_NS::IComponentManager::INVALID_COMPONENT_ID };
         CORE_NS::IComponentManager::ComponentId prevJointId { CORE_NS::IComponentManager::INVALID_COMPONENT_ID };
 
@@ -147,19 +149,9 @@ public:
     };
 
 private:
-    struct MeshProcessData {
-        const uint64_t layerMask { 0 };
-        const uint32_t batchInstanceCount { 0 };
-        const CORE_NS::Entity& renderMeshEntity;
-        const CORE_NS::Entity& meshEntity;
-        const MeshComponent& meshComponent;
-        const RenderMeshComponent& renderMeshComponent;
-        const BASE_NS::Math::Mat4X4& world;
-        const BASE_NS::Math::Mat4X4& prevWorld;
-        bool materialGpuInstancing { false };
-    };
     struct LightProcessData {
         const uint64_t layerMask { 0 };
+        uint32_t sceneId { 0U };
         const CORE_NS::Entity& entity;
         const LightComponent& lightComponent;
         const BASE_NS::Math::Mat4X4& world;
@@ -175,15 +167,14 @@ private:
     // returns the instance's valid scene component
     RenderConfigurationComponent GetRenderConfigurationComponent();
     CORE_NS::Entity ProcessScene(const RenderConfigurationComponent& sc);
-    // return material frame offset
-    uint32_t ProcessSubmesh(const MeshProcessData& mpd, const MeshComponent::Submesh& submesh, const uint32_t meshIndex,
-        const uint32_t subMeshIdx, const uint32_t skinJointIndex, const MinAndMax& mam, const bool isNegative);
-    void ProcessMesh(const MeshProcessData& mpd, const MinAndMax& batchMam, const SkinProcessData& spd,
-        BASE_NS::vector<uint32_t>* submeshMaterials);
+    void ProcessMesh(const RenderMeshData rmd, const SkinProcessData& spd);
+    void ProcessMesh(
+        BASE_NS::array_view<const RenderMeshData> rmd, const RenderMeshBatchData rmbd, const SkinProcessData& spd);
     void ProcessRenderMeshComponentBatch(
-        const CORE_NS::Entity renderMeshBatch, const CORE_NS::ComponentQuery::ResultRow* row);
-    void ProcessRenderMeshAutomaticBatch(BASE_NS::array_view<const CORE_NS::Entity> renderMeshComponents);
-    void ProcessSingleRenderMesh(CORE_NS::Entity renderMeshComponent);
+        uint32_t sceneId, const CORE_NS::Entity renderMeshBatch, const CORE_NS::ComponentQuery::ResultRow* row);
+    void ProcessRenderMeshAutomaticBatch(
+        uint32_t sceneId, BASE_NS::array_view<const CORE_NS::Entity> renderMeshComponents);
+    void ProcessSingleRenderMesh(uint32_t sceneId, CORE_NS::Entity renderMeshComponent);
     void ProcessRenderables();
     void ProcessRenderMeshBatchComponentRenderables();
     void ProcessEnvironments(const RenderConfigurationComponent& sceneComponent);
@@ -192,13 +183,13 @@ private:
     void ProcessLight(const LightProcessData& lightProcessData);
     void ProcessLights(RenderScene& renderScene);
     void ProcessShadowCamera(const LightProcessData lightProcessData, RenderLight& light);
-    void ProcessReflection(
-        const CORE_NS::ComponentQuery::ResultRow& row, const RenderCamera& camera, BASE_NS::Math::UVec2 targetRes);
+    void ProcessReflection(const CORE_NS::ComponentQuery::ResultRow& row,
+        const PlanarReflectionComponent& reflComponent, const RenderCamera& camera, BASE_NS::Math::UVec2 targetRes);
     void ProcessReflections(const RenderScene& renderScene);
     void ProcessPostProcesses();
     void RecalculatePostProcesses(BASE_NS::string_view name, RENDER_NS::PostProcessConfiguration& ppConfig);
     void FetchFullScene();
-    void EvaluateMaterialModifications(const MaterialComponent& matComp);
+    void EvaluateFrameObjectFlags();
     // calculates min max from all submeshes and does min max for inout
     struct BatchIndices {
         uint32_t submeshIndex { ~0u };
@@ -340,8 +331,8 @@ private:
     BASE_NS::unordered_map<CORE_NS::Entity, CameraData> cameraData_;
 
     BASE_NS::unordered_map<CORE_NS::Entity, BatchDataVector> batches_;
-    // used to fetch submesh material frame offsets
-    BASE_NS::vector<uint32_t> materialFrameOffsets_;
+    // used for render mesh batch processing
+    BASE_NS::vector<RenderMeshData> renderMeshData_;
 
     // store default shader data for default materials in this ECS
     DefaultMaterialShaderData dmShaderData_;

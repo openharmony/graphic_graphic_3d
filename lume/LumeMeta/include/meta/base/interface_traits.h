@@ -308,8 +308,10 @@ template<typename M>
 using FuncToSignature_t = typename FuncToSignature<M>::type;
 
 struct EnableSpecialisationType;
+
 template<bool Enable>
 using EnableSpecialisation = BASE_NS::enable_if_t<Enable, EnableSpecialisationType>;
+
 META_END_NAMESPACE()
 
 #endif

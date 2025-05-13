@@ -20,7 +20,7 @@
 #include <meta/interface/builtin_objects.h>
 #include <meta/interface/curves/intf_easing_curve.h>
 
-#include "base_object.h"
+#include "../base_object.h"
 
 META_BEGIN_NAMESPACE()
 
@@ -69,6 +69,7 @@ META_DECLARE_EASING_CURVE(StepStart)
 META_DECLARE_EASING_CURVE(StepEnd)
 
 #undef META_DECLARE_EASING_CURVE
+
 } // namespace Easing
 } // namespace Curves
 

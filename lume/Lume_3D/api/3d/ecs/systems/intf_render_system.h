@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #ifndef API_3D_ECS_SYSTEMS_IRENDER_SYSTEM_H
 #define API_3D_ECS_SYSTEMS_IRENDER_SYSTEM_H
 
+#include <3d/namespace.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <core/ecs/intf_system.h>

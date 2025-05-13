@@ -15,6 +15,7 @@
 #ifndef META_SRC_OBJECT_HIERARCHY_OBSERVER_H
 #define META_SRC_OBJECT_HIERARCHY_OBSERVER_H
 
+#include <mutex>
 #include <shared_mutex>
 
 #include <base/containers/unordered_map.h>
@@ -30,6 +31,8 @@
 #include "object.h"
 
 META_BEGIN_NAMESPACE()
+
+namespace Internal {
 
 class ObjectHierarchyObserver;
 
@@ -76,14 +79,14 @@ private:
 };
 
 class ObjectHierarchyObserver final : public IntroduceInterfaces<MetaObject, IObjectHierarchyObserver, IAttachment> {
-    META_OBJECT(ObjectHierarchyObserver, ClassId::ObjectHierarchyObserver, IntroduceInterfaces)
+    META_OBJECT(ObjectHierarchyObserver, META_NS::ClassId::ObjectHierarchyObserver, IntroduceInterfaces)
 public:
     void HierarchyChanged(const HierarchyChangedInfo& info, ObjectChangeListener* listener);
 
     META_BEGIN_STATIC_DATA()
     META_STATIC_EVENT_DATA(IObjectHierarchyObserver, IOnHierarchyChanged, OnHierarchyChanged)
     META_STATIC_PROPERTY_DATA(IAttachment, IObject::WeakPtr, DataContext)
-    META_STATIC_PROPERTY_DATA(IAttachment, IAttach::WeakPtr, AttachedTo, {})
+    META_STATIC_PROPERTY_DATA(IAttachment, IAttach::WeakPtr, AttachedTo, {}, DEFAULT_PROPERTY_FLAGS_NO_SER)
     META_END_STATIC_DATA()
     META_IMPLEMENT_EVENT(IOnHierarchyChanged, OnHierarchyChanged)
     META_IMPLEMENT_READONLY_PROPERTY(IObject::WeakPtr, DataContext)
@@ -138,6 +141,8 @@ private:
     BASE_NS::vector<ImmediateChild> immediateChildren_;
     mutable std::shared_mutex mutex_;
 };
+
+} // namespace Internal
 
 META_END_NAMESPACE()
 

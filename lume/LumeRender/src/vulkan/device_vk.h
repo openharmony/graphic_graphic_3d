@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -93,18 +93,17 @@ struct DebugFunctionUtilitiesVk {
 
 class DeviceVk final : public Device {
 public:
-    DeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createInfo);
+    DeviceVk(RenderContext& renderContext);
     ~DeviceVk() override;
 
     // From IDevice
     DeviceBackendType GetBackendType() const override;
     const DevicePlatformData& GetPlatformData() const override;
     FormatProperties GetFormatProperties(BASE_NS::Format format) const override;
-    AccelerationStructureBuildSizes GetAccelerationStructureBuildSizes(
-        const AccelerationStructureBuildGeometryInfo& geometry,
-        BASE_NS::array_view<const AccelerationStructureGeometryTrianglesInfo> triangles,
-        BASE_NS::array_view<const AccelerationStructureGeometryAabbsInfo> aabbs,
-        BASE_NS::array_view<const AccelerationStructureGeometryInstancesInfo> instances) const override;
+    AsBuildSizes GetAccelerationStructureBuildSizes(const AsBuildGeometryInfo& geometry,
+        BASE_NS::array_view<const AsGeometryTrianglesInfo> triangles,
+        BASE_NS::array_view<const AsGeometryAabbsInfo> aabbs,
+        BASE_NS::array_view<const AsGeometryInstancesInfo> instances) const override;
     ILowLevelDevice& GetLowLevelDevice() const override;
     void WaitForIdle() override;
 
@@ -133,6 +132,7 @@ public:
 
     BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuBufferDesc& desc) override;
     BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuAccelerationStructureDesc& desc) override;
+    BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const BackendSpecificBufferDesc& desc) override;
 
     BASE_NS::unique_ptr<GpuImage> CreateGpuImage(const GpuImageDesc& desc) override;
     BASE_NS::unique_ptr<GpuImage> CreateGpuImageView(
@@ -280,9 +280,11 @@ private:
     ExtFunctions extFunctions_;
     PlatformExtFunctions platformExtFunctions_;
     DefaultVulkanObjects defaultVulkanObjects_;
+    // render context create info flags
+    uint32_t rcFlags_ { 0U };
 };
 
-BASE_NS::unique_ptr<Device> CreateDeviceVk(RenderContext& renderContext, DeviceCreateInfo const& createInfo);
+BASE_NS::unique_ptr<Device> CreateDeviceVk(RenderContext& renderContext);
 
 // Wrapper for low level device access
 class LowLevelDeviceVk final : public ILowLevelDeviceVk {

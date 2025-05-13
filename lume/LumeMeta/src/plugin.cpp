@@ -99,5 +99,5 @@ __attribute__((visibility("default")))
     CORE_NS::IPlugin gPluginData { { IPlugin::UID }, "MetaObject",
         /** Version information of the plugin. */
         CORE_NS::Version { META_NS::META_OBJECT_PLUGIN_UID, META_NS::VersionString }, META_NS::RegisterInterfaces,
-        META_NS::UnregisterInterfaces, {}}; /*plugin_deps*/
+        META_NS::UnregisterInterfaces, {} /*plugin_deps*/ };
 }

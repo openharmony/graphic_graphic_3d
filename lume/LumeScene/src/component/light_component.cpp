@@ -15,7 +15,7 @@
 
 #include "light_component.h"
 
-#include "converting_value.h"
+#include "../converting_value.h"
 
 SCENE_BEGIN_NAMESPACE()
 namespace {
@@ -36,7 +36,7 @@ struct ColorConverter {
 bool LightComponent::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
     if (p->GetName() == "Color") {
-        auto ep = object_->CreateEngineProperty(path).GetResult();
+        auto ep = object_->CreateProperty(path).GetResult();
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i && i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ColorConverter>(ep)));
     }

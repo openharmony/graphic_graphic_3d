@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -53,7 +53,7 @@ struct StagingCopyStruct {
         /** Direct copy from src, no CPU data with stagingData or imageContainerPtr */
         DATA_TYPE_DIRECT_SRC_COPY = 2,
         /** Resource to resource copy with graphics commands */
-        DATA_TYPE_SRC_TO_DST_COPY = 2,
+        DATA_TYPE_SRC_TO_DST_COPY = 3,
     };
     /** Copy type enumeration */
     enum class CopyType : uint8_t {
@@ -222,6 +222,8 @@ public:
     RenderHandleReference Create(const GpuBufferDesc& desc, BASE_NS::array_view<const uint8_t> data) override;
     RenderHandleReference Create(const RenderHandleReference& replacedHandle, const GpuBufferDesc& desc) override;
     RenderHandleReference Create(const GpuBufferDesc& desc) override;
+    RenderHandleReference Create(
+        BASE_NS::string_view name, const BackendSpecificBufferDesc& backendSpecificData) override;
 
     RenderHandleReference GetOrCreate(BASE_NS::string_view name, const GpuImageDesc& desc) override;
     RenderHandleReference Create(BASE_NS::string_view name, const GpuImageDesc& desc) override;
@@ -293,7 +295,7 @@ public:
 
     /** Forward allocation/deallocation requests to actual resource managers. Not thread safe.
     Called only from Renderer. */
-    void HandlePendingAllocations();
+    void HandlePendingAllocations(bool allowDestruction);
     /** Called from the Renderer after the frame has been rendered with the backend. */
     void EndFrame();
 
@@ -509,7 +511,8 @@ private:
 #endif
         void HandleRemoved(uint32_t arrayIndex, const OperationDescription& operation);
         void HandleAlloc(uint32_t allocationIndex, const OperationDescription& operation);
-        bool HandleDealloc(uint32_t allocationIndex, const OperationDescription& operation, bool isFrameEnd);
+        bool HandleDealloc(uint32_t allocationIndex, const OperationDescription& operation, bool isFrameEnd,
+            const bool allowDestruction);
     };
     PerManagerStore bufferStore_ { RenderHandleType::GPU_BUFFER };
     PerManagerStore imageStore_ { RenderHandleType::GPU_IMAGE };
@@ -532,8 +535,8 @@ private:
         AllocType allocType { AllocType::ALLOC };
     };
 
-    void HandlePendingAllocationsImpl(bool isFrameEnd);
-    void HandleStorePendingAllocations(bool isFrameEnd, PerManagerStore& store);
+    void HandlePendingAllocationsImpl(bool isFrameEnd, bool allowDestruction);
+    void HandleStorePendingAllocations(bool isFrameEnd, bool allowDestruction, PerManagerStore& store);
     void Destroy(const RenderHandle& handle);
     // Destroy staging buffers. Not thread safe. Called from gpu resource manager
     void DestroyFrameStaging();

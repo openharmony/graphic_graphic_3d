@@ -16,6 +16,7 @@
 #ifndef SCENE_SRC_COMPONENT_FACTORIES_H
 #define SCENE_SRC_COMPONENT_FACTORIES_H
 
+#include <scene/ext/intf_component_factory.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <text_3d/ecs/components/text_component.h>
 
@@ -70,6 +71,8 @@ inline void AddBuiltinComponentFactories(IInternalScene::Ptr s)
     s->RegisterComponent(CORE3D_NS::IMeshComponentManager::UID, CreateShared<ComponentFactory>(ClassId::MeshComponent));
     s->RegisterComponent(
         CORE3D_NS::IRenderMeshComponentManager::UID, CreateShared<ComponentFactory>(ClassId::RenderMeshComponent));
+    s->RegisterComponent(
+        CORE3D_NS::IMorphComponentManager::UID, CreateShared<ComponentFactory>(ClassId::MorphComponent));
     s->RegisterComponent(
         CORE3D_NS::ILayerComponentManager::UID, CreateShared<ComponentFactory>(ClassId::LayerComponent));
     s->RegisterComponent(CORE3D_NS::INodeComponentManager::UID, CreateShared<ComponentFactory>(ClassId::NodeComponent));

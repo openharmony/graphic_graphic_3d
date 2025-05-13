@@ -44,51 +44,54 @@ public:
     ArrayProperty(NoCheckT, BASE_NS::shared_ptr<Prop> p) : p_(p)
     {}
 
+    /// Check if valid
     bool IsValid() const
     {
         return p_ != nullptr;
     }
 
+    /// returns true if valid
     explicit operator bool() const
     {
         return IsValid();
     }
 
+    /// Locked access to the property functionality
     TypedArrayPropertyLock<Type> operator->() const
     {
         return GetLockedAccess();
     }
-
+    /// Get locked access to the property functionality
     TypedArrayPropertyLock<Type> GetLockedAccess() const
     {
         return TypedArrayPropertyLock<Type>(NOCHECK, p_.get());
     }
-
+    /// Get unlocked access to the property functionality
     ArrayPropertyInterface<Type> GetUnlockedAccess() const
     {
         return ArrayPropertyInterface<Type>(p_.get());
     }
-
+    /// Convert to const pointer of IProperty
     operator IProperty::ConstPtr() const
     {
         return p_;
     }
-
+    /// Convert to pointer of IProperty
     operator IProperty::Ptr()
     {
         return p_;
     }
-
+    /// Convert to const weak pointer of IProperty
     operator IProperty::ConstWeakPtr() const
     {
         return p_;
     }
-
+    /// Convert to weak pointer of IProperty
     operator IProperty::WeakPtr()
     {
         return p_;
     }
-
+    /// Get underlying property
     PropertyType GetProperty() const
     {
         return p_;

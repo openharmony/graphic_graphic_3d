@@ -20,6 +20,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Export enum using its underlying type
 template<typename Value>
 ISerNode::Ptr EnumExport(IExportFunctions& f, const Value& v)
 {
@@ -27,6 +28,7 @@ ISerNode::Ptr EnumExport(IExportFunctions& f, const Value& v)
     return f.ExportToNode(Any<Type>(static_cast<Type>(v)));
 }
 
+/// Import enum using its underlying type
 template<typename Value>
 bool EnumImport(IImportFunctions& f, const ISerNode::ConstPtr& node, Value& out)
 {
@@ -40,6 +42,7 @@ bool EnumImport(IImportFunctions& f, const ISerNode::ConstPtr& node, Value& out)
     return res;
 }
 
+/// Get value from integer or unsigned integer nodes as given type
 template<typename Type>
 bool ExtractInteger(const ISerNode::ConstPtr& node, Type& out)
 {
@@ -54,6 +57,7 @@ bool ExtractInteger(const ISerNode::ConstPtr& node, Type& out)
     return false;
 }
 
+/// Get value from integers, floating point or boolean nodes as given type
 template<typename Type>
 bool ExtractNumber(const ISerNode::ConstPtr& node, Type& out)
 {
@@ -71,6 +75,7 @@ bool ExtractNumber(const ISerNode::ConstPtr& node, Type& out)
     return false;
 }
 
+/// Create empty object node with object id and class name
 inline IObjectNode::Ptr CreateObjectNode(ObjectId oid, BASE_NS::string className)
 {
     auto obj = GetObjectRegistry().Create<IObjectNode>(META_NS::ClassId::ObjectNode);
@@ -80,7 +85,6 @@ inline IObjectNode::Ptr CreateObjectNode(ObjectId oid, BASE_NS::string className
     }
     return obj;
 }
-
 
 META_END_NAMESPACE()
 

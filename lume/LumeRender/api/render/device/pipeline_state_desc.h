@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <base/containers/array_view.h>
+#include <base/math/matrix.h>
 #include <base/util/formats.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
@@ -244,6 +245,10 @@ enum AccessFlagBits {
     CORE_ACCESS_MEMORY_READ_BIT = 0x00008000,
     /** Memory write bit */
     CORE_ACCESS_MEMORY_WRITE_BIT = 0x00010000,
+    /** Acceleration structure read bit */
+    CORE_ACCESS_ACCELERATION_STRUCTURE_READ_BIT = 0x00200000,
+    /** Acceleration structure write */
+    CORE_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT = 0x00400000,
     /** Fragment shading rate attachment read bit */
     CORE_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT = 0x00800000,
 };
@@ -252,6 +257,8 @@ using AccessFlags = uint32_t;
 
 /** Pipeline stage flag bits */
 enum PipelineStageFlagBits {
+    /* None */
+    CORE_PIPELINE_STAGE_NONE = 0,
     /** Top of pipe bit */
     CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT = 0x00000001,
     /** Draw indirect bit */
@@ -280,8 +287,14 @@ enum PipelineStageFlagBits {
     CORE_PIPELINE_STAGE_ALL_GRAPHICS_BIT = 0x00008000,
     /** All commands bit */
     CORE_PIPELINE_STAGE_ALL_COMMANDS_BIT = 0x00010000,
-    /** Fragment shading rate attacchment bit */
+    /** Ray tracing shader bit */
+    CORE_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT = 0x00200000,
+    /** Fragment shading rate attachment bit */
     CORE_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT = 0x00400000,
+    /** Acceleration structure build bit */
+    CORE_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT = 0x02000000,
+    /** Fragment density process bit */
+    CORE_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT = 0x00800000,
 };
 /** Container for pipeline stage flag bits */
 using PipelineStageFlags = uint32_t;
@@ -824,6 +837,9 @@ struct PipelineStateConstants {
     static constexpr uint32_t MAX_RENDER_PASS_ATTACHMENT_COUNT { 8u };
     /** Max render node gpu wait signals */
     static constexpr uint32_t MAX_RENDER_NODE_GPU_WAIT_SIGNALS { 4u };
+
+    /** Acceleration structure instance byte size */
+    static constexpr uint32_t ACCELERATION_STRUCTURE_INSTANCE_SIZE { 64u };
 };
 
 /** Viewport descriptor
@@ -1318,13 +1334,13 @@ struct ShaderSpecialization {
             FLOAT = 4,
         };
         /** Shader stage */
-        ShaderStageFlags shaderStage;
+        ShaderStageFlags shaderStage {};
         /** ID */
-        uint32_t id;
+        uint32_t id { 0U };
         /** Type */
-        Type type;
+        Type type { Type::INVALID };
         /** Offset */
-        uint32_t offset;
+        uint32_t offset { 0U };
     };
 };
 
@@ -1347,7 +1363,15 @@ struct BufferOffset {
     /** Buffer handle */
     RenderHandle handle;
     /** Buffer offset in bytes */
-    uint32_t offset { 0 };
+    uint32_t offset { 0U };
+};
+
+/** Buffer offset with render handle reference */
+struct BufferOffsetWithHandleReference {
+    /** Buffer handle */
+    RenderHandleReference handle;
+    /** Buffer offset in bytes */
+    uint32_t offset { 0U };
 };
 
 /** Accleration structure types */
@@ -1360,11 +1384,11 @@ enum AccelerationStructureType : uint32_t {
     CORE_ACCELERATION_STRUCTURE_TYPE_GENERIC = 2,
 };
 
-struct AccelerationStructureBuildRangeInfo {
-    uint32_t primitiveCount { 0u };
-    uint32_t primitiveOffset { 0u };
-    uint32_t firstVertex { 0u };
-    uint32_t transformOffset { 0u };
+struct AsBuildRangeInfo {
+    uint32_t primitiveCount { 0U };
+    uint32_t primitiveOffset { 0U };
+    uint32_t firstVertex { 0U };
+    uint32_t transformOffset { 0U };
 };
 
 /** Additional parameters for geometry */
@@ -1379,8 +1403,8 @@ enum GeometryFlagBits : uint32_t {
 /** Geometry flags */
 using GeometryFlags = uint32_t;
 
-/** Acceleratoin structure geometry triangles data */
-struct AccelerationStructureGeometryTrianglesInfo {
+/** Acceleration structure geometry triangles data */
+struct AsGeometryTrianglesInfo {
     /** Vertex format */
     BASE_NS::Format vertexFormat { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
     /** Vertex stride, bytes between each vertex */
@@ -1393,13 +1417,13 @@ struct AccelerationStructureGeometryTrianglesInfo {
     uint32_t indexCount { 0u };
 
     /** Geometry flags */
-    GeometryFlags geometryFlags { 0u };
+    GeometryFlags geometryFlags { 0U };
 };
 
-/** Acceleratoin structure geometry triangles data */
-struct AccelerationStructureGeometryTrianglesData {
+/** Acceleration structure geometry triangles data */
+struct AsGeometryTrianglesData {
     /** Triangles info */
-    AccelerationStructureGeometryTrianglesInfo info;
+    AsGeometryTrianglesInfo info;
 
     /** Vertex buffer with offset */
     BufferOffset vertexData;
@@ -1409,32 +1433,69 @@ struct AccelerationStructureGeometryTrianglesData {
     BufferOffset transformData;
 };
 
+/** Acceleration structure geometry triangles data */
+struct AsGeometryTrianglesDataWithHandleReference {
+    /** Triangles info */
+    AsGeometryTrianglesInfo info;
+
+    /** Vertex buffer with offset */
+    BufferOffsetWithHandleReference vertexData;
+    /** Index buffer with offset */
+    BufferOffsetWithHandleReference indexData;
+    /** Transform buffer (4x3 matrices), additional */
+    BufferOffsetWithHandleReference transformData;
+};
+
 /** Acceleration structure geometry AABBs info */
-struct AccelerationStructureGeometryAabbsInfo {
+struct AsGeometryAabbsInfo {
     /** Stride, bytes between each AABB (must be a multiple of 8) */
     uint32_t stride { 0u };
+
+    /** Geometry flags */
+    GeometryFlags geometryFlags { 0U };
 };
 
 /** Acceleration structure geometry AABBs data */
-struct AccelerationStructureGeometryAabbsData {
+struct AsGeometryAabbsData {
     /** AABBs info */
-    AccelerationStructureGeometryAabbsInfo info;
+    AsGeometryAabbsInfo info;
     /** Buffer resource and offset for AabbPositions */
     BufferOffset data;
 };
 
+/** Acceleration structure geometry AABBs data */
+struct AsGeometryAabbsDataWithHandleReference {
+    /** AABBs info */
+    AsGeometryAabbsInfo info;
+    /** Buffer resource and offset for AabbPositions */
+    BufferOffsetWithHandleReference data;
+};
+
 /** Acceleration structure geometry instances info */
-struct AccelerationStructureGeometryInstancesInfo {
+struct AsGeometryInstancesInfo {
     /** Specifies whether data is used as an array of addresses or just an array */
     bool arrayOfPointers { false };
+
+    /** Geometry flags */
+    GeometryFlags geometryFlags { 0U };
+    /** Primitive count (the instance count) */
+    uint32_t primitiveCount { 0U };
 };
 
 /** Acceleration structure geometry instances data */
-struct AccelerationStructureGeometryInstancesData {
+struct AsGeometryInstancesData {
     /** Instances info */
-    AccelerationStructureGeometryInstancesInfo info;
+    AsGeometryInstancesInfo info;
     /** Buffer resource and offset for structures */
     BufferOffset data;
+};
+
+/** Acceleration structure geometry instances data */
+struct AsGeometryInstancesDataWithHandleReference {
+    /** Instances info */
+    AsGeometryInstancesInfo info;
+    /** Buffer resource and offset for structures */
+    BufferOffsetWithHandleReference data;
 };
 
 /** Build acceleration structure flag bits */
@@ -1464,7 +1525,7 @@ enum BuildAccelerationStructureMode : uint32_t {
 };
 
 /** Acceleration structure build geometry info */
-struct AccelerationStructureBuildGeometryInfo {
+struct AsBuildGeometryInfo {
     /** Acceleration structure type */
     AccelerationStructureType type { AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL };
     /** Additional flags */
@@ -1476,9 +1537,9 @@ struct AccelerationStructureBuildGeometryInfo {
 };
 
 /** Acceleration structure build geometry data */
-struct AccelerationStructureBuildGeometryData {
+struct AsBuildGeometryData {
     /** Geometry info */
-    AccelerationStructureBuildGeometryInfo info;
+    AsBuildGeometryInfo info;
 
     /** Handle to existing acceleration structure which is used a src for dst update. */
     RenderHandle srcAccelerationStructure;
@@ -1488,10 +1549,23 @@ struct AccelerationStructureBuildGeometryData {
     BufferOffset scratchBuffer;
 };
 
+/** Acceleration structure build geometry data */
+struct AsBuildGeometryDataWithHandleReference {
+    /** Geometry info */
+    AsBuildGeometryInfo info;
+
+    /** Handle to existing acceleration structure which is used a src for dst update. */
+    RenderHandleReference srcAccelerationStructure;
+    /** Handle to dst acceleration structure which is to be build. */
+    RenderHandleReference dstAccelerationStructure;
+    /** Handle and offset to build scratch data. (Usually optional) */
+    BufferOffsetWithHandleReference scratchBuffer;
+};
+
 /** Acceleration structure build sizes.
  * The build sizes can be queried from device with AccelerationStructureBuildGeometryInfo.
  */
-struct AccelerationStructureBuildSizes {
+struct AsBuildSizes {
     /** Acceleration structure size */
     uint32_t accelerationStructureSize { 0u };
     /** Update scratch size */
@@ -1525,28 +1599,40 @@ enum GeometryInstanceFlagBits : uint32_t {
 };
 using GeometryInstanceFlags = uint32_t;
 
-/** Acceleration structure instance info.
+/** Acceleration structure instance
  */
-struct AccelerationStructureInstanceInfo {
-    /** Affine transform matrix (4x3 used) */
-    // BASE_NS::Math::Mat4X4 transform{};
-    float transform[4][4];
+struct AsInstance {
+    /** Transform matrix */
+    BASE_NS::Math::Mat4X3 transform { BASE_NS::Math::IDENTITY_4X3 };
     /** User specified index accessable in ray shaders with InstanceCustomIndexKHR (24 bits) */
-    uint32_t instanceCustomIndex { 0u };
+    uint32_t instanceCustomIndex { 0U };
     /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
-    uint8_t mask { 0u };
+    uint8_t mask { 0U };
+    /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
+    uint32_t shaderBindingTableOffset { 0U };
     /** GeometryInstanceFlags for this instance */
-    GeometryInstanceFlags flags { 0u };
+    GeometryInstanceFlags flags { 0U };
+
+    /** Acceleration structure. (Typically bottom level AS) */
+    RenderHandle accelerationStructure {};
 };
 
-/** Acceleration structure instance data.
+/** Acceleration structure instance with reference
  */
-struct AccelerationStructureInstanceData {
-    /** Instance info */
-    AccelerationStructureInstanceInfo info;
+struct AsInstanceWithHandleReference {
+    /** Transform matrix */
+    BASE_NS::Math::Mat4X3 transform { BASE_NS::Math::IDENTITY_4X3 };
+    /** User specified index accessable in ray shaders with InstanceCustomIndexKHR (24 bits) */
+    uint32_t instanceCustomIndex { 0U };
+    /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
+    uint8_t mask { 0U };
+    /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
+    uint32_t shaderBindingTableOffset { 0U };
+    /** GeometryInstanceFlags for this instance */
+    GeometryInstanceFlags flags { 0U };
 
-    /** Acceleration structure handle */
-    RenderHandle accelerationStructureReference;
+    /** Acceleration structure. (Typically bottom level AS) */
+    RenderHandleReference accelerationStructure {};
 };
 /** @} */
 RENDER_END_NAMESPACE()

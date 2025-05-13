@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,6 +40,7 @@
 #include <3d/ecs/components/transform_component.h>
 #include <3d/ecs/components/uri_component.h>
 #include <3d/ecs/components/world_matrix_component.h>
+#include <3d/ecs/systems/intf_node_system.h>
 #include <3d/ecs/systems/intf_skinning_system.h>
 #include <3d/implementation_uids.h>
 #include <3d/intf_graphics_context.h>
@@ -708,9 +709,9 @@ IMeshBuilder::Submesh CreatePrimitiveImportInfo(const GLTFImportResult& importRe
         info.tangents = primitive.targets.size() > 0;
     }
     if (const auto pos = std::find_if(primitive.attributes.begin(), primitive.attributes.end(),
-        [](const GLTF2::Attribute& attribute) {
-            return attribute.attribute.type == GLTF2::AttributeType::POSITION;
-        });
+            [](const GLTF2::Attribute& attribute) {
+                return attribute.attribute.type == GLTF2::AttributeType::POSITION;
+            });
         pos != primitive.attributes.end()) {
         info.vertexCount = pos->accessor->count;
     }
@@ -722,10 +723,7 @@ IMeshBuilder::Submesh CreatePrimitiveImportInfo(const GLTFImportResult& importRe
 
     info.morphTargetCount = (uint32_t)primitive.targets.size();
 
-    // setting values only for the ones which do not use default
-    if (primitive.mode != GLTF2::DEFAULT_RENDER_MODE) {
-        info.inputAssembly = ConvertGltf2InputAssembly(primitive.mode);
-    }
+    info.inputAssembly = ConvertGltf2InputAssembly(primitive.mode);
 
     return info;
 }
@@ -752,7 +750,6 @@ IndicesResult LoadIndices(GatherMeshDataResult& result, const GLTF2::MeshPrimiti
     uint32_t loadedVertexCount)
 {
     IndicesResult indicesLoadResult;
-    GLTF2::GLTFLoadDataResult loadDataResult;
     if (primitive.indices) {
         if (indicesLoadResult.loadDataResult = LoadData(*primitive.indices); indicesLoadResult.loadDataResult.success) {
             ValidateIndices(indicesLoadResult.loadDataResult, loadedVertexCount, indicesLoadResult.primitiveRestart);
@@ -805,12 +802,11 @@ void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<
         IndicesResult indices = LoadIndices(result, primitive, importInfo.indexType, loadedVertexCount);
         if (!indices.loadDataResult.data.empty()) {
             const auto elementSize = indices.loadDataResult.elementSize;
-            const IMeshBuilder::DataBuffer data {
-                (elementSize == sizeof(uint32_t))
-                    ? BASE_FORMAT_R32_UINT
-                    : ((elementSize == sizeof(uint16_t)) ? BASE_FORMAT_R16_UINT : BASE_FORMAT_R8_UINT),
-                static_cast<uint32_t>(elementSize), { indices.loadDataResult.data }
-            };
+            const IMeshBuilder::DataBuffer data { (elementSize == sizeof(uint32_t))
+                                                      ? BASE_FORMAT_R32_UINT
+                                                      : ((elementSize == sizeof(uint16_t)) ? BASE_FORMAT_R16_UINT
+                                                                                           : BASE_FORMAT_R8_UINT),
+                static_cast<uint32_t>(elementSize), { indices.loadDataResult.data } };
             result.meshBuilder->SetIndexData(primitiveIndex, data);
             if (indices.primitiveRestart) {
                 result.meshBuilder->EnablePrimitiveRestart(primitiveIndex);
@@ -818,7 +814,7 @@ void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<
         }
 
         // Set AABB.
-        if (position.min.size() == 3 && position.max.size() == 3) { // 3: size
+        if (position.min.size() == 3 && position.max.size() == 3) {
             const Math::Vec3 min = { position.min[0], position.min[1], position.min[2] };
             const Math::Vec3 max = { position.max[0], position.max[1], position.max[2] };
             result.meshBuilder->SetAABB(primitiveIndex, min, max);
@@ -1287,7 +1283,7 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
 
         const size_t dataSizeInBytes = animationFrameDataResult.elementSize * animationFrameDataResult.elementCount;
         if (!CloneData(destination.data(), destination.size() * sizeof(T), animationFrameDataResult.data.data(),
-            dataSizeInBytes)) {
+                dataSizeInBytes)) {
             CORE_LOG_E("Copying of raw framedata failed.");
         }
     } else {
@@ -1310,7 +1306,7 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
 
         const size_t dataSizeInBytes = animationFrameDataResult.elementSize * animationFrameDataResult.elementCount;
         if (!CloneData(destination.data(), destination.size() * sizeof(bool), animationFrameDataResult.data.data(),
-            dataSizeInBytes)) {
+                dataSizeInBytes)) {
             CORE_LOG_E("Copying of raw framedata failed.");
         }
     } else {
@@ -1772,12 +1768,13 @@ Entity FindEntity(unordered_map<size_t, Entity> const& sceneEntities, size_t nod
 }
 
 void CreateNode(IEcs& ecs, const GLTF2::Node& node, const Entity entity, const GLTF2::Data& data,
-    const unordered_map<size_t, Entity>& sceneEntities, const Entity sceneEntity)
+    const unordered_map<size_t, Entity>& sceneEntities, const Entity sceneEntity, const uint32_t sceneId)
 {
     INodeComponentManager& nodeManager = *(GetManager<INodeComponentManager>(ecs));
     nodeManager.Create(entity);
 
     ScopedHandle<NodeComponent> component = nodeManager.Write(entity);
+    component->sceneId = sceneId;
     if (const size_t parentIndex = FindIndex(data.nodes, node.parent); parentIndex != GLTF2::GLTF_INVALID_INDEX) {
         component->parent = FindEntity(sceneEntities, parentIndex);
     } else {
@@ -1813,7 +1810,7 @@ void CreateTransform(IEcs& ecs, const GLTF2::Node& node, const Entity entity)
         Math::Vec4 perspective;
 
         if (!Math::Decompose(
-            node.matrix, component->scale, component->rotation, component->position, skew, perspective)) {
+                node.matrix, component->scale, component->rotation, component->position, skew, perspective)) {
             component->position = { 0.f, 0.f, 0.f };
             component->rotation = { 0.f, 0.f, 0.f, 1.f };
             component->scale = { 1.f, 1.f, 1.f };
@@ -1886,17 +1883,17 @@ void CreateLight(IEcs& ecs, const GLTF2::Node& node, const Entity entity)
 }
 #endif
 
-void RecursivelyCreateComponents(IEcs& ecs, GLTF2::Data const& data, GLTF2::Node const& node,
-    unordered_map<size_t, Entity> const& sceneEntities, Entity sceneEntity, Entity environmentEntity,
-    const GLTFResourceData& gltfResourceData, Entity& defaultCamera, uint32_t flags)
+void RecursivelyCreateComponents(IEcs& ecs, const GLTF2::Data& data, const GLTF2::Node& node,
+    const unordered_map<size_t, Entity>& sceneEntities, const Entity sceneEntity, const uint32_t sceneId,
+    const Entity environmentEntity, const GLTFResourceData& gltfResourceData, Entity& defaultCamera, uint32_t flags)
 {
-    size_t const nodeIndex = FindIndex(data.nodes, &node);
+    const size_t nodeIndex = FindIndex(data.nodes, &node);
     CORE_ASSERT_MSG(nodeIndex != GLTF2::GLTF_INVALID_INDEX, "Cannot find node: %s", node.name.c_str());
 
-    Entity const entity = FindEntity(sceneEntities, nodeIndex);
+    const Entity entity = FindEntity(sceneEntities, nodeIndex);
 
     // Apply to node hierarchy.
-    CreateNode(ecs, node, entity, data, sceneEntities, sceneEntity);
+    CreateNode(ecs, node, entity, data, sceneEntities, sceneEntity, sceneId);
 
     // Add name.
     CreateName(ecs, node, entity);
@@ -1936,8 +1933,8 @@ void RecursivelyCreateComponents(IEcs& ecs, GLTF2::Data const& data, GLTF2::Node
 #endif
 
     for (auto child : node.children) {
-        RecursivelyCreateComponents(
-            ecs, data, *child, sceneEntities, sceneEntity, environmentEntity, gltfResourceData, defaultCamera, flags);
+        RecursivelyCreateComponents(ecs, data, *child, sceneEntities, sceneEntity, sceneId, environmentEntity,
+            gltfResourceData, defaultCamera, flags);
     }
 }
 
@@ -2255,7 +2252,8 @@ auto FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
 } // namespace
 
 Entity ImportScene(IDevice& device, size_t sceneIndex, const GLTF2::Data& data,
-    const GLTFResourceData& gltfResourceData, IEcs& ecs, Entity rootEntity, GltfSceneImportFlags flags)
+    const GLTFResourceData& gltfResourceData, IEcs& ecs, Entity rootEntity, uint32_t sceneId,
+    GltfSceneImportFlags flags)
 {
     if (sceneIndex >= data.scenes.size()) {
         return {};
@@ -2275,8 +2273,18 @@ Entity ImportScene(IDevice& device, size_t sceneIndex, const GLTF2::Data& data,
 
     INodeComponentManager& nodeManager = *(GetManager<INodeComponentManager>(ecs));
     nodeManager.Create(sceneEntity);
-    if (auto nodeHandle = nodeManager.Write(sceneEntity); nodeHandle) {
+
+    // IGltf2::ImportGltfScene has two overloads: either rootEntity or sceneId is given. If rootEntity is valid use the
+    // sceneId from that node.
+    if (EntityUtil::IsValid(rootEntity)) {
+        if (auto nodeHandle = nodeManager.Read(rootEntity)) {
+            sceneId = nodeHandle->sceneId;
+        }
+    }
+
+    if (auto nodeHandle = nodeManager.Write(sceneEntity)) {
         nodeHandle->parent = rootEntity;
+        nodeHandle->sceneId = sceneId;
     }
 
     // Add name.
@@ -2313,7 +2321,7 @@ Entity ImportScene(IDevice& device, size_t sceneIndex, const GLTF2::Data& data,
     // Create components for all nodes in this scene.
     for (auto node : scene->nodes) {
         RecursivelyCreateComponents(
-            ecs, data, *node, sceneEntities, sceneEntity, environment, gltfResourceData, defaultCamera, flags);
+            ecs, data, *node, sceneEntities, sceneEntity, sceneId, environment, gltfResourceData, defaultCamera, flags);
     }
 
     // Apply skins only after the node hiearachy is complete.
@@ -2517,7 +2525,7 @@ GLTF2Importer::GLTF2Importer(IEngine& engine, IRenderContext& renderContext, IEc
     if (IGraphicsContext* graphicsContext_ =
             GetInstance<IGraphicsContext>(*(renderContext_.GetInterface<IClassRegister>()), UID_GRAPHICS_CONTEXT);
         graphicsContext_) {
-        colorSpaceFlags_ = graphicsContext_->GetColorSpaceFlags();
+        colorSpaceFlags_ = graphicsContext_->GetCreateInfo().colorSpaceFlags;
     }
 
     const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
@@ -3332,7 +3340,7 @@ void GLTF2Importer::PrepareMaterialTasks()
             }
             materialManager_->Create(materialEntity);
             success = ImportMaterial(result_, *data_, gltfMaterial, materialEntity, *materialManager_,
-                                     gpuResourceManager_, dmShaderData_) &&
+                          gpuResourceManager_, dmShaderData_) &&
                       success;
         }
 
@@ -3370,6 +3378,7 @@ void GLTF2Importer::PrepareMeshTasks()
 
             // Gather mesh data.
             t->data = GatherMeshData(mesh, result_, flags_, *materialManager_, device_, engine_);
+            t->errors = t->data.error;
             return t->data.success;
         };
 
@@ -3587,17 +3596,7 @@ void Gltf2SceneImporter::ImportResources(const ISceneData::Ptr& data, ResourceIm
     if (auto sceneData = data->GetInterface<SceneData>()) {
         if (auto* gltfData = sceneData->GetData()) {
             importer_->ImportGLTF(*gltfData, flags);
-            const auto& result = importer_->GetResult();
-            result_.error = result.success ? 0 : 1;
-            result_.message = result.error;
-            result_.data.samplers = result.data.samplers;
-            result_.data.images = result.data.images;
-            result_.data.textures = result.data.textures;
-            result_.data.materials = result.data.materials;
-            result_.data.meshes = result.data.meshes;
-            result_.data.skins = result.data.skins;
-            result_.data.animations = result.data.animations;
-            result_.data.specularRadianceCubemaps = result.data.specularRadianceCubemaps;
+            UpdateResults();
             if (!result_.error) {
                 data_ = data;
             }
@@ -3623,35 +3622,7 @@ void Gltf2SceneImporter::ImportResources(
 bool Gltf2SceneImporter::Execute(uint32_t timeBudget)
 {
     if (importer_->Execute(timeBudget)) {
-        const auto& result = importer_->GetResult();
-        result_.error = result.success ? 0 : 1;
-        result_.message = result.error;
-        result_.data.samplers = result.data.samplers;
-        result_.data.images = result.data.images;
-        result_.data.textures = result.data.textures;
-        result_.data.materials = result.data.materials;
-        result_.data.meshes = result.data.meshes;
-        result_.data.skins = result.data.skins;
-        result_.data.animations = result.data.animations;
-        result_.data.specularRadianceCubemaps = result.data.specularRadianceCubemaps;
-        const auto& meshData = importer_->GetMeshData();
-        meshData_.meshes.resize(meshData.meshes.size());
-        for (size_t i = 0U; i < meshData.meshes.size(); ++i) {
-            auto& dstMesh = meshData_.meshes[i];
-            const auto& srcMesh = meshData.meshes[i];
-            dstMesh.subMeshes.resize(srcMesh.subMeshes.size());
-            std::transform(srcMesh.subMeshes.cbegin(), srcMesh.subMeshes.cend(), dstMesh.subMeshes.begin(),
-                [](const GltfMeshData::SubMesh& gltfSubmesh) {
-                    MeshData::SubMesh submesh;
-                    submesh.indices = gltfSubmesh.indices;
-                    submesh.vertices = gltfSubmesh.vertices;
-                    submesh.indexBuffer = gltfSubmesh.indexBuffer;
-                    std::copy(std::begin(gltfSubmesh.attributeBuffers), std::end(gltfSubmesh.attributeBuffers),
-                        std::begin(submesh.attributeBuffers));
-                    return submesh;
-                });
-        }
-        meshData_.vertexInputDeclaration = meshData.vertexInputDeclaration;
+        UpdateResults();
         return true;
     }
     return false;
@@ -3704,6 +3675,52 @@ Entity Gltf2SceneImporter::ImportScene(size_t sceneIndex, Entity parentEntity, S
         }
     }
     return {};
+}
+
+Entity Gltf2SceneImporter::ImportScene(size_t sceneIndex, uint32_t sceneId, SceneImportFlags flags)
+{
+    if (importer_ && data_) {
+        if (auto sceneData = data_->GetInterface<SceneData>()) {
+            if (auto* gltfData = sceneData->GetData()) {
+                auto& gltf = graphicsContext_->GetGltf();
+                return gltf.ImportGltfScene(sceneIndex, *gltfData, importer_->GetResult().data, ecs_, sceneId, flags);
+            }
+        }
+    }
+    return {};
+}
+
+void Gltf2SceneImporter::UpdateResults()
+{
+    const auto& result = importer_->GetResult();
+    result_.error = result.success ? 0 : 1;
+    result_.message = result.error;
+    result_.data.samplers = result.data.samplers;
+    result_.data.images = result.data.images;
+    result_.data.textures = result.data.textures;
+    result_.data.materials = result.data.materials;
+    result_.data.meshes = result.data.meshes;
+    result_.data.skins = result.data.skins;
+    result_.data.animations = result.data.animations;
+    result_.data.specularRadianceCubemaps = result.data.specularRadianceCubemaps;
+    const auto& meshData = importer_->GetMeshData();
+    meshData_.meshes.resize(meshData.meshes.size());
+    for (size_t i = 0U; i < meshData.meshes.size(); ++i) {
+        auto& dstMesh = meshData_.meshes[i];
+        const auto& srcMesh = meshData.meshes[i];
+        dstMesh.subMeshes.resize(srcMesh.subMeshes.size());
+        std::transform(srcMesh.subMeshes.cbegin(), srcMesh.subMeshes.cend(), dstMesh.subMeshes.begin(),
+            [](const GltfMeshData::SubMesh& gltfSubmesh) {
+                MeshData::SubMesh submesh;
+                submesh.indices = gltfSubmesh.indices;
+                submesh.vertices = gltfSubmesh.vertices;
+                submesh.indexBuffer = gltfSubmesh.indexBuffer;
+                std::copy(std::begin(gltfSubmesh.attributeBuffers), std::end(gltfSubmesh.attributeBuffers),
+                    std::begin(submesh.attributeBuffers));
+                return submesh;
+            });
+    }
+    meshData_.vertexInputDeclaration = meshData.vertexInputDeclaration;
 }
 
 // IInterface

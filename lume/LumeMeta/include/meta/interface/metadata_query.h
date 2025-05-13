@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #ifndef META_INTERFACE_METADATA_QUERY_H
 #define META_INTERFACE_METADATA_QUERY_H
 
@@ -22,8 +21,8 @@
 META_BEGIN_NAMESPACE()
 
 enum class MetadataQuery {
-    EXISTING,            // Only return existing metadata objects
-    CONSTRUCT_ON_REQUEST // Create lazy metadata on request if not exist yet
+    EXISTING,            /// Only return existing metadata objects
+    CONSTRUCT_ON_REQUEST /// Create on request if not exist yet (lazy)
 };
 
 META_END_NAMESPACE()

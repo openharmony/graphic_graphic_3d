@@ -1,0 +1,48 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// Lume Super Resolution
+// Compute Luminance Pyramid stage
+
+// includes
+#include "render/shaders/common/render_color_conversion_common.h"
+#include "render/shaders/common/render_post_process_structs_common.h"
+
+#include "common/bloom_common.h"
+
+// sets
+
+layout(set = 0, binding = 0, r16f/*r16f*/) writeonly uniform image2D dstTex;
+layout(set = 0, binding = 1, r16f) uniform image2D srcTex;
+layout(set = 0, binding = 2) uniform sampler uSampler;
+
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    LocalPostProcessPushConstantStruct uPc;
+};
+
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
+
+///////////////////////////////////////////////////////////////////////////////
+// Luminance texture
+
+#define cTgs 16
+
+layout(local_size_x = cTgs, local_size_y = cTgs, local_size_z = 1) in;
+void main()
+{
+    ivec2 dstPx = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dstSz = ivec2(uPc.viewportSizeInvSize.xy);
+    if (any(greaterThanEqual(dstPx, dstSz))) return;
+
+    ivec2 srcPx = dstPx * 2;
+
+    float sum =
+          imageLoad(srcTex, srcPx + ivec2(0,0)).r +
+          imageLoad(srcTex, srcPx + ivec2(1,0)).r +
+          imageLoad(srcTex, srcPx + ivec2(0,1)).r +
+          imageLoad(srcTex, srcPx + ivec2(1,1)).r;
+
+    imageStore(dstTex, dstPx, vec4(sum * 0.25, 0,0,0));
+}

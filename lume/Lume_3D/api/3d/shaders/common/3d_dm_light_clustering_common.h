@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,9 +13,11 @@
  * limitations under the License.
  */
 
+#include "3d/shaders/common/3d_dm_structures_common.h"
+
 #ifndef SHADERS_COMMON_3D_LIGHT_CLUSTERING_COMMON_H
 #define SHADERS_COMMON_3D_LIGHT_CLUSTERING_COMMON_H
-#include "3d/shaders/common/3d_dm_structures_common.h"
+
 vec2 GetNearFar(const mat4 projectionMatrix)
 {
     const float a = projectionMatrix[2][2];

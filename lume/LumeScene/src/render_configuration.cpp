@@ -39,7 +39,7 @@ CORE_NS::Entity RenderConfiguration::CreateEntity(const IInternalScene::Ptr& sce
 bool RenderConfiguration::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
     if (p->GetName() == "Environment") {
-        auto ep = object_->CreateEngineProperty(path).GetResult();
+        auto ep = object_->CreateProperty(path).GetResult();
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
                i->PushValue(META_NS::IValue::Ptr(

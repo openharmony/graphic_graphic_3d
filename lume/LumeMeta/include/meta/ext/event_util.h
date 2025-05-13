@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef META_EXT_EVENT_UTIL_H
 #define META_EXT_EVENT_UTIL_H
 

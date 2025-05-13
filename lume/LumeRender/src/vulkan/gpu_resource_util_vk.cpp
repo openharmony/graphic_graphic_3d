@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
 
 #include "vulkan/gpu_resource_util_vk.h"
 
+#include <cinttypes>
 #include <vulkan/vulkan_core.h>
 
 #include <base/containers/allocator.h>
@@ -23,6 +24,7 @@
 #include <render/namespace.h>
 #include <render/vulkan/intf_device_vk.h>
 
+#include "util/log.h"
 #include "vulkan/device_vk.h"
 #include "vulkan/gpu_buffer_vk.h"
 #include "vulkan/gpu_image_vk.h"
@@ -32,6 +34,10 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace GpuResourceUtil {
+namespace {
+constexpr bool LOG_PRINT_GPU_BUFFER_ADDRESS { false };
+}
+
 void CopyGpuBufferVk(GpuBuffer& buffer, ByteArray& byteArray)
 {
     auto& vkBuffer = (GpuBufferVk&)buffer;
@@ -64,6 +70,19 @@ void DebugBufferNameVk(const IDevice& device, const GpuBuffer& buffer, const str
             const VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
                 VK_OBJECT_TYPE_BUFFER, VulkanHandleCast<uint64_t>(plat.buffer), name.data() };
             funcPtrs.vkSetDebugUtilsObjectNameEXT(devicePlat.device, &info);
+            if constexpr (LOG_PRINT_GPU_BUFFER_ADDRESS) {
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+                const GpuAccelerationStructurePlatformDataVk platAccel =
+                    (static_cast<const GpuBufferVk&>(buffer)).GetPlatformDataAccelerationStructure();
+                PLUGIN_LOG_I("GPU BUFFER: %s:", name.data());
+                if (platAccel.accelerationStructure) {
+                    PLUGIN_LOG_I("deviceAddress: %" PRIx64 " accelDeviceAddress: %" PRIx64, plat.deviceAddress,
+                        platAccel.deviceAddress);
+                } else {
+                    PLUGIN_LOG_I("deviceAddress: %" PRIx64, plat.deviceAddress);
+                }
+#endif
+            }
         }
     }
 }

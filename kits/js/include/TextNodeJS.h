@@ -22,7 +22,7 @@
 #include "NodeImpl.h"
 #include "ColorProxy.h"
 
-class TextNodeJS : public BaseObject<TextNodeJS>, NodeImpl {
+class TextNodeJS : public BaseObject, NodeImpl {
 public:
     static constexpr uint32_t ID = 140;
     static void Init(napi_env env, napi_value exports);

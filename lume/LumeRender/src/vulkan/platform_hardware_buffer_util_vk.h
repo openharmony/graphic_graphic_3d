@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 
 RENDER_BEGIN_NAMESPACE()
 class DeviceVk;
+struct GpuBufferDesc;
 struct GpuImageDesc;
 
 namespace PlatformHardwareBufferUtil {
@@ -57,6 +58,14 @@ void DestroyHwPlatformImage(const DeviceVk& deviceVk, VkImage image, VkDeviceMem
 
 void FillYcbcrConversionInfo(
     const HardwareBufferProperties& hwBufferProperties, VkSamplerYcbcrConversionCreateInfo& ycbcrConversionCreateInfo);
+
+struct HardwareBufferBuffer {
+    VkBuffer buffer;
+    VkDeviceMemory deviceMemory;
+};
+HardwareBufferBuffer CreateHwPlatformBuffer(const DeviceVk& deviceVk,
+    const HardwareBufferProperties& hwBufferProperties, const GpuBufferDesc& desc, uintptr_t hwBuffer);
+void DestroyHwPlatformBuffer(const DeviceVk& deviceVk, VkBuffer buffer, VkDeviceMemory deviceMemory);
 } // namespace PlatformHardwareBufferUtil
 RENDER_END_NAMESPACE()
 

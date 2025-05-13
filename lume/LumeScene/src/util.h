@@ -59,10 +59,10 @@ typename Interface::Ptr ObjectWithRenderHandle(
     if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
             scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
         if (!p && id.IsValid()) {
-            p = META_NS::GetObjectRegistry().Create<Interface>(id);
+            p = interface_pointer_cast<Interface>(scene->CreateObject(id));
         }
         if (auto i = interface_cast<IRenderResource>(p)) {
-            i->SetRenderHandle(scene, rhman->GetRenderHandleReference(entRef), entRef);
+            i->SetRenderHandle(rhman->GetRenderHandleReference(entRef));
         }
     }
     return p;
@@ -71,13 +71,7 @@ typename Interface::Ptr ObjectWithRenderHandle(
 inline CORE_NS::EntityReference HandleFromRenderResource(
     const IInternalScene::Ptr& scene, const RENDER_NS::RenderHandleReference& handle)
 {
-    CORE_NS::EntityReference ent;
-    if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
-            scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
-        ent = CORE3D_NS::GetOrCreateEntityReference(
-            scene->GetEcsContext().GetNativeEcs()->GetEntityManager(), *rhman, handle);
-    }
-    return ent;
+    return scene->GetEcsContext().GetRenderHandleEntity(handle);
 }
 
 template<typename Interface>

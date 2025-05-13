@@ -12,8 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "engine_input_property_manager.h"
+
+#include <mutex>
 
 META_BEGIN_NAMESPACE()
 

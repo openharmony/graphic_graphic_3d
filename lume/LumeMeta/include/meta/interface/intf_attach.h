@@ -16,11 +16,11 @@
 #ifndef META_INTERFACE_IATTACH_H
 #define META_INTERFACE_IATTACH_H
 
+#include <base/containers/shared_ptr.h>
 #include <base/containers/vector.h>
 
 #include <meta/base/interface_utils.h>
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/base/types.h>
 #include <meta/interface/intf_container.h>
 #include <meta/interface/intf_object.h>
