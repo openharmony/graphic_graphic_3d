@@ -66,26 +66,12 @@ private:
     // Load a scene by using an index file. See GuessIndexFilePath
     static IScene::Ptr LoadSceneWithIndex(const IRenderContext::Ptr& context, BASE_NS::string_view uri);
 
-    // Run the given load function with a path temporarily registered in the file manager. See GuessProjectPath
-    template<typename LoadFunc>
-    static inline IScene::Ptr WithPathRegistered(
-        const META_NS::IMetadata::Ptr& context, BASE_NS::string_view uri, LoadFunc loadFunc)
-    {
-        // Rely on an implementation detail: If the path is already registered, it can be re-registered.
-        // Unregistering will remove only the re-registered path and leave the original.
-        if (SetProjectPath(context, uri, ProjectPathAction::REGISTER)) {
-            const auto renderContext = META_NS::GetValue(context->GetProperty<IRenderContext::Ptr>("RenderContext"));
-            const auto result = loadFunc(renderContext, uri);
-            SetProjectPath(context, uri, ProjectPathAction::UNREGISTER);
-            return result;
-        }
-        return {};
-    }
+    static void LoadDefaultResourcesIfNeeded(const CORE_NS::IResourceManager::Ptr& resources);
 
     enum class ProjectPathAction { REGISTER, UNREGISTER };
     // Register/unregister the given uri with the file manager
     static bool SetProjectPath(
-        const META_NS::IMetadata::Ptr& engineContext, BASE_NS::string_view uri, ProjectPathAction action);
+        const IRenderContext::Ptr& renderContext, BASE_NS::string_view uri, ProjectPathAction action);
 
     // GuessIndexFilePath("schema://default.scene2") == "schema://default.res"
     static BASE_NS::string GuessIndexFilePath(BASE_NS::string_view uri);

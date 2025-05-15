@@ -19,6 +19,7 @@
 #include <scene/ext/intf_component_factory.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/intf_node_notify.h>
+#include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/scene_options.h>
 #include <shared_mutex>
@@ -31,7 +32,6 @@
 #include <meta/interface/intf_startable_controller.h>
 #include <meta/interface/intf_task_queue.h>
 
-#include "camera.h"
 #include "ecs.h"
 #include "intf_internal_raycast.h"
 
@@ -44,7 +44,8 @@ public:
         META_NS::ContainerChangeType, CORE_NS::Entity parent, CORE_NS::Entity child, size_t index) = 0;
 };
 
-class InternalScene : public META_NS::IntroduceInterfaces<IInternalScene, IInternalRayCast, IOnNodeChanged> {
+class InternalScene : public META_NS::IntroduceInterfaces<IInternalScene, IInternalRayCast, IOnNodeChanged,
+                          IApplicationContextProvider> {
 public:
     InternalScene(const IScene::Ptr& scene, IRenderContext::Ptr context, SceneOptions opts);
 
@@ -60,7 +61,8 @@ public:
 
     IRenderContext::Ptr GetContext() const override
     {
-        return context_;
+        auto ctx = context_.lock();
+        return ctx ? ctx->GetRenderContext() : nullptr;
     }
 
     INode::Ptr CreateNode(BASE_NS::string_view path, META_NS::ObjectId id) override;
@@ -84,7 +86,9 @@ public:
     }
     RENDER_NS::IRenderContext& GetRenderContext() override
     {
-        return *context_->GetRenderer();
+        auto ctx = GetRenderContextPtr();
+        CORE_ASSERT(ctx);
+        return *ctx;
     }
     CORE3D_NS::IGraphicsContext& GetGraphicsContext() override
     {
@@ -94,6 +98,7 @@ public:
     BASE_NS::shared_ptr<IScene> GetScene() const override;
     void SchedulePropertyUpdate(const IEcsObject::Ptr& obj) override;
     void SyncProperties() override;
+    void Update(const UpdateInfo& info) override;
     void Update(bool syncProperties = true) override;
 
     void RegisterComponent(const BASE_NS::Uid&, const IComponentFactory::Ptr&) override;
@@ -112,6 +117,14 @@ public:
 
     void ListenNodeChanges(bool enabled) override;
     SceneOptions GetOptions() const override;
+    void StartAllStartables(META_NS::IStartableController::ControlBehavior behavior) override;
+    void StopAllStartables(META_NS::IStartableController::ControlBehavior behavior) override;
+
+protected: // IApplicationContextProvider
+    IApplicationContext::ConstPtr GetApplicationContext() const override
+    {
+        return context_.lock();
+    }
 
 public:
     NodeHits CastRay(
@@ -145,9 +158,15 @@ private:
     void SetEntityActive(const BASE_NS::shared_ptr<IEcsObject>&, bool active) override;
 
 private:
+    BASE_NS::shared_ptr<RENDER_NS::IRenderContext> GetRenderContextPtr() const
+    {
+        auto ctx = GetContext();
+        return ctx ? ctx->GetRenderer() : nullptr;
+    }
+    BASE_NS::vector<INode::Ptr> GetNodes() const;
     IScene::WeakPtr scene_;
     IInternalScene::WeakPtr self_;
-    IRenderContext::Ptr context_;
+    IApplicationContext::ConstWeakPtr context_;
     CORE3D_NS::IGraphicsContext::Ptr graphicsContext3D_;
 
     SceneOptions options_;

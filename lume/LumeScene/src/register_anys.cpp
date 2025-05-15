@@ -70,6 +70,29 @@ using ObjectTypes = META_NS::TypeList<
 
 namespace Internal {
 
+// Compatibility with old IBitmap any
+class BitmapAnyBuilder : public META_NS::AnyBuilder {
+public:
+    using AnyType = META_NS::AnyType<IImage::Ptr>;
+
+    static META_NS::ObjectId StaticGetClassId()
+    {
+        return META_NS::ObjectId("61621edc-f7f4-a195-4275-696c74416e79");
+    }
+    META_NS::IAny::Ptr Construct() override
+    {
+        return META_NS::IAny::Ptr(new AnyType);
+    }
+    META_NS::ObjectId GetObjectId() const override
+    {
+        return StaticGetClassId();
+    }
+    BASE_NS::string GetTypeName() const override
+    {
+        return BASE_NS::string(AnyType::StaticGetTypeIdString());
+    }
+};
+
 template<typename... List>
 static void RegisterTypes(META_NS::IPropertyRegister& pr, META_NS::TypeList<List...>)
 {
@@ -89,6 +112,9 @@ void RegisterAnys()
     auto& pr = META_NS::GetObjectRegistry().GetPropertyRegister();
     RegisterTypes(pr, BasicTypes {});
     RegisterTypes(pr, ObjectTypes {});
+
+    // for compatibility
+    pr.RegisterAny(CreateShared<BitmapAnyBuilder>());
 }
 
 void UnRegisterAnys()
@@ -96,6 +122,8 @@ void UnRegisterAnys()
     auto& pr = META_NS::GetObjectRegistry().GetPropertyRegister();
     UnregisterTypes(pr, ObjectTypes {});
     UnregisterTypes(pr, BasicTypes {});
+
+    pr.UnregisterAny(BitmapAnyBuilder::StaticGetClassId());
 }
 
 } // namespace Internal

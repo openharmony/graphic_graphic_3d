@@ -110,6 +110,7 @@ target_sources(${PLUGIN_NAME} PRIVATE
     register_serializers.cpp
     render_configuration.cpp
     render_configuration.h
+    render_context.h
     resource/ecs_animation.cpp
     resource/ecs_animation.h
     resource/environment.cpp

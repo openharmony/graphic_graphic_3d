@@ -17,6 +17,7 @@
 
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/util.h>
+#include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_scene_manager.h>
 
 #include <meta/api/object_name.h>
@@ -34,9 +35,10 @@ bool Node::Build(const META_NS::IMetadata::Ptr& d)
 void Node::Destroy()
 {
     if (startableHandler_) {
-        startableHandler_->StopAll();
+        startableHandler_->StopAll(GetAttachmentContainer(false));
         startableHandler_.reset();
     }
+    Super::Destroy();
 }
 
 IScene::Ptr Node::GetScene() const
@@ -177,12 +179,12 @@ Future<INode::Ptr> Node::ImportChildScene(BASE_NS::string_view uri, BASE_NS::str
 {
     if (auto s = GetInternalScene()) {
         return s->AddTask([=, uri = BASE_NS::string(uri), name = BASE_NS::string(nodeName)] {
-            if (auto context = s->GetContext()) {
-                auto params = SCENE_NS::CreateRenderContextArg(context);
-                if (auto manager = META_NS::GetObjectRegistry().Create<SCENE_NS::ISceneManager>(
-                        SCENE_NS::ClassId::SceneManager, params)) {
-                    auto scene = manager->CreateScene(uri, s->GetOptions()).GetResult();
-                    return ImportChildScene(scene, name).GetResult();
+            if (auto provider = interface_cast<IApplicationContextProvider>(s)) {
+                if (auto appContext = provider->GetApplicationContext()) {
+                    if (auto manager = appContext->GetSceneManager()) {
+                        auto scene = manager->CreateScene(uri, s->GetOptions()).GetResult();
+                        return ImportChildScene(scene, name).GetResult();
+                    }
                 }
             }
             return INode::Ptr {};

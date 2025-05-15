@@ -19,6 +19,7 @@
 #include <scene/api/node.h>
 #include <scene/api/resource.h>
 #include <scene/ext/intf_internal_scene.h>
+#include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_image.h>
 #include <scene/interface/intf_light.h>
 #include <scene/interface/intf_mesh.h>
@@ -252,6 +253,22 @@ public:
     META_INTERFACE_OBJECT(Scene, META_NS::Object, IScene)
     /// Initialize a Scene object from a Node.
     explicit Scene(const Node& node) : META_NS::Object(node.GetScene()) {}
+    /**
+     * @brief Load a Scene from a file.
+     * @param uri The uri to load the scene from.
+     * @return A valid Scene object if loading was successful, an invalid object otherwise.
+     */
+    META_API_ASYNC static auto Load(BASE_NS::string_view uri)
+    {
+        Future<IScene::Ptr> f;
+        // Use default application context for loading
+        if (const auto ctx = GetDefaultApplicationContext()) {
+            if (const auto sm = ctx->GetSceneManager()) {
+                f = sm->CreateScene(uri);
+            }
+        }
+        return Internal::UnwrapFuture<CallType, Scene>(BASE_NS::move(f));
+    }
     /// Returns a resource factory for creating resources associated with this scene.
     auto GetResourceFactory()
     {

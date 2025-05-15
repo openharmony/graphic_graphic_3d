@@ -34,16 +34,21 @@
 #include <meta/interface/intf_startable.h>
 
 #include "../component/generic_component.h"
+#include "../node/startable_handler.h"
 #include "../resource/ecs_animation.h"
 #include "ecs_object.h"
 
 SCENE_BEGIN_NAMESPACE()
 
 InternalScene::InternalScene(const IScene::Ptr& scene, IRenderContext::Ptr context, SceneOptions opts)
-    : scene_(scene), context_(BASE_NS::move(context)), options_(BASE_NS::move(opts))
+    : scene_(scene), options_(BASE_NS::move(opts))
 {
+    if (auto getter = interface_cast<IApplicationContextProvider>(context)) {
+        context_ = getter->GetApplicationContext();
+    }
+
     graphicsContext3D_ = CORE_NS::CreateInstance<CORE3D_NS::IGraphicsContext>(
-        *context_->GetRenderer()->GetInterface<CORE_NS::IClassFactory>(), CORE3D_NS::UID_GRAPHICS_CONTEXT);
+        *context->GetRenderer()->GetInterface<CORE_NS::IClassFactory>(), CORE3D_NS::UID_GRAPHICS_CONTEXT);
     graphicsContext3D_->Init();
 }
 
@@ -80,9 +85,9 @@ void InternalScene::Uninitialize()
         ecs_->Uninitialize();
     }
 
-    if (context_->GetRenderer()) {
+    if (const auto rctx = GetRenderContextPtr()) {
         // Do a "empty render" to flush out the gpu resources instantly.
-        context_->GetRenderer()->GetRenderer().RenderFrame({});
+        rctx->GetRenderer().RenderFrame({});
     }
 }
 
@@ -141,7 +146,7 @@ INode::Ptr InternalScene::CreateNode(BASE_NS::string_view path, META_NS::ObjectI
 META_NS::IObject::Ptr InternalScene::CreateObject(META_NS::ObjectId id)
 {
     auto& r = META_NS::GetObjectRegistry();
-    auto md = CreateRenderContextArg(context_);
+    auto md = CreateRenderContextArg(GetContext());
     if (md) {
         md->AddProperty(META_NS::ConstructProperty<IInternalScene::Ptr>("Scene", self_.lock()));
     }
@@ -541,11 +546,11 @@ bool InternalScene::UpdateSyncProperties(bool resetPending)
     return pending;
 }
 
-void InternalScene::Update(bool syncProperties)
+void InternalScene::Update(const UpdateInfo& info)
 {
     using namespace std::chrono;
     bool pending;
-    if (syncProperties) {
+    if (info.syncProperties) {
         pending = UpdateSyncProperties(true);
     } else {
         std::unique_lock lock { mutex_ };
@@ -555,8 +560,14 @@ void InternalScene::Update(bool syncProperties)
 
     ecs_->ecs->ProcessEvents();
 
-    const auto currentTime =
-        static_cast<uint64_t>(duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count());
+    uint64_t currentTime {};
+
+    if (info.clock) {
+        currentTime = info.clock->GetTime().ToMicroseconds();
+    } else {
+        currentTime =
+            static_cast<uint64_t>(duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count());
+    }
 
     if (firstTime_ == ~0u) {
         previousFrameTime_ = firstTime_ = currentTime;
@@ -577,12 +588,20 @@ void InternalScene::Update(bool syncProperties)
         auto renderHandles = graphicsContext3D_->GetRenderNodeGraphs(*ecs_->ecs);
         if (!renderHandles.empty()) {
             // The scene needs to be rendered.
-            RENDER_NS::IRenderer& renderer = context_->GetRenderer()->GetRenderer();
-            renderer.RenderDeferred(renderHandles);
-
-            NotifyRenderingCameras();
+            if (auto rctx = GetRenderContextPtr()) {
+                RENDER_NS::IRenderer& renderer = rctx->GetRenderer();
+                renderer.RenderDeferred(renderHandles);
+                NotifyRenderingCameras();
+            }
         }
     }
+}
+
+void InternalScene::Update(bool syncProperties)
+{
+    IInternalSceneCore::UpdateInfo info;
+    info.syncProperties = syncProperties;
+    Update(info);
 }
 
 void InternalScene::NotifyRenderingCameras()
@@ -792,6 +811,39 @@ void InternalScene::OnChildChanged(
             } else {
                 CORE_LOG_W("child changed but cannot construct it?!");
             }
+        }
+    }
+}
+
+BASE_NS::vector<INode::Ptr> InternalScene::GetNodes() const
+{
+    // This could be improved to traverse the Node system, and get a list of nodes that we have a wrapper for in a given
+    // traversal order
+    BASE_NS::vector<INode::Ptr> nodes;
+    nodes.reserve(nodes_.size());
+    for (auto&& n : nodes_) {
+        nodes.push_back(n.second);
+    }
+    return nodes;
+}
+
+void InternalScene::StartAllStartables(META_NS::IStartableController::ControlBehavior behavior)
+{
+    if (options_.enableStartables) {
+        if (auto me = self_.lock()) {
+            for (auto&& n : GetNodes()) {
+                Internal::StartAllStartables(
+                    me, StartableHandler::StartType::DEFERRED, interface_pointer_cast<META_NS::IObject>(n));
+            }
+        }
+    }
+}
+
+void InternalScene::StopAllStartables(META_NS::IStartableController::ControlBehavior behavior)
+{
+    if (options_.enableStartables) {
+        for (auto&& n : GetNodes()) {
+            Internal::StopAllStartables(interface_pointer_cast<META_NS::IObject>(n));
         }
     }
 }

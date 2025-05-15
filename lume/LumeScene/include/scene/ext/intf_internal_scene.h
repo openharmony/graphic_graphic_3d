@@ -59,6 +59,12 @@ public:
 
     virtual void SchedulePropertyUpdate(const BASE_NS::shared_ptr<IEcsObject>& obj) = 0;
     virtual void SyncProperties() = 0;
+    struct UpdateInfo {
+        bool syncProperties { true }; /// If true, synchronize properties between ECS
+        META_NS::IClock::Ptr clock;   /// Optional clock to use for ECS update
+    };
+    virtual void Update(const UpdateInfo& info) = 0;
+    /// Updates using an internal clock. Update(const UpdateInfo& info) is preferred.
     virtual void Update(bool syncProperties = true) = 0;
 
     virtual bool SyncProperty(const META_NS::IProperty::ConstPtr& p, META_NS::EngineSyncDirection dir) = 0;
@@ -122,6 +128,10 @@ public:
     virtual bool HasPendingRender() const = 0;
 
     virtual SceneOptions GetOptions() const = 0;
+
+    // Startable handling
+    virtual void StartAllStartables(META_NS::IStartableController::ControlBehavior behavior) = 0;
+    virtual void StopAllStartables(META_NS::IStartableController::ControlBehavior behavior) = 0;
 };
 
 inline Future<bool> SyncProperty(const IInternalScene::Ptr& scene, const META_NS::IProperty::ConstPtr& p,

@@ -36,11 +36,24 @@ public:
     bool Stop(const META_NS::IObject::Ptr& attachment);
     bool StartAll(StartType type);
     bool StopAll();
+    bool StopAll(const META_NS::IContainer::Ptr& container);
 
 private:
     IInternalScene::Ptr GetScene() const;
     INode::WeakPtr node_;
 };
+
+namespace Internal {
+
+bool StartStartable(
+    const IInternalScene::Ptr& scene, StartableHandler::StartType type, const META_NS::IObject::Ptr& object);
+bool StopStartable(const META_NS::IObject::Ptr& object);
+
+bool StartAllStartables(
+    const IInternalScene::Ptr& scene, StartableHandler::StartType type, const META_NS::IObject::Ptr& object);
+bool StopAllStartables(const META_NS::IObject::Ptr& object);
+
+} // namespace Internal
 
 SCENE_END_NAMESPACE()
 

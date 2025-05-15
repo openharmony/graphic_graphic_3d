@@ -15,6 +15,7 @@
 
 #include "scene_manager.h"
 
+#include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/util.h>
 #include <scene/interface/intf_application_context.h>
@@ -37,7 +38,6 @@
 
 #include "asset/asset_object.h"
 #include "resource/resource_types.h"
-#include "util.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -120,18 +120,45 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, SceneOpt
     if (uri == "" || uri == "scene://empty") {
         return CreateScene(BASE_NS::move(opts));
     }
-    return context_->AddTask([path = BASE_NS::string(uri), context = CreateContext(BASE_NS::move(opts))] {
-        if (auto s = META_NS::GetObjectRegistry().Create<IScene>(SCENE_NS::ClassId::Scene, context)) {
-            if (const auto result = Load(s, path)) {
-                return result;
-            }
+    if (!context_) {
+        return {};
+    }
+    return context_->AddTask(
+        [path = BASE_NS::string(uri), renderContext = context_, args = CreateContext(BASE_NS::move(opts))] {
+            IScene::Ptr result;
             if (path.ends_with(".scene") || path.ends_with(".scene2")) {
-                // Loading could have failed because the .scene is of a newer type that uses an index.
-                return WithPathRegistered(context, path, LoadSceneWithIndex);
+                // Try loading as an editor project
+                if (SetProjectPath(renderContext, path, ProjectPathAction::REGISTER)) {
+                    // Rely on an implementation detail: If the path is already registered, it can be re-registered.
+                    // Unregistering will remove only the re-registered path and leave the original.
+                    result = LoadSceneWithIndex(renderContext, path);
+                    SetProjectPath(renderContext, path, ProjectPathAction::UNREGISTER);
+                }
             }
+            if (!result) {
+                // Was not an editor project (so could be either a .gltf or old format .scene)
+                result = META_NS::GetObjectRegistry().Create<IScene>(SCENE_NS::ClassId::Scene, args);
+                Load(result, path);
+            }
+            return result;
+        });
+}
+
+void SceneManager::LoadDefaultResourcesIfNeeded(const CORE_NS::IResourceManager::Ptr& resources)
+{
+    static constexpr auto DEFAULT_PROJECT_RESOURCE_GROUP_URI = "project://default_resources.res";
+    bool foundDefault = false;
+    for (auto&& group : resources->GetResourceGroups()) {
+        // The project default resource group has no name
+        if (group.empty()) {
+            foundDefault = true;
+            break;
         }
-        return IScene::Ptr {};
-    });
+    }
+    if (!foundDefault) {
+        // Did not find unnamed (default) resource group, load default resource file
+        resources->Import(DEFAULT_PROJECT_RESOURCE_GROUP_URI);
+    }
 }
 
 IScene::Ptr SceneManager::LoadSceneWithIndex(const IRenderContext::Ptr& context, BASE_NS::string_view uri)
@@ -143,6 +170,10 @@ IScene::Ptr SceneManager::LoadSceneWithIndex(const IRenderContext::Ptr& context,
     if (!resources) {
         return {};
     }
+
+    // Make sure that project default resource group has been loaded
+    LoadDefaultResourcesIfNeeded(resources);
+
     const auto index = GuessIndexFilePath(uri);
     auto ires = resources->Import(index);
     if (ires != CORE_NS::IResourceManager::Result::OK) {
@@ -158,9 +189,9 @@ IScene::Ptr SceneManager::LoadSceneWithIndex(const IRenderContext::Ptr& context,
 }
 
 bool SceneManager::SetProjectPath(
-    const META_NS::IMetadata::Ptr& engineContext, BASE_NS::string_view uri, ProjectPathAction action)
+    const IRenderContext::Ptr& renderContext, BASE_NS::string_view uri, ProjectPathAction action)
 {
-    if (const auto renderContext = GetBuildArg<IRenderContext::Ptr>(engineContext, "RenderContext")) {
+    if (renderContext) {
         if (const auto renderer = renderContext->GetRenderer()) {
             auto& fileManager = renderer->GetEngine().GetFileManager();
             const auto pathToProject = GuessProjectPath(uri);

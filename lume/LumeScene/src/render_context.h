@@ -16,6 +16,7 @@
 #ifndef SCENE_SRC_RENDER_CONTEXT_H
 #define SCENE_SRC_RENDER_CONTEXT_H
 
+#include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_render_context.h>
 
 #include <meta/ext/object.h>
@@ -23,7 +24,8 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-class RenderContext : public META_NS::IntroduceInterfaces<META_NS::BaseObject, IRenderContext> {
+class RenderContext : public META_NS::IntroduceInterfaces<META_NS::BaseObject, IRenderContext,
+                          IApplicationContextProvider, IApplicationContextSetter> {
     META_OBJECT(RenderContext, ClassId::RenderContext, IntroduceInterfaces)
 public:
     bool Initialize(BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc, META_NS::ITaskQueue::Ptr rq,
@@ -55,10 +57,24 @@ public:
         return res;
     }
 
+protected: // IApplicationContextProvider
+    IApplicationContext::ConstPtr GetApplicationContext() const override
+    {
+        return context_.lock();
+    }
+
+protected: // IApplicationContextSetter
+    void SetApplicationContext(const IApplicationContext::ConstPtr& context) override
+    {
+        context_ = context;
+    }
+
+private:
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rcontext;
     META_NS::ITaskQueue::Ptr renderQ;
     META_NS::ITaskQueue::Ptr appQ;
     CORE_NS::IResourceManager::Ptr res;
+    IApplicationContext::ConstWeakPtr context_;
 };
 
 SCENE_END_NAMESPACE()

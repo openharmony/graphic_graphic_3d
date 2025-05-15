@@ -25,6 +25,9 @@
 
 SCENE_BEGIN_NAMESPACE()
 
+/**
+ * @brief The IApplicationContext interface can be used to access application specific parameters.
+ */
 class IApplicationContext : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IApplicationContext, "52d1686d-8214-49ea-98f7-83c02a45f985")
 public:
@@ -42,8 +45,46 @@ public:
     virtual SceneOptions GetDefaultSceneOptions() const = 0;
 };
 
+/**
+ * @brief The IApplicationContextProvider interface can be implemented by classes which can be queried for an
+ *        IApplicationContext instance they belong to.
+ * @note  The default RenderContext implementation (return by calling
+ *        GetDefaultApplicationContext()->GetRenderContext()) implements IApplicationContextProvider, enabling to query
+ *        the application context a render context is associated with.
+ */
+class IApplicationContextProvider : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IApplicationContextProvider, "71c07cc6-36b5-4b71-a0e8-be4731a9753d")
+public:
+    /// Returns the associated application context.
+    virtual IApplicationContext::ConstPtr GetApplicationContext() const = 0;
+};
+
+class IApplicationContextSetter : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IApplicationContextSetter, "586601d7-ded9-43f9-aacf-f7ccd7fa33cf")
+public:
+    virtual void SetApplicationContext(const IApplicationContext::ConstPtr& context) = 0;
+};
+
 META_REGISTER_SINGLETON_CLASS(
     ApplicationContext, "424b9f97-6447-41c0-8225-1fb0e1bbd7e8", META_NS::ObjectCategoryBits::NO_CATEGORY)
+
+/// Helper function for retrieving the application context associated with a render context
+inline IApplicationContext::ConstPtr GetApplicationContext(const IRenderContext::Ptr& renderContext)
+{
+    if (auto provider = interface_cast<IApplicationContextProvider>(renderContext)) {
+        return provider->GetApplicationContext();
+    }
+    return nullptr;
+}
+
+/// Helper function for retrieving the scene manager associated with the application context of a render context
+inline ISceneManager::Ptr GetSceneManager(const IRenderContext::Ptr& renderContext)
+{
+    if (auto ctx = GetApplicationContext(renderContext)) {
+        return ctx->GetSceneManager();
+    }
+    return nullptr;
+}
 
 inline IApplicationContext::ConstPtr GetDefaultApplicationContext()
 {

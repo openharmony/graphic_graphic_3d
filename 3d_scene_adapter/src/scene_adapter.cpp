@@ -480,6 +480,14 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
             }
         };
         swapchainHandle_ = device.CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
+
+        auto &obr = META_NS::GetObjectRegistry();
+        auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+        bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
+        if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
+            i->SetRenderHandle(swapchainHandle_);
+        }
+
         if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
             auto cams = scene->GetCameras().GetResult();
             if (!cams.empty()) {
@@ -725,12 +733,10 @@ void SceneAdapter::Deinit()
         }
         swapchainHandle_ = {};
         if (bitmap_) {
+            bitmap_.reset();
             auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
             if (!scene) {
                 return META_NS::IAny::Ptr {};
-            }
-            if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
-                i->SetRenderHandle(swapchainHandle_);
             }
         }
         return META_NS::IAny::Ptr {};
@@ -752,16 +758,9 @@ void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
         WIDGET_LOGE("cast cameraObj failed in AttachSwapchain.");
         return;
     }
-    if (!swapchainHandle_ || !camera->IsActive()) {
+    if (!bitmap_ || !camera->IsActive()) {
         camera->SetRenderTarget({});
         return;
-    }
-
-    auto &obr = META_NS::GetObjectRegistry();
-    auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
-    bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
-    if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
-        i->SetRenderHandle(swapchainHandle_);
     }
     camera->SetRenderTarget(bitmap_);
 }

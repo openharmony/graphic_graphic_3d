@@ -541,3 +541,12 @@ ohos_shared_library(LIB_RENDER) {
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
+
+ohos_shared_library("AGPRenderApi") {
+  public_configs = [
+    ":lume_render_api",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

@@ -19,6 +19,7 @@
 #include <scene/ext/intf_component.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/util.h>
+#include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_external_node.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_node_import.h>
@@ -298,7 +299,7 @@ IScene::Ptr SceneImporter::ImportScene(CORE_NS::IFile& in)
     if (md) {
         md->AddProperty(META_NS::ConstructProperty<SceneOptions>("Options", opts_));
     }
-    if (auto m = META_NS::GetObjectRegistry().Create<SCENE_NS::ISceneManager>(SCENE_NS::ClassId::SceneManager, md)) {
+    if (auto m = GetSceneManager(context)) {
         if (auto scene = m->CreateScene().GetResult()) {
             importer->SetUserContext(interface_pointer_cast<META_NS::IObject>(scene));
             if (auto obj = importer->Import(in)) {

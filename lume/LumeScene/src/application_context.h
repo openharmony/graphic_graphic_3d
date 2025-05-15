@@ -35,6 +35,9 @@ public:
             if (context_) {
                 context_->Initialize(
                     info.renderContext, info.engineTaskQueue, info.applicationTaskQueue, info.resourceManager);
+                if (auto setter = interface_cast<IApplicationContextSetter>(context_)) {
+                    setter->SetApplicationContext(GetSelf<IApplicationContext>());
+                }
             }
             defaultSceneOptions_ = info.defaultSceneOptions;
             auto args = CreateRenderContextArg(context_);
