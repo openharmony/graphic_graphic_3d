@@ -30,6 +30,7 @@
 #include <render_service_client/core/ui/rs_canvas_node.h>
 #include <render_service_client/core/ui/rs_root_node.h>
 #include <render_service_client/core/ui/rs_surface_node.h>
+#include <render_service_client/core/ui/rs_ui_director.h>
 
 #include <surface_buffer.h>
 #include <surface_utils.h>
@@ -67,6 +68,7 @@ public:
     TextureInfo OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
 
 private:
+    void CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig);
     void* CreateNativeWindow(uint32_t width, uint32_t height);
     void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow);
     void ConfigTexture(float width, float height);
@@ -82,6 +84,7 @@ private:
     std::shared_ptr<Rosen::RSNode> rsNode_ = nullptr;
     std::shared_ptr<Rosen::RSNode> parent_ = nullptr;
     sptr<OHOS::Surface> producerSurface_ = nullptr;
+    std::shared_ptr<OHOS::Rosen::RSUIDirector> rsUIDirector_;
     SurfaceType surface_ = SurfaceType::UNDEFINE;
     TextureImage image_;
 };
@@ -132,6 +135,17 @@ GraphicTransformType RotationToTransform(uint32_t rotation)
     return transform;
 }
 
+void TextureLayerImpl::CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig)
+{
+    rsUIDirector_ = OHOS::Rosen::RSUIDirector::Create();
+    // Init: The first true indicates that RenderThread is created, and the second true indicates that multiple
+    // instances are used. When multi-instance is not used, each process has a global RSUIDirector. When multi-instance
+    // is used, each instance corresponds to one RSUIDirector.
+    rsUIDirector_->Init(true, true);
+    auto rsUIContext = rsUIDirector_->GetRSUIContext();
+    rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false, rsUIContext);
+}
+
 void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
 {
     std::string bundleName = GraphicsManager::GetInstance().GetHapInfo().bundleName_;
@@ -141,8 +155,7 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
     } else {
         surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model") + std::to_string(key_) };
     }
-
-    rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false);
+    CreateNatviceWindowNode(surfaceNodeConfig);
     if (!rsNode_) {
         WIDGET_LOGE("Create rs node fail");
         return nullptr;
@@ -189,6 +202,7 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
     if (!window) {
         WIDGET_LOGE("CreateNativeWindowFromSurface failed");
     }
+    rsUIDirector_->SendMessages();
 
     return reinterpret_cast<void *>(window);
 }
@@ -214,6 +228,7 @@ void TextureLayerImpl::ConfigWindow(float offsetX, float offsetY, float width, f
             return;
         }
         rsNode_->SetBounds(offsetX, offsetY, width, height);
+        rsUIDirector_->SendMessages();
     }
 }
 
