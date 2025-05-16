@@ -72,7 +72,7 @@ void main(void)
 {
     int downsampledPixels = 4;
 
-    // TODO: get camera index
+    // get camera index
     const uint cameraIdx = 0;
     ivec2 fragment = ivec2(gl_FragCoord.xy);
     int frameIndex = int(GetFrameIndex()) % (downsampledPixels * downsampledPixels);

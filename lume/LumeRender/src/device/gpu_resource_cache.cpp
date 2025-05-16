@@ -78,12 +78,12 @@ GpuResourceCache::~GpuResourceCache()
         uint32_t aliveCounter = 0;
         const uint32_t readIdx = 1u - writeIdx_;
         for (const auto& imagesRef : frameData_[writeIdx_].images) {
-            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) {
+            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2: min ref count
                 aliveCounter++;
             }
         }
         for (const auto& imagesRef : frameData_[readIdx].images) {
-            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) {
+            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2: min ref count
                 aliveCounter++;
             }
         }

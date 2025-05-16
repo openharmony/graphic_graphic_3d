@@ -616,8 +616,6 @@ LowLevelContextDescriptorWriteDataVk& DescriptorSetManagerVk::GetLowLevelDescrip
     return lowLevelDescriptorWriteData_;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 NodeContextDescriptorSetManagerVk::NodeContextDescriptorSetManagerVk(Device& device)
     : NodeContextDescriptorSetManager(device), device_ { device },
       vkDevice_ { ((const DevicePlatformDataVk&)device_.GetPlatformData()).device },

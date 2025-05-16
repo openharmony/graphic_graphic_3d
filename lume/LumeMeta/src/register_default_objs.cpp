@@ -69,7 +69,7 @@ IObjectFactory::Ptr GetContentObjectFactory();
 static constexpr ObjectTypeInfo OBJECTS[] = {
     Internal::Object::OBJECT_INFO,
     ObjectContainer::OBJECT_INFO,
-    ObjectFlatContainer::OBJECT_INFO,    
+    ObjectFlatContainer::OBJECT_INFO,
     ProxyObject::OBJECT_INFO,
     Internal::ContainerObserver::OBJECT_INFO,
     SettableFunction::OBJECT_INFO,

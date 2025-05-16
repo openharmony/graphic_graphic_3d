@@ -154,16 +154,6 @@ napi_value MeshJS::GetMaterialOverride(NapiApi::FunctionContext<>& ctx)
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
     }
-    /* auto sm = ctx.This().GetNative<SCENE_NS::IMesh>();
-    if (!sm) {
-        // return undefined.. as submesh bound.
-        return ctx.GetUndefined();
-    }
-    if (const auto material = sm->MaterialOverride()->GetValue()) {
-        napi_value args[] = { ctx.This().ToNapiValue() };
-        // These are owned by the scene, so store only weak reference.
-        return CreateFromNativeInstance(ctx.Env(), material, PtrType::WEAK, args).ToNapiValue();
-    }*/
     return ctx.GetUndefined();
 }
 

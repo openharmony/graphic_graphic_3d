@@ -101,7 +101,7 @@ bool FilterError(
 {
     if (source == GL_DEBUG_SOURCE_OTHER) {
         if (type == GL_DEBUG_TYPE_PERFORMANCE) {
-            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) {
+            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) { // 2147483647: max of uint32
                 /*  Ignore the following warning that Adreno drivers seem to spam.
                 source: GL_DEBUG_SOURCE_OTHER
                 type: GL_DEBUG_TYPE_PERFORMANCE
@@ -226,7 +226,7 @@ bool StringToUInt(string_view string, EGLint& value)
 {
     value = 0;
     for (auto digit : string) {
-        value *= 10;
+        value *= 10; // 10: decimalism
         if ((digit >= '0') && (digit <= '9')) {
             value += digit - '0';
         } else {
@@ -461,11 +461,11 @@ void FillProperties(DevicePropertiesGLES& properties)
     glGetIntegerv(GL_MAX_COMPUTE_UNIFORM_COMPONENTS, &properties.maxComputeUniformComponents);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, properties.maxComputeWorkGroupCount);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, properties.maxComputeWorkGroupCount + 1);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, properties.maxComputeWorkGroupCount + 2);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, properties.maxComputeWorkGroupCount + 2); // 2: index
     glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &properties.maxComputeWorkGroupInvocations);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, properties.maxComputeWorkGroupSize);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, properties.maxComputeWorkGroupSize + 1);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, properties.maxComputeWorkGroupSize + 2);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, properties.maxComputeWorkGroupSize + 2); // 2: index
     glGetIntegerv(GL_MAX_DEPTH_TEXTURE_SAMPLES, &properties.maxDepthTextureSamples);
     glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTERS, &properties.maxFragmentAtomicCounters);
     glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS, &properties.maxFragmentAtomicCounterBuffers);
@@ -518,7 +518,7 @@ bool IsSurfaceColorspaceSupported(const DevicePlatformDataGLES& plat)
 #undef ATTRIBUTE
 void EGLState::HandleExtensions()
 {
-    if (plat_.minorVersion > 4) {
+    if (plat_.minorVersion > 4) { // 4: egl version
         cextensions_ = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
         CHECK_EGL_ERROR();
         PLUGIN_LOG_D("\t%-32s: %s", "EGL_EXTENSIONS (CLIENT)", cextensions_.c_str());
@@ -562,7 +562,7 @@ void EGLState::FillSurfaceInfo(const EGLDisplay display, const EGLSurface surfac
     res.samples = static_cast<uint32_t>(value);
 
     EGLint colorspace = 0;
-    if (IsVersionGreaterOrEqual(1, 5) || hasColorSpaceExt_) {
+    if (IsVersionGreaterOrEqual(1, 5) || hasColorSpaceExt_) { // 1, 5: egl version
         static_assert(EGL_GL_COLORSPACE == EGL_GL_COLORSPACE_KHR);
         static_assert(EGL_GL_COLORSPACE_SRGB == EGL_GL_COLORSPACE_SRGB_KHR);
         if (eglQuerySurface(display, surface, EGL_GL_COLORSPACE, &colorspace)) {
@@ -604,7 +604,7 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
         attributes.push_back(b);
     };
     // Request OpenGL ES 3.x configs
-    if (IsVersionGreaterOrEqual(1, 5)) {
+    if (IsVersionGreaterOrEqual(1, 5)) { //  1, 5: egl version
         // EGL 1.5+
         addAttribute(EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT);
         addAttribute(EGL_CONFORMANT, EGL_OPENGL_ES3_BIT);
@@ -619,9 +619,9 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
     }
     addAttribute(EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT);
     addAttribute(EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
-    addAttribute(EGL_RED_SIZE, 8);
-    addAttribute(EGL_GREEN_SIZE, 8);
-    addAttribute(EGL_BLUE_SIZE, 8);
+    addAttribute(EGL_RED_SIZE, 8); // 8: attribute index
+    addAttribute(EGL_GREEN_SIZE, 8); // 8: attribute index
+    addAttribute(EGL_BLUE_SIZE, 8); // 8: attribute index
     addAttribute(EGL_CONFIG_CAVEAT, EGL_NONE);
     if (backendConfig) {
         if (backendConfig->MSAASamples > 1) {
@@ -634,7 +634,7 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
         PLUGIN_LOG_I("Samples:%d Alpha:%d Depth:%d Stencil:%d", backendConfig->MSAASamples, backendConfig->alphaBits,
             backendConfig->depthBits, backendConfig->stencilBits);
     } else {
-        addAttribute(EGL_ALPHA_SIZE, 8);
+        addAttribute(EGL_ALPHA_SIZE, 8); // 8: attribute index
     }
     addAttribute(EGL_NONE, EGL_NONE); // terminate list
     eglChooseConfig(plat_.display, attributes.data(), &plat_.config, 1, &num_configs);
@@ -654,7 +654,7 @@ void EGLState::CreateContext(const BackendExtraGLES* backendConfig)
         context_attributes.push_back(a);
         context_attributes.push_back(b);
     };
-    if (IsVersionGreaterOrEqual(1, 5)) {
+    if (IsVersionGreaterOrEqual(1, 5)) { // 1, 5: egl version
         // egl 1.5 or greater.
         addAttribute(EGL_CONTEXT_MAJOR_VERSION, 3); // Select an OpenGL ES 3.x context
         addAttribute(EGL_CONTEXT_MINOR_VERSION, 2); // Select an OpenGL ES x.2 context
@@ -728,10 +728,10 @@ bool EGLState::VerifyVersion()
         eglQueryContext(plat_.display, plat_.context, EGL_CONTEXT_MINOR_VERSION_KHR, &glMinor);
     }
 
-    if (glMajor < 3) {
+    if (glMajor < 3) { // 3: egl version
         fail = true;
-    } else if (glMajor == 3) {
-        if (glMinor < 2) {
+    } else if (glMajor == 3) { // 3: egl version
+        if (glMinor < 2) { // 2: egl version
             // We do NOT support 3.0 or 3.1
             fail = true;
         }
@@ -790,7 +790,7 @@ bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
     plat_.minorVersion = static_cast<uint32_t>(minor);
     PLUGIN_LOG_I("EGL %d.%d Initialized", major, minor);
 
-    if (!IsVersionGreaterOrEqual(1, 4)) {
+    if (!IsVersionGreaterOrEqual(1, 4)) { // 1, 4: egl version
         // we need at least egl 1.4
         PLUGIN_LOG_F("EGL version too old. 1.4 or later requried.");
         if (plat_.eglInitialized) {
@@ -1040,7 +1040,7 @@ uintptr_t EGLState::CreateSurface(uintptr_t window, uintptr_t /* instance */, bo
 
     EGLint attribsSrgb[] = { EGL_NONE, EGL_NONE, EGL_NONE };
     if (isSurfaceColorspaceSupported) {
-        if (IsVersionGreaterOrEqual(1, 5)) {
+        if (IsVersionGreaterOrEqual(1, 5)) { // 1, 5: egl version
             attribsSrgb[0] = EGL_GL_COLORSPACE;
             attribsSrgb[1] = isSrgb ? EGL_GL_COLORSPACE_SRGB : EGL_GL_COLORSPACE_LINEAR;
         } else if (hasColorSpaceExt_) {

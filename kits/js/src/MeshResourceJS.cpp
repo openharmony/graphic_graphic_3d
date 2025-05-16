@@ -34,7 +34,6 @@ MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
     }
 
     scene_ = ctx.Arg<0>().valueOrDefault();
-
     // Add the dispose hook to scene so that the MeshResourceJS is disposed when scene is disposed.
     if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
         sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), ctx.This());

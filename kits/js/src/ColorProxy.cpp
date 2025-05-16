@@ -49,7 +49,7 @@ void ColorProxy::SetValue(const BASE_NS::Math::Vec4& v)
     if (isColorType_) {
         META_NS::SetValue(GetProperty<BASE_NS::Color>(), BASE_NS::Color(v.x, v.y, v.z, v.w));
     } else {
-        META_NS::SetValue(GetProperty<BASE_NS::Math::Vec4>(),v);
+        META_NS::SetValue(GetProperty<BASE_NS::Math::Vec4>(), v);
     }
 }
 
@@ -96,7 +96,7 @@ bool GetColorMemberValue(const NapiApi::Env& info, META_NS::Property<T>& p, BASE
     if (memb == "a") {
         value = val.w;
         return true;
-    } 
+    }
     return false;
 }
 

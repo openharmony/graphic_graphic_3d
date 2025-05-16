@@ -86,10 +86,10 @@ __attribute__((used)) const CORE_NS::IPlugin* const g_staticPluginListDataRef = 
 #else
 
 #if _MSC_VER
-static const CORE_NS::IPlugin* const* g_staticPluginList = nullptr;
+static const CORE_NS::IPlugin* const *g_staticPluginList = nullptr;
 static size_t g_staticPluginListCount = 0;
 #else
-__attribute__((visibility("hidden"))) static const CORE_NS::IPlugin* const* g_staticPluginList = nullptr;
+__attribute__((visibility("hidden"))) static const CORE_NS::IPlugin* const *g_staticPluginList = nullptr;
 __attribute__((visibility("hidden"))) static size_t g_staticPluginListCount = 0;
 #endif
 
@@ -184,8 +184,9 @@ void GatherDynamicPlugins(vector<LibPlugin>& plugins, IFileManager& fileManager)
 bool AddDependencies(vector<Uid>& toBeLoaded, array_view<const LibPlugin> availablePlugins, const Uid& uidToLoad)
 {
     bool found = true;
-    if (auto pos = FindIf(availablePlugins,
-            [&uidToLoad](const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uidToLoad; });
+    if (auto pos =
+            FindIf(availablePlugins,
+                   [&uidToLoad](const LibPlugin &libPlugin) { return libPlugin.plugin->version.uid == uidToLoad; });
         pos != availablePlugins.end()) {
         found = AllOf(pos->plugin->pluginDependencies,
             [&](const Uid& dependency) { return AddDependencies(toBeLoaded, availablePlugins, dependency); });
@@ -405,8 +406,9 @@ void PluginRegistry::UnloadPlugins(const array_view<const Uid> pluginUids)
     CORE_LOG_D("Unload plugins:");
 #if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
     if (perfLoggerId_) {
-        if (pluginUids.empty() || std::any_of(pluginUids.cbegin(), pluginUids.cend(),
-                                      [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
+        if (pluginUids.empty() ||
+            std::any_of(pluginUids.cbegin(), pluginUids.cend(),
+                        [&perfUid = perfTracePlugin_](const Uid &uid) { return uid == perfUid; })) {
             logger_.RemoveOutput(perfLoggerId_);
             perfLoggerId_ = 0U;
         }
@@ -498,7 +500,7 @@ array_view<const ITypeInfo* const> PluginRegistry::GetTypeInfos(const Uid& typeU
 void PluginRegistry::AddListener(ITypeInfoListener& listener)
 {
     if (std::none_of(typeInfoListeners_.begin(), typeInfoListeners_.end(),
-            [adding = &listener](const auto& current) { return current == adding; })) {
+                     [adding = &listener](const auto &current) { return current == adding; })) {
         typeInfoListeners_.push_back(&listener);
     }
 }
@@ -702,8 +704,8 @@ void PluginRegistry::UnregisterPlugin(const IPlugin& plugin, PluginToken token)
 void PluginRegistry::DecreaseRefCounts(const array_view<const Uid> pluginUids)
 {
     for (const auto& uid : pluginUids) {
-        if (auto pos = std::find_if(
-                plugins_.begin(), plugins_.end(), [uid](const IPlugin* pl) { return pl && pl->version.uid == uid; });
+        if (auto pos = std::find_if(plugins_.begin(), plugins_.end(),
+                                    [uid](const IPlugin *pl) { return pl && pl->version.uid == uid; });
             pos != plugins_.end()) {
             const auto index = static_cast<size_t>(std::distance(plugins_.begin(), pos));
             --pluginDatas_[index].refcnt;

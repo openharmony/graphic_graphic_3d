@@ -46,7 +46,7 @@ void RenderDataStoreManager::CommitFrameData()
     // all valid stores can be accessed from render access stores without locks
     // remove unused data stores and gather their hashes so that stores_ can be cleaned up as well.
     for (auto it = renderAccessStores_.begin(); it != renderAccessStores_.end();) {
-        if (it->second->GetRefCount() > 2) { // in stores_, renderAccessStores_ and user
+        if (it->second->GetRefCount() > 2) { // in stores_, renderAccessStores_ and user, 2: min ref count
             ++it;
         } else {
             pendingRenderAccess.push_back({ it->first, {} });

@@ -213,7 +213,7 @@ napi_env NodeJSTaskQueue::GetNapiEnv() const
 {
     return env_;
 }
-/*static*/ napi_value NodeJSTaskQueue::Run(napi_env env, napi_callback_info info)
+napi_value NodeJSTaskQueue::Run(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     auto me = static_cast<NodeJSTaskQueue*>(fc.GetData());
@@ -234,7 +234,7 @@ void NodeJSTaskQueue::SetTimeout(napi_env env, uint32_t trigger)
     args[0] = RunFunc_.GetValue();
     args[1] = e.GetNumber(trigger);
     napi_value res { nullptr };
-    res = func.Invoke(g, 2, args);
+    res = func.Invoke(g, 2, args); // 2: arg num
     curTimeout_ = { e, res };
 }
 void NodeJSTaskQueue::CancelTimeout(napi_env env)
@@ -375,12 +375,12 @@ bool NodeJSTaskQueue::RescheduleTimer()
     return true;
 }
 
-/*static*/ void NodeJSTaskQueue::Cleanup(napi_env env, void* finalize_data, void* context)
+void NodeJSTaskQueue::Cleanup(napi_env env, void* finalize_data, void* context)
 {
     auto* me = static_cast<NodeJSTaskQueue*>(context);
     // we actually do not need to do anything here now.
 }
-/*static*/ void NodeJSTaskQueue::Invoke(napi_env env, napi_value js_callback, void* context, void* data)
+void NodeJSTaskQueue::Invoke(napi_env env, napi_value js_callback, void* context, void* data)
 {
     auto* me = static_cast<NodeJSTaskQueue*>(context);
     if (me) {

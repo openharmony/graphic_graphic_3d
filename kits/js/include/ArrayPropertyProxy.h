@@ -111,7 +111,7 @@ private:
     NapiApi::WeakRef obj_;
 };
 
-template<typename Type> 
+template<typename Type>
 BASE_NS::shared_ptr<ArrayPropertyProxy> PropertyToArrayProxy(NapiApi::Object scene, NapiApi::Object obj,
     META_NS::ArrayProperty<Type>& t, META_NS::IArrayAny::IndexType index)
 {

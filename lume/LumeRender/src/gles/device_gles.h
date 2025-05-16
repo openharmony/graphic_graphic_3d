@@ -89,7 +89,7 @@ public:
         BASE_NS::Math::UVec4 swizzle;
     };
 
-    DeviceGLES(RenderContext& renderContext);
+    explicit DeviceGLES(RenderContext& renderContext);
     ~DeviceGLES() override;
 
     // From IDevice

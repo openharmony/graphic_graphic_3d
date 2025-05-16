@@ -92,22 +92,21 @@
 #include <securec.h>
 
 namespace OHOS::Render3D {
-#define RETURN_IF_NULL(ptr)                             \
-do {                                                    \
-    if (!(ptr)) {                                       \
-        WIDGET_LOGE("%s is null in %s", #ptr, __func__); \
-        return;                                         \
-    }                                                   \
-} while (0)                                              \
+#define RETURN_IF_NULL(ptr)                                  \
+    do {                                                     \
+        if (!(ptr)) {                                        \
+            WIDGET_LOGE("%s is null in %s", #ptr, __func__); \
+            return;                                          \
+        }                                                    \
+    } while (0)
 
-#define RETURN_FALSE_IF_NULL(ptr)                       \
-do {                                                    \
-    if (!(ptr)) {                                       \
-        WIDGET_LOGE("%s is null in %s", #ptr, __func__); \
-        return false;                                   \
-    }                                                   \
-} while (0)                                              \
-
+#define RETURN_FALSE_IF_NULL(ptr)                            \
+    do {                                                     \
+        if (!(ptr)) {                                        \
+            WIDGET_LOGE("%s is null in %s", #ptr, __func__); \
+            return false;                                    \
+        }                                                    \
+    } while (0)
 
 HapInfo GetHapInfo()
 {

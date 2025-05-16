@@ -127,7 +127,7 @@ void JSWrapperState::Call(napi_env env, napi_value js_callback, void* context, v
 void JSWrapperState::Final(napi_env env, void* finalize_data, void* context) {};
 #else
 
-/*static*/ bool JSWrapperState::DeleteReference(napi_ref ref)
+bool JSWrapperState::DeleteReference(napi_ref ref)
 {
     auto curQueue = META_NS::GetTaskQueueRegistry().GetCurrentTaskQueue();
     if (auto p = interface_cast<INodeJSTaskQueue>(curQueue)) {
@@ -181,7 +181,7 @@ NapiApi::Object FetchJsObj(const META_NS::IObject::Ptr& obj, BASE_NS::string_vie
 
     // access hidden property.
     if (auto AppMeta = interface_pointer_cast<IMetadata>(obj)) {
-        if (auto wrapper = AppMeta->GetProperty<SharedPtrIInterface>(name,MetadataQuery::EXISTING)) {
+        if (auto wrapper = AppMeta->GetProperty<SharedPtrIInterface>(name, MetadataQuery::EXISTING)) {
             // The native object already contains a JS object.
             return interface_cast<JSWrapperState>(wrapper->GetValue())->GetObject();
         }

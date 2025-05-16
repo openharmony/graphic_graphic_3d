@@ -36,7 +36,7 @@ class SimpleEvent;
 template<typename MyEvent, typename... Args>
 class SimpleEvent<MyEvent, void(Args...)> : public IEventCallable<MyEvent, void, Args...> {
 public:
-    constexpr static char const* NAME { MyEvent::NAME };
+    constexpr static char const *NAME { MyEvent::NAME };
 };
 
 // NOLINTBEGIN(readability-identifier-naming)

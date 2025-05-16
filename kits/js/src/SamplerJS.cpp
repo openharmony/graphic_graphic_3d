@@ -50,9 +50,8 @@ void SamplerJS::RegisterEnums(NapiApi::Object exports)
     DECL_ENUM(SceneSamplerAddressMode, SamplerAddressMode, REPEAT);
     DECL_ENUM(SceneSamplerAddressMode, SamplerAddressMode, MIRRORED_REPEAT);
     DECL_ENUM(SceneSamplerAddressMode, SamplerAddressMode, CLAMP_TO_EDGE);
-    // Do not declare CLAMP_TO_BORDER or MIRROR_CLAMP_TO_EDGE as they are not part of SamplerAddressMode in sceneResources.d.ts
-    //DECL_ENUM(SceneSamplerAddressMode, SamplerAddressMode, CLAMP_TO_BORDER);
-    //DECL_ENUM(SceneSamplerAddressMode, SamplerAddressMode, MIRROR_CLAMP_TO_EDGE);
+    // Do not declare CLAMP_TO_BORDER or MIRROR_CLAMP_TO_EDGE as they are not part of SamplerAddressMode in
+    // sceneResources.d.ts
 #undef DECL_ENUM
     exports.Set("SamplerFilter", SceneFilter);
     exports.Set("SamplerAddressMode", SceneSamplerAddressMode);
@@ -161,7 +160,7 @@ napi_value SamplerJS::CreateRawJsObject(napi_env env)
         sampler.Set(propName, NapiApi::Value<uint32_t>(env, static_cast<uint32_t>(DEFAULT_ADDESS_MODE)));
     }
 
-    // TODO: According to the API, Sampler isn't a SceneResource, so it shouldn't have destroy (or other props).
+    // According to the API, Sampler isn't a SceneResource, so it shouldn't have destroy (or other props).
     // Add it anyway, to remain compatible with SamplerJS.
     napi_value destroyFunc;
     // If nullptr isn't ok for cb, use this no-op: [](napi_env, napi_callback_info) { return napi_value {}; }
@@ -207,14 +206,14 @@ void SamplerJS::SetMagFilter(NapiApi::FunctionContext<uint32_t>& ctx)
     }
 }
 
-napi_value SamplerJS::GetMinFilter(NapiApi::FunctionContext<>& ctx) 
+napi_value SamplerJS::GetMinFilter(NapiApi::FunctionContext<>& ctx)
 {
     auto sampler = GetSampler();
     auto filter = sampler ? META_NS::GetValue(sampler->MinFilter()) : DEFAULT_FILTER;
     return ctx.GetNumber(ConvertFromFilter(filter));
 }
 
-void SamplerJS::SetMinFilter(NapiApi::FunctionContext<uint32_t>& ctx) 
+void SamplerJS::SetMinFilter(NapiApi::FunctionContext<uint32_t>& ctx)
 {
     if (auto sampler = GetSampler()) {
         auto value = ConvertToFilter(ctx.Arg<0>());
@@ -229,7 +228,7 @@ napi_value SamplerJS::GetMipMapMode(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(ConvertFromFilter(filter));
 }
 
-void SamplerJS::SetMipMapMode(NapiApi::FunctionContext<uint32_t>& ctx) 
+void SamplerJS::SetMipMapMode(NapiApi::FunctionContext<uint32_t>& ctx)
 {
     if (auto sampler = GetSampler()) {
         auto value = ConvertToFilter(ctx.Arg<0>());
@@ -244,7 +243,7 @@ napi_value SamplerJS::GetAddressModeU(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(ConvertFromAddressMode(mode));
 }
 
-void SamplerJS::SetAddressModeU(NapiApi::FunctionContext<uint32_t>& ctx) 
+void SamplerJS::SetAddressModeU(NapiApi::FunctionContext<uint32_t>& ctx)
 {
     if (auto sampler = GetSampler()) {
         auto value = ConvertToAddressMode(ctx.Arg<0>());
@@ -259,7 +258,7 @@ napi_value SamplerJS::GetAddressModeV(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(ConvertFromAddressMode(mode));
 }
 
-void SamplerJS::SetAddressModeV(NapiApi::FunctionContext<uint32_t>& ctx) 
+void SamplerJS::SetAddressModeV(NapiApi::FunctionContext<uint32_t>& ctx)
 {
     if (auto sampler = GetSampler()) {
         auto value = ConvertToAddressMode(ctx.Arg<0>());
@@ -274,7 +273,7 @@ napi_value SamplerJS::GetAddressModeW(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(ConvertFromAddressMode(mode));
 }
 
-void SamplerJS::SetAddressModeW(NapiApi::FunctionContext<uint32_t>& ctx) 
+void SamplerJS::SetAddressModeW(NapiApi::FunctionContext<uint32_t>& ctx)
 {
     if (auto sampler = GetSampler()) {
         auto value = ConvertToAddressMode(ctx.Arg<0>());

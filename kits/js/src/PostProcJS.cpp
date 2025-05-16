@@ -199,11 +199,8 @@ void PostProcJS::SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         return;
     }
 
-
-    // TODO: If the new JS tonemap is bound to a native tonemap, we have this problem:
-    // let sharedTonemap = cam1.postprocess.tonemap;
-    // cam2.postprocess.tonemap = sharedTonemap;
-    // sharedTonemap.exposure = 0.5;  // Should set the tonemap of both cameras but won't.
+    // If the new JS tonemap is bound to a native tonemap, we have this problem:
+    // Should set the tonemap of both cameras but won't.
     auto source = tonemapJS.GetNative<SCENE_NS::ITonemap>();
     if (tonemapJS.IsNull()) {
         META_NS::SetValue(target->Enabled(), false);
@@ -298,6 +295,6 @@ void PostProcJS::SetBloom(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     if (auto bloom = postproc->Bloom()->GetValue()) {
         bloom->Enabled()->SetValue(enabled);
-        // TODO: Poke postProc so that the changes to bloom are updated.
+        // Poke postProc so that the changes to bloom are updated.
     }
 }

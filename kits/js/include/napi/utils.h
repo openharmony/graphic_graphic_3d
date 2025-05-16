@@ -26,12 +26,8 @@
 
 #define LOG_F(...) CORE_LOG_F(__VA_ARGS__)
 #define LOG_E(...) CORE_LOG_E(__VA_ARGS__)
-// #define LOG_F(...)
-// #define LOG_E(...)
 
 // Disable levels verbose and warning.
-// #define LOG_V(...) CORE_LOG_V(__VA_ARGS__)
-// #define LOG_W(...) CORE_LOG_W(__VA_ARGS__)
 #define LOG_V(...)
 #define LOG_W(...)
 

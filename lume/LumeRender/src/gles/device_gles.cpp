@@ -1386,9 +1386,9 @@ void DeviceGLES::InitializePipelineCache(array_view<const uint8_t> initialData)
     }
     auto* header = reinterpret_cast<const CacheHeader*>(initialData.data());
     if ((header->version != CACHE_VERSION) ||
-        (header->revisionHash != Hash(string_view(reinterpret_cast<const char*>(glGetString(GL_VENDOR))),
-                                     string_view(reinterpret_cast<const char*>(glGetString(GL_RENDERER))),
-                                     string_view(reinterpret_cast<const char*>(glGetString(GL_VERSION)))))) {
+        (header->revisionHash != Hash(string_view(reinterpret_cast<const char *>(glGetString(GL_VENDOR))),
+                                      string_view(reinterpret_cast<const char *>(glGetString(GL_RENDERER))),
+                                      string_view(reinterpret_cast<const char *>(glGetString(GL_VERSION)))))) {
         return;
     }
     if ((sizeof(CacheHeader) + header->programs * sizeof(CacheHeader::Program)) > initialData.size()) {
@@ -1949,13 +1949,15 @@ void DeviceGLES::CompressedTexSubImage3D(uint32_t image, uint32_t target, uint32
 
 const DeviceGLES::ImageFormat& DeviceGLES::GetGlImageFormat(const Format format) const
 {
-    if (const auto pos = std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), format,
-            [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
+    if (const auto pos =
+            std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), format,
+                             [](const ImageFormat &element, const Format value) { return element.coreFormat < value; });
         (pos != supportedFormats_.end()) && (pos->coreFormat == format)) {
         return *pos;
     }
-    if (const auto pos = std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
-            [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
+    if (const auto pos =
+            std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
+                             [](const ImageFormat &element, const Format value) { return element.coreFormat < value; });
         (pos != std::end(IMAGE_FORMATS_FALLBACK)) && (pos->coreFormat == format)) {
         PLUGIN_LOG_I("using fallback for format %u", format);
         return *pos;

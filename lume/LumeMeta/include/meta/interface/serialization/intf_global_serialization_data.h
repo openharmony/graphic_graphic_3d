@@ -31,20 +31,16 @@ struct SerializationSettings {
     /**
      * @brief Export property default value.
      */
-    // bool outputPropertyDefault { true };
     /**
      * @brief Do not export native properties which have default value set
      */
-    // bool ignorePropertiesDefaultValue {};
     /**
      * @brief Do not export native properties which value is set the same as the set default value (non-binding)
      *        (user can set the same value as default and this is not considered as default value).
      */
-    // bool ignoreValuesEqualToDefault {};
     /**
      * @brief Do not export native properties which have non-serializable binding set.
      */
-    // bool ignoreNonSerializableBindings {};
 };
 
 /// Interface to access global serialization data

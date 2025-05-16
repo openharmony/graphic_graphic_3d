@@ -72,10 +72,12 @@ void RenderDataLoader::RecurseDirectory(const string_view currentPath, const IDi
                             result.error.c_str());
                     }
                 }
-            } break;
+                break;
+            }
             case IDirectory::Entry::Type::DIRECTORY: {
                 PLUGIN_LOG_I("recursive renderer configuration directories not supported");
-            } break;
+                break;
+            }
         }
     }
 }

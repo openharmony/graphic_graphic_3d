@@ -276,7 +276,6 @@ array_view<const Gles::Bind> DescriptorSetManagerGles::GetResources(RenderHandle
     }
     return {};
 }
-///////////////////////////////////////////////////////////////////////////////
 
 NodeContextDescriptorSetManagerGles::NodeContextDescriptorSetManagerGles(Device& device)
     : NodeContextDescriptorSetManager(device), device_ { device }

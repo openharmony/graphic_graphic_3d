@@ -91,7 +91,7 @@ private:
 
 class ContinuationQueueTask : public IntroduceInterfaces<ITaskQueueTask> {
 public:
-    ContinuationQueueTask(IFutureContinuation::Ptr task) : task_(BASE_NS::move(task)) {}
+    explicit ContinuationQueueTask(IFutureContinuation::Ptr task) : task_(BASE_NS::move(task)) {}
 
     void SetParam(IAny::Ptr arg)
     {

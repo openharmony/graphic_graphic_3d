@@ -272,8 +272,8 @@ FileResourceManager::Result FileResourceManager::SaveResourceData(const Resource
     }
     if (!r.path.empty()) {
         MemFile data;
-        if (!it->second->SaveResource(r.object,
-                CORE_NS::IResourceType::StorageInfo { nullptr, &data, r.id, r.path, GetSelf<IResourceManager>() })) {
+        if (!it->second->SaveResource(r.object, CORE_NS::IResourceType::StorageInfo{nullptr, &data, r.id, r.path,
+                                                                                    GetSelf<IResourceManager>()})) {
             CORE_LOG_W("Failed to save resource: %s", r.id.ToString().c_str());
             return Result::EXPORT_FAILURE;
         }
@@ -297,8 +297,8 @@ bool FileResourceManager::UpdateOptions(ResourceData& r)
             return false;
         }
         MemFile opts;
-        if (!it->second->SaveResource(r.object,
-                CORE_NS::IResourceType::StorageInfo { &opts, nullptr, r.id, r.path, GetSelf<IResourceManager>() })) {
+        if (!it->second->SaveResource(r.object, CORE_NS::IResourceType::StorageInfo{&opts, nullptr, r.id, r.path,
+                                                                                    GetSelf<IResourceManager>()})) {
             CORE_LOG_W("Failed to save resource options");
             return false;
         }
@@ -351,8 +351,8 @@ bool FileResourceManager::AddResource(const CORE_NS::IResource::Ptr& resource, B
         d.id = id;
         d.path = path;
         MemFile opts;
-        if (!it->second->SaveResource(resource,
-                CORE_NS::IResourceType::StorageInfo { &opts, nullptr, d.id, d.path, GetSelf<IResourceManager>() })) {
+        if (!it->second->SaveResource(resource, CORE_NS::IResourceType::StorageInfo{&opts, nullptr, d.id, d.path,
+                                                                                    GetSelf<IResourceManager>()})) {
             CORE_LOG_W("Failed to save resource options");
             return false;
         }

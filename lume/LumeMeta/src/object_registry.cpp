@@ -33,7 +33,6 @@
 #include "random.h"
 #include "ref_uri_util.h"
 
-// #define OBJ_REG_LOG(...) CORE_LOG_F(__VA_ARGS__)
 #define OBJ_REG_LOG(...)
 
 /*
@@ -68,7 +67,6 @@ ObjectRegistry::~ObjectRegistry()
     classRegistry_.Clear();
     // Just for sanity.
     GC();
-    // serializationContext_.Uninitialize();
     //  And to make sure all "objects" are unregistered. (we have some that never un-register)
     //  doing it one at a time, because unregister will modify the list..
     bool first = true;

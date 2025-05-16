@@ -169,7 +169,7 @@ void BaseMaterial::SetCullMode(NapiApi::FunctionContext<uint32_t>& ctx)
             shader->CullMode()->SetValue(cullMode);
             // need to forcefully refresh the material, otherwise renderer will ignore the change
             auto val = META_NS::GetValue(material->MaterialShader());
-            META_NS::SetValue(material->MaterialShader(),val);
+            META_NS::SetValue(material->MaterialShader(), val);
         }
     }
 }
@@ -218,7 +218,7 @@ void BaseMaterial::SetBlend(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     // need to forcefully refresh the material, otherwise renderer will ignore the change
     auto val = META_NS::GetValue(material->MaterialShader());
-    META_NS::SetValue(material->MaterialShader(),val);
+    META_NS::SetValue(material->MaterialShader(), val);
 }
 napi_value BaseMaterial::GetAlphaCutoff(NapiApi::FunctionContext<>& ctx)
 {
@@ -256,8 +256,8 @@ napi_value BaseMaterial::GetRenderSort(NapiApi::FunctionContext<>& ctx)
     auto renderSort = META_NS::GetValue(material->RenderSort());
 
     NapiApi::Object renderSortJS(ctx.Env());
-    renderSortJS.Set("renderSortLayer",ctx.GetNumber(renderSort.renderSortLayer));
-    renderSortJS.Set("renderSortLayerOrder",ctx.GetNumber(renderSort.renderSortLayerOrder) );
+    renderSortJS.Set("renderSortLayer", ctx.GetNumber(renderSort.renderSortLayer));
+    renderSortJS.Set("renderSortLayerOrder", ctx.GetNumber(renderSort.renderSortLayerOrder));
     return renderSortJS.ToNapiValue();
 }
 void BaseMaterial::SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx)
@@ -394,12 +394,13 @@ void MaterialJS::SetColorShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
     auto shader = shaderJS.GetNative<SCENE_NS::IShader>();
     materialType_ = shader ? MaterialType::SHADER : MaterialType::METALLIC_ROUGHNESS;
-    META_NS::SetValue(material->Type(), shader ? SCENE_NS::MaterialType::CUSTOM : SCENE_NS::MaterialType::METALLIC_ROUGHNESS);
+    META_NS::SetValue(material->Type(),
+                      shader ? SCENE_NS::MaterialType::CUSTOM : SCENE_NS::MaterialType::METALLIC_ROUGHNESS);
 
     // bind it to material (in native)
     material->MaterialShader()->SetValue(shader);
 
-    if(!shader) {
+    if (!shader) {
         shader_.Reset();
         return;
     }

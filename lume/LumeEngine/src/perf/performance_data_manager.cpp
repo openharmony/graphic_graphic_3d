@@ -254,8 +254,8 @@ void PerformanceDataManagerFactory::RemovePerformanceTrace([[maybe_unused]] cons
 {
 #if (CORE_PERF_ENABLED == 1)
     perfTraces_.erase(std::remove_if(perfTraces_.begin(), perfTraces_.end(),
-                          [uid](const RegisteredPerformanceTrace& info) { return info.uid == uid; }),
-        perfTraces_.cend());
+                                     [uid](const RegisteredPerformanceTrace &info) { return info.uid == uid; }),
+                      perfTraces_.cend());
 #endif
 }
 

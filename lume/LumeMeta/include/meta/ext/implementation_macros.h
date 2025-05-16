@@ -225,19 +225,7 @@ public:                                                                         
     META_EXPAND(META_GET_MACRO3_IMPL(__VA_ARGS__, META_IMPLEMENT_OBJECT_BASE_AGGR_NO_CLASSINFO, \
         META_IMPLEMENT_OBJECT_BASE_NO_CLASSINFO)(__VA_ARGS__))
 
-#if 0
-#define META_INTF_CHECK(interface, type, name)                                                \
-    [](const auto* intf) {                                                                    \
-        if constexpr (!BASE_NS::is_same_v<decltype(intf), const META_NS::NoInterface*>) {     \
-            using MyMetaValueType = typename decltype(intf->name())::ValueType;               \
-            static_assert(BASE_NS::is_same_v<META_NS::PropertyType_v<type>, MyMetaValueType>, \
-                "Invalid property data, type not matching");                                  \
-        }                                                                                     \
-        return interface::INTERFACE_INFO;                                                     \
-    }((interface*)nullptr)
-#else
 #define META_INTF_CHECK(interface, type, name) interface::INTERFACE_INFO
-#endif
 
 // todo: check in META_STATIC_PROPERTY_DATA and META_STATIC_EVENT_DATA that name is part of the given interface
 //--- PROPERTY DATA

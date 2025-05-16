@@ -202,7 +202,7 @@ class NodeContextDescriptorSetManager.
 */
 class NodeContextDescriptorSetManager : public INodeContextDescriptorSetManager {
 public:
-    NodeContextDescriptorSetManager(Device& device);
+    explicit NodeContextDescriptorSetManager(Device& device);
     ~NodeContextDescriptorSetManager() override = default;
 
     static constexpr inline bool IsDynamicDescriptor(const DescriptorType descType)

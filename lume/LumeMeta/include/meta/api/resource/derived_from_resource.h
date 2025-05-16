@@ -54,15 +54,6 @@ public:
         return resource_;
     }
 
-    // static void CloneToDefaultWithoutReadonly(const IMetadata& in, IMetadata& out)
-    // {
-    //     for (auto&& p : in.GetProperties()) {
-    //         if (!in.GetMetadata(META_NS::MetadataType::PROPERTY, p->GetName()).readOnly) {
-    //             CloneToDefault(p, out);
-    //         }
-    //     }
-    // }
-
     CORE_NS::IResource::Ptr CreateResource() const override
     {
         auto res = GetObjectRegistry().Create<CORE_NS::IResource>(META_NS::ClassId::ObjectResource);
@@ -70,7 +61,6 @@ public:
             ores->SetResourceType(resourceType_);
             if (auto i = interface_cast<IMetadata>(res)) {
                 if (auto m = interface_cast<IMetadata>(this)) {
-                    // CloneToDefaultWithoutReadonly(*m, *i);
                     CloneToDefault(*m, *i);
                 }
             }

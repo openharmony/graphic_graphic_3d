@@ -598,7 +598,7 @@ napi_value NodeImpl::ClearChildren(NapiApi::FunctionContext<>& ctx)
 
     BASE_NS::vector<SCENE_NS::INode::Ptr> removedNodes;
     if (auto parent = ctx.This().GetNative<SCENE_NS::INode>()) {
-        for (auto node : parent->GetChildren().GetResult()) {            
+        for (auto node : parent->GetChildren().GetResult()) {
             if (auto childJS = FetchJsObj(node)) {
                 childJS.GetJsWrapper<NodeImpl>()->Attached(false);
             }

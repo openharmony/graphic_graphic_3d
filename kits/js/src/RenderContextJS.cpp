@@ -117,21 +117,21 @@ SCENE_NS::IBitmap::Ptr RenderResources::FetchBitmap(BASE_NS::string_view uri)
 void RenderContextJS::Init(napi_env env, napi_value exports)
 {
     using namespace NapiApi;
-    // clang-format off
     napi_property_descriptor props[] = {
         // static methods
-        /*napi_property_descriptor{ "load", nullptr, loadFun, nullptr, nullptr, nullptr,
-            (napi_property_attributes)(napi_static|napi_default_method)},*/
-        Method<NapiApi::FunctionContext<>, RenderContextJS, &RenderContextJS::GetResourceFactory>("getRenderResourceFactory"),
+        Method<NapiApi::FunctionContext<>, RenderContextJS, &RenderContextJS::GetResourceFactory>(
+            "getRenderResourceFactory"),
         Method<NapiApi::FunctionContext<>, RenderContextJS, &RenderContextJS::Dispose>("destroy"),
 
         // SceneResourceFactory methods
         Method<NapiApi::FunctionContext<BASE_NS::string>, RenderContextJS, &RenderContextJS::LoadPlugin>("loadPlugin"),
-        Method<NapiApi::FunctionContext<NapiApi::Object>, RenderContextJS, &RenderContextJS::CreateShader>("createShader"),
-        Method<NapiApi::FunctionContext<NapiApi::Object>, RenderContextJS, &RenderContextJS::CreateImage>("createImage"),
-        Method<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, RenderContextJS, &RenderContextJS::CreateMeshResource>("createMesh"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, RenderContextJS, &RenderContextJS::CreateShader>(
+            "createShader"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, RenderContextJS, &RenderContextJS::CreateImage>(
+            "createImage"),
+        Method<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, RenderContextJS,
+               &RenderContextJS::CreateMeshResource>("createMesh"),
     };
-    // clang-format on
 
     napi_value func;
     auto status = napi_define_class(env, "RenderContext", NAPI_AUTO_LENGTH, BaseObject::ctor<RenderContextJS>(),
@@ -186,8 +186,7 @@ napi_value RenderContextJS::GetDefaultContext(napi_env env)
         globalResources = resources;
     }
 
-    NapiApi::Object context;
-    context = NapiApi::Object(env, "RenderContext", {});
+    NapiApi::Object context = NapiApi::Object(env, "RenderContext", {});
     resources->defaultContext = context;
 
     return context.ToNapiValue();
@@ -233,7 +232,7 @@ napi_value RenderContextJS::LoadPlugin(NapiApi::FunctionContext<BASE_NS::string>
     NapiApi::Value<bool> result(ctx.GetEnv(), true);
     promise.Resolve(result.ToNapiValue());
 
-    return promise.ToNapiValue();;
+    return promise.ToNapiValue();
 }
 
 napi_value RenderContextJS::CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)

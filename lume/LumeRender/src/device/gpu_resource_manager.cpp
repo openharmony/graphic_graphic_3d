@@ -604,7 +604,6 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
 
         // check if present (not locked inside)
         handle = GetHandleNoLock(store, name);
-
         // create
         if (!handle) {
             if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
@@ -871,7 +870,6 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
 
         // check if present (not locked inside)
         handle = GetHandleNoLock(store, name);
-
         if (!handle) {
             handle = CreateImage(name, {}, desc).handle;
         }
@@ -1143,7 +1141,6 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
 
         // check if present (not locked inside)
         handle = GetHandleNoLock(store, name);
-
         if (!handle) {
             handle = StoreAllocation(
                 store, { ResourceDescriptor { desc }, name, {}, RenderHandleType::GPU_SAMPLER, ~0u, 0u })
@@ -1253,7 +1250,7 @@ RenderHandleReference GpuResourceManager::CreateSwapchainImage(
 
     const uint32_t addFlags = RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE;
     // NOTE: no mips for swapchains
-    // TODO: NOTE: allocation type is undefined
+    // NOTE: allocation type is undefined
     const StoreAllocationInfo info {
         ResourceDescriptor { GpuImageDesc {
             desc.imageType,
@@ -1390,8 +1387,9 @@ void GpuResourceManager::Destroy(PerManagerStore& store, const RenderHandle& han
 
     if (const uint32_t hasNameId = RenderHandleUtil::GetHasNamePart(handle); hasNameId != 0U) {
         // remove name if present
-        if (auto const pos = std::find_if(store.nameToClientIndex.begin(), store.nameToClientIndex.end(),
-                [arrayIndex](auto const& nameToHandle) { return nameToHandle.second == arrayIndex; });
+        if (auto const pos =
+                std::find_if(store.nameToClientIndex.begin(), store.nameToClientIndex.end(),
+                             [arrayIndex](auto const &nameToHandle) { return nameToHandle.second == arrayIndex; });
             pos != store.nameToClientIndex.end()) {
             store.nameToClientIndex.erase(pos);
         }
@@ -2409,9 +2407,10 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(
         if (RenderHandleUtil::IsValid(data.handle.GetHandle())) {
             // valid handle and reference counter, re-use the same ref count object, CreateClientHandle increases gen
             PLUGIN_ASSERT(data.handle.GetCounter());
-            data.handle = RenderHandleReference(CreateClientHandle(info.type, info.descriptor,
-                                                    data.handle.GetHandle().id, hasNameId, info.addHandleFlags),
-                data.handle.GetCounter());
+            data.handle =
+                RenderHandleReference(CreateClientHandle(info.type, info.descriptor, data.handle.GetHandle().id,
+                                                         hasNameId, info.addHandleFlags),
+                                      data.handle.GetCounter());
         } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_E("RENDER_VALIDATION: invalid replaced handle given to GPU resource manager, creating new");
@@ -2433,9 +2432,10 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(
             data.handle = store.clientHandles[iter->second];
             PLUGIN_ASSERT_MSG(!RenderHandleUtil::IsDeferredDestroy(data.handle.GetHandle()),
                 "deferred desctruction resources cannot be replaced");
-            data.handle = RenderHandleReference(CreateClientHandle(info.type, info.descriptor,
-                                                    data.handle.GetHandle().id, hasNameId, info.addHandleFlags),
-                data.handle.GetCounter());
+            data.handle =
+                RenderHandleReference(CreateClientHandle(info.type, info.descriptor, data.handle.GetHandle().id,
+                                                         hasNameId, info.addHandleFlags),
+                                      data.handle.GetCounter());
         }
         if (!data.handle) {
             const uint64_t handleId = GetNextAvailableHandleId(store);

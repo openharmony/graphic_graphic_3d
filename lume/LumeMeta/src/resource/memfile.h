@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <securec.h>
 
 #include <base/containers/vector.h>
 #include <core/io/intf_file.h>
@@ -39,7 +40,7 @@ struct MemFile : public CORE_NS::IFile {
     {
         size_t read = std::min<size_t>(count, data_.size() - pos_);
         if (read) {
-            std::memcpy(buffer, &data_[pos_], read);
+            memcpy_s(buffer, read, &data_[pos_], read);
             pos_ += read;
         }
         return read;
@@ -49,7 +50,7 @@ struct MemFile : public CORE_NS::IFile {
         if (data_.size() < pos_ + count) {
             data_.resize(pos_ + count);
         }
-        std::memcpy(&data_[pos_], buffer, count);
+        memcpy_s(&data_[pos_], count, buffer, count);
         pos_ += count;
         return count;
     }
@@ -58,7 +59,7 @@ struct MemFile : public CORE_NS::IFile {
         if (data_.size() < pos_ + count) {
             data_.resize(pos_ + count);
         }
-        std::memcpy(&data_[pos_], buffer, count);
+        memcpy_s(&data_[pos_], count, buffer, count);
         pos_ += count;
         return count;
     }

@@ -132,7 +132,7 @@ void BloomConfiguration::SetTo(SCENE_NS::IBloom::Ptr bloom)
         bloom->Scatter()->SetValue(scatter_);
         bloom->ScaleFactor()->SetValue(scaleFactor_);
         bloom->AmountCoefficient()->SetValue(amountCoefficient_);
-        // TODO: Poke postProc so that the changes to bloom are updated.
+        // Poke postProc so that the changes to bloom are updated.
         return META_NS::IAny::Ptr {};
     });
 }

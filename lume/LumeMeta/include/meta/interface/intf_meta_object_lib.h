@@ -42,7 +42,6 @@ class IMetaObjectLib : public CORE_NS::IInterface {
 public:
     virtual IObjectRegistry& GetObjectRegistry() const = 0;
     virtual ITaskQueueRegistry& GetTaskQueueRegistry() const = 0;
-    // virtual IBindingState& GetBindingState() const = 0;
     virtual BASE_NS::shared_ptr<IAnimationController> GetAnimationController() const = 0;
     virtual const CORE_NS::SyncApi& GetSyncApi() const = 0;
 };

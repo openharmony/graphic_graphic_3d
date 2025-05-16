@@ -168,8 +168,7 @@ void MaterialPropertyJS::SetSampler(NapiApi::FunctionContext<NapiApi::Object>& c
     auto target = META_NS::GetValue(texture->Sampler());
     NapiApi::Object source = ctx.Arg<0>();
 
-    struct SamplerChangeSet
-    {
+    struct SamplerChangeSet {
         std::optional<SCENE_NS::SamplerFilter> minFilter;
         std::optional<SCENE_NS::SamplerFilter> magFilter;
         std::optional<SCENE_NS::SamplerFilter> mipMapMode;

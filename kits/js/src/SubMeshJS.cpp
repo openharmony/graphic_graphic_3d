@@ -108,7 +108,7 @@ SubMeshJS::SubMeshJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
     }
     scene_ = fromJs.Arg<0>().valueOrDefault();
     parentMesh_ = fromJs.Arg<1>().valueOrDefault();
-    indexInParent_ = fromJs.Arg<2>().valueOrDefault();
+    indexInParent_ = fromJs.Arg<2>().valueOrDefault(); // 2: arg num
     if (!scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }

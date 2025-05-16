@@ -145,8 +145,6 @@ void SceneResourceImpl::SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx)
     BASE_NS::string name = ctx.Arg<0>();
     auto object = ctx.This();
     auto native = object.GetNative();
-
-    // name_.clear();
     if (auto named = interface_cast<META_NS::INamed>(native)) {
         META_NS::SetValue(named->Name(), name);
     } else if (auto objectname = interface_cast<META_NS::IObjectName>(native)) {

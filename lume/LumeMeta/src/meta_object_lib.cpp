@@ -104,7 +104,6 @@ CORE_NS::IInterface* MetaObjectLib::GetInterface(const BASE_NS::Uid& uid)
 }
 
 MetaObjectLib::MetaObjectLib()
-    //: sapi_ { { CreateMutex, DestroyMutex, LockMutex, UnlockMutex }, GetThreadId }, binding_(new BindingState)
     : sapi_ { { CreateMutex, DestroyMutex, LockMutex, UnlockMutex }, GetThreadId }
 {
     if (USE_IN_PLACE_MUTEX) {

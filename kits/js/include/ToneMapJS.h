@@ -35,7 +35,6 @@ public:
     ToneMapJS(napi_env, napi_callback_info);
     ~ToneMapJS() override;
 
-
     // Sync our members with the native and then let go of it. It may or may not be destroyed.
     void UnbindFromNative();
     // Start using the native as the backing object and sync our members to it.

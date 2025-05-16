@@ -89,7 +89,7 @@ class PerformanceTraceLogger final : public ILogger::IOutput {
 
 private:
     friend class PerformanceDataManagerFactory;
-    PerformanceTraceLogger(PerformanceDataManagerFactory* factory) : factory_(factory) {}
+    explicit PerformanceTraceLogger(PerformanceDataManagerFactory* factory) : factory_(factory) {}
     ~PerformanceTraceLogger() override = default;
     void Destroy() override
     {

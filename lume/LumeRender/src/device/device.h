@@ -89,7 +89,7 @@ struct DeviceFormatSupportConstants {
 
 class Device : public IDevice {
 public:
-    Device(RenderContext& renderContext);
+    explicit Device(RenderContext& renderContext);
 
     Device(const Device&) = delete;
     Device& operator=(const Device&) = delete;

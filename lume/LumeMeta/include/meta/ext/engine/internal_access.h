@@ -85,10 +85,10 @@ public:
     AnyReturnValue SyncToEngine(const IAny& value, const EnginePropertyParams& params) const override
     {
         if (CORE_NS::ScopedHandle<Type> guard { params.handle.Handle() }) {
-            uintptr_t offset = (uintptr_t) & *guard + params.Offset();
+            uintptr_t offset = (uintptr_t)(&(*guard)) + params.Offset();
             auto cont = params.containerMethods;
             if (cont) {
-                auto arroffset = (uintptr_t) & *guard + params.arraySubsOffset;
+                auto arroffset = (uintptr_t)(&(*guard)) + params.arraySubsOffset;
                 if (params.index >= cont->size(arroffset)) {
                     return AnyReturn::FAIL;
                 }
@@ -102,10 +102,10 @@ public:
     AnyReturnValue SyncFromEngine(const EnginePropertyParams& params, IAny& out) const override
     {
         if (CORE_NS::ScopedHandle<const Type> guard { params.handle.Handle() }) {
-            uintptr_t offset = (uintptr_t) & *guard + params.Offset();
+            uintptr_t offset = (uintptr_t)(&(*guard)) + params.Offset();
             auto cont = params.containerMethods;
             if (cont) {
-                auto arroffset = (uintptr_t) & *guard + params.arraySubsOffset;
+                auto arroffset = (uintptr_t)(&(*guard)) + params.arraySubsOffset;
                 if (params.index >= cont->size(arroffset)) {
                     return AnyReturn::FAIL;
                 }
@@ -147,13 +147,13 @@ public:
                 if (params.property.type.isArray) {
                     size_t size = params.property.count < vec.size() ? params.property.count : vec.size();
                     for (size_t i = 0; i != size; ++i) {
-                        ((Type*)((uintptr_t) & *guard + params.Offset()))[i] = vec[i];
+                        ((Type*)((uintptr_t)(&(*guard)) + params.Offset()))[i] = vec[i];
                     }
                 } else {
                     auto cont = params.property.metaData.containerMethods;
-                    cont->resize((uintptr_t) & *guard + params.Offset(), vec.size());
+                    cont->resize((uintptr_t)(&(*guard)) + params.Offset(), vec.size());
                     for (size_t i = 0; i != vec.size(); ++i) {
-                        *((Type*)cont->get((uintptr_t) & *guard + params.Offset(), i)) = vec[i];
+                        *((Type*)cont->get((uintptr_t)(&(*guard)) + params.Offset(), i)) = vec[i];
                     }
                 }
             }
@@ -169,13 +169,13 @@ public:
             if (params.property.type.isArray) {
                 vec.resize(params.property.count);
                 for (size_t i = 0; i != vec.size(); ++i) {
-                    vec[i] = ((const Type*)((uintptr_t) & *guard + params.Offset()))[i];
+                    vec[i] = ((const Type*)((uintptr_t)(&(*guard)) + params.Offset()))[i];
                 }
             } else {
                 auto cont = params.property.metaData.containerMethods;
-                vec.resize(cont->size((uintptr_t) & *guard + params.Offset()));
+                vec.resize(cont->size((uintptr_t)(&(*guard)) + params.Offset()));
                 for (size_t i = 0; i != vec.size(); ++i) {
-                    vec[i] = *((const Type*)cont->get((uintptr_t) & *guard + params.Offset(), i));
+                    vec[i] = *((const Type*)cont->get((uintptr_t)(&(*guard)) + params.Offset(), i));
                 }
             }
             res = out.SetData(UidFromType<InternalType>(), &vec, sizeof(InternalType));

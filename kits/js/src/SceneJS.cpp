@@ -140,7 +140,6 @@ using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 void SceneJS::Init(napi_env env, napi_value exports)
 {
     using namespace NapiApi;
-    // clang-format off
     auto loadFun = [](napi_env e, napi_callback_info cb) -> napi_value {
         FunctionContext<> fc(e, cb);
         return SceneJS::Load(fc);
@@ -153,10 +152,10 @@ void SceneJS::Init(napi_env env, napi_value exports)
 
     napi_property_descriptor props[] = {
         // static methods
-        napi_property_descriptor{ "load", nullptr, loadFun, nullptr, nullptr, nullptr,
-            (napi_property_attributes)(napi_static|napi_default_method)},
-        napi_property_descriptor{ "getDefaultRenderContext", nullptr, getDefaultRenderContextFun,
-            nullptr, nullptr, nullptr, (napi_property_attributes)(napi_static|napi_default_method)},
+        napi_property_descriptor{"load", nullptr, loadFun, nullptr, nullptr, nullptr,
+                                 (napi_property_attributes)(napi_static | napi_default_method)},
+        napi_property_descriptor{"getDefaultRenderContext", nullptr, getDefaultRenderContextFun, nullptr, nullptr,
+                                 nullptr, (napi_property_attributes)(napi_static | napi_default_method)},
         // properties
         GetSetProperty<uint32_t, SceneJS, &SceneJS::GetRenderMode, &SceneJS::SetRenderMode>("renderMode"),
         GetSetProperty<NapiApi::Object, SceneJS, &SceneJS::GetEnvironment, &SceneJS::SetEnvironment>("environment"),
@@ -173,16 +172,18 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>, SceneJS, &SceneJS::CreateLight>("createLight"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateNode>("createNode"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateTextNode>("createTextNode"),
-        Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>,
-            SceneJS, &SceneJS::CreateMaterial>("createMaterial"),
+        Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>, SceneJS, &SceneJS::CreateMaterial>(
+            "createMaterial"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateShader>("createShader"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateImage>("createImage"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateSampler>("createSampler"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateEnvironment>("createEnvironment"),
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateScene>("createScene"),
 
-        Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS, &SceneJS::ImportNode>("importNode"),
-        Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS, &SceneJS::ImportScene>("importScene"),
+        Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
+               &SceneJS::ImportNode>("importNode"),
+        Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
+               &SceneJS::ImportScene>("importScene"),
 
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::RenderFrame>("renderFrame"),
 
@@ -192,7 +193,6 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<FunctionContext<Object, BASE_NS::string>, SceneJS, &SceneJS::GetComponent>("getComponent"),
         Method<FunctionContext<>, SceneJS, &SceneJS::GetRenderContext>("getRenderContext"),
     };
-    // clang-format on
 
     napi_value func;
     auto status = napi_define_class(env, "Scene", NAPI_AUTO_LENGTH, BaseObject::ctor<SceneJS>(), nullptr,
@@ -715,8 +715,8 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     auto params = NapiApi::Object { ctx.Arg<0>() };
     const auto path = ExtractNodePath(params);
 
-    // TODO: renderPipeline is (at the moment of writing) an undocumented param. Check the API docs and usage.
-    // Remove this TODO, if it has been added to the API. Else if it's not used anywhere, remove the implementation.
+    // renderPipeline is (at the moment of writing) an undocumented param. Check the API docs and usage.
+    // Remove this, if it has been added to the API. Else if it's not used anywhere, remove the implementation.
     auto pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD);
     if (const auto renderPipelineJs = params.Get("renderPipeline")) {
         pipeline = NapiApi::Value<uint32_t>(env, renderPipelineJs);
@@ -796,7 +796,6 @@ napi_value SceneJS::ImportNode(NapiApi::FunctionContext<BASE_NS::string, NapiApi
     NapiApi::Object nnode = ctx.Arg<1>();
     NapiApi::Object nparent = ctx.Arg<2>();
     auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
-
     if (!nnode || !scene) {
         return ctx.GetNull();
     }
@@ -836,7 +835,6 @@ napi_value SceneJS::ImportScene(NapiApi::FunctionContext<BASE_NS::string, NapiAp
     NapiApi::Object nextScene = ctx.Arg<1>();
     NapiApi::Object nparent = ctx.Arg<2>();
     auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
-
     if (!nextScene || !scene) {
         return ctx.GetNull();
     }
@@ -907,7 +905,7 @@ napi_value SceneJS::CreateComponent(NapiApi::FunctionContext<NapiApi::Object, BA
 {
     auto env = ctx.GetEnv();
     auto promise = Promise(env);
-    if (ctx.ArgCount() > 2) {
+    if (ctx.ArgCount() > 2) { // 2: arg num
         return promise.Reject("Invalid number of arguments");
     }
     NapiApi::Object nnode = ctx.Arg<0>();
@@ -923,14 +921,15 @@ napi_value SceneJS::CreateComponent(NapiApi::FunctionContext<NapiApi::Object, BA
         NapiApi::Object argJS(env);
         NapiApi::WeakRef sceneRef { ctx.This() };
         napi_value args[] = { sceneRef.GetValue(), argJS.ToNapiValue() };
-        return promise.Resolve(CreateFromNativeInstance(env, "SceneComponent", comp, PtrType::WEAK, args).ToNapiValue());
+        return promise.Resolve(
+            CreateFromNativeInstance(env, "SceneComponent", comp, PtrType::WEAK, args).ToNapiValue());
     }
     return promise.Reject("Could not create component");
 }
 
 napi_value SceneJS::GetComponent(NapiApi::FunctionContext<NapiApi::Object, BASE_NS::string>& ctx)
 {
-    if (ctx.ArgCount() > 2) {
+    if (ctx.ArgCount() > 2) { // 2: arg num
         return ctx.GetNull();
     }
     NapiApi::Object nnode = ctx.Arg<0>();
@@ -1020,7 +1019,6 @@ napi_value SceneJS::CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
 
     auto uri = ExtractUri(resourceParams.Get<NapiApi::Object>("uri"));
-
     if (uri.empty()) {
         auto u = resourceParams.Get<BASE_NS::string>("uri");
         uri = ExtractUri(u);
@@ -1035,8 +1033,6 @@ napi_value SceneJS::CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
                            paramRef = NapiApi::StrongRef(resourceParams)](SCENE_NS::IShader::Ptr shader) mutable {
         if (!shader) {
             CORE_LOG_E("Fail to load shader but do not return %s", uri.c_str());
-            // promise.Reject(BASE_NS::string { "Failed to load shader from URI: " }.append(uri));
-            // return;
         }
         const auto env = promise.Env();
         napi_value args[] = { sceneRef.GetValue(), paramRef.GetValue() };

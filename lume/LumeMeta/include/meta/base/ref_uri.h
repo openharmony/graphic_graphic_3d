@@ -367,9 +367,9 @@ inline bool RefUri::AddSegment(BASE_NS::string seg)
             return false;
         }
         PushPropertySegment(UnEscapeName(seg));
-    } else if (seg.substr(0, 8) == "@Context") {
+    } else if (seg.substr(0, 8) == "@Context") { // 8: str length
         PushObjectContextSegment();
-    } else if (seg.substr(0, 8) == "@Theme") {
+    } else if (seg.substr(0, 8) == "@Theme") { // 8: str length
         PushObjectContextSegment();
         PushPropertySegment("Theme");
     } else {
@@ -433,10 +433,10 @@ inline bool RefUri::ParseUid(BASE_NS::string_view& path)
 inline bool RefUri::Parse(BASE_NS::string_view uri)
 {
     // we check the header and size must be at least 5 (at least / after the header)
-    if (uri.size() < 5 || uri.substr(0, 4) != "ref:") {
+    if (uri.size() < 5 || uri.substr(0, 4) != "ref:") { // 5: size, 4: size
         return false;
     }
-    uri.remove_prefix(4);
+    uri.remove_prefix(4); // 4: size
     // see if it is path or valid uid
     if (uri[0] != SEPARATOR_CHAR && !ParseUid(uri)) {
         return false;

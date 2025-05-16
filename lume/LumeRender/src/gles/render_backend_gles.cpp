@@ -1644,8 +1644,8 @@ uint32_t RenderBackendGLES::ResolveMSAA(const RenderPassDesc& rpd, const RenderP
             static_cast<GLint>(currentFrameBuffer_->height), mask, GL_NEAREST);
     } else {
         // Layers need to be resolved one by one. Create temporary FBOs and go through the layers.
-        GLuint frameBuffers[2U];
-        glGenFramebuffers(2, frameBuffers);
+        GLuint frameBuffers[2U]; // 2: buffer size
+        glGenFramebuffers(2, frameBuffers); // 2: buffer size
         device_.BindReadFrameBuffer(frameBuffers[0U]);
         device_.BindWriteFrameBuffer(frameBuffers[1U]);
 
@@ -1668,7 +1668,7 @@ uint32_t RenderBackendGLES::ResolveMSAA(const RenderPassDesc& rpd, const RenderP
             viewMask >>= 1U;
             ++layer;
         }
-        glDeleteFramebuffers(2, frameBuffers);
+        glDeleteFramebuffers(2, frameBuffers); // 2: buffer size
 
         // invalidation exepcts to find the actual FBOs
         device_.BindReadFrameBuffer(currentFrameBuffer_->fbos[currentSubPass_].fbo);
@@ -2077,8 +2077,8 @@ void RenderBackendGLES::RenderCommandBindDescriptorSets(const RenderCommandWithT
     std::copy(renderCmd.descriptorSetHandles + renderCmd.firstSet, renderCmd.descriptorSetHandles + lastSet,
         descriptorSetHandles_ + renderCmd.firstSet);
     auto* dst = descriptorSetDynamicOffsets_ + renderCmd.firstSet;
-    for (const auto& src : array_view(renderCmd.descriptorSetDynamicOffsets + renderCmd.firstSet,
-             renderCmd.descriptorSetDynamicOffsets + lastSet)) {
+    for (const auto &src : array_view(renderCmd.descriptorSetDynamicOffsets + renderCmd.firstSet,
+                                      renderCmd.descriptorSetDynamicOffsets + lastSet)) {
         dst->dynamicOffsetCount = src.dynamicOffsetCount;
         std::copy(src.dynamicOffsets, src.dynamicOffsets + src.dynamicOffsetCount, dst->dynamicOffsets);
         ++dst;

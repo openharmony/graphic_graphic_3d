@@ -97,7 +97,6 @@ void StartableObjectController::SetTarget(const IObject::Ptr& hierarchyRoot, Hie
     InvalidateTickables();
     target_ = hierarchyRoot;
     bool automatic = META_ACCESS_PROPERTY_VALUE(StartBehavior) == StartBehavior::AUTOMATIC;
-
     if (automatic && !hierarchyRoot) {
         StopAll(ControlBehavior::CONTROL_AUTOMATIC);
     }

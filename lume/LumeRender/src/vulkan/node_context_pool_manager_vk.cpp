@@ -360,7 +360,7 @@ void NodeContextPoolManagerVk::BeginBackendFrame()
             GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_COMMAND_BUFFER,
                 VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer), debugName_ + "_cmd_buf");
         }
-        // TODO: deferred creation
+        // deferred creation
         for (const auto& cmdPoolRef : commandSecondaryPools_) {
             GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_COMMAND_BUFFER,
                 VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer), debugName_ + "_secondary_cmd_buf");

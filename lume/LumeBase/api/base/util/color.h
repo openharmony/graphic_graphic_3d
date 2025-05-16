@@ -183,13 +183,13 @@ public:
     constexpr float& operator[](const uint32_t index) noexcept
     {
         switch (index) {
-            case 0:
+            case 0: // 0: index
                 return x;
-            case 1:
+            case 1: // 1: index
                 return y;
-            case 2:
+            case 2: // 2: index
                 return z;
-            case 3:
+            case 3: // 3: index
                 return w;
             default: // do nothing
                 break;
@@ -201,13 +201,13 @@ public:
     constexpr const float& operator[](const uint32_t index) const noexcept
     {
         switch (index) {
-            case 0:
+            case 0: // 0: index
                 return x;
-            case 1:
+            case 1: // 1: index
                 return y;
-            case 2:
+            case 2: // 2: index
                 return z;
-            case 3:
+            case 3: // 3: index
                 return w;
             default: // do nothing
                 break;

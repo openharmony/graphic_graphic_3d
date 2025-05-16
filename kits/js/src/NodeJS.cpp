@@ -98,7 +98,8 @@ void NodeJS::DisposeNative(void* sc)
         scene_.Reset();
     }
 }
-void NodeJS::Finalize(napi_env env) {
+void NodeJS::Finalize(napi_env env)
+{
     DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }

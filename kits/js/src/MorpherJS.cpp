@@ -132,7 +132,6 @@ void MorpherJS::AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr&
 
     for (META_NS::IArrayAny::IndexType i = 0; i < morphNames->GetSize(); i++) {
         auto name = morphNames->GetValueAt(i);
-
         if (name.empty()) {
             name = "key_" + BASE_NS::to_string(i);
         }

@@ -498,7 +498,6 @@ DescriptorSetUpdateInfoFlags DescriptorSetManager::UpdateCpuDescriptorSet(
     {
         const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
         const uint32_t additionalIndex = RenderHandleUtil::GetAdditionalIndexPart(handle);
-
         if ((index < descriptorSets_.size()) && descriptorSets_[index] &&
             (additionalIndex < descriptorSets_[index]->data.size())) {
             auto& ref = descriptorSets_[index]->data[additionalIndex];
@@ -513,7 +512,6 @@ DescriptorSetUpdateInfoFlags DescriptorSetManager::UpdateCpuDescriptorSet(
                     bool hasPlatformConversionBindings = false;
                     updateFlags = UpdateCpuDescriptorSetFunc((const GpuResourceManager&)device_.GetGpuResourceManager(),
                         bindingResources, gpuQueue, ref.cpuDescriptorSet, hasPlatformConversionBindings);
-
                     // set for update, these needs to be locked
                     if ((updateFlags & 0xFFFFffffU) == validUpdateFlags) {
                         descriptorSetHandlesForUpdate_.push_back(handle);
@@ -544,8 +542,6 @@ array_view<const RenderHandle> DescriptorSetManager::GetUpdateDescriptorSetHandl
 {
     return { descriptorSetHandlesForUpdate_.data(), descriptorSetHandlesForUpdate_.size() };
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 NodeContextDescriptorSetManager::NodeContextDescriptorSetManager(Device& device)
     : device_(device), globalDescriptorSetMgr_(device.GetDescriptorSetManager())

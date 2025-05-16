@@ -165,7 +165,8 @@ void TextNodeJS::DisposeNative(void* sc)
     }
 }
 
-void TextNodeJS::Finalize(napi_env env) {
+void TextNodeJS::Finalize(napi_env env)
+{
     DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }

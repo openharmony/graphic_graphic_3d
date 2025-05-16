@@ -334,12 +334,12 @@ BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
 
 static napi_value DummyFunc(napi_env e, napi_callback_info i)
 {
-    NapiApi::FunctionContext<> info(e,i);
+    NapiApi::FunctionContext<> info(e, i);
     return info.GetUndefined();
 };
 static napi_value PropProxGet(napi_env e, napi_callback_info i)
 {
-    NapiApi::FunctionContext<> info(e,i);
+    NapiApi::FunctionContext<> info(e, i);
     auto pc = static_cast<PropertyProxy*>(info.GetData());
     if (pc) {
         return pc->Value();
@@ -348,7 +348,7 @@ static napi_value PropProxGet(napi_env e, napi_callback_info i)
 };
 static napi_value PropProxSet(napi_env e, napi_callback_info i)
 {
-    NapiApi::FunctionContext<>info (e,i);
+    NapiApi::FunctionContext<>info (e, i);
     auto pc = static_cast<PropertyProxy*>(info.GetData());
     if (pc) {
         pc->SetValue(info);

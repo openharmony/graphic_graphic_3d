@@ -710,7 +710,7 @@ void RenderPreprocessorSystem::GatherSortData()
     vector<bool> disabled;
     vector<bool> shadowCaster;
     for (const auto& row : results) {
-        // TODO this list needs to update only when render mesh, node, or layer component have changed
+        // this list needs to update only when render mesh, node, or layer component have changed
         const auto nodeData = [](INodeComponentManager* nodeManager, IComponentManager::ComponentId id) {
             auto handle = nodeManager->Read(id);
             return NodeData { handle->effectivelyEnabled, handle->sceneId };
@@ -721,7 +721,7 @@ void RenderPreprocessorSystem::GatherSortData()
             auto renderMeshHandle = renderMeshManager_->Read(row.components[RMC]);
             // gather the submesh world aabbs
             if (const auto meshData = meshManager_->Read(renderMeshHandle->mesh); meshData) {
-                // TODO render system doesn't necessarily have to read the render mesh components. preprocessor
+                // render system doesn't necessarily have to read the render mesh components. preprocessor
                 // could offer two lists of mesh+world, one containing the render mesh batch style meshes and second
                 // containing regular meshes
                 const auto renderMeshEntity = renderMeshManager_->GetEntity(row.components[RMC]);
@@ -778,7 +778,7 @@ void RenderPreprocessorSystem::GatherSortData()
                 if (std::any_of(disabled.cbegin(), disabled.cend(), [](const bool disabled) { return !disabled; })) {
                     bool hasJoints = row.IsValidComponentId(JMC);
                     if (hasJoints) {
-                        // TODO this needs to happen only when joint matrices have changed
+                        // this needs to happen only when joint matrices have changed
                         auto jointMatricesHandle = jointMatricesManager_->Read(row.components[JMC]);
                         hasJoints = (jointMatricesHandle->count > 0U);
                         if (hasJoints) {
@@ -792,7 +792,7 @@ void RenderPreprocessorSystem::GatherSortData()
                         submeshIdx = 0U;
                         const auto& world = worldMatrixManager_->Read(row.components[WMC])->matrix;
                         for (const auto& submesh : meshData->submeshes) {
-                            // TODO this needs to happen only when world matrix, or mesh component have changed
+                            // this needs to happen only when world matrix, or mesh component have changed
                             if (disabled[submeshIdx]) {
                                 aabbs.push_back({});
                             } else {

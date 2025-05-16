@@ -93,7 +93,7 @@ struct DebugFunctionUtilitiesVk {
 
 class DeviceVk final : public Device {
 public:
-    DeviceVk(RenderContext& renderContext);
+    explicit DeviceVk(RenderContext& renderContext);
     ~DeviceVk() override;
 
     // From IDevice

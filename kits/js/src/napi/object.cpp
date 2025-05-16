@@ -215,8 +215,7 @@ void Object::AddProperty(const napi_property_descriptor desc)
     if (!env_ || !object_) {
         return;
     }
-    napi_status status;
-    status = napi_define_properties(env_, object_, 1, &desc);
+    napi_status status = napi_define_properties(env_, object_, 1, &desc);
 }
 
 bool Object::DeleteProperty(const BASE_NS::string_view name)

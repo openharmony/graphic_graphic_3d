@@ -266,18 +266,18 @@ struct SupportedType {
 
 // clang-format off
 using SupportedBuiltins = TypeList<
-    SupportedType<bool           , BoolNode>,
-    SupportedType<double         , DoubleNode>,
-    SupportedType<uint8_t        , UIntNode>,
-    SupportedType<uint16_t       , UIntNode>,
-    SupportedType<uint32_t       , UIntNode>,
-    SupportedType<uint64_t       , UIntNode>,
-    SupportedType<int8_t         , IntNode>,
-    SupportedType<int16_t        , IntNode>,
-    SupportedType<int32_t        , IntNode>,
-    SupportedType<int64_t        , IntNode>,
+    SupportedType<bool, BoolNode>,
+    SupportedType<double, DoubleNode>,
+    SupportedType<uint8_t, UIntNode>,
+    SupportedType<uint16_t, UIntNode>,
+    SupportedType<uint32_t, UIntNode>,
+    SupportedType<uint64_t, UIntNode>,
+    SupportedType<int8_t, IntNode>,
+    SupportedType<int16_t, IntNode>,
+    SupportedType<int32_t, IntNode>,
+    SupportedType<int64_t, IntNode>,
     SupportedType<BASE_NS::string, StringNode>,
-    SupportedType<RefUri         , RefNode>
+    SupportedType<RefUri, RefNode>
     >;
 // clang-format on
 

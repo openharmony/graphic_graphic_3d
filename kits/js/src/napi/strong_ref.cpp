@@ -103,8 +103,7 @@ void StrongRef::Reset()
         return;
     }
     uint32_t cnt;
-    napi_status stat;
-    stat = napi_reference_unref(env_, ref_, &cnt);
+    napi_status stat = napi_reference_unref(env_, ref_, &cnt);
     if (stat != napi_ok) {
         return;
     }
@@ -155,9 +154,8 @@ uint32_t StrongRef::GetRefCount() const
 
 void StrongRef::Ref()
 {
-    napi_status stat;
     uint32_t cnt;
-    stat = napi_reference_ref(env_, ref_, &cnt);
+    napi_status stat = napi_reference_ref(env_, ref_, &cnt);
 }
 
 } // namespace NapiApi

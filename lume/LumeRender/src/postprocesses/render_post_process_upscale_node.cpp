@@ -168,11 +168,6 @@ void RenderPostProcessUpscaleNode::Execute(IRenderCommandList& cmdList)
             cmdList, "Dilate and reconstruct", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
         ComputeReconstructAndDilate(pc, cmdList);
     }
-    /*{
-        RENDER_DEBUG_MARKER_COL_SCOPE(
-            cmdList, "Debug Previous Depthmap", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
-        ComputeDebug(pc, cmdList);
-    }*/
     {
         RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "Depth clip", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
         ComputeDepthClip(pc, cmdList);
@@ -210,7 +205,7 @@ void RenderPostProcessUpscaleNode::Execute(IRenderCommandList& cmdList)
 
 void RenderPostProcessUpscaleNode::SetCameraData()
 {
-    // TODO: change this
+    // change this
     // Temporary workaround to send camera data from 3D to Render
     RenderHandle cameraUbo = renderNodeContextMgr_->GetGpuResourceManager().GetBufferHandle(
         "RenderDataStoreDefaultSceneCORE3D_DM_CAM_DATA_BUF");
@@ -504,7 +499,6 @@ void RenderPostProcessUpscaleNode::ComputeAccumulate(const PushConstant& pc, REN
         binder->BindImage(9U, { targets_.historyLockStatus[writeHistoryIdx].GetHandle() });
         binder->BindImage(10U, { targets_.historyLuma[writeHistoryIdx].GetHandle() });
 
-        // binder->BindImage(11U, { nodeOutputsData.output.handle });
         binder->BindImage(11U, { targets_.finalColor.GetHandle() });
 
         // Bind camera UBO
@@ -526,7 +520,7 @@ void RenderPostProcessUpscaleNode::ComputeAccumulate(const PushConstant& pc, REN
 
         uPc.frameIndex = 1;
 
-        uPc.jitterSequenceLength = 16;
+        uPc.jitterSequenceLength = 16; // 16: length
         if (uPc.jitterSequenceLength > 0) {
             uPc.avgLanczosWeightPerFrame = 1.0f / float(uPc.jitterSequenceLength);
         } else {

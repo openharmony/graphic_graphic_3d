@@ -247,9 +247,10 @@ void ImageLoaderManager::OnTypeInfoEvent(EventType type, array_view<const ITypeI
                 }
             } else if (type == EventType::REMOVED) {
                 imageLoaders_.erase(std::remove_if(imageLoaders_.begin(), imageLoaders_.end(),
-                                        [&uid = imageLoaderInfo->uid](
-                                            const RegisteredImageLoader& loader) { return loader.uid == uid; }),
-                    imageLoaders_.cend());
+                                                   [&uid = imageLoaderInfo->uid](const RegisteredImageLoader &loader) {
+                                                       return loader.uid == uid;
+                                                   }),
+                                    imageLoaders_.cend());
             }
         }
     }

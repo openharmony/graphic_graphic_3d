@@ -190,7 +190,6 @@ CallResult<Ret> CallMetaFunctionImpl(const IFunction::Ptr& func, IndexSequence<I
         return {};
     }
     auto params = context->GetParameters();
-
     // Allow to use defaults from call context
     if (params.size() < sizeof...(Args)) {
         context->ReportError("invalid meta call");
@@ -243,7 +242,6 @@ struct IsFunctionCompatibleImpl<Ret(Args...)> {
             return false;
         }
         auto params = context->GetParameters();
-
         // Allow to use defaults from call context
         if (params.size() < sizeof...(Args)) {
             return false;

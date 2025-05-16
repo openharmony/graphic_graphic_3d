@@ -105,7 +105,6 @@ void RenderNodeShaderPassesGeneric::PreExecuteFrame()
     uint32_t uboByteSize = 0U;
     uboByteSize += dsShaderPasses_->GetRenderPropertyBindingInfo().alignedByteSize;
     uboByteSize += dsShaderPasses_->GetComputePropertyBindingInfo().alignedByteSize;
-
     // create the built-in buffer even if the bytesize would be zero
     if ((uboByteSize > uboData_.byteSize) || (uboData_.byteSize == 0U)) {
         uboData_.byteSize = uboByteSize + (OFFSET_ALIGNMENT * OVERESTIMATE_COUNT);

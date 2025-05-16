@@ -185,8 +185,6 @@ void ShaderPipelineBinderPropertyBindingSignal::Signal()
     shaderPipelineBinder_.BindPropertyBindings();
 }
 
-//
-
 ShaderPipelineBinder::ShaderPipelineBinder(
     IShaderManager& shaderMgr, const RenderHandleReference& shader, const PipelineLayout& pipelineLayout)
     : shaderMgr_(shaderMgr), shader_(shader), pipelineLayout_(pipelineLayout), renderHandleType_(shader.GetHandleType())
@@ -696,16 +694,20 @@ void ShaderPipelineBinder::BindPropertyBindings()
             switch (prop.type) {
                 case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                     BindBuffer(sb.set, sb.binding, bindingProperties->GetValue<BindableBufferWithHandleReference>(idx));
-                } break;
+                    break;
+                }
                 case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                     BindImage(sb.set, sb.binding, bindingProperties->GetValue<BindableImageWithHandleReference>(idx));
-                } break;
+                    break;
+                }
                 case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
-                    BindSampler(
-                        sb.set, sb.binding, bindingProperties->GetValue<BindableSamplerWithHandleReference>(idx));
-                } break;
+                    BindSampler(sb.set, sb.binding,
+                                bindingProperties->GetValue<BindableSamplerWithHandleReference>(idx));
+                    break;
+                }
                 default: {
-                } break;
+                    break;
+                }
             }
         }
     }

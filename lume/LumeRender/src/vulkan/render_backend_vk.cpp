@@ -838,7 +838,6 @@ VkCommandBufferInheritanceInfo RenderBackendVk::RenderGetCommandBufferInheritanc
         LowLevelRenderPassDataVk lowLevelRenderPassData = poolMgrVk.GetRenderPassData(renderCmd);
 
         const uint32_t subpass = renderCmd.subpassStartIndex;
-        // const uint32_t subpass = 0;
         return VkCommandBufferInheritanceInfo {
             VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, // sType
             nullptr,                                           // pNext

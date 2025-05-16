@@ -28,7 +28,7 @@ ArrayPropertyProxy::~ArrayPropertyProxy()
     // should be a no-op.
 }
 
-ArrayPropertyProxy::ArrayPropertyProxy(META_NS::IProperty::Ptr prop, META_NS::IArrayAny::IndexType index) 
+ArrayPropertyProxy::ArrayPropertyProxy(META_NS::IProperty::Ptr prop, META_NS::IArrayAny::IndexType index)
     : prop_(prop), index_(index)
 {
     assert(prop_);

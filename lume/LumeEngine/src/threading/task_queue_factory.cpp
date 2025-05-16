@@ -189,8 +189,9 @@ public:
                 {
                     std::lock_guard lock(mutex_);
                     for (const ITask* dep : dependencies) {
-                        if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
-                                [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
+                        if (auto pos = std::find_if(
+                                q_.cbegin(), q_.cend(),
+                                [dep](const BASE_NS::shared_ptr<Task> &task) { return task && (*task == dep); });
                             pos != q_.cend()) {
                             deps.push_back(*pos);
                         }
@@ -227,8 +228,9 @@ public:
             {
                 std::lock_guard lock(mutex_);
                 for (const ITask* dep : dependencies) {
-                    if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
-                            [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
+                    if (auto pos = std::find_if(
+                            q_.cbegin(), q_.cend(),
+                            [dep](const BASE_NS::shared_ptr<Task> &task) { return task && (*task == dep); });
                         pos != q_.cend()) {
                         deps.push_back(*pos);
                     }
@@ -430,16 +432,18 @@ private:
                 std::lock_guard lock(mutex_);
                 // After running the task remove it from the queue. Any dependent tasks will see their weak_ptr expire
                 // idicating that the dependency has been completed.
-                if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
-                        [&task](const BASE_NS::shared_ptr<Task>& queuedTask) { return queuedTask == task; });
+                if (auto pos = std::find_if(
+                        q_.cbegin(), q_.cend(),
+                        [&task](const BASE_NS::shared_ptr<Task> &queuedTask) { return queuedTask == task; });
                     pos != q_.cend()) {
                     q_.erase(pos);
                 }
                 task.reset();
 
                 // Get next function.
-                if (auto pos = std::find_if(std::begin(q_), std::end(q_),
-                        [](const BASE_NS::shared_ptr<Task>& task) { return (task) && (task->CanRun()); });
+                if (auto pos =
+                        std::find_if(std::begin(q_), std::end(q_),
+                                     [](const BASE_NS::shared_ptr<Task> &task) { return (task) && (task->CanRun()); });
                     pos != std::end(q_)) {
                     task = *pos;
                     task->running_ = true;

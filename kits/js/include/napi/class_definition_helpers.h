@@ -128,7 +128,7 @@ static inline napi_property_descriptor GetSetProperty(
         auto status = napi_define_class(env, NAPI_API_JS_NAME_STRING, NAPI_AUTO_LENGTH,                     \
             BaseObject::ctor<NAPI_API_CLASS_NAME>(), nullptr, node_props.size(), node_props.data(), &func); \
         NapiApi::MyInstanceState* mis;                                                                      \
-        NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);                                                          \
+        NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);                                           \
         mis->StoreCtor(NAPI_API_JS_NAME_STRING, func);                                                      \
     }
 

@@ -90,7 +90,8 @@ inline constexpr uint64_t CombineHash(uint64_t hash)
 {
     static_assert(HasUid_v<Type>, "META_TYPE missing for given type");
     return hash ^
-           (BASE_NS::CompileTime::FNV1aHash(MetaType<Type>::name) + 0x9e3779b97f4a7c15LLU + (hash << 12) + (hash >> 4));
+            (BASE_NS::CompileTime::FNV1aHash(MetaType<Type>::name) + 0x9e3779b97f4a7c15LLU + (hash << 12) + // 12: bits
+            (hash >> 4));                                                                                   //  4: bits
 }
 
 /**
