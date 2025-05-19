@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -58,11 +58,11 @@ using namespace CORE_NS;
 using namespace testing::ext;
 
 namespace {
-struct FuzzContext {
+struct TestContext {
     std::shared_ptr<ISceneInit> sceneInit_ = nullptr;
     CORE_NS::IEcs::Ptr ecs_;
 };
-static FuzzContext g_context;
+static TestContext g_context;
 
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
@@ -71,13 +71,13 @@ static constexpr BASE_NS::Uid APP_THREAD{"b2e8cef3-453a-4651-b564-5190f8b5190d"}
 static constexpr BASE_NS::Uid IO_QUEUE{"be88e9a0-9cd8-45ab-be48-937953dc258f"};
 static constexpr BASE_NS::Uid JS_RELEASE_THREAD{"3784fa96-b25b-4e9c-bbf1-e897d36f73af"};
 
-bool SceneDispose(FuzzContext &context)
+bool SceneDispose(TestContext &context)
 {
     context.sceneInit_ = nullptr;
     return true;
 }
 
-bool SceneCreate(FuzzContext &context)
+bool SceneCreate(TestContext &context)
 {
     context.sceneInit_ = CreateTestScene();
     context.sceneInit_->LoadPluginsAndInit();
@@ -87,7 +87,7 @@ bool SceneCreate(FuzzContext &context)
     }
 
     using namespace SCENE_NS;
-#if SCENE_META_FUZZ
+#if SCENE_META_TEST
     auto fun = [&context]() {
         auto &obr = META_NS::GetObjectRegistry();
 
@@ -505,7 +505,7 @@ bool operator==(const ComponentListener::Event& lhs, const ComponentListener::Ev
     });
 }
 
-constexpr const string_view systemGraph = "rofs3D://systemGraph.json";
+constexpr const string_view systemGraph = "file:///data/local/systemGraph.json";
 } // namespace
 
 
@@ -523,7 +523,27 @@ public:
     void TearDown() override {}
 };
 
-HWTEST_F(EcsTest, create, TestSize.Level1)
+class EcsTest1 : public testing::Test {
+public:
+    static void SetUpTestSuite()
+    {
+        SceneCreate(g_context);
+    }
+    static void TearDownTestSuite()
+    {
+        SceneDispose(g_context);
+    }
+    void SetUp() override {}
+    void TearDown() override {}
+};
+
+
+/**
+ * @tc.name: Create
+ * @tc.desc: test Create
+ * @tc.type: FUNC
+ */
+HWTEST_F(EcsTest, Create, TestSize.Level1)
 {
     auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
     IInterface* instance = static_cast<ITaskQueueFactory*>(
@@ -553,6 +573,314 @@ HWTEST_F(EcsTest, create, TestSize.Level1)
     }
 }
 
+
+/**
+ * @tc.name: CreateAndDestroyEntity
+ * @tc.desc: test CreateAndDestroyEntity
+ * @tc.type: FUNC
+ */
+HWTEST_F(EcsTest1, CreateAndDestroyEntity, TestSize.Level1)
+{
+    auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
+    // Test engine feature
+    EXPECT_EQ(engine->TickFrame(), false);
+#ifdef NDEBUG
+    EXPECT_TRUE(engine->IsDebugBuild());
+#else
+    EXPECT_FALSE(engine->IsDebugBuild());
+#endif
+
+    IEcs::Ptr ecs = engine->CreateEcs();
+    auto entityListener = EntityListener { *ecs };
+    auto componentListener = ComponentListener { *ecs, nullptr };
+    EXPECT_EQ(&ecs->GetClassFactory(), engine->GetInterface<IClassFactory>());
+    const auto& consEng = *engine;
+    EXPECT_EQ(&ecs->GetClassFactory(), consEng.GetInterface<IClassFactory>());
+    EXPECT_TRUE(consEng.GetInterface<CORE_NS::IClassRegister>() != nullptr);
+
+    auto factory = GetInstance<ISystemGraphLoaderFactory>(UID_SYSTEM_GRAPH_LOADER);
+    ASSERT_TRUE(factory);
+    auto systemGraphLoader = factory->Create(engine->GetFileManager());
+    const auto& consFac = *factory;
+    EXPECT_TRUE(consFac.GetInterface(ISystemGraphLoaderFactory::UID) != nullptr);
+    EXPECT_TRUE(consFac.GetInterface(UID_SYSTEM_GRAPH_LOADER) == nullptr);
+    // void funcs with no implementation, not available for validations
+    factory->Ref();
+    factory->Unref();
+
+    // Initially no system or managers
+    EXPECT_TRUE(ecs->GetSystems().empty());
+    EXPECT_TRUE(ecs->GetComponentManagers().empty());
+
+    // Register TypeInfos so that system graph loder can find the system and it's dependencies.
+    EXPECT_FALSE(systemGraphLoader->Load(systemGraph, *ecs).success);
+    GetPluginRegister().RegisterTypeInfo(testSystemInfo);
+    EXPECT_FALSE(systemGraphLoader->Load(systemGraph, *ecs).success);
+    GetPluginRegister().RegisterTypeInfo(testComponentInfo);
+
+    EXPECT_TRUE(systemGraphLoader->Load(systemGraph, *ecs).success);
+
+    EXPECT_TRUE(ecs->GetComponentManagers().size() == 1);
+    EXPECT_TRUE(ecs->GetSystems().size() == 1);
+
+    ecs->Initialize();
+
+    TestSystem* testSystem = GetSystem<TestSystem>(*ecs);
+    ASSERT_TRUE(testSystem);
+
+    auto* testManager = GetManager<ITestComponentManager>(*ecs);
+    ASSERT_TRUE(testManager);
+    auto testCompListener = ComponentListener { *ecs, testManager };
+    // test repeatedly adding
+    ComponentListener { *ecs, testManager };
+
+    size_t updates = testSystem->UpdateCalls();
+    IEcs* ecsArr[] = { ecs.get() };
+
+    // Initially mode is render always IEcs::Update/ IEngine::TickFrame will return true
+    EXPECT_EQ(ecs->GetRenderMode(), IEcs::RenderMode::RENDER_ALWAYS);
+
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), true);
+    EXPECT_TRUE(entityListener.events_.empty());
+    EXPECT_TRUE(componentListener.events_.empty());
+    EXPECT_TRUE(testCompListener.events_.empty());
+
+    // Even with the only system disabled.
+    testSystem->SetActive(false);
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), true);
+
+    // When mode is render if dirty and test system is not active there's no need to render.
+    ecs->SetRenderMode(IEcs::RenderMode::RENDER_IF_DIRTY);
+    EXPECT_EQ(ecs->GetRenderMode(), IEcs::RenderMode::RENDER_IF_DIRTY);
+    EXPECT_EQ(engine->TickFrame(ecsArr), false);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), false);
+
+    // But if user explicitly requests, true will be returned.
+    ecs->RequestRender();
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), true);
+
+    // Even with test system active there's no need to render as the system isn't doing any work.
+    testSystem->SetActive(true);
+    EXPECT_EQ(engine->TickFrame(ecsArr), false);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), false);
+
+    // Create one entity and create a component to the entity.
+    const auto entity = ecs->GetEntityManager().Create();
+    EXPECT_EQ(ecs->GetEntityManager().GetGenerationCounter(), 1);
+    auto itB = begin(ecs->GetEntityManager());
+    auto itE = itB;
+    auto itEnd = end(ecs->GetEntityManager());
+    auto getIt = *itEnd;
+
+    testManager->Create(entity);
+    EXPECT_EQ(testManager->GetComponentCount(), 1);
+    {
+        BASE_NS::vector<IComponentManager*> result;
+        ecs->GetComponents(entity, result);
+        EXPECT_EQ(result.size(), 1);
+        EXPECT_EQ(result[0], testManager);
+    }
+
+    // Trigger listener events
+    ecs->ProcessEvents();
+    {
+        EXPECT_EQ(entityListener.events_.size(), 1);
+        auto event =
+            EntityListener::Event { IEcs::EntityListener::EventType::CREATED, BASE_NS::vector<Entity>(1, entity) };
+        EXPECT_EQ(entityListener.events_[0], event);
+        entityListener.events_.clear();
+
+        EXPECT_EQ(componentListener.events_.size(), 1);
+        auto cEvent = ComponentListener::Event { IEcs::ComponentListener::EventType::CREATED, *testManager,
+            BASE_NS::vector<Entity>(1, entity) };
+        EXPECT_EQ(componentListener.events_[0], cEvent);
+        componentListener.events_.clear();
+
+        EXPECT_EQ(testCompListener.events_.size(), 1);
+        EXPECT_EQ(testCompListener.events_[0], cEvent);
+        testCompListener.events_.clear();
+    }
+    // Now test system will do work and true can be expected.
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), true);
+    {
+        EXPECT_EQ(entityListener.events_.size(), 0);
+        auto cEvent = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
+            BASE_NS::vector<Entity>(1, entity) };
+        EXPECT_EQ(componentListener.events_.size(), 1);
+        EXPECT_EQ(componentListener.events_[0], cEvent);
+        componentListener.events_.clear();
+        EXPECT_EQ(testCompListener.events_[0], cEvent);
+        testCompListener.events_.clear();
+    }
+    // Destroying the component will again stop work.
+    testManager->Destroy(entity);
+    EXPECT_TRUE(ecs->GetEntityManager().IsAlive(entity));
+    EXPECT_EQ(engine->TickFrame(ecsArr), false);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), false);
+    {
+        EXPECT_EQ(entityListener.events_.size(), 0);
+        EXPECT_EQ(componentListener.events_.size(), 1);
+        auto cEvent = ComponentListener::Event { IEcs::ComponentListener::EventType::DESTROYED, *testManager,
+            BASE_NS::vector<Entity>(1, entity) };
+        EXPECT_EQ(componentListener.events_[0], cEvent);
+        componentListener.events_.clear();
+        EXPECT_EQ(testCompListener.events_[0], cEvent);
+        testCompListener.events_.clear();
+    }
+
+    // With at least one component available system will cause true to be returned.
+    testManager->Create(entity);
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), true);
+    {
+        EXPECT_EQ(componentListener.events_.size(), 2);
+        auto cEvent0 = ComponentListener::Event { IEcs::ComponentListener::EventType::CREATED, *testManager,
+            BASE_NS::vector<Entity>(1, entity) };
+        auto cEvent1 = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
+            BASE_NS::vector<Entity>(1, entity) };
+        EXPECT_EQ(componentListener.events_[0], cEvent0);
+        EXPECT_EQ(componentListener.events_[1], cEvent1);
+        componentListener.events_.clear();
+
+        EXPECT_EQ(testCompListener.events_.size(), 2);
+        EXPECT_EQ(testCompListener.events_[0], cEvent0);
+        EXPECT_EQ(testCompListener.events_[1], cEvent1);
+        testCompListener.events_.clear();
+    }
+    // Try cloning.
+    const auto clone = ecs->CloneEntity(entity);
+    EXPECT_EQ(testManager->GetComponentCount(), 2);
+    // Cloned component should be equal
+    EXPECT_EQ(testManager->Read(entity)->value, testManager->Read(clone)->value);
+
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), true);
+
+    {
+        EXPECT_EQ(entityListener.events_.size(), 1);
+
+        auto event =
+            EntityListener::Event { IEcs::EntityListener::EventType::CREATED, BASE_NS::vector<Entity>(1, clone) };
+        EXPECT_EQ(entityListener.events_[0], event);
+        entityListener.events_.clear();
+        EXPECT_EQ(componentListener.events_.size(), 3);
+        auto cEvent0 = ComponentListener::Event { IEcs::ComponentListener::EventType::CREATED, *testManager,
+            BASE_NS::vector<Entity>(1, clone) };
+        auto cEvent1 = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
+            BASE_NS::vector<Entity>(1, clone) };
+        auto cEvent2 = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
+            BASE_NS::vector<Entity>({ entity, clone }) };
+        EXPECT_EQ(componentListener.events_[0], cEvent0);
+        EXPECT_EQ(componentListener.events_[1], cEvent1);
+        EXPECT_EQ(componentListener.events_[2], cEvent2);
+        componentListener.events_.clear();
+        EXPECT_EQ(testCompListener.events_.size(), 3);
+        EXPECT_EQ(testCompListener.events_[0], cEvent0);
+        EXPECT_EQ(testCompListener.events_[1], cEvent1);
+        EXPECT_EQ(testCompListener.events_[2], cEvent2);
+        testCompListener.events_.clear();
+    }
+    ecs->GetEntityManager().Destroy(clone);
+    EXPECT_FALSE(ecs->GetEntityManager().IsAlive(clone));
+    // After destroying the clone the original entity is still alive.
+    EXPECT_TRUE(ecs->GetEntityManager().IsAlive(entity));
+    // Also the clone's component is still alive until garbage collection runs.
+    EXPECT_EQ(testManager->GetComponentCount(), 2);
+    EXPECT_TRUE(testManager->HasComponent(entity));
+    EXPECT_TRUE(testManager->HasComponent(clone));
+    EXPECT_EQ(testManager->Read(entity)->value, testManager->Read(clone)->value);
+
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), true);
+    // IEngine::TickFrame/IEcs::ProcessEvents calls IComponentManager::Gc and count should be one again.
+    EXPECT_EQ(testManager->GetComponentCount(), 1);
+    EXPECT_TRUE(testManager->HasComponent(entity));
+    EXPECT_FALSE(testManager->HasComponent(clone));
+    {
+        EXPECT_EQ(entityListener.events_.size(), 1);
+        auto event =
+            EntityListener::Event { IEcs::EntityListener::EventType::DESTROYED, BASE_NS::vector<Entity>(1, clone) };
+        EXPECT_EQ(entityListener.events_[0], event);
+        entityListener.events_.clear();
+        EXPECT_EQ(componentListener.events_.size(), 2);
+        auto cEvent0 = ComponentListener::Event { IEcs::ComponentListener::EventType::DESTROYED, *testManager,
+            BASE_NS::vector<Entity>(1, clone) };
+        auto cEvent1 = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
+            BASE_NS::vector<Entity>(1, entity) };
+        EXPECT_EQ(componentListener.events_[0], cEvent0);
+        EXPECT_EQ(componentListener.events_[1], cEvent1);
+        componentListener.events_.clear();
+        EXPECT_EQ(testCompListener.events_.size(), 2);
+        EXPECT_EQ(testCompListener.events_[0], cEvent0);
+        EXPECT_EQ(testCompListener.events_[1], cEvent1);
+        testCompListener.events_.clear();
+    }
+    // Destroying the entity will destroy the component and stop work.
+    ecs->GetEntityManager().Destroy(entity);
+    EXPECT_FALSE(ecs->GetEntityManager().IsAlive(entity));
+    EXPECT_EQ(engine->TickFrame(ecsArr), false);
+    ++updates;
+    EXPECT_EQ(testSystem->UpdateCalls(), updates);
+    EXPECT_EQ(ecs->NeedRender(), false);
+    {
+        EXPECT_EQ(entityListener.events_.size(), 1);
+        auto event =
+            EntityListener::Event { IEcs::EntityListener::EventType::DESTROYED, BASE_NS::vector<Entity>(1, entity) };
+        EXPECT_EQ(entityListener.events_[0], event);
+        entityListener.events_.clear();
+        EXPECT_EQ(componentListener.events_.size(), 1);
+        auto cEvent0 = ComponentListener::Event { IEcs::ComponentListener::EventType::DESTROYED, *testManager,
+            BASE_NS::vector<Entity>(1, entity) };
+        EXPECT_EQ(componentListener.events_[0], cEvent0);
+        componentListener.events_.clear();
+        EXPECT_EQ(testCompListener.events_.size(), 1);
+        EXPECT_EQ(testCompListener.events_[0], cEvent0);
+        testCompListener.events_.clear();
+    }
+
+    const auto entityCopy = ecs->GetEntityManager().Create();
+    ecs->GetEntityManager().Destroy(entityCopy);
+    const auto entThird = ecs->GetEntityManager().Create();
+    ecs->GetEntityManager().Destroy(entThird);
+    const auto entFourth = ecs->GetEntityManager().CreateReferenceCounted();
+    EXPECT_EQ(ecs->GetEntityManager().GetReferenceCounted(entThird).GetRefCount(), 0);
+    EXPECT_EQ(ecs->GetEntityManager().GetReferenceCounted(entFourth).GetRefCount(), 2);
+
+    ecs->Uninitialize();
+
+    GetPluginRegister().UnregisterTypeInfo(testSystemInfo);
+    GetPluginRegister().UnregisterTypeInfo(testComponentInfo);
+}
+
+/**
+ * @tc.name: createAndDestroyEntity
+ * @tc.desc: test createAndDestroyEntity
+ * @tc.type: FUNC
+ */
 HWTEST_F(EcsTest, createAndDestroyEntity, TestSize.Level1)
 {
     auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
@@ -655,7 +983,12 @@ HWTEST_F(EcsTest, createAndDestroyEntity, TestSize.Level1)
     }
 }
 
-HWTEST_F(EcsTest, timeScale, TestSize.Level1)
+/**
+ * @tc.name: TimeScale
+ * @tc.desc: test TimeScale
+ * @tc.type: FUNC
+ */
+HWTEST_F(EcsTest, TimeScale, TestSize.Level1)
 {
     auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
     IEcs::Ptr ecs = engine->CreateEcs();
@@ -692,7 +1025,12 @@ HWTEST_F(EcsTest, timeScale, TestSize.Level1)
     }
 }
 
-HWTEST_F(EcsTest, createAndDestroyEntityReference, TestSize.Level1)
+/**
+ * @tc.name: CreateAndDestroyEntityReference
+ * @tc.desc: test CreateAndDestroyEntityReference
+ * @tc.type: FUNC
+ */
+HWTEST_F(EcsTest, CreateAndDestroyEntityReference, TestSize.Level1)
 {
     auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
     IEcs::Ptr ecs = engine->CreateEcs();
@@ -844,7 +1182,12 @@ size_t GetEntityCount(IEcs& ecs)
 }
 } // namespace
 
-HWTEST_F(EcsTest, destroyEntityReferenceDependencyTree, TestSize.Level1)
+/**
+ * @tc.name: DestroyEntityReferenceDependencyTree
+ * @tc.desc: test DestroyEntityReferenceDependencyTree
+ * @tc.type: FUNC
+ */
+HWTEST_F(EcsTest, DestroyEntityReferenceDependencyTree, TestSize.Level1)
 {
     auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
     IEcs::Ptr ecs = engine->CreateEcs();
@@ -883,7 +1226,12 @@ HWTEST_F(EcsTest, destroyEntityReferenceDependencyTree, TestSize.Level1)
     ASSERT_EQ(GetEntityCount(*ecs), 0);
 }
 
-HWTEST_F(EcsTest, ecsPluginTest, TestSize.Level1)
+/**
+ * @tc.name: EcsPluginTest
+ * @tc.desc: test EcsPluginTest
+ * @tc.type: FUNC
+ */
+HWTEST_F(EcsTest, EcsPluginTest, TestSize.Level1)
 {
     GetPluginRegister().RegisterTypeInfo(EcsInfo);
     auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
@@ -892,7 +1240,163 @@ HWTEST_F(EcsTest, ecsPluginTest, TestSize.Level1)
     EXPECT_TRUE(ecs != nullptr);
 }
 
-HWTEST_F(EcsTest, entityComparison, TestSize.Level1)
+/**
+ * @tc.name: componentQuery
+ * @tc.desc: test componentQuery
+ * @tc.type: FUNC
+ */
+HWTEST_F(EcsTest, componentQuery, TestSize.Level1)
+{
+    {
+        // check inital state
+        ComponentQuery query;
+        EXPECT_FALSE(query.IsValid());
+        EXPECT_FALSE(query.Execute());
+        EXPECT_TRUE(query.GetResults().empty());
+    }
+
+    auto engine = g_context.sceneInit_->GetEngineInstance().engine_;
+    IEcs::Ptr ecs = engine->CreateEcs();
+
+    // Initially no system or managers
+    EXPECT_TRUE(ecs->GetSystems().empty());
+    EXPECT_TRUE(ecs->GetComponentManagers().empty());
+
+    auto factory = GetInstance<ISystemGraphLoaderFactory>(UID_SYSTEM_GRAPH_LOADER);
+    ASSERT_TRUE(factory);
+    auto systemGraphLoader = factory->Create(engine->GetFileManager());
+
+    // Register TypeInfos so that system graph loder can find the system and it's dependencies.
+    GetPluginRegister().RegisterTypeInfo(testSystemInfo);
+    GetPluginRegister().RegisterTypeInfo(testComponentInfo);
+    GetPluginRegister().RegisterTypeInfo(testComponent2Info);
+    EXPECT_TRUE(systemGraphLoader->Load(systemGraph, *ecs).success);
+    ecs->CreateComponentManager(testComponent2Info);
+
+    ecs->Initialize();
+
+    auto* testManager = GetManager<ITestComponentManager>(*ecs);
+    ASSERT_TRUE(testManager);
+    auto* test2Manager = GetManager<ITestComponent2Manager>(*ecs);
+    ASSERT_TRUE(test2Manager);
+
+    // Setup queries with different configurations.
+    ComponentQuery queryBase;
+    queryBase.SetupQuery(*testManager, {}, true);
+    EXPECT_FALSE(queryBase.IsValid());
+
+    ComponentQuery queryBasePlusRequire;
+    const ComponentQuery::Operation operationsRequire[] = { *test2Manager,
+        ComponentQuery::Operation ::Method::REQUIRE };
+    queryBasePlusRequire.SetupQuery(*testManager, operationsRequire, true);
+    EXPECT_FALSE(queryBasePlusRequire.IsValid());
+
+    ComponentQuery queryBasePlusOptional;
+    const ComponentQuery::Operation operationsOptional[] = { *test2Manager,
+        ComponentQuery::Operation ::Method::OPTIONAL };
+    queryBasePlusOptional.SetupQuery(*testManager, operationsOptional, false);
+    EXPECT_FALSE(queryBasePlusOptional.IsValid());
+
+    // entity1 was only one component
+    auto entity1 = ecs->GetEntityManager().Create();
+    testManager->Create(entity1);
+
+    // entity2 has two components
+    auto entity2 = ecs->GetEntityManager().Create();
+    testManager->Create(entity2);
+    test2Manager->Create(entity2);
+
+    // entity3 has only one component
+    auto entity3 = ecs->GetEntityManager().Create();
+    test2Manager->Create(entity3);
+
+    // execute should return true as the queries should find something
+    EXPECT_TRUE(queryBase.Execute());
+    EXPECT_TRUE(queryBasePlusRequire.Execute());
+    EXPECT_TRUE(queryBasePlusOptional.Execute());
+
+    // after execute the queries should be in valid state
+    EXPECT_TRUE(queryBase.IsValid());
+    EXPECT_TRUE(queryBasePlusRequire.IsValid());
+    EXPECT_TRUE(queryBasePlusOptional.IsValid());
+
+    // entity1 should be found by base and base+optional, entity2 by all, entity 3 by none.
+    ASSERT_EQ(queryBase.GetResults().size(), 2U);
+    EXPECT_EQ(queryBase.GetResults()[0].entity, entity1);
+    EXPECT_EQ(queryBase.GetResults()[1].entity, entity2);
+    ASSERT_EQ(queryBasePlusRequire.GetResults().size(), 1U);
+    EXPECT_EQ(queryBasePlusRequire.GetResults()[0].entity, entity2);
+    ASSERT_EQ(queryBasePlusOptional.GetResults().size(), 2U);
+    EXPECT_EQ(queryBasePlusOptional.GetResults()[0].entity, entity1);
+    EXPECT_EQ(queryBasePlusOptional.GetResults()[1].entity, entity2);
+
+    IEcs* ecsArr[] = { ecs.get() };
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+
+    // listeners are not enabled by default so queries should be still "valid"
+    EXPECT_TRUE(queryBase.IsValid());
+    EXPECT_TRUE(queryBasePlusRequire.IsValid());
+    EXPECT_TRUE(queryBasePlusOptional.IsValid());
+
+    // enable listeners
+    queryBase.SetEcsListenersEnabled(true);
+    queryBasePlusRequire.SetEcsListenersEnabled(true);
+    queryBasePlusOptional.SetEcsListenersEnabled(true);
+
+    // no changes, execute return false
+    EXPECT_FALSE(queryBase.Execute());
+    EXPECT_FALSE(queryBasePlusRequire.Execute());
+    EXPECT_FALSE(queryBasePlusOptional.Execute());
+
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    EXPECT_TRUE(queryBase.IsValid());
+    EXPECT_TRUE(queryBasePlusRequire.IsValid());
+    EXPECT_TRUE(queryBasePlusOptional.IsValid());
+
+    // destroying testcomponent2 should invalidate the plus queries
+    test2Manager->Destroy(entity2);
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    EXPECT_TRUE(queryBase.IsValid());
+    EXPECT_FALSE(queryBasePlusRequire.IsValid());
+    EXPECT_FALSE(queryBasePlusOptional.IsValid());
+
+    // execute should return true fir the invalidated queries
+    EXPECT_FALSE(queryBase.Execute());
+    EXPECT_TRUE(queryBasePlusRequire.Execute());
+    EXPECT_TRUE(queryBasePlusOptional.Execute());
+
+    // everything is valid again
+    EXPECT_TRUE(queryBase.IsValid());
+    EXPECT_TRUE(queryBasePlusRequire.IsValid());
+    EXPECT_TRUE(queryBasePlusOptional.IsValid());
+
+    // plusRequire shouldn't find anything but others do
+    ASSERT_EQ(queryBase.GetResults().size(), 2U);
+    EXPECT_EQ(queryBase.GetResults()[0].entity, entity1);
+    EXPECT_EQ(queryBase.GetResults()[1].entity, entity2);
+    ASSERT_EQ(queryBasePlusRequire.GetResults().size(), 0U);
+    ASSERT_EQ(queryBasePlusOptional.GetResults().size(), 2U);
+    EXPECT_EQ(queryBasePlusOptional.GetResults()[0].entity, entity1);
+    EXPECT_EQ(queryBasePlusOptional.GetResults()[1].entity, entity2);
+
+    // destroying testcomponent should invalidate all queries
+    testManager->Destroy(entity1);
+    EXPECT_EQ(engine->TickFrame(ecsArr), true);
+    EXPECT_FALSE(queryBase.IsValid());
+    EXPECT_FALSE(queryBasePlusRequire.IsValid());
+    EXPECT_FALSE(queryBasePlusOptional.IsValid());
+
+    GetPluginRegister().UnregisterTypeInfo(testSystemInfo);
+    GetPluginRegister().UnregisterTypeInfo(testComponentInfo);
+    GetPluginRegister().UnregisterTypeInfo(testComponent2Info);
+}
+
+/**
+ * @tc.name: EntityComparison
+ * @tc.desc: test EntityComparison
+ * @tc.type: FUNC
+ */
+HWTEST_F(EcsTest, EntityComparison, TestSize.Level1)
 {
     constexpr Entity e1 { 1 };
     constexpr Entity e2 { 2 };

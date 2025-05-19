@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Copyright (c) 2025 Huawei Device Co., Ltd.
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 #include <chrono>
 #include <filesystem>
@@ -153,7 +153,12 @@ public:
     void TearDown() override {}
 };
 
-HWTEST_F(IoTest, factoryTests, TestSize.Level1)
+/**
+ * @tc.name: FactoryTests
+ * @tc.desc: test FactoryTests
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, FactoryTests, TestSize.Level1)
 {
     // test the interface creations.
     // no such factory return null
@@ -237,7 +242,12 @@ HWTEST_F(IoTest, factoryTests, TestSize.Level1)
     EXPECT_TRUE(fileMon.get());
 }
 
-HWTEST_F(IoTest, customTests, TestSize.Level1)
+/**
+ * @tc.name: CustomTests
+ * @tc.desc: test CustomTests
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, CustomTests, TestSize.Level1)
 {
     /*
         This test
@@ -392,7 +402,12 @@ HWTEST_F(IoTest, customTests, TestSize.Level1)
     files->UnregisterFilesystem("MyTemp");
 }
 
-HWTEST_F(IoTest, memoryFileSysTests, TestSize.Level1)
+/**
+ * @tc.name: MemoryFileSysTests
+ * @tc.desc: test MemoryFileSysTests
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, MemoryFileSysTests, TestSize.Level1)
 {
     auto data = std::string("1234567890");
     auto factory = CORE_NS::GetInstance<IFileSystemApi>(UID_FILESYSTEM_API_FACTORY);
@@ -450,7 +465,12 @@ HWTEST_F(IoTest, memoryFileSysTests, TestSize.Level1)
     EXPECT_FALSE(memP->DeleteDirectory("io/test_directory"));
 }
 
-HWTEST_F(IoTest, fileCreationAndDeletion, TestSize.Level1)
+/**
+ * @tc.name: FileCreationAndDeletion
+ * @tc.desc: test FileCreationAndDeletion
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, FileCreationAndDeletion, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
 
@@ -539,7 +559,12 @@ bool recursivelyDeleteDirectory(IFileManager* files, string_view path)
 }
 } // namespace
 
-HWTEST_F(IoTest, fileRename, TestSize.Level1)
+/**
+ * @tc.name: FileRename
+ * @tc.desc: test FileRename
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, FileRename, TestSize.Level1)
 {
     auto data = std::string("1234567890");
 
@@ -548,8 +573,8 @@ HWTEST_F(IoTest, fileRename, TestSize.Level1)
     auto toFilename = "file:///data/local/test_file04.dat";
     auto differentProto = "app:/test_file04.dat";
     auto toUtf8Filename = "file:///data/local/"
-                          "\xf0\x9d\x96\x99\xf0\x9d\x96\x8a\xf0\x9d\x96\x98\xf0\x9d\x96\x99\x5f\xf0\x9d\x96\x8b\xf0"
-                          "\x9d\x96\x8e\xf0\x9d\x96\x91\xf0\x9d\x96\x8a\x30\x35.dat";
+                        "\xf0\x9d\x96\x99\xf0\x9d\x96\x8a\xf0\x9d\x96\x98\xf0\x9d\x96\x99\x5f\xf0\x9d\x96\x8b\xf0"
+                        "\x9d\x96\x8e\xf0\x9d\x96\x91\xf0\x9d\x96\x8a\x30\x35.dat";
 
     // Make sure none of the files exist e.g. due to an interrupted test run.
     fileManager.DeleteFile(fromFilename);
@@ -613,7 +638,12 @@ HWTEST_F(IoTest, fileRename, TestSize.Level1)
     EXPECT_TRUE(fileManager.DeleteFile(toFilename));
 }
 
-HWTEST_F(IoTest, directoryFilelist, TestSize.Level1)
+/**
+ * @tc.name: DirectoryFilelist
+ * @tc.desc: test DirectoryFilelist
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, DirectoryFilelist, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
 
@@ -652,7 +682,12 @@ HWTEST_F(IoTest, directoryFilelist, TestSize.Level1)
     ASSERT_EQ(recursivelyDeleteDirectory(&fileManager, directoryUri), true);
 }
 
-HWTEST_F(IoTest, fileMonitorTest, TestSize.Level1)
+/**
+ * @tc.name: FileMonitorTest
+ * @tc.desc: test FileMonitorTest
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, FileMonitorTest, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
 
@@ -783,7 +818,12 @@ HWTEST_F(IoTest, fileMonitorTest, TestSize.Level1)
     ASSERT_TRUE(recursivelyDeleteDirectory(&fileManager, testRootUri));
 }
 
-HWTEST_F(IoTest, missingProtocol, TestSize.Level1)
+/**
+ * @tc.name: MissingProtocol
+ * @tc.desc: test MissingProtocol
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, MissingProtocol, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
 
@@ -800,7 +840,12 @@ HWTEST_F(IoTest, missingProtocol, TestSize.Level1)
     }
 }
 
-HWTEST_F(IoTest, missingFilesAndDirs, TestSize.Level1)
+/**
+ * @tc.name: MissingFilesAndDirs
+ * @tc.desc: test MissingFilesAndDirs
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, MissingFilesAndDirs, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
 
@@ -825,7 +870,12 @@ HWTEST_F(IoTest, missingFilesAndDirs, TestSize.Level1)
     }
 }
 
-HWTEST_F(IoTest, wrongTypes, TestSize.Level1)
+/**
+ * @tc.name: WrongTypes
+ * @tc.desc: test WrongTypes
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, WrongTypes, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
 
@@ -837,11 +887,16 @@ HWTEST_F(IoTest, wrongTypes, TestSize.Level1)
 
     {
         // Try to open a file as a dir.
-        auto dir = fileManager.OpenDirectory("file:///data/local/io/assetReadTest.txt");
+        auto dir = fileManager.OpenDirectory("file:///data/local/test_data/io/assetReadTest.txt");
         ASSERT_TRUE(dir == nullptr);
     }
 }
 
+/**
+ * @tc.name: TestDirectoryListing
+ * @tc.desc: test TestDirectoryListing
+ * @tc.type: FUNC
+ */
 HWTEST_F(IoTest, TestDirectoryListing, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
@@ -884,7 +939,12 @@ HWTEST_F(IoTest, TestDirectoryListing, TestSize.Level1)
     }
 }
 
-HWTEST_F(IoTest, normalizePath, TestSize.Level1)
+/**
+ * @tc.name: NormalizePath
+ * @tc.desc: test NormalizePath
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, NormalizePath, TestSize.Level1)
 {
     EXPECT_EQ(NormalizePath(""), "/");
     EXPECT_EQ(NormalizePath("."), "/");
@@ -917,7 +977,12 @@ HWTEST_F(IoTest, normalizePath, TestSize.Level1)
     EXPECT_EQ(NormalizePath("foo/../../bar/"), "");
 }
 
-HWTEST_F(IoTest, fileModeTest, TestSize.Level1)
+/**
+ * @tc.name: FileModeTest
+ * @tc.desc: test FileModeTest
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, FileModeTest, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
 
