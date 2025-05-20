@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,7 +46,7 @@ public:
     void UpdateCameraViewport(CORE_NS::IEcs& ecs, CORE_NS::Entity entity, const BASE_NS::Math::UVec2& renderResolution,
         bool autoAspect, float fovY, float orthoScale) const override;
     void CameraLookAt(CORE_NS::IEcs& ecs, CORE_NS::Entity entity, const BASE_NS::Math::Vec3& eye,
-        const BASE_NS::Math::Vec3& target, const BASE_NS::Math::Vec3& up) override;
+        const BASE_NS::Math::Vec3& target, const BASE_NS::Math::Vec3& up) const override;
 
     CORE_NS::Entity CreateLight(CORE_NS::IEcs& ecs, const LightComponent& lightComponent,
         const BASE_NS::Math::Vec3& position, const BASE_NS::Math::Quat& rotation) const override;
@@ -88,6 +88,9 @@ public:
         CORE_NS::Entity sourceEntity) const override;
 
     BASE_NS::vector<CORE_NS::Entity> Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source) const override;
+
+    bool IsSphereInsideCameraFrustum(const CORE_NS::IEcs& ecs, CORE_NS::Entity cameraEntity, BASE_NS::Math::Vec3 center,
+        float radius) const override;
 
 private:
     IGraphicsContext& graphicsContext_;

@@ -56,10 +56,10 @@ public:
     bool InvokeTask(const ITaskQueueTask::Ptr& task) override
     {
         if (task) {
-        auto q = GetTaskQueueRegistry().SetCurrentTaskQueue(self_);
-        auto ret = task->Invoke();
-        GetTaskQueueRegistry().SetCurrentTaskQueue(q);
-        return ret;
+            auto q = GetTaskQueueRegistry().SetCurrentTaskQueue(self_);
+            auto ret = task->Invoke();
+            GetTaskQueueRegistry().SetCurrentTaskQueue(q);
+            return ret;
         }
         return false;
     }

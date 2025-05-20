@@ -61,6 +61,7 @@ protected:
     ReturnError state_ { GenericError::SUCCESS };
 };
 
+/// Helper class to export and return the status
 class ExportSerializer : public SerializerBase {
 public:
     ExportSerializer(IExportContext& context) : context_(context) {}
@@ -122,6 +123,7 @@ private:
     IExportContext& context_;
 };
 
+/// Helper class to import and return the status
 class ImportSerializer : public SerializerBase {
 public:
     ImportSerializer(IImportContext& context) : context_(context) {}
@@ -190,6 +192,7 @@ private:
     IImportContext& context_;
 };
 
+/// Helper to use same names and syntax for export and import
 template<typename Context>
 class Serializer {
     Serializer(Context& c);

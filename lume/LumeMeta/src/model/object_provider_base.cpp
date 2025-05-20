@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_recyclable.h>
 

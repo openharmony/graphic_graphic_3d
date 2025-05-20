@@ -26,6 +26,7 @@ namespace Serialization {
 
 class MetaMigrateV1 : public IntroduceInterfaces<BaseObject, ISerTransformation> {
     META_OBJECT(MetaMigrateV1, ClassId::MetaMigrateV1, IntroduceInterfaces)
+
 public:
     BASE_NS::string GetName() const override
     {

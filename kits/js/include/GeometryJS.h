@@ -20,22 +20,18 @@
 #include "MeshResourceJS.h"
 #include "NodeImpl.h"
 
-class GeometryJS : public BaseObject<GeometryJS>, public NodeImpl {
+class GeometryJS : public BaseObject, public NodeImpl {
 public:
     static constexpr uint32_t ID = 100;
     static void Init(napi_env env, napi_value exports);
     GeometryJS(napi_env, napi_callback_info);
     ~GeometryJS() override;
     virtual void* GetInstanceImpl(uint32_t) override;
-
 private:
-    enum class ConstructionState { LACKS_NATIVE, FINISHED, FAILED };
-    ConstructionState Construct(
-        napi_env env, NapiApi::Object meJs, NapiApi::Object scene, NapiApi::Object sceneNodeParameters);
-    void CreateNativeObject(
-        napi_env env, NapiApi::Object meJs, NapiApi::Object sceneNodeParameters, NapiApi::Object meshResourceParam);
+    void Construct(napi_env env, NapiApi::Object meJs, NapiApi::Object scene, NapiApi::Object sceneNodeParameters);
     void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
     napi_value GetMesh(NapiApi::FunctionContext<>& ctx);
+    napi_value GetMorpher(NapiApi::FunctionContext<>& ctx);
 };
 #endif

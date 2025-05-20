@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,6 +39,8 @@ void PostProcessTonemapBlock(in uint postProcessFlags, in vec4 tonemapFactor, in
         } else if (tonemapType == CORE_POST_PROCESS_TONEMAP_FILMIC) {
             const float exposureEstimate = 6.0f;
             outCol = TonemapFilmic(x * exposureEstimate);
+        } else if (tonemapType == CORE_POST_PROCESS_TONEMAP_PBR_NEUTRAL) {
+            outCol = TonemapPbrNeutral(x);
         }
     }
 }
@@ -108,14 +110,38 @@ void PostProcessColorFringeBlock(in uint postProcessFlags, in vec4 chromaFactor,
 }
 
 /**
+ * returns triangle noise
+ * n must be normalized in [0..1] (e.g. texture coordinates)
+ */
+
+float TriangleNoise(vec2 n)
+{
+    // triangle noise, in [-1.0..1.0] range
+    n = fract(n * vec2(5.3987, 5.4421));
+    n += dot(n.yx, n.xy + vec2(21.5351, 14.3137));
+
+    float xy = n.x * n.y;
+    // compute in [0..2] and remap to [-1.0..1.0]
+    return fract(xy * 95.4307) + fract(xy * 75.04961) - 1.0;
+}
+
+/**
  * returns dithered color
  */
 void PostProcessDitherBlock(in uint postProcessFlags, in vec4 ditherFactor, in vec2 uv, in vec3 inCol, out vec3 outCol)
 {
     outCol = inCol;
     if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_DITHER_BIT) == POST_PROCESS_SPECIALIZATION_DITHER_BIT) {
-        const vec2 random01Range = vec2(uv.x * ditherFactor.y, uv.y * ditherFactor.z);
-        outCol += fract(sin(dot(random01Range.xy, vec2(12.9898, 78.233))) * 43758.5453) * ditherFactor.x;
+        const uint ditherType = uint(ditherFactor.w);
+        if (ditherType == CORE_POST_PROCESS_DITHER_INTERLEAVED) {
+            outCol += (fract(sin(dot(uv.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * ditherFactor.x;
+        } else if (ditherType == CORE_POST_PROCESS_DITHER_TRIANGLE) {
+            float noise = TriangleNoise(uv);
+            outCol += noise * ditherFactor.x;
+        } else if (ditherType == CORE_POST_PROCESS_DITHER_TRIANGLE_RGB) {
+            vec3 noiseRGB = vec3(TriangleNoise(uv), TriangleNoise(uv + 0.1337), TriangleNoise(uv + 0.3141));
+            outCol += noiseRGB * ditherFactor.x;
+        }
     }
 }
 
@@ -128,8 +154,23 @@ void PostProcessColorConversionBlock(
     outCol = inCol;
     if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_COLOR_CONVERSION_BIT) ==
         POST_PROCESS_SPECIALIZATION_COLOR_CONVERSION_BIT) {
-        const uint conversionType = uint(colorConversionFactor.w);
-        if (conversionType == CORE_POST_PROCESS_COLOR_CONVERSION_SRGB) {
+        const uint conversionFlags = uint(colorConversionFactor.w);
+        if ((conversionFlags & CORE_POST_PROCESS_COLOR_CONVERSION_SRGB) != 0) {
+            outCol.rgb = LinearToSrgb(outCol.rgb);
+        }
+    }
+}
+void PostProcessColorConversionBlock(
+    in uint postProcessFlags, in vec4 colorConversionFactor, in vec4 inCol, out vec4 outCol)
+{
+    outCol = inCol;
+    if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_COLOR_CONVERSION_BIT) ==
+        POST_PROCESS_SPECIALIZATION_COLOR_CONVERSION_BIT) {
+        const uint conversionFlags = uint(colorConversionFactor.w);
+        if ((conversionFlags & CORE_POST_PROCESS_COLOR_CONVERSION_ALPHA_MULTIPLY) != 0) {
+            outCol.rgb *= outCol.a;
+        }
+        if ((conversionFlags & CORE_POST_PROCESS_COLOR_CONVERSION_SRGB) != 0) {
             outCol.rgb = LinearToSrgb(outCol.rgb);
         }
     }

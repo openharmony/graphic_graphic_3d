@@ -45,6 +45,7 @@ public: // IMetadata
     BASE_NS::vector<IEvent::ConstPtr> GetEvents() const override;
 
     BASE_NS::vector<MetadataInfo> GetAllMetadatas(MetadataType types) const override;
+    MetadataInfo GetMetadata(MetadataType type, BASE_NS::string_view name) const override;
 
     using IMetadata::GetProperty;
     IProperty::Ptr GetProperty(BASE_NS::string_view name, MetadataQuery) override;

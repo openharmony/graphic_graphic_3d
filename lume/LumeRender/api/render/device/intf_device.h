@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -45,6 +45,8 @@ enum SwapchainFlagBits {
     CORE_SWAPCHAIN_VSYNC_BIT = 0x00000004,
     /** Hint to prefer sRGB format */
     CORE_SWAPCHAIN_SRGB_BIT = 0x00000008,
+    /** Hint to prefer high dynamic range format */
+    CORE_SWAPCHAIN_HDR_BIT = 0x00000010,
 };
 /** Container for swapchain flag bits */
 using SwapchainFlags = uint32_t;
@@ -202,11 +204,10 @@ public:
      *  @param aabb Build geometry info for size calculations.
      *  @param instances Build geometry info for size calculations.
      */
-    virtual AccelerationStructureBuildSizes GetAccelerationStructureBuildSizes(
-        const AccelerationStructureBuildGeometryInfo& geometry,
-        BASE_NS::array_view<const AccelerationStructureGeometryTrianglesInfo> triangles,
-        BASE_NS::array_view<const AccelerationStructureGeometryAabbsInfo> aabbs,
-        BASE_NS::array_view<const AccelerationStructureGeometryInstancesInfo> instances) const = 0;
+    virtual AsBuildSizes GetAccelerationStructureBuildSizes(const AsBuildGeometryInfo& geometry,
+        BASE_NS::array_view<const AsGeometryTrianglesInfo> triangles,
+        BASE_NS::array_view<const AsGeometryAabbsInfo> aabbs,
+        BASE_NS::array_view<const AsGeometryInstancesInfo> instances) const = 0;
 
     /** Get frame count. */
     virtual uint64_t GetFrameCount() const = 0;

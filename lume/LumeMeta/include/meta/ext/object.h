@@ -16,7 +16,6 @@
 #ifndef META_EXT_OBJECT_H
 #define META_EXT_OBJECT_H
 
-
 #include <meta/base/interface_macros.h>
 #include <meta/base/namespace.h>
 #include <meta/base/types.h>
@@ -28,6 +27,7 @@
 #include <meta/interface/intf_attachment_container.h>
 #include <meta/interface/intf_container_query.h>
 #include <meta/interface/intf_metadata.h>
+#include <meta/interface/intf_named.h>
 #include <meta/interface/intf_object.h>
 #include <meta/interface/intf_object_context.h>
 #include <meta/interface/intf_object_flags.h>
@@ -35,12 +35,9 @@
 #include <meta/interface/property/intf_property.h>
 #include <meta/interface/static_object_metadata.h>
 
-
 META_BEGIN_NAMESPACE()
 
-/**
- * @brief A helper class for implementing a class which implements the full set of object interfaces.
- */
+/// Object implementation that is full object with metadata and attachments
 class MetaObject : public IntroduceInterfaces<BaseObject, IMetadata, IOwner, IAttach> {
     using Super = IntroduceInterfaces<BaseObject, IMetadata, IOwner, IAttach>;
 
@@ -108,6 +105,10 @@ public:
     {
         return const_cast<const IMetadata&>(*data_).GetAllMetadatas(types);
     }
+    MetadataInfo GetMetadata(MetadataType type, BASE_NS::string_view name) const override
+    {
+        return const_cast<const IMetadata&>(*data_).GetMetadata(type, name);
+    }
     using IMetadata::GetProperty;
     IProperty::Ptr GetProperty(BASE_NS::string_view name, MetadataQuery q) override
     {
@@ -134,6 +135,17 @@ public:
     IEvent::Ptr GetEvent(BASE_NS::string_view name, MetadataQuery q) override
     {
         return data_->GetEvent(name, q);
+    }
+
+    BASE_NS::string GetName() const override
+    {
+        if (auto cont = GetAttachmentContainer(false)) {
+            auto res = cont->FindAny({ "", TraversalType::NO_HIERARCHY, { IObjectName::UID }, false });
+            if (auto oname = interface_cast<IObjectName>(res)) {
+                return oname->GetName();
+            }
+        }
+        return Super::GetName();
     }
 
 protected: // IAttach

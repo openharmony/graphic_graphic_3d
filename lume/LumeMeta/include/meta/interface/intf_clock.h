@@ -22,7 +22,6 @@
 
 #include <meta/base/interface_macros.h>
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/base/time_span.h>
 #include <meta/base/types.h>
 

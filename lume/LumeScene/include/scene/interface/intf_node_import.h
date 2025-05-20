@@ -46,7 +46,15 @@ public:
      * here)
      * @return The child node added (which was the root in given scene) or null if failed
      */
-    virtual Future<INode::Ptr> ImportChildScene(const IScene::ConstPtr& scene, const BASE_NS::string& nodeName) = 0;
+    virtual Future<INode::Ptr> ImportChildScene(const IScene::ConstPtr& scene, BASE_NS::string_view nodeName) = 0;
+    /**
+     * @brief Adds whole scene node hierarchy as child of this node.
+     * @param uri Uri of the scene resource to load.
+     * @param nodeName Name for the scene's root that is copied (the name is usually empty so you can give better name
+     * here)
+     * @return The child node added (which was the root in given scene) or null if failed
+     */
+    virtual Future<INode::Ptr> ImportChildScene(BASE_NS::string_view uri, BASE_NS::string_view nodeName) = 0;
 };
 
 SCENE_END_NAMESPACE()

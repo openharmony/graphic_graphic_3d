@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SCENE_EXT_CREATE_ENTITY_H
-#define SCENE_EXT_CREATE_ENTITY_H
+#ifndef SCENE_EXT_ICREATE_ENTITY_H
+#define SCENE_EXT_ICREATE_ENTITY_H
 
 #include <scene/base/types.h>
 #include <scene/ext/intf_ecs_context.h>

@@ -106,10 +106,10 @@ static CORE3D_NS::IMeshBuilder::Ptr CreateMeshBuilder(
     return builder;
 }
 
-Future<IMesh::Ptr> MeshCreator::Create(const MeshConfig& c, const CustomMeshData& data)
+Future<IMesh::Ptr> MeshCreator::Create(const MeshConfig& c, CustomMeshData d)
 {
     if (auto scene = scene_.lock()) {
-        return scene->AddTask([=] {
+        return scene->AddTask([=, data = BASE_NS::move(d)] {
             CORE3D_NS::IMeshBuilder::Submesh submesh;
             submesh.inputAssembly =
                 RENDER_NS::GraphicsState::InputAssembly { false, RENDER_NS::PrimitiveTopology(data.topology) };

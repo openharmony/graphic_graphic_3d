@@ -13,6 +13,7 @@
             "frag": "3dshaders://shader/core3d_dm_env.frag.spv",
             "pipelineLayout": "3dpipelinelayouts://core3d_dm_env.shaderpl",
             "renderSlot": "CORE3D_RS_DM_ENV",
+            "renderSlotDefaultShader": true,
             "state": {
                 "rasterizationState": {
                     "enableDepthClamp": false,
@@ -48,6 +49,7 @@
             "frag": "3dshaders://shader/core3d_dm_env.frag.spv",
             "pipelineLayout": "3dpipelinelayouts://core3d_dm_env.shaderpl",
             "renderSlot": "CORE3D_RS_DM_ENV_MV",
+            "renderSlotDefaultShader": true,
             "state": {
                 "rasterizationState": {
                     "enableDepthClamp": false,

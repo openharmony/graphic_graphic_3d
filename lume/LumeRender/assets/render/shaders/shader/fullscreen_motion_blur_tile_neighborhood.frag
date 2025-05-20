@@ -10,9 +10,9 @@
 
 // sets
 
-#include "render/shaders/common/render_post_process_layout_common.h"
+layout(set = 0, binding = 0) uniform sampler2D uVelocity;
 
-layout(set = 1, binding = 0) uniform sampler2D uVelocity;
+layout(constant_id = 0) const uint CORE_POST_PROCESS_FLAGS = 0;
 
 // in / out
 

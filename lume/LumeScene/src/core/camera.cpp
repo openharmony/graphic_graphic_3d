@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "camera.h"
 
 #include <scene/ext/intf_render_resource.h>
@@ -22,31 +21,15 @@
 #include <render/device/gpu_resource_desc.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
-#include "util.h"
+#include "../util.h"
 
 SCENE_BEGIN_NAMESPACE()
-
-bool EnableCamera(const IEcsObject::Ptr& camera, bool enabled)
-{
-    if (auto c = GetScopedHandle<CORE3D_NS::CameraComponent>(camera)) {
-        if (enabled) {
-            c->sceneFlags |= CORE3D_NS::CameraComponent::ACTIVE_RENDER_BIT;
-        } else {
-            c->sceneFlags &=
-                ~(CORE3D_NS::CameraComponent::ACTIVE_RENDER_BIT | CORE3D_NS::CameraComponent::MAIN_CAMERA_BIT);
-        }
-        return true;
-    }
-    return false;
-}
 
 bool UpdateCameraRenderTarget(const IEcsObject::Ptr& camera, const IRenderTarget::Ptr& target)
 {
     if (auto ecs = GetEcs(camera)) {
         CORE_NS::EntityReference ent;
-        if (auto resource = interface_cast<IEcsResource>(target)) {
-            ent = ecs->GetEntityReference(resource->GetEntity());
-        } else if (target) {
+        if (target) {
             ent = HandleFromRenderResource(camera->GetScene(), target->GetRenderHandle());
         }
         if (auto c = GetScopedHandle<CORE3D_NS::CameraComponent>(camera)) {

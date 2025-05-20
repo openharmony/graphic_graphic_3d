@@ -15,7 +15,7 @@
 
 #include "camera_node.h"
 
-#include <3d/util/intf_scene_util.h>
+#include <3d/ecs/components/camera_component.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -26,9 +26,20 @@ bool CameraNode::Build(const META_NS::IMetadata::Ptr& d)
 
 CORE_NS::Entity CameraNode::CreateEntity(const IInternalScene::Ptr& scene)
 {
-    const auto& sceneUtil = scene->GetGraphicsContext().GetSceneUtil();
-    return sceneUtil.CreateCamera(
-        *scene->GetEcsContext().GetNativeEcs(), BASE_NS::Math::Vec3(0.0f, 0.0f, 2.5f), {}, 0.1f, 100.f, 60.f);
+    const auto& ecs = scene->GetEcsContext();
+    auto ccm = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(*ecs.GetNativeEcs());
+    if (!ccm) {
+        return {};
+    }
+
+    auto ent = ecs.GetNativeEcs()->GetEntityManager().Create();
+    ecs.AddDefaultComponents(ent);
+
+    CORE3D_NS::CameraComponent cc;
+    cc.sceneFlags |= CORE3D_NS::CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT;
+    ccm->Set(ent, cc);
+
+    return ent;
 }
 
 bool CameraNode::SetEcsObject(const IEcsObject::Ptr& o)
@@ -67,6 +78,11 @@ Future<NodeHits> CameraNode::CastRay(const BASE_NS::Math::Vec2& pos, const RayCa
     }
     return {};
 }
+void CameraNode::SendInputEvent(PointerEvent& event)
+{
+    CORE_ASSERT(camera_);
+    camera_->SendInputEvent(event);
+}
 Future<BASE_NS::Math::Vec3> CameraNode::ScreenPositionToWorld(const BASE_NS::Math::Vec3& pos) const
 {
     CORE_ASSERT(camera_);
@@ -83,4 +99,5 @@ Future<BASE_NS::Math::Vec3> CameraNode::WorldPositionToScreen(const BASE_NS::Mat
     }
     return {};
 }
+
 SCENE_END_NAMESPACE()

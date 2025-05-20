@@ -12,11 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include <base/math/matrix.h>
 #include <base/math/quaternion.h>
 #include <base/math/vector.h>
 
+#include <meta/base/ids.h>
 #include <meta/base/meta_types.h>
 #include <meta/base/namespace.h>
 #include <meta/base/time_span.h>
@@ -90,19 +90,38 @@ void RegisterValueSerializers(IObjectRegistry& registry)
     RegisterSerializer<BASE_NS::Math::Mat3X3>(data, matExport, matImport);
     RegisterSerializer<BASE_NS::Math::Mat4X4>(data, matExport, matImport);
 
+    auto colorExport = [](IExportFunctions& f, const auto& v) {
+        constexpr size_t size = sizeof(v.data) / sizeof(v.data[0]); /*NOLINT(bugprone-sizeof-expression)*/
+        return ExportVector(f, v.data, size);
+    };
+    auto colorImport = [](IImportFunctions& f, const ISerNode::ConstPtr& node, auto& out) {
+        return ImportVector(f, node, out.data);
+    };
+
+    RegisterSerializer<BASE_NS::Color>(data, colorExport, colorImport);
+
+    auto idExport = [](IExportFunctions& f, const auto& v) {
+        return f.ExportToNode(Any<BASE_NS::string>(v.ToString()));
+    };
+    auto idImport = [](IImportFunctions& f, const ISerNode::ConstPtr& node, auto& out) {
+        Any<BASE_NS::string> any;
+        if (f.ImportFromNode(node, any)) {
+            out = BASE_NS::StringToUid(any.InternalGetValue());
+            return true;
+        }
+        return false;
+    };
+
+    RegisterSerializer<TypeId>(data, idExport, idImport);
+    RegisterSerializer<ObjectId>(data, idExport, idImport);
+    RegisterSerializer<InstanceId>(data, idExport, idImport);
+
     RegisterSerializer<BASE_NS::Uid>(
         data,
         [](IExportFunctions& f, const auto& v) {
             return f.ExportToNode(Any<BASE_NS::string>(BASE_NS::to_string(v).c_str()));
         },
-        [](IImportFunctions& f, const ISerNode::ConstPtr& node, auto& out) {
-            Any<BASE_NS::string> any;
-            if (f.ImportFromNode(node, any)) {
-                out = BASE_NS::StringToUid(any.InternalGetValue());
-                return true;
-            }
-            return false;
-        });
+        idImport);
 
     RegisterSerializer<TimeSpan>(
         data, [](IExportFunctions& f, const auto& v) { return f.ExportToNode(Any<int64_t>(v.ToMicroseconds())); },

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,7 +20,7 @@
 #include <base/util/uid.h>
 
 CORE3D_BEGIN_NAMESPACE()
-static constexpr BASE_NS::Uid UID_3D_PLUGIN { "8f86db7c-74e4-4da4-a327-4525e270fdb9" };
+static constexpr BASE_NS::Uid UID_3D_PLUGIN { "8307e5b2-16ad-474a-be36-b795bdf2ade9" };
 
 static constexpr BASE_NS::Uid UID_GRAPHICS_CONTEXT { "437cbd33-b012-417c-b647-a0863f51829f" };
 static constexpr BASE_NS::Uid UID_MESH_BUILDER { "7ece9671-6238-45b3-881b-fdf583181d5e" };

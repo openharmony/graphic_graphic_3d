@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -678,28 +678,36 @@ void ShaderPipelineBinder::BindPropertyBindings()
     // fetch the bindings from properties, and try to bind them
     if (bindingPropertyData_.properties && (bindingPropertyData_.properties->PropertyCount() > 0)) {
         auto* bindingProperties = bindingPropertyData_.properties.get();
-        PLUGIN_ASSERT(bindingProperties->Owner()->MetaData().size() == bindingPropertyData_.setAndBindings.size());
-        for (size_t idx = 0; idx < bindingProperties->Owner()->MetaData().size(); ++idx) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if (bindingProperties->Owner()->MetaData().size() != bindingPropertyData_.setAndBindings.size()) {
+            PLUGIN_LOG_ONCE_W(
+                "ShaderPipelineBinder::BindPropertyBindings" + to_string(bindingPropertyData_.setAndBindings.size()),
+                "RENDER_VALIDATION: Shader pipeline binder property metadata size missmatch.");
+        }
+#endif
+        const size_t count =
+            Math::min(bindingProperties->Owner()->MetaData().size(), bindingPropertyData_.setAndBindings.size());
+        for (size_t idx = 0; idx < count; ++idx) {
             // the ordering should match with the bindings in the .shader file
             const auto& prop = bindingProperties->Owner()->MetaData()[idx];
             const auto& sb = bindingPropertyData_.setAndBindings[idx];
             switch (prop.type) {
                 case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                     BindBuffer(sb.set, sb.binding, bindingProperties->GetValue<BindableBufferWithHandleReference>(idx));
-                }
                     break;
+                }
                 case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                     BindImage(sb.set, sb.binding, bindingProperties->GetValue<BindableImageWithHandleReference>(idx));
-                }
                     break;
+                }
                 case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
-                    BindSampler(
-                        sb.set, sb.binding, bindingProperties->GetValue<BindableSamplerWithHandleReference>(idx));
-                }
+                    BindSampler(sb.set, sb.binding,
+                                bindingProperties->GetValue<BindableSamplerWithHandleReference>(idx));
                     break;
+                }
                 default: {
-                }
                     break;
+                }
             }
         }
     }

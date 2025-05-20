@@ -132,9 +132,7 @@ void BloomConfiguration::SetTo(SCENE_NS::IBloom::Ptr bloom)
         bloom->Scatter()->SetValue(scatter_);
         bloom->ScaleFactor()->SetValue(scaleFactor_);
         bloom->AmountCoefficient()->SetValue(amountCoefficient_);
-        if (postproc_) {
-            postproc_->Bloom()->SetValue(bloom);
-        }
+        // Poke postProc so that the changes to bloom are updated.
         return META_NS::IAny::Ptr {};
     });
 }
@@ -262,9 +260,6 @@ void BloomConfiguration::SetType(NapiApi::FunctionContext<uint32_t>& ctx)
     type_ = (BloomConfiguration::Type)ctx.Arg<0>().valueOrDefault();
     if (bloom_) {
         bloom_->Type()->SetValue(GetType(type_));
-        if (postproc_) {
-            postproc_->Bloom()->SetValue(bloom_);
-        }
     }
 }
 void BloomConfiguration::SetQuality(NapiApi::FunctionContext<uint32_t>& ctx)
@@ -272,9 +267,6 @@ void BloomConfiguration::SetQuality(NapiApi::FunctionContext<uint32_t>& ctx)
     quality_ = (BloomConfiguration::Quality)ctx.Arg<0>().valueOrDefault();
     if (bloom_) {
         bloom_->Quality()->SetValue(GetQuality(quality_));
-        if (postproc_) {
-            postproc_->Bloom()->SetValue(bloom_);
-        }
     }
 }
 void BloomConfiguration::SetThresholdHard(NapiApi::FunctionContext<float>& ctx)
@@ -282,30 +274,20 @@ void BloomConfiguration::SetThresholdHard(NapiApi::FunctionContext<float>& ctx)
     thresholdHard_ = ctx.Arg<0>();
     if (bloom_) {
         bloom_->ThresholdHard()->SetValue(thresholdHard_);
-        if (postproc_) {
-            postproc_->Bloom()->SetValue(bloom_);
-        }
     }
 }
 void BloomConfiguration::SetScatter(NapiApi::FunctionContext<float>& ctx)
 {
-    scatter_= ctx.Arg<0>();
+    scatter_ = ctx.Arg<0>();
     if (bloom_) {
         bloom_->Scatter()->SetValue(scatter_);
-        if (postproc_) {
-            postproc_->Bloom()->SetValue(bloom_);
-        }
     }
 }
 void BloomConfiguration::SetScaleFactor(NapiApi::FunctionContext<float>& ctx)
 {
     scaleFactor_ = ctx.Arg<0>();
-    scaleFactor_ = (scaleFactor_ < 1e-6) ? 1e-6 : scaleFactor_;
     if (bloom_) {
         bloom_->ScaleFactor()->SetValue(scaleFactor_);
-        if (postproc_) {
-            postproc_->Bloom()->SetValue(bloom_);
-        }
     }
 }
 void BloomConfiguration::SetThresholdSoft(NapiApi::FunctionContext<float>& ctx)
@@ -313,9 +295,6 @@ void BloomConfiguration::SetThresholdSoft(NapiApi::FunctionContext<float>& ctx)
     thresholdSoft_ = ctx.Arg<0>();
     if (bloom_) {
         bloom_->ThresholdSoft()->SetValue(thresholdSoft_);
-        if (postproc_) {
-            postproc_->Bloom()->SetValue(bloom_);
-        }
     }
 }
 void BloomConfiguration::SetAmount(NapiApi::FunctionContext<float>& ctx)
@@ -323,9 +302,6 @@ void BloomConfiguration::SetAmount(NapiApi::FunctionContext<float>& ctx)
     amountCoefficient_ = ctx.Arg<0>();
     if (bloom_) {
         bloom_->AmountCoefficient()->SetValue(amountCoefficient_);
-        if (postproc_) {
-            postproc_->Bloom()->SetValue(bloom_);
-        }
     }
 }
 SCENE_NS::IPostProcess::Ptr BloomConfiguration::GetPostProc()
@@ -336,29 +312,26 @@ SCENE_NS::IPostProcess::Ptr BloomConfiguration::GetPostProc()
 void BloomConfiguration::SetPostProc(SCENE_NS::IPostProcess::Ptr postproc)
 {
     if (!postproc) {
-        // detaching.
         Detach();
         return;
     }
-    if ((postproc_) && (postproc != postproc_)) {
-        LOG_F("Invalid state");
+    if (postproc_ && (postproc != postproc_)) {
+        LOG_F("Invalid state. Can't change the post process of a bloom wrapper if it already has one");
         return;
     }
-    postproc_ = postproc;
-    auto bloom = postproc_->Bloom()->GetValue();
-    if ((bloom_) && (bloom != bloom_)) {
-        LOG_F("Invalid state");
-        bloom = nullptr;
-    } else {
-        if (!bloom) {
-            bloom = META_NS::GetObjectRegistry().Create<SCENE_NS::IBloom>(SCENE_NS::ClassId::Bloom);
-        }
-        bloom_ = bloom;
+
+    if (!postproc_) {
+        postproc_ = postproc;
+        bloom_ = postproc_->Bloom()->GetValue();
+        return;
     }
-    if (!bloom_) {
-        postproc_ = nullptr;
-    } else {
+
+    bloom_ = postproc_->Bloom()->GetValue();
+    if (bloom_) {
+        postproc_ = postproc;
         SetTo(bloom_);
+    } else {
+        postproc_ = nullptr;
     }
 }
 

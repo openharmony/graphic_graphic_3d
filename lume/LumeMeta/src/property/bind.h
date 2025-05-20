@@ -12,13 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef META_SRC_PROPERTY_BIND_H
 #define META_SRC_PROPERTY_BIND_H
 
 #include <meta/interface/property/intf_bind.h>
 
-#include "base_object.h"
+#include "../base_object.h"
 #include "stack_property.h"
 
 META_BEGIN_NAMESPACE()

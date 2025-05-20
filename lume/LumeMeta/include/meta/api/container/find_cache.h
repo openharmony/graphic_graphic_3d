@@ -17,20 +17,25 @@
 #define META_API_CONTAINER_FIND_CACHE_H
 
 #include <meta/api/event_handler.h>
-#include <meta/api/internal/object_api.h>
 #include <meta/api/threading/mutex.h>
 #include <meta/interface/intf_container.h>
 
 META_BEGIN_NAMESPACE()
 
 /**
- * @brief The FindCache class is a helper class for caching the results of a FindAny/FindAll operation on an IContainer.
+ * @brief FindCache base class
  */
-template<class Type>
-class FindCache {
+class FindCacheBase {
 public:
-    FindCache() = default;
-    ~FindCache() = default;
+    FindCacheBase() = default;
+    virtual ~FindCacheBase() = default;
+    /**
+     * @brief Returns true if a valid target has been set.
+     */
+    bool HasTarget() const noexcept
+    {
+        return !container_.expired();
+    }
     /**
      * @brief Sets the target for FindCache.
      * @param container Target container.
@@ -46,45 +51,6 @@ public:
             const auto cb = MakeCallback<IOnChildChanged>([this](const ChildChangedInfo&) { Invalidate(); });
             changedHandler_.Subscribe(container->OnContainerChanged(), cb);
         }
-    }
-    /**
-     * @brief Returns true if a valid target has been set.
-     */
-    bool HasTarget() const noexcept
-    {
-        return !container_.expired();
-    }
-    /**
-     * @brief Calls IContainer::FindAny, caches and returns the result. Any subsequent FindAny calls return
-     *        the cached result unless changes have been made to the container.
-     */
-    typename Type::Ptr FindAny() const
-    {
-        CORE_NS::UniqueLock lock(mutex_);
-        if (const auto container = container_.lock()) {
-            if (!cached_.IsSet(CachedResultTypeBitsValue::FIND_ANY_CACHED)) {
-                resultAny_ = container->template FindAny<Type>(options_);
-                cached_.Set(CachedResultTypeBitsValue::FIND_ANY_CACHED);
-            }
-            return resultAny_;
-        }
-        return {};
-    }
-    /**
-     * @brief Calls IContainer::FindAll, caches and returns the result. Any subsequent FindAll calls return
-     *        the cached result unless changes have been made to the container.
-     */
-    BASE_NS::vector<typename Type::Ptr> FindAll() const
-    {
-        CORE_NS::UniqueLock lock(mutex_);
-        if (const auto container = container_.lock()) {
-            if (!cached_.IsSet(CachedResultTypeBitsValue::FIND_ALL_CACHED)) {
-                resultAll_ = PtrArrayCast<Type>(container->FindAll(options_));
-                cached_.Set(CachedResultTypeBitsValue::FIND_ALL_CACHED);
-            }
-            return resultAll_;
-        }
-        return {};
     }
     /**
      * @brief Invalidates the cached query results.
@@ -103,31 +69,73 @@ public:
         ResetTarget();
     }
 
-private:
+protected:
+    virtual void ClearResults() = 0;
     void ResetTarget()
     {
         ClearResults();
         container_.reset();
         options_ = {};
     }
-    void ClearResults()
-    {
-        resultAny_.reset();
-        resultAll_.clear();
-        cached_.Clear();
-    }
     enum class CachedResultTypeBitsValue : uint16_t {
-        FIND_ANY_CACHED = 1,
-        FIND_ALL_CACHED = 2,
+        FIND_ANY_CACHED = 1 << 0,
+        FIND_ALL_CACHED = FIND_ANY_CACHED | 1 << 1,
     };
 
     mutable CORE_NS::Mutex mutex_;
-    mutable EnumBitField<CachedResultTypeBitsValue> cached_;
-    mutable typename Type::Ptr resultAny_;
-    mutable BASE_NS::vector<typename Type::Ptr> resultAll_;
+    mutable EnumBitField<CachedResultTypeBitsValue> state_;
     META_NS::IContainer::ConstWeakPtr container_;
     META_NS::IContainer::FindOptions options_;
     EventHandler changedHandler_;
+};
+
+/**
+ * @brief The FindCache class is a helper class for caching the results of a FindAny/FindAll operation on an IContainer.
+ */
+template<class Type>
+class FindCache : public FindCacheBase {
+public:
+    FindCache() = default;
+    ~FindCache() override = default;
+
+    /**
+     * @brief Calls IContainer::FindAny, caches and returns the result. Any subsequent FindAny calls return
+     *        the cached result unless changes have been made to the container.
+     */
+    typename Type::Ptr FindAny() const
+    {
+        CORE_NS::UniqueLock lock(mutex_);
+        if (const auto container = container_.lock()) {
+            if (!state_.IsSet(CachedResultTypeBitsValue::FIND_ANY_CACHED)) {
+                result_ = container->template FindAny<Type>(options_);
+                state_.Set(CachedResultTypeBitsValue::FIND_ANY_CACHED);
+            }
+        }
+        return result_.empty() ? nullptr : result_.front();
+    }
+    /**
+     * @brief Calls IContainer::FindAll, caches and returns the result. Any subsequent FindAll calls return
+     *        the cached result unless changes have been made to the container.
+     */
+    BASE_NS::vector<typename Type::Ptr> FindAll() const
+    {
+        CORE_NS::UniqueLock lock(mutex_);
+        if (const auto container = container_.lock()) {
+            if (!state_.IsSet(CachedResultTypeBitsValue::FIND_ALL_CACHED)) {
+                result_ = PtrArrayCast<Type>(container->FindAll(options_));
+                state_.Set(CachedResultTypeBitsValue::FIND_ALL_CACHED);
+            }
+        }
+        return result_;
+    }
+
+private:
+    void ClearResults() override
+    {
+        result_.clear();
+        state_.Clear();
+    }
+    mutable BASE_NS::vector<typename Type::Ptr> result_;
 };
 
 META_END_NAMESPACE()

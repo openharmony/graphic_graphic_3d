@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -488,26 +488,26 @@ CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
                     if (auto* resource = (BindableBufferWithHandleReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
-                }
                     break;
+                }
                 case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                     PLUGIN_ASSERT(meta.size == IMAGE_HANDLE_REF_BYTE_SIZE);
                     if (auto* resource = (BindableImageWithHandleReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
-                }
                     break;
+                }
                 case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
                     PLUGIN_ASSERT(meta.size == SAMPLER_HANDLE_REF_BYTE_SIZE);
                     if (auto* resource = (BindableSamplerWithHandleReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
-                }
                     break;
+                }
                 default: {
                     CORE_LOG_E("custom property binding destruction error");
-                }
                     break;
+                }
             }
         }
     }
@@ -597,16 +597,16 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
     switch (typeDecl) {
         case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
             byteSize = BUFFER_HANDLE_REF_BYTE_SIZE;
-        }
             break;
+        }
         case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
             byteSize = IMAGE_HANDLE_REF_BYTE_SIZE;
-        }
             break;
+        }
         case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
             byteSize = SAMPLER_HANDLE_REF_BYTE_SIZE;
-        }
             break;
+        }
     }
     if ((byteSize > 0) && reserved) {
         metaStrings_.push_back({ string { propertyName }, string { displayName } });
@@ -628,16 +628,16 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
         switch (meta.type) {
             case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableBufferWithHandleReference;
-            }
                 break;
+            }
             case PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableImageWithHandleReference;
-            }
                 break;
+            }
             case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
                 new (data_.data() + meta.offset) BindableSamplerWithHandleReference;
-            }
                 break;
+            }
         }
     } else {
         CORE_LOG_W("unsupported property addition for custom property binding container");
@@ -660,7 +660,8 @@ PropertyTypeDecl CustomPropertyBindingHelper::GetPropertyTypeDeclaration(const s
     } else if (type == "sampler") {
         return PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T;
     } else {
-        CORE_LOG_W("RENDER_VALIDATION: Invalid property type only buffer, image, and sampler supported");
+        CORE_LOG_W("RENDER_VALIDATION: Invalid property type only buffer, image, and sampler supported (not %s)",
+            string(type).c_str());
     }
     // NOTE: does not handle invalid types
     return PropertyType::INVALID;

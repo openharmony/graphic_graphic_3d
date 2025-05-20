@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -60,11 +60,14 @@ public:
     // only for locked backend usage to get always the next semaphore index in image acquire
     uint32_t GetNextAcquireSwapchainSemaphoreIndex() const;
 
+    bool IsValid() const override;
+
 private:
     Device& device_;
 
     VkSurfaceKHR surface_ {};
     bool ownsSurface_ { false };
+    bool valid_ { true };
 
     GpuImageDesc desc_;
     GpuImageDesc descDepthBuffer_;

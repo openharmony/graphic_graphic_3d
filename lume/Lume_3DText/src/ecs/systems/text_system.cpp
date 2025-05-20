@@ -90,12 +90,12 @@ MeshData GenerateMeshData(FONT_NS::IFont& font, BASE_NS::string_view text)
         data.uvs.push_back(info.tl);
 
         data.indices.push_back(i0);
-        data.indices.push_back(i0 + 2U); // 2U : idx
-        data.indices.push_back(i0 + 3U); // 3U : idx
+        data.indices.push_back(i0 + 2U);
+        data.indices.push_back(i0 + 3U);
 
         data.indices.push_back(i0);
         data.indices.push_back(i0 + 1U);
-        data.indices.push_back(i0 + 2U); // 2U : idx
+        data.indices.push_back(i0 + 2U);
     }
     // +z facing normal for each vertex
     data.normals.append(data.positions.size(), { 0.f, 0.f, 1.f });
@@ -110,11 +110,11 @@ void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount,
     // front face vertices
     for (size_t ii = 0; ii < vertexCount; ii++) {
         const BASE_NS::Math::Vec3 pos(
-            vertices[2 * ii] + (posX + metrics.left - metrics.leftBearing), vertices[2 * ii + 1], 0.f); // 2 ；idx
+            vertices[2 * ii] + (posX + metrics.left - metrics.leftBearing), vertices[2 * ii + 1], 0.f);
 
         const BASE_NS::Math::Vec2 uv(
-            info.tl.x + (vertices[2 * ii] / (metrics.right - metrics.left)) * (info.br.x - info.tl.x), // 2 ： idx
-            info.br.y + (vertices[2 * ii + 1] / (metrics.top - metrics.bottom)) * (info.tl.y - info.br.y)); // 2 : idx
+            info.tl.x + (vertices[2 * ii] / (metrics.right - metrics.left)) * (info.br.x - info.tl.x),
+            info.br.y + (vertices[2 * ii + 1] / (metrics.top - metrics.bottom)) * (info.tl.y - info.br.y));
 
         data.positions.push_back(pos);
         data.uvs.push_back(uv);
@@ -123,10 +123,10 @@ void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount,
     }
 
     // front face indices
-    for (size_t ii = 0; ii < elementCount * 3; ii += 3) { // 3 : size
+    for (size_t ii = 0; ii < elementCount * 3; ii += 3) {
         const uint16_t v0 = static_cast<uint16_t>(elements[ii] + vertexOffset);
         const uint16_t v1 = static_cast<uint16_t>(elements[ii + 1] + vertexOffset);
-        const uint16_t v2 = static_cast<uint16_t>(elements[ii + 2] + vertexOffset); // 2 : idx
+        const uint16_t v2 = static_cast<uint16_t>(elements[ii + 2] + vertexOffset);
 
         data.indices.push_back(v2);
         data.indices.push_back(v1);
@@ -136,7 +136,7 @@ void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount,
     // back face vertices
     for (size_t ii = 0; ii < vertexCount; ii++) {
         const BASE_NS::Math::Vec3 pos(
-            vertices[2 * ii] + (posX + metrics.left - metrics.leftBearing), vertices[2 * ii + 1], -depth); // 2 : idx
+            vertices[2 * ii] + (posX + metrics.left - metrics.leftBearing), vertices[2 * ii + 1], -depth);
 
         const BASE_NS::Math::Vec2 uv = data.uvs[ii];
 
@@ -147,10 +147,10 @@ void GenerateFrontBackFaces(const size_t vertexCount, const size_t elementCount,
     }
 
     // back face indices
-    for (size_t ii = 0; ii < elementCount * 3; ii += 3) { // 3 : idx
+    for (size_t ii = 0; ii < elementCount * 3; ii += 3) {
         const uint16_t v0 = static_cast<uint16_t>(elements[ii] + vertexOffset + vertexCount);
         const uint16_t v1 = static_cast<uint16_t>(elements[ii + 1] + vertexOffset + vertexCount);
-        const uint16_t v2 = static_cast<uint16_t>(elements[ii + 2] + vertexOffset + vertexCount); // 2 : idx
+        const uint16_t v2 = static_cast<uint16_t>(elements[ii + 2] + vertexOffset + vertexCount);
 
         data.indices.push_back(v0);
         data.indices.push_back(v1);
@@ -191,7 +191,7 @@ void GenerateSideFaces(const float depth, const float posX, const Font::GlyphInf
             data.uvs.emplace_back(u2, info.br.y);
             data.uvs.emplace_back(u2, info.tl.y);
 
-            elementOffset += 4; // 4 : offset
+            elementOffset += 4;
 
             const BASE_NS::Math::Vec3 edge1 = backFacePos1 - frontFacePos1;
             const BASE_NS::Math::Vec3 edge2 = frontFacePos2 - frontFacePos1;
@@ -202,16 +202,16 @@ void GenerateSideFaces(const float depth, const float posX, const Font::GlyphInf
             data.normals.push_back(-normal);
             data.normals.push_back(-normal);
 
-            const size_t sideVertOffset = data.positions.size() - 4; // 4:size
+            const size_t sideVertOffset = data.positions.size() - 4;
 
             // side face indices
-            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2)); // 2 : offset
+            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2));
             data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 1));
             data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 0));
 
-            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 3)); // 3 : idx
+            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 3));
             data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 1));
-            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2)); // 2 : idx
+            data.indices.push_back(static_cast<uint16_t>(sideVertOffset + 2));
         }
     }
 }
@@ -233,11 +233,11 @@ MeshData GenerateMeshData3D(FONT_NS::IFont& font, BASE_NS::string_view text, con
         const auto contours = font.GetGlyphContours(glyphIndex);
 
         for (const auto& contour : contours) {
-            tessAddContour(tessellator, 2, contour.points.data(), sizeof(BASE_NS::Math::Vec2), // 2 :size
+            tessAddContour(tessellator, 2, contour.points.data(), sizeof(BASE_NS::Math::Vec2),
                 static_cast<int>(contour.points.size()));
         }
 
-        if (tessTesselate(tessellator, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, nullptr)) { // 3,2 :size
+        if (tessTesselate(tessellator, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, nullptr)) {
             const size_t vertexCount = static_cast<size_t>(tessGetVertexCount(tessellator));
             const TESSreal* vertices = tessGetVertices(tessellator);
             const size_t elementCount = static_cast<size_t>(tessGetElementCount(tessellator));
@@ -299,7 +299,7 @@ struct TextSystem::TextData {
     BASE_NS::string fontFamily;
     BASE_NS::string fontStyle;
     float fontSize;
-    float font3DThickness { 10.0f }; // 10.0 : param
+    float font3DThickness { 10.0f };
     TextComponent::FontMethod fontMethod { TextComponent::FontMethod::RASTER };
     FONT_NS::IFont::Ptr font;
     CORE_NS::EntityReference mesh;

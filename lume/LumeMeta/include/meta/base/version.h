@@ -22,10 +22,13 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Simple version class which supports major and minor version number
 class Version {
 public:
+    /// Construct Versions from major and minor versions
     constexpr Version(uint16_t major = 0, uint16_t minor = 0) : major_(major), minor_(minor) {}
 
+    /// Construct Version from string
     constexpr explicit Version(BASE_NS::string_view str)
     {
         size_t pos = ParseInt(str, major_);
@@ -34,15 +37,17 @@ public:
         }
     }
 
+    /// Get major version
     constexpr uint16_t Major() const
     {
         return major_;
     }
+    /// Get minor version
     constexpr uint16_t Minor() const
     {
         return minor_;
     }
-
+    /// Get version as string
     BASE_NS::string ToString() const
     {
         return BASE_NS::string(BASE_NS::to_string(major_)) + "." + BASE_NS::string(BASE_NS::to_string(minor_));

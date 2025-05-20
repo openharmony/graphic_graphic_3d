@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include "container_data_model.h"
 
 #include <meta/api/make_callback.h>

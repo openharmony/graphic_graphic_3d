@@ -24,14 +24,15 @@
 #include <meta/interface/intf_manual_clock.h>
 #include <meta/interface/object_macros.h>
 
-#include "animation/animation_modifier.h"
+#include "../animation_modifier.h"
 
 META_BEGIN_NAMESPACE()
 
 namespace AnimationModifiers {
 
-class SpeedImpl final : public IntroduceInterfaces<AnimationModifierFwd, AnimationModifiers::ISpeed, INotifyOnChange> {
-    META_OBJECT(SpeedImpl, META_NS::ClassId::SpeedAnimationModifier, IntroduceInterfaces, ClassId::Object)
+class SpeedModifier final
+    : public IntroduceInterfaces<AnimationModifierFwd, AnimationModifiers::ISpeed, INotifyOnChange> {
+    META_OBJECT(SpeedModifier, META_NS::ClassId::SpeedAnimationModifier, IntroduceInterfaces, ClassId::Object)
 public:
     bool Build(const IMetadata::Ptr& data) override;
 

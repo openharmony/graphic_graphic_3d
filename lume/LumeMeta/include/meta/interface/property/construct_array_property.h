@@ -22,6 +22,14 @@
 
 META_BEGIN_NAMESPACE()
 
+/**
+ * @brief Construct array property
+ * @param obr object registry instance
+ * @param name Name of the property
+ * @param value Default value for the array property
+ * @param flags Object flags for the array property
+ * @return Typed array property
+ */
 template<typename T>
 ArrayProperty<T> ConstructArrayProperty(IObjectRegistry& obr, BASE_NS::string_view name,
     BASE_NS::array_view<const T> value = {}, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -33,14 +41,26 @@ ArrayProperty<T> ConstructArrayProperty(IObjectRegistry& obr, BASE_NS::string_vi
     SetObjectFlags(p.GetProperty(), flags, true);
     return p;
 }
-
+/**
+ * @brief Construct array property
+ * @param name Name of the property
+ * @param value Default value for the array property
+ * @param flags Object flags for the array property
+ * @return Typed array property
+ */
 template<typename T>
 ArrayProperty<T> ConstructArrayProperty(BASE_NS::string_view name, BASE_NS::array_view<const T> value = {},
     ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
 {
     return ConstructArrayProperty(GetObjectRegistry(), name, BASE_NS::move(value), flags);
 }
-
+/**
+ * @brief Construct array property with IAny default value
+ * @param name Name of the property
+ * @param value Default value for the array property
+ * @param flags Object flags for the array property
+ * @return Typed array property
+ */
 template<typename T>
 ArrayProperty<T> ConstructArrayPropertyAny(
     BASE_NS::string_view name, const IAny& value, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)

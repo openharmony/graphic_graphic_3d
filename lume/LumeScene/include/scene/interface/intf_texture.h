@@ -17,44 +17,81 @@
 #define SCENE_INTERFACE_ITEXTURE_H
 
 #include <scene/base/namespace.h>
-#include <scene/interface/intf_bitmap.h>
+#include <scene/interface/intf_image.h>
 
 #include <meta/base/interface_macros.h>
 #include <meta/interface/interface_macros.h>
 
 SCENE_BEGIN_NAMESPACE()
 
-/**
- * @brief Predefined sampler types
- */
-enum class TextureSampler {
-    UNKNOWN,
-    /** Default sampler, nearest repeat */
-    NEAREST_REPEAT,
-    /** Default sampler, nearest clamp */
-    NEAREST_CLAMP,
-    /** Default sampler, linear repeat */
-    LINEAR_REPEAT,
-    /** Default sampler, linear clamp */
-    LINEAR_CLAMP,
-    /** Default sampler, linear mipmap repeat */
-    LINEAR_MIPMAP_REPEAT,
-    /** Default sampler, linear mipmap clamp */
-    LINEAR_MIPMAP_CLAMP,
-    END_OF_LIST
+/** Filter */
+enum class SamplerFilter : uint32_t {
+    /** Nearest */
+    NEAREST = 0,
+    /** Linear */
+    LINEAR = 1,
 };
 
+/** Sampler address mode */
+enum class SamplerAddressMode : uint32_t {
+    /** Repeat */
+    REPEAT = 0,
+    /** Mirrored repeat */
+    MIRRORED_REPEAT = 1,
+    /** Clamp to edge */
+    CLAMP_TO_EDGE = 2,
+    /** Clamp to border */
+    CLAMP_TO_BORDER = 3,
+    /** Mirror clamp to edge */
+    MIRROR_CLAMP_TO_EDGE = 4,
+};
+
+/**
+ * @brief The ISampler interface defines properties for a sampler.
+ */
+class ISampler : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, ISampler, "e4ecf173-e07f-4534-a02d-a5eee9b43a97")
+public:
+    /**
+     * @brief Magnification filter
+     */
+    META_PROPERTY(SamplerFilter, MagFilter)
+    /**
+     * @brief Minification filter
+     */
+    META_PROPERTY(SamplerFilter, MinFilter)
+    /**
+     * @brief Mip map filter filter
+     */
+    META_PROPERTY(SamplerFilter, MipMapMode)
+    /**
+     * @brief Address mode U
+     */
+    META_PROPERTY(SamplerAddressMode, AddressModeU)
+    /**
+     * @brief Address mode V
+     */
+    META_PROPERTY(SamplerAddressMode, AddressModeV)
+    /**
+     * @brief Address mode W
+     */
+    META_PROPERTY(SamplerAddressMode, AddressModeW)
+};
+
+/**
+ * @brief The ITexture interface defines material property properties.
+ */
 class ITexture : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ITexture, "38c66860-d325-4256-becd-ffd2f94fbd8a")
 public:
     /**
      * @brief Texture Image
      */
-    META_PROPERTY(IBitmap::Ptr, Image)
+    META_PROPERTY(IImage::Ptr, Image)
     /**
-     * @brief Sampler type to be used with texture.
+     * @brief Sampler to be used with the texture.
      */
-    META_PROPERTY(TextureSampler, Sampler)
+    META_READONLY_PROPERTY(ISampler::Ptr, Sampler)
     /**
      * @brief Factor
      */
@@ -75,7 +112,9 @@ public:
 
 SCENE_END_NAMESPACE()
 
-META_TYPE(SCENE_NS::TextureSampler)
+META_TYPE(SCENE_NS::SamplerFilter)
+META_TYPE(SCENE_NS::SamplerAddressMode)
 META_INTERFACE_TYPE(SCENE_NS::ITexture)
+META_INTERFACE_TYPE(SCENE_NS::ISampler)
 
 #endif

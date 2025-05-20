@@ -46,7 +46,7 @@ public:
 protected:
     void Create(napi_env e, napi_callback_info i);
     void* GetInstanceImpl(uint32_t id);
-    void DisposeNative(void* /*scenejs*/, TrueRootObject*);
+    void DisposeNative(void* /*scenejs*/, BaseObject*);
 
 private:
     napi_value GetlightType(NapiApi::FunctionContext<>& ctx);
@@ -66,7 +66,7 @@ private:
     BASE_NS::unique_ptr<ColorProxy> colorProxy_;
 };
 
-class SpotLightJS : BaseObject<SpotLightJS>, BaseLight {
+class SpotLightJS : BaseObject, BaseLight {
 public:
     static constexpr uint32_t ID = 11;
     static void Init(napi_env env, napi_value exports);
@@ -78,7 +78,7 @@ private:
     void Finalize(napi_env env);
 };
 
-class DirectionalLightJS : BaseObject<DirectionalLightJS>, BaseLight {
+class DirectionalLightJS : BaseObject, BaseLight {
 public:
     static constexpr uint32_t ID = 12;
     static void Init(napi_env env, napi_value exports);
@@ -91,7 +91,7 @@ private:
     napi_value GetNear(NapiApi::FunctionContext<>& ctx);
     void SetNear(NapiApi::FunctionContext<float>& ctx);
 };
-class PointLightJS : BaseObject<PointLightJS>, BaseLight {
+class PointLightJS : BaseObject, BaseLight {
 public:
     static constexpr uint32_t ID = 13;
     static void Init(napi_env env, napi_value exports);

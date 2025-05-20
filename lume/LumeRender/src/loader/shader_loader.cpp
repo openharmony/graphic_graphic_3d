@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -436,12 +436,12 @@ RenderHandleReference ShaderLoader::CreateGraphicsShader(const ShaderDataLoader&
             const uint32_t plIndex = svRef.pipelineLayout.empty()
                                          ? INVALID_SM_INDEX
                                          : RenderHandleUtil::GetIndexPart(
-                                             shaderMgr_.GetPipelineLayoutHandle(svRef.pipelineLayout).GetHandle());
+                                               shaderMgr_.GetPipelineLayoutHandle(svRef.pipelineLayout).GetHandle());
             const uint32_t vidIndex =
                 svRef.vertexInputDeclaration.empty()
                     ? INVALID_SM_INDEX
                     : RenderHandleUtil::GetIndexPart(
-                        shaderMgr_.GetVertexInputDeclarationHandle(svRef.vertexInputDeclaration).GetHandle());
+                          shaderMgr_.GetVertexInputDeclarationHandle(svRef.vertexInputDeclaration).GetHandle());
             const uint32_t stateIndex = RenderHandleUtil::GetIndexPart(defaultGfxState.GetHandle());
             const string_view shaderStr = svRef.shaderFileStr;
             const string_view matMeta = svRef.materialMetadata;

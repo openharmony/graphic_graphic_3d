@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include <meta/interface/builtin_objects.h>
 #include <meta/interface/intf_future.h>
 #include <meta/interface/intf_object_registry.h>
@@ -37,9 +36,12 @@
 #include "object.h"
 #include "object_context.h"
 #include "object_hierarchy_observer.h"
+#include "object_name.h"
 #include "property/bind.h"
 #include "proxy_object.h"
-#include "resource/resource_container.h"
+#include "resource/file_resource_manager.h"
+#include "resource/object_resource.h"
+#include "resource/resource_placeholder.h"
 #include "serialization/backend/debug_output.h"
 #include "serialization/backend/json_input.h"
 #include "serialization/backend/json_output.h"
@@ -68,9 +70,8 @@ static constexpr ObjectTypeInfo OBJECTS[] = {
     Internal::Object::OBJECT_INFO,
     ObjectContainer::OBJECT_INFO,
     ObjectFlatContainer::OBJECT_INFO,
-    ResourceContainer::OBJECT_INFO,
     ProxyObject::OBJECT_INFO,
-    ContainerObserver::OBJECT_INFO,
+    Internal::ContainerObserver::OBJECT_INFO,
     SettableFunction::OBJECT_INFO,
     PropertyFunction::OBJECT_INFO,
     ObjectContext::OBJECT_INFO,
@@ -80,14 +81,21 @@ static constexpr ObjectTypeInfo OBJECTS[] = {
     ContentLoaderObjectProvider::OBJECT_INFO,
     CsvStringResourceLoader::OBJECT_INFO,
     ClassContentLoader::OBJECT_INFO,
-    ObjectHierarchyObserver::OBJECT_INFO,
+    Internal::ObjectHierarchyObserver::OBJECT_INFO,
     StartableObjectController::OBJECT_INFO,
     Internal::Number::OBJECT_INFO,
     Connector::OBJECT_INFO,
     JsonContentLoader::OBJECT_INFO,
     EngineValueManager::OBJECT_INFO,
-    EngineInputPropertyManager::OBJECT_INFO
+    EngineInputPropertyManager::OBJECT_INFO,
+    ObjectName::OBJECT_INFO,
+    FileResourceManager::OBJECT_INFO,
+    ObjectResource::OBJECT_INFO,
+    ObjectResourceType::OBJECT_INFO,
+    ObjectResourceOptions::OBJECT_INFO,
+    ResourcePlaceholder::OBJECT_INFO
 };
+// clang-format on
 
 void RegisterBuiltInObjects(IObjectRegistry& registry)
 {

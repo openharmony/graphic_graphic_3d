@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,24 +16,33 @@
 #ifndef API_CORE_PROPERTY_IPROPERTY_HANDLE_UTIL_H
 #define API_CORE_PROPERTY_IPROPERTY_HANDLE_UTIL_H
 
+#include <algorithm>
+#include <climits>
+#include <cstdlib>
+
 #include <base/containers/string_view.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
 #include <core/property/property.h>
 #include <core/property/property_types.h>
 #include <core/property/scoped_handle.h>
+#include <core/property_tools/property_data.h>
 
 CORE_BEGIN_NAMESPACE()
 template<typename T, typename PropertyHandle>
 ScopedHandle<T> MakeScopedHandle(
     PropertyHandle& handle, BASE_NS::string_view propertyName, const PropertyTypeDecl& propertyType)
 {
-    for (const auto& metaData : handle.Owner()->MetaData()) {
-        if (metaData.name == propertyName) {
-            if (metaData.type == propertyType) {
-                return MakeScopedHandle<T>(handle, metaData.offset);
+    const auto baseAddress = reinterpret_cast<uintptr_t>(handle.RLock());
+    if (baseAddress) {
+        const auto result = PropertyData::FindProperty(handle.Owner()->MetaData(), propertyName, baseAddress);
+        handle.RUnlock();
+        if (result && (result.property->type == propertyType)) {
+            auto scoped = ScopedHandle<T>(handle);
+            if (scoped) {
+                scoped.data_ = reinterpret_cast<decltype(scoped.data_)>(result.offset);
+                return scoped;
             }
-            break;
         }
     }
     return {};

@@ -55,7 +55,6 @@ struct InterfacePtrEntityConverter {
                     }
                 }
             } else {
-                // need to release the entity?
                 p = nullptr;
             }
         }
@@ -106,9 +105,7 @@ struct RenderResourceConverter {
     {
         CORE_NS::EntityReference ent;
         if (auto scene = scene_.lock()) {
-            if (auto i = interface_cast<IEcsResource>(v)) {
-                scene->AddTask([&] { ent = scene->GetEcsContext().GetEntityReference(i->GetEntity()); }).Wait();
-            }
+            ent = scene->AddTask([&] { return HandleFromRenderResource<Interface>(scene, v); }).GetResult();
         }
         return ent;
     }

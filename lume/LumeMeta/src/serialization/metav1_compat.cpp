@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "metav1_compat.h"
 
 #include <meta/ext/serialization/common_value_serializers.h>
@@ -21,6 +20,7 @@ META_BEGIN_NAMESPACE()
 namespace Serialization {
 
 constexpr Version NEW_VERSION(2, 0);
+
 using BasicMetaTypes = TypeList<float, double, bool, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t,
     int64_t, BASE_NS::Uid, BASE_NS::string, BASE_NS::string_view, BASE_NS::Math::Vec2, BASE_NS::Math::UVec2,
     BASE_NS::Math::IVec2, BASE_NS::Math::Vec3, BASE_NS::Math::UVec3, BASE_NS::Math::IVec3, BASE_NS::Math::Vec4,
@@ -78,7 +78,7 @@ public:
 
     void Visit(const IRootNode& n) override
     {
-        node.reset(new RootNode(VisitNode(n.GetObject()), NEW_VERSION, n.GetSerializerVersion()));
+        node.reset(new RootNode(VisitNode(n.GetObject()), {}));
     }
     void Visit(const IObjectNode& n) override
     {
@@ -137,12 +137,16 @@ public:
     {
         BASE_NS::shared_ptr<IMapNode> fmap(new MapNode);
         fmap->AddNode("source", n);
+
         BASE_NS::shared_ptr<IObjectNode> fobj(
             new ObjectNode("PropertyFunction", "", ClassId::PropertyFunction, {}, BASE_NS::move(fmap)));
+
         BASE_NS::shared_ptr<IMapNode> map(new MapNode);
         map->AddNode("function", fobj);
+
         return BASE_NS::shared_ptr<ISerNode>(new ObjectNode("Bind", "", ClassId::Bind, {}, BASE_NS::move(map)));
     }
+
     ISerNode::Ptr RewriteBind(ISerNode::Ptr n)
     {
         if (auto obj = interface_cast<IObjectNode>(n)) {
@@ -154,12 +158,14 @@ public:
         }
         return nullptr;
     }
+
     ISerNode::Ptr RewriteProperty(BASE_NS::string name, const IObjectNode& n)
     {
         ISerNode::Ptr value;
         ISerNode::Ptr bind;
         bool hasDefaultValue = false;
         auto mapNode = CreateShared<MapNode>();
+
         if (auto m = interface_cast<IMapNode>(n.GetMembers())) {
             for (auto&& node : m->GetMembers()) {
                 auto nn = node.node;

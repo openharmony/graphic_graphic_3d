@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "stack_property.h"
 
 #include <meta/api/util.h>
@@ -20,7 +19,7 @@
 #include <meta/ext/serialization/serializer.h>
 #include <meta/interface/property/intf_stack_resetable.h>
 
-#include "any.h"
+#include "../any.h"
 #include "dependencies.h"
 
 META_BEGIN_NAMESPACE()
@@ -54,27 +53,35 @@ void StackProperty::CleanUp()
     values_.clear();
 }
 
+AnyReturnValue StackProperty::TryToSetToValue(const IAny& v, IValue::Ptr& value)
+{
+    AnyReturnValue res = AnyReturn::FAIL;
+
+    auto noti = interface_cast<INotifyOnChange>(value);
+    InterfaceUniqueLock lock { value };
+    if (noti) {
+        noti->OnChanged()->EnableHandler(uintptr_t(this), false);
+    }
+    res = value->SetValue(v);
+    if (res) {
+        if (noti) {
+            noti->OnChanged()->EnableHandler(uintptr_t(this), true);
+        }
+    }
+    return res;
+}
+
 AnyReturnValue StackProperty::SetValueInValueStack(const IAny& value)
 {
     AnyReturnValue res = AnyReturn::FAIL;
     // find first value that accepts the new value, all non-accepting values are removed
     for (int i = int(values_.size()) - 1; i >= 0; --i) {
-        {
-            auto noti = interface_cast<INotifyOnChange>(values_[i]);
-            InterfaceUniqueLock lock { values_[i] };
-            if (noti) {
-                noti->OnChanged()->EnableHandler(uintptr_t(this), false);
-            }
-            res = values_[i]->SetValue(value);
-            if (res) {
-                if (noti) {
-                    noti->OnChanged()->EnableHandler(uintptr_t(this), true);
-                }
-                break;
-            }
-            if (noti) {
-                noti->OnChanged()->RemoveHandler(uintptr_t(this), true);
-            }
+        res = TryToSetToValue(value, values_[i]);
+        if (res) {
+            break;
+        }
+        if (auto noti = interface_cast<INotifyOnChange>(values_[i])) {
+            noti->OnChanged()->RemoveHandler(uintptr_t(this), true);
         }
         values_.pop_back();
     }
@@ -136,14 +143,21 @@ AnyReturnValue StackProperty::SetValue(const IAny& value)
         }
     }
     if (res) {
-        CORE_ASSERT(v);
+        CORE_ASSERT_MSG(v, "Internal any not set");
         res = SetInternalValue(value);
         if (res) {
             res = SetValueToStack(v);
         }
+        if (res) {
+            SetDefaultValueFlag(false);
+        }
     }
 
     evaluating_ = false;
+    if (HasPendingInvoke() && !locked_) {
+        SetPendingInvoke(false);
+        InvokeOnChanged(onChanged_, owner_);
+    }
     return res;
 }
 const IAny& StackProperty::GetValueFromStack() const
@@ -185,6 +199,16 @@ const IAny& StackProperty::RawGetValue() const
     const IAny& res = GetValueFromStack();
     evaluating_ = false;
     return res;
+}
+
+void StackProperty::EvaluateAndStore()
+{
+    // evaluate
+    const IAny& res = RawGetValue();
+    // store
+    if (auto v = TopValue()) {
+        TryToSetToValue(res, v);
+    }
 }
 
 const IAny& StackProperty::GetValue() const
@@ -365,7 +389,7 @@ AnyReturnValue StackProperty::SetInternalAny(IAny::Ptr any)
 void StackProperty::NotifyChange() const
 {
     requiresEvaluation_ = true;
-    CallOnChanged();
+    CallOnChanged(evaluating_);
 }
 template<typename Vec>
 bool StackProperty::ProcessResetables(Vec& vec)
@@ -373,6 +397,7 @@ bool StackProperty::ProcessResetables(Vec& vec)
     for (int i = int(vec.size()) - 1; i >= 0; --i) {
         ResetResult res = ResetResult::RESET_REMOVE_ME;
         if (auto rable = interface_cast<IStackResetable>(vec[i])) {
+            InterfaceSharedLock lock { rable };
             res = rable->ProcessOnReset(*defaultValue_);
         }
         if (res & RESET_REMOVE_ME) {
@@ -386,12 +411,13 @@ bool StackProperty::ProcessResetables(Vec& vec)
 }
 void StackProperty::ResetValue()
 {
-    if (ProcessResetables(modifiers_)) {
-        ProcessResetables(values_);
-    }
+    ProcessResetables(modifiers_);
+    ProcessResetables(values_);
+
     // reset the currentValue_ and internal value so we don't accidentally keep any shared_ptrs alive
     currentValue_ = defaultValue_->Clone(false);
     SetInternalValue(*currentValue_);
+    SetDefaultValueFlag(true);
     NotifyChange();
 }
 void StackProperty::RemoveAll()
@@ -401,6 +427,7 @@ void StackProperty::RemoveAll()
     // reset the currentValue_ and internal value so we don't accidentally keep any shared_ptrs alive
     currentValue_ = defaultValue_->Clone(false);
     SetInternalValue(*currentValue_);
+    SetDefaultValueFlag(true);
     NotifyChange();
 }
 ReturnError StackProperty::Export(IExportContext& c) const
@@ -416,6 +443,7 @@ ReturnError StackProperty::Import(IImportContext& c)
     Serializer ser(c);
     ser& NamedValue("defaultValue", defaultValue_) & NamedValue("values", values) & NamedValue("modifiers", modifiers);
     if (ser) {
+        bool def = true;
         if (!defaultValue_) {
             return GenericError::FAIL;
         }
@@ -432,6 +460,7 @@ ReturnError StackProperty::Import(IImportContext& c)
                     i->OnChanged()->AddHandler(onChangedCallback_, uintptr_t(this));
                 }
                 values_.push_back(BASE_NS::move(v));
+                def = false;
             }
         }
         for (auto&& i : modifiers) {
@@ -442,13 +471,14 @@ ReturnError StackProperty::Import(IImportContext& c)
                 modifiers_.push_back(BASE_NS::move(v));
             }
         }
+        SetDefaultValueFlag(def);
     }
     return ser;
 }
 
 bool StackProperty::IsDefaultValue() const
 {
-    return values_.empty();
+    return HasDefaultValueFlag();
 }
 
 } // namespace Internal

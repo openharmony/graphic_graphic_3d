@@ -12,14 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef META_INTERFACE_DETAIL_ANY_POINTER_COMPATIBILITY_H
 #define META_INTERFACE_DETAIL_ANY_POINTER_COMPATIBILITY_H
 
 #include <core/plugin/intf_interface.h>
 
 #include <meta/base/interface_traits.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/interface/intf_any.h>
 
 META_BEGIN_NAMESPACE()

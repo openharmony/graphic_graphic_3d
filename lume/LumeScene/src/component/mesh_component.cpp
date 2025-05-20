@@ -27,4 +27,9 @@ BASE_NS::string RenderMeshComponent::GetName() const
     return "RenderMeshComponent";
 }
 
+BASE_NS::string MorphComponent::GetName() const
+{
+    return "MorphComponent";
+}
+
 SCENE_END_NAMESPACE()

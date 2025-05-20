@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include "startable_object_controller.h"
 
 #include <meta/api/future.h>
@@ -75,8 +74,18 @@ void StartableObjectController::Destroy()
 bool StartableObjectController::SetStartableQueueId(
     const BASE_NS::Uid& startStartableQueueId, const BASE_NS::Uid& stopStartableQueueId)
 {
+    startQueue_.reset();
+    stopQueue_.reset();
     startQueueId_ = startStartableQueueId;
     stopQueueId_ = stopStartableQueueId;
+    return true;
+}
+
+bool StartableObjectController::SetStartableQueue(
+    const META_NS::ITaskQueue::Ptr& startStartableQueue, const META_NS::ITaskQueue::Ptr& stopStartableQueue)
+{
+    startQueue_ = startStartableQueue;
+    stopQueue_ = stopStartableQueue;
     return true;
 }
 
@@ -107,10 +116,37 @@ BASE_NS::vector<IObject::Ptr> StartableObjectController::GetAllObserved() const
     return observer_->GetAllObserved();
 }
 
+META_NS::ITaskQueue::Ptr StartableObjectController::GetStartQueue() const
+{
+    auto queue = startQueue_.lock();
+    if (!queue && startQueueId_ != BASE_NS::Uid {}) {
+        queue = META_NS::GetTaskQueueRegistry().GetTaskQueue(startQueueId_);
+        if (!queue) {
+            CORE_LOG_W("Cannot get task queue '%s', tasks will be run synchronously",
+                BASE_NS::to_string(startQueueId_).c_str());
+        }
+        startQueue_ = queue;
+    }
+    return queue;
+}
+META_NS::ITaskQueue::Ptr StartableObjectController::GetStopQueue() const
+{
+    auto queue = stopQueue_.lock();
+    if (!queue && stopQueueId_ != BASE_NS::Uid {}) {
+        queue = META_NS::GetTaskQueueRegistry().GetTaskQueue(stopQueueId_);
+        if (!queue) {
+            CORE_LOG_W("Cannot get task queue '%s', tasks will be run synchronously",
+                BASE_NS::to_string(stopQueueId_).c_str());
+        }
+        stopQueue_ = queue;
+    }
+    return queue;
+}
+
 bool StartableObjectController::StartAll(ControlBehavior behavior)
 {
     if (const auto root = target_.lock()) {
-        return AddOperation({ StartableOperation::START, target_ }, startQueueId_);
+        return AddOperation({ StartableOperation::START, target_ }, GetStartQueue());
     }
     return false;
 }
@@ -118,7 +154,7 @@ bool StartableObjectController::StartAll(ControlBehavior behavior)
 bool StartableObjectController::StopAll(ControlBehavior behavior)
 {
     if (auto root = target_.lock()) {
-        return AddOperation({ StartableOperation::STOP, target_ }, stopQueueId_);
+        return AddOperation({ StartableOperation::STOP, target_ }, GetStopQueue());
     }
     return false;
 }
@@ -197,9 +233,9 @@ void StartableObjectController::HierarchyChanged(const HierarchyChangedInfo& inf
             // Any hierarchy change (add/remove/move) invalidates the tick order
             InvalidateTickables();
             if (info.change == HierarchyChangeType::ADDED) {
-                AddOperation({ StartableOperation::START, info.object }, startQueueId_);
+                AddOperation({ StartableOperation::START, info.object }, GetStartQueue());
             } else if (info.change == HierarchyChangeType::REMOVING) {
-                AddOperation({ StartableOperation::STOP, info.object }, stopQueueId_);
+                AddOperation({ StartableOperation::STOP, info.object }, GetStopQueue());
             }
         }
     }
@@ -286,22 +322,22 @@ void StartableObjectController::StopStartable(IStartable* const startable, Contr
     }
 }
 
-bool StartableObjectController::HasTasks(const BASE_NS::Uid& queueId) const
+bool StartableObjectController::HasTasks(const ITaskQueue::Ptr& queue) const
 {
     std::shared_lock lock(mutex_);
-    if (auto it = operations_.find(queueId); it != operations_.end()) {
+    if (auto it = operations_.find(queue.get()); it != operations_.end()) {
         return !it->second.empty();
     }
     return false;
 }
 
-void StartableObjectController::RunTasks(const BASE_NS::Uid& queueId)
+void StartableObjectController::RunTasks(const ITaskQueue::Ptr& queue)
 {
     BASE_NS::vector<StartableOperation> operations;
     {
         std::unique_lock lock(mutex_);
         // Take tasks for the given queue id
-        if (auto it = operations_.find(queueId); it != operations_.end()) {
+        if (auto it = operations_.find(queue.get()); it != operations_.end()) {
             operations.swap(it->second);
         }
     }
@@ -326,42 +362,40 @@ void StartableObjectController::RunTasks(const BASE_NS::Uid& queueId)
     }
 }
 
-bool StartableObjectController::ProcessOps(const BASE_NS::Uid& queueId)
+bool StartableObjectController::ProcessOps(const ITaskQueue::Ptr& queue)
 {
-    if (!HasTasks(queueId)) {
+    if (!HasTasks(queue)) {
         // No tasks for the given queue, bail out
         return true;
     }
 
-    auto task = [queueId, internal = IStartableObjectControllerInternal::WeakPtr {
-        GetSelf<IStartableObjectControllerInternal>() }]() {
-        if (auto me = internal.lock()) {
-            me->RunTasks(queueId);
+    auto task = [q = ITaskQueue::WeakPtr { queue }, internal = IStartableObjectControllerInternal::WeakPtr {
+                                                        GetSelf<IStartableObjectControllerInternal>() }]() {
+        auto me = internal.lock();
+        if (me) {
+            me->RunTasks(q.lock());
         }
     };
 
-    if (queueId != BASE_NS::Uid {} && !executingStart_) {
-        if (auto queue = GetTaskQueueRegistry().GetTaskQueue(queueId)) {
-            queue->AddWaitableTask(CreateWaitableTask(BASE_NS::move(task)));
-            return true;
-        }
-        CORE_LOG_W("Cannot get task queue '%s'. Running the task synchronously.", BASE_NS::to_string(queueId).c_str());
+    if (queue && !executingStart_) {
+        queue->AddWaitableTask(CreateWaitableTask(BASE_NS::move(task)));
+        return true;
     }
     // Just run the task immediately if we don't have a queue to defer it to
     task();
     return true;
 }
 
-bool StartableObjectController::AddOperation(StartableOperation&& operation, const BASE_NS::Uid& queueId)
+bool StartableObjectController::AddOperation(StartableOperation&& operation, const ITaskQueue::Ptr& queue)
 {
     auto object = operation.root_.lock();
     if (!object) {
         return false;
     }
-    // Note that queueId may be {}, but it is still a valid key for our queue map
+    // Note that queue may be {}, but it is still a valid key for our queue map
     {
         std::unique_lock lock(mutex_);
-        auto& ops = operations_[queueId];
+        auto& ops = operations_[queue.get()];
         for (auto it = ops.begin(); it != ops.end(); ++it) {
             // If we already have an operation in queue for a given object, cancel the existing operation
             // and just add the new one
@@ -372,7 +406,7 @@ bool StartableObjectController::AddOperation(StartableOperation&& operation, con
         }
         ops.emplace_back(BASE_NS::move(operation));
     }
-    return ProcessOps(queueId);
+    return ProcessOps(queue);
 }
 
 void StartableObjectController::InvalidateTickables()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -70,17 +70,17 @@ public:
     static void CalculateTangents(const BASE_NS::array_view<const uint8_t>& indices,
         const BASE_NS::array_view<const BASE_NS::Math::Vec3>& positions,
         const BASE_NS::array_view<const BASE_NS::Math::Vec3>& normals,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec2>& uvs,
+        const BASE_NS::array_view<const BASE_NS::Math::Vec2>& uvs, RENDER_NS::PrimitiveTopology topology,
         BASE_NS::array_view<BASE_NS::Math::Vec4> outTangents);
     static void CalculateTangents(const BASE_NS::array_view<const uint16_t>& indices,
         const BASE_NS::array_view<const BASE_NS::Math::Vec3>& positions,
         const BASE_NS::array_view<const BASE_NS::Math::Vec3>& normals,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec2>& uvs,
+        const BASE_NS::array_view<const BASE_NS::Math::Vec2>& uvs, RENDER_NS::PrimitiveTopology topology,
         BASE_NS::array_view<BASE_NS::Math::Vec4> outTangents);
     static void CalculateTangents(const BASE_NS::array_view<const uint32_t>& indices,
         const BASE_NS::array_view<const BASE_NS::Math::Vec3>& positions,
         const BASE_NS::array_view<const BASE_NS::Math::Vec3>& normals,
-        const BASE_NS::array_view<const BASE_NS::Math::Vec2>& uvs,
+        const BASE_NS::array_view<const BASE_NS::Math::Vec2>& uvs, RENDER_NS::PrimitiveTopology topology,
         BASE_NS::array_view<BASE_NS::Math::Vec4> outTangents);
 
 protected:

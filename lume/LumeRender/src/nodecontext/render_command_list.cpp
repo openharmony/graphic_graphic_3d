@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -65,7 +65,7 @@ void ValidateDescriptorTypeBinding(const string_view nodeName, const GpuResource
 {
     for (const auto& ref : bindingRes.buffers) {
         if (!RenderHandleUtil::IsGpuBuffer(ref.resource.handle)) {
-            PLUGIN_LOG_E("RENDER_VALIDATION: invalid GPU buffer");
+            PLUGIN_LOG_ONCE_E(nodeName + "_invalid_gpu_buffer_", "RENDER_VALIDATION: invalid GPU buffer");
         }
         if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
             ValidateBufferUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle,
@@ -330,11 +330,19 @@ void RenderCommandList::BeginFrame()
     clearAndReserve(rpIndirectBufferBarriers_);
     clearAndReserve(descriptorSetHandlesForBarriers_);
     clearAndReserve(descriptorSetHandlesForUpdates_);
+    clearAndReserve(backendCommands_);
+    clearAndReserve(processBackendCommands_);
 
     validReleaseAcquire_ = false;
     hasMultiRpCommandListSubpasses_ = false;
     multiRpCommandListData_ = {};
-    hasGlobalDescriptorSetBindings_ = false;
+    // NOTE: we cannot reset hadGlobalDescriptorSetBindings_ to false
+    // this flag instructs the backend tasks to wait for the global descriptor set updates
+    // this could be further optimized to be reset after buffering count frames of no use of global descriptor sets
+
+#if (RENDER_DEBUG_MARKERS_ENABLED == 1)
+    debugMarkerStack_ = {};
+#endif
 }
 
 void RenderCommandList::SetValidGpuQueueReleaseAcquireBarriers()
@@ -394,7 +402,11 @@ array_view<const RenderCommandWithType> RenderCommandList::GetRenderCommands() c
 
 bool RenderCommandList::HasValidRenderCommands() const
 {
-    const uint32_t renderCommandCount = GetRenderCommandCount();
+    uint32_t renderCommandCount = GetRenderCommandCount();
+#if (RENDER_DEBUG_MARKERS_ENABLED == 1)
+    renderCommandCount = static_cast<uint32_t>(
+        Math::max(0, static_cast<int32_t>(renderCommandCount) - static_cast<int32_t>(debugMarkerStack_.commandCount)));
+#endif
     bool valid = false;
     if (enableMultiQueue_) {
         if (renderCommandCount == INITIAL_MULTI_QUEUE_BARRIER_COUNT) { // only acquire and release barrier commands
@@ -405,6 +417,10 @@ bool RenderCommandList::HasValidRenderCommands() const
         }
     } else {
         valid = (renderCommandCount > 0);
+    }
+    // add processing for render command list
+    if (!processBackendCommands_.empty()) {
+        valid = true;
     }
     valid = valid && stateData_.validCommandList;
 
@@ -433,7 +449,7 @@ MultiRenderPassCommandListData RenderCommandList::GetMultiRenderCommandListData(
 
 bool RenderCommandList::HasGlobalDescriptorSetBindings() const
 {
-    return hasGlobalDescriptorSetBindings_;
+    return hadGlobalDescriptorSetBindings_;
 }
 
 array_view<const CommandBarrier> RenderCommandList::GetCustomBarriers() const
@@ -1623,7 +1639,7 @@ void RenderCommandList::BindDescriptorSets(
                 // flag also for only this descriptor set
                 bool globalDescSet = false;
                 if ((additionalData & NodeContextDescriptorSetManager::GLOBAL_DESCRIPTOR_BIT) != 0U) {
-                    hasGlobalDescriptorSetBindings_ = true;
+                    hadGlobalDescriptorSetBindings_ = true;
                     globalDescSet = true;
                 }
                 // allocate offsets for this set
@@ -1696,31 +1712,27 @@ void RenderCommandList::BindDescriptorSet(
     BindDescriptorSets(set, { &bdsd, 1U });
 }
 
-void RenderCommandList::BuildAccelerationStructures(const AccelerationStructureBuildGeometryData& geometry,
-    const BASE_NS::array_view<const AccelerationStructureGeometryTrianglesData> triangles,
-    const BASE_NS::array_view<const AccelerationStructureGeometryAabbsData> aabbs,
-    const BASE_NS::array_view<const AccelerationStructureGeometryInstancesData> instances)
+void RenderCommandList::BuildAccelerationStructures(const AsBuildGeometryData& geometry,
+    const BASE_NS::array_view<const AsGeometryTrianglesData> triangles,
+    const BASE_NS::array_view<const AsGeometryAabbsData> aabbs,
+    const BASE_NS::array_view<const AsGeometryInstancesData> instances)
 {
     if (!(triangles.empty() && aabbs.empty() && instances.empty())) {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
+        AddBarrierPoint(RenderCommandType::BUILD_ACCELERATION_STRUCTURE);
+
         RenderCommandBuildAccelerationStructure* data =
             AllocateRenderCommand<RenderCommandBuildAccelerationStructure>(allocator_);
         if (!data) {
             return; // early out
         }
-        data->type = geometry.info.type;
-        data->flags = geometry.info.flags;
-        data->mode = geometry.info.mode;
-        data->srcAccelerationStructure = geometry.srcAccelerationStructure;
-        data->dstAccelerationStructure = geometry.dstAccelerationStructure;
-        data->scratchBuffer = geometry.scratchBuffer.handle;
-        data->scratchOffset = geometry.scratchBuffer.offset;
+        *data = {};
+        data->geometry = geometry;
 
         if (!triangles.empty()) {
-            AccelerationStructureGeometryTrianglesData* trianglesData =
-                static_cast<AccelerationStructureGeometryTrianglesData*>(
-                    AllocateRenderData(allocator_, std::alignment_of<AccelerationStructureGeometryTrianglesData>(),
-                        sizeof(AccelerationStructureGeometryTrianglesData) * triangles.size()));
+            AsGeometryTrianglesData* trianglesData =
+                static_cast<AsGeometryTrianglesData*>(AllocateRenderData(allocator_,
+                    std::alignment_of<AsGeometryTrianglesData>(), sizeof(AsGeometryTrianglesData) * triangles.size()));
             data->trianglesData = trianglesData;
             data->trianglesView = { data->trianglesData, triangles.size() };
             for (size_t idx = 0; idx < triangles.size(); ++idx) {
@@ -1728,9 +1740,8 @@ void RenderCommandList::BuildAccelerationStructures(const AccelerationStructureB
             }
         }
         if (!aabbs.empty()) {
-            AccelerationStructureGeometryAabbsData* aabbsData = static_cast<AccelerationStructureGeometryAabbsData*>(
-                AllocateRenderData(allocator_, std::alignment_of<AccelerationStructureGeometryAabbsData>(),
-                    sizeof(AccelerationStructureGeometryAabbsData) * aabbs.size()));
+            AsGeometryAabbsData* aabbsData = static_cast<AsGeometryAabbsData*>(AllocateRenderData(
+                allocator_, std::alignment_of<AsGeometryAabbsData>(), sizeof(AsGeometryAabbsData) * aabbs.size()));
             data->aabbsData = aabbsData;
             data->aabbsView = { data->aabbsData, aabbs.size() };
             for (size_t idx = 0; idx < aabbs.size(); ++idx) {
@@ -1738,10 +1749,9 @@ void RenderCommandList::BuildAccelerationStructures(const AccelerationStructureB
             }
         }
         if (!instances.empty()) {
-            AccelerationStructureGeometryInstancesData* instancesData =
-                static_cast<AccelerationStructureGeometryInstancesData*>(
-                    AllocateRenderData(allocator_, std::alignment_of<AccelerationStructureGeometryInstancesData>(),
-                        sizeof(AccelerationStructureGeometryInstancesData) * instances.size()));
+            AsGeometryInstancesData* instancesData =
+                static_cast<AsGeometryInstancesData*>(AllocateRenderData(allocator_,
+                    std::alignment_of<AsGeometryInstancesData>(), sizeof(AsGeometryInstancesData) * instances.size()));
             data->instancesData = instancesData;
             data->instancesView = { data->instancesData, instances.size() };
             for (size_t idx = 0; idx < instances.size(); ++idx) {
@@ -1749,6 +1759,33 @@ void RenderCommandList::BuildAccelerationStructures(const AccelerationStructureB
             }
         }
         renderCommands_.push_back({ RenderCommandType::BUILD_ACCELERATION_STRUCTURE, data });
+#endif
+    }
+}
+
+void RenderCommandList::CopyAccelerationStructureInstances(
+    const BufferOffset& destination, const array_view<const AsInstance> instances)
+{
+    if (RenderHandleUtil::IsGpuBuffer(destination.handle) && (!instances.empty())) {
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+        AddBarrierPoint(RenderCommandType::COPY_ACCELERATION_STRUCTURE_INSTANCES);
+
+        RenderCommandCopyAccelerationStructureInstances* data =
+            AllocateRenderCommand<RenderCommandCopyAccelerationStructureInstances>(allocator_);
+        if (!data) {
+            return; // early out
+        }
+
+        data->destination = destination;
+        data->instancesData = static_cast<AsInstance*>(
+            AllocateRenderData(allocator_, std::alignment_of<AsInstance>(), sizeof(AsInstance) * instances.size()));
+        if (data->instancesData) {
+            data->instancesView = { data->instancesData, instances.size() };
+            for (size_t idx = 0; idx < data->instancesView.size(); ++idx) {
+                data->instancesView[idx] = instances[idx];
+            }
+            renderCommands_.push_back({ RenderCommandType::COPY_ACCELERATION_STRUCTURE_INSTANCES, data });
+        }
 #endif
     }
 }
@@ -1934,12 +1971,42 @@ void RenderCommandList::SetExecuteBackendFramePosition()
         auto* data = AllocateRenderCommand<RenderCommandExecuteBackendFramePosition>(allocator_);
         if (data) {
             data->id = 0;
+            data->command = nullptr;
             renderCommands_.push_back({ RenderCommandType::EXECUTE_BACKEND_FRAME_POSITION, data });
             stateData_.executeBackendFrameSet = true;
         }
     } else {
-        PLUGIN_LOG_E("RenderCommandList: there can be only one SetExecuteBackendFramePosition() -call per frame");
+        PLUGIN_LOG_W("RenderCommandList: there can be only one SetExecuteBackendFramePosition() -call per frame");
     }
+}
+
+void RenderCommandList::SetExecuteBackendCommand(IRenderBackendCommand::Ptr backendCommand)
+{
+    if (backendCommand) {
+        AddBarrierPoint(RenderCommandType::EXECUTE_BACKEND_FRAME_POSITION);
+
+        auto* data = AllocateRenderCommand<RenderCommandExecuteBackendFramePosition>(allocator_);
+        if (data) {
+            data->id = 0;
+            data->command = backendCommand.get();
+            renderCommands_.push_back({ RenderCommandType::EXECUTE_BACKEND_FRAME_POSITION, data });
+
+            backendCommands_.push_back(backendCommand);
+        }
+    }
+}
+
+void RenderCommandList::SetBackendCommand(
+    IRenderBackendPositionCommand::Ptr backendCommand, RenderBackendCommandPosition backendCommandPosition)
+{
+    if (backendCommand) {
+        processBackendCommands_.push_back({ backendCommand, backendCommandPosition });
+    }
+}
+
+array_view<ProcessBackendCommand> RenderCommandList::GetProcessBackendCommands()
+{
+    return processBackendCommands_;
 }
 
 void RenderCommandList::BeginDebugMarker(const BASE_NS::string_view name, const BASE_NS::Math::Vec4 color)
@@ -1958,6 +2025,7 @@ void RenderCommandList::BeginDebugMarker(const BASE_NS::string_view name, const 
             data->color = { color };
             renderCommands_.push_back({ RenderCommandType::BEGIN_DEBUG_MARKER, data });
             debugMarkerStack_.stackCounter++;
+            debugMarkerStack_.commandCount++;
         }
     }
 #endif
@@ -1979,6 +2047,7 @@ void RenderCommandList::EndDebugMarker()
             data->id = 0;
             renderCommands_.push_back({ RenderCommandType::END_DEBUG_MARKER, data });
             debugMarkerStack_.stackCounter--;
+            debugMarkerStack_.commandCount++;
         }
     }
 #endif

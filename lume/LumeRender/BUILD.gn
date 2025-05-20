@@ -22,30 +22,36 @@ declare_args() {
 }
 
 config("lume_render_api") {
-  configs = [
+  configs =[
     "${LUME_CORE_PATH}:lume_base_api",
-    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_engine_api"
   ]
-  include_dirs = [ "api" ]
-
+  include_dirs = [
+    "api",
+  ]
+  
   defines = []
 
   if (RENDER_BUILD_GLES) {
-    defines += [ "RENDER_HAS_GLES_BACKEND=1" ]
+    defines += [
+      "RENDER_HAS_GLES_BACKEND=1"
+    ]
   }
 
   if (RENDER_BUILD_VULKAN) {
-    defines += [ "RENDER_HAS_VULKAN_BACKEND=1" ]
+    defines += [
+      "RENDER_HAS_VULKAN_BACKEND=1"
+    ]
   }
 }
 
 config("lume_render_config") {
   configs = [
     "${LUME_CORE_PATH}:lume_default",
-    ":lume_render_api",
-  ]
+    ":lume_render_api"
+    ]
+
   include_dirs = [
-    "3rdparty/",
     "src/",
   ]
 
@@ -67,7 +73,7 @@ config("lume_render_config") {
     "RENDER_BUILDTYPE=${BUILDTYPE}",
     "RENDER_EMBEDDED_ASSETS_ENABLED=1",
     "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
-    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER}",
+    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER}"
   ]
 
   if (RENDER_LOG_ENABLED) {
@@ -83,14 +89,16 @@ config("lume_render_config") {
   }
 
   if (LUME_OHOS_BUILD) {
-    defines += [ "__OHOS_PLATFORM__" ]
+    defines += [
+      "__OHOS_PLATFORM__",
+    ]
   }
 
   if (RENDER_VALIDATION_ENABLED) {
     defines += [
       "RENDER_VALIDATION_ENABLED=1",
       "RENDER_VULKAN_VALIDATION_ENABLED=0",
-      "RENDER_GL_DEBUG=1",
+      "RENDER_GL_DEBUG=1"
     ]
   }
   if (RENDER_BUILD_VULKAN) {
@@ -100,26 +108,37 @@ config("lume_render_config") {
     ]
 
     if (LUME_OHOS_BUILD) {
-      defines += [ "RENDER_VULKAN_VALIDATION_ENABLE_WARNINGS=0" ]
-      include_dirs += [ "src/vulkan/ohos" ]
+      defines += [
+        "RENDER_VULKAN_VALIDATION_ENABLE_WARNINGS=0"
+      ]
+      include_dirs += [
+        "src/vulkan/ohos",
+      ]
     }
   }
 
-  ldflags = [ "-Wl,--undefined=AGPRender_StaticPlugin" ]
+
+  ldflags = [
+    "-Wl,--undefined=AGPRender_StaticPlugin"
+  ]
 
   cflags = [
     "-Wno-nullability-completeness",
     "-Wno-ignored-qualifiers",
-    "-Wno-switch",
+    "-Wno-switch"
   ]
 }
 
 ohos_source_set("lume_render_src") {
-  public_configs = [ ":lume_render_config" ]
+  public_configs = [ 
+    ":lume_render_config",
+  ]
   deps = []
   external_deps = []
 
   sources = [
+    "src/plugin/static_plugin.cpp",
+    "version.cpp",
     "src/datastore/render_data_store_default_acceleration_structure_staging.cpp",
     "src/datastore/render_data_store_default_acceleration_structure_staging.h",
     "src/datastore/render_data_store_default_gpu_resource_data_copy.cpp",
@@ -152,7 +171,6 @@ ohos_source_set("lume_render_src") {
     "src/device/gpu_resource_manager.cpp",
     "src/device/gpu_resource_manager.h",
     "src/device/gpu_resource_manager_base.h",
-    "src/device/gpu_resource_manager_base.inl",
     "src/device/gpu_resource_util.cpp",
     "src/device/gpu_resource_util.h",
     "src/device/gpu_sampler.h",
@@ -189,12 +207,6 @@ ohos_source_set("lume_render_src") {
     "src/loader/vertex_input_declaration_loader.h",
     "src/node/core_render_node_factory.cpp",
     "src/node/core_render_node_factory.h",
-    "src/node/render_bloom.cpp",
-    "src/node/render_bloom.h",
-    "src/node/render_blur.cpp",
-    "src/node/render_blur.h",
-    "src/node/render_motion_blur.cpp",
-    "src/node/render_motion_blur.h",
     "src/node/render_node_back_buffer.cpp",
     "src/node/render_node_back_buffer.h",
     "src/node/render_node_bloom.cpp",
@@ -259,18 +271,49 @@ ohos_source_set("lume_render_src") {
     "src/perf/gpu_query.h",
     "src/perf/gpu_query_manager.cpp",
     "src/perf/gpu_query_manager.h",
-    "src/plugin/static_plugin.cpp",
+    "src/postprocesses/render_post_process_bloom.cpp",
+    "src/postprocesses/render_post_process_bloom.h",
+    "src/postprocesses/render_post_process_bloom_node.cpp",
+    "src/postprocesses/render_post_process_bloom_node.h",
+    "src/postprocesses/render_post_process_blur.cpp",
+    "src/postprocesses/render_post_process_blur.h",
+    "src/postprocesses/render_post_process_blur_node.cpp",
+    "src/postprocesses/render_post_process_blur_node.h",
+    "src/postprocesses/render_post_process_combined.cpp",
+    "src/postprocesses/render_post_process_combined.h",
+    "src/postprocesses/render_post_process_combined_node.cpp",
+    "src/postprocesses/render_post_process_combined_node.h",
+    "src/postprocesses/render_post_process_dof.cpp",
+    "src/postprocesses/render_post_process_dof.h",
+    "src/postprocesses/render_post_process_dof_node.cpp",
+    "src/postprocesses/render_post_process_dof_node.h",
     "src/postprocesses/render_post_process_flare.cpp",
     "src/postprocesses/render_post_process_flare.h",
     "src/postprocesses/render_post_process_flare_node.cpp",
     "src/postprocesses/render_post_process_flare_node.h",
+    "src/postprocesses/render_post_process_fxaa.cpp",
+    "src/postprocesses/render_post_process_fxaa.h",
+    "src/postprocesses/render_post_process_fxaa_node.cpp",
+    "src/postprocesses/render_post_process_fxaa_node.h",
+    "src/postprocesses/render_post_process_motion_blur.cpp",
+    "src/postprocesses/render_post_process_motion_blur.h",
+    "src/postprocesses/render_post_process_motion_blur_node.cpp",
+    "src/postprocesses/render_post_process_motion_blur_node.h",
+    "src/postprocesses/render_post_process_taa.cpp",
+    "src/postprocesses/render_post_process_taa.h",
+    "src/postprocesses/render_post_process_taa_node.cpp",
+    "src/postprocesses/render_post_process_taa_node.h",
+    "src/postprocesses/render_post_process_upscale.cpp",
+    "src/postprocesses/render_post_process_upscale.h",
+    "src/postprocesses/render_post_process_upscale_node.cpp",
+    "src/postprocesses/render_post_process_upscale_node.h",
+    "src/renderer.cpp",
+    "src/renderer.h",
     "src/render_backend.h",
     "src/render_context.cpp",
     "src/render_context.h",
     "src/render_graph.cpp",
     "src/render_graph.h",
-    "src/renderer.cpp",
-    "src/renderer.h",
     "src/resource_handle_impl.cpp",
     "src/resource_handle_impl.h",
     "src/util/json.cpp",
@@ -286,13 +329,14 @@ ohos_source_set("lume_render_src") {
     "src/util/shader_saver.cpp",
     "src/util/shader_saver.h",
     "src/util/string_util.h",
-    "version.cpp",
+    "${LUME_CORE_PATH}/api/core/property_tools/property_data.cpp",
   ]
 
   if (RENDER_BUILD_GLES) {
     sources += [
       "src/gles/device_gles.cpp",
       "src/gles/device_gles.h",
+      "src/gles/egl_functions.h",
       "src/gles/egl_state.cpp",
       "src/gles/egl_state.h",
       "src/gles/gl_functions.h",
@@ -322,9 +366,9 @@ ohos_source_set("lume_render_src") {
       "src/gles/render_frame_sync_gles.h",
       "src/gles/shader_module_gles.cpp",
       "src/gles/shader_module_gles.h",
-      "src/gles/spirv_cross_helper_structs_gles.h",
       "src/gles/spirv_cross_helpers_gles.cpp",
       "src/gles/spirv_cross_helpers_gles.h",
+      "src/gles/spirv_cross_helper_structs_gles.h",
       "src/gles/surface_information.h",
       "src/gles/swapchain_gles.cpp",
       "src/gles/swapchain_gles.h",
@@ -332,7 +376,7 @@ ohos_source_set("lume_render_src") {
 
     external_deps += [
       "graphic_2d:EGL",
-      "graphic_2d:GLESv3",
+      "graphic_2d:GLESv3"
     ]
   }
   if (RENDER_BUILD_VULKAN) {
@@ -385,15 +429,20 @@ ohos_source_set("lume_render_src") {
 
   if (LUME_OHOS_BUILD) {
     # platform source
-    sources += [ "src/device/ohos/platform_hardware_buffer.cpp" ]
+    sources += [
+      "src/device/ohos/platform_hardware_buffer.cpp",
+    ]
     if (RENDER_BUILD_GLES) {
-      sources += [ "src/gles/ohos/platform_device_gles.cpp" ]
+      sources += [
+        "src/gles/ohos/platform_device_gles.cpp",
+      ]
     }
     if (RENDER_BUILD_VULKAN) {
       # platform source
       sources += [
         "src/vulkan/ohos/platform_create_functions_vk.cpp",
         "src/vulkan/ohos/platform_device_vk.cpp",
+        "src/vulkan/ohos/platform_gpu_buffer_vk.cpp",
         "src/vulkan/ohos/platform_gpu_image_vk.cpp",
         "src/vulkan/ohos/platform_hardware_buffer_util.cpp",
         "src/vulkan/ohos/platform_vk.cpp",
@@ -411,7 +460,8 @@ ohos_source_set("lume_render_src") {
   subsystem_name = "graphic"
 }
 
-lume_compile_shader("lume_render_compile_shader") {
+lume_compile_shader("lume_render_compile_shader")
+{
   script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
   outputs = [ "$target_gen_dir" ]
   tool_path = "$target_gen_dir/../LumeBinaryCompile/LumeShaderCompiler"
@@ -419,12 +469,12 @@ lume_compile_shader("lume_render_compile_shader") {
   asset_path = rebase_path("./assets/render", root_build_dir)
   shader_path = "${dest_gen_path}/shaders"
   include_path = rebase_path("api", root_build_dir)
-  compileShader_deps =
-      [ "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile" ]
+  compileShader_deps=["${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile"]
 }
 
-lume_rofs("lume_render_rofs") {
-  output_obj = ""
+lume_rofs("lume_render_rofs")
+{
+  output_obj= ""
   if (target_cpu == "arm") {
     output_obj = "${RENDER_ROFS}_32.o"
   }
@@ -444,7 +494,7 @@ lume_rofs("lume_render_rofs") {
   copy_path = "$target_gen_dir/assets"
   compileShader_deps = [
     ":lume_render_compile_shader",
-    "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+    "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile"
   ]
   file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
 }
@@ -459,27 +509,44 @@ source_set("lume_render_rofs_obj") {
     output_obj = "${RENDER_ROFS}_64.o"
   }
 
-  sources = [ "${target_gen_dir}/assets/${output_obj}" ]
-  deps = [ ":lume_render_rofs" ]
+  sources = [
+    "${target_gen_dir}/assets/${output_obj}"
+  ]
+  deps = [
+    ":lume_render_rofs"
+  ]
 }
 
 ohos_source_set("lume_render_src_plugin") {
-  defines = [ "CORE_PLUGIN=1" ]
+  defines = [
+    "CORE_PLUGIN=1"
+  ]
   sources = [
     "src/plugin/dynamic_plugin.cpp",
     "src/plugin/dynamic_registry.cpp",
   ]
 
-  configs = [ ":lume_render_config" ]
+  configs = [
+    ":lume_render_config"
+  ]
 }
 
 ohos_shared_library(LIB_RENDER) {
   deps = [
-    ":lume_render_rofs_obj",
     ":lume_render_src",
     ":lume_render_src_plugin",
+    ":lume_render_rofs_obj"
   ]
   relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("AGPRenderApi") {
+  public_configs = [
+    ":lume_render_api",
+  ]
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

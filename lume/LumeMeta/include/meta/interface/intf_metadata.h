@@ -40,12 +40,21 @@ META_REGISTER_INTERFACE(IMetadata, "5ad7917a-e744-48bb-b789-9446d3712cf9")
 struct MetadataInfo {
     MetadataType type {};
     BASE_NS::string name;
+    TypeId interfaceId;
+    bool readOnly {};
     TypeId propertyType;
+    const StaticMetadata* data {};
+
+    bool IsValid() const
+    {
+        return !name.empty();
+    }
 };
 
 inline bool operator==(const MetadataInfo& l, const MetadataInfo& r)
 {
-    return l.type == r.type && l.name == r.name;
+    return l.type == r.type && l.name == r.name && l.interfaceId == r.interfaceId && l.readOnly == r.readOnly &&
+           l.propertyType == r.propertyType;
 }
 inline bool operator!=(const MetadataInfo& l, const MetadataInfo& r)
 {
@@ -74,7 +83,16 @@ public:
     virtual BASE_NS::vector<IEvent::Ptr> GetEvents() = 0;
     virtual BASE_NS::vector<IEvent::ConstPtr> GetEvents() const = 0;
 
+    /**
+     * @brief Get all metadata for requested types
+     * @Note  This combines static metadata and existing runtime data
+     */
     virtual BASE_NS::vector<MetadataInfo> GetAllMetadatas(MetadataType types) const = 0;
+
+    /**
+     * @brief Get metadata for requested entity, the first matching name is returned if type matches
+     */
+    virtual MetadataInfo GetMetadata(MetadataType type, BASE_NS::string_view name) const = 0;
 
     /**
      * @brief Returns the property with a given name.

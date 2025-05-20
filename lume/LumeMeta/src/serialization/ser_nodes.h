@@ -26,7 +26,7 @@
 #include <meta/interface/intf_object_factory.h>
 #include <meta/interface/serialization/intf_ser_node.h>
 
-#include "base_object.h"
+#include "../base_object.h"
 
 META_BEGIN_NAMESPACE()
 namespace Serialization {
@@ -132,13 +132,13 @@ public:
         return members;
     }
 
-    void SetObjectClassName(BASE_NS::string name) override
+    void SetObjectClassName(BASE_NS::string n) override
     {
-        className = BASE_NS::move(name);
+        className = BASE_NS::move(n);
     }
-    void SetObjectName(BASE_NS::string name) override
+    void SetObjectName(BASE_NS::string n) override
     {
-        className = BASE_NS::move(name);
+        name = BASE_NS::move(n);
     }
     void SetObjectId(ObjectId id) override
     {
@@ -170,21 +170,24 @@ class RootNode : public IntroduceInterfaces<BaseObject, IRootNode> {
     META_OBJECT(RootNode, ClassId::RootNode, IntroduceInterfaces)
 public:
     RootNode() = default;
-    RootNode(ISerNode::Ptr obj, const Version& ver, const Version& serVer)
-        : object(BASE_NS::move(obj)), version_(ver), serializerVersion_(serVer)
-    {}
+    RootNode(ISerNode::Ptr obj, SerMetadata m) : object(BASE_NS::move(obj)), metadata(BASE_NS::move(m)) {}
 
-    Version GetSerializerVersion() const override
+    SerMetadata GetMetadata() const override
     {
-        return serializerVersion_;
-    }
-    Version GetVersion() const override
-    {
-        return version_;
+        return metadata;
     }
     ISerNode::Ptr GetObject() const override
     {
         return object;
+    }
+
+    void SetMetadata(SerMetadata v) override
+    {
+        metadata = BASE_NS::move(v);
+    }
+    void SetObject(ISerNode::Ptr obj) override
+    {
+        object = BASE_NS::move(obj);
     }
 
     void Apply(ISerNodeVisitor& v) override
@@ -194,8 +197,7 @@ public:
 
 public:
     ISerNode::Ptr object;
-    Version version_ {};
-    Version serializerVersion_ {};
+    SerMetadata metadata {};
 };
 
 template<typename Type, const META_NS::ClassInfo& ClassInfo>

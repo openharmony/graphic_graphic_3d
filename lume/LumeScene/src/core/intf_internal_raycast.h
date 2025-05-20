@@ -12,12 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef SCENE_SRC_CORE_INTF_INTERNAL_RAYCAST_H
 #define SCENE_SRC_CORE_INTF_INTERNAL_RAYCAST_H
 
 #include <scene/base/types.h>
+#include <scene/ext/intf_ecs_object.h>
 #include <scene/interface/intf_camera.h>
+#include <scene/interface/intf_raycast.h>
 
 SCENE_BEGIN_NAMESPACE()
 

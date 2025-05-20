@@ -23,59 +23,48 @@ Vec4Proxy::Vec4Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec4> prop) 
     Hook("y");
     Hook("z");
     Hook("w");
-    SyncGet();
 }
 Vec4Proxy::~Vec4Proxy()
 {
     Reset();
 }
-void Vec4Proxy::UpdateLocalValues()
-{
-    // executed in javascript thread (locks handled outside)
-    value = META_NS::Property<BASE_NS::Math::Vec4>(prop_)->GetValue();
-}
-void Vec4Proxy::UpdateRemoteValues()
-{
-    // executed in engine thread (locks handled outside)
-    META_NS::Property<BASE_NS::Math::Vec4>(prop_)->SetValue(value);
-}
+
 void Vec4Proxy::SetValue(const BASE_NS::Math::Vec4& v)
 {
-    Lock();
-    if (value != v) {
-        value = v;
-        ScheduleUpdate();
-    }
-    Unlock();
+    META_NS::SetValue(GetProperty<BASE_NS::Math::Vec4>(), v);
 }
 void Vec4Proxy::SetMemberValue(NapiApi::FunctionContext<>& cb, BASE_NS::string_view memb)
 {
     // should be executed in the javascript thread.
     NapiApi::FunctionContext<float> info(cb.GetEnv(), cb.GetInfo());
     if (info) {
+        auto p = GetProperty<BASE_NS::Math::Vec4>();
+        auto value = META_NS::GetValue(p);
         float val = info.Arg<0>();
-        Lock();
+        bool changed = false;
         if ((memb == "x") && (val != value.x)) {
             value.x = val;
-            ScheduleUpdate();
+            changed = true;
         } else if ((memb == "y") && (val != value.y)) {
             value.y = val;
-            ScheduleUpdate();
+            changed = true;
         } else if ((memb == "z") && (val != value.z)) {
             value.z = val;
-            ScheduleUpdate();
+            changed = true;
         } else if ((memb == "w") && (val != value.w)) {
             value.w = val;
-            ScheduleUpdate();
+            changed = true;
         }
-        Unlock();
+        if (changed) {
+            META_NS::SetValue(p, value);
+        }
     }
 }
 napi_value Vec4Proxy::GetMemberValue(const NapiApi::Env cb, BASE_NS::string_view memb)
 {
     // should be executed in the javascript thread.
     float res;
-    Lock();
+    auto value = META_NS::GetValue(GetProperty<BASE_NS::Math::Vec4>());
     if (memb == "x") {
         res = value.x;
     } else if (memb == "y") {
@@ -86,10 +75,8 @@ napi_value Vec4Proxy::GetMemberValue(const NapiApi::Env cb, BASE_NS::string_view
         res = value.w;
     } else {
         // invalid member?
-        Unlock();
         return cb.GetUndefined();
     }
-    Unlock();
     return cb.GetNumber(res);
 }
 

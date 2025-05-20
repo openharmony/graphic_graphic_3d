@@ -17,10 +17,9 @@
 #define META_BASE_INTERFACE_UTILS_H
 
 #include <base/containers/vector.h>
-#include <core/plugin/intf_interface.h>
 
 #include <meta/base/ids.h>
-#include <meta/base/shared_ptr.h>
+#include <meta/base/interface_traits.h>
 
 META_BEGIN_NAMESPACE()
 

@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef META_SRC_ENGINE_ENGINE_INPUT_PROPERTY_MANAGER_H
 #define META_SRC_ENGINE_ENGINE_INPUT_PROPERTY_MANAGER_H
 

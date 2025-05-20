@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -404,6 +404,12 @@ struct DefaultMaterialEnvironmentStruct {
 
     // .x = count, .yzw = multi env indices
     uvec4 multiEnvIndices;
+
+    // sky atmosphere
+    // sun position
+    vec4 packedSun;
+    // rain data
+    vec4 packedRain;
 };
 
 struct DefaultMaterialFogStruct {
@@ -486,18 +492,18 @@ struct DefaultMaterialUnpackedPostProcessStruct {
 
 uint GetPackFlatIndices(const uint cameraIdx, const uint instanceIdx)
 {
-    return ((instanceIdx << 16) | (cameraIdx & 0xffff)); // 16 : left shift
+    return ((instanceIdx << 16) | (cameraIdx & 0xffff));
 }
 
 void GetUnpackFlatIndices(in uint indices, out uint cameraIdx, out uint instanceIdx)
 {
     cameraIdx = indices & 0xffff;
-    instanceIdx = indices >> 16; // 16 : right shift
+    instanceIdx = indices >> 16;
 }
 
 uint GetUnpackFlatIndicesInstanceIdx(in uint indices)
 {
-    return (indices >> 16); // 16 : right shift
+    return (indices >> 16);
 }
 
 uint GetUnpackFlatIndicesCameraIdx(in uint indices)
@@ -557,8 +563,8 @@ uint GetUnpackCameraMultiViewIndex(
     // NOTE: when gl_ViewIndex is 0 the "main" camera is used and no multi-view indexing
     if ((viewCount > 0u) && (glViewIndex <= viewCount) && (glViewIndex > 0u)) {
         // additional index packed to uints
-        const uint viewIndexShift = (glViewIndex >= 4U) ? CORE_MULTI_VIEW_VIEW_INDEX_SHIFT : 0U; // 4 : idx
-        const uint finalViewIndex = glViewIndex % 4U; // 4 idx
+        const uint viewIndexShift = (glViewIndex >= 4U) ? CORE_MULTI_VIEW_VIEW_INDEX_SHIFT : 0U;
+        const uint finalViewIndex = glViewIndex % 4U;
         cameraIdx = multiViewIndices[finalViewIndex];
         cameraIdx = (cameraIdx >> viewIndexShift) & CORE_MULTI_VIEW_VIEW_INDEX_MASK;
     }

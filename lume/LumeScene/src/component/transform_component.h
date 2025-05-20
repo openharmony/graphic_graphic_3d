@@ -16,7 +16,7 @@
 #ifndef SCENE_SRC_COMPONENT_TRANSFORM_COMPONENT_H
 #define SCENE_SRC_COMPONENT_TRANSFORM_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 #include <scene/interface/intf_transform.h>
 
 #include <meta/ext/object.h>
@@ -26,7 +26,7 @@ SCENE_BEGIN_NAMESPACE()
 META_REGISTER_CLASS(
     TransformComponent, "534bdd95-3137-4f2f-89ab-0d795560facb", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class TransformComponent : public META_NS::IntroduceInterfaces<ComponentFwd, ITransform> {
+class TransformComponent : public META_NS::IntroduceInterfaces<Component, ITransform> {
     META_OBJECT(TransformComponent, ClassId::TransformComponent, IntroduceInterfaces)
 
 public:

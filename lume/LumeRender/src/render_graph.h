@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -182,6 +182,10 @@ private:
     void HandleCopyBufferImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
         const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
     void HandleDispatchIndirect(ParameterCache& params, const uint32_t& commandListCommandIndex,
+        const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
+    void HandleBuildAccelerationStructure(ParameterCache& params, const uint32_t& commandListCommandIndex,
+        const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
+    void HandleCopyAccelerationStructureInstances(ParameterCache& params, const uint32_t& commandListCommandIndex,
         const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
 
     void HandleDescriptorSets(ParameterCache& params,

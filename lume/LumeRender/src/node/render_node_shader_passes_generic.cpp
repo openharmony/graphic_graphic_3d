@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -177,11 +177,8 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameGraphics(IRenderCommandList& cmd
             cmdList.SetDynamicStateScissor(scissorDesc);
             if (ref.renderPass.subpassDesc.fragmentShadingRateAttachmentCount > 0) {
                 cmdList.SetDynamicStateFragmentShadingRate(
-                    { 1u, 1u },
-                    FragmentShadingRateCombinerOps {
-                        CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
-                        CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE
-		    });
+                    { 1u, 1u }, FragmentShadingRateCombinerOps { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
+                                    CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
             }
 
             for (const auto& shaderRef : ref.shaderBinders) {

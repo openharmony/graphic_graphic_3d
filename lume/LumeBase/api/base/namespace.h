@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,5 +23,15 @@
 
 #define BASE_BEGIN_NAMESPACE() namespace Base {
 #define BASE_END_NAMESPACE() } // namespace Base
+
+#ifndef CORE_NS
+#define CORE_NS Core
+#endif
+#ifndef CORE_BEGIN_NAMESPACE
+#define CORE_BEGIN_NAMESPACE() namespace Core {
+#endif
+#ifndef CORE_END_NAMESPACE
+#define CORE_END_NAMESPACE() } // namespace Core
+#endif
 
 #endif // API_BASE_NAMESPACE_H

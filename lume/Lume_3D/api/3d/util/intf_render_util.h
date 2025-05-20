@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -94,17 +94,6 @@ public:
      */
     virtual RENDER_NS::RenderNodeGraphDesc GetRenderNodeGraphDesc(
         const RenderScene& renderScene, const BASE_NS::string& rngFile, const uint32_t flags) const = 0;
-
-    virtual void UseCustomRng(const BASE_NS::string& uri) = 0;
-
-    struct CustomRngGroup {
-        // Future: provide all kinds of custom rngs
-        BASE_NS::string lwrp;
-        BASE_NS::string lwrpMsaa;
-        BASE_NS::string hdrp;
-        BASE_NS::string hdrpMsaa;
-    };
-    virtual void UseCustomRngGroup(const CustomRngGroup& rngGroup) = 0;
 
 protected:
     IRenderUtil() = default;

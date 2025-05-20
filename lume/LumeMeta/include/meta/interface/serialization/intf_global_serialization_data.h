@@ -43,18 +43,25 @@ struct SerializationSettings {
      */
 };
 
+/// Interface to access global serialization data
 class IGlobalSerializationData : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IGlobalSerializationData, "f738d4d6-2575-4ae8-bb97-70a23bb6565a")
 public:
+    /// Get global serialisation settings
     virtual SerializationSettings GetDefaultSettings() const = 0;
+    /// Set global serialisation setting
     virtual void SetDefaultSettings(const SerializationSettings& settings) = 0;
-
+    /// Register global object which is then serialised as reference
     virtual void RegisterGlobalObject(const IObject::Ptr& object) = 0;
+    /// Unregister global object
     virtual void UnregisterGlobalObject(const IObject::Ptr& object) = 0;
+    /// Get global object of given instance id
     virtual IObject::Ptr GetGlobalObject(const InstanceId& id) const = 0;
-
+    /// Register value serializer for exporting and importing
     virtual void RegisterValueSerializer(const IValueSerializer::Ptr&) = 0;
+    /// Unregister value serializer
     virtual void UnregisterValueSerializer(const TypeId& id) = 0;
+    /// Get value serializer for given type id (that is, the type it serialises)
     virtual IValueSerializer::Ptr GetValueSerializer(const TypeId& id) const = 0;
 };
 

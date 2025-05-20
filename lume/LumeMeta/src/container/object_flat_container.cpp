@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include "object_flat_container.h"
 
 #include <algorithm>

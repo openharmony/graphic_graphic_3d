@@ -16,42 +16,17 @@
 #include "light_node.h"
 
 #include <3d/ecs/components/light_component.h>
-#include <3d/ecs/components/local_matrix_component.h>
-#include <3d/ecs/components/name_component.h>
-#include <3d/ecs/components/node_component.h>
-#include <3d/ecs/components/transform_component.h>
-#include <3d/ecs/components/world_matrix_component.h>
-#include <core/ecs/intf_ecs.h>
+#include <3d/util/intf_scene_util.h>
+#include <base/math/quaternion_util.h>
 
 SCENE_BEGIN_NAMESPACE()
 
 CORE_NS::Entity LightNode::CreateEntity(const IInternalScene::Ptr& scene)
 {
-    // make directly light entity by hand, we don't want to upgrade (and wait fix) Lume3D to use sceneUtil.CreateLight
-    // (will be used in future)
-    auto ecs = scene->GetEcsContext().GetNativeEcs();
-
-    auto lmm = CORE_NS::GetManager<CORE3D_NS::ILocalMatrixComponentManager>(*ecs);
-    auto wmm = CORE_NS::GetManager<CORE3D_NS::IWorldMatrixComponentManager>(*ecs);
-    auto ncm = CORE_NS::GetManager<CORE3D_NS::INodeComponentManager>(*ecs);
-    auto nameM = CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(*ecs);
-    auto tcm = CORE_NS::GetManager<CORE3D_NS::ITransformComponentManager>(*ecs);
-    auto lcm = CORE_NS::GetManager<CORE3D_NS::ILightComponentManager>(*ecs);
-    if (!lmm || !wmm || !ncm || !nameM || !tcm || !lcm) {
-        return {};
-    }
-
-    auto light = ecs->GetEntityManager().Create();
-
-    lmm->Create(light);
-    wmm->Create(light);
-    ncm->Create(light);
-    nameM->Create(light);
-    nameM->Write(light)->name = "Light";
-    tcm->Create(light);
-    lcm->Create(light);
-
-    return light;
+    const auto& sceneUtil = scene->GetGraphicsContext().GetSceneUtil();
+    CORE3D_NS::LightComponent lc;
+    return sceneUtil.CreateLight(*scene->GetEcsContext().GetNativeEcs(), lc, BASE_NS::Math::Vec3(0.0f, 0.0f, 0.0f),
+        BASE_NS::Math::Quat(0.f, 0.f, 0.f, 1.f));
 }
 
 bool LightNode::SetEcsObject(const IEcsObject::Ptr& o)

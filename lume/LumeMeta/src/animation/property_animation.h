@@ -41,6 +41,7 @@ public: // IModifier
     EvaluationResult ProcessOnSet(IAny& value, const IAny& current) override;
 
 private:
+    void OnAnimationStateChanged(const IAnimationInternal::AnimationStateChangedInfo& info) override;
     void Evaluate() override;
     AnimationState::AnimationStateParams GetParams() override;
     void OnPropertyChanged(const TargetProperty& property, const IStackProperty::Ptr& previous) override;
@@ -48,6 +49,7 @@ private:
     IAny::Ptr from_;
     IAny::Ptr to_;
     IAny::Ptr currentValue_;
+    bool evalChanged_ {};
 };
 
 } // namespace Internal

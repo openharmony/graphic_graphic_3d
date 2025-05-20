@@ -176,14 +176,14 @@ BASE_NS::pair<uint32_t, float> TrackAnimationState::UpdateIndex(float progress)
     const auto size = keyframeArray_ ? keyframeArray_->GetSize() : 0;
     auto& timestamps = GetTimeStamps();
     if (!size || !timestamps || timestamps->GetSize() != size) {
-        index = JumpTo(size_t(ITrackAnimation::INVALID_INDEX));
+        index = JumpTo(size_t(ITrackAnimation::INVALID_INDEX), progress);
     } else {
         size_t lo = 0;
         auto hi = size - 1;
         auto startTs = timestamps->GetValueAt(lo);
         auto endTs = timestamps->GetValueAt(hi);
         if (progress < startTs || progress > endTs) {
-            index = JumpTo(size_t(ITrackAnimation::INVALID_INDEX));
+            index = JumpTo(size_t(ITrackAnimation::INVALID_INDEX), progress);
         } else {
             while (lo <= hi) {
                 const auto mid = lo + (hi - lo) / 2;
@@ -192,7 +192,7 @@ BASE_NS::pair<uint32_t, float> TrackAnimationState::UpdateIndex(float progress)
                 endTs = timestamps->GetValueAt(endIndex);
                 if (IsBetween(progress, startTs, endTs, mid >= endIndex)) {
                     // Found correct keyframe
-                    index = JumpTo(mid);
+                    index = JumpTo(mid, progress);
                     break;
                 }
                 if (progress < startTs) {
@@ -206,33 +206,51 @@ BASE_NS::pair<uint32_t, float> TrackAnimationState::UpdateIndex(float progress)
     return { index, GetCurrentTrackProgress(progress) };
 }
 
-uint32_t TrackAnimationState::JumpTo(size_t index)
+void TrackAnimationState::SetPrePostFrameValues(float progress)
 {
+    auto& timestamps = GetTimeStamps();
+    auto size = keyframeArray_ ? keyframeArray_->GetSize() : 0;
+    if (size && timestamps && timestamps->GetSize() == size) {
+        if (progress < timestamps->GetValueAt(0)) {
+            keyframeArray_->GetAnyAt(0, *trackEnd_);
+            keyframeArray_->GetAnyAt(0, *trackStart_);
+        }
+        if (progress > timestamps->GetValueAt(size - 1)) {
+            keyframeArray_->GetAnyAt(size - 1, *trackEnd_);
+            keyframeArray_->GetAnyAt(size - 1, *trackStart_);
+        }
+    }
+}
+
+uint32_t TrackAnimationState::JumpTo(size_t index, float progress)
+{
+    if (index == ITrackAnimation::INVALID_INDEX) {
+        currentIndex_ = index;
+        ResetCurrentTrack();
+        SetPrePostFrameValues(progress);
+        return static_cast<uint32_t>(currentIndex_);
+    }
     if (index == currentIndex_) {
         return currentIndex_;
     }
 
-    if (index == ITrackAnimation::INVALID_INDEX) {
-        currentIndex_ = index;
-        ResetCurrentTrack();
-    } else {
-        const auto size = keyframeArray_ ? keyframeArray_->GetSize() : 0;
-        auto& timestamps = GetTimeStamps();
-        if (!size || !timestamps || timestamps->GetSize() != size) {
-            return ITrackAnimation::INVALID_INDEX;
-        }
-        index = BASE_NS::Math::min(index, size - 1);
-
-        bool last = index == size - 1;
-        auto start = last ? index - 1 : index;
-        auto end = start + 1; // < size - 1 ? start + 1 : start;
-
-        keyframeArray_->GetAnyAt(end, *trackEnd_);
-        keyframeArray_->GetAnyAt(start, *trackStart_);
-        currentRangeStartTs_ = timestamps->GetValueAt(start);
-        currentRangeEndTs_ = timestamps->GetValueAt(end);
-        currentIndex_ = last ? end : index;
+    const auto size = keyframeArray_ ? keyframeArray_->GetSize() : 0;
+    auto& timestamps = GetTimeStamps();
+    if (!size || !timestamps || timestamps->GetSize() != size || !trackStart_ || !trackEnd_) {
+        return ITrackAnimation::INVALID_INDEX;
     }
+    index = BASE_NS::Math::min(index, size - 1);
+
+    bool last = index == size - 1;
+    auto start = last && index > 0 ? index - 1 : index;
+    auto end = BASE_NS::Math::min(start + 1, size - 1);
+
+    keyframeArray_->GetAnyAt(end, *trackEnd_);
+    keyframeArray_->GetAnyAt(start, *trackStart_);
+    currentRangeStartTs_ = timestamps->GetValueAt(start);
+    currentRangeEndTs_ = timestamps->GetValueAt(end);
+    currentIndex_ = last ? end : index;
+
     return static_cast<uint32_t>(currentIndex_);
 }
 

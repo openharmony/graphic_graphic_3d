@@ -23,7 +23,6 @@
 
 #include <meta/base/interface_macros.h>
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/base/types.h>
 #include <meta/interface/interface_macros.h>
 #include <meta/interface/intf_clock.h>

@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef SCENE_SRC_CORE_ECS_LISTENER_H
 #define SCENE_SRC_CORE_ECS_LISTENER_H
 

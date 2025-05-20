@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,7 +46,6 @@ public:
         const Property* property { nullptr };
         uintptr_t offset { 0U };
         size_t index { 0 };
-        BASE_NS::string propertyPath;
     };
 
     bool WLock(IPropertyHandle& handle);         // no-copy direct-access (Locks the datahandle);
@@ -84,6 +83,13 @@ public:
      */
     static PropertyOffset FindProperty(
         BASE_NS::array_view<const Property> properties, BASE_NS::string_view propertyPath);
+
+    /** Find offset and property type for a property.
+     * @param handle Property handle to search from.
+     * @param propertyPath Property path to search for.
+     * @return PropertyOffset-structure. If property was not found, returns null PropertyOffset.
+     */
+    static PropertyOffset FindProperty(const IPropertyHandle& handle, BASE_NS::string_view propertyPath);
 
     ~PropertyData() override;
     size_t PropertyCount() const;

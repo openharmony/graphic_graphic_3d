@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,7 @@
 #define API_CORE_PLUGIN_IINTERFACE_H
 
 #include <base/containers/refcnt_ptr.h>
+#include <base/containers/shared_ptr.h>
 #include <base/namespace.h>
 #include <base/util/uid.h>
 #include <core/namespace.h>
@@ -63,4 +64,102 @@ protected:
 };
 CORE_END_NAMESPACE()
 
-#endif
+// NOLINTBEGIN(readability-identifier-naming) to keep std like syntax
+template<class U, class T>
+BASE_NS::shared_ptr<U> interface_pointer_cast(const BASE_NS::shared_ptr<T>& ptr)
+{
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, T>, "T is not an IInterface");
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, U>, "U is not an IInterface");
+    if (ptr) {
+        if constexpr (BASE_NS::is_same_v<U, T>) {
+            // same type.
+            return ptr;
+        } else {
+            return BASE_NS::shared_ptr<U>(ptr, static_cast<U*>(static_cast<void*>(ptr->GetInterface(U::UID))));
+        }
+    }
+    return {};
+}
+
+template<class U, class T>
+BASE_NS::shared_ptr<const U> interface_pointer_cast(const BASE_NS::shared_ptr<const T>& ptr)
+{
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, T>, "T is not an IInterface");
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, U>, "U is not an IInterface");
+    if (ptr) {
+        if constexpr (BASE_NS::is_same_v<U, T>) {
+            // same type.
+            return ptr;
+        } else {
+            return BASE_NS::shared_ptr<const U>(
+                ptr, static_cast<const U*>(static_cast<const void*>(ptr->GetInterface(U::UID))));
+        }
+    }
+    return {};
+}
+
+template<class U, class T>
+BASE_NS::shared_ptr<U> interface_pointer_cast(const BASE_NS::weak_ptr<T>& weak)
+{
+    return interface_pointer_cast<U>(weak.lock());
+}
+
+template<class U, class T>
+BASE_NS::shared_ptr<const U> interface_pointer_cast(const BASE_NS::weak_ptr<const T>& weak)
+{
+    return interface_pointer_cast<const U>(weak.lock());
+}
+
+template<class U, class T>
+U* interface_cast(const BASE_NS::shared_ptr<T>& ptr)
+{
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, T>, "T is not an IInterface");
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, U>, "U is not an IInterface");
+    if (ptr) {
+        if constexpr (BASE_NS::is_same_v<U, T>) {
+            // same type.
+            return ptr.get();
+        } else {
+            return static_cast<U*>(static_cast<void*>(ptr->GetInterface(U::UID)));
+        }
+    }
+    return {};
+}
+
+template<class U, class T>
+const U* interface_cast(const BASE_NS::shared_ptr<const T>& ptr)
+{
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, T>, "T is not an IInterface");
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, U>, "U is not an IInterface");
+    if (ptr) {
+        if constexpr (BASE_NS::is_same_v<U, T>) {
+            // same type.
+            return ptr.get();
+        } else {
+            return static_cast<const U*>(static_cast<const void*>(ptr->GetInterface(U::UID)));
+        }
+    }
+    return {};
+}
+
+template<class U>
+U* interface_cast(CORE_NS::IInterface* ptr)
+{
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, U>, "U is not an IInterface");
+    if (ptr) {
+        return static_cast<U*>(static_cast<void*>(ptr->GetInterface(U::UID)));
+    }
+    return {};
+}
+
+template<class U>
+const U* interface_cast(const CORE_NS::IInterface* ptr)
+{
+    static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, U>, "U is not an IInterface");
+    if (ptr) {
+        return static_cast<const U*>(static_cast<const void*>(ptr->GetInterface(U::UID)));
+    }
+    return {};
+}
+// NOLINTEND(readability-identifier-naming) to keep std like syntax
+#endif // API_CORE_PLUGIN_IINTERFACE_H

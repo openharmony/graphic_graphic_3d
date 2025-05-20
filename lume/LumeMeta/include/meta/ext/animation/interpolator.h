@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #ifndef META_EXT_INTERPOLATOR_H
 #define META_EXT_INTERPOLATOR_H
 

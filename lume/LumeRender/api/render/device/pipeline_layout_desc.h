@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -248,8 +248,6 @@ struct PushConstant {
 struct PipelineLayout {
     /** Push constant */
     PushConstant pushConstant;
-    /** [[DEPRECATED DO NOT USE]] Descriptor set count */
-    uint32_t descriptorSetCount { 0 };
     /** Descriptor sets */
     DescriptorSetLayout descriptorSetLayouts[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] {};
 };

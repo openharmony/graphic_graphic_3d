@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SCENE_EXT_COMPONENT_FACTORY_H
-#define SCENE_EXT_COMPONENT_FACTORY_H
+#ifndef SCENE_EXT_ICOMPONENT_FACTORY_H
+#define SCENE_EXT_ICOMPONENT_FACTORY_H
 
 #include <scene/ext/intf_component.h>
 #include <scene/ext/intf_ecs_object.h>

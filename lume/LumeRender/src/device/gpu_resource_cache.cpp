@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -78,12 +78,12 @@ GpuResourceCache::~GpuResourceCache()
         uint32_t aliveCounter = 0;
         const uint32_t readIdx = 1u - writeIdx_;
         for (const auto& imagesRef : frameData_[writeIdx_].images) {
-            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2 : count
+            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2: min ref count
                 aliveCounter++;
             }
         }
         for (const auto& imagesRef : frameData_[readIdx].images) {
-            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2 : count
+            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2: min ref count
                 aliveCounter++;
             }
         }
@@ -221,8 +221,8 @@ uint64_t GpuResourceCache::HashCacheGpuImageDesc(const CacheGpuImageDesc& desc)
                                          (desc.componentMapping.b << 20) | (desc.componentMapping.a << 16) |
                                          (desc.mipCount << 8u) | desc.layerCount;
     const uint64_t formatSamplesHash =
-        ((static_cast<uint64_t>(desc.format)) << 32) | ((static_cast<uint64_t>(desc.sampleCountFlags)) & 0xFFFFffff);
-    uint64_t hash = ((static_cast<uint64_t>(mipLayerSwizzleHash)) << 32u) | sizeHash;
+        (((uint64_t)desc.format) << 32) | (((uint64_t)desc.sampleCountFlags) & 0xFFFFffff);
+    uint64_t hash = (((uint64_t)mipLayerSwizzleHash) << 32u) | sizeHash;
     HashCombine(hash, formatSamplesHash);
     return hash;
 }

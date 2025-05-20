@@ -21,6 +21,7 @@
 #include <meta/interface/intf_object.h>
 
 #include <base/containers/array_view.h>
+#include <base/containers/shared_ptr.h>
 
 #include <core/intf_engine.h>
 #include <core/ecs/intf_system_graph_loader.h>
@@ -40,7 +41,6 @@
 #include <meta/interface/intf_object.h>
 #include <meta/interface/intf_object_registry.h>
 #include <meta/interface/intf_task_queue.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/base/interface_macros.h>
 #include <meta/api/make_callback.h>
 #include <meta/ext/object.h>
@@ -113,6 +113,8 @@ protected:
     META_NS::ITaskQueueWaitableTask::Ptr propSyncSync_;
 
     SurfaceBufferInfo sfBufferInfo_;
+
+    bool onWindowChanged_ = false; // todo engine thread check
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_SCENE_ADAPTER_H

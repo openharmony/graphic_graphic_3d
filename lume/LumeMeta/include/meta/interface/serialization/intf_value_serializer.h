@@ -24,11 +24,15 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Interface to define serializer for values
 class IValueSerializer : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IValueSerializer, "c493f011-102e-4567-9d27-11c3237b15fa")
 public:
+    /// Get type id which this serialiser can export/import
     virtual TypeId GetTypeId() const = 0;
+    /// Export given value as serialisation node (the value has to be compatible with the type)
     virtual ISerNode::Ptr Export(IExportFunctions&, const IAny& value) = 0;
+    /// Import given node as value in any
     virtual IAny::Ptr Import(IImportFunctions&, const ISerNode::ConstPtr& node) = 0;
 };
 

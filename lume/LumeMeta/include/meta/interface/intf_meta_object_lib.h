@@ -16,6 +16,7 @@
 #ifndef META_INTERFACE_IMETA_OBJECT_LIB_H
 #define META_INTERFACE_IMETA_OBJECT_LIB_H
 
+#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_interface.h>
 
@@ -56,8 +57,6 @@ inline IMetaObjectLib& GetMetaObjectLib()
     }
     CORE_LOG_F("Meta Object Lib not initialized");
     CORE_ASSERT(false);
-    // This is a necessary library of loading 3d engine. If the instance pointer
-    // is null, the program won't be normally executed. So use abort() to exit.
     abort();
 }
 

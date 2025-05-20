@@ -19,7 +19,7 @@
 #include "BaseObjectJS.h"
 #include "NodeImpl.h"
 
-class NodeJS : public BaseObject<NodeJS>, NodeImpl {
+class NodeJS : public BaseObject, NodeImpl {
 public:
     static constexpr uint32_t ID = 130;
     static void Init(napi_env env, napi_value exports);

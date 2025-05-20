@@ -22,7 +22,7 @@
 #include <meta/interface/intf_containable.h>
 #include <meta/interface/serialization/intf_serializable.h>
 
-#include "object.h"
+#include "../object.h"
 #include "animation_state.h"
 #include "staggered_animation_state.h"
 
@@ -146,7 +146,7 @@ public:
     META_BEGIN_STATIC_DATA()
     META_STATIC_PROPERTY_DATA(INamed, BASE_NS::string, Name)
     META_STATIC_PROPERTY_DATA(IAttachment, IObject::WeakPtr, DataContext)
-    META_STATIC_PROPERTY_DATA(IAttachment, IAttach::WeakPtr, AttachedTo)
+    META_STATIC_PROPERTY_DATA(IAttachment, IAttach::WeakPtr, AttachedTo, {}, DEFAULT_PROPERTY_FLAGS_NO_SER)
     META_STATIC_PROPERTY_DATA(IAnimation, bool, Enabled, true)
     META_STATIC_PROPERTY_DATA(IAnimation, bool, Valid, {}, DEFAULT_PROPERTY_FLAGS_NO_SER)
     META_STATIC_PROPERTY_DATA(IAnimation, TimeSpan, TotalDuration, {}, DEFAULT_PROPERTY_FLAGS_NO_SER)
@@ -400,7 +400,8 @@ protected: // IModifier
     bool IsCompatible(const TypeId& id) const override
     {
         if (auto p = GetTargetProperty()) {
-            return META_NS::IsCompatible(p.property->GetValue(), id);
+            PropertyLock lock { p.property };
+            return META_NS::IsCompatible(lock->GetValueAny(), id);
         }
         return false;
     }
@@ -411,7 +412,8 @@ protected:
     {
         GetState().UpdateTotalDuration();
         auto p = GetTargetProperty();
-        GetState().SetInterpolator(p ? p.property->GetTypeId() : TypeId {});
+        PropertyLock lock { p.property };
+        GetState().SetInterpolator(lock ? lock->GetTypeId() : TypeId {});
         SetValue(Super::META_ACCESS_PROPERTY(Valid), p);
         return GenericError::SUCCESS;
     }
@@ -429,7 +431,8 @@ protected:
     void PropertyChanged()
     {
         auto p = GetTargetProperty();
-        this->GetState().SetInterpolator(p ? p.property->GetTypeId() : TypeId {});
+        PropertyLock lock { p.property };
+        this->GetState().SetInterpolator(lock ? lock->GetTypeId() : TypeId {});
         SetValue(Super::META_ACCESS_PROPERTY(Valid), p);
         OnPropertyChanged(p, property_.lock());
         property_ = p.stack;

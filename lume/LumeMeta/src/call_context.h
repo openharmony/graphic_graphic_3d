@@ -37,7 +37,6 @@ public:
     DefaultCallContext& operator=(const DefaultCallContext& other) noexcept;
     DefaultCallContext& operator=(DefaultCallContext&& other) noexcept;
 
-
     bool DefineParameter(BASE_NS::string_view name, const IAny::Ptr& value) override;
     bool Set(BASE_NS::string_view name, const IAny& value) override;
     IAny::Ptr Get(BASE_NS::string_view name) const override;

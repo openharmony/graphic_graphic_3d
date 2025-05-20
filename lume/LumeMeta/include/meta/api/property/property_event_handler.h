@@ -24,7 +24,6 @@ META_BEGIN_NAMESPACE()
 /**
  * @brief The PropertyEventHandler class is a helper class for adding event handlers to property events.
  */
-
 template<typename EventType, BASE_NS::shared_ptr<IEvent> (INotifyOnChange::*EventFunc)(MetadataQuery) const>
 class PropertyEventHandler {
 public:

@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef META_SRC_ENGINE_ENGINE_VALUE_MANAGER_H
 #define META_SRC_ENGINE_ENGINE_VALUE_MANAGER_H
 
@@ -23,7 +22,7 @@
 #include <meta/interface/engine/intf_engine_value_manager.h>
 #include <meta/interface/intf_task_queue.h>
 
-#include "object.h"
+#include "../object.h"
 #include "engine_value.h"
 
 META_BEGIN_NAMESPACE()

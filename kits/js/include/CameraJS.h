@@ -24,7 +24,7 @@
 #include "ColorProxy.h"
 #include "NodeImpl.h"
 
-class CameraJS : public BaseObject<CameraJS>, public NodeImpl {
+class CameraJS : public BaseObject, public NodeImpl {
 public:
     static constexpr uint32_t ID = 80;
     static void Init(napi_env env, napi_value exports);
@@ -65,10 +65,18 @@ private:
     napi_value ProjectCoords(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     napi_value Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
-    napi_value Raycast(napi_env env, NapiApi::Object screenCoordJs, NapiApi::Object options);
+
     template<typename CoordType>
-    bool ExtractRaycastStuff(const NapiApi::Object& jsCoord, NapiApi::StrongRef& scene,
-        SCENE_NS::ICameraRayCast::Ptr& raycastSelf, CoordType& nativeCoord);
+    struct RaycastResources {
+        CoordType nativeCoord;
+        SCENE_NS::ICameraRayCast::Ptr raycastSelf;
+        NapiApi::StrongRef scene;
+
+        bool hasEverything { false };
+        BASE_NS::string errorMsg;
+    };
+    template<typename CoordType>
+    RaycastResources<CoordType> GetRaycastResources(const NapiApi::Object& jsCoord);
 
     BASE_NS::unique_ptr<ColorProxy> clearColor_;
     NapiApi::StrongRef postProc_;

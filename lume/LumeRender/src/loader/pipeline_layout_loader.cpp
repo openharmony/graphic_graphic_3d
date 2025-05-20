@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,24 +38,21 @@ RENDER_JSON_SERIALIZE_ENUM(ShaderStageFlagBits,
 
 RENDER_JSON_SERIALIZE_ENUM(AdditionalDescriptorTypeImageFlagBits,
     {
-        { (AdditionalDescriptorTypeImageFlagBits)0, nullptr },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DEPTH_BIT, "image_depth_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_ARRAY_BIT, "image_array_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_MULTISAMPLE_BIT, "image_multisample_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_SAMPLED_BIT, "image_sampled_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_LOAD_STORE_BIT, "image_load_store_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_1D_BIT,
-	    "image_dimension_1d_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_2D_BIT,
-	    "image_dimension_2d_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_3D_BIT,
-	    "image_dimension_3d_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_CUBE_BIT,
-	    "image_dimension_cube_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_BUFFER_BIT,
-	    "image_dimension_buffer_bit" },
-        { AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_SUBPASS_BIT,
-	    "image_dimension_subpass_bit" },
+        {(AdditionalDescriptorTypeImageFlagBits)0, nullptr},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DEPTH_BIT, "image_depth_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_ARRAY_BIT, "image_array_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_MULTISAMPLE_BIT, "image_multisample_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_SAMPLED_BIT, "image_sampled_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_LOAD_STORE_BIT, "image_load_store_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_1D_BIT, "image_dimension_1d_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_2D_BIT, "image_dimension_2d_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_3D_BIT, "image_dimension_3d_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_CUBE_BIT,
+         "image_dimension_cube_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_BUFFER_BIT,
+         "image_dimension_buffer_bit"},
+        {AdditionalDescriptorTypeImageFlagBits::CORE_DESCRIPTOR_TYPE_IMAGE_DIMENSION_SUBPASS_BIT,
+         "image_dimension_subpass_bit"},
     })
 
 RENDER_JSON_SERIALIZE_ENUM(DescriptorType,
@@ -104,6 +101,9 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unuse
 
     SafeGetJsonValue(jsonData, "renderSlot", result.error, renderSlotName);
     SafeGetJsonValue(jsonData, "renderSlotDefault", result.error, defaultRenderSlot);
+    if (!defaultRenderSlot) {
+        SafeGetJsonValue(jsonData, "renderSlotDefaultPipelineLayout", result.error, defaultRenderSlot);
+    }
 
     if (const auto pcIter = jsonData.find("pushConstant"); pcIter) {
         SafeGetJsonValue(*pcIter, "size", result.error, pl.pushConstant.byteSize);
@@ -112,8 +112,7 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unuse
             *pcIter, "shaderStageFlags", result.error, pl.pushConstant.shaderStageFlags);
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (pl.pushConstant.byteSize > PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) {
-            PLUGIN_LOG_W(
-                "RENDER_VALIDATION: Invalid push constant size clamped (name:%s). push constant size %u <= %u",
+            PLUGIN_LOG_W("RENDER_VALIDATION: Invalid push constant size clamped (name:%s). push constant size %u <= %u",
                 uri.data(), pl.pushConstant.byteSize, PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE);
         }
 #endif
@@ -151,11 +150,8 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unuse
             const uint32_t setIndex = descriptorSetLayouts[idx].set;
             if (setIndex < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
                 pl.descriptorSetLayouts[setIndex] = move(descriptorSetLayouts[idx]);
-                pl.descriptorSetCount++;
             }
         }
-        // reassure
-        pl.descriptorSetCount = Math::min(pl.descriptorSetCount, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
     } else {
         result.error += "invalid descriptor set layout count";
     }

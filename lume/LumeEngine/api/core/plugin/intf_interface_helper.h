@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,8 +16,7 @@
 #ifndef API_CORE_PLUGIN_IINTERFACE_HELPER_H
 #define API_CORE_PLUGIN_IINTERFACE_HELPER_H
 
-#include <atomic>
-
+#include <base/containers/atomics.h>
 #include <base/util/uid.h>
 #include <core/plugin/intf_interface.h>
 
@@ -57,19 +56,19 @@ public:
 
     void Ref() override
     {
-        refcnt_.fetch_add(1, std::memory_order_relaxed);
+        BASE_NS::AtomicIncrementRelaxed(&refcnt_);
     }
 
     void Unref() override
     {
-        if (std::atomic_fetch_sub_explicit(&refcnt_, 1, std::memory_order_release) == 1) {
-            std::atomic_thread_fence(std::memory_order_acquire);
+        if (BASE_NS::AtomicDecrementRelease(&refcnt_) == 0) {
+            BASE_NS::AtomicFenceAcquire();
             delete this;
         }
     }
 
 protected:
-    std::atomic<int32_t> refcnt_ { 0 };
+    int32_t refcnt_ { 0 };
 };
 CORE_END_NAMESPACE()
 

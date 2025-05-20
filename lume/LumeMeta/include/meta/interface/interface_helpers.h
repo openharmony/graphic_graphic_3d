@@ -16,12 +16,12 @@
 #ifndef META_INTERFACE_EXT_INTERFACE_HELPERS_H
 #define META_INTERFACE_EXT_INTERFACE_HELPERS_H
 
+#include <base/containers/atomics.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/vector.h>
 #include <base/util/uid.h>
 #include <core/plugin/intf_interface.h>
 
-#include <meta/base/atomics.h>
 #include <meta/base/namespace.h>
 #include <meta/base/type_traits.h>
 #include <meta/interface/intf_lifecycle.h>
@@ -295,11 +295,11 @@ public:
 
     void Ref() override
     {
-        CORE_NS::AtomicIncrement(&refcnt_);
+        BASE_NS::AtomicIncrement(&refcnt_);
     }
     void Unref() override
     {
-        if (CORE_NS::AtomicDecrement(&refcnt_) == 0) {
+        if (BASE_NS::AtomicDecrement(&refcnt_) == 0) {
             if constexpr (HAS_ILIFECYCLE<Interfaces...>) {
                 if (auto i = this->GetInterface(ILifecycle::UID)) {
                     static_cast<ILifecycle*>(i)->Destroy();
@@ -372,7 +372,6 @@ public:
         return BASE_NS::vector<BASE_NS::Uid>();
     }
 };
-
 
 META_END_NAMESPACE()
 

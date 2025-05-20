@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -41,7 +41,8 @@ void RecordAllocation(const int64_t alignedByteSize)
     if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
-        pdm->UpdateData("AllGpuImages", "GPU_IMAGE", alignedByteSize);
+        pdm->UpdateData("AllGpuImages", "GPU_IMAGE", alignedByteSize,
+            CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
     }
 }
 #endif
@@ -219,20 +220,26 @@ GpuImageVk::GpuImageVk(Device& device, const GpuImageDesc& desc) : GpuImage(), d
 GpuImageVk::GpuImageVk(
     Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData, const uintptr_t hwBuffer)
     : device_(device), plat_((const GpuImagePlatformDataVk&)platformData),
-      desc_(hwBuffer ? GetImageDescFromHwBufferDesc(hwBuffer) : desc), hwBuffer_(hwBuffer), ownsResources_(false)
+      desc_(hwBuffer ? GetImageDescFromHwBufferDesc(hwBuffer) : desc), ownsResources_(false),
+      ownsImage_(plat_.image ? false : true), ownsImageViews_(plat_.imageView ? false : true)
 {
+    // with platform data the resources can be created from hwbuffer and/or direct platform images
+    // the destruction happens based on ownsImage_ and ownsImageViews_
+
 #if (RENDER_VALIDATION_ENABLED == 1)
-    if (!plat_.image && !plat_.imageView && hwBuffer) {
+    if ((!plat_.image) && (!plat_.imageView) && (!hwBuffer)) {
         PLUGIN_LOG_W("RENDER_VALIDATION: creating GpuImage without image, imageView, or hwBuffer");
     }
 #endif
     FillImageDescVk(desc_, plat_);
+    // additional image views are not created if initial image view is provided
     if (plat_.image && !plat_.imageView && (desc_.usageFlags & IMAGE_VIEW_USAGE_FLAGS)) {
         CreateVkImageViews(plat_.aspectFlags, nullptr);
     } else if (plat_.imageView) {
         plat_.imageViewBase = plat_.imageView;
     }
     if (hwBuffer) {
+        plat_.platformHwBuffer = hwBuffer;
         CreatePlatformHwBuffer();
     }
 }
@@ -247,9 +254,9 @@ GpuImageVk::~GpuImageVk()
         }
         vec.clear();
     };
-    // hw buffer variant creates image views and needs to destroy those as well
+    // high level view might own image views
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
-    if (ownsResources_ || (hwBuffer_ != 0)) {
+    if (ownsResources_ || ownsImageViews_) {
         vkDestroyImageView(device, // device
             plat_.imageView,       // imageView
             nullptr);              // pAllocator
@@ -263,7 +270,7 @@ GpuImageVk::~GpuImageVk()
         destroyImageViews(device, platViews_.mipImageAllLayerViews);
     }
 
-    if (ownsResources_) {
+    if (ownsImage_) {
 #if (RENDER_PERF_ENABLED == 1)
         RecordAllocation(-static_cast<int64_t>(mem_.allocationInfo.size));
 #endif
@@ -275,7 +282,8 @@ GpuImageVk::~GpuImageVk()
         if (gpuMemAllocator) {
             gpuMemAllocator->DestroyImage(plat_.image, mem_.allocation);
         }
-    } else if (hwBuffer_ != 0) {
+    }
+    if (plat_.platformHwBuffer) {
         DestroyPlatformHwBuffer();
     }
 }
@@ -443,7 +451,7 @@ VkImageAspectFlags GetImageAspectFlagsFromFormat(const VkFormat format)
     const bool isDepthFormat =
         ((format == VkFormat::VK_FORMAT_D16_UNORM) || (format == VkFormat::VK_FORMAT_X8_D24_UNORM_PACK32) ||
             (format == VkFormat::VK_FORMAT_D32_SFLOAT) || (format == VkFormat::VK_FORMAT_D16_UNORM_S8_UINT) ||
-            (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT));
+            (format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT) || (format == VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT));
     if (isDepthFormat) {
         flags |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
 

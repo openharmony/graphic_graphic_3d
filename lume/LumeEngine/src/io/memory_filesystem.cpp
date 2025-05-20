@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -56,7 +56,7 @@ IFile::Ptr MemoryFilesystem::CreateFile(const string_view path)
     if (auto const pos = memoryFiles_.find(path); pos != memoryFiles_.end()) {
         return IFile::Ptr { new MemoryFile(pos->second.lock(), IFile::Mode::READ_WRITE) };
     }
-    auto storage = std::make_shared<MemoryFileStorage>();
+    auto storage = BASE_NS::make_shared<MemoryFileStorage>();
     memoryFiles_[path] = storage;
 
     return IFile::Ptr { new MemoryFile(BASE_NS::move(storage), IFile::Mode::READ_WRITE) };

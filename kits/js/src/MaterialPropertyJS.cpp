@@ -20,6 +20,9 @@
 
 #include "MaterialJS.h"
 #include "MaterialPropertyJS.h"
+#include "SamplerJS.h"
+
+#include <optional>
 
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
@@ -37,6 +40,9 @@ void MaterialPropertyJS::Init(napi_env env, napi_value exports)
         GetSetProperty<Object, MaterialPropertyJS, &MaterialPropertyJS::GetFactor, &MaterialPropertyJS::SetFactor>(
             "factor"));
     node_props.push_back(
+        GetSetProperty<Object, MaterialPropertyJS, &MaterialPropertyJS::GetSampler, &MaterialPropertyJS::SetSampler>(
+            "sampler"));
+    node_props.push_back(
         MakeTROMethod<FunctionContext<>, MaterialPropertyJS, &MaterialPropertyJS::Dispose>("destroy"));
 
     napi_value func;
@@ -44,23 +50,10 @@ void MaterialPropertyJS::Init(napi_env env, napi_value exports)
         nullptr, node_props.size(), node_props.data(), &func);
 
     MyInstanceState* mis;
-    GetInstanceData(env, (void**)&mis);
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     mis->StoreCtor("MaterialProperty", func);
 }
-MaterialPropertyJS::MaterialPropertyJS(napi_env e, napi_callback_info i) : BaseObject<MaterialPropertyJS>(e, i)
-{
-    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
-    if (!fromJs) {
-        return;
-    }
-
-    NapiApi::Object meJs(fromJs.This());
-    NapiApi::Object args = fromJs.Arg<1>();
-    if (auto obj = GetNativeObjectParam<META_NS::IObject>(args)) {
-        SetNativeObject(obj, false);
-        StoreJsObj(obj, meJs);
-    }
-}
+MaterialPropertyJS::MaterialPropertyJS(napi_env e, napi_callback_info i) : BaseObject(e, i) {}
 MaterialPropertyJS::~MaterialPropertyJS()
 {
     DisposeNative(nullptr);
@@ -82,48 +75,43 @@ napi_value MaterialPropertyJS::Dispose(NapiApi::FunctionContext<>& ctx)
 void MaterialPropertyJS::Finalize(napi_env env)
 {
     DisposeNative(nullptr);
-    BaseObject<MaterialPropertyJS>::Finalize(env);
+    BaseObject::Finalize(env);
 }
 void MaterialPropertyJS::DisposeNative(void*)
 {
     if (!disposed_) {
         disposed_ = true;
-        SetNativeObject(nullptr, false);
-        SetNativeObject(nullptr, true);
+        sampler_.Reset();
+        UnsetNativeObject();
     }
 }
 napi_value MaterialPropertyJS::GetImage(NapiApi::FunctionContext<>& ctx)
 {
-    auto texture = interface_pointer_cast<SCENE_NS::ITexture>(GetThisNativeObject(ctx));
+    auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
     if (!texture) {
         return ctx.GetUndefined();
     }
 
     SCENE_NS::IBitmap::Ptr image = META_NS::GetValue(texture->Image());
-    auto obj = interface_pointer_cast<META_NS::IObject>(image);
-
-    if (auto cached = FetchJsObj(obj)) {
-        return cached.ToNapiValue();
-    }
     napi_value args[] = { ctx.This().ToNapiValue() };
-    return CreateFromNativeInstance(ctx.GetEnv(), obj, false, BASE_NS::countof(args), args).ToNapiValue();
+    return CreateFromNativeInstance(ctx.GetEnv(), image, PtrType::WEAK, args).ToNapiValue();
 }
 void MaterialPropertyJS::SetImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    auto texture = interface_pointer_cast<SCENE_NS::ITexture>(GetThisNativeObject(ctx));
+    auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
     if (!texture) {
         return;
     }
 
     NapiApi::Object imageJS = ctx.Arg<0>();
-    if (auto nat = imageJS.Native<TrueRootObject>()) {
+    if (auto nat = imageJS.GetRoot()) {
         SCENE_NS::IBitmap::Ptr image = interface_pointer_cast<SCENE_NS::IBitmap>(nat->GetNativeObject());
         META_NS::SetValue(texture->Image(), image);
     }
 }
 napi_value MaterialPropertyJS::GetFactor(NapiApi::FunctionContext<>& ctx)
 {
-    auto texture = interface_pointer_cast<SCENE_NS::ITexture>(GetThisNativeObject(ctx));
+    auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
     if (!texture) {
         return ctx.GetUndefined();
     }
@@ -140,7 +128,7 @@ napi_value MaterialPropertyJS::GetFactor(NapiApi::FunctionContext<>& ctx)
 }
 void MaterialPropertyJS::SetFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    auto texture = interface_pointer_cast<SCENE_NS::ITexture>(GetThisNativeObject(ctx));
+    auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
     if (!texture) {
         return;
     }
@@ -152,4 +140,98 @@ void MaterialPropertyJS::SetFactor(NapiApi::FunctionContext<NapiApi::Object>& ct
         auto w = factorJS.Get<float>("w");
         META_NS::SetValue(texture->Factor(), { x, y, z, w });
     }
+}
+napi_value MaterialPropertyJS::GetSampler(NapiApi::FunctionContext<>& ctx)
+{
+    if (auto existing = sampler_.GetObject()) {
+        return existing.ToNapiValue();
+    }
+    
+    if (auto texture = GetNativeObject<ITexture>()) {
+        if (auto sampler = META_NS::GetValue(texture->Sampler())) {
+            napi_value args[] = { ctx.This().ToNapiValue() };
+            auto object = CreateFromNativeInstance(ctx.GetEnv(), sampler, PtrType::STRONG, args);
+            sampler_ = NapiApi::StrongRef(object);
+            return object.ToNapiValue();
+        }
+    }
+    return ctx.GetUndefined();
+}
+
+void MaterialPropertyJS::SetSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
+    if (!texture) {
+        return;
+    }
+
+    auto target = META_NS::GetValue(texture->Sampler());
+    NapiApi::Object source = ctx.Arg<0>();
+
+    struct SamplerChangeSet {
+        std::optional<SCENE_NS::SamplerFilter> minFilter;
+        std::optional<SCENE_NS::SamplerFilter> magFilter;
+        std::optional<SCENE_NS::SamplerFilter> mipMapMode;
+        std::optional<SCENE_NS::SamplerAddressMode> addressModeU;
+        std::optional<SCENE_NS::SamplerAddressMode> addressModeV;
+        std::optional<SCENE_NS::SamplerAddressMode> addressModeW;
+
+        bool HasChanges() const
+        {
+            return minFilter.has_value() || magFilter.has_value() || mipMapMode.has_value() ||
+                   addressModeU.has_value() || addressModeV.has_value() || addressModeW.has_value();
+        }
+    };
+
+    SamplerChangeSet changes;
+    bool defined = source && source.IsDefined() && !source.IsNull();
+    if (defined) {
+        if (source.Has("magFilter")) {
+            changes.magFilter = SamplerJS::ConvertToFilter(source.Get<uint32_t>("magFilter"));
+        }
+        if (source.Has("minFilter")) {
+            changes.minFilter = SamplerJS::ConvertToFilter(source.Get<uint32_t>("minFilter"));
+        }
+        if (source.Has("mipMapMode")) {
+            changes.mipMapMode = SamplerJS::ConvertToFilter(source.Get<uint32_t>("mipMapMode"));
+        }
+        if (source.Has("addressModeU")) {
+            changes.addressModeU = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeU"));
+        }
+        if (source.Has("addressModeV")) {
+            changes.addressModeV = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeV"));
+        }
+        if (source.Has("addressModeW")) {
+            changes.addressModeW = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeW"));
+        }
+    }
+
+    ExecSyncTask([&]() {
+        // Apply given object as a changeset on top of default sampler
+        if (auto resetable = interface_cast<META_NS::IResetableObject>(target)) {
+            resetable->ResetObject(); // First, reset to default state
+        }
+        // Then apply those properties that have been set in our input object
+        if (changes.HasChanges()) {
+            if (changes.magFilter) {
+                META_NS::SetValue(target->MagFilter(), changes.magFilter.value());
+            }
+            if (changes.minFilter) {
+                META_NS::SetValue(target->MinFilter(), changes.minFilter.value());
+            }
+            if (changes.mipMapMode) {
+                META_NS::SetValue(target->MipMapMode(), changes.mipMapMode.value());
+            }
+            if (changes.addressModeU) {
+                META_NS::SetValue(target->AddressModeU(), changes.addressModeU.value());
+            }
+            if (changes.addressModeV) {
+                META_NS::SetValue(target->AddressModeV(), changes.addressModeV.value());
+            }
+            if (changes.addressModeW) {
+                META_NS::SetValue(target->AddressModeW(), changes.addressModeW.value());
+            }
+        }
+        return META_NS::IAny::Ptr {};
+    });
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,6 +30,8 @@
 #include <render/property/property_types.h>
 
 #include "default_engine_constants.h"
+#include "postprocesses/render_post_process_flare.h"
+#include "util/log.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -56,9 +58,9 @@ RenderPassDesc::RenderArea GetImageRenderArea(
 
 RenderPostProcessFlareNode::RenderPostProcessFlareNode()
     : inputProperties_(
-          &nodeInputsData_, array_view(PropertyType::DataType<RenderPostProcessFlareNode::NodeInputs>::properties)),
+          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessFlareNode::NodeInputs>::properties)),
       outputProperties_(
-          &nodeOutputsData_, array_view(PropertyType::DataType<RenderPostProcessFlareNode::NodeOutputs>::properties))
+          &nodeOutputsData, array_view(PropertyType::DataType<RenderPostProcessFlareNode::NodeOutputs>::properties))
 
 {}
 
@@ -115,14 +117,17 @@ void RenderPostProcessFlareNode::Init(
 void RenderPostProcessFlareNode::PreExecute()
 {
     if (valid_ && postProcess_) {
-        if (const auto* props = postProcess_->GetProperties(); props) {
-            enabled_ = CORE_NS::GetPropertyValue<bool>(props, "enabled");
+        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+        // this node is directly dependant
+        PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessFlareNode::EffectProperties));
+        if (propertyView.size_bytes() == sizeof(RenderPostProcessFlareNode::EffectProperties)) {
+            effectProperties_ = (const RenderPostProcessFlareNode::EffectProperties&)(*propertyView.data());
         }
     } else {
-        enabled_ = false;
+        effectProperties_.enabled = false;
     }
 
-    if (enabled_) {
+    if (effectProperties_.enabled) {
         // check input and output
         EvaluateOutput();
     }
@@ -130,7 +135,7 @@ void RenderPostProcessFlareNode::PreExecute()
 
 IRenderNode::ExecuteFlags RenderPostProcessFlareNode::GetExecuteFlags() const
 {
-    if (enabled_) {
+    if (effectProperties_.enabled) {
         return 0;
     } else {
         return IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE;
@@ -139,18 +144,18 @@ IRenderNode::ExecuteFlags RenderPostProcessFlareNode::GetExecuteFlags() const
 
 void RenderPostProcessFlareNode::Execute(IRenderCommandList& cmdList)
 {
-    CORE_ASSERT(enabled_);
+    CORE_ASSERT(effectProperties_.enabled);
 
     EvaluateOutput();
 
     RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderLensFlare", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
 
-    BindableImage currOutput = nodeOutputsData_.output;
+    BindableImage currOutput = nodeOutputsData.output;
     if (!RenderHandleUtil::IsValid(currOutput.handle)) {
         return;
     }
     // update the output
-    nodeOutputsData_.output = currOutput;
+    nodeOutputsData.output = currOutput;
 
     const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const RenderPassDesc::RenderArea renderArea =
@@ -196,15 +201,8 @@ void RenderPostProcessFlareNode::Execute(IRenderCommandList& cmdList)
 RenderPostProcessFlareNode::PushConstantStruct RenderPostProcessFlareNode::GetPushDataStruct(
     const uint32_t width, const uint32_t height) const
 {
-    Math::Vec3 flarePos { 0.0f, 0.0f, 0.0f };
-    float intensity = 1.0f;
-    if (postProcess_) {
-        if (const auto* props = postProcess_->GetProperties(); props) {
-            flarePos = CORE_NS::GetPropertyValue<Math::Vec3>(props, "flarePos");
-            intensity = CORE_NS::GetPropertyValue<float>(props, "intensity");
-        }
-    }
-
+    const Math::Vec3 flarePos = effectProperties_.flarePos;
+    float intensity = effectProperties_.intensity;
     // NOTE: the shader is currently still run even though the intensity is zero
     // signed culling for z
     if ((flarePos.x < 0.0f) || (flarePos.x > 1.0f) || (flarePos.y < 0.0f) || (flarePos.y > 1.0f) ||
@@ -221,8 +219,8 @@ RenderPostProcessFlareNode::PushConstantStruct RenderPostProcessFlareNode::GetPu
 
 void RenderPostProcessFlareNode::EvaluateOutput()
 {
-    if (RenderHandleUtil::IsValid(nodeInputsData_.input.handle)) {
-        nodeOutputsData_.output = nodeInputsData_.input;
+    if (RenderHandleUtil::IsValid(nodeInputsData.input.handle)) {
+        nodeOutputsData.output = nodeInputsData.input;
     }
 }
 RENDER_END_NAMESPACE()

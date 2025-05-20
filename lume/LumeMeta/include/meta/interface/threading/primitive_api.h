@@ -35,7 +35,7 @@ static constexpr size_t MUTEX_HANDLE_STORAGE_SIZE = 8;
 static constexpr size_t MUTEX_HANDLE_STORAGE_SIZE = 40;
 #endif
 
-struct alignas(8) MutexHandle { // 8: alginment bit
+struct alignas(8) MutexHandle { // 8: align
     union {
         void* ptr = nullptr;
         char storage[MUTEX_HANDLE_STORAGE_SIZE];

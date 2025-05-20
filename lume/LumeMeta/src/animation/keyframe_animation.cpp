@@ -49,11 +49,14 @@ void KeyframeAnimation::OnAnimationStateChanged(const AnimationStateChangedInfo&
                     // Evaluate current value
                     Evaluate();
                     // Then set the correct keyframe value to the underlying property
-                    p.property->SetValue(*currentValue_);
+                    PropertyLock lock { p.property };
+                    lock->SetValueAny(*currentValue_);
                 }
                 break;
-            case AnimationTargetState::RUNNING:
-                currentValue_ = p.property->GetValue().Clone(false);
+            case AnimationTargetState::RUNNING: {
+                PropertyLock lock { p.property };
+                currentValue_ = lock->GetValueAny().Clone(false);
+            }
                 // Evaluate current value
                 Evaluate();
                 break;
@@ -74,6 +77,10 @@ void KeyframeAnimation::Evaluate()
         META_ACCESS_PROPERTY_VALUE(To), META_ACCESS_PROPERTY_VALUE(Progress), META_ACCESS_PROPERTY_VALUE(Curve) };
     if (GetState().EvaluateValue(data) == AnyReturn::SUCCESS) {
         NotifyChanged();
+        if (auto prop = GetTargetProperty()) {
+            PropertyLock lock { prop.property };
+            prop.stack->EvaluateAndStore();
+        }
     }
 }
 

@@ -16,7 +16,7 @@
 #ifndef SCENE_SRC_COMPONENT_LIGHT_COMPONENT_H
 #define SCENE_SRC_COMPONENT_LIGHT_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 #include <scene/interface/intf_light.h>
 
 #include <meta/ext/object.h>
@@ -25,7 +25,7 @@ SCENE_BEGIN_NAMESPACE()
 
 META_REGISTER_CLASS(LightComponent, "1e25f1c9-723d-4a5a-9cc1-770b0eade707", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class LightComponent : public META_NS::IntroduceInterfaces<ComponentFwd, ILight> {
+class LightComponent : public META_NS::IntroduceInterfaces<Component, ILight> {
     META_OBJECT(LightComponent, ClassId::LightComponent, IntroduceInterfaces)
 
 public:

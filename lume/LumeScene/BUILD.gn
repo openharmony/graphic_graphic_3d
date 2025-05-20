@@ -19,7 +19,7 @@ config("lume_scenewidget_config") {
     "include",
     "src",
     "${LUME_META_PATH}/include",
-    "${LUME_CORE_PATH}/ecshelper",
+    "${LUME_CORE_PATH}/ecshelper"
   ]
 
   defines = [
@@ -32,7 +32,7 @@ config("lume_scenewidget_config") {
     "CORE3D_DEV_ENABLED=${CORE_DEV_ENABLED}",
     "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
     "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
-    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }",
+    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }"
   ]
   cflags = [
     "-Wno-unused-function",
@@ -53,7 +53,7 @@ config("lume_scenewidget_config") {
     "-Wno-overloaded-virtual",
     "-Wno-thread-safety-attributes",
     "-Wno-missing-braces",
-  ]
+    ]
 }
 
 ohos_source_set("lume_scenewidget_src") {
@@ -64,64 +64,20 @@ ohos_source_set("lume_scenewidget_src") {
     "${LUME_CORE_PATH}:lume_base_api",
     "${LUME_CORE_PATH}:lume_engine_api",
     "${LUME_CORE_PATH}:lume_component_help_config",
-    "${LUME_SERIALIZER_PATH}:ecs_serializer_api",
-    "${LUME_CORE_PATH}:lume_default",
+    "${LUME_SERIALIZER_PATH}:ecs_serializer_api",    
+    "${LUME_CORE_PATH}:lume_default"
   ]
 
   sources = [
-    "include/scene/base/namespace.h",
-    "include/scene/base/types.h",
-    "include/scene/ext/component_fwd.h",
-    "include/scene/ext/component_util.h",
-    "include/scene/ext/ecs_lazy_property_fwd.h",
-    "include/scene/ext/intf_component.h",
-    "include/scene/ext/intf_component_factory.h",
-    "include/scene/ext/intf_converting_value.h",
-    "include/scene/ext/intf_create_entity.h",
-    "include/scene/ext/intf_ecs_context.h",
-    "include/scene/ext/intf_ecs_event_listener.h",
-    "include/scene/ext/intf_ecs_object.h",
-    "include/scene/ext/intf_ecs_object_access.h",
-    "include/scene/ext/intf_engine_property_init.h",
-    "include/scene/ext/intf_internal_camera.h",
-    "include/scene/ext/intf_internal_scene.h",
-    "include/scene/ext/intf_render_resource.h",
-    "include/scene/ext/named_scene_object.h",
-    "include/scene/ext/scene_property.h",
-    "include/scene/ext/util.h",
-    "include/scene/interface/component_util.h",
-    "include/scene/interface/intf_bitmap.h",
-    "include/scene/interface/intf_camera.h",
-    "include/scene/interface/intf_create_mesh.h",
-    "include/scene/interface/intf_environment.h",
-    "include/scene/interface/intf_layer.h",
-    "include/scene/interface/intf_light.h",
-    "include/scene/interface/intf_material.h",
-    "include/scene/interface/intf_mesh.h",
-    "include/scene/interface/intf_node.h",
-    "include/scene/interface/intf_postprocess.h",
-    "include/scene/interface/intf_raycast.h",
-    "include/scene/interface/intf_render_configuration.h",
-    "include/scene/interface/intf_render_target.h",
-    "include/scene/interface/intf_scene.h",
-    "include/scene/interface/intf_scene_manager.h",
-    "include/scene/interface/intf_shader.h",
-    "include/scene/interface/intf_text.h",
-    "include/scene/interface/intf_texture.h",
-    "include/scene/interface/intf_transform.h",
-    "include/scene/interface/postprocess/intf_bloom.h",
-    "include/scene/interface/postprocess/intf_postprocess_effect.h",
-    "include/scene/interface/postprocess/intf_tonemap.h",
+    "src/application_context.h",
     "src/asset/asset_object.cpp",
     "src/asset/asset_object.h",
-    "src/bitmap.cpp",
-    "src/bitmap.h",
     "src/component/animation_component.cpp",
     "src/component/animation_component.h",
     "src/component/camera_component.cpp",
     "src/component/camera_component.h",
-    "src/component/enviroment_component.h",
     "src/component/environment_component.cpp",
+    "src/component/environment_component.h",
     "src/component/generic_component.cpp",
     "src/component/generic_component.h",
     "src/component/layer_component.cpp",
@@ -150,27 +106,20 @@ ohos_source_set("lume_scenewidget_src") {
     "src/core/ecs_listener.h",
     "src/core/ecs_object.cpp",
     "src/core/ecs_object.h",
-    "src/core/internal_raycast.h",
     "src/core/internal_scene.cpp",
     "src/core/internal_scene.h",
-    "src/ecs_animation.cpp",
-    "src/ecs_animation.h",
+    "src/core/intf_internal_raycast.h",
     "src/ecs_component/entity_owner_component.h",
     "src/ecs_component/entity_owner_component_info.h",
     "src/ecs_component/entity_owner_component_manager.cpp",
     "src/entity_converting_value.h",
-    "src/environment.cpp",
-    "src/environment.h",
-    "src/mesh/material.cpp",
-    "src/mesh/material.h",
     "src/mesh/mesh.cpp",
     "src/mesh/mesh.h",
     "src/mesh/mesh_creator.cpp",
     "src/mesh/mesh_creator.h",
     "src/mesh/mesh_resource.h",
-    "src/mesh/shader.cpp",
-    "src/mesh/shader.h",
-    "src/mesh/shader_util.cpp",
+    "src/mesh/sampler.cpp",
+    "src/mesh/sampler.h",
     "src/mesh/submesh.cpp",
     "src/mesh/submesh.h",
     "src/mesh/texture.cpp",
@@ -180,24 +129,72 @@ ohos_source_set("lume_scenewidget_src") {
     "src/node/light_node.cpp",
     "src/node/light_node.h",
     "src/node/mesh_node.cpp",
+    "src/node/mesh_node.h",
     "src/node/node.cpp",
     "src/node/node.h",
+    "src/node/startable_handler.cpp",
+    "src/node/startable_handler.h",
     "src/node/text_node.cpp",
     "src/node/text_node.h",
-    "src/nodel/mesh_node.h",
     "src/plugin.cpp",
+    "src/postprocess/bloom.cpp",
     "src/postprocess/bloom.h",
     "src/postprocess/postprocess.cpp",
     "src/postprocess/postprocess.h",
+    "src/postprocess/tonemap.cpp",
     "src/postprocess/tonemap.h",
+    "src/postprocess/util.h",
+    "src/register_anys.cpp",
     "src/register_engine_access.cpp",
+    "src/register_serializers.cpp",
     "src/render_configuration.cpp",
     "src/render_configuration.h",
+    "src/render_context.h",
+    "src/resource/ecs_animation.cpp",
+    "src/resource/ecs_animation.h",
+    "src/resource/environment.cpp",
+    "src/resource/environment.h",
+    "src/resource/image.cpp",
+    "src/resource/image.h",
+    "src/resource/material.cpp",
+    "src/resource/material.h",
+    "src/resource/render_resource.cpp",
+    "src/resource/render_resource.h",
+    "src/resource/render_resource_manager.cpp",
+    "src/resource/render_resource_manager.h",
+    "src/resource/resource_types.cpp",
+    "src/resource/resource_types.h",
+    "src/resource/shader.cpp",
+    "src/resource/shader.h",
+    "src/resource/types/animation_type.cpp",
+    "src/resource/types/animation_type.h",
+    "src/resource/types/environment_type.cpp",
+    "src/resource/types/environment_type.h",
+    "src/resource/types/gltf_scene_type.cpp",
+    "src/resource/types/gltf_scene_type.h",
+    "src/resource/types/image_type.cpp",
+    "src/resource/types/image_type.h",
+    "src/resource/types/material_type.cpp",
+    "src/resource/types/material_type.h",
+    "src/resource/types/postprocess_type.cpp",
+    "src/resource/types/postprocess_type.h",
+    "src/resource/types/scene_type.cpp",
+    "src/resource/types/scene_type.h",
+    "src/resource/types/shader_type.cpp",
+    "src/resource/types/shader_type.h",
     "src/scene.cpp",
     "src/scene.h",
     "src/scene_manager.cpp",
     "src/scene_manager.h",
+    "src/serialization/external_node.h",
+    "src/serialization/scene_exporter.cpp",
+    "src/serialization/scene_exporter.h",
+    "src/serialization/scene_importer.cpp",
+    "src/serialization/scene_importer.h",
+    "src/serialization/scene_ser.h",
+    "src/serialization/util.h",
     "src/util.h",
+    "src/util_interfaces.h",
   ]
 
   include_dirs = [
@@ -205,14 +202,16 @@ ohos_source_set("lume_scenewidget_src") {
     "${LUME_CORE_PATH}/api",
     "${LUME_RENDER_PATH}/api",
     "${LUME_CORE3D_PATH}/api",
-    "${LUME_META_PATH}/include",
+    "${LUME_META_PATH}/include"
   ]
-
+ 
   deps = [
-    "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
     "${LUME_META_PATH}:libPluginMetaObject",
+    "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper"
   ]
-  external_deps = [ "c_utils:utils" ]
+  external_deps = [
+    "c_utils:utils",
+  ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
@@ -227,8 +226,8 @@ ohos_source_set("lume_scenewidget_src") {
 
 ohos_shared_library("libPluginSceneWidget") {
   deps = [
-    ":lume_scenewidget_src",
     "${LUME_SERIALIZER_PATH}:EcsSerializer",
+    ":lume_scenewidget_src",
   ]
   relative_install_dir = "graphics3d"
   part_name = "graphic_3d"

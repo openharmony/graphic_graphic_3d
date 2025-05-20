@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -87,16 +87,26 @@ private:
         RENDER_NS::IDescriptorSetBinder::Ptr dmSet2Binder;
         bool dmSet2Ready { false };
     };
+    struct TlasData {
+        RENDER_NS::RenderHandleReference as;
+        RENDER_NS::RenderHandleReference asInstanceBuffer;
+        RENDER_NS::RenderHandleReference scratch;
 
-    void UpdateBuffers(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
+        RENDER_NS::AsBuildSizes asBuildSizes;
+        bool createNewBuffer { false };
+    };
+
     void UpdateMeshBuffer(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
     void UpdateSkinBuffer(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
     void UpdateMaterialBuffers(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
+    void UpdateTlasBuffers(
+        RENDER_NS::IRenderCommandList& cmdList, const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
     void UpdateDescriptorSets(
         RENDER_NS::IRenderCommandList& cmdList, const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
 
     void ProcessBuffers(const ObjectCounts& objectCounts);
     void ProcessGlobalBinders();
+    void ProcessTlasBuffers();
 
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
@@ -107,6 +117,9 @@ private:
     GlobalDescriptorSets globalDescs_;
     RENDER_NS::PipelineLayout defaultMaterialPipelineLayout_;
     MaterialHandleStruct defaultMaterialStruct_;
+
+    bool rtEnabled_ { false };
+    TlasData tlas_;
 };
 CORE3D_END_NAMESPACE()
 

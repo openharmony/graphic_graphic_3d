@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -55,8 +55,14 @@
 #define CORE_POST_PROCESS_TONEMAP_ACES 0
 #define CORE_POST_PROCESS_TONEMAP_ACES_2020 1
 #define CORE_POST_PROCESS_TONEMAP_FILMIC 2
+#define CORE_POST_PROCESS_TONEMAP_PBR_NEUTRAL 3
 
-#define CORE_POST_PROCESS_COLOR_CONVERSION_SRGB 1
+#define CORE_POST_PROCESS_DITHER_INTERLEAVED 0
+#define CORE_POST_PROCESS_DITHER_TRIANGLE 1
+#define CORE_POST_PROCESS_DITHER_TRIANGLE_RGB 2
+
+#define CORE_POST_PROCESS_COLOR_CONVERSION_SRGB (1 << 0)
+#define CORE_POST_PROCESS_COLOR_CONVERSION_ALPHA_MULTIPLY (1 << 1)
 
 #define TAA_USE_BICUBIC_BIT 1
 #define TAA_USE_VARIANCE_CLIPPING_BIT 2

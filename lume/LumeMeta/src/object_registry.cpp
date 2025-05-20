@@ -306,7 +306,7 @@ bool ObjectRegistry::PostCreate(const BASE_NS::Uid& uid, InstanceId instid, cons
         singletons_[uid] = classes.front(); // Store singleton weakref
     }
     if (createInfo.isGloballyAvailable) {
-        CORE_LOG_D("Registering global object: %s [%s]", GetClassName(uid).c_str(), instid.ToString().c_str());
+        CORE_LOG_V("Registering global object: %s [%s]", GetClassName(uid).c_str(), instid.ToString().c_str());
         globalObjects_[instid] = classes.front();
     }
     return true;
@@ -523,7 +523,7 @@ IObjectContext::Ptr ObjectRegistry::GetDefaultObjectContext() const
     if (!defaultContext_) {
         defaultContext_ = context;
     }
-    CORE_ASSERT(defaultContext_);
+    CORE_ASSERT_MSG(defaultContext_, "Failed to create default object context");
     return defaultContext_;
 }
 
@@ -719,7 +719,7 @@ void ObjectRegistry::RegisterAny(BASE_NS::shared_ptr<AnyBuilder> builder)
         CORE_LOG_W("Any already registered [id=%s, type=%s]", builder->GetObjectId().ToString().c_str(),
             builder->GetTypeName().c_str());
     }
-    CORE_LOG_D("Registering Any [%s] for type '%s'", builder->GetObjectId().ToString().c_str(),
+    CORE_LOG_V("Registering Any [%s] for type '%s'", builder->GetObjectId().ToString().c_str(),
         builder->GetTypeName().c_str());
     anyBuilders_[builder->GetObjectId()] = builder;
 }

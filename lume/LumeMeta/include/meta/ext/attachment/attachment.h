@@ -47,7 +47,7 @@ protected:
 public:
     META_BEGIN_STATIC_DATA()
     META_STATIC_PROPERTY_DATA(IAttachment, IObject::WeakPtr, DataContext)
-    META_STATIC_PROPERTY_DATA(IAttachment, IAttach::WeakPtr, AttachedTo)
+    META_STATIC_PROPERTY_DATA(IAttachment, IAttach::WeakPtr, AttachedTo, {}, DEFAULT_PROPERTY_FLAGS_NO_SER)
     META_END_STATIC_DATA()
 
     /** Implementation of IAttachment::DataContext */

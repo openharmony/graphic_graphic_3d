@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -247,9 +247,10 @@ void ImageLoaderManager::OnTypeInfoEvent(EventType type, array_view<const ITypeI
                 }
             } else if (type == EventType::REMOVED) {
                 imageLoaders_.erase(std::remove_if(imageLoaders_.begin(), imageLoaders_.end(),
-                    [&uid = imageLoaderInfo->uid](
-                        const RegisteredImageLoader& loader) { return loader.uid == uid; }),
-                    imageLoaders_.cend());
+                                                   [&uid = imageLoaderInfo->uid](const RegisteredImageLoader &loader) {
+                                                       return loader.uid == uid;
+                                                   }),
+                                    imageLoaders_.cend());
             }
         }
     }

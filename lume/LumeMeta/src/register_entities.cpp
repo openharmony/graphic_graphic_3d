@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include <meta/base/namespace.h>
 #include <meta/interface/intf_object_registry.h>
 

@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-
 #include "container_base.h"
 
 #include <algorithm>
+#include <mutex>
 
 #include <base/math/mathf.h>
 
@@ -30,7 +30,7 @@ void ContainerBase::SetImplementingIContainer(IObject* me, IContainer* c)
 {
     me_ = me;
     impl_ = c;
-    CORE_ASSERT(impl_);
+    CORE_ASSERT_MSG(impl_, "ContainerBase with null implementation");
 }
 
 void ContainerBase::LockShared() const

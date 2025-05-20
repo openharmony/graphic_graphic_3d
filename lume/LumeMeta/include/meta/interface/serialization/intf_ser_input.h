@@ -20,10 +20,12 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Serialisation input interface
 class ISerInput : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ISerInput, "c33cdbb9-9913-41ab-a525-96876b66eb30")
 public:
     // todo: have source interface instead of string
+    /// Process a string to serialisation tree (e.g. json)
     virtual ISerNode::Ptr Process(BASE_NS::string_view) = 0;
 };
 

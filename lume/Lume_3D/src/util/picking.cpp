@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/joint_matrices_component.h>
 #include <3d/ecs/components/layer_component.h>
+#include <3d/ecs/components/local_matrix_component.h>
 #include <3d/ecs/components/mesh_component.h>
 #include <3d/ecs/components/render_mesh_component.h>
 #include <3d/ecs/components/transform_component.h>
@@ -109,6 +110,7 @@ bool IntersectTriangle(const Math::Vec3 triangle[3], const Math::Vec3 start, con
 
     const Math::Vec3 pvec = Math::Cross(direction, v0v2);
     const float det = Math::Dot(v0v1, pvec);
+
     // ray and triangle are parallel and backface culling
     if (det < Math::EPSILON) {
         hitDistance = 0.f;
@@ -177,23 +179,24 @@ void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentM
 
 // Calculates AABB using TransformComponent.
 void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentManager,
-    const ITransformComponentManager& transformComponentManager, const IMeshComponentManager& meshManager,
+    const ITransformComponentManager& transformComponentManager,
+    const ILocalMatrixComponentManager& localMatrixComponentManager, const IMeshComponentManager& meshManager,
     const ISceneNode& sceneNode, const Math::Mat4X4& parentWorld, bool isRecursive, MinAndMax& mamInOut)
 {
     const Entity entity = sceneNode.GetEntity();
     Math::Mat4X4 worldMatrix = parentWorld;
 
-    if (const auto transformId = transformComponentManager.GetComponentId(entity);
-        transformId != IComponentManager::INVALID_COMPONENT_ID) {
-        const TransformComponent tc = transformComponentManager.Get(transformId);
-        const Math::Mat4X4 localMatrix = Math::Trs(tc.position, tc.rotation, tc.scale);
+    if (const ScopedHandle<const TransformComponent> tc = transformComponentManager.Read(entity)) {
+        const Math::Mat4X4 localMatrix = Math::Trs(tc->position, tc->rotation, tc->scale);
         worldMatrix = worldMatrix * localMatrix;
+    } else {
+        if (const ScopedHandle<const LocalMatrixComponent> lmc = localMatrixComponentManager.Read(entity)) {
+            worldMatrix = worldMatrix * lmc->matrix;
+        }
     }
 
-    if (const auto renderMeshId = renderMeshComponentManager.GetComponentId(entity);
-        renderMeshId != IComponentManager::INVALID_COMPONENT_ID) {
-        const RenderMeshComponent rmc = renderMeshComponentManager.Get(renderMeshId);
-        if (const auto meshHandle = meshManager.Read(rmc.mesh); meshHandle) {
+    if (const auto renderMeshHandle = renderMeshComponentManager.Read(entity)) {
+        if (const auto meshHandle = meshManager.Read(renderMeshHandle->mesh); meshHandle) {
             const MinAndMax meshMam = GetWorldAABB(worldMatrix, meshHandle->aabbMin, meshHandle->aabbMax);
             mamInOut.minAABB = Math::min(mamInOut.minAABB, meshMam.minAABB);
             mamInOut.maxAABB = Math::max(mamInOut.maxAABB, meshMam.maxAABB);
@@ -204,8 +207,8 @@ void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentM
     if (isRecursive) {
         for (ISceneNode* child : sceneNode.GetChildren()) {
             if (child) {
-                UpdateRecursiveAABB(renderMeshComponentManager, transformComponentManager, meshManager, *child,
-                    worldMatrix, isRecursive, mamInOut);
+                UpdateRecursiveAABB(renderMeshComponentManager, transformComponentManager, localMatrixComponentManager,
+                    meshManager, *child, worldMatrix, isRecursive, mamInOut);
             }
         }
     }
@@ -387,7 +390,7 @@ vector<RayCastResult> Picking::RayCast(const IEcs& ecs, const Math::Vec3& start,
             // Use the skinned aabb's.
             const auto& jointMatricesComponent = *jointMatrices;
             if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start, invDir,
-                distance)) {
+                    distance)) {
                 const float centerDistance = Math::Magnitude(
                     (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f - start);
                 const Math::Vec3 hitPosition = start + direction * distance;
@@ -437,7 +440,7 @@ vector<RayCastResult> Picking::RayCast(
                     // Use the skinned aabb's.
                     const auto& jointMatricesComponent = *jointMatrices;
                     if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start,
-                        invDir, distance)) {
+                            invDir, distance)) {
                         const float centerDistance = Math::Magnitude(
                             (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f -
                             start);
@@ -476,14 +479,14 @@ BASE_NS::vector<RayTriangleCastResult> Core3D::Picking::RayCast(const BASE_NS::M
 {
     vector<RayTriangleCastResult> result;
 
-    if (triangles.size() % 3 != 0) { // 3: parm
+    if (triangles.size() % 3 != 0) {
         CORE_LOG_W("Number of triangles vertices not divisible by 3!");
         return result;
     }
 
     float distance = 0.f;
     Math::Vec2 uv;
-    for (size_t ii = 0; ii < triangles.size(); ii += 3) { // 3: index
+    for (size_t ii = 0; ii < triangles.size(); ii += 3) {
         if (IntersectTriangle(&triangles[ii], start, direction, distance, uv)) {
             const Math::Vec3 hitPosition = start + direction * distance;
 
@@ -587,10 +590,11 @@ MinAndMax Picking::GetTransformComponentAABB(Entity entity, bool isRecursive, IE
     if (ISceneNode* node = GetSystem<INodeSystem>(ecs)->GetNode(entity); node) {
         auto& renderMeshComponentManager = *GetManager<IRenderMeshComponentManager>(ecs);
         auto& transformComponentManager = *GetManager<ITransformComponentManager>(ecs);
+        auto& localMatrixComponentManager = *GetManager<ILocalMatrixComponentManager>(ecs);
         auto& meshComponentManager = *GetManager<IMeshComponentManager>(ecs);
 
-        UpdateRecursiveAABB(renderMeshComponentManager, transformComponentManager, meshComponentManager, *node,
-            Math::Mat4X4(1.0f), isRecursive, mam);
+        UpdateRecursiveAABB(renderMeshComponentManager, transformComponentManager, localMatrixComponentManager,
+            meshComponentManager, *node, Math::Mat4X4(1.0f), isRecursive, mam);
     }
 
     return mam;

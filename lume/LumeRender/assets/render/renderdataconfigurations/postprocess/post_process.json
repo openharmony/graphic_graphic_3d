@@ -2,7 +2,7 @@
     "version": 1.0,
     "name": "PostProcessCore",
     "postProcessConfiguration": {
-        "enableFlags": "bloom | vignette | color_fringe | tonemap",
+        "enableFlags": "bloom | tonemap",
         "bloomConfiguration": {
             "thresholdHard": 1.0,
             "thresholdSoft": 2.0,

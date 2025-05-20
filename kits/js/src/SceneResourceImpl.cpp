@@ -84,7 +84,7 @@ bool SceneResourceImpl::validateSceneRef()
 napi_value SceneResourceImpl::Dispose(NapiApi::FunctionContext<>& ctx)
 {
     // Dispose of the native object. (makes the js object invalid)
-    if (TrueRootObject* instance = GetThisRootObject(ctx)) {
+    if (TrueRootObject* instance = ctx.This().GetRoot()) {
         // see if we have "scenejs" as ext (prefer one given as argument)
         napi_status stat;
         SceneJS* ptr { nullptr };
@@ -97,13 +97,7 @@ napi_value SceneResourceImpl::Dispose(NapiApi::FunctionContext<>& ctx)
             }
         }
         if (!ptr) {
-            NapiApi::Object obj = scene_.GetObject();
-            if (obj) {
-                auto* tro = obj.Native<TrueRootObject>();
-                if (tro) {
-                    ptr = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-                }
-            }
+            ptr = scene_.GetObject().GetJsWrapper<SceneJS>();
         }
         instance->DisposeNative(ptr);
     }
@@ -118,7 +112,11 @@ napi_value SceneResourceImpl::GetObjectType(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    return ctx.GetNumber(type_);
+    uint32_t type = -1; // return -1 if the resource does not exist anymore
+    if (ctx.This().GetNative()) {
+        type = type_;
+    }
+    return ctx.GetNumber(type);
 }
 
 napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
@@ -128,10 +126,14 @@ napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
     }
 
     BASE_NS::string name;
-    if (auto named = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
-        name = named->Name()->GetValue();
-    } else if (auto node = interface_pointer_cast<META_NS::IObject>(GetThisNativeObject(ctx))) {
-        name = node->GetName();
+    auto native = ctx.This().GetNative();
+    if (auto named = interface_cast<META_NS::INamed>(native)) {
+        name = META_NS::GetValue(named->Name());
+    } else if (native) {
+        name = native->GetName();
+    }
+    if (name.empty()) {
+        name = name_; // Use cache if we didn't get anthing from underlying object
     }
     return ctx.GetString(name);
 }
@@ -141,10 +143,15 @@ void SceneResourceImpl::SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx)
         return;
     }
     BASE_NS::string name = ctx.Arg<0>();
-    if (auto named = interface_pointer_cast<META_NS::INamed>(GetThisNativeObject(ctx))) {
-        named->Name()->SetValue(name);
+    auto object = ctx.This();
+    auto native = object.GetNative();
+    if (auto named = interface_cast<META_NS::INamed>(native)) {
+        META_NS::SetValue(named->Name(), name);
+    } else if (auto objectname = interface_cast<META_NS::IObjectName>(native)) {
+        objectname->SetName(name);
     } else {
-        LOG_E("renaming resource not implemented, trying to name (%d) to '%s'", type_, name.c_str());
+        // Object does not support naming, store name locally
+        name_ = name;
     }
 }
 void SceneResourceImpl::SetUri(NapiApi::StrongRef uri)

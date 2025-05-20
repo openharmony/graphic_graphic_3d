@@ -19,7 +19,7 @@
 
 #include "container.h"
 
-META_BEGIN_NAMESPACE()
+META_BEGIN_INTERNAL_NAMESPACE()
 
 class ObjectContainer : public IntroduceInterfaces<MetaObject, Container, IContainerPreTransaction> {
     META_OBJECT(ObjectContainer, ClassId::ObjectContainer, IntroduceInterfaces)
@@ -48,6 +48,6 @@ public:
     META_IMPLEMENT_EVENT(IOnChildChanging, ContainerAboutToChange)
 };
 
-META_END_NAMESPACE()
+META_END_INTERNAL_NAMESPACE()
 
 #endif // META_SRC_OBJECT_CONTAINER_H

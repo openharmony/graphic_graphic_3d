@@ -22,30 +22,40 @@
 #include <meta/base/namespace.h>
 #include <meta/base/ref_uri.h>
 #include <meta/base/version.h>
+#include <meta/interface/serialization/ser_metadata.h>
 
 META_BEGIN_NAMESPACE()
 
 class ISerNodeVisitor;
 
+/// Serialisation intermediate form base node type
 class ISerNode : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ISerNode, "eea35313-5add-4408-ae62-0dd7464b986c")
 public:
+    /// Apply visitor for the node
     virtual void Apply(ISerNodeVisitor&) = 0;
 };
 
+/// Serialisation intermediate form root node
 class IRootNode : public ISerNode {
     META_INTERFACE(ISerNode, IRootNode, "d42016dc-3941-463b-b332-b101ca2a9665")
 public:
-    virtual Version GetVersion() const = 0;
-    virtual Version GetSerializerVersion() const = 0;
+    /// Get metadata
+    virtual SerMetadata GetMetadata() const = 0;
+    /// Get root object
     virtual ISerNode::Ptr GetObject() const = 0;
+
+    virtual void SetMetadata(SerMetadata) = 0;
+    virtual void SetObject(ISerNode::Ptr) = 0;
 };
 
+/// Serialisation intermediate form nil node
 class INilNode : public ISerNode {
     META_INTERFACE(ISerNode, INilNode, "d2712b6e-5c3c-4355-8c63-e039b946afdb")
 public:
 };
 
+/// Serialisation intermediate form object node
 class IObjectNode : public ISerNode {
     META_INTERFACE(ISerNode, IObjectNode, "9c702ee2-6943-4cba-97c8-ac4cf9549cd2")
 public:
@@ -62,6 +72,7 @@ public:
     virtual void SetMembers(ISerNode::Ptr) = 0;
 };
 
+/// Serialisation intermediate form array node
 class IArrayNode : public ISerNode {
     META_INTERFACE(ISerNode, IArrayNode, "40230896-a813-45df-b342-892d5b80405d")
 public:
@@ -74,6 +85,7 @@ struct NamedNode {
     ISerNode::Ptr node;
 };
 
+/// Serialisation intermediate form map node
 class IMapNode : public ISerNode {
     META_INTERFACE(ISerNode, IMapNode, "2fecfa69-652e-41cc-9724-3145b43a9ec5")
 public:
@@ -82,6 +94,7 @@ public:
     virtual void AddNode(BASE_NS::string_view name, ISerNode::Ptr) = 0;
 };
 
+/// Serialisation intermediate form built-in value node
 template<typename Type>
 class IBuiltinValueNode : public ISerNode {
     META_INTERFACE(ISerNode, IBuiltinValueNode, MakeUid<Type>("SerNodes"))
@@ -97,6 +110,7 @@ using IUIntNode = IBuiltinValueNode<uint64_t>;
 using IStringNode = IBuiltinValueNode<BASE_NS::string>;
 using IRefUriNode = IBuiltinValueNode<RefUri>;
 
+/// Serialisation intermediate form visitor base interface
 class ISerNodeVisitor : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ISerNodeVisitor, "147d085e-a0c3-480b-ad21-37cb8db0c120")
 public:

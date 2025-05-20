@@ -25,6 +25,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Task implementation for futures
 class PromisedQueueTask : public IntroduceInterfaces<ITaskQueueTask, ITaskScheduleInfo> {
 public:
     PromisedQueueTask(ITaskQueueWaitableTask::Ptr task, IPromise::Ptr p)
@@ -60,6 +61,7 @@ private:
     ITaskQueueWaitableTask::Ptr task_;
     IPromise::Ptr promise_;
 };
+
 META_END_NAMESPACE()
 
 #endif

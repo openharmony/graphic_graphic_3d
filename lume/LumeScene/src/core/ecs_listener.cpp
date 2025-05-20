@@ -26,8 +26,10 @@ bool EcsListener::Initialize(IEcsContext& context)
 }
 void EcsListener::Uninitialize()
 {
-    ecs_->GetNativeEcs()->RemoveListener((CORE_NS::IEcs::EntityListener&)*this);
-    ecs_->GetNativeEcs()->RemoveListener((CORE_NS::IEcs::ComponentListener&)*this);
+    if (ecs_) {
+        ecs_->GetNativeEcs()->RemoveListener((CORE_NS::IEcs::EntityListener&)*this);
+        ecs_->GetNativeEcs()->RemoveListener((CORE_NS::IEcs::ComponentListener&)*this);
+    }
 }
 
 void EcsListener::RegisterEcsObject(const IEcsObject::Ptr& p)

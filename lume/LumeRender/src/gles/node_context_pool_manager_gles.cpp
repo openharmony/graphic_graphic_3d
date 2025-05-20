@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -55,7 +55,7 @@ uint32_t HighestBit(uint32_t value)
     return count;
 }
 
-void UpdateBindImages(const RenderCommandBeginRenderPass& beginRenderPass, array_view<BindImage> images,
+bool UpdateBindImages(const RenderCommandBeginRenderPass& beginRenderPass, array_view<BindImage> images,
     GpuResourceManager& gpuResourceMgr_)
 {
     const auto& renderPassDesc = beginRenderPass.renderPassDesc;
@@ -63,7 +63,11 @@ void UpdateBindImages(const RenderCommandBeginRenderPass& beginRenderPass, array
         images[idx].layer = renderPassDesc.attachments[idx].layer;
         images[idx].mipLevel = renderPassDesc.attachments[idx].mipLevel;
         images[idx].image = gpuResourceMgr_.GetImage<GpuImageGLES>(renderPassDesc.attachmentHandles[idx]);
+        if (!images[idx].image) {
+            return false;
+        }
     }
+    return true;
 }
 
 uint64_t HashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourceManager& gpuResourceMgr)
@@ -755,7 +759,9 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
     }
 
     BindImage images[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
-    UpdateBindImages(beginRenderPass, images, gpuResourceMgr_);
+    if (!UpdateBindImages(beginRenderPass, images, gpuResourceMgr_)) {
+        return {};
+    }
 
     // Create fbo for each subpass
     LowlevelFramebufferGL fb;
@@ -783,7 +789,7 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
     }
     uint32_t arrayIndex = 0;
     if (auto const pos = std::find_if(framebufferCache_.framebuffers.begin(), framebufferCache_.framebuffers.end(),
-        [](auto const& framebuffer) { return framebuffer.fbos.empty(); });
+                                      [](auto const &framebuffer) { return framebuffer.fbos.empty(); });
         pos != framebufferCache_.framebuffers.end()) {
         arrayIndex = (uint32_t)std::distance(framebufferCache_.framebuffers.begin(), pos);
         *pos = move(fb);

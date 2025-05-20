@@ -21,6 +21,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Helper to bind individual array elements
 class ArrayElementBind : public IntroduceInterfaces<IValue, INotifyOnChange> {
 public:
     ArrayElementBind(const IProperty::Ptr& p, size_t index) : p_(p), index_(index)
@@ -88,6 +89,7 @@ private:
     std::size_t index_ {};
 };
 
+/// Bind property to single element of array property
 inline void AddArrayElementBind(const IProperty::Ptr& p, const IProperty::Ptr& arr, size_t index)
 {
     if (auto i = interface_cast<IStackProperty>(p)) {

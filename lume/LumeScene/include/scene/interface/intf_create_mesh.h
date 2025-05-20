@@ -51,7 +51,7 @@ class ICreateMesh : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ICreateMesh, "727c676f-e20b-403a-93b1-a6116b3b36d9")
 public:
     /// Create custom mesh from given data
-    virtual Future<IMesh::Ptr> Create(const MeshConfig&, const CustomMeshData& data) = 0;
+    virtual Future<IMesh::Ptr> Create(const MeshConfig&, CustomMeshData data) = 0;
 
     /// Create cube mesh from given data
     virtual Future<IMesh::Ptr> CreateCube(const MeshConfig&, float width, float height, float depth) = 0;

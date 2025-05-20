@@ -18,11 +18,19 @@
 #include <stdint.h>
 
 #include <base/namespace.h>
+#include <base/util/color.h>
 #include <base/util/compile_time_hashes.h>
 #include <base/util/uid.h>
+#include <core/plugin/intf_interface.h>
 #include <core/property/property_types.h>
 
 #include <meta/base/type_traits.h>
+
+CORE_BEGIN_NAMESPACE()
+
+DECLARE_PROPERTY_TYPE(BASE_NS::vector<BASE_NS::string>);
+
+CORE_END_NAMESPACE()
 
 META_BEGIN_NAMESPACE()
 
@@ -81,10 +89,9 @@ template<typename Type>
 inline constexpr uint64_t CombineHash(uint64_t hash)
 {
     static_assert(HasUid_v<Type>, "META_TYPE missing for given type");
-
     return hash ^
-        // 12: shift 4: shift
-        (BASE_NS::CompileTime::FNV1aHash(MetaType<Type>::name) + 0x9e3779b97f4a7c15LLU + (hash << 12) + (hash >> 4));
+            (BASE_NS::CompileTime::FNV1aHash(MetaType<Type>::name) + 0x9e3779b97f4a7c15LLU + (hash << 12) + // 12: bits
+            (hash >> 4));                                                                                   //  4: bits
 }
 
 /**
@@ -228,8 +235,14 @@ META_TYPE(BASE_NS::Math::IVec4);
 META_TYPE(BASE_NS::Math::Quat);
 META_TYPE(BASE_NS::Math::Mat3X3);
 META_TYPE(BASE_NS::Math::Mat4X4);
+META_TYPE(BASE_NS::Color);
 META_TYPE(CORE_NS::Entity);
 META_TYPE(CORE_NS::EntityReference);
+
+META_TYPE(BASE_NS::shared_ptr<const CORE_NS::IInterface>)
+META_TYPE(BASE_NS::shared_ptr<CORE_NS::IInterface>)
+META_TYPE(BASE_NS::weak_ptr<const CORE_NS::IInterface>)
+META_TYPE(BASE_NS::weak_ptr<CORE_NS::IInterface>)
 
 CORE_BEGIN_NAMESPACE()
 class IPropertyHandle;

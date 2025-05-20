@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,6 +21,7 @@
 #endif
 
 #include <3d/implementation_uids.h>
+#include <3d/intf_graphics_context.h>
 #include <3d/render/default_material_constants.h>
 #include <3d/render/intf_render_data_store_default_camera.h>
 #include <3d/render/intf_render_data_store_default_light.h>
@@ -55,6 +56,7 @@
 #include <render/nodecontext/intf_render_node_util.h>
 #include <render/render_data_structures.h>
 
+#include "render/datastore/render_data_store_weather.h"
 // NOTE: do not include in header
 #include "render_light_helper.h"
 
@@ -67,6 +69,8 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
+constexpr bool ENABLE_RT { true };
+
 constexpr bool USE_IMMUTABLE_SAMPLERS { false };
 constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
 constexpr string_view POD_DATA_STORE_NAME { "RenderDataStorePod" };
@@ -417,7 +421,7 @@ void CreateColorTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const Ren
     RenderNodeDefaultCameraController::CreatedTargets& createdTargets)
 {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-    CORE_LOG_I("CORE3D_VALIDATION: creating camera color targets %s", customCamRngId.data());
+    CORE_LOG_D("CORE3D_VALIDATION: creating camera color targets %s", customCamRngId.data());
 #endif
     // This (re-)creates all the needed color targets
     GpuImageDesc desc = cameraResourceSetup.inputImageDescs.color;
@@ -468,7 +472,7 @@ void CreateDepthTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const Ren
     RenderNodeDefaultCameraController::CreatedTargets& createdTargets)
 {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-    CORE_LOG_I("CORE3D_VALIDATION: creating camera depth targets %s", customCamRngId.data());
+    CORE_LOG_D("CORE3D_VALIDATION: creating camera depth targets %s", customCamRngId.data());
 #endif
     // this (re-)creates all the needed depth targets
     // we support cameras without depth targets (default depth is created if no msaa)
@@ -563,6 +567,21 @@ bool DepthTargetsRecreationNeeded(const RenderCamera& camera,
 void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
+
+    // get flags for rt
+    if constexpr (ENABLE_RT) {
+        rtEnabled_ = false;
+        IRenderContext& renderContext = renderNodeContextMgr_->GetRenderContext();
+        IGraphicsContext* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(
+            *renderContext.GetInterface<CORE_NS::IClassRegister>(), UID_GRAPHICS_CONTEXT);
+        if (graphicsContext) {
+            const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
+            if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
+                rtEnabled_ = true;
+            }
+        }
+    }
+
     SetDefaultGpuImageDescs();
     ParseRenderNodeInputs();
 
@@ -589,6 +608,7 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
+    dsWeatherName_ = RenderNodeSceneUtil::GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
 
     currentScene_ = {};
     currentScene_.customCamRngName = jsonInputs_.customCameraName;
@@ -629,6 +649,10 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
         // get the camera buffers
         uboHandles_.cameraData = renderNodeContextMgr_->GetGpuResourceManager().GetBufferHandle(
             dataStoreScene->GetName() + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME);
+        if (rtEnabled_) {
+            uboHandles_.tlas = renderNodeContextMgr_->GetGpuResourceManager().GetBufferHandle(
+                dataStoreScene->GetName() + DefaultMaterialMaterialConstants::MATERIAL_TLAS_PREFIX_NAME);
+        }
     }
     shadowBuffers_ = GetShadowBufferNodeData(gpuResourceMgr, stores_.dataStoreNameScene);
 }
@@ -665,9 +689,9 @@ void RenderNodeDefaultCameraController::PreExecuteFrame()
     if (!globalDescs_.dmSet0Binder) {
         auto& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
         const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-        const RenderHandle defaultPlHandle =
-            shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_FORWARD);
-        const PipelineLayout pl = shaderMgr.GetPipelineLayout(defaultPlHandle);
+        const IShaderManager::RenderSlotData shaderRsd = shaderMgr.GetRenderSlotData(
+            shaderMgr.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE));
+        const PipelineLayout pl = shaderMgr.GetPipelineLayout(shaderRsd.pipelineLayout.GetHandle());
 
         const string_view us = stores_.dataStoreNameScene;
         string camName;
@@ -739,6 +763,11 @@ void RenderNodeDefaultCameraController::UpdateGlobalDescriptorSets(IRenderComman
         bi.handle = radianceCubemap;
         bi.samplerHandle = defaultSamplers_.cubemapHandle;
         binder.BindImage(bindingIndex++, bi, descFlags);
+
+        // bind acceleration structure
+        if (rtEnabled_) {
+            binder.BindBuffer(bindingIndex++, uboHandles_.tlas, 0U);
+        }
     }
 
     const RenderHandle handles[] { binder.GetDescriptorSetHandle() };
@@ -904,14 +933,14 @@ void RenderNodeDefaultCameraController::CreateResources()
         }
 
         if ((camRes_.renResolution.x < 1U) || (camRes_.renResolution.y < 1U)) {
+            camRes_.renResolution.x = Math::max(1u, colorDesc.width);
+            camRes_.renResolution.y = Math::max(1u, colorDesc.height);
 #if (CORE3D_VALIDATION_ENABLED == 1)
             const string_view nodeName = renderNodeContextMgr_->GetName();
             CORE_LOG_ONCE_E(nodeName + "cam_controller_renRes",
-                "CORE3D_VALIDATION: RN:%s camera render resolution %ux%u", nodeName.data(), camRes_.renResolution.x,
-                camRes_.renResolution.y);
+                "CORE3D_VALIDATION: RN:%s camera render resolution resized to match target %ux%u", nodeName.data(),
+                camRes_.renResolution.x, camRes_.renResolution.y);
 #endif
-            camRes_.renResolution.x = Math::max(1u, camRes_.renResolution.x);
-            camRes_.renResolution.y = Math::max(1u, camRes_.renResolution.y);
         }
 
         const bool enableRenderRes = (camera.renderPipelineType != RenderCamera::RenderPipelineType::LIGHT_FORWARD);
@@ -1090,6 +1119,17 @@ Math::UVec4 GetMultiEnvironmentIndices(const RenderCamera& cam)
         return { 0U, 0U, 0U, 0U };
     }
 }
+
+inline RenderDataStoreWeather::WeatherSettings GetWeatherSettings(
+    const IRenderNodeRenderDataStoreManager& rdsMgr, const string_view dsName)
+{
+    if (const auto* dsWeather = static_cast<RenderDataStoreWeather*>(rdsMgr.GetRenderDataStore(dsName)); dsWeather) {
+        return dsWeather->GetWeatherSettings();
+    } else {
+        return {};
+    }
+}
+
 } // namespace
 
 void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
@@ -1100,10 +1140,12 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
     constexpr uint32_t envByteSize =
         sizeof(DefaultMaterialEnvironmentStruct) * CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT;
 
-    const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-    if (const auto* dsCamera = static_cast<IRenderDataStoreDefaultCamera*>(
-            renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameCamera));
+    const auto& rdsMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
+    if (const auto* dsCamera =
+            static_cast<IRenderDataStoreDefaultCamera*>(rdsMgr.GetRenderDataStore(stores_.dataStoreNameCamera));
         dsCamera) {
+        const RenderDataStoreWeather::WeatherSettings ws = GetWeatherSettings(rdsMgr, dsWeatherName_);
+
         // the environments needs to be in camera sorted order
         // we fetch environments one by one based on their id
         // in typical scenario there's only one environment present and others are filled with default data
@@ -1138,6 +1180,8 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                     Math::UVec4(id.x, id.y, layer.x, layer.y),
                     {},
                     multiEnvIndices,
+                    {},
+                    {},
                 };
                 constexpr size_t countOfSh = countof(envStruct.shIndirectCoefficients);
                 if (currEnv.radianceCubemap || (currEnv.multiEnvCount > 0U)) {
@@ -1149,6 +1193,9 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                         envStruct.shIndirectCoefficients[jdx] = defaultSHIndirectCoefficients[jdx];
                     }
                 }
+                // sky atmosphere
+                envStruct.packedSun = Math::Vec4(ws.sunPos, 0.0f);
+                envStruct.packedRain = { ws.coverage, ws.precipitation, ws.cloudType, 0.0f };
 
                 if (!CloneData(data, size_t(dataEnd - data), &envStruct, sizeof(DefaultMaterialEnvironmentStruct))) {
                     CORE_LOG_E("environment ubo copying failed.");
@@ -1197,6 +1244,7 @@ void RenderNodeDefaultCameraController::UpdateLightBuffer()
     if (dataStoreScene && dataStoreLight) {
         auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
         const auto scene = dataStoreScene->GetScene();
+        const uint32_t sceneId = currentScene_.camera.sceneId;
         const auto& lights = dataStoreLight->GetLights();
         const Math::Vec4 shadowAtlasSizeInvSize = RenderLightHelper::GetShadowAtlasSizeInvSize(*dataStoreLight);
         const uint32_t shadowCount = dataStoreLight->GetLightCounts().shadowCount;
@@ -1205,7 +1253,8 @@ void RenderNodeDefaultCameraController::UpdateLightBuffer()
             // NOTE: do not read data from mapped buffer (i.e. do not use mapped buffer as input to anything)
             RenderLightHelper::LightCounts lightCounts;
             const uint32_t lightCount = std::min(CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT, (uint32_t)lights.size());
-            vector<RenderLightHelper::SortData> sortedFlags = RenderLightHelper::SortLights(lights, lightCount);
+            vector<RenderLightHelper::SortData> sortedFlags =
+                RenderLightHelper::SortLights(lights, lightCount, sceneId);
 
             auto* singleLightStruct =
                 reinterpret_cast<DefaultMaterialSingleLightStruct*>(data + RenderLightHelper::LIGHT_LIST_OFFSET);
@@ -1260,7 +1309,7 @@ void RenderNodeDefaultCameraController::UpdatePostProcessConfiguration()
     }
 }
 
-void RenderNodeDefaultCameraController::ClusterLights(Render::IRenderCommandList& cmdList)
+void RenderNodeDefaultCameraController::ClusterLights(RENDER_NS::IRenderCommandList& cmdList)
 {
     cmdList.BindPipeline(clusterBinders_.psoHandle);
 

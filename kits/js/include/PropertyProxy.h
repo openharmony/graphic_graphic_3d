@@ -19,9 +19,10 @@
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/property/property.h>
 #include <meta/interface/property/property_events.h>
+#include <meta/api/util.h>
 #include <napi_api.h>
 
-#include <scene/interface/intf_bitmap.h>
+#include <scene/interface/intf_image.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
@@ -33,36 +34,22 @@ public:
 
     virtual void SetValue(NapiApi::FunctionContext<>& info) = 0;
     virtual napi_value Value() = 0;
-
-    // removes hooks.(if removeProperty is true, the property will be fully removed from the object)
     virtual void Reset() = 0;
 
     virtual void SetExtra(const BASE_NS::shared_ptr<CORE_NS::IInterface>);
-    virtual const BASE_NS::shared_ptr<CORE_NS::IInterface> GetExtra() const;
+    virtual const BASE_NS::shared_ptr<CORE_NS::IInterface> GetExtra() const noexcept;
 protected:
-    void RemoveHandlers();
-
-    virtual void UpdateLocalValues() = 0;
-    virtual void UpdateRemoteValues() = 0;
-    void UpdateLocal();
-    int32_t UpdateRemote();
-    void ScheduleUpdate();
-
-    // synchronized get value.
-    void SyncGet();
-
-    void Lock();
-    void Unlock();
-
+    /// Returns a Property<Type> instance from underlying property
+    template<typename Type>
+    META_NS::Property<Type> GetProperty() const
+    {
+        return META_NS::Property<Type>(prop_);
+    }
+    /// Returns the underlying property ptr
+    META_NS::IProperty::Ptr GetPropertyPtr() const noexcept;
+private:
     BASE_NS::weak_ptr<CORE_NS::IInterface> extra_;
     META_NS::IProperty::Ptr prop_;
-    META_NS::IEvent::Token changeToken_ { 0 };
-    META_NS::ITaskQueue::Token updateToken_ { nullptr };
-    META_NS::IOnChanged::InterfaceTypePtr changeHandler_;
-    META_NS::ITaskQueueTask::Ptr updateTask_;
-
-private:
-    CORE_NS::SpinLock lock_;
 };
 
 class ObjectPropertyProxy : public PropertyProxy {
@@ -99,119 +86,82 @@ public:
 
     BASE_NS::vector<BASE_NS::unique_ptr<MemberProxy>> accessors_;
 };
-class BitmapProxy : public PropertyProxy {
-public:
-    BitmapProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<SCENE_NS::IBitmap::Ptr> prop);
-    ~BitmapProxy() override;
 
+class EntityProxy : public PropertyProxy {
+public:
+    EntityProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<CORE_NS::Entity> prop);
+    ~EntityProxy() override;
     void Reset() override;
 
 protected:
     napi_value Value() override;
     void SetValue(NapiApi::FunctionContext<>& info) override;
-    void SetValue(const SCENE_NS::IBitmap::Ptr v);
-    void UpdateLocalValues() override;
-    void UpdateRemoteValues() override;
-    SCENE_NS::IBitmap::Ptr value {};
+    void SetValue(const CORE_NS::Entity v);
     NapiApi::WeakRef obj_;
     NapiApi::WeakRef scene_;
 };
 
-template<typename type>
-class TypeProxy : public PropertyProxy {
+class ImageProxy : public PropertyProxy {
 public:
-    TypeProxy(NapiApi::Object obj, META_NS::Property<type> prop);
-    ~TypeProxy() override;
-
+    ImageProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<SCENE_NS::IImage::Ptr> prop);
+    ~ImageProxy() override;
     void Reset() override;
 
 protected:
     napi_value Value() override;
     void SetValue(NapiApi::FunctionContext<>& info) override;
-    void SetValue(const type v);
-    void UpdateLocalValues() override;
-    void UpdateRemoteValues() override;
-    type value {};
+    void SetValue(const SCENE_NS::IImage::Ptr& v);
+    NapiApi::WeakRef obj_;
+    NapiApi::WeakRef scene_;
+};
+
+template<typename Type>
+class TypeProxy : public PropertyProxy {
+public:
+    TypeProxy(NapiApi::Object obj, META_NS::Property<Type> prop) : PropertyProxy(prop), obj_(obj) {}
+    ~TypeProxy() override
+    {
+        Reset();
+    }
+    void Reset() override
+    {
+        if (!obj_.IsEmpty()) {
+            if (auto prop = GetPropertyPtr()) {
+                obj_.GetObject().DeleteProperty(prop->GetName());
+            }
+        }
+        obj_.Reset();
+    }
+
+protected:
+    napi_value Value() override
+    {
+        auto value = META_NS::GetValue(GetProperty<Type>());
+        if constexpr (BASE_NS::is_same_v<Type, BASE_NS::string>) {
+            return NapiApi::Env(obj_.GetEnv()).GetString(value);
+        } else if constexpr (BASE_NS::is_same_v<Type, bool>) {
+            return NapiApi::Env(obj_.GetEnv()).GetBoolean(value);
+        } else {
+            return NapiApi::Env(obj_.GetEnv()).GetNumber(value);
+        }
+    }
+    void SetValue(NapiApi::FunctionContext<>& info) override
+    {
+        NapiApi::FunctionContext<Type> data { info };
+        if (data) {
+            Type value = data.template Arg<0>();
+            META_NS::SetValue(GetProperty<Type>(), value);
+        }
+    }
+    void SetValue(const Type& v)
+    {
+        META_NS::SetValue(GetProperty<Type>(), v);
+    }
+
+private:
     NapiApi::WeakRef obj_;
 };
 
-template<typename type>
-void TypeProxy<type>::Reset()
-{
-    Lock();
-    if (!prop_) {
-        Unlock();
-        return;
-    }
-    BASE_NS::string name = prop_->GetName();
-    RemoveHandlers();
-
-    if (!obj_.IsEmpty()) {
-        obj_.GetObject().DeleteProperty(name);
-    }
-    obj_.Reset();
-    Unlock();
-}
-template<typename type>
-TypeProxy<type>::TypeProxy(NapiApi::Object obj, META_NS::Property<type> prop) : PropertyProxy(prop)
-{
-    obj_ = obj;
-    SyncGet();
-}
-
-template<typename type>
-TypeProxy<type>::~TypeProxy()
-{
-    // Unhook the objects.
-    Reset();
-}
-template<typename type>
-void TypeProxy<type>::UpdateLocalValues()
-{
-    // executed in engine thread (locks handled outside)
-    if (prop_) {
-        value = META_NS::Property<type>(prop_)->GetValue();
-    }
-}
-template<typename type>
-void TypeProxy<type>::UpdateRemoteValues()
-{
-    // executed in engine thread (locks handled outside)
-    if (prop_) {
-        META_NS::Property<type>(prop_)->SetValue(value);
-    }
-}
-
-template<typename type>
-void TypeProxy<type>::SetValue(const type v)
-{
-    Lock();
-    if (value != v) {
-        value = v;
-        ScheduleUpdate();
-    }
-    Unlock();
-}
-template<typename type>
-napi_value TypeProxy<type>::Value()
-{
-    Lock();
-    type res = value;
-    Unlock();
-    return NapiApi::Env(obj_.GetEnv()).GetNumber((type)res);
-}
-template<typename type>
-void TypeProxy<type>::SetValue(NapiApi::FunctionContext<>& info)
-{
-    NapiApi::FunctionContext<type> data { info };
-    if (data) {
-        type val = data.template Arg<0>();
-        Lock();
-        value = val;
-        ScheduleUpdate();
-        Unlock();
-    }
-}
 
 BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
 

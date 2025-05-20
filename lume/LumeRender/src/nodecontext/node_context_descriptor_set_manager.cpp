@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -90,9 +90,9 @@ inline bool IsTheSameImageBinding(const BindableImage& src, const BindableImage&
     const EngineResourceHandle& srcHandle, const EngineResourceHandle& dstHandle,
     const EngineResourceHandle& srcSamplerHandle, const EngineResourceHandle& dstSamplerHandle)
 {
-    return (src.handle == dst.handle) && (srcHandle.id == dstHandle.id) && (src.mip == dst.mip) &&
-           (src.layer == dst.layer) && (src.imageLayout == dst.imageLayout) &&
-           (srcSamplerHandle.id == dstSamplerHandle.id) && ((src.handle.id & RENDER_HANDLE_REMAPPABLE_MASK_ID) == 0);
+    return (src.handle == dst.handle) && (srcHandle == dstHandle) && (src.mip == dst.mip) && (src.layer == dst.layer) &&
+           (src.imageLayout == dst.imageLayout) && (srcSamplerHandle == dstSamplerHandle) &&
+           ((src.handle.id & RENDER_HANDLE_REMAPPABLE_MASK_ID) == 0);
 }
 
 inline bool IsTheSameSamplerBinding(const BindableSampler& src, const BindableSampler& dst,
@@ -398,7 +398,7 @@ array_view<const RenderHandle> DescriptorSetManager::GetDescriptorSetHandles(con
     return {};
 }
 
-CpuDescriptorSet* DescriptorSetManager::GetCpuDescriptorSet(const RenderHandle& handle)
+CpuDescriptorSet* DescriptorSetManager::GetCpuDescriptorSet(const RenderHandle& handle) const
 {
     PLUGIN_ASSERT(RenderHandleUtil::GetHandleType(handle) == RenderHandleType::DESCRIPTOR_SET);
 
@@ -417,7 +417,8 @@ CpuDescriptorSet* DescriptorSetManager::GetCpuDescriptorSet(const RenderHandle& 
     return cpuDescriptorSet;
 }
 
-DescriptorSetLayoutBindingResourcesHandler DescriptorSetManager::GetCpuDescriptorSetData(const RenderHandle& handle)
+DescriptorSetLayoutBindingResourcesHandler DescriptorSetManager::GetCpuDescriptorSetData(
+    const RenderHandle& handle) const
 {
     if (const CpuDescriptorSet* cpuDescriptorSet = GetCpuDescriptorSet(handle); cpuDescriptorSet) {
         return DescriptorSetLayoutBindingResourcesHandler {
@@ -434,7 +435,7 @@ DescriptorSetLayoutBindingResourcesHandler DescriptorSetManager::GetCpuDescripto
     }
 }
 
-DynamicOffsetDescriptors DescriptorSetManager::GetDynamicOffsetDescriptors(const RenderHandle& handle)
+DynamicOffsetDescriptors DescriptorSetManager::GetDynamicOffsetDescriptors(const RenderHandle& handle) const
 {
     if (const CpuDescriptorSet* cpuDescriptorSet = GetCpuDescriptorSet(handle); cpuDescriptorSet) {
         return DynamicOffsetDescriptors {
@@ -446,7 +447,7 @@ DynamicOffsetDescriptors DescriptorSetManager::GetDynamicOffsetDescriptors(const
     }
 }
 
-bool DescriptorSetManager::HasDynamicBarrierResources(const RenderHandle& handle)
+bool DescriptorSetManager::HasDynamicBarrierResources(const RenderHandle& handle) const
 {
     // NOTE: this method cannot provide up-to-date information during ExecuteFrame
     // some render node task will update the dynamicity data in parallel
@@ -458,7 +459,7 @@ bool DescriptorSetManager::HasDynamicBarrierResources(const RenderHandle& handle
     }
 }
 
-uint32_t DescriptorSetManager::GetDynamicOffsetDescriptorCount(const RenderHandle& handle)
+uint32_t DescriptorSetManager::GetDynamicOffsetDescriptorCount(const RenderHandle& handle) const
 {
     if (const CpuDescriptorSet* cpuDescriptorSet = GetCpuDescriptorSet(handle); cpuDescriptorSet) {
         return static_cast<uint32_t>(cpuDescriptorSet->dynamicOffsetDescriptors.size());
@@ -467,6 +468,18 @@ uint32_t DescriptorSetManager::GetDynamicOffsetDescriptorCount(const RenderHandl
         PLUGIN_LOG_E("RENDER_VALIDATION: invalid handle to GetDynamicOffsetDescriptorCount");
 #endif
         return 0U;
+    }
+}
+
+bool DescriptorSetManager::HasPlatformConversionBindings(const RenderHandle& handle) const
+{
+    // NOTE: this method cannot provide up-to-date information during ExecuteFrame
+    // some render node task will update the dynamicity data in parallel
+
+    if (const CpuDescriptorSet* cpuDescriptorSet = GetCpuDescriptorSet(handle); cpuDescriptorSet) {
+        return cpuDescriptorSet->hasPlatformConversionBindings;
+    } else {
+        return false;
     }
 }
 
@@ -488,6 +501,7 @@ DescriptorSetUpdateInfoFlags DescriptorSetManager::UpdateCpuDescriptorSet(
         if ((index < descriptorSets_.size()) && descriptorSets_[index] &&
             (additionalIndex < descriptorSets_[index]->data.size())) {
             auto& ref = descriptorSets_[index]->data[additionalIndex];
+
             bool validWrite = false;
             {
                 // lock global mutex for shared data and for the boolean inside vectors
@@ -772,6 +786,20 @@ uint32_t NodeContextDescriptorSetManager::GetDynamicOffsetDescriptorCount(const 
     }
 }
 
+bool NodeContextDescriptorSetManager::HasPlatformConversionBindings(const RenderHandle handle) const
+
+{
+    const uint32_t descSetIdx = GetCpuDescriptorSetIndex(handle);
+    if (descSetIdx == ~0U) {
+        return globalDescriptorSetMgr_.HasPlatformConversionBindings(handle);
+    } else {
+        PLUGIN_ASSERT(descSetIdx < DESCRIPTOR_SET_INDEX_TYPE_COUNT);
+        const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
+        const auto& cpuDescSets = cpuDescriptorSets_[descSetIdx];
+        return HasPlatformConversionBindingsImpl(arrayIndex, cpuDescSets);
+    }
+}
+
 DescriptorSetUpdateInfoFlags NodeContextDescriptorSetManager::UpdateCpuDescriptorSet(
     const RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources, const GpuQueue& gpuQueue)
 {
@@ -788,7 +816,7 @@ DescriptorSetUpdateInfoFlags NodeContextDescriptorSetManager::UpdateCpuDescripto
 
 DescriptorSetUpdateInfoFlags NodeContextDescriptorSetManager::UpdateCpuDescriptorSetImpl(const uint32_t index,
     const DescriptorSetLayoutBindingResources& bindingResources, const GpuQueue& gpuQueue,
-    vector<CpuDescriptorSet>& cpuDescriptorSets)
+    array_view<CpuDescriptorSet> cpuDescriptorSets)
 {
     DescriptorSetUpdateInfoFlags updateFlags = 0U;
     if (index < (uint32_t)cpuDescriptorSets.size()) {
@@ -847,6 +875,18 @@ bool NodeContextDescriptorSetManager::HasDynamicBarrierResourcesImpl(
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_E("RENDER_VALIDATION: invalid handle to HasDynamicBarrierResources");
+#endif
+        return false;
+    }
+}
+bool NodeContextDescriptorSetManager::HasPlatformConversionBindingsImpl(
+    const uint32_t index, const BASE_NS::vector<CpuDescriptorSet>& cpuDescriptorSet)
+{
+    if (index < (uint32_t)cpuDescriptorSet.size()) {
+        return cpuDescriptorSet[index].hasPlatformConversionBindings;
+    } else {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_E("RENDER_VALIDATION: invalid handle to HasPlatformConversionBindings");
 #endif
         return false;
     }

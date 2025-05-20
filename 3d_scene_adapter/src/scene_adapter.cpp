@@ -23,6 +23,7 @@
 #include "napi/native_node_api.h"
 
 #include <base/containers/array_view.h>
+#include <base/containers/shared_ptr.h>
 
 #include <core/intf_engine.h>
 #include <core/ecs/intf_system_graph_loader.h>
@@ -43,7 +44,6 @@
 #include <meta/interface/intf_object.h>
 #include <meta/interface/intf_object_registry.h>
 #include <meta/interface/intf_task_queue.h>
-#include <meta/base/shared_ptr.h>
 #include <meta/base/interface_macros.h>
 #include <meta/api/make_callback.h>
 #include <meta/ext/object.h>
@@ -61,6 +61,7 @@
 #include <scene/interface/intf_camera.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/intf_ecs_context.h>
+#include <scene/interface/intf_application_context.h>
 
 #include <scene/ext/intf_ecs_object_access.h>
 #include <text_3d/implementation_uids.h>
@@ -91,22 +92,21 @@
 #include <securec.h>
 
 namespace OHOS::Render3D {
-#define RETURN_IF_NULL(ptr)                             \
-do {                                                    \
-    if (!(ptr)) {                                       \
-        WIDGET_LOGE("%s is null in %s", #ptr, __func__); \
-        return;                                         \
-    }                                                   \
-} while (0)                                              \
+#define RETURN_IF_NULL(ptr)                                  \
+    do {                                                     \
+        if (!(ptr)) {                                        \
+            WIDGET_LOGE("%s is null in %s", #ptr, __func__); \
+            return;                                          \
+        }                                                    \
+    } while (0)
 
-#define RETURN_FALSE_IF_NULL(ptr)                       \
-do {                                                    \
-    if (!(ptr)) {                                       \
-        WIDGET_LOGE("%s is null in %s", #ptr, __func__); \
-        return false;                                   \
-    }                                                   \
-} while (0)                                              \
-
+#define RETURN_FALSE_IF_NULL(ptr)                            \
+    do {                                                     \
+        if (!(ptr)) {                                        \
+            WIDGET_LOGE("%s is null in %s", #ptr, __func__); \
+            return false;                                    \
+        }                                                    \
+    } while (0)
 
 HapInfo GetHapInfo()
 {
@@ -142,6 +142,7 @@ using IntfWeakPtr = META_NS::WeakPtrIInterface;
 
 struct EngineInstance {
     void *libHandle_ = nullptr;
+    SCENE_NS::IApplicationContext::Ptr applicationContext_;
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext_;
     BASE_NS::shared_ptr<CORE_NS::IEngine> engine_;
 };
@@ -307,9 +308,6 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
         platform.RegisterDefaultPaths(fileManager);
         engineInstance_.engine_->Init();
 
-        engineInstance_.renderContext_.reset(CORE_NS::CreateInstance<RENDER_NS::IRenderContext>(
-            *engineInstance_.engine_->GetInterface<Core::IClassFactory>(), RENDER_NS::UID_RENDER_CONTEXT).get());
-
         RENDER_NS::RenderCreateInfo renderCreateInfo{};
         RENDER_NS::BackendExtraGLES glExtra{};
         Render::DeviceCreateInfo deviceCreateInfo{};
@@ -326,6 +324,12 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
             renderCreateInfo.applicationInfo = {};
             renderCreateInfo.deviceCreateInfo = deviceCreateInfo;
         }
+
+        engineInstance_.renderContext_.reset(
+            static_cast<RENDER_NS::IRenderContext *>(
+                engineInstance_.engine_->GetInterface<CORE_NS::IClassFactory>()
+                    ->CreateInstance(RENDER_NS::UID_RENDER_CONTEXT)
+                    .release()));
 
         auto rrc = engineInstance_.renderContext_->Init(renderCreateInfo);
         if (rrc != RENDER_NS::RenderResultCode::RENDER_SUCCESS) {
@@ -344,14 +348,30 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
         }
         auto flags = META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE;
 
-        doc->AddProperty(META_NS::ConstructProperty<IntfPtr>("RenderContext", nullptr, flags));
         doc->AddProperty(META_NS::ConstructProperty<IntfPtr>("EngineQueue", nullptr, flags));
         doc->AddProperty(META_NS::ConstructProperty<IntfPtr>("AppQueue", nullptr, flags));
         doc->AddProperty(META_NS::ConstructArrayProperty<IntfWeakPtr>("Scenes", {}, flags));
 
+        // Use engine file manager for our resource manager
+        auto resources =
+            META_NS::GetObjectRegistry().Create<CORE_NS::IResourceManager>(
+                    META_NS::ClassId::FileResourceManager);
+        resources->SetFileManager(CORE_NS::IFileManager::Ptr(&fileManager));
+
+        engineInstance_.applicationContext_ =
+            META_NS::GetObjectRegistry().Create<SCENE_NS::IApplicationContext>(
+                    SCENE_NS::ClassId::ApplicationContext);
+        if (engineInstance_.applicationContext_) {
+            SCENE_NS::IApplicationContext::ApplicationContextInfo info{
+                engineThread, appThread, engineInstance_.renderContext_,
+                    resources, SCENE_NS::SceneOptions{}};
+            engineInstance_.applicationContext_->Initialize(info);
+        }
+
         doc->GetProperty<META_NS::SharedPtrIInterface>("EngineQueue")->SetValue(engineThread);
         doc->GetProperty<META_NS::SharedPtrIInterface>("AppQueue")->SetValue(appThread);
-        doc->GetProperty<META_NS::SharedPtrIInterface>("RenderContext")->SetValue(engineInstance_.renderContext_);
+        doc->AddProperty(META_NS::ConstructProperty<SCENE_NS::IRenderContext::Ptr>(
+                    "RenderContext", engineInstance_.applicationContext_->GetRenderContext(), flags));
 
         WIDGET_LOGD("register shader paths");
         static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc { "shaders://" };
@@ -455,11 +475,18 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
             RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             {
                 reinterpret_cast<uintptr_t>(textureInfo.nativeWindow_),
-                reinterpret_cast<uintptr_t>(static_cast<const RENDER_NS::DevicePlatformDataGLES&>(
-                    device.GetPlatformData()).display)
+                {}, // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
             }
         };
         swapchainHandle_ = device.CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
+
+        auto &obr = META_NS::GetObjectRegistry();
+        auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+        bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
+        if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
+            i->SetRenderHandle(swapchainHandle_);
+        }
+
         if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
             auto cams = scene->GetCameras().GetResult();
             if (!cams.empty()) {
@@ -473,6 +500,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
 
     if (engineThread) {
         engineThread->AddWaitableTask(cb)->Wait();
+        onWindowChanged_ = true;
     } else {
         WIDGET_LOGE("ENGINE_THREAD not ready in OnWindowChange");
     }
@@ -572,14 +600,17 @@ void SceneAdapter::RenderFunction()
     RETURN_IF_NULL(sceneWidgetObj_);
     auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
     RETURN_IF_NULL(scene);
-    if (!bitmap_) {
-        auto cams = scene->GetCameras().GetResult();
-        if (!cams.empty()) {
-            for (auto c : cams) {
-                AttachSwapchain(interface_pointer_cast<META_NS::IObject>(c));
-            }
+    BASE_NS::vector<SCENE_NS::ICamera::Ptr> disabledCameras;
+    auto cams = scene->GetCameras().GetResult();
+    for (auto c : cams) {
+        if (!bitmap_ && c->IsActive()) {
+            c->SetActive(false);
+            disabledCameras.push_back(c);
         }
+
+        AttachSwapchain(interface_pointer_cast<META_NS::IObject>(c));
     }
+
     scene->GetInternalScene()->Update(false);
     bool receiveBuffer = receiveBuffer_;
     receiveBuffer_ = false;
@@ -606,6 +637,11 @@ void SceneAdapter::RenderFunction()
         }
     }
     rc->GetRenderer().RenderDeferredFrame();
+
+    for (auto& camera : disabledCameras) {
+        camera->SetActive(true);
+    }
+
     if (receiveBuffer) {
         auto addedSD = renderFrameUtil.GetFrameGpuSignalData();
         for (const auto& ref : addedSD) {
@@ -657,7 +693,10 @@ void SceneAdapter::RenderFrame(bool needsSyncPaint)
     if (!singleFrameAsync_ || !singleFrameSync_ || !propSyncSync_) {
         CreateRenderFunction();
     }
-
+    if (!onWindowChanged_) {
+        WIDGET_LOGW("window has not changed");
+        return;
+    }
     if (propSyncSync_) {
         WIDGET_SCOPED_TRACE("SceneAdapter::propSyncSync_");
         engineThread->AddWaitableTask(propSyncSync_)->Wait();
@@ -687,20 +726,18 @@ void SceneAdapter::Deinit()
     RETURN_IF_NULL(engineThread);
     WIDGET_LOGI("SceneAdapter::Deinit");
     auto func = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
-        if (bitmap_) {
-            auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
-            if (!scene) {
-                return META_NS::IAny::Ptr {};
-            }
-            if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
-                i->SetRenderHandle(scene->GetInternalScene(), swapchainHandle_);
-            }
-        }
         if (swapchainHandle_) {
             auto& device = engineInstance_.renderContext_->GetDevice();
             device.DestroySwapchain(swapchainHandle_);
         }
         swapchainHandle_ = {};
+        if (bitmap_) {
+            bitmap_.reset();
+            auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+            if (!scene) {
+                return META_NS::IAny::Ptr {};
+            }
+        }
         return META_NS::IAny::Ptr {};
     });
     engineThread->AddWaitableTask(func)->Wait();
@@ -710,28 +747,19 @@ void SceneAdapter::Deinit()
     singleFrameSync_.reset();
     propSyncSync_.reset();
     needsRepaint_ = false;
+    onWindowChanged_ = false;
 }
 
 void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
 {
-    WIDGET_LOGI("attach swapchain");
-    if (!swapchainHandle_) {
-        return;
-    }
-    auto node = interface_cast<SCENE_NS::INode>(cameraObj);
-    if (node == nullptr) {
+    auto camera = interface_pointer_cast<SCENE_NS::ICamera>(cameraObj);
+    if (!camera) {
         WIDGET_LOGE("cast cameraObj failed in AttachSwapchain.");
         return;
     }
-    auto scene = node->GetScene();
-    auto camera = interface_pointer_cast<SCENE_NS::ICamera>(cameraObj);
-    if (!camera->IsActive()) {
+    if (!bitmap_ || !camera->IsActive()) {
+        camera->SetRenderTarget({});
         return;
-    }
-
-    bitmap_ = META_NS::GetObjectRegistry().Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap);
-    if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
-        i->SetRenderHandle(scene->GetInternalScene(), swapchainHandle_);
     }
     camera->SetRenderTarget(bitmap_);
 }

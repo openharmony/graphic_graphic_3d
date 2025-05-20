@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include <core/ecs/entity.h>
 #include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_component_manager.h>
+#include <core/ecs/intf_ecs.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/namespace.h>
 #include <render/resource_handle.h>
@@ -41,7 +42,7 @@ BEGIN_COMPONENT(IRenderHandleComponentManager, RenderHandleComponent)
      * Further details of the image can be queried with IGpuResourceManager::IsGpuBuffer/Image/Sampler*,
      * IGpuResourceManager::GetBuffer/Image/SamplerDescriptor.
      */
-    DEFINE_PROPERTY(RENDER_NS::RenderHandleReference, reference, "Render Handle Reference", 0,)
+    DEFINE_PROPERTY(RENDER_NS::RenderHandleReference, reference, "Render Handle Reference", 0, )
 
 END_COMPONENT_EXT(
     IRenderHandleComponentManager, RenderHandleComponent, "fb5c16b5-c369-4f7b-bc02-5398ddfdfa1d",
@@ -91,6 +92,45 @@ inline CORE_NS::EntityReference GetOrCreateEntityReference(CORE_NS::IEntityManag
         rhcMgr.Write(entity)->reference = handle;
     }
     return entity;
+}
+
+/**
+ * Helper function to get or create entity reference for render handle reference.
+ * @param ecs ECS.
+ * @param handle Render handle reference for the render resource.
+ * @return EntityReference for render handle reference
+ */
+inline CORE_NS::EntityReference GetOrCreateEntityReference(
+    CORE_NS::IEcs& ecs, const RENDER_NS::RenderHandleReference& handle)
+{
+    IRenderHandleComponentManager* rhcMgr = CORE_NS::GetManager<IRenderHandleComponentManager>(ecs);
+    if (!rhcMgr) {
+        return {};
+    }
+    CORE_NS::EntityReference entity =
+        ecs.GetEntityManager().GetReferenceCounted(rhcMgr->GetEntityWithReference(handle));
+    if (!entity) {
+        entity = ecs.GetEntityManager().CreateReferenceCounted();
+        rhcMgr->Create(entity);
+        rhcMgr->Write(entity)->reference = handle;
+    }
+    return entity;
+}
+
+/**
+ * Helper function to get or create entity reference for render handle reference.
+ * @param ecs ECS.
+ * @param handle Render handle reference for the render resource.
+ * @return EntityReference for render handle reference
+ */
+inline CORE_NS::EntityReference GetOrCreateEntityReference(
+    CORE_NS::IEcs* ecs, const RENDER_NS::RenderHandleReference& handle)
+{
+    if (ecs) {
+        return GetOrCreateEntityReference(*ecs, handle);
+    } else {
+        return {};
+    }
 }
 
 CORE3D_END_NAMESPACE()

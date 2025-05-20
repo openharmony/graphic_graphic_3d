@@ -21,7 +21,6 @@
 #include <core/plugin/intf_interface.h>
 
 #include <meta/base/namespace.h>
-#include <meta/base/shared_ptr.h>
 
 META_BEGIN_NAMESPACE()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -55,6 +55,12 @@ struct is_same<T, T> : true_type {};
 
 template<class T, class U>
 constexpr auto is_same_v = is_same<T, U>::value;
+
+template<class Base, class Derived>
+struct is_base_of : integral_constant<bool, __is_base_of(Base, Derived)> {};
+
+template<class Base, class Derived>
+constexpr bool is_base_of_v = is_base_of<Base, Derived>::value;
 
 template<class T>
 struct remove_extent {
@@ -336,6 +342,110 @@ struct is_signed<T, false> : false_type {};
 
 template<typename T>
 inline constexpr bool is_signed_v = is_signed<T>::value;
+
+template<class T, class... Args>
+struct is_constructible : integral_constant<bool, __is_constructible(T, Args...)> {};
+
+template<class T, class... Args>
+constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
+
+template<class T, class... Args>
+struct is_trivially_constructible : integral_constant<bool, __is_trivially_constructible(T, Args...)> {};
+
+template<class T, class... Args>
+constexpr bool is_trivially_constructible_v = is_trivially_constructible<T, Args...>::value;
+
+template<class T, class... Args>
+struct is_nothrow_constructible : integral_constant<bool, __is_nothrow_constructible(T, Args...)> {};
+
+template<class T, class... Args>
+constexpr bool is_nothrow_constructible_v = is_nothrow_constructible<T, Args...>::value;
+
+template<class T>
+struct is_default_constructible : is_constructible<T> {};
+
+template<class T>
+inline constexpr bool is_default_constructible_v = is_default_constructible<T>::value;
+
+template<class T>
+struct is_trivially_default_constructible : is_trivially_constructible<T> {};
+
+template<class T>
+inline constexpr bool is_trivially_default_constructible_v = is_trivially_default_constructible<T>::value;
+
+template<class T>
+struct is_nothrow_default_constructible : is_nothrow_constructible<T> {};
+
+template<class T>
+inline constexpr bool is_nothrow_default_constructible_v = is_nothrow_default_constructible<T>::value;
+
+template<class T>
+struct is_copy_constructible : is_constructible<T, add_lvalue_reference_t<const T>> {};
+
+template<class T>
+inline constexpr bool is_copy_constructible_v = is_copy_constructible<T>::value;
+
+template<class T>
+struct is_nothrow_copy_constructible : is_nothrow_constructible<T, add_lvalue_reference_t<const T>> {};
+
+template<class T>
+constexpr bool is_nothrow_copy_constructible_v = is_nothrow_copy_constructible<T>::value;
+
+template<class To, class From>
+struct is_assignable : integral_constant<bool, __is_assignable(To, From)> {};
+
+template<class To, class From>
+constexpr bool is_assignable_v = is_assignable<To, From>::value;
+
+template<class To, class From>
+struct is_trivially_assignable : integral_constant<bool, __is_trivially_assignable(To, From)> {};
+
+template<class To, class From>
+constexpr bool is_trivially_assignable_v = is_trivially_assignable<To, From>::value;
+
+template<class To, class From>
+struct is_nothrow_assignable : integral_constant<bool, __is_nothrow_assignable(To, From)> {};
+
+template<class To, class From>
+constexpr bool is_nothrow_assignable_v = is_nothrow_assignable<To, From>::value;
+
+template<class T>
+struct is_copy_assignable : is_assignable<add_lvalue_reference_t<T>, add_lvalue_reference_t<const T>> {};
+
+template<class T>
+constexpr bool is_copy_assignable_v = is_copy_assignable<T>::value;
+
+template<class T>
+struct is_trivially_copy_assignable
+    : is_trivially_assignable<add_lvalue_reference_t<T>, add_lvalue_reference_t<const T>> {};
+
+template<class T>
+constexpr bool is_trivially_copy_assignable_v = is_trivially_copy_assignable<T>::value;
+
+template<class T>
+struct is_nothrow_copy_assignable : is_nothrow_assignable<add_lvalue_reference_t<T>, add_lvalue_reference_t<const T>> {
+};
+
+template<class T>
+constexpr bool is_nothrow_copy_assignable_v = is_nothrow_copy_assignable<T>::value;
+
+template<class T>
+struct is_move_assignable : is_assignable<add_lvalue_reference_t<T>, T> {};
+
+template<class T>
+constexpr bool is_move_assignable_v = is_move_assignable<T>::value;
+
+template<class T>
+struct is_trivially_move_assignable : is_trivially_assignable<add_lvalue_reference_t<T>, T> {};
+
+template<class T>
+constexpr bool is_trivially_move_assignable_v = is_trivially_move_assignable<T>::value;
+
+template<class T>
+struct is_nothrow_move_assignable : is_nothrow_assignable<add_lvalue_reference_t<T>, T> {};
+
+template<class T>
+constexpr bool is_nothrow_move_assignable_v = is_nothrow_move_assignable<T>::value;
 
 namespace detail {
 template<typename T>

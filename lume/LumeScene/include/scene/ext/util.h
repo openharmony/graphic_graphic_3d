@@ -24,7 +24,7 @@ SCENE_BEGIN_NAMESPACE()
 template<typename Type>
 Type GetBuildArg(const META_NS::IMetadata::Ptr& d, BASE_NS::string_view name)
 {
-    return META_NS::GetValue(d->GetProperty<Type>(name));
+    return d ? META_NS::GetValue(d->GetProperty<Type>(name)) : Type {};
 }
 
 template<typename Interface>
@@ -32,8 +32,10 @@ typename BASE_NS::shared_ptr<Interface> GetInterfaceBuildArg(
     const META_NS::IMetadata::Ptr& d, BASE_NS::string_view name)
 {
     BASE_NS::shared_ptr<Interface> res;
-    if (auto p = d->GetProperty<META_NS::SharedPtrIInterface>(name)) {
-        res = interface_pointer_cast<Interface>(p->GetValue());
+    if (d) {
+        if (auto p = d->GetProperty<META_NS::SharedPtrIInterface>(name)) {
+            res = interface_pointer_cast<Interface>(p->GetValue());
+        }
     }
     return res;
 }
@@ -74,6 +76,9 @@ inline BASE_NS::string_view NormalisePath(BASE_NS::string_view path)
 
 inline BASE_NS::string_view ParentPath(BASE_NS::string_view path)
 {
+    if (path.ends_with('/')) {
+        path.remove_suffix(1);
+    }
     auto pos = path.find_last_of('/');
     if (pos != BASE_NS::string_view::npos) {
         return path.substr(0, pos);
@@ -83,6 +88,9 @@ inline BASE_NS::string_view ParentPath(BASE_NS::string_view path)
 
 inline BASE_NS::string_view EntityName(BASE_NS::string_view path)
 {
+    if (path.ends_with('/')) {
+        path.remove_suffix(1);
+    }
     auto pos = path.find_last_of('/');
     if (pos != BASE_NS::string_view::npos) {
         return path.substr(pos + 1);

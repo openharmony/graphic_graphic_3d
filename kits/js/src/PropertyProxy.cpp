@@ -20,70 +20,30 @@
 #include <meta/interface/intf_metadata.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <napi_api.h>
+
 #include <scene/ext/intf_internal_scene.h>
+#include <scene/ext/intf_ecs_object_access.h>
 
 #include "BaseObjectJS.h"
 #include "Vec2Proxy.h"
 #include "Vec3Proxy.h"
 #include "Vec4Proxy.h"
+#include "QuatProxy.h"
+#include "ColorProxy.h"
 
 PropertyProxy::~PropertyProxy()
 {
     // should be a no-op.
-    RemoveHandlers();
-}
-
-void PropertyProxy::UpdateLocal()
-{
-    // should execute in engine thread.
-    Lock();
-    if (prop_) {
-        UpdateLocalValues();
-    }
-    Unlock();
-}
-int32_t PropertyProxy::UpdateRemote()
-{
-    // executed in engine thread (ie. happens between frames)
-    Lock();
-    if (prop_) {
-        // make sure the handler is not called..
-        auto token = changeToken_;
-        if (token) {
-            prop_->OnChanged()->RemoveHandler(token);
-        }
-
-        UpdateRemoteValues();
-
-        if (auto ext = interface_pointer_cast<SCENE_NS::IInternalScene>(GetExtra())) {
-            ext->SyncProperty(prop_, META_NS::EngineSyncDirection::AUTO);
-        }
-
-        // add it back.
-        if (token) {
-            changeToken_ = prop_->OnChanged()->AddHandler(changeHandler_);
-        }
-    }
-    updateToken_ = nullptr;
-    Unlock();
-    return 0;
-}
-
-void PropertyProxy::ScheduleUpdate()
-{
-    // create a task to engine queue to sync the property.
-    if (updateToken_ == nullptr) {
-        // sync not queued, so queue sync.
-        updateToken_ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddTask(updateTask_);
-    }
 }
 
 PropertyProxy::PropertyProxy(META_NS::IProperty::Ptr prop) : prop_(prop)
 {
     assert(prop_);
-    changeHandler_ = META_NS::MakeCallback<META_NS::IOnChanged>(this, &PropertyProxy::UpdateLocal);
-    updateTask_ = META_NS::MakeCallback<META_NS::ITaskQueueTask>(this, &PropertyProxy::UpdateRemote);
-    changeToken_ = prop_->OnChanged()->AddHandler(changeHandler_);
+}
+
+META_NS::IProperty::Ptr PropertyProxy::GetPropertyPtr() const noexcept
+{
+    return prop_;
 }
 
 void PropertyProxy::SetExtra(const BASE_NS::shared_ptr<CORE_NS::IInterface> extra)
@@ -91,47 +51,9 @@ void PropertyProxy::SetExtra(const BASE_NS::shared_ptr<CORE_NS::IInterface> extr
     extra_ = extra;
 }
 
-const BASE_NS::shared_ptr<CORE_NS::IInterface> PropertyProxy::GetExtra() const
+const BASE_NS::shared_ptr<CORE_NS::IInterface> PropertyProxy::GetExtra() const noexcept
 {
     return extra_.lock();
-}
-
-void PropertyProxy::RemoveHandlers()
-{
-    if (!changeHandler_) {
-        return;
-    }
-    ExecSyncTask([this]() {
-        if (updateToken_) {
-            META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->CancelTask(updateToken_);
-            updateToken_ = nullptr;
-        }
-        if (prop_ && changeToken_) {
-            prop_->OnChanged()->RemoveHandler(changeToken_);
-        }
-        changeToken_ = {};
-        prop_.reset();
-        changeHandler_.reset();
-        updateTask_.reset();
-        return META_NS::IAny::Ptr {};
-    });
-}
-void PropertyProxy::SyncGet()
-{
-    // initialize current values.
-    ExecSyncTask([this]() {
-        // executed in engine thread
-        UpdateLocal();
-        return META_NS::IAny::Ptr {};
-    });
-}
-void PropertyProxy::Lock()
-{
-    lock_.Lock();
-}
-void PropertyProxy::Unlock()
-{
-    lock_.Unlock();
 }
 
 ObjectPropertyProxy::MemberProxy::MemberProxy(ObjectPropertyProxy* p, BASE_NS::string m) : proxy_(p), memb_(m) {}
@@ -166,8 +88,8 @@ void ObjectPropertyProxy::Create(napi_env env, const BASE_NS::string jsName)
         obj_ = NapiApi::StrongRef { NapiApi::Object(env) };
     } else {
         NapiApi::MyInstanceState* mis;
-        GetInstanceData(env, reinterpret_cast<void**>(&mis));
-        auto ref = NapiApi::Object(env, mis->getRef());
+        NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
+        auto ref = NapiApi::Object(env, mis->GetRef());
         auto cl = ref.Get(jsName.c_str());
         if (cl) {
             napi_value value;
@@ -186,7 +108,6 @@ void ObjectPropertyProxy::Hook(const BASE_NS::string member)
         return;
     }
     auto ValueObject = obj_.GetObject();
-
     auto* accessor = new MemberProxy(this, member);
     accessors_.push_back(BASE_NS::unique_ptr<MemberProxy>(accessor));
     ValueObject.AddProperty({ accessor->Name().data(), nullptr, nullptr, MemberProxy::Getter, MemberProxy::Setter,
@@ -199,8 +120,6 @@ void ObjectPropertyProxy::Reset()
     if (obj_.IsEmpty()) {
         return;
     }
-
-    RemoveHandlers();
 
     NapiApi::Env env(obj_.GetEnv());
     // unhook all hooked members.
@@ -249,103 +168,117 @@ ObjectPropertyProxy::~ObjectPropertyProxy()
 {
     Reset();
 }
-void BitmapProxy::Reset()
-{
-    Lock();
-    if (!prop_) {
-        Unlock();
-        return;
-    }
-    BASE_NS::string name = prop_->GetName();
-    RemoveHandlers();
 
-    if (!obj_.IsEmpty()) {
-        obj_.GetObject().DeleteProperty(name);
-    }
-    obj_.Reset();
-    scene_.Reset();
-    Unlock();
-}
-
-BitmapProxy::BitmapProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<SCENE_NS::IBitmap::Ptr> prop)
+EntityProxy::EntityProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<CORE_NS::Entity> prop)
     : PropertyProxy(prop)
 {
     scene_ = scn;
     obj_ = obj;
-    SyncGet();
 }
-BitmapProxy::~BitmapProxy()
+
+EntityProxy::~EntityProxy()
 {
     // Unhook the objects.
     Reset();
 }
 
-void BitmapProxy::UpdateLocalValues()
+void EntityProxy::Reset()
 {
-    // executed in engine thread (locks handled outside)
-    if (prop_) {
-        value = META_NS::Property<SCENE_NS::IBitmap::Ptr>(prop_)->GetValue();
+    auto prop = GetPropertyPtr();
+    if (!obj_.IsEmpty() && prop) {
+        obj_.GetObject().DeleteProperty(prop->GetName());
     }
+    obj_.Reset();
+    scene_.Reset();
 }
-void BitmapProxy::UpdateRemoteValues()
+
+void EntityProxy::SetValue(const CORE_NS::Entity v)
 {
-    // executed in engine thread (locks handled outside)
-    if (prop_) {
-        META_NS::Property<SCENE_NS::IBitmap::Ptr>(prop_)->SetValue(value);
-    }
+    META_NS::SetValue(GetProperty<CORE_NS::Entity>(), v);
 }
-void BitmapProxy::SetValue(const SCENE_NS::IBitmap::Ptr v)
+
+napi_value EntityProxy::Value()
 {
-    Lock();
-    if (value != v) {
-        value = v;
-        ScheduleUpdate();
-    }
-    Unlock();
-}
-napi_value BitmapProxy::Value()
-{
-    // should be executed in the javascript thread.
-    Lock();
-    SCENE_NS::IBitmap::Ptr res = value;
-    Unlock();
-    if (auto cached = FetchJsObj(res)) {
-        return cached.ToNapiValue();
-    }
     NapiApi::Env env(obj_.GetEnv());
-
-    if (res) {
-        NapiApi::Object parms(env);
-        napi_value args[] = {
-            scene_.GetValue(),
-            parms.ToNapiValue()
-        };
-        MakeNativeObjectParam(env, res, BASE_NS::countof(args), args);
-
-        auto size = res->Size()->GetValue();
-        BASE_NS::string uri;
-        if (auto m = interface_cast<META_NS::IMetadata>(res)) {
-            if (auto p = m->GetProperty<BASE_NS::string>("Uri")) {
-                uri = p->GetValue();
+    if (auto entity = META_NS::GetValue(GetProperty<CORE_NS::Entity>()); CORE_NS::EntityUtil::IsValid(entity)) {
+        if (auto scene = scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
+            if (auto internal = scene->GetInternalScene()) {
+                if (auto node = internal->FindNode(entity, {})) {
+                    NapiApi::Object parms(env);
+                    napi_value args[] = { scene_.GetValue(), parms.ToNapiValue() };
+                    return CreateFromNativeInstance(env, node, PtrType::WEAK, args).ToNapiValue();
+                }
             }
         }
-        auto name = interface_cast<META_NS::IObject>(res)->GetName();
-        parms.Set("uri", uri);
-        NapiApi::Object imageJS(GetJSConstructor(env, "Image"), BASE_NS::countof(args), args);
-        return imageJS.ToNapiValue();
     }
     return env.GetNull();
 }
-void BitmapProxy::SetValue(NapiApi::FunctionContext<>& info)
+
+void EntityProxy::SetValue(NapiApi::FunctionContext<>& info)
 {
     NapiApi::FunctionContext<NapiApi::Object> data { info };
     if (data) {
         NapiApi::Object val = data.Arg<0>();
-        auto bitmap = GetNativeMeta<SCENE_NS::IBitmap>(val);
-        Lock();
-        value = bitmap;
-        ScheduleUpdate();
-        Unlock();
+        CORE_NS::Entity entity;
+        if (auto ecsoa = val.GetNative<SCENE_NS::IEcsObjectAccess>()) {
+            if (auto ecso = ecsoa->GetEcsObject()) {
+                entity = ecso->GetEntity();
+            }
+        }
+        META_NS::SetValue(GetProperty<CORE_NS::Entity>(), entity);
+    }
+}
+
+void ImageProxy::Reset()
+{
+    auto prop = GetPropertyPtr();
+    if (!obj_.IsEmpty() && prop) {
+        obj_.GetObject().DeleteProperty(prop->GetName());
+    }
+    obj_.Reset();
+    scene_.Reset();
+}
+
+ImageProxy::ImageProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<SCENE_NS::IImage::Ptr> prop)
+    : PropertyProxy(prop)
+{
+    scene_ = scn;
+    obj_ = obj;
+}
+ImageProxy::~ImageProxy()
+{
+    // Unhook the objects.
+    Reset();
+}
+void ImageProxy::SetValue(const SCENE_NS::IBitmap::Ptr& v)
+{
+    META_NS::SetValue(GetProperty<SCENE_NS::IBitmap::Ptr>(), v);
+}
+napi_value ImageProxy::Value()
+{
+    auto value = META_NS::GetValue(GetProperty<SCENE_NS::IImage::Ptr>());
+    NapiApi::Env env(obj_.GetEnv());
+    if (value) {
+        NapiApi::Object parms(env);
+        napi_value args[] = { scene_.GetValue(), parms.ToNapiValue() };
+        BASE_NS::string uri;
+        if (auto m = interface_cast<META_NS::IMetadata>(value)) {
+            if (auto p = m->GetProperty<BASE_NS::string>("Uri")) {
+                uri = p->GetValue();
+            }
+        }
+        parms.Set("uri", uri);
+        return CreateFromNativeInstance(env, value, PtrType::WEAK, args).ToNapiValue();
+    }
+    return env.GetNull();
+}
+void ImageProxy::SetValue(NapiApi::FunctionContext<>& info)
+{
+    NapiApi::FunctionContext<NapiApi::Object> data { info };
+    if (data) {
+        NapiApi::Object val = data.Arg<0>();
+        auto bitmap = val.GetNative<SCENE_NS::IImage>();
+        META_NS::SetValue(GetProperty<SCENE_NS::IImage::Ptr>(), bitmap);
     }
 }
 
@@ -367,6 +300,9 @@ BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
     if (META_NS::IsCompatibleWith<uint64_t>(t)) {
         return BASE_NS::shared_ptr { new TypeProxy<uint64_t>(obj, t) };
     }
+    if (META_NS::IsCompatibleWith<BASE_NS::string>(t)) {
+        return BASE_NS::shared_ptr { new TypeProxy<BASE_NS::string>(obj, t) };
+    }
     if (META_NS::IsCompatibleWith<BASE_NS::Math::Vec2>(t)) {
         return BASE_NS::shared_ptr { new Vec2Proxy(obj.GetEnv(), t) };
     }
@@ -376,8 +312,20 @@ BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
     if (META_NS::IsCompatibleWith<BASE_NS::Math::Vec4>(t)) {
         return BASE_NS::shared_ptr { new Vec4Proxy(obj.GetEnv(), t) };
     }
-    if (META_NS::IsCompatibleWith<SCENE_NS::IBitmap::Ptr>(t)) {
-        return BASE_NS::shared_ptr { new BitmapProxy(scene, obj, t) };
+    if (META_NS::IsCompatibleWith<BASE_NS::Math::Quat>(t)) {
+        return BASE_NS::shared_ptr { new QuatProxy(obj.GetEnv(), t) };
+    }
+    if (META_NS::IsCompatibleWith<BASE_NS::Color>(t)) {
+        return BASE_NS::shared_ptr { new ColorProxy(obj.GetEnv(), META_NS::Property<BASE_NS::Color>(t)) };
+    }
+    if (META_NS::IsCompatibleWith<SCENE_NS::IImage::Ptr>(t)) {
+        return BASE_NS::shared_ptr { new ImageProxy(scene, obj, t) };
+    }
+    if (META_NS::IsCompatibleWith<CORE_NS::Entity>(t)) {
+        return BASE_NS::shared_ptr { new EntityProxy(scene, obj, t) };
+    }
+    if (META_NS::IsCompatibleWith<bool>(t)) {
+        return BASE_NS::shared_ptr { new TypeProxy<bool>(obj, t) };
     }
     auto any = META_NS::GetInternalAny(t);
     LOG_F("Unsupported property type [%s]", any ? any->GetTypeIdString().c_str() : "<Unknown>");

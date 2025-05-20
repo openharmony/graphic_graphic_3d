@@ -5,7 +5,6 @@
     },
     "category": "3D",
     "displayName": "Environment",
-    "baseShader": "campreviewshaders://shader/camera_stream.shader",
     "shaders": [
         {
             "displayName": "Default Environment",
@@ -14,6 +13,7 @@
             "frag": "campreviewshaders://shader/camera_stream.frag.spv",
             "pipelineLayout": "campreviewpipelinelayouts://camera_stream.shaderpl",
             "renderSlot": "CORE3D_RS_DM_ENV",
+            "renderSlotDefaultShader": false,
             "state": {
                 "rasterizationState": {
                     "enableDepthClamp": false,
@@ -48,7 +48,8 @@
             "vert": "campreviewshaders://shader/camera_stream.vert.spv",
             "frag": "campreviewshaders://shader/camera_stream.frag.spv",
             "pipelineLayout": "campreviewpipelinelayouts://camera_stream.shaderpl",
-            "renderSlot": "CORE3D_RS_DM_ENV",
+            "renderSlot": "CORE3D_RS_DM_ENV_MV",
+            "renderSlotDefaultShader": false,
             "state": {
                 "rasterizationState": {
                     "enableDepthClamp": false,

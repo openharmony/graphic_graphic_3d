@@ -16,8 +16,6 @@
 #ifndef META_INTERFACE_RESOURCE_IDYNAMIC_RESOURCE_H
 #define META_INTERFACE_RESOURCE_IDYNAMIC_RESOURCE_H
 
-#include <core/plugin/intf_interface.h>
-
 #include <meta/base/meta_types.h>
 #include <meta/base/namespace.h>
 #include <meta/interface/interface_macros.h>
@@ -35,6 +33,11 @@ public:
      * @brief Resource changed
      */
     META_EVENT(META_NS::IOnChanged, OnResourceChanged)
+};
+
+class IReloadableResource : public IDynamicResource {
+    META_INTERFACE(IDynamicResource, IReloadableResource, "924efc47-63a8-4a25-ab7d-bacacf27eee0")
+public:
     /**
      * @brief Manually refresh the resource. May lead to OnResourceChanged being invoked.
      */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,8 +15,7 @@
 
 #include "threading/task_queue.h"
 
-#include <atomic>
-
+#include <base/containers/atomics.h>
 #include <base/containers/refcnt_ptr.h>
 #include <base/containers/type_traits.h>
 #include <base/containers/unique_ptr.h>
@@ -34,7 +33,7 @@ TaskQueue::ExecuteAsyncTask::ExecuteAsyncTask(TaskQueue& queue) : queue_(queue) 
 void TaskQueue::ExecuteAsyncTask::operator()()
 {
     queue_.Execute();
-    queue_.isRunningAsync_ = false;
+    BASE_NS::AtomicDecrement(&queue_.isRunningAsync_);
 }
 
 void TaskQueue::ExecuteAsyncTask::Destroy()
@@ -43,7 +42,7 @@ void TaskQueue::ExecuteAsyncTask::Destroy()
 }
 
 // -- TaskQueue
-TaskQueue::TaskQueue(const IThreadPool::Ptr& threadPool) : threadPool_(threadPool), isRunningAsync_(false) {}
+TaskQueue::TaskQueue(const IThreadPool::Ptr& threadPool) : threadPool_(threadPool), isRunningAsync_(0) {}
 
 TaskQueue::~TaskQueue() = default;
 
@@ -52,7 +51,7 @@ void TaskQueue::ExecuteAsync()
     CORE_ASSERT(threadPool_ != nullptr);
 
     if (!IsRunningAsync()) {
-        isRunningAsync_ = true;
+        BASE_NS::AtomicIncrement(&isRunningAsync_);
 
         // Execute in new thread.
         asyncOperation_ = threadPool_->Push(IThreadPool::ITask::Ptr { new ExecuteAsyncTask(*this) });
@@ -61,14 +60,14 @@ void TaskQueue::ExecuteAsync()
 
 bool TaskQueue::IsRunningAsync() const
 {
-    return isRunningAsync_;
+    return BASE_NS::AtomicRead(&isRunningAsync_) > 0;
 }
 
 void TaskQueue::Wait()
 {
     if (IsRunningAsync()) {
         asyncOperation_->Wait();
-        isRunningAsync_ = false;
+        isRunningAsync_ = 0;
     }
 }
 

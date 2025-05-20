@@ -31,7 +31,7 @@ public:
 
 protected:
     void* GetInstanceImpl(uint32_t);
-    void DisposeNative(TrueRootObject*);
+    void DisposeNative(BaseObject*);
 
     MaterialType materialType_;
 
@@ -49,7 +49,7 @@ private:
     void SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 };
 
-class MaterialJS : BaseObject<MaterialJS>, BaseMaterial {
+class MaterialJS : BaseObject, BaseMaterial {
 public:
     static constexpr uint32_t ID = 31;
     static void Init(napi_env env, napi_value exports);
@@ -70,7 +70,7 @@ private:
     void SetMaterialProperty(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     META_NS::IObject::Ptr shaderBind_;
-
     NapiApi::StrongRef shader_;
 };
+
 #endif

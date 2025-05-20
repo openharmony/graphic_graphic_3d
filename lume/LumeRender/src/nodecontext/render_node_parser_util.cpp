@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -116,7 +116,8 @@ RENDER_JSON_SERIALIZE_ENUM(ImageUsageFlagBits,
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, "depth_stencil_attachment" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, "transient_attachment" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, "input_attachment" },
-        { ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT, "fragment_shading_rate_attachment" },
+        { ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT,
+            "fragment_shading_rate_attachment" },
     })
 
 RENDER_JSON_SERIALIZE_ENUM(ImageCreateFlagBits,
@@ -180,8 +181,7 @@ RENDER_JSON_SERIALIZE_ENUM(BufferUsageFlagBits,
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, "shader_device_address" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT,
             "acceleration_structure_build_input_read_only" },
-        { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT,
-            "acceleration_structure_storage" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT, "acceleration_structure_storage" },
     })
 
 RENDER_JSON_SERIALIZE_ENUM(RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits,
@@ -247,7 +247,7 @@ inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInp
     SafeGetJsonEnum(jsonData, "stencilLoadOp", context.error, context.data.stencilLoadOp);
     SafeGetJsonEnum(jsonData, "stencilStoreOp", context.error, context.data.stencilStoreOp);
     if (auto const pos = jsonData.find("clearColor"); pos) {
-        if (pos->is_array() && pos->array_.size() == 4) { // 4: length
+        if (pos->is_array() && pos->array_.size() == 4) { // 4: array size
             FromJson(*pos, context.data.clearValue.color.float32);
         } else {
             const auto asString = to_string(*pos);
@@ -256,7 +256,7 @@ inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInp
         }
     }
     if (auto const pos = jsonData.find("clearDepth"); pos) {
-        if (pos->is_array() && pos->array_.size() == 2) { // 2: length
+        if (pos->is_array() && pos->array_.size() == 2) { // 2: array size
             if (pos->array_[0].is_number()) {
                 context.data.clearValue.depthStencil.depth = pos->array_[0].as_number<float>();
             } else {
@@ -317,7 +317,7 @@ inline void FromJson(
     SafeGetJsonValue(jsonData, "dependencySizeScale", context.error, context.data.dependencySizeScale);
 
     if (auto const pos = jsonData.find("shadingRateTexelSize"); pos) {
-        if (pos->is_array() && pos->array_.size() == 2) { // 2: length
+        if (pos->is_array() && pos->array_.size() == 2) { // 2: array size
             if (pos->array_[0].is_number() && pos->array_[1u].is_number()) {
                 context.data.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
                 context.data.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();
@@ -463,7 +463,7 @@ void ParseRenderpass(const string_view name, const json::value& node,
         SafetyCheckRenderPassVectors(renderPass);
 
         if (auto const pos = sp->find("shadingRateTexelSize"); pos) {
-            if ((pos->is_array() && pos->array_.size() == 2) && // 2 : size
+            if ((pos->is_array() && pos->array_.size() == 2) && // 2: size
                 (pos->array_[0].is_number() && pos->array_[1u].is_number())) {
                 renderPass.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
                 renderPass.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();

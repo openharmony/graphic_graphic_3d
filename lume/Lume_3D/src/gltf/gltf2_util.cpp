@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,9 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+#include <meshoptimizer.h>
+#endif
 
 #include <base/containers/fixed_string.h>
 #include <base/util/base64_decode.h>
@@ -59,6 +62,70 @@ vector<uint8_t> Read(const uint8_t* src, uint32_t componentByteSize, uint32_t co
 
 vector<uint8_t> Read(Accessor const& accessor)
 {
+    const uint32_t componentByteSize = GetComponentByteSize(accessor.componentType);
+    const uint32_t componentCount = GetComponentsCount(accessor.type);
+    const uint32_t elementSize = componentCount * componentByteSize;
+    const uint32_t count = accessor.count;
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+    // Import should be reworked so that instead of a task which loads all buffers there would be tasks for bufferViews.
+    // this would allow progressing tasks depending on which part of a buffer has been loaded instead of waiting for the
+    // whole buffer.
+    if (accessor.bufferView->meshoptCompression.buffer) {
+        auto& meshoptCompression = accessor.bufferView->meshoptCompression;
+        meshoptCompression.dataLock.Lock();
+        if (meshoptCompression.data.empty()) {
+            meshoptCompression.data.resize(accessor.bufferView->byteLength);
+            const uint8_t* compressed = meshoptCompression.buffer->data.data() + meshoptCompression.byteOffset;
+            uint8_t* decompressed = meshoptCompression.data.data();
+            if (meshoptCompression.mode == CompressionMode::ATTRIBUTES) {
+                const auto ret = meshopt_decodeVertexBuffer(decompressed, meshoptCompression.count,
+                    meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
+                if (ret) {
+                    CORE_LOG_E("meshopt_decodeVertexBuffer %d", ret);
+                    meshoptCompression.data.clear();
+                } else {
+                    if (meshoptCompression.filter == CompressionFilter::OCTAHEDRAL) {
+                        meshopt_decodeFilterOct(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
+                    } else if (meshoptCompression.filter == CompressionFilter::QUATERNION) {
+                        meshopt_decodeFilterQuat(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
+                    } else if (meshoptCompression.filter == CompressionFilter::EXPONENTIAL)
+                        meshopt_decodeFilterExp(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
+                }
+            } else {
+                // mode 1 (TRIANGLES) for triangle list, mode 2 (INDICES) for other topologies,
+                const auto ret = meshopt_decodeIndexBuffer(decompressed, meshoptCompression.count,
+                    meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
+                if (ret) {
+                    CORE_LOG_E("meshopt_decodeIndexBuffer %d", ret);
+                    meshoptCompression.data.clear();
+                }
+            }
+        }
+        meshoptCompression.dataLock.Unlock();
+        vector<uint8_t> data;
+        if (!meshoptCompression.data.empty()) {
+            const auto total = (count * elementSize);
+            data.resize(total);
+            // copy accessor.count elements from accessor.byteOffset taking stride into account.
+            const size_t byteStride = meshoptCompression.byteStride;
+            const uint8_t* src = accessor.bufferView->meshoptCompression.data.data() + accessor.byteOffset;
+            uint8_t* dst = data.data();
+            if (data.size() < (accessor.byteOffset + total)) {
+                data.resize(total);
+            }
+            if ((elementSize == byteStride) || (byteStride == 0)) {
+                std::copy(src, src + total, dst);
+            } else {
+                for (uint32_t element = 0; element < count; ++element) {
+                    std::copy(src, src + elementSize, dst);
+                    src += byteStride;
+                    dst += elementSize;
+                }
+            }
+        }
+        return data;
+    }
+#endif
     if (!accessor.bufferView->data) {
         return {};
     }
@@ -66,14 +133,9 @@ vector<uint8_t> Read(Accessor const& accessor)
     const size_t startOffset = accessor.bufferView->byteOffset + accessor.byteOffset;
     const size_t bufferLength = accessor.bufferView->buffer->byteLength;
     const size_t bufferRemaining = bufferLength - startOffset;
+    const size_t byteStride = accessor.bufferView->byteStride;
 
     const uint8_t* src = accessor.bufferView->data + accessor.byteOffset;
-
-    const uint32_t componentByteSize = GetComponentByteSize(accessor.componentType);
-    const uint32_t componentCount = GetComponentsCount(accessor.type);
-    const uint32_t elementSize = componentCount * componentByteSize;
-    const size_t byteStride = accessor.bufferView->byteStride;
-    const uint32_t count = accessor.count;
 
     size_t readBytes = 0u;
 
@@ -177,7 +239,7 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
 
     auto const& sparseIndicesBufferView = accessor.sparse.indices.bufferView;
     vector<uint8_t> sparseIndicesData;
-    if (sparseIndicesBufferView->buffer) {
+    if (sparseIndicesBufferView->buffer && sparseIndicesBufferView->data) {
         const uint8_t* src = sparseIndicesBufferView->data + accessor.sparse.indices.byteOffset;
 
         auto const componentCount = 1u;
@@ -190,7 +252,7 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
     }
 
     auto const& sparseValuesBufferView = accessor.sparse.values.bufferView;
-    if (sparseValuesBufferView->buffer) {
+    if (sparseValuesBufferView->buffer && sparseValuesBufferView->data) {
         vector<uint8_t> sourceData;
 
         const uint8_t* src = sparseValuesBufferView->data + accessor.sparse.values.byteOffset;
@@ -766,11 +828,11 @@ string_view ValidatePrimitiveAttribute(
     if (attributeIndex < countof(ATTRIBUTE_VALIDATION)) {
         auto& validation = ATTRIBUTE_VALIDATION[attributeIndex];
         if (std::none_of(validation.dataTypes.begin(), validation.dataTypes.end(),
-            [accessorType](const DataType& validType) { return validType == accessorType; })) {
+                [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
         } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
-            [accessorComponentType](
-                const ComponentType& validType) { return validType == accessorComponentType; })) {
+                       [accessorComponentType](
+                           const ComponentType& validType) { return validType == accessorComponentType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].componentTypeError;
         }
     } else {
@@ -830,11 +892,11 @@ string_view ValidatePrimitiveAttributeQuatization(
     if (attributeIndex < countof(ATTRIBUTE_VALIDATION_Q)) {
         auto& validation = ATTRIBUTE_VALIDATION_Q[attributeIndex];
         if (std::none_of(validation.dataTypes.begin(), validation.dataTypes.end(),
-            [accessorType](const DataType& validType) { return validType == accessorType; })) {
+                [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
         } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
-            [accessorComponentType](
-               const ComponentType& validType) { return validType == accessorComponentType; })) {
+                       [accessorComponentType](
+                           const ComponentType& validType) { return validType == accessorComponentType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].componentTypeError;
         }
     } else {
@@ -1035,6 +1097,11 @@ BufferLoadResult LoadBuffers(const Data* data, IFileManager& fileManager)
     // Load data to all buffers.
     for (const auto& buffer : data->buffers) {
         if (buffer && buffer->data.empty()) {
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+            if (data->meshCompression && (data->defaultResourcesOffset < 0) && buffer->uri.empty()) {
+                continue;
+            }
+#endif
             result = LoadBuffer(*data, *buffer, fileManager);
             if (!result.success) {
                 return result;
@@ -1067,7 +1134,6 @@ UriLoadResult LoadUri(const string_view uri, const string_view expectedMimeType,
         if (!isValidMimeType) {
             return URI_LOAD_FAILED_INVALID_MIME_TYPE;
         }
-        string_view outMimeType;
         DecodeDataURI(outData, uri, 0u, false);
         if (outData.empty()) {
             return URI_LOAD_FAILED_TO_DECODE_BASE64;
@@ -1082,6 +1148,18 @@ UriLoadResult LoadUri(const string_view uri, const string_view expectedMimeType,
     }
 
     return URI_LOAD_SUCCESS;
+}
+
+template<typename SrcFormat>
+vector<float> Normalize(array_view<const float> src)
+{
+    vector<float> result(src.size());
+    auto it = result.begin().ptr();
+    const auto normalizer = 1.f / static_cast<float>(std::numeric_limits<SrcFormat>::max());
+    for (const auto& v : src) {
+        *it++ = v * normalizer;
+    }
+    return result;
 }
 
 // Load accessor data.
@@ -1100,8 +1178,49 @@ GLTFLoadDataResult LoadData(Accessor const& accessor)
     result.componentCount = GetComponentsCount(dataType);
     result.elementSize = result.componentCount * result.componentByteSize;
     result.elementCount = accessor.count;
-    result.min = accessor.min;
-    result.max = accessor.max;
+    if (result.normalized) {
+        switch (result.componentType) {
+            case GLTF2::ComponentType::BYTE: {
+                result.min = Normalize<int8_t>(accessor.min);
+                result.max = Normalize<int8_t>(accessor.max);
+                break;
+            }
+            case GLTF2::ComponentType::UNSIGNED_BYTE: {
+                result.min = Normalize<uint8_t>(accessor.min);
+                result.max = Normalize<uint8_t>(accessor.max);
+                break;
+            }
+            case GLTF2::ComponentType::SHORT: {
+                result.min = Normalize<int16_t>(accessor.min);
+                result.max = Normalize<int16_t>(accessor.max);
+                break;
+            }
+            case GLTF2::ComponentType::UNSIGNED_SHORT: {
+                result.min = Normalize<uint16_t>(accessor.min);
+                result.max = Normalize<uint16_t>(accessor.max);
+                break;
+            }
+            case GLTF2::ComponentType::INT: {
+                result.min = Normalize<int32_t>(accessor.min);
+                result.max = Normalize<int32_t>(accessor.max);
+                break;
+            }
+            case GLTF2::ComponentType::UNSIGNED_INT: {
+                result.min = Normalize<uint32_t>(accessor.min);
+                result.max = Normalize<uint32_t>(accessor.max);
+                break;
+            }
+            case GLTF2::ComponentType::FLOAT:
+                result.min = accessor.min;
+                result.max = accessor.max;
+                break;
+            case GLTF2::ComponentType::INVALID:
+                break;
+        }
+    } else {
+        result.min = accessor.min;
+        result.max = accessor.max;
+    }
 
     if (bufferView && bufferView->buffer) {
         vector<uint8_t> fileData = Read(accessor);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,7 +29,7 @@ SCENE_BEGIN_NAMESPACE()
 
 BEGIN_COMPONENT(IEntityOwnerComponentManager, EntityOwnerComponent)
     /** Owned entity. */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, entity, "Entity", 0,)
+    DEFINE_PROPERTY(CORE_NS::EntityReference, entity, "Entity", 0, )
 END_COMPONENT(IEntityOwnerComponentManager, EntityOwnerComponent, "aa74aebf-58d5-46bf-b6f2-bdcb55274e9e")
 #if !defined(IMPLEMENT_MANAGER)
 SCENE_END_NAMESPACE()

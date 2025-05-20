@@ -23,6 +23,7 @@ declare_args() {
   CORE_DIR_NAME = "LumeEngine"
   RENDER_DIR_NAME = "LumeRender"
   CORE3D_DIR_NAME = "Lume_3D"
+  LUME3DTEXT_DIR_NAME = "Lume3DText"
   BINARY_DIR_NAME = "LumeBinaryCompile"
   META_DIR_NAME = "LumeMeta"
   SCENE_DIR_NAME = "LumeScene"
@@ -38,6 +39,7 @@ declare_args() {
   LIB_ENGINE_CORE = "libAGPDLL"
   LIB_RENDER = "libPluginAGPRender"
   LIB_CORE3D = "libPluginAGP3D"
+  LIB_3DTEXT = "libPluginAGP3DText"
   LIB_JPG = "libPluginAGPJpg"
   LIB_PNG = "libPluginAGPPng"
   LIB_CAM_PREVIEW = "libPluginCamPreview"
@@ -67,6 +69,7 @@ declare_args() {
   LUME_JPG_PATH = "${LUME_ROOT}/${JPG_DIR_NAME}/"
   LUME_FONT_PATH = "${LUME_ROOT}/${FONT_DIR_NAME}/"
   LUME_SERIALIZER_PATH = "${LUME_ROOT}/${ECS_SERIALIZER_DIR_NAME}/"
+  LUME_LUME3DTEXT_PATH = "${LUME_ROOT}/${LUME3DTEXT_DIR_NAME}/"
 
   LUME_CORE_DLL_PATH = "${LUME_ROOT}/${CORE_DIR_NAME}/DLL/"
   LUME_CORE3D_DLL_PATH = "${LUME_ROOT}/${CORE3D_DIR_NAME}/DLL/"

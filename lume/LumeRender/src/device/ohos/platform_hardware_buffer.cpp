@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -120,5 +120,19 @@ GpuImageDesc GetImageDescFromHwBufferDesc(uintptr_t platformHwBuffer)
         SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
         { CORE_COMPONENT_SWIZZLE_R, CORE_COMPONENT_SWIZZLE_G, CORE_COMPONENT_SWIZZLE_B, CORE_COMPONENT_SWIZZLE_A },
     };
+}
+
+GpuBufferDesc GetBufferDescFromHwBufferDesc(uintptr_t platformHwBuffer)
+{
+    auto* aHwBuffer = reinterpret_cast<OH_NativeBuffer*>(platformHwBuffer);
+    OH_NativeBuffer_Config config;
+    OH_NativeBuffer_GetConfig(aHwBuffer, &config);
+
+    GpuBufferDesc ret;
+    ret.usageFlags |= BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                      BufferUsageFlagBits::CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    ret.byteSize = config.width;
+    ret.format = GetCoreFormatFromNativeBufferFormat(config.format);
+    return ret;
 }
 RENDER_END_NAMESPACE()

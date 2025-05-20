@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,13 +14,6 @@
  */
 
 #include "gpu_semaphore_gles.h"
-
-#if RENDER_HAS_GLES_BACKEND
-#define EGL_EGLEXT_PROTOTYPES
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#undef EGL_EGLEXT_PROTOTYPES
-#endif
 
 #include <render/namespace.h>
 
@@ -50,16 +43,8 @@ GpuSemaphoreGles::~GpuSemaphoreGles()
 {
     if (ownsResources_ && plat_.sync) {
         PLUGIN_ASSERT(device_.IsActive());
-#if RENDER_HAS_GLES_BACKEND
-        const auto disp = static_cast<const DevicePlatformDataGLES &>(device_.GetEglState().GetPlatformData()).display;
-        EGLSyncKHR sync = reinterpret_cast<EGLSyncKHR>(plat_.sync);
-        eglDestroySyncKHR(disp, sync);
-#elif RENDER_HAS_GL_BACKEND
-        GLsync sync = reinterpret_cast<GLsync>(plat_.sync);
+        auto sync = reinterpret_cast<GLsync>(plat_.sync);
         glDeleteSync(sync);
-#else
-        BASE_LOG_E("no available backend type");
-#endif
     }
     plat_.sync = 0;
 }

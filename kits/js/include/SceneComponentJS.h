@@ -21,7 +21,7 @@
 
 #include <base/containers/unordered_map.h>
 
-class SceneComponentJS : public BaseObject<SceneComponentJS> {
+class SceneComponentJS : public BaseObject {
 public:
     static constexpr uint32_t ID = 200;
     static void Init(napi_env env, napi_value exports);

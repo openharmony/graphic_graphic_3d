@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef SCENE_SRC_CORE_CAMERA_H
 #define SCENE_SRC_CORE_CAMERA_H
 
@@ -22,7 +21,6 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-bool EnableCamera(const IEcsObject::Ptr& camera, bool enabled);
 bool UpdateCameraRenderTarget(const IEcsObject::Ptr& camera, const IRenderTarget::Ptr& target);
 
 SCENE_END_NAMESPACE()

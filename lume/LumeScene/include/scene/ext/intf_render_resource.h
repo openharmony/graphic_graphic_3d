@@ -33,8 +33,7 @@ class IInternalScene;
 class IRenderResource : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IRenderResource, "23bcea3d-de86-4c35-b3c5-c9425f27f6e7")
 public:
-    virtual bool SetRenderHandle(const BASE_NS::shared_ptr<IInternalScene>& scene, RENDER_NS::RenderHandleReference,
-        CORE_NS::EntityReference = {}) = 0;
+    virtual bool SetRenderHandle(RENDER_NS::RenderHandleReference) = 0;
     virtual RENDER_NS::RenderHandleReference GetRenderHandle() const = 0;
 };
 

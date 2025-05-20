@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "text_component.h"
 
 SCENE_BEGIN_NAMESPACE()

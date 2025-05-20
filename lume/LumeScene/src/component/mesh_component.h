@@ -16,10 +16,11 @@
 #ifndef SCENE_SRC_COMPONENT_MESH_COMPONENT_H
 #define SCENE_SRC_COMPONENT_MESH_COMPONENT_H
 
-#include <scene/ext/component_fwd.h>
+#include <scene/ext/component.h>
 #include <scene/interface/intf_mesh.h>
 
 #include <3d/ecs/components/mesh_component.h>
+#include <3d/ecs/components/morph_component.h>
 #include <3d/ecs/components/render_mesh_component.h>
 
 #include <meta/ext/object.h>
@@ -27,13 +28,6 @@
 META_TYPE(CORE3D_NS::MeshComponent::Submesh)
 
 SCENE_BEGIN_NAMESPACE()
-
-class IInternalSubMesh : public CORE_NS::IInterface {
-    META_INTERFACE(CORE_NS::IInterface, IInternalSubMesh, "1f943376-8861-4438-b5da-497f28c21e5a")
-public:
-    virtual CORE3D_NS::MeshComponent::Submesh GetSubMesh() const = 0;
-    virtual bool SetSubMesh(IEcsContext&, const CORE3D_NS::MeshComponent::Submesh&) = 0;
-};
 
 class IInternalMesh : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IInternalMesh, "8926f642-01ee-411f-8fa0-c17d9cda4bb8")
@@ -46,7 +40,7 @@ public:
 
 META_REGISTER_CLASS(MeshComponent, "3350d990-8d83-4d29-b916-db9854c7fa6f", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class MeshComponent : public META_NS::IntroduceInterfaces<ComponentFwd, IInternalMesh> {
+class MeshComponent : public META_NS::IntroduceInterfaces<Component, IInternalMesh> {
     META_OBJECT(MeshComponent, ClassId::MeshComponent, IntroduceInterfaces)
 
 public:
@@ -75,7 +69,7 @@ public:
 META_REGISTER_CLASS(
     RenderMeshComponent, "af2f8d45-b34d-4598-8374-ed48a8db69af", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class RenderMeshComponent : public META_NS::IntroduceInterfaces<ComponentFwd, IInternalRenderMesh> {
+class RenderMeshComponent : public META_NS::IntroduceInterfaces<Component, IInternalRenderMesh> {
     META_OBJECT(RenderMeshComponent, SCENE_NS::ClassId::RenderMeshComponent, IntroduceInterfaces)
 
 public:
@@ -84,6 +78,23 @@ public:
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(CORE_NS::Entity, Mesh)
+public:
+    BASE_NS::string GetName() const override;
+};
+
+META_REGISTER_CLASS(MorphComponent, "8feeb648-23fe-4dc5-9f33-cf502e671fe9", META_NS::ObjectCategoryBits::NO_CATEGORY)
+
+class MorphComponent : public META_NS::IntroduceInterfaces<Component, IMorpher> {
+    META_OBJECT(MorphComponent, ClassId::MorphComponent, IntroduceInterfaces)
+
+public:
+    META_BEGIN_STATIC_DATA()
+    SCENE_STATIC_ARRAY_PROPERTY_DATA(IMorpher, BASE_NS::string, MorphNames, "MorphComponent.morphNames")
+    SCENE_STATIC_ARRAY_PROPERTY_DATA(IMorpher, float, MorphWeights, "MorphComponent.morphWeights")
+    META_END_STATIC_DATA()
+
+    META_IMPLEMENT_ARRAY_PROPERTY(BASE_NS::string, MorphNames)
+    META_IMPLEMENT_ARRAY_PROPERTY(float, MorphWeights)
 public:
     BASE_NS::string GetName() const override;
 };

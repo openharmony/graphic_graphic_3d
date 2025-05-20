@@ -27,6 +27,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Simple object implementation that implements minimal set of interfaces for object
 class MinimalObject : public IntroduceInterfaces<IObject, IObjectFlags, IStaticMetadata> {
 public:
     MinimalObject() : flags_(ObjectFlagBits::DEFAULT_FLAGS) {}

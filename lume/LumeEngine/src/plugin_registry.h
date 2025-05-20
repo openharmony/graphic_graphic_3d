@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -86,8 +86,9 @@ protected:
         int32_t refcnt;
     };
 
-    void RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, bool asDependency);
+    void RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, int32_t refCount);
     static void UnregisterPlugin(const IPlugin& plugin, PluginToken token);
+    void DecreaseRefCounts(BASE_NS::array_view<const BASE_NS::Uid> pluginUids);
 
     BASE_NS::vector<PluginData> pluginDatas_;
     BASE_NS::vector<const IPlugin*> plugins_;

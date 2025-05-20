@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "number.h"
 
 #include <limits>
@@ -39,22 +38,22 @@ struct CompType {
     template<typename T>
     constexpr CompType(Type<T>)
         : uid(UidFromType<T>()), size(sizeof(T)), load([](const void* data) {
-            T v = *static_cast<const T*>(data);
-            return MapToVariant(v);
-        }),
-        save([](Number::VariantType var, void* data) {
-            T v {};
-            std::visit([&](const auto& arg) { v = static_cast<T>(arg); }, var);
-            *static_cast<T*>(data) = v;
-        }),
-        loadAny([](const IAny& any, Number::VariantType& var) {
-            T v {};
-            bool res = any.GetValue(v);
-            if (res) {
-                var = MapToVariant(v);
-            }
-            return res;
-        })
+              T v = *static_cast<const T*>(data);
+              return MapToVariant(v);
+          }),
+          save([](Number::VariantType var, void* data) {
+              T v {};
+              std::visit([&](const auto& arg) { v = static_cast<T>(arg); }, var);
+              *static_cast<T*>(data) = v;
+          }),
+          loadAny([](const IAny& any, Number::VariantType& var) {
+              T v {};
+              bool res = any.GetValue(v);
+              if (res) {
+                  var = MapToVariant(v);
+              }
+              return res;
+          })
     {}
 
     using LoadFunc = Number::VariantType(const void*);

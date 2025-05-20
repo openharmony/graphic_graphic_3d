@@ -22,44 +22,27 @@
 #include "SceneJS.h"
 
 MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
-    : BaseObject<MeshResourceJS>(e, i), SceneResourceImpl(SceneResourceType::MESH_RESOURCE)
+    : BaseObject(e, i), SceneResourceImpl(SceneResourceType::MESH_RESOURCE)
 {
-    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
-    NapiApi::Object meJs(fromJs.This());
-
-    if (!fromJs) {
-        // We except this was created internally and that things will be initialized later.
+    NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> ctx(e, i);
+    // As long as our native object is a dummy interface without a backing implementation, we're only concerned about
+    // arg validity and not about native object existence.
+    if (!ctx) {
+        LOG_E("Cannot finish creating a mesh resource: Invalid args given");
+        assert(false);
         return;
     }
-    scene_ = fromJs.Arg<0>().valueOrDefault();
+
+    scene_ = ctx.Arg<0>().valueOrDefault();
     // Add the dispose hook to scene so that the MeshResourceJS is disposed when scene is disposed.
-    if (auto sceneJS = GetJsWrapper<SceneJS>(scene_.GetObject())) {
-        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), fromJs.This());
+    if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
+        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), ctx.This());
     }
 
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
-        LOG_F("INVALID SCENE!");
-    }
-
-    auto resourceParams = NapiApi::Object { fromJs.Arg<1>() };
-    auto nativeObj = GetNativeObjectParam<META_NS::IObject>(resourceParams);
-    if (!nativeObj) {
-        nativeObj = META_NS::GetObjectRegistry().Create<META_NS::IObject>(SCENE_NS::ClassId::MeshResource);
-    }
-
-    // TODO: Name remains undefined. This has no effect. There are prop problems with other SceneResourceImpls as well.
-    auto name = BASE_NS::string {};
+    auto resourceParams = NapiApi::Object { ctx.Arg<1>() };
     if (auto nameParam = resourceParams.Get<BASE_NS::string>("name"); nameParam.IsDefined()) {
-        name = nameParam;
-    } else if (nativeObj) {
-        name = nativeObj->GetName();
+        ctx.This().Set("name", nameParam);
     }
-    if (!name.empty()) {
-        meJs.Set("name", name);
-    }
-
-    SetNativeObject(nativeObj, false);
-    StoreJsObj(nativeObj, meJs);
 
     GeometryDefinition::GeometryDefinition* geomDef {};
     napi_get_value_external(e, resourceParams.Get("GeometryDefinition"), (void**)&geomDef);
@@ -83,7 +66,7 @@ void* MeshResourceJS::GetInstanceImpl(uint32_t id)
 
 SCENE_NS::IMesh::Ptr MeshResourceJS::CreateMesh()
 {
-    auto scene = GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject());
+    auto scene = scene_.GetObject().GetNative<SCENE_NS::IScene>();
     if (!scene || !geometryDefinition_) {
         return {};
     }
@@ -101,9 +84,7 @@ void MeshResourceJS::DisposeNative(void* scene)
     }
     disposed_ = true;
     if (auto node = interface_pointer_cast<SCENE_NS::IMeshResource>(GetNativeObject())) {
-        // reset the native object refs
-        SetNativeObject(nullptr, false);
-        SetNativeObject(nullptr, true);
+        UnsetNativeObject();
     }
     geometryDefinition_.reset();
 
@@ -116,6 +97,6 @@ void MeshResourceJS::DisposeNative(void* scene)
 
 void MeshResourceJS::Finalize(napi_env env)
 {
-    DisposeNative(GetJsWrapper<SceneJS>(scene_.GetObject()));
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }

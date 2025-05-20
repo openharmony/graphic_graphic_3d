@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,6 @@
 #ifndef CORE_THREADING_TASK_QUEUE_H
 #define CORE_THREADING_TASK_QUEUE_H
 
-#include <atomic>
 #include <cstdint>
 #include <functional>
 
@@ -123,7 +122,7 @@ protected:
 
     IThreadPool::Ptr threadPool_;
     IThreadPool::IResult::Ptr asyncOperation_;
-    std::atomic_bool isRunningAsync_;
+    int32_t isRunningAsync_;
 };
 CORE_END_NAMESPACE()
 

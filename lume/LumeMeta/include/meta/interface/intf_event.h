@@ -19,6 +19,7 @@
 #include <base/containers/array_view.h>
 #include <base/containers/string_view.h>
 #include <base/util/uid.h>
+#include <core/log.h>
 #include <core/plugin/intf_interface.h>
 
 #include <meta/base/interface_macros.h>

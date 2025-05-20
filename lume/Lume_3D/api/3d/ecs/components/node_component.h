@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -42,6 +42,10 @@ BEGIN_COMPONENT(INodeComponentManager, NodeComponent)
 
     /** Defines whether this entity is included in an exported scene. */
     DEFINE_PROPERTY(bool, exported, "Exported", 0, true)
+
+    /** Nodes can be assigned to different scenes". This allows setting up multiple node hierarchies with different
+     * scene ID values and rendering only the nodes in the same scene as the camera. */
+    DEFINE_PROPERTY(uint32_t, sceneId, "Scene", 0, 0U)
 
 END_COMPONENT(INodeComponentManager, NodeComponent, "d9d330b5-3900-4503-8c89-233c0c9184de")
 #if !defined(IMPLEMENT_MANAGER)

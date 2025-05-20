@@ -24,11 +24,25 @@
 SCENE_BEGIN_NAMESPACE()
 
 class LightNode : public META_NS::IntroduceInterfaces<Node, ILight, ICreateEntity> {
-    using Super = IntroduceInterfaces;
-    META_IMPLEMENT_OBJECT_TYPE_INTERFACE(ClassId::LightNode)
-    META_DEFINE_OBJECT_TYPE_INFO(LightNode, ClassId::LightNode)
+    META_OBJECT(LightNode, ClassId::LightNode, IntroduceInterfaces)
 
 public:
+    META_BEGIN_STATIC_DATA()
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, BASE_NS::Color, Color)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, Intensity)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, NearPlane)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, bool, ShadowEnabled)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, ShadowStrength)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, ShadowDepthBias)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, ShadowNormalBias)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, SpotInnerAngle)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, float, SpotOuterAngle)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, LightType, Type)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, BASE_NS::Math::Vec4, AdditionalFactor)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, uint64_t, LightLayerMask)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ILight, uint64_t, ShadowLayerMask)
+    META_END_STATIC_DATA()
+
     SCENE_USE_COMPONENT_PROPERTY(BASE_NS::Color, Color, "LightComponent")
     SCENE_USE_COMPONENT_PROPERTY(float, Intensity, "LightComponent")
     SCENE_USE_COMPONENT_PROPERTY(float, NearPlane, "LightComponent")

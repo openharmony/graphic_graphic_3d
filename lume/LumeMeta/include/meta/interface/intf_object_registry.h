@@ -17,7 +17,6 @@
 #define META_INTERFACE_IOBJECT_REGISTRY_H
 
 #include <base/containers/vector.h>
-#include <core/plugin/intf_interface.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 

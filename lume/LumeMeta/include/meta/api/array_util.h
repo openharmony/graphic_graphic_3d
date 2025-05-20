@@ -28,12 +28,63 @@ inline BASE_NS::shared_ptr<CORE_NS::IInterface> GetPointerAt(IArrayAny::IndexTyp
     return lock ? GetPointer(lock->GetAnyAt(index)) : nullptr;
 }
 
+/// Get shared_ptr of IInterface from an array any in given location, or nullptr if not compatible
+inline BASE_NS::shared_ptr<const CORE_NS::IInterface> GetConstPointerAt(
+    IArrayAny::IndexType index, const IProperty::ConstPtr& p)
+{
+    ArrayPropertyLock lock { p };
+    return lock ? GetConstPointer(lock->GetAnyAt(index)) : nullptr;
+}
+
 /// Get interface pointer from an array any in given location, or nullptr if not compatible
 template<typename Interface>
 inline BASE_NS::shared_ptr<Interface> GetPointerAt(IArrayAny::IndexType index, const IProperty::ConstPtr& p)
 {
     return interface_pointer_cast<Interface>(GetPointerAt(index, p));
 }
+
+/// Get interface pointer from an array any in given location, or nullptr if not compatible
+template<typename Interface>
+inline BASE_NS::shared_ptr<Interface> GetConstPointerAt(IArrayAny::IndexType index, const IProperty::ConstPtr& p)
+{
+    return interface_pointer_cast<Interface>(GetConstPointerAt(index, p));
+}
+
+/// Set interface pointer to an array property in given location, or nullptr if not compatible
+inline bool SetPointerAt(
+    IArrayAny::IndexType index, const IProperty::Ptr& p, const BASE_NS::shared_ptr<CORE_NS::IInterface>& ptr)
+{
+    if (ArrayPropertyLock lock { p }) {
+        if (auto any = lock->ConstructItemAny()) {
+            if (any->SetValue(ptr)) {
+                return lock->SetAnyAt(index, *any);
+            }
+        }
+    }
+    return false;
+}
+
+/// Set interface pointer to an array property in given location, or nullptr if not compatible
+inline bool SetPointerAt(
+    IArrayAny::IndexType index, const IProperty::Ptr& p, const BASE_NS::shared_ptr<const CORE_NS::IInterface>& ptr)
+{
+    if (ArrayPropertyLock lock { p }) {
+        if (auto any = lock->ConstructItemAny()) {
+            if (any->SetValue(ptr)) {
+                return lock->SetAnyAt(index, *any);
+            }
+        }
+    }
+    return false;
+}
+
+/// Set interface pointer to an array property in given location, or nullptr if not compatible
+template<typename Interface>
+inline bool SetPointerAt(IArrayAny::IndexType index, const IProperty::Ptr& p, const BASE_NS::shared_ptr<Interface>& ptr)
+{
+    return SetPointerAt(index, p, interface_pointer_cast<CORE_NS::IInterface>(ptr));
+}
+
 /// Check if property is an array property
 inline bool IsArrayProperty(const IProperty::ConstPtr& p)
 {
@@ -61,6 +112,18 @@ inline bool IsItemCompatible(
     const IProperty::ConstPtr& p, const TypeId& id, CompatibilityDirection dir = CompatibilityDirection::BOTH)
 {
     return p && IsItemCompatible(*p, id, dir);
+}
+
+/// Check if array property contains pointers that can be extracted as constant IInterface
+inline bool IsGetPointerArray(const IProperty::ConstPtr& p)
+{
+    return IsItemCompatible(p, GetTypeId<SharedPtrConstIInterface>(), CompatibilityDirection::GET);
+}
+
+/// Check if array property contains pointers that can be set as IInterface
+inline bool IsSetPointerArray(const IProperty::ConstPtr& p)
+{
+    return IsItemCompatible(p, GetTypeId<SharedPtrIInterface>(), CompatibilityDirection::SET);
 }
 
 META_END_NAMESPACE()

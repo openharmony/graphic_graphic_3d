@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -691,7 +691,7 @@ public:
         if (first == last) {
             return;
         }
-        difference_type cnt = last - first;
+        const difference_type cnt = last - first;
         if (cnt < 0) {
             return;
         }
@@ -715,7 +715,7 @@ public:
         if (first == last) {
             return;
         }
-        difference_type cnt = last - first;
+        const difference_type cnt = last - first;
         if (cnt < 0) {
             return;
         }
@@ -770,14 +770,14 @@ public:
     }
 
     template<class... Args>
-    iterator emplace(iterator pos, Args&&... args)
+    iterator emplace(const_iterator pos, Args&&... args)
     {
         const difference_type p = pos - begin();
         pointer tmp = allocate_if_needed(size_ + 1U);
         pointer res = nullptr;
         if (tmp != data_) {
             pointer bgin = begin().ptr();
-            pointer insrt = pos.ptr();
+            pointer insrt = bgin + p;
             pointer ed = end().ptr();
             // Use new storage.
             res = init_move(tmp, bgin, static_cast<size_type>(p)); // move old objects from before pos
@@ -789,13 +789,14 @@ public:
             allocator_.free(data_);
             data_ = tmp;
         } else {
-            // move objects after pos..
-            res = pos.ptr();
-            if (pos != end()) {
+            res = ((pointer)pos.ptr());
+            if (cend() == pos) {
+                ::new (res) T(forward<Args>(args)...);
+            } else {
+                // move objects after pos..
                 reverse_move(end().ptr() - 1, res, end().ptr());
-                destroy_at(pos);
+                *res = T(forward<Args>(args)...);
             }
-            ::new (res) T(forward<Args>(args)...);
         }
         size_++;
         return iterator(res);

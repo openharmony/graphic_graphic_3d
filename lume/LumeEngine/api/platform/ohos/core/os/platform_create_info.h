@@ -18,7 +18,6 @@
 
 #ifdef __OHOS_PLATFORM__
 #include <memory>
-
 #include <platform/common/core/os/extensions_create_info.h>
 
 #include <base/containers/string.h>

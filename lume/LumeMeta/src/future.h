@@ -16,8 +16,11 @@
 #ifndef META_SRC_FUTURE_H
 #define META_SRC_FUTURE_H
 
+#include <condition_variable>
 #include <mutex>
 #include <thread>
+
+#include <base/containers/shared_ptr.h>
 
 #include <meta/base/interface_macros.h>
 #include <meta/base/namespace.h>

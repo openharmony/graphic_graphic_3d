@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -64,7 +64,6 @@ constexpr uint32_t Align(uint32_t value, uint32_t align)
 }
 
 // make sure that generation is valid
-constexpr uint64_t INVALIDATE_GENERATION_SHIFT { 32 };
 EngineResourceHandle InvalidateWithGeneration(const EngineResourceHandle handle)
 {
     return { handle.id | ~RenderHandleUtil::RES_HANDLE_GENERATION_MASK };
@@ -74,16 +73,8 @@ EngineResourceHandle UnpackNewHandle(
     const EngineResourceHandle& handle, const RenderHandleType type, const uint32_t arrayIndex)
 {
     // increments generation counter
-    if (RenderHandleUtil::IsValid(handle)) {
-        const uint32_t gpuGenIndex = RenderHandleUtil::GetGenerationIndexPart(handle) + 1;
-        return RenderHandleUtil::CreateEngineResourceHandle(type, arrayIndex, gpuGenIndex);
-    } else {
-        const uint64_t genIndex =
-            (InvalidateWithGeneration(handle).id & RenderHandleUtil::RES_HANDLE_GENERATION_MASK) >>
-            RenderHandleUtil::RES_HANDLE_GENERATION_SHIFT;
-        const uint32_t gpuGenIndex = uint32_t(genIndex) + 1;
-        return RenderHandleUtil::CreateEngineResourceHandle(type, arrayIndex, gpuGenIndex);
-    }
+    const uint32_t gpuGenIndex = RenderHandleUtil::GetGenerationIndexPart(handle) + 1;
+    return RenderHandleUtil::CreateEngineResourceHandle(type, arrayIndex, gpuGenIndex);
 }
 
 // we need to know if image is a depth format when binding to descriptor set as read only
@@ -93,7 +84,8 @@ constexpr RenderHandleInfoFlags GetAdditionalImageFlagsFromFormat(const Format f
 
     const bool isDepthFormat =
         ((format == Format::BASE_FORMAT_D16_UNORM) || (format == Format::BASE_FORMAT_X8_D24_UNORM_PACK32) ||
-            (format == Format::BASE_FORMAT_D32_SFLOAT) || (format == Format::BASE_FORMAT_D24_UNORM_S8_UINT));
+            (format == Format::BASE_FORMAT_D32_SFLOAT) || (format == Format::BASE_FORMAT_D16_UNORM_S8_UINT) ||
+            (format == Format::BASE_FORMAT_D24_UNORM_S8_UINT) || (format == Format::BASE_FORMAT_D32_SFLOAT_S8_UINT));
     if (isDepthFormat) {
         flags |= CORE_RESOURCE_HANDLE_DEPTH_IMAGE;
     }
@@ -769,6 +761,47 @@ RenderHandleReference GpuResourceManager::Create(const GpuBufferDesc& desc, cons
     return Create({}, desc, data);
 }
 
+RenderHandleReference GpuResourceManager::Create(
+    const string_view name, const BackendSpecificBufferDesc& backendSpecificData)
+{
+    device_.Activate();
+    PerManagerStore& store = bufferStore_;
+    const auto lock = std::lock_guard(store.clientMutex);
+
+    // replace immediate created if still pending (i.e. not usable on the GPU)
+    const auto emplaceResourceIndex = static_cast<uint32_t>(store.pendingData.buffers.size());
+    const uint32_t optionalResourceIndex =
+        Math::min(emplaceResourceIndex, GetPendingOptionalResourceIndex(store, {}, name));
+
+    // additional handle flags provide information if platform conversion is needed
+    uint32_t additionalHandleFlags = 0u;
+
+    if (unique_ptr<GpuBuffer> gpuBuffer = [this](const BackendSpecificBufferDesc& backendSpecificData) {
+            // protect GPU memory allocations
+            auto lock = std::lock_guard(allocationMutex_);
+            return device_.CreateGpuBuffer(backendSpecificData);
+        }(backendSpecificData)) {
+        // safety checks
+        if ((optionalResourceIndex < emplaceResourceIndex) &&
+            (optionalResourceIndex < store.pendingData.buffers.size())) {
+            store.pendingData.buffers[optionalResourceIndex] = move(gpuBuffer);
+        } else {
+            store.pendingData.buffers.push_back(move(gpuBuffer));
+        }
+    }
+    device_.Deactivate();
+
+    const auto& buffers = store.pendingData.buffers;
+    const auto& finalDesc = (optionalResourceIndex < buffers.size() && buffers[optionalResourceIndex])
+                                ? buffers[optionalResourceIndex]->GetDesc()
+                                : GpuBufferDesc {};
+    auto handle = StoreAllocation(store, { ResourceDescriptor { finalDesc }, name, {}, RenderHandleType::GPU_BUFFER,
+                                             optionalResourceIndex, additionalHandleFlags })
+                      .handle;
+
+    return handle;
+}
+
 // needs to be locked when called
 GpuResourceManager::StoreAllocationData GpuResourceManager::CreateImage(
     const string_view name, const RenderHandle& replacedHandle, const GpuImageDesc& desc)
@@ -834,6 +867,7 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
     {
         PerManagerStore& store = imageStore_;
         const auto lock = std::lock_guard(store.clientMutex);
+
         // check if present (not locked inside)
         handle = GetHandleNoLock(store, name);
         if (!handle) {
@@ -1007,7 +1041,7 @@ RenderHandleReference GpuResourceManager::CreateView(
         Math::min(emplaceResourceIndex, GetPendingOptionalResourceIndex(store, {}, name));
 
     if (unique_ptr<GpuImage> gpuImage = [this](const GpuImageDesc& desc,
-        const GpuImagePlatformData& gpuImagePlatformData) {
+                                            const GpuImagePlatformData& gpuImagePlatformData) {
             // protect GPU memory allocations
             auto lock = std::lock_guard(allocationMutex_);
             return device_.CreateGpuImageView(desc, gpuImagePlatformData);
@@ -1043,7 +1077,7 @@ RenderHandleReference GpuResourceManager::CreateView(
     uint32_t additionalHandleFlags = 0u;
 
     if (unique_ptr<GpuImage> gpuImage = [this](const GpuImageDesc& desc,
-        const BackendSpecificImageDesc& backendSpecificData) {
+                                            const BackendSpecificImageDesc& backendSpecificData) {
             // protect GPU memory allocations
             auto lock = std::lock_guard(allocationMutex_);
             return device_.CreateGpuImageView(desc, backendSpecificData);
@@ -1104,6 +1138,7 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
     {
         PerManagerStore& store = samplerStore_;
         const auto lock = std::lock_guard(store.clientMutex);
+
         // check if present (not locked inside)
         handle = GetHandleNoLock(store, name);
         if (!handle) {
@@ -1159,7 +1194,8 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::CreateAccelerationSt
     GpuAccelerationStructureDesc validatedDesc = desc;
     validatedDesc.bufferDesc.usageFlags |= defaultBufferUsageFlags_;
     validatedDesc.bufferDesc.byteSize = Math::max(validatedDesc.bufferDesc.byteSize, 1u),
-    validatedDesc.bufferDesc.usageFlags |= CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT;
+    validatedDesc.bufferDesc.usageFlags |=
+        CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT | CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
     constexpr auto additionalBufferFlags = CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE;
     return StoreAllocation(store, { ResourceDescriptor { validatedDesc }, name, replacedHandle,
@@ -1214,7 +1250,7 @@ RenderHandleReference GpuResourceManager::CreateSwapchainImage(
 
     const uint32_t addFlags = RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE;
     // NOTE: no mips for swapchains
-    // TODO: NOTE: allocation type is undefined
+    // NOTE: allocation type is undefined
     const StoreAllocationInfo info {
         ResourceDescriptor { GpuImageDesc {
             desc.imageType,
@@ -1351,8 +1387,9 @@ void GpuResourceManager::Destroy(PerManagerStore& store, const RenderHandle& han
 
     if (const uint32_t hasNameId = RenderHandleUtil::GetHasNamePart(handle); hasNameId != 0U) {
         // remove name if present
-        if (auto const pos = std::find_if(store.nameToClientIndex.begin(), store.nameToClientIndex.end(),
-            [arrayIndex](auto const& nameToHandle) { return nameToHandle.second == arrayIndex; });
+        if (auto const pos =
+                std::find_if(store.nameToClientIndex.begin(), store.nameToClientIndex.end(),
+                             [arrayIndex](auto const &nameToHandle) { return nameToHandle.second == arrayIndex; });
             pos != store.nameToClientIndex.end()) {
             store.nameToClientIndex.erase(pos);
         }
@@ -1718,6 +1755,7 @@ void GpuResourceManager::CreateGpuResource(const OperationDescription& op, const
         } else {
             if (op.optionalResourceIndex != ~0u) {
                 BufferVector& res = *(reinterpret_cast<BufferVector*>(reinterpret_cast<void*>(preCreatedResVec)));
+                PLUGIN_ASSERT(op.optionalResourceIndex < res.size());
                 gpuBufferMgr_->Create<GpuAccelerationStructureDesc>(arrayIndex,
                     op.descriptor.combinedBufDescriptor.bufferDesc, move(res[op.optionalResourceIndex]), false,
                     op.descriptor.combinedBufDescriptor);
@@ -1730,6 +1768,7 @@ void GpuResourceManager::CreateGpuResource(const OperationDescription& op, const
         PLUGIN_ASSERT(preCreatedResVec);
         if (op.optionalResourceIndex != ~0u) {
             ImageVector& images = *(reinterpret_cast<ImageVector*>(reinterpret_cast<void*>(preCreatedResVec)));
+            PLUGIN_ASSERT(op.optionalResourceIndex < images.size());
             gpuImageMgr_->Create<uint32_t>(
                 arrayIndex, op.descriptor.imageDescriptor, move(images[op.optionalResourceIndex]), false, 0);
         } else {
@@ -1773,11 +1812,11 @@ void GpuResourceManager::HandlePendingRemappings(
     }
 }
 
-void GpuResourceManager::HandlePendingAllocationsImpl(const bool isFrameEnd)
+void GpuResourceManager::HandlePendingAllocationsImpl(const bool isFrameEnd, const bool allowDestruction)
 {
-    HandleStorePendingAllocations(isFrameEnd, bufferStore_);
-    HandleStorePendingAllocations(isFrameEnd, imageStore_);
-    HandleStorePendingAllocations(isFrameEnd, samplerStore_);
+    HandleStorePendingAllocations(isFrameEnd, allowDestruction, bufferStore_);
+    HandleStorePendingAllocations(isFrameEnd, allowDestruction, imageStore_);
+    HandleStorePendingAllocations(isFrameEnd, allowDestruction, samplerStore_);
 
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     ProcessDebugTags();
@@ -1808,9 +1847,9 @@ void GpuResourceManager::PerManagerStore::HandleAlloc(uint32_t arrayIndex, const
 }
 
 bool GpuResourceManager::PerManagerStore::HandleDealloc(
-    uint32_t arrayIndex, const OperationDescription& operation, const bool isFrameEnd)
+    uint32_t arrayIndex, const OperationDescription& operation, const bool isFrameEnd, const bool allowDestruction)
 {
-    if (RenderHandleUtil::IsDeferredDestroy(operation.handle) && (!isFrameEnd)) {
+    if ((!allowDestruction) || (RenderHandleUtil::IsDeferredDestroy(operation.handle) && (!isFrameEnd))) {
         // push deferred destroys back to wait for the end of the frame destruction
         pendingData.allocations.push_back(operation);
         return false;
@@ -1830,7 +1869,8 @@ bool GpuResourceManager::PerManagerStore::HandleDealloc(
     return true;
 }
 
-void GpuResourceManager::HandleStorePendingAllocations(const bool isFrameEnd, PerManagerStore& store)
+void GpuResourceManager::HandleStorePendingAllocations(
+    const bool isFrameEnd, const bool allowDestruction, PerManagerStore& store)
 {
     store.clientMutex.lock();
     // protect GPU memory allocations
@@ -1874,7 +1914,7 @@ void GpuResourceManager::HandleStorePendingAllocations(const bool isFrameEnd, Pe
             store.HandleAlloc(arrayIndex, allocation);
             CreateGpuResource(allocation, arrayIndex, store.handleType, pendingRes);
         } else if (allocation.allocType == AllocType::DEALLOC) {
-            if (store.HandleDealloc(arrayIndex, allocation, isFrameEnd)) {
+            if (store.HandleDealloc(arrayIndex, allocation, isFrameEnd, allowDestruction)) {
                 DestroyGpuResource(allocation, arrayIndex, store.handleType, store);
             }
         }
@@ -1904,15 +1944,16 @@ void GpuResourceManager::HandleStorePendingAllocations(const bool isFrameEnd, Pe
     }
 }
 
-void GpuResourceManager::HandlePendingAllocations()
+void GpuResourceManager::HandlePendingAllocations(const bool allowDestruction)
 {
-    HandlePendingAllocationsImpl(false);
+    HandlePendingAllocationsImpl(false, allowDestruction);
 }
 
 void GpuResourceManager::EndFrame()
 {
     DestroyFrameStaging();
-    HandlePendingAllocationsImpl(true);
+    // end frame, allow destruction
+    HandlePendingAllocationsImpl(true, true);
 }
 
 void GpuResourceManager::RenderBackendImmediateRemapGpuImageHandle(
@@ -2069,6 +2110,13 @@ void* GpuResourceManager::MapBufferMemory(const RenderHandle& handle) const
     void* data = nullptr;
     if (isOutsideRendererMappable) {
         const bool isCreatedImmediate = RenderHandleUtil::IsImmediatelyCreated(handle);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if (!isCreatedImmediate) {
+            const auto tmpString = "map_buffer_memory" + to_string(handle.id);
+            PLUGIN_LOG_ONCE_W(tmpString,
+                "RENDER_VALIDATION: cannot map buffer memory (missing CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE?)");
+        }
+#endif
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
         const auto clientLock = std::lock_guard(bufferStore_.clientMutex);
         if (isCreatedImmediate && (arrayIndex < static_cast<uint32_t>(bufferStore_.clientHandles.size()))) {
@@ -2218,7 +2266,8 @@ EngineResourceHandle GpuResourceManager::GetGpuHandle(const PerManagerStore& sto
 #endif
         return store.gpuHandles[arrayIndex];
     } else {
-        PLUGIN_LOG_E("No gpu resource handle for client handle : %" PRIx64, clientHandle.id);
+        const auto tmpName = to_string(clientHandle.id) + "GpuResourceManager::GetGpuHandle";
+        PLUGIN_LOG_ONCE_E(tmpName.c_str(), "No gpu resource handle for client handle : %" PRIx64, clientHandle.id);
         return EngineResourceHandle {};
     }
 }
@@ -2358,8 +2407,10 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(
         if (RenderHandleUtil::IsValid(data.handle.GetHandle())) {
             // valid handle and reference counter, re-use the same ref count object, CreateClientHandle increases gen
             PLUGIN_ASSERT(data.handle.GetCounter());
-            data.handle = RenderHandleReference(CreateClientHandle(info.type, info.descriptor,
-                data.handle.GetHandle().id, hasNameId, info.addHandleFlags), data.handle.GetCounter());
+            data.handle =
+                RenderHandleReference(CreateClientHandle(info.type, info.descriptor, data.handle.GetHandle().id,
+                                                         hasNameId, info.addHandleFlags),
+                                      data.handle.GetCounter());
         } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_E("RENDER_VALIDATION: invalid replaced handle given to GPU resource manager, creating new");
@@ -2381,8 +2432,10 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(
             data.handle = store.clientHandles[iter->second];
             PLUGIN_ASSERT_MSG(!RenderHandleUtil::IsDeferredDestroy(data.handle.GetHandle()),
                 "deferred desctruction resources cannot be replaced");
-            data.handle = RenderHandleReference(CreateClientHandle(info.type, info.descriptor,
-                data.handle.GetHandle().id, hasNameId, info.addHandleFlags), data.handle.GetCounter());
+            data.handle =
+                RenderHandleReference(CreateClientHandle(info.type, info.descriptor, data.handle.GetHandle().id,
+                                                         hasNameId, info.addHandleFlags),
+                                      data.handle.GetCounter());
         }
         if (!data.handle) {
             const uint64_t handleId = GetNextAvailableHandleId(store);

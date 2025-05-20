@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include "debug_output.h"
 
 #include <string>

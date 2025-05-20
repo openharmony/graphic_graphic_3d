@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -215,6 +215,9 @@ private:
 
     void RenderCommand(const RenderCommandBuildAccelerationStructure& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
+    void RenderCommand(const RenderCommandCopyAccelerationStructureInstances& renderCmd,
+        const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
+        const StateCache& stateCache);
 
     void RenderCommand(const RenderCommandClearColorImage& renderCmd, const LowLevelCommandBufferVk& cmdBuf,
         NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr, const StateCache& stateCache);
@@ -288,6 +291,9 @@ private:
         BASE_NS::vector<PresentationInfo> infos;
     };
     PresentationData presentationData_;
+
+    // process backend commands for all positions
+    BASE_NS::vector<ProcessBackendCommand> processBackendCommands_;
 
     // internal presentationInfo_ state change (called 0 or 1 time from random thread for presentation layout change)
     void RenderPresentationLayout(const LowLevelCommandBufferVk& cmdBuf, uint32_t cmdBufferIdx);

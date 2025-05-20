@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #ifndef META_BASE_ALGORITHMS_H
 #define META_BASE_ALGORITHMS_H
 
@@ -28,6 +27,13 @@ META_BEGIN_NAMESPACE()
 
 constexpr size_t NPOS = -1;
 
+/**
+ * @brief Find index of first matching value in vector or NPOS if no such value
+ * @param vec Vector to search
+ * @param value Value to search
+ * @param pos Index to start the search
+ * @return First index where is 'value' or NPOS
+ */
 template<typename Type>
 size_t FindFirstOf(const BASE_NS::vector<Type>& vec, const Type& value, size_t pos = 0)
 {

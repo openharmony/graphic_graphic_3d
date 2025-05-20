@@ -16,10 +16,10 @@
 #ifndef SCENE_SRC_SCENE_MANAGER_H
 #define SCENE_SRC_SCENE_MANAGER_H
 
+#include <scene/interface/intf_render_context.h>
 #include <scene/interface/intf_scene_manager.h>
 
 #include <meta/ext/object_container.h>
-#include <meta/interface/intf_task_queue.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -28,12 +28,60 @@ class SceneManager : public META_NS::IntroduceInterfaces<META_NS::CommonObjectCo
 public:
     bool Build(const META_NS::IMetadata::Ptr&) override;
 
+    /**
+     * @brief Create an empty scene with default options
+     * @return Null scene pointer if creation failed
+     */
     Future<IScene::Ptr> CreateScene() override;
+    /**
+     * @brief Create an empty scene
+     * @param opts Options for creation
+     * @return Null scene pointer if creation failed
+     */
+    Future<IScene::Ptr> CreateScene(SceneOptions opts) override;
+    /**
+     * @brief Load scene from a file. Multiple formats are supported
+     * @param uri Location of the scene file, for example file://myscene.gltf or file://myscene.scene
+     * @return Null scene pointer if creation failed
+     * @note Supports 2 types of .scene files. First tries with older loader. If that fails, then newer one with index
+     */
     Future<IScene::Ptr> CreateScene(BASE_NS::string_view uri) override;
+    /**
+     * @brief Load scene from a file. Multiple formats are supported
+     * @param uri Location of the scene file, for example file://myscene.gltf or file://myscene.scene
+     * @param opts Options for creation
+     * @return Null scene pointer if creation failed
+     * @note Supports 2 types of .scene files. First tries with older loader. If that fails, then newer one with index
+     */
+    Future<IScene::Ptr> CreateScene(BASE_NS::string_view uri, SceneOptions opts) override;
+
+    IRenderContext::Ptr GetContext() const override
+    {
+        return context_;
+    }
 
 private:
-    META_NS::IMetadata::Ptr context_;
-    META_NS::ITaskQueue::Ptr engineQueue_;
+    META_NS::IMetadata::Ptr CreateContext(SceneOptions opts) const;
+
+    // Load a scene by using an index file. See GuessIndexFilePath
+    static IScene::Ptr LoadSceneWithIndex(const IRenderContext::Ptr& context, BASE_NS::string_view uri);
+
+    static void LoadDefaultResourcesIfNeeded(const CORE_NS::IResourceManager::Ptr& resources);
+
+    enum class ProjectPathAction { REGISTER, UNREGISTER };
+    // Register/unregister the given uri with the file manager
+    static bool SetProjectPath(
+        const IRenderContext::Ptr& renderContext, BASE_NS::string_view uri, ProjectPathAction action);
+
+    // GuessIndexFilePath("schema://default.scene2") == "schema://default.res"
+    static BASE_NS::string GuessIndexFilePath(BASE_NS::string_view uri);
+
+    // GuessProjectPath("schema://path/to/PROJECT/assets/default.scene2") == "schema://path/to/PROJECT"
+    static BASE_NS::string GuessProjectPath(BASE_NS::string_view uri);
+
+private:
+    IRenderContext::Ptr context_;
+    SceneOptions opts_;
 };
 
 SCENE_END_NAMESPACE()

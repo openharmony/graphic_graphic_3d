@@ -27,7 +27,7 @@ void CubeJS::Init(napi_env env, napi_value exports)
     auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
         napi_value thisVar = nullptr;
         napi_get_cb_info(env, info, nullptr, nullptr, &thisVar, nullptr);
-        NapiApi::Object { env, thisVar }.Set("size", NapiApi::Object(GetJSConstructor(env, "Vec3"), 0, {}));
+        NapiApi::Object { env, thisVar }.Set("size", NapiApi::Object(env, "Vec3", {}));
         return thisVar;
     };
     auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::CUBE); };

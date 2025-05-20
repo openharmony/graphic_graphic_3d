@@ -30,4 +30,12 @@
  */
 #define META_END_NAMESPACE() } // namespace Meta
 
+#define META_BEGIN_INTERNAL_NAMESPACE() \
+    namespace META_NS {                 \
+    namespace Internal {
+
+#define META_END_INTERNAL_NAMESPACE() \
+    } /* namespace Internal */        \
+    } // namespace Meta
+
 #endif

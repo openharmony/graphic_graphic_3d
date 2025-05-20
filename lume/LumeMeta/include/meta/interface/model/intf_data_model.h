@@ -27,7 +27,7 @@ META_BEGIN_NAMESPACE()
 
 struct IOnDataAddedInfo {
     constexpr static BASE_NS::Uid UID { "9de720f7-8b7f-4b64-92ae-c0a3d9a13807" };
-    constexpr static char const* NAME { "OnDataAdded" };
+    constexpr static char const *NAME { "OnDataAdded" };
 };
 
 /**
@@ -45,7 +45,7 @@ using IOnDataAdded = META_NS::SimpleEvent<IOnDataAddedInfo, void(DataModelIndex 
 
 struct IOnDataRemovedInfo {
     constexpr static BASE_NS::Uid UID { "3440f5d6-b874-40e6-999c-eee3a4049b94" };
-    constexpr static char const * NAME { "OnDataRemoved" };
+    constexpr static char const *NAME { "OnDataRemoved" };
 };
 
 /**
@@ -56,7 +56,7 @@ using IOnDataRemoved = META_NS::SimpleEvent<IOnDataRemovedInfo, void(DataModelIn
 
 struct IOnDataMovedInfo {
     constexpr static BASE_NS::Uid UID { "7407dcc5-c903-4ceb-a337-23a1ff6f1d76" };
-    constexpr static char const * NAME { "OnDataMoved" };
+    constexpr static char const *NAME { "OnDataMoved" };
 };
 
 /**

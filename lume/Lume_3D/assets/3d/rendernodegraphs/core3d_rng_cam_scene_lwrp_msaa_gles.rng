@@ -88,6 +88,8 @@
                 "type": "graphics",
                 "index": 0
             },
+            "renderSlot": "CORE3D_RS_DM_ENV",
+            "shaderMultiviewRenderSlot": "CORE3D_RS_DM_ENV_MV",
             "nodeFlags": 1,
             "renderPass": {
                 "attachments": [

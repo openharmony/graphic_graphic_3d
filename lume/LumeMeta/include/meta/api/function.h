@@ -241,7 +241,6 @@ struct IsFunctionCompatibleImpl<Ret(Args...)> {
         if (!context) {
             return false;
         }
-
         auto params = context->GetParameters();
         // Allow to use defaults from call context
         if (params.size() < sizeof...(Args)) {

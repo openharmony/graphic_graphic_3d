@@ -23,7 +23,7 @@ bool StaggeredAnimationState::Initialize(AnimationStateParams&& params)
     if (!Super::Initialize(BASE_NS::move(params))) {
         return false;
     }
-        onChildrenChanged_ = CreateShared<META_NS::EventImpl<IOnChanged>>();
+    onChildrenChanged_ = CreateShared<META_NS::EventImpl<IOnChanged>>();
 
     if (container_ = CreateContainer(); container_) {
         if (auto required = interface_cast<IRequiredInterfaces>(container_)) {

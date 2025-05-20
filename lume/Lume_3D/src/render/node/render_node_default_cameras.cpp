@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -251,7 +251,7 @@ void RenderNodeDefaultCameras::AddCameras(const IRenderDataStoreDefaultCamera* d
 {
     const uint32_t cameraCount = static_cast<uint32_t>(
         Math::max(0, Math::min(static_cast<int32_t>(CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - cameraOffset),
-            static_cast<int32_t>(cameras.size()))));
+                         static_cast<int32_t>(cameras.size()))));
     for (uint32_t idx = 0; idx < cameraCount; ++idx) {
         const auto& currCamera = cameras[idx];
         // take into account the offset to GPU cameras
@@ -446,6 +446,8 @@ void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCame
             Math::UVec4(id.x, id.y, layer.x, layer.y),
             {},
             multiEnvIndices,
+            {},
+            {},
         };
         constexpr size_t countOfSh = countof(envStruct.shIndirectCoefficients);
         if (currEnv.radianceCubemap || (currEnv.multiEnvCount > 0U)) {

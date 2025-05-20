@@ -46,6 +46,7 @@ inline void DefaultResult<void>()
         }                                                       \
         return META_NS::DefaultResult<decltype(b->Function)>(); \
     }()
+
 /**
  * @brief A helper macro for classes deriving from BaseObjectFwd. Makes a forwarder for an interface
  *        property implemented by the super class.
@@ -67,7 +68,8 @@ inline void DefaultResult<void>()
 #define META_EXT_CALL_BASE(Interface, Function) META_IMPL_CALL_BASE(Interface, Function)
 
 /**
- * @brief A helper class for implementing a class which implements the full set of object interfaces.
+ * @brief A helper class for implementing a class using "aggregate inheritance" which implements the full set of object
+ * interfaces.
  */
 class ObjectFwd : public IntroduceInterfaces<BaseObjectFwd, IMetadata, IOwner, IAttach> {
     META_OBJECT_NO_CLASSINFO(ObjectFwd, IntroduceInterfaces, ClassId::Object)
@@ -124,6 +126,10 @@ protected:
     BASE_NS::vector<MetadataInfo> GetAllMetadatas(MetadataType types) const override
     {
         return META_EXT_CALL_BASE(IMetadata, GetAllMetadatas(types));
+    }
+    MetadataInfo GetMetadata(MetadataType type, BASE_NS::string_view name) const override
+    {
+        return META_EXT_CALL_BASE(IMetadata, GetMetadata(type, name));
     }
     using IMetadata::GetProperty;
     IProperty::Ptr GetProperty(BASE_NS::string_view name, MetadataQuery q) override

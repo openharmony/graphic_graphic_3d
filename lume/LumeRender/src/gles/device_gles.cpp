@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,6 +38,7 @@
 #include "gles/render_frame_sync_gles.h"
 #include "gles/shader_module_gles.h"
 #include "gles/swapchain_gles.h"
+#include "render_context.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
@@ -1109,10 +1110,9 @@ bool DeviceGLES::IsDepthResolveSupported() const
 }
 #endif
 
-DeviceGLES::DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& createInfo)
-    : Device(renderContext, createInfo)
+DeviceGLES::DeviceGLES(RenderContext& renderContext) : Device(renderContext)
 {
-    eglState_.CreateContext(createInfo);
+    eglState_.CreateContext(renderContext.GetCreateInfo().deviceCreateInfo);
     if (!eglState_.IsValid()) {
         PLUGIN_LOG_F("Failed to create a context");
         return;
@@ -1151,6 +1151,37 @@ DeviceGLES::DeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& cre
 #endif
     }
     FillExtensions(extensions_);
+
+#if RENDER_HAS_GLES_BACKEND
+    if (!HasExtension("GL_EXT_buffer_storage")) {
+        glBufferStorageEXT = nullptr;
+    }
+
+    if (!HasExtension("GL_OES_EGL_image")) {
+        glEGLImageTargetTexture2DOES = nullptr;
+    }
+
+    if (!HasExtension("GL_EXT_multisampled_render_to_texture")) {
+        glRenderbufferStorageMultisampleEXT = nullptr;
+        glFramebufferTexture2DMultisampleEXT = nullptr;
+    }
+
+    if (!HasExtension("GL_OVR_multiview")) {
+        glFramebufferTextureMultiviewOVR = nullptr;
+    }
+
+    if (!HasExtension("GL_OVR_multiview_multisampled_render_to_texture")) {
+        glFramebufferTextureMultisampleMultiviewOVR = nullptr;
+    }
+
+    if (!HasExtension("GL_EXT_disjoint_timer_query")) {
+        glGetQueryObjectui64vEXT = nullptr;
+    }
+
+    if (!HasExtension("GL_EXT_external_buffer")) {
+        glBufferStorageExternalEXT = nullptr;
+    }
+#endif
 
 #if RENDER_HAS_GL_BACKEND
     // Extension in OpenGL ES, but part of core in OpenGL.
@@ -1265,11 +1296,9 @@ FormatProperties DeviceGLES::GetFormatProperties(const Format format) const
     return properties;
 }
 
-AccelerationStructureBuildSizes DeviceGLES::GetAccelerationStructureBuildSizes(
-    const AccelerationStructureBuildGeometryInfo& geometry,
-    BASE_NS::array_view<const AccelerationStructureGeometryTrianglesInfo> triangles,
-    BASE_NS::array_view<const AccelerationStructureGeometryAabbsInfo> aabbs,
-    BASE_NS::array_view<const AccelerationStructureGeometryInstancesInfo> instances) const
+AsBuildSizes DeviceGLES::GetAccelerationStructureBuildSizes(const AsBuildGeometryInfo& geometry,
+    BASE_NS::array_view<const AsGeometryTrianglesInfo> triangles, BASE_NS::array_view<const AsGeometryAabbsInfo> aabbs,
+    BASE_NS::array_view<const AsGeometryInstancesInfo> instances) const
 {
     return {};
 }
@@ -1357,9 +1386,9 @@ void DeviceGLES::InitializePipelineCache(array_view<const uint8_t> initialData)
     }
     auto* header = reinterpret_cast<const CacheHeader*>(initialData.data());
     if ((header->version != CACHE_VERSION) ||
-        (header->revisionHash != Hash(string_view(reinterpret_cast<const char*>(glGetString(GL_VENDOR))),
-                                      string_view(reinterpret_cast<const char*>(glGetString(GL_RENDERER))),
-                                      string_view(reinterpret_cast<const char*>(glGetString(GL_VERSION)))))) {
+        (header->revisionHash != Hash(string_view(reinterpret_cast<const char *>(glGetString(GL_VENDOR))),
+                                      string_view(reinterpret_cast<const char *>(glGetString(GL_RENDERER))),
+                                      string_view(reinterpret_cast<const char *>(glGetString(GL_VERSION)))))) {
         return;
     }
     if ((sizeof(CacheHeader) + header->programs * sizeof(CacheHeader::Program)) > initialData.size()) {
@@ -1459,9 +1488,9 @@ void DeviceGLES::WaitForIdle()
 }
 
 #if (RENDER_HAS_GL_BACKEND)
-unique_ptr<Device> CreateDeviceGL(RenderContext& renderContext, DeviceCreateInfo const& createInfo)
+unique_ptr<Device> CreateDeviceGL(RenderContext& renderContext)
 {
-    if (auto device = make_unique<DeviceGLES>(renderContext, createInfo); device) {
+    if (auto device = make_unique<DeviceGLES>(renderContext); device) {
         const auto& plat = static_cast<const DevicePlatformDataGL&>(device->GetPlatformData());
         if (plat.context != nullptr) {
             return device;
@@ -1471,9 +1500,9 @@ unique_ptr<Device> CreateDeviceGL(RenderContext& renderContext, DeviceCreateInfo
 }
 #endif
 #if (RENDER_HAS_GLES_BACKEND)
-unique_ptr<Device> CreateDeviceGLES(RenderContext& renderContext, DeviceCreateInfo const& createInfo)
+unique_ptr<Device> CreateDeviceGLES(RenderContext& renderContext)
 {
-    if (auto device = make_unique<DeviceGLES>(renderContext, createInfo); device) {
+    if (auto device = make_unique<DeviceGLES>(renderContext); device) {
         const auto& plat = static_cast<const DevicePlatformDataGLES&>(device->GetPlatformData());
         if (plat.context != EGL_NO_CONTEXT) {
             return device;
@@ -1673,9 +1702,6 @@ void DeviceGLES::UseProgram(uint32_t program)
 void DeviceGLES::BindBuffer(uint32_t target, uint32_t buffer)
 {
     const uint32_t targetId = GenericTargetToTargetId(target);
-    if (targetId >= MAX_BUFFER_TARGET_ID) {
-        return;
-    }
     auto& state = bufferBound_[targetId];
     if ((!state.bound) || (state.buffer != buffer)) {
         state.bound = true;
@@ -1687,9 +1713,6 @@ void DeviceGLES::BindBuffer(uint32_t target, uint32_t buffer)
 void DeviceGLES::BindBufferRange(uint32_t target, uint32_t binding, uint32_t buffer, uint64_t offset, uint64_t size)
 {
     const uint32_t targetId = IndexedTargetToTargetId(target);
-    if (targetId >= MAX_BUFFER_BIND_ID || binding >= MAX_BINDING_VALUE) {
-        return;
-    }
     auto& slot = boundBuffers_[targetId][binding];
 
     if ((slot.cached == false) || (slot.buffer != buffer) || (slot.offset != offset) || (slot.size != size)) {
@@ -1807,9 +1830,6 @@ void DeviceGLES::SetActiveTextureUnit(uint32_t textureUnit)
 void DeviceGLES::BindTexture(uint32_t textureUnit, uint32_t target, uint32_t texture)
 {
     const uint32_t targetId = TextureTargetToTargetId(target);
-    if (textureUnit >= MAX_TEXTURE_UNITS || targetId >= MAX_TEXTURE_TARGET_ID) {
-        return;
-    }
 #if RENDER_HAS_GLES_BACKEND
     if (target == GL_TEXTURE_EXTERNAL_OES) {
         // Work around for oes textures needing a bind to zero to update.
@@ -1929,13 +1949,15 @@ void DeviceGLES::CompressedTexSubImage3D(uint32_t image, uint32_t target, uint32
 
 const DeviceGLES::ImageFormat& DeviceGLES::GetGlImageFormat(const Format format) const
 {
-    if (const auto pos = std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), format,
-        [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
+    if (const auto pos =
+            std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), format,
+                             [](const ImageFormat &element, const Format value) { return element.coreFormat < value; });
         (pos != supportedFormats_.end()) && (pos->coreFormat == format)) {
         return *pos;
     }
-    if (const auto pos = std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
-        [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
+    if (const auto pos =
+            std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
+                             [](const ImageFormat &element, const Format value) { return element.coreFormat < value; });
         (pos != std::end(IMAGE_FORMATS_FALLBACK)) && (pos->coreFormat == format)) {
         PLUGIN_LOG_I("using fallback for format %u", format);
         return *pos;

@@ -72,7 +72,7 @@ vec4 FxaaPixelShader(vec2 fragCoord, vec4 neighborCoords, texture2D texture, sam
     // min-max luminance around the pixel
     const float lumaMaxNwSw = max(lumaNw, lumaSw);
 #if FXAA_USE_PATCHES == 0
-    lumaNe += 1.0 / 384.0; // 384.0 : param
+    lumaNe += 1.0 / 384.0;
 #endif
     const float lumaMinNwSw = min(lumaNw, lumaSw);
     const float lumaMaxNeSe = max(lumaNe, lumaSe);
@@ -90,7 +90,7 @@ vec4 FxaaPixelShader(vec2 fragCoord, vec4 neighborCoords, texture2D texture, sam
     // edge direction
     float dirSwMinusNe = lumaSw - lumaNe;
 #if FXAA_USE_PATCHES
-    dirSwMinusNe += 1.0 / 512.0; // 512.0 : param
+    dirSwMinusNe += 1.0 / 512.0;
 #endif
 
     const float lumaRange = lumaMaxM - lumaMinM;
@@ -110,18 +110,18 @@ vec4 FxaaPixelShader(vec2 fragCoord, vec4 neighborCoords, texture2D texture, sam
     const vec4 colorP1 = FxaaTexTop(texture, samp, fragCoord.xy + normEdgeDir * invFrameOpt.zw);
 
 #if FXAA_USE_PATCHES
-    const float dirAbsMinTimesC = max(abs(normEdgeDir.x), abs(normEdgeDir.y)) * edgeSharpness * 0.015; // 0.015:param
-    const vec2 scaledEdgeDir = normEdgeDir.xy * min(lumaRange / dirAbsMinTimesC, 3); // 3:param
+    const float dirAbsMinTimesC = max(abs(normEdgeDir.x), abs(normEdgeDir.y)) * edgeSharpness * 0.015;
+    const vec2 scaledEdgeDir = normEdgeDir.xy * min(lumaRange / dirAbsMinTimesC, 3);
 #else
     const float dirAbsMinTimesC = min(abs(normEdgeDir.x), abs(normEdgeDir.y)) * edgeSharpness;
-    const vec2 scaledEdgeDir = clamp(normEdgeDir.xy / dirAbsMinTimesC, -2, 2); // 2:param
+    const vec2 scaledEdgeDir = clamp(normEdgeDir.xy / dirAbsMinTimesC, -2, 2);
 #endif
 
     const vec4 colorN2 = FxaaTexTop(texture, samp, fragCoord.xy - scaledEdgeDir * invFrameOpt2.zw);
     const vec4 colorP2 = FxaaTexTop(texture, samp, fragCoord.xy + scaledEdgeDir * invFrameOpt2.zw);
 
     const vec4 blendedA = colorN1 + colorP1;
-    vec4 blendedB = ((colorN2 + colorP2) * 0.25) + (blendedA * 0.25); // 0.25 : param
+    vec4 blendedB = ((colorN2 + colorP2) * 0.25) + (blendedA * 0.25);
 
 #if (FXAA_LUMA_GREEN == 0)
     const bool useTwoTap = (blendedB.w < lumaMin) || (blendedB.w > lumaMax);
@@ -129,11 +129,11 @@ vec4 FxaaPixelShader(vec2 fragCoord, vec4 neighborCoords, texture2D texture, sam
     const bool useTwoTap = (blendedB.y < lumaMin) || (blendedB.y > lumaMax);
 #endif
     if (useTwoTap) {
-        blendedB.xyz = blendedA.xyz * 0.5; // 0.5 : half
+        blendedB.xyz = blendedA.xyz * 0.5;
     }
 
 #if FXAA_USE_PATCHES
-    blendedB = mix(blendedB, colorM, 0.25); // 0.25 : param
+    blendedB = mix(blendedB, colorM, 0.25);
 #endif
     return blendedB;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,9 +15,8 @@
 
 #include "ohos_file.h"
 
-#include <cstdint>
-
 #include <cerrno>
+#include <cstdint>
 #include <dirent.h>
 
 #ifndef _DIRENT_HAVE_D_TYPE
@@ -64,8 +63,11 @@ void OhosResMgr::UpdateResManager(const PlatformHapInfo& hapInfo)
         return;
     }
 
-    std::shared_ptr<OHOS::Global::Resource::ResourceManager>
-        newResMgr(OHOS::Global::Resource::CreateResourceManager());
+    std::shared_ptr<OHOS::Global::Resource::ResourceManager> newResMgr(OHOS::Global::Resource::CreateResourceManager());
+    if (!newResMgr) {
+        CORE_LOG_E("CreateResourceManager failed");
+        return;
+    }
     auto resRet = newResMgr->AddResource(hapInfo.hapPath.c_str());
     resourceManagers_[key] = newResMgr;
     resourceManager_ = newResMgr;

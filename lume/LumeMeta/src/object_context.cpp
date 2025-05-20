@@ -99,6 +99,7 @@ void ObjectContext::AddInternalProxy(BASE_NS::string_view propertyPropertyName, 
         proxy_->AddInternalProxy(propertyPropertyName, sourcePropertyName);
     }
 }
+
 } // namespace Internal
 
 META_END_NAMESPACE()

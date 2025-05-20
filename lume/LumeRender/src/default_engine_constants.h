@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -71,6 +71,14 @@ struct DefaultEngineGpuResourceConstants {
 struct DefaultDebugConstants {
     /** Default color used for e.g. debug markers inside render */
     static constexpr const BASE_NS::Math::Vec4 CORE_DEFAULT_DEBUG_COLOR { 1.0f, 0.5f, 1.0f, 1.0f };
+};
+
+struct DeviceConstants {
+    static constexpr uint32_t MAX_SWAPCHAIN_COUNT { 8U };
+
+    static constexpr uint32_t MIN_BUFFERING_COUNT { 2U };
+    /** definitely a bit high number, prefer e.g. 3. */
+    static constexpr uint32_t MAX_BUFFERING_COUNT { 6U };
 };
 /** @} */
 RENDER_END_NAMESPACE()

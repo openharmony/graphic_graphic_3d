@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,7 +40,7 @@ struct RenderDataStoreTypeInfo : public CORE_NS::ITypeInfo {
     using CreateRenderDataStoreFn = BASE_NS::refcnt_ptr<IRenderDataStore> (*)(
         IRenderContext& renderContext, const char* instanceName);
 
-    /** Unique ID of the rander data store. */
+    /** Unique ID of the render data store. */
     const BASE_NS::Uid uid;
     /** Name used during data store creation to identify the type of the data store. */
     const char* const typeName { "" };
@@ -51,14 +51,14 @@ struct RenderDataStoreTypeInfo : public CORE_NS::ITypeInfo {
 /** Information needed from the plugin for managing RenderNodes. */
 struct RenderNodeTypeInfo : public CORE_NS::ITypeInfo {
     /** TypeInfo UID for render node. */
-    static constexpr BASE_NS::Uid UID { "92085439-2cf7-4762-8769-28b552f4c5a4" };
+    static constexpr BASE_NS::Uid UID { "d54d3800-7378-43e6-bde8-8095660dd7f1" };
 
     using CreateRenderNodeFn = IRenderNode* (*)();
     using DestroyRenderNodeFn = void (*)(IRenderNode* instance);
     using PluginRenderNodeClassType = uint32_t;
     using PluginRenderNodeBackendFlags = uint32_t;
 
-    /** Unique ID of the rander node. */
+    /** Unique ID of the render node. */
     const BASE_NS::Uid uid;
     /** Name used during node creation to identify the type of the node. */
     const char* const typeName { "" };
@@ -71,6 +71,11 @@ struct RenderNodeTypeInfo : public CORE_NS::ITypeInfo {
     PluginRenderNodeBackendFlags renderNodeBackendFlags { 0u };
     /** Render node class type (see IRenderNode) */
     PluginRenderNodeClassType renderNodeClassType { 0u };
+
+    /** Optional unique ID of a render node, which should be before this node. */
+    const BASE_NS::Uid afterNode;
+    /** Optional unique ID of a render node, which should be after this node. */
+    const BASE_NS::Uid beforeNode;
 };
 
 /** A plugin which adds new render data store and render node types. */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,6 +19,7 @@
 #include <memory>
 
 #include <base/containers/allocator.h>
+#include <base/containers/shared_ptr.h>
 #include <base/namespace.h>
 #include <core/io/intf_file.h>
 #include <core/log.h>
@@ -38,7 +39,7 @@ uint64_t MemoryFileStorage::Write(uint64_t index, const void* buffer, uint64_t c
     return 0;
 }
 
-MemoryFile::MemoryFile(std::shared_ptr<MemoryFileStorage>&& buffer, Mode mode)
+MemoryFile::MemoryFile(BASE_NS::shared_ptr<MemoryFileStorage>&& buffer, Mode mode)
     : buffer_(BASE_NS::move(buffer)), mode_(mode)
 {}
 

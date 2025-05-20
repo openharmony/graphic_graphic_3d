@@ -51,6 +51,14 @@ struct PropertyType<ValuePtr<T, ClassInfo>> {
 template<typename T>
 using PropertyType_v = typename PropertyType<T>::Type; // NOLINT(readability-identifier-naming)
 
+/**
+ * @brief Construct property
+ * @param obr Object registry instance
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return Typed property
+ */
 template<typename T>
 Property<T> ConstructProperty(IObjectRegistry& obr, BASE_NS::string_view name, const T& value = {},
     ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -64,7 +72,13 @@ Property<T> ConstructProperty(IObjectRegistry& obr, BASE_NS::string_view name, c
     }
     return p;
 }
-
+/**
+ * @brief Construct property
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return Typed property
+ */
 template<typename T, typename = BASE_NS::enable_if_t<!BASE_NS::is_convertible_v<T*, ValuePtrBase*>>>
 Property<T> ConstructProperty(
     BASE_NS::string_view name, const T& value = {}, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -72,6 +86,13 @@ Property<T> ConstructProperty(
     return ConstructProperty(GetObjectRegistry(), name, value, flags);
 }
 
+/**
+ * @brief Construct property for value pointer type
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return Typed property
+ */
 template<typename T, typename Param = typename T::TypePtr>
 Property<typename T::TypePtr> ConstructProperty(
     BASE_NS::string_view name, const Param& value = {}, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -94,6 +115,13 @@ Property<typename T::TypePtr> ConstructProperty(
     return p;
 }
 
+/**
+ * @brief Construct property with default IAny value
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return Typed property
+ */
 template<typename T>
 Property<PropertyType_v<T>> ConstructPropertyAny(
     BASE_NS::string_view name, const IAny& value, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
@@ -105,6 +133,13 @@ Property<PropertyType_v<T>> ConstructPropertyAny(
     return p;
 }
 
+/**
+ * @brief Construct property using IAny as type for the property
+ * @param name Name of the property
+ * @param value Default value for the property
+ * @param flags Object flags for the property
+ * @return typeless property
+ */
 inline IProperty::Ptr ConstructPropertyAny(
     BASE_NS::string_view name, const IAny& value, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
 {

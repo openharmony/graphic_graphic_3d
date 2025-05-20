@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -66,6 +66,8 @@ struct RenderCreateInfo {
         CREATE_INFO_SEPARATE_RENDER_FRAME_BACKEND_BIT = 0x00000002,
         /** Request separate render frame present (backend graphics API presentation) */
         CREATE_INFO_SEPARATE_RENDER_FRAME_PRESENT_BIT = 0x00000004,
+        /** Request ray-tracing support */
+        CREATE_INFO_RAY_TRACING_BIT = 0x00000008,
     };
     /** Container for render create info flag bits */
     using CreateInfoFlags = uint32_t;
@@ -126,14 +128,14 @@ public:
     /** Get engine */
     virtual CORE_NS::IEngine& GetEngine() const = 0;
 
-    /** Get color space flags */
-    virtual BASE_NS::ColorSpaceFlags GetColorSpaceFlags() const = 0;
-
     /** Get version */
     virtual BASE_NS::string_view GetVersion() = 0;
 
     /** Writes current pipelines to disk if cache:// location exists. */
     virtual void WritePipelineCache() const = 0;
+
+    /** Get create info */
+    virtual RenderCreateInfo GetCreateInfo() const = 0;
 
 protected:
     IRenderContext() = default;

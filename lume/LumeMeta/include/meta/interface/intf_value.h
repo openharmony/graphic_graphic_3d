@@ -22,11 +22,15 @@ META_BEGIN_NAMESPACE()
 
 META_REGISTER_INTERFACE(IValue, "23c3c0c7-9937-468c-9199-28f982b40fe5")
 
+/// Interface for values
 class IValue : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IValue)
 public:
+    /// Set value as given any (the any has to be compatible)
     virtual AnyReturnValue SetValue(const IAny& value) = 0;
+    /// Get value as any or invalid any in case of error
     virtual const IAny& GetValue() const = 0;
+    /// Check if given type id if compatible with this value
     virtual bool IsCompatible(const TypeId& id) const = 0;
 };
 

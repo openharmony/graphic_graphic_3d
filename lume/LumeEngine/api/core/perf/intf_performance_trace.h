@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,6 +37,7 @@ public:
     static constexpr auto UID = BASE_NS::Uid { "18fc4522-29a3-4887-a2cf-0e170587edf9" };
     static constexpr auto TRACY_UID = BASE_NS::Uid { "1FC3A1DE-A352-4A7C-A2E0-C1FE208DABD4" };
     static constexpr auto ATRACE_UID = BASE_NS::Uid { "392C7588-86D5-47B9-963F-96412E439B9F" };
+    static constexpr auto HITRACE_UID = BASE_NS::Uid { "8d051c51-eaa4-47a1-be68-f923350bb3a8" };
 
     IPerformanceTrace(const IPerformanceTrace&) = delete;
     IPerformanceTrace& operator=(const IPerformanceTrace&) = delete;
@@ -60,6 +61,7 @@ public:
     virtual void FrameEnd(const char* name) = 0;
     virtual void MemAllocNamed(const void* ptr, size_t size, bool secure, const char* name) = 0;
     virtual void MemFreeNamed(const void* ptr, bool secure, const char* name) = 0;
+    virtual void GlobalFrameChanged() = 0;
 
 protected:
     IPerformanceTrace() = default;

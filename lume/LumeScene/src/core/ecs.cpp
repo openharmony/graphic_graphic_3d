@@ -25,48 +25,12 @@
 #include <3d/implementation_uids.h>
 #include <3d/util/intf_scene_util.h>
 #include <core/ecs/intf_system_graph_loader.h>
+#include <render/datastore/intf_render_data_store.h>
 
+#include "ecs_object.h"
 #include "internal_scene.h"
 
 SCENE_BEGIN_NAMESPACE()
-
-static bool SetPreprocesor(CORE3D_NS::IRenderPreprocessorSystem& system, BASE_NS::string_view tag)
-{
-    BASE_NS::string dataStorePrefix = "renderDataStore: " + tag;
-
-    auto sceneDataStore = dataStorePrefix + "-RenderDataStoreDefaultScene";
-    auto cameraDataStore = dataStorePrefix + "-RenderDataStoreDefaultCamera";
-    auto lightDataStore = dataStorePrefix + "-RenderDataStoreDefaultLight";
-    auto materialDataStore = dataStorePrefix + "-RenderDataStoreDefaultMaterial";
-    auto morphDataStore = dataStorePrefix + "-RenderDataStoreMorph";
-
-    if (auto prop = system.GetProperties()) {
-        {
-            CORE_NS::ScopedHandle<CORE3D_NS::IRenderPreprocessorSystem::Properties> p(prop);
-            p->dataStorePrefix = dataStorePrefix;
-            p->dataStoreScene = sceneDataStore;
-            p->dataStoreCamera = cameraDataStore;
-            p->dataStoreLight = lightDataStore;
-            p->dataStoreMaterial = materialDataStore;
-            p->dataStoreMorph = morphDataStore;
-        }
-        system.SetProperties(*prop);
-        return true;
-    }
-    return false;
-}
-
-static bool InitPreprocesor(const CORE_NS::IEcs& ecs, RENDER_NS::IRenderContext& context)
-{
-    auto system = CORE_NS::GetSystem<CORE3D_NS::IRenderPreprocessorSystem>(ecs);
-    if (system) {
-        std::random_device rd;
-        std::mt19937_64 gen(rd());
-        return SetPreprocesor(*system,
-            BASE_NS::string(BASE_NS::to_string(uintptr_t(&ecs))) + "_" + BASE_NS::string(BASE_NS::to_string(gen())));
-    }
-    return false;
-}
 
 template<typename Manager>
 Manager* Ecs::GetCoreManager()
@@ -78,13 +42,9 @@ Manager* Ecs::GetCoreManager()
     return m;
 }
 
-bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
+bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene, const SceneOptions& opts)
 {
     using namespace CORE_NS;
-    if (!scene) {
-        CORE_LOG_E("invalid scene");
-        return false;
-    }
     scene_ = scene;
     auto& context = scene->GetRenderContext();
     auto& engine = context.GetEngine();
@@ -92,12 +52,14 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
     ecs = engine.CreateEcs();
     ecs->SetRenderMode(CORE_NS::IEcs::RENDER_ALWAYS);
 
-    auto* factory = GetInstance<ISystemGraphLoaderFactory>(UID_SYSTEM_GRAPH_LOADER);
-    auto systemGraphLoader = factory->Create(engine.GetFileManager());
-    // Use default graph.
-    systemGraphLoader->Load(scene->GetSystemGraphUri().c_str(), *ecs);
+    if (!opts.systemGraphUri.empty()) {
+        auto* factory = GetInstance<ISystemGraphLoaderFactory>(UID_SYSTEM_GRAPH_LOADER);
+        auto systemGraphLoader = factory->Create(engine.GetFileManager());
+        if (systemGraphLoader->Load(opts.systemGraphUri, *ecs).success) {
+            CORE_LOG_D("Using custom system graph: %s", opts.systemGraphUri.c_str());
+        }
+    }
 
-    InitPreprocesor(*ecs, context);
     ecs->Initialize();
 
     animationComponentManager = GetCoreManager<CORE3D_NS::IAnimationComponentManager>();
@@ -119,48 +81,30 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
     localMatrixComponentManager = GetCoreManager<CORE3D_NS::ILocalMatrixComponentManager>();
     worldMatrixComponentManager = GetCoreManager<CORE3D_NS::IWorldMatrixComponentManager>();
     textComponentManager = GetCoreManager<TEXT3D_NS::ITextComponentManager>();
+    morphComponentManager = GetCoreManager<CORE3D_NS::IMorphComponentManager>();
+
     if (animationComponentManager) {
         animationQuery.reset(new CORE_NS::ComponentQuery());
         animationQuery->SetEcsListenersEnabled(true);
-        const ComponentQuery::Operation operations[] = {
-            {
-                *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
-            },
-            {
-                *nameComponentManager, ComponentQuery::Operation::OPTIONAL
-            }
-        };
+        const ComponentQuery::Operation operations[] = { { *nodeComponentManager, ComponentQuery::Operation::OPTIONAL },
+            { *nameComponentManager, ComponentQuery::Operation::OPTIONAL } };
         animationQuery->SetupQuery(*animationComponentManager, operations);
     }
 
     if (meshComponentManager) {
         meshQuery.reset(new CORE_NS::ComponentQuery());
         meshQuery->SetEcsListenersEnabled(true);
-        const ComponentQuery::Operation operations[] = {
-            {
-                *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
-            },
-            {
-                *nameComponentManager, ComponentQuery::Operation::OPTIONAL
-            }
-        };
+        const ComponentQuery::Operation operations[] = { { *nodeComponentManager, ComponentQuery::Operation::OPTIONAL },
+            { *nameComponentManager, ComponentQuery::Operation::OPTIONAL } };
         meshQuery->SetupQuery(*meshComponentManager, operations);
     }
 
     if (materialComponentManager) {
         materialQuery.reset(new CORE_NS::ComponentQuery());
         materialQuery->SetEcsListenersEnabled(true);
-        const ComponentQuery::Operation operations[] = {
-            {
-                *nodeComponentManager, ComponentQuery::Operation::OPTIONAL
-            },
-            {
-                *nameComponentManager, ComponentQuery::Operation::OPTIONAL
-            },
-            {
-                *uriComponentManager, ComponentQuery::Operation::OPTIONAL
-            }
-        };
+        const ComponentQuery::Operation operations[] = { { *nodeComponentManager, ComponentQuery::Operation::OPTIONAL },
+            { *nameComponentManager, ComponentQuery::Operation::OPTIONAL },
+            { *uriComponentManager, ComponentQuery::Operation::OPTIONAL } };
         materialQuery->SetupQuery(*materialComponentManager, operations);
     }
     nodeSystem = GetSystem<CORE3D_NS::INodeSystem>(*ecs);
@@ -184,6 +128,7 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene)
 void Ecs::Uninitialize()
 {
     EcsListener::Uninitialize();
+    nodeSystem->RemoveListener(*this);
     animationComponentManager = {};
     cameraComponentManager = {};
     envComponentManager = {};
@@ -198,10 +143,11 @@ void Ecs::Uninitialize()
     transformComponentManager = {};
     uriComponentManager = {};
     renderConfigComponentManager = {};
+    morphComponentManager = {};
     meshQuery.reset();
     materialQuery.reset();
     animationQuery.reset();
-    rootNode_ = {};
+    rootEntity_ = {};
     nodeSystem = {};
     picking = {};
     components_.clear();
@@ -217,12 +163,12 @@ CORE_NS::IComponentManager* Ecs::FindComponent(BASE_NS::string_view name) const
     return it != components_.end() ? it->second : nullptr;
 }
 
-const CORE3D_NS::ISceneNode* Ecs::FindNode(BASE_NS::string_view path) const
+CORE3D_NS::ISceneNode* Ecs::FindNode(BASE_NS::string_view path)
 {
     if (path.empty() || path == "/") {
-        return rootNode_;
+        return GetNode(rootEntity_);
     }
-    const CORE3D_NS::ISceneNode* node = &nodeSystem->GetRootNode();
+    CORE3D_NS::ISceneNode* node = &nodeSystem->GetRootNode();
     BASE_NS::string_view p = FirstSegment(path);
     while (node && !path.empty()) {
         node = node->GetChild(p);
@@ -232,7 +178,7 @@ const CORE3D_NS::ISceneNode* Ecs::FindNode(BASE_NS::string_view path) const
     return node;
 }
 
-const CORE3D_NS::ISceneNode* Ecs::FindNodeParent(BASE_NS::string_view path) const
+CORE3D_NS::ISceneNode* Ecs::FindNodeParent(BASE_NS::string_view path)
 {
     return FindNode(NormalisePath(ParentPath(path)));
 }
@@ -259,7 +205,15 @@ bool Ecs::IsNodeEntity(CORE_NS::Entity ent) const
 
 CORE_NS::Entity Ecs::GetRootEntity() const
 {
-    return rootNode_ ? rootNode_->GetEntity() : CORE_NS::Entity {};
+    return rootEntity_;
+}
+
+CORE_NS::Entity Ecs::GetParent(CORE_NS::Entity ent) const
+{
+    if (auto n = nodeComponentManager->Read(ent)) {
+        return n->parent;
+    }
+    return {};
 }
 
 IEcsObject::Ptr Ecs::GetEcsObject(CORE_NS::Entity ent)
@@ -297,28 +251,48 @@ bool Ecs::RemoveEntity(CORE_NS::Entity ent)
 
 bool Ecs::CreateUnnamedRootNode()
 {
-    if (rootNode_) {
+    if (CORE_NS::EntityUtil::IsValid(rootEntity_)) {
         return false;
     }
-    rootNode_ = nodeSystem->CreateNode();
+
+    BASE_NS::vector<CORE_NS::Entity> children;
     for (auto&& c : nodeSystem->GetRootNode().GetChildren()) {
-        if (c != rootNode_) {
-            c->SetParent(*rootNode_);
+        children.push_back(c->GetEntity());
+    }
+
+    auto root = nodeSystem->CreateNode();
+    rootEntity_ = root->GetEntity();
+    root->SetParent(nodeSystem->GetRootNode());
+
+    for (auto&& n : children) {
+        if (auto root = GetNode(rootEntity_)) {
+            if (auto child = GetNode(n)) {
+                child->SetParent(*root);
+            }
         }
     }
-    rootNode_->SetParent(nodeSystem->GetRootNode());
-    AddDefaultComponents(rootNode_->GetEntity());
+
+    AddDefaultComponents(rootEntity_);
     return true;
 }
 
-bool Ecs::SetNodeParentAndName(CORE_NS::Entity ent, BASE_NS::string_view name, const CORE3D_NS::ISceneNode* parent)
+bool Ecs::SetNodeName(CORE_NS::Entity ent, BASE_NS::string_view name)
 {
     auto n = nodeSystem->GetNode(ent);
     if (n) {
-        if (parent) {
-            n->SetParent(*parent);
-        }
         n->SetName(name);
+    }
+    return n != nullptr;
+}
+
+bool Ecs::SetNodeParentAndName(CORE_NS::Entity ent, BASE_NS::string_view name, CORE3D_NS::ISceneNode* parent)
+{
+    auto n = nodeSystem->GetNode(ent);
+    if (n) {
+        n->SetName(name);
+        if (parent) {
+            parent->AddChild(*n);
+        }
     }
     return n != nullptr;
 }
@@ -332,9 +306,13 @@ const CORE3D_NS::ISceneNode* Ecs::GetNode(CORE_NS::Entity ent) const
     return nodeSystem->GetNode(ent);
 }
 
-CORE_NS::EntityReference Ecs::GetEntityReference(CORE_NS::Entity ent)
+CORE_NS::EntityReference Ecs::GetRenderHandleEntity(const RENDER_NS::RenderHandleReference& handle)
 {
-    return ecs->GetEntityManager().GetReferenceCounted(ent);
+    CORE_NS::EntityReference ent;
+    if (handle && rhComponentManager) {
+        ent = CORE3D_NS::GetOrCreateEntityReference(ecs->GetEntityManager(), *rhComponentManager, handle);
+    }
+    return ent;
 }
 
 void Ecs::AddDefaultComponents(CORE_NS::Entity ent) const
@@ -353,6 +331,104 @@ void Ecs::AddDefaultComponents(CORE_NS::Entity ent) const
     create(worldMatrixComponentManager);
 }
 
+void Ecs::ListenNodeChanges(bool enabled)
+{
+    if (enabled) {
+        nodeSystem->AddListener(*this);
+    } else {
+        nodeSystem->RemoveListener(*this);
+    }
+}
+
+void Ecs::OnChildChanged(const CORE3D_NS::ISceneNode& parent, CORE3D_NS::INodeSystem::SceneNodeListener::EventType type,
+    const CORE3D_NS::ISceneNode& child, size_t index)
+{
+    if (auto i = interface_pointer_cast<IOnNodeChanged>(scene_)) {
+        META_NS::ContainerChangeType cchange {};
+        if (type == CORE3D_NS::INodeSystem::SceneNodeListener::EventType::ADDED) {
+            cchange = META_NS::ContainerChangeType::ADDED;
+        } else if (type == CORE3D_NS::INodeSystem::SceneNodeListener::EventType::REMOVED) {
+            cchange = META_NS::ContainerChangeType::REMOVED;
+        } else {
+            // invalid event
+            return;
+        }
+        i->OnChildChanged(cchange, parent.GetEntity(), child.GetEntity(), index);
+    }
+}
+
+bool Ecs::CheckDeactivatedAncestry(CORE_NS::Entity start, CORE_NS::Entity node, std::set<CORE_NS::Entity>& reactivate)
+{
+    if (start == node) {
+        return true;
+    }
+    if (CORE_NS::EntityUtil::IsValid(node)) {
+        if (auto n = nodeComponentManager->Read(node)) {
+            auto ret = CheckDeactivatedAncestry(start, n->parent, reactivate);
+            if (ret) {
+                reactivate.insert(node);
+            }
+            return ret;
+        }
+    }
+    return false;
+}
+
+void Ecs::ReactivateNodes(CORE_NS::Entity ent)
+{
+    auto& entMan = ecs->GetEntityManager();
+
+    std::set<CORE_NS::Entity> reactivate;
+    reactivate.insert(ent);
+    if (nodeComponentManager->HasComponent(ent)) {
+        auto it = entMan.Begin(CORE_NS::IEntityManager::IteratorType::DEACTIVATED);
+        auto end = entMan.End(CORE_NS::IEntityManager::IteratorType::DEACTIVATED);
+
+        BASE_NS::vector<CORE_NS::Entity> nodes;
+        for (; it && !it->Compare(end); it->Next()) {
+            auto e = it->Get();
+            if (nodeComponentManager->HasComponent(e)) {
+                nodes.push_back(e);
+            }
+        }
+        for (auto&& n : nodes) {
+            CheckDeactivatedAncestry(ent, n, reactivate);
+        }
+    }
+    for (auto&& n : reactivate) {
+        entMan.SetActive(n, true);
+    }
+}
+
+void Ecs::SetNodesActive(CORE_NS::Entity ent, bool enabled)
+{
+    if (!enabled) {
+        auto decents = GetNodeDescendants(ent);
+        for (auto&& ent : decents) {
+            ecs->GetEntityManager().SetActive(ent, false);
+        }
+    } else {
+        ReactivateNodes(ent);
+    }
+}
+
+void Ecs::GetNodeDescendants(CORE_NS::Entity ent, BASE_NS::vector<CORE_NS::Entity>& entities) const
+{
+    if (auto n = GetNode(ent)) {
+        for (auto&& c : n->GetChildren()) {
+            GetNodeDescendants(c->GetEntity(), entities);
+        }
+    }
+    entities.push_back(ent);
+}
+
+BASE_NS::vector<CORE_NS::Entity> Ecs::GetNodeDescendants(CORE_NS::Entity ent) const
+{
+    BASE_NS::vector<CORE_NS::Entity> entities;
+    GetNodeDescendants(ent, entities);
+    return entities;
+}
+
 CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild)
 {
     IInternalScene::Ptr localScene = parent.GetScene();
@@ -365,6 +441,28 @@ CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& 
 
     auto ent = util.Clone(*localScene->GetEcsContext().GetNativeEcs(), parent.GetEntity(),
         *extScene->GetEcsContext().GetNativeEcs(), extChild.GetEntity());
+
+    if (CORE_NS::EntityUtil::IsValid(ent)) {
+        if (auto i = interface_pointer_cast<IOnNodeChanged>(localScene)) {
+            size_t index(-1);
+            if (auto nodeSystem =
+                    CORE_NS::GetSystem<CORE3D_NS::INodeSystem>(*localScene->GetEcsContext().GetNativeEcs())) {
+                if (auto parentNode = nodeSystem->GetNode(parent.GetEntity())) {
+                    auto children = parentNode->GetChildren();
+                    for (auto childIndex = 0; childIndex < children.size(); ++childIndex) {
+                        if (children[childIndex]->GetEntity() == ent) {
+                            index = childIndex;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                CORE_LOG_W("Failed to resolve imported child index, NodeSystem not found");
+            }
+
+            i->OnChildChanged(META_NS::ContainerChangeType::ADDED, parent.GetEntity(), ent, index);
+        }
+    }
 
     return ent;
 }
@@ -386,7 +484,7 @@ static CORE_NS::Entity ReparentOldRoot(
     }
     if (node) {
         if (auto parentNode = nodeSystem->GetNode(parent.GetEntity())) {
-            node->SetParent(*parentNode);
+            parentNode->AddChild(*node);
         } else {
             CORE_LOG_W("Invalid parent when import scene");
         }

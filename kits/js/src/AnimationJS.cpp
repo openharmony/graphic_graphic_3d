@@ -19,6 +19,7 @@
 #include <meta/interface/animation/builtin_animations.h>
 #include <meta/interface/intf_attach.h>
 #include <scene/interface/intf_scene.h>
+#include <scene/ext/intf_ecs_object_access.h>
 
 #include "SceneJS.h"
 
@@ -75,35 +76,28 @@ void AnimationJS::Init(napi_env env, napi_value exports)
 }
 
 AnimationJS::AnimationJS(napi_env e, napi_callback_info i)
-    : BaseObject<AnimationJS>(e, i), SceneResourceImpl(SceneResourceImpl::ANIMATION)
+    : BaseObject(e, i), SceneResourceImpl(SceneResourceImpl::ANIMATION)
 {
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
     NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene...
     NapiApi::Object args = fromJs.Arg<1>();  // access to params.
     scene_ = { scene };
-    if (!GetNativeMeta<SCENE_NS::IScene>(scene_.GetObject())) {
+    if (!scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
 
-    auto* tro = scene.Native<TrueRootObject>();
-    if (tro) {
-        auto* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-        if (sceneJS) {
-            sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-        }
+    if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
+        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
 
+    META_NS::IAnimation::Ptr anim;
     if (args) {
         using namespace META_NS;
-        auto obj = GetNativeObjectParam<IObject>(args);
-        if (auto a = interface_cast<IAnimation>(obj)) {
-            // linking to an existing object.
-            SetNativeObject(obj, false);
-            StoreJsObj(obj, meJs);
-
+        anim = interface_pointer_cast<IAnimation>(GetNativeObject());
+        if (anim) {
             // check if there is a speed controller already.(and use that)
-            auto attachments = interface_cast<META_NS::IAttach>(a)->GetAttachments();
+            auto attachments = interface_cast<META_NS::IAttach>(anim)->GetAttachments();
             for (auto at : attachments) {
                 if (interface_cast<AnimationModifiers::ISpeed>(at)) {
                     // yes.. (expect at most one)
@@ -112,6 +106,22 @@ AnimationJS::AnimationJS(napi_env e, napi_callback_info i)
                 }
             }
         }
+    }
+    if (anim) {
+#if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED == 1)
+        using namespace SCENE_NS;
+        auto acc = interface_cast<IEcsObjectAccess>(anim);
+        IEcsObject::Ptr ecsObj;
+        if ((acc) && (ecsObj = acc->GetEcsObject())) {
+            completed_ = ecsObj->CreateProperty("AnimationStateComponent.completed").GetResult();
+            if (completed_) {
+                OnCompletedEvent_ = completed_->OnChanged();
+            }
+        }
+#else
+        // Use IAnimation OnFinished to trigger the animation ends (has a bug)
+        OnCompletedEvent_ = anim->OnFinished();
+#endif
     }
 }
 void* AnimationJS::GetInstanceImpl(uint32_t id)
@@ -123,8 +133,8 @@ void* AnimationJS::GetInstanceImpl(uint32_t id)
 
 void AnimationJS::Finalize(napi_env env)
 {
-    DisposeNative(nullptr);
-    BaseObject<AnimationJS>::Finalize(env);
+    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    BaseObject::Finalize(env);
 }
 AnimationJS::~AnimationJS()
 {
@@ -139,28 +149,27 @@ void AnimationJS::DisposeNative(void*)
         disposed_ = true;
 
         LOG_V("AnimationJS::DisposeNative");
-        NapiApi::Object obj = scene_.GetObject();
-        auto* tro = obj.Native<TrueRootObject>();
-        if (tro) {
-            SceneJS* sceneJS = static_cast<SceneJS*>(tro->GetInstanceImpl(SceneJS::ID));
-            if (sceneJS) {
-                sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
+        if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
+            sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
         scene_.Reset();
 
-        // make sure we release postProc settings
+        // release all the native resources (callbacks, modifiers, properties)
+        if (OnCompletedEvent_ && OnFinishedToken_) {
+            OnCompletedEvent_->RemoveHandler(OnFinishedToken_);
+        }
+        OnCompletedEvent_ = {};
+        OnFinishedToken_ = 0;
+#if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED == 1)
+        completed_.reset();
+#endif
         if (auto anim = interface_pointer_cast<META_NS::IAnimation>(GetNativeObject())) {
-            // reset the native object refs
-            SetNativeObject(nullptr, false);
-            SetNativeObject(nullptr, true);
+            UnsetNativeObject();
             // remove listeners.
             if (OnStartedToken_) {
                 anim->OnStarted()->RemoveHandler(OnStartedToken_);
             }
-            if (OnFinishedToken_) {
-                anim->OnFinished()->RemoveHandler(OnFinishedToken_);
-            }
+            OnStartedToken_ = 0;
             if (speedModifier_) {
                 auto attach = interface_cast<META_NS::IAttach>(anim);
                 if (attach) {
@@ -273,15 +282,17 @@ napi_value AnimationJS::GetProgress(NapiApi::FunctionContext<>& ctx)
 napi_value AnimationJS::OnFinished(NapiApi::FunctionContext<NapiApi::Function>& ctx)
 {
     auto func = ctx.Arg<0>();
+    if (!OnCompletedEvent_) {
+        return ctx.GetUndefined();
+    }
     // do we have existing callback?
     if (OnFinishedCB_) {
         // stop listening ...
-        if (auto a = interface_cast<META_NS::IAnimation>(GetNativeObject())) {
-            a->OnFinished()->RemoveHandler(OnFinishedToken_);
-            OnFinishedToken_ = 0;
-        }
+        OnCompletedEvent_->RemoveHandler(OnFinishedToken_);
+        OnFinishedToken_ = 0;
         // ... and release it
         OnFinishedCB_->Release();
+        OnFinishedCB_ = nullptr;
     }
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
@@ -292,10 +303,21 @@ napi_value AnimationJS::OnFinished(NapiApi::FunctionContext<NapiApi::Function>& 
         // create handler...
         OnFinishedCB_ = new OnCallJS("OnFinished", ctx.This(), func);
         // ... and start listening
-        if (auto a = interface_cast<META_NS::IAnimation>(GetNativeObject())) {
-            OnFinishedToken_ = a->OnFinished()->AddHandler(
-                META_NS::MakeCallback<META_NS::IOnChanged>(OnFinishedCB_, &OnCallJS::Trigger));
-        }
+#if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED == 1)
+        auto cb = META_NS::MakeCallback<META_NS::IOnChanged>([this]() {
+            bool completion = false;
+            if (!completed_) {
+                return;
+            }
+            completed_->GetValue().GetValue(completion);
+            if (completion && OnFinishedCB_) {
+                OnFinishedCB_->Trigger();
+            }
+        });
+#else
+        auto cb = META_NS::MakeCallback<META_NS::IOnChanged>(OnFinishedCB_, &OnCallJS::Trigger);
+#endif
+        OnFinishedToken_ = OnCompletedEvent_->AddHandler(cb);
     }
     return ctx.GetUndefined();
 }
@@ -312,6 +334,7 @@ napi_value AnimationJS::OnStarted(NapiApi::FunctionContext<NapiApi::Function>& c
         }
         // ... and release it
         OnStartedCB_->Release();
+        OnStartedCB_ = nullptr;
     }
     if (!validateSceneRef()) {
         return ctx.GetUndefined();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -76,17 +76,27 @@ VkFormat GetColorFormat(const uint32_t flags, const vector<VkSurfaceFormatKHR>& 
         VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM };
     constexpr VkFormat nonSrgbFormats[preferredFormatCount] = { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM,
         VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB };
-
-    const bool preferSrgbFormat = (flags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT);
-    const array_view<const VkFormat> formats =
-        (preferSrgbFormat) ? array_view<const VkFormat> { srgbFormats, preferredFormatCount }
-                           : array_view<const VkFormat> { nonSrgbFormats, preferredFormatCount };
+    constexpr VkFormat hdrFormats[] = { VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32,
+        VK_FORMAT_R16G16B16A16_SFLOAT };
 
     // If pSurfaceFormats includes just one entry, whose value for format is VK_FORMAT_UNDEFINED,
     // surface has no preferred format. In this case, the application can use any valid VkFormat value.
     if (surfaceFormats[0].format == VK_FORMAT_UNDEFINED && surfaceFormats.size() == 1) {
         return VK_FORMAT_R8G8B8A8_SRGB;
     }
+
+    if (flags & SwapchainFlagBits::CORE_SWAPCHAIN_HDR_BIT) {
+        for (auto format : hdrFormats) {
+            for (auto surfaceFormat : surfaceFormats) {
+                if (format == surfaceFormat.format) {
+                    return surfaceFormat.format;
+                }
+            }
+        }
+    }
+    const bool preferSrgbFormat = (flags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT);
+    const array_view<const VkFormat> formats =
+        (preferSrgbFormat) ? array_view<const VkFormat> { srgbFormats } : array_view<const VkFormat> { nonSrgbFormats };
 
     for (auto format : formats) {
         for (auto surfaceFormat : surfaceFormats) {
@@ -120,7 +130,7 @@ ColorInfo GetColorInfo(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR
     PLUGIN_ASSERT_MSG(ci.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR, "colorspace not correct");
 
     PLUGIN_ASSERT_MSG(ci.format != VK_FORMAT_UNDEFINED, "colorformat not correct");
-    PLUGIN_LOG_E("swapchainColorFormat: %u swapchainColorSpace %u", ci.format, ci.colorSpace);
+    PLUGIN_LOG_D("swapchainColorFormat: %u swapchainColorSpace %u", ci.format, ci.colorSpace);
 
     return ci;
 }
@@ -237,6 +247,14 @@ constexpr GpuImageDesc GetDepthDesc(const uint32_t width, const uint32_t height,
         {},                                                                       // componentMapping
     };
 }
+
+inline void LogAndUpdateResultError(const VkResult newResult, VkResult& result)
+{
+    if (newResult != VK_SUCCESS) {
+        PLUGIN_LOG_E("vulkan result is not VK_SUCCESS : %d", (int32_t)newResult);
+        result = newResult;
+    }
+}
 } // namespace
 
 SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCreateInfo)
@@ -282,7 +300,7 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             (surfaceCapabilities.maxImageCount == 0)
                 ? (Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount))
                 : (Math::min(surfaceCapabilities.maxImageCount,
-                   Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
+                             Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
         PLUGIN_LOG_D("swapchainImageCount: %u", imageCount);
 
         const VkSurfaceTransformFlagsKHR swapchainTransform =
@@ -321,14 +339,18 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             VK_NULL_HANDLE,                                    // oldSwapchain
         };
 
-        VALIDATE_VK_RESULT(vkCreateSwapchainKHR(vkDevice, &vkSwapchainCreateInfo, nullptr, &plat_.swapchain));
-
+        VkResult mainResult = VK_SUCCESS;
         {
+            VkResult result = vkCreateSwapchainKHR(vkDevice, &vkSwapchainCreateInfo, nullptr, &plat_.swapchain);
+            LogAndUpdateResultError(result, mainResult);
+        }
+        if (mainResult == VK_SUCCESS) {
             uint32_t realImageCount = 0;
-            VALIDATE_VK_RESULT(vkGetSwapchainImagesKHR(vkDevice, // device
-                plat_.swapchain,                                 // swapchain
-                &realImageCount,                                 // pSwapchainImageCount
-                nullptr));                                       // pSwapchainImages
+            VkResult result = vkGetSwapchainImagesKHR(vkDevice, // device
+                plat_.swapchain,                                // swapchain
+                &realImageCount,                                // pSwapchainImageCount
+                nullptr);                                       // pSwapchainImages
+            LogAndUpdateResultError(result, mainResult);
 
             PLUGIN_LOG_D("swapchain realImageCount: %u", realImageCount);
 
@@ -336,10 +358,11 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             plat_.swapchainImages.imageViews.resize(realImageCount);
             plat_.swapchainImages.semaphores.resize(realImageCount);
 
-            VALIDATE_VK_RESULT(vkGetSwapchainImagesKHR(vkDevice, // device
-                plat_.swapchain,                                 // swapchain
-                &realImageCount,                                 // pSwapchainImageCount
-                plat_.swapchainImages.images.data()));           // pSwapchainImages
+            result = vkGetSwapchainImagesKHR(vkDevice, // device
+                plat_.swapchain,                       // swapchain
+                &realImageCount,                       // pSwapchainImageCount
+                plat_.swapchainImages.images.data());  // pSwapchainImages
+            LogAndUpdateResultError(result, mainResult);
 
             constexpr VkComponentMapping componentMapping {
                 VK_COMPONENT_SWIZZLE_IDENTITY, // r
@@ -372,14 +395,17 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
                     componentMapping,                         // components
                     imageSubresourceRange                     // subresourceRange;
                 };
-                VALIDATE_VK_RESULT(vkCreateImageView(vkDevice, // device
-                    &imageViewCreateInfo,                      // pCreateInfo
-                    nullptr,                                   // pAllocator
-                    &plat_.swapchainImages.imageViews[idx]));  // pView
-                VALIDATE_VK_RESULT(vkCreateSemaphore(vkDevice, // device
-                    &semaphoreCreateInfo,                      // pCreateInfo
-                    nullptr,                                   // pAllocator
-                    &plat_.swapchainImages.semaphores[idx]));  // pSemaphore
+                result = vkCreateImageView(vkDevice,         // device
+                    &imageViewCreateInfo,                    // pCreateInfo
+                    nullptr,                                 // pAllocator
+                    &plat_.swapchainImages.imageViews[idx]); // pView
+                LogAndUpdateResultError(result, mainResult);
+
+                result = vkCreateSemaphore(vkDevice,         // device
+                    &semaphoreCreateInfo,                    // pCreateInfo
+                    nullptr,                                 // pAllocator
+                    &plat_.swapchainImages.semaphores[idx]); // pSemaphore
+                LogAndUpdateResultError(result, mainResult);
             }
         }
 
@@ -390,8 +416,13 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             const Format depthFormat = GetValidDepthFormat((const DeviceVk&)device_);
             descDepthBuffer_ = GetDepthDesc(plat_.swapchainImages.width, plat_.swapchainImages.height, depthFormat);
         }
+
+        if (mainResult != VK_SUCCESS) {
+            valid_ = false;
+        }
     } else {
         PLUGIN_LOG_E("Invalid surface in swapchain creation");
+        valid_ = false;
     }
 }
 
@@ -454,5 +485,10 @@ uint32_t SwapchainVk::GetNextAcquireSwapchainSemaphoreIndex() const
 {
     currSemaphoreIdx_ = (currSemaphoreIdx_ + 1) % plat_.swapchainImages.semaphores.size();
     return currSemaphoreIdx_;
+}
+
+bool SwapchainVk::IsValid() const
+{
+    return valid_;
 }
 RENDER_END_NAMESPACE()

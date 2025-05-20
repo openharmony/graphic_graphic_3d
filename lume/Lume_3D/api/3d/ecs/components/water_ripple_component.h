@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#if !defined(API_3D_ECS_COMPONENTS_WATER_RIPPLE_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
+#define API_3D_ECS_COMPONENTS_WATER_RIPPLE_COMPONENT_H
+
+#if !defined(IMPLEMENT_MANAGER)
+#include <3d/namespace.h>
+#include <base/math/vector.h>
+#include <core/ecs/component_struct_macros.h>
+#include <core/ecs/intf_component_manager.h>
+
+CORE3D_BEGIN_NAMESPACE()
+#endif
+
+BEGIN_COMPONENT(IWaterRippleComponentManager, WaterRippleComponent)
+    /** Position is the offset from the center of an object to its ripple component,
+        if the ripple component touch the water surface then a ripple is generated. */
+    DEFINE_PROPERTY(BASE_NS::Math::Vec3, position, "Position", 0, ARRAY_VALUE(0, 0, 0))
+
+END_COMPONENT(IWaterRippleComponentManager, WaterRippleComponent, "5081aabb-2013-ffff-b9bb-23041e73bc3d")
+#if !defined(IMPLEMENT_MANAGER)
+CORE3D_END_NAMESPACE()
+#endif
+
+#endif

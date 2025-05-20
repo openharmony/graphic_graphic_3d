@@ -27,6 +27,7 @@
 
 META_BEGIN_NAMESPACE()
 
+/// Helper class to use export/import functions to construct value serializer
 template<typename Type, typename ExportFunc, typename ImportFunc>
 struct ValueSerializer : IntroduceInterfaces<IValueSerializer> {
     ValueSerializer(ExportFunc e, ImportFunc i) : export_(BASE_NS::move(e)), import_(BASE_NS::move(i)) {}

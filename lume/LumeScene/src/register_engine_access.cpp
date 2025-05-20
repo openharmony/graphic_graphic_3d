@@ -93,6 +93,7 @@ DECLARE_PROPERTY_TYPE(CameraComponent::Projection);
 DECLARE_PROPERTY_TYPE(CameraComponent::TargetUsage);
 DECLARE_PROPERTY_TYPE(vector<CameraComponent::TargetUsage>);
 DECLARE_PROPERTY_TYPE(Format);
+
 DECLARE_PROPERTY_TYPE(TextComponent::FontMethod);
 CORE_END_NAMESPACE()
 
@@ -118,6 +119,7 @@ META_TYPE(RENDER_NS::FxaaConfiguration);
 META_TYPE(RENDER_NS::MotionBlurConfiguration);
 META_TYPE(RENDER_NS::TaaConfiguration);
 META_TYPE(RENDER_NS::VignetteConfiguration);
+META_TYPE(RENDER_NS::RenderHandle)
 
 META_TYPE(CORE3D_NS::MeshComponent::Submesh)
 META_TYPE(CORE3D_NS::AnimationComponent::PlaybackState);
@@ -126,9 +128,12 @@ META_TYPE(CORE3D_NS::CameraComponent::RenderingPipeline);
 META_TYPE(CORE3D_NS::CameraComponent::Culling);
 META_TYPE(CORE3D_NS::CameraComponent::Projection);
 META_TYPE(CORE3D_NS::CameraComponent::TargetUsage);
+
 META_TYPE(TEXT3D_NS::TextComponent::FontMethod);
 
 SCENE_BEGIN_NAMESPACE()
+
+namespace Internal {
 
 template<typename Prop>
 void RegisterEngineAccessImpl()
@@ -190,12 +195,13 @@ void RegisterEngineAccess()
     RegisterMapEngineAccessImpl<CameraComponent::Projection, CameraProjection>();
     RegisterMapEngineAccessImpl<CameraComponent::Culling, CameraCulling>();
     RegisterMapEngineAccessImpl<CameraComponent::RenderingPipeline, CameraPipeline>();
+
     RegisterMapEngineAccessImpl<EnvironmentComponent::Background, EnvBackgroundType>();
     RegisterMapEngineAccessImpl<LightComponent::Type, LightType>();
     RegisterMapEngineAccessImpl<MaterialComponent::Type, MaterialType>();
-    RegisterMapEngineAccessImpl<TonemapConfiguration::TonemapType, uint32_t>();
-    RegisterMapEngineAccessImpl<BloomConfiguration::BloomType, uint32_t>();
-    RegisterMapEngineAccessImpl<BloomConfiguration::BloomQualityType, uint32_t>();
+    RegisterMapEngineAccessImpl<TonemapConfiguration::TonemapType, TonemapType>();
+    RegisterMapEngineAccessImpl<BloomConfiguration::BloomType, BloomType>();
+    RegisterMapEngineAccessImpl<BloomConfiguration::BloomQualityType, EffectQualityType>();
     RegisterMapEngineAccessImpl<TextComponent::FontMethod, SCENE_NS::FontMethod>();
 
     RegisterEngineAccessImplAndAny<MaterialComponent::RenderSort>();
@@ -214,6 +220,7 @@ void RegisterEngineAccess()
     RegisterEngineAccessImpl<TaaConfiguration>();
     RegisterEngineAccessImpl<TonemapConfiguration>();
     RegisterEngineAccessImpl<VignetteConfiguration>();
+    RegisterEngineAccessImpl<RENDER_NS::RenderHandle>();
 
     RegisterEngineAccessImpl<BASE_NS::vector<Submesh>>();
     RegisterEngineAccessImpl<BASE_NS::vector<AnimationStateComponent::TrackState>>();
@@ -239,6 +246,7 @@ void UnregisterEngineAccess()
     UnregisterEngineAccessImpl<TaaConfiguration>();
     UnregisterEngineAccessImpl<TonemapConfiguration>();
     UnregisterEngineAccessImpl<VignetteConfiguration>();
+    UnregisterEngineAccessImpl<RENDER_NS::RenderHandle>();
 
     UnregisterEngineAccessImplAndAny<MaterialComponent::RenderSort>();
     UnregisterEngineAccessImplAndAny<MaterialComponent::Shader>();
@@ -260,4 +268,5 @@ void UnregisterEngineAccess()
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<TextComponent::FontMethod>::coreType);
 }
 
+} // namespace Internal
 SCENE_END_NAMESPACE()

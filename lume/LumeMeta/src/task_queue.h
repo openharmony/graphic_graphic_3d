@@ -16,6 +16,7 @@
 #ifndef META_SRC_TASK_QUEUE_H
 #define META_SRC_TASK_QUEUE_H
 
+#include <chrono>
 #include <deque>
 #include <mutex>
 #include <thread>

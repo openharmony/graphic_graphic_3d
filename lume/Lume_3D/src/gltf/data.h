@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -84,6 +84,10 @@ struct Assets {
 #if defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
     // true then KHR_mesh_quantization extension required. this expands the valid attribute componentTypes.
     bool quantization { false };
+#endif
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+    // true then EXT_meshopt_compression extension required.
+    bool meshCompression { false };
 #endif
 };
 
