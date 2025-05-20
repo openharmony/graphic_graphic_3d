@@ -275,6 +275,12 @@ void TextureLayerImpl::DestroyRenderTarget()
 {
     // window release
     RemoveChild();
+    // clean cache routine should be in rs node deconstruct
+    auto rsSurfaceNode = OHOS::Rosen::RSBaseNode::ReinterpretCast<OHOS::Rosen::RSSurfaceNode>(rsNode_);
+    if (rsSurfaceNode->GetSurface()) {
+        rsSurfaceNode->GetSurface()->CleanCache(true);
+    }
+
     rsNode_ = nullptr;
     parent_ = nullptr;
     image_.textureInfo_ = {};
