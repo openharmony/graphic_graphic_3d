@@ -21,7 +21,7 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/interface/model/intf_object_provider.h>
 
-#include "../object.h"
+#include "object.h"
 
 META_BEGIN_NAMESPACE()
 

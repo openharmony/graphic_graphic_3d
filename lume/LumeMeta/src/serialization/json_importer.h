@@ -16,7 +16,7 @@
 #ifndef META_SRC_SERIALIZATION_JSON_IMPORTER_H
 #define META_SRC_SERIALIZATION_JSON_IMPORTER_H
 
-#include "../base_object.h"
+#include "base_object.h"
 #include "importer.h"
 
 META_BEGIN_NAMESPACE()

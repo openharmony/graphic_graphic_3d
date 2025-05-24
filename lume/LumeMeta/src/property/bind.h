@@ -17,7 +17,7 @@
 
 #include <meta/interface/property/intf_bind.h>
 
-#include "../base_object.h"
+#include "base_object.h"
 #include "stack_property.h"
 
 META_BEGIN_NAMESPACE()

@@ -140,7 +140,6 @@ config("lume_engine_config") {
     "${LUME_CORE_PATH}/3rdparty/",
     "${LUME_CORE_PATH}/src/",
     "${LUME_CORE_PATH}/asserts/",
-    "//commonlibrary/c_utils/base/include",
     "${STB_IMAGE_PATH}",
   ]
 

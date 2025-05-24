@@ -23,7 +23,7 @@
 #include <meta/api/object_name.h>
 #include <meta/base/interface_utils.h>
 
-#include "../core/ecs.h"
+#include "core/ecs.h"
 
 SCENE_BEGIN_NAMESPACE()
 
