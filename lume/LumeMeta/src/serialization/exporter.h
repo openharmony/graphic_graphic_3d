@@ -27,7 +27,7 @@
 #include <meta/interface/serialization/intf_exporter.h>
 #include <meta/interface/serialization/intf_global_serialization_data.h>
 
-#include "../base_object.h"
+#include "base_object.h"
 #include "ser_nodes.h"
 
 META_BEGIN_NAMESPACE()

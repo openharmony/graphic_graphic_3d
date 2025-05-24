@@ -14,8 +14,8 @@
  */
 #include "submesh.h"
 
-#include "../entity_converting_value.h"
-#include "../util.h"
+#include "entity_converting_value.h"
+#include "util.h"
 
 SCENE_BEGIN_NAMESPACE()
 

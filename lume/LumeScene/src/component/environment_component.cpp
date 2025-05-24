@@ -15,7 +15,7 @@
 
 #include "environment_component.h"
 
-#include "../entity_converting_value.h"
+#include "entity_converting_value.h"
 
 SCENE_BEGIN_NAMESPACE()
 

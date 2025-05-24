@@ -24,7 +24,7 @@
 #include <meta/interface/intf_manual_clock.h>
 #include <meta/interface/object_macros.h>
 
-#include "../animation_modifier.h"
+#include "animation/animation_modifier.h"
 
 META_BEGIN_NAMESPACE()
 

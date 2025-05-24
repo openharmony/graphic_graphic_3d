@@ -33,9 +33,9 @@
 #include <meta/api/engine/util.h>
 #include <meta/interface/intf_startable.h>
 
-#include "../component/generic_component.h"
-#include "../node/startable_handler.h"
-#include "../resource/ecs_animation.h"
+#include "component/generic_component.h"
+#include "node/startable_handler.h"
+#include "resource/ecs_animation.h"
 #include "ecs_object.h"
 
 SCENE_BEGIN_NAMESPACE()

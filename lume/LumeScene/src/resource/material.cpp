@@ -25,9 +25,9 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/engine/intf_engine_value_manager.h>
 
-#include "../entity_converting_value.h"
-#include "../mesh/texture.h"
-#include "../util_interfaces.h"
+#include "entity_converting_value.h"
+#include "mesh/texture.h"
+#include "util_interfaces.h"
 
 SCENE_BEGIN_NAMESPACE()
 namespace {

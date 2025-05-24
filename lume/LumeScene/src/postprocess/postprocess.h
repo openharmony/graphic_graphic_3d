@@ -25,7 +25,7 @@
 #include <meta/ext/object.h>
 #include <meta/ext/resource/resource.h>
 
-#include "../component/postprocess_component.h"
+#include "component/postprocess_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 

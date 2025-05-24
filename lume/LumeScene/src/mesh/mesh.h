@@ -27,7 +27,7 @@
 #include <meta/ext/resource/resource.h>
 #include <meta/interface/intf_owner.h>
 
-#include "../component/mesh_component.h"
+#include "component/mesh_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 

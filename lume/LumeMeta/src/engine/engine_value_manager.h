@@ -22,7 +22,7 @@
 #include <meta/interface/engine/intf_engine_value_manager.h>
 #include <meta/interface/intf_task_queue.h>
 
-#include "../object.h"
+#include "object.h"
 #include "engine_value.h"
 
 META_BEGIN_NAMESPACE()

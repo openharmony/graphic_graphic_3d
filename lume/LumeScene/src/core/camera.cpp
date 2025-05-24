@@ -21,7 +21,7 @@
 #include <render/device/gpu_resource_desc.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
-#include "../util.h"
+#include "util.h"
 
 SCENE_BEGIN_NAMESPACE()
 

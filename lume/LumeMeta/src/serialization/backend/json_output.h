@@ -22,7 +22,7 @@
 #include <meta/interface/builtin_objects.h>
 #include <meta/interface/serialization/intf_ser_output.h>
 
-#include "../../base_object.h"
+#include "base_object.h"
 
 META_BEGIN_NAMESPACE()
 

@@ -23,7 +23,7 @@
 #include <meta/base/ref_uri.h>
 #include <meta/ext/minimal_object.h>
 
-#include "../ser_nodes.h"
+#include "serialization/ser_nodes.h"
 
 META_BEGIN_NAMESPACE()
 

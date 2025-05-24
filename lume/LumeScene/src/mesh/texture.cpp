@@ -21,8 +21,8 @@
 #include <3d/ecs/components/render_handle_component.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
-#include "../entity_converting_value.h"
-#include "../resource/image.h"
+#include "entity_converting_value.h"
+#include "resource/image.h"
 #include "sampler.h"
 
 SCENE_BEGIN_NAMESPACE()
