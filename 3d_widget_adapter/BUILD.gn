@@ -180,6 +180,7 @@ ohos_source_set("widget_adapter_source") {
       "c_utils:utils",
       "graphic_2d:EGL",
       "graphic_2d:GLESv3",
+      "graphic_2d:librender_service_base",
       "graphic_2d:librender_service_client",
       "hilog:libhilog",
       "hitrace:hitrace_meter",
