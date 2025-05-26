@@ -109,7 +109,7 @@ private:
     ThreadSafeCallback* OnStartedCB_ { nullptr };
     ThreadSafeCallback* OnFinishedCB_ { nullptr };
     META_NS::AnimationModifiers::ISpeed::Ptr speedModifier_;
-#define USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED 1
+#define USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED 0
 #if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED==1)
     META_NS::IProperty::Ptr completed_;
 #endif

@@ -411,7 +411,7 @@ napi_value AnimationJS::Finish(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
     if (auto a = interface_cast<META_NS::IStartableAnimation>(GetNativeObject())) {
-        a->Seek(1.0);
+        a->Finish();
     }
     return ctx.GetUndefined();
 }
