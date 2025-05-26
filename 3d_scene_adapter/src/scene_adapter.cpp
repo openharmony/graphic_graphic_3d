@@ -91,6 +91,11 @@
 #include <surface_buffer.h>
 #include <securec.h>
 
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES/gl.h>
+#include <GLES/glext.h>
+
 namespace OHOS::Render3D {
 #define RETURN_IF_NULL(ptr)                                  \
     do {                                                     \

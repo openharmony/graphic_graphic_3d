@@ -95,6 +95,10 @@ config("widget_adapter_config") {
     "DBG_DRAW_PIXEL=${DBG_DRAW_PIXEL}",
   ]
 
+  if (ohos_indep_compiler_enable) {
+    defines += [ "GRAPHIC_2D_INDEP_BUILD" ]
+  }
+
   if (current_os == "ohos") {
     defines += [ "__OHOS_PLATFORM__" ]
   }
@@ -180,6 +184,7 @@ ohos_source_set("widget_adapter_source") {
       "c_utils:utils",
       "graphic_2d:EGL",
       "graphic_2d:GLESv3",
+      "graphic_2d:librender_service_base",
       "graphic_2d:librender_service_client",
       "hilog:libhilog",
       "hitrace:hitrace_meter",
