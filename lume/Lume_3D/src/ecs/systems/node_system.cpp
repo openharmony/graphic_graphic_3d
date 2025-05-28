@@ -1558,9 +1558,11 @@ void NodeSystem::UpdatePreviousWorldMatrices()
         const auto components = worldMatrixManager_.GetComponentCount();
         for (IComponentManager::ComponentId id = 0U; id < components; ++id) {
             auto handle = worldMatrixManager_.GetData(id);
-            if (auto comp = ScopedHandle<const WorldMatrixComponent>(*handle)) {
-                if (comp->prevMatrix == comp->matrix) {
-                    continue;
+            if (handle) {
+                if (auto comp = ScopedHandle<const WorldMatrixComponent>(*handle)) {
+                    if (comp->prevMatrix == comp->matrix) {
+                        continue;
+                    }
                 }
             }
             if (auto comp = ScopedHandle<WorldMatrixComponent>(*handle)) {

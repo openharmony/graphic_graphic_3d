@@ -51,7 +51,9 @@ void MaterialPropertyJS::Init(napi_env env, napi_value exports)
 
     MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("MaterialProperty", func);
+    if (mis) {
+        mis->StoreCtor("MaterialProperty", func);
+    }
 }
 MaterialPropertyJS::MaterialPropertyJS(napi_env e, napi_callback_info i) : BaseObject(e, i) {}
 MaterialPropertyJS::~MaterialPropertyJS()

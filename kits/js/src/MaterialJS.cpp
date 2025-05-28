@@ -40,11 +40,9 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
         TROGetSetProperty<bool, BaseMaterial, &BaseMaterial::GetShadowReceiver, &BaseMaterial::SetShadowReceiver>(
             "shadowReceiver"));
     node_props.emplace_back(
-        TROGetSetProperty<uint32_t, BaseMaterial, &BaseMaterial::GetCullMode, &BaseMaterial::SetCullMode>(
-            "cullMode"));
+        TROGetSetProperty<uint32_t, BaseMaterial, &BaseMaterial::GetCullMode, &BaseMaterial::SetCullMode>("cullMode"));
     node_props.emplace_back(
-        TROGetSetProperty<NapiApi::Object, BaseMaterial, &BaseMaterial::GetBlend, &BaseMaterial::SetBlend>(
-            "blend"));
+        TROGetSetProperty<NapiApi::Object, BaseMaterial, &BaseMaterial::GetBlend, &BaseMaterial::SetBlend>("blend"));
     node_props.emplace_back(
         TROGetSetProperty<float, BaseMaterial, &BaseMaterial::GetAlphaCutoff, &BaseMaterial::SetAlphaCutoff>(
             "alphaCutoff"));
@@ -58,7 +56,9 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor(class_name, func);
+    if (mis) {
+        mis->StoreCtor(class_name, func);
+    }
 
     NapiApi::Object exp1(env, exports);
     napi_value eType1 = nullptr;

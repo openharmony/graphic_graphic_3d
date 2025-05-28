@@ -44,37 +44,6 @@ vec3 ScatterTonemapping(vec3 col)
     return 1.0 - exp(-col);
 }
 
-// https://github.com/mxcop/src-dgi/blob/main/assets/shaders/shared/sky.slang
-// float hash12(vec2 p)
-//{
-//    vec3 p3 = fract(vec3(p.xyx) * .1031);
-//    p3 += dot(p3, p3.yzx + 33.33);
-//    return fract((p3.x + p3.y) * p3.z);
-//}
-//
-// float hash13(vec3 p3)
-//{
-//    p3 = fract(p3 * .1031);
-//    p3 += dot(p3, p3.zyx + 31.32);
-//    return fract((p3.x + p3.y) * p3.z);
-//}
-//
-// float CalculateStars(vec3 rd)
-//{
-//    if (rd.y <= 0.0)
-//        return 0.0;
-//
-//    float stars = 0.0;
-//    vec2 uv = rd.xz / (rd.y + 1.0);
-//
-//    vec2 id = floor(uv * 700.0 + 234.0);
-//    float star = hash12(id);
-//    float brightness = smoothstep(0.98, 1.0, star);
-//    stars += brightness * 0.5;
-//
-//    return stars * rd.y;
-//}
-
 vec3 CalculateStars(vec3 dir)
 {
     vec3 star = vec3(noise(dir.xzy * 400)) * 0.3 - 0.5;

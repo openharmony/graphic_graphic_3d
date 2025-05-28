@@ -59,7 +59,9 @@ void MeshJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("Mesh", func);
+    if (mis) {
+        mis->StoreCtor("Mesh", func);
+    }
 }
 
 MeshJS::MeshJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneResourceImpl(SceneResourceImpl::MESH)

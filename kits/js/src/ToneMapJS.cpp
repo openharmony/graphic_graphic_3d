@@ -92,7 +92,9 @@ void ToneMapJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("ToneMappingSettings", func);
+    if (mis) {
+        mis->StoreCtor("ToneMappingSettings", func);
+    }
 
     NapiApi::Object exp(env, exports);
 

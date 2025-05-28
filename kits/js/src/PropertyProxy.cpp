@@ -89,6 +89,10 @@ void ObjectPropertyProxy::Create(napi_env env, const BASE_NS::string jsName)
     } else {
         NapiApi::MyInstanceState* mis;
         NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
+        if (!mis) {
+            CORE_LOG_E("Could not Get Napi Instance");
+            return;
+        }
         auto ref = NapiApi::Object(env, mis->GetRef());
         auto cl = ref.Get(jsName.c_str());
         if (cl) {

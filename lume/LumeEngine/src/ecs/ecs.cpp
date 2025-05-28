@@ -499,7 +499,9 @@ Entity Ecs::CloneEntity(const Entity entity)
             const auto id = cm->GetComponentId(entity);
             if (id != IComponentManager::INVALID_COMPONENT_ID) {
                 cm->Create(clonedEntity);
-                cm->SetData(clonedEntity, *cm->GetData(id));
+                if (auto dataHandle = cm->GetData(id); dataHandle != nullptr) {
+                    cm->SetData(clonedEntity, *dataHandle);
+                }
             }
         }
     }

@@ -190,6 +190,10 @@ bool EngineValueManager::ConstructValueImplArraySubs(
             return false;
         }
         auto handle = params.handle.Handle();
+        if (!handle) {
+            CORE_LOG_W("Invalid property handle");
+            return false;
+        }
         auto data = (uintptr_t)handle->RLock();
         if (!data) {
             CORE_LOG_W("Invalid property data");

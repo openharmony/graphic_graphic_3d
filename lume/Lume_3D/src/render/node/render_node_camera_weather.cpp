@@ -68,14 +68,18 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     ParseRenderNodeInputs();
 
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
-    if (renderNodeSceneUtil_ = CORE_NS::GetInstance<IRenderNodeSceneUtil>(
-            *(renderNodeContextMgr_->GetRenderContext().GetInterface<IClassRegister>()), UID_RENDER_NODE_SCENE_UTIL);
-        renderNodeSceneUtil_) {
-        stores_ = renderNodeSceneUtil_->GetSceneRenderDataStores(
-            renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
-        dsWeatherName_ = renderNodeSceneUtil_->GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
+    CORE_NS::IClassRegister *cr = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassRegister>();
+    if (cr != nullptr) {
+        if (renderNodeSceneUtil_ = CORE_NS::GetInstance<IRenderNodeSceneUtil>(*cr, UID_RENDER_NODE_SCENE_UTIL);
+            renderNodeSceneUtil_) {
+            stores_ = renderNodeSceneUtil_->GetSceneRenderDataStores(renderNodeContextMgr,
+                                                                     renderNodeGraphData.renderNodeGraphDataStoreName);
+            dsWeatherName_ = renderNodeSceneUtil_->GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
 
-        GetSceneUniformBuffers(stores_.dataStoreNameScene);
+            GetSceneUniformBuffers(stores_.dataStoreNameScene);
+        }
+    } else {
+        CORE_LOG_E("get null ClassRegister");
     }
     currentScene_ = {};
 
@@ -505,7 +509,6 @@ void RenderNodeCameraWeather::ExecuteUpsampleAndReproject(RENDER_NS::IRenderComm
 
     BlurShaderPushConstant pcV {};
 
-    // pcV.view = d.view;
     pcV.dir[0U].x = d.time;
     pcV.dir[0U].y = float(targetIndex_) + .5f;
     pcV.dir[0U].z = settings.density;
@@ -555,7 +558,6 @@ void RenderNodeCameraWeather::ExecuteUpsampleAndPostProcess(RENDER_NS::IRenderCo
 
     BlurShaderPushConstant pcV {};
 
-    // pcV.view = d.view;
     pcV.dir[0U].x = d.time;
     pcV.dir[0U].y = settings.windSpeed;
     pcV.dir[0U].z = settings.density;

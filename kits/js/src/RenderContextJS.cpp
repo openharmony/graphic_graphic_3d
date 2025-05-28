@@ -141,7 +141,9 @@ void RenderContextJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
-    mis->StoreCtor("RenderContext", func);
+    if (mis) {
+        mis->StoreCtor("RenderContext", func);
+    }
 }
 
 void RenderContextJS::RegisterEnums(NapiApi::Object exports) {}

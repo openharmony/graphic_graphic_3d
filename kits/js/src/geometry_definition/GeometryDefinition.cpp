@@ -73,7 +73,9 @@ void GeometryDefinition::DefineClass(napi_env env, napi_value exports, BASE_NS::
     napi_define_class(env, name.data(), NAPI_AUTO_LENGTH, ctor, nullptr, props.size(), props.data(), &classCtor);
     NapiApi::MyInstanceState* mis {};
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor(name, classCtor);
+    if (mis) {
+        mis->StoreCtor(name, classCtor);
+    }
     NapiApi::Object { env, exports }.Set(name, classCtor);
 }
 

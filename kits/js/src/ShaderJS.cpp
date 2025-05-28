@@ -42,7 +42,9 @@ void ShaderJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
-    mis->StoreCtor("Shader", func);
+    if (mis) {
+        mis->StoreCtor("Shader", func);
+    }
 }
 
 ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
@@ -89,7 +91,15 @@ void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
 
     napi_env e = inputs.GetEnv();
     auto* tro = material.GetRoot();
+    if (!tro) {
+        LOG_E("null material root object");
+        return;
+    }
     auto mat = interface_pointer_cast<SCENE_NS::IMaterial>(tro->GetNativeObject());
+    if (!mat) {
+        LOG_E("null material engine object");
+        return;
+    }
 
     BASE_NS::vector<napi_property_descriptor> inputProps;
 

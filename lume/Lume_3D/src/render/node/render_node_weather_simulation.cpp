@@ -316,7 +316,6 @@ void RenderNodeWeatherSimulation ::ParseRenderNodeInputs()
     }
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
-    // inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
     jsonInputs_.hasChangeableResourceHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.resources);
     jsonInputs_.hasChangeableDispatchHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.dispatchResources);
 }

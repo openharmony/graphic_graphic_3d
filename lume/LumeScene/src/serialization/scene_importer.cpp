@@ -74,10 +74,10 @@ static META_NS::IObject::Ptr GetIObjectFromProperty(const META_NS::IProperty::Pt
             if (index < arr->GetSize()) {
                 res = interface_pointer_cast<META_NS::IObject>(META_NS::GetPointer(arr->GetAnyAt(index)));
             } else {
-                CORE_LOG_W("Index out of bounds: %s [%zu]", p->GetName().c_str(), index);
+                CORE_LOG_W("Index out of bounds: %s [%zu]", p ? p->GetName().c_str() : "unknown", index);
             }
         } else {
-            CORE_LOG_W("Trying to index non-array property: %s", p->GetName().c_str());
+            CORE_LOG_W("Trying to index non-array property: %s", p ? p->GetName().c_str() : "unknown");
         }
     } else {
         if (auto obj = META_NS::GetPointer(p)) {

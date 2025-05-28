@@ -74,11 +74,6 @@ float noise(vec2 x)
     float c = hash(i + vec2(0.0, 1.0));
     float d = hash(i + vec2(1.0, 1.0));
 
-    // Simple 2D lerp using smoothstep envelope between the values.
-    // return vec3(mix(mix(a, b, smoothstep(0.0, 1.0, f.x)),
-    //			mix(c, d, smoothstep(0.0, 1.0, f.x)),
-    //			smoothstep(0.0, 1.0, f.y)));
-
     // Same code, with the clamps in smoothstep and common subexpressions
     // optimized away.
     vec2 u = f * f * (3.0 - 2.0 * f);
@@ -142,8 +137,6 @@ vec2 IntersectLayer(in Ray ray, in vec2 h)
 
 vec2 IntersectLayer(in Ray ray, in vec3 center, in float radius, in vec2 h, in vec3 up)
 {
-    // vec2 s = ray.dir.y * h;
-    // return s;
     vec2 d = (h - ray.o.y);
     return d / ray.dir.y;
 }
@@ -164,7 +157,6 @@ float ComputeSamples(in Ray ray, in vec3 up)
     float grad = smoothstep(0, 1, grada * gradb);
 
     return (1 - cosTheta);
-    // return grad;
 }
 
 vec2 LatitudeLongitude(vec3 p, float r)
@@ -187,9 +179,6 @@ vec2 WeathermapPosition(vec3 pos)
     const float one_degree_radians = 0.01745329252;
     vec2 uv = LatitudeLongitudeSubtract(p0, p1) / one_degree_radians / weatherMapScale;
     return 0.5 + uv.yx;
-
-    // float scale = 1.0 / (uParams.params[4].w * 2.0);
-    // return 0.5 + (pos.xz * scale);
 }
 
 float override(float val, float mapped)
@@ -243,19 +232,6 @@ highp vec3 RaySphereIntersect(highp vec3 start, // starting position of the ray
         return vec3(0.0, 0.0, 0.0);
 
     return vec3((-b - sqrt(d)) / (2.0 * a), (-b + sqrt(d)) / (2.0 * a), 1.0);
-
-    /*
-        // Geometric solution
-        vec3 L = -start;
-        float tca = dot(L, dir);
-        // if (tca < 0) return vec3(0.0,0.0,0.0);
-        float d2 = dot(L, L) - tca * tca;
-        if (d2 > radius * radius) return vec3(0.0,0.0,0.0);
-        float thc = sqrt(radius * radius - d2);
-        float t0 = tca - thc;
-        float t1 = tca + thc;
-        return vec3(t0, t1, 1.0);
-    */
 }
 
 bool FindAtmosphereIntersections(Ray ray, vec3 planetPosition, vec3 radius, out vec2 tIntersect)

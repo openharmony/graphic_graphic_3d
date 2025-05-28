@@ -42,6 +42,7 @@
 #include <core/image/intf_image_loader_manager.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
+#include <core/log.h>
 #include <core/plugin/intf_class_factory.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
@@ -209,14 +210,7 @@ constexpr RenderDataStoreWeather::CloudRenderingType GetCloudRenderingType(
 } // namespace
 
 WeatherSystem::WeatherSystem(IEcs& ecs)
-    : ecs_(ecs), renderContext_(*GetInstance<IRenderContext>(
-                     *ecs.GetClassFactory().GetInterface<IClassRegister>(), UID_RENDER_CONTEXT)),
-      graphicsContext_(
-          *GetInstance<IGraphicsContext>(*renderContext_.GetInterface<IClassRegister>(), UID_GRAPHICS_CONTEXT)),
-      gpuResourceManager_(renderContext_.GetDevice().GetGpuResourceManager()),
-      renderDataStoreManager_(
-          GetInstance<IRenderContext>(*ecs.GetClassFactory().GetInterface<IClassRegister>(), UID_RENDER_CONTEXT)
-              ->GetRenderDataStoreManager()),
+    : ecs_(ecs),
       materialManager_(*GetManager<IMaterialComponentManager>(ecs)),
       meshManager_(*GetManager<IMeshComponentManager>(ecs)),
       renderMeshManager_(*GetManager<IRenderMeshComponentManager>(ecs)),
@@ -228,6 +222,21 @@ WeatherSystem::WeatherSystem(IEcs& ecs)
       weatherManager_(*GetManager<IWeatherComponentManager>(ecs)),
       rippleComponentManager_(*GetManager<IWaterRippleComponentManager>(ecs))
 {
+    IClassRegister *cr = ecs.GetClassFactory().GetInterface<IClassRegister>();
+    if (cr) {
+        renderContext_ = GetInstance<IRenderContext>(*cr, UID_RENDER_CONTEXT);
+        if (renderContext_) {
+            auto rcClassReg = renderContext_->GetInterface<IClassRegister>();
+            if (rcClassReg) {
+                graphicsContext_ = GetInstance<IGraphicsContext>(*rcClassReg, UID_GRAPHICS_CONTEXT);
+            }
+            gpuResourceManager_ = &renderContext_->GetDevice().GetGpuResourceManager();
+            renderDataStoreManager_ = &renderContext_->GetRenderDataStoreManager();
+        }
+    } else {
+        CORE_LOG_E("get null ClassRegister");
+    }
+
     ecs.AddListener(rippleComponentManager_, *this);
     Initialize();
 }
@@ -249,11 +258,15 @@ Entity WeatherSystem::GetMaterialEntity(const Entity& entity)
 
 WeatherSystem::RipplePlaneResources WeatherSystem::GetOrCreateSimulationResources(const Entity& entity)
 {
+    if (!graphicsContext_) {
+        CORE_LOG_E("null graphicsContext");
+        return {};
+    }
     auto iter = handleResources_.find(entity);
     if (iter != handleResources_.end()) {
         return iter->second;
     }
-    auto res = CreateSimulationResourcesForEntity(ecs_, graphicsContext_, entity);
+    auto res = CreateSimulationResourcesForEntity(ecs_, *graphicsContext_, entity);
     handleResources_.insert({ entity, res });
     return res;
 }
@@ -332,6 +345,10 @@ inline constexpr uint32_t GetResDivider(RenderDataStoreWeather::CloudRenderingTy
 
 bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint64_t delta)
 {
+    if (!renderContext_ || !renderDataStoreManager_) {
+        CORE_LOG_E("null renderContext or renderDataStoreManager");
+        return false;
+    }
     if (!active_) {
         return false;
     }
@@ -345,7 +362,7 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
         }
         dsName += RenderDataStoreWeather::TYPE_NAME;
         dataStoreWeather_ = refcnt_ptr<RenderDataStoreWeather>(
-            renderDataStoreManager_.Create(RenderDataStoreWeather::UID, dsName.c_str()));
+            renderDataStoreManager_->Create(RenderDataStoreWeather::UID, dsName.c_str()));
     }
     if (!dataStoreWeather_) {
         return false;
@@ -461,9 +478,9 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
             cm.gpuImageDesc.width = maxRes.x;
             cm.gpuImageDesc.height = maxRes.y;
 
-            cm.cloudTexHandle = renderContext_.GetDevice().GetGpuResourceManager().Create(
+            cm.cloudTexHandle = renderContext_->GetDevice().GetGpuResourceManager().Create(
                 DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME + "CLOUD", cm.gpuImageDesc);
-            cm.cloudPrevTexHandle = renderContext_.GetDevice().GetGpuResourceManager().Create(
+            cm.cloudPrevTexHandle = renderContext_->GetDevice().GetGpuResourceManager().Create(
                 DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME + "CLOUD_PREV", cm.gpuImageDesc);
             cm.cloudTexture = GetOrCreateEntityReference(ecs_, cm.cloudTexHandle);
             cm.cloudPrevTexture = GetOrCreateEntityReference(ecs_, cm.cloudPrevTexHandle);
@@ -477,6 +494,10 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
 
 void WeatherSystem::ProcessWaterRipples()
 {
+    if (!graphicsContext_) {
+        CORE_LOG_E("null graphicsContext");
+        return;
+    }
     const auto queryResult = query_.GetResults();
     if (queryResult.empty()) {
         return;
@@ -499,8 +520,16 @@ void WeatherSystem::ProcessWaterRipples()
         planeCenter = transComponent.position;
         Math::Vec2 offset = Math::Vec2(planeCenter.x - prevPlanePos_.x, planeCenter.z - prevPlanePos_.z);
 
-        const auto pickingUtil =
-            GetInstance<IPicking>(*graphicsContext_.GetRenderContext().GetInterface<IClassRegister>(), UID_PICKING);
+        const IClassRegister* cr = graphicsContext_->GetRenderContext().GetInterface<IClassRegister>();
+        if (cr == nullptr) {
+            CORE_LOG_E("get null ClassRegister");
+            return;
+        }
+        const auto pickingUtil = GetInstance<IPicking>(*cr, UID_PICKING);
+        if (pickingUtil == nullptr) {
+            CORE_LOG_E("get null IPicking");
+            return;
+        }
         const auto mam = pickingUtil->GetWorldMatrixComponentAABB(waterEffectsPlane.entity, false, ecs_);
 
         const Math::Vec3 aabbMin = mam.minAABB;
@@ -517,8 +546,16 @@ void WeatherSystem::ProcessWaterRipples()
     }
 
     const auto IntersectAabb = [this](const Math::Vec3& worldXYZ, Math::Vec2& inPlaneUv) -> bool {
-        const auto pickingUtil =
-            GetInstance<IPicking>(*graphicsContext_.GetRenderContext().GetInterface<IClassRegister>(), UID_PICKING);
+        IClassRegister* cr = graphicsContext_->GetRenderContext().GetInterface<IClassRegister>();
+        if (cr == nullptr) {
+            CORE_LOG_E("get null ClassRegister");
+            return false;
+        }
+        const auto pickingUtil = GetInstance<IPicking>(*cr, UID_PICKING);
+        if (pickingUtil == nullptr) {
+            CORE_LOG_E("get null IPicking");
+            return false;
+        }
         const auto mam = pickingUtil->GetWorldMatrixComponentAABB(waterEffectsPlane.entity, false, ecs_);
 
         Math::Vec3 aabbMin = mam.minAABB;
@@ -586,7 +623,7 @@ void WeatherSystem::ProcessWaterRipples()
 
     RipplePlaneResources res = GetOrCreateSimulationResources(waterEffectsPlane.entity);
 
-    auto& dataStoreManager = graphicsContext_.GetRenderContext().GetRenderDataStoreManager();
+    auto& dataStoreManager = graphicsContext_->GetRenderContext().GetRenderDataStoreManager();
     if (auto rdsDefaultStaging = refcnt_ptr<IRenderDataStoreDefaultStaging>(
             dataStoreManager.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING))) {
         const auto& inputArgsBufferHandle = renderHandleManager_.GetRenderHandleReference(res.rippleArgsBufferHandle);
@@ -598,6 +635,10 @@ void WeatherSystem::ProcessWaterRipples()
 
 void WeatherSystem::UpdateCloudMaterial(const CORE_NS::Entity camEntity)
 {
+    if (!renderContext_) {
+        CORE_LOG_E("null renderContext");
+        return;
+    }
     // create only once
     if (!EntityUtil::IsValid(cloudMatData_.renderMeshEntity)) {
         IEntityManager& em = ecs_.GetEntityManager();
@@ -617,7 +658,7 @@ void WeatherSystem::UpdateCloudMaterial(const CORE_NS::Entity camEntity)
 
         // material
         if (auto handle = materialManager_.Write(cloudMatData_.matEntity); handle) {
-            IShaderManager& shaderMgr = renderContext_.GetDevice().GetShaderManager();
+            IShaderManager& shaderMgr = renderContext_->GetDevice().GetShaderManager();
             const auto shader = shaderMgr.GetShaderHandle(CLOUD_SHADER_NAME);
             handle->materialShader.shader = GetOrCreateEntityReference(ecs_, shader);
             handle->textures[MaterialComponent::BASE_COLOR].image = cloudMatData_.cloudTexture;

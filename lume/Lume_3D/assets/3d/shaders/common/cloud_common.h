@@ -140,11 +140,6 @@ vec3 uSunColor()
 {
     return uPc.params[2].xyz;
 }
-/*
-vec3 uAtmosphereColor()
-{
-    return uPc.params[3].xyz;
-}*/
 
 vec3 windDir()
 {

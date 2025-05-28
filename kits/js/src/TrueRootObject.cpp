@@ -112,7 +112,11 @@ void TrueRootObject::InjectNativeObject(
         delete (TrueRootObject::InjectedNativeObject*)obj;
     };
     napi_value nativeObjStash;
-    napi_create_external(env, (void*)tmpPtr, deleteTmpPtr, nullptr, &nativeObjStash);
+    napi_status status = napi_create_external(env, (void*)tmpPtr, deleteTmpPtr, nullptr, &nativeObjStash);
+    if (status != napi_ok) {
+        LOG_E("napi_create_external failed");
+        delete tmpPtr;
+    }
 
     NapiApi::Object resourceParam(env, args.argv[0]);
     resourceParam.Set("NativeObject", nativeObjStash);

@@ -1036,8 +1036,12 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
 
 MeshBuilder::MeshBuilder(IRenderContext& renderContext) : renderContext_(renderContext)
 {
-    IGraphicsContext* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(
-        *renderContext.GetInterface<CORE_NS::IClassRegister>(), UID_GRAPHICS_CONTEXT);
+    CORE_NS::IClassRegister* cr = renderContext.GetInterface<CORE_NS::IClassRegister>();
+    if (cr == nullptr) {
+        CORE_LOG_W("Can't get class register interface");
+        return;
+    }
+    IGraphicsContext* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(*cr, UID_GRAPHICS_CONTEXT);
     if (graphicsContext) {
         const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
         if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {

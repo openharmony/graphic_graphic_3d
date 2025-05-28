@@ -202,7 +202,9 @@ void SceneJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
-    mis->StoreCtor("Scene", func);
+    if (mis) {
+        mis->StoreCtor("Scene", func);
+    }
 }
 
 void SceneJS::RegisterEnums(NapiApi::Object exports)
@@ -985,7 +987,11 @@ napi_value SceneJS::CreateGeometry(NapiApi::FunctionContext<NapiApi::Object, Nap
     const auto sceneJs = ctx.This();
     auto params = NapiApi::Object { ctx.Arg<0>() };
     auto meshRes = NapiApi::Object { ctx.Arg<1>() };
-    const auto meshResourceJs = static_cast<MeshResourceJS*>(meshRes.GetRoot()->GetInstanceImpl(MeshResourceJS::ID));
+    auto tro = meshRes.GetRoot();
+    if (!tro) {
+        return promise.Reject("Invalid mesh resource given");
+    }
+    const auto meshResourceJs = static_cast<MeshResourceJS*>(tro->GetInstanceImpl(MeshResourceJS::ID));
     if (!meshResourceJs) {
         return promise.Reject("Invalid mesh resource given");
     }

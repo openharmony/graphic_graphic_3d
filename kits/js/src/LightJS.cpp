@@ -95,7 +95,9 @@ void BaseLight::Init(const char* class_name, napi_env env, napi_value exports,
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor(class_name, func);
+    if (mis) {
+        mis->StoreCtor(class_name, func);
+    }
 }
 void* BaseLight::GetInstanceImpl(uint32_t id)
 {

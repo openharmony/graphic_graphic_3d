@@ -550,6 +550,7 @@ void SceneAdapter::DeinitRenderThread()
         }
 
         doc->GetArrayProperty<IntfWeakPtr>("Scenes")->Reset();
+        engineInstance_.applicationContext_.reset();
         engineInstance_.renderContext_.reset();
         engineInstance_.engine_.reset();
 

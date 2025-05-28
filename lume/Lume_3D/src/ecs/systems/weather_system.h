@@ -88,10 +88,10 @@ private:
 
     bool active_ { true };
     CORE_NS::IEcs& ecs_;
-    RENDER_NS::IRenderContext& renderContext_;
-    CORE3D_NS::IGraphicsContext& graphicsContext_;
-    RENDER_NS::IGpuResourceManager& gpuResourceManager_;
-    RENDER_NS::IRenderDataStoreManager& renderDataStoreManager_;
+    RENDER_NS::IRenderContext* renderContext_;
+    CORE3D_NS::IGraphicsContext* graphicsContext_;
+    RENDER_NS::IGpuResourceManager* gpuResourceManager_;
+    RENDER_NS::IRenderDataStoreManager* renderDataStoreManager_;
 
     CORE_NS::ComponentQuery query_;
 
