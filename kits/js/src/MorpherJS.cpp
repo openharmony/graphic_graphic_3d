@@ -42,7 +42,9 @@ void MorpherJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
-    mis->StoreCtor("Morpher", func);
+    if (mis) {
+        mis->StoreCtor("Morpher", func);
+    }
 }
 
 napi_value MorpherJS::Dispose(NapiApi::FunctionContext<>& ctx)

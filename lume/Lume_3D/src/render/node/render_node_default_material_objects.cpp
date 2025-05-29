@@ -147,14 +147,18 @@ void RenderNodeDefaultMaterialObjects::InitNode(IRenderNodeContextManager& rende
     // get flags for rt
     if constexpr (ENABLE_RT) {
         rtEnabled_ = false;
-        IRenderContext& renderContext = renderNodeContextMgr_->GetRenderContext();
-        IGraphicsContext* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(
-            *renderContext.GetInterface<CORE_NS::IClassRegister>(), UID_GRAPHICS_CONTEXT);
-        if (graphicsContext) {
-            const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
-            if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
-                rtEnabled_ = true;
+        IRenderContext &renderContext = renderNodeContextMgr_->GetRenderContext();
+        CORE_NS::IClassRegister *cr = renderContext.GetInterface<CORE_NS::IClassRegister>();
+        if (cr != nullptr) {
+            IGraphicsContext *graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(*cr, UID_GRAPHICS_CONTEXT);
+            if (graphicsContext) {
+                const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
+                if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
+                    rtEnabled_ = true;
+                }
             }
+        } else {
+            CORE_LOG_E("get null ClassRegister");
         }
     }
 

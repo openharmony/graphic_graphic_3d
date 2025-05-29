@@ -421,7 +421,9 @@ napi_value NodeImpl::GetParent(NapiApi::FunctionContext<>& ctx)
 
     // These are owned by the scene, so store only a weak reference.
     auto js = CreateFromNativeInstance(env, parent, PtrType::WEAK, args);
-    js.GetJsWrapper<NodeImpl>()->Attached(true);
+    if (auto wrapper = js.GetJsWrapper<NodeImpl>()) {
+        wrapper->Attached(true);
+    }
     return js.ToNapiValue();
 }
 
@@ -451,7 +453,9 @@ napi_value NodeImpl::GetChild(NapiApi::FunctionContext<uint32_t>& ctx)
             napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
             // These are owned by the scene, so store only weak reference.
             auto js = CreateFromNativeInstance(env, children[index], PtrType::WEAK, args);
-            js.GetJsWrapper<NodeImpl>()->Attached(true);
+            if (auto wrapper = js.GetJsWrapper<NodeImpl>()) {
+                wrapper->Attached(true);
+            }
             return js.ToNapiValue();
         }
     }
@@ -489,7 +493,9 @@ napi_value NodeImpl::AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
 
     if (auto parent = ctx.This().GetNative<SCENE_NS::INode>()) {
-        childJS.GetJsWrapper<NodeImpl>()->Attached(true);
+        if (auto wrapper = childJS.GetJsWrapper<NodeImpl>()) {
+            wrapper->Attached(true);
+        }
         parent->AddChild(childNode);
         childNode->Enabled()->SetValue(true);
     }
@@ -539,7 +545,9 @@ napi_value NodeImpl::InsertChildAfter(NapiApi::FunctionContext<NapiApi::Object, 
                 }
             }
         }
-        childJS.GetJsWrapper<NodeImpl>()->Attached(true);
+        if (auto wrapper = childJS.GetJsWrapper<NodeImpl>()) {
+            wrapper->Attached(true);
+        }
         parent->AddChild(childNode, index).GetResult();
         childNode->Enabled()->SetValue(true);
     }
@@ -583,7 +591,9 @@ napi_value NodeImpl::RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
 
     if (auto parent = ctx.This().GetNative<SCENE_NS::INode>()) {
-        childJS.GetJsWrapper<NodeImpl>()->Attached(false);
+        if (auto wrapper = childJS.GetJsWrapper<NodeImpl>()) {
+            wrapper->Attached(false);
+        }
         parent->RemoveChild(childNode).GetResult();
         childNode->Enabled()->SetValue(false);
     }
@@ -600,7 +610,9 @@ napi_value NodeImpl::ClearChildren(NapiApi::FunctionContext<>& ctx)
     if (auto parent = ctx.This().GetNative<SCENE_NS::INode>()) {
         for (auto node : parent->GetChildren().GetResult()) {
             if (auto childJS = FetchJsObj(node)) {
-                childJS.GetJsWrapper<NodeImpl>()->Attached(false);
+                if (auto wrapper = childJS.GetJsWrapper<NodeImpl>()) {
+                    wrapper->Attached(false);
+                }
             }
             parent->RemoveChild(node).GetResult();
             node->Enabled()->SetValue(false);

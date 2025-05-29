@@ -68,7 +68,9 @@ void RegisterClasses(napi_env env, napi_value exports)
         napi_value color_class = nullptr;
         napi_define_class(
             env, "Color", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(desc4), desc4, &color_class);
-        mis->StoreCtor("Color", color_class);
+        if (mis) {
+            mis->StoreCtor("Color", color_class);
+        }
     }
     // Declare math classes.. "simply" for now.
     {

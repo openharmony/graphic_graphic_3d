@@ -122,14 +122,15 @@ static inline napi_property_descriptor GetSetProperty(
     node_props.push_back(                                                                                            \
         NapiApi::Method<NapiApi::FunctionContext<__VA_ARGS__>, NAPI_API_CLASS_NAME, &NAPI_API_CLASS_NAME::function>( \
             name));
-#define DeclareClass()                                                                                      \
-    {                                                                                                       \
+#define DeclareClass() {                                                                                    \
         napi_value func;                                                                                    \
         auto status = napi_define_class(env, NAPI_API_JS_NAME_STRING, NAPI_AUTO_LENGTH,                     \
             BaseObject::ctor<NAPI_API_CLASS_NAME>(), nullptr, node_props.size(), node_props.data(), &func); \
         NapiApi::MyInstanceState* mis;                                                                      \
         NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);                                           \
-        mis->StoreCtor(NAPI_API_JS_NAME_STRING, func);                                                      \
+        if (mis) {                                                                                          \
+            mis->StoreCtor(NAPI_API_JS_NAME_STRING, func);                                                  \
+        }                                                                                                   \
     }
 
 #endif

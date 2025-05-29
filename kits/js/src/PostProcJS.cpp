@@ -52,7 +52,9 @@ void PostProcJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("PostProcessSettings", func);
+    if (mis) {
+        mis->StoreCtor("PostProcessSettings", func);
+    }
 }
 
 napi_value PostProcJS::Dispose(NapiApi::FunctionContext<>& ctx)

@@ -60,17 +60,19 @@ Object::Object(napi_env env, BASE_NS::string_view className, const JsFuncArgs& a
 {
     NapiApi::MyInstanceState* mis {};
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    const auto ctor = NapiApi::Function(env, mis->FetchCtor(className));
+    if (mis) {
+        const auto ctor = NapiApi::Function(env, mis->FetchCtor(className));
 
-    napi_new_instance(env_, ctor, args.argc, args.argv, &object_);
-    if (object_) {
-        napi_typeof(env_, object_, &jstype);
-    }
-    if (jstype != napi_object) {
-        // value was not an object!
-        env_ = {};
-        object_ = nullptr;
-        jstype = napi_undefined;
+        napi_new_instance(env_, ctor, args.argc, args.argv, &object_);
+        if (object_) {
+            napi_typeof(env_, object_, &jstype);
+        }
+        if (jstype != napi_object) {
+            // value was not an object!
+            env_ = {};
+            object_ = nullptr;
+            jstype = napi_undefined;
+        }
     }
 }
 

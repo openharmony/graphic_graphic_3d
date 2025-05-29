@@ -17,12 +17,6 @@
 
 float GetHeightFractionForPoint(vec3 inPosition, vec2 inCloudMinMax)
 {
-    /*
-        float a = (inCloudMinMax.y - inCloudMinMax.x) > 0 ? 1.0 / (inCloudMinMax.y - inCloudMinMax.x) : 1.0;
-        float height_fraction = (inPosition.y - inCloudMinMax.x ) * a;
-        return clamp(height_fraction,0,1);
-     */
-
     vec3 d = inPosition - vec3(0, -DEFAULT_PLANET_RADIUS, 0);
     float l = length(d) - DEFAULT_PLANET_RADIUS - inCloudMinMax.x;
     return clamp(l / (inCloudMinMax.y - inCloudMinMax.x), 0, 1);
@@ -88,8 +82,6 @@ float SampleCloudDensity(in vec3 p, in vec3 weatherData, in float mipLevel, in v
 
     // apply the height function to the base cloud shape
     baseCloud *= densityHeightGradient;
-
-    // return check(base_cloud, 0.0, 1.0);
 
     // cloud coverage is stored in the weather_data�s red channel.
     float cloudCoverage = weatherData.r;

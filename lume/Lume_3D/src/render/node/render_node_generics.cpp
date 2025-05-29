@@ -34,6 +34,10 @@ void RenderNodeMixin::Load(const BASE_NS::string_view shader, BASE_NS::vector<De
     ComputeShaderData& debugShaderData, size_t reserved)
 {
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
+    if (!renderNodeContextMgr_) {
+        CORE_LOG_E("null RenderNodeContextManager");
+        return;
+    }
     auto& utils = renderNodeContextMgr_->GetRenderNodeUtil();
 
     auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
@@ -54,6 +58,10 @@ void RenderNodeMixin::Load(const BASE_NS::string_view shader, BASE_NS::vector<De
     GraphicsShaderData& debugShaderData, Base::array_view<const DynamicStateEnum> dynstates, size_t reserved)
 {
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
+    if (!renderNodeContextMgr_) {
+        CORE_LOG_E("null RenderNodeContextManager");
+        return;
+    }
     auto& utils = renderNodeContextMgr_->GetRenderNodeUtil();
 
     auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
@@ -77,6 +85,10 @@ void RenderNodeMixin::Load(const BASE_NS::string_view shader, BASE_NS::vector<De
 RenderPass RenderNodeMixin::CreateRenderPass(const RenderHandle input)
 {
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
+    if (!renderNodeContextMgr_) {
+        CORE_LOG_E("null RenderNodeContextManager");
+        return {};
+    }
     const GpuImageDesc desc = renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(input);
     RenderPass rp;
     rp.renderPassDesc.attachmentCount = 1u;
@@ -101,6 +113,10 @@ void RenderNodeMixin::RecreateImages(RenderSize size, RENDER_NS::RenderHandleRef
     }
 
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
+    if (!renderNodeContextMgr_) {
+        CORE_LOG_E("null RenderNodeContextManager");
+        return;
+    }
     auto& gpuResourceManager = renderNodeContextMgr_->GetGpuResourceManager();
     auto desc = gpuResourceManager.GetImageDescriptor(handle.GetHandle());
     desc.width = uint32_t(size.w);
@@ -117,6 +133,10 @@ void RenderNodeMixin::RecreateImages(
     }
 
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
+    if (!renderNodeContextMgr_) {
+        CORE_LOG_E("null RenderNodeContextManager");
+        return;
+    }
     auto& gpuResourceManager = renderNodeContextMgr_->GetGpuResourceManager();
     auto descCurr = gpuResourceManager.GetImageDescriptor(handle.GetHandle());
 

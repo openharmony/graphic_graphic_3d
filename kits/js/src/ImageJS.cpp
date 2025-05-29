@@ -39,7 +39,9 @@ void ImageJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("Image", func);
+    if (mis) {
+        mis->StoreCtor("Image", func);
+    }
 }
 
 void ImageJS::DisposeNative(void* sc)

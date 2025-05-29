@@ -57,7 +57,9 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("Environment", func);
+    if (mis) {
+        mis->StoreCtor("Environment", func);
+    }
 
     NapiApi::Object exp(env, exports);
 

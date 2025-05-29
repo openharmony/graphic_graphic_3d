@@ -115,7 +115,9 @@ void SamplerJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
-    mis->StoreCtor("Sampler", func);
+    if (mis) {
+        mis->StoreCtor("Sampler", func);
+    }
 
     NapiApi::Object exp1(env, exports);
     napi_value eType1, v1;

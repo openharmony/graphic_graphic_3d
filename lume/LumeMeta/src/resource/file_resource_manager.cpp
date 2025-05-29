@@ -41,9 +41,10 @@ static bool ResourceMatches(
 
 FileResourceManager::FileResourceManager()
 {
-    auto factory = CORE_NS::GetInstance<CORE_NS::IFileSystemApi>(CORE_NS::UID_FILESYSTEM_API_FACTORY);
-    fileManager_ = factory->CreateFilemanager();
-    fileManager_->RegisterFilesystem("file", factory->CreateStdFileSystem());
+    if (auto factory = CORE_NS::GetInstance<CORE_NS::IFileSystemApi>(CORE_NS::UID_FILESYSTEM_API_FACTORY)) {
+        fileManager_ = factory->CreateFilemanager();
+        fileManager_->RegisterFilesystem("file", factory->CreateStdFileSystem());
+    }
 }
 
 void FileResourceManager::AddListener(const IResourceListener::Ptr& p)

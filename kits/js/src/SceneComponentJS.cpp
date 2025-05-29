@@ -42,7 +42,9 @@ void SceneComponentJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("SceneComponent", func);
+    if (mis) {
+        mis->StoreCtor("SceneComponent", func);
+    }
 }
 
 napi_value SceneComponentJS::Dispose(NapiApi::FunctionContext<>& ctx)

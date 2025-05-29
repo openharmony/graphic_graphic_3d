@@ -56,22 +56,26 @@ void PrintFontsFromNode(const SCENE_NS::INode::Ptr& someNode)
 BASE_NS::string GetDefaultFont(const SCENE_NS::INode::Ptr& node)
 {
     BASE_NS::string defaultFont = "";
-    if (auto ecsAccess = interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(node)) {
-        if (auto engineClassRegister = ecsAccess->GetEcsObject()
-                ->GetScene()
-                ->GetEcsContext()
-                .GetNativeEcs()
-                ->GetClassFactory()
-                .GetInterface<CORE_NS::IClassRegister>()) {
-            if (auto* renderClassRegister = CORE_NS::GetInstance<CORE_NS::IClassRegister>(
-                    *engineClassRegister, RENDER_NS::UID_RENDER_CONTEXT)) {
-                auto fontManager =
-                    CORE_NS::GetInstance<FONT_NS::IFontManager>(*renderClassRegister, FONT_NS::UID_FONT_MANAGER);
-
-                auto typeFaces = fontManager->GetTypeFaces();
-                if (!typeFaces.empty()) {
-                    defaultFont = typeFaces.begin()->name;
-                }
+    auto ecsAccess = interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(node);
+    if (!ecsAccess) {
+        return defaultFont;
+    }
+    auto engineClassRegister = ecsAccess->GetEcsObject()
+                                   ->GetScene()
+                                   ->GetEcsContext()
+                                   .GetNativeEcs()
+                                   ->GetClassFactory()
+                                   .GetInterface<CORE_NS::IClassRegister>();
+    if (!engineClassRegister) {
+        return defaultFont;
+    }
+    if (auto *renderClassRegister =
+            CORE_NS::GetInstance<CORE_NS::IClassRegister>(*engineClassRegister, RENDER_NS::UID_RENDER_CONTEXT)) {
+        auto fontManager = CORE_NS::GetInstance<FONT_NS::IFontManager>(*renderClassRegister, FONT_NS::UID_FONT_MANAGER);
+        if (fontManager) {
+            auto typeFaces = fontManager->GetTypeFaces();
+            if (!typeFaces.empty()) {
+                defaultFont = typeFaces.begin()->name;
             }
         }
     }
@@ -97,7 +101,9 @@ void TextNodeJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("TextNode", func);
+    if (mis) {
+        mis->StoreCtor("TextNode", func);
+    }
 }
 
 TextNodeJS::TextNodeJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(NodeImpl::TEXT)

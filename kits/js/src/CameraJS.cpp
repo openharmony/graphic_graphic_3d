@@ -102,7 +102,9 @@ void CameraJS::Init(napi_env env, napi_value exports)
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
-    mis->StoreCtor("Camera", func);
+    if (mis) {
+        mis->StoreCtor("Camera", func);
+    }
 }
 
 CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(NodeImpl::CAMERA)
@@ -273,10 +275,11 @@ napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
         auto postproc = camera->PostProcess()->GetValue();
         if (!postproc) {
-            auto cameraJs = static_cast<CameraJS*>(ctx.This().GetRoot());
-            postproc =
-                interface_pointer_cast<SCENE_NS::IPostProcess>(cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess));
-            camera->PostProcess()->SetValue(postproc);
+            if (auto cameraJs = static_cast<CameraJS *>(ctx.This().GetRoot())) {
+                postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(
+                    cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess));
+                camera->PostProcess()->SetValue(postproc);
+            }
         }
         NapiApi::Env env(ctx.Env());
         NapiApi::Object parms(env);
@@ -321,11 +324,12 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
                 ctx.This().ToNapiValue(),  // Camera..
                 ctx.Arg<0>().ToNapiValue() // "javascript object for values"
             };
-            auto cameraJs = static_cast<CameraJS*>(ctx.This().GetRoot());
-            auto postproc = cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess);
-            // PostProcessSettings will store a weak ref of its native. We, the camera, own it.
-            psp = CreateFromNativeInstance(ctx.Env(), postproc, PtrType::WEAK, args);
-            native = psp.GetRoot();
+            if (auto cameraJs = static_cast<CameraJS *>(ctx.This().GetRoot())) {
+                auto postproc = cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess);
+                // PostProcessSettings will store a weak ref of its native. We, the camera, own it.
+                psp = CreateFromNativeInstance(ctx.Env(), postproc, PtrType::WEAK, args);
+                native = psp.GetRoot();
+            }
         }
         postProc_ = NapiApi::StrongRef(psp);
 
