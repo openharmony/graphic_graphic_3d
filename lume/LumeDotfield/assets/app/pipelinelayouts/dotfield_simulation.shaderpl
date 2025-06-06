@@ -1,0 +1,21 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "pipelinelayout"
+    },
+    "pushConstant": { "size": 48, "shaderStageFlags": "compute_bit" },
+    "descriptorSetLayouts": [
+        {
+            "set" : 0,
+            "bindings": [
+                { "binding": 0, "descriptorType": "storage_buffer", "descriptorCount": 1, "shaderStageFlags": "compute_bit" }
+            ]
+        },
+        {
+            "set" : 1,
+            "bindings": [
+                { "binding": 0, "descriptorType": "storage_buffer", "descriptorCount": 1, "shaderStageFlags": "compute_bit" }
+            ]
+        }
+    ]
+}

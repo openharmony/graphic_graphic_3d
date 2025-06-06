@@ -1,0 +1,201 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+declare_args() {
+  DOTFIELD_EMBEDDED_ASSETS_ENABLED = true
+  DOTFIELD_ROFS = "rofsDotfield"
+}
+
+config("lume_dotfield_api") {
+  include_dirs = [
+    "api",
+    "assets",
+    "${LUME_CORE3D_PATH}/api"
+  ]
+
+  defines = []
+}
+
+config("lume_dotfield_config") {
+  include_dirs = [
+    "src/",
+  ]
+
+  defines = [ "CORE_PLUGIN=1" ]
+
+  if (DOTFIELD_EMBEDDED_ASSETS_ENABLED) {
+    defines += [ "DOTFIELD_EMBEDDED_ASSETS_ENABLED=1" ]
+  }
+
+  ldflags = [
+    "-Wl,--exclude-libs,ALL",
+  ]
+
+  cflags = [
+    "-Wno-unused-function",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-logical-op-parentheses",
+    "-Wno-unused-local-typedef",
+    "-fvisibility=hidden",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-Wno-ignored-qualifiers",
+  ]
+  cflags_cc = [
+    "-std=c++17",
+    "-Wno-overloaded-virtual",
+    "-Wno-thread-safety-attributes",
+    "-Wno-missing-braces",
+  ]
+}
+
+ohos_source_set("lume_dotfield_src") {
+  public_configs = [
+    ":lume_dotfield_api",
+    ":lume_dotfield_config",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default",
+  ]
+
+  sources = [
+    "src/component_dll.cpp",
+    "src/components/dotfield_component.cpp",
+    "src/render/render_data_store_default_dotfield.cpp",
+    "src/render/render_data_store_default_dotfield.h",
+    "src/render/render_node_dotfield_simulation.cpp",
+    "src/render/render_node_dotfield_simulation.h",
+    "src/systems/dotfield_system.cpp",
+    # "version.cpp",
+  ]
+
+  deps = [
+    "${LUME_CORE_PATH}/DLL:libAGPDLL",
+    "${LUME_RENDER_PATH}:libPluginAGPRender",
+    "${LUME_CORE3D_PATH}/DLL:libPluginAGP3D",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "hilog:libhilog",
+  ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+lume_compile_shader("lume_dotfield_compile_shader") {
+  script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
+  outputs = [ "$target_gen_dir" ]
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/LumeShaderCompiler"
+  dest_gen_path = "$target_gen_dir/assets"
+  asset_path = rebase_path("./assets/app", root_build_dir)
+  shader_path = "${dest_gen_path}/shaders"
+  include_path = rebase_path("api", root_build_dir)
+  render_include_path = "${LUME_PATH}/${CORE3D_DIR_NAME}/api/"
+  compileShader_deps =
+      [ "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile" ]
+}
+
+lume_rofs("lume_dotfield_rofs") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${DOTFIELD_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${DOTFIELD_ROFS}_64.o"
+  }
+
+  outputs = "${target_gen_dir}/assets/${output_obj}"
+
+  tool_path = "$target_gen_dir/../LumeBinaryCompile/lumeassetcompiler"
+  root = "/"
+  bin_name = "DOTFIELD_BIN"
+  size_name = "DOTFIELD_BIN_SIZE"
+  base_name = DOTFIELD_ROFS
+  script = "${LUME_CORE_PATH}/tools/CompilerAsset.sh"
+  copy_path = "$target_gen_dir/assets"
+  compileShader_deps = [
+    ":lume_dotfield_compile_shader",
+    "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+  ]
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
+}
+
+source_set("lume_dotfield_rofs_obj") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${DOTFIELD_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${DOTFIELD_ROFS}_64.o"
+  }
+
+  sources = [ "${target_gen_dir}/assets/${output_obj}" ]
+  deps = [ ":lume_dotfield_rofs" ]
+}
+
+ohos_static_library("libDotfield") {
+  public_deps = [ ":lume_dotfield_src" ]
+
+  if (DOTFIELD_EMBEDDED_ASSETS_ENABLED) {
+    deps = [ ":lume_dotfield_rofs_obj" ]
+  }
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+config("lume_dotfield_plugin_config") {
+  defines = [
+    "CORE_PLUGIN=1"
+  ]
+}
+
+ohos_source_set("lume_dotfield_src_plugin") {
+  sources = [
+  ]
+
+  configs = [
+    ":lume_dotfield_plugin_config",
+    ":lume_dotfield_api",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default",
+  ]
+}
+
+ohos_shared_library("libPluginDotfield") {
+  public_deps = [
+    ":libDotfield",
+    ":lume_dotfield_src_plugin"
+  ]
+
+  relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

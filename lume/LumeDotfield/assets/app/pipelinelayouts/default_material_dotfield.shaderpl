@@ -1,0 +1,15 @@
+{
+  "compatibility_info": {
+      "version": "22.00",
+      "type": "pipelinelayout"
+  },
+  "pushConstant": { "size": 112, "shaderStageFlags": "vertex_bit" },
+  "descriptorSetLayouts": [
+    {
+      "set": 0,
+      "bindings": [
+        { "binding": 0, "descriptorType": "uniform_buffer", "descriptorCount": 1, "shaderStageFlags": "vertex_bit" }
+      ]
+    }
+  ]
+}

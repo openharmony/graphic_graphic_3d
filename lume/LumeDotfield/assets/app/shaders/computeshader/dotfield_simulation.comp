@@ -1,0 +1,104 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+
+#include "common/dotfield_common.h"
+#include "common/dotfield_struct_common.h"
+
+// sets
+
+// set 0, input buffer
+layout(set = 0, binding = 0, std430) readonly buffer inBuffer
+{
+    uvec2 inputBuffer[];
+};
+
+// set 1, output buffer
+layout(set = 1, binding = 0, std430) writeonly buffer outBuffer
+{
+    uvec2 outputBuffer[];
+};
+
+layout(push_constant, std430) uniform uPushConstant
+{
+    DotfieldSimulationPushConstantStruct inPushConstant;
+};
+
+// specialization
+layout(constant_id = 0) const uint LOAD_MODE = 0;
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Sample input buffer with clamping
+vec3 sampleGrid(int x, int y)
+{
+    int sx = clamp(x, 0, int(inPushConstant.indices.x - 1));
+    int sy = clamp(y, 0, int(inPushConstant.indices.y - 1));
+
+    uvec2 inp = inputBuffer[sy * inPushConstant.indices.x + sx];
+    return vec3(unpackHalf2x16(inp.x), unpackHalf2x16(inp.y).x);
+}
+
+layout(local_size_x = DOTFIELD_SIMULATION_TGS, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    // Tunable variables
+    const float displacementSpeed = 0.2f;
+    const vec3 maxDisplacement = vec3(0.2f, 0.2f, 0.7f);
+    const float tensionFactor = 0.1f;
+    const float dampenFactor = 0.9f;
+
+    const uint tid = gl_GlobalInvocationID.x;
+
+    const int grid_x = int(tid % inPushConstant.indices.x);
+    const int grid_y = int(tid / inPushConstant.indices.x);
+
+    vec3 inValue;
+    vec3 outValue;
+    if ( LOAD_MODE == 0 ) {
+        // Normal mode, read input buffer
+        uvec2 current = inputBuffer[tid];
+        outValue.xy = unpackHalf2x16(current.x);
+        outValue.z = unpackHalf2x16(current.y).x;
+
+        const float diag = 0.70710678118f; // 1/sqrt(2)
+        inValue = sampleGrid(grid_x - 1, grid_y - 1);
+        inValue += sampleGrid(grid_x + 1, grid_y - 1);
+        inValue += sampleGrid(grid_x - 1, grid_y + 1);
+        inValue += sampleGrid(grid_x + 1, grid_y + 1);
+        inValue *= diag;
+
+        inValue += sampleGrid(grid_x - 1, grid_y);
+        inValue += sampleGrid(grid_x + 1, grid_y);
+        inValue += sampleGrid(grid_x, grid_y - 1);
+        inValue += sampleGrid(grid_x, grid_y + 1);
+
+        inValue /= (diag * 4 + 4); // calculate weighted average
+    } else {
+        // First frame, initialize to zero
+        inValue = vec3(0.f);
+        outValue = vec3(0.f);
+    }
+    outValue *= dampenFactor;
+    outValue = mix(inValue, outValue, tensionFactor);
+
+    if ( inPushConstant.pos.z > 0 )
+    {
+        // Apply touch
+        vec2 delta = vec2(grid_x, grid_y) - inPushConstant.pos.xy;
+        float distance = length(delta);
+        if ( distance < inPushConstant.pos.z )
+        {
+            delta /= inPushConstant.pos.z;
+            float reconstructZ = -sqrt(1.f - dot(delta, delta));
+            vec3 delta3 = normalize(vec3(delta, reconstructZ));
+            outValue = mix(outValue, delta3 * maxDisplacement, displacementSpeed);
+        }
+    }
+    uvec2 outp;
+    outp.x = packHalf2x16(outValue.xy);
+    outp.y = packHalf2x16(outValue.zz);
+    outputBuffer[tid] = outp;
+}
