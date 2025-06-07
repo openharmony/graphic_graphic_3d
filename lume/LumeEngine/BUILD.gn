@@ -300,6 +300,12 @@ lume_rofs("lume_engine_rofs")
   copy_path = "$target_gen_dir/assets"
   file_extension = ""
   compileShader_deps=["${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile"]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile/"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+    ]
+  }
 }
 
 source_set("lume_engine_rofs_obj") {

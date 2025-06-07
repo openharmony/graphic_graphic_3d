@@ -21,4 +21,7 @@ lume_binary_complile("lume_binary_assets_compile") {
 }
 group("binary_compile_asset") {
   deps = [ ":lume_binary_assets_compile" ]
+  if (ohos_indep_compiler_enable) {
+    deps = []
+  }
 }

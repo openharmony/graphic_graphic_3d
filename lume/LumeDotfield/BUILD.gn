@@ -114,6 +114,12 @@ lume_compile_shader("lume_dotfield_compile_shader") {
   render_include_path = "${LUME_PATH}/${CORE3D_DIR_NAME}/api/"
   compileShader_deps =
       [ "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile" ]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile",
+    ]
+  }
 }
 
 lume_rofs("lume_dotfield_rofs") {
@@ -139,6 +145,12 @@ lume_rofs("lume_dotfield_rofs") {
     ":lume_dotfield_compile_shader",
     "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
   ]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile/"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+    ]
+  }
   file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
 }
 

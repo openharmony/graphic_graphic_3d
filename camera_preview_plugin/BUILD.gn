@@ -80,6 +80,12 @@ lume_compile_shader("cam_preview_compile_shader") {
   render_include_path = "${LUME_PATH}/${RENDER_DIR_NAME}/api/"
   compileShader_deps =
       [ "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile" ]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile",
+    ]
+  }
 }
 
 lume_rofs("CAM_PREVIEW_ROFS") {
@@ -105,6 +111,12 @@ lume_rofs("CAM_PREVIEW_ROFS") {
     ":cam_preview_compile_shader",
     "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
   ]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+    ]
+  }
   file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
 }
 
