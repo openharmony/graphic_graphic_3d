@@ -18,9 +18,6 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>
-#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-#include <meshoptimizer.h>
-#endif
 
 #include <base/containers/fixed_string.h>
 #include <base/util/base64_decode.h>
@@ -66,66 +63,6 @@ vector<uint8_t> Read(Accessor const& accessor)
     const uint32_t componentCount = GetComponentsCount(accessor.type);
     const uint32_t elementSize = componentCount * componentByteSize;
     const uint32_t count = accessor.count;
-#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-    // Import should be reworked so that instead of a task which loads all buffers there would be tasks for bufferViews.
-    // this would allow progressing tasks depending on which part of a buffer has been loaded instead of waiting for the
-    // whole buffer.
-    if (accessor.bufferView->meshoptCompression.buffer) {
-        auto& meshoptCompression = accessor.bufferView->meshoptCompression;
-        meshoptCompression.dataLock.Lock();
-        if (meshoptCompression.data.empty()) {
-            meshoptCompression.data.resize(accessor.bufferView->byteLength);
-            const uint8_t* compressed = meshoptCompression.buffer->data.data() + meshoptCompression.byteOffset;
-            uint8_t* decompressed = meshoptCompression.data.data();
-            if (meshoptCompression.mode == CompressionMode::ATTRIBUTES) {
-                const auto ret = meshopt_decodeVertexBuffer(decompressed, meshoptCompression.count,
-                    meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
-                if (ret) {
-                    CORE_LOG_E("meshopt_decodeVertexBuffer %d", ret);
-                    meshoptCompression.data.clear();
-                } else {
-                    if (meshoptCompression.filter == CompressionFilter::OCTAHEDRAL) {
-                        meshopt_decodeFilterOct(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
-                    } else if (meshoptCompression.filter == CompressionFilter::QUATERNION) {
-                        meshopt_decodeFilterQuat(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
-                    } else if (meshoptCompression.filter == CompressionFilter::EXPONENTIAL)
-                        meshopt_decodeFilterExp(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
-                }
-            } else {
-                // mode 1 (TRIANGLES) for triangle list, mode 2 (INDICES) for other topologies,
-                const auto ret = meshopt_decodeIndexBuffer(decompressed, meshoptCompression.count,
-                    meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
-                if (ret) {
-                    CORE_LOG_E("meshopt_decodeIndexBuffer %d", ret);
-                    meshoptCompression.data.clear();
-                }
-            }
-        }
-        meshoptCompression.dataLock.Unlock();
-        vector<uint8_t> data;
-        if (!meshoptCompression.data.empty()) {
-            const auto total = (count * elementSize);
-            data.resize(total);
-            // copy accessor.count elements from accessor.byteOffset taking stride into account.
-            const size_t byteStride = meshoptCompression.byteStride;
-            const uint8_t* src = accessor.bufferView->meshoptCompression.data.data() + accessor.byteOffset;
-            uint8_t* dst = data.data();
-            if (data.size() < (accessor.byteOffset + total)) {
-                data.resize(total);
-            }
-            if ((elementSize == byteStride) || (byteStride == 0)) {
-                std::copy(src, src + total, dst);
-            } else {
-                for (uint32_t element = 0; element < count; ++element) {
-                    std::copy(src, src + elementSize, dst);
-                    src += byteStride;
-                    dst += elementSize;
-                }
-            }
-        }
-        return data;
-    }
-#endif
     if (!accessor.bufferView->data) {
         return {};
     }
@@ -1097,11 +1034,6 @@ BufferLoadResult LoadBuffers(const Data* data, IFileManager& fileManager)
     // Load data to all buffers.
     for (const auto& buffer : data->buffers) {
         if (buffer && buffer->data.empty()) {
-#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-            if (data->meshCompression && (data->defaultResourcesOffset < 0) && buffer->uri.empty()) {
-                continue;
-            }
-#endif
             result = LoadBuffer(*data, *buffer, fileManager);
             if (!result.success) {
                 return result;

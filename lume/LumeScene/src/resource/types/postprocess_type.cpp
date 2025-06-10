@@ -21,7 +21,7 @@
 
 #include <meta/api/metadata_util.h>
 
-#include "serialization/util.h"
+#include "../../serialization/util.h"
 
 SCENE_BEGIN_NAMESPACE()
 

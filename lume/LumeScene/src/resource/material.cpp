@@ -25,9 +25,9 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/engine/intf_engine_value_manager.h>
 
-#include "entity_converting_value.h"
-#include "mesh/texture.h"
-#include "util_interfaces.h"
+#include "../entity_converting_value.h"
+#include "../mesh/texture.h"
+#include "../util_interfaces.h"
 
 SCENE_BEGIN_NAMESPACE()
 namespace {
@@ -433,7 +433,7 @@ bool Material::SyncCustomProperties(BASE_NS::vector<META_NS::IEngineValue::Ptr>*
 
     auto doSync = [&]() -> bool {
         // syncing material shader updates the custom properties
-        obj->GetScene()->SyncProperty(MaterialShader(), META_NS::EngineSyncDirection::AUTO);
+        obj->GetScene()->SyncProperty(material_->MaterialShader(), META_NS::EngineSyncDirection::AUTO);
         obj->GetScene()->SyncProperty(material_->CustomProperties(), META_NS::EngineSyncDirection::FROM_ENGINE);
         return manager->ConstructValues(allCustomProps, { "", synced_values });
     };

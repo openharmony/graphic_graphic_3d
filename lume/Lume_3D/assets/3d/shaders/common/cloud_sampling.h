@@ -22,11 +22,6 @@ float GetHeightFractionForPoint(vec3 inPosition, vec2 inCloudMinMax)
     return clamp(l / (inCloudMinMax.y - inCloudMinMax.x), 0, 1);
 }
 
-//   color(0.0, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)); = red
-//   color(0.5, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)); = green
-//   color(1.0, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)); = blue
-//   color(0.25, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)); = red + geen / 2.0
-//   color(0.75, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)); = green + blue / 2.0
 vec3 color(float cloudType, vec3 stratus, vec3 stratocumulus, vec3 cumulus)
 {
     float a = clamp(cloudType, 0.0, 0.5) * 2.0;

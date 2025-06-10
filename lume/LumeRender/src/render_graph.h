@@ -173,6 +173,8 @@ private:
     void HandleRenderpassIndirectBufferBarriers(ParameterCache& params, uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const VertexBuffer>& indirectBufferBarrierListRef);
 
+    void HandleRenderPassImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
+        const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
     void HandleClearImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
         const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
     void HandleBlitImage(ParameterCache& params, const uint32_t& commandListCommandIndex,

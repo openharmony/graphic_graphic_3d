@@ -791,6 +791,18 @@ void RenderPreprocessorSystem::GatherSortData()
                     if (!hasJoints) {
                         submeshIdx = 0U;
                         const auto& world = worldMatrixManager_->Read(row.components[WMC])->matrix;
+                        if (allowInstancing) {
+                            // negative scale requires a different graphics state and assuming most of the content
+                            // doesn't have negative scaling we'll just use separate draws for inverted meshes instead
+                            // of instanced draws. negative scaling factor can be determined by checking is the
+                            // determinant of the 3x3 sub-matrix negative.
+                            const float determinant = world.x.x * (world.y.y * world.z.z - world.z.y * world.y.z) -
+                                                      world.x.y * (world.y.x * world.z.z - world.y.z * world.z.x) +
+                                                      world.x.z * (world.y.x * world.z.y - world.y.y * world.z.x);
+                            if (determinant < 0.f) {
+                                allowInstancing = false;
+                            }
+                        }
                         for (const auto& submesh : meshData->submeshes) {
                             // this needs to happen only when world matrix, or mesh component have changed
                             if (disabled[submeshIdx]) {

@@ -39,7 +39,7 @@ BASE_NS::string ExtractName(NapiApi::Object sceneNodeParameters);
  * @param resource a JS object that fulfills the Resource interface.
  * @return The URI or an empty string if no URI is found.
  */
-BASE_NS::string ExtractUri(NapiApi::FunctionContext<>& resource);
+BASE_NS::string ExtractUri(NapiApi::FunctionContext<>& ctx);
 
 /**
  * @brief Extract URI from a Resource arg.
@@ -54,5 +54,6 @@ BASE_NS::string ExtractUri(NapiApi::Object resource);
  * @return The URI or an empty string if no URI is found.
  */
 BASE_NS::string ExtractUri(BASE_NS::string uri);
+
 
 #endif

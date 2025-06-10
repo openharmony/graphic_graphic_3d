@@ -27,7 +27,7 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 
-#include "component/material_component.h"
+#include "../component/material_component.h"
 #include "render_resource.h"
 
 SCENE_BEGIN_NAMESPACE()

@@ -197,7 +197,7 @@ napi_value NodeImpl::GetNodeName(NapiApi::FunctionContext<>& ctx)
     auto native = ctx.This().GetNative();
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     if (!node) {
-        LOG_E("NodeImpl not a node! %p %p", native.get(), node.get());
+        LOG_E("NodeImpl::GetNodeName NodeImpl not a node!");
         return ctx.GetUndefined();
     }
     name = native->GetName();

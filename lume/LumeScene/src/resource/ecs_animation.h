@@ -23,7 +23,7 @@
 #include <meta/ext/resource/resource.h>
 #include <meta/interface/animation/intf_animation.h>
 
-#include "component/animation_component.h"
+#include "../component/animation_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 

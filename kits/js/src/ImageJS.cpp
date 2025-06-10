@@ -37,14 +37,14 @@ void ImageJS::Init(napi_env env, napi_value exports)
     auto status = napi_define_class(
         env, "Image", NAPI_AUTO_LENGTH, BaseObject::ctor<ImageJS>(), nullptr, props.size(), props.data(), &func);
 
-    NapiApi::MyInstanceState* mis;
-    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
+    NapiApi::MyInstanceState *mis;
+    NapiApi::MyInstanceState::GetInstance(env, (void **)&mis);
     if (mis) {
         mis->StoreCtor("Image", func);
     }
 }
 
-void ImageJS::DisposeNative(void* sc)
+void ImageJS::DisposeNative(void *sc)
 {
     if (!disposed_) {
         disposed_ = true;
@@ -73,7 +73,7 @@ void ImageJS::DisposeNative(void* sc)
         resources_.reset();
     }
 }
-void* ImageJS::GetInstanceImpl(uint32_t id)
+void *ImageJS::GetInstanceImpl(uint32_t id)
 {
     if (id == ImageJS::ID)
         return this;
@@ -85,8 +85,7 @@ void ImageJS::Finalize(napi_env env)
     BaseObject::Finalize(env);
 }
 
-ImageJS::ImageJS(napi_env e, napi_callback_info i)
-    : BaseObject(e, i), SceneResourceImpl(SceneResourceType::IMAGE)
+ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneResourceImpl(SceneResourceType::IMAGE)
 {
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
@@ -151,7 +150,7 @@ ImageJS::~ImageJS()
     DisposeNative(nullptr);
 }
 
-napi_value ImageJS::GetWidth(NapiApi::FunctionContext<>& ctx)
+napi_value ImageJS::GetWidth(NapiApi::FunctionContext<> &ctx)
 {
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
@@ -163,7 +162,7 @@ napi_value ImageJS::GetWidth(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(width);
 }
 
-napi_value ImageJS::GetHeight(NapiApi::FunctionContext<>& ctx)
+napi_value ImageJS::GetHeight(NapiApi::FunctionContext<> &ctx)
 {
     if (!validateSceneRef()) {
         return ctx.GetUndefined();

@@ -15,13 +15,13 @@
 
 #include "ecs_animation.h"
 
-#include "base/math/mathf.h"
+#include <base/math/mathf.h>
 
 #include <meta/api/make_callback.h>
 #include <meta/interface/animation/modifiers/intf_loop.h>
 #include <meta/interface/animation/modifiers/intf_speed.h>
 
-#include "converting_value.h"
+#include "../converting_value.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -128,13 +128,19 @@ void EcsAnimation::InternalStop()
 }
 void EcsAnimation::SetProgress(float progress)
 {
+    using META_NS::GetValue;
+    using META_NS::SetValue;
     progress = Base::Math::clamp01(progress);
-    if (anim_->Speed()->GetValue() < 0.0) {
-        anim_->Time()->SetValue((1.0 - progress) * GetValue(TotalDuration()).ToSecondsFloat());
-    } else {
-        anim_->Time()->SetValue(progress * GetValue(TotalDuration()).ToSecondsFloat());
+    
+    if (anim_) {
+        // ECS component expects the time to be set without any modifiers
+        auto duration = GetValue(anim_->Duration());
+        if (GetValue(anim_->Speed()) < 0.0) {
+            progress = 1.f - progress;
+        }
+        SetValue(anim_->Time(), progress * duration);
     }
-    META_ACCESS_PROPERTY(Progress)->SetValue(progress);
+    SetValue(META_ACCESS_PROPERTY(Progress), progress);
 }
 void EcsAnimation::Pause()
 {
@@ -145,14 +151,12 @@ void EcsAnimation::Pause()
 }
 void EcsAnimation::Restart()
 {
-    if (META_ACCESS_PROPERTY_VALUE(Enabled))
-    {
+    if (META_ACCESS_PROPERTY_VALUE(Enabled)) {
         SetProgress(0.0f);
         anim_->State()->SetValue(CORE3D_NS::AnimationComponent::PlaybackState::PLAY);
         META_ACCESS_PROPERTY(Running)->SetValue(true);
         META_NS::Invoke<META_NS::IOnChanged>(EventOnStarted(META_NS::MetadataQuery::EXISTING));
     }
-    
 }
 void EcsAnimation::Seek(float position)
 {
@@ -222,5 +226,4 @@ bool EcsAnimation::DetachFrom(const META_NS::IAttach::Ptr& target)
 {
     return true;
 }
-
 SCENE_END_NAMESPACE()

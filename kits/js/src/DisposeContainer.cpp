@@ -81,9 +81,14 @@ void DisposeContainer::DisposeAll(napi_env e)
     while (!disposables_.empty()) {
         auto env = disposables_.begin()->second.GetObject();
         if (env) {
+            auto size = disposables_.size();
             NapiApi::Function func = env.Get<NapiApi::Function>("destroy");
             if (func) {
                 func.Invoke(env, 1, &scene);
+            }
+            if (size == disposables_.size()) {
+                LOG_E("Dispose function didn't dispose");
+                disposables_.erase(disposables_.begin());
             }
         } else {
             disposables_.erase(disposables_.begin());

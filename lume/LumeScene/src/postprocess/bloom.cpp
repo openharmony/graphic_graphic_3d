@@ -18,7 +18,7 @@
 #include <3d/ecs/components/post_process_component.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
-#include "entity_converting_value.h"
+#include "../entity_converting_value.h"
 
 META_TYPE(RENDER_NS::RenderHandle)
 

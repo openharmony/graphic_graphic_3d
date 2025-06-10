@@ -60,7 +60,7 @@ std::shared_ptr<FaceData> FontBuffer::CreateFace(long index)
     auto face = std::make_shared<FaceData>(shared_from_this(), ftFace);
 
     faces_.push_back(face);
-    CORE_LOG_N("create FaceData %p", this);
+    CORE_LOG_N("create FaceData");
     return face;
 }
 

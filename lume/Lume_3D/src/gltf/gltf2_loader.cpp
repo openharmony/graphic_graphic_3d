@@ -101,9 +101,6 @@ const string_view SUPPORTED_EXTENSIONS[] = {
 #if defined(GLTF2_EXTENSION_KHR_TEXTURE_TRANSFORM)
     "KHR_texture_transform",
 #endif
-#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-    "EXT_meshopt_compression",
-#endif
 #if defined(GLTF2_EXTENSION_HW_XR_EXT)
     "HW_XR_EXT",
 #endif
@@ -456,122 +453,6 @@ std::optional<int> BufferViewByteStride(LoadResult& loadResult, const json::valu
     return stride;
 }
 
-#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-std::optional<int> BufferViewByteStrideMeshoptCompression(
-    LoadResult& loadResult, const json::value& jsonData, const size_t parentStride)
-{
-    // "default": 0 "minimum": 4, "maximum": 252, "multipleOf":
-    int stride;
-    if (!ParseOptionalNumber<int>(loadResult, stride, jsonData, "byteStride", 0)) {
-        return std::nullopt;
-    } else if (stride < 0) {
-        SetError(loadResult, "byteStride can't be negative");
-        return std::nullopt;
-    } else if (parentStride && (static_cast<size_t>(stride) != parentStride)) {
-        SetError(loadResult, "bufferView.byteStride doesn't match meshopt byteStride");
-        return std::nullopt;
-    }
-    return stride;
-}
-
-CompressionFilter GetFilterMeshoptCompression(BASE_NS::string_view filter, int byteStride)
-{
-    CompressionFilter ret = CompressionFilter::NONE;
-    if (filter == "OCTAHEDRAL") {
-        // When filter is "OCTAHEDRAL", byteStride must be equal to 4 or 8
-        if ((byteStride == 4U) || (byteStride == 8U)) {
-            ret = CompressionFilter::OCTAHEDRAL;
-        } else {
-            ret = CompressionFilter::INVALID;
-        }
-    } else if (filter == "QUATERNION") {
-        // When filter is "QUATERNION", byteStride must be equal to 8
-        if (byteStride == 8U) {
-            ret = CompressionFilter::QUATERNION;
-        } else {
-            ret = CompressionFilter::INVALID;
-        }
-    } else if (filter == "EXPONENTIAL") {
-        // When filter is "EXPONENTIAL", byteStride must be divisible by 4
-        if (byteStride % 4U == 0) {
-            ret = CompressionFilter::EXPONENTIAL;
-        } else {
-            ret = CompressionFilter::INVALID;
-        }
-    }
-    return ret;
-}
-
-CompressionMode GetModeMeshoptCompression(
-    const BASE_NS::string_view mode, const int byteStride, const size_t count, const CompressionFilter filter)
-{
-    CompressionMode ret = CompressionMode::INVALID;
-    if (mode == "ATTRIBUTES") {
-        // When mode is "ATTRIBUTES", byteStride must be divisible by 4 and must be <= 256.
-        if ((byteStride % 4) == 0 && byteStride <= 256) {
-            ret = CompressionMode::ATTRIBUTES;
-        }
-    } else if (mode == "TRIANGLES") {
-        // When mode is "TRIANGLES", count must be divisible by 3
-        // When mode is "TRIANGLES" or "INDICES", byteStride must be equal to 2 or 4
-        // When mode is "TRIANGLES" or "INDICES", filter must be equal to "NONE" or omitted
-        if ((count % 3U == 0) && ((byteStride == 2) || (byteStride == 4)) && (filter == CompressionFilter::NONE)) {
-            ret = CompressionMode::TRIANGLES;
-        }
-    } else if (mode == "INDICES") {
-        // When mode is "TRIANGLES" or "INDICES", byteStride must be equal to 2 or 4
-        // When mode is "TRIANGLES" or "INDICES", filter must be equal to "NONE" or omitted
-        if (((byteStride == 2) || (byteStride == 4)) && (filter == CompressionFilter::NONE)) {
-            ret = CompressionMode::INDICES;
-        }
-    }
-    return ret;
-}
-
-bool ParseMeshoptCompression(LoadResult& loadResult, const json::value& meshOptCompression, BufferView* bufferView)
-{
-    const auto buffer = BufferViewBuffer(loadResult, meshOptCompression);
-    const auto byteLength = BufferViewByteLength(loadResult, meshOptCompression);
-    const auto byteOffset = BufferViewByteOffset(loadResult, meshOptCompression, buffer, byteLength);
-    const auto byteStride =
-        BufferViewByteStrideMeshoptCompression(loadResult, meshOptCompression, bufferView->byteStride);
-    if (!buffer || !byteLength || !byteOffset || !byteStride) {
-        return false;
-    }
-    if (!(*buffer) || (*buffer)->byteLength < size_t(*byteOffset + *byteLength)) {
-        return false;
-    }
-    if (!SafeGetJsonValue(meshOptCompression, "count", loadResult.error, bufferView->meshoptCompression.count)) {
-        return false;
-    }
-    if (bufferView->byteLength != (*byteStride) * bufferView->meshoptCompression.count) {
-        return false;
-    }
-    if (auto const pos = meshOptCompression.find("filter"); pos && pos->is_string()) {
-        bufferView->meshoptCompression.filter = GetFilterMeshoptCompression(pos->string_, *byteStride);
-        if (bufferView->meshoptCompression.filter == CompressionFilter::INVALID) {
-            return false;
-        }
-    }
-
-    BASE_NS::string mode;
-    if (!SafeGetJsonValue(meshOptCompression, "mode", loadResult.error, mode)) {
-        return false;
-    }
-    bufferView->meshoptCompression.mode = GetModeMeshoptCompression(
-        mode, *byteStride, bufferView->meshoptCompression.count, bufferView->meshoptCompression.filter);
-    if (bufferView->meshoptCompression.mode == CompressionMode::INVALID) {
-        return false;
-    }
-    bufferView->meshoptCompression.buffer = *buffer;
-    bufferView->meshoptCompression.byteLength = size_t(*byteLength);
-    bufferView->meshoptCompression.byteOffset = size_t(*byteOffset);
-    bufferView->meshoptCompression.byteStride = size_t(*byteStride);
-
-    return true;
-}
-#endif
-
 std::optional<BufferTarget> BufferViewTarget(LoadResult& loadResult, const json::value& jsonData)
 {
     // "default": NOT_DEFINED if set then ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER
@@ -604,18 +485,6 @@ bool ParseBufferView(LoadResult& loadResult, const json::value& jsonData)
         view->byteOffset = size_t(*offset);
         view->byteStride = size_t(*stride);
         view->target = *target;
-#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-        const auto meshOptCompressionParser = [bufferView = view.get()](
-                                                  LoadResult& loadResult, const json::value& extensions) -> bool {
-            return ParseObject(loadResult, extensions, "EXT_meshopt_compression",
-                [bufferView](LoadResult& loadResult, const json::value& meshOptCompression) {
-                    return ParseMeshoptCompression(loadResult, meshOptCompression, bufferView);
-                });
-        };
-        if (!ParseObject(loadResult, jsonData, "extensions", meshOptCompressionParser)) {
-            return false;
-        }
-#endif
         loadResult.data->bufferViews.push_back(move(view));
     } else {
         loadResult.data->bufferViews.emplace_back();
@@ -1583,14 +1452,8 @@ bool PrimitiveAttributes(LoadResult& loadResult, const json::value& jsonData, Me
                     auto const validationResult = ValidatePrimitiveAttribute(
                         attribute.attribute.type, attribute.accessor->type, attribute.accessor->componentType);
                     if (!validationResult.empty()) {
-#if defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION) || defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-#if defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION) && defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-                        if ((loadResult.data->quantization) || (loadResult.data->meshCompression)) {
-#elif defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
+#if defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
                         if (loadResult.data->quantization) {
-#else
-                        if (loadResult.data->meshCompression) {
-#endif
                             auto const extendedValidationResult = ValidatePrimitiveAttributeQuatization(
                                 attribute.attribute.type, attribute.accessor->type, attribute.accessor->componentType);
                             if (!extendedValidationResult.empty()) {
@@ -2765,11 +2628,6 @@ bool GltfRequiredExtension(LoadResult& loadResult, const json::value& jsonData)
 #if defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
             if (val == "KHR_mesh_quantization") {
                 loadResult.data->quantization = true;
-            }
-#endif
-#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
-            if (val == "EXT_meshopt_compression") {
-                loadResult.data->meshCompression = true;
             }
 #endif
         }

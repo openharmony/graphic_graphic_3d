@@ -111,8 +111,8 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
     auto fontDataPtr = fontData.get();
     datas_.push_back(Data { pixelSize, std::move(fontData) });
 
-    CORE_LOG_N("create FontData PT: %f dpi: %d (pix: %d, yppem: %d, h: %d) %p", sizeInPt, yDpi, pixelSize,
-        fontDataPtr->sizeData_->metrics.y_ppem, fontDataPtr->sizeData_->metrics.height >> 6, this); // 6 : param
+    CORE_LOG_N("create FontData PT: %f dpi: %d (pix: %d, yppem: %d, h: %d)", sizeInPt, yDpi, pixelSize,
+        fontDataPtr->sizeData_->metrics.y_ppem, fontDataPtr->sizeData_->metrics.height >> 6); // 6 : param
     return fontDataPtr;
 }
 

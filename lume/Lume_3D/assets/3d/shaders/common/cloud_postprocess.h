@@ -110,9 +110,7 @@ vec4 Postprocess(in Ray ray, in VolumeSample o, in int colorType)
 
     if (colorType == 0) {
         [[branch]] if (false) {
-        }
-        else {
-
+        } else {
             float ambient_energy = 1;
             float direct_energy = 1;
 
@@ -169,7 +167,6 @@ vec4 Postprocess(in Ray ray, in VolumeSample o, in int colorType)
             finalColor = vec4(1, 0, 1, 1 - o.transmission);
         }
     }
-
     return finalColor;
 }
 
