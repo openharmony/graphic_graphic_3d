@@ -95,6 +95,10 @@ config("widget_adapter_config") {
     "DBG_DRAW_PIXEL=${DBG_DRAW_PIXEL}",
   ]
 
+  if (ohos_indep_compiler_enable) {
+    defines += [ "GRAPHIC_2D_INDEP_BUILD" ]
+  }
+
   if (current_os == "ohos") {
     defines += [ "__OHOS_PLATFORM__" ]
   }
