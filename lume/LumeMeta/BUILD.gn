@@ -18,7 +18,7 @@ config("lume_metaobject_config") {
   include_dirs = [
     "3rdparty/",
     "src/",
-    "include"
+    "include",
   ]
 
   defines = [
@@ -144,6 +144,21 @@ ohos_source_set("lume_metaobject_src") {
   external_deps = [
     "c_utils:utils",
   ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+config("lume_meta_api_config") {
+  include_dirs = [
+    "include",
+  ]
+}
+
+ohos_shared_library("AGPMetaApi") {
+  public_configs = [
+    ":lume_meta_api_config",
+  ]
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

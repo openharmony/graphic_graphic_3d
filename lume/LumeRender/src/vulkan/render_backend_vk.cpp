@@ -2272,11 +2272,14 @@ void RenderBackendVk::RenderCommand(const RenderCommandBindDescriptorSets& rende
 #endif
             } else {
                 // possible pso re-creation and bind of these sets to the new pso
+                PLUGIN_LOG_E("vkCmdBindDescriptorSets hit des cache");
                 const RenderCommandBindPipeline renderCmdBindPipeline { stateCache.psoHandle,
                     (PipelineBindPoint)pipelineBindPoint };
                 RenderCommand(renderCmdBindPipeline, cmdBuf, psoMgr, poolMgr, stateCache);
                 RenderCommand(renderCmd, cmdBuf, psoMgr, poolMgr, stateCache, aNcdsm);
             }
+        } else {
+            PLUGIN_LOG_E("stateCache.validBindings invalid");
         }
     }
 }

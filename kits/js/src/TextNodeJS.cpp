@@ -188,7 +188,7 @@ napi_value TextNodeJS::GetText(NapiApi::FunctionContext<>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
+        LOG_E("TextNodeJS::GetText NodeImpl not a text node!");
         return ctx.GetUndefined();
     }
 
@@ -230,7 +230,7 @@ napi_value TextNodeJS::GetFont(NapiApi::FunctionContext<>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
+        LOG_E("TextNodeJS::GetFont NodeImpl not a text node!");
         return ctx.GetUndefined();
     }
 
@@ -264,7 +264,7 @@ napi_value TextNodeJS::GetColor(NapiApi::FunctionContext<>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
+        LOG_E("TextNodeJS::GetColor NodeImpl not a text node!");
         return ctx.GetUndefined();
     }
 
@@ -285,7 +285,7 @@ void TextNodeJS::SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
+        LOG_E("TextNodeJS::SetColor NodeImpl not a text node!");
         return;
     }
 
@@ -306,7 +306,7 @@ napi_value TextNodeJS::GetFontSize(NapiApi::FunctionContext<>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("NodeImpl not a text node! %p %p %p", native.get(), node.get(), text.get());
+        LOG_E("TextNodeJS::GetFontSize NodeImpl not a text node!");
         return ctx.GetUndefined();
     }
 

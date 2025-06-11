@@ -125,7 +125,7 @@ SubMeshJS::SubMeshJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 }
 SubMeshJS::~SubMeshJS()
 {
-    LOG_V("SubMeshJS -- %p", this);
+    LOG_V("SubMeshJS --");
 }
 
 napi_value SubMeshJS::GetAABB(NapiApi::FunctionContext<>& ctx)

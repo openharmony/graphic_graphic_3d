@@ -16,7 +16,7 @@
 
 #include <3d/ecs/components/name_component.h>
 
-#include "converting_value.h"
+#include "../converting_value.h"
 #include "bloom.h"
 #include "tonemap.h"
 #include "util.h"

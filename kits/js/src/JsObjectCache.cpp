@@ -251,7 +251,7 @@ void DebugNativesHavingJS()
                 p = i->GetProperty<META_NS::SharedPtrIInterface>("_JSWMesh", META_NS::MetadataQuery::EXISTING);
             }
             if (p) {
-                LOG_F("jsobj: %s %s (%p, strong count %u) (has JSW)", classname.c_str(), v->GetName().c_str(), v.get(),
+                LOG_F("jsobj: %s %s (strong count %u) (has JSW)", classname.c_str(), v->GetName().c_str(),
                     v.use_count());
 
                 if (auto val = interface_cast<JSWrapperState>(p->GetValue())) {
@@ -273,10 +273,10 @@ void DebugNativesHavingJS()
                                             if (JI) {
                                                 classname = JI->GetClassName();
                                             }
-                                            LOG_F("but the _JSW points to another object?: %s %s (%p, strong count %u) "
-                                                  "strong: %d (tro: %p)",
-                                                classname.c_str(), m->GetName().c_str(), m.get(), m.use_count(),
-                                                tro->IsStrong(), tro);
+                                            LOG_F("but the _JSW points to another object?: %s %s (strong count %u) "
+                                                  "strong: %d",
+                                                classname.c_str(), m->GetName().c_str(), m.use_count(),
+                                                tro->IsStrong());
                                         }
                                     }
                                 } else {
@@ -291,7 +291,7 @@ void DebugNativesHavingJS()
                     }
                 }
             } else {
-                LOG_F("obj: %s %s (%p, strong count %u)", classname.c_str(), v->GetName().c_str(), v.get(),
+                LOG_F("obj: %s %s (strong count %u)", classname.c_str(), v->GetName().c_str(),
                     v.use_count());
             }
         }

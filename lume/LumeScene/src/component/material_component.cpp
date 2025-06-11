@@ -64,10 +64,11 @@ IInternalMaterial::ActiveTextureSlotInfo MaterialComponent::GetActiveTextureSlot
                         break;
                     }
                 }
-                // add the default types. (incorrect .shader declarations may take active anyway. so we MUST keep them)
+                // add the default types. (incorrect .shader declarations may make them active anyway. so we MUST keep
+                // them)
                 info.count = CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT;
                 info.slots.resize(CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT);
-                const char *const names[] = {"BASE_COLOR", 
+                const char *const names[] = {"BASE_COLOR",
                     "NORMAL",
                     "MATERIAL",
                     "EMISSIVE",
@@ -78,8 +79,7 @@ IInternalMaterial::ActiveTextureSlotInfo MaterialComponent::GetActiveTextureSlot
                     "SHEEN",
                     "TRANSMISSION",
                     "SPECULAR"};
-                for (int index = 0; index < CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT; index++)
-                {
+                for (int index = 0; index < CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT; index++) {
                     ActiveTextureSlotInfo::TextureSlot ts;
                     ts.name = names[index];
                     info.slots[index] = BASE_NS::move(ts);

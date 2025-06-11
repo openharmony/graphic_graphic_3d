@@ -24,7 +24,7 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 
-#include "util_interfaces.h"
+#include "../util_interfaces.h"
 
 SCENE_BEGIN_NAMESPACE()
 

@@ -18,6 +18,8 @@
 #include "BaseObjectJS.h"
 #include "SceneJS.h"
 
+#include <meta/api/util.h>
+
 SceneResourceImpl::SceneResourceImpl(SceneResourceType type) : type_(type)
 {
     LOG_V("SceneResourceImpl ++");
@@ -133,7 +135,7 @@ napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
         name = native->GetName();
     }
     if (name.empty()) {
-        name = name_; // Use cache if we didn't get anthing from underlying object
+        name = name_; // Use cached if we didn't get anything from underlying object
     }
     return ctx.GetString(name);
 }

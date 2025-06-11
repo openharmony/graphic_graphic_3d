@@ -179,7 +179,7 @@ std::shared_ptr<FontBuffer> FontManager::CreateFontBuffer(const TypeFace& typeFa
     auto fb = std::make_shared<FontBuffer>(this, typeFace.uid, bytes);
 
     fontBuffers_.insert({ typeFace.uid, fb });
-    CORE_LOG_N("create FontBuffer %p", this);
+    CORE_LOG_N("create FontBuffer");
 
     return fb;
 }
@@ -776,7 +776,7 @@ void FontManager::Unref()
 {
     if (refcnt_.fetch_sub(1, std::memory_order_release) == 1) {
         std::atomic_thread_fence(std::memory_order_acquire);
-        CORE_LOG_N("delete FontManager %p", this);
+        CORE_LOG_N("delete FontManager");
         delete this;
     }
 }

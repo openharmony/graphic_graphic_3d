@@ -21,7 +21,7 @@
 #include <3d/render/default_material_constants.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
-#include "util.h"
+#include "../util.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -58,8 +58,8 @@ RENDER_NS::GraphicsState GraphicsState::CreateGraphicsState(
     RENDER_NS::IShaderManager::GraphicsStateVariantCreateInfo vinfo;
     if (state) {
         gs = man.GetGraphicsState(state);
-        auto desc = man.GetIdDesc(state);
-        vinfo.renderSlot = desc.renderSlot;
+        auto id = man.GetRenderSlotId(state);
+        vinfo.renderSlot = man.GetRenderSlotName(id);
     } else {
         auto renderSlotId = man.GetRenderSlotId(defaultRenderSlot);
         auto rsd = man.GetRenderSlotData(renderSlotId);
@@ -72,10 +72,14 @@ RENDER_NS::GraphicsState GraphicsState::CreateGraphicsState(
     return gs;
 }
 
-bool GraphicsState::UpdateGraphicsState(const IRenderContext::Ptr& context, const RENDER_NS::GraphicsState& gs)
+bool GraphicsState::UpdateGraphicsState(
+    const IRenderContext::Ptr& context, const RENDER_NS::GraphicsState& gs, BASE_NS::string_view renderSlot = {})
 {
     auto& man = context->GetRenderer()->GetDevice().GetShaderManager();
-    RENDER_NS::IShaderManager::GraphicsStateVariantCreateInfo vinfo { GetRenderSlot(gs) };
+    RENDER_NS::IShaderManager::GraphicsStateVariantCreateInfo vinfo { renderSlot };
+    if (renderSlot.empty()) {
+        vinfo.renderSlot = GetRenderSlot(gs);
+    }
     auto s = man.CreateGraphicsState({ "SceneGS_" + BASE_NS::string(BASE_NS::to_string(uintptr_t(this))), gs }, vinfo);
     {
         bool update = false;
@@ -105,13 +109,9 @@ RENDER_NS::GraphicsState GraphicsState::CreateNewGraphicsState(const IRenderCont
                                   : CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
     auto rsd = man.GetRenderSlotData(renderSlotId);
     auto gs = man.GetGraphicsState(rsd.graphicsState);
-    gs.rasterizationState.cullModeFlags = oldgs.rasterizationState.cullModeFlags;
-    if (blend) {
-        if (gs.colorBlendState.colorAttachmentCount == 0) {
-            gs.colorBlendState.colorAttachmentCount = 1;
-        }
-        gs.colorBlendState.colorAttachments[0].enableBlend = blend;
-    }
+    gs.inputAssembly = oldgs.inputAssembly;
+    gs.depthStencilState = oldgs.depthStencilState;
+    gs.rasterizationState = oldgs.rasterizationState;
     return gs;
 }
 
@@ -141,9 +141,10 @@ bool Shader::SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::
     }
     RENDER_NS::IShaderManager::IdDesc desc;
     RENDER_NS::GraphicsState gs;
+    BASE_NS::string renderSlot;
     context
         ->AddTask([&] {
-            BASE_NS::string_view renderSlot(CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
+            renderSlot = CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE;
             if (shader) {
                 desc = context->GetRenderer()->GetDevice().GetShaderManager().GetIdDesc(shader);
                 renderSlot = desc.renderSlot;
@@ -158,9 +159,12 @@ bool Shader::SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::
     }
 
     // todo: notify in same thread?
+    setShaderStateInProgress_ = true;
     Name()->SetValue(desc.displayName);
     CullMode()->SetValue(static_cast<CullModeFlags>(gs.rasterizationState.cullModeFlags));
     Blend()->SetValue(IsBlendEnabled(gs));
+    setShaderStateInProgress_ = false;
+    UpdateGraphicsState(context, gs, renderSlot);
     if (auto ev = EventOnResourceChanged(META_NS::MetadataQuery::EXISTING)) {
         META_NS::Invoke<META_NS::IOnChanged>(ev);
     }
@@ -170,6 +174,10 @@ bool Shader::SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::
 
 void Shader::OnPropertyChanged(const META_NS::IProperty& p)
 {
+    if (setShaderStateInProgress_) {
+        // ignore the property sets during SetShaderState.
+        return;
+    }
     auto context = context_.lock();
     auto state = GetGraphicsState();
     if (!context || !state) {

@@ -23,6 +23,7 @@
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
+#include <base/util/uid_util.h>
 #include <core/image/intf_animated_image.h>
 #include <core/image/intf_image_container.h>
 #include <core/image/intf_image_loader_manager.h>
@@ -151,7 +152,8 @@ ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::LoadAnimatedImage(IFi
     file.Seek(0);
 
     for (auto& loader : imageLoaders_) {
-        if (loader.instance->CanLoad(array_view<const uint8_t>(buffer.get(), static_cast<size_t>(byteLength)))) {
+        if (loader.instance &&
+            loader.instance->CanLoad(array_view<const uint8_t>(buffer.get(), static_cast<size_t>(byteLength)))) {
             return loader.instance->LoadAnimatedImage(file, loadFlags);
         }
     }
@@ -164,7 +166,7 @@ ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::LoadAnimatedImage(
     CORE_CPU_PERF_SCOPE("CORE", "LoadAnimatedImage(bytes)", "", CORE_PROFILER_DEFAULT_COLOR);
 
     for (auto& loader : imageLoaders_) {
-        if (loader.instance->CanLoad(imageFileBytes)) {
+        if (loader.instance && loader.instance->CanLoad(imageFileBytes)) {
             return loader.instance->LoadAnimatedImage(imageFileBytes, loadFlags);
         }
     }
@@ -226,8 +228,12 @@ vector<IImageLoaderManager::ImageType> ImageLoaderManager::GetSupportedTypes() c
 {
     vector<IImageLoaderManager::ImageType> allTypes;
     for (const auto& loader : imageLoaders_) {
-        const auto types = loader.instance->GetSupportedTypes();
-        allTypes.append(types.cbegin(), types.cend());
+        if (loader.instance) {
+            const auto types = loader.instance->GetSupportedTypes();
+            allTypes.append(types.cbegin(), types.cend());
+        } else {
+            CORE_LOG_E(" loader.instance is nullptr and uid: %s", to_string(loader.uid).data());
+        }
     }
     return allTypes;
 }

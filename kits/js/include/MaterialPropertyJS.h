@@ -15,6 +15,7 @@
 #ifndef _MATERIAL_PROPERTY_JS_H_
 #define _MATERIAL_PROPERTY_JS_H_
 #include <meta/interface/intf_object.h>
+#include "Vec4Proxy.h"
 
 #include "BaseObjectJS.h"
 
@@ -39,5 +40,7 @@ private:
     void SetFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value GetSampler(NapiApi::FunctionContext<>& ctx);
     void SetSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
+    BASE_NS::unique_ptr<Vec4Proxy> factorProxy_;
 };
 #endif

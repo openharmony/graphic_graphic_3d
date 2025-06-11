@@ -18,7 +18,7 @@
 BASE_NS::string ExtractNodePath(NapiApi::Object params)
 {
     const auto env = params.GetEnv();
-    if (auto path = NapiApi::Value<BASE_NS::string> { env, params.Get("path") }; path.IsDefined()) {
+    if (auto path = NapiApi::Value<BASE_NS::string>{env, params.Get("path")}; path.IsDefined()) {
         return path;
     }
     return ExtractName(params);
@@ -26,7 +26,7 @@ BASE_NS::string ExtractNodePath(NapiApi::Object params)
 
 BASE_NS::string ExtractName(NapiApi::Object params)
 {
-    return NapiApi::Value<BASE_NS::string> { params.GetEnv(), params.Get("name") };
+    return NapiApi::Value<BASE_NS::string>{params.GetEnv(), params.Get("name")};
 }
 
 BASE_NS::string ExtractUri(NapiApi::FunctionContext<>& ctx)
@@ -34,12 +34,11 @@ BASE_NS::string ExtractUri(NapiApi::FunctionContext<>& ctx)
     BASE_NS::string uri;
     NapiApi::FunctionContext<BASE_NS::string> uriStr(ctx);
     if (uriStr) {
-        // actually not support anymore.
+        // actually not supported anymore.
         uri = uriStr.Arg<0>();
         // check if there is a protocol
         auto t = uri.find("://");
-        if (t == BASE_NS::string::npos)
-        {
+        if (t == BASE_NS::string::npos) {
             // no proto . so use default
             uri.insert(0, "file://");
         }
@@ -52,15 +51,15 @@ BASE_NS::string ExtractUri(NapiApi::FunctionContext<>& ctx)
     uint32_t resourceType = uriRawFile.Get<uint32_t>("type");
     NapiApi::Array parms = uriRawFile.Get<NapiApi::Array>("params");
 
-    if ((id == 0) && (resourceType == 30000)) {  // 30000 : param
-        // seems like a correct raw file.
+    if ((id == 0) && (resourceType == 30000)) { // 30000: param
+        // seems like a correct rawfile.
         uri = parms.Get<BASE_NS::string>(0);
     }
     if (!uri.empty()) {
         // add the schema then
         uri.insert(0, "OhosRawFile://");
     }
-    
+
     return uri;
 }
 
@@ -70,7 +69,7 @@ BASE_NS::string ExtractUri(NapiApi::Object resource)
     uint32_t resourceType = resource.Get<uint32_t>("type");
     NapiApi::Array parms = resource.Get<NapiApi::Array>("params");
     BASE_NS::string uri;
-    if ((id == 0) && (resourceType == 30000)) { // 30000: param
+    if ((id == 0) && (resourceType == 30000)) {  // 30000: param
         // seems like a correct rawfile.
         uri = parms.Get<BASE_NS::string>(0);
     }

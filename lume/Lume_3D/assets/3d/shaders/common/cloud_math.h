@@ -74,8 +74,6 @@ float noise(vec2 x)
     float c = hash(i + vec2(0.0, 1.0));
     float d = hash(i + vec2(1.0, 1.0));
 
-    // Same code, with the clamps in smoothstep and common subexpressions
-    // optimized away.
     vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
 }

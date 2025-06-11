@@ -258,4 +258,4 @@ PLUGIN_DATA(DotfieldPlugin) {
     Dotfield::UnregisterInterfaces,
     { Dotfield::PLUGIN_DEPENDENCIES },
 };
-}
+}

@@ -108,7 +108,9 @@ void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
     customProperties = mat->GetCustomProperties();
 
     if (!Textures.empty()) {
-        BASE_NS::string_view default_names[] = { "BASE_COLOR", "NORMAL", "MATERIAL", "EMISSIVE", "AO", "CLEARCOAT", "CLEARCOAT_ROUGHNESS", "CLEARCOAT_NORMAL", "SHEEN", "TRANSMISSION", "SPECULAR" };
+        // list of default names
+        BASE_NS::string_view default_names[] = { "BASE_COLOR", "NORMAL", "MATERIAL", "EMISSIVE", "AO", "CLEARCOAT",
+            "CLEARCOAT_ROUGHNESS", "CLEARCOAT_NORMAL", "SHEEN", "TRANSMISSION", "SPECULAR" };
         int index = 0;
         for (auto t : Textures) {
             BASE_NS::string name;
@@ -134,19 +136,18 @@ void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
                 const auto& res = proxies_.insert_or_assign(n, proxt);
                 inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
             }
-
+            
             // create default named property, if it was renamed
-            if (name != default_names[index])
-            {
+            if (name != default_names[index]) {
                 BASE_NS::shared_ptr<PropertyProxy> proxt;
-                if (proxt = BASE_NS::shared_ptr{new Vec4Proxy(e, t->Factor())}) {
+                if (proxt = BASE_NS::shared_ptr { new Vec4Proxy(e, t->Factor()) }) {
                     auto n = default_names[index] + "_" + t->Factor()->GetName();
-                    const auto &res = proxies_.insert_or_assign(n, proxt);
+                    const auto& res = proxies_.insert_or_assign(n, proxt);
                     inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
                 }
-                if (proxt = BASE_NS::shared_ptr{new ImageProxy(scene_.GetObject(), inputs, t->Image())}) {
+                if (proxt = BASE_NS::shared_ptr { new ImageProxy(scene_.GetObject(), inputs, t->Image()) }) {
                     auto n = default_names[index] + "_" + t->Image()->GetName();
-                    const auto &res = proxies_.insert_or_assign(n, proxt);
+                    const auto& res = proxies_.insert_or_assign(n, proxt);
                     inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
                 }
             }

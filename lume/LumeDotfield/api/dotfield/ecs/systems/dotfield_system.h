@@ -37,4 +37,4 @@ inline constexpr const char* GetName(const IDotfieldSystem*)
     return "DotfieldSystem";
 }
 } // namespace Dotfield
-#endif
+#endif

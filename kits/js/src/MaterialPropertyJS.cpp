@@ -84,6 +84,7 @@ void MaterialPropertyJS::DisposeNative(void*)
     if (!disposed_) {
         disposed_ = true;
         sampler_.Reset();
+        factorProxy_.reset();
         UnsetNativeObject();
     }
 }
@@ -96,7 +97,7 @@ napi_value MaterialPropertyJS::GetImage(NapiApi::FunctionContext<>& ctx)
 
     SCENE_NS::IBitmap::Ptr image = META_NS::GetValue(texture->Image());
     napi_value args[] = { ctx.This().ToNapiValue() };
-    return CreateFromNativeInstance(ctx.GetEnv(), image, PtrType::WEAK, args).ToNapiValue();
+    return CreateFromNativeInstance(ctx.GetEnv(), image, PtrType::STRONG, args).ToNapiValue();
 }
 void MaterialPropertyJS::SetImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
@@ -111,22 +112,15 @@ void MaterialPropertyJS::SetImage(NapiApi::FunctionContext<NapiApi::Object>& ctx
         META_NS::SetValue(texture->Image(), image);
     }
 }
-napi_value MaterialPropertyJS::GetFactor(NapiApi::FunctionContext<>& ctx)
+napi_value MaterialPropertyJS::GetFactor(NapiApi::FunctionContext<> &ctx)
 {
-    auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
-    if (!texture) {
-        return ctx.GetUndefined();
+    if (auto texture = ctx.This().GetNative<SCENE_NS::ITexture>()) {
+        if (!factorProxy_) {
+            factorProxy_ = BASE_NS::make_unique<Vec4Proxy>(ctx.Env(), texture->Factor());
+        }
+        return factorProxy_->Value();
     }
-
-    BASE_NS::Math::Vec4 factor = META_NS::GetValue(texture->Factor());
-
-    NapiApi::Env env(ctx.Env());
-    NapiApi::Object res(env);
-    res.Set("x", NapiApi::Value<float> { env, factor.x });
-    res.Set("y", NapiApi::Value<float> { env, factor.y });
-    res.Set("z", NapiApi::Value<float> { env, factor.z });
-    res.Set("w", NapiApi::Value<float> { env, factor.w });
-    return res.ToNapiValue();
+    return ctx.GetUndefined();
 }
 void MaterialPropertyJS::SetFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {

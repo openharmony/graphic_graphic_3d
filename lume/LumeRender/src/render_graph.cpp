@@ -1163,6 +1163,9 @@ void RenderGraph::RenderCommand(const uint32_t renderNodeIndex, const uint32_t c
     } else {
         if (rc.renderCommandType == RenderCommandType::DISPATCH_INDIRECT) {
             HandleDispatchIndirect(parameters, commandListCommandIndex, cmdListRef);
+        } else if (rc.renderCommandType == RenderCommandType::BEGIN_RENDER_PASS) {
+            // additional render pass attachment barriers
+            HandleRenderPassImage(parameters, commandListCommandIndex, cmdListRef);
         }
         const uint32_t descriptorSetHandleBeginIndex = rc.descriptorSetHandleIndexBegin;
         const uint32_t descriptorSetHandleEndIndex = descriptorSetHandleBeginIndex + rc.descriptorSetHandleCount;
@@ -1325,6 +1328,37 @@ void RenderGraph::HandleRenderpassIndirectBufferBarriers(ParameterCache& params,
                 UpdateStateAndCreateBarriersGpuBuffer(
                     resourceState, { ib.bufferHandle, ib.bufferOffset, ib.byteSize }, params);
             }
+        }
+    }
+}
+
+void RenderGraph::HandleRenderPassImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
+    const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef)
+{
+    const uint32_t nextListIdx = commandListCommandIndex + 1;
+    PLUGIN_ASSERT(nextListIdx < cmdListRef.size());
+    const auto& nextCmdRef = cmdListRef[nextListIdx];
+    PLUGIN_ASSERT(nextCmdRef.type == RenderCommandType::BEGIN_RENDER_PASS);
+
+    const RenderCommandBeginRenderPass& nextRc = *static_cast<RenderCommandBeginRenderPass*>(nextCmdRef.rc);
+    // check for all attachments
+    const RenderPassDesc& rpDesc = nextRc.renderPassDesc;
+    for (uint32_t attachIdx = 0U; attachIdx < rpDesc.attachmentCount; ++attachIdx) {
+        const RenderHandle handle = rpDesc.attachmentHandles[attachIdx];
+        const bool needsBarrier = CheckForBarrierNeed(params.handledCustomBarriers, params.customBarrierCount, handle);
+        if (needsBarrier) {
+            const bool depthImage = RenderHandleUtil::IsDepthImage(handle);
+            BindableImage bRes = {};
+            bRes.handle = handle;
+            bRes.imageLayout = depthImage ? CORE_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+                                          : CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            const AccessFlags accessFlags =
+                depthImage ? CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            const PipelineStageFlags pipelineStageFlags = CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+            AddCommandBarrierAndUpdateStateCacheImage(params.renderNodeIndex,
+                GpuResourceState { 0, accessFlags, pipelineStageFlags, params.gpuQueue }, bRes, params.rcWithType,
+                params.combinedBarriers, currNodeGpuResourceTransfers_);
         }
     }
 }

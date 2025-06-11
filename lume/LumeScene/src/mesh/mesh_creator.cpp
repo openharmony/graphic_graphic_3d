@@ -123,7 +123,13 @@ Future<IMesh::Ptr> MeshCreator::Create(const MeshConfig& c, CustomMeshData d)
             auto positionData = FillData(data.vertices);
             auto normalData = FillData(data.normals);
             auto uvData = FillData(data.uvs);
-            auto colorData = FillData(data.colors);
+            // Convert from BASE_NS::Color->BASE_NS::Math::Vec4
+            BASE_NS::vector<BASE_NS::Math::Vec4> colors;
+            colors.reserve(data.colors.size());
+            for (auto&& color : data.colors) {
+                colors.emplace_back(color.r, color.g, color.b, color.a);
+            }
+            auto colorData = FillData(colors);
             CORE3D_NS::IMeshBuilder::DataBuffer dummy {};
 
             builder->SetVertexData(0, positionData, normalData, uvData, dummy, dummy, colorData);
