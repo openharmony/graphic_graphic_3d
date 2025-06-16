@@ -277,7 +277,7 @@ void TextureLayerImpl::DestroyRenderTarget()
     RemoveChild();
     // clean cache routine should be in rs node deconstruct
     auto rsSurfaceNode = OHOS::Rosen::RSBaseNode::ReinterpretCast<OHOS::Rosen::RSSurfaceNode>(rsNode_);
-    if (rsSurfaceNode->GetSurface()) {
+    if (rsSurfaceNode && rsSurfaceNode->GetSurface()) {
         rsSurfaceNode->GetSurface()->CleanCache(true);
     }
 
