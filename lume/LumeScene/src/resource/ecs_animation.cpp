@@ -131,17 +131,21 @@ void EcsAnimation::SetProgress(float progress)
     using META_NS::GetValue;
     using META_NS::SetValue;
     progress = Base::Math::clamp01(progress);
-    
-    if (anim_) {
-        // ECS component expects the time to be set without any modifiers
-        auto duration = GetValue(anim_->Duration());
-        if (GetValue(anim_->Speed()) < 0.0) {
-            progress = 1.f - progress;
-        }
-        SetValue(anim_->Time(), progress * duration);
+    if (!anim_) {
+        return;
     }
-    SetValue(META_ACCESS_PROPERTY(Progress), progress);
+    auto speed = GetValue(anim_->Speed());
+    if (speed < 0.0) {
+        auto duration = GetValue(anim_->Duration());
+        progress = 1.f - progress;
+        SetValue(anim_->Time(), progress * duration);
+        SetValue(META_ACCESS_PROPERTY(Progress), progress);
+        return;
+    }
+    anim_->Time()->SetValue(progress * GetValue(TotalDuration()).ToSecondsFloat());
+    META_ACCESS_PROPERTY(Progress)->SetValue(progress);
 }
+
 void EcsAnimation::Pause()
 {
     if (META_ACCESS_PROPERTY_VALUE(Enabled)) {

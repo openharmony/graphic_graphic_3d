@@ -69,8 +69,8 @@ public:
     bool SetNodeParentAndName(CORE_NS::Entity ent, BASE_NS::string_view name, CORE3D_NS::ISceneNode* parent);
 
     BASE_NS::string GetPath(const CORE3D_NS::ISceneNode* node) const;
-    bool IsNodeEntity(CORE_NS::Entity ent) const;
-    bool RemoveEntity(CORE_NS::Entity ent);
+    bool IsNodeEntity(CORE_NS::Entity ent) const override;
+    bool RemoveEntity(CORE_NS::Entity ent) override;
 
     void ListenNodeChanges(bool enabled);
 
@@ -139,7 +139,10 @@ private:
         const CORE3D_NS::ISceneNode& child, size_t index) override;
 
     void ReactivateNodes(CORE_NS::Entity ent);
-    bool CheckDeactivatedAncestry(CORE_NS::Entity start, CORE_NS::Entity node, std::set<CORE_NS::Entity>& reactivate);
+
+    bool CheckDeactivatedAncestry(
+        CORE_NS::Entity start, CORE_NS::Entity node, std::set<CORE_NS::Entity>& reactivate) const;
+    std::set<CORE_NS::Entity> GetDeactivatedChildren(CORE_NS::Entity ent) const;
 
     void GetNodeDescendants(CORE_NS::Entity, BASE_NS::vector<CORE_NS::Entity>&) const;
 
@@ -147,10 +150,12 @@ private:
     BASE_NS::weak_ptr<IInternalScene> scene_;
     CORE_NS::Entity rootEntity_ {};
     BASE_NS::unordered_map<BASE_NS::string, CORE_NS::IComponentManager*> components_;
+    BASE_NS::vector<CORE_NS::Entity> imported_;
 };
 
 CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild);
-CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IScene& extScene);
+CORE_NS::Entity CopyExternalAsChild(
+    const IEcsObject& parent, const IScene& extScene, BASE_NS::vector<CORE_NS::Entity>& imported);
 
 SCENE_END_NAMESPACE()
 

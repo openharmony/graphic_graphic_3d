@@ -632,8 +632,11 @@ void SceneAdapter::RenderFunction()
             sfBufferInfo_.acquireFence_ = nullptr;
         }
         if (backendType == RENDER_NS::DeviceBackendType::VULKAN) {
-            // NOTE: vulkan not implemented yet
-            WIDGET_LOGD("vulkan fence");
+            RENDER_NS::IRenderFrameUtil::SignalData signalData;
+            signalData.signaled = false;
+            signalData.signalResourceType = RENDER_NS::IRenderFrameUtil::SignalResourceType::GPU_SEMAPHORE;
+            signalData.handle = bufferFenceHandle_;
+            renderFrameUtil.AddGpuSignal(signalData);
         } else if (backendType == RENDER_NS::DeviceBackendType::OPENGLES) {
             RENDER_NS::IRenderFrameUtil::SignalData signalData;
             signalData.signaled = false;
@@ -792,7 +795,6 @@ RENDER_NS::RenderHandleReference CreateOESTextureHandle(CORE_NS::IEcs::Ptr ecs,
     std::shared_ptr<RENDER_NS::BackendSpecificImageDesc> data = nullptr;
     auto backendType = renderContext->GetDevice().GetBackendType();
     if (backendType == RENDER_NS::DeviceBackendType::VULKAN) {
-        // NOTE: vulkan not implemented yet
         data = std::make_shared<RENDER_NS::ImageDescVk>();
         auto vkData = std::static_pointer_cast<RENDER_NS::ImageDescVk>(data);
         vkData->platformHwBuffer = reinterpret_cast<uintptr_t>(nativeBuffer);

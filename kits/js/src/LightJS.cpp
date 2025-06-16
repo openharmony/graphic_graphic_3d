@@ -117,9 +117,11 @@ void BaseLight::DisposeNative(void* scn, BaseObject* tro)
     colorProxy_.reset();
     if (auto light = interface_pointer_cast<SCENE_NS::ILight>(tro->GetNativeObject())) {
         tro->UnsetNativeObject();
-        if (auto node = interface_pointer_cast<SCENE_NS::INode>(light)) {
-            if (auto scene = node->GetScene()) {
-                scene->ReleaseNode(BASE_NS::move(node), false);
+        if (!IsAttached()) {
+            if (auto node = interface_pointer_cast<SCENE_NS::INode>(light)) {
+                if (auto scene = node->GetScene()) {
+                    scene->RemoveNode(BASE_NS::move(node)).Wait();
+                }
             }
         }
     }

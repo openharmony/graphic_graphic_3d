@@ -55,6 +55,8 @@ public:
      * @return The child node added (which was the root in given scene) or null if failed
      */
     virtual Future<INode::Ptr> ImportChildScene(BASE_NS::string_view uri, BASE_NS::string_view nodeName) = 0;
+
+    virtual void TrackImportedEntities(BASE_NS::array_view<const CORE_NS::Entity> entities) = 0;
 };
 
 SCENE_END_NAMESPACE()

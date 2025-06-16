@@ -38,6 +38,16 @@ void Node::Destroy()
         startableHandler_->StopAll(GetAttachmentContainer(false));
         startableHandler_.reset();
     }
+    if (!imported_.empty()) {
+        if (auto s = GetInternalScene()) {
+            auto& ecs = s->GetEcsContext();
+            for (auto&& ent : imported_) {
+                if (!ecs.IsNodeEntity(ent)) { // Nodes are handled by the hierarchy so don't delete those here?
+                    ecs.RemoveEntity(ent);
+                }
+            }
+        }
+    }
     Super::Destroy();
 }
 
@@ -161,11 +171,15 @@ Future<INode::Ptr> Node::ImportChildScene(const IScene::ConstPtr& scene, BASE_NS
     if (auto s = GetInternalScene(); s && scene) {
         if (scene != GetScene()) {
             return s->AddTask([=, name = BASE_NS::string(nodeName)] {
-                auto ent = CopyExternalAsChild(*object_, *scene);
+                BASE_NS::vector<CORE_NS::Entity> imported;
+                auto ent = CopyExternalAsChild(*object_, *scene, imported);
                 auto node = CORE_NS::EntityUtil::IsValid(ent) ? s->FindNode(ent, {}) : nullptr;
                 if (auto named = interface_cast<META_NS::INamed>(node)) {
                     named->Name()->SetValue(name);
                     SyncProperty(s, named->Name());
+                }
+                if (auto import = interface_cast<INodeImport>(node)) {
+                    import->TrackImportedEntities(imported);
                 }
                 return node;
             });
@@ -419,6 +433,11 @@ void Node::OnChildChanged(META_NS::ContainerChangeType type, const INode::Ptr& c
             s->InvokeUserNotification<META_NS::IOnChildChanged>(event, info);
         }
     }
+}
+
+void Node::TrackImportedEntities(BASE_NS::array_view<const CORE_NS::Entity> entities)
+{
+    imported_.insert(imported_.end(), entities.begin(), entities.end());
 }
 
 bool Node::IsListening() const
