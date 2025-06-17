@@ -87,7 +87,7 @@ void DisposeContainer::DisposeAll(napi_env e)
                 func.Invoke(env, 1, &scene);
             }
             if (size == disposables_.size()) {
-                LOG_E("Dispose function didn't dispose");
+                LOG_E("Weak ref dispose function didn't dispose.");
                 disposables_.erase(disposables_.begin());
             }
         } else {

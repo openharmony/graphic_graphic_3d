@@ -97,6 +97,14 @@ void NodeJS::DisposeNative(void* sc)
             sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
+        if (!IsAttached()) {
+            if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
+                if (auto scene = node->GetScene()) {
+                    scene->RemoveNode(BASE_NS::move(node)).Wait();
+                }
+            }
+        }
+        UnsetNativeObject();
         scene_.Reset();
     }
 }

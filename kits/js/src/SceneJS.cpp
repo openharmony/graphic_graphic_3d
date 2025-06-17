@@ -390,12 +390,18 @@ void SceneJS::DisposeNative(void*)
         while (!strongDisposables_.empty()) {
             auto it = strongDisposables_.begin();
             auto token = it->first;
-            auto env = it->second.GetObject();
-            if (env) {
+            auto obj = it->second.GetObject();
+            if (obj) {
+                // "detaching" the nodes let's the destroy/dispose method release fully.
+                auto isNode = static_cast<NodeImpl*>(obj.GetRoot()->GetInstanceImpl(NodeImpl::ID));
+                if (isNode && isNode->IsAttached()) {
+                    // it's a node, and it's attached. so detach.
+                    isNode->Attached(false);
+                }
                 auto size = strongDisposables_.size();
-                NapiApi::Function func = env.Get<NapiApi::Function>("destroy");
+                NapiApi::Function func = obj.Get<NapiApi::Function>("destroy");
                 if (func) {
-                    func.Invoke(env, 1, &scene);
+                    func.Invoke(obj, 1, &scene);
                 }
 
                 if (size == strongDisposables_.size()) {
@@ -411,9 +417,14 @@ void SceneJS::DisposeNative(void*)
         while (!disposables_.empty()) {
             auto env = disposables_.begin()->second.GetObject();
             if (env) {
+                auto size = disposables_.size();
                 NapiApi::Function func = env.Get<NapiApi::Function>("destroy");
                 if (func) {
                     func.Invoke(env, 1, &scene);
+                }
+                if (size == disposables_.size()) {
+                    LOG_E("Weak ref dispose function didn't dispose.");
+                    disposables_.erase(disposables_.begin());
                 }
             } else {
                 disposables_.erase(disposables_.begin());

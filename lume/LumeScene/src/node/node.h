@@ -19,6 +19,7 @@
 #include <scene/ext/component.h>
 #include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/intf_node_notify.h>
+#include <scene/interface/intf_layer.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_node_import.h>
 #include <scene/interface/intf_scene.h>
@@ -84,6 +85,7 @@ public:
     Future<INode::Ptr> ImportChildScene(const IScene::ConstPtr& scene, BASE_NS::string_view nodeName) override;
     Future<INode::Ptr> ImportChildScene(BASE_NS::string_view uri, BASE_NS::string_view nodeName) override;
     bool SetEcsObject(const IEcsObject::Ptr& obj) override;
+    void TrackImportedEntities(BASE_NS::array_view<const CORE_NS::Entity> entities) override;
 
 public:
     bool Attach(const IObject::Ptr& attachment, const IObject::Ptr& dataContext) override;
@@ -123,6 +125,7 @@ public:
 
 private:
     BASE_NS::unique_ptr<StartableHandler> startableHandler_;
+    BASE_NS::vector<CORE_NS::Entity> imported_;
 };
 
 SCENE_END_NAMESPACE()

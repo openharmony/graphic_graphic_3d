@@ -29,7 +29,7 @@ public:
     static void RegisterEnums(NapiApi::Object exports);
 
     bool IsAttached() const;
-    void Attached(bool attached);
+    virtual void Attached(bool attached);
 
 protected:
     static void GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props);

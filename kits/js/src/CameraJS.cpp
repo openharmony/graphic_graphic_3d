@@ -33,8 +33,9 @@ static constexpr uint32_t ACTIVE_RENDER_BIT = 1; //  CameraComponent::ACTIVE_REN
 
 void* CameraJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == CameraJS::ID)
+    if (id == CameraJS::ID) {
         return this;
+    }
     return NodeImpl::GetInstanceImpl(id);
 }
 void CameraJS::DisposeNative(void* sc)
@@ -42,6 +43,7 @@ void CameraJS::DisposeNative(void* sc)
     if (!disposed_) {
         LOG_V("CameraJS::DisposeNative");
         disposed_ = true;
+        auto cam = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject());
 
         if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
             sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
@@ -57,7 +59,7 @@ void CameraJS::DisposeNative(void* sc)
         postProc_.Reset();
 
         clearColor_.reset();
-        if (auto cam = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
+        if (cam) {
             UnsetNativeObject();
 
             auto ptr = cam->PostProcess()->GetValue();
@@ -67,10 +69,12 @@ void CameraJS::DisposeNative(void* sc)
             // dispose all extra objects.
             resources_.clear();
 
-            if (auto camnode = interface_pointer_cast<SCENE_NS::INode>(cam)) {
+            if (!IsAttached()) {
                 cam->SetActive(false);
-                if (auto scene = camnode->GetScene()) {
-                    scene->ReleaseNode(BASE_NS::move(camnode), false);
+                if (auto node = interface_pointer_cast<SCENE_NS::INode>(cam)) {
+                    if (auto scene = node->GetScene()) {
+                        scene->RemoveNode(BASE_NS::move(node)).Wait();
+                    }
                 }
             }
         }

@@ -112,9 +112,11 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene, const Sce
 
     entityOwnerComponentManager =
         static_cast<IEntityOwnerComponentManager*>(ecs->CreateComponentManager(ENTITY_OWNER_COMPONENT_TYPE_INFO));
-    if (!entityOwnerComponentManager) {
+
+    if (!entityOwnerComponentManager || !nodeSystem || !picking) {
         return false;
     }
+
     components_[entityOwnerComponentManager->GetName()] = entityOwnerComponentManager;
 
     if (!EcsListener::Initialize(*this)) {
@@ -357,16 +359,17 @@ void Ecs::OnChildChanged(const CORE3D_NS::ISceneNode& parent, CORE3D_NS::INodeSy
     }
 }
 
-bool Ecs::CheckDeactivatedAncestry(CORE_NS::Entity start, CORE_NS::Entity node, std::set<CORE_NS::Entity>& reactivate)
+bool Ecs::CheckDeactivatedAncestry(
+    CORE_NS::Entity start, CORE_NS::Entity node, std::set<CORE_NS::Entity>& entities) const
 {
     if (start == node) {
         return true;
     }
     if (CORE_NS::EntityUtil::IsValid(node)) {
         if (auto n = nodeComponentManager->Read(node)) {
-            auto ret = CheckDeactivatedAncestry(start, n->parent, reactivate);
+            auto ret = CheckDeactivatedAncestry(start, n->parent, entities);
             if (ret) {
-                reactivate.insert(node);
+                entities.insert(node);
             }
             return ret;
         }
@@ -374,13 +377,12 @@ bool Ecs::CheckDeactivatedAncestry(CORE_NS::Entity start, CORE_NS::Entity node, 
     return false;
 }
 
-void Ecs::ReactivateNodes(CORE_NS::Entity ent)
+std::set<CORE_NS::Entity> Ecs::GetDeactivatedChildren(CORE_NS::Entity ent) const
 {
-    auto& entMan = ecs->GetEntityManager();
+    std::set<CORE_NS::Entity> entities;
 
-    std::set<CORE_NS::Entity> reactivate;
-    reactivate.insert(ent);
     if (nodeComponentManager->HasComponent(ent)) {
+        auto& entMan = ecs->GetEntityManager();
         auto it = entMan.Begin(CORE_NS::IEntityManager::IteratorType::DEACTIVATED);
         auto end = entMan.End(CORE_NS::IEntityManager::IteratorType::DEACTIVATED);
 
@@ -392,9 +394,19 @@ void Ecs::ReactivateNodes(CORE_NS::Entity ent)
             }
         }
         for (auto&& n : nodes) {
-            CheckDeactivatedAncestry(ent, n, reactivate);
+            CheckDeactivatedAncestry(ent, n, entities);
         }
     }
+    return entities;
+}
+
+void Ecs::ReactivateNodes(CORE_NS::Entity ent)
+{
+    auto& entMan = ecs->GetEntityManager();
+
+    std::set<CORE_NS::Entity> reactivate = GetDeactivatedChildren(ent);
+    reactivate.insert(ent);
+
     for (auto&& n : reactivate) {
         entMan.SetActive(n, true);
     }
@@ -414,9 +426,16 @@ void Ecs::SetNodesActive(CORE_NS::Entity ent, bool enabled)
 
 void Ecs::GetNodeDescendants(CORE_NS::Entity ent, BASE_NS::vector<CORE_NS::Entity>& entities) const
 {
-    if (auto n = GetNode(ent)) {
-        for (auto&& c : n->GetChildren()) {
-            GetNodeDescendants(c->GetEntity(), entities);
+    auto& entMan = ecs->GetEntityManager();
+    if (entMan.IsAlive(ent)) {
+        if (auto n = GetNode(ent)) {
+            for (auto&& c : n->GetChildren()) {
+                GetNodeDescendants(c->GetEntity(), entities);
+            }
+        }
+    } else {
+        for (auto&& e : GetDeactivatedChildren(ent)) {
+            entities.push_back(e);
         }
     }
     entities.push_back(ent);
@@ -491,10 +510,11 @@ static CORE_NS::Entity ReparentOldRoot(
     } else {
         CORE_LOG_W("Failed to find old root when import scene");
     }
-    return node->GetEntity();
+    return node ? node->GetEntity() : CORE_NS::Entity {};
 }
 
-CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IScene& scene)
+CORE_NS::Entity CopyExternalAsChild(
+    const IEcsObject& parent, const IScene& scene, BASE_NS::vector<CORE_NS::Entity>& imported)
 {
     IInternalScene::Ptr localScene = parent.GetScene();
     IInternalScene::Ptr extScene = scene.GetInternalScene();
@@ -503,8 +523,8 @@ CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IScene& scen
     }
 
     auto& util = localScene->GetGraphicsContext().GetSceneUtil();
-    auto vec = util.Clone(*localScene->GetEcsContext().GetNativeEcs(), *extScene->GetEcsContext().GetNativeEcs());
-    return ReparentOldRoot(localScene, parent, vec);
+    imported = util.Clone(*localScene->GetEcsContext().GetNativeEcs(), *extScene->GetEcsContext().GetNativeEcs());
+    return ReparentOldRoot(localScene, parent, imported);
 }
 
 SCENE_END_NAMESPACE()

@@ -52,13 +52,8 @@ void ImageJS::DisposeNative(void *sc)
 
         if (sc && resources_) {
             resources_->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-        }
 
-        NapiApi::Object obj = scene_.GetObject();
-
-        if (interface_pointer_cast<IBitmap>(GetNativeObject())) {
-            if (obj) {
-                BASE_NS::string uri = ExtractUri(uri_.GetObject());
+            if (BASE_NS::string uri = ExtractUri(uri_.GetObject()); !uri.empty()) {
                 ExecSyncTask([uri, resources = resources_]() -> META_NS::IAny::Ptr {
                     if (resources) {
                         resources->StoreBitmap(uri, nullptr);
