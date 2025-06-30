@@ -60,8 +60,9 @@ struct BindMaps {
 void ProcessPushConstants(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum uniform_props[] = { flag, GL_LOCATION };
-    GLint inUse[BASE_NS::countof(uniform_props)] { 0 };
+    const GLenum uniformProperties[] = { flag, GL_LOCATION };
+    constexpr auto propertyCount = static_cast<GLsizei>(countof(uniformProperties));
+    GLint inUse[propertyCount] { 0 };
     for (auto& info : plat.infos) {
         // check for duplicates.. (there can be dupes since vertex and fragment both can use the same constant..)
         if (auto pos = std::find_if(map.pushConstants.begin(), map.pushConstants.end(),
@@ -71,8 +72,8 @@ void ProcessPushConstants(GLuint program, const ShaderModulePlatformDataGLES& pl
         } else {
             const GLuint index = glGetProgramResourceIndex(program, GL_UNIFORM, info.name.c_str());
             if (index != GL_INVALID_INDEX) {
-                glGetProgramResourceiv(program, GL_UNIFORM, index, (GLsizei)countof(uniform_props), uniform_props,
-                    (GLsizei)sizeof(inUse), &len, inUse);
+                glGetProgramResourceiv(
+                    program, GL_UNIFORM, index, propertyCount, uniformProperties, propertyCount, &len, inUse);
                 if (inUse[0]) {
                     map.pushConstants.push_back(info);
                     map.pushConstants.back().location = inUse[1];
@@ -86,15 +87,16 @@ void ProcessStorageBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
 {
 #if defined(RENDER_VALIDATION_ENABLED) && (RENDER_VALIDATION_ENABLED)
     GLsizei len;
-    const GLenum block_props[] = { flag, GL_BUFFER_BINDING };
-    GLint inUse[BASE_NS::countof(block_props)] { 0 };
+    const GLenum blockProperties[] = { flag, GL_BUFFER_BINDING };
+    constexpr auto propertyCount = static_cast<GLsizei>(countof(blockProperties));
+    GLint inUse[propertyCount] { 0 };
     for (const auto& t : plat.sbSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
         const GLuint index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, t.name.c_str());
         if (index != GL_INVALID_INDEX) {
-            glGetProgramResourceiv(program, GL_SHADER_STORAGE_BLOCK, index, (GLsizei)countof(block_props), block_props,
-                (GLsizei)sizeof(inUse), &len, inUse);
+            glGetProgramResourceiv(
+                program, GL_SHADER_STORAGE_BLOCK, index, propertyCount, blockProperties, propertyCount, &len, inUse);
             if (inUse[0]) {
                 const uint8_t fi = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                 if (inUse[1] != (fi - 1)) {
@@ -109,13 +111,13 @@ void ProcessStorageBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
 void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum block_props[] = { flag, GL_BUFFER_BINDING };
-    GLint inUse[BASE_NS::countof(block_props)] { 0 };
+    const GLenum blockProperties[] = { flag, GL_BUFFER_BINDING };
+    constexpr auto propertyCount = static_cast<GLsizei>(countof(blockProperties));
+    GLint inUse[propertyCount] { 0 };
     for (const auto& t : plat.ubSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
         if (t.arrayElements > 1) {
-            GLint inUse2[BASE_NS::countof(block_props)] { 0 };
             // need to handle arrays separately, (since each index is a separate resource..)
             uint8_t& fi = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
             fi = (uint8_t)(map.maxUniformBinding + 1);
@@ -127,12 +129,13 @@ void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
                 tmp += '[';
                 tmp += iStr;
                 tmp += ']';
-                const GLuint elementIndex = glGetProgramResourceIndex(program, GL_UNIFORM_BLOCK, tmp.c_str());
-                glGetProgramResourceiv(program, GL_UNIFORM_BLOCK, elementIndex, (GLsizei)countof(block_props),
-                    block_props, (GLsizei)sizeof(inUse2), &len, inUse2);
                 /*
                  * we could do this optimization, but currently no way to signal backend that array element is not in
                  * use.
+                 * GLint inUse2[propertyCount] { 0 };
+                 * const GLuint elementIndex = glGetProgramResourceIndex(program, GL_UNIFORM_BLOCK, tmp.c_str());
+                 * glGetProgramResourceiv(program, GL_UNIFORM_BLOCK, elementIndex, propertyCount,
+                 *   blockProperties, propertyCount, &len, inUse2);                 
                  * if (inUse2[0]) {
                  *     uint8_t& fi = map.uniformBindingSets.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                  *     fi = ++map.uniformBindingSets.maxBind;
@@ -147,8 +150,8 @@ void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
         } else {
             const GLuint index = glGetProgramResourceIndex(program, GL_UNIFORM_BLOCK, t.name.c_str());
             if (index != GL_INVALID_INDEX) {
-                glGetProgramResourceiv(program, GL_UNIFORM_BLOCK, index, (GLsizei)countof(block_props), block_props,
-                    (GLsizei)sizeof(inUse), &len, inUse);
+                glGetProgramResourceiv(
+                    program, GL_UNIFORM_BLOCK, index, propertyCount, blockProperties, propertyCount, &len, inUse);
                 if (inUse[0]) {
                     uint8_t& fi = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                     if (fi == 0) {
@@ -164,15 +167,16 @@ void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
 void ProcessImageTextures(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, const BindMaps& map)
 {
     GLsizei len;
-    const GLenum uniform_props[] = { flag, GL_LOCATION };
-    GLint inUse[BASE_NS::countof(uniform_props)] { 0 };
+    const GLenum uniformProperties[] = { flag, GL_LOCATION };
+    constexpr auto propertyCount = static_cast<GLsizei>(countof(uniformProperties));
+    GLint inUse[propertyCount] { 0 };
     for (const auto& t : plat.ciSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
         const GLuint index = glGetProgramResourceIndex(program, GL_UNIFORM, t.name.c_str());
         if (index != GL_INVALID_INDEX) {
-            glGetProgramResourceiv(program, GL_UNIFORM, index, (GLsizei)countof(uniform_props), uniform_props,
-                (GLsizei)sizeof(inUse), &len, inUse);
+            glGetProgramResourceiv(
+                program, GL_UNIFORM, index, propertyCount, uniformProperties, propertyCount, &len, inUse);
             if (inUse[0]) {
                 const uint8_t& fi = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                 GLint unit = 0;
@@ -188,7 +192,8 @@ void ProcessCombinedSamplers(GLuint program, const ShaderModulePlatformDataGLES&
 {
     GLsizei len;
     const GLenum props[] = { flag, GL_LOCATION };
-    GLint inUse[BASE_NS::countof(props)] { 0 };
+    constexpr auto propertyCount = static_cast<GLsizei>(countof(props));
+    GLint inUse[propertyCount] { 0 };
     for (const auto& t : plat.combSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
@@ -196,9 +201,8 @@ void ProcessCombinedSamplers(GLuint program, const ShaderModulePlatformDataGLES&
         PLUGIN_ASSERT(t.sBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
         const GLuint index = glGetProgramResourceIndex(program, GL_UNIFORM, t.name.c_str());
         if (index != GL_INVALID_INDEX) {
-            glGetProgramResourceiv(
-                program, GL_UNIFORM, index, (GLsizei)countof(props), props, (GLsizei)sizeof(inUse), &len, inUse);
-            if (inUse[0]) {
+        glGetProgramResourceiv(program, GL_UNIFORM, index, propertyCount, props, propertyCount, &len, inUse);
+        if (inUse[0]) {
                 uint8_t& ii = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                 if (ii == 0) {
                     ii = ++map.maxTextureBinding;
@@ -223,15 +227,16 @@ void ProcessCombinedSamplers(GLuint program, const ShaderModulePlatformDataGLES&
 void ProcessSubPassInputs(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum uniform_props[] = { flag, GL_LOCATION };
-    GLint inUse[BASE_NS::countof(uniform_props)] { 0 };
+    const GLenum uniformProperties[] = { flag, GL_LOCATION };
+    constexpr auto propertyCount = static_cast<GLsizei>(countof(uniformProperties));
+    GLint inUse[propertyCount] { 0 };
     for (const auto& t : plat.siSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
         const GLuint index = glGetProgramResourceIndex(program, GL_UNIFORM, t.name.c_str());
         if (index != GL_INVALID_INDEX) {
-            glGetProgramResourceiv(program, GL_UNIFORM, index, (GLsizei)countof(uniform_props), uniform_props,
-                (GLsizei)sizeof(inUse), &len, inUse);
+            glGetProgramResourceiv(
+                program, GL_UNIFORM, index, propertyCount, uniformProperties, propertyCount, &len, inUse);
             if (inUse[0]) {
                 uint8_t& fi = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                 if (fi == 0) {
@@ -246,15 +251,16 @@ void ProcessSubPassInputs(GLuint program, const ShaderModulePlatformDataGLES& pl
 void ProcessSamplers(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum uniform_props[] = { flag, GL_LOCATION, GL_ARRAY_SIZE };
-    GLint inUse[BASE_NS::countof(uniform_props)] { 0 };
+    const GLenum uniformProperties[] = { flag, GL_LOCATION, GL_ARRAY_SIZE };
+    constexpr auto propertyCount = static_cast<GLsizei>(countof(uniformProperties));
+    GLint inUse[propertyCount] { 0 };
     for (const auto& t : plat.cbSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
         const GLuint index = glGetProgramResourceIndex(program, GL_UNIFORM, t.name.c_str());
         if (index != GL_INVALID_INDEX) {
-            glGetProgramResourceiv(program, GL_UNIFORM, index, (GLsizei)countof(uniform_props), uniform_props,
-                (GLsizei)sizeof(inUse), &len, inUse);
+            glGetProgramResourceiv(
+                program, GL_UNIFORM, index, propertyCount, uniformProperties, propertyCount, &len, inUse);
             if (inUse[0]) {
                 uint8_t& fi = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                 if (fi == 0) {
@@ -599,17 +605,17 @@ void GpuShaderProgramGLES::FilterInputs(GpuShaderProgramGLES& ret)
     GLint inputs;
     uint32_t inputLocations[Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES];
     enum propertyIndices { LOCATION = 0, VERTEX_REF = 1, FRAGMENT_REF = 2, MAX_INDEX };
-    const GLenum inputProps[] = { GL_LOCATION, GL_REFERENCED_BY_VERTEX_SHADER, GL_REFERENCED_BY_FRAGMENT_SHADER };
-    constexpr auto PropertyCount = static_cast<GLsizei>(countof(inputProps));
-    static_assert(PropertyCount == MAX_INDEX);
-    GLint values[PropertyCount];
+    constexpr GLenum inputProps[] = { GL_LOCATION, GL_REFERENCED_BY_VERTEX_SHADER, GL_REFERENCED_BY_FRAGMENT_SHADER };
+    constexpr auto propertyCount = static_cast<GLsizei>(countof(inputProps));
+    static_assert(propertyCount == MAX_INDEX);
+    GLint values[propertyCount];
     const auto program = static_cast<GLuint>(ret.plat_.program);
     glGetProgramInterfaceiv(program, GL_PROGRAM_INPUT, GL_ACTIVE_RESOURCES, &inputs);
     uint32_t inputsInUse = 0;
     for (GLint i = 0; i < inputs; i++) {
         GLsizei wrote;
-        glGetProgramResourceiv(program, GL_PROGRAM_INPUT, static_cast<GLuint>(i), PropertyCount, inputProps,
-            PropertyCount, &wrote, values);
+        glGetProgramResourceiv(program, GL_PROGRAM_INPUT, static_cast<GLuint>(i), propertyCount, inputProps,
+            propertyCount, &wrote, values);
         if ((values[LOCATION] != Gles::INVALID_LOCATION) &&
             ((values[VERTEX_REF] == GL_TRUE) || (values[FRAGMENT_REF] == GL_TRUE))) {
             inputLocations[inputsInUse] = static_cast<uint32_t>((values[LOCATION]));

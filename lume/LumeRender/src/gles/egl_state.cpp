@@ -492,7 +492,7 @@ void FillProperties(DevicePropertiesGLES& properties)
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &properties.uniformBufferOffsetAlignment);
     glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &properties.shaderStorageBufferOffsetAlignment);
 
-    glGetIntegerv(GL_MIN_SAMPLE_SHADING_VALUE, &properties.minSampleShadingValue);
+    glGetFloatv(GL_MIN_SAMPLE_SHADING_VALUE, &properties.minSampleShadingValue);
     glGetIntegerv(GL_MAX_DEBUG_GROUP_STACK_DEPTH, &properties.maxDebugGroupStackDepth);
     glGetIntegerv(GL_MAX_DEBUG_LOGGED_MESSAGES, &properties.maxDebugLoggedMessages);
     glGetIntegerv(GL_MAX_DEBUG_MESSAGE_LENGTH, &properties.maxDebugMessageLength);
