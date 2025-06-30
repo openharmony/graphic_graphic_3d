@@ -101,12 +101,15 @@ void Future::Cancel()
     }
 }
 
-void Future::ActivateContinuation(const ContinuationData& d, const IAny::Ptr& result)
+void Future::ActivateContinuation(ContinuationData d, const IAny::Ptr& result)
 {
     if (auto q = d.queue.lock()) {
         d.continuation->SetParam(result);
-        auto token = q->AddTask(d.continuation);
-        d.continuation->SetQueueInfo(q, token);
+        auto fut = interface_pointer_cast<IFutureSetInfo>(d.continuation->GetFuture());
+        auto token = q->AddTask(BASE_NS::move(d.continuation));
+        if (fut) {
+            fut->SetQueueInfo(q, token);
+        }
     } else if (d.runInline) {
         d.continuation->SetParam(result);
         d.continuation->Invoke();
@@ -121,7 +124,7 @@ void Future::ActivateContinuation(std::unique_lock<std::mutex>& lock)
     auto result = result_;
     lock.unlock();
     for (auto&& v : cdata) {
-        ActivateContinuation(v, result);
+        ActivateContinuation(BASE_NS::move(v), result);
     }
 }
 

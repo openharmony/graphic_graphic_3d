@@ -312,7 +312,7 @@ napi_value RenderContextJS::CreateImage(NapiApi::FunctionContext<NapiApi::Object
         return bitmap;
     };
 
-    auto convertToJs = [promise, uri, contextRef = NapiApi::StrongRef(ctx.This()), resources = resources_.lock(),
+    auto convertToJs = [promise, uri, contextRef = NapiApi::StrongRef(ctx.This()), resources = GetResources(),
                            paramRef = NapiApi::StrongRef(resourceParams)](SCENE_NS::IBitmap::Ptr bitmap) mutable {
         if (!bitmap) {
             promise.Reject(BASE_NS::string { "Failed to load image from URI " }.append(uri));
