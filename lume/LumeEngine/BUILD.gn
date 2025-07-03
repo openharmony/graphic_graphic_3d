@@ -288,6 +288,14 @@ lume_rofs("lume_engine_rofs")
     output_obj = "${CORE_ROFS}_64.o"
   }
 
+  if (target_cpu == "x86") {
+    output_obj = "${CORE_ROFS}_x32.o"
+  }
+
+  if (target_cpu == "x64") {
+    output_obj = "${CORE_ROFS}_x64.o"
+  }
+
   outputs = "${target_gen_dir}/assets/${output_obj}"
 
   tool_path = "$target_gen_dir/../LumeBinaryCompile/lumeassetcompiler"
@@ -315,6 +323,14 @@ source_set("lume_engine_rofs_obj") {
 
   if (target_cpu == "arm64") {
     output_obj = "${CORE_ROFS}_64.o"
+  }
+
+  if (target_cpu == "x86") {
+    output_obj = "${CORE_ROFS}_x32.o"
+  }
+
+  if (target_cpu == "x64") {
+    output_obj = "${CORE_ROFS}_x64.o"
   }
 
   sources = [
