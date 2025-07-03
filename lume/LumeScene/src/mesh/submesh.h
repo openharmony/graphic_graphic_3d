@@ -22,8 +22,8 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 
-#include "../component/mesh_component.h"
-#include "../util_interfaces.h"
+#include "component/mesh_component.h"
+#include "util_interfaces.h"
 
 SCENE_BEGIN_NAMESPACE()
 

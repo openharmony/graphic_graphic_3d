@@ -17,7 +17,7 @@
 
 #include <base/containers/string.h>
 
-#include "../TrueRootObject.h"
+#include "TrueRootObject.h"
 #include "function.h"
 #include "utils.h"
 

@@ -47,7 +47,7 @@
 #include <core/intf_engine.h>
 #include <render/intf_render_context.h>
 
-#include "../ecs_component/entity_owner_component_info.h"
+#include "ecs_component/entity_owner_component_info.h"
 #include "ecs_listener.h"
 
 SCENE_BEGIN_NAMESPACE()

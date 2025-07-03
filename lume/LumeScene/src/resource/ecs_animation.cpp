@@ -21,7 +21,7 @@
 #include <meta/interface/animation/modifiers/intf_loop.h>
 #include <meta/interface/animation/modifiers/intf_speed.h>
 
-#include "../converting_value.h"
+#include "converting_value.h"
 
 SCENE_BEGIN_NAMESPACE()
 
