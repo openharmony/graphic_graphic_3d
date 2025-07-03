@@ -27,7 +27,7 @@
 #include <meta/ext/resource/resource.h>
 #include <meta/interface/resource/intf_resource.h>
 
-#include "../component/environment_component.h"
+#include "component/environment_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 
