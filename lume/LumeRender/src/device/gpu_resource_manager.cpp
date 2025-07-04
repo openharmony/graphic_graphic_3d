@@ -599,22 +599,22 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
     GpuBufferDesc validDesc = GetValidGpuBufferDesc(desc);
     CheckAndEnableMemoryOptimizations(gpuResourceMgrFlags_, validDesc);
     {
-        PerManagerStore& store = bufferStore_;
-        const auto lock = std::lock_guard(store.clientMutex);
+        const auto lock = std::lock_guard(bufferStore_.clientMutex);
 
         // check if present (not locked inside)
-        handle = GetHandleNoLock(store, name);
-        // create
-        if (!handle) {
-            if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
-                device_.Activate();
-            }
+        handle = GetHandleNoLock(bufferStore_, name);
+    }
+    // create
+    if (!handle) {
+        if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
+            device_.Activate();
+        }
 
-            handle = CreateBuffer(name, {}, validDesc).handle;
+        const auto lock = std::lock_guard(bufferStore_.clientMutex);
+        handle = CreateBuffer(name, {}, validDesc).handle;
 
-            if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
-                device_.Deactivate();
-            }
+        if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
+            device_.Deactivate();
         }
     }
     return handle;
@@ -2118,6 +2118,11 @@ void* GpuResourceManager::MapBufferMemory(const RenderHandle& handle) const
         }
 #endif
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
+        // with gl MapMemory may require context to be active. Activate grabs a mutex which must be before clientMutex.
+        const bool isOpenGl = (device_.GetBackendType() != DeviceBackendType::VULKAN);
+        if (isOpenGl) {
+            device_.Activate();
+        }
         const auto clientLock = std::lock_guard(bufferStore_.clientMutex);
         if (isCreatedImmediate && (arrayIndex < static_cast<uint32_t>(bufferStore_.clientHandles.size()))) {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -2128,6 +2133,9 @@ void* GpuResourceManager::MapBufferMemory(const RenderHandle& handle) const
             if (bufferStore_.additionalData[arrayIndex].resourcePtr) {
                 data = (reinterpret_cast<GpuBuffer*>(bufferStore_.additionalData[arrayIndex].resourcePtr))->MapMemory();
             }
+        }
+        if (isOpenGl) {
+            device_.Deactivate();
         }
     } else if (GpuBuffer* buffer = GetBuffer(handle); buffer) {
         data = buffer->MapMemory();
@@ -2146,6 +2154,11 @@ void GpuResourceManager::UnmapBuffer(const RenderHandle& handle) const
     if (isOutsideRendererMappable) {
         const bool isCreatedImmediate = RenderHandleUtil::IsImmediatelyCreated(handle);
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(handle);
+        // with gl Unmap may require context to be active. Activate grabs a mutex which must be before clientMutex.
+        const bool isOpenGl = (device_.GetBackendType() != DeviceBackendType::VULKAN);
+        if (isOpenGl) {
+            device_.Activate();
+        }
         const auto clientLock = std::lock_guard(bufferStore_.clientMutex);
         if (isCreatedImmediate && (arrayIndex < static_cast<uint32_t>(bufferStore_.clientHandles.size()))) {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -2156,6 +2169,9 @@ void GpuResourceManager::UnmapBuffer(const RenderHandle& handle) const
             if (bufferStore_.additionalData[arrayIndex].resourcePtr) {
                 (reinterpret_cast<GpuBuffer*>(bufferStore_.additionalData[arrayIndex].resourcePtr))->Unmap();
             }
+        }
+        if (isOpenGl) {
+            device_.Deactivate();
         }
     } else if (const GpuBuffer* buffer = GetBuffer(handle); buffer) {
         buffer->Unmap();
