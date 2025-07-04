@@ -37,7 +37,13 @@ META_BEGIN_NAMESPACE()
 
 class ContinuationQueueTask;
 
-class Future final : public IntroduceInterfaces<IFuture> {
+class IFutureSetInfo : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IFutureSetInfo, "3aad605c-080f-447a-b013-f1f7d68216ba")
+public:
+    virtual void SetQueueInfo(const ITaskQueue::Ptr& queue, ITaskQueue::Token token) = 0;
+};
+
+class Future final : public IntroduceInterfaces<IFuture, IFutureSetInfo> {
 public:
     StateType GetState() const override;
     StateType Wait() const override;
@@ -49,7 +55,7 @@ public:
     void SetResult(IAny::Ptr p);
     void SetAbandoned();
 
-    void SetQueueInfo(const ITaskQueue::Ptr& queue, ITaskQueue::Token token);
+    void SetQueueInfo(const ITaskQueue::Ptr& queue, ITaskQueue::Token token) override;
 
 private:
     // Then continuation support
@@ -60,7 +66,7 @@ private:
     };
 
     void ActivateContinuation(std::unique_lock<std::mutex>& lock);
-    void ActivateContinuation(const ContinuationData& d, const IAny::Ptr& result);
+    void ActivateContinuation(ContinuationData d, const IAny::Ptr& result);
 
 private:
     mutable std::mutex mutex_;
