@@ -135,7 +135,7 @@ void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
                  * GLint inUse2[propertyCount] { 0 };
                  * const GLuint elementIndex = glGetProgramResourceIndex(program, GL_UNIFORM_BLOCK, tmp.c_str());
                  * glGetProgramResourceiv(program, GL_UNIFORM_BLOCK, elementIndex, propertyCount,
-                 *   blockProperties, propertyCount, &len, inUse2);                 
+                 *   blockProperties, propertyCount, &len, inUse2);
                  * if (inUse2[0]) {
                  *     uint8_t& fi = map.uniformBindingSets.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                  *     fi = ++map.uniformBindingSets.maxBind;
