@@ -101,6 +101,7 @@ void TextureLayerImpl::SetParent(std::shared_ptr<Rosen::RSNode>& parent)
     RemoveChild();
 
     if (parent_ && rsNode_) {
+        rsNode_->SetRSUIContext(parent->GetRSUIContext());
         parent_->AddChild(rsNode_, 0); // second paramenter is added child at the index of parent's children;
     }
 }
@@ -202,7 +203,6 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
     if (!window) {
         WIDGET_LOGE("CreateNativeWindowFromSurface failed");
     }
-    rsUIDirector_->SendMessages();
 
     return reinterpret_cast<void *>(window);
 }
@@ -228,7 +228,6 @@ void TextureLayerImpl::ConfigWindow(float offsetX, float offsetY, float width, f
             return;
         }
         rsNode_->SetBounds(offsetX, offsetY, width, height);
-        rsUIDirector_->SendMessages();
     }
 }
 
