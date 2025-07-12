@@ -1027,7 +1027,7 @@ HWTEST_F(IoTest, ExistenceCheckTest, TestSize.Level1)
     protocol = "testPath";
     EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
 
-    std::string longStr(104, 'a');
+    std::string longStr(1024, 'a');
     BASE_NE::string_view sv(longStr.data(), longStr.size());
     EXPECT_TRUE(fileManager.ExistenceCheck(sv));
 
