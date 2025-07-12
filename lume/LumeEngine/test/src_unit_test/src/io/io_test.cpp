@@ -1006,3 +1006,32 @@ HWTEST_F(IoTest, FileModeTest, TestSize.Level1)
 
     EXPECT_FALSE(StdFile::Create("", IFile::Mode::READ_WRITE));
 }
+
+/**
+ * @tc.name: ExistenceCheckTest
+ * @tc.desc: test ExistenceCheck
+ * @tc.type: FUNC
+ */
+HWTEST_F(IoTest, ExistenceCheckTest, TestSize.Level1)
+{
+    auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
+    BASE_NE::string_view protocol;
+    EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
+
+    protocol = "";
+    EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
+
+    protocol = "\ntestPath";
+    EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
+
+    protocol = "testPath";
+    EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
+
+    std::string longStr(1024, 'a');
+    BASE_NE::string_view sv(longStr.data(), longStr.size());
+    EXPECT_TRUE(fileManager.ExistenceCheck(sv));
+
+    BASE_NE::string_view uriIn = "folder/subFolder";
+    fileManager.RegisterPath(protocol, uriIn, true);
+    EXPECT_FALSE(fileManager.ExistenceCheck(protocol));
+}
