@@ -83,6 +83,8 @@ public:
     napi_value CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
     // create sampler
     // create scene
+    // Register shader Path
+    napi_value RegisterResourcePath(NapiApi::FunctionContext<BASE_NS::string, BASE_NS::string>& ctx);
 
 private:
     CORE_NS::Mutex mutex_;

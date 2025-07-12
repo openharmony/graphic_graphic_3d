@@ -334,6 +334,16 @@ vector<string> FileManager::GetAbsolutePaths(const string_view uriIn) const
     return ret;
 }
 
+bool FileManager::ExistenceCheck(const string_view protocol)
+{
+    // Check if the proxy protocol exists already.
+    auto it = proxyFilesystems_.find(protocol);
+    if (it != proxyFilesystems_.end()) {
+        return false;
+    }
+    return true;
+}
+
 bool FileManager::RegisterPath(const string_view protocol, const string_view uriIn, bool prepend)
 {
     auto uri = FixPath(uriIn);

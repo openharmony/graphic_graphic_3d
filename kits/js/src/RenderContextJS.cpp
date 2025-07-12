@@ -131,6 +131,8 @@ void RenderContextJS::Init(napi_env env, napi_value exports)
             "createImage"),
         Method<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, RenderContextJS,
                &RenderContextJS::CreateMeshResource>("createMesh"),
+        Method<NapiApi::FunctionContext<BASE_NS::string, BASE_NS::string>, RenderContextJS,
+               &RenderContextJS::RegisterResourcePath>("registerResourcePath"),
     };
 
     napi_value func;
@@ -341,4 +343,43 @@ napi_value RenderContextJS::CreateImage(NapiApi::FunctionContext<NapiApi::Object
 napi_value RenderContextJS::CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx)
 {
     return ctx.GetUndefined();
+}
+
+napi_value RenderContextJS::RegisterResourcePath(NapiApi::FunctionContext<BASE_NS::string, BASE_NS::string>& ctx)
+{
+    using namespace RENDER_NS;
+
+    // 1.read current path of shader and protocol name
+    auto registerProtocol = ctx.Arg<0>().valueOrDefault();
+    auto resourcePath = ctx.Arg<1>().valueOrDefault();
+    LOG_E("register resource path is: [%s], register protocol is : [%s]",
+        resourcePath.c_str(), registerProtocol.c_str());
+    
+    // 2.Check Empty for path & protocol
+    if (resourcePath.empty() || registerProtocol.empty()) {
+        LOG_E("Invalid register path or protocol of assets given");
+        NapiApi::Value<bool> result(ctx.GetEnv(), false);
+        return result.ToNapiValue();
+    }
+
+    auto& obr = META_NS::GetObjectRegistry();
+    auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+    auto& fileManager = doc->GetProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext")
+                            ->GetValue()->GetRenderer()->GetEngine().GetFileManager();
+
+    // 3.Check if the proxy protocol exists already.
+    if (!(fileManager.ExistenceCheck(registerProtocol))) {
+        LOG_E("Register protocol exists already");
+        NapiApi::Value<bool> result(ctx.GetEnv(), false);
+        return result.ToNapiValue();
+    }
+    // 4.Check if the protocol is already declared. | Register now!
+    if (!(fileManager.RegisterPath(registerProtocol.c_str(), resourcePath.c_str(), false))) {
+        LOG_E("Register protocol declared already");
+        NapiApi::Value<bool> result(ctx.GetEnv(), false);
+        return result.ToNapiValue();
+    }
+
+    NapiApi::Value<bool> result(ctx.GetEnv(), true);
+    return result.ToNapiValue();
 }
