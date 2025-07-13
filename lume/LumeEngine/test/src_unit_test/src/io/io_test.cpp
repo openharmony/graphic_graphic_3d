@@ -1015,7 +1015,7 @@ HWTEST_F(IoTest, FileModeTest, TestSize.Level1)
 HWTEST_F(IoTest, ExistenceCheckTest, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
-    BASE_NE::string_view protocol;
+    BASE_NS::string_view protocol;
     EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
 
     protocol = "";
@@ -1028,10 +1028,10 @@ HWTEST_F(IoTest, ExistenceCheckTest, TestSize.Level1)
     EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
 
     std::string longStr(1024, 'a');
-    BASE_NE::string_view sv(longStr.data(), longStr.size());
+    BASE_NS::string_view sv(longStr.data(), longStr.size());
     EXPECT_TRUE(fileManager.ExistenceCheck(sv));
 
-    BASE_NE::string_view uriIn = "folder/subFolder";
+    BASE_NS::string_view uriIn = "/folder/subFolder";
     fileManager.RegisterPath(protocol, uriIn, true);
     EXPECT_FALSE(fileManager.ExistenceCheck(protocol));
 }
