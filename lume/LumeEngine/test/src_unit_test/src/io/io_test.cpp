@@ -1008,30 +1008,30 @@ HWTEST_F(IoTest, FileModeTest, TestSize.Level1)
 }
 
 /**
- * @tc.name: ExistenceCheckTest
- * @tc.desc: test ExistenceCheck
+ * @tc.name: CheckExistenceTest
+ * @tc.desc: test CheckExistence
  * @tc.type: FUNC
  */
-HWTEST_F(IoTest, ExistenceCheckTest, TestSize.Level1)
+HWTEST_F(IoTest, CheckExistenceTest, TestSize.Level1)
 {
     auto& fileManager = g_context.sceneInit_->GetEngineInstance().engine_->GetFileManager();
     BASE_NS::string_view protocol;
-    EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
+    EXPECT_TRUE(fileManager.CheckExistence(protocol));
 
     protocol = "";
-    EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
+    EXPECT_TRUE(fileManager.CheckExistence(protocol));
 
     protocol = "\ntestPath";
-    EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
+    EXPECT_TRUE(fileManager.CheckExistence(protocol));
 
     protocol = "testPath";
-    EXPECT_TRUE(fileManager.ExistenceCheck(protocol));
+    EXPECT_TRUE(fileManager.CheckExistence(protocol));
 
     std::string longStr(1024, 'a');
     BASE_NS::string_view sv(longStr.data(), longStr.size());
-    EXPECT_TRUE(fileManager.ExistenceCheck(sv));
+    EXPECT_TRUE(fileManager.CheckExistence(sv));
 
     BASE_NS::string_view uriIn = "/folder/subFolder";
     fileManager.RegisterPath(protocol, uriIn, true);
-    EXPECT_FALSE(fileManager.ExistenceCheck(protocol));
+    EXPECT_FALSE(fileManager.CheckExistence(protocol));
 }

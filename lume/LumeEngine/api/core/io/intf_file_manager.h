@@ -136,7 +136,7 @@ public:
     /** Check if the proxy protocol exists already for assets
      *  @param protocol Protocol to be registered
      */
-    virtual bool ExistenceCheck(BASE_NS::string_view protocol) = 0;
+    virtual bool CheckExistence(BASE_NS::string_view protocol) = 0;
 
     /** Register uri with given protocol for assets usage
      *  @param protocol Protocol to be registered
