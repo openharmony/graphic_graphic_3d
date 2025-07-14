@@ -358,8 +358,7 @@ napi_value RenderContextJS::RegisterResourcePath(NapiApi::FunctionContext<BASE_N
     // 2.Check Empty for path & protocol
     if (resourcePath.empty() || registerProtocol.empty()) {
         LOG_E("Invalid register path or protocol of assets given");
-        NapiApi::Value<bool> result(ctx.GetEnv(), false);
-        return result.ToNapiValue();
+        return ctx.GetBoolean(false);
     }
 
     auto& obr = META_NS::GetObjectRegistry();
@@ -368,18 +367,15 @@ napi_value RenderContextJS::RegisterResourcePath(NapiApi::FunctionContext<BASE_N
                             ->GetValue()->GetRenderer()->GetEngine().GetFileManager();
 
     // 3.Check if the proxy protocol exists already.
-    if (!(fileManager.ExistenceCheck(registerProtocol))) {
+    if (!(fileManager.CheckExistence(registerProtocol))) {
         LOG_E("Register protocol exists already");
-        NapiApi::Value<bool> result(ctx.GetEnv(), false);
-        return result.ToNapiValue();
+        return ctx.GetBoolean(false);
     }
     // 4.Check if the protocol is already declared. | Register now!
     if (!(fileManager.RegisterPath(registerProtocol.c_str(), resourcePath.c_str(), false))) {
         LOG_E("Register protocol declared already");
-        NapiApi::Value<bool> result(ctx.GetEnv(), false);
-        return result.ToNapiValue();
+        return ctx.GetBoolean(false);
     }
 
-    NapiApi::Value<bool> result(ctx.GetEnv(), true);
-    return result.ToNapiValue();
+    return ctx.GetBoolean(true);
 }

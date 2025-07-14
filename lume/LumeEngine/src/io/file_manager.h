@@ -60,7 +60,7 @@ public:
     void UnregisterAssetPath(BASE_NS::string_view uri) override;
 
     BASE_NS::vector<BASE_NS::string> GetAbsolutePaths(BASE_NS::string_view uri) const;
-    bool ExistenceCheck(BASE_NS::string_view protocol) override;
+    bool CheckExistence(BASE_NS::string_view protocol) override;
     bool RegisterPath(BASE_NS::string_view protocol, BASE_NS::string_view uri, bool prepend) override;
     void UnregisterPath(BASE_NS::string_view protocol, BASE_NS::string_view uri) override;
 
