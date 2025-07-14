@@ -142,7 +142,7 @@ void TextureLayerImpl::CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig 
     // Init: The first true indicates that RenderThread is created, and the second true indicates that multiple
     // instances are used. When multi-instance is not used, each process has a global RSUIDirector. When multi-instance
     // is used, each instance corresponds to one RSUIDirector.
-    rsUIDirector_->Init(true, true);
+    rsUIDirector_->Init(true, false); // the second params need to be true for adapting multi-instances
     auto rsUIContext = rsUIDirector_->GetRSUIContext();
     rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false, rsUIContext);
 }
