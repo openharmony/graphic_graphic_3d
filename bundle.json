@@ -136,20 +136,6 @@
             }
           },
           {
-            "name": "//foundation/graphic/graphic_3d/lume/LumeEngine:lume_component_help_src",
-            "header": {
-            "header_files": [
-              "ecshelper/ComponentTools/base_manager.h",
-              "ecshelper/ComponentTools/component_query.h",
-              "ecshelper/PropertyTools/property_api_impl.h",
-              "ecshelper/PropertyTools/property_data.h",
-              "ecshelper/PropertyTools/property_macros.h",
-              "ecshelper/PropertyTools/property_value.h"
-             ],
-             "header_base": "//foundation/graphic/graphic_3d/lume/LumeEngine"
-            }
-          },
-          {
             "header": {
               "header_base": "//foundation/graphic/graphic_3d/lume/LumeEngine/ecshelper",
               "header_files": [
