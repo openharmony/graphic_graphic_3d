@@ -97,7 +97,6 @@ bool WidgetAdapter::DrawFrame()
     WIDGET_SCOPED_TRACE_ARGS("WidgetAdpater::DrawFrame QOS:%d", firstFrame_);
     CHECK_NULL_PTR(engine_);
     if (firstFrame_) {
-        Widget3DQosScoped qos("WidgetAdapter::DrawFrame");
         firstFrame_ = false;
         PerformDrawFrame();
     } else {
@@ -140,7 +139,6 @@ bool WidgetAdapter::UpdateShaderPath(const std::string& shaderPath)
 
 bool WidgetAdapter::UpdateImageTexturePaths(const std::vector<std::string>& imageTextures)
 {
-    Widget3DQosScoped qos("WidgetAdapter::UpdateImageTexturePaths");
     CHECK_NULL_PTR(engine_);
     engine_->UpdateImageTexturePaths(imageTextures);
     return true;

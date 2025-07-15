@@ -68,7 +68,7 @@
 #include "ability.h"
 
 #include "data_ability_helper.h"
-
+#include <sys/resource.h>
 #include "napi_base_context.h"
 
 #include <render/implementation_uids.h>
@@ -95,7 +95,7 @@
 #include <EGL/eglext.h>
 #include <GLES/gl.h>
 #include <GLES/glext.h>
-
+#define ENGINE_SERVICE_PRIORITY (-20)
 namespace OHOS::Render3D {
 #define RETURN_IF_NULL(ptr)                                  \
     do {                                                     \
@@ -295,6 +295,7 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
     }
 
     auto engineInit = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([platformCreateInfo]() {
+        setpriority(0, 0, ENGINE_SERVICE_PRIORITY);
         auto &obr = META_NS::GetObjectRegistry();
         // Initialize lumeengine/render etc
         CORE_NS::EngineCreateInfo engineCreateInfo{platformCreateInfo, {}, {}};
