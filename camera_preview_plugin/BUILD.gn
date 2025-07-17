@@ -98,6 +98,14 @@ lume_rofs("CAM_PREVIEW_ROFS") {
     output_obj = "${CAM_PREVIEW_ROFS}_64.o"
   }
 
+  if (target_cpu == "x86") {
+    output_obj = "${CAM_PREVIEW_ROFS}_x32.o"
+  }
+
+  if (target_cpu == "x64") {
+    output_obj = "${CAM_PREVIEW_ROFS}_x64.o"
+  }
+
   outputs = "${target_gen_dir}/assets/${output_obj}"
 
   tool_path = "$target_gen_dir/../lume/LumeBinaryCompile/lumeassetcompiler"
@@ -130,6 +138,14 @@ source_set("campreview_rofs_obj") {
     output_obj = "${CAM_PREVIEW_ROFS}_64.o"
   }
 
+  if (target_cpu == "x86") {
+    output_obj = "${CAM_PREVIEW_ROFS}_x32.o"
+  }
+
+  if (target_cpu == "x64") {
+    output_obj = "${CAM_PREVIEW_ROFS}_x64.o"
+  }
+  
   sources = [ "${target_gen_dir}/assets/${output_obj}" ]
   deps = [ ":CAM_PREVIEW_ROFS" ]
 }

@@ -196,7 +196,7 @@ ohos_source_set("widget_adapter_source") {
 
     defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
 
-    if (target_cpu == "arm") {
+    if (target_cpu == "arm" || target_cpu == "x86") {
       defines += [
         "PLATFORM_CORE_ROOT_PATH=/system/lib/",
         "PLATFORM_CORE_PLUGIN_PATH=/system/lib/graphics3d/",
@@ -205,7 +205,7 @@ ohos_source_set("widget_adapter_source") {
       ]
     }
 
-    if (target_cpu == "arm64") {
+    if (target_cpu == "arm64" || target_cpu == "x64") {
       defines += [
         "PLATFORM_CORE_ROOT_PATH=/system/lib64/",
         "PLATFORM_CORE_PLUGIN_PATH=/system/lib64/graphics3d/",
