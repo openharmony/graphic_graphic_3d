@@ -1,0 +1,58 @@
+/*
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!namespace("graphics3d.ScenePostProcessSettings")
+
+enum ToneMappingType: i32 {
+    ACES = 0,
+    ACES_2020 = 1,
+    FILMIC = 2,
+}
+
+interface ToneMappingSettings {
+    @get getType(): Optional<ToneMappingType>;
+    @set setType(type: Optional<ToneMappingType>): void;
+
+    @get getExposure(): Optional<f64>;
+    @set setExposure(exposure: Optional<f64>): void;
+
+    @get getImpl(): Optional<i64>;
+}
+
+interface BloomSettings {
+    @get getThresholdHard(): Optional<f64>;
+    @set setThresholdHard(thresholdHard: Optional<f64>): void;
+
+    @get getThresholdSoft(): Optional<f64>;
+    @set setThresholdSoft(thresholdSoft: Optional<f64>): void;
+
+    @get getScaleFactor(): Optional<f64>;
+    @set setScaleFactor(scaleFactor: Optional<f64>): void;
+
+    @get getScatter(): Optional<f64>;
+    @set setScatter(scatter: Optional<f64>): void;
+
+    @get getImpl(): Optional<i64>;
+}
+
+interface PostProcessSettings {
+    @get getToneMapping(): Optional<ToneMappingSettings>;
+    @set setToneMapping(toneMapping: Optional<ToneMappingSettings>): void;
+
+    @get getBloom(): Optional<BloomSettings>;
+    @set setBloom(bloom: Optional<BloomSettings>): void;
+
+    @get getImpl(): Optional<i64>;
+}
