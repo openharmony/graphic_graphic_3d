@@ -325,21 +325,6 @@ InvokeReturn<std::shared_ptr<CameraETS>> SceneETS::CreateCamera(const std::strin
     camera->SetActive(false);
 
     camera->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
-#ifdef __PHYSICS_MODULE__
-    // DELETE WHEN FIX FORWARD BUG
-    // ai assistant: FORWARD/R16G16B16A16/MSAA     pre-loaded camera
-    // hair simulation: FORWARD/R8G8B8A8_SRGB/MSAA create camera
-    // soft body: FORWARD/R16G16B16A16/MSAA        create camera
-    if (OHOS::Render3D::SceneAdapter::IsHairPlugin()) {
-        pipeline = static_cast<uint32_t>(SCENE_NS::CameraPipeline::FORWARD);
-        uint32_t curBits = camera->PipelineFlags()->GetValue();
-        camera->PipelineFlags()->SetValue(curBits | static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::MSAA_BIT));
-        camera->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R8G8B8A8_SRGB}});
-    }
-    if (OHOS::Render3D::SceneAdapter::IsSoftbody()) {
-        pipeline = uint32_t(SCENE_NS::CameraPipeline::FORWARD);
-    }
-#endif
     camera->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
     return InvokeReturn(std::make_shared<CameraETS>(camera));
 }
