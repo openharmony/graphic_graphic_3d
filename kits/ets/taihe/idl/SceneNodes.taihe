@@ -1,0 +1,158 @@
+/*
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!sts_inject("""
+import { ResourceStr } from 'arkui.component.units';
+""")
+
+@!namespace("graphics3d.SceneNodes")
+
+from SceneResources use SceneResource, Mesh, MeshResource, Morpher;
+from SceneTypes use Quaternion, Color, Vec2, Vec3;
+from ScenePostProcessSettings use PostProcessSettings;
+from SceneTH use RaycastParameters, RaycastResult, SceneNodeParameters;
+
+interface LayerMask {
+    getEnabled(index: i32): bool;
+
+    setEnabled(index: i32, enabled: bool): void;
+}
+
+enum NodeType: i32 {
+    NODE = 1,
+    GEOMETRY = 2,
+    CAMERA = 3,
+    LIGHT = 4,
+}
+
+// TODO Container to be implemented
+
+interface Container {
+    append(item: Node): void;
+
+    insertAfter(item: Node, sibling: NodeOrNull): void;
+
+    remove(item: Node): void;
+
+    get(index: i32): NodeOrNull;
+
+    clear(): void;
+
+    count(): i32;
+}
+
+interface Node: SceneResource {
+    @get getPosition(): Vec3;
+    @set setPosition(pos: Vec3): void;
+
+    @get getRotation(): Quaternion;
+    @set setRotation(rotate: Quaternion): void;
+
+    @get getScale(): Vec3;
+    @set setScale(scale: Vec3): void;
+
+    @get getVisible(): bool;
+    @set setVisible(visible: bool): void;
+
+    @get getNodeType(): NodeType;
+
+    @get getLayerMask(): LayerMask;
+
+    @get getPath(): String;
+
+    @get getParent(): NodeOrNull;
+
+    @get getChildren(): Container;
+
+    getNodeByPath(path: String): NodeOrNull;
+
+    GetImpl(): i64;
+}
+
+union NodeOrNull {
+    node: Node;
+    @null nValue;
+}
+
+interface Geometry : Node {
+    @get getMesh(): Mesh;
+    @get getMorpher(): Optional<Morpher>;
+}
+
+enum LightType: i32 {
+    DIRECTIONAL = 1,
+    SPOT = 2,
+}
+
+interface Light: Node {
+    @get getLightType(): LightType;
+
+    @get getColor(): Color;
+    @set setColor(color: Color): void;
+
+    @get getIntensity(): f64;
+    @set setIntensity(intensity: f64): void;
+
+    @get getShadowEnabled(): bool;
+    @set setShadowEnabled(enabled: bool): void;
+
+    @get getEnabled(): bool;
+    @set setEnabled(enable: bool): void;
+}
+
+interface SpotLight: Light {
+}
+
+interface DirectionalLight: Light {
+}
+
+union LightTypeUnion {
+    directional: DirectionalLight;
+    spot: SpotLight;
+    base: Light;
+}
+
+union PostProcessSettingsOrNull {
+    postProcess: PostProcessSettings;
+    @null nValue;
+}
+
+union ColorOrNull {
+    color: Color;
+    @null nValue;
+}
+
+interface Camera: Node {
+    @get getFov(): f64;
+    @set setFov(fov: f64): void;
+
+    @get getNearPlane(): f64;
+    @set setNearPlane(nearPlane: f64): void;
+
+    @get getFarPlane(): f64;
+    @set setFarPlane(farPlane: f64): void;
+
+    @get getEnabled(): bool;
+    @set setEnabled(enabled: bool): void;
+
+    @get getPostProcess(): PostProcessSettingsOrNull;
+    @set setPostProcess(process: PostProcessSettingsOrNull): void;
+
+    @get getClearColor(): ColorOrNull;
+    @set setClearColor(color: ColorOrNull): void;
+
+    @gen_promise("raycast")
+    raycastSync(viewPosition: Vec2, params: RaycastParameters): Array<RaycastResult>;
+}

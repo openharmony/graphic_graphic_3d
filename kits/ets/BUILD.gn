@@ -1,0 +1,314 @@
+# Copyright (C) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//build/config/components/ets_frontend/ets2abc_config.gni")
+import("//build/ohos/taihe_idl/taihe.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+subsystem_name = "graphic"
+part_name = "graphic_3d"
+taihe_generated_file_path = "$taihe_file_path/out/$subsystem_name/$part_name"
+
+config("lume3d_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+    "${LUME_META_PATH}/include",
+    "${LUME_SCENE_PATH}/include",
+
+  ]
+
+  if (current_os == "ohos") {
+    include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
+  }
+
+  configs = [
+    "${LUME_ROOT}/LumeFont:lume_font_api",
+    "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
+  ]
+
+  cflags = [
+    "-Wall",
+    "-fexceptions",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+
+    "-Wno-nullability-completeness",
+    "-Wno-ignored-qualifiers",
+    "-Wno-switch",
+    "-Wno-overloaded-virtual",
+    "-Wno-parentheses",
+
+    "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "-DCORE_BUILD_2D = 0",
+    "-DCORE_BUILD_VULKAN=0",
+    "-DCORE_BUILD_GL=0",
+    "-DCORE_BUILD_GLES=1",
+    "-DCORE_DEV_ENABLED=0",
+    "-DCORE_TESTS_ENABLED=0",
+    "-DCORE_GL_DEBUG=0",
+    "-DCORE_VALIDATION_ENABLED = 0",
+    "-DCORE_VULKAN_VALIDATION_ENABLED = 0",
+    "-DCORE_EMBEDDED_ASSETS_ENABLED = 2",
+    "-DCORE_ENABLE_GPU_QUERIES=0",
+    "-DCORE_DEBUG_GPU_RESOURCE_IDS = 0",
+    "-DCORE_DEBUG_COMMAND_MARKERS_ENABLED = 0",
+    "-DCORE_DEBUG_MARKERS_ENABLED = 0",
+    "-DRENDER_HAS_GL_BACKEND=0",
+    "-DRENDER_HAS_GLES_BACKEND = 1",
+    "-DRENDER_HAS_VULKAN_BACKEND = 1",
+    "-DVK_USE_PLATFORM_OHOS = 1",
+    "-DCORE_LOG_NO_DEBUG=0",
+    "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
+    "-DCORE_LOG_TO_CONSOLE",
+    "-DCORE_DYNAMIC=1",
+  ]
+}
+
+copy_taihe_idl("copy_scene") {
+  sources = [
+    "taihe/idl/SceneTH.taihe",
+    "taihe/idl/SceneNodes.taihe",
+    "taihe/idl/ScenePostProcessSettings.taihe",
+    "taihe/idl/SceneResources.taihe",
+    "taihe/idl/SceneTypes.taihe",
+  ]
+}
+
+ohos_taihe("run_taihe") {
+  taihe_generated_file_path = "$taihe_generated_file_path"
+  deps = [ ":copy_scene" ]
+  outputs = [
+    "$taihe_generated_file_path/src/SceneTH.abi.c",
+    "$taihe_generated_file_path/src/SceneTH.ani.cpp",
+    "$taihe_generated_file_path/src/SceneNodes.abi.c",
+    "$taihe_generated_file_path/src/SceneNodes.ani.cpp",
+    "$taihe_generated_file_path/src/ScenePostProcessSettings.abi.c",
+    "$taihe_generated_file_path/src/ScenePostProcessSettings.ani.cpp",
+    "$taihe_generated_file_path/src/SceneResources.abi.c",
+    "$taihe_generated_file_path/src/SceneResources.ani.cpp",
+    "$taihe_generated_file_path/src/SceneTypes.abi.c",
+    "$taihe_generated_file_path/src/SceneTypes.ani.cpp",
+  ]
+}
+
+taihe_shared_library("scene_ani") {
+  taihe_generated_file_path = "$taihe_generated_file_path"
+  subsystem_name = "$subsystem_name"
+  part_name = "$part_name"
+  sources = get_target_outputs(":run_taihe")
+  include_dirs = [
+    "include",
+    "taihe/include",
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+    "${LUME_META_PATH}/include",
+    "${LUME_SCENE_PATH}/include",
+  ]
+
+  if (current_os == "ohos") {
+    include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
+  }
+
+  sources += [
+    "taihe/src/ani_constructor.cpp",
+    "taihe/src/AnimationImpl.cpp",
+    "taihe/src/ANIUtils.cpp",
+    "taihe/src/BlendImpl.cpp",
+    "taihe/src/BloomSettingsImpl.cpp",
+    "taihe/src/CameraImpl.cpp",
+    "taihe/src/EnvironmentImpl.cpp",
+    "taihe/src/GeometryImpl.cpp",
+    "taihe/src/ImageImpl.cpp",
+    "taihe/src/LightImpl.cpp",
+    "taihe/src/MaterialImpl.cpp",
+    "taihe/src/MaterialPropertyImpl.cpp",
+    "taihe/src/MeshImpl.cpp",
+    "taihe/src/MeshResourceImpl.cpp",
+    "taihe/src/MetallicRoughnessMaterialImpl.cpp",
+    "taihe/src/MorpherImpl.cpp",
+    "taihe/src/NodeImpl.cpp",
+    "taihe/src/PostProcessSettingsImpl.cpp",
+    "taihe/src/RenderContextImpl.cpp",
+    "taihe/src/RenderResourceFactoryImpl.cpp",
+    "taihe/src/RenderSortImpl.cpp",
+    "taihe/src/SamplerImpl.cpp",
+    "taihe/src/SceneImpl.cpp",
+    "taihe/src/SceneResourceFactoryImpl.cpp",
+    "taihe/src/SceneResourceImpl.cpp",
+    "taihe/src/SceneTypesImpl.cpp",
+    "taihe/src/ShaderImpl.cpp",
+    "taihe/src/ShaderMaterialImpl.cpp",
+    "taihe/src/SubMeshImpl.cpp",
+    "taihe/src/ToneMappingSettingsImpl.cpp",
+    "src/AnimationETS.cpp",
+    "src/BloomETS.cpp",
+    "src/CameraETS.cpp",
+    "src/ColorProxy.cpp",
+    "src/EnvironmentETS.cpp",
+    "src/geometry_definition/CubeETS.cpp",
+    "src/geometry_definition/CustomETS.cpp",
+    "src/geometry_definition/GeometryDefinition.cpp",
+    "src/geometry_definition/PlaneETS.cpp",
+    "src/geometry_definition/SphereETS.cpp",
+    "src/GeometryETS.cpp",
+    "src/ImageETS.cpp",
+    "src/LightETS.cpp",
+    "src/MeshETS.cpp",
+    "src/MeshResourceETS.cpp",
+    "src/MorpherETS.cpp",
+    "src/NodeETS.cpp",
+    "src/PostProcessETS.cpp",
+    "src/QuatProxy.cpp",
+    "src/SceneETS.cpp",
+    "src/SceneResourceETS.cpp",
+    "src/SubMeshETS.cpp",
+    "src/TonemapETS.cpp",
+    "src/Vec2Proxy.cpp",
+    "src/Vec3Proxy.cpp",
+    "src/Vec4Proxy.cpp",
+  ]
+
+  deps = [
+    ":run_taihe",
+    "../../3d_widget_adapter:lib3dWidgetAdapter",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "graphic_surface:surface",
+    "hilog:libhilog",
+    "hitrace:hitrace_meter",
+    "init:libbegetutil",
+  ]
+
+  configs = [
+    ":lume3d_config",
+    "../../3d_scene_adapter:scene_adapter_config",
+  ]
+}
+
+generate_static_abc("graphics3d_scene") {
+  base_url = "$taihe_generated_file_path"
+  files = [
+    "$taihe_generated_file_path/graphics3d.Scene.ets",
+  ]
+  is_boot_abc = "True"
+  device_dst_file = "/system/framework/graphics3d_scene.abc"
+  dependencies = [ ":run_taihe" ]
+}
+
+generate_static_abc("graphics3d_scene_nodes") {
+  base_url = "$taihe_generated_file_path"
+  files = [
+    "$taihe_generated_file_path/graphics3d.SceneNodes.ets",
+  ]
+  is_boot_abc = "True"
+  device_dst_file = "/system/framework/graphics3d_scene_nodes.abc"
+  dependencies = [ ":run_taihe" ]
+}
+
+generate_static_abc("graphics3d_scene_post_process_settings") {
+  base_url = "$taihe_generated_file_path"
+  files = [
+    "$taihe_generated_file_path/graphics3d.ScenePostProcessSettings.ets",
+  ]
+  is_boot_abc = "True"
+  device_dst_file = "/system/framework/graphics3d_scene_post_process_settings.abc"
+  dependencies = [ ":run_taihe" ]
+}
+
+generate_static_abc("graphics3d_scene_resources") {
+  base_url = "$taihe_generated_file_path"
+  files = [
+    "$taihe_generated_file_path/graphics3d.SceneResources.ets",
+  ]
+  is_boot_abc = "True"
+  device_dst_file = "/system/framework/graphics3d_scene_resources.abc"
+  dependencies = [ ":run_taihe" ]
+}
+
+generate_static_abc("graphics3d_scene_types") {
+  base_url = "$taihe_generated_file_path"
+  files = [
+    "$taihe_generated_file_path/graphics3d.SceneTypes.ets",
+  ]
+  is_boot_abc = "True"
+  device_dst_file = "/system/framework/graphics3d_scene_types.abc"
+  dependencies = [ ":run_taihe" ]
+}
+
+ohos_prebuilt_etc("graphics3d_scene_etc") {
+  source = "$target_out_dir/graphics3d_scene.abc"
+  module_install_dir = "framework"
+  subsystem_name = "$subsystem_name"
+  part_name = "$part_name"
+  deps = [ ":graphics3d_scene" ]
+}
+
+ohos_prebuilt_etc("graphics3d_scene_nodes_etc") {
+  source = "$target_out_dir/graphics3d_scene_nodes.abc"
+  module_install_dir = "framework"
+  subsystem_name = "$subsystem_name"
+  part_name = "$part_name"
+  deps = [ ":graphics3d_scene_nodes" ]
+}
+
+ohos_prebuilt_etc("graphics3d_scene_post_process_settings_etc") {
+  source = "$target_out_dir/graphics3d_scene_post_process_settings.abc"
+  module_install_dir = "framework"
+  subsystem_name = "$subsystem_name"
+  part_name = "$part_name"
+  deps = [ ":graphics3d_scene_post_process_settings" ]
+}
+
+ohos_prebuilt_etc("graphics3d_scene_resources_etc") {
+  source = "$target_out_dir/graphics3d_scene_resources.abc"
+  module_install_dir = "framework"
+  subsystem_name = "$subsystem_name"
+  part_name = "$part_name"
+  deps = [ ":graphics3d_scene_resources" ]
+}
+
+ohos_prebuilt_etc("graphics3d_scene_types_etc") {
+  source = "$target_out_dir/graphics3d_scene_types.abc"
+  module_install_dir = "framework"
+  subsystem_name = "$subsystem_name"
+  part_name = "$part_name"
+  deps = [ ":graphics3d_scene_types" ]
+}
+
+group("graphics_3d_taihe") {
+  deps = [
+    ":graphics3d_scene_etc",
+    ":graphics3d_scene_nodes_etc",
+    ":graphics3d_scene_post_process_settings_etc",
+    ":graphics3d_scene_resources_etc",
+    ":graphics3d_scene_types_etc",
+    ":scene_ani",
+  ]
+}

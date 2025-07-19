@@ -1,0 +1,283 @@
+/*
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!sts_inject("""
+import { ResourceStr } from 'arkui.component.units';
+""")
+
+@!namespace("graphics3d.SceneResources")
+
+from SceneTypes use Vec2, Vec3, Vec4, Aabb, GeometryDefinition, GeometryDefinitionType;
+from SceneTH use SceneResourceParameters;
+
+enum SceneResourceType: i32 {
+    UNKNOWN = 0,
+    NODE = 1,
+    ENVIRONMENT = 2,
+    MATERIAL = 3,
+    MESH = 4,
+    ANIMATION = 5,
+    SHADER = 6,
+    IMAGE = 7,
+    MESH_RESOURCE = 8,
+}
+
+interface SceneResource {
+    @get getName(): String;
+    @set setName(name: String): void;
+
+    @get getResourceType(): SceneResourceType;
+
+    @get getUri(): Optional<@sts_type("ResourceStr") Opaque>;
+
+    destroy(): void;
+}
+
+enum MaterialType: i32 {
+    SHADER = 1,
+    METALLIC_ROUGHNESS = 2,
+}
+
+enum CullMode: i32 {
+    NONE = 0,
+    FRONT = 1,
+    BACK = 2,
+}
+
+interface Blend {
+    @get getEnabled(): bool;
+    @set setEnabled(enable: bool): void;
+}
+
+interface RenderSort {
+    @get getRenderSortLayer(): Optional<i32>;
+    @set setRenderSortLayer(value: Optional<i32>): void;
+
+    @get getRenderSortLayerOrder(): Optional<i32>;
+    @set setRenderSortLayerOrder(value: Optional<i32>): void;
+}
+
+interface Material : SceneResource {
+    @get getMaterialType(): MaterialType;
+
+    @get getShadowReceiver(): Optional<bool>;
+    @set setShadowReceiver(value: Optional<bool>): void;
+
+    @get getCullMode(): Optional<CullMode>;
+    @set setCullMode(mode: Optional<CullMode>): void;
+
+    @get getBlend(): Optional<Blend>;
+    @set setBlend(blend: Optional<Blend>): void;
+
+    @get getAlphaCutoff(): Optional<f64>;
+    @set setAlphaCutoff(cutoff: Optional<f64>): void;
+
+    @get getRenderSort(): Optional<RenderSort>;
+    @set setRenderSort(renderSort: Optional<RenderSort>): void;
+}
+
+enum SamplerFilter: i32 {
+    NEAREST = 0,
+    LINEAR = 1,
+}
+
+enum SamplerAddressMode: i32 {
+    REPEAT = 0,
+    MIRRORED_REPEAT = 1,
+    CLAMP_TO_EDGE = 2,
+}
+
+interface Sampler {
+    @get getMagFilter(): Optional<SamplerFilter>;
+    @set setMagFilter(filter: Optional<SamplerFilter>): void;
+
+    @get getMinFilter(): Optional<SamplerFilter>;
+    @set setMinFilter(filter: Optional<SamplerFilter>): void;
+
+    @get getMipMapMode(): Optional<SamplerFilter>;
+    @set setMipMapMode(mode: Optional<SamplerFilter>): void;
+
+    @get getAddressModeU(): Optional<SamplerAddressMode>;
+    @set setAddressModeU(mode: Optional<SamplerAddressMode>): void;
+
+    @get getAddressModeV(): Optional<SamplerAddressMode>;
+    @set setAddressModeV(mode: Optional<SamplerAddressMode>): void;
+}
+
+union ImageOrNull {
+    image: Image;
+    @null nValue;
+}
+
+union ImageOrNullOrUndefined {
+    image: Image;
+    @null nValue;
+    @undefined uValue;
+}
+
+interface MaterialProperty {
+    @get getImage(): ImageOrNull;
+    @set setImage(img: ImageOrNull): void;
+
+    @get getFactor(): Vec4;
+    @set setFactor(factor: Vec4): void;
+
+    @get getSampler(): Optional<Sampler>;
+    @set setSampler(sampler: Optional<Sampler>): void;
+}
+
+interface MetallicRoughnessMaterial : Material {
+    @get getBaseColor(): MaterialProperty;
+    @set setBaseColor(color: MaterialProperty): void;
+
+    @get getNormal(): MaterialProperty;
+    @set setNormal(normal: MaterialProperty): void;
+
+    @get getMaterial(): MaterialProperty;
+    @set setMaterial(material: MaterialProperty): void;
+
+    @get getAmbientOcclusion(): MaterialProperty;
+    @set setAmbientOcclusion(ao: MaterialProperty): void;
+
+    @get getEmissive(): MaterialProperty;
+    @set setEmissive(emissive: MaterialProperty): void;
+
+    @get getClearCoat(): MaterialProperty;
+    @set setClearCoat(clearCoat: MaterialProperty): void;
+
+    @get getClearCoatRoughness(): MaterialProperty;
+    @set setClearCoatRoughness(roughness: MaterialProperty): void;
+
+    @get getClearCoatNormal(): MaterialProperty;
+    @set setClearCoatNormal(normal: MaterialProperty): void;
+
+    @get getSheen(): MaterialProperty;
+    @set setSheen(sheen: MaterialProperty): void;
+
+    @get getSpecular(): MaterialProperty;
+    @set setSpecular(specular: MaterialProperty): void;
+}
+
+interface ShaderMaterial : Material {
+    @get getColorShader(): Optional<Shader>;
+    @set setColorShader(shader: Optional<Shader>): void;
+}
+
+interface SubMesh {
+    @get getName(): String;
+    @set setName(name: String): void;
+
+    @get getMaterial(): Material;
+    @set setMaterial(mat: Material): void;
+
+    @get getAabb(): Aabb;
+}
+
+interface Morpher {
+    @get getTargets(): @record Map<String, f64>;
+}
+
+interface Mesh : SceneResource {
+    @get getSubMeshes(): Array<SubMesh>;
+    @get getAabb(): Aabb;
+
+    @get getMaterialOverride(): Optional<Material>;
+    @set setMaterialOverride(mat: Optional<Material>): void;
+}
+
+interface MeshResource : SceneResource {
+    GetImpl(): i64;
+}
+
+interface Animation : SceneResource {
+    @get getEnabled(): bool;
+    @set setEnabled(enabled: bool): void;
+
+    @get getSpeed(): Optional<f64>;
+    @set setSpeed(speed: Optional<f64>): void;
+
+    @get getDuration(): f64;
+
+    @get getRunning(): bool;
+
+    @get getProgress(): f64;
+
+    onFinished(callback: () => void): void;
+
+    onStarted(callback: () => void): void;
+
+    pause(): void;
+
+    restart(): void;
+
+    seek(position: f64): void;
+
+    start(): void;
+
+    stop(): void;
+
+    finish(): void;
+}
+
+enum EnvironmentBackgroundType : i32 {
+    BACKGROUND_NONE = 0,
+    BACKGROUND_IMAGE = 1,
+    BACKGROUND_CUBEMAP = 2,
+    BACKGROUND_EQUIRECTANGULAR = 3,
+}
+
+interface Environment : SceneResource {
+    @get getBackgroundType(): EnvironmentBackgroundType;
+    @set setBackgroundType(type: EnvironmentBackgroundType): void;
+
+    @get getIndirectDiffuseFactor(): Vec4;
+    @set setIndirectDiffuseFactor(factor: Vec4): void;
+
+    @get getIndirectSpecularFactor(): Vec4;
+    @set setIndirectSpecularFactor(factor: Vec4): void;
+
+    @get getEnvironmentMapFactor(): Vec4;
+    @set setEnvironmentMapFactor(factor: Vec4): void;
+
+    @get getEnvironmentImage(): ImageOrNullOrUndefined;
+    @set setEnvironmentImage(image: ImageOrNullOrUndefined): void;
+
+    @get getRadianceImage(): ImageOrNullOrUndefined;
+    @set setRadianceImage(image: ImageOrNullOrUndefined): void;
+
+    @get getIrradianceCoefficients(): Optional<Array<Vec3>>;
+    @set setIrradianceCoefficients(coefficients: Optional<Array<Vec3>>): void;
+
+    GetImpl(): i64;
+}
+
+interface Image : SceneResource {
+    @get getWidth(): i32;
+    @get getHeight(): i32;
+}
+
+union ShaderInputType {
+    t_bool: bool;
+    t_i32: i32;
+    t_f64: f64;
+    t_vec2: Vec2;
+    t_vec3: Vec3;
+    t_vec4: Vec4;
+    t_image: Image;
+}
+
+interface Shader : SceneResource {
+    @get getInputs(): @record Map<String, ShaderInputType>;
+}
