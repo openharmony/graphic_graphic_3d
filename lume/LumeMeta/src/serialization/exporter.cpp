@@ -308,7 +308,7 @@ ReturnError Exporter::ExportValue(const IAny& entity, ISerNode::Ptr& res)
 ReturnError Exporter::ExportAny(const IAny::ConstPtr& any, ISerNode::Ptr& res)
 {
     ReturnError err = GenericError::SUCCESS;
-    if (!registry_.GetPropertyRegister().IsAnyRegistered(any->GetClassId())) {
+    if (any && !registry_.GetPropertyRegister().IsAnyRegistered(any->GetClassId())) {
         CORE_LOG_W("Exporting any that is not registered [class id=%s, type=%s, type id=%s]",
             any->GetClassId().ToString().c_str(), any->GetTypeIdString().c_str(), any->GetTypeId().ToString().c_str());
     }

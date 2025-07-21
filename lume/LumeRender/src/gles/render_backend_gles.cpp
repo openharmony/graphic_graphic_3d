@@ -1657,10 +1657,10 @@ uint32_t RenderBackendGLES::ResolveMSAA(const RenderPassDesc& rpd, const RenderP
         const auto& srcPlat = static_cast<const GpuImagePlatformDataGL&>(srcImage->GetBasePlatformData());
         const auto& dstImage =
             gpuResourceMgr_.GetImage(rpd.attachmentHandles[currentSubPass.resolveAttachmentIndices[0U]]);
-        const auto& dstPlat = static_cast<const GpuImagePlatformDataGL&>(dstImage->GetBasePlatformData());
         if (dstImage == nullptr) {
             return GL_FRAMEBUFFER;
         }
+        const auto& dstPlat = static_cast<const GpuImagePlatformDataGL&>(dstImage->GetBasePlatformData());
         auto viewMask = currentSubPass.viewMask;
         auto layer = 0;
         while (viewMask) {
