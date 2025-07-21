@@ -869,7 +869,7 @@ public:
                 node.lastState_.parentNode = nullptr;
                 node.lastState_.depth = 0U;
             }
-            if (SceneNode* parent = GetNode(newParent); parent != &node) {
+            if (SceneNode* parent = GetNode(newParent); parent && parent != &node) {
                 // Set parent / child relationship.
                 parent->children_.push_back(&node);
                 node.lastState_.parent = newParent;

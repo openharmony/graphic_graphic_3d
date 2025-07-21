@@ -83,7 +83,9 @@ void RegisterClasses(napi_env env, napi_value exports)
         napi_value vec2_class = nullptr;
         napi_define_class(
             env, "Vec2", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(desc2), desc2, &vec2_class);
-        mis->StoreCtor("Vec2", vec2_class);
+        if (mis) {
+            mis->StoreCtor("Vec2", vec2_class);
+        }
 
         /// Vec3
         // clang-format off
@@ -96,7 +98,9 @@ void RegisterClasses(napi_env env, napi_value exports)
         napi_value vec3_class = nullptr;
         napi_define_class(
             env, "Vec3", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(desc3), desc3, &vec3_class);
-        mis->StoreCtor("Vec3", vec3_class);
+        if (mis) {
+            mis->StoreCtor("Vec3", vec3_class);
+        }
 
         /// Vec4
         // clang-format off
@@ -110,7 +114,9 @@ void RegisterClasses(napi_env env, napi_value exports)
         napi_value vec4_class = nullptr;
         napi_define_class(
             env, "Vec4", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(desc4), desc4, &vec4_class);
-        mis->StoreCtor("Vec4", vec4_class);
+        if (mis) {
+            mis->StoreCtor("Vec4", vec4_class);
+        }
 
         /// Quaternion
         // clang-format off
@@ -124,7 +130,9 @@ void RegisterClasses(napi_env env, napi_value exports)
         napi_value quaternion_class = nullptr;
         napi_define_class(env, "Quaternion", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(qdesc), qdesc,
             &quaternion_class);
-        mis->StoreCtor("Quaternion", quaternion_class);
+        if (mis) {
+            mis->StoreCtor("Quaternion", quaternion_class);
+        }
     }
 
     napi_value scene3dNS = exports;
