@@ -1583,10 +1583,7 @@ void LumeCommon::SetupCustomRenderTarget(const TextureInfo &info)
         CreateSwapchain(info.nativeWindow_);
         imageEntity = GetOrCreateEntityReference(ecs.GetEntityManager(), *rhcManager, swapchainHandle_);
     } else {
-        auto imageEntity =
-            CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(), *rhcManager, SetupGpuImageTarget());
-        auto depthEntity =
-            CORE3D_NS::GetOrCreateEntityReference(ecs.GetEntityManager(), *rhcManager, SetupGpuDepthTarget());
+        WIDGET_LOGE("cannot create swapchain");
     }
     cameraComponent->postProcess = postprocessEntity_;
     cameraComponent->customColorTargets.emplace_back(std::move(imageEntity));
