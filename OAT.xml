@@ -51,6 +51,7 @@
                 <filteritem type="filename" name="*.gltf" desc="test resource file,can not add license head"/>
                 <filteritem type="filename" name="*.scene" desc="test resource file,can not add license head"/>
                 <filteritem type="filename" name="*.prefab" desc="test resource file,can not add license head"/>
+                <filteritem type="filename" name="*.csv" desc="test resource file,can not add license head"/>
                 <!--filteritem type="filename" name="*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="abcdefg/.*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="projectroot/[a-zA-Z0-9]{20,}.sh" desc="Temp files"/-->
@@ -70,6 +71,7 @@
                 <filteritem type="filename" name="*.gltf" desc="test resource file,can not add license head"/>
                 <filteritem type="filename" name="*.scene" desc="test resource file,can not add license head"/>
                 <filteritem type="filename" name="*.prefab" desc="test resource file,can not add license head"/>
+                <filteritem type="filename" name="*.csv" desc="test resource file,can not add license head"/>
                 <!--filteritem type="filename" name="*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="abcdefg/.*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="projectroot/[a-zA-Z0-9]{20,}.sh" desc="Temp files"/-->
