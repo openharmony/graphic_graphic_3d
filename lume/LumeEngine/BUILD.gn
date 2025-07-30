@@ -409,6 +409,13 @@ ohos_source_set("lume_component_help_src") {
 }
 
 ohos_static_library("libComponentHelper") {
+  public_configs = [
+    ":lume_component_help_config",
+    ":lume_base_api",
+    ":lume_engine_api",
+    ":lume_default",
+  ]
+
   deps = [
     ":lume_component_help_src",
   ]
