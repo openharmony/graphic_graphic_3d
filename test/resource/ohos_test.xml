@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ -->
+<configuration ver="2.0">
+    <target name="lume_meta_test">
+        <preparer>
+            <option name="shell" value="mkdir -p /data/local/test_data/csv" src="res"/>
+            <option name="shell" value="mkdir -p /data/local/test_data/csv" src="res"/>
+            <option name="push" value="test_data/csv/basic.csv -> /data/local/test_data/csv/" src="res"/>
+            <option name="push" value="test_data/csv/complex.csv -> /data/local/test_data/csv/" src="res"/>
+            <option name="push" value="test_data/csv/invalid_content.csv -> /data/local/test_data/csv/" src="res"/>
+            <option name="push" value="test_data/csv/invalid_empty.csv -> /data/local/test_data/csv/" src="res"/>
+            <option name="push" value="test_data/csv/invalid_header.csv -> /data/local/test_data/csv/" src="res"/>
+            <option name="push" value="test_data/csv/invalid_structure.csv -> /data/local/test_data/csv/" src="res"/>
+            <option name="push" value="test_data/csv/multiline.csv -> /data/local/test_data/csv/" src="res"/>
+            <option name="push" value="test_data/csv/quotes.csv -> /data/local/test_data/csv/" src="res"/>
+            <option name="push" value="test_data/metav1/bind.json -> /data/local/test_data/metav1/" src="res"/>
+            <option name="push" value="test_data/metav1/local_strings.json -> /data/local/test_data/metav1/" src="res"/>
+            <option name="push" value="test_data/metav1/obj1.json -> /data/local/test_data/metav1/" src="res"/>
+            <option name="push" value="test_data/metav1/obj2.json -> /data/local/test_data/metav1/" src="res"/>
+            <option name="push" value="test_data/metav1/test_type_with_attachment.json -> /data/local/test_data/metav1/" src="res"/>
+            <option name="push" value="test_data/metav1/test_type.json -> /data/local/test_data/metav1/" src="res"/>
+            <option name="push" value="test_data/insert_test_assets_here.txt -> /data/local/test_data/" src="res"/>
+        </preparer>
+    </target>
+</configuration>

@@ -1,0 +1,113 @@
+{
+    "$meta": {
+        "version": "1.0"
+    },
+    "$root": {
+        "$classId": "766fadc7-1767-42fd-a60a-f974e25e6cc9",
+        "$name": "TestType",
+        "$instanceId": "0000ed3e-2c43-7ddc-94b5-d5c6bc71f7f1",
+        "$properties": {
+            "FloatProperty2": {
+                "$classId": "a00a62a9-42b2-0165-5072-6f7065727479",
+                "defaultValue": 0,
+                "flags": 179
+            },
+            "FloatProperty1": {
+                "$classId": "a00a62a9-42b2-0165-5072-6f7065727479",
+                "defaultValue": 0,
+                "flags": 179
+            },
+            "Second": {
+                "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                "value": "Hipshops",
+                "defaultValue": "",
+                "flags": 243
+            },
+            "MyIntArray": {
+                "$classId": "3c6e71cc-c85a-8ae8-5072-6f7065727479",
+                "defaultValue": [],
+                "flags": 179
+            },
+            "Vec3Property1": {
+                "$classId": "24fb1c29-d383-5a6f-5072-6f7065727479",
+                "defaultValue": [0, 0, 0],
+                "flags": 179
+            },
+            "Vec3Property2": {
+                "$classId": "24fb1c29-d383-5a6f-5072-6f7065727479",
+                "defaultValue": [0, 0, 0],
+                "flags": 179
+            },
+            "First": {
+                "$classId": "b6a8d81c-22be-419c-5072-6f7065727479",
+                "value": 2,
+                "defaultValue": 0,
+                "flags": 243
+            },
+            "MyConstIntArray": {
+                "$classId": "3c6e71cc-c85a-8ae8-5072-6f7065727479",
+                "value": [1, 2, 3, 4, 5],
+                "defaultValue": [1, 2, 3, 4, 5],
+                "flags": 225
+            },
+            "EmbeddedTestTypeProperty": {
+                "$classId": "34ff5d2c-94b1-741f-5072-6f7065727479",
+                "value": {
+                    "$classId": "4a3bd491-1111-4a9a-bcad-92530493be09",
+                    "$name": "EmbeddedTestType",
+                    "$instanceId": "0000ed3e-2c4e-c944-fa0b-79e84657fa89",
+                    "$properties": {
+                        "Property": {
+                            "$classId": "b6a8d81c-22be-419c-5072-6f7065727479",
+                            "defaultValue": 0,
+                            "flags": 179
+                        }
+                    }
+                },
+                "defaultValue": null,
+                "flags": 243
+            },
+            "Vec3Property3": {
+                "$classId": "24fb1c29-d383-5a6f-5072-6f7065727479",
+                "defaultValue": [0, 0, 0],
+                "flags": 179
+            },
+            "Third": {
+                "$classId": "b6a8d81c-22be-419c-5072-6f7065727479",
+                "defaultValue": 0,
+                "flags": 177
+            },
+            "Name": {
+                "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                "value": "",
+                "defaultValue": "",
+                "flags": 243
+            },
+            "MyTestTypeProperty2": {
+                "$classId": "549269ec-c59e-d1e4-5072-6f7065727479",
+                "defaultValue": {
+                    "$classId": "549269ec-c59e-d1e4-5479-706564416e79",
+                    "$name": "Any",
+                    "$instanceId": "0000ed3e-2c4a-e07c-f9f0-1cf13058b83e",
+                    "value": 0
+                },
+                "flags": 179
+            },
+            "MyTestTypeProperty1": {
+                "$classId": "549269ec-c59e-d1e4-5072-6f7065727479",
+                "defaultValue": {
+                    "$classId": "549269ec-c59e-d1e4-5479-706564416e79",
+                    "$name": "Any",
+                    "$instanceId": "0000ed3e-2c4a-3a14-2066-f030916c1d58",
+                    "value": 0
+                },
+                "flags": 179
+            },
+            "Fourth": {
+                "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                "defaultValue": "",
+                "flags": 179
+            }
+        }
+    }
+}
