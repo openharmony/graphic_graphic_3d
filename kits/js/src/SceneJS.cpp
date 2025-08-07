@@ -896,21 +896,44 @@ void SceneJS::SetRenderMode(NapiApi::FunctionContext<uint32_t>& ctx)
 napi_value SceneJS::RenderFrame(NapiApi::FunctionContext<>& ctx)
 {
     if (ctx.ArgCount() > 1) {
-        return ctx.GetUndefined();
-    }
-    auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
-    if (!scene) {
-        return ctx.GetUndefined();
+        CORE_LOG_E("render frame %d", __LINE__);
+        return ctx.GetBoolean(false);
     }
 
+#ifdef __SCENE_ADAPTER__
+    auto sceneAdapter = std::static_pointer_cast<OHOS::Render3D::SceneAdapter>(scene_);
+    if (sceneAdapter) {
+        auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
+        if (!scene) {
+            return ctx.GetBoolean(false);
+        }
+
+        // set RenderMode based on Arg<0>.alwaysRender
+        NapiApi::FunctionContext<NapiApi::Object> paramsCtx(ctx);
+        NapiApi::Object params = paramsCtx.Arg<0>();
+        bool alwaysRender = params.IsUndefinedOrNull("alwaysRender") ? true : params.Get<bool>("alwaysRender");
+        if (currentAlwaysRender_ != alwaysRender) {
+            currentAlwaysRender_ = alwaysRender;
+            scene->SetRenderMode(static_cast<SCENE_NS::RenderMode>(alwaysRender));
+        }
+
+        sceneAdapter->SetNeedsRepaint(false);
+        sceneAdapter->RenderFrame(false);
+    } else {
+        return ctx.GetBoolean(false);
+    }
+#else
+    auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
+    if (!scene) {
+        return ctx.GetBoolean(false);
+    }
     // todo: fix this
     // NapiApi::Object params = ctx.Arg<0>();
     // auto alwaysRender = params ? params.Get<bool>("alwaysRender") : true;
-
     if (auto sc = scene->GetInternalScene()) {
         sc->RenderFrame();
     }
-
+#endif
     return ctx.GetBoolean(true);
 }
 
