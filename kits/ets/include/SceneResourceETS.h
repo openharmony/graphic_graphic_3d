@@ -21,6 +21,7 @@
 #include <meta/api/util.h>
 #include <scene/interface/intf_scene.h>
 
+namespace OHOS::Render3D {
 class SceneResourceETS {
 public:
     enum SceneResourceType {
@@ -80,4 +81,5 @@ private:
     std::string name_; // Cache for name if object does not support naming
     std::string uri_;
 };
+}  // namespace OHOS::Render3D
 #endif  // SCENE_RESOURCE_ETS_H

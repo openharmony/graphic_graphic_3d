@@ -19,11 +19,12 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
+namespace OHOS::Render3D::KITETS {
 ::SceneResources::Image ImageImpl::createImageFromTH(SceneTH::SceneResourceParameters const &params)
 {
     WIDGET_LOGI("ImageImpl::createImageFromTH(), name: %{public}s", params.name.c_str());
     const std::string name(params.name);
-    const std::string uri = OHOS::Render3D::ExtractUri(params.uri);
+    const std::string uri = ExtractUri(params.uri);
     if (uri.empty() || name.empty()) {
         taihe::set_error("Invalid scene resource Image parameters given");
         return SceneResources::Image({nullptr, nullptr});
@@ -52,3 +53,4 @@ int32_t ImageImpl::getHeight()
 {
     return imageETS_->GetHeight();
 }
+}  // namespace OHOS::Render3D::KITETS

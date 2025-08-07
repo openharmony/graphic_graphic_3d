@@ -33,6 +33,7 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
+namespace OHOS::Render3D::KITETS {
 class RenderResourceFactoryImpl {
 public:
     RenderResourceFactoryImpl()
@@ -77,4 +78,5 @@ public:
         return SceneTH::loadScene(uri);
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_RENDER_RESOURCE_FACTORY_IMPL_H

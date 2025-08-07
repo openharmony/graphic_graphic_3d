@@ -15,6 +15,7 @@
 
 #include "MorpherETS.h"
 
+namespace OHOS::Render3D {
 MorpherETS::MorpherETS(const SCENE_NS::IMorpher::Ptr morpher) : morpher_(morpher)
 {}
 
@@ -46,3 +47,4 @@ void MorpherETS::Set(const std::string &name, const float weight)
     }
     morpher_->MorphWeights()->SetValueAt(index, weight);
 }
+}  // namespace OHOS::Render3D

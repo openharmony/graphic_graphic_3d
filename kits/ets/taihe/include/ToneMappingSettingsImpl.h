@@ -27,6 +27,7 @@
 
 #include "TonemapETS.h"
 
+namespace OHOS::Render3D::KITETS {
 class ToneMappingSettingsImpl {
     friend class PostProcessSettingsImpl;
 
@@ -48,4 +49,5 @@ public:
 private:
     std::shared_ptr<TonemapETS> tonemapETS_;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_TONE_MAPPING_SETTINGS_IMPL_H

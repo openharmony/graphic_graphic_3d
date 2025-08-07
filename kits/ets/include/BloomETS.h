@@ -22,6 +22,7 @@
 #include <scene/interface/postprocess/intf_bloom.h>
 #include <scene/interface/intf_postprocess.h>
 
+namespace OHOS::Render3D {
 class BloomETS {
 public:
     static std::shared_ptr<BloomETS> FromJS(
@@ -97,4 +98,5 @@ private:
     SCENE_NS::IPostProcess::WeakPtr postProc_;
     SCENE_NS::IBloom::Ptr bloom_;  // bloom object from postproc_
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_BLOOM_ETS_H

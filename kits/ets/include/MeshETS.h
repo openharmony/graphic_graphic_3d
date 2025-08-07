@@ -21,6 +21,7 @@
 #include "SubMeshETS.h"
 #include "SceneResourceETS.h"
 
+namespace OHOS::Render3D {
 class MeshETS : public SceneResourceETS {
 public:
     MeshETS(const SCENE_NS::IMesh::Ptr mesh);
@@ -38,4 +39,5 @@ public:
 private:
     SCENE_NS::IMesh::WeakPtr mesh_{nullptr};
 };
+}  // namespace OHOS::Render3D
 #endif  // MESH_ETS_H

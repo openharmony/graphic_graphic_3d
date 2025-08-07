@@ -15,6 +15,7 @@
 
 #include "QuatProxy.h"
 
+namespace OHOS::Render3D {
 QuatProxy::QuatProxy(const META_NS::Property<BASE_NS::Math::Quat> &prop) : PropertyProxy<BASE_NS::Math::Quat>(prop)
 {}
 
@@ -92,3 +93,4 @@ void QuatProxy::SetW(const float w)
     value.w = w;
     META_NS::SetValue(prop, value);
 }
+}  // namespace OHOS::Render3D

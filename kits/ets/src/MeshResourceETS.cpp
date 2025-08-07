@@ -18,8 +18,9 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
+namespace OHOS::Render3D {
 MeshResourceETS::MeshResourceETS(const std::string &name, const std::string &uri,
-    BASE_NS::unique_ptr<GeometryDefinition::GeometryDefinition> geometryDefinition)
+    BASE_NS::unique_ptr<Geometry::GeometryDefinition> geometryDefinition)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::MESH_RESOURCE)
 {
     WIDGET_LOGI("MeshResourceETS ++, name: %{public}s, uri:%{public}s", name.c_str(), uri.c_str());
@@ -51,3 +52,4 @@ SCENE_NS::IMesh::Ptr MeshResourceETS::CreateMesh(const SCENE_NS::IScene::Ptr &sc
     auto meshConfig = SCENE_NS::MeshConfig{};
     return geometryDefinition_->CreateMesh(meshCreator, meshConfig);
 }
+}  // namespace OHOS::Render3D

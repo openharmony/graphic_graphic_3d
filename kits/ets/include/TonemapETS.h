@@ -21,6 +21,7 @@
 #include <scene/interface/postprocess/intf_tonemap.h>
 #include <scene/interface/intf_postprocess.h>
 
+namespace OHOS::Render3D {
 class TonemapETS {
 public:
     enum ToneMappingType {
@@ -76,4 +77,5 @@ private:
     SCENE_NS::IPostProcess::WeakPtr postProc_;
     SCENE_NS::ITonemap::Ptr tonemap_;  // tonemap object from postproc_
 };
+}  // namespace OHOS::Render3D
 #endif // OHOS_3D_TONEMAP_ETS_H

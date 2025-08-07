@@ -14,3 +14,6 @@
  */
 
 #include "BlendImpl.h"
+
+namespace OHOS::Render3D::KITETS {
+}  // namespace OHOS::Render3D::KITETS

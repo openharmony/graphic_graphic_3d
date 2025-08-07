@@ -22,7 +22,7 @@
 
 #include "geometry_definition/GeometryDefinition.h"
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 class CustomETS : public GeometryDefinition {
 public:
@@ -52,5 +52,5 @@ private:
     BASE_NS::vector<BASE_NS::Color> colors_;
 };
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry
 #endif  // GEOMETRY_DEFINITION_CUSTOM_ETS_H

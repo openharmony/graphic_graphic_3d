@@ -28,6 +28,7 @@
 #include "ANIUtils.h"
 #include "SceneResourceETS.h"
 
+namespace OHOS::Render3D::KITETS {
 class SceneResourceImpl {
 public:
     SceneResourceImpl(const SceneResources::SceneResourceType &type, const std::shared_ptr<SceneResourceETS> srETS)
@@ -58,4 +59,5 @@ private:
     SceneResources::SceneResourceType type_;
     std::shared_ptr<SceneResourceETS> sceneResourceETS_{nullptr};
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SCENE_RESOURCE_IMPL_H

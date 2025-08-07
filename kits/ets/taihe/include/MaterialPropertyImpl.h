@@ -22,6 +22,7 @@
 
 #include "SceneResourceImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class MaterialPropertyImpl {
 public:
     MaterialPropertyImpl()
@@ -59,4 +60,5 @@ public:
         TH_THROW(std::runtime_error, "setSampler not implemented");
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MATERIAL_PROPERTY_IMPL_H

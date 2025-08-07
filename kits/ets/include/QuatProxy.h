@@ -20,6 +20,7 @@
 
 #include "PropertyProxy.h"
 
+namespace OHOS::Render3D {
 class QuatProxy : public PropertyProxy<BASE_NS::Math::Quat> {
 public:
     explicit QuatProxy(const META_NS::Property<BASE_NS::Math::Quat> &prop);
@@ -37,4 +38,5 @@ public:
     float GetW() const;
     void SetW(const float w);
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_QUAT_PROXY_H

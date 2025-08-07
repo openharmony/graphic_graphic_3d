@@ -15,6 +15,7 @@
 
 #include "SceneTypesImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 ::SceneTypes::CustomGeometry CreateCustomGeometry() {
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
@@ -38,7 +39,9 @@
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<SphereGeometryImpl, ::SceneTypes::SphereGeometry>();
 }
+}  // namespace OHOS::Render3D::KITETS
 
+using namespace OHOS::Render3D::KITETS;
 // Since these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
 TH_EXPORT_CPP_API_CreateCustomGeometry(CreateCustomGeometry);

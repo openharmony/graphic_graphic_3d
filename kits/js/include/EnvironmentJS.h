@@ -17,7 +17,7 @@
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 #include "Vec4Proxy.h"
-class EnvironmentJS : public BaseObject, SceneResourceImpl {
+class EnvironmentJS : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 90;
     static void Init(napi_env env, napi_value exports);

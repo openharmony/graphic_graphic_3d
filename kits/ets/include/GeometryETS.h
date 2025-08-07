@@ -27,6 +27,7 @@
 #include "MorpherETS.h"
 #include "NodeETS.h"
 
+namespace OHOS::Render3D {
 class GeometryETS : public NodeETS {
 public:
     static std::shared_ptr<GeometryETS> FromJS(const SCENE_NS::INode::Ptr meshNode, const std::string &name, const std::string &uri = "");
@@ -39,4 +40,5 @@ public:
 private:
     SCENE_NS::INode::WeakPtr meshNode_{nullptr};
 };
+}  // namespace OHOS::Render3D
 #endif

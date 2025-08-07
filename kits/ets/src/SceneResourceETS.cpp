@@ -17,6 +17,7 @@
 
 #include <meta/api/util.h>
 
+namespace OHOS::Render3D {
 SceneResourceETS::SceneResourceETS(SceneResourceType type) : type_(type)
 {
     CORE_LOG_D("SceneResourceETS ++");
@@ -73,3 +74,4 @@ std::string SceneResourceETS::GetUri() const
 {
     return uri_;
 }
+}  // namespace OHOS::Render3D

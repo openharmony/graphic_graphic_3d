@@ -15,6 +15,7 @@
 
 #include "PostProcessSettingsImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 std::shared_ptr<PostProcessETS> PostProcessSettingsImpl::CreateInternal(
     const ScenePostProcessSettings::ToneMappingSettings &tonemapData,
     const ScenePostProcessSettings::BloomSettings &bloomData)
@@ -96,3 +97,4 @@ void PostProcessSettingsImpl::setBloom(::taihe::optional_view<::ScenePostProcess
         }
     }
 }
+}  // namespace OHOS::Render3D::KITETS

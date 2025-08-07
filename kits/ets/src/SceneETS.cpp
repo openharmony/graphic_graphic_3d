@@ -138,6 +138,26 @@ SceneETS::SceneETS()
     WIDGET_LOGI("SceneETS::SceneETS()");
 }
 
+SceneETS::SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter)
+    : scene_(scene), sceneAdapter_(sceneAdapter)
+{
+    WIDGET_LOGI("SceneETS::SceneETS(scene)");
+    if (!scene_ || !sceneAdapter_) {
+        WIDGET_LOGE("invalid scene or sceneAdapter");
+        return;
+    }
+
+    SCENE_NS::IEnvironment::Ptr environment;
+    if (auto rc = scene_->RenderConfiguration()->GetValue()) {
+        environment = rc->Environment()->GetValue();
+    }
+    if (environment) {
+        environmentETS_ = std::make_shared<EnvironmentETS>(environment, scene_, "DefaultEnv");
+    } else {
+        WIDGET_LOGE("no environment in scene");
+    }
+}
+
 void SceneETS::AddScene(META_NS::IObjectRegistry *obr, SCENE_NS::IScene::Ptr scene)
 {
     if (!obr) {
@@ -193,9 +213,9 @@ bool SceneETS::Load(std::string uri)
         }
         uri[t] = '/';
     }
-    auto engineThreadTask = [this](SCENE_NS::IScene::Ptr scene) -> SCENE_NS::IScene::Ptr {
+    auto engineThreadTask = [this](SCENE_NS::IScene::Ptr scene) mutable {
         if (!scene || !scene->RenderConfiguration()->GetValue()) {
-            return {};
+            return;
         }
 
         // Make sure there's a valid root node
@@ -206,15 +226,7 @@ bool SceneETS::Load(std::string uri)
         // LEGACY COMPATIBILITY end
         auto &obr = META_NS::GetObjectRegistry();
         AddScene(&obr, scene);
-        return scene;
-    };
-    auto jsThreadTask = [this](SCENE_NS::IScene::Ptr scene) mutable {
-        if (!scene) {
-            return;
-        }
         scene_ = scene;
-        renderResourceMananager_ =
-            scene->CreateObject<SCENE_NS::IRenderResourceManager>(SCENE_NS::ClassId::RenderResourceManager).GetResult();
 
         auto curenv = GetEnvironment();
         if (!curenv) {
@@ -248,12 +260,10 @@ bool SceneETS::Load(std::string uri)
         return false;
     }
     auto params = interface_pointer_cast<META_NS::IMetadata>(META_NS::GetObjectRegistry().GetDefaultObjectContext());
-    auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
-    auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_RELEASE_THREAD);
+    auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD2);
 
     sceneManager->CreateScene(uri.c_str())
         .Then(BASE_NS::move(engineThreadTask), engineQ)
-        .Then(BASE_NS::move(jsThreadTask), jsQ)
         .Wait();
 
     return true;
@@ -261,11 +271,16 @@ bool SceneETS::Load(std::string uri)
 
 std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
 {
-    BASE_NS::vector<META_NS::IAnimation::Ptr> animRes = scene_->GetAnimations().GetResult();
+    BASE_NS::vector<META_NS::IAnimation::Ptr> animRes;
+    ExecSyncTask2([this, &animRes]() {
+        animRes = scene_->GetAnimations().GetResult();
+        return META_NS::IAny::Ptr {};
+    });
+
     std::vector<std::shared_ptr<AnimationETS>> animationETSlist;
     for (const auto &animationRef : animRes) {
         animationETSlist.emplace_back(std::make_shared<AnimationETS>(
-            interface_pointer_cast<META_NS::IObject>(animationRef)));  // use make_unique instead in the future.
+            interface_pointer_cast<META_NS::IObject>(animationRef), scene_));  // use make_unique instead in the future.
     }
     return animationETSlist;
 }
@@ -352,7 +367,7 @@ InvokeReturn<std::shared_ptr<EnvironmentETS>> SceneETS::CreateEnvironment(
     }
     if (auto nativeEnv = interface_pointer_cast<SCENE_NS::IEnvironment>(
             scene_->CreateObject(SCENE_NS::ClassId::Environment).GetResult())) {
-        return InvokeReturn(std::make_shared<EnvironmentETS>(name, uri, nativeEnv));
+        return InvokeReturn(std::make_shared<EnvironmentETS>(nativeEnv, scene_, name, uri));
     } else {
         return InvokeReturn<std::shared_ptr<EnvironmentETS>>(nullptr, "Environment creation failed");
     }
@@ -373,7 +388,7 @@ InvokeReturn<std::shared_ptr<EnvironmentETS>> SceneETS::GetEnvironment()
             return InvokeReturn(environmentETS_);
         }
         CORE_LOG_E("no environmentETS_, do not expect go here");
-        environmentETS_ = std::make_shared<EnvironmentETS>("DefaultEnv", "", environment);
+        environmentETS_ = std::make_shared<EnvironmentETS>(environment, scene_);
         return InvokeReturn(environmentETS_);
     }
     return InvokeReturn<std::shared_ptr<EnvironmentETS>>(nullptr, "no environment in rendercontext");
@@ -438,6 +453,5 @@ void SceneETS::Destroy()
     }
 #endif
 }
-
 
 }  // namespace OHOS::Render3D

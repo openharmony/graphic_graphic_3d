@@ -20,9 +20,22 @@
 #include "taihe/optional.hpp"
 #include "taihe/runtime.hpp"
 
+#include "SceneTH.user.hpp"
+#include "SceneResources.user.hpp"
+#include "SceneResources.Transfer.proj.hpp"
+#include "SceneResources.Transfer.impl.hpp"
+
+#include "AnimationJS.h"
+#include <napi_api.h>
+#include "interop_js/arkts_interop_js_api.h"
+#include "interop_js/arkts_esvalue.h"
+#include "napi/native_api.h"
+#include "TransferEnvironment.h"
+
 #include "AnimationETS.h"
 #include "SceneResourceImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class AnimationImpl : public SceneResourceImpl {
 public:
     static SceneResources::Animation createAnimationFromETS(std::shared_ptr<AnimationETS> animationETS);
@@ -39,8 +52,8 @@ public:
     bool getRunning();
     double getProgress();
 
-    void onStarted(::taihe::callback_view<void()> callback);
-    void onFinished(::taihe::callback_view<void()> callback);
+    void onStarted(::taihe::callback_view<void(SceneResources::CallbackUndefinedType const&)> callback);
+    void onFinished(::taihe::callback_view<void(SceneResources::CallbackUndefinedType const&)> callback);
 
     void pause();
     void restart();
@@ -49,9 +62,13 @@ public:
     void stop();
     void finish();
 
+    int64_t getAnimationImpl();
+    std::shared_ptr<AnimationETS> getAnimationETS() const;
+
 private:
     std::shared_ptr<AnimationETS> animationETS_{nullptr};
-    taihe::callback<void()> onStartedCB_{{nullptr, nullptr}};
-    taihe::callback<void()> onFinishedCB_{{nullptr, nullptr}};
+    taihe::callback<void(SceneResources::CallbackUndefinedType const&)> onStartedCB_{{nullptr, nullptr}};
+    taihe::callback<void(SceneResources::CallbackUndefinedType const&)> onFinishedCB_{{nullptr, nullptr}};
 };
+} // namespace OHOS::Render3D::KITETS
 #endif // OHOS_3D_ANIMATION_IMPL_H

@@ -23,6 +23,7 @@
 #include "SceneResources.user.hpp"
 #include "SceneTH.user.hpp"
 
+namespace OHOS::Render3D::KITETS {
 class SamplerImpl {
 public:
     SamplerImpl(::SceneTH::SceneResourceParameters const &params)
@@ -80,4 +81,5 @@ public:
         TH_THROW(std::runtime_error, "setAddressModeV not implemented");
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SAMPLER_IMPL_H

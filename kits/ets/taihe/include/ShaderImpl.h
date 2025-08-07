@@ -28,6 +28,7 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
+namespace OHOS::Render3D::KITETS {
 class ShaderImpl : public SceneResourceImpl {
 public:
     ShaderImpl(SceneTH::SceneResourceParameters const &params)
@@ -39,4 +40,5 @@ public:
 
     ::taihe::map<::taihe::string, ::SceneResources::ShaderInputType> getInputs();
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SHADER_IMPL_H

@@ -32,7 +32,7 @@ void* SceneBridgeAni::UnwrapSceneFromAni(ani_env* env, ani_object value)
         return {};
     }
 
-    arkts::ani_signature::Type clsSignature = arkts::ani_signature::Builder::BuildClass("graphis3d/Scene/Scene");
+    arkts::ani_signature::Type clsSignature = arkts::ani_signature::Builder::BuildClass("graphics3d/Scene/Scene");
     ani_class sceneCls;
     if (env->FindClass(clsSignature.Descriptor().c_str(), &sceneCls) != ANI_OK) {
         WIDGET_LOGE("ace_lume find scene class fail");

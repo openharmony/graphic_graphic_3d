@@ -15,6 +15,7 @@
 
 #include "LightETS.h"
 
+namespace OHOS::Render3D {
 LightETS::LightETS(
     const SCENE_NS::ILight::Ptr light, LightType lightType, const std::string &name, const std::string &uri)
     : NodeETS(NodeETS::NodeType::LIGHT, interface_pointer_cast<SCENE_NS::INode>(light)), light_(light),
@@ -40,6 +41,26 @@ LightETS::LightETS(
     }
     if (auto light = light_.lock()) {
         light->Type()->SetValue(sceneLightType);
+    }
+}
+
+LightETS::LightETS(const SCENE_NS::ILight::Ptr light)
+    : NodeETS(NodeETS::NodeType::LIGHT, interface_pointer_cast<SCENE_NS::INode>(light)), light_(light)
+{
+    SCENE_NS::LightType type = light->Type()->GetValue();
+    switch (type) {
+        case SCENE_NS::LightType::DIRECTIONAL:
+            lightType_ = LightType::DIRECTIONAL;
+            break;
+        case SCENE_NS::LightType::SPOT:
+            lightType_ = LightType::SPOT;
+            break;
+        case SCENE_NS::LightType::POINT:
+            lightType_ = LightType::POINT;
+            break;
+        default:
+            lightType_ = LightType::DIRECTIONAL;
+            break;
     }
 }
 
@@ -141,3 +162,4 @@ void LightETS::SetEnabled(bool enable)
         CORE_LOG_E("no light object");
     }
 }
+}  // namespace OHOS::Render3D

@@ -30,7 +30,7 @@
 #include <base/containers/vector.h>
 #include <base/containers/string.h>
 
-namespace OHOS::Render3D {
+namespace OHOS::Render3D::KITETS {
 /**
  * Determine whether the actual type of ResourceStr is String
  */
@@ -107,5 +107,5 @@ inline taihe::string ToTaiheString(const BASE_NS::string &str)
 {
     return taihe::string(str.c_str());
 }
-}  // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_ANI_UTILS_H

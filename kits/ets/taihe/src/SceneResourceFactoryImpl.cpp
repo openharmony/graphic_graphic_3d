@@ -21,6 +21,13 @@
 #include "SceneResourceFactoryImpl.h"
 #include "ParamUtils.h"
 
+#include "interop_js/arkts_interop_js_api.h"
+#include "interop_js/arkts_esvalue.h"
+#include "BaseObjectJS.h"
+#include "nodejstaskqueue.h"
+#include "SceneJS.h"
+
+namespace OHOS::Render3D::KITETS {
 ::SceneNodes::Camera SceneResourceFactoryImpl::createCameraSync(::SceneTH::SceneNodeParameters const &params)
 {
     if (!sceneETS_) {
@@ -99,7 +106,7 @@
         return ::SceneResources::Environment({nullptr, nullptr});
     }
     std::string name = ExtractResourceName(params);
-    std::string uri = OHOS::Render3D::ExtractUri(params.uri);
+    std::string uri = ExtractUri(params.uri);
     WIDGET_LOGI("createEnvironmentSync, SceneResource name: %{public}s uri: %{public}s", name.c_str(), uri.c_str());
     InvokeReturn<std::shared_ptr<EnvironmentETS>> environment = sceneETS_->CreateEnvironment(name, uri);
     if (environment.error.empty()) {
@@ -123,7 +130,6 @@
         return SceneNodes::Geometry({nullptr, nullptr});
     }
     std::string nodePath = ExtractNodePath(params);
-    WIDGET_LOGE("SceneResourceFactoryImpl::createGeometrySync, nodePath: %{public}s", nodePath.c_str());
     InvokeReturn<std::shared_ptr<GeometryETS>> geom = sceneETS_->CreateGeometry(nodePath, mri->mrETS_);
     if (geom.error.empty()) {
         return taihe::make_holder<GeometryImpl, ::SceneNodes::Geometry>(geom.value);
@@ -132,3 +138,79 @@
         return SceneNodes::Geometry({nullptr, nullptr});
     }
 }
+
+::SceneTH::SceneResourceFactory sceneResourceFactoryTransferStaticImpl(uintptr_t input)
+{
+    ani_object esValue = reinterpret_cast<ani_object>(input);
+    void *nativePtr = nullptr;
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+        WIDGET_LOGE("unwrap esvalue failed");
+        return SceneTH::SceneResourceFactory({nullptr, nullptr});
+    }
+    auto sceneJS = reinterpret_cast<SceneJS *>(nativePtr);
+    if (!sceneJS) {
+        WIDGET_LOGE("transfer SceneResourceFactory failed");
+        return SceneTH::SceneResourceFactory({nullptr, nullptr});
+    }
+    SCENE_NS::IScene::Ptr scene = sceneJS->GetNativeObject<SCENE_NS::IScene>();
+    std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter = sceneJS->scene_;
+    auto sceneETS = std::make_shared<SceneETS>(scene, sceneAdapter);
+    return taihe::make_holder<SceneResourceFactoryImpl, SceneTH::SceneResourceFactory>(sceneETS);
+}
+
+uintptr_t sceneResourceFactoryTransferDynamicImpl(::SceneTH::weak::SceneResourceFactory input)
+{
+    taihe::optional<int64_t> implOp = input->getImpl();
+    if (!implOp.has_value()) {
+        WIDGET_LOGE("get SceneResourceFactoryImpl failed");
+        return 0;
+    }
+    SceneResourceFactoryImpl *srfi = reinterpret_cast<SceneResourceFactoryImpl *>(implOp.value());
+    if (srfi == nullptr) {
+        WIDGET_LOGE("can't cast to SceneResourceFactoryImpl");
+        return 0;
+    }
+    std::shared_ptr<SceneETS> internalScene = srfi->getInternalScene();
+    if (!internalScene) {
+        WIDGET_LOGE("get SceneETS failed");
+        return 0;
+    }
+    SCENE_NS::IScene::Ptr nativeObj = internalScene->GetNativeScene();
+    if (!nativeObj) {
+        WIDGET_LOGE("get IScene failed");
+        return 0;
+    }
+    napi_env jsenv;
+    if (!arkts_napi_scope_open(taihe::get_env(), &jsenv)) {
+        WIDGET_LOGE("arkts_napi_scope_open failed");
+        return 0;
+    }
+    if (!TransferEnvironment::check(jsenv)) {
+        WIDGET_LOGE("TransferEnvironment check failed");
+        // An error has occurred, ignoring the function call result.
+        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
+        return 0;
+    }
+    auto sceneJs = CreateFromNativeInstance(jsenv, nativeObj, PtrType::STRONG, {});
+    if (!sceneJs) {
+        WIDGET_LOGE("create SceneJS failed");
+        // An error has occurred, ignoring the function call result.
+        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
+        return 0;
+    }
+    napi_value sceneValue = sceneJs.ToNapiValue();
+    ani_ref resAny;
+    if (!arkts_napi_scope_close_n(jsenv, 1, &sceneValue, &resAny)) {
+        WIDGET_LOGE("arkts_napi_scope_close_n failed");
+        return 0;
+    }
+    return reinterpret_cast<uintptr_t>(resAny);
+}
+}  // namespace OHOS::Render3D::KITETS
+
+using namespace OHOS::Render3D::KITETS;
+// Since these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
+TH_EXPORT_CPP_API_sceneResourceFactoryTransferStaticImpl(sceneResourceFactoryTransferStaticImpl);
+TH_EXPORT_CPP_API_sceneResourceFactoryTransferDynamicImpl(sceneResourceFactoryTransferDynamicImpl);
+// NOLINTEND

@@ -40,6 +40,7 @@
 #include "MeshResourceETS.h"
 #include "NodeETS.h"
 #include "Vec4Proxy.h"
+#include "Utils.h"
 
 namespace OHOS::Render3D {
 class SceneETS {
@@ -51,6 +52,7 @@ public:
 
 public:
     SceneETS();
+    SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter);
     bool Load(std::string uri);
     std::shared_ptr<OHOS::Render3D::ISceneAdapter> *GetSceneAdapter()
     {
@@ -75,6 +77,11 @@ public:
 
     void Destroy();
 
+    SCENE_NS::IScene::Ptr GetNativeScene()
+    {
+        return scene_;
+    }
+
 private:
     static void AddScene(META_NS::IObjectRegistry *obr, SCENE_NS::IScene::Ptr scene);
     static void FlushScenes();
@@ -85,7 +92,6 @@ private:
 private:
     std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter_ = nullptr;
     SCENE_NS::IScene::Ptr scene_{nullptr};
-    SCENE_NS::IRenderResourceManager::Ptr renderResourceMananager_;
 
     std::shared_ptr<EnvironmentETS> environmentETS_{nullptr};
 

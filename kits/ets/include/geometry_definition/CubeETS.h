@@ -22,7 +22,7 @@
 
 #include "geometry_definition/GeometryDefinition.h"
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 class CubeETS : public GeometryDefinition {
 public:
@@ -36,5 +36,5 @@ private:
     BASE_NS::Math::Vec3 size_{};
 };
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry
 #endif  // GEOMETRY_DEFINITION_CUBE_ETS_H

@@ -23,6 +23,7 @@
 #include "NodeETS.h"
 #include "Utils.h"
 
+namespace OHOS::Render3D {
 class LightETS : public NodeETS {
 public:
     enum LightType {
@@ -42,6 +43,8 @@ public:
 
     LightETS(
         const SCENE_NS::ILight::Ptr light, LightType lightType, const std::string &name, const std::string &uri = "");
+    // construct from existed light
+    LightETS(const SCENE_NS::ILight::Ptr light);
     ~LightETS() override;
 
     LightType GetLightType();
@@ -63,4 +66,5 @@ private:
     std::shared_ptr<ColorProxy> colorProxy_{nullptr};
     LightType lightType_{LightType::DIRECTIONAL};
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_LIGHT_ETS_H

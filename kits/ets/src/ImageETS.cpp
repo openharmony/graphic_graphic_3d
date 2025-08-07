@@ -18,6 +18,7 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
+namespace OHOS::Render3D {
 ImageETS::ImageETS(const std::string &name, const std::string &uri)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE)
 {
@@ -60,3 +61,4 @@ int32_t ImageETS::GetHeight() const
     }
     return bitmap_->Size()->GetValue().y;
 }
+}  // namespace OHOS::Render3D
