@@ -217,10 +217,7 @@ void SceneImpl::destroy()
     if (!type || !type->is_valid()) {
         WIDGET_LOGE("scene.getNodeByPath invalid node type");
         // currently ignore the type
-        // return ::SceneNodes::NodeOrNull::make_nValue();
     }
-    // auto node = sceneETS_->GetNodeByPath(path.c_str(), type.get_value());
-    // std::shared_ptr<NodeETS> node = nodeETS_->GetNodeByPath(std::string(path));
     const auto &root = getRoot();
     if (!root.holds_node()) {
         WIDGET_LOGE("scene.getNodeByPath invalid root");

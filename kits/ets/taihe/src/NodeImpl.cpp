@@ -176,7 +176,8 @@ void NodeImpl::setVisible(const bool visible)
     return "";
 }
 
-::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node) {
+::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node)
+{
     if (!node) {
         return SceneNodes::VariousNodesOrNull::make_nValue();
     }
