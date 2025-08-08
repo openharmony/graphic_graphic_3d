@@ -115,6 +115,7 @@ private:
     BASE_NS::unordered_map<uintptr_t, NapiApi::WeakRef> disposables_;
     napi_env env_;
     SCENE_NS::IRenderResourceManager::Ptr renderMan_;
+    bool currentAlwaysRender_ = true;
 
 public:
     NapiApi::Object CreateEnvironment(NapiApi::Object, NapiApi::Object);
