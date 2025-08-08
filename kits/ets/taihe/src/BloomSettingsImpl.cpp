@@ -19,6 +19,7 @@
 
 #include "BloomSettingsImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 std::shared_ptr<BloomETS> BloomSettingsImpl::CreateInternal(const ScenePostProcessSettings::BloomSettings &data)
 {
     float thresholdHard, thresholdSoft, scaleFactor, scatter;
@@ -138,3 +139,4 @@ void BloomSettingsImpl::setScatter(::taihe::optional_view<double> scatter)
         }
     }
 }
+}  // namespace OHOS::Render3D::KITETS

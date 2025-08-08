@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,24 +13,5 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_3D_VEC2_PROXY_H
-#define OHOS_3D_VEC2_PROXY_H
-
-#include <base/math/vector.h>
-
-#include "PropertyProxy.h"
-
-namespace OHOS::Render3D {
-class Vec2Proxy : public PropertyProxy<BASE_NS::Math::Vec2> {
-public:
-    explicit Vec2Proxy(const META_NS::Property<BASE_NS::Math::Vec2> &prop);
-    ~Vec2Proxy() override;
-
-    float GetX() const;
-    void SetX(const float x);
-
-    float GetY() const;
-    void SetY(const float y);
-};
-}  // namespace OHOS::Render3D
-#endif  // OHOS_3D_VEC2_PROXY_H
+import { Resource } from 'global.resource';
+export type ResourceStr = string | Resource;

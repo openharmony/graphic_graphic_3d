@@ -24,6 +24,7 @@
 #include "SceneResources.user.hpp"
 #include "SceneResourceImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class MaterialImpl : public SceneResourceImpl {
 public:
     MaterialImpl() : SceneResourceImpl(SceneResources::SceneResourceType::key_t::MATERIAL)
@@ -86,4 +87,5 @@ public:
         TH_THROW(std::runtime_error, "setRenderSort not implemented");
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MATERIAL_IMPL_H

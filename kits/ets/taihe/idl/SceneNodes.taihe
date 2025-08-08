@@ -14,10 +14,12 @@
  */
 
 @!sts_inject("""
-import { ResourceStr } from 'arkui.component.units';
+import { ResourceStr } from './arkui.component.units';
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
 """)
 
-@!namespace("graphics3d.SceneNodes")
+@!namespace("SceneNodes")
 
 from SceneResources use SceneResource, Mesh, MeshResource, Morpher;
 from SceneTypes use Quaternion, Color, Vec2, Vec3;
@@ -72,11 +74,35 @@ interface Node: SceneResource {
 
     @get getPath(): String;
 
-    @get getParent(): NodeOrNull;
+    @!sts_inject_into_interface("""
+    get parent(): (Node | null);
+    """)
+
+    @!sts_inject_into_class("""
+    get parent(): (Node | null) {
+        let res = this.getParentInner();
+        if (res != null) {
+            return res as Node;
+        }
+        return null;
+    }
+    """)
+
+    getParentInner(): VariousNodesOrNull;
 
     @get getChildren(): Container;
 
-    getNodeByPath(path: String): NodeOrNull;
+    @!sts_inject_into_interface("""
+    getNodeByPath(path: String): (Node | null) {
+        let res = this.getNodeByPathInner(path);
+        if (res != null) {
+            return res as Node;
+        }
+        return null;
+    }
+    """)
+
+    getNodeByPathInner(path: String): VariousNodesOrNull;
 
     GetImpl(): i64;
 }
@@ -86,9 +112,27 @@ union NodeOrNull {
     @null nValue;
 }
 
+union VariousNodesOrNull {
+    geometry: Geometry;
+    camera: Camera;
+    light: Light;
+    node: Node;
+    @null nValue;
+}
+
 interface Geometry : Node {
     @get getMesh(): Mesh;
     @get getMorpher(): Optional<Morpher>;
+
+    @!sts_inject_into_class("""
+    get parent(): (Node | null) {
+        let res = this.getParentInner();
+        if (res != null) {
+            return res as Node;
+        }
+        return null;
+    }
+    """)
 }
 
 enum LightType: i32 {
@@ -110,12 +154,40 @@ interface Light: Node {
 
     @get getEnabled(): bool;
     @set setEnabled(enable: bool): void;
+
+    @!sts_inject_into_class("""
+    get parent(): (Node | null) {
+        let res = this.getParentInner();
+        if (res != null) {
+            return res as Node;
+        }
+        return null;
+    }
+    """)
 }
 
 interface SpotLight: Light {
+    @!sts_inject_into_class("""
+    get parent(): (Node | null) {
+        let res = this.getParentInner();
+        if (res != null) {
+            return res as Node;
+        }
+        return null;
+    }
+    """)
 }
 
 interface DirectionalLight: Light {
+    @!sts_inject_into_class("""
+    get parent(): (Node | null) {
+        let res = this.getParentInner();
+        if (res != null) {
+            return res as Node;
+        }
+        return null;
+    }
+    """)
 }
 
 union LightTypeUnion {
@@ -155,4 +227,16 @@ interface Camera: Node {
 
     @gen_promise("raycast")
     raycastSync(viewPosition: Vec2, params: RaycastParameters): Array<RaycastResult>;
+
+    @get getImpl(): Optional<i64>;
+
+    @!sts_inject_into_class("""
+    get parent(): (Node | null) {
+        let res = this.getParentInner();
+        if (res != null) {
+            return res as Node;
+        }
+        return null;
+    }
+    """)
 }

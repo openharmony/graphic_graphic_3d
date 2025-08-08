@@ -20,9 +20,11 @@
 
 #include <3d/ecs/components/layer_component.h>
 
-#include "GeometryETS.h"
 #include "CameraETS.h"
+#include "GeometryETS.h"
+#include "LightETS.h"
 
+namespace OHOS::Render3D {
 std::shared_ptr<NodeETS> NodeETS::FromNative(const SCENE_NS::INode::Ptr &node)
 {
     if (auto obj = interface_cast<META_NS::IObject>(node)) {
@@ -32,8 +34,7 @@ std::shared_ptr<NodeETS> NodeETS::FromNative(const SCENE_NS::INode::Ptr &node)
         } else if (name == "CameraNode") {
             return std::make_shared<CameraETS>(interface_pointer_cast<SCENE_NS::ICamera>(node));
         } else if (name == "LightNode") {
-            // TODO 返回LightETS
-            return std::make_shared<NodeETS>(NodeType::LIGHT, node);
+            return std::make_shared<LightETS>(interface_pointer_cast<SCENE_NS::ILight>(node));
         } else if (name == "TextNode") {
             // TODO 返回TextETS
             return std::make_shared<NodeETS>(NodeType::TEXT, node);
@@ -42,17 +43,12 @@ std::shared_ptr<NodeETS> NodeETS::FromNative(const SCENE_NS::INode::Ptr &node)
     return std::make_shared<NodeETS>(NodeType::NODE, node);
 }
 
-std::shared_ptr<NodeETS> NodeETS::FromJS(
-    const SCENE_NS::INode::Ptr &node, const std::string &name, const std::string &uri)
-{
-    auto nodeETS = std::make_shared<NodeETS>(NodeType::NODE, node);
-    nodeETS->SetName(name);
-    nodeETS->SetUri(uri);
-    return nodeETS;
-}
-
 NodeETS::NodeETS(const NodeType &type, const SCENE_NS::INode::Ptr &node)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::NODE), type_(type), node_(node)
+{}
+
+NodeETS::NodeETS(const SCENE_NS::INode::Ptr &node)
+    : SceneResourceETS(SceneResourceETS::SceneResourceType::NODE), node_(node)
 {}
 
 NodeETS::~NodeETS()
@@ -371,3 +367,4 @@ bool operator==(const SCENE_NS::INode::Ptr node, const std::shared_ptr<NodeETS> 
     }
     return node == nodeETS->GetInternalNode();
 }
+}  // namespace OHOS::Render3D

@@ -22,10 +22,20 @@
 
 #include "SceneTH.user.hpp"
 #include "SceneResources.user.hpp"
+#include "SceneResources.Transfer.proj.hpp"
+#include "SceneResources.Transfer.impl.hpp"
+
+#include "BaseObjectJS.h"
+#include <napi_api.h>
+#include "interop_js/arkts_interop_js_api.h"
+#include "interop_js/arkts_esvalue.h"
+#include "napi/native_api.h"
+#include "TransferEnvironment.h"
 
 #include "SceneResourceImpl.h"
 #include "EnvironmentETS.h"
 
+namespace OHOS::Render3D::KITETS {
 class EnvironmentImpl : public SceneResourceImpl {
 private:
     std::shared_ptr<EnvironmentETS> envETS_{nullptr};
@@ -84,4 +94,5 @@ public:
         return reinterpret_cast<int64_t>(this);
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_ENVIRONMENT_IMPL_H

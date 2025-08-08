@@ -67,6 +67,7 @@ public:
     static void RegisterEnums(NapiApi::Object exports);
 
     void* GetInstanceImpl(uint32_t id);
+    NapiApi::WeakRef GetSceneWeakRef();
 
 protected:
     static void GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props);

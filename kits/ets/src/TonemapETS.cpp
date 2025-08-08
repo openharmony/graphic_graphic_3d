@@ -15,6 +15,7 @@
 
 #include "TonemapETS.h"
 
+namespace OHOS::Render3D {
 std::shared_ptr<TonemapETS> TonemapETS::FromJS(const TonemapETS::ToneMappingType &type, const float exposure)
 {
     auto tm = std::shared_ptr<TonemapETS>(new TonemapETS());
@@ -106,3 +107,4 @@ TonemapETS::ToneMappingType TonemapETS::FromInternalType(const SCENE_NS::Tonemap
             return TonemapETS::ToneMappingType::ACES;
     }
 }
+}  // namespace OHOS::Render3D

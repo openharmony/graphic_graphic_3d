@@ -18,6 +18,8 @@
 
 #include "SceneTH.proj.hpp"
 #include "SceneTH.impl.hpp"
+#include "SceneTH.Transfer.proj.hpp"
+#include "SceneTH.Transfer.impl.hpp"
 #include "taihe/runtime.hpp"
 #include "stdexcept"
 #include "SceneResources.user.hpp"
@@ -32,10 +34,7 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
-#ifdef __SCENE_ADAPTER__
-#include "3d_widget_adapter_log.h"
-#endif
-
+namespace OHOS::Render3D::KITETS {
 class SceneComponentImpl {
 public:
     SceneComponentImpl()
@@ -61,31 +60,23 @@ public:
 
 class SceneImpl {
 private:
-    std::shared_ptr<OHOS::Render3D::SceneETS> sceneETS_;
+    std::shared_ptr<SceneETS> sceneETS_;
 
 public:
-    SceneImpl(const std::string &uriStr);
+    explicit SceneImpl(const std::string &uriStr);
+
+    SceneImpl(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter);
 
     ::SceneResources::Environment getEnvironment();
 
     void setEnvironment(::SceneResources::weak::Environment env);
 
-    ::taihe::array<::SceneResources::Animation> getAnimations()
-    {
-        WIDGET_LOGE("SceneImpl::getAnimations()"); // move implementation to SceneImpl.cpp
-        std::vector<std::shared_ptr<AnimationETS>> animationETSlist = sceneETS_->GetAnimations(); // use unique_ptr instead in the future
-
-        std::vector<::SceneResources::Animation> result;
-        for (const auto& animationETS : animationETSlist) {
-            result.emplace_back(AnimationImpl::createAnimationFromETS(animationETS));
-        }
-
-        return taihe::array<::SceneResources::Animation>(result);
-    }
+    ::taihe::array<::SceneResources::Animation> getAnimations();
 
     ::SceneNodes::NodeOrNull getRoot();
 
-    ::SceneNodes::NodeOrNull getNodeByPath(::taihe::string_view path, ::taihe::optional_view<::SceneNodes::NodeType> type);
+    ::SceneNodes::VariousNodesOrNull getNodeByPathInner(
+        ::taihe::string_view path, ::taihe::optional_view<::SceneNodes::NodeType> type);
 
     ::SceneTH::SceneResourceFactory getResourceFactory()
     {
@@ -126,11 +117,24 @@ public:
 
     int64_t getSceneNative();
 
-    // std::shared_ptr<ISceneAdapter> GetSceneAdapter();
+    ::taihe::optional<int64_t> getImpl()
+    {
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<int64_t>(this));
+    }
+
+    std::shared_ptr<SceneETS> getInternalScene() const
+    {
+        return sceneETS_;
+    }
 };
 
 ::SceneTH::RenderContextOrNull getDefaultRenderContext();
 
 ::SceneTH::Scene loadScene(::taihe::optional_view<uintptr_t> uri);
+
+::SceneTH::Scene sceneTransferStaticImpl(uintptr_t input);
+
+uintptr_t sceneTransferDynamicImpl(::SceneTH::weak::Scene input);
+} // namespace OHOS::Render3D::KITETS
 
 #endif  // OHOS_3D_SCENE_IMPL_H

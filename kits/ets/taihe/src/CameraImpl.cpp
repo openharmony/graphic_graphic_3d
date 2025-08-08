@@ -22,6 +22,12 @@
 #include "ColorImpl.h"
 #include "Vec3Impl.h"
 
+#include "interop_js/arkts_interop_js_api.h"
+#include "interop_js/arkts_esvalue.h"
+#include "TransferEnvironment.h"
+#include "BaseObjectJS.h"
+
+namespace OHOS::Render3D::KITETS {
 CameraImpl::CameraImpl(const std::shared_ptr<CameraETS> cameraETS) : NodeImpl(cameraETS), cameraETS_(cameraETS)
 {
     WIDGET_LOGE("CameraImpl ++");
@@ -216,3 +222,98 @@ void CameraImpl::setClearColor(::SceneNodes::ColorOrNull const &color)
         return {};
     }
 }
+
+::SceneNodes::Camera cameraTransferStaticImpl(uintptr_t input)
+{
+    WIDGET_LOGI("cameraTransferStaticImpl");
+    ani_object esValue = reinterpret_cast<ani_object>(input);
+    void *nativePtr = nullptr;
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+        WIDGET_LOGE("unwrap esvalue failed");
+        return SceneNodes::Camera({nullptr, nullptr});
+    }
+    TrueRootObject *tro = reinterpret_cast<TrueRootObject *>(nativePtr);
+    if (tro == nullptr) {
+        WIDGET_LOGE("transfer camera failed");
+        return SceneNodes::Camera({nullptr, nullptr});
+    }
+    SCENE_NS::ICamera::Ptr cam = tro->GetNativeObject<SCENE_NS::ICamera>();
+    return taihe::make_holder<CameraImpl, ::SceneNodes::Camera>(std::make_shared<CameraETS>(cam));
+}
+
+uintptr_t cameraTransferDynamicImpl(::SceneNodes::weak::Camera input)
+{
+    WIDGET_LOGI("cameraTransferDynamicImpl");
+    if (input.is_error()) {
+        WIDGET_LOGE("null input camera vtbl_ptr");
+        return 0;
+    }
+    taihe::optional<int64_t> implOp = input->getImpl();
+    if (!implOp.has_value()) {
+        WIDGET_LOGE("get camera impl failed");
+        return 0;
+    }
+    CameraImpl *camera = reinterpret_cast<CameraImpl *>(implOp.value());
+    if (camera == nullptr) {
+        WIDGET_LOGE("can't cast to camera impl");
+        return 0;
+    }
+    std::shared_ptr<CameraETS> internalCamera = camera->getInternalCamera();
+    if (!internalCamera) {
+        WIDGET_LOGE("get camera ets failed");
+        return 0;
+    }
+    META_NS::IObject::Ptr nativeObj = internalCamera->GetNativeObj();
+    if (!nativeObj) {
+        WIDGET_LOGE("get native camera failed");
+        return 0;
+    }
+    SCENE_NS::INode::Ptr cameraNode = interface_pointer_cast<SCENE_NS::INode>(nativeObj);
+    if (!cameraNode) {
+        WIDGET_LOGE("can't get scene from camera");
+        return 0;
+    }
+    napi_env jsenv;
+    if (!arkts_napi_scope_open(taihe::get_env(), &jsenv)) {
+        WIDGET_LOGE("arkts_napi_scope_open failed");
+        return 0;
+    }
+    if (!TransferEnvironment::check(jsenv)) {
+        WIDGET_LOGE("TransferEnvironment check failed");
+        // An error has occurred, ignoring the function call result.
+        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
+        return 0;
+    }
+    auto sceneJs = CreateFromNativeInstance(jsenv, cameraNode->GetScene(), PtrType::STRONG, {});
+    if (!sceneJs) {
+        WIDGET_LOGE("create SceneJS failed.");
+        // An error has occurred, ignoring the function call result.
+        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
+        return 0;
+    }
+    napi_value nullValue;
+    napi_get_null(jsenv, &nullValue);
+    napi_value args[] = {sceneJs.ToNapiValue(), nullValue};
+    auto cameraObj = CreateFromNativeInstance(jsenv, cameraNode, PtrType::WEAK, args);
+    if (!cameraObj) {
+        WIDGET_LOGE("create CameraJS failed.");
+        // An error has occurred, ignoring the function call result.
+        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
+        return 0;
+    }
+    napi_value cameraValue = cameraObj.ToNapiValue();
+    ani_ref resAny;
+    if (!arkts_napi_scope_close_n(jsenv, 1, &cameraValue, &resAny)) {
+        WIDGET_LOGE("arkts_napi_scope_close_n failed");
+        return 0;
+    }
+    return reinterpret_cast<uintptr_t>(resAny);
+}
+}  // namespace OHOS::Render3D::KITETS
+
+using namespace OHOS::Render3D::KITETS;
+// Since these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
+TH_EXPORT_CPP_API_cameraTransferStaticImpl(cameraTransferStaticImpl);
+TH_EXPORT_CPP_API_cameraTransferDynamicImpl(cameraTransferDynamicImpl);
+// NOLINTEND

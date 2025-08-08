@@ -24,6 +24,7 @@
 #include <meta/interface/property/property_events.h>
 #include <meta/api/util.h>
 
+namespace OHOS::Render3D {
 template <typename Type>
 class PropertyProxy {
 public:
@@ -48,4 +49,5 @@ public:
 protected:
     META_NS::IProperty::Ptr prop_;
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_PROPERTY_PROXY_H

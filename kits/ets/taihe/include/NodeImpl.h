@@ -21,6 +21,15 @@
 #include "taihe/runtime.hpp"
 #include "stdexcept"
 
+#include "SceneNodes.Transfer.proj.hpp"
+#include "SceneNodes.Transfer.impl.hpp"
+#include "BaseObjectJS.h"
+#include <napi_api.h>
+#include "interop_js/arkts_interop_js_api.h"
+#include "interop_js/arkts_esvalue.h"
+#include "napi/native_api.h"
+#include "TransferEnvironment.h"
+
 #ifdef __SCENE_ADAPTER__
 #include "3d_widget_adapter_log.h"
 #endif
@@ -28,6 +37,7 @@
 #include "SceneResourceImpl.h"
 #include "NodeETS.h"
 
+namespace OHOS::Render3D::KITETS {
 class LayerMaskImpl {
 public:
     LayerMaskImpl(const std::shared_ptr<NodeETS> nodeETS);
@@ -69,9 +79,9 @@ public:
     ::SceneNodes::NodeType getNodeType();
     ::SceneNodes::LayerMask getLayerMask();
     ::taihe::string getPath();
-    ::SceneNodes::NodeOrNull getParent();
+    ::SceneNodes::VariousNodesOrNull getParentInner();
     ::SceneNodes::Container getChildren();
-    ::SceneNodes::NodeOrNull getNodeByPath(::taihe::string_view path);
+    ::SceneNodes::VariousNodesOrNull getNodeByPathInner(::taihe::string_view path);
     void destroy();
 
     int64_t GetImpl()
@@ -87,4 +97,5 @@ public:
 private:
     std::shared_ptr<NodeETS> nodeETS_;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_NODE_IMPL_H

@@ -20,7 +20,7 @@
 
 #include "geometry_definition/GeometryDefinition.h"
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 class SphereETS : public GeometryDefinition {
 public:
@@ -35,6 +35,6 @@ private:
     uint32_t segmentCount_;
 };
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry
 
 #endif  // GEOMETRY_DEFINITION_SPHERE_ETS_H

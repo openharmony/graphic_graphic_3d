@@ -23,6 +23,7 @@
 #include "SceneResources.user.hpp"
 #include "MaterialImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class ShaderMaterialImpl : public MaterialImpl {
 public:
     // ::SceneTH::SceneResourceParameters const &params, ::SceneResources::MaterialType materialType
@@ -41,4 +42,5 @@ public:
         TH_THROW(std::runtime_error, "setColorShader not implemented");
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SHADER_MATERIAL_IMPL_H

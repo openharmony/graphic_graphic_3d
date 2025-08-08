@@ -27,17 +27,17 @@
 #include "Vec3Proxy.h"
 #include "QuatProxy.h"
 
+namespace OHOS::Render3D {
 class NodeETS : public SceneResourceETS, public std::enable_shared_from_this<NodeETS> {
     friend bool operator==(const SCENE_NS::INode::Ptr node, const std::shared_ptr<NodeETS> nodeETS);
     friend class CameraETS;
 
 public:
     static std::shared_ptr<NodeETS> FromNative(const SCENE_NS::INode::Ptr &node);
-    static std::shared_ptr<NodeETS> FromJS(
-        const SCENE_NS::INode::Ptr &node, const std::string &name, const std::string &uri = "");
     enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, TEXT = 5 };
 
     NodeETS(const NodeType &type, const SCENE_NS::INode::Ptr &node);
+    NodeETS(const SCENE_NS::INode::Ptr &node);
     virtual ~NodeETS();
 
     META_NS::IObject::Ptr GetNativeObj() const override;
@@ -93,4 +93,5 @@ private:
     std::shared_ptr<Vec3Proxy> sclProxy_{nullptr};
     std::shared_ptr<QuatProxy> rotProxy_{nullptr};
 };
+}  // namespace OHOS::Render3D
 #endif  // NODE_ETS_H

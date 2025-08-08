@@ -15,6 +15,7 @@
 
 #include "SceneResourceImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 ::taihe::string SceneResourceImpl::getName()
 {
     if (sceneResourceETS_) {
@@ -41,7 +42,7 @@ void SceneResourceImpl::setName(::taihe::string_view name)
     if (!sceneResourceETS_) {
         return {};
     }
-    ani_string uri = OHOS::Render3D::ToANIString(sceneResourceETS_->GetUri());
+    ani_string uri = ToANIString(sceneResourceETS_->GetUri());
     return taihe::optional<uintptr_t>(std::in_place, (uintptr_t)uri);
 }
 
@@ -49,3 +50,4 @@ void SceneResourceImpl::destroy()
 {
     sceneResourceETS_.reset();
 }
+}  // namespace OHOS::Render3D::KITETS

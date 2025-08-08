@@ -14,9 +14,17 @@
  */
 
 #include "NodeImpl.h"
+#include "GeometryImpl.h"
+#include "CameraImpl.h"
+#include "LightImpl.h"
 #include "Vec3Impl.h"
 #include "QuaternionImpl.h"
 
+#include "GeometryETS.h"
+#include "CameraETS.h"
+#include "LightETS.h"
+
+namespace OHOS::Render3D::KITETS {
 LayerMaskImpl::LayerMaskImpl(const std::shared_ptr<NodeETS> nodeETS) : nodeETS_(nodeETS)
 {}
 
@@ -168,17 +176,35 @@ void NodeImpl::setVisible(const bool visible)
     return "";
 }
 
-::SceneNodes::NodeOrNull NodeImpl::getParent()
+::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node)
 {
-    std::shared_ptr<NodeETS> parent = nullptr;
-    if (nodeETS_) {
-        parent = nodeETS_->GetParent();
+    if (!node) {
+        return SceneNodes::VariousNodesOrNull::make_nValue();
     }
-    if (parent) {
-        return SceneNodes::NodeOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(parent));
-    } else {
-        return SceneNodes::NodeOrNull::make_nValue();
+    NodeETS::NodeType type = node->GetNodeType();
+    switch (type) {
+        case NodeETS::NodeType::GEOMETRY:
+            return SceneNodes::VariousNodesOrNull::make_geometry(taihe::make_holder<GeometryImpl,
+                SceneNodes::Geometry>(std::static_pointer_cast<GeometryETS>(node)));
+        case NodeETS::NodeType::CAMERA:
+            return SceneNodes::VariousNodesOrNull::make_camera(taihe::make_holder<CameraImpl,
+                SceneNodes::Camera>(std::static_pointer_cast<CameraETS>(node)));
+        case NodeETS::NodeType::LIGHT:
+            return SceneNodes::VariousNodesOrNull::make_light(taihe::make_holder<LightImpl,
+                SceneNodes::Light>(std::static_pointer_cast<LightETS>(node)));
+        default:
+            return SceneNodes::VariousNodesOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node));
     }
+}
+
+::SceneNodes::VariousNodesOrNull NodeImpl::getParentInner()
+{
+    if (!nodeETS_) {
+        WIDGET_LOGE("node.getParent invalid nodeETS");
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+    std::shared_ptr<NodeETS> parent = nodeETS_->GetParent();
+    return MakeVariousNodesOrNull(parent);
 }
 
 ::SceneNodes::Container NodeImpl::getChildren()
@@ -186,19 +212,100 @@ void NodeImpl::setVisible(const bool visible)
     return taihe::make_holder<ContainerImpl, ::SceneNodes::Container>(nodeETS_);
 }
 
-::SceneNodes::NodeOrNull NodeImpl::getNodeByPath(::taihe::string_view path)
+::SceneNodes::VariousNodesOrNull NodeImpl::getNodeByPathInner(::taihe::string_view path)
 {
-    WIDGET_LOGI("node.getNodeByPath");
     if (!nodeETS_) {
-
-        WIDGET_LOGI("node.getNodeByPath invalid nodeETS");
-        return SceneNodes::NodeOrNull::make_nValue();
+        WIDGET_LOGE("node.getNodeByPath invalid nodeETS");
+        return SceneNodes::VariousNodesOrNull::make_nValue();
     }
     std::shared_ptr<NodeETS> node = nodeETS_->GetNodeByPath(std::string(path));
-    return SceneNodes::NodeOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node));
+    return MakeVariousNodesOrNull(node);
 }
 
 void NodeImpl::destroy()
 {
     nodeETS_.reset();
 }
+
+::SceneNodes::Node nodeTransferStaticImpl(uintptr_t input)
+{
+    WIDGET_LOGI("nodeTransferStaticImpl");
+    ani_object esValue = reinterpret_cast<ani_object>(input);
+    void *nativePtr = nullptr;
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+        WIDGET_LOGE("nodeTransferStaticImpl failed during arkts_esvalue_unwrap.");
+        return SceneNodes::Node({nullptr, nullptr});
+    }
+
+    TrueRootObject *tro = reinterpret_cast<TrueRootObject *>(nativePtr);
+    SCENE_NS::INode::Ptr nodePtr = tro->GetNativeObject<SCENE_NS::INode>();
+    if (nodePtr == nullptr) {
+        WIDGET_LOGE("nodeTransferStaticImpl failed during GetNativeObject.");
+        return SceneNodes::Node({nullptr, nullptr});
+    }
+    auto node = NodeETS::FromNative(nodePtr);
+    NodeETS::NodeType type = node->GetNodeType();
+    switch (type) {
+        case NodeETS::NodeType::GEOMETRY:
+            return taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(std::static_pointer_cast<GeometryETS>(node));
+        case NodeETS::NodeType::CAMERA:
+            return taihe::make_holder<CameraImpl, SceneNodes::Camera>(std::static_pointer_cast<CameraETS>(node));
+        case NodeETS::NodeType::LIGHT:
+            return taihe::make_holder<LightImpl, SceneNodes::Light>(std::static_pointer_cast<LightETS>(node));
+        default:
+            return taihe::make_holder<NodeImpl, SceneNodes::Node>(node);
+    }
+}
+
+uintptr_t nodeTransferDynamicImpl(::SceneNodes::Node input)
+{
+    WIDGET_LOGI("nodeTransferDynamicImpl");
+    int64_t implRawPtr = input->GetImpl();
+    NodeImpl *implPtr = reinterpret_cast<NodeImpl *>(implRawPtr);
+    std::shared_ptr<NodeETS> nodeETS = implPtr->GetInternalNode();
+    if (!nodeETS) {
+        WIDGET_LOGE("get NodeETS failed");
+        return 0;
+    }
+
+    SCENE_NS::INode::Ptr node = interface_pointer_cast<SCENE_NS::INode>(nodeETS->GetNativeObj());
+    if (!node) {
+        WIDGET_LOGE("can't get scene from node");
+        return 0;
+    }
+    napi_env jsenv;
+    if (!arkts_napi_scope_open(taihe::get_env(), &jsenv)) {
+        WIDGET_LOGE("arkts_napi_scope_open failed");
+        return 0;
+    }
+    if (!TransferEnvironment::check(jsenv)) {
+        WIDGET_LOGE("TransferEnvironment check failed");
+        // An error has occurred, ignoring the function call result.
+        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
+        return 0;
+    }
+    auto sceneJs = CreateFromNativeInstance(jsenv, node->GetScene(), PtrType::STRONG, {});
+    if (!sceneJs) {
+        WIDGET_LOGE("create SceneJS failed.");
+        // An error has occurred, ignoring the function call result.
+        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
+        return 0;
+    }
+    napi_value args[] = {sceneJs.ToNapiValue(), NapiApi::Object(jsenv).ToNapiValue()};
+    auto napiObj = CreateFromNativeInstance(jsenv, node, PtrType::WEAK, args);
+    napi_value nodeValue = napiObj.ToNapiValue();
+    ani_ref resAny;
+    if (!arkts_napi_scope_close_n(jsenv, 1, &nodeValue, &resAny)) {
+        WIDGET_LOGE("arkts_napi_scope_close_n failed");
+        return 0;
+    }
+    return reinterpret_cast<uintptr_t>(resAny);
+}
+}  // namespace OHOS::Render3D::KITETS
+
+using namespace OHOS::Render3D::KITETS;
+// Since these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
+TH_EXPORT_CPP_API_nodeTransferStaticImpl(nodeTransferStaticImpl);
+TH_EXPORT_CPP_API_nodeTransferDynamicImpl(nodeTransferDynamicImpl);
+// NOLINTEND

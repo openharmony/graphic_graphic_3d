@@ -18,6 +18,7 @@
 
 #include "ANIUtils.h"
 
+namespace OHOS::Render3D::KITETS {
 inline std::string ExtractNodeName(SceneTH::SceneNodeParameters const &params)
 {
     return std::string(params.name);
@@ -36,5 +37,5 @@ inline std::string ExtractResourceName(SceneTH::SceneResourceParameters const &p
 {
     return std::string(params.name);
 }
-
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_PARAM_UTILS_H

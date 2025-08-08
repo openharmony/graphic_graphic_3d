@@ -14,14 +14,16 @@
  */
 
 @!sts_inject("""
-import { ResourceStr } from 'arkui.component.units';
+import { ResourceStr } from './arkui.component.units';
+import { NodeType, Node } from './SceneNodes';
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
 """)
-@!sts_inject("loadLibrary('scene_ani.z');")
 
-@!namespace("graphics3d.Scene")
+@!namespace("Scene")
 
 from SceneResources use Shader, MaterialType, Material, Animation, Environment, Image, MeshResource, Sampler, SceneResource;
-from SceneNodes use Camera, LightType, LightTypeUnion, Light, Node, NodeType, Geometry, NodeOrNull;
+from SceneNodes use Camera, LightType, LightTypeUnion, Light, Node, NodeType, Geometry, NodeOrNull, VariousNodesOrNull;
 from SceneTypes use GeometryDefinitionType, Vec2, Vec3, Vec4;
 
 struct SceneResourceParameters {
@@ -79,6 +81,8 @@ interface SceneResourceFactory : RenderResourceFactory {
 
     @gen_promise("createGeometry")
     createGeometrySync(params: SceneNodeParameters, mesh: MeshResource): Geometry;
+
+    @get getImpl(): Optional<i64>;
 }
 
 union ComponentPropertyType {
@@ -137,7 +141,17 @@ interface Scene {
 
     @get getRoot(): NodeOrNull;
 
-    getNodeByPath(path: String, type: Optional<NodeType>): NodeOrNull;
+    @!sts_inject_into_class("""
+    getNodeByPath(path: String, type: (NodeType | undefined)): (Node | null) {
+        let res = this.getNodeByPathInner(path, type);
+        if (res != null) {
+            return res as Node;
+        }
+        return null;
+    }
+    """)
+
+    getNodeByPathInner(path: String, type: Optional<NodeType>): VariousNodesOrNull;
 
     getResourceFactory(): SceneResourceFactory;
 
@@ -155,6 +169,8 @@ interface Scene {
     getComponent(node: Node, name: String): SceneComponentOrNull;
 
     getSceneNative(): i64;
+
+    @get getImpl(): Optional<i64>;
 }
 
 union RenderContextOrNull {

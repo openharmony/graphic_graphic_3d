@@ -18,6 +18,7 @@
 
 #include "QuatProxy.h"
 
+namespace OHOS::Render3D::KITETS {
 class QuaternionImpl {
 public:
     QuaternionImpl(const std::shared_ptr<QuatProxy> proxy) : proxy_(proxy)
@@ -104,4 +105,5 @@ private:
     // non meta property data
     BASE_NS::Math::Quat stageData_;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_QUATERNION_IMPL_H

@@ -20,6 +20,7 @@
 
 #include "PropertyProxy.h"
 
+namespace OHOS::Render3D {
 class ColorProxy : public PropertyProxy<BASE_NS::Color> {
 public:
     explicit ColorProxy(const META_NS::Property<BASE_NS::Color> &prop);
@@ -37,4 +38,5 @@ public:
     float GetA() const;
     void SetA(const float a);
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_COLOR_PROXY_H

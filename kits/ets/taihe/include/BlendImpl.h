@@ -20,6 +20,7 @@
 #include "taihe/optional.hpp"
 #include "stdexcept"
 
+namespace OHOS::Render3D::KITETS {
 class BlendImpl {
 public:
     BlendImpl()
@@ -37,4 +38,5 @@ public:
         TH_THROW(std::runtime_error, "setEnabled not implemented");
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif // OHOS_3D_BLEND_IMPL_H

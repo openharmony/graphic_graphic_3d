@@ -15,6 +15,7 @@
 
 #include "MorpherImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 MorpherImpl::MorpherImpl(const std::shared_ptr<MorpherETS> morpherETS) : morpherETS_(morpherETS)
 {}
 
@@ -29,3 +30,4 @@ MorpherImpl::~MorpherImpl()
     return targets;
     // TH_THROW(std::runtime_error, "getTargets not implemented");
 }
+}  // namespace OHOS::Render3D::KITETS

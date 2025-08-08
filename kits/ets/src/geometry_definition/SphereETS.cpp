@@ -15,7 +15,7 @@
 
 #include "geometry_definition/SphereETS.h"
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 SphereETS::SphereETS(float radius, uint32_t segmentCount)
     : GeometryDefinition(), radius_(radius), segmentCount_(segmentCount)
@@ -32,4 +32,4 @@ SCENE_NS::IMesh::Ptr SphereETS::CreateMesh(
     return creator->CreateSphere(config, radius_, segmentCount_, segmentCount_).GetResult();
 }
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry

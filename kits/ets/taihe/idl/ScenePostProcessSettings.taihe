@@ -13,7 +13,11 @@
  * limitations under the License.
  */
 
-@!namespace("graphics3d.ScenePostProcessSettings")
+@!namespace("ScenePostProcessSettings")
+@!sts_inject("""
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
+""")
 
 enum ToneMappingType: i32 {
     ACES = 0,

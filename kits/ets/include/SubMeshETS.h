@@ -20,6 +20,7 @@
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_material.h>
 
+namespace OHOS::Render3D {
 class SubMeshETS {
 public:
     SubMeshETS(const SCENE_NS::ISubMesh::Ptr subMesh);
@@ -36,4 +37,5 @@ public:
 private:
     SCENE_NS::ISubMesh::Ptr subMesh_{nullptr};
 };
+}  // namespace OHOS::Render3D
 #endif  // SUB_MESH_ETS_H

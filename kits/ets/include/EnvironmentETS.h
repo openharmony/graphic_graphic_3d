@@ -23,6 +23,7 @@
 #include "SceneResourceETS.h"
 #include "Vec4Proxy.h"
 
+namespace OHOS::Render3D {
 class EnvironmentETS : public SceneResourceETS {
 public:
     enum EnvironmentBackgroundType {
@@ -59,7 +60,12 @@ public:
         BACKGROUND_EQUIRECTANGULAR = 3,
     };
 
-    EnvironmentETS(const std::string &name, const std::string &uri, SCENE_NS::IEnvironment::Ptr environment);
+    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene,
+        const std::string &name = "", const std::string &uri = "");
+    SCENE_NS::IScene::Ptr GetScene() const
+    {
+        return scene_.lock();
+    }
 
     ~EnvironmentETS() override;
 
@@ -69,13 +75,15 @@ public:
     void SetBackgroundType(EnvironmentBackgroundType typeE);
 
     std::shared_ptr<Vec4Proxy> GetIndirectDiffuseFactor();
-    void SetIndirectDiffuseFactor(const BASE_NS::Math::Vec4& factor);
+    void SetIndirectDiffuseFactor(const BASE_NS::Math::Vec4 &factor);
     std::shared_ptr<Vec4Proxy> GetIndirectSpecularFactor();
-    void SetIndirectSpecularFactor(const BASE_NS::Math::Vec4& factor);
+    void SetIndirectSpecularFactor(const BASE_NS::Math::Vec4 &factor);
 
 private:
     SCENE_NS::IEnvironment::Ptr environment_{nullptr};
+    SCENE_NS::IScene::WeakPtr scene_{nullptr};
     std::shared_ptr<Vec4Proxy> diffuseFactor_{nullptr};
     std::shared_ptr<Vec4Proxy> specularFactor_{nullptr};
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_ENVIRONMENT_ETS_H
