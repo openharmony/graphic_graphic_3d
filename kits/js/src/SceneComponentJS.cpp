@@ -96,6 +96,9 @@ SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObjec
     scene_ = { NapiApi::Object(fromJs.Arg<0>()) };
     NapiApi::Object node = fromJs.Arg<1>();
     const auto native = GetNativeObject();
+    if (!native) {
+        return;
+    }
 
     NapiApi::Object meJs(fromJs.This());
 

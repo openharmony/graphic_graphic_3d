@@ -496,13 +496,18 @@ RenderDataStoreDefaultMaterial::RenderDataStoreDefaultMaterial(
 
     // get flags for rt
     if constexpr (ENABLE_RT) {
-        IGraphicsContext* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(
-            *renderContext.GetInterface<CORE_NS::IClassRegister>(), UID_GRAPHICS_CONTEXT);
-        if (graphicsContext) {
-            const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
-            if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
-                rtEnabled_ = true;
+        CORE_NS::IClassRegister *cr = renderContext.GetInterface<CORE_NS::IClassRegister>();
+        if (cr) {
+            IGraphicsContext* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(
+                *cr, UID_GRAPHICS_CONTEXT);
+            if (graphicsContext) {
+                const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
+                if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
+                    rtEnabled_ = true;
+                }
             }
+        } else {
+            CORE_LOG_E("get null ClassRegister");
         }
     }
 }
