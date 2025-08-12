@@ -20,8 +20,11 @@
 #include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 
 #include "3d_widget_adapter_log.h"
+
+#define ENGINE_SERVICE_PRIORITY (-20)
 
 namespace OHOS::Render3D {
 GraphicsTask::Message::Message(const std::function<Task>& task)
@@ -117,7 +120,10 @@ void GraphicsTask::Start()
     }
     exit_ = false;
     loop_ = std::thread([this] { this->EngineThread(); });
-    PushAsyncMessage([this] { this->SetName(); });
+    PushAsyncMessage([this] {
+        this->SetName();
+        setpriority(0, 0, ENGINE_SERVICE_PRIORITY);
+    });
     WIDGET_LOGD("GraphicsTask::Start end");
 }
 

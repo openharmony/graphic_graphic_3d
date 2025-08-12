@@ -128,7 +128,6 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
     const HapInfo& hapInfo)
 {
     WIDGET_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
-    Widget3DQosScoped qos("GraphicsManagerCommon::GetEngine");
     if (viewTextures_.size() > 1u) {
         WIDGET_LOGD("view is not unique and view size is %zu", viewTextures_.size());
     }
@@ -173,7 +172,6 @@ std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineT
 std::unique_ptr<IEngine> GraphicsManagerCommon::GetEngine(EngineFactory::EngineType type, int32_t key)
 {
     WIDGET_SCOPED_TRACE("GraphicsManagerCommon::GetEngine");
-    Widget3DQosScoped qos("GraphicsManagerCommon::GetEngine");
     if (viewTextures_.size() > 1u) {
         WIDGET_LOGD("view is not unique and view size is %zu", viewTextures_.size());
     }
