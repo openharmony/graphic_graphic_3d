@@ -73,7 +73,7 @@ public:
     ::taihe::array<::SceneResources::Animation> getAnimations()
     {
         WIDGET_LOGE("SceneImpl::getAnimations()"); // move implementation to SceneImpl.cpp
-        std::vector<std::shared_ptr<AnimationETS>> animationETSlist = sceneETS_->GetAnimations(); // use unique_ptr instead in the future
+        std::vector<std::shared_ptr<AnimationETS>> animationETSlist = sceneETS_->GetAnimations();
 
         std::vector<::SceneResources::Animation> result;
         for (const auto& animationETS : animationETSlist) {
@@ -85,7 +85,8 @@ public:
 
     ::SceneNodes::NodeOrNull getRoot();
 
-    ::SceneNodes::NodeOrNull getNodeByPath(::taihe::string_view path, ::taihe::optional_view<::SceneNodes::NodeType> type);
+    ::SceneNodes::NodeOrNull getNodeByPath(::taihe::string_view path,
+                                           ::taihe::optional_view<::SceneNodes::NodeType> type);
 
     ::SceneTH::SceneResourceFactory getResourceFactory()
     {

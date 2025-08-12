@@ -86,25 +86,6 @@ void SceneImpl::destroy()
 ::SceneNodes::NodeOrNull SceneImpl::getRoot()
 {
     WIDGET_LOGI("scene.getRoot");
-    //     if (auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject())) {
-    //     SCENE_NS::INode::Ptr root = scene->GetRootNode().GetResult();
-
-    //     NapiApi::StrongRef sceneRef { ctx.This() };
-    //     if (!sceneRef.GetObject().GetNative<SCENE_NS::IScene>()) {
-    //         LOG_F("INVALID SCENE!");
-    //     }
-
-    //     NapiApi::Object argJS(ctx.GetEnv());
-    //     napi_value args[] = { sceneRef.GetObject().ToNapiValue(), argJS.ToNapiValue() };
-
-    //     // Store a weak ref, as these are owned by the scene.
-    //     auto js = CreateFromNativeInstance(ctx.GetEnv(), root, PtrType::WEAK, args);
-    //     if (auto node = js.GetJsWrapper<NodeImpl>()) {
-    //         node->Attached(true);
-    //     }
-    //     return js.ToNapiValue();
-    // }
-    // return ctx.GetUndefined();
     auto node = sceneETS_->GetRoot();
     return SceneNodes::NodeOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node.value));
 }
@@ -115,18 +96,12 @@ void SceneImpl::destroy()
     if (!type || !type->is_valid()) {
         WIDGET_LOGE("scene.getNodeByPath invalid node type");
         // currently ignore the type
-        // return ::SceneNodes::NodeOrNull::make_nValue();
     }
-    // auto node = sceneETS_->GetNodeByPath(path.c_str(), type.get_value());
-    // std::shared_ptr<NodeETS> node = nodeETS_->GetNodeByPath(std::string(path));
     const auto& root = getRoot();
     if (!root.holds_node()) {
         WIDGET_LOGE("scene.getNodeByPath invalid root");
         return ::SceneNodes::NodeOrNull::make_nValue();
     }
-    // currently ignore the type
-    // return SceneNodes::NodeOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(root.get_node_ref().getNodeByPath(path)));
-    // return ::SceneNodes::NodeOrNull::make_node();
     return root.get_node_ref()->getNodeByPath(path);
 }
 

@@ -40,7 +40,7 @@ ImageImpl::ImageImpl(const std::shared_ptr<ImageETS> imageETS)
 ImageImpl::~ImageImpl()
 {
     WIDGET_LOGE("ImageImpl --");
-    // imageETS_.reset();
+    imageETS_.reset();
 }
 
 int32_t ImageImpl::getWidth()

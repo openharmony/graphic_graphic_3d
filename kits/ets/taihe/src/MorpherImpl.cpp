@@ -25,7 +25,5 @@ MorpherImpl::~MorpherImpl()
 
 ::taihe::map<::taihe::string, double> MorpherImpl::getTargets()
 {
-    taihe::map<taihe::string, double> targets;
-    return targets;
-    // TH_THROW(std::runtime_error, "getTargets not implemented");
+    TH_THROW(std::runtime_error, "getTargets not implemented");
 }
