@@ -90,7 +90,8 @@ void SceneImpl::destroy()
     return SceneNodes::NodeOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node.value));
 }
 
-::SceneNodes::NodeOrNull SceneImpl::getNodeByPath(::taihe::string_view path, ::taihe::optional_view<::SceneNodes::NodeType> type)
+::SceneNodes::NodeOrNull SceneImpl::getNodeByPath(
+    ::taihe::string_view path, ::taihe::optional_view<::SceneNodes::NodeType> type)
 {
     WIDGET_LOGI("scene.getNodeByPath");
     if (!type || !type->is_valid()) {
