@@ -48,23 +48,24 @@ PostProcessSettingsImpl::~PostProcessSettingsImpl()
 void PostProcessSettingsImpl::setToneMapping(
     ::taihe::optional_view<::ScenePostProcessSettings::ToneMappingSettings> toneMapping)
 {
-    if (postProcessETS_) {
-        if (toneMapping.has_value()) {
-            ScenePostProcessSettings::ToneMappingSettings tonemapValue = toneMapping.value();
-            taihe::optional<int64_t> implOp = tonemapValue->getImpl();
-            if (implOp.has_value()) {
-                ToneMappingSettingsImpl *settings = reinterpret_cast<ToneMappingSettingsImpl *>(implOp.value());
-                if (settings == nullptr) {
-                    postProcessETS_->SetToneMapping(ToneMappingSettingsImpl::CreateInternal(tonemapValue));
-                } else {
-                    postProcessETS_->SetToneMapping(settings->tonemapETS_);
-                }
-            } else {
+    if (!postProcessETS_) {
+        return;
+    }
+    if (toneMapping.has_value()) {
+        ScenePostProcessSettings::ToneMappingSettings tonemapValue = toneMapping.value();
+        taihe::optional<int64_t> implOp = tonemapValue->getImpl();
+        if (implOp.has_value()) {
+            ToneMappingSettingsImpl *settings = reinterpret_cast<ToneMappingSettingsImpl *>(implOp.value());
+            if (settings == nullptr) {
                 postProcessETS_->SetToneMapping(ToneMappingSettingsImpl::CreateInternal(tonemapValue));
+            } else {
+                postProcessETS_->SetToneMapping(settings->tonemapETS_);
             }
         } else {
-            postProcessETS_->SetToneMapping(nullptr);
+            postProcessETS_->SetToneMapping(ToneMappingSettingsImpl::CreateInternal(tonemapValue));
         }
+    } else {
+        postProcessETS_->SetToneMapping(nullptr);
     }
 }
 
