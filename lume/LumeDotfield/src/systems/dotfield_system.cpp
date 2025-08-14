@@ -223,6 +223,7 @@ bool DotfieldSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t d
             prim.touchDirection = dfc.touchDirection;
             prim.touchRadius = dfc.touchRadius;
             prim.pointScale = dfc.pointScale;
+            prim.colors = { dfc.color0, dfc.color1, dfc.color2, dfc.color3 };
             if (worldMatrixManager_->HasComponent(prim.entity)) {
                 WorldMatrixComponent wc = worldMatrixManager_->Get(prim.entity);
                 prim.matrix = wc.matrix;
@@ -244,7 +245,7 @@ bool DotfieldSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t d
             if (auto materialHandle = materialManager_->Write(prim.entity)) {
                 materialHandle->materialShader.shader = shader_;
                 BASE_NS::CloneData(
-                    &materialHandle->textures[0].factor, sizeof(Math::Vec4), &prim.colors, sizeof(Math::UVec4));
+                    &materialHandle->textures[1].factor, sizeof(Math::Vec4), &prim.colors, sizeof(Math::UVec4));
                 materialHandle->textures[2].factor = { dsTime, dfc.pointScale, 0.f, 0.f }; // 2: texture idx
             }
         }
