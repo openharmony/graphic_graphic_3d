@@ -15,7 +15,7 @@
 
 #include "geometry_definition/CustomETS.h"
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 CustomETS::CustomETS(const PrimitiveTopology topology, const BASE_NS::vector<BASE_NS::Math::Vec3> &vertices,
     const BASE_NS::vector<uint32_t> &indices, const BASE_NS::vector<BASE_NS::Math::Vec3> &normals,
@@ -44,4 +44,4 @@ SCENE_NS::PrimitiveTopology CustomETS::GetTopology() const
         return SCENE_NS::PrimitiveTopology::TRIANGLE_STRIP;
     }
 }
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry

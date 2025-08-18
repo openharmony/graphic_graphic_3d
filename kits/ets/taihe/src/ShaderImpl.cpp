@@ -15,7 +15,9 @@
 
 #include "ShaderImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 ::taihe::map<::taihe::string, ::SceneResources::ShaderInputType> ShaderImpl::getInputs()
 {
     TH_THROW(std::runtime_error, "getInputs not implemented");
 }
+}  // namespace OHOS::Render3D::KITETS

@@ -15,7 +15,7 @@
 
 #include "ANIUtils.h"
 
-namespace OHOS::Render3D {
+namespace OHOS::Render3D::KITETS {
 std::string ResourceToString(ani_object ani_obj, ani_env *env)
 {
     std::string resourceStr;
@@ -87,4 +87,4 @@ SceneETS::RenderParameters ExtractRenderParameters(::taihe::optional_view<::Scen
     }
     return renderParams;
 }
-}  // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D::KITETS

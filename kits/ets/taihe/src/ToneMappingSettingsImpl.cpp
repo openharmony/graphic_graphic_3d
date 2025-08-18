@@ -15,6 +15,7 @@
 
 #include "ToneMappingSettingsImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 std::shared_ptr<TonemapETS> ToneMappingSettingsImpl::CreateInternal(
     const ScenePostProcessSettings::ToneMappingSettings &data)
 {
@@ -86,3 +87,4 @@ void ToneMappingSettingsImpl::setExposure(::taihe::optional_view<double> exposur
         }
     }
 }
+}  // namespace OHOS::Render3D::KITETS

@@ -15,7 +15,7 @@
 
 #include "geometry_definition/PlaneETS.h"
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 PlaneETS::PlaneETS(const BASE_NS::Math::Vec2 &size) : GeometryDefinition(), size_(size)
 {}
@@ -31,4 +31,4 @@ SCENE_NS::IMesh::Ptr PlaneETS::CreateMesh(
     return creator->CreatePlane(config, size_.x, size_.y).GetResult();
 }
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry

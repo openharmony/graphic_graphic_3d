@@ -15,6 +15,7 @@
 
 #include "SubMeshETS.h"
 
+namespace OHOS::Render3D {
 SubMeshETS::SubMeshETS(const SCENE_NS::ISubMesh::Ptr subMesh) : subMesh_(subMesh)
 {
     CORE_LOG_D("SubMeshETS ++");
@@ -75,3 +76,4 @@ void SubMeshETS::SetMaterial(const SCENE_NS::IMaterial::Ptr &material)
         META_NS::SetValue(subMesh_->Material(), material);
     }
 }
+}  // namespace OHOS::Render3D

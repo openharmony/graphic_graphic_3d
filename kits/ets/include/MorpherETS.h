@@ -19,6 +19,7 @@
 #include <string>
 #include <scene/interface/intf_mesh.h>
 
+namespace OHOS::Render3D {
 class MorpherETS {
 public:
     MorpherETS(const SCENE_NS::IMorpher::Ptr morpher);
@@ -29,4 +30,5 @@ public:
 private:
     SCENE_NS::IMorpher::Ptr morpher_;
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_MORPHER_ETS_H

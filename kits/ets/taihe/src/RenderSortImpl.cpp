@@ -14,3 +14,6 @@
  */
 
 #include "RenderSortImpl.h"
+
+namespace OHOS::Render3D::KITETS {
+}  // namespace OHOS::Render3D::KITETS

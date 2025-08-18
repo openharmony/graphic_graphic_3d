@@ -23,6 +23,7 @@
 #include <string>
 #include "SceneResourceETS.h"
 
+namespace OHOS::Render3D {
 class ImageETS : public SceneResourceETS {
 public:
     ImageETS(const std::string &name, const std::string &uri);
@@ -40,4 +41,5 @@ public:
 private:
     SCENE_NS::IBitmap::Ptr bitmap_ {nullptr};
 };
+}  // namespace OHOS::Render3D
 #endif // OHOS_3D_IMAGE_ETS_H

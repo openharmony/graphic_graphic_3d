@@ -19,7 +19,7 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 CubeETS::CubeETS(const BASE_NS::Math::Vec3 &size) : GeometryDefinition(), size_(size)
 {
@@ -37,4 +37,4 @@ SCENE_NS::IMesh::Ptr CubeETS::CreateMesh(
     return creator->CreateCube(config, size_.x, size_.y, size_.z).GetResult();
 }
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry

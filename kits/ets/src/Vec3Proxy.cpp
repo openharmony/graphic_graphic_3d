@@ -15,6 +15,7 @@
 
 #include "Vec3Proxy.h"
 
+namespace OHOS::Render3D {
 Vec3Proxy::Vec3Proxy(const META_NS::Property<BASE_NS::Math::Vec3> &prop) : PropertyProxy<BASE_NS::Math::Vec3>(prop)
 {}
 
@@ -74,3 +75,4 @@ void Vec3Proxy::SetZ(const float z)
     value.z = z;
     META_NS::SetValue(prop, value);
 }
+}  // namespace OHOS::Render3D

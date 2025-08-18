@@ -16,6 +16,7 @@
 #include "MeshImpl.h"
 #include "Vec3Impl.h"
 
+namespace OHOS::Render3D::KITETS {
 MeshImpl::MeshImpl(const std::shared_ptr<MeshETS> meshETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::MESH, meshETS), meshETS_(meshETS)
 {}
@@ -53,3 +54,4 @@ void MeshImpl::setMaterialOverride(::taihe::optional_view<::SceneResources::Mate
 {
     TH_THROW(std::runtime_error, "setMaterialOverride not implemented");
 }
+}  // namespace OHOS::Render3D::KITETS

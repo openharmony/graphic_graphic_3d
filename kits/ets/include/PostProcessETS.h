@@ -23,6 +23,7 @@
 #include "TonemapETS.h"
 #include "BloomETS.h"
 
+namespace OHOS::Render3D {
 class PostProcessETS {
 public:
     static std::shared_ptr<PostProcessETS> FromJS(
@@ -68,4 +69,5 @@ private:
     std::shared_ptr<TonemapETS> tonemap_;
     std::shared_ptr<BloomETS> bloom_;
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_POSTPROCESS_ETS_H

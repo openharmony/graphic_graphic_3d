@@ -16,6 +16,7 @@
 #include "BloomETS.h"
 #include "Utils.h"
 
+namespace OHOS::Render3D {
 std::shared_ptr<BloomETS> BloomETS::FromJS(
     const float thresholdHard, const float thresholdSoft, const float scaleFactor, const float scatter)
 {
@@ -93,7 +94,7 @@ void BloomETS::SetThresholdHard(const float thresholdHard)
 float BloomETS::GetScatter()
 {
     if (bloom_) {
-        ExecSyncTask([this]() {
+        ExecSyncTask2([this]() {
             scatter_ = bloom_->Scatter()->GetValue();
             return META_NS::IAny::Ptr{};
         });
@@ -112,7 +113,7 @@ void BloomETS::SetScatter(const float scatter)
 float BloomETS::GetScaleFactor()
 {
     if (bloom_) {
-        ExecSyncTask([this]() {
+        ExecSyncTask2([this]() {
             scaleFactor_ = bloom_->ScaleFactor()->GetValue();
             return META_NS::IAny::Ptr{};
         });
@@ -230,3 +231,4 @@ BloomETS::Quality BloomETS::FromInternalQuality(const SCENE_NS::EffectQualityTyp
             return BloomETS::Quality::NORMAL;
     }
 }
+}  // namespace OHOS::Render3D

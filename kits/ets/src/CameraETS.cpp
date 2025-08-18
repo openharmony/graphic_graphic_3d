@@ -17,6 +17,7 @@
 
 #include "CameraETS.h"
 
+namespace OHOS::Render3D {
 std::shared_ptr<CameraETS> CameraETS::FromJS(
     const SCENE_NS::ICamera::Ptr camera, const std::string &name, const std::string &uri)
 {
@@ -154,7 +155,7 @@ bool CameraETS::GetEnabled()
 void CameraETS::SetEnabled(const bool enabled)
 {
     if (auto camera = camera_.lock()) {
-        ExecSyncTask([camera, enabled]() {
+        ExecSyncTask2([camera, enabled]() {
             if (camera) {
                 uint32_t flags = camera->SceneFlags()->GetValue();
                 if (enabled) {
@@ -288,3 +289,4 @@ InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BAS
     });
     return InvokeReturn<std::vector<CameraETS::RaycastResult>>(result);
 }
+}  // namespace OHOS::Render3D

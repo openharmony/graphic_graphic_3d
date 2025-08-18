@@ -15,8 +15,10 @@
 
 #include "EnvironmentETS.h"
 
-EnvironmentETS::EnvironmentETS(const std::string &name, const std::string &uri, SCENE_NS::IEnvironment::Ptr environment)
-    : SceneResourceETS(SceneResourceETS::SceneResourceType::ENVIRONMENT), environment_(environment)
+namespace OHOS::Render3D {
+EnvironmentETS::EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene,
+    const std::string &name, const std::string &uri)
+    : SceneResourceETS(SceneResourceETS::SceneResourceType::ENVIRONMENT), environment_(environment), scene_(scene)
 {
     CORE_LOG_D("EnvironmentETS ++");
     SetName(name);
@@ -82,7 +84,7 @@ std::shared_ptr<Vec4Proxy> EnvironmentETS::GetIndirectDiffuseFactor()
     return diffuseFactor_;
 }
 
-void EnvironmentETS::SetIndirectDiffuseFactor(const BASE_NS::Math::Vec4& factor)
+void EnvironmentETS::SetIndirectDiffuseFactor(const BASE_NS::Math::Vec4 &factor)
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
@@ -104,7 +106,7 @@ std::shared_ptr<Vec4Proxy> EnvironmentETS::GetIndirectSpecularFactor()
     return specularFactor_;
 }
 
-void EnvironmentETS::SetIndirectSpecularFactor(const BASE_NS::Math::Vec4& factor)
+void EnvironmentETS::SetIndirectSpecularFactor(const BASE_NS::Math::Vec4 &factor)
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
@@ -114,3 +116,4 @@ void EnvironmentETS::SetIndirectSpecularFactor(const BASE_NS::Math::Vec4& factor
     }
     specularFactor_->SetValue(factor);
 }
+}  // namespace OHOS::Render3D

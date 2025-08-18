@@ -14,10 +14,12 @@
  */
 
 @!sts_inject("""
-import { ResourceStr } from 'arkui.component.units';
+import { ResourceStr } from './arkui.component.units';
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
 """)
 
-@!namespace("graphics3d.SceneResources")
+@!namespace("SceneResources")
 
 from SceneTypes use Vec2, Vec3, Vec4, Aabb, GeometryDefinition, GeometryDefinitionType;
 from SceneTH use SceneResourceParameters;
@@ -201,6 +203,10 @@ interface MeshResource : SceneResource {
     GetImpl(): i64;
 }
 
+union CallbackUndefinedType {
+    @undefined undefined;
+}
+
 interface Animation : SceneResource {
     @get getEnabled(): bool;
     @set setEnabled(enabled: bool): void;
@@ -214,9 +220,9 @@ interface Animation : SceneResource {
 
     @get getProgress(): f64;
 
-    onFinished(callback: () => void): void;
+    onFinished(callback: (data: CallbackUndefinedType) => void): void;
 
-    onStarted(callback: () => void): void;
+    onStarted(callback: (data: CallbackUndefinedType) => void): void;
 
     pause(): void;
 
@@ -229,6 +235,8 @@ interface Animation : SceneResource {
     stop(): void;
 
     finish(): void;
+
+    getAnimationImpl(): i64;
 }
 
 enum EnvironmentBackgroundType : i32 {

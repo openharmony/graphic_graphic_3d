@@ -23,6 +23,7 @@
 
 #include "BloomETS.h"
 
+namespace OHOS::Render3D::KITETS {
 class BloomSettingsImpl {
     friend class PostProcessSettingsImpl;
 
@@ -48,4 +49,5 @@ public:
 private:
     std::shared_ptr<BloomETS> bloomETS_;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_BLOOM_SETTINGS_IMPL_H

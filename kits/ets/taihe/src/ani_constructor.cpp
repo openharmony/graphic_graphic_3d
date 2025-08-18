@@ -16,9 +16,12 @@
 #include "taihe/runtime.hpp"
 #include "ScenePostProcessSettings.ani.hpp"
 #include "SceneTH.ani.hpp"
+#include "SceneTH.Transfer.ani.hpp"
 #include "SceneResources.ani.hpp"
+#include "SceneResources.Transfer.ani.hpp"
 #include "SceneTypes.ani.hpp"
 #include "SceneNodes.ani.hpp"
+#include "SceneNodes.Transfer.ani.hpp"
 
 #include "3d_widget_adapter_log.h"
 #include "scene_adapter/scene_adapter.h"
@@ -39,8 +42,16 @@ ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
         WIDGET_LOGE("Error from SceneTH::ANIRegister");
         return ANI_ERROR;
     }
+    if (ANI_OK != SceneTH::Transfer::ANIRegister(env)) {
+        WIDGET_LOGE("Error from SceneTH::Transfer::ANIRegister");
+        return ANI_ERROR;
+    }
     if (ANI_OK != SceneResources::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneResources::ANIRegister");
+        return ANI_ERROR;
+    }
+    if (ANI_OK != SceneResources::Transfer::ANIRegister(env)) {
+        WIDGET_LOGE("Error from SceneResources::Transfer::ANIRegister");
         return ANI_ERROR;
     }
     if (ANI_OK != SceneTypes::ANIRegister(env)) {
@@ -49,6 +60,10 @@ ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
     }
     if (ANI_OK != SceneNodes::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneNodes::ANIRegister");
+        return ANI_ERROR;
+    }
+    if (ANI_OK != SceneNodes::Transfer::ANIRegister(env)) {
+        WIDGET_LOGE("Error from SceneNodes::Transfer::ANIRegister");
         return ANI_ERROR;
     }
     *result = ANI_VERSION_1;

@@ -15,9 +15,9 @@
 
 #include "geometry_definition/GeometryDefinition.h"
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 GeometryDefinition::GeometryDefinition()
 {}
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry
