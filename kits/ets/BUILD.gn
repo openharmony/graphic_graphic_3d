@@ -85,35 +85,52 @@ config("lume3d_config") {
   ]
 }
 
+ohos_copy("copy_scene_ets") {
+  sources = [
+    "taihe/ets/arkui.component.units.ets",
+  ]
+  outputs = [ "$taihe_generated_file_path/graphics3d/{{source_file_part}}" ]
+}
+
 copy_taihe_idl("copy_scene") {
   sources = [
     "taihe/idl/SceneTH.taihe",
+    "taihe/idl/SceneTH.Transfer.taihe",
     "taihe/idl/SceneNodes.taihe",
+    "taihe/idl/SceneNodes.Transfer.taihe",
     "taihe/idl/ScenePostProcessSettings.taihe",
     "taihe/idl/SceneResources.taihe",
+    "taihe/idl/SceneResources.Transfer.taihe",
     "taihe/idl/SceneTypes.taihe",
   ]
 }
 
 ohos_taihe("run_taihe") {
-  taihe_generated_file_path = "$taihe_generated_file_path"
+  taihe_generated_file_path = "$taihe_generated_file_path/graphics3d"
+  path_prefix = "graphics3d"
   deps = [ ":copy_scene" ]
   outputs = [
     "$taihe_generated_file_path/src/SceneTH.abi.c",
     "$taihe_generated_file_path/src/SceneTH.ani.cpp",
+    "$taihe_generated_file_path/src/SceneTH.Transfer.abi.c",
+    "$taihe_generated_file_path/src/SceneTH.Transfer.ani.cpp",
     "$taihe_generated_file_path/src/SceneNodes.abi.c",
     "$taihe_generated_file_path/src/SceneNodes.ani.cpp",
+    "$taihe_generated_file_path/src/SceneNodes.Transfer.abi.c",
+    "$taihe_generated_file_path/src/SceneNodes.Transfer.ani.cpp",
     "$taihe_generated_file_path/src/ScenePostProcessSettings.abi.c",
     "$taihe_generated_file_path/src/ScenePostProcessSettings.ani.cpp",
     "$taihe_generated_file_path/src/SceneResources.abi.c",
     "$taihe_generated_file_path/src/SceneResources.ani.cpp",
+    "$taihe_generated_file_path/src/SceneResources.Transfer.abi.c",
+    "$taihe_generated_file_path/src/SceneResources.Transfer.ani.cpp",
     "$taihe_generated_file_path/src/SceneTypes.abi.c",
     "$taihe_generated_file_path/src/SceneTypes.ani.cpp",
   ]
 }
 
 taihe_shared_library("scene_ani") {
-  taihe_generated_file_path = "$taihe_generated_file_path"
+  taihe_generated_file_path = "$taihe_generated_file_path/graphics3d"
   subsystem_name = "$subsystem_name"
   part_name = "$part_name"
   sources = get_target_outputs(":run_taihe")
@@ -194,6 +211,7 @@ taihe_shared_library("scene_ani") {
   deps = [
     ":run_taihe",
     "../../3d_widget_adapter:lib3dWidgetAdapter",
+    "../js:libScene3DNapiSource",
   ]
 
   external_deps = [
@@ -204,6 +222,9 @@ taihe_shared_library("scene_ani") {
     "hilog:libhilog",
     "hitrace:hitrace_meter",
     "init:libbegetutil",
+    "ability_runtime:napi_common",
+    "runtime_core:ani_helpers",
+    "napi:ace_napi",
   ]
 
   configs = [
@@ -215,27 +236,35 @@ taihe_shared_library("scene_ani") {
 generate_static_abc("graphics3d_scene") {
   base_url = "$taihe_generated_file_path"
   files = [
-    "$taihe_generated_file_path/graphics3d.Scene.ets",
+    "$taihe_generated_file_path/graphics3d/Scene.ets",
+    "$taihe_generated_file_path/graphics3d/arkui.component.units.ets",
   ]
   is_boot_abc = "True"
   device_dst_file = "/system/framework/graphics3d_scene.abc"
-  dependencies = [ ":run_taihe" ]
+  dependencies = [
+    ":run_taihe",
+    ":copy_scene_ets",
+  ]
 }
 
 generate_static_abc("graphics3d_scene_nodes") {
   base_url = "$taihe_generated_file_path"
   files = [
-    "$taihe_generated_file_path/graphics3d.SceneNodes.ets",
+    "$taihe_generated_file_path/graphics3d/SceneNodes.ets",
+    "$taihe_generated_file_path/graphics3d/arkui.component.units.ets",
   ]
   is_boot_abc = "True"
   device_dst_file = "/system/framework/graphics3d_scene_nodes.abc"
-  dependencies = [ ":run_taihe" ]
+  dependencies = [
+    ":run_taihe",
+    ":copy_scene_ets",
+  ]
 }
 
 generate_static_abc("graphics3d_scene_post_process_settings") {
   base_url = "$taihe_generated_file_path"
   files = [
-    "$taihe_generated_file_path/graphics3d.ScenePostProcessSettings.ets",
+    "$taihe_generated_file_path/graphics3d/ScenePostProcessSettings.ets",
   ]
   is_boot_abc = "True"
   device_dst_file = "/system/framework/graphics3d_scene_post_process_settings.abc"
@@ -245,17 +274,21 @@ generate_static_abc("graphics3d_scene_post_process_settings") {
 generate_static_abc("graphics3d_scene_resources") {
   base_url = "$taihe_generated_file_path"
   files = [
-    "$taihe_generated_file_path/graphics3d.SceneResources.ets",
+    "$taihe_generated_file_path/graphics3d/SceneResources.ets",
+    "$taihe_generated_file_path/graphics3d/arkui.component.units.ets",
   ]
   is_boot_abc = "True"
   device_dst_file = "/system/framework/graphics3d_scene_resources.abc"
-  dependencies = [ ":run_taihe" ]
+  dependencies = [
+    ":run_taihe",
+    ":copy_scene_ets",
+  ]
 }
 
 generate_static_abc("graphics3d_scene_types") {
   base_url = "$taihe_generated_file_path"
   files = [
-    "$taihe_generated_file_path/graphics3d.SceneTypes.ets",
+    "$taihe_generated_file_path/graphics3d/SceneTypes.ets",
   ]
   is_boot_abc = "True"
   device_dst_file = "/system/framework/graphics3d_scene_types.abc"

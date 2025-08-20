@@ -23,6 +23,7 @@
 #include "MaterialImpl.h"
 #include "SceneResources.user.hpp"
 
+namespace OHOS::Render3D::KITETS {
 class SubMeshImpl {
 public:
     SubMeshImpl(const std::shared_ptr<SubMeshETS> subMeshETS);
@@ -36,4 +37,5 @@ public:
 private:
     std::shared_ptr<SubMeshETS> subMeshETS_;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SUB_MESH_IMPL_H

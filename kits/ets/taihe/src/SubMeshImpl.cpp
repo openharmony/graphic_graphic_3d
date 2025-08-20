@@ -16,6 +16,7 @@
 #include "SubMeshImpl.h"
 #include "Vec3Impl.h"
 
+namespace OHOS::Render3D::KITETS {
 SubMeshImpl::SubMeshImpl(const std::shared_ptr<SubMeshETS> subMeshETS) : subMeshETS_(subMeshETS)
 {}
 
@@ -63,3 +64,4 @@ void SubMeshImpl::setMaterial(::SceneResources::weak::Material mat)
             taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3)};
     }
 }
+}  // namespace OHOS::Render3D::KITETS

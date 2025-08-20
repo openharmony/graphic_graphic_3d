@@ -21,7 +21,7 @@
 
 #include <base/containers/vector.h>
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 enum GeometryType {
     CUSTOM = 0,
@@ -41,6 +41,6 @@ protected:
     GeometryDefinition();
 };
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry
 
 #endif

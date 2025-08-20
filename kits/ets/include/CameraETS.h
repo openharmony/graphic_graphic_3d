@@ -28,6 +28,7 @@
 #include "Utils.h"
 #include "Vec4Proxy.h"
 
+namespace OHOS::Render3D {
 class CameraETS : public NodeETS {
 public:
     static std::shared_ptr<CameraETS> FromJS(
@@ -74,4 +75,5 @@ private:
     std::shared_ptr<Vec4Proxy> clearColorProxy_{nullptr};
     std::shared_ptr<PostProcessETS> postProcess_{nullptr};
 };
+}  // namespace OHOS::Render3D
 #endif  // CAMERA_ETS_H

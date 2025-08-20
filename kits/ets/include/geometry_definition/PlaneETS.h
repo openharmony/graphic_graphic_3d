@@ -20,7 +20,7 @@
 
 #include "geometry_definition/GeometryDefinition.h"
 
-namespace GeometryDefinition {
+namespace OHOS::Render3D::Geometry {
 
 class PlaneETS : public GeometryDefinition {
 public:
@@ -34,5 +34,5 @@ private:
     BASE_NS::Math::Vec2 size_{};
 };
 
-}  // namespace GeometryDefinition
+}  // namespace OHOS::Render3D::Geometry
 #endif  // GEOMETRY_DEFINITION_PLANE_ETS_H

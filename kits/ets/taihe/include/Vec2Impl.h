@@ -18,6 +18,7 @@
 
 #include "Vec2Proxy.h"
 
+namespace OHOS::Render3D::KITETS {
 class Vec2Impl {
 public:
     Vec2Impl(const std::shared_ptr<Vec2Proxy> proxy) : proxy_(proxy)
@@ -70,4 +71,5 @@ private:
     // non meta property data
     BASE_NS::Math::Vec2 stageData_ = BASE_NS::Math::ZERO_VEC2;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_VEC2_IMPL_H

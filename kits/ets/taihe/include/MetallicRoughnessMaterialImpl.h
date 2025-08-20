@@ -24,6 +24,7 @@
 #include "MaterialImpl.h"
 #include "MaterialPropertyImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class MetallicRoughnessMaterialImpl : public MaterialImpl {
 public:
     // ::SceneTH::SceneResourceParameters const &params, ::SceneResources::MaterialType materialType
@@ -152,4 +153,5 @@ public:
         TH_THROW(std::runtime_error, "setSpecular not implemented");
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_METALLIC_ROUGHNESS_MATERIAL_IMPL_H

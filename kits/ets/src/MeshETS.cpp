@@ -15,6 +15,7 @@
 
 #include "MeshETS.h"
 
+namespace OHOS::Render3D {
 MeshETS::MeshETS(const SCENE_NS::IMesh::Ptr mesh)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::MESH), mesh_(mesh)
 {
@@ -81,3 +82,4 @@ void MeshETS::SetMaterialOverride(const SCENE_NS::IMaterial::Ptr &material)
         SCENE_NS::SetMaterialForAllSubMeshes(mesh, material);
     }
 }
+}  // namespace OHOS::Render3D

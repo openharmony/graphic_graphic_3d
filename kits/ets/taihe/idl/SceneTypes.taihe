@@ -13,7 +13,11 @@
  * limitations under the License.
  */
 
-@!namespace("graphics3d.SceneTypes")
+@!namespace("SceneTypes")
+@!sts_inject("""
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
+""")
 
 interface Vec2 {
     @get getX(): f64;

@@ -26,10 +26,16 @@
 #include <string>
 #include "SceneResourceETS.h"
 
+namespace OHOS::Render3D {
 class AnimationETS : public SceneResourceETS {
 public:
-    AnimationETS(const META_NS::IObject::Ptr animationRef);
+    AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE_NS::IScene::Ptr scene);
     ~AnimationETS() override;
+
+    SCENE_NS::IScene::Ptr GetScene() const
+    {
+        return scene_.lock();
+    }
 
     META_NS::IObject::Ptr GetNativeObj() const override;
     BASE_NS::string GetName();
@@ -57,6 +63,7 @@ public:
 
 private:
     META_NS::IObject::Ptr animationRef_{nullptr};
+    SCENE_NS::IScene::WeakPtr scene_{nullptr}; // Store a weak ref
 
     META_NS::IEvent::Token OnFinishedToken_{0};
     META_NS::IEvent::Token OnStartedToken_{0};
@@ -69,4 +76,5 @@ private:
 #endif
     META_NS::Event<META_NS::IEvent> OnCompletedEvent_;
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_ANIMATION_ETS_H

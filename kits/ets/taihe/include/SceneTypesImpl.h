@@ -28,7 +28,7 @@
 #include "Vec2Impl.h"
 #include "Vec3Impl.h"
 
-namespace {
+namespace OHOS::Render3D::KITETS {
 
 class GeometryDefinitionImpl {
 public:
@@ -159,7 +159,6 @@ public:
 
     ::SceneTypes::Vec3 getSize()
     {
-        WIDGET_LOGI("CubeGeometryImpl::getSize, error: %{public}s", size_.is_error() ? "true" : "false");
         if (size_.is_error()) {
             size_ = taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
         }
@@ -168,7 +167,6 @@ public:
 
     void setSize(::SceneTypes::weak::Vec3 size)
     {
-        WIDGET_LOGI("CubeGeometryImpl::setSize");
         this->size_ = size;
     }
 
@@ -246,6 +244,6 @@ private:
     float radius_;
     int32_t segmentCount_;
 };
-}  // namespace
+} // namespace OHOS::Render3D::KITETS
 
 #endif  // OHOS_3D_SCENE_TYPES_IMPL_H

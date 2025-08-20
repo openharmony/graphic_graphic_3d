@@ -1,0 +1,45 @@
+/*
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!namespace("Scene", "Transfer")
+@!sts_inject("""
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
+""")
+
+from SceneTH use Scene, SceneResourceFactory;
+
+@!sts_inject("""
+export function sceneTransferStatic(input: Any): Object {
+    return sceneTransferStaticImpl(ESValue.wrap(input));
+}
+export function sceneTransferDynamic(input: Object): Any {
+    return sceneTransferDynamicImpl(input as Scene);
+}
+
+export function sceneResourceFactoryTransferStatic(input: Any): Object {
+    return sceneResourceFactoryTransferStaticImpl(ESValue.wrap(input));
+}
+
+export function sceneResourceFactoryTransferDynamic(input: Object): Any {
+    return sceneResourceFactoryTransferDynamicImpl(input as SceneResourceFactory);
+}
+""")
+
+function sceneTransferStaticImpl(input: @sts_type("ESValue") Opaque): Scene;
+function sceneTransferDynamicImpl(input: Scene): @sts_type("Any") Opaque;
+
+function sceneResourceFactoryTransferStaticImpl(input: @sts_type("ESValue") Opaque): SceneResourceFactory;
+function sceneResourceFactoryTransferDynamicImpl(input: SceneResourceFactory): @sts_type("Any") Opaque;

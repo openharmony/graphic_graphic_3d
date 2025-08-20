@@ -18,6 +18,8 @@
 
 #include "SceneNodes.proj.hpp"
 #include "SceneNodes.impl.hpp"
+#include "SceneNodes.Transfer.proj.hpp"
+#include "SceneNodes.Transfer.impl.hpp"
 #include "taihe/runtime.hpp"
 #include "stdexcept"
 
@@ -33,6 +35,7 @@
 #include "NodeImpl.h"
 #include "PostProcessSettingsImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class CameraImpl : public NodeImpl {
 public:
     CameraImpl(const std::shared_ptr<CameraETS> cameraETS);
@@ -60,8 +63,18 @@ public:
     ::taihe::array<::SceneTH::RaycastResult> raycastSync(
         ::SceneTypes::weak::Vec2 viewPosition, ::SceneTH::RaycastParameters const &params);
 
+    ::taihe::optional<int64_t> getImpl()
+    {
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<int64_t>(this));
+    }
+
+    std::shared_ptr<CameraETS> getInternalCamera() const
+    {
+        return cameraETS_;
+    }
+
 private:
     std::shared_ptr<CameraETS> cameraETS_;
 };
-
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_CAMERA_IMPL_H

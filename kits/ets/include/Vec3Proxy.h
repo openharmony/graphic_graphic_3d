@@ -20,6 +20,7 @@
 
 #include "PropertyProxy.h"
 
+namespace OHOS::Render3D {
 class Vec3Proxy : public PropertyProxy<BASE_NS::Math::Vec3> {
 public:
     explicit Vec3Proxy(const META_NS::Property<BASE_NS::Math::Vec3> &prop);
@@ -34,4 +35,5 @@ public:
     float GetZ() const;
     void SetZ(const float z);
 };
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_VEC3_PROXY_H

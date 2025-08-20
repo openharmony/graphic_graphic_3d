@@ -25,6 +25,7 @@
 
 #include "MorpherETS.h"
 
+namespace OHOS::Render3D::KITETS {
 class MorpherImpl {
 public:
     MorpherImpl(const std::shared_ptr<MorpherETS> morpherETS);
@@ -36,4 +37,5 @@ public:
 private:
     std::shared_ptr<MorpherETS> morpherETS_;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MORPHER_IMPL_H

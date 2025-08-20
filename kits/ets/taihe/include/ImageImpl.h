@@ -25,6 +25,7 @@
 #include "ImageETS.h"
 #include "SceneResourceImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class ImageImpl : public SceneResourceImpl {
 public:
     static SceneResources::Image createImageFromTH(SceneTH::SceneResourceParameters const &params);
@@ -37,4 +38,5 @@ public:
 private:
     std::shared_ptr<ImageETS> imageETS_ {nullptr};
 };
+} // namespace OHOS::Render3D::KITETS
 #endif // OHOS_3D_IMAGE_IMPL_H

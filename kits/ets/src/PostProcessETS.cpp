@@ -16,6 +16,7 @@
 #include "PostProcessETS.h"
 #include "Utils.h"
 
+namespace OHOS::Render3D {
 std::shared_ptr<PostProcessETS> PostProcessETS::FromJS(
     const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom)
 {
@@ -76,7 +77,7 @@ void PostProcessETS::SetToneMapping(const std::shared_ptr<TonemapETS> tonemap)
             return;
         }
         if (tonemap_->IsMatch(tonemap)) {
-            ExecSyncTask([this, tonemap]() {
+            ExecSyncTask2([this, tonemap]() {
                 tonemap_->SetEnabled(true);
                 tonemap_->SetType(tonemap->GetType());
                 tonemap_->SetExposure(tonemap->GetExposure());
@@ -124,7 +125,7 @@ void PostProcessETS::SetBloom(const std::shared_ptr<BloomETS> bloom)
             return;
         }
         if (bloom_->IsMatch(bloom)) {
-            ExecSyncTask([this, bloom]() {
+            ExecSyncTask2([this, bloom]() {
                 bloom_->SetEnabled(true);
                 bloom_->SetType(bloom->GetType());
                 bloom_->SetQuality(bloom->GetQuality());
@@ -142,3 +143,4 @@ void PostProcessETS::SetBloom(const std::shared_ptr<BloomETS> bloom)
         bloom_->SetEnabled(false);
     }
 }
+}  // namespace OHOS::Render3D

@@ -20,6 +20,7 @@
 #include "taihe/optional.hpp"
 #include "stdexcept"
 
+namespace OHOS::Render3D::KITETS {
 class RenderSortImpl {
 public:
     RenderSortImpl()
@@ -47,4 +48,5 @@ public:
         TH_THROW(std::runtime_error, "setRenderSortLayerOrder not implemented");
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_RENDER_SORT_IMPL_H

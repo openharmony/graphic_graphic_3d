@@ -29,6 +29,7 @@
 #include "ToneMappingSettingsImpl.h"
 #include "BloomSettingsImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class PostProcessSettingsImpl {
 public:
     static std::shared_ptr<PostProcessETS> CreateInternal(
@@ -55,4 +56,5 @@ public:
 private:
     std::shared_ptr<PostProcessETS> postProcessETS_;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_POST_PROCESS_SETTINGS_IMPL_H

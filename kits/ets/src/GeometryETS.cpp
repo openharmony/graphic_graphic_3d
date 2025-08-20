@@ -15,6 +15,7 @@
 
 #include "GeometryETS.h"
 
+namespace OHOS::Render3D {
 std::shared_ptr<GeometryETS> GeometryETS::FromJS(
     const SCENE_NS::INode::Ptr meshNode, const std::string &name, const std::string &uri)
 {
@@ -49,3 +50,4 @@ std::shared_ptr<MorpherETS> GeometryETS::GetMorpher()
     }
     return nullptr;
 }
+}  // namespace OHOS::Render3D

@@ -33,6 +33,7 @@
 #include "geometry_definition/PlaneETS.h"
 #include "geometry_definition/SphereETS.h"
 
+namespace OHOS::Render3D::KITETS {
 class MeshResourceImpl : public SceneResourceImpl {
     friend class SceneResourceFactoryImpl;
 
@@ -49,9 +50,10 @@ public:
     }
 
 private:
-    static BASE_NS::unique_ptr<GeometryDefinition::CustomETS> MakeCustomETS(
+    static BASE_NS::unique_ptr<Geometry::CustomETS> MakeCustomETS(
         const SceneTypes::CustomGeometry &customGeometry);
 
     std::shared_ptr<MeshResourceETS> mrETS_{nullptr};
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MESH_RESOURCE_IMPL_H

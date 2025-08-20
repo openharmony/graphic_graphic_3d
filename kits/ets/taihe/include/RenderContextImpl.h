@@ -23,6 +23,7 @@
 
 #include "RenderResourceFactoryImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 class RenderContextImpl {
 public:
     RenderContextImpl()
@@ -42,4 +43,5 @@ public:
         TH_THROW(std::runtime_error, "loadPluginSync not implemented");
     }
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_RENDER_CONTEXT_IMPL_H

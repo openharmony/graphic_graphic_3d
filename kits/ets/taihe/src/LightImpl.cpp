@@ -16,6 +16,7 @@
 #include "LightImpl.h"
 #include "ColorImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 LightImpl::LightImpl(const std::shared_ptr<LightETS> lightETS) : NodeImpl(lightETS), lightETS_(lightETS)
 {
     WIDGET_LOGI("LightImpl ++");
@@ -110,3 +111,4 @@ void LightImpl::setEnabled(bool enable)
     }
     lightETS_->SetEnabled(enable);
 }
+}  // namespace OHOS::Render3D::KITETS

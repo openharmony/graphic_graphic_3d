@@ -18,6 +18,8 @@
 
 #include "SceneTH.proj.hpp"
 #include "SceneTH.impl.hpp"
+#include "SceneTH.Transfer.proj.hpp"
+#include "SceneTH.Transfer.impl.hpp"
 #include "taihe/runtime.hpp"
 #include "stdexcept"
 
@@ -40,9 +42,10 @@
 #include "geometry_definition/PlaneETS.h"
 #include "geometry_definition/SphereETS.h"
 
+namespace OHOS::Render3D::KITETS {
 class SceneResourceFactoryImpl : public RenderResourceFactoryImpl {
 public:
-    SceneResourceFactoryImpl(const std::shared_ptr<OHOS::Render3D::SceneETS> sceneETS) : sceneETS_(sceneETS)
+    SceneResourceFactoryImpl(const std::shared_ptr<SceneETS> sceneETS) : sceneETS_(sceneETS)
     {}
 
     ::SceneNodes::Camera createCameraSync(::SceneTH::SceneNodeParameters const &params);
@@ -63,7 +66,18 @@ public:
     ::SceneNodes::Geometry createGeometrySync(
         ::SceneTH::SceneNodeParameters const &params, ::SceneResources::weak::MeshResource mesh);
 
+    ::taihe::optional<int64_t> getImpl()
+    {
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<int64_t>(this));
+    }
+
+    std::shared_ptr<SceneETS> getInternalScene() const
+    {
+        return sceneETS_;
+    }
+
 private:
-    std::shared_ptr<OHOS::Render3D::SceneETS> sceneETS_;
+    std::shared_ptr<SceneETS> sceneETS_;
 };
+} // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SCENE_RESOURCE_FACTORY_IMPL_H

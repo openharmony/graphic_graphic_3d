@@ -15,6 +15,7 @@
 
 #include "GeometryImpl.h"
 
+namespace OHOS::Render3D::KITETS {
 GeometryImpl::GeometryImpl(const std::shared_ptr<GeometryETS> geometryETS)
     : NodeImpl(geometryETS), geometryETS_(geometryETS)
 {}
@@ -43,3 +44,4 @@ GeometryImpl::~GeometryImpl()
         return taihe::optional<SceneResources::Morpher>(std::nullopt);
     }
 }
+}  // namespace OHOS::Render3D::KITETS

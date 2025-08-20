@@ -18,8 +18,9 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
-AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef)
-    : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animationRef_(animationRef)
+namespace OHOS::Render3D {
+AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE_NS::IScene::Ptr scene)
+    : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animationRef_(animationRef), scene_(scene)
 {
     WIDGET_LOGI("AnimationETS ++ with animationRef, name: %{public}s", GetName().c_str());
 
@@ -227,3 +228,4 @@ void AnimationETS::Finish()
         a->Finish();
     }
 }
+}  // namespace OHOS::Render3D
