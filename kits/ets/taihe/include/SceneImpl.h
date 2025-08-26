@@ -67,6 +67,8 @@ public:
 
     SceneImpl(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter);
 
+    ~SceneImpl();
+
     ::SceneResources::Environment getEnvironment();
 
     void setEnvironment(::SceneResources::weak::Environment env);

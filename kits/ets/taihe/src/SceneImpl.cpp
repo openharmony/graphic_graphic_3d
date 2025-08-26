@@ -40,6 +40,12 @@ SceneImpl::SceneImpl(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D
     }
 }
 
+SceneImpl::~SceneImpl()
+{
+    WIDGET_LOGI("SceneImpl dtor");
+    destroy();
+}
+
 bool SceneImpl::renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> params)
 {
     WIDGET_LOGI("SceneImpl renderFrame");
@@ -181,8 +187,11 @@ int64_t SceneImpl::getSceneNative()
 
 void SceneImpl::destroy()
 {
-    WIDGET_LOGI("scene.destroy");
-    sceneETS_->Destroy();
+    if (sceneETS_) {
+        WIDGET_LOGI("scene.destroy");
+        sceneETS_->Destroy();
+        sceneETS_.reset();
+    }
 }
 
 ::SceneNodes::NodeOrNull SceneImpl::getRoot()

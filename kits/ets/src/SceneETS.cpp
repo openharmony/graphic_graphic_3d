@@ -158,6 +158,12 @@ SceneETS::SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::
     }
 }
 
+SceneETS::~SceneETS()
+{
+    CORE_LOG_I("SceneETS::~SceneETS");
+    Destroy();
+}
+
 void SceneETS::AddScene(META_NS::IObjectRegistry *obr, SCENE_NS::IScene::Ptr scene)
 {
     if (!obr) {
@@ -451,7 +457,10 @@ void SceneETS::Destroy()
     if (auto sceneAdapter = std::static_pointer_cast<OHOS::Render3D::SceneAdapter>(sceneAdapter_)) {
         sceneAdapter->Deinit();
     }
+    sceneAdapter_.reset();
 #endif
+    environmentETS_.reset();
+    scene_.reset();
 }
 
 }  // namespace OHOS::Render3D
