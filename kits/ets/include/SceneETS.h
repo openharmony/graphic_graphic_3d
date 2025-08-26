@@ -53,6 +53,7 @@ public:
 public:
     SceneETS();
     SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter);
+    ~SceneETS();
     bool Load(std::string uri);
     std::shared_ptr<OHOS::Render3D::ISceneAdapter> *GetSceneAdapter()
     {
