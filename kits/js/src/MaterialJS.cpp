@@ -24,6 +24,7 @@
 #include <scene/interface/intf_material.h>
 
 #include "SceneJS.h"
+#include "MaterialPropertyJS.h"
 using IntfPtr = META_NS::SharedPtrIInterface;
 using IntfWeakPtr = META_NS::WeakPtrIInterface;
 
@@ -511,10 +512,9 @@ void MaterialJS::SetMaterialProperty(NapiApi::FunctionContext<NapiApi::Object>& 
         return;
     }
 
-    NapiApi::Object arg = ctx.Arg<0>();
-    if (auto etex = GetNativeObject<SCENE_NS::ITexture>()) {
-        // Copy the exposed data from the given texture
-        META_NS::SetValue(texture->Image(), META_NS::GetValue(etex->Image()));
-        META_NS::SetValue(texture->Factor(), META_NS::GetValue(etex->Factor()));
+    if (NapiApi::Object obj = ctx.Arg<0>()) {
+        MaterialPropertyJS::SetImage(texture, obj.Get<NapiApi::Object>("image"));
+        MaterialPropertyJS::SetFactor(texture, obj.Get<NapiApi::Object>("factor"));
+        MaterialPropertyJS::SetSampler(texture, obj.Get<NapiApi::Object>("sampler"));
     }
 }
