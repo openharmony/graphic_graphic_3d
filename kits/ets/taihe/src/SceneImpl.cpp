@@ -201,20 +201,18 @@ void SceneImpl::destroy()
     return SceneNodes::NodeOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node.value));
 }
 
-::SceneNodes::VariousNodesOrNull SceneImpl::getNodeByPathInner(
+::SceneNodes::VariousNodesOrNull SceneImpl::getNodeByPath(
     ::taihe::string_view path, ::taihe::optional_view<::SceneNodes::NodeType> type)
 {
     if (!type || !type->is_valid()) {
         WIDGET_LOGE("scene.getNodeByPath invalid node type");
         // currently ignore the type
     }
-    const auto &root = getRoot();
-    if (!root.holds_node()) {
-        WIDGET_LOGE("scene.getNodeByPath invalid root");
-        return ::SceneNodes::VariousNodesOrNull::make_nValue();
+    std::shared_ptr<NodeETS> node = nullptr;
+    if (sceneETS_) {
+        node = sceneETS_->GetNodeByPath(std::string(path));
     }
-    // currently ignore the type
-    return root.get_node_ref()->getNodeByPathInner(path);
+    return NodeImpl::MakeVariousNodesOrNull(node);
 }
 } // namespace OHOS::Render3D::KITETS
 

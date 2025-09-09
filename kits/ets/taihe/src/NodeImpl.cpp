@@ -20,8 +20,8 @@
 #include "Vec3Impl.h"
 #include "QuaternionImpl.h"
 
-#include "GeometryETS.h"
 #include "CameraETS.h"
+#include "GeometryETS.h"
 #include "LightETS.h"
 
 namespace OHOS::Render3D::KITETS {
@@ -84,6 +84,27 @@ void ContainerImpl::clear()
 int32_t ContainerImpl::count()
 {
     TH_THROW(std::runtime_error, "count not implemented");
+}
+
+::SceneNodes::VariousNodesOrNull NodeImpl::MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node)
+{
+    if (!node) {
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+    NodeETS::NodeType type = node->GetNodeType();
+    switch (type) {
+        case NodeETS::NodeType::GEOMETRY:
+            return SceneNodes::VariousNodesOrNull::make_geometry(
+                taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(std::static_pointer_cast<GeometryETS>(node)));
+        case NodeETS::NodeType::CAMERA:
+            return SceneNodes::VariousNodesOrNull::make_camera(
+                taihe::make_holder<CameraImpl, SceneNodes::Camera>(std::static_pointer_cast<CameraETS>(node)));
+        case NodeETS::NodeType::LIGHT:
+            return SceneNodes::VariousNodesOrNull::make_light(
+                taihe::make_holder<LightImpl, SceneNodes::Light>(std::static_pointer_cast<LightETS>(node)));
+        default:
+            return SceneNodes::VariousNodesOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node));
+    }
 }
 
 NodeImpl::NodeImpl(const std::shared_ptr<NodeETS> nodeETS)
@@ -158,7 +179,7 @@ void NodeImpl::setVisible(const bool visible)
 ::SceneNodes::NodeType NodeImpl::getNodeType()
 {
     if (nodeETS_) {
-        return static_cast<SceneNodes::NodeType::key_t>(static_cast<int32_t>(nodeETS_->GetNodeType()));
+        return SceneNodes::NodeType::from_value(static_cast<int32_t>(nodeETS_->GetNodeType()));
     }
     return SceneNodes::NodeType::key_t::NODE;
 }
@@ -176,28 +197,7 @@ void NodeImpl::setVisible(const bool visible)
     return "";
 }
 
-::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node)
-{
-    if (!node) {
-        return SceneNodes::VariousNodesOrNull::make_nValue();
-    }
-    NodeETS::NodeType type = node->GetNodeType();
-    switch (type) {
-        case NodeETS::NodeType::GEOMETRY:
-            return SceneNodes::VariousNodesOrNull::make_geometry(taihe::make_holder<GeometryImpl,
-                SceneNodes::Geometry>(std::static_pointer_cast<GeometryETS>(node)));
-        case NodeETS::NodeType::CAMERA:
-            return SceneNodes::VariousNodesOrNull::make_camera(taihe::make_holder<CameraImpl,
-                SceneNodes::Camera>(std::static_pointer_cast<CameraETS>(node)));
-        case NodeETS::NodeType::LIGHT:
-            return SceneNodes::VariousNodesOrNull::make_light(taihe::make_holder<LightImpl,
-                SceneNodes::Light>(std::static_pointer_cast<LightETS>(node)));
-        default:
-            return SceneNodes::VariousNodesOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node));
-    }
-}
-
-::SceneNodes::VariousNodesOrNull NodeImpl::getParentInner()
+::SceneNodes::VariousNodesOrNull NodeImpl::getParent()
 {
     if (!nodeETS_) {
         WIDGET_LOGE("node.getParent invalid nodeETS");
@@ -212,7 +212,7 @@ void NodeImpl::setVisible(const bool visible)
     return taihe::make_holder<ContainerImpl, ::SceneNodes::Container>(nodeETS_);
 }
 
-::SceneNodes::VariousNodesOrNull NodeImpl::getNodeByPathInner(::taihe::string_view path)
+::SceneNodes::VariousNodesOrNull NodeImpl::getNodeByPath(::taihe::string_view path)
 {
     if (!nodeETS_) {
         WIDGET_LOGE("node.getNodeByPath invalid nodeETS");

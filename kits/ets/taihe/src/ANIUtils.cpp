@@ -25,13 +25,13 @@ std::string ResourceToString(ani_object ani_obj, ani_env *env)
 
     ani_object params;
     env->Object_GetPropertyByName_Ref(ani_obj, "params", reinterpret_cast<ani_ref *>(&params));
-    ani_double length;
-    env->Object_GetPropertyByName_Double(params, "length", &length);
-    WIDGET_LOGD("resource params length %{public}f", length);
+    ani_int length;
+    env->Object_GetPropertyByName_Int(params, "length", &length);
+    WIDGET_LOGD("resource params length %{public}d", length);
     for (int i = 0; i < static_cast<int>(length); i++) {
         ani_ref stringEntryRef;
         env->Object_CallMethodByName_Ref(
-            params, "$_get", "I:Lstd/core/Object;", &stringEntryRef, static_cast<ani_int>(i));
+            params, "$_get", "i:C{std.core.Object}", &stringEntryRef, static_cast<ani_int>(i));
         resourceStr = ToStdString(reinterpret_cast<ani_string>(stringEntryRef), env);
         WIDGET_LOGD("string in params: %{public}s", resourceStr.c_str());
         // there supposed to be one resource string
