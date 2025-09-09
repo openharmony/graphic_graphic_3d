@@ -77,8 +77,8 @@ public:
 
     ::SceneNodes::NodeOrNull getRoot();
 
-    ::SceneNodes::VariousNodesOrNull getNodeByPathInner(
-        ::taihe::string_view path, ::taihe::optional_view<::SceneNodes::NodeType> type);
+    ::SceneNodes::VariousNodesOrNull getNodeByPath(::taihe::string_view path,
+                                                   ::taihe::optional_view<::SceneNodes::NodeType> type);
 
     ::SceneTH::SceneResourceFactory getResourceFactory()
     {

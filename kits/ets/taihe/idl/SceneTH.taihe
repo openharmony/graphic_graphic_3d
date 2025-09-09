@@ -141,17 +141,7 @@ interface Scene {
 
     @get getRoot(): NodeOrNull;
 
-    @!sts_inject_into_class("""
-    getNodeByPath(path: String, type: (NodeType | undefined)): (Node | null) {
-        let res = this.getNodeByPathInner(path, type);
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
-
-    getNodeByPathInner(path: String, type: Optional<NodeType>): VariousNodesOrNull;
+    getNodeByPath(path: String, type: Optional<NodeType>): VariousNodesOrNull;
 
     getResourceFactory(): SceneResourceFactory;
 

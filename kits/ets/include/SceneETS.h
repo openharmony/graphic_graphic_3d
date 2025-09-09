@@ -27,11 +27,6 @@
 
 #include "scene_adapter/intf_scene_adapter.h"
 
-// #include "BaseObjectJS.h"
-// #include "DisposeContainer.h"
-// #include "MeshResourceJS.h"
-// #include "RenderContextJS.h"
-
 #include "AnimationETS.h"
 #include "CameraETS.h"
 #include "EnvironmentETS.h"
@@ -75,6 +70,7 @@ public:
     bool RenderFrame(RenderParameters renderParam);
 
     std::vector<std::shared_ptr<AnimationETS>> GetAnimations();
+    std::shared_ptr<NodeETS> GetNodeByPath(const std::string &path);
 
     void Destroy();
 

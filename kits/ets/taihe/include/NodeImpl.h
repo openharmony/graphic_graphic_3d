@@ -66,6 +66,8 @@ private:
 
 class NodeImpl : public SceneResourceImpl {
 public:
+    static ::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node);
+
     NodeImpl(const std::shared_ptr<NodeETS> nodeETS);
     ~NodeImpl();
     ::SceneTypes::Vec3 getPosition();
@@ -79,9 +81,9 @@ public:
     ::SceneNodes::NodeType getNodeType();
     ::SceneNodes::LayerMask getLayerMask();
     ::taihe::string getPath();
-    ::SceneNodes::VariousNodesOrNull getParentInner();
+    ::SceneNodes::VariousNodesOrNull getParent();
     ::SceneNodes::Container getChildren();
-    ::SceneNodes::VariousNodesOrNull getNodeByPathInner(::taihe::string_view path);
+    ::SceneNodes::VariousNodesOrNull getNodeByPath(::taihe::string_view path);
     void destroy();
 
     int64_t GetImpl()

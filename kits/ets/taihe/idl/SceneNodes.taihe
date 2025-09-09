@@ -74,35 +74,11 @@ interface Node: SceneResource {
 
     @get getPath(): String;
 
-    @!sts_inject_into_interface("""
-    get parent(): (Node | null);
-    """)
-
-    @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
-
-    getParentInner(): VariousNodesOrNull;
+    @get getParent(): VariousNodesOrNull;
 
     @get getChildren(): Container;
 
-    @!sts_inject_into_interface("""
-    getNodeByPath(path: String): (Node | null) {
-        let res = this.getNodeByPathInner(path);
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
-
-    getNodeByPathInner(path: String): VariousNodesOrNull;
+    getNodeByPath(path: String): VariousNodesOrNull;
 
     GetImpl(): i64;
 }
@@ -123,16 +99,6 @@ union VariousNodesOrNull {
 interface Geometry : Node {
     @get getMesh(): Mesh;
     @get getMorpher(): Optional<Morpher>;
-
-    @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
 }
 
 enum LightType: i32 {
@@ -154,40 +120,12 @@ interface Light: Node {
 
     @get getEnabled(): bool;
     @set setEnabled(enable: bool): void;
-
-    @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
 }
 
 interface SpotLight: Light {
-    @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
 }
 
 interface DirectionalLight: Light {
-    @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
 }
 
 union LightTypeUnion {
@@ -229,14 +167,4 @@ interface Camera: Node {
     raycastSync(viewPosition: Vec2, params: RaycastParameters): Array<RaycastResult>;
 
     @get getImpl(): Optional<i64>;
-
-    @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
 }

@@ -15,18 +15,6 @@
 
 #include "SceneETS.h"
 
-// #include "JsObjectCache.h"
-// #include "LightJS.h"
-// #include "MaterialJS.h"
-// #include "MeshResourceJS.h"
-// #include "NodeJS.h"
-// #include "ParamParsing.h"
-// #include "Promise.h"
-// #include "RenderContextJS.h"
-// #include "SamplerJS.h"
-// #include "nodejstaskqueue.h"
-// static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
-
 #include <meta/api/make_callback.h>
 #include <meta/interface/animation/intf_animation.h>
 #include <meta/interface/intf_object_context.h>
@@ -289,6 +277,41 @@ std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
             interface_pointer_cast<META_NS::IObject>(animationRef), scene_));  // use make_unique instead in the future.
     }
     return animationETSlist;
+}
+
+std::shared_ptr<NodeETS> SceneETS::GetNodeByPath(const std::string &path)
+{
+    std::shared_ptr<NodeETS> rootNode = GetRoot().value;
+    if (!rootNode) {
+        return nullptr;
+    }
+    std::string realPath = path;
+    const std::string rootName = rootNode->GetName();
+    if (realPath.empty() || (realPath == std::string_view("/")) || (realPath == rootName)) {
+        // empty or '/' or "exact rootnodename". so return root
+        return rootNode;
+    }
+
+    // remove the "root nodes name", if given (make sure it also matches though..)
+    size_t pos = 0;
+    if (realPath[0] != '/') {
+        pos = realPath.find('/', 0);
+        std::string_view step = realPath.substr(0, pos);
+        if (!step.empty() && (step != rootName)) {
+            // root not matching
+            return nullptr;
+        }
+    }
+    if (pos != std::string_view::npos) {
+        realPath = realPath.substr(pos + 1);
+    }
+
+    if (realPath.empty()) {
+        // after removing the root node name
+        // nothing left in path, so return root.
+        return rootNode;
+    }
+    return rootNode->GetNodeByPath(realPath);
 }
 
 InvokeReturn<std::shared_ptr<NodeETS>> SceneETS::CreateNode(const std::string &path)

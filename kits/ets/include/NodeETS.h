@@ -44,8 +44,7 @@ public:
 
     NodeType GetNodeType();
 
-    std::string GetNodeName();
-    void SetNodeName(const std::string &name);
+    std::string GetName() const override;
 
     std::shared_ptr<Vec3Proxy> GetPosition();
     void SetPosition(const BASE_NS::Math::Vec3 &position);
