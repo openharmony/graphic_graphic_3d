@@ -372,14 +372,16 @@ void EngineValueManager::NotifySyncs()
 
 static AnyReturnValue SyncValue(const IEngineValue::Ptr& value, EngineSyncDirection dir)
 {
+    AnyReturnValue res = AnyReturn::SUCCESS;
     InterfaceUniqueLock valueLock { value };
     if (auto i = interface_pointer_cast<IEngineValueInternal>(value)) {
         // if this engine value depends on another one, sync the dependency first
         if (auto pv = interface_pointer_cast<IEngineValue>(i->GetPropertyParams().handle.parentValue)) {
-            SyncValue(pv, dir);
+            // make sure the parent is synchronised, either direction
+            res = SyncValue(pv, EngineSyncDirection::AUTO);
         }
     }
-    return value->Sync(dir);
+    return res ? value->Sync(dir) : res;
 }
 
 bool EngineValueManager::Sync(EngineSyncDirection dir)

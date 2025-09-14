@@ -38,7 +38,7 @@ AnyReturnValue EngineValue::Sync(EngineSyncDirection dir)
             valueChanged_ = false;
             return access_->SyncToEngine(*value_, params_) ? AnyReturn::NOTHING_TO_DO : AnyReturn::FAIL;
         }
-        return AnyReturn::NOTHING_TO_DO;
+        return params_.handle.Handle() ? AnyReturn::NOTHING_TO_DO : AnyReturn::FAIL;
     }
     auto res = access_->SyncFromEngine(params_, *value_);
     pendingNotify_ = pendingNotify_ || (res && res != AnyReturn::NOTHING_TO_DO);
