@@ -16,20 +16,15 @@
 #include "TonemapETS.h"
 
 namespace OHOS::Render3D {
-std::shared_ptr<TonemapETS> TonemapETS::FromJS(const TonemapETS::ToneMappingType &type, const float exposure)
-{
-    auto tm = std::shared_ptr<TonemapETS>(new TonemapETS());
-    tm->SetType(type);
-    tm->SetExposure(exposure);
-    return tm;
-}
-
-TonemapETS::TonemapETS()
-{}
-
 TonemapETS::TonemapETS(const SCENE_NS::IPostProcess::Ptr postProc, const SCENE_NS::ITonemap::Ptr tonemap)
     : postProc_(postProc), tonemap_(tonemap)
 {}
+
+TonemapETS::TonemapETS(const ToneMappingType &type, const float exposure)
+{
+    type_ = type;
+    exposure_ = exposure;
+}
 
 TonemapETS::~TonemapETS()
 {

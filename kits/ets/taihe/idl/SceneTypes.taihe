@@ -1,0 +1,183 @@
+/*
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!namespace("SceneTypes")
+@!sts_inject("""
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
+""")
+
+interface Vec2 {
+    @get getX(): f64;
+    @set setX(x: f64): void;
+
+    @get getY(): f64;
+    @set setY(y: f64): void;
+}
+
+interface Vec3 {
+    @get getX(): f64;
+    @set setX(x: f64): void;
+
+    @get getY(): f64;
+    @set setY(y: f64): void;
+
+    @get getZ(): f64;
+    @set setZ(z: f64): void;
+}
+
+interface Vec4 {
+    @get getX(): f64;
+    @set setX(x: f64): void;
+
+    @get getY(): f64;
+    @set setY(y: f64): void;
+
+    @get getZ(): f64;
+    @set setZ(z: f64): void;
+
+    @get getW(): f64;
+    @set setW(w: f64): void;
+}
+
+interface Quaternion {
+    @get getX(): f64;
+    @set setX(x: f64): void;
+
+    @get getY(): f64;
+    @set setY(y: f64): void;
+
+    @get getZ(): f64;
+    @set setZ(z: f64): void;
+
+    @get getW(): f64;
+    @set setW(w: f64): void;
+}
+
+struct Aabb {
+    aabbMin: Vec3;
+    aabbMax: Vec3;
+}
+
+interface Color {
+    @get getR(): f64;
+    @set setR(r: f64): void;
+
+    @get getG(): f64;
+    @set setG(g: f64): void;
+
+    @get getB(): f64;
+    @set setB(b: f64): void;
+
+    @get getA(): f64;
+    @set setA(a: f64): void;
+}
+
+struct Rect {
+    x: f64;
+    y: f64;
+    width: f64;
+    height: f64;
+}
+
+enum GeometryType : i32 {
+    CUSTOM = 0,
+    CUBE = 1,
+    PLANE = 2,
+    SPHERE = 3
+}
+
+interface GeometryDefinition {
+    @get getGeometryType(): GeometryType;
+}
+
+enum PrimitiveTopology : i32 {
+    TRIANGLE_LIST = 0,
+    TRIANGLE_STRIP = 1
+}
+
+@class
+interface CustomGeometry : GeometryDefinition {
+    @get getTopology(): Optional<PrimitiveTopology>;
+    @set setTopology(topology: Optional<PrimitiveTopology>): void;
+
+    @get getVertices(): Array<Vec3>;
+    @set setVertices(vertices: Array<Vec3>): void;
+
+    @get getIndices(): Optional<Array<i32>>;
+    @set setIndices(indices: Optional<Array<i32>>): void;
+
+    @get getNormals(): Optional<Array<Vec3>>;
+    @set setNormals(normals: Optional<Array<Vec3>>): void;
+
+    @get getUvs(): Optional<Array<Vec2>>;
+    @set setUvs(uvs: Optional<Array<Vec2>>): void;
+
+    @get getColors(): Optional<Array<Color>>;
+    @set setColors(colors: Optional<Array<Color>>): void;
+}
+
+@ctor("CustomGeometry")
+function CreateCustomGeometry(): CustomGeometry;
+
+@class
+interface CubeGeometry : GeometryDefinition {
+    @get getSize(): Vec3;
+    @set setSize(size: Vec3): void;
+}
+
+@ctor("CubeGeometry")
+function CreateCubeGeometry(): CubeGeometry;
+
+@class
+interface PlaneGeometry : GeometryDefinition {
+    @get getSize(): Vec2;
+    @set setSize(size: Vec2): void;
+}
+
+@ctor("PlaneGeometry")
+function CreatePlaneGeometry(): PlaneGeometry;
+
+@class
+interface SphereGeometry : GeometryDefinition {
+    @get getRadius(): f64;
+    @set setRadius(radius: f64): void;
+
+    @get getSegmentCount(): i32;
+    @set setSegmentCount(count: i32): void;
+}
+
+@ctor("SphereGeometry")
+function CreateSphereGeometry(): SphereGeometry;
+
+union GeometryDefinitionType {
+    custom: CustomGeometry;
+    cube: CubeGeometry;
+    plane: PlaneGeometry;
+    sphere: SphereGeometry;
+    base: GeometryDefinition;
+}
+
+@!sts_inject("""
+export type Position3 = Vec3;
+""")
+
+@!sts_inject("""
+export type Rotation3 = Vec3;
+""")
+
+@!sts_inject("""
+export type Scale3 = Vec3;
+""")

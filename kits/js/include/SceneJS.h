@@ -29,7 +29,6 @@
 #endif
 #include "BaseObjectJS.h"
 #include "DisposeContainer.h"
-#include "MeshResourceJS.h"
 #include "RenderContextJS.h"
 
 class SceneJS : public BaseObject {

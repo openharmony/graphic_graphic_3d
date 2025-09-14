@@ -32,6 +32,8 @@ public:
     ShaderETS(const SCENE_NS::IShader::Ptr &shader, const std::string &name, const std::string &uri);
     ~ShaderETS();
 
+    void BindToMaterial(const SCENE_NS::IMaterial::Ptr &material);
+
     int32_t GetInputsSize() const
     {
         return proxies_.size();
@@ -52,7 +54,6 @@ public:
     }
 
 private:
-    void BindToMaterial(const SCENE_NS::IMaterial::Ptr &material);
     SCENE_NS::IShader::Ptr shader_{nullptr};
     std::unordered_map<std::string, std::shared_ptr<IPropertyProxy>> proxies_;
     std::vector<std::string> keys_;

@@ -29,6 +29,8 @@ public:
     static std::shared_ptr<PostProcessETS> FromJS(
         const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom);
     PostProcessETS(const SCENE_NS::ICamera::Ptr camera, const SCENE_NS::IPostProcess::Ptr pp);
+    // store post process settings from ETS
+    PostProcessETS(const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom);
     ~PostProcessETS();
 
     std::shared_ptr<TonemapETS> GetToneMapping();
@@ -62,7 +64,6 @@ public:
     }
 
 private:
-    PostProcessETS();
     SCENE_NS::ICamera::WeakPtr camera_{nullptr};     // weak ref to owning camera.
     SCENE_NS::IPostProcess::Ptr postProc_{nullptr};  // keep a strong ref..
 

@@ -17,21 +17,15 @@
 #include "Utils.h"
 
 namespace OHOS::Render3D {
-std::shared_ptr<PostProcessETS> PostProcessETS::FromJS(
-    const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom)
-{
-    auto pp = std::shared_ptr<PostProcessETS>(new PostProcessETS());
-    pp->tonemap_ = tonemap;
-    pp->bloom_ = bloom;
-    return pp;
-}
-
 PostProcessETS::PostProcessETS(const SCENE_NS::ICamera::Ptr camera, const SCENE_NS::IPostProcess::Ptr pp)
     : camera_(camera), postProc_(pp)
 {}
 
-PostProcessETS::PostProcessETS()
-{}
+PostProcessETS::PostProcessETS(const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom)
+{
+    tonemap_ = tonemap;
+    bloom_ = bloom;
+}
 
 PostProcessETS::~PostProcessETS()
 {

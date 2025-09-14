@@ -22,7 +22,7 @@ namespace OHOS::Render3D {
 AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE_NS::IScene::Ptr scene)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animationRef_(animationRef), scene_(scene)
 {
-    WIDGET_LOGI("AnimationETS ++ with animationRef, name: %{public}s", GetName().c_str());
+    WIDGET_LOGD("AnimationETS ++ with animationRef, name: %{public}s", GetName().c_str());
 
     using namespace META_NS;
     META_NS::IAnimation::Ptr anim = interface_pointer_cast<IAnimation>(animationRef_);
@@ -55,7 +55,7 @@ AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE
 
 AnimationETS::~AnimationETS()
 {
-    WIDGET_LOGI("AnimationETS --");
+    WIDGET_LOGD("AnimationETS --");
     animationRef_.reset();
 }
 

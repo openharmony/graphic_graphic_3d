@@ -270,6 +270,9 @@ BASE_NS::Math::Vec3 CameraETS::ScreenToWorld(const BASE_NS::Math::Vec3 &screen)
 InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BASE_NS::Math::Vec2 &position,
     const std::shared_ptr<NodeETS> rootNode, const std::shared_ptr<NodeETS> layerMaskNode)
 {
+    if (!rootNode) {
+        return InvokeReturn<std::vector<CameraETS::RaycastResult>>({}, "Invalid rootNode");
+    }
     auto rayCast = interface_pointer_cast<SCENE_NS::ICameraRayCast>(camera_);
     if (!rayCast) {
         return InvokeReturn<std::vector<CameraETS::RaycastResult>>({}, "Invalid camera");

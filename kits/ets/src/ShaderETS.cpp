@@ -46,11 +46,11 @@ ShaderETS::ShaderETS(const SCENE_NS::IShader::Ptr &shader, const std::string &na
 
 void ShaderETS::BindToMaterial(const SCENE_NS::IMaterial::Ptr &material)
 {
+    keys_.clear();
+    proxies_.clear();
     if (!material) {
         return;
     }
-    keys_.clear();
-    proxies_.clear();
     BASE_NS::vector<SCENE_NS::ITexture::Ptr> textures = material->Textures()->GetValue();
     if (!textures.empty()) {
         int index = 0;
@@ -135,8 +135,10 @@ void ShaderETS::SetInput(const std::string &key, const std::any &value)
         return;
     }
     if (META_NS::IsCompatibleWith<bool>(prop)) {
+        // 1.1 interface declaration do not include bool type, For compatibility, use int32_t instead.
         std::shared_ptr<PropertyProxy<bool>> proxy = static_pointer_cast<PropertyProxy<bool>>(input);
-        proxy->SetValue(std::any_cast<bool>(value));
+        bool bValue = std::any_cast<int32_t>(value) != 0;
+        proxy->SetValue(bValue);
     } else if (META_NS::IsCompatibleWith<int32_t>(prop)) {
         std::shared_ptr<PropertyProxy<int32_t>> proxy = static_pointer_cast<PropertyProxy<int32_t>>(input);
         proxy->SetValue(std::any_cast<int32_t>(value));
@@ -159,9 +161,10 @@ void ShaderETS::SetInput(const std::string &key, const std::any &value)
         if (imageETS) {
             proxy->SetValue(imageETS->GetNativeImage());
         }
+    } else {
+        auto any = META_NS::GetInternalAny(prop);
+        CORE_LOG_E("Unsupported property type [%s]", any ? any->GetTypeIdString().c_str() : "<Unknown>");
     }
-    auto any = META_NS::GetInternalAny(prop);
-    CORE_LOG_E("Unsupported property type [%s]", any ? any->GetTypeIdString().c_str() : "<Unknown>");
 }
 
 META_NS::IObject::Ptr ShaderETS::GetNativeObj() const

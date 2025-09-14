@@ -1,0 +1,45 @@
+/*
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!namespace("SceneResources", "Transfer")
+@!sts_inject("""
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
+""")
+
+from SceneResources use Animation, Environment;
+
+@!sts_inject("""
+export function animationTransferStatic(input: Any): Object {
+    return animationTransferStaticImpl(ESValue.wrap(input));
+}
+export function animationTransferDynamic(input: Object): Any {
+    return animationTransferDynamicImpl(input as Animation);
+}
+
+export function environmentTransferStatic(input: Any): Object {
+    return environmentTransferStaticImpl(ESValue.wrap(input));
+}
+
+export function environmentTransferDynamic(input: Object): Any {
+    return environmentTransferDynamicImpl(input as Environment);
+}
+""")
+
+function animationTransferStaticImpl(input: @sts_type("ESValue") Opaque): Animation;
+function animationTransferDynamicImpl(input: Animation): @sts_type("Any") Opaque;
+
+function environmentTransferStaticImpl(input: @sts_type("ESValue") Opaque): Environment;
+function environmentTransferDynamicImpl(input: Environment): @sts_type("Any") Opaque;
