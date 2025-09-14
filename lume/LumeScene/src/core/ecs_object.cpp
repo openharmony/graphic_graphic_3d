@@ -285,11 +285,28 @@ void EcsObject::OnEntityEvent(CORE_NS::IEcs::EntityListener::EventType type)
     }
 }
 
+static void RemoveComponentPointers(
+    const META_NS::IEngineValueManager::Ptr& m, const CORE_NS::IComponentManager* manager)
+{
+    for (auto&& v : m->GetAllEngineValues()) {
+        if (auto acc = interface_cast<META_NS::IEngineValueInternal>(v)) {
+            META_NS::InterfaceUniqueLock lock { v };
+            auto param = acc->GetPropertyParams();
+            if (param.handle.manager == manager) {
+                param.handle.manager = nullptr;
+                acc->SetPropertyParams(param);
+            }
+        }
+    }
+}
+
 void EcsObject::OnComponentEvent(
     CORE_NS::IEcs::ComponentListener::EventType type, const CORE_NS::IComponentManager& component)
 {
     if (type == CORE_NS::IEcs::ComponentListener::EventType::MODIFIED) {
         valueManager_->Sync(META_NS::EngineSyncDirection::AUTO);
+    } else if (type == CORE_NS::IEcs::ComponentListener::EventType::DESTROYED) {
+        RemoveComponentPointers(valueManager_, &component);
     }
 }
 
