@@ -14,9 +14,74 @@
  */
 
 @!sts_inject("""
-import { ResourceStr } from './arkui.component.units';
+import { ResourceStr } from 'arkui.component.units';
+import { ShadowRecord, RecordProxyHandler } from './RecordProxy';
+import { Callback } from '@ohos.base';
 // Ensure that libscene_ani is loaded.
 loadLibrary('scene_ani.z');
+
+class ShaderShadowRecord extends ShadowRecord<ShaderInputType> {
+    static createProxy(shader: Shader): Record<string, ShaderInputType> {
+        let handler = new ShaderInputsProxyHandler(shader);
+        return proxy.Proxy.create(new ShaderShadowRecord() as ShadowRecord<ShaderInputType>,
+            handler) as Record<string, ShaderInputType>;
+    }
+}
+
+class ShaderInputsProxyHandler extends RecordProxyHandler<ShaderInputType> {
+    private shader: Shader;
+
+    constructor(shader: Shader) {
+        this.shader = shader;
+    }
+
+    override getSize(): int {
+        return this.shader.getInputsSize();
+    }
+
+    override getKeys(): string[] {
+        return this.shader.getInputsKeys();
+    }
+
+    override getProperty(key: string): ShaderInputType | undefined {
+        return this.shader.getInput(key);
+    }
+
+    override setProperty(key: string, value: ShaderInputType): void {
+        this.shader.setInput(key, value);
+    }
+}
+
+class MorpherShadowRecord extends ShadowRecord<double> {
+    static createProxy(morpher: Morpher): Record<string, double> {
+        let handler = new MorpherTargetsProxyHandler(morpher);
+        return proxy.Proxy.create(new MorpherShadowRecord() as ShadowRecord<double>, handler) as Record<string, double>;
+    }
+}
+
+class MorpherTargetsProxyHandler extends RecordProxyHandler<double> {
+    private morpher: Morpher;
+
+    constructor(morpher: Morpher) {
+        this.morpher = morpher;
+    }
+
+    override getSize(): int {
+        return this.morpher.getTargetsSize();
+    }
+
+    override getKeys(): string[] {
+        return this.morpher.getTargetsKeys();
+    }
+
+    override getProperty(key: string): double | undefined {
+        return this.morpher.getTarget(key);
+    }
+
+    override setProperty(key: string, value: double): void {
+        this.morpher.setTarget(key, value);
+    }
+}
 """)
 
 @!namespace("SceneResources")
@@ -45,6 +110,8 @@ interface SceneResource {
     @get getUri(): Optional<@sts_type("ResourceStr") Opaque>;
 
     destroy(): void;
+
+    @get getImpl(): Optional<i64>;
 }
 
 enum MaterialType: i32 {
@@ -58,17 +125,13 @@ enum CullMode: i32 {
     BACK = 2,
 }
 
-interface Blend {
-    @get getEnabled(): bool;
-    @set setEnabled(enable: bool): void;
+struct Blend {
+    enabled: bool;
 }
 
-interface RenderSort {
-    @get getRenderSortLayer(): Optional<i32>;
-    @set setRenderSortLayer(value: Optional<i32>): void;
-
-    @get getRenderSortLayerOrder(): Optional<i32>;
-    @set setRenderSortLayerOrder(value: Optional<i32>): void;
+struct RenderSort {
+    renderSortLayer: Optional<i32>;
+    renderSortLayerOrder: Optional<i32>;
 }
 
 interface Material : SceneResource {
@@ -116,6 +179,8 @@ interface Sampler {
 
     @get getAddressModeV(): Optional<SamplerAddressMode>;
     @set setAddressModeV(mode: Optional<SamplerAddressMode>): void;
+
+    @get getImpl(): Optional<i64>;
 }
 
 union ImageOrNull {
@@ -124,9 +189,9 @@ union ImageOrNull {
 }
 
 union ImageOrNullOrUndefined {
-    image: Image;
-    @null nValue;
     @undefined uValue;
+    @null nValue;
+    image: Image;
 }
 
 interface MaterialProperty {
@@ -138,6 +203,8 @@ interface MaterialProperty {
 
     @get getSampler(): Optional<Sampler>;
     @set setSampler(sampler: Optional<Sampler>): void;
+
+    @get getImpl(): Optional<i64>;
 }
 
 interface MetallicRoughnessMaterial : Material {
@@ -177,30 +244,52 @@ interface ShaderMaterial : Material {
     @set setColorShader(shader: Optional<Shader>): void;
 }
 
+interface PBRMaterial: MetallicRoughnessMaterial, ShaderMaterial {
+}
+
+union VariousMaterial {
+    pbr: PBRMaterial;
+    shader: ShaderMaterial;
+    metaRough: MetallicRoughnessMaterial;
+    base: Material;
+}
+
 interface SubMesh {
     @get getName(): String;
     @set setName(name: String): void;
 
-    @get getMaterial(): Material;
+    @get getMaterial(): VariousMaterial;
     @set setMaterial(mat: Material): void;
 
     @get getAabb(): Aabb;
 }
 
 interface Morpher {
-    @get getTargets(): @record Map<String, f64>;
+    @!sts_inject_into_interface("""
+    get targets(): Record<string, double>;
+    """)
+
+    @!sts_inject_into_class("""
+    get targets(): Record<string, double> {
+        return MorpherShadowRecord.createProxy(this);
+    }
+    """)
+
+    getTargetsSize(): i32;
+    getTargetsKeys(): Array<String>;
+    getTarget(key: String): Optional<f64>;
+    setTarget(key: String, value: f64): void;
 }
 
 interface Mesh : SceneResource {
     @get getSubMeshes(): Array<SubMesh>;
     @get getAabb(): Aabb;
 
-    @get getMaterialOverride(): Optional<Material>;
+    @get getMaterialOverride(): Optional<VariousMaterial>;
     @set setMaterialOverride(mat: Optional<Material>): void;
 }
 
 interface MeshResource : SceneResource {
-    GetImpl(): i64;
 }
 
 union CallbackUndefinedType {
@@ -220,7 +309,19 @@ interface Animation : SceneResource {
 
     @get getProgress(): f64;
 
-    onFinished(callback: (data: CallbackUndefinedType) => void): void;
+    @!sts_inject_into_interface("""
+    onFinished(callback: Callback<void>): void;
+    """)
+
+    @!sts_inject_into_class("""
+    onFinished(callback: Callback<void>): void {
+        this.onFinishedInner(() => {
+            EAWorker.postToMain<void>(callback);
+        });
+    }
+    """)
+
+    onFinishedInner(callback: () => void): void;
 
     onStarted(callback: (data: CallbackUndefinedType) => void): void;
 
@@ -267,8 +368,6 @@ interface Environment : SceneResource {
 
     @get getIrradianceCoefficients(): Optional<Array<Vec3>>;
     @set setIrradianceCoefficients(coefficients: Optional<Array<Vec3>>): void;
-
-    GetImpl(): i64;
 }
 
 interface Image : SceneResource {
@@ -277,7 +376,6 @@ interface Image : SceneResource {
 }
 
 union ShaderInputType {
-    t_bool: bool;
     t_i32: i32;
     t_f64: f64;
     t_vec2: Vec2;
@@ -287,5 +385,18 @@ union ShaderInputType {
 }
 
 interface Shader : SceneResource {
-    @get getInputs(): @record Map<String, ShaderInputType>;
+    @!sts_inject_into_interface("""
+    get inputs(): Record<string, ShaderInputType>;
+    """)
+
+    @!sts_inject_into_class("""
+    get inputs(): Record<string, ShaderInputType> {
+        return ShaderShadowRecord.createProxy(this);
+    }
+    """)
+
+    getInputsSize(): i32;
+    getInputsKeys(): Array<String>;
+    getInput(key: String): Optional<ShaderInputType>;
+    setInput(key: String, value: ShaderInputType): void;
 }

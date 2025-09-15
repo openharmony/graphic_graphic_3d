@@ -28,7 +28,7 @@
 #include "interop_js/arkts_interop_js_api.h"
 #include "interop_js/arkts_esvalue.h"
 #include "napi/native_api.h"
-#include "TransferEnvironment.h"
+#include "CheckNapiEnv.h"
 
 #ifdef __SCENE_ADAPTER__
 #include "3d_widget_adapter_log.h"
@@ -49,14 +49,14 @@ private:
     std::shared_ptr<NodeETS> nodeETS_;
 };
 
-class ContainerImpl {
+class NodeContainerImpl {
 public:
-    ContainerImpl(const std::shared_ptr<NodeETS> nodeETS);
-    ~ContainerImpl();
+    NodeContainerImpl(const std::shared_ptr<NodeETS> nodeETS);
+    ~NodeContainerImpl();
     void append(::SceneNodes::weak::Node item);
     void insertAfter(::SceneNodes::weak::Node item, ::SceneNodes::NodeOrNull const &sibling);
     void remove(::SceneNodes::weak::Node item);
-    ::SceneNodes::NodeOrNull get(int32_t index);
+    ::SceneNodes::VariousNodesOrNull get(int32_t index);
     void clear();
     int32_t count();
 
@@ -66,7 +66,10 @@ private:
 
 class NodeImpl : public SceneResourceImpl {
 public:
-    NodeImpl(const std::shared_ptr<NodeETS> nodeETS);
+    static ::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node);
+    static ::SceneNodes::VariousNodes MakeVariousNodes(const std::shared_ptr<NodeETS> &node);
+
+    explicit NodeImpl(const std::shared_ptr<NodeETS> nodeETS);
     ~NodeImpl();
     ::SceneTypes::Vec3 getPosition();
     void setPosition(::SceneTypes::weak::Vec3 pos);
@@ -79,15 +82,10 @@ public:
     ::SceneNodes::NodeType getNodeType();
     ::SceneNodes::LayerMask getLayerMask();
     ::taihe::string getPath();
-    ::SceneNodes::VariousNodesOrNull getParentInner();
-    ::SceneNodes::Container getChildren();
-    ::SceneNodes::VariousNodesOrNull getNodeByPathInner(::taihe::string_view path);
+    ::SceneNodes::VariousNodesOrNull getParent();
+    ::SceneNodes::NodeContainer getNodeContainer();
+    ::SceneNodes::VariousNodesOrNull getNodeByPath(::taihe::string_view path);
     void destroy();
-
-    int64_t GetImpl()
-    {
-        return reinterpret_cast<int64_t>(this);
-    }
 
     std::shared_ptr<NodeETS> GetInternalNode()
     {

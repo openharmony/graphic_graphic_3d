@@ -14,9 +14,49 @@
  */
 
 @!sts_inject("""
-import { ResourceStr } from './arkui.component.units';
+import { ResourceStr } from 'arkui.component.units';
 // Ensure that libscene_ani is loaded.
 loadLibrary('scene_ani.z');
+
+export interface Container<T> {
+    append(item: T): void;
+    insertAfter(item: T, sibling: T | null): void;
+    remove(item: T): void;
+    get(index: int): T | null;
+    clear(): void;
+    count(): int;
+}
+
+export class NodeContainerProxy implements Container<Node> {
+    private nc: NodeContainer;
+    constructor(nc: NodeContainer) {
+        this.nc = nc;
+    }
+
+    append(item: Node): void {
+        this.nc.append(item);
+    }
+
+    insertAfter(item: Node, sibling: Node | null): void {
+        this.nc.insertAfter(item, sibling);
+    }
+
+    remove(item: Node): void {
+        this.nc.remove(item);
+    }
+
+    get(index: int): Node | null {
+        return this.nc.get(index);
+    }
+
+    clear(): void {
+        this.nc.clear();
+    }
+
+    count(): int {
+        return this.nc.count();
+    }
+}
 """)
 
 @!namespace("SceneNodes")
@@ -39,16 +79,14 @@ enum NodeType: i32 {
     LIGHT = 4,
 }
 
-// TODO Container to be implemented
-
-interface Container {
+interface NodeContainer {
     append(item: Node): void;
 
     insertAfter(item: Node, sibling: NodeOrNull): void;
 
     remove(item: Node): void;
 
-    get(index: i32): NodeOrNull;
+    get(index: i32): VariousNodesOrNull;
 
     clear(): void;
 
@@ -74,37 +112,21 @@ interface Node: SceneResource {
 
     @get getPath(): String;
 
+    @get getParent(): VariousNodesOrNull;
+
     @!sts_inject_into_interface("""
-    get parent(): (Node | null);
+    get children(): Container<Node>;
     """)
 
     @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
+    get children(): Container<Node> {
+        return new NodeContainerProxy(this.getNodeContainer()) as Container<Node>;
     }
     """)
 
-    getParentInner(): VariousNodesOrNull;
+    getNodeContainer(): NodeContainer;
 
-    @get getChildren(): Container;
-
-    @!sts_inject_into_interface("""
-    getNodeByPath(path: String): (Node | null) {
-        let res = this.getNodeByPathInner(path);
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
-
-    getNodeByPathInner(path: String): VariousNodesOrNull;
-
-    GetImpl(): i64;
+    getNodeByPath(path: String): VariousNodesOrNull;
 }
 
 union NodeOrNull {
@@ -120,17 +142,20 @@ union VariousNodesOrNull {
     @null nValue;
 }
 
+union VariousNodes {
+    geometry: Geometry;
+    camera: Camera;
+    light: Light;
+    node: Node;
+}
+
 interface Geometry : Node {
     @get getMesh(): Mesh;
     @get getMorpher(): Optional<Morpher>;
 
     @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
+    get children(): Container<Node> {
+        return new NodeContainerProxy(this.getNodeContainer()) as Container<Node>;
     }
     """)
 }
@@ -156,36 +181,24 @@ interface Light: Node {
     @set setEnabled(enable: bool): void;
 
     @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
+    get children(): Container<Node> {
+        return new NodeContainerProxy(this.getNodeContainer()) as Container<Node>;
     }
     """)
 }
 
 interface SpotLight: Light {
     @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
+    get children(): Container<Node> {
+        return new NodeContainerProxy(this.getNodeContainer()) as Container<Node>;
     }
     """)
 }
 
 interface DirectionalLight: Light {
     @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
+    get children(): Container<Node> {
+        return new NodeContainerProxy(this.getNodeContainer()) as Container<Node>;
     }
     """)
 }
@@ -228,15 +241,12 @@ interface Camera: Node {
     @gen_promise("raycast")
     raycastSync(viewPosition: Vec2, params: RaycastParameters): Array<RaycastResult>;
 
-    @get getImpl(): Optional<i64>;
+    worldToScreen(worldPosition: Vec3): Vec3;
+    screenToWorld(viewPosition: Vec3): Vec3;
 
     @!sts_inject_into_class("""
-    get parent(): (Node | null) {
-        let res = this.getParentInner();
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
+    get children(): Container<Node> {
+        return new NodeContainerProxy(this.getNodeContainer()) as Container<Node>;
     }
     """)
 }

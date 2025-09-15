@@ -69,14 +69,14 @@ public:
     virtual META_NS::IObject::Ptr GetNativeObj() const = 0;
 
     SceneResourceType GetResourceType();
-    std::string GetName() const;
+    virtual std::string GetName() const;
     void SetName(const std::string &name);
     std::string GetUri() const;
 
 protected:
     void SetUri(const std::string &uri);
 
-private:
+protected:
     SceneResourceType type_;
     std::string name_; // Cache for name if object does not support naming
     std::string uri_;

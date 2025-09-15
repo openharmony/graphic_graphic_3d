@@ -14,12 +14,14 @@
  */
 
 #include "MeshImpl.h"
+#include "PBRMaterialImpl.h"
 #include "Vec3Impl.h"
 
 namespace OHOS::Render3D::KITETS {
 MeshImpl::MeshImpl(const std::shared_ptr<MeshETS> meshETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::MESH, meshETS), meshETS_(meshETS)
-{}
+{
+}
 
 MeshImpl::~MeshImpl()
 {
@@ -28,8 +30,20 @@ MeshImpl::~MeshImpl()
 
 ::taihe::array<::SceneResources::SubMesh> MeshImpl::getSubMeshes()
 {
-    taihe::array<SceneResources::SubMesh> subMeshes = {};
-    return subMeshes;
+    if (!meshETS_) {
+        WIDGET_LOGE("get submeshes failed, invalid mesh");
+        return {};
+    }
+    const std::vector<std::shared_ptr<SubMeshETS>> subMeshes = meshETS_->GetSubMeshes();
+    if (subMeshes.empty()) {
+        return {};
+    }
+    std::vector<::SceneResources::SubMesh> smVector;
+    smVector.reserve(subMeshes.size());
+    for (size_t i = 0; i < subMeshes.size(); i++) {
+        smVector.emplace_back(::taihe::make_holder<SubMeshImpl, ::SceneResources::SubMesh>(subMeshes[i]));
+    }
+    return taihe::array_view<SceneResources::SubMesh>(smVector);
 }
 
 ::SceneTypes::Aabb MeshImpl::getAabb()
@@ -38,20 +52,40 @@ MeshImpl::~MeshImpl()
         auto aabbMin = meshETS_->GetAABBMin();
         auto aabbMax = meshETS_->GetAABBMax();
         return SceneTypes::Aabb{taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(aabbMin),
-            taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(aabbMax)};
+                                taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(aabbMax)};
     } else {
         return SceneTypes::Aabb{taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3),
-            taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3)};
+                                taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3)};
     }
 }
 
-::taihe::optional<::SceneResources::Material> MeshImpl::getMaterialOverride()
+::taihe::optional<::SceneResources::VariousMaterial> MeshImpl::getMaterialOverride()
 {
-    TH_THROW(std::runtime_error, "getMaterialOverride not implemented");
+    if (!meshETS_) {
+        return std::nullopt;
+    }
+    std::shared_ptr<MaterialETS> matETS = meshETS_->GetMaterialOverride();
+    if (!matETS) {
+        return std::nullopt;
+    }
+    auto mat = ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(matETS);
+    return ::taihe::optional<::SceneResources::VariousMaterial>(std::in_place,
+                                                                ::SceneResources::VariousMaterial::make_pbr(mat));
 }
 
 void MeshImpl::setMaterialOverride(::taihe::optional_view<::SceneResources::Material> mat)
 {
-    TH_THROW(std::runtime_error, "setMaterialOverride not implemented");
+    if (!meshETS_) {
+        WIDGET_LOGE("set material override failed, mesh is null");
+        return;
+    }
+    std::shared_ptr<MaterialETS> matETS = nullptr;
+    if (mat) {
+        MaterialImpl *mi = GetImplPointer<MaterialImpl>(static_cast<::SceneResources::SceneResource>(*mat)->getImpl());
+        if (mi) {
+            matETS = mi->getInternalMaterial();
+        }
+    }
+    meshETS_->SetMaterialOverride(matETS);
 }
 }  // namespace OHOS::Render3D::KITETS

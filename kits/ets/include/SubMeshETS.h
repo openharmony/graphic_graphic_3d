@@ -20,6 +20,8 @@
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_material.h>
 
+#include "MaterialETS.h"
+
 namespace OHOS::Render3D {
 class SubMeshETS {
 public:
@@ -31,8 +33,8 @@ public:
     BASE_NS::Math::Vec3 GetAABBMin();
     BASE_NS::Math::Vec3 GetAABBMax();
 
-    SCENE_NS::IMaterial::Ptr GetMaterial();
-    void SetMaterial(const SCENE_NS::IMaterial::Ptr &material);
+    std::shared_ptr<MaterialETS> GetMaterial();
+    void SetMaterial(const std::shared_ptr<MaterialETS> &mat);
 
 private:
     SCENE_NS::ISubMesh::Ptr subMesh_{nullptr};

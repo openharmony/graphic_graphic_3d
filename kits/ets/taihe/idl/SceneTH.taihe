@@ -14,16 +14,49 @@
  */
 
 @!sts_inject("""
-import { ResourceStr } from './arkui.component.units';
+import { ResourceStr } from 'arkui.component.units';
 import { NodeType, Node } from './SceneNodes';
+import { ShadowRecord, RecordProxyHandler } from './RecordProxy'
 // Ensure that libscene_ani is loaded.
 loadLibrary('scene_ani.z');
+
+class ComponentShadowRecord extends ShadowRecord<ComponentPropertyType> {
+    static createProxy(component: SceneComponent): Record<string, ComponentPropertyType> {
+        let handler = new ComponentPropertyProxyHandler(component);
+        return proxy.Proxy.create(new ComponentShadowRecord() as ShadowRecord<ComponentPropertyType>,
+            handler) as Record<string, ComponentPropertyType>;
+    }
+}
+
+class ComponentPropertyProxyHandler extends RecordProxyHandler<ComponentPropertyType> {
+    private property: SceneComponent;
+
+    constructor(property: SceneComponent) {
+        this.property = property;
+    }
+
+    override getSize(): int {
+        return this.property.getPropertySize();
+    }
+
+    override getKeys(): string[] {
+        return this.property.getPropertyKeys();
+    }
+
+    override getProperty(key: string): ComponentPropertyType | undefined {
+        return this.property.getComponentProperty(key);
+    }
+
+    override setProperty(key: string, value: ComponentPropertyType): void {
+        this.property.setComponentProperty(key, value);
+    }
+}
 """)
 
 @!namespace("Scene")
 
-from SceneResources use Shader, MaterialType, Material, Animation, Environment, Image, MeshResource, Sampler, SceneResource;
-from SceneNodes use Camera, LightType, LightTypeUnion, Light, Node, NodeType, Geometry, NodeOrNull, VariousNodesOrNull;
+from SceneResources use Shader, MaterialType, VariousMaterial, Animation, Environment, Image, MeshResource, Sampler, SceneResource;
+from SceneNodes use Camera, LightType, LightTypeUnion, Light, Node, NodeType, Geometry, NodeOrNull, VariousNodesOrNull, VariousNodes;
 from SceneTypes use GeometryDefinitionType, Vec2, Vec3, Vec4;
 
 struct SceneResourceParameters {
@@ -37,7 +70,7 @@ struct SceneNodeParameters {
 }
 
 struct RaycastResult {
-    node: Node;
+    node: VariousNodes;
     centerDistance: f64;
     hitPosition: Vec3;
 }
@@ -74,7 +107,7 @@ interface SceneResourceFactory : RenderResourceFactory {
     createNodeSync(params: SceneNodeParameters): Node;
 
     @gen_promise("createMaterial")
-    createMaterialSync(params: SceneResourceParameters, materialType: MaterialType): Material;
+    createMaterialSync(params: SceneResourceParameters, materialType: MaterialType): VariousMaterial;
 
     @gen_promise("createEnvironment")
     createEnvironmentSync(params: SceneResourceParameters): Environment;
@@ -86,6 +119,8 @@ interface SceneResourceFactory : RenderResourceFactory {
 }
 
 union ComponentPropertyType {
+    @undefined uValue;
+    @null nValue;
     t_string: String;
     t_bool: bool;
     t_i32: i32;
@@ -93,7 +128,6 @@ union ComponentPropertyType {
     t_vec2: Vec2;
     t_vec3: Vec3;
     t_vec4: Vec4;
-    t_image: Image;
     t_scene_resource: SceneResource;
 
     t_string_arr: Array<String>;
@@ -103,17 +137,27 @@ union ComponentPropertyType {
     t_vec2_arr: Array<Vec2>;
     t_vec3_arr: Array<Vec3>;
     t_vec4_arr: Array<Vec4>;
-    t_image_arr: Array<Image>;
     t_scene_resource_arr: Array<SceneResource>;
-    @undefined uValue;
-    @null nValue;
 }
 
 interface SceneComponent {
+    @!sts_inject_into_interface("""
+    get property(): Record<string, ComponentPropertyType>;
+    """)
+
+    @!sts_inject_into_class("""
+    get property(): Record<string, ComponentPropertyType> {
+        return ComponentShadowRecord.createProxy(this);
+    }
+    """)
+
+    getPropertySize(): i32;
+    getPropertyKeys(): Array<String>;
+    getComponentProperty(key: String): Optional<ComponentPropertyType>;
+    setComponentProperty(key: String, value: ComponentPropertyType): void;
+
     @get getName(): String;
     @set setName(name: String): void;
-
-    @get getProperty(): @record Map<String, ComponentPropertyType>;
 }
 
 interface RenderContext {
@@ -121,6 +165,8 @@ interface RenderContext {
 
     @gen_promise("loadPlugin")
     loadPluginSync(name: String): bool;
+
+    registerResourcePath(protocol: String, uri: String): bool;
 }
 
 struct RenderParameters {
@@ -141,17 +187,7 @@ interface Scene {
 
     @get getRoot(): NodeOrNull;
 
-    @!sts_inject_into_class("""
-    getNodeByPath(path: String, type: (NodeType | undefined)): (Node | null) {
-        let res = this.getNodeByPathInner(path, type);
-        if (res != null) {
-            return res as Node;
-        }
-        return null;
-    }
-    """)
-
-    getNodeByPathInner(path: String, type: Optional<NodeType>): VariousNodesOrNull;
+    getNodeByPath(path: String, type: Optional<NodeType>): VariousNodesOrNull;
 
     getResourceFactory(): SceneResourceFactory;
 

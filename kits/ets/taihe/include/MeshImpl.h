@@ -20,8 +20,11 @@
 #include "taihe/optional.hpp"
 #include "stdexcept"
 
+#include "MaterialImpl.h"
 #include "SceneResourceImpl.h"
+#include "SubMeshImpl.h"
 
+#include "MaterialETS.h"
 #include "MeshETS.h"
 
 namespace OHOS::Render3D::KITETS {
@@ -35,7 +38,7 @@ public:
 
     ::SceneTypes::Aabb getAabb();
 
-    ::taihe::optional<::SceneResources::Material> getMaterialOverride();
+    ::taihe::optional<::SceneResources::VariousMaterial> getMaterialOverride();
 
     void setMaterialOverride(::taihe::optional_view<::SceneResources::Material> mat);
 

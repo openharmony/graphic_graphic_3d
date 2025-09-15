@@ -24,12 +24,28 @@
 #include <scene/interface/intf_scene.h>
 
 namespace OHOS::Render3D {
+#define RETURN_IF_NULL(ptr)                                  \
+    do {                                                     \
+        if (!(ptr)) {                                        \
+            CORE_LOG_E("%s is null in %s", #ptr, __func__);  \
+            return;                                          \
+        }                                                    \
+    } while (0)
+
+#define RETURN_IF_NULL_WITH_VALUE(ptr, ret)                  \
+    do {                                                     \
+        if (!(ptr)) {                                        \
+            CORE_LOG_E("%s is null in %s", #ptr, __func__);  \
+            return ret;                                      \
+        }                                                    \
+    } while (0)
 // tasks execute in the engine/render thread.
-static constexpr BASE_NS::Uid ENGINE_THREAD2 { "2070e705-d061-40e4-bfb7-90fad2c280af" };
+static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
 
 // tasks execute in the javascript mainthread. *NOT IMPLEMENTED*
-static constexpr BASE_NS::Uid JS_THREAD2 { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
-static constexpr BASE_NS::Uid JS_RELEASE_THREAD2 { "3784fa96-b25b-4e9c-bbf1-e897d36f73af" };
+static constexpr BASE_NS::Uid JS_THREAD { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
+static constexpr BASE_NS::Uid JS_RELEASE_THREAD { "3784fa96-b25b-4e9c-bbf1-e897d36f73af" };
+static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
 
 template <typename V>
 struct InvokeReturn {
@@ -50,7 +66,7 @@ struct InvokeReturn {
 
 // run synchronous task in specific tq.
 template <typename func>
-META_NS::IAny::Ptr ExecSyncTask2(const META_NS::ITaskQueue::Ptr tq, func &&fun)
+META_NS::IAny::Ptr ExecSyncTask(const META_NS::ITaskQueue::Ptr tq, func &&fun)
 {
     return tq
         ->AddWaitableTask(BASE_NS::move(META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>(BASE_NS::move(fun))))
@@ -59,9 +75,9 @@ META_NS::IAny::Ptr ExecSyncTask2(const META_NS::ITaskQueue::Ptr tq, func &&fun)
 
 // run task synchronously in engine thread.
 template <typename func>
-META_NS::IAny::Ptr ExecSyncTask2(func &&fun)
+META_NS::IAny::Ptr ExecSyncTask(func &&fun)
 {
-    return ExecSyncTask2(META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD2), BASE_NS::move(fun));
+    return ExecSyncTask(META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD), BASE_NS::move(fun));
 }
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_UTILS_H

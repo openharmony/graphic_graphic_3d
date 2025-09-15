@@ -14,34 +14,48 @@
  */
 
 #include "ImageETS.h"
+
+#include "RenderContextETS.h"
+
 #ifdef __SCENE_ADAPTER__
 #include "3d_widget_adapter_log.h"
 #endif
 
 namespace OHOS::Render3D {
-ImageETS::ImageETS(const std::string &name, const std::string &uri)
-    : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE)
+ImageETS::ImageETS(const std::string &name, const std::string &uri, const SCENE_NS::IBitmap::Ptr bitmap)
+    : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE), bitmap_(bitmap)
 {
     WIDGET_LOGI("ImageETS ++, name: %{public}s, uri:%{public}s", name.c_str(), uri.c_str());
     SetName(name);
     SetUri(uri);
-    SetBitmap(uri);
+
+    resources_ = RenderContextETS::GetInstance().GetResources();
+}
+
+ImageETS::ImageETS(const SCENE_NS::IImage::Ptr &image)
+    : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE), bitmap_(image)
+{
+    resources_ = RenderContextETS::GetInstance().GetResources();
 }
 
 ImageETS::~ImageETS()
 {
     WIDGET_LOGI("ImageETS --");
-    // bitmap_.reset(); // nullptr
+    if (!uri_.empty()) {
+        ExecSyncTask([uri = uri_, resources = resources_]() -> META_NS::IAny::Ptr {
+            if (resources) {
+                resources->StoreBitmap(uri.c_str(), nullptr);
+            }
+            return {};
+        });
+    }
+    bitmap_.reset();
+    resources_.reset();
 }
 
 META_NS::IObject::Ptr ImageETS::GetNativeObj() const
 {
     return interface_pointer_cast<META_NS::IObject>(bitmap_);
-}
-
-void ImageETS::SetBitmap(const std::string &uri)
-{
-    WIDGET_LOGE("ImageETS::SetBitmap() not implemented yet.");
 }
 
 int32_t ImageETS::GetWidth() const

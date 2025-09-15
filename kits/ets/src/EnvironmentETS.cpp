@@ -16,13 +16,28 @@
 #include "EnvironmentETS.h"
 
 namespace OHOS::Render3D {
+EnvironmentETS::EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene)
+    : EnvironmentETS(environment, scene, "", "")
+{
+}
+
 EnvironmentETS::EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene,
-    const std::string &name, const std::string &uri)
+                               const std::string &name)
+    : EnvironmentETS(environment, scene, name, "")
+{
+}
+
+EnvironmentETS::EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene,
+                               const std::string &name, const std::string &uri)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::ENVIRONMENT), environment_(environment), scene_(scene)
 {
     CORE_LOG_D("EnvironmentETS ++");
-    SetName(name);
-    SetUri(uri);
+    if (!name.empty()) {
+        SetName(name);
+    }
+    if (!uri.empty()) {
+        SetUri(uri);
+    }
 }
 
 EnvironmentETS::~EnvironmentETS()
@@ -51,6 +66,7 @@ void EnvironmentETS::SetBackgroundType(EnvironmentBackgroundType typeE)
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return;
     }
     SCENE_NS::EnvBackgroundType type;
     switch (typeE) {
@@ -77,6 +93,7 @@ std::shared_ptr<Vec4Proxy> EnvironmentETS::GetIndirectDiffuseFactor()
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return nullptr;
     }
     if (!diffuseFactor_) {
         diffuseFactor_ = std::make_shared<Vec4Proxy>(environment_->IndirectDiffuseFactor());
@@ -88,6 +105,7 @@ void EnvironmentETS::SetIndirectDiffuseFactor(const BASE_NS::Math::Vec4 &factor)
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return;
     }
     if (!diffuseFactor_) {
         diffuseFactor_ = std::make_shared<Vec4Proxy>(environment_->IndirectDiffuseFactor());
@@ -99,6 +117,7 @@ std::shared_ptr<Vec4Proxy> EnvironmentETS::GetIndirectSpecularFactor()
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return nullptr;
     }
     if (!specularFactor_) {
         specularFactor_ = std::make_shared<Vec4Proxy>(environment_->IndirectSpecularFactor());
@@ -110,10 +129,107 @@ void EnvironmentETS::SetIndirectSpecularFactor(const BASE_NS::Math::Vec4 &factor
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return;
     }
     if (!specularFactor_) {
         specularFactor_ = std::make_shared<Vec4Proxy>(environment_->IndirectSpecularFactor());
     }
     specularFactor_->SetValue(factor);
+}
+
+std::shared_ptr<Vec4Proxy> EnvironmentETS::GetEnvironmentMapFactor()
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+        return nullptr;
+    }
+    if (!envMapFactor_) {
+        envMapFactor_ = std::make_shared<Vec4Proxy>(environment_->EnvMapFactor());
+    }
+    return envMapFactor_;
+}
+
+void EnvironmentETS::SetEnvironmentMapFactor(const BASE_NS::Math::Vec4 &factor)
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+        return;
+    }
+    if (!envMapFactor_) {
+        envMapFactor_ = std::make_shared<Vec4Proxy>(environment_->EnvMapFactor());
+    }
+    envMapFactor_->SetValue(factor);
+}
+
+std::shared_ptr<ImageETS> EnvironmentETS::GetEnvironmentImage()
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+    }
+    SCENE_NS::IBitmap::Ptr image = environment_->EnvironmentImage()->GetValue();
+    if (!image) {
+        return nullptr;
+    }
+    return std::make_shared<ImageETS>(image);
+}
+
+void EnvironmentETS::SetEnvironmentImage(std::shared_ptr<ImageETS> image)
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+    }
+    SCENE_NS::IBitmap::Ptr imagePtr;
+    if (image) {
+        imagePtr = image->GetNativeImage();
+    }
+    environment_->EnvironmentImage()->SetValue(imagePtr);
+}
+
+std::shared_ptr<ImageETS> EnvironmentETS::GetRadianceImage()
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+    }
+    SCENE_NS::IBitmap::Ptr image = environment_->RadianceImage()->GetValue();
+    if (!image) {
+        return nullptr;
+    }
+    return std::make_shared<ImageETS>(image);
+}
+
+void EnvironmentETS::SetRadianceImage(std::shared_ptr<ImageETS> image)
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+    }
+    SCENE_NS::IBitmap::Ptr imagePtr;
+    if (image) {
+        imagePtr = image->GetNativeImage();
+    }
+    environment_->RadianceImage()->SetValue(imagePtr);
+}
+
+BASE_NS::vector<BASE_NS::Math::Vec3> EnvironmentETS::GetIrradianceCoefficients()
+{
+    BASE_NS::vector<BASE_NS::Math::Vec3> coeffs;
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+        return coeffs;
+    }
+    coeffs = environment_->IrradianceCoefficients()->GetValue();
+    return coeffs;
+}
+
+void EnvironmentETS::SetIrradianceCoefficients(const BASE_NS::vector<BASE_NS::Math::Vec3> &coefficients)
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+        return;
+    }
+    if (coefficients.size() != 9) {  // 9: size
+        CORE_LOG_E("not enough elements in input coefficients");
+        return;
+    }
+    environment_->IrradianceCoefficients()->SetValue(coefficients);
 }
 }  // namespace OHOS::Render3D

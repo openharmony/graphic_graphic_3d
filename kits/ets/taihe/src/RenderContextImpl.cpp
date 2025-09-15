@@ -16,4 +16,13 @@
 #include "RenderContextImpl.h"
 
 namespace OHOS::Render3D::KITETS {
+bool RenderContextImpl::loadPluginSync(::taihe::string_view name)
+{
+    return RenderContextETS::GetInstance().LoadPlugin(name.c_str());
+}
+
+bool RenderContextImpl::registerResourcePath(::taihe::string_view protocol, ::taihe::string_view uri)
+{
+    return RenderContextETS::GetInstance().RegisterResourcePath(protocol.c_str(), uri.c_str());
+}
 }  // namespace OHOS::Render3D::KITETS

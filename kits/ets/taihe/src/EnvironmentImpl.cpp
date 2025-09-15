@@ -14,6 +14,8 @@
  */
 
 #include "EnvironmentImpl.h"
+#include "ImageImpl.h"
+#include "Vec3Impl.h"
 #include "Vec4Impl.h"
 #include "EnvironmentJS.h"
 
@@ -21,7 +23,7 @@ namespace OHOS::Render3D::KITETS {
 EnvironmentImpl::EnvironmentImpl(const std::shared_ptr<EnvironmentETS> envETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::ENVIRONMENT, envETS), envETS_(envETS)
 {
-    WIDGET_LOGI("EnvironmentImpl ++");
+    WIDGET_LOGD("EnvironmentImpl ++");
 }
 
 std::shared_ptr<EnvironmentETS> EnvironmentImpl::GetEnvETS()
@@ -31,60 +33,135 @@ std::shared_ptr<EnvironmentETS> EnvironmentImpl::GetEnvETS()
 
 ::SceneResources::EnvironmentBackgroundType EnvironmentImpl::getBackgroundType()
 {
-    if (!envETS_) {
-        taihe::set_error("Invalid Environment");
-        return SceneResources::EnvironmentBackgroundType(
-            SceneResources::EnvironmentBackgroundType::key_t::BACKGROUND_NONE);
-    }
+    RETURN_IF_NULL_WITH_VALUE(envETS_, SceneResources::EnvironmentBackgroundType(
+        SceneResources::EnvironmentBackgroundType::key_t::BACKGROUND_NONE));
     return static_cast<SceneResources::EnvironmentBackgroundType::key_t>(envETS_->GetBackgroundType());
 }
 
 void EnvironmentImpl::setBackgroundType(::SceneResources::EnvironmentBackgroundType type)
 {
-    if (!envETS_) {
-        taihe::set_error("Invalid Environment");
-        return;
-    }
+    RETURN_IF_NULL(envETS_);
     auto envType = static_cast<EnvironmentETS::EnvironmentBackgroundType>(type.get_value());
     envETS_->SetBackgroundType(envType);
 }
 
 ::SceneTypes::Vec4 EnvironmentImpl::getIndirectDiffuseFactor()
 {
-    if (!envETS_) {
-        taihe::set_error("Invalid Environment");
-        return SceneTypes::Vec4({nullptr, nullptr});
-    }
+    RETURN_IF_NULL_WITH_VALUE(envETS_, SceneTypes::Vec4({nullptr, nullptr}));
     return taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(envETS_->GetIndirectDiffuseFactor());
 }
 
 void EnvironmentImpl::setIndirectDiffuseFactor(::SceneTypes::weak::Vec4 factor)
 {
-    if (!envETS_) {
-        taihe::set_error("Invalid Environment");
-        return;
-    }
+    RETURN_IF_NULL(envETS_);
     BASE_NS::Math::Vec4 diffuseFactor{factor->getX(), factor->getY(), factor->getZ(), factor->getW()};
     envETS_->SetIndirectDiffuseFactor(diffuseFactor);
 }
 
 ::SceneTypes::Vec4 EnvironmentImpl::getIndirectSpecularFactor()
 {
-    if (!envETS_) {
-        taihe::set_error("Invalid Environment");
-        return SceneTypes::Vec4({nullptr, nullptr});
-    }
+    RETURN_IF_NULL_WITH_VALUE(envETS_, SceneTypes::Vec4({nullptr, nullptr}));
     return taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(envETS_->GetIndirectSpecularFactor());
 }
 
 void EnvironmentImpl::setIndirectSpecularFactor(::SceneTypes::weak::Vec4 factor)
 {
-    if (!envETS_) {
-        taihe::set_error("Invalid Environment");
-        return;
-    }
+    RETURN_IF_NULL(envETS_);
     BASE_NS::Math::Vec4 specularFactor{factor->getX(), factor->getY(), factor->getZ(), factor->getW()};
     envETS_->SetIndirectSpecularFactor(specularFactor);
+}
+
+::SceneTypes::Vec4 EnvironmentImpl::getEnvironmentMapFactor()
+{
+    RETURN_IF_NULL_WITH_VALUE(envETS_, SceneTypes::Vec4({nullptr, nullptr}));
+    return taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(envETS_->GetEnvironmentMapFactor());
+}
+
+void EnvironmentImpl::setEnvironmentMapFactor(::SceneTypes::weak::Vec4 factor)
+{
+    RETURN_IF_NULL(envETS_);
+    BASE_NS::Math::Vec4 envMapFactor{factor->getX(), factor->getY(), factor->getZ(), factor->getW()};
+    envETS_->SetEnvironmentMapFactor(envMapFactor);
+}
+
+::SceneResources::ImageOrNullOrUndefined EnvironmentImpl::getEnvironmentImage()
+{
+    RETURN_IF_NULL_WITH_VALUE(envETS_, ::SceneResources::ImageOrNullOrUndefined::make_uValue());
+    auto imageETS = envETS_->GetEnvironmentImage();
+    if (!imageETS) {
+        return ::SceneResources::ImageOrNullOrUndefined::make_nValue();
+    }
+    auto image = taihe::make_holder<ImageImpl, ::SceneResources::Image>(imageETS);
+    return ::SceneResources::ImageOrNullOrUndefined::make_image(image);
+}
+
+void EnvironmentImpl::setEnvironmentImage(::SceneResources::ImageOrNullOrUndefined const& image)
+{
+    RETURN_IF_NULL(envETS_);
+    if (image.holds_image()) {
+        taihe::optional<int64_t> imageImplOp =
+            static_cast<::SceneResources::SceneResource>(image.get_image_ref())->getImpl();
+        if (imageImplOp.has_value()) {
+            auto imageImpl = reinterpret_cast<ImageImpl*>(imageImplOp.value());
+            envETS_->SetEnvironmentImage(imageImpl->getInternalImage());
+            return;
+        }
+    }
+    WIDGET_LOGW("setEnvironmentImage null input");
+    envETS_->SetEnvironmentImage(nullptr);
+}
+
+::SceneResources::ImageOrNullOrUndefined EnvironmentImpl::getRadianceImage()
+{
+    RETURN_IF_NULL_WITH_VALUE(envETS_, ::SceneResources::ImageOrNullOrUndefined::make_uValue());
+    auto imageETS = envETS_->GetRadianceImage();
+    if (!imageETS) {
+        return ::SceneResources::ImageOrNullOrUndefined::make_nValue();
+    }
+    auto image = taihe::make_holder<ImageImpl, ::SceneResources::Image>(imageETS);
+    return ::SceneResources::ImageOrNullOrUndefined::make_image(image);
+}
+
+void EnvironmentImpl::setRadianceImage(::SceneResources::ImageOrNullOrUndefined const& image)
+{
+    RETURN_IF_NULL(envETS_);
+    if (image.holds_image()) {
+        taihe::optional<int64_t> imageImplOp =
+            static_cast<::SceneResources::SceneResource>(image.get_image_ref())->getImpl();
+        if (imageImplOp.has_value()) {
+            auto imageImpl = reinterpret_cast<ImageImpl*>(imageImplOp.value());
+            envETS_->SetRadianceImage(imageImpl->getInternalImage());
+            return;
+        }
+    }
+    WIDGET_LOGW("setRadianceImage null input");
+    envETS_->SetRadianceImage(nullptr);
+}
+
+::taihe::optional<::taihe::array<::SceneTypes::Vec3>> EnvironmentImpl::getIrradianceCoefficients()
+{
+    RETURN_IF_NULL_WITH_VALUE(envETS_, ::taihe::optional<::taihe::array<::SceneTypes::Vec3>>(std::nullopt));
+    auto coeffs = envETS_->GetIrradianceCoefficients();
+    std::vector<::SceneTypes::Vec3> coeffsVec;
+    for (auto& c : coeffs) {
+        coeffsVec.push_back(taihe::make_holder<Vec3Impl, ::SceneTypes::Vec3>(c));
+    }
+    ::taihe::array<::SceneTypes::Vec3> coeffsArr{coeffsVec};
+    return ::taihe::optional<::taihe::array<::SceneTypes::Vec3>>(std::in_place, coeffsArr);
+}
+
+void EnvironmentImpl::setIrradianceCoefficients(::taihe::optional_view<::taihe::array<::SceneTypes::Vec3>> coefficients)
+{
+    RETURN_IF_NULL(envETS_);
+    if (coefficients.has_value()) {
+        BASE_NS::vector<BASE_NS::Math::Vec3> coeffsVector;
+        for (auto& coeff : coefficients.value()) {
+            coeffsVector.emplace_back(coeff->getX(), coeff->getY(), coeff->getZ());
+        }
+        envETS_->SetIrradianceCoefficients(coeffsVector);
+    } else {
+        WIDGET_LOGE("Invalid coefficients");
+    }
 }
 
 ::SceneResources::Environment environmentTransferStaticImpl(uintptr_t input)
@@ -122,26 +199,23 @@ void EnvironmentImpl::setIndirectSpecularFactor(::SceneTypes::weak::Vec4 factor)
 uintptr_t environmentTransferDynamicImpl(::SceneResources::Environment input)
 {
     WIDGET_LOGI("environmentTransferDynamicImpl");
-    int64_t implRawPtr = input->GetImpl();
-    EnvironmentImpl *implPtr = reinterpret_cast<EnvironmentImpl *>(implRawPtr);
+    RETURN_IF_NULL_WITH_VALUE(!input.is_error(), 0);
+    auto envOptional = static_cast<::SceneResources::SceneResource>(input)->getImpl();
+    RETURN_IF_NULL_WITH_VALUE(envOptional.has_value(), 0);
+    auto implPtr = reinterpret_cast<EnvironmentImpl*>(envOptional.value());
+    RETURN_IF_NULL_WITH_VALUE(implPtr, 0);
     std::shared_ptr<EnvironmentETS> envETS = implPtr->GetEnvETS();
-    if (!envETS) {
-        WIDGET_LOGE("get EnvironmentETS failed");
-        return 0;
-    }
+    RETURN_IF_NULL_WITH_VALUE(envETS, 0);
 
     SCENE_NS::IEnvironment::Ptr environment = interface_pointer_cast<SCENE_NS::IEnvironment>(envETS->GetNativeObj());
-    if (!environment) {
-        WIDGET_LOGE("can't get scene from environment");
-        return 0;
-    }
+    RETURN_IF_NULL_WITH_VALUE(environment, 0);
     napi_env jsenv;
     if (!arkts_napi_scope_open(taihe::get_env(), &jsenv)) {
         WIDGET_LOGE("arkts_napi_scope_open failed");
         return 0;
     }
-    if (!TransferEnvironment::check(jsenv)) {
-        WIDGET_LOGE("TransferEnvironment check failed");
+    if (!CheckNapiEnv(jsenv)) {
+        WIDGET_LOGE("CheckNapiEnv failed");
         // An error has occurred, ignoring the function call result.
         arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
         return 0;

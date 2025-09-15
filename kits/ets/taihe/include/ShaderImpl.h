@@ -16,29 +16,39 @@
 #ifndef OHOS_3D_SHADER_IMPL_H
 #define OHOS_3D_SHADER_IMPL_H
 
-#include "taihe/runtime.hpp"
-#include "taihe/optional.hpp"
-#include "stdexcept"
-
-#include "SceneTH.user.hpp"
-
 #include "SceneResourceImpl.h"
+#include "SceneTH.user.hpp"
+#include "stdexcept"
+#include "taihe/optional.hpp"
+#include "taihe/runtime.hpp"
 
 #ifdef __SCENE_ADAPTER__
 #include "3d_widget_adapter_log.h"
 #endif
 
+#include "ANIUtils.h"
+#include "ShaderETS.h"
+
 namespace OHOS::Render3D::KITETS {
 class ShaderImpl : public SceneResourceImpl {
 public:
-    ShaderImpl(SceneTH::SceneResourceParameters const &params)
-        : SceneResourceImpl(SceneResources::SceneResourceType::key_t::SHADER)
+    ShaderImpl(const std::shared_ptr<ShaderETS> &shader);
+    ~ShaderImpl();
+
+    int32_t getInputsSize();
+
+    ::taihe::array<::taihe::string> getInputsKeys();
+
+    ::taihe::optional<::SceneResources::ShaderInputType> getInput(::taihe::string_view key);
+    void setInput(::taihe::string_view key, ::SceneResources::ShaderInputType const& value);
+
+    std::shared_ptr<ShaderETS> getInternalShader() const
     {
-        // Don't forget to implement the constructor.
-        WIDGET_LOGE("The shader hasn't been implemented yet, dear.");
+        return shaderETS_;
     }
 
-    ::taihe::map<::taihe::string, ::SceneResources::ShaderInputType> getInputs();
+private:
+    std::shared_ptr<ShaderETS> shaderETS_{nullptr};
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SHADER_IMPL_H

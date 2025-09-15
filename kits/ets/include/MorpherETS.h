@@ -27,6 +27,9 @@ public:
     float Get(const std::string &name);
     void Set(const std::string &name, const float weight);
 
+    std::vector<std::string> GetMorpherNames() const;
+    int32_t GetWeightsSize() const;
+
 private:
     SCENE_NS::IMorpher::Ptr morpher_;
 };

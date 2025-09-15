@@ -23,63 +23,41 @@
 #include "SceneResources.user.hpp"
 #include "SceneTH.user.hpp"
 
+#include "SamplerETS.h"
+
 namespace OHOS::Render3D::KITETS {
 class SamplerImpl {
 public:
-    SamplerImpl(::SceneTH::SceneResourceParameters const &params)
+    SamplerImpl(const std::shared_ptr<SamplerETS> &sampler);
+    ~SamplerImpl();
+
+    ::taihe::optional<::SceneResources::SamplerFilter> getMagFilter();
+    void setMagFilter(::taihe::optional_view<::SceneResources::SamplerFilter> filter);
+
+    ::taihe::optional<::SceneResources::SamplerFilter> getMinFilter();
+    void setMinFilter(::taihe::optional_view<::SceneResources::SamplerFilter> filter);
+
+    ::taihe::optional<::SceneResources::SamplerFilter> getMipMapMode();
+    void setMipMapMode(::taihe::optional_view<::SceneResources::SamplerFilter> filter);
+
+    ::taihe::optional<::SceneResources::SamplerAddressMode> getAddressModeU();
+    void setAddressModeU(::taihe::optional_view<::SceneResources::SamplerAddressMode> mode);
+
+    ::taihe::optional<::SceneResources::SamplerAddressMode> getAddressModeV();
+    void setAddressModeV(::taihe::optional_view<::SceneResources::SamplerAddressMode> mode);
+
+    ::taihe::optional<int64_t> getImpl()
     {
-        // Don't forget to implement the constructor.
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
     }
 
-    ::taihe::optional<::SceneResources::SamplerFilter> getMagFilter()
+    std::shared_ptr<SamplerETS> getInternalObject() const
     {
-        TH_THROW(std::runtime_error, "getMagFilter not implemented");
+        return sampler_;
     }
 
-    void setMagFilter(::taihe::optional_view<::SceneResources::SamplerFilter> filter)
-    {
-        TH_THROW(std::runtime_error, "setMagFilter not implemented");
-    }
-
-    ::taihe::optional<::SceneResources::SamplerFilter> getMinFilter()
-    {
-        TH_THROW(std::runtime_error, "getMinFilter not implemented");
-    }
-
-    void setMinFilter(::taihe::optional_view<::SceneResources::SamplerFilter> filter)
-    {
-        TH_THROW(std::runtime_error, "SetminFilter not implemented");
-    }
-
-    ::taihe::optional<::SceneResources::SamplerFilter> getMipMapMode()
-    {
-        TH_THROW(std::runtime_error, "getMipMapMode not implemented");
-    }
-
-    void setMipMapMode(::taihe::optional_view<::SceneResources::SamplerFilter> filter)
-    {
-        TH_THROW(std::runtime_error, "setMipMapMode not implemented");
-    }
-
-    ::taihe::optional<::SceneResources::SamplerAddressMode> getAddressModeU()
-    {
-        TH_THROW(std::runtime_error, "getAddressModeU not implemented");
-    }
-
-    void setAddressModeU(::taihe::optional_view<::SceneResources::SamplerAddressMode> mode)
-    {
-        TH_THROW(std::runtime_error, "setAddressModeU not implemented");
-    }
-
-    ::taihe::optional<::SceneResources::SamplerAddressMode> getAddressModeV()
-    {
-        TH_THROW(std::runtime_error, "getAddressModeV not implemented");
-    }
-
-    void setAddressModeV(::taihe::optional_view<::SceneResources::SamplerAddressMode> mode)
-    {
-        TH_THROW(std::runtime_error, "setAddressModeV not implemented");
-    }
+private:
+    std::shared_ptr<SamplerETS> sampler_;
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SAMPLER_IMPL_H

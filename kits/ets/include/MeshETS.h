@@ -18,6 +18,7 @@
 #include <meta/interface/intf_object.h>
 #include <scene/interface/intf_mesh.h>
 
+#include "MaterialETS.h"
 #include "SubMeshETS.h"
 #include "SceneResourceETS.h"
 
@@ -33,8 +34,8 @@ public:
     BASE_NS::Math::Vec3 GetAABBMin();
     BASE_NS::Math::Vec3 GetAABBMax();
 
-    SCENE_NS::IMaterial::Ptr GetMaterialOverride();
-    void SetMaterialOverride(const SCENE_NS::IMaterial::Ptr &material);
+    std::shared_ptr<MaterialETS> GetMaterialOverride();
+    void SetMaterialOverride(const std::shared_ptr<MaterialETS> &mat);
 
 private:
     SCENE_NS::IMesh::WeakPtr mesh_{nullptr};

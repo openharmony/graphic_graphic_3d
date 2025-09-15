@@ -63,10 +63,8 @@ public:
     ::taihe::array<::SceneTH::RaycastResult> raycastSync(
         ::SceneTypes::weak::Vec2 viewPosition, ::SceneTH::RaycastParameters const &params);
 
-    ::taihe::optional<int64_t> getImpl()
-    {
-        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<int64_t>(this));
-    }
+    ::SceneTypes::Vec3 worldToScreen(::SceneTypes::weak::Vec3 worldPosition);
+    ::SceneTypes::Vec3 screenToWorld(::SceneTypes::weak::Vec3 viewPosition);
 
     std::shared_ptr<CameraETS> getInternalCamera() const
     {

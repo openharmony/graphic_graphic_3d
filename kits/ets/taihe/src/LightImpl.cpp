@@ -31,7 +31,7 @@ DirectionalLightImpl::DirectionalLightImpl(const std::shared_ptr<LightETS> light
 ::SceneNodes::LightType LightImpl::getLightType()
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
         return SceneNodes::LightType(SceneNodes::LightType::key_t::DIRECTIONAL);
     }
     return SceneNodes::LightType::from_value(lightETS_->GetLightType());
@@ -40,14 +40,14 @@ DirectionalLightImpl::DirectionalLightImpl(const std::shared_ptr<LightETS> light
 ::SceneTypes::Color LightImpl::getColor()
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
         return SceneTypes::Color({nullptr, nullptr});
     }
     auto color = lightETS_->GetColor();
     if (color) {
         return taihe::make_holder<ColorImpl, SceneTypes::Color>(color);
     } else {
-        taihe::set_error("lightETS_ GetColor fail");
+        WIDGET_LOGE("lightETS_ GetColor fail");
         return SceneTypes::Color({nullptr, nullptr});
     }
 }
@@ -55,7 +55,7 @@ DirectionalLightImpl::DirectionalLightImpl(const std::shared_ptr<LightETS> light
 void LightImpl::setColor(::SceneTypes::weak::Color color)
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
     }
     BASE_NS::Color colorVec{color->getR(), color->getG(), color->getB(), color->getA()};
     lightETS_->SetColor(colorVec);
@@ -64,7 +64,7 @@ void LightImpl::setColor(::SceneTypes::weak::Color color)
 double LightImpl::getIntensity()
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
         return 0.0f;
     }
     return lightETS_->GetIntensity();
@@ -73,7 +73,7 @@ double LightImpl::getIntensity()
 void LightImpl::setIntensity(double intensity)
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
     }
     lightETS_->SetIntensity(intensity);
 }
@@ -81,7 +81,7 @@ void LightImpl::setIntensity(double intensity)
 bool LightImpl::getShadowEnabled()
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
         return false;
     }
     return lightETS_->GetShadowEnabled();
@@ -90,7 +90,7 @@ bool LightImpl::getShadowEnabled()
 void LightImpl::setShadowEnabled(bool enabled)
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
     }
     lightETS_->SetShadowEnabled(enabled);
 }
@@ -98,7 +98,7 @@ void LightImpl::setShadowEnabled(bool enabled)
 bool LightImpl::getEnabled()
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
         return false;
     }
     return lightETS_->GetEnabled();
@@ -107,7 +107,7 @@ bool LightImpl::getEnabled()
 void LightImpl::setEnabled(bool enable)
 {
     if (!lightETS_) {
-        taihe::set_error("Invalid light");
+        WIDGET_LOGE("Invalid light");
     }
     lightETS_->SetEnabled(enable);
 }

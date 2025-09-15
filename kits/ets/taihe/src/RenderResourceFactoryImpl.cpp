@@ -16,4 +16,23 @@
 #include "RenderResourceFactoryImpl.h"
 
 namespace OHOS::Render3D::KITETS {
+::SceneResources::Shader RenderResourceFactoryImpl::createShaderSync(::SceneTH::SceneResourceParameters const &params)
+{
+    const std::string name = ExtractResourceName(params);
+    const std::string uri = ExtractUri(params.uri);
+    const InvokeReturn<std::shared_ptr<ShaderETS>> shader = RenderContextETS::GetInstance().CreateShader(name, uri);
+    if (shader) {
+        return ::taihe::make_holder<ShaderImpl, ::SceneResources::Shader>(shader.value);
+    } else {
+        ::taihe::set_error(shader.error);
+        return ::SceneResources::Shader({nullptr, nullptr});
+    }
+}
+
+::SceneResources::Sampler RenderResourceFactoryImpl::createSamplerSync(::SceneTH::SceneResourceParameters const &params)
+{
+    std::shared_ptr<SamplerETS> sampler = std::make_shared<SamplerETS>();
+    return ::taihe::make_holder<SamplerImpl, ::SceneResources::Sampler>(sampler);
+}
+
 }  // namespace OHOS::Render3D::KITETS

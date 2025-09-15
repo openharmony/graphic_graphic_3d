@@ -31,9 +31,10 @@ public:
     };
     static constexpr ToneMappingType DEFAULT_TYPE = ToneMappingType::ACES;
     static constexpr float DEFAULT_EXPOSURE = 0.7;
-    static std::shared_ptr<TonemapETS> FromJS(const ToneMappingType &type, const float exposure);
 
     TonemapETS(const SCENE_NS::IPostProcess::Ptr postProc, const SCENE_NS::ITonemap::Ptr tonemap);
+    // store tonemap settings from ETS
+    TonemapETS(const ToneMappingType &type, const float exposure);
     ~TonemapETS();
 
     TonemapETS::ToneMappingType GetType();
@@ -67,7 +68,6 @@ public:
     }
 
 private:
-    TonemapETS();
     inline SCENE_NS::TonemapType ToInternalType(const TonemapETS::ToneMappingType &type);
     inline TonemapETS::ToneMappingType FromInternalType(const SCENE_NS::TonemapType &type);
 

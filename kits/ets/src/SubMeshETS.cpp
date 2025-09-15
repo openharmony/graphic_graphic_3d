@@ -61,19 +61,25 @@ BASE_NS::Math::Vec3 SubMeshETS::GetAABBMax()
     }
 }
 
-SCENE_NS::IMaterial::Ptr SubMeshETS::GetMaterial()
+std::shared_ptr<MaterialETS> SubMeshETS::GetMaterial()
 {
-    if (subMesh_) {
-        return META_NS::GetValue(subMesh_->Material());
-    } else {
+    if (!subMesh_) {
+        CORE_LOG_E("get material failed, submesh is null");
         return nullptr;
     }
+    SCENE_NS::IMaterial::Ptr mat = subMesh_->Material()->GetValue();
+    return std::make_shared<MaterialETS>(mat);
 }
 
-void SubMeshETS::SetMaterial(const SCENE_NS::IMaterial::Ptr &material)
+void SubMeshETS::SetMaterial(const std::shared_ptr<MaterialETS> &mat)
 {
-    if (subMesh_) {
-        META_NS::SetValue(subMesh_->Material(), material);
+    if (!subMesh_) {
+        CORE_LOG_E("set material failed, submesh is null");
+        return;
+    }
+    SCENE_NS::IMaterial::Ptr nativeMat = mat ? mat->GetNativeMaterial() : nullptr;
+    if (nativeMat) {
+        subMesh_->Material()->SetValue(nativeMat);
     }
 }
 }  // namespace OHOS::Render3D

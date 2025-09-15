@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,5 +13,23 @@
  * limitations under the License.
  */
 
-import { Resource } from 'global.resource';
-export type ResourceStr = string | Resource;
+#ifndef OHOS_3D_ENTITY_PROXY_H
+#define OHOS_3D_ENTITY_PROXY_H
+
+#include <scene/ext/intf_ecs_object_access.h>
+
+#include "PropertyProxy.h"
+
+namespace OHOS::Render3D {
+class EntityProxy : public PropertyProxy<CORE_NS::Entity> {
+public:
+    explicit EntityProxy(const META_NS::Property<CORE_NS::Entity> &prop) : PropertyProxy(prop)
+    {
+    }
+
+    ~EntityProxy() override
+    {
+    }
+};
+}  // namespace OHOS::Render3D
+#endif  // OHOS_3D_ENTITY_PROXY_H

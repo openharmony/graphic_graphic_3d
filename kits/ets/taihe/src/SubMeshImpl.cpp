@@ -14,6 +14,7 @@
  */
 
 #include "SubMeshImpl.h"
+#include "PBRMaterialImpl.h"
 #include "Vec3Impl.h"
 
 namespace OHOS::Render3D::KITETS {
@@ -40,16 +41,37 @@ void SubMeshImpl::setName(::taihe::string_view name)
     }
 }
 
-::SceneResources::Material SubMeshImpl::getMaterial()
+::SceneResources::VariousMaterial SubMeshImpl::getMaterial()
 {
-    // The parameters in the make_holder function should be of the same type
-    // as the parameters in the constructor of the actual implementation class.
-    TH_THROW(std::runtime_error, "getMaterial not implemented");
+    if (!subMeshETS_) {
+        WIDGET_LOGE("get material failed, internal submesh is null");
+        return ::SceneResources::VariousMaterial::make_pbr(::SceneResources::PBRMaterial({nullptr, nullptr}));
+    }
+    std::shared_ptr<MaterialETS> matETS = subMeshETS_->GetMaterial();
+    if (!matETS) {
+        return ::SceneResources::VariousMaterial::make_pbr(::SceneResources::PBRMaterial({nullptr, nullptr}));
+    }
+    auto mat = ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(matETS);
+    return ::SceneResources::VariousMaterial::make_pbr(mat);
 }
 
 void SubMeshImpl::setMaterial(::SceneResources::weak::Material mat)
 {
-    TH_THROW(std::runtime_error, "setMaterial not implemented");
+    if (!subMeshETS_) {
+        WIDGET_LOGE("set material failed, internal submesh is null");
+        return;
+    }
+    ::taihe::optional<int64_t> implOp = static_cast<::SceneResources::weak::SceneResource>(mat)->getImpl();
+    if (!implOp) {
+        WIDGET_LOGE("set material failed, material is null");
+        return;
+    }
+    MaterialImpl *matImpl = reinterpret_cast<MaterialImpl *>(implOp.value());
+    if (matImpl == nullptr) {
+        WIDGET_LOGE("set material failed, material is null");
+        return;
+    }
+    subMeshETS_->SetMaterial(matImpl->getInternalMaterial());
 }
 
 ::SceneTypes::Aabb SubMeshImpl::getAabb()

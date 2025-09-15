@@ -21,71 +21,44 @@
 #include "stdexcept"
 
 #include "SceneTH.user.hpp"
-#include "SceneResources.user.hpp"
+#include "SceneResources.proj.hpp"
+#include "SceneResources.impl.hpp"
 #include "SceneResourceImpl.h"
+
+#include <scene/interface/intf_material.h>
+
+#include "MaterialETS.h"
 
 namespace OHOS::Render3D::KITETS {
 class MaterialImpl : public SceneResourceImpl {
 public:
-    MaterialImpl() : SceneResourceImpl(SceneResources::SceneResourceType::key_t::MATERIAL)
+    MaterialImpl(const std::shared_ptr<MaterialETS> mat);
+    ~MaterialImpl();
+
+    ::SceneResources::MaterialType getMaterialType();
+
+    ::taihe::optional<bool> getShadowReceiver();
+    void setShadowReceiver(::taihe::optional_view<bool> value);
+
+    ::taihe::optional<::SceneResources::CullMode> getCullMode();
+    void setCullMode(::taihe::optional_view<::SceneResources::CullMode> mode);
+
+    ::taihe::optional<::SceneResources::Blend> getBlend();
+    void setBlend(::taihe::optional_view<::SceneResources::Blend> blend);
+
+    ::taihe::optional<double> getAlphaCutoff();
+    void setAlphaCutoff(::taihe::optional_view<double> cutoff);
+
+    ::taihe::optional<::SceneResources::RenderSort> getRenderSort();
+    void setRenderSort(::taihe::optional_view<::SceneResources::RenderSort> renderSort);
+
+    std::shared_ptr<MaterialETS> getInternalMaterial() const
     {
-        // Don't forget to implement the constructor.
+        return materialETS_;
     }
 
-    ::SceneResources::MaterialType getMaterialType()
-    {
-        TH_THROW(std::runtime_error, "getMaterialType not implemented");
-    }
-
-    ::taihe::optional<bool> getShadowReceiver()
-    {
-        TH_THROW(std::runtime_error, "getShadowReceiver not implemented");
-    }
-
-    void setShadowReceiver(::taihe::optional_view<bool> value)
-    {
-        TH_THROW(std::runtime_error, "setShadowReceiver not implemented");
-    }
-
-    ::taihe::optional<::SceneResources::CullMode> getCullMode()
-    {
-        TH_THROW(std::runtime_error, "getCullMode not implemented");
-    }
-
-    void setCullMode(::taihe::optional_view<::SceneResources::CullMode> mode)
-    {
-        TH_THROW(std::runtime_error, "setCullMode not implemented");
-    }
-
-    ::taihe::optional<::SceneResources::Blend> getBlend()
-    {
-        TH_THROW(std::runtime_error, "getBlend not implemented");
-    }
-
-    void setBlend(::taihe::optional_view<::SceneResources::Blend> blend)
-    {
-        TH_THROW(std::runtime_error, "setBlend not implemented");
-    }
-
-    ::taihe::optional<double> getAlphaCutoff()
-    {
-        TH_THROW(std::runtime_error, "getAlphaCutoff not implemented");
-    }
-
-    void setAlphaCutoff(::taihe::optional_view<double> cutoff)
-    {
-        TH_THROW(std::runtime_error, "setAlphaCutoff not implemented");
-    }
-
-    ::taihe::optional<::SceneResources::RenderSort> getRenderSort()
-    {
-        TH_THROW(std::runtime_error, "getRenderSort not implemented");
-    }
-
-    void setRenderSort(::taihe::optional_view<::SceneResources::RenderSort> renderSort)
-    {
-        TH_THROW(std::runtime_error, "setRenderSort not implemented");
-    }
+private:
+    std::shared_ptr<MaterialETS> materialETS_;
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MATERIAL_IMPL_H

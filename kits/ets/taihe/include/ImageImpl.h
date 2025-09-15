@@ -22,6 +22,7 @@
 #include "SceneTH.user.hpp"
 
 #include "ANIUtils.h"
+#include "ParamUtils.h"
 #include "ImageETS.h"
 #include "SceneResourceImpl.h"
 
@@ -35,8 +36,13 @@ public:
     int32_t getWidth();
     int32_t getHeight();
 
+    std::shared_ptr<ImageETS> getInternalImage() const
+    {
+        return imageETS_;
+    }
+
 private:
-    std::shared_ptr<ImageETS> imageETS_ {nullptr};
+    std::shared_ptr<ImageETS> imageETS_{nullptr};
 };
 } // namespace OHOS::Render3D::KITETS
 #endif // OHOS_3D_IMAGE_IMPL_H

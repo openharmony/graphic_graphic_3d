@@ -13,30 +13,23 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_3D_BLEND_IMPL_H
-#define OHOS_3D_BLEND_IMPL_H
+#ifndef OHOS_3D_IMAGE_PROXY_H
+#define OHOS_3D_IMAGE_PROXY_H
 
-#include "taihe/runtime.hpp"
-#include "taihe/optional.hpp"
-#include "stdexcept"
+#include <scene/interface/intf_image.h>
 
-namespace OHOS::Render3D::KITETS {
-class BlendImpl {
+#include "PropertyProxy.h"
+
+namespace OHOS::Render3D {
+class ImageProxy : public PropertyProxy<SCENE_NS::IImage::Ptr> {
 public:
-    BlendImpl()
+    explicit ImageProxy(const META_NS::Property<SCENE_NS::IImage::Ptr> &prop) : PropertyProxy(prop)
     {
-        // Don't forget to implement the constructor.
     }
 
-    bool getEnabled()
+    ~ImageProxy() override
     {
-        TH_THROW(std::runtime_error, "getEnabled not implemented");
-    }
-
-    void setEnabled(bool enable)
-    {
-        TH_THROW(std::runtime_error, "setEnabled not implemented");
     }
 };
-} // namespace OHOS::Render3D::KITETS
-#endif // OHOS_3D_BLEND_IMPL_H
+}  // namespace OHOS::Render3D
+#endif  // OHOS_3D_IMAGE_PROXY_H

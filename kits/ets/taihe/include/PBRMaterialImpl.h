@@ -13,7 +13,21 @@
  * limitations under the License.
  */
 
-#include "BlendImpl.h"
+#ifndef OHOS_3D_PBR_MATERIAL_IMPL_H
+#define OHOS_3D_PBR_MATERIAL_IMPL_H
+
+#include "MaterialImpl.h"
+#include "MetallicRoughnessMaterialImpl.h"
+#include "ShaderMaterialImpl.h"
 
 namespace OHOS::Render3D::KITETS {
+class PBRMaterialImpl : public MetallicRoughnessMaterialImpl, public ShaderMaterialImpl {
+public:
+    PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat);
+    ~PBRMaterialImpl();
+
+private:
+    std::shared_ptr<MaterialETS> materialETS_;
+};
 }  // namespace OHOS::Render3D::KITETS
+#endif  // OHOS_3D_PBR_MATERIAL_IMPL_H

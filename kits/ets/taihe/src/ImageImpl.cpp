@@ -19,29 +19,36 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
+#include <core/image/intf_image_loader_manager.h>
+#include <core/intf_engine.h>
+#include <render/device/intf_gpu_resource_manager.h>
+#include <scene/interface/intf_render_context.h>
+#include <meta/interface/property/construct_property.h>
+
 namespace OHOS::Render3D::KITETS {
 ::SceneResources::Image ImageImpl::createImageFromTH(SceneTH::SceneResourceParameters const &params)
 {
-    WIDGET_LOGI("ImageImpl::createImageFromTH(), name: %{public}s", params.name.c_str());
-    const std::string name(params.name);
-    const std::string uri = ExtractUri(params.uri);
-    if (uri.empty() || name.empty()) {
-        taihe::set_error("Invalid scene resource Image parameters given");
+    const std::string name = ExtractResourceName(params);
+    const std::string uri = ExtractUri(params.uri).c_str();
+    WIDGET_LOGI("ImageImpl::createImageFromTH(), name: %{public}s, uri: %{public}s", name.c_str(), uri.c_str());
+    auto imageETS = RenderContextETS::GetInstance().CreateImage(name, uri);
+    if (uri.empty() || name.empty() || !imageETS) {
+        WIDGET_LOGE("Invalid scene resource Image parameters given");
         return SceneResources::Image({nullptr, nullptr});
     }
-    return taihe::make_holder<ImageImpl, ::SceneResources::Image>(std::make_shared<ImageETS>(name, uri));
+    return taihe::make_holder<ImageImpl, ::SceneResources::Image>(imageETS);
 }
 
 ImageImpl::ImageImpl(const std::shared_ptr<ImageETS> imageETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::IMAGE, imageETS), imageETS_(imageETS)
 {
-    WIDGET_LOGE("ImageImpl ++");
+    WIDGET_LOGD("ImageImpl ++");
 }
 
 ImageImpl::~ImageImpl()
 {
-    WIDGET_LOGE("ImageImpl --");
-    // imageETS_.reset();
+    WIDGET_LOGD("ImageImpl --");
+    imageETS_.reset();
 }
 
 int32_t ImageImpl::getWidth()

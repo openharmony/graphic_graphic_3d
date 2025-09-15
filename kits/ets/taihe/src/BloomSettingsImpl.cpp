@@ -22,34 +22,31 @@
 namespace OHOS::Render3D::KITETS {
 std::shared_ptr<BloomETS> BloomSettingsImpl::CreateInternal(const ScenePostProcessSettings::BloomSettings &data)
 {
-    float thresholdHard, thresholdSoft, scaleFactor, scatter;
+    float thresholdHard;
     if (data->getThresholdHard().has_value()) {
         thresholdHard = data->getThresholdHard().value();
     } else {
         thresholdHard = 0.0F;
     }
+    float thresholdSoft;
     if (data->getThresholdSoft().has_value()) {
         thresholdSoft = data->getThresholdSoft().value();
     } else {
         thresholdSoft = 0.0F;
     }
+    float scaleFactor;
     if (data->getScaleFactor().has_value()) {
         scaleFactor = data->getScaleFactor().value();
     } else {
         scaleFactor = 0.0F;
     }
+    float scatter;
     if (data->getScatter().has_value()) {
         scatter = data->getScatter().value();
     } else {
         scatter = 0.0F;
     }
-    WIDGET_LOGI("BloomSettingsImpl::CreateInternal, {\"thresholdHard\": %{public}f, \"thresholdSoft\": %{public}f, "
-                "\"scaleFactor\": %{public}f, \"scatter\": %{public}f }",
-        thresholdHard,
-        thresholdSoft,
-        scaleFactor,
-        scatter);
-    return BloomETS::FromJS(thresholdHard, thresholdSoft, scaleFactor, scatter);
+    return std::make_shared<BloomETS>(thresholdHard, thresholdSoft, scaleFactor, scatter);
 }
 
 BloomSettingsImpl::BloomSettingsImpl(const std::shared_ptr<BloomETS> bloomETS) : bloomETS_(bloomETS)

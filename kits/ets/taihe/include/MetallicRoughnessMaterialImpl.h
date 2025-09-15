@@ -16,142 +16,56 @@
 #ifndef OHOS_3D_METALLIC_ROUGHNESS_MATERIAL_IMPL_H
 #define OHOS_3D_METALLIC_ROUGHNESS_MATERIAL_IMPL_H
 
-#include "taihe/runtime.hpp"
-#include "taihe/optional.hpp"
-#include "stdexcept"
-
-#include "SceneResources.user.hpp"
 #include "MaterialImpl.h"
 #include "MaterialPropertyImpl.h"
+#include "SceneResources.user.hpp"
+#include "stdexcept"
+#include "taihe/optional.hpp"
+#include "taihe/runtime.hpp"
 
 namespace OHOS::Render3D::KITETS {
-class MetallicRoughnessMaterialImpl : public MaterialImpl {
+class MetallicRoughnessMaterialImpl : virtual public MaterialImpl {
 public:
-    // ::SceneTH::SceneResourceParameters const &params, ::SceneResources::MaterialType materialType
-    MetallicRoughnessMaterialImpl() : MaterialImpl()
-    {
-        // Don't forget to implement the constructor.
-    }
+    MetallicRoughnessMaterialImpl(const std::shared_ptr<MaterialETS> mat);
+    ~MetallicRoughnessMaterialImpl();
 
-    ::SceneResources::MaterialProperty getBaseColor()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
+    ::SceneResources::MaterialProperty getBaseColor();
+    void setBaseColor(::SceneResources::weak::MaterialProperty color);
 
-    void setBaseColor(::SceneResources::weak::MaterialProperty color)
-    {
-        TH_THROW(std::runtime_error, "setBaseColor not implemented");
-    }
+    ::SceneResources::MaterialProperty getNormal();
+    void setNormal(::SceneResources::weak::MaterialProperty normal);
 
-    ::SceneResources::MaterialProperty getNormal()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
+    ::SceneResources::MaterialProperty getMaterial();
+    void setMaterial(::SceneResources::weak::MaterialProperty material);
 
-    void setNormal(::SceneResources::weak::MaterialProperty normal)
-    {
-        TH_THROW(std::runtime_error, "setNormal not implemented");
-    }
+    ::SceneResources::MaterialProperty getAmbientOcclusion();
+    void setAmbientOcclusion(::SceneResources::weak::MaterialProperty ao);
 
-    ::SceneResources::MaterialProperty getMaterial()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
+    ::SceneResources::MaterialProperty getEmissive();
+    void setEmissive(::SceneResources::weak::MaterialProperty emissive);
 
-    void setMaterial(::SceneResources::weak::MaterialProperty material)
-    {
-        TH_THROW(std::runtime_error, "setMaterial not implemented");
-    }
+    ::SceneResources::MaterialProperty getClearCoat();
+    void setClearCoat(::SceneResources::weak::MaterialProperty clearCoat);
 
-    ::SceneResources::MaterialProperty getAmbientOcclusion()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
+    ::SceneResources::MaterialProperty getClearCoatRoughness();
+    void setClearCoatRoughness(::SceneResources::weak::MaterialProperty roughness);
 
-    void setAmbientOcclusion(::SceneResources::weak::MaterialProperty ao)
-    {
-        TH_THROW(std::runtime_error, "setAmbientOcclusion not implemented");
-    }
+    ::SceneResources::MaterialProperty getClearCoatNormal();
+    void setClearCoatNormal(::SceneResources::weak::MaterialProperty normal);
 
-    ::SceneResources::MaterialProperty getEmissive()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
+    ::SceneResources::MaterialProperty getSheen();
+    void setSheen(::SceneResources::weak::MaterialProperty sheen);
 
-    void setEmissive(::SceneResources::weak::MaterialProperty emissive)
-    {
-        TH_THROW(std::runtime_error, "setEmissive not implemented");
-    }
+    ::SceneResources::MaterialProperty getSpecular();
+    void setSpecular(::SceneResources::weak::MaterialProperty specular);
 
-    ::SceneResources::MaterialProperty getClearCoat()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
+private:
+    template<size_t Index>
+    ::SceneResources::MaterialProperty getProperty();
+    template<size_t Index>
+    void setProperty(::SceneResources::weak::MaterialProperty prop);
 
-    void setClearCoat(::SceneResources::weak::MaterialProperty clearCoat)
-    {
-        TH_THROW(std::runtime_error, "setClearCoat not implemented");
-    }
-
-    ::SceneResources::MaterialProperty getClearCoatRoughness()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
-
-    void setClearCoatRoughness(::SceneResources::weak::MaterialProperty roughness)
-    {
-        TH_THROW(std::runtime_error, "setClearCoatRoughness not implemented");
-    }
-
-    ::SceneResources::MaterialProperty getClearCoatNormal()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
-
-    void setClearCoatNormal(::SceneResources::weak::MaterialProperty normal)
-    {
-        TH_THROW(std::runtime_error, "setClearCoatNormal not implemented");
-    }
-
-    ::SceneResources::MaterialProperty getSheen()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
-
-    void setSheen(::SceneResources::weak::MaterialProperty sheen)
-    {
-        TH_THROW(std::runtime_error, "setSheen not implemented");
-    }
-
-    ::SceneResources::MaterialProperty getSpecular()
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>();
-    }
-
-    void setSpecular(::SceneResources::weak::MaterialProperty specular)
-    {
-        TH_THROW(std::runtime_error, "setSpecular not implemented");
-    }
+    std::shared_ptr<MaterialETS> materialETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_METALLIC_ROUGHNESS_MATERIAL_IMPL_H
