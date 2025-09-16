@@ -23,6 +23,9 @@
 #include "MaterialImpl.h"
 #include "SceneResources.user.hpp"
 
+#include "MaterialETS.h"
+#include "SubMeshETS.h"
+
 namespace OHOS::Render3D::KITETS {
 class SubMeshImpl {
 public:
@@ -30,7 +33,7 @@ public:
     ~SubMeshImpl();
     ::taihe::string getName();
     void setName(::taihe::string_view name);
-    ::SceneResources::Material getMaterial();
+    ::SceneResources::VariousMaterial getMaterial();
     void setMaterial(::SceneResources::weak::Material mat);
     ::SceneTypes::Aabb getAabb();
 

@@ -17,18 +17,18 @@
 #define OHOS_3D_ANI_UTILS_H
 #include <algorithm>
 
+#include "3d_widget_adapter_log.h"
+#include <ani_signature_builder.h>
+#include <base/containers/vector.h>
+#include <base/containers/string.h>
+
 #include "SceneTH.proj.hpp"
 #include "SceneTH.impl.hpp"
-
 #include "taihe/optional.hpp"
 #include "taihe/runtime.hpp"
 #include "taihe/array.hpp"
 
 #include "SceneETS.h"
-
-#include "3d_widget_adapter_log.h"
-#include <base/containers/vector.h>
-#include <base/containers/string.h>
 
 namespace OHOS::Render3D::KITETS {
 /**
@@ -41,7 +41,8 @@ inline bool IsString(uintptr_t resourceStr, ani_env *env = nullptr)
     }
     ani_boolean isStr;
     ani_class cls;
-    env->FindClass("Lstd/core/String;", &cls);
+    auto stringClass = arkts::ani_signature::Builder::BuildClass({"std", "core", "String"});
+    env->FindClass(stringClass.Descriptor().c_str(), &cls);
     env->Object_InstanceOf((ani_object)resourceStr, cls, &isStr);
     return isStr;
 }
@@ -106,6 +107,16 @@ inline BASE_NS::string ToBaseString(const taihe::string &str)
 inline taihe::string ToTaiheString(const BASE_NS::string &str)
 {
     return taihe::string(str.c_str());
+}
+
+template<typename T>
+inline T *GetImplPointer(const ::taihe::optional<int64_t> &implOp)
+{
+    if (implOp.has_value()) {
+        return reinterpret_cast<T *>(implOp.value());
+    } else {
+        return nullptr;
+    }
 }
 }  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_ANI_UTILS_H

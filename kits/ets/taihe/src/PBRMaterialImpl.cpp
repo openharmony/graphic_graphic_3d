@@ -13,7 +13,15 @@
  * limitations under the License.
  */
 
-#include "RenderSortImpl.h"
+#include "PBRMaterialImpl.h"
 
 namespace OHOS::Render3D::KITETS {
+PBRMaterialImpl::PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat)
+    : MaterialImpl(mat), MetallicRoughnessMaterialImpl(mat), ShaderMaterialImpl(mat), materialETS_(mat)
+{}
+
+PBRMaterialImpl::~PBRMaterialImpl()
+{
+    materialETS_.reset();
+}
 }  // namespace OHOS::Render3D::KITETS

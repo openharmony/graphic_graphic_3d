@@ -16,30 +16,31 @@
 #ifndef OHOS_3D_IMAGE_ETS_H
 #define OHOS_3D_IMAGE_ETS_H
 
-#include <base/containers/unordered_map.h>
-#include <meta/api/threading/mutex.h>
-#include <scene/interface/intf_image.h>
-#include <scene/interface/intf_scene.h>
 #include <string>
+
+#include <base/containers/unordered_map.h>
+
+#include "RenderResourcesETS.h"
 #include "SceneResourceETS.h"
 
 namespace OHOS::Render3D {
 class ImageETS : public SceneResourceETS {
 public:
-    ImageETS(const std::string &name, const std::string &uri);
+    ImageETS(const std::string &name, const std::string &uri, const SCENE_NS::IBitmap::Ptr bitmap);
+    explicit ImageETS(const SCENE_NS::IImage::Ptr &image);
     ~ImageETS() override;
 
     META_NS::IObject::Ptr GetNativeObj() const override;
-    // BASE_NS::string GetName();
-    // void SetName(const BASE_NS::string &name);
-
-    void SetBitmap(const std::string &uri);
-
+    SCENE_NS::IImage::Ptr GetNativeImage() const
+    {
+        return bitmap_;
+    }
     int32_t GetWidth() const;
     int32_t GetHeight() const;
 
 private:
-    SCENE_NS::IBitmap::Ptr bitmap_ {nullptr};
+    SCENE_NS::IBitmap::Ptr bitmap_{nullptr};
+    std::shared_ptr<RenderResourcesETS> resources_{nullptr};
 };
 }  // namespace OHOS::Render3D
 #endif // OHOS_3D_IMAGE_ETS_H

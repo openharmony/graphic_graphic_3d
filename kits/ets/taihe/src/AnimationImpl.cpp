@@ -26,14 +26,14 @@ namespace OHOS::Render3D::KITETS {
 }
 
 AnimationImpl::AnimationImpl(const std::shared_ptr<AnimationETS> animationETS)
-    : SceneResourceImpl(SceneResources::SceneResourceType::key_t::ANIMATION), animationETS_(animationETS)
+    : SceneResourceImpl(SceneResources::SceneResourceType::key_t::ANIMATION, animationETS), animationETS_(animationETS)
 {
-    WIDGET_LOGE("AnimationImpl ++");
+    WIDGET_LOGD("AnimationImpl ++");
 }
 
 AnimationImpl::~AnimationImpl()
 {
-    WIDGET_LOGE("AnimationImpl --");
+    WIDGET_LOGD("AnimationImpl --");
     animationETS_.reset();
 }
 
@@ -87,13 +87,12 @@ void AnimationImpl::onStarted(::taihe::callback_view<void(SceneResources::Callba
     });
 }
 
-void AnimationImpl::onFinished(::taihe::callback_view<void(SceneResources::CallbackUndefinedType const&)> callback)
+void AnimationImpl::onFinishedInner(::taihe::callback_view<void()> callback)
 {
     onFinishedCB_ = callback;
     animationETS_->OnFinished([this]() {
         if (!onFinishedCB_.is_error()) {
-            auto result = SceneResources::CallbackUndefinedType::make_undefined();
-            onFinishedCB_(result);
+            onFinishedCB_();
         }
     });
 }
@@ -130,7 +129,7 @@ void AnimationImpl::finish()
 
 int64_t AnimationImpl::getAnimationImpl()
 {
-    return reinterpret_cast<int64_t>(this);
+    return reinterpret_cast<uintptr_t>(this);
 }
 
 std::shared_ptr<AnimationETS> AnimationImpl::getAnimationETS() const
@@ -193,8 +192,8 @@ uintptr_t animationTransferDynamicImpl(::SceneResources::Animation input)
         WIDGET_LOGE("arkts_napi_scope_open failed");
         return 0;
     }
-    if (!TransferEnvironment::check(jsenv)) {
-        WIDGET_LOGE("TransferEnvironment check failed");
+    if (!CheckNapiEnv(jsenv)) {
+        WIDGET_LOGE("CheckNapiEnv failed");
         // An error has occurred, ignoring the function call result.
         arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
         return 0;

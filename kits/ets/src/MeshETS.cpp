@@ -70,14 +70,15 @@ BASE_NS::Math::Vec3 MeshETS::GetAABBMax()
     }
 }
 
-SCENE_NS::IMaterial::Ptr MeshETS::GetMaterialOverride()
+std::shared_ptr<MaterialETS> MeshETS::GetMaterialOverride()
 {
-    // FIXME 原来就没实现
+    CORE_LOG_E("GetMaterialOverride is not supported now");
     return nullptr;
 }
 
-void MeshETS::SetMaterialOverride(const SCENE_NS::IMaterial::Ptr &material)
+void MeshETS::SetMaterialOverride(const std::shared_ptr<MaterialETS> &mat)
 {
+    SCENE_NS::IMaterial::Ptr material = mat ? mat->GetNativeMaterial() : nullptr;
     if (auto mesh = mesh_.lock()) {
         SCENE_NS::SetMaterialForAllSubMeshes(mesh, material);
     }

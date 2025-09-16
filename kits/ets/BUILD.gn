@@ -85,13 +85,6 @@ config("lume3d_config") {
   ]
 }
 
-ohos_copy("copy_scene_ets") {
-  sources = [
-    "taihe/ets/arkui.component.units.ets",
-  ]
-  outputs = [ "$taihe_generated_file_path/graphics3d/{{source_file_part}}" ]
-}
-
 copy_taihe_idl("copy_scene") {
   sources = [
     "taihe/idl/SceneTH.taihe",
@@ -103,6 +96,13 @@ copy_taihe_idl("copy_scene") {
     "taihe/idl/SceneResources.Transfer.taihe",
     "taihe/idl/SceneTypes.taihe",
   ]
+}
+
+ohos_copy("copy_record_ets") {
+  sources = [
+    "taihe/ets/RecordProxy.ets",
+  ]
+  outputs = [ "$taihe_generated_file_path/graphics3d/{{source_file_part}}" ]
 }
 
 ohos_taihe("run_taihe") {
@@ -136,6 +136,7 @@ taihe_shared_library("scene_ani") {
   sources = get_target_outputs(":run_taihe")
   include_dirs = [
     "include",
+    "include/property_proxy",
     "taihe/include",
     "${LUME_BASE_PATH}/api",
     "${LUME_CORE_PATH}/api",
@@ -153,7 +154,6 @@ taihe_shared_library("scene_ani") {
     "taihe/src/ani_constructor.cpp",
     "taihe/src/AnimationImpl.cpp",
     "taihe/src/ANIUtils.cpp",
-    "taihe/src/BlendImpl.cpp",
     "taihe/src/BloomSettingsImpl.cpp",
     "taihe/src/CameraImpl.cpp",
     "taihe/src/EnvironmentImpl.cpp",
@@ -167,11 +167,12 @@ taihe_shared_library("scene_ani") {
     "taihe/src/MetallicRoughnessMaterialImpl.cpp",
     "taihe/src/MorpherImpl.cpp",
     "taihe/src/NodeImpl.cpp",
+    "taihe/src/PBRMaterialImpl.cpp",
     "taihe/src/PostProcessSettingsImpl.cpp",
     "taihe/src/RenderContextImpl.cpp",
     "taihe/src/RenderResourceFactoryImpl.cpp",
-    "taihe/src/RenderSortImpl.cpp",
     "taihe/src/SamplerImpl.cpp",
+    "taihe/src/SceneComponentImpl.cpp",
     "taihe/src/SceneImpl.cpp",
     "taihe/src/SceneResourceFactoryImpl.cpp",
     "taihe/src/SceneResourceImpl.cpp",
@@ -180,32 +181,40 @@ taihe_shared_library("scene_ani") {
     "taihe/src/ShaderMaterialImpl.cpp",
     "taihe/src/SubMeshImpl.cpp",
     "taihe/src/ToneMappingSettingsImpl.cpp",
-    "src/AnimationETS.cpp",
-    "src/BloomETS.cpp",
-    "src/CameraETS.cpp",
-    "src/ColorProxy.cpp",
-    "src/EnvironmentETS.cpp",
     "src/geometry_definition/CubeETS.cpp",
     "src/geometry_definition/CustomETS.cpp",
     "src/geometry_definition/GeometryDefinition.cpp",
     "src/geometry_definition/PlaneETS.cpp",
     "src/geometry_definition/SphereETS.cpp",
+    "src/property_proxy/ColorProxy.cpp",
+    "src/property_proxy/PropertyProxy.cpp",
+    "src/property_proxy/QuatProxy.cpp",
+    "src/property_proxy/Vec2Proxy.cpp",
+    "src/property_proxy/Vec3Proxy.cpp",
+    "src/property_proxy/Vec4Proxy.cpp",
+    "src/AnimationETS.cpp",
+    "src/BloomETS.cpp",
+    "src/CameraETS.cpp",
+    "src/EnvironmentETS.cpp",
     "src/GeometryETS.cpp",
     "src/ImageETS.cpp",
     "src/LightETS.cpp",
+    "src/MaterialETS.cpp",
+    "src/MaterialPropertyETS.cpp",
     "src/MeshETS.cpp",
     "src/MeshResourceETS.cpp",
     "src/MorpherETS.cpp",
     "src/NodeETS.cpp",
     "src/PostProcessETS.cpp",
-    "src/QuatProxy.cpp",
+    "src/RenderResourcesETS.cpp",
+    "src/RenderContextETS.cpp",
+    "src/SamplerETS.cpp",
+    "src/SceneComponentETS.cpp",
     "src/SceneETS.cpp",
     "src/SceneResourceETS.cpp",
+    "src/ShaderETS.cpp",
     "src/SubMeshETS.cpp",
     "src/TonemapETS.cpp",
-    "src/Vec2Proxy.cpp",
-    "src/Vec3Proxy.cpp",
-    "src/Vec4Proxy.cpp",
   ]
 
   deps = [
@@ -237,28 +246,20 @@ generate_static_abc("graphics3d_scene") {
   base_url = "$taihe_generated_file_path"
   files = [
     "$taihe_generated_file_path/graphics3d/Scene.ets",
-    "$taihe_generated_file_path/graphics3d/arkui.component.units.ets",
   ]
   is_boot_abc = "True"
   device_dst_file = "/system/framework/graphics3d_scene.abc"
-  dependencies = [
-    ":run_taihe",
-    ":copy_scene_ets",
-  ]
+  dependencies = [ ":run_taihe" ]
 }
 
 generate_static_abc("graphics3d_scene_nodes") {
   base_url = "$taihe_generated_file_path"
   files = [
     "$taihe_generated_file_path/graphics3d/SceneNodes.ets",
-    "$taihe_generated_file_path/graphics3d/arkui.component.units.ets",
   ]
   is_boot_abc = "True"
   device_dst_file = "/system/framework/graphics3d_scene_nodes.abc"
-  dependencies = [
-    ":run_taihe",
-    ":copy_scene_ets",
-  ]
+  dependencies = [ ":run_taihe" ]
 }
 
 generate_static_abc("graphics3d_scene_post_process_settings") {
@@ -275,13 +276,13 @@ generate_static_abc("graphics3d_scene_resources") {
   base_url = "$taihe_generated_file_path"
   files = [
     "$taihe_generated_file_path/graphics3d/SceneResources.ets",
-    "$taihe_generated_file_path/graphics3d/arkui.component.units.ets",
+    "$taihe_generated_file_path/graphics3d/RecordProxy.ets",
   ]
   is_boot_abc = "True"
   device_dst_file = "/system/framework/graphics3d_scene_resources.abc"
   dependencies = [
     ":run_taihe",
-    ":copy_scene_ets",
+    ":copy_record_ets",
   ]
 }
 

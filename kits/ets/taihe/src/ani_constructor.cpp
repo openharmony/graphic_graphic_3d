@@ -22,6 +22,13 @@
 #include "SceneTypes.ani.hpp"
 #include "SceneNodes.ani.hpp"
 #include "SceneNodes.Transfer.ani.hpp"
+#if __has_include(<ani.h>)
+#include <ani.h>
+#elif __has_include(<ani/ani.h>)
+#include <ani/ani.h>
+#else
+#error "ani.h not found. Please ensure the Ani SDK is correctly installed."
+#endif
 
 #include "3d_widget_adapter_log.h"
 #include "scene_adapter/scene_adapter.h"
@@ -34,37 +41,38 @@ ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
         WIDGET_LOGE("vm->GetEnv error");
         return ANI_ERROR;
     }
+    ani_status status = ANI_OK;
     if (ANI_OK != ScenePostProcessSettings::ANIRegister(env)) {
         WIDGET_LOGE("Error from ScenePostProcessSettings::ANIRegister");
-        return ANI_ERROR;
+        status = ANI_ERROR;
     }
     if (ANI_OK != SceneTH::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneTH::ANIRegister");
-        return ANI_ERROR;
+        status = ANI_ERROR;
     }
     if (ANI_OK != SceneTH::Transfer::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneTH::Transfer::ANIRegister");
-        return ANI_ERROR;
+        status = ANI_ERROR;
     }
     if (ANI_OK != SceneResources::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneResources::ANIRegister");
-        return ANI_ERROR;
+        status = ANI_ERROR;
     }
     if (ANI_OK != SceneResources::Transfer::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneResources::Transfer::ANIRegister");
-        return ANI_ERROR;
+        status = ANI_ERROR;
     }
     if (ANI_OK != SceneTypes::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneTypes::ANIRegister");
-        return ANI_ERROR;
+        status = ANI_ERROR;
     }
     if (ANI_OK != SceneNodes::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneNodes::ANIRegister");
-        return ANI_ERROR;
+        status = ANI_ERROR;
     }
     if (ANI_OK != SceneNodes::Transfer::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneNodes::Transfer::ANIRegister");
-        return ANI_ERROR;
+        status = ANI_ERROR;
     }
     *result = ANI_VERSION_1;
 
@@ -72,5 +80,5 @@ ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
     auto sceneAdapter_ = std::make_shared<OHOS::Render3D::SceneAdapter>();
     sceneAdapter_->LoadPluginsAndInit();
 
-    return ANI_OK;
+    return status;
 }

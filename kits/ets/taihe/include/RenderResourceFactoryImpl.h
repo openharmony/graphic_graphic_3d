@@ -33,6 +33,9 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
+#include "RenderContextETS.h"
+#include "SamplerETS.h"
+
 namespace OHOS::Render3D::KITETS {
 class RenderResourceFactoryImpl {
 public:
@@ -41,17 +44,10 @@ public:
         // Don't forget to implement the constructor.
     }
 
-    ::SceneResources::Shader createShaderSync(::SceneTH::SceneResourceParameters const &params)
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<ShaderImpl, ::SceneResources::Shader>(params);
-    }
+    ::SceneResources::Shader createShaderSync(::SceneTH::SceneResourceParameters const &params);
 
     ::SceneResources::Image createImageSync(::SceneTH::SceneResourceParameters const &params)
     {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
         return ImageImpl::createImageFromTH(params);
     }
 
@@ -64,12 +60,7 @@ public:
         return MeshResourceImpl::Create(params, geometry);
     }
 
-    ::SceneResources::Sampler createSamplerSync(::SceneTH::SceneResourceParameters const &params)
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<SamplerImpl, ::SceneResources::Sampler>(params);
-    }
+    ::SceneResources::Sampler createSamplerSync(::SceneTH::SceneResourceParameters const &params);
 
     ::SceneTH::Scene createSceneSync(::taihe::optional_view<uintptr_t> uri)
     {

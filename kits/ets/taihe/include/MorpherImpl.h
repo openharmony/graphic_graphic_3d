@@ -17,13 +17,12 @@
 #define OHOS_3D_MORPHER_IMPL_H
 
 #include <stdexcept>
-#include "taihe/runtime.hpp"
-#include "taihe/optional.hpp"
-
-#include "SceneResources.proj.hpp"
-#include "SceneResources.impl.hpp"
 
 #include "MorpherETS.h"
+#include "SceneResources.impl.hpp"
+#include "SceneResources.proj.hpp"
+#include "taihe/optional.hpp"
+#include "taihe/runtime.hpp"
 
 namespace OHOS::Render3D::KITETS {
 class MorpherImpl {
@@ -32,10 +31,15 @@ public:
 
     ~MorpherImpl();
 
-    ::taihe::map<::taihe::string, double> getTargets();
+    int32_t getTargetsSize();
+
+    ::taihe::array<::taihe::string> getTargetsKeys();
+
+    ::taihe::optional<double> getTarget(::taihe::string_view key);
+    void setTarget(::taihe::string_view key, double const &value);
 
 private:
     std::shared_ptr<MorpherETS> morpherETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MORPHER_IMPL_H

@@ -14,19 +14,20 @@
  */
 
 #include "NodeImpl.h"
-#include "GeometryImpl.h"
-#include "CameraImpl.h"
-#include "LightImpl.h"
-#include "Vec3Impl.h"
-#include "QuaternionImpl.h"
 
-#include "GeometryETS.h"
 #include "CameraETS.h"
+#include "CameraImpl.h"
+#include "GeometryETS.h"
+#include "GeometryImpl.h"
 #include "LightETS.h"
+#include "LightImpl.h"
+#include "QuaternionImpl.h"
+#include "Vec3Impl.h"
 
 namespace OHOS::Render3D::KITETS {
 LayerMaskImpl::LayerMaskImpl(const std::shared_ptr<NodeETS> nodeETS) : nodeETS_(nodeETS)
-{}
+{
+}
 
 LayerMaskImpl::~LayerMaskImpl()
 {
@@ -48,47 +49,151 @@ void LayerMaskImpl::setEnabled(int32_t index, bool enabled)
     }
 }
 
-ContainerImpl::ContainerImpl(const std::shared_ptr<NodeETS> nodeETS) : nodeETS_(nodeETS)
-{}
+NodeContainerImpl::NodeContainerImpl(const std::shared_ptr<NodeETS> nodeETS) : nodeETS_(nodeETS)
+{
+}
 
-ContainerImpl::~ContainerImpl()
+NodeContainerImpl::~NodeContainerImpl()
 {
     nodeETS_.reset();
 }
 
-void ContainerImpl::append(::SceneNodes::weak::Node item)
+void NodeContainerImpl::append(::SceneNodes::weak::Node item)
 {
-    TH_THROW(std::runtime_error, "append not implemented");
+    auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(item)->getImpl();
+    if (!nodeOptional.has_value()) {
+        WIDGET_LOGE("invalid node in taihe object");
+        return;
+    }
+    auto nodeImpl = reinterpret_cast<NodeImpl*>(nodeOptional.value());
+    if (nodeImpl == nullptr) {
+        return;
+    }
+    std::shared_ptr<NodeETS> itemNode = nodeImpl->GetInternalNode();
+    if (!itemNode) {
+        return;
+    }
+    nodeETS_->AppendChild(itemNode);
 }
 
-void ContainerImpl::insertAfter(::SceneNodes::weak::Node item, ::SceneNodes::NodeOrNull const &sibling)
+void NodeContainerImpl::insertAfter(::SceneNodes::weak::Node item, ::SceneNodes::NodeOrNull const &sibling)
 {
-    TH_THROW(std::runtime_error, "insertAfter not implemented");
+    auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(item)->getImpl();
+    if (!nodeOptional.has_value()) {
+        WIDGET_LOGE("invalid node in taihe object");
+        return;
+    }
+    auto nodeImpl = reinterpret_cast<NodeImpl*>(nodeOptional.value());
+    if (nodeImpl == nullptr) {
+        return;
+    }
+    std::shared_ptr<NodeETS> itemNode = nodeImpl->GetInternalNode();
+    if (!itemNode) {
+        return;
+    }
+    std::shared_ptr<NodeETS> siblingNode = nullptr;
+    if (sibling.holds_node()) {
+        ::SceneNodes::Node node = sibling.get_node_ref();
+        auto siblingNodeOptional = static_cast<::SceneResources::SceneResource>(node)->getImpl();
+        if (!siblingNodeOptional.has_value()) {
+            WIDGET_LOGE("invalid node in taihe object");
+            return;
+        }
+        auto siblingNodeImpl = reinterpret_cast<NodeImpl*>(siblingNodeOptional.value());
+        if (siblingNodeImpl != nullptr) {
+            siblingNode = siblingNodeImpl->GetInternalNode();
+        }
+    }
+    nodeETS_->InsertChildAfter(itemNode, siblingNode);
 }
 
-void ContainerImpl::remove(::SceneNodes::weak::Node item)
+void NodeContainerImpl::remove(::SceneNodes::weak::Node item)
 {
-    TH_THROW(std::runtime_error, "remove not implemented");
+    auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(item)->getImpl();
+    if (!nodeOptional.has_value()) {
+        WIDGET_LOGE("invalid node in taihe object");
+        return;
+    }
+    auto nodeImpl = reinterpret_cast<NodeImpl*>(nodeOptional.value());
+    if (nodeImpl == nullptr) {
+        WIDGET_LOGE("cast NodeImpl fail");
+        return;
+    }
+    std::shared_ptr<NodeETS> itemNode = nodeImpl->GetInternalNode();
+    if (!itemNode) {
+        WIDGET_LOGE("GetInternalNode fail");
+        return;
+    }
+    nodeETS_->RemoveChild(itemNode);
 }
 
-::SceneNodes::NodeOrNull ContainerImpl::get(int32_t index)
+::SceneNodes::VariousNodesOrNull NodeContainerImpl::get(int32_t index)
 {
-    TH_THROW(std::runtime_error, "get not implemented");
+    if (!nodeETS_) {
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+    std::shared_ptr<NodeETS> node = nodeETS_->GetChild(index);
+    return NodeImpl::MakeVariousNodesOrNull(node);
 }
 
-void ContainerImpl::clear()
+void NodeContainerImpl::clear()
 {
-    TH_THROW(std::runtime_error, "clear not implemented");
+    if (nodeETS_) {
+        nodeETS_->ClearChildren();
+    }
 }
 
-int32_t ContainerImpl::count()
+int32_t NodeContainerImpl::count()
 {
-    TH_THROW(std::runtime_error, "count not implemented");
+    if (nodeETS_) {
+        return nodeETS_->GetCount();
+    }
+    return 0;
+}
+
+::SceneNodes::VariousNodesOrNull NodeImpl::MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node)
+{
+    if (!node) {
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+    NodeETS::NodeType type = node->GetNodeType();
+    switch (type) {
+        case NodeETS::NodeType::GEOMETRY:
+            return SceneNodes::VariousNodesOrNull::make_geometry(
+                taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(std::static_pointer_cast<GeometryETS>(node)));
+        case NodeETS::NodeType::CAMERA:
+            return SceneNodes::VariousNodesOrNull::make_camera(
+                taihe::make_holder<CameraImpl, SceneNodes::Camera>(std::static_pointer_cast<CameraETS>(node)));
+        case NodeETS::NodeType::LIGHT:
+            return SceneNodes::VariousNodesOrNull::make_light(
+                taihe::make_holder<LightImpl, SceneNodes::Light>(std::static_pointer_cast<LightETS>(node)));
+        default:
+            return SceneNodes::VariousNodesOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node));
+    }
+}
+
+::SceneNodes::VariousNodes NodeImpl::MakeVariousNodes(const std::shared_ptr<NodeETS> &node)
+{
+    NodeETS::NodeType type = node->GetNodeType();
+    switch (type) {
+        case NodeETS::NodeType::GEOMETRY:
+            return SceneNodes::VariousNodes::make_geometry(
+                taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(std::static_pointer_cast<GeometryETS>(node)));
+        case NodeETS::NodeType::CAMERA:
+            return SceneNodes::VariousNodes::make_camera(
+                taihe::make_holder<CameraImpl, SceneNodes::Camera>(std::static_pointer_cast<CameraETS>(node)));
+        case NodeETS::NodeType::LIGHT:
+            return SceneNodes::VariousNodes::make_light(
+                taihe::make_holder<LightImpl, SceneNodes::Light>(std::static_pointer_cast<LightETS>(node)));
+        default:
+            return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node));
+    }
 }
 
 NodeImpl::NodeImpl(const std::shared_ptr<NodeETS> nodeETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::NODE, nodeETS), nodeETS_(nodeETS)
-{}
+{
+}
 
 NodeImpl::~NodeImpl()
 {
@@ -176,28 +281,7 @@ void NodeImpl::setVisible(const bool visible)
     return "";
 }
 
-::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node)
-{
-    if (!node) {
-        return SceneNodes::VariousNodesOrNull::make_nValue();
-    }
-    NodeETS::NodeType type = node->GetNodeType();
-    switch (type) {
-        case NodeETS::NodeType::GEOMETRY:
-            return SceneNodes::VariousNodesOrNull::make_geometry(taihe::make_holder<GeometryImpl,
-                SceneNodes::Geometry>(std::static_pointer_cast<GeometryETS>(node)));
-        case NodeETS::NodeType::CAMERA:
-            return SceneNodes::VariousNodesOrNull::make_camera(taihe::make_holder<CameraImpl,
-                SceneNodes::Camera>(std::static_pointer_cast<CameraETS>(node)));
-        case NodeETS::NodeType::LIGHT:
-            return SceneNodes::VariousNodesOrNull::make_light(taihe::make_holder<LightImpl,
-                SceneNodes::Light>(std::static_pointer_cast<LightETS>(node)));
-        default:
-            return SceneNodes::VariousNodesOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node));
-    }
-}
-
-::SceneNodes::VariousNodesOrNull NodeImpl::getParentInner()
+::SceneNodes::VariousNodesOrNull NodeImpl::getParent()
 {
     if (!nodeETS_) {
         WIDGET_LOGE("node.getParent invalid nodeETS");
@@ -207,12 +291,12 @@ void NodeImpl::setVisible(const bool visible)
     return MakeVariousNodesOrNull(parent);
 }
 
-::SceneNodes::Container NodeImpl::getChildren()
+::SceneNodes::NodeContainer NodeImpl::getNodeContainer()
 {
-    return taihe::make_holder<ContainerImpl, ::SceneNodes::Container>(nodeETS_);
+    return taihe::make_holder<NodeContainerImpl, ::SceneNodes::NodeContainer>(nodeETS_);
 }
 
-::SceneNodes::VariousNodesOrNull NodeImpl::getNodeByPathInner(::taihe::string_view path)
+::SceneNodes::VariousNodesOrNull NodeImpl::getNodeByPath(::taihe::string_view path)
 {
     if (!nodeETS_) {
         WIDGET_LOGE("node.getNodeByPath invalid nodeETS");
@@ -260,8 +344,12 @@ void NodeImpl::destroy()
 uintptr_t nodeTransferDynamicImpl(::SceneNodes::Node input)
 {
     WIDGET_LOGI("nodeTransferDynamicImpl");
-    int64_t implRawPtr = input->GetImpl();
-    NodeImpl *implPtr = reinterpret_cast<NodeImpl *>(implRawPtr);
+    auto nodeOptional = static_cast<::SceneResources::SceneResource>(input)->getImpl();
+    if (!nodeOptional.has_value()) {
+        WIDGET_LOGE("invalid node in taihe object");
+        return 0;
+    }
+    auto implPtr = reinterpret_cast<NodeImpl*>(nodeOptional.value());
     std::shared_ptr<NodeETS> nodeETS = implPtr->GetInternalNode();
     if (!nodeETS) {
         WIDGET_LOGE("get NodeETS failed");
@@ -278,8 +366,8 @@ uintptr_t nodeTransferDynamicImpl(::SceneNodes::Node input)
         WIDGET_LOGE("arkts_napi_scope_open failed");
         return 0;
     }
-    if (!TransferEnvironment::check(jsenv)) {
-        WIDGET_LOGE("TransferEnvironment check failed");
+    if (!CheckNapiEnv(jsenv)) {
+        WIDGET_LOGE("CheckNapiEnv failed");
         // An error has occurred, ignoring the function call result.
         arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
         return 0;

@@ -20,6 +20,7 @@
 
 #include <scene/interface/intf_scene.h>
 
+#include "ImageETS.h"
 #include "SceneResourceETS.h"
 #include "Vec4Proxy.h"
 
@@ -60,8 +61,11 @@ public:
         BACKGROUND_EQUIRECTANGULAR = 3,
     };
 
-    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene,
-        const std::string &name = "", const std::string &uri = "");
+    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene);
+    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene, const std::string &name);
+    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene, const std::string &name,
+        const std::string &uri);
+
     SCENE_NS::IScene::Ptr GetScene() const
     {
         return scene_.lock();
@@ -79,11 +83,24 @@ public:
     std::shared_ptr<Vec4Proxy> GetIndirectSpecularFactor();
     void SetIndirectSpecularFactor(const BASE_NS::Math::Vec4 &factor);
 
+    std::shared_ptr<Vec4Proxy> GetEnvironmentMapFactor();
+    void SetEnvironmentMapFactor(const BASE_NS::Math::Vec4 &factor);
+
+    std::shared_ptr<ImageETS> GetEnvironmentImage();
+    void SetEnvironmentImage(std::shared_ptr<ImageETS> image);
+
+    std::shared_ptr<ImageETS> GetRadianceImage();
+    void SetRadianceImage(std::shared_ptr<ImageETS> image);
+
+    BASE_NS::vector<BASE_NS::Math::Vec3> GetIrradianceCoefficients();
+    void SetIrradianceCoefficients(const BASE_NS::vector<BASE_NS::Math::Vec3>& coefficients);
+
 private:
     SCENE_NS::IEnvironment::Ptr environment_{nullptr};
     SCENE_NS::IScene::WeakPtr scene_{nullptr};
     std::shared_ptr<Vec4Proxy> diffuseFactor_{nullptr};
     std::shared_ptr<Vec4Proxy> specularFactor_{nullptr};
+    std::shared_ptr<Vec4Proxy> envMapFactor_{nullptr};
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_ENVIRONMENT_ETS_H

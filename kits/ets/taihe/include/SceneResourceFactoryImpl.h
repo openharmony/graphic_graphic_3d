@@ -37,6 +37,7 @@
 #include "SceneETS.h"
 #include "geometry_definition/GeometryDefinition.h"
 #include "MeshResourceETS.h"
+#include "MaterialETS.h"
 #include "geometry_definition/CubeETS.h"
 #include "geometry_definition/CustomETS.h"
 #include "geometry_definition/PlaneETS.h"
@@ -55,11 +56,8 @@ public:
 
     ::SceneNodes::Node createNodeSync(::SceneTH::SceneNodeParameters const &params);
 
-    ::SceneResources::Material createMaterialSync(
-        ::SceneTH::SceneResourceParameters const &params, ::SceneResources::MaterialType materialType)
-    {
-        return ::taihe::make_holder<MaterialImpl, ::SceneResources::Material>();
-    }
+    ::SceneResources::VariousMaterial createMaterialSync(
+        ::SceneTH::SceneResourceParameters const &params, ::SceneResources::MaterialType materialType);
 
     ::SceneResources::Environment createEnvironmentSync(::SceneTH::SceneResourceParameters const &params);
 
@@ -68,7 +66,7 @@ public:
 
     ::taihe::optional<int64_t> getImpl()
     {
-        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<int64_t>(this));
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
     }
 
     std::shared_ptr<SceneETS> getInternalScene() const

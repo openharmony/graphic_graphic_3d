@@ -26,6 +26,7 @@
 #include "SceneNodes.user.hpp"
 
 #include "AnimationImpl.h"
+#include "SceneComponentImpl.h"
 #include "SceneResourceFactoryImpl.h"
 #include "SceneETS.h"
 
@@ -35,37 +36,17 @@
 #endif
 
 namespace OHOS::Render3D::KITETS {
-class SceneComponentImpl {
-public:
-    SceneComponentImpl()
-    {
-        // Don't forget to implement the constructor.
-    }
-
-    ::taihe::string getName()
-    {
-        TH_THROW(std::runtime_error, "getName not implemented");
-    }
-
-    void setName(::taihe::string_view name)
-    {
-        TH_THROW(std::runtime_error, "setName not implemented");
-    }
-
-    ::taihe::map<::taihe::string, ::SceneTH::ComponentPropertyType> getProperty()
-    {
-        TH_THROW(std::runtime_error, "getProperty not implemented");
-    }
-};
-
 class SceneImpl {
 private:
     std::shared_ptr<SceneETS> sceneETS_;
+    std::optional<::taihe::array<::SceneResources::Animation>> animations_;
 
 public:
     explicit SceneImpl(const std::string &uriStr);
 
     SceneImpl(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter);
+
+    ~SceneImpl();
 
     ::SceneResources::Environment getEnvironment();
 
@@ -75,7 +56,7 @@ public:
 
     ::SceneNodes::NodeOrNull getRoot();
 
-    ::SceneNodes::VariousNodesOrNull getNodeByPathInner(
+    ::SceneNodes::VariousNodesOrNull getNodeByPath(
         ::taihe::string_view path, ::taihe::optional_view<::SceneNodes::NodeType> type);
 
     ::SceneTH::SceneResourceFactory getResourceFactory()
@@ -86,40 +67,22 @@ public:
     void destroy();
 
     ::SceneNodes::Node importNode(
-        ::taihe::string_view name, ::SceneNodes::weak::Node node, ::SceneNodes::NodeOrNull parent)
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        TH_THROW(std::runtime_error, "importNode not implemented");
-    }
+        ::taihe::string_view name, ::SceneNodes::weak::Node node, ::SceneNodes::NodeOrNull parent);
 
     ::SceneNodes::Node importScene(
-        ::taihe::string_view name, ::SceneTH::weak::Scene scene, ::SceneNodes::NodeOrNull parent)
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        TH_THROW(std::runtime_error, "importScene not implemented");
-    }
+        ::taihe::string_view name, ::SceneTH::weak::Scene scene, ::SceneNodes::NodeOrNull parent);
 
     bool renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> params);
 
-    ::SceneTH::SceneComponent createComponentSync(::SceneNodes::weak::Node node, ::taihe::string_view name)
-    {
-        // The parameters in the make_holder function should be of the same type
-        // as the parameters in the constructor of the actual implementation class.
-        return taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>();
-    }
+    ::SceneTH::SceneComponent createComponentSync(::SceneNodes::weak::Node node, ::taihe::string_view name);
 
-    ::SceneTH::SceneComponentOrNull getComponent(::SceneNodes::weak::Node node, ::taihe::string_view name)
-    {
-        TH_THROW(std::runtime_error, "getComponent not implemented");
-    }
+    ::SceneTH::SceneComponentOrNull getComponent(::SceneNodes::weak::Node node, ::taihe::string_view name);
 
     int64_t getSceneNative();
 
     ::taihe::optional<int64_t> getImpl()
     {
-        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<int64_t>(this));
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
     }
 
     std::shared_ptr<SceneETS> getInternalScene() const

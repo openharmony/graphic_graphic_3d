@@ -45,7 +45,7 @@ public:
 
     ::taihe::optional<int64_t> getImpl()
     {
-        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<int64_t>(this));
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
     }
 
     std::shared_ptr<PostProcessETS> GetInternalSettings() const

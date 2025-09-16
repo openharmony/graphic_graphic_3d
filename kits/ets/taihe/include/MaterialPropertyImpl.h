@@ -20,45 +20,40 @@
 #include "taihe/optional.hpp"
 #include "stdexcept"
 
+#include "ANIUtils.h"
+#include "SamplerImpl.h"
 #include "SceneResourceImpl.h"
+
+#include "MaterialPropertyETS.h"
+#include "SamplerETS.h"
 
 namespace OHOS::Render3D::KITETS {
 class MaterialPropertyImpl {
 public:
-    MaterialPropertyImpl()
+    MaterialPropertyImpl(const std::shared_ptr<MaterialPropertyETS> matProp);
+    ~MaterialPropertyImpl();
+
+    ::SceneResources::ImageOrNull getImage();
+    void setImage(::SceneResources::ImageOrNull const& img);
+
+    ::SceneTypes::Vec4 getFactor();
+    void setFactor(::SceneTypes::weak::Vec4 const &factor);
+
+    ::taihe::optional<::SceneResources::Sampler> getSampler();
+    void setSampler(::taihe::optional_view<::SceneResources::Sampler> sampler);
+
+    ::taihe::optional<int64_t> getImpl()
     {
-        // Don't forget to implement the constructor.
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
     }
 
-    ::SceneResources::ImageOrNull getImage()
+    std::shared_ptr<MaterialPropertyETS> getInternalMaterialProperty() const
     {
-        TH_THROW(std::runtime_error, "getImage not implemented");
+        return materialPropertyETS_;
     }
 
-    void setImage(::SceneResources::ImageOrNull const& img)
-    {
-        TH_THROW(std::runtime_error, "setImage not implemented");
-    }
-
-    ::SceneTypes::Vec4 getFactor()
-    {
-        TH_THROW(std::runtime_error, "getFactor not implemented");
-    }
-
-    void setFactor(::SceneTypes::Vec4 const &factor)
-    {
-        TH_THROW(std::runtime_error, "setFactor not implemented");
-    }
-
-    ::taihe::optional<::SceneResources::Sampler> getSampler()
-    {
-        TH_THROW(std::runtime_error, "getSampler not implemented");
-    }
-
-    void setSampler(::taihe::optional_view<::SceneResources::Sampler> sampler)
-    {
-        TH_THROW(std::runtime_error, "setSampler not implemented");
-    }
+private:
+    std::shared_ptr<MaterialPropertyETS> materialPropertyETS_{nullptr};
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MATERIAL_PROPERTY_IMPL_H

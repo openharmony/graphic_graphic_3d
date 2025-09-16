@@ -35,11 +35,6 @@ public:
         : type_(type), sceneResourceETS_(srETS)
     {}
 
-    SceneResourceImpl(const SceneResources::SceneResourceType &type) : type_(type), sceneResourceETS_(nullptr)
-    {
-        // TODO 为了编译通过，后续需要删除
-    }
-
     ~SceneResourceImpl()
     {
         sceneResourceETS_.reset();
@@ -52,6 +47,11 @@ public:
     ::SceneResources::SceneResourceType getResourceType();
 
     ::taihe::optional<uintptr_t> getUri();
+
+    ::taihe::optional<int64_t> getImpl()
+    {
+        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
+    }
 
     void destroy();
 

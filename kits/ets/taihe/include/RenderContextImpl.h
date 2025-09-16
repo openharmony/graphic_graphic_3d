@@ -38,10 +38,9 @@ public:
         return taihe::make_holder<RenderResourceFactoryImpl, ::SceneTH::RenderResourceFactory>();
     }
 
-    bool loadPluginSync(::taihe::string_view name)
-    {
-        TH_THROW(std::runtime_error, "loadPluginSync not implemented");
-    }
+    bool loadPluginSync(::taihe::string_view name);
+
+    bool registerResourcePath(::taihe::string_view protocol, ::taihe::string_view uri);
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_RENDER_CONTEXT_IMPL_H

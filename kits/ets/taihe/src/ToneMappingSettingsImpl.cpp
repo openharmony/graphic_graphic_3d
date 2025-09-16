@@ -31,10 +31,7 @@ std::shared_ptr<TonemapETS> ToneMappingSettingsImpl::CreateInternal(
     } else {
         exposure = 0.0F;
     }
-    WIDGET_LOGI("ToneMappingSettingsImpl::CreateInternal, {\"type\": %{public}d, \"exposure\": %{public}f}",
-        static_cast<int32_t>(type),
-        exposure);
-    return TonemapETS::FromJS(type, exposure);
+    return std::make_shared<TonemapETS>(type, exposure);
 }
 
 ToneMappingSettingsImpl::ToneMappingSettingsImpl(const std::shared_ptr<TonemapETS> tonemapETS) : tonemapETS_(tonemapETS)

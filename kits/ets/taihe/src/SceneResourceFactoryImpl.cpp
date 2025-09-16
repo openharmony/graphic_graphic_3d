@@ -19,6 +19,7 @@
 #include <base/util/color.h>
 
 #include "SceneResourceFactoryImpl.h"
+#include "PBRMaterialImpl.h"
 #include "ParamUtils.h"
 
 #include "interop_js/arkts_interop_js_api.h"
@@ -98,6 +99,32 @@ namespace OHOS::Render3D::KITETS {
     }
 }
 
+::SceneResources::VariousMaterial SceneResourceFactoryImpl::createMaterialSync(
+    ::SceneTH::SceneResourceParameters const &params, ::SceneResources::MaterialType materialType)
+{
+    if (!sceneETS_) {
+        taihe::set_error("Invalid scene ets");
+        auto mat = ::SceneResources::MetallicRoughnessMaterial({nullptr, nullptr});
+        return ::SceneResources::VariousMaterial::make_metaRough(mat);
+    }
+    std::string name = std::string(params.name);
+    std::string uri = ExtractUri(params.uri);
+    MaterialETS::MaterialType type;
+    if (materialType == ::SceneResources::MaterialType::key_t::SHADER) {
+        type = MaterialETS::MaterialType::SHADER;
+    } else {
+        type = MaterialETS::MaterialType::METALLIC_ROUGHNESS;
+    }
+    InvokeReturn<std::shared_ptr<MaterialETS>> material = sceneETS_->CreateMaterial(name, uri, type);
+    if (!material) {
+        taihe::set_error(material.error);
+        auto mat = ::SceneResources::PBRMaterial({nullptr, nullptr});
+        return ::SceneResources::VariousMaterial::make_pbr(mat);
+    }
+    auto mat = ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(material.value);
+    return ::SceneResources::VariousMaterial::make_pbr(mat);
+}
+
 ::SceneResources::Environment SceneResourceFactoryImpl::createEnvironmentSync(
     ::SceneTH::SceneResourceParameters const &params)
 {
@@ -124,7 +151,12 @@ namespace OHOS::Render3D::KITETS {
         taihe::set_error("Invalid scene");
         return SceneNodes::Geometry({nullptr, nullptr});
     }
-    MeshResourceImpl *mri = reinterpret_cast<MeshResourceImpl *>(mesh->GetImpl());
+    auto meshOptional = static_cast<::SceneResources::weak::SceneResource>(mesh)->getImpl();
+    if (!meshOptional.has_value()) {
+        taihe::set_error("invalid mesh in taihe object");
+        return SceneNodes::Geometry({nullptr, nullptr});
+    }
+    auto mri = reinterpret_cast<MeshResourceImpl*>(meshOptional.value());
     if (mri == nullptr || !(mri->mrETS_)) {
         taihe::set_error("Invalid MeshResource");
         return SceneNodes::Geometry({nullptr, nullptr});
@@ -185,8 +217,8 @@ uintptr_t sceneResourceFactoryTransferDynamicImpl(::SceneTH::weak::SceneResource
         WIDGET_LOGE("arkts_napi_scope_open failed");
         return 0;
     }
-    if (!TransferEnvironment::check(jsenv)) {
-        WIDGET_LOGE("TransferEnvironment check failed");
+    if (!CheckNapiEnv(jsenv)) {
+        WIDGET_LOGE("CheckNapiEnv failed");
         // An error has occurred, ignoring the function call result.
         arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
         return 0;

@@ -30,7 +30,7 @@
 #include "interop_js/arkts_interop_js_api.h"
 #include "interop_js/arkts_esvalue.h"
 #include "napi/native_api.h"
-#include "TransferEnvironment.h"
+#include "CheckNapiEnv.h"
 
 #include "SceneResourceImpl.h"
 #include "EnvironmentETS.h"
@@ -53,46 +53,17 @@ public:
     ::SceneTypes::Vec4 getIndirectSpecularFactor();
     void setIndirectSpecularFactor(::SceneTypes::weak::Vec4 factor);
 
-    ::SceneTypes::Vec4 getEnvironmentMapFactor()
-    {
-        TH_THROW(std::runtime_error, "getEnvironmentMapFactor not implemented");
-    }
-    void setEnvironmentMapFactor(::SceneTypes::weak::Vec4 factor)
-    {
-        TH_THROW(std::runtime_error, "setEnvironmentMapFactor not implemented");
-    }
+    ::SceneTypes::Vec4 getEnvironmentMapFactor();
+    void setEnvironmentMapFactor(::SceneTypes::weak::Vec4 factor);
 
-    ::SceneResources::ImageOrNullOrUndefined getEnvironmentImage()
-    {
-        TH_THROW(std::runtime_error, "getEnvironmentImage not implemented");
-    }
-    void setEnvironmentImage(::SceneResources::ImageOrNullOrUndefined const& image)
-    {
-        TH_THROW(std::runtime_error, "setEnvironmentImage not implemented");
-    }
+    ::SceneResources::ImageOrNullOrUndefined getEnvironmentImage();
+    void setEnvironmentImage(::SceneResources::ImageOrNullOrUndefined const& image);
 
-    ::SceneResources::ImageOrNullOrUndefined getRadianceImage()
-    {
-        TH_THROW(std::runtime_error, "getRadianceImage not implemented");
-    }
-    void setRadianceImage(::SceneResources::ImageOrNullOrUndefined const& image)
-    {
-        TH_THROW(std::runtime_error, "setRadianceImage not implemented");
-    }
+    ::SceneResources::ImageOrNullOrUndefined getRadianceImage();
+    void setRadianceImage(::SceneResources::ImageOrNullOrUndefined const& image);
 
-    ::taihe::optional<::taihe::array<::SceneTypes::Vec3>> getIrradianceCoefficients()
-    {
-        TH_THROW(std::runtime_error, "getIrradianceCoefficients not implemented");
-    }
-    void setIrradianceCoefficients(::taihe::optional_view<::taihe::array<::SceneTypes::Vec3>> coefficients)
-    {
-        TH_THROW(std::runtime_error, "setIrradianceCoefficients not implemented");
-    }
-
-    int64_t GetImpl()
-    {
-        return reinterpret_cast<int64_t>(this);
-    }
+    ::taihe::optional<::taihe::array<::SceneTypes::Vec3>> getIrradianceCoefficients();
+    void setIrradianceCoefficients(::taihe::optional_view<::taihe::array<::SceneTypes::Vec3>> coefficients);
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_ENVIRONMENT_IMPL_H

@@ -44,11 +44,6 @@ public:
     explicit MeshResourceImpl(const std::shared_ptr<MeshResourceETS> mrETS);
     ~MeshResourceImpl();
 
-    int64_t GetImpl()
-    {
-        return reinterpret_cast<int64_t>(this);
-    }
-
 private:
     static BASE_NS::unique_ptr<Geometry::CustomETS> MakeCustomETS(
         const SceneTypes::CustomGeometry &customGeometry);

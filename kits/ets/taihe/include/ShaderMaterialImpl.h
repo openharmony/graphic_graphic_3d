@@ -24,23 +24,16 @@
 #include "MaterialImpl.h"
 
 namespace OHOS::Render3D::KITETS {
-class ShaderMaterialImpl : public MaterialImpl {
+class ShaderMaterialImpl : virtual public MaterialImpl {
 public:
-    // ::SceneTH::SceneResourceParameters const &params, ::SceneResources::MaterialType materialType
-    ShaderMaterialImpl() : MaterialImpl()
-    {
-        // Don't forget to implement the constructor.
-    }
+    ShaderMaterialImpl(const std::shared_ptr<MaterialETS> mat);
+    ~ShaderMaterialImpl();
 
-    ::taihe::optional<::SceneResources::Shader> getColorShader()
-    {
-        TH_THROW(std::runtime_error, "getColorShader not implemented");
-    }
+    ::taihe::optional<::SceneResources::Shader> getColorShader();
+    void setColorShader(::taihe::optional_view<::SceneResources::Shader> shader);
 
-    void setColorShader(::taihe::optional_view<::SceneResources::Shader> shader)
-    {
-        TH_THROW(std::runtime_error, "setColorShader not implemented");
-    }
+private:
+    std::shared_ptr<MaterialETS> materialETS_;
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SHADER_MATERIAL_IMPL_H

@@ -23,7 +23,7 @@ namespace OHOS::Render3D::Geometry {
 
 CubeETS::CubeETS(const BASE_NS::Math::Vec3 &size) : GeometryDefinition(), size_(size)
 {
-    WIDGET_LOGI("CubeETS +++, size(%{public}f, %{public}f, %{public}f)", size.x, size.y, size.z);
+    WIDGET_LOGD("CubeETS +++, size(%{public}f, %{public}f, %{public}f)", size.x, size.y, size.z);
 }
 
 GeometryType CubeETS::GetType()

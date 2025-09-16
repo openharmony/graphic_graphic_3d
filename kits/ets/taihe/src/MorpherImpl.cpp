@@ -17,17 +17,46 @@
 
 namespace OHOS::Render3D::KITETS {
 MorpherImpl::MorpherImpl(const std::shared_ptr<MorpherETS> morpherETS) : morpherETS_(morpherETS)
-{}
+{
+}
 
 MorpherImpl::~MorpherImpl()
 {
     morpherETS_.reset();
 }
 
-::taihe::map<::taihe::string, double> MorpherImpl::getTargets()
+int32_t MorpherImpl::getTargetsSize()
 {
-    taihe::map<taihe::string, double> targets;
-    return targets;
-    // TH_THROW(std::runtime_error, "getTargets not implemented");
+    return morpherETS_ ? morpherETS_->GetWeightsSize() : 0;
+}
+
+::taihe::array<::taihe::string> MorpherImpl::getTargetsKeys()
+{
+    if (morpherETS_) {
+        std::vector<std::string> targetsKeys = morpherETS_->GetMorpherNames();
+        std::vector<::taihe::string> keys;
+        keys.reserve(targetsKeys.size());
+        for (size_t i = 0; i < targetsKeys.size(); ++i) {
+            keys.emplace_back(::taihe::string(targetsKeys[i]));
+        }
+        return ::taihe::array_view<::taihe::string>(keys);
+    }
+    return {};
+}
+
+::taihe::optional<double> MorpherImpl::getTarget(::taihe::string_view key)
+{
+    if (morpherETS_) {
+        return ::taihe::optional<double>(std::in_place, morpherETS_->Get(std::string(key)));
+    } else {
+        return ::taihe::optional<double>(std::in_place, 0);
+    }
+}
+
+void MorpherImpl::setTarget(::taihe::string_view key, double const &value)
+{
+    if (morpherETS_) {
+        morpherETS_->Set(std::string(key), value);
+    }
 }
 }  // namespace OHOS::Render3D::KITETS
