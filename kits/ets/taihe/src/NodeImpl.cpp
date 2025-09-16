@@ -158,7 +158,7 @@ void NodeImpl::setVisible(const bool visible)
 ::SceneNodes::NodeType NodeImpl::getNodeType()
 {
     if (nodeETS_) {
-        return static_cast<SceneNodes::NodeType::key_t>(static_cast<int32_t>(nodeETS_->GetNodeType()));
+        return SceneNodes::NodeType::from_value(static_cast<int32_t>(nodeETS_->GetNodeType()));
     }
     return SceneNodes::NodeType::key_t::NODE;
 }
