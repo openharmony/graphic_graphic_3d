@@ -16,25 +16,29 @@
 #include "SceneTypesImpl.h"
 
 namespace OHOS::Render3D::KITETS {
-::SceneTypes::CustomGeometry CreateCustomGeometry() {
+::SceneTypes::CustomGeometry CreateCustomGeometry()
+{
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<CustomGeometryImpl, ::SceneTypes::CustomGeometry>();
 }
 
-::SceneTypes::CubeGeometry CreateCubeGeometry() {
+::SceneTypes::CubeGeometry CreateCubeGeometry()
+{
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<CubeGeometryImpl, ::SceneTypes::CubeGeometry>();
 }
 
-::SceneTypes::PlaneGeometry CreatePlaneGeometry() {
+::SceneTypes::PlaneGeometry CreatePlaneGeometry()
+{
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<PlaneGeometryImpl, ::SceneTypes::PlaneGeometry>();
 }
 
-::SceneTypes::SphereGeometry CreateSphereGeometry() {
+::SceneTypes::SphereGeometry CreateSphereGeometry()
+{
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<SphereGeometryImpl, ::SceneTypes::SphereGeometry>();
