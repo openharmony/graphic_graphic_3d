@@ -35,14 +35,13 @@ std::shared_ptr<TonemapETS> ToneMappingSettingsImpl::CreateInternal(
 }
 
 ToneMappingSettingsImpl::ToneMappingSettingsImpl(const std::shared_ptr<TonemapETS> tonemapETS) : tonemapETS_(tonemapETS)
-{
-    WIDGET_LOGI("ToneMappingSettingsImpl ++");
-}
+{}
 
 ToneMappingSettingsImpl::~ToneMappingSettingsImpl()
 {
-    WIDGET_LOGI("ToneMappingSettingsImpl --");
-    tonemapETS_.reset();
+    if (tonemapETS_) {
+        tonemapETS_.reset();
+    }
 }
 
 ::taihe::optional<::ScenePostProcessSettings::ToneMappingType> ToneMappingSettingsImpl::getType()

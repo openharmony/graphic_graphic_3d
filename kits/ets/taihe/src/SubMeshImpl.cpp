@@ -23,7 +23,9 @@ SubMeshImpl::SubMeshImpl(const std::shared_ptr<SubMeshETS> subMeshETS) : subMesh
 
 SubMeshImpl::~SubMeshImpl()
 {
-    subMeshETS_.reset();
+    if (subMeshETS_) {
+        subMeshETS_.reset();
+    }
 }
 
 ::taihe::string SubMeshImpl::getName()

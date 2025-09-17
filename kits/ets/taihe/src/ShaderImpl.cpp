@@ -32,7 +32,9 @@ ShaderImpl::ShaderImpl(const std::shared_ptr<ShaderETS> &shader)
 
 ShaderImpl::~ShaderImpl()
 {
-    shaderETS_.reset();
+    if (shaderETS_) {
+        shaderETS_.reset();
+    }
 }
 
 int32_t ShaderImpl::getInputsSize()

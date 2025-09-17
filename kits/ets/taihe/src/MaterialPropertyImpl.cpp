@@ -26,7 +26,9 @@ MaterialPropertyImpl::MaterialPropertyImpl(const std::shared_ptr<MaterialPropert
 
 MaterialPropertyImpl::~MaterialPropertyImpl()
 {
-    materialPropertyETS_.reset();
+    if (materialPropertyETS_) {
+        materialPropertyETS_.reset();
+    }
 }
 
 ::SceneResources::ImageOrNull MaterialPropertyImpl::getImage()

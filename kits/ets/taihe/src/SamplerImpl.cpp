@@ -66,7 +66,9 @@ SamplerImpl::SamplerImpl(const std::shared_ptr<SamplerETS> &sampler) : sampler_(
 
 SamplerImpl::~SamplerImpl()
 {
-    sampler_.reset();
+    if (sampler_) {
+        sampler_.reset();
+    }
 }
 
 ::taihe::optional<::SceneResources::SamplerFilter> SamplerImpl::getMagFilter()

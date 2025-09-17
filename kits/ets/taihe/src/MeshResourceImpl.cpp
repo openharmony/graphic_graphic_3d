@@ -83,13 +83,12 @@ SceneResources::MeshResource MeshResourceImpl::Create(
 
 MeshResourceImpl::MeshResourceImpl(const std::shared_ptr<MeshResourceETS> mrETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::MESH_RESOURCE, mrETS), mrETS_(mrETS)
-{
-    WIDGET_LOGE("MeshResourceImpl ++");
-}
+{}
 
 MeshResourceImpl::~MeshResourceImpl()
 {
-    WIDGET_LOGE("MeshResourceImpl --");
-    mrETS_.reset();
+    if (mrETS_) {
+        mrETS_.reset();
+    }
 }
 }  // namespace OHOS::Render3D::KITETS

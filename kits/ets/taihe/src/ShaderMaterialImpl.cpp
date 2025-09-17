@@ -24,7 +24,9 @@ ShaderMaterialImpl::ShaderMaterialImpl(const std::shared_ptr<MaterialETS> mat) :
 
 ShaderMaterialImpl::~ShaderMaterialImpl()
 {
-    materialETS_.reset();
+    if (materialETS_) {
+        materialETS_.reset();
+    }
 }
 
 ::taihe::optional<::SceneResources::Shader> ShaderMaterialImpl::getColorShader()

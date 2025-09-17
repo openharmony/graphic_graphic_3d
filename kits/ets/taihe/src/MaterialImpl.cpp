@@ -23,7 +23,9 @@ MaterialImpl::MaterialImpl(const std::shared_ptr<MaterialETS> mat)
 
 MaterialImpl::~MaterialImpl()
 {
-    materialETS_.reset();
+    if (materialETS_) {
+        materialETS_.reset();
+    }
 }
 
 ::SceneResources::MaterialType MaterialImpl::getMaterialType()

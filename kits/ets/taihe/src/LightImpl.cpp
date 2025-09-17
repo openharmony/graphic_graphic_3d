@@ -18,9 +18,7 @@
 
 namespace OHOS::Render3D::KITETS {
 LightImpl::LightImpl(const std::shared_ptr<LightETS> lightETS) : NodeImpl(lightETS), lightETS_(lightETS)
-{
-    WIDGET_LOGI("LightImpl ++");
-}
+{}
 
 SpotLightImpl::SpotLightImpl(const std::shared_ptr<LightETS> lightETS) : LightImpl(lightETS)
 {}

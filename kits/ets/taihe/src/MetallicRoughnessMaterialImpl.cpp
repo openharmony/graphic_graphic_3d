@@ -23,7 +23,9 @@ MetallicRoughnessMaterialImpl::MetallicRoughnessMaterialImpl(const std::shared_p
 
 MetallicRoughnessMaterialImpl::~MetallicRoughnessMaterialImpl()
 {
-    materialETS_.reset();
+    if (materialETS_) {
+        materialETS_.reset();
+    }
 }
 
 ::SceneResources::MaterialProperty MetallicRoughnessMaterialImpl::getBaseColor()

@@ -32,7 +32,9 @@ PostProcessSettingsImpl::PostProcessSettingsImpl(const std::shared_ptr<PostProce
 
 PostProcessSettingsImpl::~PostProcessSettingsImpl()
 {
-    postProcessETS_.reset();
+    if (postProcessETS_) {
+        postProcessETS_.reset();
+    }
 }
 
 ::taihe::optional<::ScenePostProcessSettings::ToneMappingSettings> PostProcessSettingsImpl::getToneMapping()

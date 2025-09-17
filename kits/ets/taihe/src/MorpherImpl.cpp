@@ -22,7 +22,9 @@ MorpherImpl::MorpherImpl(const std::shared_ptr<MorpherETS> morpherETS) : morpher
 
 MorpherImpl::~MorpherImpl()
 {
-    morpherETS_.reset();
+    if (morpherETS_) {
+        morpherETS_.reset();
+    }
 }
 
 int32_t MorpherImpl::getTargetsSize()

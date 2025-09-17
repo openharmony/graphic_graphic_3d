@@ -41,23 +41,22 @@ namespace OHOS::Render3D::KITETS {
 
 ImageImpl::ImageImpl(const std::shared_ptr<ImageETS> imageETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::IMAGE, imageETS), imageETS_(imageETS)
-{
-    WIDGET_LOGD("ImageImpl ++");
-}
+{}
 
 ImageImpl::~ImageImpl()
 {
-    WIDGET_LOGD("ImageImpl --");
-    imageETS_.reset();
+    if (imageETS_) {
+        imageETS_.reset();
+    }
 }
 
 int32_t ImageImpl::getWidth()
 {
-    return imageETS_->GetWidth();
+    return imageETS_ != nullptr ? imageETS_->GetWidth() : 0;
 }
 
 int32_t ImageImpl::getHeight()
 {
-    return imageETS_->GetHeight();
+    return imageETS_ != nullptr ? imageETS_->GetHeight() : 0;
 }
 }  // namespace OHOS::Render3D::KITETS

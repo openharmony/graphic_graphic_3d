@@ -22,7 +22,9 @@ GeometryImpl::GeometryImpl(const std::shared_ptr<GeometryETS> geometryETS)
 
 GeometryImpl::~GeometryImpl()
 {
-    geometryETS_.reset();
+    if (geometryETS_) {
+        geometryETS_.reset();
+    }
 }
 
 ::SceneResources::Mesh GeometryImpl::getMesh()

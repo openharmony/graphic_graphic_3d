@@ -31,7 +31,9 @@ LayerMaskImpl::LayerMaskImpl(const std::shared_ptr<NodeETS> nodeETS) : nodeETS_(
 
 LayerMaskImpl::~LayerMaskImpl()
 {
-    nodeETS_.reset();
+    if (nodeETS_) {
+        nodeETS_.reset();
+    }
 }
 
 bool LayerMaskImpl::getEnabled(const int32_t index)
@@ -55,11 +57,17 @@ NodeContainerImpl::NodeContainerImpl(const std::shared_ptr<NodeETS> nodeETS) : n
 
 NodeContainerImpl::~NodeContainerImpl()
 {
-    nodeETS_.reset();
+    if (nodeETS_) {
+        nodeETS_.reset();
+    }
 }
 
 void NodeContainerImpl::append(::SceneNodes::weak::Node item)
 {
+    if (!nodeETS_) {
+        WIDGET_LOGE("NodeContainerImpl::append() nodeETS_ is nullptr");
+        return;
+    }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(item)->getImpl();
     if (!nodeOptional.has_value()) {
         WIDGET_LOGE("invalid node in taihe object");
@@ -78,6 +86,10 @@ void NodeContainerImpl::append(::SceneNodes::weak::Node item)
 
 void NodeContainerImpl::insertAfter(::SceneNodes::weak::Node item, ::SceneNodes::NodeOrNull const &sibling)
 {
+    if (!nodeETS_) {
+        WIDGET_LOGE("NodeContainerImpl::insertAfter() nodeETS_ is nullptr");
+        return;
+    }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(item)->getImpl();
     if (!nodeOptional.has_value()) {
         WIDGET_LOGE("invalid node in taihe object");
@@ -109,6 +121,10 @@ void NodeContainerImpl::insertAfter(::SceneNodes::weak::Node item, ::SceneNodes:
 
 void NodeContainerImpl::remove(::SceneNodes::weak::Node item)
 {
+    if (!nodeETS_) {
+        WIDGET_LOGE("NodeContainerImpl::remove() nodeETS_ is nullptr");
+        return;
+    }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(item)->getImpl();
     if (!nodeOptional.has_value()) {
         WIDGET_LOGE("invalid node in taihe object");
@@ -197,7 +213,9 @@ NodeImpl::NodeImpl(const std::shared_ptr<NodeETS> nodeETS)
 
 NodeImpl::~NodeImpl()
 {
-    nodeETS_.reset();
+    if (nodeETS_) {
+        nodeETS_.reset();
+    }
 }
 
 ::SceneTypes::Vec3 NodeImpl::getPosition()
@@ -308,7 +326,9 @@ void NodeImpl::setVisible(const bool visible)
 
 void NodeImpl::destroy()
 {
-    nodeETS_.reset();
+    if (nodeETS_) {
+        nodeETS_.reset();
+    }
 }
 
 ::SceneNodes::Node nodeTransferStaticImpl(uintptr_t input)

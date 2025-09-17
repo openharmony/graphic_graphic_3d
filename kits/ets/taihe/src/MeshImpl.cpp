@@ -25,7 +25,9 @@ MeshImpl::MeshImpl(const std::shared_ptr<MeshETS> meshETS)
 
 MeshImpl::~MeshImpl()
 {
-    meshETS_.reset();
+    if (meshETS_) {
+        meshETS_.reset();
+    }
 }
 
 ::taihe::array<::SceneResources::SubMesh> MeshImpl::getSubMeshes()

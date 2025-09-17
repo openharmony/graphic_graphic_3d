@@ -28,9 +28,7 @@
 namespace OHOS::Render3D::KITETS {
 SceneComponentImpl::SceneComponentImpl(std::shared_ptr<SceneComponentETS> sceneComponentETS)
     : sceneComponentETS_(sceneComponentETS)
-{
-    WIDGET_LOGD("SceneComponentImpl ctor");
-}
+{}
 
 ::taihe::string SceneComponentImpl::getName()
 {

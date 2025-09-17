@@ -22,6 +22,8 @@ PBRMaterialImpl::PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat)
 
 PBRMaterialImpl::~PBRMaterialImpl()
 {
-    materialETS_.reset();
+    if (materialETS_) {
+        materialETS_.reset();
+    }
 }
 }  // namespace OHOS::Render3D::KITETS
