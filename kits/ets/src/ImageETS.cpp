@@ -35,6 +35,7 @@ ImageETS::ImageETS(const std::string &name, const std::string &uri, const SCENE_
 ImageETS::ImageETS(const SCENE_NS::IImage::Ptr &image)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE), bitmap_(image)
 {
+    resources_ = RenderContextETS::GetInstance().GetResources();
 }
 
 ImageETS::~ImageETS()

@@ -41,7 +41,8 @@
           "skia",
           "freetype",
           "zlib",
-          "bounds_checking_function"
+          "bounds_checking_function",
+          "runtime_core"
         ],
         "third_party": []
       },
@@ -62,6 +63,7 @@
           "//foundation/graphic/graphic_3d/lume/LumeEcsSerializer:EcsSerializer",
           "//foundation/graphic/graphic_3d/lume/LumeScene:libPluginSceneWidget",
           "//foundation/graphic/graphic_3d/kits/js:libscene",
+          "//foundation/graphic/graphic_3d/kits/ets:graphics_3d_taihe",
           "//foundation/graphic/graphic_3d/lume/LumeFont:libPluginFont",
           "//foundation/graphic/graphic_3d/lume/Lume_3DText:libPluginAGP3DText",
           "//foundation/graphic/graphic_3d/camera_preview_plugin:libPluginCamPreview",

@@ -33,6 +33,7 @@ namespace OHOS::Render3D::KITETS {
 class SceneComponentImpl {
 public:
     explicit SceneComponentImpl(std::shared_ptr<SceneComponentETS> sceneComponentETS);
+    ~SceneComponentImpl();
 
     int32_t getPropertySize();
     ::taihe::array<::taihe::string> getPropertyKeys();

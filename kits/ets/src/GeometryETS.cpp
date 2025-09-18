@@ -46,7 +46,11 @@ std::shared_ptr<MeshETS> GeometryETS::GetMesh()
 std::shared_ptr<MorpherETS> GeometryETS::GetMorpher()
 {
     if (auto ma = interface_pointer_cast<SCENE_NS::IMorphAccess>(meshNode_)) {
-        return std::make_shared<MorpherETS>(META_NS::GetValue(ma->Morpher()));
+        if (auto morpher = META_NS::GetValue(ma->Morpher())) {
+            return std::make_shared<MorpherETS>(morpher);
+        } else {
+            return nullptr;
+        }
     }
     return nullptr;
 }

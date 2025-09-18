@@ -35,6 +35,7 @@ private:
     std::shared_ptr<LightETS> lightETS_{nullptr};
 public:
     explicit LightImpl(const std::shared_ptr<LightETS> lightETS);
+    ~LightImpl();
 
     ::SceneNodes::LightType getLightType();
 

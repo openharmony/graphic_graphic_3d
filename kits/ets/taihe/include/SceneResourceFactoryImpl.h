@@ -49,6 +49,11 @@ public:
     SceneResourceFactoryImpl(const std::shared_ptr<SceneETS> sceneETS) : sceneETS_(sceneETS)
     {}
 
+    ~SceneResourceFactoryImpl()
+    {
+        sceneETS_.reset();
+    }
+
     ::SceneNodes::Camera createCameraSync(::SceneTH::SceneNodeParameters const &params);
 
     ::SceneNodes::LightTypeUnion createLightSync(

@@ -18,12 +18,14 @@
 
 #include "ImageETS.h"
 #include "RenderResourcesETS.h"
+#include "ShaderETS.h"
 #include "Utils.h"
+
+#include <scene/interface/resource/intf_render_resource_manager.h>
 
 namespace OHOS::Render3D {
 class RenderContextETS {
 public:
-    RenderContextETS();
     ~RenderContextETS();
 
     static RenderContextETS& GetInstance()
@@ -36,10 +38,16 @@ public:
 
     bool LoadPlugin(const std::string &name);
 
+    bool RegisterResourcePath(const std::string &protocol, const std::string &uri);
+
+    InvokeReturn<std::shared_ptr<ShaderETS>> CreateShader(const std::string &name, const std::string &uri);
     std::shared_ptr<ImageETS> CreateImage(const std::string &name, const std::string &uri);
 
 private:
+    RenderContextETS();
+
     std::weak_ptr<RenderResourcesETS> resources_;
+    SCENE_NS::IRenderResourceManager::Ptr renderResourceManager_;
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_RENDER_CONTEXT_ETS_H

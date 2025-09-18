@@ -39,11 +39,21 @@ namespace OHOS::Render3D {
 RenderContextETS::RenderContextETS()
 {
     WIDGET_LOGD("RenderContextETS ++");
+    auto &r = META_NS::GetObjectRegistry();
+    auto obj = r.Create<META_NS::IMetadata>(META_NS::ClassId::Object);
+    if (obj) {
+        auto doc = interface_cast<META_NS::IMetadata>(r.GetDefaultObjectContext());
+        auto renderContext = doc->GetProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext")->GetValue();
+        obj->AddProperty(META_NS::ConstructProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext", renderContext));
+        renderResourceManager_ = interface_pointer_cast<SCENE_NS::IRenderResourceManager>(
+            r.Create(SCENE_NS::ClassId::RenderResourceManager, obj));
+    }
 }
 
 RenderContextETS::~RenderContextETS()
 {
     WIDGET_LOGD("RenderContextETS --");
+    renderResourceManager_.reset();
 }
 
 std::shared_ptr<RenderResourcesETS> RenderContextETS::GetResources()
@@ -71,6 +81,18 @@ bool RenderContextETS::LoadPlugin(const std::string &name)
         Core::GetPluginRegister().LoadPlugins({uid});
     });
     return true;
+}
+
+InvokeReturn<std::shared_ptr<ShaderETS>> RenderContextETS::CreateShader(const std::string &name, const std::string &uri)
+{
+    if (!renderResourceManager_) {
+        return InvokeReturn<std::shared_ptr<ShaderETS>>(nullptr, "render resource manager is not ready");
+    }
+    if (uri.empty()) {
+        return InvokeReturn<std::shared_ptr<ShaderETS>>(nullptr, "Invalid shader uri given");
+    }
+    SCENE_NS::IShader::Ptr shader = renderResourceManager_->LoadShader(uri.c_str()).GetResult();
+    return InvokeReturn<std::shared_ptr<ShaderETS>>(std::make_shared<ShaderETS>(shader, name, uri));
 }
 
 std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name, const std::string &uri)
@@ -141,7 +163,34 @@ std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name,
         WIDGET_LOGE("Failed to load image from URI %{public}s", uri.c_str());
         return nullptr;
     }
-    GetResources()->StoreBitmap(uri.c_str(), BASE_NS::move(bitmap));
+    GetResources()->StoreBitmap(uri.c_str(), bitmap);
     return std::make_shared<ImageETS>(name, uri, bitmap);
+}
+
+bool RenderContextETS::RegisterResourcePath(const std::string &protocol, const std::string &uri)
+{
+    if (protocol.empty() || uri.empty()) {
+        CORE_LOG_E("Invalid protocol or uri");
+        return false;
+    }
+    auto &obr = META_NS::GetObjectRegistry();
+    auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+    if (!doc) {
+        CORE_LOG_E("Get default object context failed");
+        return false;
+    }
+    auto &fileManager = doc->GetProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext")
+                            ->GetValue()->GetRenderer()->GetEngine().GetFileManager();
+    // Check if the proxy protocol exists already.
+    if (!fileManager.CheckExistence(protocol.c_str())) {
+        CORE_LOG_E("Protocol %s does not exist", protocol.c_str());
+        return false;
+    }
+    // Check if the protocol is already registered. | Register now!
+    if (!fileManager.RegisterPath(protocol.c_str(), uri.c_str(), false)) {
+        CORE_LOG_E("Register protocol %s with %s failed", protocol.c_str(), uri.c_str());
+        return false;
+    }
+    return true;
 }
 }  // namespace OHOS::Render3D

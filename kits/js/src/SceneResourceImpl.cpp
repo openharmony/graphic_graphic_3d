@@ -71,6 +71,12 @@ void* SceneResourceImpl::GetInstanceImpl(uint32_t id)
         return this;
     return nullptr;
 }
+
+NapiApi::WeakRef SceneResourceImpl::GetSceneWeakRef()
+{
+    return scene_;
+}
+
 bool SceneResourceImpl::validateSceneRef()
 {
     if (scene_.GetObject()) {

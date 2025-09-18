@@ -20,6 +20,8 @@
 
 #include "ImageETS.h"
 #include "Vec4Proxy.h"
+#include "SamplerETS.h"
+#include "Utils.h"
 
 namespace OHOS::Render3D {
 class MaterialPropertyETS {
@@ -33,6 +35,9 @@ public:
     std::shared_ptr<Vec4Proxy> GetFactor();
     void SetFactor(const BASE_NS::Math::Vec4 &factor);
 
+    std::shared_ptr<SamplerETS> GetSampler();
+    void SetSampler(const std::shared_ptr<SamplerETS> sampler);
+
     SCENE_NS::ITexture::Ptr GetNativeTexture()
     {
         return tex_;
@@ -41,6 +46,7 @@ public:
 private:
     SCENE_NS::ITexture::Ptr tex_;
     std::shared_ptr<Vec4Proxy> factorProxy_{nullptr};
+    std::shared_ptr<SamplerETS> sampler_{nullptr};
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_MATERIAL_PROPERTY_ETS_H

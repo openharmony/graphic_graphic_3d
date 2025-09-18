@@ -13,26 +13,24 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_3D_ENTITY_PROXY_H
-#define OHOS_3D_ENTITY_PROXY_H
+#ifndef OHOS_3D_VEC2_PROXY_H
+#define OHOS_3D_VEC2_PROXY_H
 
-#include <meta/api/util.h>
-#include <meta/interface/property/property.h>
-#include <meta/interface/property/property_events.h>
-#include <scene/ext/intf_ecs_object_access.h>
+#include <base/math/vector.h>
 
 #include "PropertyProxy.h"
 
 namespace OHOS::Render3D {
-class EntityProxy : public PropertyProxy<CORE_NS::Entity> {
+class Vec2Proxy : public PropertyProxy<BASE_NS::Math::Vec2> {
 public:
-    explicit EntityProxy(const META_NS::Property<CORE_NS::Entity> &prop) : PropertyProxy(prop)
-    {
-    }
+    explicit Vec2Proxy(const META_NS::Property<BASE_NS::Math::Vec2> &prop);
+    ~Vec2Proxy() override;
 
-    ~EntityProxy() override
-    {
-    }
+    float GetX() const;
+    void SetX(const float x);
+
+    float GetY() const;
+    void SetY(const float y);
 };
 }  // namespace OHOS::Render3D
-#endif  // OHOS_3D_ENTITY_PROXY_H
+#endif  // OHOS_3D_VEC2_PROXY_H

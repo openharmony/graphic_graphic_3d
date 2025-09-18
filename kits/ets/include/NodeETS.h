@@ -37,15 +37,14 @@ public:
     enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, TEXT = 5 };
 
     NodeETS(const NodeType &type, const SCENE_NS::INode::Ptr &node);
-    NodeETS(const SCENE_NS::INode::Ptr &node);
+    explicit NodeETS(const SCENE_NS::INode::Ptr &node);
     virtual ~NodeETS();
 
     META_NS::IObject::Ptr GetNativeObj() const override;
 
     NodeType GetNodeType();
 
-    std::string GetNodeName();
-    void SetNodeName(const std::string &name);
+    std::string GetName() const override;
 
     std::shared_ptr<Vec3Proxy> GetPosition();
     void SetPosition(const BASE_NS::Math::Vec3 &position);
@@ -80,7 +79,7 @@ public:
     void AppendChild(const std::shared_ptr<NodeETS> &childNode);
     void RemoveChild(const std::shared_ptr<NodeETS> &childNode);
 
-protected:
+public:
     SCENE_NS::INode::Ptr GetInternalNode()
     {
         return node_.lock();

@@ -17,24 +17,16 @@
 #include "Utils.h"
 
 namespace OHOS::Render3D {
-std::shared_ptr<BloomETS> BloomETS::FromJS(
-    const float thresholdHard, const float thresholdSoft, const float scaleFactor, const float scatter)
-{
-    auto bc = std::shared_ptr<BloomETS>(new BloomETS());
-    bc->SetThresholdHard(thresholdHard);
-    bc->SetThresholdSoft(thresholdSoft);
-    bc->SetScatter(scatter);
-    bc->SetScaleFactor(scaleFactor);
-    return bc;
-}
-
-BloomETS::BloomETS()
-{}
-
 BloomETS::BloomETS(const SCENE_NS::IPostProcess::Ptr postProc, const SCENE_NS::IBloom::Ptr bloom)
     : postProc_(postProc), bloom_(bloom)
+{}
+
+BloomETS::BloomETS(const float thresholdHard, const float thresholdSoft, const float scaleFactor, const float scatter)
 {
-    // SetFrom(bloom);
+    thresholdHard_ = thresholdHard;
+    thresholdSoft_ = thresholdSoft;
+    scaleFactor_ = scaleFactor;
+    scatter_ = scatter;
 }
 
 BloomETS::~BloomETS()
