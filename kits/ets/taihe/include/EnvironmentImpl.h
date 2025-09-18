@@ -41,6 +41,7 @@ private:
     std::shared_ptr<EnvironmentETS> envETS_{nullptr};
 public:
     explicit EnvironmentImpl(const std::shared_ptr<EnvironmentETS> envETS);
+    ~EnvironmentImpl();
 
     std::shared_ptr<EnvironmentETS> GetEnvETS();
 

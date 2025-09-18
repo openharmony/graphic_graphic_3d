@@ -25,13 +25,12 @@
 namespace OHOS::Render3D {
 class BloomETS {
 public:
-    static std::shared_ptr<BloomETS> FromJS(
-        const float thresholdHard, const float thresholdSoft, const float scaleFactor, const float scatter);
-
     enum class Quality : uint32_t { LOW = 1, NORMAL = 2, HIGH = 3 };
     enum class Type : uint32_t { NORMAL = 1, HORIZONTAL = 2, VERTICAL = 3, BILATERAL = 4 };
 
     BloomETS(const SCENE_NS::IPostProcess::Ptr postProc, const SCENE_NS::IBloom::Ptr bloom);
+    // store bloom settings from ETS
+    BloomETS(const float thresholdHard, const float thresholdSoft, const float scaleFactor, const float scatter);
     ~BloomETS();
 
     float GetAmountCoefficient();
@@ -80,7 +79,6 @@ public:
     }
 
 private:
-    BloomETS();
     inline SCENE_NS::BloomType ToInternalType(const BloomETS::Type &type);
     inline BloomETS::Type FromInternalType(const SCENE_NS::BloomType &type);
 

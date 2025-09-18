@@ -1,0 +1,46 @@
+/*
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!namespace("SceneNodes", "Transfer")
+@!sts_inject("""
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
+""")
+
+from SceneNodes use Camera, Node;
+
+@!sts_inject("""
+export function cameraTransferStatic(input: Any): Object {
+    return cameraTransferStaticImpl(ESValue.wrap(input));
+}
+
+export function cameraTransferDynamic(input: Object): Any {
+    return cameraTransferDynamicImpl(input as Camera);
+}
+
+export function nodeTransferStatic(input: Any): Object {
+    return nodeTransferStaticImpl(ESValue.wrap(input));
+}
+
+export function nodeTransferDynamic(input: Object): Any {
+    return nodeTransferDynamicImpl(input as Node);
+}
+""")
+
+function cameraTransferStaticImpl(input: @sts_type("ESValue") Opaque): Camera;
+function cameraTransferDynamicImpl(input: Camera): @sts_type("Any") Opaque;
+
+function nodeTransferStaticImpl(input: @sts_type("ESValue") Opaque): Node;
+function nodeTransferDynamicImpl(input: Node): @sts_type("Any") Opaque;

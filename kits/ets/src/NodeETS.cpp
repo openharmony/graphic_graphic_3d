@@ -36,7 +36,8 @@ std::shared_ptr<NodeETS> NodeETS::FromNative(const SCENE_NS::INode::Ptr &node)
         } else if (name == "LightNode") {
             return std::make_shared<LightETS>(interface_pointer_cast<SCENE_NS::ILight>(node));
         } else if (name == "TextNode") {
-            // TODO 返回TextETS
+            // should return TextETS
+            CORE_LOG_E("TextETS not implemented yet!");
             return std::make_shared<NodeETS>(NodeType::TEXT, node);
         }
     }
@@ -74,19 +75,17 @@ NodeETS::NodeType NodeETS::GetNodeType()
     return type_;
 }
 
-std::string NodeETS::GetNodeName()
+std::string NodeETS::GetName() const
 {
-    if (auto node = node_.lock()) {
-        return node->GetName().c_str();
-    } else {
-        return "";
+    std::string nodeName = SceneResourceETS::GetName();
+    if (nodeName.empty()) {
+        if (auto node = node_.lock()) {
+            if (auto parent = node->GetParent().GetResult(); !parent) {
+                nodeName = "rootNode_";
+            }
+        }
     }
-}
-void NodeETS::SetNodeName(const std::string &name)
-{
-    if (auto named = interface_pointer_cast<META_NS::INamed>(node_)) {
-        named->Name()->SetValue(name.c_str());
-    }
+    return nodeName;
 }
 
 std::shared_ptr<Vec3Proxy> NodeETS::GetPosition()

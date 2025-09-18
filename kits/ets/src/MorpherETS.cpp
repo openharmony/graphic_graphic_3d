@@ -32,6 +32,7 @@ float MorpherETS::Get(const std::string &name)
     }
     auto index = morpher_->MorphNames()->FindFirstValueOf(name.c_str());
     if (index == -1) {
+        CORE_LOG_E("Can not find morph weight, name: %s", name.c_str());
         return 0.0F;
     }
     return morpher_->MorphWeights()->GetValueAt(index);
@@ -44,6 +45,7 @@ void MorpherETS::Set(const std::string &name, const float weight)
     }
     auto index = morpher_->MorphNames()->FindFirstValueOf(name.c_str());
     if (index == -1) {
+        CORE_LOG_E("Can not find morph weight, name: %s", name.c_str());
         return;
     }
     morpher_->MorphWeights()->SetValueAt(index, weight);
@@ -51,6 +53,9 @@ void MorpherETS::Set(const std::string &name, const float weight)
 
 std::vector<std::string> MorpherETS::GetMorpherNames() const
 {
+    if (!morpher_) {
+        return {};
+    }
     BASE_NS::vector<BASE_NS::string> names = morpher_->MorphNames()->GetValue();
     std::vector<std::string> ret;
     ret.reserve(names.size());

@@ -110,6 +110,7 @@ ohos_source_set("scene_adapter_source") {
   sources = [
     "src/scene_adapter.cpp",
     "src/scene_bridge.cpp",
+    "src/scene_bridge_ani.cpp",
   ]
 
   include_dirs = [
@@ -148,6 +149,8 @@ ohos_source_set("scene_adapter_source") {
     "ipc:ipc_single",
     "napi:ace_napi",
     "vulkan-headers:vulkan_headers",
+    "runtime_core:ani",
+    "runtime_core:ani_helpers",
   ]
   defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
 

@@ -69,7 +69,7 @@ public:
     virtual META_NS::IObject::Ptr GetNativeObj() const = 0;
 
     SceneResourceType GetResourceType();
-    std::string GetName() const;
+    virtual std::string GetName() const;
     void SetName(const std::string &name);
     std::string GetUri() const;
 

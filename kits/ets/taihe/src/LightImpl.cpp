@@ -20,6 +20,11 @@ namespace OHOS::Render3D::KITETS {
 LightImpl::LightImpl(const std::shared_ptr<LightETS> lightETS) : NodeImpl(lightETS), lightETS_(lightETS)
 {}
 
+LightImpl::~LightImpl()
+{
+    lightETS_.reset();
+}
+
 SpotLightImpl::SpotLightImpl(const std::shared_ptr<LightETS> lightETS) : LightImpl(lightETS)
 {}
 

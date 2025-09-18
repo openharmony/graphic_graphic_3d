@@ -253,7 +253,16 @@ TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float
 TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
 {
     // no DestroyRenderTarget will not cause memory leak / render issue
-    surface_ = windowChangeInfo.surfaceType;
+    switch (windowChangeInfo.surfaceType) {
+        case SurfaceType::SURFACE_WINDOW:
+        case SurfaceType::SURFACE_TEXTURE:
+        case SurfaceType::SURFACE_BUFFER:
+            surface_ = windowChangeInfo.surfaceType;
+            break;
+        default:
+            surface_ = SurfaceType::SURFACE_WINDOW;
+            break;
+    }
     offsetX_ = (int)windowChangeInfo.offsetX;
     offsetY_ = (int)windowChangeInfo.offsetY;
     transform_ = windowChangeInfo.transformType;

@@ -15,18 +15,6 @@
 
 #include "SceneETS.h"
 
-// #include "JsObjectCache.h"
-// #include "LightJS.h"
-// #include "MaterialJS.h"
-// #include "MeshResourceJS.h"
-// #include "NodeJS.h"
-// #include "ParamParsing.h"
-// #include "Promise.h"
-// #include "RenderContextJS.h"
-// #include "SamplerJS.h"
-// #include "nodejstaskqueue.h"
-// static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
-
 #include <meta/api/make_callback.h>
 #include <meta/interface/animation/intf_animation.h>
 #include <meta/interface/intf_object_context.h>
@@ -160,6 +148,12 @@ SceneETS::SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::
     resources_ = RenderContextETS::GetInstance().GetResources();
 }
 
+SceneETS::~SceneETS()
+{
+    CORE_LOG_I("SceneETS::~SceneETS");
+    Destroy();
+}
+
 void SceneETS::AddScene(META_NS::IObjectRegistry *obr, SCENE_NS::IScene::Ptr scene)
 {
     if (!obr) {
@@ -273,6 +267,9 @@ bool SceneETS::Load(std::string uri)
 
 std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
 {
+    if (animations_) {
+        return animations_.value();
+    }
     BASE_NS::vector<META_NS::IAnimation::Ptr> animRes;
     ExecSyncTask([this, &animRes]() {
         animRes = scene_->GetAnimations().GetResult();
@@ -284,7 +281,43 @@ std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
         animationETSlist.emplace_back(std::make_shared<AnimationETS>(
             interface_pointer_cast<META_NS::IObject>(animationRef), scene_));  // use make_unique instead in the future.
     }
-    return animationETSlist;
+    animations_ = std::move(animationETSlist);
+    return animations_.value();
+}
+
+std::shared_ptr<NodeETS> SceneETS::GetNodeByPath(const std::string &path)
+{
+    std::shared_ptr<NodeETS> rootNode = GetRoot().value;
+    if (!rootNode) {
+        return nullptr;
+    }
+    std::string realPath = path;
+    const std::string rootName = rootNode->GetName();
+    if (realPath.empty() || (realPath == std::string_view("/")) || (realPath == rootName)) {
+        // empty or '/' or "exact rootnodename". so return root
+        return rootNode;
+    }
+
+    // remove the "root nodes name", if given (make sure it also matches though..)
+    size_t pos = 0;
+    if (realPath[0] != '/') {
+        pos = realPath.find('/', 0);
+        std::string_view step = realPath.substr(0, pos);
+        if (!step.empty() && (step != rootName)) {
+            // root not matching
+            return nullptr;
+        }
+    }
+    if (pos != std::string_view::npos) {
+        realPath = realPath.substr(pos + 1);
+    }
+
+    if (realPath.empty()) {
+        // after removing the root node name
+        // nothing left in path, so return root.
+        return rootNode;
+    }
+    return rootNode->GetNodeByPath(realPath);
 }
 
 InvokeReturn<std::shared_ptr<NodeETS>> SceneETS::CreateNode(const std::string &path)
@@ -458,6 +491,89 @@ bool SceneETS::RenderFrame(RenderParameters renderParam)
     }
 }
 
+std::shared_ptr<NodeETS> SceneETS::ImportNode(const std::string &name, std::shared_ptr<NodeETS> node,
+    std::shared_ptr<NodeETS> parent)
+{
+    if (!scene_ || !node) {
+        CORE_LOG_E("empty scene/node object");
+        return nullptr;
+    }
+    SCENE_NS::INode::Ptr nodeObj = node->GetInternalNode();
+    SCENE_NS::INode::Ptr parentObj;
+    if (parent) {
+        parentObj = parent->GetInternalNode();
+    } else {
+        parentObj = scene_->GetRootNode().GetResult();
+    }
+
+    if (auto import = interface_cast<SCENE_NS::INodeImport>(parentObj)) {
+        auto importedNode = import->ImportChild(nodeObj).GetResult();
+        if (!name.empty()) {
+            if (auto named = interface_cast<META_NS::INamed>(importedNode)) {
+                named->Name()->SetValue(name.c_str());
+            }
+        }
+        ResetAnimations();
+        return std::make_shared<NodeETS>(importedNode);
+    }
+    return nullptr;
+}
+
+std::shared_ptr<NodeETS> SceneETS::ImportScene(const std::string &name, std::shared_ptr<SceneETS> scene,
+    std::shared_ptr<NodeETS> parent)
+{
+    if (!scene_ || !scene) {
+        CORE_LOG_E("empty scene/importedScene object");
+        return nullptr;
+    }
+    SCENE_NS::IScene::Ptr extScene = scene->GetNativeScene();
+    SCENE_NS::INode::Ptr parentObj;
+    if (parent) {
+        parentObj = parent->GetInternalNode();
+    } else {
+        parentObj = scene_->GetRootNode().GetResult();
+    }
+
+    if (auto import = interface_cast<SCENE_NS::INodeImport>(parentObj)) {
+        auto importedNode = import->ImportChildScene(extScene, name.c_str()).GetResult();
+        ResetAnimations();
+        return std::make_shared<NodeETS>(importedNode);
+    }
+    return nullptr;
+}
+
+InvokeReturn<std::shared_ptr<SceneComponentETS>> SceneETS::CreateComponent(std::shared_ptr<NodeETS> node,
+    const std::string &name)
+{
+    if (!scene_ || !node || name.empty()) {
+        return InvokeReturn<std::shared_ptr<SceneComponentETS>>(nullptr, "Invalid scene or input");
+    }
+
+    auto nodeObj = node->GetInternalNode();
+    if (auto comp = scene_->CreateComponent(nodeObj, name.c_str()).GetResult()) {
+        return InvokeReturn(std::make_shared<SceneComponentETS>(comp, name));
+    }
+    return InvokeReturn<std::shared_ptr<SceneComponentETS>>(nullptr, "CreateComponent failed");
+}
+
+InvokeReturn<std::shared_ptr<SceneComponentETS>> SceneETS::GetComponent(std::shared_ptr<NodeETS> node,
+    const std::string &name)
+{
+    if (!scene_ || !node || name.empty()) {
+        return InvokeReturn<std::shared_ptr<SceneComponentETS>>(nullptr, "Invalid scene or input");
+    }
+
+    auto nodeObj = node->GetInternalNode();
+    if (auto attach = interface_pointer_cast<META_NS::IAttach>(nodeObj)) {
+        if (auto cont = attach->GetAttachmentContainer(false)) {
+            if (auto comp = cont->FindByName<SCENE_NS::IComponent>(name.c_str())) {
+                return InvokeReturn(std::make_shared<SceneComponentETS>(comp, name));
+            }
+        }
+    }
+    return InvokeReturn<std::shared_ptr<SceneComponentETS>>(nullptr, "GetComponent failed");
+}
+
 void SceneETS::Destroy()
 {
     if (disposed_) {
@@ -471,8 +587,19 @@ void SceneETS::Destroy()
     if (auto sceneAdapter = std::static_pointer_cast<OHOS::Render3D::SceneAdapter>(sceneAdapter_)) {
         sceneAdapter->Deinit();
     }
+    sceneAdapter_.reset();
 #endif
+    environmentETS_.reset();
+    scene_.reset();
     resources_.reset();
+    ResetAnimations();
 }
 
+void SceneETS::ResetAnimations()
+{
+    if (animations_) {
+        animations_.value().clear();
+    }
+    animations_ = std::nullopt;
+}
 }  // namespace OHOS::Render3D

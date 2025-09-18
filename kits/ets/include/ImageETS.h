@@ -27,11 +27,11 @@ namespace OHOS::Render3D {
 class ImageETS : public SceneResourceETS {
 public:
     ImageETS(const std::string &name, const std::string &uri, const SCENE_NS::IBitmap::Ptr bitmap);
-    ImageETS(const SCENE_NS::IImage::Ptr &image);
+    explicit ImageETS(const SCENE_NS::IImage::Ptr &image);
     ~ImageETS() override;
 
     META_NS::IObject::Ptr GetNativeObj() const override;
-    SCENE_NS::IImage::Ptr GetNativeImage() cons
+    SCENE_NS::IImage::Ptr GetNativeImage() const
     {
         return bitmap_;
     }
@@ -40,7 +40,7 @@ public:
 
 private:
     SCENE_NS::IBitmap::Ptr bitmap_{nullptr};
-    std::shared_ptr<RenderResourcesETS> resources_;
+    std::shared_ptr<RenderResourcesETS> resources_{nullptr};
 };
 }  // namespace OHOS::Render3D
 #endif // OHOS_3D_IMAGE_ETS_H

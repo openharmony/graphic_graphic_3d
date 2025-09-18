@@ -30,6 +30,11 @@ SceneComponentImpl::SceneComponentImpl(std::shared_ptr<SceneComponentETS> sceneC
     : sceneComponentETS_(sceneComponentETS)
 {}
 
+SceneComponentImpl::~SceneComponentImpl()
+{
+    sceneComponentETS_.reset();
+}
+
 ::taihe::string SceneComponentImpl::getName()
 {
     if (!sceneComponentETS_) {

@@ -24,6 +24,21 @@
 #include <scene/interface/intf_scene.h>
 
 namespace OHOS::Render3D {
+#define RETURN_IF_NULL(ptr)                                  \
+    do {                                                     \
+        if (!(ptr)) {                                        \
+            CORE_LOG_E("%s is null in %s", #ptr, __func__);  \
+            return;                                          \
+        }                                                    \
+    } while (0)
+
+#define RETURN_IF_NULL_WITH_VALUE(ptr, ret)                  \
+    do {                                                     \
+        if (!(ptr)) {                                        \
+            CORE_LOG_E("%s is null in %s", #ptr, __func__);  \
+            return ret;                                      \
+        }                                                    \
+    } while (0)
 // tasks execute in the engine/render thread.
 static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
 

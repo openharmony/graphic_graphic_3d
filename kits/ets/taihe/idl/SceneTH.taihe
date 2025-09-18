@@ -1,0 +1,222 @@
+/*
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!sts_inject("""
+import { ResourceStr } from 'arkui.component.units';
+import { NodeType, Node } from './SceneNodes';
+import { ShadowRecord, RecordProxyHandler } from './RecordProxy'
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
+
+class ComponentShadowRecord extends ShadowRecord<ComponentPropertyType> {
+    static createProxy(component: SceneComponent): Record<string, ComponentPropertyType> {
+        let handler = new ComponentPropertyProxyHandler(component);
+        return proxy.Proxy.create(new ComponentShadowRecord() as ShadowRecord<ComponentPropertyType>,
+            handler) as Record<string, ComponentPropertyType>;
+    }
+}
+
+class ComponentPropertyProxyHandler extends RecordProxyHandler<ComponentPropertyType> {
+    private property: SceneComponent;
+
+    constructor(property: SceneComponent) {
+        this.property = property;
+    }
+
+    override getSize(): int {
+        return this.property.getPropertySize();
+    }
+
+    override getKeys(): string[] {
+        return this.property.getPropertyKeys();
+    }
+
+    override getProperty(key: string): ComponentPropertyType | undefined {
+        return this.property.getComponentProperty(key);
+    }
+
+    override setProperty(key: string, value: ComponentPropertyType): void {
+        this.property.setComponentProperty(key, value);
+    }
+}
+""")
+
+@!namespace("Scene")
+
+from SceneResources use Shader, MaterialType, VariousMaterial, Animation, Environment, Image, MeshResource, Sampler, SceneResource;
+from SceneNodes use Camera, LightType, LightTypeUnion, Light, Node, NodeType, Geometry, NodeOrNull, VariousNodesOrNull, VariousNodes;
+from SceneTypes use GeometryDefinitionType, Vec2, Vec3, Vec4;
+
+struct SceneResourceParameters {
+    name: String;
+    uri: Optional<@sts_type("ResourceStr") Opaque>;
+}
+
+struct SceneNodeParameters {
+    name: String;
+    path: Optional<String>;
+}
+
+struct RaycastResult {
+    node: VariousNodes;
+    centerDistance: f64;
+    hitPosition: Vec3;
+}
+
+struct RaycastParameters {
+    rootNode: Optional<Node>;
+}
+
+interface RenderResourceFactory {
+    @gen_promise("createShader")
+    createShaderSync(params: SceneResourceParameters): Shader;
+
+    @gen_promise("createImage")
+    createImageSync(params: SceneResourceParameters): Image;
+
+    @gen_promise("createMesh")
+    createMeshSync(params: SceneResourceParameters, geometry: GeometryDefinitionType): MeshResource;
+
+    @gen_promise("createSampler")
+    createSamplerSync(params:SceneResourceParameters): Sampler;
+
+    @gen_promise("createScene")
+    createSceneSync(uri: Optional<@sts_type("ResourceStr") Opaque>): Scene;
+}
+
+interface SceneResourceFactory : RenderResourceFactory {
+    @gen_promise("createCamera")
+    createCameraSync(params: SceneNodeParameters): Camera;
+
+    @gen_promise("createLight")
+    createLightSync(params: SceneNodeParameters, lightType: LightType): LightTypeUnion;
+
+    @gen_promise("createNode")
+    createNodeSync(params: SceneNodeParameters): Node;
+
+    @gen_promise("createMaterial")
+    createMaterialSync(params: SceneResourceParameters, materialType: MaterialType): VariousMaterial;
+
+    @gen_promise("createEnvironment")
+    createEnvironmentSync(params: SceneResourceParameters): Environment;
+
+    @gen_promise("createGeometry")
+    createGeometrySync(params: SceneNodeParameters, mesh: MeshResource): Geometry;
+
+    @get getImpl(): Optional<i64>;
+}
+
+union ComponentPropertyType {
+    @undefined uValue;
+    @null nValue;
+    t_string: String;
+    t_bool: bool;
+    t_i32: i32;
+    t_f64: f64;
+    t_vec2: Vec2;
+    t_vec3: Vec3;
+    t_vec4: Vec4;
+    t_scene_resource: SceneResource;
+
+    t_string_arr: Array<String>;
+    t_bool_arr: Array<bool>;
+    t_i32_arr: Array<i32>;
+    t_f64_arr: Array<f64>;
+    t_vec2_arr: Array<Vec2>;
+    t_vec3_arr: Array<Vec3>;
+    t_vec4_arr: Array<Vec4>;
+    t_scene_resource_arr: Array<SceneResource>;
+}
+
+interface SceneComponent {
+    @!sts_inject_into_interface("""
+    get property(): Record<string, ComponentPropertyType>;
+    """)
+
+    @!sts_inject_into_class("""
+    get property(): Record<string, ComponentPropertyType> {
+        return ComponentShadowRecord.createProxy(this);
+    }
+    """)
+
+    getPropertySize(): i32;
+    getPropertyKeys(): Array<String>;
+    getComponentProperty(key: String): Optional<ComponentPropertyType>;
+    setComponentProperty(key: String, value: ComponentPropertyType): void;
+
+    @get getName(): String;
+    @set setName(name: String): void;
+}
+
+interface RenderContext {
+    getRenderResourceFactory(): RenderResourceFactory;
+
+    @gen_promise("loadPlugin")
+    loadPluginSync(name: String): bool;
+
+    registerResourcePath(protocol: String, uri: String): bool;
+}
+
+struct RenderParameters {
+    alwaysRender: Optional<bool>;
+}
+
+union SceneComponentOrNull {
+    sc: SceneComponent;
+    @null nValue;
+}
+
+@class
+interface Scene {
+    @get getEnvironment(): Environment;
+    @set setEnvironment(env: Environment): void;
+
+    @get getAnimations(): Array<Animation>;
+
+    @get getRoot(): NodeOrNull;
+
+    getNodeByPath(path: String, type: Optional<NodeType>): VariousNodesOrNull;
+
+    getResourceFactory(): SceneResourceFactory;
+
+    destroy(): void;
+
+    importNode(name: String, node: Node, parent: NodeOrNull): Node;
+
+    importScene(name: String, scene: Scene, parent: NodeOrNull): Node;
+
+    renderFrame(params: Optional<RenderParameters>): bool;
+
+    @gen_promise("createComponent")
+    createComponentSync(node: Node, name: String): SceneComponent;
+
+    getComponent(node: Node, name: String): SceneComponentOrNull;
+
+    getSceneNative(): i64;
+
+    @get getImpl(): Optional<i64>;
+}
+
+union RenderContextOrNull {
+    rc: RenderContext;
+    @null nValue;
+}
+
+@static("Scene")
+function getDefaultRenderContext(): RenderContextOrNull;
+
+@static("Scene")
+@gen_promise("load")
+function loadScene(uri: Optional<@sts_type("ResourceStr") Opaque>): Scene;
