@@ -26,9 +26,7 @@ std::shared_ptr<PostProcessETS> PostProcessSettingsImpl::CreateInternal(
 
 PostProcessSettingsImpl::PostProcessSettingsImpl(const std::shared_ptr<PostProcessETS> postProcessETS)
     : postProcessETS_(postProcessETS)
-{
-    WIDGET_LOGI("PostProcessSettingsImpl ++");
-}
+{}
 
 PostProcessSettingsImpl::~PostProcessSettingsImpl()
 {

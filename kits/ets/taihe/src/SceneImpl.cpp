@@ -25,7 +25,6 @@ namespace OHOS::Render3D::KITETS {
 
 SceneImpl::SceneImpl(const std::string &uriStr)
 {
-    WIDGET_LOGI("SceneImpl ctor");
     sceneETS_ = std::make_shared<SceneETS>();
     if (!sceneETS_->Load(uriStr)) {
         WIDGET_LOGE("ohos_lume loadScene fail");
@@ -34,7 +33,6 @@ SceneImpl::SceneImpl(const std::string &uriStr)
 
 SceneImpl::SceneImpl(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter)
 {
-    WIDGET_LOGI("SceneImpl transfer ctor");
     sceneETS_ = std::make_shared<SceneETS>(scene, sceneAdapter);
     if (!sceneETS_) {
         WIDGET_LOGE("ohos_lume loadScene fail");
@@ -43,7 +41,6 @@ SceneImpl::SceneImpl(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D
 
 SceneImpl::~SceneImpl()
 {
-    WIDGET_LOGI("SceneImpl dtor");
     destroy();
 }
 
@@ -104,7 +101,6 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 
 ::SceneTH::Scene loadScene(::taihe::optional_view<uintptr_t> uri)
 {
-    WIDGET_LOGI("loadScene begin");
     std::string uriStr = ExtractUri(uri);
     if (uriStr.empty()) {
         uriStr = "scene://empty";
@@ -267,7 +263,6 @@ int64_t SceneImpl::getSceneNative()
 void SceneImpl::destroy()
 {
     if (sceneETS_) {
-        WIDGET_LOGI("scene.destroy");
         sceneETS_->Destroy();
         sceneETS_.reset();
     }
@@ -276,7 +271,6 @@ void SceneImpl::destroy()
 
 ::SceneNodes::NodeOrNull SceneImpl::getRoot()
 {
-    WIDGET_LOGI("scene.getRoot");
     auto node = sceneETS_->GetRoot();
     return SceneNodes::NodeOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node.value));
 }

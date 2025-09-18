@@ -31,7 +31,6 @@ EnvironmentETS::EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SC
                                const std::string &name, const std::string &uri)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::ENVIRONMENT), environment_(environment), scene_(scene)
 {
-    CORE_LOG_D("EnvironmentETS ++");
     if (!name.empty()) {
         SetName(name);
     }
@@ -42,10 +41,10 @@ EnvironmentETS::EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SC
 
 EnvironmentETS::~EnvironmentETS()
 {
-    CORE_LOG_D("EnvironmentETS --");
     environment_.reset();
     diffuseFactor_.reset();
     specularFactor_.reset();
+    envMapFactor_.reset();
 }
 
 META_NS::IObject::Ptr EnvironmentETS::GetNativeObj() const

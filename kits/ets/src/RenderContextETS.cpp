@@ -38,7 +38,6 @@ META_TYPE(BASE_NS::shared_ptr<CORE_NS::IImageLoaderManager::LoadResult>);
 namespace OHOS::Render3D {
 RenderContextETS::RenderContextETS()
 {
-    WIDGET_LOGD("RenderContextETS ++");
     auto &r = META_NS::GetObjectRegistry();
     auto obj = r.Create<META_NS::IMetadata>(META_NS::ClassId::Object);
     if (obj) {
@@ -52,7 +51,6 @@ RenderContextETS::RenderContextETS()
 
 RenderContextETS::~RenderContextETS()
 {
-    WIDGET_LOGD("RenderContextETS --");
     renderResourceManager_.reset();
 }
 
@@ -73,7 +71,6 @@ bool RenderContextETS::LoadPlugin(const std::string &name)
         WIDGET_LOGE("%{public}s is not a Uid string", name.c_str());
         return false;
     }
-    WIDGET_LOGI("Loading plugin: %s", name.c_str());
 
     BASE_NS::Uid uid(*(char(*)[37])name.data());
     const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);

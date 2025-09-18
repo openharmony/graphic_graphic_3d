@@ -17,13 +17,10 @@
 
 namespace OHOS::Render3D {
 SubMeshETS::SubMeshETS(const SCENE_NS::ISubMesh::Ptr subMesh) : subMesh_(subMesh)
-{
-    CORE_LOG_D("SubMeshETS ++");
-}
+{}
 
 SubMeshETS::~SubMeshETS()
 {
-    CORE_LOG_D("SubMeshETS --");
     subMesh_.reset();
 }
 
