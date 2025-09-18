@@ -22,8 +22,6 @@ namespace OHOS::Render3D {
 AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE_NS::IScene::Ptr scene)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animationRef_(animationRef), scene_(scene)
 {
-    WIDGET_LOGD("AnimationETS ++ with animationRef, name: %{public}s", GetName().c_str());
-
     using namespace META_NS;
     META_NS::IAnimation::Ptr anim = interface_pointer_cast<IAnimation>(animationRef_);
     if (anim) {
@@ -55,7 +53,6 @@ AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE
 
 AnimationETS::~AnimationETS()
 {
-    WIDGET_LOGD("AnimationETS --");
     animationRef_.reset();
 }
 
@@ -208,10 +205,7 @@ void AnimationETS::Seek(float position)
 void AnimationETS::Start()
 {
     if (auto a = interface_cast<META_NS::IStartableAnimation>(animationRef_)) {
-        CORE_LOG_E("Start animation ets");
         a->Start();
-    } else {
-        CORE_LOG_E("Invalid animation");
     }
 }
 

@@ -123,14 +123,12 @@ using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 namespace OHOS::Render3D {
 SceneETS::SceneETS()
 {
-    WIDGET_LOGI("SceneETS::SceneETS()");
     resources_ = RenderContextETS::GetInstance().GetResources();
 }
 
 SceneETS::SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter)
     : scene_(scene), sceneAdapter_(sceneAdapter)
 {
-    WIDGET_LOGI("SceneETS::SceneETS(scene)");
     if (!scene_ || !sceneAdapter_) {
         WIDGET_LOGE("invalid scene or sceneAdapter");
         return;
@@ -150,7 +148,6 @@ SceneETS::SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::
 
 SceneETS::~SceneETS()
 {
-    CORE_LOG_I("SceneETS::~SceneETS");
     Destroy();
 }
 
@@ -198,7 +195,6 @@ BASE_NS::string_view SceneETS::ExtractPathToProject(BASE_NS::string_view uri)
 
 bool SceneETS::Load(std::string uri)
 {
-    WIDGET_LOGI("SceneETS::Load %{public}s", uri.c_str());
     if (uri.empty()) {
         uri = "scene://empty";
     }
@@ -244,7 +240,6 @@ bool SceneETS::Load(std::string uri)
         }
 #ifdef __SCENE_ADAPTER__
         // set SceneAdapter
-        CORE_LOG_E("create scene adapter");
         auto sceneAdapter = std::make_shared<OHOS::Render3D::SceneAdapter>();
         sceneAdapter->SetSceneObj(interface_pointer_cast<META_NS::IObject>(scene));
         sceneAdapter_ = sceneAdapter;
@@ -580,7 +575,6 @@ void SceneETS::Destroy()
         return;
     }
     disposed_ = true;
-    CORE_LOG_E("SCENE_JS::DisposeNative");
 
     // what should be released ???
 #ifdef __SCENE_ADAPTER__

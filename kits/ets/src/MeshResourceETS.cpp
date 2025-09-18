@@ -23,7 +23,6 @@ MeshResourceETS::MeshResourceETS(const std::string &name, const std::string &uri
     BASE_NS::unique_ptr<Geometry::GeometryDefinition> geometryDefinition)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::MESH_RESOURCE)
 {
-    WIDGET_LOGI("MeshResourceETS ++, name: %{public}s, uri:%{public}s", name.c_str(), uri.c_str());
     geometryDefinition_ = std::move(geometryDefinition);
     SetName(name);
     SetUri(uri);
@@ -31,7 +30,6 @@ MeshResourceETS::MeshResourceETS(const std::string &name, const std::string &uri
 
 MeshResourceETS::~MeshResourceETS()
 {
-    WIDGET_LOGI("MeshResourceETS --");
     geometryDefinition_.reset();
 }
 

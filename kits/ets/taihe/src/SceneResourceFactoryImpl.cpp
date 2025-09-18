@@ -36,7 +36,6 @@ namespace OHOS::Render3D::KITETS {
         return SceneNodes::Camera({nullptr, nullptr});
     }
     std::string nodePath = ExtractNodePath(params);
-    WIDGET_LOGD("SceneResourceFactoryImpl::createCameraSync, nodePath: %{public}s", nodePath.c_str());
     InvokeReturn<std::shared_ptr<CameraETS>> camera = sceneETS_->CreateCamera(nodePath);
     if (camera.error.empty()) {
         return taihe::make_holder<CameraImpl, ::SceneNodes::Camera>(camera.value);
@@ -56,11 +55,6 @@ namespace OHOS::Render3D::KITETS {
     std::string nodeName = ExtractNodeName(params);
     std::string nodePath = ExtractNodePath(params);
     LightETS::LightType type = LightETS::LightType(lightType.get_value());
-    WIDGET_LOGD(
-        "SceneResourceFactoryImpl::createLightSync, nodeName: %{public}s, nodePath: %{public}s, lightType: %{public}d",
-        nodeName.c_str(),
-        nodePath.c_str(),
-        type);
     InvokeReturn<std::shared_ptr<LightETS>> light = sceneETS_->CreateLight(nodeName, nodePath, type);
     if (!light) {
         taihe::set_error(light.error);

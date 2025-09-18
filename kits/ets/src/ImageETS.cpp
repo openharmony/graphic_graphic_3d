@@ -25,7 +25,6 @@ namespace OHOS::Render3D {
 ImageETS::ImageETS(const std::string &name, const std::string &uri, const SCENE_NS::IBitmap::Ptr bitmap)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE), bitmap_(bitmap)
 {
-    WIDGET_LOGI("ImageETS ++, name: %{public}s, uri:%{public}s", name.c_str(), uri.c_str());
     SetName(name);
     SetUri(uri);
 
@@ -40,7 +39,6 @@ ImageETS::ImageETS(const SCENE_NS::IImage::Ptr &image)
 
 ImageETS::~ImageETS()
 {
-    WIDGET_LOGI("ImageETS --");
     if (!uri_.empty()) {
         ExecSyncTask([uri = uri_, resources = resources_]() -> META_NS::IAny::Ptr {
             if (resources) {

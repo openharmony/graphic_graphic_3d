@@ -41,7 +41,6 @@
 namespace OHOS::Render3D {
 SceneComponentETS::SceneComponentETS(SCENE_NS::IComponent::Ptr comp, const std::string &name) : comp_(comp), name_(name)
 {
-    WIDGET_LOGD("SceneComponentETS ++");
     AddProperties();
 }
 
