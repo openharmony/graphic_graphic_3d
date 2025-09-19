@@ -73,7 +73,7 @@ private:
     void SetRenderMode(NapiApi::FunctionContext<uint32_t>& ctx);
 
     // JS methods
-    napi_value GetNode(NapiApi::FunctionContext<BASE_NS::string>& ctx);
+    napi_value GetNode(NapiApi::FunctionContext<>& ctx);
     napi_value GetResourceFactory(NapiApi::FunctionContext<>& ctx);
 
     napi_value CreateCamera(NapiApi::FunctionContext<NapiApi::Object>& ctx);
