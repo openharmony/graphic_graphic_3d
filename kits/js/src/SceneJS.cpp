@@ -163,7 +163,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
         // animations
         GetProperty<BASE_NS::string, SceneJS, &SceneJS::GetRoot>("root"),
         // scene methods
-        Method<NapiApi::FunctionContext<BASE_NS::string>, SceneJS, &SceneJS::GetNode>("getNodeByPath"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::GetNode>("getNodeByPath"),
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::GetResourceFactory>("getResourceFactory"),
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::Dispose>("destroy"),
 
@@ -584,14 +584,24 @@ SceneJS::~SceneJS()
     }
 }
 
-napi_value SceneJS::GetNode(NapiApi::FunctionContext<BASE_NS::string>& ctx)
+napi_value SceneJS::GetNode(NapiApi::FunctionContext<>& ctx)
 {
     // verify that path starts from "correct root" and then let the root node handle the rest.
     NapiApi::Object meJs(ctx.This());
     NapiApi::Object root = meJs.Get<NapiApi::Object>("root");
     BASE_NS::string rootName = root.Get<BASE_NS::string>("name");
     NapiApi::Function func = root.Get<NapiApi::Function>("getNodeByPath");
-    BASE_NS::string path = ctx.Arg<0>();
+    BASE_NS::string path = "";
+    NapiApi::FunctionContext<BASE_NS::string> params(ctx);
+    if (params) {
+        path = params.Arg<0>();
+    } else {
+        NapiApi::FunctionContext<BASE_NS::string, uint32_t> paramsWithType(ctx);
+        if (paramsWithType) {
+            path = paramsWithType.Arg<0>();
+            // currently ignore the type
+        }
+    }
     if (path.empty() || (path == BASE_NS::string_view("/")) || (path == rootName)) {
         // empty or '/' or "exact rootnodename". so return root
         return root.ToNapiValue();
