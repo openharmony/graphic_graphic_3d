@@ -256,9 +256,9 @@ void SceneComponentImpl::SetPropertyFromSceneResource(const std::string &name,
         case ::SceneResources::SceneResourceType::key_t::MESH_RESOURCE:
             break;
         default:
+            WIDGET_LOGE("no match SceneResourceType");
             break;
     }
-    WIDGET_LOGE("no match SceneResourceType");
 }
 
 void SceneComponentImpl::SetArrayPropertyFromSceneResource(
@@ -296,10 +296,16 @@ void SceneComponentImpl::SetArrayPropertyFromSceneResource(
             BASE_NS::vector<SCENE_NS::IImage::Ptr> arr;
             for (auto &sr : srArray) {
                 taihe::optional<int64_t> srOp = sr->getImpl();
+                if (!srOp.has_value()) {
+                    arr.push_back(nullptr);
+                    continue;
+                }
                 SceneResourceImpl *srImpl = reinterpret_cast<SceneResourceImpl *>(srOp.value());
                 if (srImpl) {
                     std::shared_ptr<ImageETS> imgETS = static_cast<ImageImpl *>(srImpl)->getInternalImage();
                     arr.push_back(imgETS->GetNativeImage());
+                } else {
+                    arr.push_back(nullptr);
                 }
             }
             sceneComponentETS_->SetArrayProperty(name, arr);
@@ -308,9 +314,9 @@ void SceneComponentImpl::SetArrayPropertyFromSceneResource(
         case ::SceneResources::SceneResourceType::key_t::MESH_RESOURCE:
             break;
         default:
+            WIDGET_LOGE("no match SceneResourceType");
             break;
     }
-    WIDGET_LOGE("no match SceneResourceType");
 }
 
 void SceneComponentImpl::setComponentProperty(::taihe::string_view key, ::SceneTH::ComponentPropertyType const &value)

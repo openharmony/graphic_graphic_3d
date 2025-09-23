@@ -58,9 +58,14 @@ struct InvokeReturn {
     explicit InvokeReturn(const V &v, const std::string &errorMsg) : value(v), error(errorMsg)
     {}
 
-    operator bool() const
+    explicit operator bool() const
     {
         return error.empty();
+    }
+
+    bool operator!() const
+    {
+        return !(error.empty());
     }
 };
 

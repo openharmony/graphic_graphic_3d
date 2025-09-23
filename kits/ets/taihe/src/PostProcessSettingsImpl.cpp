@@ -81,19 +81,21 @@ void PostProcessSettingsImpl::setToneMapping(
 
 void PostProcessSettingsImpl::setBloom(::taihe::optional_view<::ScenePostProcessSettings::BloomSettings> bloom)
 {
-    if (postProcessETS_) {
-        if (bloom.has_value()) {
-            ScenePostProcessSettings::BloomSettings bloomValue = bloom.value();
-            taihe::optional<int64_t> implOp = bloomValue->getImpl();
-            if (implOp.has_value()) {
-                BloomSettingsImpl *settings = reinterpret_cast<BloomSettingsImpl *>(implOp.value());
+    if (!postProcessETS_) {
+        return;
+    }
+    if (bloom.has_value()) {
+        ScenePostProcessSettings::BloomSettings bloomValue = bloom.value();
+        taihe::optional<int64_t> implOp = bloomValue->getImpl();
+        if (implOp.has_value()) {
+            if (BloomSettingsImpl *settings = reinterpret_cast<BloomSettingsImpl *>(implOp.value())) {
                 postProcessETS_->SetBloom(settings->bloomETS_);
-            } else {
-                postProcessETS_->SetBloom(BloomSettingsImpl::CreateInternal(bloomValue));
             }
         } else {
-            postProcessETS_->SetBloom(nullptr);
+            postProcessETS_->SetBloom(BloomSettingsImpl::CreateInternal(bloomValue));
         }
+    } else {
+        postProcessETS_->SetBloom(nullptr);
     }
 }
 }  // namespace OHOS::Render3D::KITETS

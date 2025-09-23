@@ -119,7 +119,7 @@ std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name,
     using LoadResult = CORE_NS::IImageLoaderManager::LoadResult;
     auto loadImage = [uri, renderContext]() {
         uint32_t imageLoaderFlags = CORE_NS::IImageLoaderManager::IMAGE_LOADER_GENERATE_MIPS;
-        auto& imageLoaderMgr = renderContext->GetEngine().GetImageLoaderManager();
+        auto &imageLoaderMgr = renderContext->GetEngine().GetImageLoaderManager();
         // LoadResult contains a unique pointer, so can't copy. Move it to the heap and pass a pointer instead.
         return BASE_NS::shared_ptr<LoadResult>{new LoadResult{imageLoaderMgr.LoadImage(uri.c_str(), imageLoaderFlags)}};
     };

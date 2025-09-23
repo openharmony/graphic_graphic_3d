@@ -164,6 +164,7 @@ std::shared_ptr<ImageETS> EnvironmentETS::GetEnvironmentImage()
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return nullptr;
     }
     SCENE_NS::IBitmap::Ptr image = environment_->EnvironmentImage()->GetValue();
     if (!image) {
@@ -172,10 +173,11 @@ std::shared_ptr<ImageETS> EnvironmentETS::GetEnvironmentImage()
     return std::make_shared<ImageETS>(image);
 }
 
-void EnvironmentETS::SetEnvironmentImage(std::shared_ptr<ImageETS> image)
+void EnvironmentETS::SetEnvironmentImage(const std::shared_ptr<ImageETS> &image)
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return;
     }
     SCENE_NS::IBitmap::Ptr imagePtr;
     if (image) {
@@ -188,6 +190,7 @@ std::shared_ptr<ImageETS> EnvironmentETS::GetRadianceImage()
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return nullptr;
     }
     SCENE_NS::IBitmap::Ptr image = environment_->RadianceImage()->GetValue();
     if (!image) {
@@ -196,10 +199,11 @@ std::shared_ptr<ImageETS> EnvironmentETS::GetRadianceImage()
     return std::make_shared<ImageETS>(image);
 }
 
-void EnvironmentETS::SetRadianceImage(std::shared_ptr<ImageETS> image)
+void EnvironmentETS::SetRadianceImage(const std::shared_ptr<ImageETS> &image)
 {
     if (!environment_) {
         CORE_LOG_E("empty env object");
+        return;
     }
     SCENE_NS::IBitmap::Ptr imagePtr;
     if (image) {

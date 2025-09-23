@@ -39,10 +39,12 @@ inline bool IsString(uintptr_t resourceStr, ani_env *env = nullptr)
     if (env == nullptr) {
         env = taihe::get_env();
     }
-    ani_boolean isStr;
     ani_class cls;
     auto stringClass = arkts::ani_signature::Builder::BuildClass({"std", "core", "String"});
-    env->FindClass(stringClass.Descriptor().c_str(), &cls);
+    if (ANI_OK != env->FindClass(stringClass.Descriptor().c_str(), &cls)) {
+        return false;
+    }
+    ani_boolean isStr;
     env->Object_InstanceOf((ani_object)resourceStr, cls, &isStr);
     return isStr;
 }

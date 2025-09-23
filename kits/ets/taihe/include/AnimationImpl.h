@@ -67,8 +67,6 @@ public:
 
 private:
     std::shared_ptr<AnimationETS> animationETS_{nullptr};
-    taihe::callback<void(SceneResources::CallbackUndefinedType const&)> onStartedCB_{{nullptr, nullptr}};
-    taihe::callback<void()> onFinishedCB_{{nullptr, nullptr}};
 };
 } // namespace OHOS::Render3D::KITETS
 #endif // OHOS_3D_ANIMATION_IMPL_H
