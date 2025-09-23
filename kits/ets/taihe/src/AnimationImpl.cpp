@@ -73,23 +73,26 @@ double AnimationImpl::getProgress()
     return static_cast<double>(animationETS_->GetProgress());
 }
 
-void AnimationImpl::onStarted(::taihe::callback_view<void(SceneResources::CallbackUndefinedType const&)> callback)
+void AnimationImpl::onStarted(::taihe::callback_view<void(SceneResources::CallbackUndefinedType const &)> callback)
 {
-    onStartedCB_ = callback;
-    animationETS_->OnStarted([this]() {
-        if (!onStartedCB_.is_error()) {
-            auto result = SceneResources::CallbackUndefinedType::make_undefined();
-            onStartedCB_(result);
-        }
-    });
+    animationETS_->OnStarted(
+        [callback = ::taihe::callback<void(SceneResources::CallbackUndefinedType const &)>(callback)]() {
+            if (callback.is_error()) {
+                WIDGET_LOGE("Animation onStarted callback error");
+            } else {
+                auto result = SceneResources::CallbackUndefinedType::make_undefined();
+                callback(result);
+            }
+        });
 }
 
 void AnimationImpl::onFinishedInner(::taihe::callback_view<void()> callback)
 {
-    onFinishedCB_ = callback;
-    animationETS_->OnFinished([this]() {
-        if (!onFinishedCB_.is_error()) {
-            onFinishedCB_();
+    animationETS_->OnFinished([callback = ::taihe::callback<void()>(callback)]() {
+        if (callback.is_error()) {
+            WIDGET_LOGE("Animation onFinished callback error");
+        } else {
+            callback();
         }
     });
 }

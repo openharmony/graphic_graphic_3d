@@ -53,6 +53,23 @@ AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE
 
 AnimationETS::~AnimationETS()
 {
+    if (speedModifier_) {
+        if (auto attach = interface_cast<META_NS::IAttach>(animationRef_)) {
+            attach->Detach(speedModifier_);
+        }
+        speedModifier_.reset();
+    }
+    if (auto *anim = interface_cast<META_NS::IAnimation>(animationRef_); (anim != nullptr) && (OnStartedToken_ != 0)) {
+        anim->OnStarted()->RemoveHandler(OnStartedToken_);
+    }
+    OnStartedToken_ = 0;
+
+    if (OnCompletedEvent_ && OnFinishedToken_ != 0) {
+        OnCompletedEvent_->RemoveHandler(OnFinishedToken_);
+    }
+    OnFinishedToken_ = 0;
+    OnFinishedCB_ = {};
+
     animationRef_.reset();
 }
 

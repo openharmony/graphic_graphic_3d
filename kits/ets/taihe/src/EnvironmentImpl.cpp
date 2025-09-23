@@ -105,9 +105,10 @@ void EnvironmentImpl::setEnvironmentImage(::SceneResources::ImageOrNullOrUndefin
         taihe::optional<int64_t> imageImplOp =
             static_cast<::SceneResources::SceneResource>(image.get_image_ref())->getImpl();
         if (imageImplOp.has_value()) {
-            auto imageImpl = reinterpret_cast<ImageImpl*>(imageImplOp.value());
-            envETS_->SetEnvironmentImage(imageImpl->getInternalImage());
-            return;
+            if (auto imageImpl = reinterpret_cast<ImageImpl *>(imageImplOp.value())) {
+                envETS_->SetEnvironmentImage(imageImpl->getInternalImage());
+                return;
+            }
         }
     }
     WIDGET_LOGW("setEnvironmentImage null input");
@@ -178,6 +179,10 @@ void EnvironmentImpl::setIrradianceCoefficients(::taihe::optional_view<::taihe::
     }
 
     EnvironmentJS *tro = reinterpret_cast<EnvironmentJS *>(nativePtr);
+    if (tro == nullptr) {
+        WIDGET_LOGE("environmentTransferStaticImpl failed, input is not environment.");
+        return SceneResources::Environment({nullptr, nullptr});
+    }
     SCENE_NS::IEnvironment::Ptr environment = tro->GetNativeObject<SCENE_NS::IEnvironment>();
     if (environment == nullptr) {
         WIDGET_LOGE("environmentTransferStaticImpl failed during GetNativeObject.");

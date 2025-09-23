@@ -77,7 +77,7 @@ void ShaderETS::BindToMaterial(const SCENE_NS::IMaterial::Ptr &material)
             }
 
             // create default named property, if it was renamed. Backward compatible API
-            if (name != DEFAULT_TEXTURE_NAMES[index]) {
+            if (index < std::size(DEFAULT_TEXTURE_NAMES) && name != DEFAULT_TEXTURE_NAMES[index]) {
                 if (proxt = std::make_shared<Vec4Proxy>(texture->Factor())) {
                     auto n = DEFAULT_TEXTURE_NAMES[index] + "_" + texture->Factor()->GetName();
                     proxies_.insert_or_assign(n.c_str(), std::move(proxt));

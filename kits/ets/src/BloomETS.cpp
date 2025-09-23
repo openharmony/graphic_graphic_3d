@@ -191,7 +191,7 @@ BloomETS::Type BloomETS::FromInternalType(const SCENE_NS::BloomType &type)
         case SCENE_NS::BloomType::VERTICAL:
             return BloomETS::Type::VERTICAL;
         case SCENE_NS::BloomType::BILATERAL:
-            return BloomETS::Type::NORMAL;
+            return BloomETS::Type::BILATERAL;
         case SCENE_NS::BloomType::NORMAL:
         default:
             return BloomETS::Type::NORMAL;

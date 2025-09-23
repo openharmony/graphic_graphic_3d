@@ -75,7 +75,7 @@ public:
     std::shared_ptr<NodeETS> GetChild(const uint32_t index);
 
     void ClearChildren();
-    void InsertChildAfter(const std::shared_ptr<NodeETS> &childNode, const std::shared_ptr<NodeETS> &siblindNode);
+    void InsertChildAfter(const std::shared_ptr<NodeETS> &childNode, const std::shared_ptr<NodeETS> &siblingNode);
     void AppendChild(const std::shared_ptr<NodeETS> &childNode);
     void RemoveChild(const std::shared_ptr<NodeETS> &childNode);
 
