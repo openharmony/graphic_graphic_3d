@@ -137,7 +137,7 @@ bool MaterialETS::GetBlend()
     return META_NS::GetValue(shader->Blend());
 }
 
-void MaterialETS::SetBlend(const bool &blend)
+void MaterialETS::SetBlend(const bool blend)
 {
     if (!material_) {
         CORE_LOG_E("set blend failed, invalid material");
@@ -263,10 +263,12 @@ void MaterialETS::SetProperty(const size_t index, const std::shared_ptr<Material
         CORE_LOG_E("set property failed, texture at %zu is null", index);
         return;
     }
-    if (auto inTex = property->GetNativeTexture()) {
-         // Copy the exposed data from the given texture
-        META_NS::SetValue(texture->Image(), META_NS::GetValue(inTex->Image()));
-        META_NS::SetValue(texture->Factor(), META_NS::GetValue(inTex->Factor()));
+    if (property) {
+        if (auto inTex = property->GetNativeTexture()) {
+            // Copy the exposed data from the given texture
+            META_NS::SetValue(texture->Image(), META_NS::GetValue(inTex->Image()));
+            META_NS::SetValue(texture->Factor(), META_NS::GetValue(inTex->Factor()));
+        }
     }
 }
 

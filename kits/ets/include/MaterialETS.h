@@ -66,7 +66,7 @@ public:
     void SetCullMode(const MaterialETS::CullMode mode);
 
     bool GetBlend();
-    void SetBlend(const bool &blend);
+    void SetBlend(const bool blend);
 
     float GetAlphaCutoff();
     void SetAlphaCutoff(const float cutoff);

@@ -27,6 +27,11 @@ SamplerETS::SamplerETS()
 
 SamplerETS::SamplerETS(const SCENE_NS::ISampler::Ptr sampler) : sampler_(sampler)
 {
+    magFilter_ = DEFAULT_FILTER;
+    minFilter_ = DEFAULT_FILTER;
+    mipMapMode_ = DEFAULT_FILTER;
+    addressModeU_ = DEFAULT_ADDESS_MODE;
+    addressModeV_ = DEFAULT_ADDESS_MODE;
 }
 
 SamplerETS::~SamplerETS()

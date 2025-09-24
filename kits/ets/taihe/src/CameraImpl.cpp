@@ -29,13 +29,10 @@
 
 namespace OHOS::Render3D::KITETS {
 CameraImpl::CameraImpl(const std::shared_ptr<CameraETS> cameraETS) : NodeImpl(cameraETS), cameraETS_(cameraETS)
-{
-    WIDGET_LOGE("CameraImpl ++");
-}
+{}
 
 CameraImpl::~CameraImpl()
 {
-    WIDGET_LOGE("CameraImpl --");
     cameraETS_.reset();
 }
 

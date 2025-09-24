@@ -22,6 +22,7 @@ namespace OHOS::Render3D::KITETS {
         case SCENE_NS::SamplerFilter::LINEAR:
             return ::SceneResources::SamplerFilter::key_t::LINEAR;
         default:
+            // Current support is limited to LINEAR and NEAREST, return NEAREST when not LINEAR.
             return ::SceneResources::SamplerFilter::key_t::NEAREST;
     }
 }
@@ -32,6 +33,7 @@ SCENE_NS::SamplerFilter ToNativeFilter(const ::SceneResources::SamplerFilter &fi
         case ::SceneResources::SamplerFilter::key_t::LINEAR:
             return SCENE_NS::SamplerFilter::LINEAR;
         default:
+            // Current support is limited to LINEAR and NEAREST, return NEAREST when not LINEAR.
             return SCENE_NS::SamplerFilter::NEAREST;
     }
 }

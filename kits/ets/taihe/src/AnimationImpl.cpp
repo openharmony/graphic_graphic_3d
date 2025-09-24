@@ -27,13 +27,10 @@ namespace OHOS::Render3D::KITETS {
 
 AnimationImpl::AnimationImpl(const std::shared_ptr<AnimationETS> animationETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::ANIMATION, animationETS), animationETS_(animationETS)
-{
-    WIDGET_LOGD("AnimationImpl ++");
-}
+{}
 
 AnimationImpl::~AnimationImpl()
 {
-    WIDGET_LOGD("AnimationImpl --");
     animationETS_.reset();
 }
 
@@ -76,23 +73,26 @@ double AnimationImpl::getProgress()
     return static_cast<double>(animationETS_->GetProgress());
 }
 
-void AnimationImpl::onStarted(::taihe::callback_view<void(SceneResources::CallbackUndefinedType const&)> callback)
+void AnimationImpl::onStarted(::taihe::callback_view<void(SceneResources::CallbackUndefinedType const &)> callback)
 {
-    onStartedCB_ = callback;
-    animationETS_->OnStarted([this]() {
-        if (!onStartedCB_.is_error()) {
-            auto result = SceneResources::CallbackUndefinedType::make_undefined();
-            onStartedCB_(result);
-        }
-    });
+    animationETS_->OnStarted(
+        [callback = ::taihe::callback<void(SceneResources::CallbackUndefinedType const &)>(callback)]() {
+            if (callback.is_error()) {
+                WIDGET_LOGE("Animation onStarted callback error");
+            } else {
+                auto result = SceneResources::CallbackUndefinedType::make_undefined();
+                callback(result);
+            }
+        });
 }
 
 void AnimationImpl::onFinishedInner(::taihe::callback_view<void()> callback)
 {
-    onFinishedCB_ = callback;
-    animationETS_->OnFinished([this]() {
-        if (!onFinishedCB_.is_error()) {
-            onFinishedCB_();
+    animationETS_->OnFinished([callback = ::taihe::callback<void()>(callback)]() {
+        if (callback.is_error()) {
+            WIDGET_LOGE("Animation onFinished callback error");
+        } else {
+            callback();
         }
     });
 }
@@ -139,7 +139,6 @@ std::shared_ptr<AnimationETS> AnimationImpl::getAnimationETS() const
 
 ::SceneResources::Animation animationTransferStaticImpl(uintptr_t input)
 {
-    WIDGET_LOGI("animationTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
     if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
@@ -166,7 +165,6 @@ std::shared_ptr<AnimationETS> AnimationImpl::getAnimationETS() const
 
 uintptr_t animationTransferDynamicImpl(::SceneResources::Animation input)
 {
-    WIDGET_LOGI("animationTransferDynamicImpl");
     if (input.is_error()) {
         WIDGET_LOGE("null input animation vtbl_ptr");
         return 0;

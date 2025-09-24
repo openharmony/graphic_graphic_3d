@@ -22,8 +22,6 @@ namespace OHOS::Render3D {
 AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE_NS::IScene::Ptr scene)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animationRef_(animationRef), scene_(scene)
 {
-    WIDGET_LOGD("AnimationETS ++ with animationRef, name: %{public}s", GetName().c_str());
-
     using namespace META_NS;
     META_NS::IAnimation::Ptr anim = interface_pointer_cast<IAnimation>(animationRef_);
     if (anim) {
@@ -55,7 +53,23 @@ AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE
 
 AnimationETS::~AnimationETS()
 {
-    WIDGET_LOGD("AnimationETS --");
+    if (speedModifier_) {
+        if (auto attach = interface_cast<META_NS::IAttach>(animationRef_)) {
+            attach->Detach(speedModifier_);
+        }
+        speedModifier_.reset();
+    }
+    if (auto *anim = interface_cast<META_NS::IAnimation>(animationRef_); (anim != nullptr) && (OnStartedToken_ != 0)) {
+        anim->OnStarted()->RemoveHandler(OnStartedToken_);
+    }
+    OnStartedToken_ = 0;
+
+    if (OnCompletedEvent_ && OnFinishedToken_ != 0) {
+        OnCompletedEvent_->RemoveHandler(OnFinishedToken_);
+    }
+    OnFinishedToken_ = 0;
+    OnFinishedCB_ = {};
+
     animationRef_.reset();
 }
 
@@ -208,10 +222,7 @@ void AnimationETS::Seek(float position)
 void AnimationETS::Start()
 {
     if (auto a = interface_cast<META_NS::IStartableAnimation>(animationRef_)) {
-        CORE_LOG_E("Start animation ets");
         a->Start();
-    } else {
-        CORE_LOG_E("Invalid animation");
     }
 }
 

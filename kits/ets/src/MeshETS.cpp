@@ -18,13 +18,10 @@
 namespace OHOS::Render3D {
 MeshETS::MeshETS(const SCENE_NS::IMesh::Ptr mesh)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::MESH), mesh_(mesh)
-{
-    CORE_LOG_D("MeshETS ++");
-}
+{}
 
 MeshETS::~MeshETS()
 {
-    CORE_LOG_D("MeshETS --");
     mesh_.reset();
 }
 

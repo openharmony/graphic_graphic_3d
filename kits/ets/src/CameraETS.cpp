@@ -29,13 +29,10 @@ std::shared_ptr<CameraETS> CameraETS::FromJS(
 
 CameraETS::CameraETS(const SCENE_NS::ICamera::Ptr camera)
     : NodeETS(NodeETS::NodeType::CAMERA, interface_pointer_cast<SCENE_NS::INode>(camera)), camera_(camera)
-{
-    CORE_LOG_D("CameraETS ++");
-}
+{}
 
 CameraETS::~CameraETS()
 {
-    CORE_LOG_D("CameraETS --");
     clearColorProxy_.reset();
     postProcess_.reset();
     camera_.reset();
