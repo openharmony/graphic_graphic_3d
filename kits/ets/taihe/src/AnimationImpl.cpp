@@ -146,7 +146,7 @@ std::shared_ptr<AnimationETS> AnimationImpl::getAnimationETS() const
     }
 
     AnimationJS *tro = reinterpret_cast<AnimationJS *>(nativePtr);
-    META_NS::IObject::Ptr anim = tro->GetNativeObject();
+    META_NS::IAnimation::Ptr anim = tro->GetNativeObject<META_NS::IAnimation>();
     if (anim == nullptr) {
         TH_THROW(std::runtime_error, "animationTransferStaticImpl failed during GetNativeObject.");
     }

@@ -28,65 +28,71 @@ MaterialPropertyETS::~MaterialPropertyETS()
 
 std::shared_ptr<ImageETS> MaterialPropertyETS::GetImage()
 {
-    if (!tex_) {
+    auto tex = tex_.lock();
+    if (!tex) {
         CORE_LOG_E("MaterialPropertyETS::GetImage tex_ is null");
         return nullptr;
     }
-    SCENE_NS::IImage::Ptr image = META_NS::GetValue(tex_->Image());
+    SCENE_NS::IImage::Ptr image = META_NS::GetValue(tex->Image());
     return std::make_shared<ImageETS>(image);
 }
 
 void MaterialPropertyETS::SetImage(const std::shared_ptr<ImageETS> img)
 {
-    if (!tex_ || !img) {
+    auto tex = tex_.lock();
+    if (!tex || !img) {
         return;
     }
     SCENE_NS::IImage::Ptr nativeImg = img->GetNativeImage();
-    META_NS::SetValue(tex_->Image(), nativeImg);
+    META_NS::SetValue(tex->Image(), nativeImg);
 }
 
 std::shared_ptr<Vec4Proxy> MaterialPropertyETS::GetFactor()
 {
-    if (!tex_) {
-        CORE_LOG_E("MaterialPropertyETS::GetFactor tex_ is null");
+    auto tex = tex_.lock();
+    if (!tex) {
+        CORE_LOG_E("Get factor failed, texture is null");
         return nullptr;
     }
     if (!factorProxy_) {
-        factorProxy_ = std::make_shared<Vec4Proxy>(tex_->Factor());
+        factorProxy_ = std::make_shared<Vec4Proxy>(tex->Factor());
     }
     return factorProxy_;
 }
 
 void MaterialPropertyETS::SetFactor(const BASE_NS::Math::Vec4 &factor)
 {
-    if (!tex_) {
-        CORE_LOG_E("MaterialPropertyETS::SetFactor tex_ is null");
+    auto tex = tex_.lock();
+    if (!tex) {
+        CORE_LOG_E("Set factor failed, texture is null");
         return;
     }
     if (!factorProxy_) {
-        factorProxy_ = std::make_shared<Vec4Proxy>(tex_->Factor());
+        factorProxy_ = std::make_shared<Vec4Proxy>(tex->Factor());
     }
     factorProxy_->SetValue(factor);
 }
 
 std::shared_ptr<SamplerETS> MaterialPropertyETS::GetSampler()
 {
-    if (!tex_) {
-        CORE_LOG_E("get sampler failed, texture is null");
+    auto tex = tex_.lock();
+    if (!tex) {
+        CORE_LOG_E("Get sampler failed, texture is null");
         return nullptr;
     }
     if (!sampler_) {
-        sampler_ = std::make_shared<SamplerETS>(META_NS::GetValue(tex_->Sampler()));
+        sampler_ = std::make_shared<SamplerETS>(META_NS::GetValue(tex->Sampler()));
     }
     return sampler_;
 }
 
 void MaterialPropertyETS::SetSampler(const std::shared_ptr<SamplerETS> sampler)
 {
-    if (!tex_ || !sampler) {
+    auto tex = tex_.lock();
+    if (!tex || !sampler) {
         return;
     }
-    SCENE_NS::ISampler::Ptr nativeSampler = META_NS::GetValue(tex_->Sampler());
+    SCENE_NS::ISampler::Ptr nativeSampler = META_NS::GetValue(tex->Sampler());
     ExecSyncTask([&]() {
         // Apply given object as a changeset on top of default sampler
         if (auto resetable = interface_cast<META_NS::IResetableObject>(nativeSampler)) {

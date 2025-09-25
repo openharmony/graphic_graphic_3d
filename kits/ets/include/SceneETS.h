@@ -109,6 +109,8 @@ private:
 
     std::shared_ptr<EnvironmentETS> environmentETS_{nullptr};
     std::shared_ptr<RenderResourcesETS> resources_;
+    // Retain animation here, then keep a weak poninter of animation elsewhere.
+    BASE_NS::vector<META_NS::IAnimation::Ptr> nativeAnimations_;
     std::optional<std::vector<std::shared_ptr<AnimationETS>>> animations_;
 
     bool disposed_ = false;

@@ -26,7 +26,7 @@ SubMeshETS::~SubMeshETS()
 
 BASE_NS::string SubMeshETS::GetName()
 {
-    if (auto named = interface_cast<META_NS::INamed>(subMesh_)) {
+    if (auto named = interface_cast<META_NS::INamed>(subMesh_.lock())) {
         return META_NS::GetValue(named->Name());
     } else {
         return "";
@@ -35,15 +35,15 @@ BASE_NS::string SubMeshETS::GetName()
 
 void SubMeshETS::SetName(const BASE_NS::string &name)
 {
-    if (auto named = interface_cast<META_NS::INamed>(subMesh_)) {
+    if (auto named = interface_cast<META_NS::INamed>(subMesh_.lock())) {
         named->Name()->SetValue(name);
     }
 }
 
 BASE_NS::Math::Vec3 SubMeshETS::GetAABBMin()
 {
-    if (subMesh_) {
-        return META_NS::GetValue(subMesh_->AABBMin());
+    if (auto sm = subMesh_.lock()) {
+        return META_NS::GetValue(sm->AABBMin());
     } else {
         return BASE_NS::Math::ZERO_VEC3;
     }
@@ -51,8 +51,8 @@ BASE_NS::Math::Vec3 SubMeshETS::GetAABBMin()
 
 BASE_NS::Math::Vec3 SubMeshETS::GetAABBMax()
 {
-    if (subMesh_) {
-        return META_NS::GetValue(subMesh_->AABBMax());
+    if (auto sm = subMesh_.lock()) {
+        return META_NS::GetValue(sm->AABBMax());
     } else {
         return BASE_NS::Math::ZERO_VEC3;
     }
@@ -60,23 +60,25 @@ BASE_NS::Math::Vec3 SubMeshETS::GetAABBMax()
 
 std::shared_ptr<MaterialETS> SubMeshETS::GetMaterial()
 {
-    if (!subMesh_) {
+    auto sm = subMesh_.lock();
+    if (!sm) {
         CORE_LOG_E("get material failed, submesh is null");
         return nullptr;
     }
-    SCENE_NS::IMaterial::Ptr mat = subMesh_->Material()->GetValue();
+    SCENE_NS::IMaterial::Ptr mat = sm->Material()->GetValue();
     return std::make_shared<MaterialETS>(mat);
 }
 
 void SubMeshETS::SetMaterial(const std::shared_ptr<MaterialETS> &mat)
 {
-    if (!subMesh_) {
+    auto sm = subMesh_.lock();
+    if (!sm) {
         CORE_LOG_E("set material failed, submesh is null");
         return;
     }
     SCENE_NS::IMaterial::Ptr nativeMat = mat ? mat->GetNativeMaterial() : nullptr;
     if (nativeMat) {
-        subMesh_->Material()->SetValue(nativeMat);
+        sm->Material()->SetValue(nativeMat);
     }
 }
 }  // namespace OHOS::Render3D
