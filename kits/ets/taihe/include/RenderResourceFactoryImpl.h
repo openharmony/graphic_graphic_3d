@@ -54,7 +54,6 @@ public:
     ::SceneResources::MeshResource createMeshSync(
         ::SceneTH::SceneResourceParameters const &params, ::SceneTypes::GeometryDefinitionType const &geometry)
     {
-        WIDGET_LOGI("RenderResourceFactoryImpl::createMeshSync, tag: %{public}d", static_cast<int>(geometry.get_tag()));
         // The parameters in the make_holder function should be of the same type
         // as the parameters in the constructor of the actual implementation class.
         return MeshResourceImpl::Create(params, geometry);

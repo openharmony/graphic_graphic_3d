@@ -87,10 +87,10 @@ public:
     void SetEnvironmentMapFactor(const BASE_NS::Math::Vec4 &factor);
 
     std::shared_ptr<ImageETS> GetEnvironmentImage();
-    void SetEnvironmentImage(std::shared_ptr<ImageETS> image);
+    void SetEnvironmentImage(const std::shared_ptr<ImageETS> &image);
 
     std::shared_ptr<ImageETS> GetRadianceImage();
-    void SetRadianceImage(std::shared_ptr<ImageETS> image);
+    void SetRadianceImage(const std::shared_ptr<ImageETS> &image);
 
     BASE_NS::vector<BASE_NS::Math::Vec3> GetIrradianceCoefficients();
     void SetIrradianceCoefficients(const BASE_NS::vector<BASE_NS::Math::Vec3>& coefficients);

@@ -21,7 +21,6 @@ LightETS::LightETS(
     : NodeETS(NodeETS::NodeType::LIGHT, interface_pointer_cast<SCENE_NS::INode>(light)), light_(light),
       lightType_(lightType)
 {
-    CORE_LOG_D("LightETS ++");
     SetName(name);
     SetUri(uri);
     SCENE_NS::LightType sceneLightType;
@@ -66,7 +65,6 @@ LightETS::LightETS(const SCENE_NS::ILight::Ptr light)
 
 LightETS::~LightETS()
 {
-    CORE_LOG_D("LightETS --");
     light_.reset();
     colorProxy_.reset();
 }

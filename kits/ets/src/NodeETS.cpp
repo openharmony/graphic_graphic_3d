@@ -211,7 +211,11 @@ std::shared_ptr<NodeETS> NodeETS::GetNodeByPath(const std::string &path)
         return nullptr;
     }
     BASE_NS::string childPath = node->GetPath().GetResult() + "/" + BASE_NS::string(path.c_str());
-    const auto child = node->GetScene()->FindNode(childPath).GetResult();
+    auto scene = node->GetScene();
+    if (!scene) {
+        return nullptr;
+    }
+    const auto child = scene->FindNode(childPath).GetResult();
     if (child) {
         return FromNative(child);
     } else {

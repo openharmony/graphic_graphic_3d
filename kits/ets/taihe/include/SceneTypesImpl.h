@@ -41,14 +41,10 @@ public:
 class CustomGeometryImpl : public GeometryDefinitionImpl {
 public:
     CustomGeometryImpl()
-    {
-        WIDGET_LOGI("CustomGeometryImpl ++");
-    }
+    {}
 
     ~CustomGeometryImpl()
-    {
-        WIDGET_LOGI("CustomGeometryImpl --");
-    }
+    {}
 
     ::taihe::optional<::SceneTypes::PrimitiveTopology> getTopology()
     {
@@ -148,14 +144,10 @@ private:
 class CubeGeometryImpl : public GeometryDefinitionImpl {
 public:
     CubeGeometryImpl()
-    {
-        WIDGET_LOGI("CubeGeometryImpl ++");
-    }
+    {}
 
     ~CubeGeometryImpl()
-    {
-        WIDGET_LOGI("CubeGeometryImpl --");
-    }
+    {}
 
     ::SceneTypes::Vec3 getSize()
     {
@@ -182,9 +174,7 @@ private:
 class PlaneGeometryImpl : public GeometryDefinitionImpl {
 public:
     PlaneGeometryImpl()
-    {
-        WIDGET_LOGI("PlaneGeometryImpl ++");
-    }
+    {}
 
     ::SceneTypes::Vec2 getSize()
     {
@@ -211,9 +201,7 @@ private:
 class SphereGeometryImpl : public GeometryDefinitionImpl {
 public:
     SphereGeometryImpl()
-    {
-        WIDGET_LOGI("SphereGeometryImpl ++");
-    }
+    {}
 
     double getRadius()
     {

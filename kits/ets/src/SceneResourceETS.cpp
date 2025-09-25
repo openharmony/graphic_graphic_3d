@@ -19,14 +19,10 @@
 
 namespace OHOS::Render3D {
 SceneResourceETS::SceneResourceETS(SceneResourceType type) : type_(type)
-{
-    CORE_LOG_D("SceneResourceETS ++");
-}
+{}
 
 SceneResourceETS::~SceneResourceETS()
-{
-    CORE_LOG_D("SceneResourceETS --");
-}
+{}
 
 SceneResourceETS::SceneResourceType SceneResourceETS::GetResourceType()
 {
