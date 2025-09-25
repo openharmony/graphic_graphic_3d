@@ -37,7 +37,7 @@ public:
     void SetMaterial(const std::shared_ptr<MaterialETS> &mat);
 
 private:
-    SCENE_NS::ISubMesh::Ptr subMesh_{nullptr};
+    SCENE_NS::ISubMesh::WeakPtr subMesh_{nullptr};
 };
 }  // namespace OHOS::Render3D
 #endif  // SUB_MESH_ETS_H

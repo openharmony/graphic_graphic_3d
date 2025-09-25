@@ -40,11 +40,11 @@ public:
 
     SCENE_NS::ITexture::Ptr GetNativeTexture()
     {
-        return tex_;
+        return tex_.lock();
     }
 
 private:
-    SCENE_NS::ITexture::Ptr tex_;
+    SCENE_NS::ITexture::WeakPtr tex_;
     std::shared_ptr<Vec4Proxy> factorProxy_{nullptr};
     std::shared_ptr<SamplerETS> sampler_{nullptr};
 };

@@ -29,7 +29,7 @@
 namespace OHOS::Render3D {
 class AnimationETS : public SceneResourceETS {
 public:
-    AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE_NS::IScene::Ptr scene);
+    AnimationETS(const META_NS::IAnimation::Ptr animation, const SCENE_NS::IScene::Ptr scene);
     ~AnimationETS() override;
 
     SCENE_NS::IScene::Ptr GetScene() const
@@ -62,17 +62,17 @@ public:
     void Finish();
 
 private:
-    META_NS::IObject::Ptr animationRef_{nullptr};
+    META_NS::IAnimation::WeakPtr animation_{nullptr};
     SCENE_NS::IScene::WeakPtr scene_{nullptr}; // Store a weak ref
 
     META_NS::IEvent::Token OnFinishedToken_{0};
     META_NS::IEvent::Token OnStartedToken_{0};
 
     std::function<void()> OnFinishedCB_;
-    META_NS::AnimationModifiers::ISpeed::Ptr speedModifier_;
+    META_NS::AnimationModifiers::ISpeed::WeakPtr speedModifier_;
 #define USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED 0
 #if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED == 1)
-    META_NS::IProperty::Ptr completed_;
+    META_NS::IProperty::WeakPtr completed_;
 #endif
     META_NS::Event<META_NS::IEvent> OnCompletedEvent_;
 };

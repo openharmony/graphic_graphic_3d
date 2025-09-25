@@ -34,8 +34,8 @@ TonemapETS::~TonemapETS()
 
 TonemapETS::ToneMappingType TonemapETS::GetType()
 {
-    if (tonemap_) {
-        type_ = FromInternalType(tonemap_->Type()->GetValue());
+    if (auto tonemap = tonemap_.lock()) {
+        type_ = FromInternalType(tonemap->Type()->GetValue());
     }
     return type_;
 }
@@ -43,15 +43,15 @@ TonemapETS::ToneMappingType TonemapETS::GetType()
 void TonemapETS::SetType(const ToneMappingType type)
 {
     type_ = type;
-    if (tonemap_) {
-        tonemap_->Type()->SetValue(ToInternalType(type_));
+    if (auto tonemap = tonemap_.lock()) {
+        tonemap->Type()->SetValue(ToInternalType(type_));
     }
 }
 
 float TonemapETS::GetExposure()
 {
-    if (tonemap_) {
-        exposure_ = tonemap_->Exposure()->GetValue();
+    if (auto tonemap = tonemap_.lock()) {
+        exposure_ = tonemap->Exposure()->GetValue();
     }
     return exposure_;
 }
@@ -59,23 +59,23 @@ float TonemapETS::GetExposure()
 void TonemapETS::SetExposure(const float exposure)
 {
     exposure_ = exposure;
-    if (tonemap_) {
-        tonemap_->Exposure()->SetValue(exposure_);
+    if (auto tonemap = tonemap_.lock()) {
+        tonemap->Exposure()->SetValue(exposure_);
     }
 }
 
 bool TonemapETS::IsEnabled()
 {
-    if (tonemap_) {
-        return tonemap_->Enabled()->GetValue();
+    if (auto tonemap = tonemap_.lock()) {
+        return tonemap->Enabled()->GetValue();
     }
     return false;
 }
 
 void TonemapETS::SetEnabled(const bool enable)
 {
-    if (tonemap_) {
-        tonemap_->Enabled()->SetValue(enable);
+    if (auto tonemap = tonemap_.lock()) {
+        tonemap->Enabled()->SetValue(enable);
     }
 }
 
