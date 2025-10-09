@@ -272,7 +272,8 @@ std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
 
     std::vector<std::shared_ptr<AnimationETS>> animationETSlist;
     for (const auto &animationRef : nativeAnimations_) {
-        animationETSlist.emplace_back(std::make_shared<AnimationETS>(animationRef, scene_));  // use make_unique instead in the future.
+        // use make_unique instead in the future.
+        animationETSlist.emplace_back(std::make_shared<AnimationETS>(animationRef, scene_));
     }
     animations_ = std::move(animationETSlist);
     return animations_.value();
