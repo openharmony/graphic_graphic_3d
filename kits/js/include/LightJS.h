@@ -76,6 +76,12 @@ private:
     void* GetInstanceImpl(uint32_t id);
     void DisposeNative(void*);
     void Finalize(napi_env env);
+    napi_value GetInnerAngle(NapiApi::FunctionContext<>& ctx);
+    void SetInnerAngle(NapiApi::FunctionContext<float>& ctx);
+    napi_value GetOuterAngle(NapiApi::FunctionContext<>& ctx);
+    void SetOuterAngle(NapiApi::FunctionContext<float>& ctx);
+    napi_value GetRange(NapiApi::FunctionContext<>& ctx);
+    void SetRange(NapiApi::FunctionContext<float>& ctx);
 };
 
 class DirectionalLightJS : BaseObject, BaseLight {

@@ -48,6 +48,8 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
         &EnvironmentJS::SetIndirectSpecularFactor>("indirectSpecularFactor"));
     node_props.emplace_back(GetSetProperty<Object, EnvironmentJS, &EnvironmentJS::GetEnvironmentMapFactor,
         &EnvironmentJS::SetEnvironmentMapFactor>("environmentMapFactor"));
+    node_props.emplace_back(GetSetProperty<Object, EnvironmentJS, &EnvironmentJS::GetEnvironmentRotation,
+        &EnvironmentJS::SetEnvironmentRotation>("environmentRotation"));
 
     // clang-format on
 
@@ -426,4 +428,35 @@ void EnvironmentJS::SetEnvironmentMapFactor(NapiApi::FunctionContext<NapiApi::Ob
         environmentFactor_ = BASE_NS::make_unique<Vec4Proxy>(ctx.Env(), node->EnvMapFactor());
     }
     environmentFactor_->SetValue(obj);
+}
+
+napi_value EnvironmentJS::GetEnvironmentRotation(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    auto node = ctx.This().GetNative<SCENE_NS::IEnvironment>();
+    if (!node) {
+        return ctx.GetUndefined();
+    }
+    if (environmentRotation_ == nullptr) {
+        environmentRotation_ = BASE_NS::make_unique<QuatProxy>(ctx.Env(), node->EnvironmentRotation());
+    }
+    return environmentRotation_->Value();
+}
+    
+void EnvironmentJS::SetEnvironmentRotation(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+    auto node = ctx.This().GetNative<SCENE_NS::IEnvironment>();
+    if (!node) {
+        return;
+    }
+    NapiApi::Object obj = ctx.Arg<0>();
+    if (environmentRotation_ == nullptr) {
+        environmentRotation_ = BASE_NS::make_unique<QuatProxy>(ctx.Env(), node->EnvironmentRotation());
+    }
+    environmentRotation_->SetValue(obj);
 }

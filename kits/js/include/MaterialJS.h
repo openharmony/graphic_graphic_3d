@@ -22,10 +22,12 @@
 class BaseMaterial : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 30;
-    enum MaterialType { SHADER = 1, METALLIC_ROUGHNESS = 2 };
+    enum MaterialType { SHADER = 1, METALLIC_ROUGHNESS = 2, UNLIT = 3 };
     enum CullMode { NONE = 0, FRONT = 1, BACK = 2 };
+    enum PolygonMode { FILL = 0, LINE = 1, POINT = 2 };
     static void Init(const char* name, napi_env env, napi_value exports, napi_callback ctor,
         BASE_NS::vector<napi_property_descriptor>& props);
+    static void InitEnumType(napi_env env, napi_value exports);
     BaseMaterial(MaterialType lt);
     ~BaseMaterial() override;
 
@@ -41,6 +43,8 @@ private:
     void SetShadowReceiver(NapiApi::FunctionContext<bool>& ctx);
     napi_value GetCullMode(NapiApi::FunctionContext<>& ctx);
     void SetCullMode(NapiApi::FunctionContext<uint32_t>& ctx);
+    napi_value GetPolygonMode(NapiApi::FunctionContext<>& ctx);
+    void SetPolygonMode(NapiApi::FunctionContext<uint32_t>& ctx);
     napi_value GetBlend(NapiApi::FunctionContext<>& ctx);
     void SetBlend(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value GetAlphaCutoff(NapiApi::FunctionContext<>& ctx);

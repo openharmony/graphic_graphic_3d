@@ -57,11 +57,13 @@ public:
     META_BEGIN_STATIC_DATA()
     META_STATIC_PROPERTY_DATA(META_NS::INamed, BASE_NS::string, Name)
     META_STATIC_PROPERTY_DATA(IShader, CullModeFlags, CullMode)
+    META_STATIC_PROPERTY_DATA(IShader, SCENE_NS::PolygonMode, PolygonMode)
     META_STATIC_PROPERTY_DATA(IShader, bool, Blend)
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(BASE_NS::string, Name)
     META_IMPLEMENT_PROPERTY(CullModeFlags, CullMode)
+    META_IMPLEMENT_PROPERTY(SCENE_NS::PolygonMode, PolygonMode)
     META_IMPLEMENT_PROPERTY(bool, Blend)
 
     void OnPropertyChanged(const META_NS::IProperty&) override;

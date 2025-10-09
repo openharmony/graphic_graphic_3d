@@ -65,6 +65,9 @@ public:
 
     ::taihe::optional<::taihe::array<::SceneTypes::Vec3>> getIrradianceCoefficients();
     void setIrradianceCoefficients(::taihe::optional_view<::taihe::array<::SceneTypes::Vec3>> coefficients);
+
+    ::taihe::optional<::SceneTypes::Quaternion> getEnvironmentRotation();
+    void setEnvironmentRotation(::taihe::optional_view<::SceneTypes::Quaternion> rotation);
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_ENVIRONMENT_IMPL_H

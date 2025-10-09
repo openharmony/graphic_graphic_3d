@@ -398,6 +398,8 @@ InvokeReturn<std::shared_ptr<MaterialETS>> SceneETS::CreateMaterial(const std::s
     if (auto mat = scene_->CreateObject<SCENE_NS::IMaterial>(SCENE_NS::ClassId::Material).GetResult()) {
         if (materialType == MaterialETS::MaterialType::SHADER) {
             META_NS::SetValue(mat->Type(), SCENE_NS::MaterialType::CUSTOM);
+        } else if (materialType == MaterialETS::MaterialType::UNLIT) {
+            META_NS::SetValue(mat->Type(), SCENE_NS::MaterialType::UNLIT);
         }
         return InvokeReturn(std::make_shared<MaterialETS>(mat, name, uri));
     } else {

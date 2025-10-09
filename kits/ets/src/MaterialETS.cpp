@@ -47,6 +47,8 @@ MaterialETS::MaterialType MaterialETS::GetMaterialType()
     SCENE_NS::MaterialType nativeType = META_NS::GetValue(material_->Type());
     if (nativeType == SCENE_NS::MaterialType::METALLIC_ROUGHNESS) {
         return MaterialType::METALLIC_ROUGHNESS;
+    } else if (nativeType == SCENE_NS::MaterialType::UNLIT) {
+        return MaterialType::UNLIT;
     } else {
         return MaterialType::SHADER;
     }
@@ -118,6 +120,48 @@ void MaterialETS::SetCullMode(MaterialETS::CullMode mode)
         flags = SCENE_NS::CullModeFlags::BACK_BIT;
     }
     META_NS::SetValue(shader->CullMode(), flags);
+    // need to forcefully refresh the material, otherwise render will ignore the changes
+    auto val = META_NS::GetValue(material_->MaterialShader());
+    META_NS::SetValue(material_->MaterialShader(), val);
+}
+
+MaterialETS::PolygonMode MaterialETS::GetPolygonMode()
+{
+    PolygonMode mode = PolygonMode::FILL;
+    if (!material_) {
+        CORE_LOG_E("get polygon mode failed, invalid material");
+        return mode;
+    }
+    SCENE_NS::IShader::Ptr shader = META_NS::GetValue(material_->MaterialShader());
+    if (!shader) {
+        CORE_LOG_E("get polygon mode failed, invalid shader");
+        return mode;
+    }
+
+    SCENE_NS::PolygonMode innerMode = META_NS::GetValue(shader->PolygonMode());
+    if (innerMode == SCENE_NS::PolygonMode::FILL) {
+        mode = PolygonMode::FILL;
+    } else if (innerMode == SCENE_NS::PolygonMode::LINE) {
+        mode = PolygonMode::LINE;
+    } else if (innerMode == SCENE_NS::PolygonMode::POINT) {
+        mode = PolygonMode::POINT;
+    }
+    return mode;
+}
+
+void MaterialETS::SetPolygonMode(const MaterialETS::PolygonMode mode)
+{
+    if (!material_) {
+        CORE_LOG_E("set polygon mode failed, invalid material");
+        return;
+    }
+    SCENE_NS::IShader::Ptr shader = META_NS::GetValue(material_->MaterialShader());
+    if (!shader) {
+        CORE_LOG_E("set polygon mode failed, invalid shader");
+        return;
+    }
+    auto polyMode = static_cast<SCENE_NS::PolygonMode>(mode);
+    META_NS::SetValue(shader->PolygonMode(), polyMode);
     // need to forcefully refresh the material, otherwise render will ignore the changes
     auto val = META_NS::GetValue(material_->MaterialShader());
     META_NS::SetValue(material_->MaterialShader(), val);

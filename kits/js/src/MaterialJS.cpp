@@ -42,6 +42,9 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
     node_props.emplace_back(
         TROGetSetProperty<uint32_t, BaseMaterial, &BaseMaterial::GetCullMode, &BaseMaterial::SetCullMode>("cullMode"));
     node_props.emplace_back(
+        TROGetSetProperty<uint32_t, BaseMaterial, &BaseMaterial::GetPolygonMode, &BaseMaterial::SetPolygonMode>(
+            "polygonMode"));
+    node_props.emplace_back(
         TROGetSetProperty<NapiApi::Object, BaseMaterial, &BaseMaterial::GetBlend, &BaseMaterial::SetBlend>("blend"));
     node_props.emplace_back(
         TROGetSetProperty<float, BaseMaterial, &BaseMaterial::GetAlphaCutoff, &BaseMaterial::SetAlphaCutoff>(
@@ -59,17 +62,22 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
     if (mis) {
         mis->StoreCtor(class_name, func);
     }
+    InitEnumType(env, exports);
+}
 
+void BaseMaterial::InitEnumType(napi_env env, napi_value exports)
+{
     NapiApi::Object exp1(env, exports);
     napi_value eType1 = nullptr;
     napi_value v1 = nullptr;
     napi_create_object(env, &eType1);
 #define DECL_ENUM(enu, x)                         \
     napi_create_uint32(env, MaterialType::x, &v1); \
-    napi_set_named_property(env, enu, #x, v1);
+    napi_set_named_property(env, enu, #x, v1)
 
     DECL_ENUM(eType1, SHADER);
     DECL_ENUM(eType1, METALLIC_ROUGHNESS);
+    DECL_ENUM(eType1, UNLIT);
 #undef DECL_ENUM
     exp1.Set("MaterialType", eType1);
 
@@ -79,13 +87,27 @@ void BaseMaterial::Init(const char* class_name, napi_env env, napi_value exports
     napi_create_object(env, &eType2);
 #define DECL_ENUM(enu, x)                         \
     napi_create_uint32(env, CullMode::x, &v2); \
-    napi_set_named_property(env, enu, #x, v2);
+    napi_set_named_property(env, enu, #x, v2)
 
     DECL_ENUM(eType2, NONE);
     DECL_ENUM(eType2, FRONT);
     DECL_ENUM(eType2, BACK);
 #undef DECL_ENUM
     exp2.Set("CullMode", eType2);
+
+    NapiApi::Object exp3(env, exports);
+    napi_value eType3 = nullptr;
+    napi_value v3 = nullptr;
+    napi_create_object(env, &eType3);
+#define DECL_ENUM(enu, x)                         \
+    napi_create_uint32(env, PolygonMode::x, &v2); \
+    napi_set_named_property(env, enu, #x, v2)
+
+    DECL_ENUM(eType3, FILL);
+    DECL_ENUM(eType3, LINE);
+    DECL_ENUM(eType3, POINT);
+#undef DECL_ENUM
+    exp3.Set("PolygonMode", eType3);
 }
 
 void* BaseMaterial::GetInstanceImpl(uint32_t id)
@@ -108,9 +130,13 @@ napi_value BaseMaterial::GetMaterialType(NapiApi::FunctionContext<>& ctx)
     }
     uint32_t type = -1; // return -1 if the object does not exist anymore
     if (auto material = ctx.This().GetNative<SCENE_NS::IMaterial>()) {
-        type = META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::METALLIC_ROUGHNESS
-                   ? BaseMaterial::METALLIC_ROUGHNESS
-                   : BaseMaterial::SHADER;
+        if (META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::METALLIC_ROUGHNESS) {
+            type = BaseMaterial::METALLIC_ROUGHNESS;
+        } else if (META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::UNLIT) {
+            type = BaseMaterial::UNLIT;
+        } else {
+            type = BaseMaterial::SHADER;
+        }
     }
     return ctx.GetNumber(type);
 }
@@ -173,6 +199,40 @@ void BaseMaterial::SetCullMode(NapiApi::FunctionContext<uint32_t>& ctx)
         }
     }
 }
+
+napi_value BaseMaterial::GetPolygonMode(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    auto polyMode = SCENE_NS::PolygonMode::FILL;
+    if (auto material = ctx.This().GetNative<SCENE_NS::IMaterial>()) {
+        if (auto shader = META_NS::GetValue(material->MaterialShader())) {
+            if (auto scene = scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
+                polyMode = META_NS::GetValue(shader->PolygonMode());
+            }
+        }
+    }
+    return ctx.GetNumber(static_cast<uint32_t>(polyMode));
+}
+
+void BaseMaterial::SetPolygonMode(NapiApi::FunctionContext<uint32_t>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+    auto polyMode = static_cast<SCENE_NS::PolygonMode>((uint32_t)ctx.Arg<0>());
+
+    if (auto material = ctx.This().GetNative<SCENE_NS::IMaterial>()) {
+        if (auto shader = META_NS::GetValue(material->MaterialShader())) {
+            shader->PolygonMode()->SetValue(polyMode);
+            // need to forcefully refresh the material, otherwise renderer will ignore the change
+            auto val = META_NS::GetValue(material->MaterialShader());
+            META_NS::SetValue(material->MaterialShader(), val);
+        }
+    }
+}
+
 napi_value BaseMaterial::GetBlend(NapiApi::FunctionContext<>& ctx)
 {
     if (!validateSceneRef()) {
@@ -327,9 +387,13 @@ MaterialJS::MaterialJS(napi_env e, napi_callback_info i)
 
     const auto material = GetNativeObject<SCENE_NS::IMaterial>();
     if (material) {
-        materialType_ = META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::CUSTOM
-                            ? MaterialType::SHADER
-                            : MaterialType::METALLIC_ROUGHNESS;
+        if (META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::CUSTOM) {
+            materialType_ = MaterialType::SHADER;
+        } else if (META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::UNLIT) {
+            materialType_ = MaterialType::UNLIT;
+        } else {
+            materialType_ = MaterialType::METALLIC_ROUGHNESS;
+        }
     }
 
     BASE_NS::string name;

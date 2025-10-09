@@ -17,7 +17,6 @@
 #define OHOS_3D_METALLIC_ROUGHNESS_MATERIAL_IMPL_H
 
 #include "MaterialImpl.h"
-#include "MaterialPropertyImpl.h"
 #include "SceneResources.user.hpp"
 #include "stdexcept"
 #include "taihe/optional.hpp"
@@ -60,11 +59,6 @@ public:
     void setSpecular(::SceneResources::weak::MaterialProperty specular);
 
 private:
-    template<size_t Index>
-    ::SceneResources::MaterialProperty getProperty();
-    template<size_t Index>
-    void setProperty(::SceneResources::weak::MaterialProperty prop);
-
     std::shared_ptr<MaterialETS> materialETS_;
 };
 }  // namespace OHOS::Render3D::KITETS

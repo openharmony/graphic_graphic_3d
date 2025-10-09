@@ -71,6 +71,10 @@ public:
      */
     META_PROPERTY(float, SpotOuterAngle)
     /**
+     * @brief Light range.
+     */
+    META_PROPERTY(float, Range)
+    /**
      * @brief Type of the light. Defaults to DIRECTIONAL.
      */
     META_PROPERTY(LightType, Type)

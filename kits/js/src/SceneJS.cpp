@@ -796,6 +796,8 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
         const auto env = promise.Env();
         if (type == BaseMaterial::SHADER) {
             META_NS::SetValue(material->Type(), SCENE_NS::MaterialType::CUSTOM);
+        } else if (type == BaseMaterial::UNLIT) {
+            META_NS::SetValue(material->Type(), SCENE_NS::MaterialType::UNLIT);
         }
         napi_value args[] = { sceneRef.GetValue(), paramRef.GetValue() };
         const auto result = CreateFromNativeInstance(env, material, PtrType::STRONG, args);

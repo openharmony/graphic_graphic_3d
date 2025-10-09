@@ -40,6 +40,16 @@ enum class CullModeFlags : uint32_t {
     FRONT_AND_BACK = 0x00000003,
 };
 
+/** Polygon drawing mode */
+enum class PolygonMode : uint32_t {
+    /** Fill */
+    FILL = 0,
+    /** Line */
+    LINE = 1,
+    /** Point */
+    POINT = 2,
+};
+
 inline CullModeFlags operator|(CullModeFlags l, CullModeFlags r)
 {
     return CullModeFlags(static_cast<uint32_t>(l) | static_cast<uint32_t>(r));
@@ -49,6 +59,7 @@ class IShader : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IShader, "8a241b86-14c6-48ec-b450-6f9818f9f31a")
 public:
     META_PROPERTY(CullModeFlags, CullMode);
+    META_PROPERTY(SCENE_NS::PolygonMode, PolygonMode);
     META_PROPERTY(bool, Blend);
 };
 
@@ -70,6 +81,7 @@ META_REGISTER_CLASS(Shader, "56d686b8-7a33-4608-b12a-1a170381bcfd", META_NS::Obj
 SCENE_END_NAMESPACE()
 
 META_TYPE(SCENE_NS::CullModeFlags)
+META_TYPE(SCENE_NS::PolygonMode)
 META_INTERFACE_TYPE(SCENE_NS::IShader)
 META_INTERFACE_TYPE(SCENE_NS::IGraphicsState)
 

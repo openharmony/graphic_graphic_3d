@@ -86,7 +86,7 @@ class MorpherTargetsProxyHandler extends RecordProxyHandler<double> {
 
 @!namespace("SceneResources")
 
-from SceneTypes use Vec2, Vec3, Vec4, Aabb, GeometryDefinition, GeometryDefinitionType;
+from SceneTypes use Vec2, Vec3, Vec4, Aabb, GeometryDefinition, GeometryDefinitionType, Quaternion;
 from SceneTH use SceneResourceParameters;
 
 enum SceneResourceType: i32 {
@@ -117,12 +117,19 @@ interface SceneResource {
 enum MaterialType: i32 {
     SHADER = 1,
     METALLIC_ROUGHNESS = 2,
+    UNLIT = 3,
 }
 
 enum CullMode: i32 {
     NONE = 0,
     FRONT = 1,
     BACK = 2,
+}
+
+enum PolygonMode: i32 {
+    FILL = 0,
+    LINE = 1,
+    POINT = 2,
 }
 
 struct Blend {
@@ -142,6 +149,9 @@ interface Material : SceneResource {
 
     @get getCullMode(): Optional<CullMode>;
     @set setCullMode(mode: Optional<CullMode>): void;
+
+    @get getPolygonMode(): Optional<PolygonMode>;
+    @set setPolygonMode(mode: Optional<PolygonMode>): void;
 
     @get getBlend(): Optional<Blend>;
     @set setBlend(blend: Optional<Blend>): void;
@@ -244,7 +254,26 @@ interface ShaderMaterial : Material {
     @set setColorShader(shader: Optional<Shader>): void;
 }
 
-interface PBRMaterial: MetallicRoughnessMaterial, ShaderMaterial {
+interface UnlitMaterial : Material {
+    @!sts_inject_into_interface("""
+    get baseColor(): MaterialProperty;
+    set baseColor(color: MaterialProperty);
+    """)
+
+    @!sts_inject_into_class("""
+    get baseColor(): MaterialProperty {
+        return this.getBaseColorInner();
+    }
+    set baseColor(color: MaterialProperty) {
+        this.setBaseColorInner(color);
+    }
+    """)
+
+    getBaseColorInner(): MaterialProperty;
+    setBaseColorInner(color: MaterialProperty): void;
+}
+
+interface PBRMaterial: MetallicRoughnessMaterial, ShaderMaterial, UnlitMaterial {
 }
 
 union VariousMaterial {
@@ -368,6 +397,9 @@ interface Environment : SceneResource {
 
     @get getIrradianceCoefficients(): Optional<Array<Vec3>>;
     @set setIrradianceCoefficients(coefficients: Optional<Array<Vec3>>): void;
+
+    @get getEnvironmentRotation(): Optional<Quaternion>;
+    @set setEnvironmentRotation(rotation: Optional<Quaternion>): void;
 }
 
 interface Image : SceneResource {

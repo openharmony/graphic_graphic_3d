@@ -253,7 +253,12 @@ SpotLightJS::SpotLightJS(napi_env e, napi_callback_info i)
 void SpotLightJS::Init(napi_env env, napi_value exports)
 {
     BASE_NS::vector<napi_property_descriptor> node_props;
-
+    node_props.push_back(
+        GetSetProperty<float, SpotLightJS, &SpotLightJS::GetInnerAngle, &SpotLightJS::SetInnerAngle>("innerAngle"));
+    node_props.push_back(
+        GetSetProperty<float, SpotLightJS, &SpotLightJS::GetOuterAngle, &SpotLightJS::SetOuterAngle>("outerAngle"));
+    node_props.push_back(
+        GetSetProperty<float, SpotLightJS, &SpotLightJS::GetRange, &SpotLightJS::SetRange>("range"));
     BaseLight::Init("SpotLight", env, exports, node_props, BaseObject::ctor<SpotLightJS>());
 }
 
@@ -275,6 +280,75 @@ void SpotLightJS::Finalize(napi_env env)
 {
     DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
+}
+
+napi_value SpotLightJS::GetInnerAngle(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    float innerAngle = 0.0;
+    if (auto light = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
+        innerAngle = META_NS::GetValue(light->SpotInnerAngle());
+    }
+    return ctx.GetNumber(innerAngle);
+}
+
+void SpotLightJS::SetInnerAngle(NapiApi::FunctionContext<float>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+    float innerAngle = ctx.Arg<0>();
+    if (auto light = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
+        META_NS::SetValue(light->SpotInnerAngle(), innerAngle);
+    }
+}
+
+napi_value SpotLightJS::GetOuterAngle(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    float outerAngle = 0.0;
+    if (auto light = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
+        outerAngle = META_NS::GetValue(light->SpotOuterAngle());
+    }
+    return ctx.GetNumber(outerAngle);
+}
+
+void SpotLightJS::SetOuterAngle(NapiApi::FunctionContext<float>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+    float outerAngle = ctx.Arg<0>();
+    if (auto light = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
+        META_NS::SetValue(light->SpotOuterAngle(), outerAngle);
+    }
+}
+
+napi_value SpotLightJS::GetRange(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    float range = 0.0;
+    if (auto light = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
+        range = META_NS::GetValue(light->Range());
+    }
+    return ctx.GetNumber(range);
+}
+
+void SpotLightJS::SetRange(NapiApi::FunctionContext<float>& ctx)
+{
+    if (!validateSceneRef()) {
+        return;
+    }
+    float range = ctx.Arg<0>();
+    if (auto light = interface_cast<SCENE_NS::ILight>(GetNativeObject())) {
+        META_NS::SetValue(light->Range(), range);
+    }
 }
 
 PointLightJS::PointLightJS(napi_env e, napi_callback_info i)

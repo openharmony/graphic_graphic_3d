@@ -235,4 +235,28 @@ void EnvironmentETS::SetIrradianceCoefficients(const BASE_NS::vector<BASE_NS::Ma
     }
     environment_->IrradianceCoefficients()->SetValue(coefficients);
 }
+
+std::shared_ptr<QuatProxy> EnvironmentETS::GetEnvironmentRotation()
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+        return nullptr;
+    }
+    if (!envRotation_) {
+        envRotation_ = std::make_shared<QuatProxy>(environment_->EnvironmentRotation());
+    }
+    return envRotation_;
+}
+
+void EnvironmentETS::SetEnvironmentRotation(const BASE_NS::Math::Quat &rotation)
+{
+    if (!environment_) {
+        CORE_LOG_E("empty env object");
+        return;
+    }
+    if (!envRotation_) {
+        envRotation_ = std::make_shared<QuatProxy>(environment_->EnvironmentRotation());
+    }
+    envRotation_->SetValue(rotation);
+}
 }  // namespace OHOS::Render3D

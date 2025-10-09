@@ -51,6 +51,7 @@ using BasicTypes = META_NS::TypeList<
     BloomType,
     TonemapType,
     CullModeFlags,
+    PolygonMode,
     ImageLoadInfo
     >;
 using ObjectTypes = META_NS::TypeList<

@@ -180,6 +180,15 @@ interface Light: Node {
     @get getEnabled(): bool;
     @set setEnabled(enable: bool): void;
 
+    @get getInnerAngle(): Optional<f64>;
+    @set setInnerAngle(innerAngle: Optional<f64>): void;
+
+    @get getOuterAngle(): Optional<f64>;
+    @set setOuterAngle(outerAngle: Optional<f64>): void;
+
+    @get getRange(): Optional<f64>;
+    @set setRange(range: Optional<f64>): void;
+
     @!sts_inject_into_class("""
     get children(): Container<Node> {
         return new NodeContainerProxy(this.getNodeContainer()) as Container<Node>;

@@ -13,18 +13,28 @@
  * limitations under the License.
  */
 
-#include "PBRMaterialImpl.h"
+#include "UnlitMaterialImpl.h"
 
 namespace OHOS::Render3D::KITETS {
-PBRMaterialImpl::PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat)
-    : MaterialImpl(mat), MetallicRoughnessMaterialImpl(mat), ShaderMaterialImpl(mat),
-    UnlitMaterialImpl(mat), materialETS_(mat)
-{}
+UnlitMaterialImpl::UnlitMaterialImpl(const std::shared_ptr<MaterialETS> mat)
+    : MaterialImpl(mat), materialETS_(mat)
+{
+}
 
-PBRMaterialImpl::~PBRMaterialImpl()
+UnlitMaterialImpl::~UnlitMaterialImpl()
 {
     if (materialETS_) {
         materialETS_.reset();
     }
+}
+
+::SceneResources::MaterialProperty UnlitMaterialImpl::getBaseColorInner()
+{
+    return getProperty<MaterialETS::TextureIndex::BASE_COLOR>();
+}
+
+void UnlitMaterialImpl::setBaseColorInner(::SceneResources::weak::MaterialProperty color)
+{
+    setProperty<MaterialETS::TextureIndex::BASE_COLOR>(color);
 }
 }  // namespace OHOS::Render3D::KITETS

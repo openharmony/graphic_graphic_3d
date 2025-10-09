@@ -61,6 +61,15 @@ public:
     bool GetEnabled();
     void SetEnabled(bool enable);
 
+    float GetInnerAngle();
+    void SetInnerAngle(float innerAngle);
+
+    float GetOuterAngle();
+    void SetOuterAngle(float outerAngle);
+
+    float GetRange();
+    void SetRange(float range);
+
 private:
     SCENE_NS::ILight::WeakPtr light_{nullptr};
     std::shared_ptr<ColorProxy> colorProxy_{nullptr};

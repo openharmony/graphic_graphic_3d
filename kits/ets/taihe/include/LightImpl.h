@@ -50,6 +50,15 @@ public:
 
     bool getEnabled();
     void setEnabled(bool enable);
+
+    ::taihe::optional<double> getInnerAngle();
+    void setInnerAngle(::taihe::optional_view<double> innerAngle);
+
+    ::taihe::optional<double> getOuterAngle();
+    void setOuterAngle(::taihe::optional_view<double> outerAngle);
+
+    ::taihe::optional<double> getRange();
+    void setRange(::taihe::optional_view<double> range);
 };
 
 class SpotLightImpl : public LightImpl {
