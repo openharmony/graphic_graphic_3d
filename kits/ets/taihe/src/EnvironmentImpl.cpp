@@ -99,8 +99,11 @@ void EnvironmentImpl::setEnvironmentImage(::SceneResources::ImageOrNullOrUndefin
 {
     RETURN_IF_NULL(envETS_);
     if (image.holds_image()) {
-        taihe::optional<int64_t> imageImplOp =
-            static_cast<::SceneResources::SceneResource>(image.get_image_ref())->getImpl();
+        ::SceneResources::Image img = image.get_image_ref();
+        if (img.is_error()) {
+            return;
+        }
+        taihe::optional<int64_t> imageImplOp = static_cast<::SceneResources::SceneResource>(img)->getImpl();
         if (imageImplOp.has_value()) {
             if (auto imageImpl = reinterpret_cast<ImageImpl *>(imageImplOp.value())) {
                 envETS_->SetEnvironmentImage(imageImpl->getInternalImage());
@@ -127,8 +130,11 @@ void EnvironmentImpl::setRadianceImage(::SceneResources::ImageOrNullOrUndefined 
 {
     RETURN_IF_NULL(envETS_);
     if (image.holds_image()) {
-        taihe::optional<int64_t> imageImplOp =
-            static_cast<::SceneResources::SceneResource>(image.get_image_ref())->getImpl();
+        ::SceneResources::Image img = image.get_image_ref();
+        if (img.is_error()) {
+            return;
+        }
+        taihe::optional<int64_t> imageImplOp = static_cast<::SceneResources::SceneResource>(img)->getImpl();
         if (imageImplOp.has_value()) {
             auto imageImpl = reinterpret_cast<ImageImpl*>(imageImplOp.value());
             envETS_->SetRadianceImage(imageImpl->getInternalImage());
