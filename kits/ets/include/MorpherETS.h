@@ -31,7 +31,7 @@ public:
     int32_t GetWeightsSize() const;
 
 private:
-    SCENE_NS::IMorpher::Ptr morpher_;
+    SCENE_NS::IMorpher::WeakPtr morpher_;
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_MORPHER_ETS_H

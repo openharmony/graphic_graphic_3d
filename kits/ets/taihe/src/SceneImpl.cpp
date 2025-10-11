@@ -63,6 +63,9 @@ bool SceneImpl::renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> 
 
 void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 {
+    if (env.is_error()) {
+        return;
+    }
     auto envOptional = static_cast<::SceneResources::weak::SceneResource>(env)->getImpl();
     if (!envOptional.has_value()) {
         WIDGET_LOGE("invalid environment in taihe object");
@@ -112,6 +115,9 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 ::SceneNodes::Node SceneImpl::importNode(::taihe::string_view name, ::SceneNodes::weak::Node node,
     ::SceneNodes::NodeOrNull parent)
 {
+    if (node.is_error()) {
+        return ::SceneNodes::Node({nullptr, nullptr});
+    }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
     if (!nodeOptional.has_value()) {
         WIDGET_LOGE("invalid node in taihe object");
@@ -149,6 +155,9 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 ::SceneNodes::Node SceneImpl::importScene(::taihe::string_view name, ::SceneTH::weak::Scene scene,
     ::SceneNodes::NodeOrNull parent)
 {
+    if (scene.is_error()) {
+        return ::SceneNodes::Node({nullptr, nullptr});
+    }
     ::taihe::optional<int64_t> sceneOptional = scene->getImpl();
     if (!sceneOptional.has_value()) {
         WIDGET_LOGE("Invalid scene in importScene");
@@ -191,7 +200,6 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
     }
     auto sceneJS = reinterpret_cast<SceneJS *>(nativePtr);
     if (!sceneJS) {
-        WIDGET_LOGE("transfer scene failed");
         WIDGET_LOGE("transfer scene failed");
         return ::SceneTH::Scene({nullptr, nullptr});
     }
@@ -312,6 +320,9 @@ void SceneImpl::destroy()
 
 ::SceneTH::SceneComponentOrNull SceneImpl::getComponent(::SceneNodes::weak::Node node, ::taihe::string_view name)
 {
+    if (node.is_error()) {
+        return ::SceneTH::SceneComponentOrNull::make_nValue();
+    }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
     if (!nodeOptional.has_value()) {
         WIDGET_LOGE("invalid node in taihe object");

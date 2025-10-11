@@ -37,13 +37,14 @@ PostProcessETS::~PostProcessETS()
 
 std::shared_ptr<TonemapETS> PostProcessETS::GetToneMapping()
 {
-    if (!postProc_) {
+    auto pp = postProc_.lock();
+    if (!pp) {
         // The configuration data from ETS is stored in tonemap_.
         return tonemap_;
     }
     if (!tonemap_) {
-        SCENE_NS::ITonemap::Ptr toneValue = META_NS::GetValue(postProc_->Tonemap());
-        tonemap_ = std::make_shared<TonemapETS>(postProc_, toneValue);
+        SCENE_NS::ITonemap::Ptr toneValue = META_NS::GetValue(pp->Tonemap());
+        tonemap_ = std::make_shared<TonemapETS>(pp, toneValue);
     }
 
     if (tonemap_->IsEnabled()) {
@@ -56,13 +57,14 @@ std::shared_ptr<TonemapETS> PostProcessETS::GetToneMapping()
 
 void PostProcessETS::SetToneMapping(const std::shared_ptr<TonemapETS> tonemap)
 {
-    if (!postProc_) {
+    auto pp = postProc_.lock();
+    if (!pp) {
         return;
     }
 
     if (!tonemap_) {
-        SCENE_NS::ITonemap::Ptr toneValue = META_NS::GetValue(postProc_->Tonemap());
-        tonemap_ = std::make_shared<TonemapETS>(postProc_, toneValue);
+        SCENE_NS::ITonemap::Ptr toneValue = META_NS::GetValue(pp->Tonemap());
+        tonemap_ = std::make_shared<TonemapETS>(pp, toneValue);
     }
 
     if (tonemap) {
@@ -87,13 +89,14 @@ void PostProcessETS::SetToneMapping(const std::shared_ptr<TonemapETS> tonemap)
 
 std::shared_ptr<BloomETS> PostProcessETS::GetBloom()
 {
-    if (!postProc_) {
+    auto pp = postProc_.lock();
+    if (!pp) {
         // The configuration data from ETS is stored in bloom_.
         return bloom_;
     }
     if (!bloom_) {
-        SCENE_NS::IBloom::Ptr bloomValue = META_NS::GetValue(postProc_->Bloom());
-        bloom_ = std::make_shared<BloomETS>(postProc_, bloomValue);
+        SCENE_NS::IBloom::Ptr bloomValue = META_NS::GetValue(pp->Bloom());
+        bloom_ = std::make_shared<BloomETS>(pp, bloomValue);
     }
 
     if (bloom_->IsEnabled()) {
@@ -106,12 +109,13 @@ std::shared_ptr<BloomETS> PostProcessETS::GetBloom()
 
 void PostProcessETS::SetBloom(const std::shared_ptr<BloomETS> bloom)
 {
-    if (!postProc_) {
+    auto pp = postProc_.lock();
+    if (!pp) {
         return;
     }
     if (!bloom_) {
-        SCENE_NS::IBloom::Ptr bloomValue = META_NS::GetValue(postProc_->Bloom());
-        bloom_ = std::make_shared<BloomETS>(postProc_, bloomValue);
+        SCENE_NS::IBloom::Ptr bloomValue = META_NS::GetValue(pp->Bloom());
+        bloom_ = std::make_shared<BloomETS>(pp, bloomValue);
     }
     if (bloom) {
         if (bloom_->StrictEqual(bloom)) {

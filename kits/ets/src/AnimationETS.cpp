@@ -19,47 +19,46 @@
 #endif
 
 namespace OHOS::Render3D {
-AnimationETS::AnimationETS(const META_NS::IObject::Ptr animationRef, const SCENE_NS::IScene::Ptr scene)
-    : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animationRef_(animationRef), scene_(scene)
+AnimationETS::AnimationETS(const META_NS::IAnimation::Ptr animation, const SCENE_NS::IScene::Ptr scene)
+    : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animation_(animation), scene_(scene)
 {
     using namespace META_NS;
-    META_NS::IAnimation::Ptr anim = interface_pointer_cast<IAnimation>(animationRef_);
-    if (anim) {
+    if (animation) {
         // check if there is a speed controller already.(and use that)
-        auto attachments = interface_cast<META_NS::IAttach>(anim)->GetAttachments();
+        auto attachments = interface_cast<META_NS::IAttach>(animation)->GetAttachments();
         for (auto at : attachments) {
-            if (interface_cast<AnimationModifiers::ISpeed>(at)) {
+            if (auto modifier = interface_pointer_cast<AnimationModifiers::ISpeed>(at)) {
                 // yes.. (expect at most one)
-                speedModifier_ = interface_pointer_cast<AnimationModifiers::ISpeed>(at);
+                speedModifier_ = modifier;
                 break;
             }
         }
 #if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED == 1)
         using namespace SCENE_NS;
-        auto acc = interface_cast<IEcsObjectAccess>(anim);
+        auto acc = interface_cast<IEcsObjectAccess>(animation);
         IEcsObject::Ptr ecsObj;
         if ((acc) && (ecsObj = acc->GetEcsObject())) {
-            completed_ = ecsObj->CreateProperty("AnimationStateComponent.completed").GetResult();
-            if (completed_) {
-                OnCompletedEvent_ = completed_->OnChanged();
+            auto completedProp = ecsObj->CreateProperty("AnimationStateComponent.completed").GetResult();
+            if (completedProp) {
+                OnCompletedEvent_ = completedProp->OnChanged();
             }
+            completed_ = completedProp;
         }
 #else
         // Use IAnimation OnFinished to trigger the animation ends (has a bug)
-        OnCompletedEvent_ = anim->OnFinished();
+        OnCompletedEvent_ = animation->OnFinished();
 #endif
     }
 }
 
 AnimationETS::~AnimationETS()
 {
-    if (speedModifier_) {
-        if (auto attach = interface_cast<META_NS::IAttach>(animationRef_)) {
-            attach->Detach(speedModifier_);
+    if (auto modifier = speedModifier_.lock()) {
+        if (auto attach = interface_cast<META_NS::IAttach>(animation_.lock())) {
+            attach->Detach(modifier);
         }
-        speedModifier_.reset();
     }
-    if (auto *anim = interface_cast<META_NS::IAnimation>(animationRef_); (anim != nullptr) && (OnStartedToken_ != 0)) {
+    if (auto anim = animation_.lock(); (anim != nullptr) && (OnStartedToken_ != 0)) {
         anim->OnStarted()->RemoveHandler(OnStartedToken_);
     }
     OnStartedToken_ = 0;
@@ -69,18 +68,16 @@ AnimationETS::~AnimationETS()
     }
     OnFinishedToken_ = 0;
     OnFinishedCB_ = {};
-
-    animationRef_.reset();
 }
 
 META_NS::IObject::Ptr AnimationETS::GetNativeObj() const
 {
-    return animationRef_;
+    return interface_pointer_cast<META_NS::IObject>(animation_);
 }
 
 BASE_NS::string AnimationETS::GetName()
 {
-    if (auto named = interface_cast<META_NS::INamed>(animationRef_)) {
+    if (auto named = interface_cast<META_NS::INamed>(animation_.lock())) {
         return META_NS::GetValue(named->Name());
     } else {
         return "";
@@ -88,7 +85,7 @@ BASE_NS::string AnimationETS::GetName()
 }
 void AnimationETS::SetName(const BASE_NS::string &name)
 {
-    if (auto named = interface_cast<META_NS::INamed>(animationRef_)) {
+    if (auto named = interface_cast<META_NS::INamed>(animation_.lock())) {
         named->Name()->SetValue(name);
     }
 }
@@ -96,14 +93,14 @@ void AnimationETS::SetName(const BASE_NS::string &name)
 bool AnimationETS::GetEnabled()
 {
     bool enabled{false};
-    if (auto a = interface_cast<META_NS::IAnimation>(animationRef_)) {
+    if (auto a = animation_.lock()) {
         enabled = a->Enabled()->GetValue();
     }
     return enabled;
 }
 void AnimationETS::SetEnabled(bool enabled)
 {
-    if (auto a = interface_cast<META_NS::IAnimation>(animationRef_)) {
+    if (auto a = animation_.lock()) {
         a->Enabled()->SetValue(enabled);
     }
 }
@@ -111,27 +108,29 @@ void AnimationETS::SetEnabled(bool enabled)
 float AnimationETS::GetSpeed()
 {
     float speed = 1.0;
-    if (speedModifier_) {
-        speed = speedModifier_->SpeedFactor()->GetValue();
+    if (auto modifier = speedModifier_.lock()) {
+        speed = modifier->SpeedFactor()->GetValue();
     }
     return speed;
 }
 void AnimationETS::SetSpeed(float speed)
 {
-    if (auto a = interface_cast<META_NS::IAnimation>(animationRef_)) {
+    if (auto a = animation_.lock()) {
         using namespace META_NS;
-        if (!speedModifier_) {
-            speedModifier_ = GetObjectRegistry().Create<AnimationModifiers::ISpeed>(ClassId::SpeedAnimationModifier);
-            interface_cast<IAttach>(a)->Attach(speedModifier_);
+        META_NS::AnimationModifiers::ISpeed::Ptr modifier = speedModifier_.lock();
+        if (!modifier) {
+            modifier = GetObjectRegistry().Create<AnimationModifiers::ISpeed>(ClassId::SpeedAnimationModifier);
+            interface_cast<IAttach>(a)->Attach(modifier);
+            speedModifier_ = modifier;
         }
-        speedModifier_->SpeedFactor()->SetValue(speed);
+        modifier->SpeedFactor()->SetValue(speed);
     }
 }
 
 float AnimationETS::GetDuration() const
 {
     float duration = 0.0;
-    if (auto a = interface_cast<META_NS::IAnimation>(animationRef_)) {
+    if (auto a = animation_.lock()) {
         duration = a->TotalDuration()->GetValue().ToSecondsFloat();
     }
     return duration;
@@ -140,7 +139,7 @@ float AnimationETS::GetDuration() const
 bool AnimationETS::GetRunning() const
 {
     bool running{false};
-    if (auto a = interface_cast<META_NS::IAnimation>(animationRef_)) {
+    if (auto a = animation_.lock()) {
         running = a->Running()->GetValue();
     }
     return running;
@@ -149,7 +148,7 @@ bool AnimationETS::GetRunning() const
 float AnimationETS::GetProgress() const
 {
     float progress = 0.0;
-    if (auto a = interface_cast<META_NS::IAnimation>(animationRef_)) {
+    if (auto a = animation_.lock()) {
         progress = a->Progress()->GetValue();
     }
     return progress;
@@ -157,8 +156,8 @@ float AnimationETS::GetProgress() const
 
 void AnimationETS::OnStarted(const std::function<void()> &onStartedCB)
 {
-    META_NS::IAnimation *anim = interface_cast<META_NS::IAnimation>(animationRef_);
-    if (anim == nullptr) {
+    META_NS::IAnimation::Ptr anim = animation_.lock();
+    if (!anim) {
         CORE_LOG_E("Invalid animation");
         return;
     }
@@ -184,10 +183,11 @@ void AnimationETS::OnFinished(const std::function<void()> &onFinishedCB)
 #if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED == 1)
     auto cb = META_NS::MakeCallback<META_NS::IOnChanged>([this]() {
         bool completion = false;
-        if (!completed_) {
+        auto completedProp = completed_.lock();
+        if (!completedProp) {
             return;
         }
-        completed_->GetValue().GetValue(completion);
+        completedProp->GetValue().GetValue(completion);
         if (completion && OnFinishedCB_) {
             OnFinishedCB_();
         }
@@ -200,42 +200,42 @@ void AnimationETS::OnFinished(const std::function<void()> &onFinishedCB)
 
 void AnimationETS::Pause()
 {
-    if (auto a = interface_cast<META_NS::IStartableAnimation>(animationRef_)) {
+    if (auto a = interface_cast<META_NS::IStartableAnimation>(animation_.lock())) {
         a->Pause();
     }
 }
 
 void AnimationETS::Restart()
 {
-    if (auto a = interface_cast<META_NS::IStartableAnimation>(animationRef_)) {
+    if (auto a = interface_cast<META_NS::IStartableAnimation>(animation_.lock())) {
         a->Restart();
     }
 }
 
 void AnimationETS::Seek(float position)
 {
-    if (auto a = interface_cast<META_NS::IStartableAnimation>(animationRef_)) {
+    if (auto a = interface_cast<META_NS::IStartableAnimation>(animation_.lock())) {
         a->Seek(position);
     }
 }
 
 void AnimationETS::Start()
 {
-    if (auto a = interface_cast<META_NS::IStartableAnimation>(animationRef_)) {
+    if (auto a = interface_cast<META_NS::IStartableAnimation>(animation_.lock())) {
         a->Start();
     }
 }
 
 void AnimationETS::Stop()
 {
-    if (auto a = interface_cast<META_NS::IStartableAnimation>(animationRef_)) {
+    if (auto a = interface_cast<META_NS::IStartableAnimation>(animation_.lock())) {
         a->Stop();
     }
 }
 
 void AnimationETS::Finish()
 {
-    if (auto a = interface_cast<META_NS::IStartableAnimation>(animationRef_)) {
+    if (auto a = interface_cast<META_NS::IStartableAnimation>(animation_.lock())) {
         a->Finish();
     }
 }

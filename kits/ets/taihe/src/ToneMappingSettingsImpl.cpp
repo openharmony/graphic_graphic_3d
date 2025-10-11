@@ -23,25 +23,22 @@ std::shared_ptr<TonemapETS> ToneMappingSettingsImpl::CreateInternal(
     if (data->getType().has_value()) {
         type = static_cast<TonemapETS::ToneMappingType>(data->getType().value().get_value());
     } else {
-        type = TonemapETS::ToneMappingType::ACES;
+        type = TonemapETS::DEFAULT_TYPE;
     }
     float exposure;
     if (data->getExposure().has_value()) {
         exposure = data->getExposure().value();
     } else {
-        exposure = 0.0F;
+        exposure = TonemapETS::DEFAULT_EXPOSURE;
     }
     return std::make_shared<TonemapETS>(type, exposure);
 }
 
 ToneMappingSettingsImpl::ToneMappingSettingsImpl(const std::shared_ptr<TonemapETS> tonemapETS) : tonemapETS_(tonemapETS)
-{
-    WIDGET_LOGI("ToneMappingSettingsImpl ++");
-}
+{}
 
 ToneMappingSettingsImpl::~ToneMappingSettingsImpl()
 {
-    WIDGET_LOGI("ToneMappingSettingsImpl --");
     tonemapETS_.reset();
 }
 

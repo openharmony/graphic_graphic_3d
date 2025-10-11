@@ -37,8 +37,8 @@ BloomETS::~BloomETS()
 
 float BloomETS::GetAmountCoefficient()
 {
-    if (bloom_) {
-        amountCoefficient_ = bloom_->AmountCoefficient()->GetValue();
+    if (auto bloom = bloom_.lock()) {
+        amountCoefficient_ = bloom->AmountCoefficient()->GetValue();
     }
     return amountCoefficient_;
 }
@@ -46,15 +46,15 @@ float BloomETS::GetAmountCoefficient()
 void BloomETS::SetAmountCoefficient(const float amount)
 {
     amountCoefficient_ = amount;
-    if (bloom_) {
-        bloom_->AmountCoefficient()->SetValue(amountCoefficient_);
+    if (auto bloom = bloom_.lock()) {
+        bloom->AmountCoefficient()->SetValue(amountCoefficient_);
     }
 }
 
 float BloomETS::GetThresholdSoft()
 {
-    if (bloom_) {
-        thresholdSoft_ = bloom_->ThresholdSoft()->GetValue();
+    if (auto bloom = bloom_.lock()) {
+        thresholdSoft_ = bloom->ThresholdSoft()->GetValue();
     }
     return thresholdSoft_;
 }
@@ -62,15 +62,15 @@ float BloomETS::GetThresholdSoft()
 void BloomETS::SetThresholdSoft(const float thresholdSoft)
 {
     thresholdSoft_ = thresholdSoft;
-    if (bloom_) {
-        bloom_->ThresholdSoft()->SetValue(thresholdSoft_);
+    if (auto bloom = bloom_.lock()) {
+        bloom->ThresholdSoft()->SetValue(thresholdSoft_);
     }
 }
 
 float BloomETS::GetThresholdHard()
 {
-    if (bloom_) {
-        thresholdHard_ = bloom_->ThresholdHard()->GetValue();
+    if (auto bloom = bloom_.lock()) {
+        thresholdHard_ = bloom->ThresholdHard()->GetValue();
     }
     return thresholdHard_;
 }
@@ -78,16 +78,18 @@ float BloomETS::GetThresholdHard()
 void BloomETS::SetThresholdHard(const float thresholdHard)
 {
     thresholdHard_ = thresholdHard;
-    if (bloom_) {
-        bloom_->ThresholdHard()->SetValue(thresholdHard_);
+    if (auto bloom = bloom_.lock()) {
+        bloom->ThresholdHard()->SetValue(thresholdHard_);
     }
 }
 
 float BloomETS::GetScatter()
 {
-    if (bloom_) {
+    if (auto bloom = bloom_.lock()) {
         ExecSyncTask([this]() {
-            scatter_ = bloom_->Scatter()->GetValue();
+            if (auto bloom = bloom_.lock()) {
+                scatter_ = bloom->Scatter()->GetValue();
+            }
             return META_NS::IAny::Ptr{};
         });
     }
@@ -97,16 +99,18 @@ float BloomETS::GetScatter()
 void BloomETS::SetScatter(const float scatter)
 {
     scatter_ = scatter;
-    if (bloom_) {
-        bloom_->Scatter()->SetValue(scatter_);
+    if (auto bloom = bloom_.lock()) {
+        bloom->Scatter()->SetValue(scatter_);
     }
 }
 
 float BloomETS::GetScaleFactor()
 {
-    if (bloom_) {
+    if (auto bloom = bloom_.lock()) {
         ExecSyncTask([this]() {
-            scaleFactor_ = bloom_->ScaleFactor()->GetValue();
+            if (auto bloom = bloom_.lock()) {
+                scaleFactor_ = bloom->ScaleFactor()->GetValue();
+            }
             return META_NS::IAny::Ptr{};
         });
     }
@@ -116,15 +120,15 @@ float BloomETS::GetScaleFactor()
 void BloomETS::SetScaleFactor(float scaleFactor)
 {
     scaleFactor_ = scaleFactor;
-    if (bloom_) {
-        bloom_->ScaleFactor()->SetValue(scaleFactor_);
+    if (auto bloom = bloom_.lock()) {
+        bloom->ScaleFactor()->SetValue(scaleFactor_);
     }
 }
 
 BloomETS::Type BloomETS::GetType()
 {
-    if (bloom_) {
-        type_ = FromInternalType(bloom_->Type()->GetValue());
+    if (auto bloom = bloom_.lock()) {
+        type_ = FromInternalType(bloom->Type()->GetValue());
     }
     return type_;
 }
@@ -132,15 +136,15 @@ BloomETS::Type BloomETS::GetType()
 void BloomETS::SetType(const BloomETS::Type &type)
 {
     type_ = (BloomETS::Type)type;
-    if (bloom_) {
-        bloom_->Type()->SetValue(ToInternalType(type_));
+    if (auto bloom = bloom_.lock()) {
+        bloom->Type()->SetValue(ToInternalType(type_));
     }
 }
 
 BloomETS::Quality BloomETS::GetQuality()
 {
-    if (bloom_) {
-        quality_ = FromInternalQuality(bloom_->Quality()->GetValue());
+    if (auto bloom = bloom_.lock()) {
+        quality_ = FromInternalQuality(bloom->Quality()->GetValue());
     }
     return quality_;
 }
@@ -148,23 +152,23 @@ BloomETS::Quality BloomETS::GetQuality()
 void BloomETS::SetQuality(const BloomETS::Quality &quality)
 {
     quality_ = (BloomETS::Quality)quality;
-    if (bloom_) {
-        bloom_->Quality()->SetValue(ToInternalQuality(quality_));
+    if (auto bloom = bloom_.lock()) {
+        bloom->Quality()->SetValue(ToInternalQuality(quality_));
     }
 }
 
 bool BloomETS::IsEnabled()
 {
-    if (bloom_) {
-        return bloom_->Enabled()->GetValue();
+    if (auto bloom = bloom_.lock()) {
+        return bloom->Enabled()->GetValue();
     }
     return false;
 }
 
 void BloomETS::SetEnabled(const bool enable)
 {
-    if (bloom_) {
-        bloom_->Enabled()->SetValue(enable);
+    if (auto bloom = bloom_.lock()) {
+        bloom->Enabled()->SetValue(enable);
     }
 }
 

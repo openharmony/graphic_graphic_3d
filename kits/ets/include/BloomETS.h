@@ -25,6 +25,12 @@
 namespace OHOS::Render3D {
 class BloomETS {
 public:
+    static constexpr float DEFAULT_THRESHOLD_HARD = 1.0F;
+    static constexpr float DEFAULT_THRESHOLD_SOFT = 2.0f;
+    static constexpr float DEFAULT_AMOUNT_COEFFICIENT = 0.25f;
+    static constexpr float DEFAULT_SCATTER = 1.0f;
+    static constexpr float DEFAULT_SCALE_FACTOR = 1.0f;
+
     enum class Quality : uint32_t { LOW = 1, NORMAL = 2, HIGH = 3 };
     enum class Type : uint32_t { NORMAL = 1, HORIZONTAL = 2, VERTICAL = 3, BILATERAL = 4 };
 
@@ -62,7 +68,7 @@ public:
         if (!other) {
             return false;
         }
-        return (postProc_.lock() == other->postProc_.lock() && bloom_ == other->bloom_);
+        return (postProc_.lock() == other->postProc_.lock() && bloom_.lock() == other->bloom_.lock());
     }
 
     bool IsMatch(const std::shared_ptr<BloomETS> other) const
@@ -85,16 +91,16 @@ private:
     inline SCENE_NS::EffectQualityType ToInternalQuality(const BloomETS::Quality &quality);
     inline BloomETS::Quality FromInternalQuality(const SCENE_NS::EffectQualityType &quality);
 
-    float thresholdHard_{1.0f};
-    float thresholdSoft_{2.0f};
-    float amountCoefficient_{0.25f};
-    float scatter_{1.0f};
-    float scaleFactor_{1.0f};
+    float thresholdHard_{DEFAULT_THRESHOLD_HARD};
+    float thresholdSoft_{DEFAULT_THRESHOLD_SOFT};
+    float amountCoefficient_{DEFAULT_AMOUNT_COEFFICIENT};
+    float scatter_{DEFAULT_SCATTER};
+    float scaleFactor_{DEFAULT_SCALE_FACTOR};
     BloomETS::Type type_{BloomETS::Type::NORMAL};
     BloomETS::Quality quality_{BloomETS::Quality::NORMAL};
 
     SCENE_NS::IPostProcess::WeakPtr postProc_;
-    SCENE_NS::IBloom::Ptr bloom_;  // bloom object from postproc_
+    SCENE_NS::IBloom::WeakPtr bloom_;  // bloom object from postproc_
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_BLOOM_ETS_H

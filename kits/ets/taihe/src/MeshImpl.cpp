@@ -81,7 +81,11 @@ void MeshImpl::setMaterialOverride(::taihe::optional_view<::SceneResources::Mate
     }
     std::shared_ptr<MaterialETS> matETS = nullptr;
     if (mat) {
-        MaterialImpl *mi = GetImplPointer<MaterialImpl>(static_cast<::SceneResources::SceneResource>(*mat)->getImpl());
+        ::SceneResources::Material mtr = *mat;
+        if (mtr.is_error()) {
+            return;
+        }
+        MaterialImpl *mi = GetImplPointer<MaterialImpl>(static_cast<::SceneResources::SceneResource>(mtr)->getImpl());
         if (mi) {
             matETS = mi->getInternalMaterial();
         }
