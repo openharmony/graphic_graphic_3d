@@ -93,6 +93,10 @@ void MaterialPropertyETS::SetSampler(const std::shared_ptr<SamplerETS> sampler)
         return;
     }
     SCENE_NS::ISampler::Ptr nativeSampler = META_NS::GetValue(tex->Sampler());
+    if (!nativeSampler) {
+        CORE_LOG_E("Failed to set sampler, target sampler is null");
+        return;
+    }
     ExecSyncTask([&]() {
         // Apply given object as a changeset on top of default sampler
         if (auto resetable = interface_cast<META_NS::IResetableObject>(nativeSampler)) {
