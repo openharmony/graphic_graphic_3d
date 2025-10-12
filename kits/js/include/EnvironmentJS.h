@@ -17,6 +17,8 @@
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 #include "Vec4Proxy.h"
+#include "QuatProxy.h"
+
 class EnvironmentJS : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 90;
@@ -81,8 +83,13 @@ private:
 
     napi_value GetEnvironmentMapFactor(NapiApi::FunctionContext<>& ctx);
     void SetEnvironmentMapFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
+    napi_value GetEnvironmentRotation(NapiApi::FunctionContext<>& ctx);
+    void SetEnvironmentRotation(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
     BASE_NS::unique_ptr<Vec4Proxy> diffuseFactor_;
     BASE_NS::unique_ptr<Vec4Proxy> specularFactor_;
     BASE_NS::unique_ptr<Vec4Proxy> environmentFactor_;
+    BASE_NS::unique_ptr<QuatProxy> environmentRotation_;
 };
 #endif

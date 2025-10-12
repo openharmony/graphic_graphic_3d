@@ -29,11 +29,17 @@ public:
     enum MaterialType {
         SHADER = 1,
         METALLIC_ROUGHNESS = 2,
+        UNLIT = 3,
     };
     enum CullMode {
         NONE = 0,
         FRONT = 1,
         BACK = 2,
+    };
+    enum PolygonMode {
+        FILL = 0,
+        LINE = 1,
+        POINT = 2,
     };
     struct RenderSort {
         uint32_t renderSortLayer;
@@ -64,6 +70,9 @@ public:
 
     MaterialETS::CullMode GetCullMode();
     void SetCullMode(const MaterialETS::CullMode mode);
+
+    MaterialETS::PolygonMode GetPolygonMode();
+    void SetPolygonMode(const MaterialETS::PolygonMode mode);
 
     bool GetBlend();
     void SetBlend(const bool blend);

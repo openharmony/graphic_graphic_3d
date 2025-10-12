@@ -23,6 +23,7 @@
 #include "ImageETS.h"
 #include "SceneResourceETS.h"
 #include "Vec4Proxy.h"
+#include "QuatProxy.h"
 
 namespace OHOS::Render3D {
 class EnvironmentETS : public SceneResourceETS {
@@ -95,12 +96,16 @@ public:
     BASE_NS::vector<BASE_NS::Math::Vec3> GetIrradianceCoefficients();
     void SetIrradianceCoefficients(const BASE_NS::vector<BASE_NS::Math::Vec3>& coefficients);
 
+    std::shared_ptr<QuatProxy> GetEnvironmentRotation();
+    void SetEnvironmentRotation(const BASE_NS::Math::Quat &rotation);
+
 private:
     SCENE_NS::IEnvironment::Ptr environment_{nullptr};
     SCENE_NS::IScene::WeakPtr scene_{nullptr};
     std::shared_ptr<Vec4Proxy> diffuseFactor_{nullptr};
     std::shared_ptr<Vec4Proxy> specularFactor_{nullptr};
     std::shared_ptr<Vec4Proxy> envMapFactor_{nullptr};
+    std::shared_ptr<QuatProxy> envRotation_{nullptr};
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_ENVIRONMENT_ETS_H

@@ -81,6 +81,8 @@ public:
     META_INTERFACE_OBJECT(Shader, Resource, IShader)
     /// @see IShader::CullMode
     META_INTERFACE_OBJECT_PROPERTY(CullModeFlags, CullMode)
+    /// @see IShader::PolygonMode
+    META_INTERFACE_OBJECT_PROPERTY(PolygonMode, PolygonMode)
     /// @see IShader::Blend
     META_INTERFACE_OBJECT_PROPERTY(bool, Blend)
 };

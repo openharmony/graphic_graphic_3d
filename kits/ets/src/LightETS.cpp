@@ -160,4 +160,61 @@ void LightETS::SetEnabled(bool enable)
         CORE_LOG_E("no light object");
     }
 }
+
+float LightETS::GetInnerAngle()
+{
+    if (auto light = light_.lock()) {
+        return META_NS::GetValue(light->SpotInnerAngle());
+    } else {
+        CORE_LOG_E("no light object");
+        return 0.0f;
+    }
+}
+
+void LightETS::SetInnerAngle(float innerAngle)
+{
+    if (auto light = light_.lock()) {
+        META_NS::SetValue(light->SpotInnerAngle(), innerAngle);
+    } else {
+        CORE_LOG_E("no light object");
+    }
+}
+
+float LightETS::GetOuterAngle()
+{
+    if (auto light = light_.lock()) {
+        return META_NS::GetValue(light->SpotOuterAngle());
+    } else {
+        CORE_LOG_E("no light object");
+        return 0.0f;
+    }
+}
+
+void LightETS::SetOuterAngle(float outerAngle)
+{
+    if (auto light = light_.lock()) {
+        META_NS::SetValue(light->SpotOuterAngle(), outerAngle);
+    } else {
+        CORE_LOG_E("no light object");
+    }
+}
+
+float LightETS::GetRange()
+{
+    if (auto light = light_.lock()) {
+        return META_NS::GetValue(light->Range());
+    } else {
+        CORE_LOG_E("no light object");
+        return 0.0f;
+    }
+}
+
+void LightETS::SetRange(float range)
+{
+    if (auto light = light_.lock()) {
+        META_NS::SetValue(light->Range(), range);
+    } else {
+        CORE_LOG_E("no light object");
+    }
+}
 }  // namespace OHOS::Render3D

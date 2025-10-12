@@ -106,6 +106,8 @@ namespace OHOS::Render3D::KITETS {
     MaterialETS::MaterialType type;
     if (materialType == ::SceneResources::MaterialType::key_t::SHADER) {
         type = MaterialETS::MaterialType::SHADER;
+    } else if (materialType == ::SceneResources::MaterialType::key_t::UNLIT) {
+        type = MaterialETS::MaterialType::UNLIT;
     } else {
         type = MaterialETS::MaterialType::METALLIC_ROUGHNESS;
     }

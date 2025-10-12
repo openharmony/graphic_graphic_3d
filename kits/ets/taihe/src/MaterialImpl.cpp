@@ -37,6 +37,8 @@ MaterialImpl::~MaterialImpl()
     MaterialETS::MaterialType type = materialETS_->GetMaterialType();
     if (type == MaterialETS::MaterialType::METALLIC_ROUGHNESS) {
         return ::SceneResources::MaterialType::key_t::METALLIC_ROUGHNESS;
+    } else if (type == MaterialETS::MaterialType::UNLIT) {
+        return ::SceneResources::MaterialType::key_t::UNLIT;
     } else {
         return ::SceneResources::MaterialType::key_t::SHADER;
     }
@@ -96,6 +98,44 @@ void MaterialImpl::setCullMode(::taihe::optional_view<::SceneResources::CullMode
         }
     }
     materialETS_->SetCullMode(innerMode);
+}
+
+::taihe::optional<::SceneResources::PolygonMode> MaterialImpl::getPolygonMode()
+{
+    if (!materialETS_) {
+        WIDGET_LOGE("get polygon mode failed, invalid material");
+        return std::nullopt;
+    }
+    MaterialETS::PolygonMode innerMode = materialETS_->GetPolygonMode();
+    ::SceneResources::PolygonMode mode = ::SceneResources::PolygonMode::key_t::FILL;
+    if (innerMode == MaterialETS::PolygonMode::FILL) {
+        mode = ::SceneResources::PolygonMode::key_t::FILL;
+    } else if (innerMode == MaterialETS::PolygonMode::LINE) {
+        mode = ::SceneResources::PolygonMode::key_t::LINE;
+    } else if (innerMode == MaterialETS::PolygonMode::POINT) {
+        mode = ::SceneResources::PolygonMode::key_t::POINT;
+    }
+    return ::taihe::optional<::SceneResources::PolygonMode>(std::in_place, mode);
+}
+
+void MaterialImpl::setPolygonMode(::taihe::optional_view<::SceneResources::PolygonMode> mode)
+{
+    if (!materialETS_) {
+        WIDGET_LOGE("set cull mode failed, invalid material");
+        return;
+    }
+    MaterialETS::PolygonMode innerMode = MaterialETS::PolygonMode::FILL;
+    if (mode) {
+        ::SceneResources::PolygonMode modeVal = *mode;
+        if (modeVal == ::SceneResources::PolygonMode::key_t::FILL) {
+            innerMode = MaterialETS::PolygonMode::FILL;
+        } else if (modeVal == ::SceneResources::PolygonMode::key_t::LINE) {
+            innerMode = MaterialETS::PolygonMode::LINE;
+        } else if (modeVal == ::SceneResources::PolygonMode::key_t::POINT) {
+            innerMode = MaterialETS::PolygonMode::POINT;
+        }
+    }
+    materialETS_->SetPolygonMode(innerMode);
 }
 
 ::taihe::optional<::SceneResources::Blend> MaterialImpl::getBlend()

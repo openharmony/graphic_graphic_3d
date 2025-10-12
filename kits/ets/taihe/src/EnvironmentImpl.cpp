@@ -17,6 +17,7 @@
 #include "ImageImpl.h"
 #include "Vec3Impl.h"
 #include "Vec4Impl.h"
+#include "QuaternionImpl.h"
 #include "EnvironmentJS.h"
 
 namespace OHOS::Render3D::KITETS {
@@ -85,6 +86,26 @@ void EnvironmentImpl::setEnvironmentMapFactor(::SceneTypes::weak::Vec4 factor)
     RETURN_IF_NULL(envETS_);
     BASE_NS::Math::Vec4 envMapFactor{factor->getX(), factor->getY(), factor->getZ(), factor->getW()};
     envETS_->SetEnvironmentMapFactor(envMapFactor);
+}
+
+::taihe::optional<::SceneTypes::Quaternion> EnvironmentImpl::getEnvironmentRotation()
+{
+    RETURN_IF_NULL_WITH_VALUE(envETS_, std::nullopt);
+    ::SceneTypes::Quaternion quat =
+        taihe::make_holder<QuaternionImpl, ::SceneTypes::Quaternion>(envETS_->GetEnvironmentRotation());
+    return ::taihe::optional<::SceneTypes::Quaternion>(std::in_place, quat);
+}
+
+void EnvironmentImpl::setEnvironmentRotation(::taihe::optional_view<::SceneTypes::Quaternion> rotation)
+{
+    RETURN_IF_NULL(envETS_);
+    if (rotation.has_value()) {
+        BASE_NS::Math::Quat envMapRotation{rotation.value()->getX(), rotation.value()->getY(),
+            rotation.value()->getZ(), rotation.value()->getW()};
+        envETS_->SetEnvironmentRotation(envMapRotation);
+    } else {
+        WIDGET_LOGE("Invalid rotation");
+    }
 }
 
 ::SceneResources::ImageOrNullOrUndefined EnvironmentImpl::getEnvironmentImage()

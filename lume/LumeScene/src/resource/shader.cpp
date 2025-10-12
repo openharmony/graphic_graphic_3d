@@ -162,6 +162,7 @@ bool Shader::SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::
     setShaderStateInProgress_ = true;
     Name()->SetValue(desc.displayName);
     CullMode()->SetValue(static_cast<CullModeFlags>(gs.rasterizationState.cullModeFlags));
+    PolygonMode()->SetValue(static_cast<SCENE_NS::PolygonMode>(gs.rasterizationState.polygonMode));
     Blend()->SetValue(IsBlendEnabled(gs));
     setShaderStateInProgress_ = false;
     UpdateGraphicsState(context, gs, renderSlot);
@@ -193,6 +194,14 @@ void Shader::OnPropertyChanged(const META_NS::IProperty& p)
             .Wait();
     } else if (p.GetName() == "Blend") {
         context->AddTask([&] { UpdateGraphicsState(context, CreateNewGraphicsState(context, Blend()->GetValue())); })
+            .Wait();
+    } else if (p.GetName() == "PolygonMode") {
+        context
+            ->AddTask([&] {
+                auto gs = GetGraphicsState(context);
+                gs.rasterizationState.polygonMode = static_cast<RENDER_NS::PolygonMode>(PolygonMode()->GetValue());
+                UpdateGraphicsState(context, gs);
+            })
             .Wait();
     }
 }

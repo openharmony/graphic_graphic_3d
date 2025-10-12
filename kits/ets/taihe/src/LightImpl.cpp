@@ -114,4 +114,68 @@ void LightImpl::setEnabled(bool enable)
     }
     lightETS_->SetEnabled(enable);
 }
+
+::taihe::optional<double> LightImpl::getInnerAngle()
+{
+    if (!lightETS_) {
+        WIDGET_LOGE("Invalid light");
+        return ::taihe::optional<double>(std::nullopt);
+    }
+    return ::taihe::optional<double>(std::in_place, lightETS_->GetInnerAngle());
+}
+
+void LightImpl::setInnerAngle(::taihe::optional_view<double> innerAngle)
+{
+    if (!lightETS_) {
+        WIDGET_LOGE("Invalid light");
+    }
+    if (innerAngle.has_value()) {
+        lightETS_->SetInnerAngle(innerAngle.value());
+    } else {
+        lightETS_->SetInnerAngle(0.0f);
+    }
+}
+
+::taihe::optional<double> LightImpl::getOuterAngle()
+{
+    if (!lightETS_) {
+        WIDGET_LOGE("Invalid light");
+        return ::taihe::optional<double>(std::nullopt);
+    }
+    return ::taihe::optional<double>(std::in_place, lightETS_->GetOuterAngle());
+}
+
+void LightImpl::setOuterAngle(::taihe::optional_view<double> outerAngle)
+{
+    if (!lightETS_) {
+        WIDGET_LOGE("Invalid light");
+    }
+    if (outerAngle.has_value()) {
+        lightETS_->SetOuterAngle(outerAngle.value());
+    } else {
+        constexpr float INV_PI4 = 3.14159265359 / 4.0f;    // 45 degree
+        lightETS_->SetOuterAngle(INV_PI4);
+    }
+}
+
+::taihe::optional<double> LightImpl::getRange()
+{
+    if (!lightETS_) {
+        WIDGET_LOGE("Invalid light");
+        return ::taihe::optional<double>(std::nullopt);
+    }
+    return ::taihe::optional<double>(std::in_place, lightETS_->GetRange());
+}
+
+void LightImpl::setRange(::taihe::optional_view<double> range)
+{
+    if (!lightETS_) {
+        WIDGET_LOGE("Invalid light");
+    }
+    if (range.has_value()) {
+        lightETS_->SetRange(range.value());
+    } else {
+        lightETS_->SetRange(0.0f);
+    }
+}
 }  // namespace OHOS::Render3D::KITETS
