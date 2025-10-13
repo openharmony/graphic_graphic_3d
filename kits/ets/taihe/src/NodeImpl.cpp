@@ -64,6 +64,9 @@ NodeContainerImpl::~NodeContainerImpl()
 
 void NodeContainerImpl::append(::SceneNodes::weak::Node item)
 {
+    if (item.is_error()) {
+        return;
+    }
     if (!nodeETS_) {
         WIDGET_LOGE("NodeContainerImpl::append() nodeETS_ is nullptr");
         return;
@@ -90,6 +93,9 @@ void NodeContainerImpl::insertAfter(::SceneNodes::weak::Node item, ::SceneNodes:
         WIDGET_LOGE("NodeContainerImpl::insertAfter() nodeETS_ is nullptr");
         return;
     }
+    if (item.is_error()) {
+        return;
+    }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(item)->getImpl();
     if (!nodeOptional.has_value()) {
         WIDGET_LOGE("invalid node in taihe object");
@@ -106,6 +112,9 @@ void NodeContainerImpl::insertAfter(::SceneNodes::weak::Node item, ::SceneNodes:
     std::shared_ptr<NodeETS> siblingNode = nullptr;
     if (sibling.holds_node()) {
         ::SceneNodes::Node node = sibling.get_node_ref();
+        if (node.is_error()) {
+            return;
+        }
         auto siblingNodeOptional = static_cast<::SceneResources::SceneResource>(node)->getImpl();
         if (!siblingNodeOptional.has_value()) {
             WIDGET_LOGE("invalid node in taihe object");
@@ -123,6 +132,9 @@ void NodeContainerImpl::remove(::SceneNodes::weak::Node item)
 {
     if (!nodeETS_) {
         WIDGET_LOGE("NodeContainerImpl::remove() nodeETS_ is nullptr");
+        return;
+    }
+    if (item.is_error()) {
         return;
     }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(item)->getImpl();

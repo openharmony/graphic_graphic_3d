@@ -57,7 +57,7 @@ protected:
 
 private:
     std::string name_;
-    SCENE_NS::IComponent::Ptr comp_;
+    SCENE_NS::IComponent::WeakPtr comp_;
     std::unordered_map<std::string, std::shared_ptr<IPropertyProxy>> proxies_;
     std::vector<std::string> keys_;
 };

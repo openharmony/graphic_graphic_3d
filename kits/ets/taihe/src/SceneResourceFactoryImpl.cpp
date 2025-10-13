@@ -147,6 +147,10 @@ namespace OHOS::Render3D::KITETS {
         taihe::set_error("Invalid scene");
         return SceneNodes::Geometry({nullptr, nullptr});
     }
+    if (mesh.is_error()) {
+        taihe::set_error("Invalid mesh resource given");
+        return SceneNodes::Geometry({nullptr, nullptr});
+    }
     auto meshOptional = static_cast<::SceneResources::weak::SceneResource>(mesh)->getImpl();
     if (!meshOptional.has_value()) {
         taihe::set_error("invalid mesh in taihe object");

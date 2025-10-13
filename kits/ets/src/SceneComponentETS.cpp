@@ -63,11 +63,12 @@ void SceneComponentETS::SetName(const std::string& name)
 
 void SceneComponentETS::AddProperties()
 {
-    auto meta = interface_cast<META_NS::IMetadata>(comp_);
-    if (!comp_ || !meta) {
+    auto compoment = comp_.lock();
+    auto meta = interface_cast<META_NS::IMetadata>(compoment);
+    if (!compoment || !meta) {
         return;
     }
-    comp_->PopulateAllProperties();
+    compoment->PopulateAllProperties();
     keys_.clear();
     proxies_.clear();
 

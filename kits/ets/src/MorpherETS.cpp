@@ -27,36 +27,39 @@ MorpherETS::~MorpherETS()
 
 float MorpherETS::Get(const std::string &name)
 {
-    if (!morpher_) {
+    auto morpher = morpher_.lock();
+    if (!morpher) {
         return 0.0F;
     }
-    auto index = morpher_->MorphNames()->FindFirstValueOf(name.c_str());
+    auto index = morpher->MorphNames()->FindFirstValueOf(name.c_str());
     if (index == -1) {
         CORE_LOG_E("Can not find morph weight, name: %s", name.c_str());
         return 0.0F;
     }
-    return morpher_->MorphWeights()->GetValueAt(index);
+    return morpher->MorphWeights()->GetValueAt(index);
 }
 
 void MorpherETS::Set(const std::string &name, const float weight)
 {
-    if (!morpher_) {
+    auto morpher = morpher_.lock();
+    if (!morpher) {
         return;
     }
-    auto index = morpher_->MorphNames()->FindFirstValueOf(name.c_str());
+    auto index = morpher->MorphNames()->FindFirstValueOf(name.c_str());
     if (index == -1) {
         CORE_LOG_E("Can not find morph weight, name: %s", name.c_str());
         return;
     }
-    morpher_->MorphWeights()->SetValueAt(index, weight);
+    morpher->MorphWeights()->SetValueAt(index, weight);
 }
 
 std::vector<std::string> MorpherETS::GetMorpherNames() const
 {
-    if (!morpher_) {
+    auto morpher = morpher_.lock();
+    if (!morpher) {
         return {};
     }
-    BASE_NS::vector<BASE_NS::string> names = morpher_->MorphNames()->GetValue();
+    BASE_NS::vector<BASE_NS::string> names = morpher->MorphNames()->GetValue();
     std::vector<std::string> ret;
     ret.reserve(names.size());
     for (const auto& name : names) {
@@ -67,9 +70,10 @@ std::vector<std::string> MorpherETS::GetMorpherNames() const
 
 int32_t MorpherETS::GetWeightsSize() const
 {
-    if (!morpher_) {
+    auto morpher = morpher_.lock();
+    if (!morpher) {
         return 0;
     }
-    return morpher_->MorphWeights()->GetSize();
+    return morpher->MorphWeights()->GetSize();
 }
 }  // namespace OHOS::Render3D

@@ -113,12 +113,12 @@ std::string GetTypeName()
 #ifdef __clang__
     std::string_view p = __PRETTY_FUNCTION__;
     size_t start = p.find("T = ") + 4;  // 4: length of "T = "
-    size_t end = p.find(";", start);
+    size_t end = p.find("]", start);
     return std::string(p.substr(start, end - start));
 #elif defined(__GNUC__)
     std::string_view p = __PRETTY_FUNCTION__;
     size_t start = p.find("T = ") + 4;  // 4: length of "T = "
-    size_t end = p.find(";", start);
+    size_t end = p.find("]", start);
     return std::string(p.substr(start, end - start));
 #elif defined(_MSC_VER)
     std::string_view p = __FUNCSIG__;
@@ -150,16 +150,26 @@ void ProxySetProperty(std::shared_ptr<IPropertyProxy> proxy, const Type &value, 
     if constexpr (std::is_same_v<Type, int32_t> || std::is_same_v<Type, float>) {
         if (META_NS::IsCompatibleWith<float>(prop)) {
             static_pointer_cast<PropertyProxy<float>>(proxy)->SetValue(static_cast<float>(value));
+            CORE_LOG_W("property [%s] has type [float], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
+            return;
         } else if (META_NS::IsCompatibleWith<int32_t>(prop)) {
             static_pointer_cast<PropertyProxy<int32_t>>(proxy)->SetValue(static_cast<int32_t>(value));
+            CORE_LOG_W("property [%s] has type [int32_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
+            return;
         } else if (META_NS::IsCompatibleWith<uint32_t>(prop)) {
             static_pointer_cast<PropertyProxy<uint32_t>>(proxy)->SetValue(
                 static_cast<uint32_t>(static_cast<int32_t>(value)));
+            CORE_LOG_W("property [%s] has type [uint32_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
+            return;
         } else if (META_NS::IsCompatibleWith<int64_t>(prop)) {
             static_pointer_cast<PropertyProxy<int64_t>>(proxy)->SetValue(static_cast<int64_t>(value));
+            CORE_LOG_W("property [%s] has type [int64_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
+            return;
         } else if (META_NS::IsCompatibleWith<uint64_t>(prop)) {
             static_pointer_cast<PropertyProxy<uint64_t>>(proxy)->SetValue(
                 static_cast<uint64_t>(static_cast<int64_t>(value)));
+            CORE_LOG_W("property [%s] has type [uint64_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
+            return;
         }
     }
     auto any = META_NS::GetInternalAny(prop);

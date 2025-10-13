@@ -49,6 +49,9 @@ void ShaderMaterialImpl::setColorShader(::taihe::optional_view<::SceneResources:
     std::shared_ptr<ShaderETS> shaderETS = nullptr;
     if (shader) {
         ::SceneResources::Shader sd = shader.value();
+        if (sd.is_error()) {
+            return;
+        }
         ::taihe::optional<int64_t> implOp = static_cast<::SceneResources::SceneResource>(sd)->getImpl();
         ShaderImpl *shaderImpl = GetImplPointer<ShaderImpl>(implOp);
         if (shaderImpl == nullptr) {

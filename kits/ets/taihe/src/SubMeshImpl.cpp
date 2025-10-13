@@ -63,6 +63,9 @@ void SubMeshImpl::setMaterial(::SceneResources::weak::Material mat)
         WIDGET_LOGE("set material failed, internal submesh is null");
         return;
     }
+    if (mat.is_error()) {
+        return;
+    }
     ::taihe::optional<int64_t> implOp = static_cast<::SceneResources::weak::SceneResource>(mat)->getImpl();
     if (!implOp) {
         WIDGET_LOGE("set material failed, material is null");

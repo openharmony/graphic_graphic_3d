@@ -265,16 +265,15 @@ std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
     if (animations_) {
         return animations_.value();
     }
-    BASE_NS::vector<META_NS::IAnimation::Ptr> animRes;
-    ExecSyncTask([this, &animRes]() {
-        animRes = scene_->GetAnimations().GetResult();
+    ExecSyncTask([this]() {
+        nativeAnimations_ = scene_->GetAnimations().GetResult();
         return META_NS::IAny::Ptr {};
     });
 
     std::vector<std::shared_ptr<AnimationETS>> animationETSlist;
-    for (const auto &animationRef : animRes) {
-        animationETSlist.emplace_back(std::make_shared<AnimationETS>(
-            interface_pointer_cast<META_NS::IObject>(animationRef), scene_));  // use make_unique instead in the future.
+    for (const auto &animationRef : nativeAnimations_) {
+        // use make_unique instead in the future.
+        animationETSlist.emplace_back(std::make_shared<AnimationETS>(animationRef, scene_));
     }
     animations_ = std::move(animationETSlist);
     return animations_.value();
@@ -597,5 +596,6 @@ void SceneETS::ResetAnimations()
         animations_.value().clear();
     }
     animations_ = std::nullopt;
+    nativeAnimations_.clear();
 }
 }  // namespace OHOS::Render3D

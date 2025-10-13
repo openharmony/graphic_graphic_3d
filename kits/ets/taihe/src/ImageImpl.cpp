@@ -30,10 +30,9 @@ namespace OHOS::Render3D::KITETS {
 {
     const std::string name = ExtractResourceName(params);
     const std::string uri = ExtractUri(params.uri).c_str();
-    WIDGET_LOGI("ImageImpl::createImageFromTH(), name: %{public}s, uri: %{public}s", name.c_str(), uri.c_str());
     auto imageETS = RenderContextETS::GetInstance().CreateImage(name, uri);
     if (uri.empty() || name.empty() || !imageETS) {
-        WIDGET_LOGE("Invalid scene resource Image parameters given");
+        ::taihe::set_error("Invalid scene resource Image parameters given");
         return SceneResources::Image({nullptr, nullptr});
     }
     return taihe::make_holder<ImageImpl, ::SceneResources::Image>(imageETS);
