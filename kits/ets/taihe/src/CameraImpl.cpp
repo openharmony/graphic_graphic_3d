@@ -299,6 +299,7 @@ uintptr_t cameraTransferDynamicImpl(::SceneNodes::weak::Camera input)
     // Here, we temporarily store it and restore it after the CameraJS construction is completed.
     auto nativeCamera = interface_cast<SCENE_NS::ICamera>(nativeObj);
     auto postProc = META_NS::GetValue(nativeCamera->PostProcess());
+    auto toneMap = META_NS::GetValue(postProc->Tonemap());
 
     napi_value nullValue;
     napi_get_null(jsenv, &nullValue);
@@ -315,6 +316,17 @@ uintptr_t cameraTransferDynamicImpl(::SceneNodes::weak::Camera input)
         // Restore the camera's post-processing configuration
         napi_value args[] = {cameraObj.ToNapiValue(), nullValue};
         auto postProcJS = CreateFromNativeInstance(jsenv, postProc, PtrType::WEAK, args);
+
+        if (toneMap) {
+            // temporarily store the postProc's toneMapping configuration
+            auto type = toneMap->Type()->GetValue();
+            auto exposure = toneMap->Exposure()->GetValue();
+            // restore the postProc's toneMapping configuration
+            auto toneMapJS = CreateFromNativeInstance(jsenv, toneMap, PtrType::WEAK, {});
+            toneMapJS.Set("type", NapiApi::Value<uint32_t>(jsenv, static_cast<uint32_t>(type)));
+            toneMapJS.Set("exposure", NapiApi::Value<float>(jsenv, exposure));
+            postProcJS.Set("toneMapping", toneMapJS);
+        }
         cameraObj.Set("postProcess", postProcJS);
     }
 
