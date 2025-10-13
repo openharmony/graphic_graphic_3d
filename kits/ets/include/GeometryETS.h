@@ -30,7 +30,8 @@
 namespace OHOS::Render3D {
 class GeometryETS : public NodeETS {
 public:
-    static std::shared_ptr<GeometryETS> FromJS(const SCENE_NS::INode::Ptr meshNode, const std::string &name, const std::string &uri = "");
+    static std::shared_ptr<GeometryETS> FromJS(const SCENE_NS::INode::Ptr meshNode, const std::string &name,
+                                               const std::string &uri = "");
     GeometryETS(const SCENE_NS::INode::Ptr meshNode);
     ~GeometryETS();
 
