@@ -185,10 +185,10 @@ void PostProcJS::SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         // not possible.
         return;
     }
-    NapiApi::Object tonemapJS = ctx.Arg<0>();
+    NapiApi::Object argObj = ctx.Arg<0>();
 
     if (auto currentlySet = toneMap_.GetObject()) {
-        if (tonemapJS.StrictEqual(currentlySet)) {
+        if (currentlySet.StrictEqual(argObj)) {
             return;
         }
         if (const auto wrapper = currentlySet.GetJsWrapper<ToneMapJS>()) {
@@ -198,22 +198,35 @@ void PostProcJS::SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
     auto target = postproc->Tonemap()->GetValue();
     if (!target) {
+        toneMap_.Reset();
         return;
     }
 
-    // If the new JS tonemap is bound to a native tonemap, we have this problem:
-    // Should set the tonemap of both cameras but won't.
-    auto source = tonemapJS.GetNative<SCENE_NS::ITonemap>();
-    if (tonemapJS.IsNull()) {
-        META_NS::SetValue(target->Enabled(), false);
-    } else {
-        const auto newType = tonemapJS.Get<uint32_t>("type").valueOrDefault(ToneMapJS::DEFAULT_TYPE);
-        const auto newExposure = tonemapJS.Get<float>("exposure").valueOrDefault(ToneMapJS::DEFAULT_EXPOSURE);
-        META_NS::SetValue(target->Type(), ToneMapJS::ToNativeType(newType));
-        META_NS::SetValue(target->Exposure(), newExposure);
+    if (const auto wrapper = argObj.GetJsWrapper<ToneMapJS>()) {
+        // Design shortcoming: suppose we have two cameras in ArkTS code: cam1 and cam2.
+        // If we extract the tonemap: const tonemap = cam1.toneMapping; and assign it also to cam2,
+        // then tonemap.exposure = 2; affects only cam2, as we bind it to cam2's native on the following line.
+        // We could copy ObjectProxy usage from vignette and color fringe to mitigate (but not solve) this.
+        wrapper->BindToNative(target);
         META_NS::SetValue(target->Enabled(), true);
+        toneMap_ = NapiApi::StrongRef(argObj);
+    } else if (argObj) {
+        // The arg is a raw JS object.
+        napi_value args[] = { argObj.ToNapiValue() };
+        auto tonemapJS = CreateFromNativeInstance(ctx.GetEnv(), target, PtrType::WEAK, args);
+        // ToneMapJS constructor sets native properties from the given args only once.
+        // After first creation, the same cached wrapper is used, so the constructor isn't being run.
+        tonemapJS.Set<uint32_t>("type", argObj.Get<uint32_t>("type"));
+        tonemapJS.Set<float>("exposure", argObj.Get<float>("exposure"));
+        // If using a cached wrapper, we have just unbound it above. Rebind to sync changes.
+        tonemapJS.GetJsWrapper<ToneMapJS>()->BindToNative(target);
+        META_NS::SetValue(target->Enabled(), true);
+        toneMap_ = NapiApi::StrongRef(tonemapJS);
+    } else {
+        // The arg is undefined.
+        META_NS::SetValue(target->Enabled(), false);
+        toneMap_.Reset();
     }
-    toneMap_ = NapiApi::StrongRef(tonemapJS);
 }
 
 napi_value PostProcJS::GetToneMapping(NapiApi::FunctionContext<>& ctx)
@@ -224,6 +237,10 @@ napi_value PostProcJS::GetToneMapping(NapiApi::FunctionContext<>& ctx)
             // no tonemap object or tonemap disabled.
             return ctx.GetUndefined();
         }
+        if (const auto toneMap = toneMap_.GetObject()) {
+            return toneMap.ToNapiValue();
+        }
+
         auto tonemapJS = CreateFromNativeInstance(ctx.GetEnv(), tone, PtrType::WEAK, {});
         toneMap_ = NapiApi::StrongRef(tonemapJS); // take ownership of the object.
         return tonemapJS.ToNapiValue();
