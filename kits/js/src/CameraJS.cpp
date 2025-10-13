@@ -146,7 +146,6 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImp
     if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
         meJs.Set("name", name);
     }
-    meJs.Set("postProcess", fromJs.GetNull());
 }
 void CameraJS::Finalize(napi_env env)
 {
@@ -283,8 +282,8 @@ napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
             napi_value args[] = { ctx.This().ToNapiValue(), parms.ToNapiValue() };
             // The native camera owns the native post process. We, the JS camera, own the JS post process.
             postProc_ = NapiApi::StrongRef(CreateFromNativeInstance(env, postproc, PtrType::WEAK, args));
-            return postProc_.GetValue();
         }
+        return postProc_.GetValue();
     }
     return ctx.GetNull();
 }
