@@ -39,15 +39,12 @@ public:
     std::shared_ptr<BloomETS> GetBloom();
     void SetBloom(const std::shared_ptr<BloomETS> bloom);
 
-    // SCENE_NS::ICamera::Ptr GetCamera();
-    // void SetCamera(const SCENE_NS::ICamera::Ptr camera);
-
     bool StrictEqual(const std::shared_ptr<PostProcessETS> other) const
     {
         if (!other) {
             return false;
         }
-        return (camera_.lock() == other->camera_.lock() && postProc_ == other->postProc_);
+        return (camera_.lock() == other->camera_.lock() && postProc_.lock() == other->postProc_.lock());
     }
 
     bool IsMatch(const std::shared_ptr<PostProcessETS> other) const
@@ -65,7 +62,7 @@ public:
 
 private:
     SCENE_NS::ICamera::WeakPtr camera_{nullptr};     // weak ref to owning camera.
-    SCENE_NS::IPostProcess::Ptr postProc_{nullptr};  // keep a strong ref..
+    SCENE_NS::IPostProcess::WeakPtr postProc_{nullptr};
 
     std::shared_ptr<TonemapETS> tonemap_;
     std::shared_ptr<BloomETS> bloom_;

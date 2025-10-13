@@ -49,6 +49,9 @@ void MaterialPropertyImpl::setImage(::SceneResources::ImageOrNull const &img)
     std::shared_ptr<ImageETS> internalImage = nullptr;
     if (img.holds_image()) {
         ::SceneResources::Image image = img.get_image_ref();
+        if (image.is_error()) {
+            return;
+        }
         ::taihe::optional<int64_t> implOp = static_cast<::SceneResources::SceneResource>(image)->getImpl();
         if (!implOp.has_value()) {
             WIDGET_LOGE("set image failed, can't get internal image");

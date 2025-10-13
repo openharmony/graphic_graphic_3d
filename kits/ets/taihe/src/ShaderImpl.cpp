@@ -135,6 +135,9 @@ void ShaderImpl::setInput(::taihe::string_view key, ::SceneResources::ShaderInpu
         shaderETS_->SetInput(name, BASE_NS::Math::Vec4(vec4->getX(), vec4->getY(), vec4->getZ(), vec4->getW()));
     } else if (value.holds_t_image()) {
         ::SceneResources::Image img = value.get_t_image_ref();
+        if (img.is_error()) {
+            return;
+        }
         taihe::optional<int64_t> implOp = static_cast<::SceneResources::SceneResource>(img)->getImpl();
         if (!implOp) {
             WIDGET_LOGE("failed to set input, image is not initialized");

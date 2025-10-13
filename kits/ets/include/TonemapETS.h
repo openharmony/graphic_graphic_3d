@@ -51,7 +51,7 @@ public:
         if (!other) {
             return false;
         }
-        return (postProc_.lock() == other->postProc_.lock() && tonemap_ == other->tonemap_);
+        return (postProc_.lock() == other->postProc_.lock() && tonemap_.lock() == other->tonemap_.lock());
     }
 
     bool IsMatch(const std::shared_ptr<TonemapETS> other) const
@@ -75,7 +75,7 @@ private:
     float exposure_;
 
     SCENE_NS::IPostProcess::WeakPtr postProc_;
-    SCENE_NS::ITonemap::Ptr tonemap_;  // tonemap object from postproc_
+    SCENE_NS::ITonemap::WeakPtr tonemap_;  // tonemap object from postproc_
 };
 }  // namespace OHOS::Render3D
 #endif // OHOS_3D_TONEMAP_ETS_H

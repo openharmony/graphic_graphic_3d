@@ -26,25 +26,25 @@ std::shared_ptr<BloomETS> BloomSettingsImpl::CreateInternal(const ScenePostProce
     if (data->getThresholdHard().has_value()) {
         thresholdHard = data->getThresholdHard().value();
     } else {
-        thresholdHard = 0.0F;
+        thresholdHard = BloomETS::DEFAULT_THRESHOLD_HARD;
     }
     float thresholdSoft;
     if (data->getThresholdSoft().has_value()) {
         thresholdSoft = data->getThresholdSoft().value();
     } else {
-        thresholdSoft = 0.0F;
+        thresholdSoft = BloomETS::DEFAULT_THRESHOLD_SOFT;
     }
     float scaleFactor;
     if (data->getScaleFactor().has_value()) {
         scaleFactor = data->getScaleFactor().value();
     } else {
-        scaleFactor = 0.0F;
+        scaleFactor = BloomETS::DEFAULT_SCALE_FACTOR;
     }
     float scatter;
     if (data->getScatter().has_value()) {
         scatter = data->getScatter().value();
     } else {
-        scatter = 0.0F;
+        scatter = BloomETS::DEFAULT_SCATTER;
     }
     return std::make_shared<BloomETS>(thresholdHard, thresholdSoft, scaleFactor, scatter);
 }
