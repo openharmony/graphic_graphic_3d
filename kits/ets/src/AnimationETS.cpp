@@ -23,9 +23,10 @@ AnimationETS::AnimationETS(const META_NS::IAnimation::Ptr animation, const SCENE
     : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animation_(animation), scene_(scene)
 {
     using namespace META_NS;
-    if (animation) {
+    auto attach = interface_cast<META_NS::IAttach>(animation);
+    if (animation && attach) {
         // check if there is a speed controller already.(and use that)
-        auto attachments = interface_cast<META_NS::IAttach>(animation)->GetAttachments();
+        auto attachments = attach->GetAttachments();
         for (auto at : attachments) {
             if (auto modifier = interface_pointer_cast<AnimationModifiers::ISpeed>(at)) {
                 // yes.. (expect at most one)

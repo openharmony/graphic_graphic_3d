@@ -59,7 +59,6 @@ public:
     std::shared_ptr<NodeETS> GetParent();
 
     std::shared_ptr<NodeETS> GetNodeByPath(const std::string &path);
-    // napi_value GetComponent(NapiApi::FunctionContext<BASE_NS::string> &ctx);
 
     std::shared_ptr<NodeETS> GetChildContainer();  // returns a container object.
 
