@@ -88,21 +88,23 @@ void CameraETS::SetNear(const float near)
 
 std::shared_ptr<PostProcessETS> CameraETS::GetPostProcess()
 {
-    if (auto camera = camera_.lock()) {
-        if (!postProcess_) {
-            SCENE_NS::IPostProcess::Ptr postProc = camera->PostProcess()->GetValue();
-            if (!postProc) {
-                if (SCENE_NS::IScene::Ptr scene = interface_cast<SCENE_NS::INode>(camera)->GetScene()) {
-                    postProc = interface_pointer_cast<SCENE_NS::IPostProcess>(
-                        scene->CreateObject(SCENE_NS::ClassId::PostProcess).GetResult());
-                    camera->PostProcess()->SetValue(postProc);
-                }
-            }
-            postProcess_ = std::make_shared<PostProcessETS>(camera, postProc);
-        }
-        return postProcess_;
+    auto camera = camera_.lock();
+    if (!camera) {
+        return nullptr;
     }
-    return nullptr;
+    if (!postProcess_) {
+        SCENE_NS::IPostProcess::Ptr postProc = camera->PostProcess()->GetValue();
+        auto node = interface_cast<SCENE_NS::INode>(camera);
+        if (!postProc && node) {
+            if (SCENE_NS::IScene::Ptr scene = node->GetScene()) {
+                postProc = interface_pointer_cast<SCENE_NS::IPostProcess>(
+                    scene->CreateObject(SCENE_NS::ClassId::PostProcess).GetResult());
+                camera->PostProcess()->SetValue(postProc);
+            }
+        }
+        postProcess_ = std::make_shared<PostProcessETS>(camera, postProc);
+    }
+    return postProcess_;
 }
 
 void CameraETS::SetPostProcess(const std::shared_ptr<PostProcessETS> pp)
@@ -113,8 +115,9 @@ void CameraETS::SetPostProcess(const std::shared_ptr<PostProcessETS> pp)
     }
     if (!postProcess_) {
         SCENE_NS::IPostProcess::Ptr postProc = camera->PostProcess()->GetValue();
-        if (!postProc) {
-            if (SCENE_NS::IScene::Ptr scene = interface_cast<SCENE_NS::INode>(camera)->GetScene()) {
+        auto node = interface_cast<SCENE_NS::INode>(camera);
+        if (!postProc && node) {
+            if (SCENE_NS::IScene::Ptr scene = node->GetScene()) {
                 postProc = interface_pointer_cast<SCENE_NS::IPostProcess>(
                     scene->CreateObject(SCENE_NS::ClassId::PostProcess).GetResult());
                 camera->PostProcess()->SetValue(postProc);
@@ -199,10 +202,6 @@ void CameraETS::SetMSAA(const bool msaaEnabled)
 
 InvokeReturn<std::shared_ptr<Vec4Proxy>> CameraETS::GetClearColor()
 {
-    // if (!validateSceneRef()) {
-    //     return ctx.GetUndefined();
-    // }
-
     auto camera = camera_.lock();
     if (!camera) {
         return InvokeReturn<std::shared_ptr<Vec4Proxy>>({}, "Invalid camera");
@@ -220,9 +219,6 @@ InvokeReturn<std::shared_ptr<Vec4Proxy>> CameraETS::GetClearColor()
 
 void CameraETS::SetClearColor(const bool enabled, const BASE_NS::Math::Vec4 &color)
 {
-    // if (!validateSceneRef()) {
-    //     return;
-    // }
     clearColorEnabled_ = enabled;
     auto camera = camera_.lock();
     if (!camera) {

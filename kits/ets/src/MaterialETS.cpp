@@ -278,7 +278,9 @@ void MaterialETS::SetColorShader(const std::shared_ptr<ShaderETS> shader)
         shader_.reset();
         return;
     }
-    shader->BindToMaterial(material_);
+    if (shader) {
+        shader->BindToMaterial(material_);
+    }
     shader_ = shader;
 }
 

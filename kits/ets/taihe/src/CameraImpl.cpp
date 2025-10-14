@@ -298,6 +298,12 @@ uintptr_t cameraTransferDynamicImpl(::SceneNodes::weak::Camera input)
     // causing the post-processing configuration to be lost.
     // Here, we temporarily store it and restore it after the CameraJS construction is completed.
     auto nativeCamera = interface_cast<SCENE_NS::ICamera>(nativeObj);
+    if (!nativeCamera) {
+        WIDGET_LOGE("nativeCamera cast failed.");
+        // An error has occurred, ignoring the function call result.
+        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
+        return 0;
+    }
     auto postProc = META_NS::GetValue(nativeCamera->PostProcess());
 
     napi_value nullValue;
