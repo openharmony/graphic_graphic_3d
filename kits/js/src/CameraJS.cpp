@@ -146,7 +146,6 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImp
     if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
         meJs.Set("name", name);
     }
-    meJs.Set("postProcess", fromJs.GetNull());
 }
 void CameraJS::Finalize(napi_env env)
 {
@@ -277,19 +276,13 @@ napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
-        auto postproc = camera->PostProcess()->GetValue();
-        if (!postproc) {
-            if (auto cameraJs = static_cast<CameraJS *>(ctx.This().GetRoot())) {
-                postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(
-                    cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess));
-                camera->PostProcess()->SetValue(postproc);
-            }
+        if (const auto postproc = camera->PostProcess()->GetValue()) {
+            NapiApi::Env env(ctx.Env());
+            NapiApi::Object parms(env);
+            napi_value args[] = { ctx.This().ToNapiValue(), parms.ToNapiValue() };
+            // The native camera owns the native post process. We, the JS camera, own the JS post process.
+            postProc_ = NapiApi::StrongRef(CreateFromNativeInstance(env, postproc, PtrType::WEAK, args));
         }
-        NapiApi::Env env(ctx.Env());
-        NapiApi::Object parms(env);
-        napi_value args[] = { ctx.This().ToNapiValue(), parms.ToNapiValue() };
-        // take ownership of the object.
-        postProc_ = NapiApi::StrongRef(CreateFromNativeInstance(env, postproc, PtrType::WEAK, args));
         return postProc_.GetValue();
     }
     return ctx.GetNull();
@@ -307,7 +300,7 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
     NapiApi::Object psp = ctx.Arg<0>();
     if (auto currentlySet = postProc_.GetObject()) {
-        if (psp.StrictEqual(currentlySet)) {
+        if (currentlySet.StrictEqual(psp)) {
             // setting the exactly the same postprocess setting. do nothing.
             return;
         }
