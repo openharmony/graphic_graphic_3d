@@ -750,6 +750,7 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     const auto camera = scene->CreateNode<SCENE_NS::ICamera>(path, SCENE_NS::ClassId::CameraNode).GetResult();
     camera->SetActive(false);
     camera->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
+    camera->PostProcess()->SetValue(nullptr);
     napi_value args[] = { sceneJs.ToNapiValue(), params.ToNapiValue() };
     // Store a weak ref, as these are owned by the scene.
     const auto result = CreateFromNativeInstance(env, camera, PtrType::WEAK, args);
