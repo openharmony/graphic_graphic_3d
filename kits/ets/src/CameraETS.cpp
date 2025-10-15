@@ -263,9 +263,6 @@ BASE_NS::Math::Vec3 CameraETS::ScreenToWorld(const BASE_NS::Math::Vec3 &screen)
 InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BASE_NS::Math::Vec2 &position,
     const std::shared_ptr<NodeETS> rootNode, const std::shared_ptr<NodeETS> layerMaskNode)
 {
-    if (!rootNode) {
-        return InvokeReturn<std::vector<CameraETS::RaycastResult>>({}, "Invalid rootNode");
-    }
     auto rayCast = interface_pointer_cast<SCENE_NS::ICameraRayCast>(camera_);
     if (!rayCast) {
         return InvokeReturn<std::vector<CameraETS::RaycastResult>>({}, "Invalid camera");
@@ -278,7 +275,7 @@ InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BAS
         }
     }
     BASE_NS::vector<SCENE_NS::NodeHit> nodeHits =
-        rayCast->CastRay(position, {layerMask, rootNode->GetInternalNode()}).GetResult();
+        rayCast->CastRay(position, {layerMask, rootNode ? rootNode->GetInternalNode() : nullptr}).GetResult();
     std::vector<CameraETS::RaycastResult> result(nodeHits.size());
     std::transform(nodeHits.begin(), nodeHits.end(), result.begin(), [](const auto &nodeHit) {
         return CameraETS::RaycastResult{FromNative(nodeHit.node), nodeHit.distanceToCenter, nodeHit.position};
