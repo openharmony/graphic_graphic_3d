@@ -46,12 +46,18 @@ SceneImpl::~SceneImpl()
 
 bool SceneImpl::renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> params)
 {
+    if (!sceneETS_) {
+        return false;
+    }
     SceneETS::RenderParameters renderParams = ExtractRenderParameters(params);
     return sceneETS_->RenderFrame(renderParams);
 }
 
 ::SceneResources::Environment SceneImpl::getEnvironment()
 {
+    if (!sceneETS_) {
+        return ::SceneResources::Environment({nullptr, nullptr});
+    }
     InvokeReturn<std::shared_ptr<EnvironmentETS>> environemnt = sceneETS_->GetEnvironment();
     if (environemnt) {
         return taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(environemnt.value);
@@ -63,7 +69,7 @@ bool SceneImpl::renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> 
 
 void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 {
-    if (env.is_error()) {
+    if (!sceneETS_ || env.is_error()) {
         return;
     }
     auto envOptional = static_cast<::SceneResources::weak::SceneResource>(env)->getImpl();
@@ -81,6 +87,9 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 
 ::taihe::array<::SceneResources::Animation> SceneImpl::getAnimations()
 {
+    if (!sceneETS_) {
+        return {};
+    }
     if (animations_) {
         return animations_.value();
     }
@@ -115,7 +124,7 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 ::SceneNodes::Node SceneImpl::importNode(::taihe::string_view name, ::SceneNodes::weak::Node node,
     ::SceneNodes::NodeOrNull parent)
 {
-    if (node.is_error()) {
+    if (!sceneETS_ || node.is_error()) {
         return ::SceneNodes::Node({nullptr, nullptr});
     }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
@@ -155,7 +164,7 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 ::SceneNodes::Node SceneImpl::importScene(::taihe::string_view name, ::SceneTH::weak::Scene scene,
     ::SceneNodes::NodeOrNull parent)
 {
-    if (scene.is_error()) {
+    if (!sceneETS_ || scene.is_error()) {
         return ::SceneNodes::Node({nullptr, nullptr});
     }
     ::taihe::optional<int64_t> sceneOptional = scene->getImpl();
@@ -264,6 +273,9 @@ uintptr_t sceneTransferDynamicImpl(::SceneTH::weak::Scene input)
 
 int64_t SceneImpl::getSceneNative()
 {
+    if (!sceneETS_) {
+        return 0;
+    }
     auto scene = sceneETS_->GetSceneAdapter();
     return static_cast<int64_t>(reinterpret_cast<uintptr_t>(scene));
 }
@@ -279,6 +291,9 @@ void SceneImpl::destroy()
 
 ::SceneNodes::NodeOrNull SceneImpl::getRoot()
 {
+    if (!sceneETS_) {
+        return SceneNodes::NodeOrNull::make_nValue();
+    }
     auto node = sceneETS_->GetRoot();
     return SceneNodes::NodeOrNull::make_node(taihe::make_holder<NodeImpl, SceneNodes::Node>(node.value));
 }
@@ -299,6 +314,10 @@ void SceneImpl::destroy()
 
 ::SceneTH::SceneComponent SceneImpl::createComponentSync(::SceneNodes::weak::Node node, ::taihe::string_view name)
 {
+    if (!sceneETS_ || node.is_error()) {
+        taihe::set_error("Invalid parameters given");
+        return ::SceneTH::SceneComponent({nullptr, nullptr});
+    }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
     if (!nodeOptional.has_value()) {
         taihe::set_error("invalid node in taihe object");
@@ -320,7 +339,7 @@ void SceneImpl::destroy()
 
 ::SceneTH::SceneComponentOrNull SceneImpl::getComponent(::SceneNodes::weak::Node node, ::taihe::string_view name)
 {
-    if (node.is_error()) {
+    if (!sceneETS_ || node.is_error()) {
         return ::SceneTH::SceneComponentOrNull::make_nValue();
     }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
