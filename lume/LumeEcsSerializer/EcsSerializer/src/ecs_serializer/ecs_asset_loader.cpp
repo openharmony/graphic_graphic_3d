@@ -84,6 +84,14 @@ public:
         return ec_;
     }
 
+    ImportedResources GetImportedResources() const override
+    {
+        ImportedResources res;
+        res.images = resourceData_.images;
+        res.materials = resourceData_.materials;
+        return res;
+    }
+
     string GetSrc() const override
     {
         return src_;
@@ -469,22 +477,22 @@ private:
             sceneIndex = 0;
         }
 
-        const CORE3D_NS::GLTFResourceData& resourceData = importer_->GetResult().data;
+        resourceData_ = importer_->GetResult().data;
         Entity importedSceneEntity {};
         if (sceneIndex != CORE_GLTF_INVALID_INDEX) {
             GltfSceneImportFlags importFlags = CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL;
             importedSceneEntity =
-                gltf.ImportGltfScene(sceneIndex, *loadResult_.data, resourceData, ecs_, root, importFlags);
+                gltf.ImportGltfScene(sceneIndex, *loadResult_.data, resourceData_, ecs_, root, importFlags);
         }
         if (!EntityUtil::IsValid(importedSceneEntity)) {
             return {};
         }
 
         // Link animation tracks to targets
-        if (!resourceData.animations.empty()) {
+        if (!resourceData_.animations.empty()) {
             INodeSystem* nodeSystem = GetSystem<INodeSystem>(ecs_);
             if (auto animationRootNode = nodeSystem->GetNode(importedSceneEntity); animationRootNode) {
-                for (const auto& animationEntity : resourceData.animations) {
+                for (const auto& animationEntity : resourceData_.animations) {
                     ECS_SERIALIZER_NS::UpdateAnimationTrackTargets(
                         ecs_, animationEntity, animationRootNode->GetEntity());
                 }
@@ -683,6 +691,8 @@ private:
     IGLTF2Importer::Ptr importer_ {};
 
     vector<IEcsAssetLoader::IListener*> listeners_;
+
+    CORE3D_NS::GLTFResourceData resourceData_;
 };
 
 IEcsAssetLoader::Ptr CreateEcsAssetLoader(IEcsAssetManager& assetManager, IGraphicsContext& graphicsContext,

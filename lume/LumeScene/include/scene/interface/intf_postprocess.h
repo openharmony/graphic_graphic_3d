@@ -18,7 +18,9 @@
 
 #include <scene/base/types.h>
 #include <scene/interface/postprocess/intf_bloom.h>
+#include <scene/interface/postprocess/intf_color_fringe.h>
 #include <scene/interface/postprocess/intf_tonemap.h>
+#include <scene/interface/postprocess/intf_vignette.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -35,6 +37,14 @@ public:
      * @return
      */
     META_READONLY_PROPERTY(IBloom::Ptr, Bloom)
+    /**
+     * @brief Camera postprocessing settings, color fringe
+     */
+    META_READONLY_PROPERTY(IColorFringe::Ptr, ColorFringe)
+    /**
+     * @brief Camera postprocessing settings, vignette
+     */
+    META_READONLY_PROPERTY(IVignette::Ptr, Vignette)
 };
 
 META_REGISTER_CLASS(PostProcess, "2df6c964-5a32-4270-86e6-755e3f5697ff", META_NS::ObjectCategoryBits::NO_CATEGORY)

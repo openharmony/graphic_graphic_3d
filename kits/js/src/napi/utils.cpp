@@ -23,6 +23,8 @@
 #define USE_WORKAROUND 0
 #endif
 
+#include <optional>
+
 #if USE_WORKAROUND
 #include <base/containers/unordered_map.h>
 #endif
@@ -168,6 +170,15 @@ bool ValidateType(napi_valuetype jstype, bool isArray)
             return true;
         }
     }
+    if constexpr (BASE_NS::is_same_v<type, std::optional<bool>>) {
+        if (jstype == napi_boolean) {
+            return true;
+        }
+
+        if (jstype == napi_undefined) {
+            return true;
+        }
+    }
     // yup..
     if constexpr (BASE_NS::is_same_v<type, float>) {
         if (jstype == napi_number) {
@@ -233,6 +244,7 @@ bool ValidateType(napi_valuetype jstype, bool isArray)
 
 template bool ValidateType<BASE_NS::string>(napi_valuetype, bool);
 template bool ValidateType<bool>(napi_valuetype, bool);
+template bool ValidateType<std::optional<bool>>(napi_valuetype, bool);
 template bool ValidateType<float>(napi_valuetype, bool);
 template bool ValidateType<double>(napi_valuetype, bool);
 template bool ValidateType<uint32_t>(napi_valuetype, bool);

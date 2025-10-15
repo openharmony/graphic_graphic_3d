@@ -15,10 +15,10 @@
 
 #include "bloom.h"
 
+#include <scene/ext/intf_render_resource.h>
+
 #include <3d/ecs/components/post_process_component.h>
 #include <render/device/intf_gpu_resource_manager.h>
-
-#include "entity_converting_value.h"
 
 META_TYPE(RENDER_NS::RenderHandle)
 
@@ -74,22 +74,20 @@ struct RenderHandleImageConverter {
 
 bool Bloom::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
-    BASE_NS::string cpath = "PostProcessComponent.bloomConfiguration." + path;
-    if (p->GetName() == "DirtMaskImage") {
-        auto ep = object_->CreateProperty(cpath).GetResult();
+    if (p && p->GetName() == "DirtMaskImage") {
+        auto ep = object_->CreateProperty(GetPropertyPath(path)).GetResult();
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
                i->PushValue(
                    META_NS::IValue::Ptr(new ConvertingValue<RenderHandleImageConverter>(ep, { object_->GetScene() })));
     }
-    if (p->GetName() == "Enabled") {
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return flags_ && i &&
-               i->PushValue(META_NS::IValue::Ptr(
-                   new ConvertingValue<PPEffectEnabledConverter<CORE3D_NS::PostProcessComponent::BLOOM_BIT>>(
-                       flags_, { flags_ })));
-    }
-    return AttachEngineProperty(p, cpath);
+    return PostProcessEffect::InitDynamicProperty(p, path);
+}
+
+BASE_NS::string_view Bloom::GetComponentPath() const
+{
+    static constexpr BASE_NS::string_view p("PostProcessComponent.bloomConfiguration.");
+    return p;
 }
 
 SCENE_END_NAMESPACE()

@@ -68,6 +68,7 @@ public:
     INode::Ptr CreateNode(BASE_NS::string_view path, META_NS::ObjectId id) override;
     INode::Ptr FindNode(BASE_NS::string_view path, META_NS::ObjectId id) const override;
     INode::Ptr FindNode(CORE_NS::Entity ent, META_NS::ObjectId id) const override;
+    INode::Ptr GetRootNode() const override;
     bool ReleaseNode(INode::Ptr&& node, bool recursive) override;
     bool RemoveNode(const INode::Ptr& node) override;
     META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id) override;

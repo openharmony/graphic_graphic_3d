@@ -18,6 +18,7 @@
 #include <scene/interface/intf_environment.h>
 #include <scene/interface/intf_light.h>
 #include <scene/interface/intf_material.h>
+#include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_text.h>
 #include <text_3d/ecs/components/text_component.h>
 
@@ -28,7 +29,7 @@
 #include <3d/ecs/components/light_component.h>
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/mesh_component.h>
-#include <3d/ecs/components/post_process_component.h>
+#include <3d/ecs/components/render_configuration_component.h>
 
 #include <meta/base/namespace.h>
 #include <meta/ext/any_builder.h>
@@ -46,18 +47,8 @@ using BASE_NS::vector;
 using CORE3D_NS::AnimationComponent;
 using CORE3D_NS::AnimationStateComponent;
 using CORE3D_NS::CameraComponent;
+using CORE3D_NS::RenderConfigurationComponent;
 
-using RENDER_NS::BloomConfiguration;
-using RENDER_NS::BlurConfiguration;
-using RENDER_NS::ColorConversionConfiguration;
-using RENDER_NS::ColorFringeConfiguration;
-using RENDER_NS::DitherConfiguration;
-using RENDER_NS::DofConfiguration;
-using RENDER_NS::FxaaConfiguration;
-using RENDER_NS::MotionBlurConfiguration;
-using RENDER_NS::TaaConfiguration;
-using RENDER_NS::TonemapConfiguration;
-using RENDER_NS::VignetteConfiguration;
 using TEXT3D_NS::TextComponent;
 
 CORE_BEGIN_NAMESPACE()
@@ -69,21 +60,6 @@ DECLARE_PROPERTY_TYPE(MaterialComponent::Shader);
 DECLARE_PROPERTY_TYPE(MaterialComponent::TextureInfo);
 DECLARE_PROPERTY_TYPE(MaterialComponent::TextureTransform);
 
-DECLARE_PROPERTY_TYPE(TonemapConfiguration);
-DECLARE_PROPERTY_TYPE(TonemapConfiguration::TonemapType);
-DECLARE_PROPERTY_TYPE(BloomConfiguration);
-DECLARE_PROPERTY_TYPE(BloomConfiguration::BloomType);
-DECLARE_PROPERTY_TYPE(BloomConfiguration::BloomQualityType);
-DECLARE_PROPERTY_TYPE(BlurConfiguration);
-DECLARE_PROPERTY_TYPE(ColorConversionConfiguration);
-DECLARE_PROPERTY_TYPE(ColorFringeConfiguration);
-DECLARE_PROPERTY_TYPE(DitherConfiguration);
-DECLARE_PROPERTY_TYPE(DofConfiguration);
-DECLARE_PROPERTY_TYPE(FxaaConfiguration);
-DECLARE_PROPERTY_TYPE(MotionBlurConfiguration);
-DECLARE_PROPERTY_TYPE(TaaConfiguration);
-DECLARE_PROPERTY_TYPE(VignetteConfiguration);
-
 DECLARE_PROPERTY_TYPE(vector<MeshComponent::Submesh>);
 DECLARE_PROPERTY_TYPE(AnimationComponent::PlaybackState);
 DECLARE_PROPERTY_TYPE(BASE_NS::vector<AnimationStateComponent::TrackState>);
@@ -93,6 +69,10 @@ DECLARE_PROPERTY_TYPE(CameraComponent::Projection);
 DECLARE_PROPERTY_TYPE(CameraComponent::TargetUsage);
 DECLARE_PROPERTY_TYPE(vector<CameraComponent::TargetUsage>);
 DECLARE_PROPERTY_TYPE(Format);
+
+DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowType);
+DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowQuality);
+DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowSmoothness);
 
 DECLARE_PROPERTY_TYPE(TextComponent::FontMethod);
 CORE_END_NAMESPACE()
@@ -105,20 +85,6 @@ META_TYPE(CORE3D_NS::MaterialComponent::Shader);
 META_TYPE(CORE3D_NS::MaterialComponent::TextureInfo);
 META_TYPE(CORE3D_NS::MaterialComponent::TextureTransform);
 
-META_TYPE(RENDER_NS::TonemapConfiguration);
-META_TYPE(RENDER_NS::TonemapConfiguration::TonemapType);
-META_TYPE(RENDER_NS::BloomConfiguration);
-META_TYPE(RENDER_NS::BloomConfiguration::BloomType);
-META_TYPE(RENDER_NS::BloomConfiguration::BloomQualityType);
-META_TYPE(RENDER_NS::BlurConfiguration);
-META_TYPE(RENDER_NS::ColorConversionConfiguration);
-META_TYPE(RENDER_NS::ColorFringeConfiguration);
-META_TYPE(RENDER_NS::DitherConfiguration);
-META_TYPE(RENDER_NS::DofConfiguration);
-META_TYPE(RENDER_NS::FxaaConfiguration);
-META_TYPE(RENDER_NS::MotionBlurConfiguration);
-META_TYPE(RENDER_NS::TaaConfiguration);
-META_TYPE(RENDER_NS::VignetteConfiguration);
 META_TYPE(RENDER_NS::RenderHandle)
 
 META_TYPE(CORE3D_NS::MeshComponent::Submesh)
@@ -128,6 +94,10 @@ META_TYPE(CORE3D_NS::CameraComponent::RenderingPipeline);
 META_TYPE(CORE3D_NS::CameraComponent::Culling);
 META_TYPE(CORE3D_NS::CameraComponent::Projection);
 META_TYPE(CORE3D_NS::CameraComponent::TargetUsage);
+
+META_TYPE(CORE3D_NS::RenderConfigurationComponent::SceneShadowType);
+META_TYPE(CORE3D_NS::RenderConfigurationComponent::SceneShadowQuality);
+META_TYPE(CORE3D_NS::RenderConfigurationComponent::SceneShadowSmoothness);
 
 META_TYPE(TEXT3D_NS::TextComponent::FontMethod);
 
@@ -196,12 +166,14 @@ void RegisterEngineAccess()
     RegisterMapEngineAccessImpl<CameraComponent::Culling, CameraCulling>();
     RegisterMapEngineAccessImpl<CameraComponent::RenderingPipeline, CameraPipeline>();
 
+    RegisterMapEngineAccessImpl<RenderConfigurationComponent::SceneShadowType, SceneShadowType>();
+    RegisterMapEngineAccessImpl<RenderConfigurationComponent::SceneShadowQuality, SceneShadowQuality>();
+    RegisterMapEngineAccessImpl<RenderConfigurationComponent::SceneShadowSmoothness, SceneShadowSmoothness>();
+
     RegisterMapEngineAccessImpl<EnvironmentComponent::Background, EnvBackgroundType>();
     RegisterMapEngineAccessImpl<LightComponent::Type, LightType>();
     RegisterMapEngineAccessImpl<MaterialComponent::Type, MaterialType>();
-    RegisterMapEngineAccessImpl<TonemapConfiguration::TonemapType, TonemapType>();
-    RegisterMapEngineAccessImpl<BloomConfiguration::BloomType, BloomType>();
-    RegisterMapEngineAccessImpl<BloomConfiguration::BloomQualityType, EffectQualityType>();
+
     RegisterMapEngineAccessImpl<TextComponent::FontMethod, SCENE_NS::FontMethod>();
 
     RegisterEngineAccessImplAndAny<MaterialComponent::RenderSort>();
@@ -209,17 +181,6 @@ void RegisterEngineAccess()
     RegisterEngineAccessImplAndAny<MaterialComponent::TextureInfo>();
     RegisterEngineAccessImplAndAny<MaterialComponent::TextureTransform>();
 
-    RegisterEngineAccessImpl<BloomConfiguration>();
-    RegisterEngineAccessImpl<BlurConfiguration>();
-    RegisterEngineAccessImpl<ColorConversionConfiguration>();
-    RegisterEngineAccessImpl<ColorFringeConfiguration>();
-    RegisterEngineAccessImpl<DitherConfiguration>();
-    RegisterEngineAccessImpl<DofConfiguration>();
-    RegisterEngineAccessImpl<FxaaConfiguration>();
-    RegisterEngineAccessImpl<MotionBlurConfiguration>();
-    RegisterEngineAccessImpl<TaaConfiguration>();
-    RegisterEngineAccessImpl<TonemapConfiguration>();
-    RegisterEngineAccessImpl<VignetteConfiguration>();
     RegisterEngineAccessImpl<RENDER_NS::RenderHandle>();
 
     RegisterEngineAccessImpl<BASE_NS::vector<Submesh>>();
@@ -235,17 +196,6 @@ void UnregisterEngineAccess()
     UnregisterEngineAccessImpl<BASE_NS::vector<AnimationStateComponent::TrackState>>();
     UnregisterEngineAccessImpl<BASE_NS::vector<Submesh>>();
 
-    UnregisterEngineAccessImpl<BloomConfiguration>();
-    UnregisterEngineAccessImpl<BlurConfiguration>();
-    UnregisterEngineAccessImpl<ColorConversionConfiguration>();
-    UnregisterEngineAccessImpl<ColorFringeConfiguration>();
-    UnregisterEngineAccessImpl<DitherConfiguration>();
-    UnregisterEngineAccessImpl<DofConfiguration>();
-    UnregisterEngineAccessImpl<FxaaConfiguration>();
-    UnregisterEngineAccessImpl<MotionBlurConfiguration>();
-    UnregisterEngineAccessImpl<TaaConfiguration>();
-    UnregisterEngineAccessImpl<TonemapConfiguration>();
-    UnregisterEngineAccessImpl<VignetteConfiguration>();
     UnregisterEngineAccessImpl<RENDER_NS::RenderHandle>();
 
     UnregisterEngineAccessImplAndAny<MaterialComponent::RenderSort>();
@@ -253,10 +203,11 @@ void UnregisterEngineAccess()
     UnregisterEngineAccessImplAndAny<MaterialComponent::TextureInfo>();
     UnregisterEngineAccessImplAndAny<MaterialComponent::TextureTransform>();
 
+    UnregisterEngineAccessImplAndAny<RenderConfigurationComponent::SceneShadowType>();
+    UnregisterEngineAccessImplAndAny<RenderConfigurationComponent::SceneShadowQuality>();
+    UnregisterEngineAccessImplAndAny<RenderConfigurationComponent::SceneShadowSmoothness>();
+
     auto& r = META_NS::GetObjectRegistry();
-    r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<BloomConfiguration::BloomType>::coreType);
-    r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<BloomConfiguration::BloomQualityType>::coreType);
-    r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<TonemapConfiguration::TonemapType>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<MaterialComponent::Type>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<LightComponent::Type>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<EnvironmentComponent::Background>::coreType);

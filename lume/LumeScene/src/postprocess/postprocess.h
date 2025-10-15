@@ -25,7 +25,7 @@
 #include <meta/ext/object.h>
 #include <meta/ext/resource/resource.h>
 
-#include "component/postprocess_component.h"
+#include "../component/postprocess_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -38,10 +38,14 @@ public:
     META_BEGIN_STATIC_DATA()
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, ITonemap::Ptr, Tonemap, "")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, IBloom::Ptr, Bloom, "")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, IColorFringe::Ptr, ColorFringe, "")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, IVignette::Ptr, Vignette, "")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_READONLY_PROPERTY(ITonemap::Ptr, Tonemap)
     META_IMPLEMENT_READONLY_PROPERTY(IBloom::Ptr, Bloom)
+    META_IMPLEMENT_READONLY_PROPERTY(IColorFringe::Ptr, ColorFringe)
+    META_IMPLEMENT_READONLY_PROPERTY(IVignette::Ptr, Vignette)
 
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
@@ -53,6 +57,11 @@ public:
     {
         return ClassId::PostProcessResource.Id().ToUid();
     }
+
+private:
+    template<typename T>
+    bool InitEffect(const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id);
+    META_NS::IObject::Ptr CreateEffect(const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id);
 
 private:
     IInternalPostProcess::Ptr pp_;

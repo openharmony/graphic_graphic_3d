@@ -76,7 +76,8 @@ private:
     napi_value GetNode(NapiApi::FunctionContext<>& ctx);
     napi_value GetResourceFactory(NapiApi::FunctionContext<>& ctx);
 
-    napi_value CreateCamera(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    napi_value CreateCamera(NapiApi::FunctionContext<>& ctx);
+    static void ApplyCameraParameters(NapiApi::Object& params, NapiApi::Object& cam);
     napi_value CreateLight(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx);
     napi_value CreateNode(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateTextNode(NapiApi::FunctionContext<NapiApi::Object>& ctx);

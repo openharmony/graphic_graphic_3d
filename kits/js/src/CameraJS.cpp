@@ -91,7 +91,12 @@ void CameraJS::Init(napi_env env, napi_value exports)
     node_props.push_back(GetSetProperty<float, CameraJS, &CameraJS::GetNear, &CameraJS::SetNear>("nearPlane"));
     node_props.push_back(GetSetProperty<float, CameraJS, &CameraJS::GetFar, &CameraJS::SetFar>("farPlane"));
     node_props.push_back(GetSetProperty<bool, CameraJS, &CameraJS::GetEnabled, &CameraJS::SetEnabled>("enabled"));
-    node_props.push_back(GetSetProperty<bool, CameraJS, &CameraJS::GetMSAA, &CameraJS::SetMSAA>("msaa"));
+    node_props.push_back(GetSetProperty<std::optional<bool>, CameraJS, &CameraJS::GetMSAA, &CameraJS::SetMSAA>("msaa"));
+    node_props.push_back(
+        GetSetProperty<uint32_t, CameraJS, &CameraJS::GetRenderingPipeline, &CameraJS::SetRenderingPipeline>(
+            "renderingPipeline"));
+    node_props.push_back(GetSetProperty<uint32_t, CameraJS, &CameraJS::GetRenderTargetColorFormat,
+        &CameraJS::SetRenderTargetColorFormat>("defaultRenderTargetFormat"));
     node_props.push_back(
         GetSetProperty<Object, CameraJS, &CameraJS::GetPostProcess, &CameraJS::SetPostProcess>("postProcess"));
     node_props.push_back(GetSetProperty<Object, CameraJS, &CameraJS::GetColor, &CameraJS::SetColor>("clearColor"));
@@ -109,6 +114,33 @@ void CameraJS::Init(napi_env env, napi_value exports)
     if (mis) {
         mis->StoreCtor("Camera", func);
     }
+}
+
+void CameraJS::RegisterEnums(NapiApi::Object exports)
+{
+    const auto env = exports.GetEnv();
+    auto tmp = napi_value {};
+
+    auto colorFormat = NapiApi::Object { env };
+#define DECL_ENUM(enu, x)                                                \
+    {                                                                    \
+        napi_create_uint32(env, BASE_NS::Format::BASE_FORMAT_##x, &tmp); \
+        enu.Set(#x, tmp);                                                \
+    }
+    DECL_ENUM(colorFormat, R8G8B8_SRGB);
+    DECL_ENUM(colorFormat, R8G8B8A8_SRGB);
+    DECL_ENUM(colorFormat, R16G16B16_SFLOAT);
+    DECL_ENUM(colorFormat, R16G16B16A16_SFLOAT);
+    DECL_ENUM(colorFormat, B10G11R11_UFLOAT_PACK32);
+#undef DECL_ENUM
+    exports.Set("ColorFormat", colorFormat);
+
+    auto renderingPipelineType = NapiApi::Object { env };
+    napi_create_uint32(env, static_cast<uint32_t>(SCENE_NS::CameraPipeline::LIGHT_FORWARD), &tmp);
+    renderingPipelineType.Set("FORWARD_LIGHTWEIGHT", tmp);
+    napi_create_uint32(env, static_cast<uint32_t>(SCENE_NS::CameraPipeline::FORWARD), &tmp);
+    renderingPipelineType.Set("FORWARD", tmp);
+    exports.Set("RenderingPipelineType", renderingPipelineType);
 }
 
 CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(NodeImpl::CAMERA)
@@ -312,29 +344,92 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
 
     SCENE_NS::IPostProcess::Ptr postproc;
-    if (psp) {
-        // see if we have a native backing for the input object..
-        TrueRootObject* native = psp.GetRoot();
-        if (!native) {
-            // nope.. so create a new bridged object.
-            napi_value args[] = {
-                ctx.This().ToNapiValue(),  // Camera..
-                ctx.Arg<0>().ToNapiValue() // "javascript object for values"
-            };
-            if (auto cameraJs = static_cast<CameraJS *>(ctx.This().GetRoot())) {
-                auto postproc = cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess);
-                // PostProcessSettings will store a weak ref of its native. We, the camera, own it.
-                psp = CreateFromNativeInstance(ctx.Env(), postproc, PtrType::WEAK, args);
-                native = psp.GetRoot();
-            }
-        }
-        postProc_ = NapiApi::StrongRef(psp);
 
-        if (native) {
-            postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(native->GetNativeObject());
+    // see if we have a native backing for the input object..
+    TrueRootObject* native = nullptr;
+
+    if (psp) {
+        native = psp.GetRoot();
+    }
+
+    if (!native) {
+        // nope.. so create a new bridged object.
+        napi_value args[] = {
+            ctx.This().ToNapiValue(),  // Camera..
+            psp ? ctx.Arg<0>().ToNapiValue()
+                : NapiApi::Object(ctx.Env()).ToNapiValue() // "javascript object for values"
+        };
+
+        if (auto cameraJs = static_cast<CameraJS *>(ctx.This().GetRoot())) {
+            auto postproc = cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess);
+
+            if (!psp) {
+                if (auto pp = interface_pointer_cast<SCENE_NS::IPostProcess>(postproc)) {
+                    pp->Vignette()->GetValue()->Enabled()->SetValue(true);
+                    pp->ColorFringe()->GetValue()->Enabled()->SetValue(true);
+                    pp->Bloom()->GetValue()->Enabled()->SetValue(true);
+                }
+            }
+            // PostProcessSettings will store a weak ref of its native. We, the camera, own it.
+            psp = CreateFromNativeInstance(ctx.Env(), postproc, PtrType::WEAK, args);
+            native = psp.GetRoot();
         }
     }
+
+    postProc_ = NapiApi::StrongRef(psp);
+
+    if (native) {
+        postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(native->GetNativeObject());
+    }
+
     camera->PostProcess()->SetValue(postproc);
+}
+
+napi_value CameraJS::GetRenderingPipeline(NapiApi::FunctionContext<>& ctx)
+{
+    auto pipeline = SCENE_NS::CameraPipeline::LIGHT_FORWARD;
+    if (const auto camera = ctx.This().GetNative<SCENE_NS::ICamera>()) {
+        pipeline = camera->RenderingPipeline()->GetValue();
+    } else {
+        LOG_E("Native camera unset. Getting default rendering pipeline type");
+    }
+    return ctx.GetNumber(static_cast<uint32_t>(pipeline));
+}
+
+void CameraJS::SetRenderingPipeline(NapiApi::FunctionContext<uint32_t>& ctx)
+{
+    if (const auto camera = ctx.This().GetNative<SCENE_NS::ICamera>()) {
+        const uint32_t pipeline = ctx.Arg<0>();
+        camera->RenderingPipeline()->SetValue(static_cast<SCENE_NS::CameraPipeline>(pipeline));
+    } else {
+        LOG_E("Native camera unset. Setting rendering pipeline type has no effect");
+    }
+}
+
+napi_value CameraJS::GetRenderTargetColorFormat(NapiApi::FunctionContext<>& ctx)
+{
+    auto colorFormat = SCENE_NS::ColorFormat {};
+    if (const auto camera = ctx.This().GetNative<SCENE_NS::ICamera>()) {
+        if (const auto formats = camera->ColorTargetCustomization()->GetValue(); !formats.empty()) {
+            colorFormat = formats.front();
+        }
+    } else {
+        LOG_E("Native camera unset. Getting default render target color format");
+    }
+    return ctx.GetNumber(static_cast<uint32_t>(colorFormat.format));
+}
+
+void CameraJS::SetRenderTargetColorFormat(NapiApi::FunctionContext<uint32_t>& ctx)
+{
+    if (const auto camera = ctx.This().GetNative<SCENE_NS::ICamera>()) {
+        const uint32_t format = ctx.Arg<0>();
+        auto colorFormat = SCENE_NS::ColorFormat {};
+        colorFormat.format = static_cast<BASE_NS::Format>(format);
+        // Just overwrite whatever the array had with our single value.
+        camera->ColorTargetCustomization()->SetValue({ colorFormat });
+    } else {
+        LOG_E("Native camera unset. Setting render target color format has no effect");
+    }
 }
 
 napi_value CameraJS::GetColor(NapiApi::FunctionContext<>& ctx)
@@ -510,12 +605,18 @@ napi_value CameraJS::GetMSAA(NapiApi::FunctionContext<>& ctx)
     return ctx.GetBoolean(enabled);
 }
 
-void CameraJS::SetMSAA(NapiApi::FunctionContext<bool>& ctx)
+void CameraJS::SetMSAA(NapiApi::FunctionContext<std::optional<bool>>& ctx)
 {
     if (!validateSceneRef()) {
         return;
     }
-    msaaEnabled_ = ctx.Arg<0>();
+    std::optional<bool> value = ctx.Arg<0>();
+    if (value) {
+        msaaEnabled_ = *value;
+    } else {
+        msaaEnabled_ = false;
+    }
+
     if (auto camera = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject())) {
         uint32_t curBits = camera->PipelineFlags()->GetValue();
         if (msaaEnabled_) {

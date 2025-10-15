@@ -21,6 +21,13 @@
 
 ECS_SERIALIZER_BEGIN_NAMESPACE()
 
+struct ImportedResources {
+    /** Imported images. */
+    BASE_NS::vector<CORE_NS::EntityReference> images;
+    /** Imported materials. */
+    BASE_NS::vector<CORE_NS::EntityReference> materials;
+};
+
 /** Asset loader interface */
 class IEcsAssetLoader {
 public:
@@ -45,6 +52,8 @@ public:
 
     /** Returns the entity collection used by this loader. */
     virtual IEntityCollection& GetEntityCollection() const = 0;
+
+    virtual ImportedResources GetImportedResources() const = 0;
 
     /** Returns the src for this loader that is used to resolve the final loading uri. */
     virtual BASE_NS::string GetSrc() const = 0;

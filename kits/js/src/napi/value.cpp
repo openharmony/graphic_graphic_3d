@@ -15,6 +15,8 @@
 
 #include "value.h"
 
+#include <optional>
+
 #include "array.h"
 #include "function.h"
 #include "object.h"
@@ -74,6 +76,15 @@ type NapiApi::Value<type>::valueOrDefault(const type defaultValue)
     if constexpr (BASE_NS::is_same_v<type, bool>) {
         status = napi_get_value_bool(env_, value_, &value);
     }
+    if constexpr (BASE_NS::is_same_v<type, std::optional<bool>>) {
+        bool innerValue;
+        status = napi_get_value_bool(env_, value_, &innerValue);
+        if (status == napi_ok) {
+            value = innerValue;
+        } else {
+            value.reset();
+        }
+    }
     if constexpr (BASE_NS::is_same_v<type, float>) {
         double tmp;
         status = napi_get_value_double(env_, value_, &tmp);
@@ -117,6 +128,7 @@ type NapiApi::Value<type>::valueOrDefault(const type defaultValue)
 
 template class Value<BASE_NS::string>;
 template class Value<bool>;
+template class Value<std::optional<bool>>;
 template class Value<float>;
 template class Value<double>;
 template class Value<uint32_t>;

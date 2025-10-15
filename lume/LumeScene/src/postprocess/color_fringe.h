@@ -13,29 +13,30 @@
  * limitations under the License.
  */
 
-#ifndef SCENE_SRC_POSTPROCESS_TONEMAP_H
-#define SCENE_SRC_POSTPROCESS_TONEMAP_H
+#ifndef SCENE_SRC_POSTPROCESS_COLOR_FRINGE_H
+#define SCENE_SRC_POSTPROCESS_COLOR_FRINGE_H
 
-#include <scene/interface/postprocess/intf_tonemap.h>
+#include <scene/interface/postprocess/intf_color_fringe.h>
 
 #include "postprocess_effect.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-META_REGISTER_CLASS(Tonemap, "56c1fc6e-90aa-486d-846e-c9a5c780a90a", META_NS::ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(ColorFringe, "3e403293-8e0c-43bf-ae30-cb45d6ad2d65", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class Tonemap : public Internal::PostProcessEffect<ITonemap, CORE3D_NS::PostProcessComponent::TONEMAP_BIT> {
-    META_OBJECT(Tonemap, ClassId::Tonemap, PostProcessEffect)
+class ColorFringe
+    : public Internal::PostProcessEffect<IColorFringe, CORE3D_NS::PostProcessComponent::COLOR_FRINGE_BIT> {
+    META_OBJECT(ColorFringe, ClassId::ColorFringe, PostProcessEffect)
 public:
     META_BEGIN_STATIC_DATA()
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcessEffect, bool, Enabled, "")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITonemap, TonemapType, Type, "tonemapType")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITonemap, float, Exposure, "exposure")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorFringe, float, Coefficient, "coefficient")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorFringe, float, DistanceCoefficient, "distanceCoefficient")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(bool, Enabled)
-    META_IMPLEMENT_PROPERTY(TonemapType, Type)
-    META_IMPLEMENT_PROPERTY(float, Exposure)
+    META_IMPLEMENT_PROPERTY(float, Coefficient)
+    META_IMPLEMENT_PROPERTY(float, DistanceCoefficient)
 
 private:
     BASE_NS::string_view GetComponentPath() const override;
@@ -43,4 +44,4 @@ private:
 
 SCENE_END_NAMESPACE()
 
-#endif
+#endif // SCENE_SRC_POSTPROCESS_COLOR_FRINGE_H

@@ -18,20 +18,38 @@
 #include <scene/api/resource.h>
 #include <scene/interface/intf_postprocess.h>
 
+#include <meta/api/interface_object.h>
+
 SCENE_BEGIN_NAMESPACE()
 
+/**
+ * @brief THe PostProcessEffect class is the base class for all post process effects.
+ */
+class PostProcessEffect : public META_NS::InterfaceObject<IPostProcessEffect> {
+public:
+    META_INTERFACE_OBJECT(PostProcessEffect, META_NS::InterfaceObject<IPostProcessEffect>, IPostProcessEffect)
+    /// @see IPostProcessEffect::Enabled
+    META_INTERFACE_OBJECT_PROPERTY(bool, Enabled)
+};
+
+/**
+ * @brief The Bloom class wraps a post process effect which implements ITonemap.
+ */
 class Tonemap : public META_NS::InterfaceObject<ITonemap> {
 public:
-    META_INTERFACE_OBJECT(Tonemap, META_NS::InterfaceObject<ITonemap>, ITonemap)
+    META_INTERFACE_OBJECT(Tonemap, PostProcessEffect, ITonemap)
     /// @see ITonemap::Type
     META_INTERFACE_OBJECT_PROPERTY(TonemapType, Type)
     /// @see ITonemap::Exposure
     META_INTERFACE_OBJECT_PROPERTY(float, Exposure)
 };
 
+/**
+ * @brief The Bloom class wraps a post process effect which implements IBloom.
+ */
 class Bloom : public META_NS::InterfaceObject<IBloom> {
 public:
-    META_INTERFACE_OBJECT(Bloom, META_NS::InterfaceObject<IBloom>, IBloom)
+    META_INTERFACE_OBJECT(Bloom, PostProcessEffect, IBloom)
     /// @see IBloom::Type
     META_INTERFACE_OBJECT_PROPERTY(BloomType, Type)
     /// @see IBloom::Quality
@@ -54,6 +72,33 @@ public:
     META_INTERFACE_OBJECT_PROPERTY(float, ScaleFactor)
 };
 
+/**
+ * @brief The ColorFringe class wraps a post process effect which implements IColorFringe.
+ */
+class ColorFringe : public PostProcessEffect {
+public:
+    META_INTERFACE_OBJECT(ColorFringe, PostProcessEffect, IColorFringe)
+    /// @see IColorFringe::Coefficient
+    META_INTERFACE_OBJECT_PROPERTY(float, Coefficient)
+    /// @see IColorFringe::DistanceCoefficient
+    META_INTERFACE_OBJECT_PROPERTY(float, DistanceCoefficient)
+};
+
+/**
+ * @brief The Vignette class wraps a post process effect which implements IVignette.
+ */
+class Vignette : public PostProcessEffect {
+public:
+    META_INTERFACE_OBJECT(Vignette, PostProcessEffect, IVignette)
+    /// @see IVignette::Coefficient
+    META_INTERFACE_OBJECT_PROPERTY(float, Coefficient)
+    /// @see IVignette::Power
+    META_INTERFACE_OBJECT_PROPERTY(float, Power)
+};
+
+/**
+ * @brief The PostProcess class wraps a post process setup object which implements IPostProcess.
+ */
 class PostProcess : META_NS::InterfaceObject<IPostProcess> {
 public:
     META_INTERFACE_OBJECT(PostProcess, META_NS::InterfaceObject<IPostProcess>, IPostProcess)
@@ -62,6 +107,10 @@ public:
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Tonemap, Tonemap)
     /// @see IPostProcess::Bloom
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Bloom, Bloom)
+    /// @see IPostProcess::ColorFringe
+    META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::ColorFringe, ColorFringe)
+    /// @see IPostProcess::Vignette
+    META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Vignette, Vignette)
 };
 
 SCENE_END_NAMESPACE()

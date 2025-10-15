@@ -43,39 +43,51 @@ public:
             return;
         }
         napi_status status { napi_ok };
-        status = napi_get_cb_info(env, info, &providedArgCount_, nullptr, &jsThis_, &data_);
+        size_t providedArgCount = 0;
+        status = napi_get_cb_info(env, info, &providedArgCount, nullptr, &jsThis_, &data_);
+        if (status != napi_ok) {
+            return;
+        }
+        // Get as many args as were provided, despite how many were requested.
+        args_.resize(providedArgCount);
+
+        status = napi_get_cb_info(env, info, &providedArgCount, args_.data(), nullptr, nullptr);
         if (status != napi_ok) {
             return;
         }
         env_ = NapiApi::Env(env);
         info_ = info;
+
         if constexpr (sizeof...(RequestedArgs) > 0) {
             // validate arg count first
-            const bool exactOk = argMode == ArgCount::EXACT && requestedArgCount_ == providedArgCount_;
-            const bool partialOk = argMode == ArgCount::PARTIAL && requestedArgCount_ <= providedArgCount_;
-            if (!exactOk && !partialOk) {
+            const bool exactOk = argMode == ArgCount::EXACT && requestedArgCount_ == args_.size();
+            const bool partialOk = argMode == ArgCount::PARTIAL && requestedArgCount_ <= args_.size();
+            if ((!exactOk && !partialOk) || !validate<RequestedArgs...>(0)) {
                 jsThis_ = nullptr;
                 data_ = nullptr;
                 info_ = nullptr;
-                return;
-            }
-
-            // get the arguments
-            auto getThisManyArgs = requestedArgCount_; // The napi call needs a non-const.
-            status = napi_get_cb_info(env, info, &getThisManyArgs, args, nullptr, nullptr);
-            if (!validate<RequestedArgs...>(0)) {
-                // non matching types in context!
-                jsThis_ = nullptr;
-                data_ = nullptr;
-                info_ = nullptr;
+                args_.clear();
                 return;
             }
         }
     }
 
     template<typename... Other>
-    FunctionContext(const FunctionContext<Other...>& other) : FunctionContext(other.GetEnv(), other.GetInfo())
-    {}
+    FunctionContext(const FunctionContext<Other...>& other)
+        : jsThis_(other.RawThis()), data_(other.GetData()), args_(other.GetArgs()), env_(other.GetEnv()),
+          info_(other.GetInfo())
+    {
+        if constexpr (sizeof...(RequestedArgs) > 0) {
+            const bool exactOk = requestedArgCount_ == args_.size();
+            if (!exactOk || !validate<RequestedArgs...>(0)) {
+                jsThis_ = nullptr;
+                data_ = nullptr;
+                info_ = nullptr;
+                args_.clear();
+                return;
+            }
+        }
+    }
 
     operator bool() const
     {
@@ -107,12 +119,33 @@ public:
         return { env_, jsThis_ };
     }
 
-    napi_value value(size_t index)
+    napi_value RawThis() const
     {
-        if (index < requestedArgCount_) {
-            return args[index];
+        return jsThis_;
+    }
+
+    BASE_NS::vector<napi_value> GetArgs() const
+    {
+        return args_;
+    }
+
+    // Get any provided arg (even past the requested ones) if it exists, else return nullptr.
+    napi_value Value(size_t index)
+    {
+        if (index < args_.size()) {
+            return args_[index];
         }
         return nullptr;
+    }
+
+    // Reassign any provided arg (even past the requested ones) if it exists. Return true for success.
+    bool SetValue(size_t index, napi_value newValue)
+    {
+        if (index < args_.size()) {
+            args_[index] = newValue;
+            return true;
+        }
+        return false;
     }
 
     template<size_t I, typename T, typename... TypesI>
@@ -125,26 +158,18 @@ public:
         using type = T;
     };
 
+    // Get a requested arg. For a truthy FunctionContext, the value will be valid; for a falsy, invalid.
     template<size_t index>
     auto Arg()
     {
-        if constexpr (sizeof...(RequestedArgs) > 0) {
-            if constexpr (index < sizeof...(RequestedArgs)) {
-                return NapiApi::Value<typename GetTypeImpl<index, RequestedArgs...>::type> { env_, args[index] };
-            }
-            if constexpr (index >= sizeof...(RequestedArgs)) {
-                static_assert(index < sizeof...(RequestedArgs), "Index out of range !");
-                return NapiApi::Value<void*>((napi_env) nullptr, (void*)nullptr);
-            }
-        }
-        if constexpr (sizeof...(RequestedArgs) == 0) {
-            return;
-        }
+        static_assert(index < sizeof...(RequestedArgs), "Index out of range!");
+        using Type = typename GetTypeImpl<index, RequestedArgs...>::type;
+        return NapiApi::Value<Type> { env_, Value(index) };
     }
 
     size_t ArgCount() const
     {
-        return providedArgCount_;
+        return args_.size();
     }
 
     napi_value GetUndefined()
@@ -193,9 +218,9 @@ private:
     {
         napi_valuetype jstype;
         napi_status status = napi_invalid_arg;
-        status = napi_typeof(env_, args[index], &jstype);
+        status = napi_typeof(env_, args_[index], &jstype);
         bool isArray = false;
-        napi_is_array(env_, args[index], &isArray);
+        napi_is_array(env_, args_[index], &isArray);
 
         bool ret = NapiApi::ValidateType<First>(jstype, isArray);
         if (ret) {
@@ -211,13 +236,11 @@ private:
 
     napi_value jsThis_ { nullptr };
     void* data_ { nullptr };
-    // How many args we want to access from the JS function call.
+    // How many args we want to validate and access with Arg.
     const size_t requestedArgCount_ { sizeof...(RequestedArgs) };
-    napi_value args[sizeof...(RequestedArgs) + 1] {};
+    BASE_NS::vector<napi_value> args_;
     NapiApi::Env env_ { nullptr };
     napi_callback_info info_ { nullptr };
-    // How many args actually were in the JS function call.
-    size_t providedArgCount_ { 0 };
 };
 
 } // namespace NapiApi
