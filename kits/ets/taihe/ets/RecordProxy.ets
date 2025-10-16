@@ -51,7 +51,7 @@ export abstract class RecordProxyHandler<V> extends proxy.DefaultProxyHandler<Sh
         return new ShadowRecordIterator<V, R>(this, fn);
     }
 
-    get(target: ShadowRecord<V>, name: string): NullishType {
+    get(target: ShadowRecord<V>, name: string): Any {
         if (name == "size") {
             return this.getSize();
         }
@@ -59,12 +59,12 @@ export abstract class RecordProxyHandler<V> extends proxy.DefaultProxyHandler<Sh
         return null;
     }
 
-    set(target: ShadowRecord<V>, name: string, value: NullishType): boolean {
+    set(target: ShadowRecord<V>, name: string, value: Any): boolean {
         console.error("not support setting property.");
         return true;
     }
 
-    invoke(target: ShadowRecord<V>, method: Method, args: FixedArray<NullishType>): NullishType {
+    invoke(target: ShadowRecord<V>, method: Method, args: FixedArray<Any>): Any {
         const methodName = method.getName();
         if ("$_get" == methodName || "get" == methodName) {
             const key = args[0] as string;
