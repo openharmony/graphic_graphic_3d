@@ -22,15 +22,19 @@
 
 #include "TonemapETS.h"
 #include "BloomETS.h"
+#include "VignetteETS.h"
+#include "ColorFringeETS.h"
 
 namespace OHOS::Render3D {
 class PostProcessETS {
 public:
     static std::shared_ptr<PostProcessETS> FromJS(
-        const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom);
+        const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom,
+        const std::shared_ptr<VignetteETS> vignette, const std::shared_ptr<ColorFringeETS> colorFringe);
     PostProcessETS(const SCENE_NS::ICamera::Ptr camera, const SCENE_NS::IPostProcess::Ptr pp);
     // store post process settings from ETS
-    PostProcessETS(const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom);
+    PostProcessETS(const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom,
+        const std::shared_ptr<VignetteETS> vignette, const std::shared_ptr<ColorFringeETS> colorFringe);
     ~PostProcessETS();
 
     std::shared_ptr<TonemapETS> GetToneMapping();
@@ -38,6 +42,12 @@ public:
 
     std::shared_ptr<BloomETS> GetBloom();
     void SetBloom(const std::shared_ptr<BloomETS> bloom);
+
+    std::shared_ptr<VignetteETS> GetVignette();
+    void SetVignette(const std::shared_ptr<VignetteETS> vignette);
+
+    std::shared_ptr<ColorFringeETS> GetColorFringe();
+    void SetColorFringe(const std::shared_ptr<ColorFringeETS> colorFringe);
 
     bool StrictEqual(const std::shared_ptr<PostProcessETS> other) const
     {
@@ -66,6 +76,8 @@ private:
 
     std::shared_ptr<TonemapETS> tonemap_;
     std::shared_ptr<BloomETS> bloom_;
+    std::shared_ptr<VignetteETS> vignette_;
+    std::shared_ptr<ColorFringeETS> colorFringe_;
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_POSTPROCESS_ETS_H

@@ -352,7 +352,7 @@ InvokeReturn<std::shared_ptr<GeometryETS>> SceneETS::CreateGeometry(
     }
 }
 
-InvokeReturn<std::shared_ptr<CameraETS>> SceneETS::CreateCamera(const std::string &path, uint32_t pipeline)
+InvokeReturn<std::shared_ptr<CameraETS>> SceneETS::CreateCamera(const std::string &path, uint32_t pipeline, bool msaa)
 {
     // renderPipeline is (at the moment of writing) an undocumented param. Check the API docs and usage.
     // Remove this, if it has been added to the API. Else if it's not used anywhere, remove the implementation.
@@ -370,7 +370,9 @@ InvokeReturn<std::shared_ptr<CameraETS>> SceneETS::CreateCamera(const std::strin
 
     camera->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
     camera->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
-    return InvokeReturn(std::make_shared<CameraETS>(camera));
+    auto cameraETS = std::make_shared<CameraETS>(camera);
+    cameraETS->SetMSAA(msaa);
+    return InvokeReturn(cameraETS);
 }
 
 InvokeReturn<std::shared_ptr<LightETS>> SceneETS::CreateLight(

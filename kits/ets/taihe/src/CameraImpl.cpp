@@ -153,7 +153,25 @@ void CameraImpl::setPostProcess(::SceneNodes::PostProcessSettingsOrNull const &p
             WIDGET_LOGI("CameraImpl::setPostProcess: disable bloom");
             bloom = nullptr;
         }
-        pp = std::make_shared<PostProcessETS>(tonemap, bloom);
+
+        taihe::optional<ScenePostProcessSettings::VignetteSettings> vignetteOp = ppValue->getVignette();
+        std::shared_ptr<VignetteETS> vignette;
+        if (vignetteOp.has_value()) {
+            vignette = VignetteSettingsImpl::CreateInternal(vignetteOp.value());
+        } else {
+            WIDGET_LOGI("CameraImpl::setPostProcess: disable vignette");
+            vignette = nullptr;
+        }
+
+        taihe::optional<ScenePostProcessSettings::ColorFringeSettings> colorFringeOp = ppValue->getColorFringe();
+        std::shared_ptr<ColorFringeETS> colorFringe;
+        if (colorFringeOp.has_value()) {
+            colorFringe = ColorFringeSettingsImpl::CreateInternal(colorFringeOp.value());
+        } else {
+            WIDGET_LOGI("CameraImpl::setPostProcess: disable colorFringe");
+            colorFringe = nullptr;
+        }
+        pp = std::make_shared<PostProcessETS>(tonemap, bloom, vignette, colorFringe);
     }
     cameraETS_->SetPostProcess(pp);
 }
@@ -182,6 +200,47 @@ void CameraImpl::setClearColor(::SceneNodes::ColorOrNull const &color)
         } else {
             cameraETS_->SetClearColor(false, BASE_NS::Math::ZERO_VEC4);
         }
+    }
+}
+
+::taihe::optional<bool> CameraImpl::getMsaa()
+{
+    if (!cameraETS_) {
+        return ::taihe::optional<bool>(std::in_place, false);
+    }
+    return ::taihe::optional<bool>(std::in_place, cameraETS_->GetMSAA());
+}
+
+void CameraImpl::setMsaa(::taihe::optional_view<bool> msaa)
+{
+    if (!cameraETS_) {
+        return;
+    }
+    if (msaa) {
+        cameraETS_->SetMSAA(msaa.value());
+    } else {
+        cameraETS_->SetMSAA(false);
+    }
+}
+
+::taihe::optional<::SceneTypes::RenderingPipelineType> CameraImpl::getRenderingPipeline()
+{
+    SceneTypes::RenderingPipelineType type = SceneTypes::RenderingPipelineType::key_t::FORWARD_LIGHTWEIGHT;
+    if (cameraETS_) {
+        type =
+            SceneTypes::RenderingPipelineType::from_value(static_cast<int32_t>(cameraETS_->GetRenderingPipeline()));
+    }
+    return ::taihe::optional<::SceneTypes::RenderingPipelineType>(std::in_place, type);
+}
+
+void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::RenderingPipelineType> renderingPipeline)
+{
+    if (cameraETS_) {
+        SceneTypes::RenderingPipelineType type = SceneTypes::RenderingPipelineType::key_t::FORWARD_LIGHTWEIGHT;
+        if (renderingPipeline.has_value()) {
+            type = renderingPipeline.value();
+        }
+        cameraETS_->SetRenderingPipeline((CameraETS::RenderingPipelineType)type.get_value());
     }
 }
 

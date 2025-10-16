@@ -28,13 +28,17 @@
 #include "PostProcessETS.h"
 #include "ToneMappingSettingsImpl.h"
 #include "BloomSettingsImpl.h"
+#include "VignetteSettingsImpl.h"
+#include "ColorFringeSettingsImpl.h"
 
 namespace OHOS::Render3D::KITETS {
 class PostProcessSettingsImpl {
 public:
     static std::shared_ptr<PostProcessETS> CreateInternal(
         const ScenePostProcessSettings::ToneMappingSettings &tonemapData,
-        const ScenePostProcessSettings::BloomSettings &bloomData);
+        const ScenePostProcessSettings::BloomSettings &bloomData,
+        const ScenePostProcessSettings::VignetteSettings &vignetteData,
+        const ScenePostProcessSettings::ColorFringeSettings &colorFringeData);
 
     PostProcessSettingsImpl(const std::shared_ptr<PostProcessETS> postProcessETS);
     ~PostProcessSettingsImpl();
@@ -42,6 +46,10 @@ public:
     void setToneMapping(::taihe::optional_view<::ScenePostProcessSettings::ToneMappingSettings> toneMapping);
     ::taihe::optional<::ScenePostProcessSettings::BloomSettings> getBloom();
     void setBloom(::taihe::optional_view<::ScenePostProcessSettings::BloomSettings> bloom);
+    ::taihe::optional<::ScenePostProcessSettings::VignetteSettings> getVignette();
+    void setVignette(::taihe::optional_view<::ScenePostProcessSettings::VignetteSettings> vignette);
+    ::taihe::optional<::ScenePostProcessSettings::ColorFringeSettings> getColorFringe();
+    void setColorFringe(::taihe::optional_view<::ScenePostProcessSettings::ColorFringeSettings> colorFringe);
 
     ::taihe::optional<int64_t> getImpl()
     {

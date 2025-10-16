@@ -56,6 +56,9 @@ public:
 
     ::SceneNodes::Camera createCameraSync(::SceneTH::SceneNodeParameters const &params);
 
+    ::SceneNodes::Camera createCameraSyncWithCameraParams(
+        ::SceneTH::SceneNodeParameters const &params, ::SceneTH::CameraParameters const &cameraParams);
+
     ::SceneNodes::LightTypeUnion createLightSync(
         ::SceneTH::SceneNodeParameters const &params, ::SceneNodes::LightType lightType);
 
