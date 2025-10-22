@@ -34,6 +34,7 @@
 #include "ParamParsing.h"
 #include "Promise.h"
 #include "nodejstaskqueue.h"
+#include "scene_adapter/scene_adapter.h"
 
 static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
 
@@ -184,6 +185,9 @@ BASE_NS::shared_ptr<RenderResources> RenderContextJS::GetResources() const
 
 napi_value RenderContextJS::GetDefaultContext(napi_env env)
 {
+    if (!OHOS::Render3D::SceneAdapter::IsEngineInitSuccessful()) {
+        return NapiApi::Env(env).GetNull();
+    }
     auto resources = globalResources.lock();
     if (!resources) {
         resources.reset(new GlobalResources);

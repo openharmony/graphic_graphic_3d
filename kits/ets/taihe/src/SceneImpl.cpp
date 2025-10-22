@@ -20,6 +20,7 @@
 #include "SceneJS.h"
 #include "CheckNapiEnv.h"
 #include "RenderContextImpl.h"
+#include "scene_adapter/scene_adapter.h"
 
 namespace OHOS::Render3D::KITETS {
 
@@ -107,6 +108,9 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 
 ::SceneTH::RenderContextOrNull getDefaultRenderContext()
 {
+    if (!OHOS::Render3D::SceneAdapter::IsEngineInitSuccessful()) {
+        return ::SceneTH::RenderContextOrNull::make_nValue();
+    }
     auto rc = taihe::make_holder<RenderContextImpl, ::SceneTH::RenderContext>();
     return ::SceneTH::RenderContextOrNull::make_rc(rc);
 }
