@@ -81,6 +81,10 @@ public:
     static void ShutdownPluginRegistry();
     static void DeinitRenderThread();
     ~SceneAdapter() override;
+    static bool IsEngineInitSuccessful()
+    {
+        return engineInitSuccessful_;
+    }
 
 protected:
     static bool LoadEngineLib();
@@ -115,6 +119,7 @@ protected:
     SurfaceBufferInfo sfBufferInfo_;
 
     bool onWindowChanged_ = false; // todo engine thread check
+    static bool engineInitSuccessful_;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_SCENE_ADAPTER_H

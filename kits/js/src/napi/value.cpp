@@ -34,6 +34,9 @@ void Value<T>::Init(napi_env env, Type v)
     if constexpr (BASE_NS::is_same_v<Type, double>) {
         napi_create_double(env_, v, &value_);
     }
+    if constexpr (BASE_NS::is_same_v<Type, bool>) {
+        napi_get_boolean(env_, v, &value_);
+    }
     if constexpr (BASE_NS::is_same_v<Type, uint32_t>) {
         napi_create_uint32(env_, v, &value_);
     }
