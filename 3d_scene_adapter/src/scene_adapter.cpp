@@ -113,6 +113,8 @@ namespace OHOS::Render3D {
         }                                                    \
     } while (0)
 
+bool SceneAdapter::engineInitSuccessful_ = false;
+
 HapInfo GetHapInfo()
 {
     WIDGET_SCOPED_TRACE("SceneAdapter::GetHapInfo");
@@ -449,16 +451,19 @@ bool SceneAdapter::LoadPluginsAndInit()
     #undef PLATFORM_PATH_NAME
     if (!LoadPlugins(platformCreateInfo)) {
         UnlockCompositor();
+        engineInitSuccessful_ = false;
         return false;
     }
 
     if (!InitEngine(platformCreateInfo)) {
         UnlockCompositor();
+        engineInitSuccessful_ = false;
         return false;
     }
 
     CreateRenderFunction();
     UnlockCompositor();
+    engineInitSuccessful_ = true;
     return true;
 }
 
