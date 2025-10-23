@@ -141,6 +141,7 @@ ohos_source_set("napi_source") {
       "src/NodeImpl.cpp",
       "src/NodeJS.cpp",
       "src/nodejstaskqueue.cpp",
+      "src/ObjectProxy.cpp",
       "src/ParamParsing.cpp",
       "src/PostProcJS.cpp",
       "src/Promise.cpp",

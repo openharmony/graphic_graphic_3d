@@ -165,6 +165,7 @@ void RegisterClasses(napi_env env, napi_value exports)
     RenderContextJS::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
+    CameraJS::RegisterEnums({ env, scene3dNS });
     GeometryDefinition::CustomJS::RegisterEnums({ env, scene3dNS });
     GeometryDefinition::RegisterEnums({ env, scene3dNS });
     NodeImpl::RegisterEnums({ env, scene3dNS });

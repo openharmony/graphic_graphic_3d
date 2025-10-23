@@ -69,10 +69,21 @@ bool SceneObject::Build(const META_NS::IMetadata::Ptr& d)
 bool SceneObject::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
     if (p->GetName() == "RenderConfiguration") {
-        auto obj = CreateObject<IRenderConfiguration>(ClassId::RenderConfiguration).GetResult();
-        if (META_NS::Property<IRenderConfiguration::Ptr> t { p }) {
-            return t->SetValue(obj);
-        }
+        // ETS API requires RenderConfigurationComponent to be available as an attachment in the root node
+        // of the Scene. When RenderConfiguration property is initialized, attach the component wrapper into the
+        // Scene's root node for it to be available from JS.
+        return internal_
+            ->AddTask([&]() -> bool {
+                if (META_NS::Property<IRenderConfiguration::Ptr> t { p }) {
+                    if (auto root = internal_->GetRootNode()) {
+                        if (auto component = internal_->CreateEcsComponent(root, "RenderConfigurationComponent")) {
+                            return t->SetValue(interface_pointer_cast<IRenderConfiguration>(component));
+                        }
+                    }
+                }
+                return false;
+            })
+            .GetResult();
     }
     return false;
 }
@@ -97,7 +108,7 @@ void SceneObject::StartAutoUpdate(META_NS::TimeSpan interval)
 
 Future<INode::Ptr> SceneObject::GetRootNode() const
 {
-    return internal_->AddTask([=] { return internal_->FindNode("", {}); });
+    return internal_->AddTask([=] { return internal_->GetRootNode(); });
 }
 
 Future<INode::Ptr> SceneObject::CreateNode(const BASE_NS::string_view uri, META_NS::ObjectId id)

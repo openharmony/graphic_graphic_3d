@@ -26,14 +26,29 @@ SCENE_BEGIN_NAMESPACE()
 
 CORE_NS::Entity RenderConfiguration::CreateEntity(const IInternalScene::Ptr& scene)
 {
-    auto& ecs = scene->GetEcsContext();
-    auto rconfig = ecs.FindComponent<CORE3D_NS::RenderConfigurationComponent>();
-    if (!rconfig) {
-        return CORE_NS::Entity {};
+    CORE_NS::Entity entity {};
+    if (!scene) {
+        return entity;
     }
-    auto ent = ecs.GetNativeEcs()->GetEntityManager().Create();
-    rconfig->Create(ent);
-    return ent;
+    // First try to get our scene's root node's entity
+    if (auto rootNode = scene->GetRootNode()) {
+        if (auto access = interface_cast<IEcsObjectAccess>(rootNode)) {
+            if (auto ecso = access->GetEcsObject()) {
+                entity = ecso->GetEntity();
+            }
+        }
+    }
+    // No root node so create a new entity
+    if (!CORE_NS::EntityUtil::IsValid(entity)) {
+        auto& ecs = scene->GetEcsContext();
+        if (auto rconfig = ecs.FindComponent<CORE3D_NS::RenderConfigurationComponent>()) {
+            if (auto necs = ecs.GetNativeEcs()) {
+                entity = necs->GetEntityManager().Create();
+                rconfig->Create(entity);
+            }
+        }
+    }
+    return entity;
 }
 
 bool RenderConfiguration::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
@@ -46,6 +61,11 @@ bool RenderConfiguration::InitDynamicProperty(const META_NS::IProperty::Ptr& p, 
                    new InterfacePtrEntityValue<IEnvironment>(ep, { object_->GetScene(), ClassId::Environment })));
     }
     return AttachEngineProperty(p, path);
+}
+
+BASE_NS::string RenderConfiguration::GetName() const
+{
+    return "RenderConfigurationComponent";
 }
 
 SCENE_END_NAMESPACE()

@@ -349,6 +349,11 @@ INode::Ptr InternalScene::FindNode(BASE_NS::string_view path, META_NS::ObjectId 
     return nullptr;
 }
 
+INode::Ptr InternalScene::GetRootNode() const
+{
+    return FindNode("", {});
+}
+
 INode::Ptr InternalScene::ReleaseCached(NodesType::iterator it)
 {
     auto node = BASE_NS::move(it->second);

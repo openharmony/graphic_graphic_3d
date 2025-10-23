@@ -168,7 +168,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::Dispose>("destroy"),
 
         // SceneResourceFactory methods
-        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateCamera>("createCamera"),
+        Method<FunctionContext<>, SceneJS, &SceneJS::CreateCamera>("createCamera"),
         Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>, SceneJS, &SceneJS::CreateLight>("createLight"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateNode>("createNode"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateTextNode>("createTextNode"),
@@ -727,37 +727,85 @@ napi_value SceneJS::CreateEnvironment(NapiApi::FunctionContext<NapiApi::Object>&
     return Promise(env).Resolve(CreateEnvironment(ctx.This(), ctx.Arg<0>()).ToNapiValue());
 }
 
-napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
 {
-    const auto env = ctx.GetEnv();
+    const auto env = vCtx.GetEnv();
+    const auto info = vCtx.GetInfo();
     auto promise = Promise(env);
 
-    const auto sceneJs = ctx.This();
-    auto scene = sceneJs.GetNative<SCENE_NS::IScene>();
+    auto sceneNodeParams = NapiApi::Object {};
+    auto cameraParams = NapiApi::Object {};
+    if (auto ctx = NapiApi::FunctionContext<NapiApi::Object> { env, info }) {
+        sceneNodeParams = ctx.Arg<0>();
+    } else if (auto ctx = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> { env, info }) {
+        sceneNodeParams = ctx.Arg<0>();
+        cameraParams = ctx.Arg<1>();
+    } else {
+        return promise.Reject("Invalid args given to createCamera");
+    }
 
-    auto params = NapiApi::Object { ctx.Arg<0>() };
-    const auto path = ExtractNodePath(params);
-
-    // renderPipeline is (at the moment of writing) an undocumented param. Check the API docs and usage.
-    // Remove this, if it has been added to the API. Else if it's not used anywhere, remove the implementation.
+    // renderPipeline is an undocumented, deprecated param. It is in use in multiple apps, so support it for now.
+    // If the documented param renderingPipeline is supplied in CameraParameters, it will take precedence.
     auto pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD);
-    if (const auto renderPipelineJs = params.Get("renderPipeline")) {
+    if (const auto renderPipelineJs = sceneNodeParams.Get("renderPipeline")) {
         pipeline = NapiApi::Value<uint32_t>(env, renderPipelineJs);
     }
 
     // Don't create the camera asynchronously. There's a race condition, and we need to deactivate it immediately.
     // Otherwise we get tons of render validation issues.
-    const auto camera = scene->CreateNode<SCENE_NS::ICamera>(path, SCENE_NS::ClassId::CameraNode).GetResult();
-    camera->SetActive(false);
-    camera->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
-    camera->PostProcess()->SetValue(nullptr);
-    napi_value args[] = { sceneJs.ToNapiValue(), params.ToNapiValue() };
-    // Store a weak ref, as these are owned by the scene.
-    const auto result = CreateFromNativeInstance(env, camera, PtrType::WEAK, args);
-    if (auto node = result.GetJsWrapper<NodeImpl>()) {
-        node->Attached(true);
+    auto deactivateCamera = [](SCENE_NS::ICamera::Ptr camera) {
+        if (camera) {
+            camera->SetActive(false);
+        }
+        return camera;
+    };
+    const auto sceneJs = vCtx.This();
+    auto convertToJs = [promise, pipeline, sceneRef = NapiApi::StrongRef { sceneJs },
+                           sceneNodeParamRef = NapiApi::StrongRef { sceneNodeParams },
+                           cameraParamRef = NapiApi::StrongRef { cameraParams }](
+                           SCENE_NS::ICamera::Ptr camera) mutable {
+        if (!camera) {
+            promise.Reject("Camera creation failed");
+            return;
+        }
+        const auto env = promise.Env();
+        camera->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
+        camera->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
+        camera->PostProcess()->SetValue(nullptr);
+        napi_value args[] = { sceneRef.GetValue(), sceneNodeParamRef.GetValue() };
+        // Store a weak ref, as these are owned by the scene.
+        auto result = CreateFromNativeInstance(env, camera, PtrType::WEAK, args);
+        if (auto node = result.GetJsWrapper<NodeImpl>()) {
+            node->Attached(true);
+        }
+        if (auto cameraParams = cameraParamRef.GetObject()) {
+            ApplyCameraParameters(cameraParams, result);
+        }
+        promise.Resolve(result.ToNapiValue());
+    };
+
+    const auto scene = sceneJs.GetNative<SCENE_NS::IScene>();
+    const auto path = ExtractNodePath(sceneNodeParams);
+    const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
+    const auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
+    // Immediately deactivate camera in the same thread where it was created to avoid a race condition.
+    scene->CreateNode<SCENE_NS::ICamera>(path, SCENE_NS::ClassId::CameraNode)
+        .Then(BASE_NS::move(deactivateCamera), engineQ)
+        .Then(BASE_NS::move(convertToJs), jsQ);
+    return promise;
+}
+
+void SceneJS::ApplyCameraParameters(NapiApi::Object& params, NapiApi::Object& cameraJs)
+{
+    if (const auto value = params.Get<bool>("msaa"); value.IsValid()) {
+        cameraJs.Set<bool>("msaa", value);
     }
-    return promise.Resolve(result.ToNapiValue());
+    if (const auto value = params.Get<uint32_t>("renderingPipeline"); value.IsValid()) {
+        cameraJs.Set<uint32_t>("renderingPipeline", value);
+    }
+    if (const auto value = params.Get<uint32_t>("defaultRenderTargetFormat"); value.IsValid()) {
+        cameraJs.Set<uint32_t>("defaultRenderTargetFormat", value);
+    }
 }
 
 napi_value SceneJS::CreateLight(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx)

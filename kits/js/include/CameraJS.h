@@ -15,6 +15,8 @@
 #ifndef CAMERA_JS_H
 #define CAMERA_JS_H
 
+#include <optional>
+
 #include <meta/interface/intf_object.h>
 #include <scene/interface/intf_raycast.h>
 
@@ -28,6 +30,7 @@ class CameraJS : public BaseObject, public NodeImpl {
 public:
     static constexpr uint32_t ID = 80;
     static void Init(napi_env env, napi_value exports);
+    static void RegisterEnums(NapiApi::Object exports);
     CameraJS(napi_env, napi_callback_info);
     ~CameraJS() override;
     virtual void* GetInstanceImpl(uint32_t) override;
@@ -53,7 +56,13 @@ private:
     void SetEnabled(NapiApi::FunctionContext<bool>& ctx);
 
     napi_value GetMSAA(NapiApi::FunctionContext<>& ctx);
-    void SetMSAA(NapiApi::FunctionContext<bool>& ctx);
+    void SetMSAA(NapiApi::FunctionContext<std::optional<bool>>& ctx);
+
+    napi_value GetRenderingPipeline(NapiApi::FunctionContext<>& ctx);
+    void SetRenderingPipeline(NapiApi::FunctionContext<uint32_t>& ctx);
+
+    napi_value GetRenderTargetColorFormat(NapiApi::FunctionContext<>& ctx);
+    void SetRenderTargetColorFormat(NapiApi::FunctionContext<uint32_t>& ctx);
 
     napi_value GetColor(NapiApi::FunctionContext<>& ctx);
     void SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx);
@@ -83,7 +92,7 @@ private:
 
     BASE_NS::unordered_map<uintptr_t, META_NS::IObject::Ptr> resources_;
 
-    bool msaaEnabled_{false};
-    bool clearColorEnabled_{false};
+    bool msaaEnabled_ { false };
+    bool clearColorEnabled_ { false };
 };
 #endif

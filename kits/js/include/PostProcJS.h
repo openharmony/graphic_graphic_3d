@@ -15,7 +15,9 @@
 
 #ifndef POSTPROCJS_H
 #define POSTPROCJS_H
+
 #include "BaseObjectJS.h"
+#include "ObjectProxy.h"
 
 class PostProcJS : public BaseObject {
 public:
@@ -36,9 +38,18 @@ private:
     void SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value GetBloom(NapiApi::FunctionContext<>& ctx);
     void SetBloom(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-    NapiApi::StrongRef toneMap_; // keep a strong ref..
+    napi_value GetVignette(NapiApi::FunctionContext<>& ctx);
+    void SetVignette(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    void SetupVignetteProxy(napi_env env, SCENE_NS::IVignette::Ptr vignette);
 
-    NapiApi::WeakRef camera_; // weak ref to owning camera.
-    NapiApi::StrongRef bloom_; // keep a strong ref..
+    napi_value GetColorFringe(NapiApi::FunctionContext<>& ctx);
+    void SetColorFringe(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    void SetupColorFringeProxy(napi_env env, SCENE_NS::IColorFringe::Ptr colorFringe);
+
+    NapiApi::StrongRef toneMap_; // We own the tonemap.
+    NapiApi::WeakRef camera_;    // The camera owns us.
+    NapiApi::StrongRef bloom_;   // We own the bloom.
+    ObjectProxy vignetteProxy_;
+    ObjectProxy colorFringeProxy_;
 };
 #endif

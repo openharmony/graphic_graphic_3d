@@ -102,6 +102,7 @@ public:
     virtual INode::Ptr CreateNode(BASE_NS::string_view path, META_NS::ObjectId id) = 0;
     virtual INode::Ptr FindNode(BASE_NS::string_view path, META_NS::ObjectId id) const = 0;
     virtual INode::Ptr FindNode(CORE_NS::Entity, META_NS::ObjectId id) const = 0;
+    virtual INode::Ptr GetRootNode() const = 0;
 
     virtual bool ReleaseNode(INode::Ptr&& node, bool recursive) = 0;
     virtual bool RemoveNode(const INode::Ptr& node) = 0;

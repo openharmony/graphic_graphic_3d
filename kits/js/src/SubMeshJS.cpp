@@ -22,8 +22,10 @@
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_mesh.h>
 
+#include "JsObjectCache.h"
 #include "MeshJS.h"
 #include "SceneJS.h"
+
 void* SubMeshJS::GetInstanceImpl(uint32_t id)
 {
     if (id == SubMeshJS::ID)

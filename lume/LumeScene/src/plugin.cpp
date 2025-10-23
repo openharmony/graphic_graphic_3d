@@ -56,8 +56,10 @@
 #include "node/node.h"
 #include "node/text_node.h"
 #include "postprocess/bloom.h"
+#include "postprocess/color_fringe.h"
 #include "postprocess/postprocess.h"
 #include "postprocess/tonemap.h"
+#include "postprocess/vignette.h"
 #include "render_configuration.h"
 #include "render_context.h"
 #include "resource/ecs_animation.h"
@@ -95,6 +97,8 @@ SCENE_BEGIN_NAMESPACE()
 namespace Internal {
 void RegisterEngineAccess();
 void UnregisterEngineAccess();
+void RegisterPostProcessEngineAccess();
+void UnregisterPostProcessEngineAccess();
 void RegisterAnys();
 void UnRegisterAnys();
 void RegisterSerializers();
@@ -113,6 +117,7 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
 
     Internal::RegisterAnys();
     Internal::RegisterEngineAccess();
+    Internal::RegisterPostProcessEngineAccess();
     Internal::RegisterSerializers();
 
     META_NS::RegisterObjectType<SceneManager>();
@@ -143,6 +148,8 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<Image>();
     META_NS::RegisterObjectType<Bloom>();
     META_NS::RegisterObjectType<Tonemap>();
+    META_NS::RegisterObjectType<ColorFringe>();
+    META_NS::RegisterObjectType<Vignette>();
     META_NS::RegisterObjectType<PostProcess>();
 
     META_NS::RegisterObjectType<Environment>();
@@ -246,6 +253,7 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<RenderContext>();
 
     Internal::UnRegisterSerializers();
+    Internal::UnregisterPostProcessEngineAccess();
     Internal::UnregisterEngineAccess();
     Internal::UnRegisterAnys();
 

@@ -20,6 +20,7 @@
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_text.h>
 #include <scene/interface/intf_texture.h>
+#include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/postprocess/intf_bloom.h>
 #include <scene/interface/postprocess/intf_tonemap.h>
 #include <scene/interface/resource/image_info.h>
@@ -52,7 +53,10 @@ using BasicTypes = META_NS::TypeList<
     TonemapType,
     CullModeFlags,
     PolygonMode,
-    ImageLoadInfo
+    ImageLoadInfo,
+    SceneShadowType,
+    SceneShadowQuality,
+    SceneShadowSmoothness
     >;
 using ObjectTypes = META_NS::TypeList<
     ISampler::Ptr,

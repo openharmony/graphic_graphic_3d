@@ -13,29 +13,29 @@
  * limitations under the License.
  */
 
-#ifndef SCENE_SRC_POSTPROCESS_TONEMAP_H
-#define SCENE_SRC_POSTPROCESS_TONEMAP_H
+#ifndef SCENE_SRC_POSTPROCESS_VIGNETTE_H
+#define SCENE_SRC_POSTPROCESS_VIGNETTE_H
 
-#include <scene/interface/postprocess/intf_tonemap.h>
+#include <scene/interface/postprocess/intf_vignette.h>
 
 #include "postprocess_effect.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-META_REGISTER_CLASS(Tonemap, "56c1fc6e-90aa-486d-846e-c9a5c780a90a", META_NS::ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(Vignette, "af3eb8f6-b271-4fb5-b077-a4644942be89", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class Tonemap : public Internal::PostProcessEffect<ITonemap, CORE3D_NS::PostProcessComponent::TONEMAP_BIT> {
-    META_OBJECT(Tonemap, ClassId::Tonemap, PostProcessEffect)
+class Vignette : public Internal::PostProcessEffect<IVignette, CORE3D_NS::PostProcessComponent::VIGNETTE_BIT> {
+    META_OBJECT(Vignette, ClassId::Vignette, PostProcessEffect)
 public:
     META_BEGIN_STATIC_DATA()
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcessEffect, bool, Enabled, "")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITonemap, TonemapType, Type, "tonemapType")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITonemap, float, Exposure, "exposure")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IVignette, float, Coefficient, "coefficient")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IVignette, float, Power, "power")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(bool, Enabled)
-    META_IMPLEMENT_PROPERTY(TonemapType, Type)
-    META_IMPLEMENT_PROPERTY(float, Exposure)
+    META_IMPLEMENT_PROPERTY(float, Coefficient)
+    META_IMPLEMENT_PROPERTY(float, Power)
 
 private:
     BASE_NS::string_view GetComponentPath() const override;
@@ -43,4 +43,4 @@ private:
 
 SCENE_END_NAMESPACE()
 
-#endif
+#endif // SCENE_SRC_POSTPROCESS_VIGNETTE_H

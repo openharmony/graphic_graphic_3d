@@ -13,15 +13,15 @@
  * limitations under the License.
  */
 
-#include "tonemap.h"
+#include "color_fringe.h"
 
 #include <3d/ecs/components/post_process_component.h>
 
 SCENE_BEGIN_NAMESPACE()
 
-BASE_NS::string_view Tonemap::GetComponentPath() const
+BASE_NS::string_view ColorFringe::GetComponentPath() const
 {
-    static constexpr BASE_NS::string_view p("PostProcessComponent.tonemapConfiguration.");
+    static constexpr BASE_NS::string_view p("PostProcessComponent.colorFringeConfiguration.");
     return p;
 }
 

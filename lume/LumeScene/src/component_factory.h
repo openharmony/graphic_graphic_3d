@@ -20,6 +20,8 @@
 #include <scene/ext/intf_internal_scene.h>
 #include <text_3d/ecs/components/text_component.h>
 
+#include <3d/ecs/components/render_configuration_component.h>
+
 #include "component/animation_component.h"
 #include "component/camera_component.h"
 #include "component/environment_component.h"
@@ -77,6 +79,8 @@ inline void AddBuiltinComponentFactories(IInternalScene::Ptr s)
         CORE3D_NS::ILayerComponentManager::UID, CreateShared<ComponentFactory>(ClassId::LayerComponent));
     s->RegisterComponent(CORE3D_NS::INodeComponentManager::UID, CreateShared<ComponentFactory>(ClassId::NodeComponent));
     s->RegisterComponent(TEXT3D_NS::ITextComponentManager::UID, CreateShared<ComponentFactory>(ClassId::TextComponent));
+    s->RegisterComponent(CORE3D_NS::IRenderConfigurationComponentManager::UID,
+        CreateShared<ComponentFactory>(ClassId::RenderConfiguration));
 }
 
 SCENE_END_NAMESPACE()

@@ -13,16 +13,29 @@
  * limitations under the License.
  */
 
-#include "tonemap.h"
+#ifndef SCENE_INTERFACE_POSTPROCESS_IVIGNETTE_H
+#define SCENE_INTERFACE_POSTPROCESS_IVIGNETTE_H
 
-#include <3d/ecs/components/post_process_component.h>
+#include <scene/base/types.h>
+#include <scene/interface/postprocess/intf_postprocess_effect.h>
 
 SCENE_BEGIN_NAMESPACE()
 
-BASE_NS::string_view Tonemap::GetComponentPath() const
-{
-    static constexpr BASE_NS::string_view p("PostProcessComponent.tonemapConfiguration.");
-    return p;
-}
+class IVignette : public IPostProcessEffect {
+    META_INTERFACE(IPostProcessEffect, IVignette, "bf3a09bd-cc53-48c7-8e5d-0a6e7bf327fd")
+public:
+    /**
+     * @brief Vignette coefficient.
+     */
+    META_PROPERTY(float, Coefficient)
+    /**
+     * @brief Vignette power.
+     */
+    META_PROPERTY(float, Power)
+};
 
 SCENE_END_NAMESPACE()
+
+META_INTERFACE_TYPE(SCENE_NS::IVignette)
+
+#endif // SCENE_INTERFACE_POSTPROCESS_IVIGNETTE_H
