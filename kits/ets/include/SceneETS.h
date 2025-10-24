@@ -63,8 +63,8 @@ public:
     InvokeReturn<std::shared_ptr<NodeETS>> GetRoot();
     InvokeReturn<std::shared_ptr<GeometryETS>> CreateGeometry(
         const std::string &path, const std::shared_ptr<MeshResourceETS> &mr);
-    InvokeReturn<std::shared_ptr<CameraETS>> CreateCamera(
-        const std::string &path, uint32_t pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD));
+    InvokeReturn<std::shared_ptr<CameraETS>> CreateCamera(const std::string &path,
+        uint32_t pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD), bool msaa = false);
     InvokeReturn<std::shared_ptr<EnvironmentETS>> CreateEnvironment(const std::string &name, const std::string &uri);
     InvokeReturn<std::shared_ptr<LightETS>> CreateLight(
         const std::string &name, const std::string &path, LightETS::LightType lightType);

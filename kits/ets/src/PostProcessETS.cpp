@@ -15,22 +15,30 @@
 
 #include "PostProcessETS.h"
 #include "Utils.h"
+#ifdef __SCENE_ADAPTER__
+#include "3d_widget_adapter_log.h"
+#endif
 
 namespace OHOS::Render3D {
 PostProcessETS::PostProcessETS(const SCENE_NS::ICamera::Ptr camera, const SCENE_NS::IPostProcess::Ptr pp)
     : camera_(camera), postProc_(pp)
 {}
 
-PostProcessETS::PostProcessETS(const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom)
+PostProcessETS::PostProcessETS(const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom,
+    const std::shared_ptr<VignetteETS> vignette, const std::shared_ptr<ColorFringeETS> colorFringe)
 {
     tonemap_ = tonemap;
     bloom_ = bloom;
+    vignette_ = vignette;
+    colorFringe_ = colorFringe;
 }
 
 PostProcessETS::~PostProcessETS()
 {
     tonemap_.reset();
     bloom_.reset();
+    vignette_.reset();
+    colorFringe_.reset();
     postProc_.reset();
     camera_.reset();
 }
@@ -139,6 +147,105 @@ void PostProcessETS::SetBloom(const std::shared_ptr<BloomETS> bloom)
         }
     } else {
         bloom_->SetEnabled(false);
+    }
+}
+
+std::shared_ptr<VignetteETS> PostProcessETS::GetVignette()
+{
+    auto pp = postProc_.lock();
+    if (!pp) {
+        // The configuration data from ETS is stored in vignette_.
+        return vignette_;
+    }
+    if (!vignette_) {
+        SCENE_NS::IVignette::Ptr vignetteValue = META_NS::GetValue(pp->Vignette());
+        vignette_ = std::make_shared<VignetteETS>(pp, vignetteValue);
+    }
+
+    if (vignette_->IsEnabled()) {
+        return vignette_;
+    } else {
+        // vignette disabled.
+        return nullptr;
+    }
+}
+
+void PostProcessETS::SetVignette(const std::shared_ptr<VignetteETS> vignette)
+{
+    auto pp = postProc_.lock();
+    if (!pp) {
+        return;
+    }
+    if (!vignette_) {
+        SCENE_NS::IVignette::Ptr vignetteValue = META_NS::GetValue(pp->Vignette());
+        vignette_ = std::make_shared<VignetteETS>(pp, vignetteValue);
+    }
+    if (vignette) {
+        if (vignette_->StrictEqual(vignette)) {
+            // setting the exactly the same vignette setting. do nothing.
+            return;
+        }
+        if (vignette_->IsMatch(vignette)) {
+            ExecSyncTask([this, vignette]() {
+                vignette_->SetEnabled(true);
+                vignette_->SetRoundness(vignette->GetRoundness());
+                vignette_->SetIntensity(vignette->GetIntensity());
+                return META_NS::IAny::Ptr{};
+            });
+        } else {
+            CORE_LOG_F("Invalid state. Can't change the post process of a bloom if it already has one");
+        }
+    } else {
+        vignette_->SetEnabled(false);
+    }
+}
+
+std::shared_ptr<ColorFringeETS> PostProcessETS::GetColorFringe()
+{
+    auto pp = postProc_.lock();
+    if (!pp) {
+        // The configuration data from ETS is stored in colorFringe_.
+        return colorFringe_;
+    }
+    if (!colorFringe_) {
+        SCENE_NS::IColorFringe::Ptr colorFringeValue = META_NS::GetValue(pp->ColorFringe());
+        colorFringe_ = std::make_shared<ColorFringeETS>(pp, colorFringeValue);
+    }
+
+    if (colorFringe_->IsEnabled()) {
+        return colorFringe_;
+    } else {
+        // colorFringe disabled.
+        return nullptr;
+    }
+}
+
+void PostProcessETS::SetColorFringe(const std::shared_ptr<ColorFringeETS> colorFringe)
+{
+    auto pp = postProc_.lock();
+    if (!pp) {
+        return;
+    }
+    if (!colorFringe_) {
+        SCENE_NS::IColorFringe::Ptr colorFringeValue = META_NS::GetValue(pp->ColorFringe());
+        colorFringe_ = std::make_shared<ColorFringeETS>(pp, colorFringeValue);
+    }
+    if (colorFringe) {
+        if (colorFringe_->StrictEqual(colorFringe)) {
+            // setting the exactly the same colorFringe setting. do nothing.
+            return;
+        }
+        if (colorFringe_->IsMatch(colorFringe)) {
+            ExecSyncTask([this, colorFringe]() {
+                colorFringe_->SetEnabled(true);
+                colorFringe_->SetIntensity(colorFringe->GetIntensity());
+                return META_NS::IAny::Ptr{};
+            });
+        } else {
+            CORE_LOG_F("Invalid state. Can't change the post process of a bloom if it already has one");
+        }
+    } else {
+        colorFringe_->SetEnabled(false);
     }
 }
 }  // namespace OHOS::Render3D

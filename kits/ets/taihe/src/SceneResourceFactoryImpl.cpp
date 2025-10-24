@@ -45,6 +45,33 @@ namespace OHOS::Render3D::KITETS {
     }
 }
 
+::SceneNodes::Camera SceneResourceFactoryImpl::createCameraSyncWithCameraParams(
+    ::SceneTH::SceneNodeParameters const &params, ::SceneTH::CameraParameters const &cameraParams)
+{
+    if (!sceneETS_) {
+        taihe::set_error("Invalid scene");
+        return SceneNodes::Camera({nullptr, nullptr});
+    }
+    bool msaa = false;
+    if (cameraParams.msaa) {
+        msaa = cameraParams.msaa.value();
+    }
+
+    uint32_t pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD);
+    if (cameraParams.renderingPipeline) {
+        pipeline = cameraParams.renderingPipeline.value();
+    }
+
+    std::string nodePath = ExtractNodePath(params);
+    InvokeReturn<std::shared_ptr<CameraETS>> camera = sceneETS_->CreateCamera(nodePath, pipeline, msaa);
+    if (camera.error.empty()) {
+        return taihe::make_holder<CameraImpl, ::SceneNodes::Camera>(camera.value);
+    } else {
+        taihe::set_error(camera.error);
+        return SceneNodes::Camera({nullptr, nullptr});
+    }
+}
+
 ::SceneNodes::LightTypeUnion SceneResourceFactoryImpl::createLightSync(
     ::SceneTH::SceneNodeParameters const &params, ::SceneNodes::LightType lightType)
 {

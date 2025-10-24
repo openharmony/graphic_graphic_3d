@@ -51,12 +51,35 @@ interface BloomSettings {
     @get getImpl(): Optional<i64>;
 }
 
+interface VignetteSettings {
+    @get getRoundness(): Optional<f64>;
+    @set setRoundness(scaleFactor: Optional<f64>): void;
+
+    @get getIntensity(): Optional<f64>;
+    @set setIntensity(scatter: Optional<f64>): void;
+
+    @get getImpl(): Optional<i64>;
+}
+
+interface ColorFringeSettings {
+    @get getIntensity(): Optional<f64>;
+    @set setIntensity(scatter: Optional<f64>): void;
+
+    @get getImpl(): Optional<i64>;
+}
+
 interface PostProcessSettings {
     @get getToneMapping(): Optional<ToneMappingSettings>;
     @set setToneMapping(toneMapping: Optional<ToneMappingSettings>): void;
 
     @get getBloom(): Optional<BloomSettings>;
     @set setBloom(bloom: Optional<BloomSettings>): void;
+
+    @get getVignette(): Optional<VignetteSettings>;
+    @set setVignette(bloom: Optional<VignetteSettings>): void;
+
+    @get getColorFringe(): Optional<ColorFringeSettings>;
+    @set setColorFringe(bloom: Optional<ColorFringeSettings>): void;
 
     @get getImpl(): Optional<i64>;
 }

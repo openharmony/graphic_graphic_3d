@@ -18,10 +18,13 @@
 namespace OHOS::Render3D::KITETS {
 std::shared_ptr<PostProcessETS> PostProcessSettingsImpl::CreateInternal(
     const ScenePostProcessSettings::ToneMappingSettings &tonemapData,
-    const ScenePostProcessSettings::BloomSettings &bloomData)
+    const ScenePostProcessSettings::BloomSettings &bloomData,
+    const ScenePostProcessSettings::VignetteSettings &vignetteData,
+    const ScenePostProcessSettings::ColorFringeSettings &colorFringeData)
 {
     return std::make_shared<PostProcessETS>(
-        ToneMappingSettingsImpl::CreateInternal(tonemapData), BloomSettingsImpl::CreateInternal(bloomData));
+        ToneMappingSettingsImpl::CreateInternal(tonemapData), BloomSettingsImpl::CreateInternal(bloomData),
+        VignetteSettingsImpl::CreateInternal(vignetteData), ColorFringeSettingsImpl::CreateInternal(colorFringeData));
 }
 
 PostProcessSettingsImpl::PostProcessSettingsImpl(const std::shared_ptr<PostProcessETS> postProcessETS)
@@ -42,7 +45,7 @@ PostProcessSettingsImpl::~PostProcessSettingsImpl()
             postProcessETS_->GetToneMapping());
         return taihe::optional<::ScenePostProcessSettings::ToneMappingSettings>(std::in_place, tm);
     } else {
-        return taihe::optional<::ScenePostProcessSettings::ToneMappingSettings>(std::nullopt);
+        return std::nullopt;
     }
 }
 
@@ -77,7 +80,7 @@ void PostProcessSettingsImpl::setToneMapping(
             taihe::make_holder<BloomSettingsImpl, ScenePostProcessSettings::BloomSettings>(postProcessETS_->GetBloom());
         return taihe::optional<::ScenePostProcessSettings::BloomSettings>(std::in_place, bloom);
     } else {
-        return taihe::optional<::ScenePostProcessSettings::BloomSettings>(std::nullopt);
+        return std::nullopt;
     }
 }
 
@@ -98,6 +101,69 @@ void PostProcessSettingsImpl::setBloom(::taihe::optional_view<::ScenePostProcess
         }
     } else {
         postProcessETS_->SetBloom(nullptr);
+    }
+}
+
+::taihe::optional<::ScenePostProcessSettings::VignetteSettings> PostProcessSettingsImpl::getVignette()
+{
+    if (postProcessETS_) {
+        auto vignette = taihe::make_holder<VignetteSettingsImpl, ScenePostProcessSettings::VignetteSettings>(
+            postProcessETS_->GetVignette());
+        return taihe::optional<::ScenePostProcessSettings::VignetteSettings>(std::in_place, vignette);
+    } else {
+        return std::nullopt;
+    }
+}
+
+void PostProcessSettingsImpl::setVignette(::taihe::optional_view<::ScenePostProcessSettings::VignetteSettings> vignette)
+{
+    if (!postProcessETS_) {
+        return;
+    }
+    if (vignette.has_value()) {
+        ScenePostProcessSettings::VignetteSettings vignetteValue = vignette.value();
+        taihe::optional<int64_t> implOp = vignetteValue->getImpl();
+        if (implOp.has_value()) {
+            if (VignetteSettingsImpl *settings = reinterpret_cast<VignetteSettingsImpl *>(implOp.value())) {
+                postProcessETS_->SetVignette(settings->vignetteETS_);
+            }
+        } else {
+            postProcessETS_->SetVignette(VignetteSettingsImpl::CreateInternal(vignetteValue));
+        }
+    } else {
+        postProcessETS_->SetVignette(nullptr);
+    }
+}
+
+::taihe::optional<::ScenePostProcessSettings::ColorFringeSettings> PostProcessSettingsImpl::getColorFringe()
+{
+    if (postProcessETS_) {
+        auto colorFringe = taihe::make_holder<ColorFringeSettingsImpl, ScenePostProcessSettings::ColorFringeSettings>(
+            postProcessETS_->GetColorFringe());
+        return taihe::optional<::ScenePostProcessSettings::ColorFringeSettings>(std::in_place, colorFringe);
+    } else {
+        return std::nullopt;
+    }
+}
+
+void PostProcessSettingsImpl::setColorFringe(
+    ::taihe::optional_view<::ScenePostProcessSettings::ColorFringeSettings> colorFringe)
+{
+    if (!postProcessETS_) {
+        return;
+    }
+    if (colorFringe.has_value()) {
+        ScenePostProcessSettings::ColorFringeSettings colorFringeValue = colorFringe.value();
+        taihe::optional<int64_t> implOp = colorFringeValue->getImpl();
+        if (implOp.has_value()) {
+            if (ColorFringeSettingsImpl *settings = reinterpret_cast<ColorFringeSettingsImpl *>(implOp.value())) {
+                postProcessETS_->SetColorFringe(settings->colorFringeETS_);
+            }
+        } else {
+            postProcessETS_->SetColorFringe(ColorFringeSettingsImpl::CreateInternal(colorFringeValue));
+        }
+    } else {
+        postProcessETS_->SetColorFringe(nullptr);
     }
 }
 }  // namespace OHOS::Render3D::KITETS
