@@ -99,6 +99,17 @@ napi_value MaterialPropertyJS::GetImage(NapiApi::FunctionContext<>& ctx)
     napi_value args[] = { ctx.This().ToNapiValue() };
     return CreateFromNativeInstance(ctx.GetEnv(), image, PtrType::STRONG, args).ToNapiValue();
 }
+
+void MaterialPropertyJS::SetImage(Scene::ITexture::Ptr texture, NapiApi::Object imageJS)
+{
+    if (!texture) {
+        return;
+    }
+    // GetNative may return null. Then we are just unsetting the image.
+    const auto image = imageJS.GetNative<SCENE_NS::IImage>();
+    META_NS::SetValue(texture->Image(), image);
+}
+
 void MaterialPropertyJS::SetImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
     auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
@@ -107,10 +118,7 @@ void MaterialPropertyJS::SetImage(NapiApi::FunctionContext<NapiApi::Object>& ctx
     }
 
     NapiApi::Object imageJS = ctx.Arg<0>();
-    if (auto nat = imageJS.GetRoot()) {
-        SCENE_NS::IBitmap::Ptr image = interface_pointer_cast<SCENE_NS::IBitmap>(nat->GetNativeObject());
-        META_NS::SetValue(texture->Image(), image);
-    }
+    SetImage(texture, imageJS);
 }
 napi_value MaterialPropertyJS::GetFactor(NapiApi::FunctionContext<> &ctx)
 {
@@ -122,19 +130,26 @@ napi_value MaterialPropertyJS::GetFactor(NapiApi::FunctionContext<> &ctx)
     }
     return ctx.GetUndefined();
 }
+
+void MaterialPropertyJS::SetFactor(Scene::ITexture::Ptr texture, NapiApi::Object factorJS)
+{
+    if (texture && factorJS) {
+        auto x = factorJS.Get<float>("x");
+        auto y = factorJS.Get<float>("y");
+        auto z = factorJS.Get<float>("z");
+        auto w = factorJS.Get<float>("w");
+        META_NS::SetValue(texture->Factor(), { x, y, z, w });
+    }
+}
+
 void MaterialPropertyJS::SetFactor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
     auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
     if (!texture) {
         return;
     }
-
     if (NapiApi::Object factorJS = ctx.Arg<0>()) {
-        auto x = factorJS.Get<float>("x");
-        auto y = factorJS.Get<float>("y");
-        auto z = factorJS.Get<float>("z");
-        auto w = factorJS.Get<float>("w");
-        META_NS::SetValue(texture->Factor(), { x, y, z, w });
+        SetFactor(texture, factorJS);
     }
 }
 napi_value MaterialPropertyJS::GetSampler(NapiApi::FunctionContext<>& ctx)
@@ -154,54 +169,56 @@ napi_value MaterialPropertyJS::GetSampler(NapiApi::FunctionContext<>& ctx)
     return ctx.GetUndefined();
 }
 
-void MaterialPropertyJS::SetSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+namespace {
+struct SamplerChangeSet {
+    std::optional<SCENE_NS::SamplerFilter> minFilter;
+    std::optional<SCENE_NS::SamplerFilter> magFilter;
+    std::optional<SCENE_NS::SamplerFilter> mipMapMode;
+    std::optional<SCENE_NS::SamplerAddressMode> addressModeU;
+    std::optional<SCENE_NS::SamplerAddressMode> addressModeV;
+    std::optional<SCENE_NS::SamplerAddressMode> addressModeW;
+
+    bool HasChanges() const
+    {
+        return minFilter.has_value() || magFilter.has_value() || mipMapMode.has_value() ||
+               addressModeU.has_value() || addressModeV.has_value() || addressModeW.has_value();
+    }
+};
+
+void PopulateChanges(SamplerChangeSet& changes, NapiApi::Object& source)
 {
-    auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
+    if (source.Has("magFilter")) {
+        changes.magFilter = SamplerJS::ConvertToFilter(source.Get<uint32_t>("magFilter"));
+    }
+    if (source.Has("minFilter")) {
+        changes.minFilter = SamplerJS::ConvertToFilter(source.Get<uint32_t>("minFilter"));
+    }
+    if (source.Has("mipMapMode")) {
+        changes.mipMapMode = SamplerJS::ConvertToFilter(source.Get<uint32_t>("mipMapMode"));
+    }
+    if (source.Has("addressModeU")) {
+        changes.addressModeU = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeU"));
+    }
+    if (source.Has("addressModeV")) {
+        changes.addressModeV = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeV"));
+    }
+    if (source.Has("addressModeW")) {
+        changes.addressModeW = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeW"));
+    }
+}
+}
+
+void MaterialPropertyJS::SetSampler(Scene::ITexture::Ptr texture, NapiApi::Object source)
+{
     if (!texture) {
         return;
     }
-
     auto target = META_NS::GetValue(texture->Sampler());
-    NapiApi::Object source = ctx.Arg<0>();
-
-    struct SamplerChangeSet {
-        std::optional<SCENE_NS::SamplerFilter> minFilter;
-        std::optional<SCENE_NS::SamplerFilter> magFilter;
-        std::optional<SCENE_NS::SamplerFilter> mipMapMode;
-        std::optional<SCENE_NS::SamplerAddressMode> addressModeU;
-        std::optional<SCENE_NS::SamplerAddressMode> addressModeV;
-        std::optional<SCENE_NS::SamplerAddressMode> addressModeW;
-
-        bool HasChanges() const
-        {
-            return minFilter.has_value() || magFilter.has_value() || mipMapMode.has_value() ||
-                   addressModeU.has_value() || addressModeV.has_value() || addressModeW.has_value();
-        }
-    };
-
     SamplerChangeSet changes;
     bool defined = source && source.IsDefined() && !source.IsNull();
     if (defined) {
-        if (source.Has("magFilter")) {
-            changes.magFilter = SamplerJS::ConvertToFilter(source.Get<uint32_t>("magFilter"));
-        }
-        if (source.Has("minFilter")) {
-            changes.minFilter = SamplerJS::ConvertToFilter(source.Get<uint32_t>("minFilter"));
-        }
-        if (source.Has("mipMapMode")) {
-            changes.mipMapMode = SamplerJS::ConvertToFilter(source.Get<uint32_t>("mipMapMode"));
-        }
-        if (source.Has("addressModeU")) {
-            changes.addressModeU = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeU"));
-        }
-        if (source.Has("addressModeV")) {
-            changes.addressModeV = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeV"));
-        }
-        if (source.Has("addressModeW")) {
-            changes.addressModeW = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeW"));
-        }
+        PopulateChanges(changes, source);
     }
-
     ExecSyncTask([&]() {
         // Apply given object as a changeset on top of default sampler
         if (auto resetable = interface_cast<META_NS::IResetableObject>(target)) {
@@ -230,4 +247,14 @@ void MaterialPropertyJS::SetSampler(NapiApi::FunctionContext<NapiApi::Object>& c
         }
         return META_NS::IAny::Ptr {};
     });
+}
+
+void MaterialPropertyJS::SetSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    auto texture = ctx.This().GetNative<SCENE_NS::ITexture>();
+    if (!texture) {
+        return;
+    }
+    NapiApi::Object samplerJS = ctx.Arg<0>();
+    SetSampler(texture, samplerJS);
 }
