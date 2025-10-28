@@ -62,7 +62,7 @@ export class NodeContainerProxy implements Container<Node> {
 @!namespace("SceneNodes")
 
 from SceneResources use SceneResource, Mesh, MeshResource, Morpher;
-from SceneTypes use Quaternion, Color, Vec2, Vec3;
+from SceneTypes use Quaternion, Color, RenderingPipelineType, Vec2, Vec3;
 from ScenePostProcessSettings use PostProcessSettings;
 from SceneTH use RaycastParameters, RaycastResult, SceneNodeParameters;
 
@@ -246,6 +246,12 @@ interface Camera: Node {
 
     @get getClearColor(): ColorOrNull;
     @set setClearColor(color: ColorOrNull): void;
+
+    @get getMsaa(): Optional<bool>;
+    @set setMsaa(msaa: Optional<bool>): void;
+
+    @get getRenderingPipeline(): Optional<RenderingPipelineType>;
+    @set setRenderingPipeline(renderingPipeline: Optional<RenderingPipelineType>): void;
 
     @gen_promise("raycast")
     raycastSync(viewPosition: Vec2, params: RaycastParameters): Array<RaycastResult>;

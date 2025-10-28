@@ -156,6 +156,7 @@ taihe_shared_library("scene_ani") {
     "taihe/src/ANIUtils.cpp",
     "taihe/src/BloomSettingsImpl.cpp",
     "taihe/src/CameraImpl.cpp",
+    "taihe/src/ColorFringeSettingsImpl.cpp",
     "taihe/src/EnvironmentImpl.cpp",
     "taihe/src/GeometryImpl.cpp",
     "taihe/src/ImageImpl.cpp",
@@ -182,6 +183,7 @@ taihe_shared_library("scene_ani") {
     "taihe/src/ShaderMaterialImpl.cpp",
     "taihe/src/SubMeshImpl.cpp",
     "taihe/src/ToneMappingSettingsImpl.cpp",
+    "taihe/src/VignetteSettingsImpl.cpp",
     "src/geometry_definition/CubeETS.cpp",
     "src/geometry_definition/CustomETS.cpp",
     "src/geometry_definition/GeometryDefinition.cpp",
@@ -196,6 +198,7 @@ taihe_shared_library("scene_ani") {
     "src/AnimationETS.cpp",
     "src/BloomETS.cpp",
     "src/CameraETS.cpp",
+    "src/ColorFringeETS.cpp",
     "src/EnvironmentETS.cpp",
     "src/GeometryETS.cpp",
     "src/ImageETS.cpp",
@@ -216,6 +219,7 @@ taihe_shared_library("scene_ani") {
     "src/ShaderETS.cpp",
     "src/SubMeshETS.cpp",
     "src/TonemapETS.cpp",
+    "src/VignetteETS.cpp",
   ]
 
   deps = [

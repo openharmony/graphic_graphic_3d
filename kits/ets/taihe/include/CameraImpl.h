@@ -60,6 +60,12 @@ public:
     ::SceneNodes::ColorOrNull getClearColor();
     void setClearColor(::SceneNodes::ColorOrNull const &color);
 
+    ::taihe::optional<bool> getMsaa();
+    void setMsaa(::taihe::optional_view<bool> msaa);
+
+    ::taihe::optional<::SceneTypes::RenderingPipelineType> getRenderingPipeline();
+    void setRenderingPipeline(::taihe::optional_view<::SceneTypes::RenderingPipelineType> renderingPipeline);
+
     ::taihe::array<::SceneTH::RaycastResult> raycastSync(
         ::SceneTypes::weak::Vec2 viewPosition, ::SceneTH::RaycastParameters const &params);
 

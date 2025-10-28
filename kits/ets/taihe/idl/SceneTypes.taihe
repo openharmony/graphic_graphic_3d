@@ -99,6 +99,11 @@ enum GeometryType : i32 {
     SPHERE = 3
 }
 
+enum RenderingPipelineType : i32 {
+    FORWARD_LIGHTWEIGHT = 0,
+    FORWARD = 1
+}
+
 interface GeometryDefinition {
     @get getGeometryType(): GeometryType;
 }

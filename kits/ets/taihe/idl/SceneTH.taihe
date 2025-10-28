@@ -57,7 +57,7 @@ class ComponentPropertyProxyHandler extends RecordProxyHandler<ComponentProperty
 
 from SceneResources use Shader, MaterialType, VariousMaterial, Animation, Environment, Image, MeshResource, Sampler, SceneResource;
 from SceneNodes use Camera, LightType, LightTypeUnion, Light, Node, NodeType, Geometry, NodeOrNull, VariousNodesOrNull, VariousNodes;
-from SceneTypes use GeometryDefinitionType, Vec2, Vec3, Vec4;
+from SceneTypes use RenderingPipelineType, GeometryDefinitionType, Vec2, Vec3, Vec4;
 
 struct SceneResourceParameters {
     name: String;
@@ -96,9 +96,17 @@ interface RenderResourceFactory {
     createSceneSync(uri: Optional<@sts_type("ResourceStr") Opaque>): Scene;
 }
 
+struct CameraParameters {
+    renderingPipeline: Optional<RenderingPipelineType>;
+    msaa: Optional<bool>;
+}
+
 interface SceneResourceFactory : RenderResourceFactory {
     @gen_promise("createCamera")
     createCameraSync(params: SceneNodeParameters): Camera;
+
+    @gen_promise("createCamera")
+    createCameraSyncWithCameraParams(params: SceneNodeParameters, cameraParams: CameraParameters): Camera;
 
     @gen_promise("createLight")
     createLightSync(params: SceneNodeParameters, lightType: LightType): LightTypeUnion;

@@ -26,6 +26,9 @@ public:
     MaterialPropertyJS(napi_env, napi_callback_info);
     ~MaterialPropertyJS() override;
 
+    static void SetFactor(Scene::ITexture::Ptr texture, NapiApi::Object factorJS);
+    static void SetImage(Scene::ITexture::Ptr texture, NapiApi::Object imageJS);
+    static void SetSampler(Scene::ITexture::Ptr texture, NapiApi::Object samplerJS);
 private:
     void* GetInstanceImpl(uint32_t) override;
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);

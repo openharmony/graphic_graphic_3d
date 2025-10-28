@@ -12,6 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifdef __SCENE_ADAPTER__
+#include "3d_widget_adapter_log.h"
+#endif
 
 #include <scene/interface/intf_layer.h>
 
@@ -29,7 +32,25 @@ std::shared_ptr<CameraETS> CameraETS::FromJS(
 
 CameraETS::CameraETS(const SCENE_NS::ICamera::Ptr camera)
     : NodeETS(NodeETS::NodeType::CAMERA, interface_pointer_cast<SCENE_NS::INode>(camera)), camera_(camera)
-{}
+{
+    if (!camera) {
+        return;
+    }
+    if (auto pp = META_NS::GetValue(camera->PostProcess()); !pp) {
+        auto node = interface_cast<SCENE_NS::INode>(camera);
+        if (node) {
+            if (SCENE_NS::IScene::Ptr scene = node->GetScene()) {
+                auto postProc = interface_pointer_cast<SCENE_NS::IPostProcess>(
+                    scene->CreateObject(SCENE_NS::ClassId::PostProcess).GetResult());
+                postProc->Vignette()->GetValue()->Enabled()->SetValue(true);
+                pp->ColorFringe()->GetValue()->Enabled()->SetValue(true);
+                pp->Bloom()->GetValue()->Enabled()->SetValue(true);
+                pp->Tonemap()->GetValue()->Enabled()->SetValue(true);
+                camera->PostProcess()->SetValue(postProc);
+            }
+        }
+    }
+}
 
 CameraETS::~CameraETS()
 {
@@ -134,12 +155,27 @@ void CameraETS::SetPostProcess(const std::shared_ptr<PostProcessETS> pp)
         if (postProcess_->IsMatch(pp)) {
             postProcess_->SetToneMapping(pp->GetToneMapping());
             postProcess_->SetBloom(pp->GetBloom());
+            postProcess_->SetVignette(pp->GetVignette());
+            postProcess_->SetColorFringe(pp->GetColorFringe());
         } else {
             CORE_LOG_F("Invalid state. Can't change the camera of a post process if it already has one");
         }
     } else {
-        postProcess_->SetToneMapping(nullptr);
-        postProcess_->SetBloom(nullptr);
+        auto node = interface_cast<SCENE_NS::INode>(camera);
+        if (node) {
+            if (SCENE_NS::IScene::Ptr scene = node->GetScene()) {
+                auto newPostProc = interface_pointer_cast<SCENE_NS::IPostProcess>(
+                    scene->CreateObject(SCENE_NS::ClassId::PostProcess).GetResult());
+                postProcess_->SetToneMapping(
+                    std::make_shared<TonemapETS>(newPostProc, META_NS::GetValue(newPostProc->Tonemap())));
+                postProcess_->SetBloom(
+                    std::make_shared<BloomETS>(newPostProc, META_NS::GetValue(newPostProc->Bloom())));
+                postProcess_->SetVignette(
+                    std::make_shared<VignetteETS>(newPostProc, META_NS::GetValue(newPostProc->Vignette())));
+                postProcess_->SetColorFringe(
+                    std::make_shared<ColorFringeETS>(newPostProc, META_NS::GetValue(newPostProc->ColorFringe())));
+            }
+        }
     }
 }
 
@@ -242,6 +278,25 @@ void CameraETS::SetClearColor(const bool enabled, const BASE_NS::Math::Vec4 &col
     camera->PipelineFlags()->SetValue(curBits);
 }
 
+CameraETS::RenderingPipelineType CameraETS::GetRenderingPipeline()
+{
+    auto pipeline = SCENE_NS::CameraPipeline::LIGHT_FORWARD;
+    auto camera = camera_.lock();
+    if (camera) {
+        pipeline = camera->RenderingPipeline()->GetValue();
+    }
+    return FromInternalType(pipeline);
+}
+
+void CameraETS::SetRenderingPipeline(const RenderingPipelineType pipeline)
+{
+    auto camera = camera_.lock();
+    if (!camera) {
+        return;
+    }
+    camera->RenderingPipeline()->SetValue(ToInternalType(pipeline));
+}
+
 BASE_NS::Math::Vec3 CameraETS::WorldToScreen(const BASE_NS::Math::Vec3 &world)
 {
     if (auto rayCast = interface_pointer_cast<SCENE_NS::ICameraRayCast>(camera_)) {
@@ -281,5 +336,25 @@ InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BAS
         return CameraETS::RaycastResult{FromNative(nodeHit.node), nodeHit.distanceToCenter, nodeHit.position};
     });
     return InvokeReturn<std::vector<CameraETS::RaycastResult>>(result);
+}
+
+SCENE_NS::CameraPipeline CameraETS::ToInternalType(const CameraETS::RenderingPipelineType &pipeline)
+{
+    switch (pipeline) {
+        case CameraETS::RenderingPipelineType::FORWARD:
+            return SCENE_NS::CameraPipeline::FORWARD;
+        default:
+            return SCENE_NS::CameraPipeline::LIGHT_FORWARD;
+    }
+}
+
+CameraETS::RenderingPipelineType CameraETS::FromInternalType(const SCENE_NS::CameraPipeline &pipeline)
+{
+    switch (pipeline) {
+        case SCENE_NS::CameraPipeline::FORWARD:
+            return CameraETS::RenderingPipelineType::FORWARD;
+        default:
+            return CameraETS::RenderingPipelineType::FORWARD_LIGHTWEIGHT;
+    }
 }
 }  // namespace OHOS::Render3D

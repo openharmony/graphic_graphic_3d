@@ -31,6 +31,10 @@
 namespace OHOS::Render3D {
 class CameraETS : public NodeETS {
 public:
+    enum RenderingPipelineType : uint32_t {
+        FORWARD_LIGHTWEIGHT = 0,
+        FORWARD = 1,
+    };
     static std::shared_ptr<CameraETS> FromJS(
         const SCENE_NS::ICamera::Ptr camera, const std::string &name, const std::string &uri = "");
 
@@ -62,6 +66,9 @@ public:
     InvokeReturn<std::shared_ptr<Vec4Proxy>> GetClearColor();
     void SetClearColor(const bool enabled, const BASE_NS::Math::Vec4 &color);
 
+    CameraETS::RenderingPipelineType GetRenderingPipeline();
+    void SetRenderingPipeline(const RenderingPipelineType pipeline);
+
     BASE_NS::Math::Vec3 WorldToScreen(const BASE_NS::Math::Vec3 &world);
     BASE_NS::Math::Vec3 ScreenToWorld(const BASE_NS::Math::Vec3 &screen);
 
@@ -69,6 +76,9 @@ public:
         const std::shared_ptr<NodeETS> rootNode = nullptr, const std::shared_ptr<NodeETS> layerMask = nullptr);
 
 private:
+    inline SCENE_NS::CameraPipeline ToInternalType(const CameraETS::RenderingPipelineType &pipeline);
+    inline CameraETS::RenderingPipelineType FromInternalType(const SCENE_NS::CameraPipeline &pipeline);
+
     SCENE_NS::ICamera::WeakPtr camera_{nullptr};
     bool msaaEnabled_{false};
     bool clearColorEnabled_{false};
