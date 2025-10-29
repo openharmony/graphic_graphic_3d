@@ -43,9 +43,9 @@ CameraETS::CameraETS(const SCENE_NS::ICamera::Ptr camera)
                 auto postProc = interface_pointer_cast<SCENE_NS::IPostProcess>(
                     scene->CreateObject(SCENE_NS::ClassId::PostProcess).GetResult());
                 postProc->Vignette()->GetValue()->Enabled()->SetValue(true);
-                pp->ColorFringe()->GetValue()->Enabled()->SetValue(true);
-                pp->Bloom()->GetValue()->Enabled()->SetValue(true);
-                pp->Tonemap()->GetValue()->Enabled()->SetValue(true);
+                postProc->ColorFringe()->GetValue()->Enabled()->SetValue(true);
+                postProc->Bloom()->GetValue()->Enabled()->SetValue(true);
+                postProc->Tonemap()->GetValue()->Enabled()->SetValue(true);
                 camera->PostProcess()->SetValue(postProc);
             }
         }
