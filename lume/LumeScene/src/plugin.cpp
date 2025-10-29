@@ -217,6 +217,8 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<Image>();
     META_NS::UnregisterObjectType<Bloom>();
     META_NS::UnregisterObjectType<Tonemap>();
+    META_NS::UnregisterObjectType<ColorFringe>();
+    META_NS::UnregisterObjectType<Vignette>();
     META_NS::UnregisterObjectType<PostProcess>();
 
     META_NS::UnregisterObjectType<Environment>();
