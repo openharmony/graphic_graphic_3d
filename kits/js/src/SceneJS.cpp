@@ -477,6 +477,10 @@ napi_value SceneJS::CreateNode(
         NapiApi::ArgCount::PARTIAL };
     const auto env = ctx.GetEnv();
     auto promise = Promise(env);
+    auto scene = ctx.This().GetNative<SCENE_NS::IScene>();
+    if (!scene) {
+        return promise.Reject("Invalid scene");
+    }
     auto sceneNodeParameters = ctx.Arg<0>();
 
     auto convertToJs = [promise, jsClassName = BASE_NS::string { jsClassName },
@@ -492,7 +496,6 @@ napi_value SceneJS::CreateNode(
     };
 
     const auto nodePath = ExtractNodePath(sceneNodeParameters);
-    auto scene = ctx.This().GetNative<SCENE_NS::IScene>();
     const auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
     scene->CreateNode(nodePath, classId).Then(BASE_NS::move(convertToJs), jsQ);
     return promise;
@@ -744,6 +747,12 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         return promise.Reject("Invalid args given to createCamera");
     }
 
+    const auto sceneJs = vCtx.This();
+    const auto scene = sceneJs.GetNative<SCENE_NS::IScene>();
+    if (!scene) {
+        return promise.Reject("Invalid scene");
+    }
+
     // renderPipeline is an undocumented, deprecated param. It is in use in multiple apps, so support it for now.
     // If the documented param renderingPipeline is supplied in CameraParameters, it will take precedence.
     auto pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD);
@@ -759,7 +768,6 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         }
         return camera;
     };
-    const auto sceneJs = vCtx.This();
     auto convertToJs = [promise, pipeline, sceneRef = NapiApi::StrongRef { sceneJs },
                            sceneNodeParamRef = NapiApi::StrongRef { sceneNodeParams },
                            cameraParamRef = NapiApi::StrongRef { cameraParams }](
@@ -784,7 +792,6 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         promise.Resolve(result.ToNapiValue());
     };
 
-    const auto scene = sceneJs.GetNative<SCENE_NS::IScene>();
     const auto path = ExtractNodePath(sceneNodeParams);
     const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
     const auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
@@ -839,6 +846,10 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
     const auto env = ctx.GetEnv();
     auto promise = Promise(env);
     uint32_t type = ctx.Arg<1>();
+    const auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject());
+    if (!scene) {
+        return promise.Reject("Invalid scene");
+    }
 
     auto convertToJs = [promise, type, sceneRef = NapiApi::StrongRef(ctx.This()),
                            paramRef = NapiApi::StrongRef(ctx.Arg<0>())](SCENE_NS::IMaterial::Ptr material) mutable {
@@ -853,7 +864,6 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
         promise.Resolve(result.ToNapiValue());
     };
 
-    const auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject());
     const auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
     scene->CreateObject<SCENE_NS::IMaterial>(SCENE_NS::ClassId::Material).Then(BASE_NS::move(convertToJs), jsQ);
     return promise;

@@ -53,7 +53,7 @@ void DisposeContainer::DisposeAll(napi_env e)
             // do nothing.
         },
         nullptr, &tmp);
-    scen.Set("SceneJS", tmp);
+    scen.Set("DisposeContainer", tmp);
     napi_value scene = scen.ToNapiValue();
 
     // dispose all cameras/env/etcs.
