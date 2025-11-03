@@ -198,5 +198,17 @@ Future<IMesh::Ptr> MeshCreator::CreateCone(const MeshConfig& c, float radius, fl
     }
     return {};
 }
+Future<IMesh::Ptr> MeshCreator::CreateCylinder(const MeshConfig& c, float radius, float height, uint32_t segmentCount)
+{
+    if (auto scene = scene_.lock()) {
+        return scene->AddTask([=] {
+            auto& util = scene->GetGraphicsContext().GetMeshUtil();
+            auto ent = util.GenerateCylinderMesh(
+                *scene->GetEcsContext().GetNativeEcs(), c.name, GetMaterial(c), radius, height, segmentCount);
+            return CreateMesh(scene, ent);
+        });
+    }
+    return {};
+}
 
 SCENE_END_NAMESPACE()

@@ -61,6 +61,8 @@ public:
     virtual Future<IMesh::Ptr> CreateSphere(const MeshConfig&, float radius, uint32_t rings, uint32_t sectors) = 0;
     /// Create cone mesh from given data
     virtual Future<IMesh::Ptr> CreateCone(const MeshConfig&, float radius, float length, uint32_t sectors) = 0;
+    /// Create cylinder mesh from given data
+    virtual Future<IMesh::Ptr> CreateCylinder(const MeshConfig&, float radius, float height, uint32_t segmentCount) = 0;
 };
 
 META_REGISTER_CLASS(MeshCreator, "e920536a-8b5b-4503-a299-7e7f3fc2f603", META_NS::ObjectCategoryBits::NO_CATEGORY)

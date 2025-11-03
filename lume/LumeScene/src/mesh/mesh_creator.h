@@ -32,6 +32,7 @@ public:
     Future<IMesh::Ptr> CreatePlane(const MeshConfig&, float width, float depth) override;
     Future<IMesh::Ptr> CreateSphere(const MeshConfig&, float radius, uint32_t rings, uint32_t sectors) override;
     Future<IMesh::Ptr> CreateCone(const MeshConfig&, float radius, float length, uint32_t sectors) override;
+    Future<IMesh::Ptr> CreateCylinder(const MeshConfig&, float radius, float height, uint32_t segmentCount) override;
 
     bool Build(const META_NS::IMetadata::Ptr&) override;
 

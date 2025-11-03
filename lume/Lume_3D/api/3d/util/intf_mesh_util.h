@@ -88,6 +88,17 @@ public:
         CORE_NS::Entity material, float majorRadius, float minorRadius, uint32_t majorSectors,
         uint32_t minorSectors) = 0;
 
+    /** Generate cylinder mesh.
+     * @param ecs ECS instance where entity will live.
+     * @param name Name of the mesh resource.
+     * @param material Material for mesh resource, if not set will use default glTF material.
+     * @param radius Radius of the cylinder.
+     * @param height Height of the cylinder.
+     * @param segmentCount Number of segmented faces around the circumference of the cylinder.
+     */
+    virtual CORE_NS::Entity GenerateCylinderMesh(const CORE_NS::IEcs& ecs, BASE_NS::string_view name,
+        CORE_NS::Entity material, float radius, float height, uint32_t segmentCount) = 0;
+
     /** Generate renderable entity
      * @param ecs ECS instance where entity will live.
      * @param name Name of the mesh resource and entity.
@@ -150,6 +161,17 @@ public:
      */
     virtual CORE_NS::Entity GenerateTorus(const CORE_NS::IEcs& ecs, BASE_NS::string_view name, CORE_NS::Entity material,
         float majorRadius, float minorRadius, uint32_t majorSectors, uint32_t minorSectors) = 0;
+
+    /** Generate cylinder entity.
+     * @param ecs ECS instance where entity will live.
+     * @param name Name of the mesh resource and entity.
+     * @param material Material for mesh resource, if not set will use default glTF material.
+     * @param radius Radius of the cylinder.
+     * @param height Height of the cylinder.
+     * @param segmentCount Number of segmented faces around the circumference of the cylinder.
+     */
+    virtual CORE_NS::Entity GenerateCylinder(const CORE_NS::IEcs& ecs, BASE_NS::string_view name,
+        CORE_NS::Entity material, float radius, float height, uint32_t segmentCount) = 0;
 
 protected:
     IMeshUtil() = default;

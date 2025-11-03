@@ -42,6 +42,7 @@
 #include "geometry_definition/CustomETS.h"
 #include "geometry_definition/PlaneETS.h"
 #include "geometry_definition/SphereETS.h"
+#include "geometry_definition/CylinderETS.h"
 
 namespace OHOS::Render3D::KITETS {
 class SceneResourceFactoryImpl : public RenderResourceFactoryImpl {

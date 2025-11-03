@@ -46,6 +46,8 @@ public:
         float majorRadius, float minorRadius, uint32_t majorSectors, uint32_t minorSectors) override;
     CORE_NS::Entity GenerateCubeMesh(const CORE_NS::IEcs& ecs, BASE_NS::string_view name, CORE_NS::Entity material,
         float width, float height, float depth) override;
+    CORE_NS::Entity GenerateCylinderMesh(const CORE_NS::IEcs& ecs, BASE_NS::string_view name, CORE_NS::Entity material,
+        float radius, float height, uint32_t segmentCount) override;
 
     CORE_NS::Entity GenerateEntity(
         const CORE_NS::IEcs& ecs, BASE_NS::string_view name, CORE_NS::Entity meshEntity) override;
@@ -63,6 +65,9 @@ public:
 
     CORE_NS::Entity GenerateTorus(const CORE_NS::IEcs& ecs, BASE_NS::string_view name, CORE_NS::Entity material,
         float majorRadius, float minorRadius, uint32_t majorSectors, uint32_t minorSectors) override;
+
+    CORE_NS::Entity GenerateCylinder(const CORE_NS::IEcs& ecs, BASE_NS::string_view name, CORE_NS::Entity material,
+        float radius, float height, uint32_t segmentCount) override;
 
     explicit MeshUtil(CORE_NS::IClassFactory& factory);
     ~MeshUtil() override = default;

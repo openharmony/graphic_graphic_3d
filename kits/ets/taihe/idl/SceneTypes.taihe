@@ -96,7 +96,8 @@ enum GeometryType : i32 {
     CUSTOM = 0,
     CUBE = 1,
     PLANE = 2,
-    SPHERE = 3
+    SPHERE = 3,
+    CYLINDER = 4
 }
 
 enum RenderingPipelineType : i32 {
@@ -167,11 +168,27 @@ interface SphereGeometry : GeometryDefinition {
 @ctor("SphereGeometry")
 function CreateSphereGeometry(): SphereGeometry;
 
+@class
+interface CylinderGeometry : GeometryDefinition {
+    @get getRadius(): f64;
+    @set setRadius(radius: f64): void;
+
+    @get getHeight(): f64;
+    @set setHeight(height: f64): void;
+
+    @get getSegmentCount(): i32;
+    @set setSegmentCount(count: i32): void;
+}
+
+@ctor("CylinderGeometry")
+function CreateCylinderGeometry(): CylinderGeometry;
+
 union GeometryDefinitionType {
     custom: CustomGeometry;
     cube: CubeGeometry;
     plane: PlaneGeometry;
     sphere: SphereGeometry;
+    cylinder: CylinderGeometry;
     base: GeometryDefinition;
 }
 

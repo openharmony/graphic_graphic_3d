@@ -122,6 +122,7 @@ ohos_source_set("napi_source") {
       "src/geometry_definition/GeometryDefinition.cpp",
       "src/geometry_definition/PlaneJS.cpp",
       "src/geometry_definition/SphereJS.cpp",
+      "src/geometry_definition/CylinderJS.cpp",
       "src/ImageJS.cpp",
       "src/JsObjectCache.cpp",
       "src/LightJS.cpp",

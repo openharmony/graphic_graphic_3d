@@ -43,6 +43,13 @@ namespace OHOS::Render3D::KITETS {
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<SphereGeometryImpl, ::SceneTypes::SphereGeometry>();
 }
+
+::SceneTypes::CylinderGeometry CreateCylinderGeometry()
+{
+    // The parameters in the make_holder function should be of the same type
+    // as the parameters in the constructor of the actual implementation class.
+    return taihe::make_holder<CylinderGeometryImpl, ::SceneTypes::CylinderGeometry>();
+}
 }  // namespace OHOS::Render3D::KITETS
 
 using namespace OHOS::Render3D::KITETS;
@@ -52,4 +59,5 @@ TH_EXPORT_CPP_API_CreateCustomGeometry(CreateCustomGeometry);
 TH_EXPORT_CPP_API_CreateCubeGeometry(CreateCubeGeometry);
 TH_EXPORT_CPP_API_CreatePlaneGeometry(CreatePlaneGeometry);
 TH_EXPORT_CPP_API_CreateSphereGeometry(CreateSphereGeometry);
+TH_EXPORT_CPP_API_CreateCylinderGeometry(CreateCylinderGeometry);
 // NOLINTEND

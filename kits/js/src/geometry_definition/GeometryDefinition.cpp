@@ -19,6 +19,7 @@
 #include <geometry_definition/CustomJS.h>
 #include <geometry_definition/PlaneJS.h>
 #include <geometry_definition/SphereJS.h>
+#include <geometry_definition/CylinderJS.h>
 #include <napi_api.h>
 
 namespace GeometryDefinition {
@@ -39,6 +40,7 @@ void RegisterEnums(NapiApi::Object exports)
     DECL_ENUM(GeometryType, CUBE);
     DECL_ENUM(GeometryType, PLANE);
     DECL_ENUM(GeometryType, SPHERE);
+    DECL_ENUM(GeometryType, CYLINDER);
 #undef DECL_ENUM
 
     exports.Set("GeometryType", GeometryType);
@@ -57,6 +59,8 @@ BASE_NS::unique_ptr<GeometryDefinition> GeometryDefinition::FromJs(NapiApi::Obje
             result = PlaneJS::FromJs(jsDefinition);
         } else if (type == GeometryType::SPHERE) {
             result = SphereJS::FromJs(jsDefinition);
+        } else if (type == GeometryType::CYLINDER) {
+            result = CylinderJS::FromJs(jsDefinition);
         } else {
             LOG_E("Can't create a native geometry definition: unsupported geometryType");
         }

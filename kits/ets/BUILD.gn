@@ -189,6 +189,7 @@ taihe_shared_library("scene_ani") {
     "src/geometry_definition/GeometryDefinition.cpp",
     "src/geometry_definition/PlaneETS.cpp",
     "src/geometry_definition/SphereETS.cpp",
+    "src/geometry_definition/CylinderETS.cpp",
     "src/property_proxy/ColorProxy.cpp",
     "src/property_proxy/PropertyProxy.cpp",
     "src/property_proxy/QuatProxy.cpp",
