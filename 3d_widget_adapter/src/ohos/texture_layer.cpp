@@ -66,6 +66,7 @@ public:
     TextureInfo OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
         bool recreateWindow, SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW) override;
     TextureInfo OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
+    void SetBackgroundColor(uint32_t backgroundColor) override;
 
 private:
     void CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig);
@@ -80,6 +81,7 @@ private:
     uint32_t height_ = 0u;
     int32_t key_ = INT32_MAX;
     uint32_t transform_ = 0U;
+    uint32_t backgroundColor_ = 0U;
 
     std::shared_ptr<Rosen::RSNode> rsNode_ = nullptr;
     std::shared_ptr<Rosen::RSNode> parent_ = nullptr;
@@ -87,6 +89,7 @@ private:
     std::shared_ptr<OHOS::Rosen::RSUIDirector> rsUIDirector_;
     SurfaceType surface_ = SurfaceType::UNDEFINE;
     TextureImage image_;
+    std::string bundleName_ = "";
 };
 
 TextureInfo TextureLayerImpl::GetTextureInfo()
@@ -149,9 +152,9 @@ void TextureLayerImpl::CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig 
 
 void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
 {
-    std::string bundleName = GraphicsManager::GetInstance().GetHapInfo().bundleName_;
+    bundleName_ = GraphicsManager::GetInstance().GetHapInfo().bundleName_;
     struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig;
-    if (bundleName.find("totemweather") != std::string::npos) {
+    if (bundleName_.find("totemweather") != std::string::npos) {
         surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model totemweather") + std::to_string(key_) };
     } else {
         surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model") + std::to_string(key_) };
@@ -171,12 +174,11 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
         surfaceNode->SetHardwareEnabled(false);
     }
 
-    if (bundleName.find("sceneboard") != std::string::npos) {
+    if (bundleName_.find("sceneboard") != std::string::npos) {
         surfaceNode->SetHardwareEnabled(true); // SetHardwareEnabled as a flag enable gpu bilinear interpolation
-    } else if (bundleName.find("totemweather") != std::string::npos) {
+    } else if (bundleName_.find("totemweather") != std::string::npos) {
         surfaceNode->SetHardwareEnabled(true);
-        uint32_t argbWhite = 0xFFFFFFFF;  // set a white background color for dss
-        surfaceNode->SetBackgroundColor(argbWhite);
+        surfaceNode->SetBackgroundColor(backgroundColor_);
     }
 
     producerSurface_ = surfaceNode->GetSurface();
@@ -266,6 +268,7 @@ TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChang
     offsetX_ = (int)windowChangeInfo.offsetX;
     offsetY_ = (int)windowChangeInfo.offsetY;
     transform_ = windowChangeInfo.transformType;
+    backgroundColor_ = windowChangeInfo.backgroundColor;
 
     image_.textureInfo_.width_ = static_cast<uint32_t>(windowChangeInfo.width);
     image_.textureInfo_.height_ = static_cast<uint32_t>(windowChangeInfo.height);
@@ -294,6 +297,15 @@ void TextureLayerImpl::DestroyRenderTarget()
     image_.textureInfo_ = {};
 }
 
+void TextureLayerImpl::SetBackgroundColor(uint32_t backgroundColor)
+{
+    backgroundColor_ = backgroundColor;
+    auto surfaceNode = OHOS::Rosen::RSBaseNode::ReinterpretCast<OHOS::Rosen::RSSurfaceNode>(rsNode_);
+    if (surfaceNode && (bundleName_.find("totemweather") != std::string::npos)) {
+        surfaceNode->SetBackgroundColor(backgroundColor_);
+    }
+}
+
 TextureLayerImpl::TextureLayerImpl(int32_t key) : key_(key)
 {
 }
@@ -312,6 +324,11 @@ TextureInfo TextureLayer::GetTextureInfo()
 void TextureLayer::SetParent(std::shared_ptr<Rosen::RSNode>& parent)
 {
     textureLayer_->SetParent(parent);
+}
+
+void TextureLayer::SetBackgroundColor(uint32_t backgroundColor)
+{
+    textureLayer_->SetBackgroundColor(backgroundColor);
 }
 
 TextureInfo TextureLayer::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
