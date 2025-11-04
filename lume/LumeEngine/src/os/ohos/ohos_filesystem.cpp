@@ -57,6 +57,7 @@ string OhosFilesystem::ValidatePath(const string_view pathIn) const
 IFile::Ptr OhosFilesystem::OpenFile(const BASE_NS::string_view path, const IFile::Mode mode)
 {
     if (mode == IFile::Mode::READ_ONLY) {
+        std::lock_guard<std::mutex> guard(mutex_);
         if (auto const pos = ohosFiles_.find(path); pos != ohosFiles_.end()) {
             auto storage = pos->second.lock();
             if (storage) {

@@ -65,6 +65,7 @@ protected:
     PlatformHapInfo hapInfo_;
     BASE_NS::unordered_map<BASE_NS::string, std::weak_ptr<OhosFileStorage>> ohosFiles_;
     BASE_NS::refcnt_ptr<OhosResMgr> resManager_ = nullptr;
+    std::mutex mutex_;
 };
 CORE_END_NAMESPACE()
 #endif
