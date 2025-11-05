@@ -34,6 +34,7 @@ public:
     virtual TextureInfo OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
         bool recreateWindow, SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW);
     virtual TextureInfo OnWindowChange(const WindowChangeInfo& windowChangeInfo);
+    virtual void SetBackgroundColor(uint32_t backgroundColor);
 
 protected:
     TextureLayer() = default;
