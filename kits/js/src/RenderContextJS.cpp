@@ -155,11 +155,25 @@ RenderContextJS::RenderContextJS(napi_env env, napi_callback_info info)
     : BaseObject(env, info), env_(env), globalResources_(globalResources.lock())
 {
     LOG_V("RenderContextJS ++");
+    // Acquire the js task queue. (make sure that as long as we have a scene, the nodejstaskqueue is useable)
+    if (auto jsQueue = interface_cast<INodeJSTaskQueue>(GetOrCreateNodeTaskQueue(env))) {
+        jsQueue->Acquire();
+    }
 }
 
 RenderContextJS::~RenderContextJS()
 {
     LOG_V("RenderContextJS --");
+    // Release the js task queue.
+    auto tq = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
+    if (auto p = interface_cast<INodeJSTaskQueue>(tq)) {
+        p->Release();
+        // check if we can safely de-init here also.
+        if (p->IsReleased()) {
+            // destroy and unregister the queue.
+            DeinitNodeTaskQueue();
+        }
+    }
 }
 
 void* RenderContextJS::GetInstanceImpl(uint32_t id)
@@ -216,31 +230,27 @@ napi_value RenderContextJS::GetResourceFactory(NapiApi::FunctionContext<>& ctx)
 
 napi_value RenderContextJS::LoadPlugin(NapiApi::FunctionContext<BASE_NS::string>& ctx)
 {
+    Promise promise(ctx.GetEnv());
     auto c = ctx.Arg<0>().valueOrDefault();
     if (!BASE_NS::IsUidString(c)) {
         LOG_E("\"%s\" is not a Uid string", c.c_str());
-
-        Promise promise(ctx.GetEnv());
         NapiApi::Value<bool> result(ctx.GetEnv(), false);
         promise.Resolve(result.ToNapiValue());
-
-        return promise.ToNapiValue();
+        return promise;
     }
 
-    LOG_E("Loading plugin: %s", c.c_str());
-
     BASE_NS::Uid uid(*(char(*)[37])c.data());
-
+    auto convertToJs = [promise](bool success) mutable {
+        NapiApi::Value<bool> result(promise.Env(), success);
+        promise.Resolve(result.ToNapiValue());
+    };
     const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
+    const auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
     META_NS::AddFutureTaskOrRunDirectly(engineQ, [uid]() {
-        Core::GetPluginRegister().LoadPlugins({uid});
-    });
+        return Core::GetPluginRegister().LoadPlugins({uid});
+    }).Then(BASE_NS::move(convertToJs), jsQ);
 
-    Promise promise(ctx.GetEnv());
-    NapiApi::Value<bool> result(ctx.GetEnv(), true);
-    promise.Resolve(result.ToNapiValue());
-
-    return promise.ToNapiValue();
+    return promise;
 }
 
 napi_value RenderContextJS::CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
