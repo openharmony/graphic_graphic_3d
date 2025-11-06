@@ -16,6 +16,8 @@
 #ifndef CORE_OS_OHOS_OHOS_FILESYSTEM_H
 #define CORE_OS_OHOS_OHOS_FILESYSTEM_H
 
+#include <mutex>
+
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
