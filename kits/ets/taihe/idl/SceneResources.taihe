@@ -15,71 +15,100 @@
 
 @!sts_inject("""
 import { ResourceStr } from 'arkui.component.units';
-import { ShadowRecord, RecordProxyHandler } from './RecordProxy';
+import { RecordIterator } from './RecordProxy';
 import { Callback } from '@ohos.base';
 // Ensure that libscene_ani is loaded.
 loadLibrary('scene_ani.z');
 
-class ShaderShadowRecord extends ShadowRecord<ShaderInputType> {
-    static createProxy(shader: Shader): Record<string, ShaderInputType> {
-        let handler = new ShaderInputsProxyHandler(shader);
-        return proxy.Proxy.create(new ShaderShadowRecord() as ShadowRecord<ShaderInputType>,
-            handler) as Record<string, ShaderInputType>;
-    }
-}
-
-class ShaderInputsProxyHandler extends RecordProxyHandler<ShaderInputType> {
+class ShaderRecord extends Record<string, ShaderInputType> {
     private shader: Shader;
 
     constructor(shader: Shader) {
         this.shader = shader;
     }
 
-    override getSize(): int {
+    override get size(): int {
         return this.shader.getInputsSize();
     }
 
-    override getKeys(): string[] {
-        return this.shader.getInputsKeys();
+    override get(k: string, def: ShaderInputType): ShaderInputType {
+        return this.shader.getInput(k) ?? def;
     }
 
-    override getProperty(key: string): ShaderInputType | undefined {
+    override get(k: string): ShaderInputType | undefined {
+        return this.shader.getInput(k);
+    }
+
+    override set(k: string, v: ShaderInputType): this {
+        this.shader.setInput(k, v);
+        return this;
+    }
+
+    override $_get(key: string): ShaderInputType | undefined {
         return this.shader.getInput(key);
     }
 
-    override setProperty(key: string, value: ShaderInputType): void {
+    override $_set(key: string, value: ShaderInputType): void {
         this.shader.setInput(key, value);
     }
-}
 
-class MorpherShadowRecord extends ShadowRecord<double> {
-    static createProxy(morpher: Morpher): Record<string, double> {
-        let handler = new MorpherTargetsProxyHandler(morpher);
-        return proxy.Proxy.create(new MorpherShadowRecord() as ShadowRecord<double>, handler) as Record<string, double>;
+    override keys(): IterableIterator<string> {
+        return new RecordIterator<string>(this.shader.getInputsKeys(), (key: string) => key);
+    }
+
+    override values(): IterableIterator<ShaderInputType> {
+        return new RecordIterator<ShaderInputType>(this.shader.getInputsKeys(), (key: string) => this.shader.getInput(key)!);
+    }
+
+    override entries(): IterableIterator<[string, ShaderInputType]> {
+        return new RecordIterator<[string, ShaderInputType]>(this.shader.getInputsKeys(),
+            (key: string) => [key, this.shader.getInput(key)!]);
     }
 }
 
-class MorpherTargetsProxyHandler extends RecordProxyHandler<double> {
+class MorpherRecord extends Record<string, double> {
     private morpher: Morpher;
 
     constructor(morpher: Morpher) {
         this.morpher = morpher;
     }
 
-    override getSize(): int {
+    override get size(): int {
         return this.morpher.getTargetsSize();
     }
 
-    override getKeys(): string[] {
-        return this.morpher.getTargetsKeys();
+    override get(k: string, def: double): double {
+        return this.morpher.getTarget(k) ?? def;
     }
 
-    override getProperty(key: string): double | undefined {
+    override get(k: string): double | undefined {
+        return this.morpher.getTarget(k);
+    }
+
+    override set(k: string, v: double): this {
+        this.morpher.setTarget(k, v);
+        return this;
+    }
+
+    override $_get(key: string): double | undefined {
         return this.morpher.getTarget(key);
     }
 
-    override setProperty(key: string, value: double): void {
+    override $_set(key: string, value: double): void {
         this.morpher.setTarget(key, value);
+    }
+
+    override keys(): IterableIterator<string> {
+        return new RecordIterator<string>(this.morpher.getTargetsKeys(), (key: string) => key);
+    }
+
+    override values(): IterableIterator<double> {
+        return new RecordIterator<double>(this.morpher.getTargetsKeys(), (key: string) => this.morpher.getTarget(key)!);
+    }
+
+    override entries(): IterableIterator<[string, double]> {
+        return new RecordIterator<[string, double]>(this.morpher.getTargetsKeys(),
+            (key: string) => [key, this.morpher.getTarget(key)!]);
     }
 }
 """)
@@ -295,12 +324,12 @@ interface SubMesh {
 
 interface Morpher {
     @!sts_inject_into_interface("""
-    get targets(): Record<string, double>;
+    get targets(): MorpherRecord;
     """)
 
     @!sts_inject_into_class("""
-    get targets(): Record<string, double> {
-        return MorpherShadowRecord.createProxy(this);
+    get targets(): MorpherRecord {
+        return new MorpherRecord(this);
     }
     """)
 
@@ -418,12 +447,12 @@ union ShaderInputType {
 
 interface Shader : SceneResource {
     @!sts_inject_into_interface("""
-    get inputs(): Record<string, ShaderInputType>;
+    get inputs(): ShaderRecord;
     """)
 
     @!sts_inject_into_class("""
-    get inputs(): Record<string, ShaderInputType> {
-        return ShaderShadowRecord.createProxy(this);
+    get inputs(): ShaderRecord {
+        return new ShaderRecord(this);
     }
     """)
 
