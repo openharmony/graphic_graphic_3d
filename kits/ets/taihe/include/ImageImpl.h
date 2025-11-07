@@ -32,6 +32,7 @@ public:
     static SceneResources::Image createImageFromTH(SceneTH::SceneResourceParameters const &params);
     explicit ImageImpl(const std::shared_ptr<ImageETS> imageETS);
     ~ImageImpl();
+    void destroy() override;
 
     int32_t getWidth();
     int32_t getHeight();

@@ -25,6 +25,11 @@ MeshETS::~MeshETS()
     mesh_.reset();
 }
 
+void MeshETS::Destroy()
+{
+    mesh_.reset();
+}
+
 META_NS::IObject::Ptr MeshETS::GetNativeObj() const
 {
     auto mesh = mesh_.lock();

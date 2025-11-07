@@ -60,6 +60,7 @@ public:
     MaterialETS(const SCENE_NS::IMaterial::Ptr mat);
     MaterialETS(const SCENE_NS::IMaterial::Ptr mat, const std::string &name, const std::string &uri);
     ~MaterialETS() override;
+    void Destroy() override;
 
     META_NS::IObject::Ptr GetNativeObj() const override;
 

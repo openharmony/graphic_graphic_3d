@@ -25,7 +25,13 @@ MeshImpl::MeshImpl(const std::shared_ptr<MeshETS> meshETS)
 
 MeshImpl::~MeshImpl()
 {
+    meshETS_.reset();
+}
+
+void MeshImpl::destroy()
+{
     if (meshETS_) {
+        meshETS_->Destroy();
         meshETS_.reset();
     }
 }

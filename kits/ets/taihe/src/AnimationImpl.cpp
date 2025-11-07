@@ -34,6 +34,14 @@ AnimationImpl::~AnimationImpl()
     animationETS_.reset();
 }
 
+void AnimationImpl::destroy()
+{
+    if (animationETS_) {
+        animationETS_->Destroy();
+        animationETS_.reset();
+    }
+}
+
 bool AnimationImpl::getEnabled()
 {
     return animationETS_->GetEnabled();

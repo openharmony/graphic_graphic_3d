@@ -324,7 +324,7 @@ interface SubMesh {
 
 interface Morpher {
     @!sts_inject_into_interface("""
-    get targets(): MorpherRecord;
+    get targets(): Record<string, double>;
     """)
 
     @!sts_inject_into_class("""
@@ -447,7 +447,7 @@ union ShaderInputType {
 
 interface Shader : SceneResource {
     @!sts_inject_into_interface("""
-    get inputs(): ShaderRecord;
+    get inputs(): Record<string, ShaderInputType>;
     """)
 
     @!sts_inject_into_class("""

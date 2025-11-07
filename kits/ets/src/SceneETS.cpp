@@ -320,7 +320,9 @@ InvokeReturn<std::shared_ptr<NodeETS>> SceneETS::CreateNode(const std::string &p
         return InvokeReturn<std::shared_ptr<NodeETS>>(nullptr, "Invalid scene");
     }
     if (auto node = scene_->CreateNode(path.c_str(), SCENE_NS::ClassId::Node).GetResult()) {
-        return InvokeReturn(std::make_shared<NodeETS>(NodeETS::NodeType::NODE, node));
+        auto nodePtr = std::make_shared<NodeETS>(NodeETS::NodeType::NODE, node);
+        nodePtr->Attached(true);
+        return InvokeReturn(nodePtr);
     } else {
         return InvokeReturn<std::shared_ptr<NodeETS>>(
             nullptr, "Node creation failed. Is the given node path unique and valid?");
@@ -332,7 +334,9 @@ InvokeReturn<std::shared_ptr<NodeETS>> SceneETS::GetRoot()
     if (!scene_) {
         return InvokeReturn<std::shared_ptr<NodeETS>>(nullptr, "Invalid scene");
     }
-    return InvokeReturn(std::make_shared<NodeETS>(NodeETS::NodeType::NODE, scene_->GetRootNode().GetResult()));
+    auto rootNode = std::make_shared<NodeETS>(NodeETS::NodeType::NODE, scene_->GetRootNode().GetResult());
+    rootNode->Attached(true);
+    return InvokeReturn(rootNode);
 }
 
 InvokeReturn<std::shared_ptr<GeometryETS>> SceneETS::CreateGeometry(
@@ -345,7 +349,9 @@ InvokeReturn<std::shared_ptr<GeometryETS>> SceneETS::CreateGeometry(
     if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(meshNode)) {
         const auto mesh = mr->CreateMesh(scene_);
         access->SetMesh(mesh).GetResult();
-        return InvokeReturn<std::shared_ptr<GeometryETS>>(GeometryETS::FromJS(meshNode, mr->GetName(), mr->GetUri()));
+        auto nodeETS = GeometryETS::FromJS(meshNode, mr->GetName(), mr->GetUri());
+        nodeETS->Attached(true);
+        return InvokeReturn<std::shared_ptr<GeometryETS>>(nodeETS);
     } else {
         return InvokeReturn<std::shared_ptr<GeometryETS>>(
             nullptr, "Geometry node creation failed. Is the given node path unique and valid?");
@@ -371,6 +377,7 @@ InvokeReturn<std::shared_ptr<CameraETS>> SceneETS::CreateCamera(const std::strin
     camera->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
     camera->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
     auto cameraETS = std::make_shared<CameraETS>(camera);
+    cameraETS->Attached(true);
     cameraETS->SetMSAA(msaa);
     return InvokeReturn(cameraETS);
 }
@@ -512,7 +519,9 @@ std::shared_ptr<NodeETS> SceneETS::ImportNode(const std::string &name, std::shar
             }
         }
         ResetAnimations();
-        return std::make_shared<NodeETS>(importedNode);
+        auto nodeETS = std::make_shared<NodeETS>(importedNode);
+        nodeETS->Attached(true);
+        return nodeETS;
     }
     return nullptr;
 }
@@ -535,7 +544,9 @@ std::shared_ptr<NodeETS> SceneETS::ImportScene(const std::string &name, std::sha
     if (auto import = interface_cast<SCENE_NS::INodeImport>(parentObj)) {
         auto importedNode = import->ImportChildScene(extScene, name.c_str()).GetResult();
         ResetAnimations();
-        return std::make_shared<NodeETS>(importedNode);
+        auto nodeETS = std::make_shared<NodeETS>(importedNode);
+        nodeETS->Attached(true);
+        return nodeETS;
     }
     return nullptr;
 }

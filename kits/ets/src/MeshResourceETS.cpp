@@ -33,6 +33,11 @@ MeshResourceETS::~MeshResourceETS()
     geometryDefinition_.reset();
 }
 
+void MeshResourceETS::Destroy()
+{
+    geometryDefinition_.reset();
+}
+
 META_NS::IObject::Ptr MeshResourceETS::GetNativeObj() const
 {
     // MeshResource holds no engine resource

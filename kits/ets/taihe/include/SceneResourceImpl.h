@@ -53,7 +53,7 @@ public:
         return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
     }
 
-    void destroy();
+    virtual void destroy();
 
 private:
     SceneResources::SceneResourceType type_;

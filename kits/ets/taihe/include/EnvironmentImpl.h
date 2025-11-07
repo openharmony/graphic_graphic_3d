@@ -42,6 +42,7 @@ private:
 public:
     explicit EnvironmentImpl(const std::shared_ptr<EnvironmentETS> envETS);
     ~EnvironmentImpl();
+    void destroy() override;
 
     std::shared_ptr<EnvironmentETS> GetEnvETS();
 

@@ -34,6 +34,7 @@ public:
                                                const std::string &uri = "");
     GeometryETS(const SCENE_NS::INode::Ptr meshNode);
     ~GeometryETS();
+    void Destroy() override;
 
     std::shared_ptr<MeshETS> GetMesh();
     std::shared_ptr<MorpherETS> GetMorpher();

@@ -39,6 +39,7 @@ public:
     NodeETS(const NodeType &type, const SCENE_NS::INode::Ptr &node);
     explicit NodeETS(const SCENE_NS::INode::Ptr &node);
     virtual ~NodeETS();
+    void Destroy() override;
 
     META_NS::IObject::Ptr GetNativeObj() const override;
 
@@ -77,6 +78,8 @@ public:
     void InsertChildAfter(const std::shared_ptr<NodeETS> &childNode, const std::shared_ptr<NodeETS> &siblingNode);
     void AppendChild(const std::shared_ptr<NodeETS> &childNode);
     void RemoveChild(const std::shared_ptr<NodeETS> &childNode);
+    bool IsAttached() const;
+    virtual void Attached(bool attached);
 
 public:
     SCENE_NS::INode::Ptr GetInternalNode()
@@ -90,6 +93,7 @@ private:
     std::shared_ptr<Vec3Proxy> posProxy_{nullptr};
     std::shared_ptr<Vec3Proxy> sclProxy_{nullptr};
     std::shared_ptr<QuatProxy> rotProxy_{nullptr};
+    bool attached_ = false;
 };
 }  // namespace OHOS::Render3D
 #endif  // NODE_ETS_H

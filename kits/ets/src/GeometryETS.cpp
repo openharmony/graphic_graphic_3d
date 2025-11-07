@@ -34,6 +34,20 @@ GeometryETS::~GeometryETS()
     meshNode_.reset();
 }
 
+void GeometryETS::Destroy()
+{
+    bool attached = IsAttached();
+    if (auto node = interface_pointer_cast<SCENE_NS::INode>(meshNode_)) {
+        if (!attached) {
+            if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(node)) {
+                access->SetMesh(nullptr).Wait();
+            }
+        }
+    }
+    meshNode_.reset();
+    NodeETS::Destroy();
+}
+
 std::shared_ptr<MeshETS> GeometryETS::GetMesh()
 {
     if (auto ma = interface_pointer_cast<SCENE_NS::IMeshAccess>(meshNode_)) {

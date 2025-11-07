@@ -27,6 +27,7 @@ class MeshETS : public SceneResourceETS {
 public:
     MeshETS(const SCENE_NS::IMesh::Ptr mesh);
     ~MeshETS();
+    void Destroy() override;
 
     META_NS::IObject::Ptr GetNativeObj() const override;
 

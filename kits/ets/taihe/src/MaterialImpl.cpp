@@ -23,7 +23,13 @@ MaterialImpl::MaterialImpl(const std::shared_ptr<MaterialETS> mat)
 
 MaterialImpl::~MaterialImpl()
 {
+    materialETS_.reset();
+}
+
+void MaterialImpl::destroy()
+{
     if (materialETS_) {
+        materialETS_->Destroy();
         materialETS_.reset();
     }
 }
@@ -121,7 +127,7 @@ void MaterialImpl::setCullMode(::taihe::optional_view<::SceneResources::CullMode
 void MaterialImpl::setPolygonMode(::taihe::optional_view<::SceneResources::PolygonMode> mode)
 {
     if (!materialETS_) {
-        WIDGET_LOGE("set cull mode failed, invalid material");
+        WIDGET_LOGE("set polygon mode failed, invalid material");
         return;
     }
     MaterialETS::PolygonMode innerMode = MaterialETS::PolygonMode::FILL;

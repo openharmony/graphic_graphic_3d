@@ -39,6 +39,11 @@ ImageETS::ImageETS(const SCENE_NS::IImage::Ptr &image)
 
 ImageETS::~ImageETS()
 {
+    Cleanup();
+}
+
+void ImageETS::Destroy()
+{
     if (!uri_.empty()) {
         ExecSyncTask([uri = uri_, resources = resources_]() -> META_NS::IAny::Ptr {
             if (resources) {
@@ -47,6 +52,11 @@ ImageETS::~ImageETS()
             return {};
         });
     }
+    Cleanup();
+}
+
+void ImageETS::Cleanup()
+{
     bitmap_.reset();
     resources_.reset();
 }

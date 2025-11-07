@@ -44,7 +44,13 @@ ImageImpl::ImageImpl(const std::shared_ptr<ImageETS> imageETS)
 
 ImageImpl::~ImageImpl()
 {
+    imageETS_.reset();
+}
+
+void ImageImpl::destroy()
+{
     if (imageETS_) {
+        imageETS_->Destroy();
         imageETS_.reset();
     }
 }

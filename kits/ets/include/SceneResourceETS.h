@@ -72,6 +72,7 @@ public:
     virtual std::string GetName() const;
     void SetName(const std::string &name);
     std::string GetUri() const;
+    virtual void Destroy() = 0;
 
 protected:
     void SetUri(const std::string &uri);

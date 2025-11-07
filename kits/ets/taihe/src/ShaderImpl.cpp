@@ -32,7 +32,13 @@ ShaderImpl::ShaderImpl(const std::shared_ptr<ShaderETS> &shader)
 
 ShaderImpl::~ShaderImpl()
 {
+    shaderETS_.reset();
+}
+
+void ShaderImpl::destroy()
+{
     if (shaderETS_) {
+        shaderETS_->Destroy();
         shaderETS_.reset();
     }
 }

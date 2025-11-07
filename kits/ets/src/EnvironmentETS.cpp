@@ -41,6 +41,16 @@ EnvironmentETS::EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SC
 
 EnvironmentETS::~EnvironmentETS()
 {
+    Cleanup();
+}
+
+void EnvironmentETS::Destroy()
+{
+    Cleanup();
+}
+
+void EnvironmentETS::Cleanup()
+{
     environment_.reset();
     diffuseFactor_.reset();
     specularFactor_.reset();

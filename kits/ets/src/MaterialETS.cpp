@@ -30,6 +30,16 @@ MaterialETS::MaterialETS(const SCENE_NS::IMaterial::Ptr mat, const std::string &
 
 MaterialETS::~MaterialETS()
 {
+    shader_.reset();
+    material_.reset();
+}
+
+void MaterialETS::Destroy()
+{
+    if (shader_) {
+        shader_->DetachFromMaterial();
+    }
+    shader_.reset();
     material_.reset();
 }
 

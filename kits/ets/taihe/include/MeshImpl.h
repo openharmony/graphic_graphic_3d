@@ -34,6 +34,8 @@ public:
 
     ~MeshImpl();
 
+    void destroy() override;
+
     ::taihe::array<::SceneResources::SubMesh> getSubMeshes();
 
     ::SceneTypes::Aabb getAabb();

@@ -165,7 +165,7 @@ union ComponentPropertyType {
 
 interface SceneComponent {
     @!sts_inject_into_interface("""
-    get property(): SceneComponentRecord;
+    get property(): Record<string, ComponentPropertyType>;
     """)
 
     @!sts_inject_into_class("""

@@ -43,6 +43,7 @@ public:
 
     explicit MeshResourceImpl(const std::shared_ptr<MeshResourceETS> mrETS);
     ~MeshResourceImpl();
+    void destroy() override;
 
 private:
     static BASE_NS::unique_ptr<Geometry::CustomETS> MakeCustomETS(
