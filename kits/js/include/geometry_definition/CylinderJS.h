@@ -13,35 +13,35 @@
  * limitations under the License.
  */
 
-#ifndef GEOMETRY_DEFINITION_GEOMETRY_DEFINITION_H
-#define GEOMETRY_DEFINITION_GEOMETRY_DEFINITION_H
+#ifndef GEOMETRY_DEFINITION_CYLINDER_JS_H
+#define GEOMETRY_DEFINITION_CYLINDER_JS_H
 
+#include <napi_api.h>
 #include <scene/interface/intf_create_mesh.h>
-#include <scene/interface/intf_scene.h>
 
-#include <base/containers/vector.h>
+#include <base/math/vector.h>
 
-namespace OHOS::Render3D::Geometry {
+#include "geometry_definition/GeometryDefinition.h"
 
-enum GeometryType {
-    CUSTOM = 0,
-    CUBE = 1,
-    PLANE = 2,
-    SPHERE = 3,
-    CYLINDER = 4,
-};
+namespace GeometryDefinition {
 
-class GeometryDefinition {
+class CylinderJS : public GeometryDefinition {
 public:
-    virtual ~GeometryDefinition() = default;
-    virtual GeometryType GetType() = 0;
+    ~CylinderJS() override = default;
+    static GeometryDefinition* FromJs(NapiApi::Object&);
     virtual SCENE_NS::IMesh::Ptr CreateMesh(
-        const SCENE_NS::ICreateMesh::Ptr &creator, const SCENE_NS::MeshConfig &config) const = 0;
+        const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const override;
 
-protected:
-    GeometryDefinition();
+    static void Init(napi_env env, napi_value exports);
+
+private:
+    CylinderJS(float radius, float height, uint32_t segmentCount);
+
+    float radius_;
+    float height_;
+    uint32_t segmentCount_;
 };
 
-}  // namespace OHOS::Render3D::Geometry
+} // namespace GeometryDefinition
 
 #endif

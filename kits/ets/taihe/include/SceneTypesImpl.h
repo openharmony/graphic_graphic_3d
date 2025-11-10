@@ -232,6 +232,52 @@ private:
     float radius_;
     int32_t segmentCount_;
 };
+
+class CylinderGeometryImpl : public GeometryDefinitionImpl {
+public:
+    CylinderGeometryImpl()
+    {}
+
+    double getRadius()
+    {
+        return radius_;
+    }
+
+    void setRadius(double radius)
+    {
+        radius_ = radius;
+    }
+
+    double getHeight()
+    {
+        return height_;
+    }
+
+    void setHeight(double height)
+    {
+        height_ = height;
+    }
+
+    int32_t getSegmentCount()
+    {
+        return segmentCount_;
+    }
+
+    void setSegmentCount(int32_t count)
+    {
+        segmentCount_ = count;
+    }
+
+    ::SceneTypes::GeometryType getGeometryType() override
+    {
+        return ::SceneTypes::GeometryType::key_t::CYLINDER;
+    }
+
+private:
+    float radius_{0.0f};
+    float height_{0.0f};
+    int32_t segmentCount_{0};
+};
 } // namespace OHOS::Render3D::KITETS
 
 #endif  // OHOS_3D_SCENE_TYPES_IMPL_H

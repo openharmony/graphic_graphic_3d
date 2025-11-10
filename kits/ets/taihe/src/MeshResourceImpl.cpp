@@ -71,6 +71,12 @@ SceneResources::MeshResource MeshResourceImpl::Create(
         float radius = sphereGeometry->getRadius();
         int segmentCount = sphereGeometry->getSegmentCount();
         gd = BASE_NS::make_unique<Geometry::SphereETS>(radius, segmentCount);
+    } else if (geometry.holds_cylinder()) {
+        const SceneTypes::CylinderGeometry &cylinderGeometry = geometry.get_cylinder_ref();
+        float radius = cylinderGeometry->getRadius();
+        float height = cylinderGeometry->getHeight();
+        int segmentCount = cylinderGeometry->getSegmentCount();
+        gd = BASE_NS::make_unique<Geometry::CylinderETS>(radius, height, segmentCount);
     } else {
         taihe::set_error("Unknown type of GeometryDefinition");
         return SceneResources::MeshResource({nullptr, nullptr});

@@ -92,6 +92,14 @@ constexpr uint16_t CUBE_INDICES[6u * 6u] = {
 
 constexpr uint32_t CUBE_UV_INDICES[6u] = { 0, 3, 1, 3, 2, 1 };
 
+constexpr uint32_t CYLINDER_MIN_SEGMENTS = 3u;
+
+constexpr float CYLINDER_CAP_UV_RADIUS = 0.24f;
+
+constexpr Math::Vec2 CYLINDER_CAP_UV_CENTER[2u] = { Math::Vec2(0.25f, 0.25f), Math::Vec2(0.75f, 0.25f) };
+
+constexpr uint16_t CYLINDER_SIDE_INDICES[6u] = { 0, 1, 3, 0, 3, 2 };
+
 constexpr float TWO_PI = Math::PI * 2.0f;
 
 template<typename IndexType>
@@ -355,6 +363,62 @@ void GenerateTorusGeometry(
             indices.push_back(i2);
 
             currentVertexIndex++;
+        }
+    }
+}
+
+void GenerateCylinderGeometry(float radius, float height, uint32_t segments, Geometry<uint32_t> geometry)
+{
+    if (radius < Math::EPSILON || height < Math::EPSILON || segments < CYLINDER_MIN_SEGMENTS) {
+        CORE_LOG_E("Invalid parameters for cylinder creation: radius %f, height %f, segments %u",
+            radius, height, segments);
+        return;
+    }
+    vector<Math::Vec3>& vertices = geometry.vertices;
+    vector<Math::Vec3>& normals = geometry.normals;
+    vector<Math::Vec2>& uvs = geometry.uvs;
+    vector<uint32_t>& indices = geometry.indices;
+
+    const size_t maxVertexCount = segments * 4u + 2u;
+    const size_t maxIndexCount = segments * 12u - 12u;
+    vertices.reserve(maxVertexCount);
+    normals.reserve(maxVertexCount);
+    uvs.reserve(maxVertexCount);
+    indices.reserve(maxIndexCount);
+
+    // The upper and lower bases of the cylinder
+    for (size_t i = 0; i < segments; i++) {
+        float angle = i * (360.0f / segments) * Math::DEG2RAD;
+        vertices.emplace_back(sin(angle) * radius, 0.5f * height, cos(angle) * radius);
+        vertices.emplace_back(sin(angle) * radius, -0.5f * height, cos(angle) * radius);
+        normals.emplace_back(0.f, 1.f, 0.f);
+        normals.emplace_back(0.f, -1.f, 0.f);
+        Math::Vec2 uv = Math::Vec2(sin(angle), cos(angle));
+        uvs.emplace_back(uv * CYLINDER_CAP_UV_RADIUS + CYLINDER_CAP_UV_CENTER[0]);
+        uvs.emplace_back(uv * CYLINDER_CAP_UV_RADIUS + CYLINDER_CAP_UV_CENTER[1]);
+    }
+    for (size_t i = 1; i < segments - 1; i++) {
+        indices.push_back(0);
+        indices.push_back(2 * i);
+        indices.push_back(2 * i + 2);
+        indices.push_back(1);
+        indices.push_back(2 * i + 3);
+        indices.push_back(2 * i + 1);
+    }
+    // The lateral surface of the cylinder
+    uint32_t indexOffset = vertices.size();
+    for (size_t i = 0; i <= segments; i++) {
+        const Math::Vec3 v0 = vertices[(2 * i) % (2 * segments)];
+        const Math::Vec3 v1 = vertices[(2 * i + 1) % (2 * segments)];
+        vertices.emplace_back(v0);
+        vertices.emplace_back(v1);
+        normals.append(2u, Math::Normalize(Math::Vec3(v0.x, 0.f, v0.z)));
+        uvs.emplace_back((float)i / segments, 1);
+        uvs.emplace_back((float)i / segments, 0.5);
+    }
+    for (size_t i = 0; i < segments; i++) {
+        for (size_t j = 0; j < 6u; j++) {
+            indices.push_back(indexOffset + 2 * i + CYLINDER_SIDE_INDICES[j]);
         }
     }
 }
@@ -751,6 +815,43 @@ Entity MeshUtil::GenerateCubeMesh(
     return CreateMesh(ecs, *builder, name);
 }
 
+CORE_NS::Entity MeshUtil::GenerateCylinderMesh(const CORE_NS::IEcs& ecs, BASE_NS::string_view name,
+    CORE_NS::Entity material, float radius, float height, uint32_t segmentCount)
+{
+    vector<Math::Vec3> vertices;
+    vector<Math::Vec3> normals;
+    vector<Math::Vec2> uvs;
+    vector<uint32_t> indices;
+    GenerateCylinderGeometry(radius, height, segmentCount, { vertices, normals, uvs, indices });
+
+    vector<Math::Vec4> tangents(vertices.size());
+    CalculateTangents(
+        indices, vertices, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
+
+    IMeshBuilder::Submesh submesh;
+    submesh.material = material;
+    submesh.vertexCount = static_cast<uint32_t>(vertices.size());
+    submesh.indexCount = static_cast<uint32_t>(indices.size());
+    submesh.indexType = submesh.vertexCount <= UINT16_MAX ? CORE_INDEX_TYPE_UINT16 : CORE_INDEX_TYPE_UINT32;
+    submesh.tangents = true;
+
+    auto builder = InitializeBuilder(submesh);
+
+    auto positionData = FillData(vertices);
+    auto normalData = FillData(normals);
+    auto uvData = FillData(uvs);
+    auto tangentData = FillData(tangents);
+    IMeshBuilder::DataBuffer dummy {};
+    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
+
+    builder->CalculateAABB(0, positionData);
+
+    auto indexData = FillData(indices);
+    builder->SetIndexData(0, indexData);
+
+    return CreateMesh(ecs, *builder, name);
+}
+
 Entity MeshUtil::GenerateEntity(const IEcs& ecs, const string_view name, Entity meshHandle)
 {
     INodeSystem* nodesystem = GetSystem<INodeSystem>(ecs);
@@ -807,6 +908,13 @@ Entity MeshUtil::GenerateTorus(const IEcs& ecs, const string_view name, Entity m
 {
     const Entity meshHandle =
         GenerateTorusMesh(ecs, name, material, majorRadius, minorRadius, majorSectors, minorSectors);
+    return GenerateEntity(ecs, name, meshHandle);
+}
+
+Entity MeshUtil::GenerateCylinder(const IEcs& ecs, const string_view name, Entity material,
+    float radius, float height, uint32_t segmentCount)
+{
+    const Entity meshHandle = GenerateCylinderMesh(ecs, name, material, radius, height, segmentCount);
     return GenerateEntity(ecs, name, meshHandle);
 }
 

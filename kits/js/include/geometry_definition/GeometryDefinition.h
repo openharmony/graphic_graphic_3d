@@ -28,6 +28,7 @@ enum GeometryType {
     CUBE = 1,
     PLANE = 2,
     SPHERE = 3,
+    CYLINDER = 4,
 };
 void RegisterEnums(NapiApi::Object exports);
 

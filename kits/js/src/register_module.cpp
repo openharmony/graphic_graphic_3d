@@ -38,6 +38,7 @@
 #include "geometry_definition/CustomJS.h"
 #include "geometry_definition/PlaneJS.h"
 #include "geometry_definition/SphereJS.h"
+#include "geometry_definition/CylinderJS.h"
 
 void RegisterClasses(napi_env env, napi_value exports)
 {
@@ -158,6 +159,7 @@ void RegisterClasses(napi_env env, napi_value exports)
     SamplerJS::Init(env, scene3dNS);
     ShaderJS::Init(env, scene3dNS);
     GeometryDefinition::SphereJS::Init(env, scene3dNS);
+    GeometryDefinition::CylinderJS::Init(env, scene3dNS);
     AnimationJS::Init(env, scene3dNS);
     SceneComponentJS::Init(env, scene3dNS);
     TextNodeJS::Init(env, scene3dNS);
