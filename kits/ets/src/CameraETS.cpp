@@ -333,7 +333,9 @@ InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BAS
         rayCast->CastRay(position, {layerMask, rootNode ? rootNode->GetInternalNode() : nullptr}).GetResult();
     std::vector<CameraETS::RaycastResult> result(nodeHits.size());
     std::transform(nodeHits.begin(), nodeHits.end(), result.begin(), [](const auto &nodeHit) {
-        return CameraETS::RaycastResult{FromNative(nodeHit.node), nodeHit.distanceToCenter, nodeHit.position};
+        auto nodePtr = FromNative(nodeHit.node);
+        nodePtr->Attached(true);
+        return CameraETS::RaycastResult{nodePtr, nodeHit.distanceToCenter, nodeHit.position};
     });
     return InvokeReturn<std::vector<CameraETS::RaycastResult>>(result);
 }

@@ -112,19 +112,38 @@ void ShaderETS::BindToMaterial(const SCENE_NS::IMaterial::Ptr &material)
 
 ShaderETS::~ShaderETS()
 {
+    DetachFromMaterial();
+    shader_.reset();
+}
+
+void ShaderETS::Destroy()
+{
+    DetachFromMaterial();
+    shader_.reset();
+}
+
+void ShaderETS::DetachFromMaterial()
+{
     keys_.clear();
     proxies_.clear();
-    shader_.reset();
 }
 
 std::shared_ptr<IPropertyProxy> ShaderETS::GetInput(const std::string &key)
 {
-    return proxies_[key];
+    if (auto it = proxies_.find(key); it != proxies_.end()) {
+        return it->second;
+    }
+    return nullptr;
 }
 
 void ShaderETS::SetInput(const std::string &key, const std::any &value)
 {
-    std::shared_ptr<IPropertyProxy> input = proxies_[key];
+    auto it = proxies_.find(key);
+    if (it == proxies_.end()) {
+        CORE_LOG_E("set input failed, input '%s' doesn't exist", key.c_str());
+        return;
+    }
+    std::shared_ptr<IPropertyProxy> input = it->second;
     if (!input) {
         CORE_LOG_E("set input failed, input '%s' doesn't exist", key.c_str());
         return;

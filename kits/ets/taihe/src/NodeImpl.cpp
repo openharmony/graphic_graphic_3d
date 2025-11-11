@@ -225,9 +225,7 @@ NodeImpl::NodeImpl(const std::shared_ptr<NodeETS> nodeETS)
 
 NodeImpl::~NodeImpl()
 {
-    if (nodeETS_) {
-        nodeETS_.reset();
-    }
+    nodeETS_.reset();
 }
 
 ::SceneTypes::Vec3 NodeImpl::getPosition()
@@ -339,6 +337,7 @@ void NodeImpl::setVisible(const bool visible)
 void NodeImpl::destroy()
 {
     if (nodeETS_) {
+        nodeETS_->Destroy();
         nodeETS_.reset();
     }
 }

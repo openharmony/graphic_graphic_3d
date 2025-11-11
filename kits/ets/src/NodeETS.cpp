@@ -60,6 +60,43 @@ NodeETS::~NodeETS()
     node_.reset();
 }
 
+void NodeETS::Destroy()
+{
+    auto node = node_.lock();
+    if (node) {
+        return;
+    }
+    ExecSyncTask([remove = !IsAttached(), node = BASE_NS::move(node)]() mutable {
+        BASE_NS::weak_ptr wp = node;
+        if (auto scene = node->GetScene()) {
+            if (remove) {
+                // fully destroy the node
+                CORE_LOG_V("@@@@@@ Removing node");
+                scene->RemoveNode(BASE_NS::move(node)).Wait();
+            } else {
+                // just release the cache
+                CORE_LOG_V("@@@@@@ Release node");
+                scene->ReleaseNode(BASE_NS::move(node), false).Wait();
+            }
+        }
+        return META_NS::IAny::Ptr {};
+    });
+    posProxy_.reset();
+    sclProxy_.reset();
+    rotProxy_.reset();
+    node_.reset();
+}
+
+bool NodeETS::IsAttached() const
+{
+    return attached_;
+}
+
+void NodeETS::Attached(bool attached)
+{
+    attached_ = attached;
+}
+
 META_NS::IObject::Ptr NodeETS::GetNativeObj() const
 {
     auto node = node_.lock();
@@ -198,7 +235,9 @@ std::shared_ptr<NodeETS> NodeETS::GetParent()
         return nullptr;
     }
     if (auto parent = node->GetParent().GetResult()) {
-        return FromNative(parent);
+        auto parentPtr = FromNative(parent);
+        parentPtr->Attached(true);
+        return parentPtr;
     } else {
         return nullptr;
     }
@@ -217,7 +256,9 @@ std::shared_ptr<NodeETS> NodeETS::GetNodeByPath(const std::string &path)
     }
     const auto child = scene->FindNode(childPath).GetResult();
     if (child) {
-        return FromNative(child);
+        auto childPtr = FromNative(child);
+        childPtr->Attached(true);
+        return childPtr;
     } else {
         return nullptr;
     }
@@ -294,7 +335,9 @@ std::shared_ptr<NodeETS> NodeETS::GetChild(const uint32_t index)
         auto children = node->GetChildren().GetResult();
         if (index < children.size()) {
             const auto child = children[index];
-            return FromNative(child);
+            auto childPtr = FromNative(child);
+            childPtr->Attached(true);
+            return childPtr;
         }
     }
     return nullptr;
@@ -334,6 +377,7 @@ void NodeETS::InsertChildAfter(const std::shared_ptr<NodeETS> &childNode, const 
                 }
             }
         }
+        childNode->Attached(true);
         parent->AddChild(child, index).GetResult();
         child->Enabled()->SetValue(true);
     }
@@ -346,6 +390,7 @@ void NodeETS::AppendChild(const std::shared_ptr<NodeETS> &childNode)
     }
     if (auto parent = node_.lock()) {
         SCENE_NS::INode::Ptr child = childNode->GetInternalNode();
+        childNode->Attached(true);
         parent->AddChild(child);
         child->Enabled()->SetValue(true);
     }
@@ -358,6 +403,7 @@ void NodeETS::RemoveChild(const std::shared_ptr<NodeETS> &childNode)
     }
     if (auto parent = node_.lock()) {
         SCENE_NS::INode::Ptr child = childNode->GetInternalNode();
+        childNode->Attached(false);
         parent->RemoveChild(child).GetResult();
         child->Enabled()->SetValue(false);
     }

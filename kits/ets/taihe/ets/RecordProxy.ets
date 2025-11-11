@@ -13,23 +13,14 @@
  * limitations under the License.
  */
 
-export class ShadowRecord<V> extends Record<string, V> {
-    static createProxy<V>(handler: RecordProxyHandler<V>): Record<string, V> {
-        return proxy.Proxy.create(new ShadowRecord<V>(), handler) as Record<string, V>;
-    }
-}
-
-class ShadowRecordIterator<V, R> implements IterableIterator<R> {
-    private proxyHandler: RecordProxyHandler<V>;
+export class RecordIterator<R> implements IterableIterator<R> {
     private keys: string[];
+    private mapper: (key: string) => R;
     private index: int = -1;
 
-    private mapper: (key: string, handler: RecordProxyHandler<V>) => R;
-
-    constructor(proxyHandler: RecordProxyHandler<V>, mapper: (key: string, handler: RecordProxyHandler<V>) => R) {
-        this.proxyHandler = proxyHandler;
+    constructor(keys: string[], mapper: (key: string) => R) {
+        this.keys = keys;
         this.mapper = mapper;
-        this.keys = proxyHandler.getKeys();
     }
 
     override next(): IteratorResult<R> {
@@ -38,55 +29,10 @@ class ShadowRecordIterator<V, R> implements IterableIterator<R> {
             return new IteratorResult<R>();
         }
         const key: string = this.keys[this.index];
-        return new IteratorResult<R>(this.mapper(key, this.proxyHandler));
+        return new IteratorResult<R>(this.mapper(key));
     }
 
     override $_iterator(): IterableIterator<R> {
         return this;
     }
-}
-
-export abstract class RecordProxyHandler<V> extends proxy.DefaultProxyHandler<ShadowRecord<V>> {
-    internal recordIterator<R>(fn: (key: String, handle: RecordProxyHandler<V>) => R): IterableIterator<R> {
-        return new ShadowRecordIterator<V, R>(this, fn);
-    }
-
-    get(target: ShadowRecord<V>, name: string): NullishType {
-        if (name == "size") {
-            return this.getSize();
-        }
-        console.error("unexcepted property:", name);
-        return null;
-    }
-
-    set(target: ShadowRecord<V>, name: string, value: NullishType): boolean {
-        console.error("not support setting property.");
-        return true;
-    }
-
-    invoke(target: ShadowRecord<V>, method: Method, args: FixedArray<NullishType>): NullishType {
-        const methodName = method.getName();
-        if ("$_get" == methodName || "get" == methodName) {
-            const key = args[0] as string;
-            return this.getProperty(key);
-        } else if ("$_set" == methodName || "set" == methodName) {
-            const key = args[0] as string;
-            const value = args[1] as V;
-            this.setProperty(key, value);
-            return target;
-        } else if ("keys" == methodName) {
-            return this.recordIterator<string>((key: string, handler: RecordProxyHandler<V>) => key);
-        } else if ("values" == methodName) {
-            return this.recordIterator<V>((key: string, handler: RecordProxyHandler<V>) => handler.getProperty(key)!);
-        } else if ("entries" == methodName) {
-            return this.recordIterator<[string, V]>((key: string, handler: RecordProxyHandler<V>) => [key,
-                handler.getProperty(key)!]);
-        }
-        return super.invoke(target, method, args);
-    }
-
-    abstract getSize(): int;
-    abstract getKeys(): string[];
-    abstract getProperty(key: string): V | undefined;
-    abstract setProperty(key: string, value: V): void;
 }

@@ -35,6 +35,7 @@ class MaterialImpl : public SceneResourceImpl {
 public:
     MaterialImpl(const std::shared_ptr<MaterialETS> mat);
     ~MaterialImpl();
+    void destroy() override;
 
     ::SceneResources::MaterialType getMaterialType();
 

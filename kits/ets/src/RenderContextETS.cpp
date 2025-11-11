@@ -74,10 +74,9 @@ bool RenderContextETS::LoadPlugin(const std::string &name)
 
     BASE_NS::Uid uid(*(char(*)[37])name.data());
     const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
-    META_NS::AddFutureTaskOrRunDirectly(engineQ, [uid]() {
-        Core::GetPluginRegister().LoadPlugins({uid});
-    });
-    return true;
+    return META_NS::AddFutureTaskOrRunDirectly(engineQ, [uid]() {
+        return Core::GetPluginRegister().LoadPlugins({uid});
+    }).GetResult();
 }
 
 InvokeReturn<std::shared_ptr<ShaderETS>> RenderContextETS::CreateShader(const std::string &name, const std::string &uri)

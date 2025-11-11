@@ -30,6 +30,14 @@ EnvironmentImpl::~EnvironmentImpl()
     envETS_.reset();
 }
 
+void EnvironmentImpl::destroy()
+{
+    if (envETS_) {
+        envETS_->Destroy();
+    }
+    envETS_.reset();
+}
+
 std::shared_ptr<EnvironmentETS> EnvironmentImpl::GetEnvETS()
 {
     return envETS_;

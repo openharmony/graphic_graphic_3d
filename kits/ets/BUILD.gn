@@ -223,6 +223,8 @@ taihe_shared_library("scene_ani") {
     "src/VignetteETS.cpp",
   ]
 
+  shlib_type = "ani"
+
   deps = [
     ":run_taihe",
     "../../3d_widget_adapter:lib3dWidgetAdapter",

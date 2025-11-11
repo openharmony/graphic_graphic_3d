@@ -31,6 +31,8 @@ class AnimationETS : public SceneResourceETS {
 public:
     AnimationETS(const META_NS::IAnimation::Ptr animation, const SCENE_NS::IScene::Ptr scene);
     ~AnimationETS() override;
+    void Destroy() override;
+    void Cleanup();
 
     SCENE_NS::IScene::Ptr GetScene() const
     {

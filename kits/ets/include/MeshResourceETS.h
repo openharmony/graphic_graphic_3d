@@ -30,6 +30,8 @@ public:
 
     ~MeshResourceETS() override;
 
+    void Destroy() override;
+
     META_NS::IObject::Ptr GetNativeObj() const override;
 
     SCENE_NS::IMesh::Ptr CreateMesh(const SCENE_NS::IScene::Ptr &scene) const;

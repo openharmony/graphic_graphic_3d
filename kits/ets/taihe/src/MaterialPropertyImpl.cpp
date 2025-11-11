@@ -98,8 +98,15 @@ void MaterialPropertyImpl::setFactor(::SceneTypes::weak::Vec4 const &factor)
         WIDGET_LOGE("get sampler failed, can't get internal material property");
         return std::nullopt;
     }
-    auto sampler = ::taihe::make_holder<SamplerImpl, ::SceneResources::Sampler>(materialPropertyETS_->GetSampler());
-    return ::taihe::optional<::SceneResources::Sampler>(std::in_place, sampler);
+    if (!sampler_.is_error()) {
+        return ::taihe::optional<::SceneResources::Sampler>(std::in_place, sampler_);
+    }
+    if (auto samplerETS = materialPropertyETS_->GetSampler()) {
+        sampler_ = ::taihe::make_holder<SamplerImpl, ::SceneResources::Sampler>(samplerETS);
+        return ::taihe::optional<::SceneResources::Sampler>(std::in_place, sampler_);
+    } else {
+        return std::nullopt;
+    }
 }
 
 void MaterialPropertyImpl::setSampler(::taihe::optional_view<::SceneResources::Sampler> sampler)

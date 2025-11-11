@@ -41,6 +41,7 @@ public:
     static SceneResources::Animation createAnimationFromETS(std::shared_ptr<AnimationETS> animationETS);
     explicit AnimationImpl(const std::shared_ptr<AnimationETS> animationETS_);
     ~AnimationImpl();
+    void destroy() override;
 
     bool getEnabled();
     void setEnabled(bool enabled);

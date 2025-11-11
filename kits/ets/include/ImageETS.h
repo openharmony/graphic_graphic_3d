@@ -29,6 +29,8 @@ public:
     ImageETS(const std::string &name, const std::string &uri, const SCENE_NS::IBitmap::Ptr bitmap);
     explicit ImageETS(const SCENE_NS::IImage::Ptr &image);
     ~ImageETS() override;
+    void Destroy() override;
+    void Cleanup();
 
     META_NS::IObject::Ptr GetNativeObj() const override;
     SCENE_NS::IImage::Ptr GetNativeImage() const

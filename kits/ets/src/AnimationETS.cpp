@@ -14,9 +14,12 @@
  */
 
 #include "AnimationETS.h"
+#include <scene/ext/intf_ecs_context.h>
+#include <scene/ext/intf_internal_scene.h>
 #ifdef __SCENE_ADAPTER__
 #include "3d_widget_adapter_log.h"
 #endif
+#include "Utils.h"
 
 namespace OHOS::Render3D {
 AnimationETS::AnimationETS(const META_NS::IAnimation::Ptr animation, const SCENE_NS::IScene::Ptr scene)
@@ -53,6 +56,40 @@ AnimationETS::AnimationETS(const META_NS::IAnimation::Ptr animation, const SCENE
 }
 
 AnimationETS::~AnimationETS()
+{
+    Cleanup();
+}
+
+META_NS::IAny::Ptr RemoveAnimationEntry(bool d, META_NS::IAnimation::Ptr &a)
+{
+    CORE_NS::Entity entity;
+    SCENE_NS::IInternalScene::Ptr isce;
+    if (auto ecsoa = interface_cast<SCENE_NS::IEcsObjectAccess>(a)) {
+        if (auto ecso = ecsoa->GetEcsObject()) {
+            entity = ecso->GetEntity();
+            isce = ecso->GetScene();
+        }
+    }
+    META_NS::IAnimation::WeakPtr wp = a;
+    a.reset();
+    if ((!d) || (!wp.expired()) || !isce) {
+        return {};
+    }
+    isce->GetEcsContext().RemoveEntity(entity);
+    return {};
+}
+
+void AnimationETS::Destroy()
+{
+    auto anim = animation_.lock();
+    if (!anim) {
+        return;
+    }
+    ExecSyncTask([a = BASE_NS::move(anim)]() mutable { return RemoveAnimationEntry(true, a); });
+    Cleanup();
+}
+
+void AnimationETS::Cleanup()
 {
     if (auto modifier = speedModifier_.lock()) {
         if (auto attach = interface_cast<META_NS::IAttach>(animation_.lock())) {

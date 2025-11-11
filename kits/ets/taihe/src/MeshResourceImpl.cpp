@@ -93,7 +93,13 @@ MeshResourceImpl::MeshResourceImpl(const std::shared_ptr<MeshResourceETS> mrETS)
 
 MeshResourceImpl::~MeshResourceImpl()
 {
+    mrETS_.reset();
+}
+
+void MeshResourceImpl::destroy()
+{
     if (mrETS_) {
+        mrETS_->Destroy();
         mrETS_.reset();
     }
 }

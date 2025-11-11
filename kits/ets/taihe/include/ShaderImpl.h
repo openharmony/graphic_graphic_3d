@@ -34,6 +34,7 @@ class ShaderImpl : public SceneResourceImpl {
 public:
     ShaderImpl(const std::shared_ptr<ShaderETS> &shader);
     ~ShaderImpl();
+    void destroy() override;
 
     int32_t getInputsSize();
 

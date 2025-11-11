@@ -54,6 +54,7 @@ public:
 
 private:
     std::shared_ptr<MaterialPropertyETS> materialPropertyETS_{nullptr};
+    ::SceneResources::Sampler sampler_{{nullptr, nullptr}};
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MATERIAL_PROPERTY_IMPL_H

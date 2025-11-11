@@ -16,39 +16,54 @@
 @!sts_inject("""
 import { ResourceStr } from 'arkui.component.units';
 import { NodeType, Node } from './SceneNodes';
-import { ShadowRecord, RecordProxyHandler } from './RecordProxy'
+import { RecordIterator } from './RecordProxy'
 // Ensure that libscene_ani is loaded.
 loadLibrary('scene_ani.z');
 
-class ComponentShadowRecord extends ShadowRecord<ComponentPropertyType> {
-    static createProxy(component: SceneComponent): Record<string, ComponentPropertyType> {
-        let handler = new ComponentPropertyProxyHandler(component);
-        return proxy.Proxy.create(new ComponentShadowRecord() as ShadowRecord<ComponentPropertyType>,
-            handler) as Record<string, ComponentPropertyType>;
-    }
-}
+class SceneComponentRecord extends Record<string, ComponentPropertyType> {
+    private sc: SceneComponent;
 
-class ComponentPropertyProxyHandler extends RecordProxyHandler<ComponentPropertyType> {
-    private property: SceneComponent;
-
-    constructor(property: SceneComponent) {
-        this.property = property;
+    constructor(sc: SceneComponent) {
+        this.sc = sc;
     }
 
-    override getSize(): int {
-        return this.property.getPropertySize();
+    override get size(): int {
+        return this.sc.getPropertySize();
     }
 
-    override getKeys(): string[] {
-        return this.property.getPropertyKeys();
+    override get(k: string, def: ComponentPropertyType): ComponentPropertyType {
+        return this.sc.getComponentProperty(k) ?? def;
     }
 
-    override getProperty(key: string): ComponentPropertyType | undefined {
-        return this.property.getComponentProperty(key);
+    override get(k: string): ComponentPropertyType | undefined {
+        return this.sc.getComponentProperty(k);
     }
 
-    override setProperty(key: string, value: ComponentPropertyType): void {
-        this.property.setComponentProperty(key, value);
+    override set(k: string, v: ComponentPropertyType): this {
+        this.sc.setComponentProperty(k, v);
+        return this;
+    }
+
+    override $_get(key: string): ComponentPropertyType | undefined {
+        return this.sc.getComponentProperty(key);
+    }
+
+    override $_set(key: string, value: ComponentPropertyType): void {
+        this.sc.setComponentProperty(key, value);
+    }
+
+    override keys(): IterableIterator<string> {
+        return new RecordIterator<string>(this.sc.getPropertyKeys(), (key: string) => key);
+    }
+
+    override values(): IterableIterator<ComponentPropertyType> {
+        return new RecordIterator<ComponentPropertyType>(this.sc.getPropertyKeys(), 
+            (key: string) => this.sc.getComponentProperty(key)!);
+    }
+
+    override entries(): IterableIterator<[string, ComponentPropertyType]> {
+        return new RecordIterator<[string, ComponentPropertyType]>(this.sc.getPropertyKeys(),
+            (key: string) => [key, this.sc.getComponentProperty(key)!]);
     }
 }
 """)
@@ -154,8 +169,8 @@ interface SceneComponent {
     """)
 
     @!sts_inject_into_class("""
-    get property(): Record<string, ComponentPropertyType> {
-        return ComponentShadowRecord.createProxy(this);
+    get property(): SceneComponentRecord {
+        return new SceneComponentRecord(this);
     }
     """)
 

@@ -31,8 +31,10 @@ public:
     ShaderETS(const SCENE_NS::IShader::Ptr &shader, const SCENE_NS::IMaterial::Ptr &material);
     ShaderETS(const SCENE_NS::IShader::Ptr &shader, const std::string &name, const std::string &uri);
     ~ShaderETS();
+    void Destroy() override;
 
     void BindToMaterial(const SCENE_NS::IMaterial::Ptr &material);
+    void DetachFromMaterial();
 
     int32_t GetInputsSize() const
     {

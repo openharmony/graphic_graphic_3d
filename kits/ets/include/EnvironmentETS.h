@@ -66,6 +66,8 @@ public:
     EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene, const std::string &name);
     EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene, const std::string &name,
         const std::string &uri);
+    void Destroy() override;
+    void Cleanup();
 
     SCENE_NS::IScene::Ptr GetScene() const
     {
