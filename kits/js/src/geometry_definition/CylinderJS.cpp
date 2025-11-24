@@ -20,6 +20,8 @@
 
 namespace GeometryDefinition {
 
+static constexpr int CYLINDER_MIN_SEGMENTS = 3;
+
 CylinderJS::CylinderJS(float radius, float height, uint32_t segmentCount)
     : GeometryDefinition(), radius_(radius), height_(height), segmentCount_(segmentCount) {}
 
@@ -47,11 +49,13 @@ void CylinderJS::Init(napi_env env, napi_value exports)
 
 GeometryDefinition* CylinderJS::FromJs(NapiApi::Object& jsDefinition)
 {
-    if (auto radius = jsDefinition.Get<float>("radius"); radius.IsValid()) {
-        if (auto height = jsDefinition.Get<float>("height"); height.IsValid()) {
-            if (auto segmentCount = jsDefinition.Get<uint32_t>("segmentCount"); segmentCount.IsValid()) {
-                return new CylinderJS(radius, height, segmentCount);
-            }
+    auto radius = jsDefinition.Get<float>("radius");
+    auto height = jsDefinition.Get<float>("height");
+    // Check valid segmentCount range with a signed type to avoid underflow. Internally we use uint32_t.
+    auto segmentCount = jsDefinition.Get<int64_t>("segmentCount");
+    if (radius.IsValid() && height.IsValid() && segmentCount.IsValid()) {
+        if (radius > 0 && height > 0 && segmentCount >= CYLINDER_MIN_SEGMENTS) {
+            return new CylinderJS(radius, height, segmentCount);
         }
     }
     LOG_E("Unable to create CylinderJS: Invalid JS object given");
