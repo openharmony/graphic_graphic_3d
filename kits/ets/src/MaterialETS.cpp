@@ -59,6 +59,8 @@ MaterialETS::MaterialType MaterialETS::GetMaterialType()
         return MaterialType::METALLIC_ROUGHNESS;
     } else if (nativeType == SCENE_NS::MaterialType::UNLIT) {
         return MaterialType::UNLIT;
+    } else if (nativeType == SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA) {
+        return MaterialType::UNLIT_SHADOW_ALPHA;
     } else {
         return MaterialType::SHADER;
     }

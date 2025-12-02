@@ -45,6 +45,8 @@ void MaterialImpl::destroy()
         return ::SceneResources::MaterialType::key_t::METALLIC_ROUGHNESS;
     } else if (type == MaterialETS::MaterialType::UNLIT) {
         return ::SceneResources::MaterialType::key_t::UNLIT;
+    }  else if (type == MaterialETS::MaterialType::UNLIT_SHADOW_ALPHA) {
+        return ::SceneResources::MaterialType::key_t::UNLIT_SHADOW_ALPHA;
     } else {
         return ::SceneResources::MaterialType::key_t::SHADER;
     }

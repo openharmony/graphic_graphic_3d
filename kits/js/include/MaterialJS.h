@@ -22,7 +22,7 @@
 class BaseMaterial : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 30;
-    enum MaterialType { SHADER = 1, METALLIC_ROUGHNESS = 2, UNLIT = 3 };
+    enum MaterialType { SHADER = 1, METALLIC_ROUGHNESS = 2, UNLIT = 3, UNLIT_SHADOW_ALPHA = 100 };
     enum CullMode { NONE = 0, FRONT = 1, BACK = 2 };
     enum PolygonMode { FILL = 0, LINE = 1, POINT = 2 };
     static void Init(const char* name, napi_env env, napi_value exports, napi_callback ctor,

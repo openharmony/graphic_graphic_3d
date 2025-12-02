@@ -858,6 +858,8 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
             META_NS::SetValue(material->Type(), SCENE_NS::MaterialType::CUSTOM);
         } else if (type == BaseMaterial::UNLIT) {
             META_NS::SetValue(material->Type(), SCENE_NS::MaterialType::UNLIT);
+        } else if (type == BaseMaterial::UNLIT_SHADOW_ALPHA) {
+            META_NS::SetValue(material->Type(), SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA);
         }
         napi_value args[] = { sceneRef.GetValue(), paramRef.GetValue() };
         const auto result = CreateFromNativeInstance(env, material, PtrType::STRONG, args);

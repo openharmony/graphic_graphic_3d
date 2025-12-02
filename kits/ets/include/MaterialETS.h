@@ -30,6 +30,7 @@ public:
         SHADER = 1,
         METALLIC_ROUGHNESS = 2,
         UNLIT = 3,
+        UNLIT_SHADOW_ALPHA = 100,
     };
     enum CullMode {
         NONE = 0,

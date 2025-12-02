@@ -13,18 +13,28 @@
  * limitations under the License.
  */
 
-#include "PBRMaterialImpl.h"
+#include "UnlitShadowAlphaImpl.h"
 
 namespace OHOS::Render3D::KITETS {
-PBRMaterialImpl::PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat)
-    : MaterialImpl(mat), MetallicRoughnessMaterialImpl(mat), ShaderMaterialImpl(mat),
-    UnlitMaterialImpl(mat), UnlitShadowAlphaImpl(mat), materialETS_(mat)
-{}
+UnlitShadowAlphaImpl::UnlitShadowAlphaImpl(const std::shared_ptr<MaterialETS> mat)
+    : MaterialImpl(mat), materialETS_(mat)
+{
+}
 
-PBRMaterialImpl::~PBRMaterialImpl()
+UnlitShadowAlphaImpl::~UnlitShadowAlphaImpl()
 {
     if (materialETS_) {
         materialETS_.reset();
     }
+}
+
+::SceneResources::MaterialProperty UnlitShadowAlphaImpl::getShadowAlpha()
+{
+    return getProperty<MaterialETS::TextureIndex::BASE_COLOR>();
+}
+
+void UnlitShadowAlphaImpl::setShadowAlpha(::SceneResources::weak::MaterialProperty color)
+{
+    setProperty<MaterialETS::TextureIndex::BASE_COLOR>(color);
 }
 }  // namespace OHOS::Render3D::KITETS
