@@ -782,9 +782,9 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         napi_value args[] = { sceneRef.GetValue(), sceneNodeParamRef.GetValue() };
         // Store a weak ref, as these are owned by the scene.
         auto result = CreateFromNativeInstance(env, camera, PtrType::WEAK, args);
-        napi_value null;
-        napi_get_null(env, &null);
-        result.Set("postProcess", null); // not bound to anything...
+        napi_value napiNull;
+        napi_get_null(env, &napiNull);
+        result.Set("postProcess", napiNull); // not bound to anything...
         if (auto node = result.GetJsWrapper<NodeImpl>()) {
             node->Attached(true);
         }
