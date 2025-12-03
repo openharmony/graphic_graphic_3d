@@ -22,6 +22,9 @@
 #endif
 
 namespace OHOS::Render3D::KITETS {
+
+static constexpr int CYLINDER_MIN_SEGMENTS = 3;
+
 BASE_NS::unique_ptr<Geometry::CustomETS> MeshResourceImpl::MakeCustomETS(
     const SceneTypes::CustomGeometry &customGeometry)
 {
@@ -76,7 +79,11 @@ SceneResources::MeshResource MeshResourceImpl::Create(
         float radius = cylinderGeometry->getRadius();
         float height = cylinderGeometry->getHeight();
         int segmentCount = cylinderGeometry->getSegmentCount();
-        gd = BASE_NS::make_unique<Geometry::CylinderETS>(radius, height, segmentCount);
+        if (radius > 0 && height > 0 && segmentCount >= CYLINDER_MIN_SEGMENTS) {
+            gd = BASE_NS::make_unique<Geometry::CylinderETS>(radius, height, segmentCount);
+        } else {
+            taihe::set_error("Unable to create CylinderETS: Invalid parameters given");
+        }
     } else {
         taihe::set_error("Unknown type of GeometryDefinition");
         return SceneResources::MeshResource({nullptr, nullptr});
