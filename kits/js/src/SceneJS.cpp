@@ -779,10 +779,12 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         const auto env = promise.Env();
         camera->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
         camera->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
-        camera->PostProcess()->SetValue(nullptr);
         napi_value args[] = { sceneRef.GetValue(), sceneNodeParamRef.GetValue() };
         // Store a weak ref, as these are owned by the scene.
         auto result = CreateFromNativeInstance(env, camera, PtrType::WEAK, args);
+        napi_value napiNull;
+        napi_get_null(env, &napiNull);
+        result.Set("postProcess", napiNull); // not bound to anything...
         if (auto node = result.GetJsWrapper<NodeImpl>()) {
             node->Attached(true);
         }
