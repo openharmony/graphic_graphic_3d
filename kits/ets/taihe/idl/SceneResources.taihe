@@ -147,6 +147,7 @@ enum MaterialType: i32 {
     SHADER = 1,
     METALLIC_ROUGHNESS = 2,
     UNLIT = 3,
+    UNLIT_SHADOW_ALPHA = 100,
 }
 
 enum CullMode: i32 {
@@ -302,7 +303,26 @@ interface UnlitMaterial : Material {
     setBaseColorInner(color: MaterialProperty): void;
 }
 
-interface PBRMaterial: MetallicRoughnessMaterial, ShaderMaterial, UnlitMaterial {
+interface UnlitShadowAlphaMaterial : Material {
+    @!sts_inject_into_interface("""
+    get baseColor(): MaterialProperty;
+    set baseColor(color: MaterialProperty);
+    """)
+
+    @!sts_inject_into_class("""
+    get baseColor(): MaterialProperty {
+        return this.getShadowAlpha();
+    }
+    set baseColor(color: MaterialProperty) {
+        this.setShadowAlpha(color);
+    }
+    """)
+
+    getShadowAlpha(): MaterialProperty;
+    setShadowAlpha(color: MaterialProperty): void;
+}
+
+interface PBRMaterial: MetallicRoughnessMaterial, ShaderMaterial, UnlitMaterial, UnlitShadowAlphaMaterial {
 }
 
 union VariousMaterial {

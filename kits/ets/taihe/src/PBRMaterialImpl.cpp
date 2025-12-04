@@ -18,7 +18,7 @@
 namespace OHOS::Render3D::KITETS {
 PBRMaterialImpl::PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat)
     : MaterialImpl(mat), MetallicRoughnessMaterialImpl(mat), ShaderMaterialImpl(mat),
-    UnlitMaterialImpl(mat), materialETS_(mat)
+    UnlitMaterialImpl(mat), UnlitShadowAlphaImpl(mat), materialETS_(mat)
 {}
 
 PBRMaterialImpl::~PBRMaterialImpl()

@@ -13,24 +13,26 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_3D_PBR_MATERIAL_IMPL_H
-#define OHOS_3D_PBR_MATERIAL_IMPL_H
+#ifndef OHOS_3D_UNLIT_SHADOW_ALPHA_MATERIAL_IMPL_H
+#define OHOS_3D_UNLIT_SHADOW_ALPHA_MATERIAL_IMPL_H
 
 #include "MaterialImpl.h"
-#include "MetallicRoughnessMaterialImpl.h"
-#include "ShaderMaterialImpl.h"
-#include "UnlitMaterialImpl.h"
-#include "UnlitShadowAlphaImpl.h"
+#include "SceneResources.user.hpp"
+#include "stdexcept"
+#include "taihe/optional.hpp"
+#include "taihe/runtime.hpp"
 
 namespace OHOS::Render3D::KITETS {
-class PBRMaterialImpl : public MetallicRoughnessMaterialImpl, public ShaderMaterialImpl, public UnlitMaterialImpl,
-    public UnlitShadowAlphaImpl {
+class UnlitShadowAlphaImpl : virtual public MaterialImpl {
 public:
-    PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat);
-    ~PBRMaterialImpl();
+    UnlitShadowAlphaImpl(const std::shared_ptr<MaterialETS> mat);
+    ~UnlitShadowAlphaImpl();
+
+    ::SceneResources::MaterialProperty getShadowAlpha();
+    void setShadowAlpha(::SceneResources::weak::MaterialProperty color);
 
 private:
     std::shared_ptr<MaterialETS> materialETS_;
 };
-}  // namespace OHOS::Render3D::KITETS
-#endif  // OHOS_3D_PBR_MATERIAL_IMPL_H
+} // namespace OHOS::Render3D::KITETS
+#endif  // OHOS_3D_UNLIT_SHADOW_ALPHA_MATERIAL_IMPL_H

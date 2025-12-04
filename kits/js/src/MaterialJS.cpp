@@ -79,6 +79,7 @@ void BaseMaterial::InitEnumType(napi_env env, napi_value exports)
     DECL_ENUM(eType1, SHADER);
     DECL_ENUM(eType1, METALLIC_ROUGHNESS);
     DECL_ENUM(eType1, UNLIT);
+    DECL_ENUM(eType1, UNLIT_SHADOW_ALPHA);
 #undef DECL_ENUM
     exp1.Set("MaterialType", eType1);
 
@@ -135,6 +136,8 @@ napi_value BaseMaterial::GetMaterialType(NapiApi::FunctionContext<>& ctx)
             type = BaseMaterial::METALLIC_ROUGHNESS;
         } else if (META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::UNLIT) {
             type = BaseMaterial::UNLIT;
+        } else if (META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA) {
+            type = BaseMaterial::UNLIT_SHADOW_ALPHA;
         } else {
             type = BaseMaterial::SHADER;
         }
@@ -392,6 +395,8 @@ MaterialJS::MaterialJS(napi_env e, napi_callback_info i)
             materialType_ = MaterialType::SHADER;
         } else if (META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::UNLIT) {
             materialType_ = MaterialType::UNLIT;
+        } else if (META_NS::GetValue(material->Type()) == SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA) {
+            materialType_ = MaterialType::UNLIT_SHADOW_ALPHA;
         } else {
             materialType_ = MaterialType::METALLIC_ROUGHNESS;
         }

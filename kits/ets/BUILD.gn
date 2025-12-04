@@ -167,6 +167,7 @@ taihe_shared_library("scene_ani") {
     "taihe/src/MeshResourceImpl.cpp",
     "taihe/src/MetallicRoughnessMaterialImpl.cpp",
     "taihe/src/UnlitMaterialImpl.cpp",
+    "taihe/src/UnlitShadowAlphaImpl.cpp",
     "taihe/src/MorpherImpl.cpp",
     "taihe/src/NodeImpl.cpp",
     "taihe/src/PBRMaterialImpl.cpp",

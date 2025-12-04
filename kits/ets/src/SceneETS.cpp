@@ -408,6 +408,8 @@ InvokeReturn<std::shared_ptr<MaterialETS>> SceneETS::CreateMaterial(const std::s
             META_NS::SetValue(mat->Type(), SCENE_NS::MaterialType::CUSTOM);
         } else if (materialType == MaterialETS::MaterialType::UNLIT) {
             META_NS::SetValue(mat->Type(), SCENE_NS::MaterialType::UNLIT);
+        } else if (materialType == MaterialETS::MaterialType::UNLIT_SHADOW_ALPHA) {
+            META_NS::SetValue(mat->Type(), SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA);
         }
         return InvokeReturn(std::make_shared<MaterialETS>(mat, name, uri));
     } else {
