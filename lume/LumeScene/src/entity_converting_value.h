@@ -17,6 +17,7 @@
 #define SCENE_SRC_ENTITY_CONVERTING_VALUE_H
 
 #include <scene/ext/intf_ecs_context.h>
+#include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/intf_render_resource.h>
 
 #include <3d/ecs/components/render_handle_component.h>

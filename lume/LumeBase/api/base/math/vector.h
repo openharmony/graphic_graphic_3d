@@ -494,6 +494,8 @@ public:
 // Assert that UVec2 is the same as 2 uint32_t's
 static_assert(sizeof(UVec2) == 2 * sizeof(uint32_t));
 
+static constexpr UVec2 ZERO_UVEC2(0, 0);
+
 /** @ingroup group_math_vector */
 /** Unsigned integer vector3 presentation */
 class UVec3 {

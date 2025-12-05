@@ -18,6 +18,8 @@
 #include <meta/interface/intf_metadata.h>
 #include <meta/interface/intf_object_flags.h>
 #include <meta/interface/property/property.h>
+#include <meta/interface/property/construct_property.h>
+#include <meta/ext/metadata_helpers.h>
 
 META_BEGIN_NAMESPACE()
 

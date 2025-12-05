@@ -32,5 +32,17 @@ public:
     float GetY() const;
     void SetY(const float y);
 };
+
+class UVec2Proxy : public PropertyProxy<BASE_NS::Math::UVec2> {
+public:
+    explicit UVec2Proxy(const META_NS::Property<BASE_NS::Math::UVec2> &prop);
+    ~UVec2Proxy() override;
+
+    uint32_t GetX() const;
+    void SetX(const uint32_t x);
+
+    uint32_t GetY() const;
+    void SetY(const uint32_t y);
+};
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_VEC2_PROXY_H

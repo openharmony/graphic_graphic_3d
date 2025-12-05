@@ -57,4 +57,46 @@ void Vec2Proxy::SetY(const float y)
     value.y = y;
     META_NS::SetValue(prop, value);
 }
+
+UVec2Proxy::UVec2Proxy(const META_NS::Property<BASE_NS::Math::UVec2> &prop) : PropertyProxy<BASE_NS::Math::UVec2>(prop)
+{}
+
+UVec2Proxy::~UVec2Proxy()
+{}
+
+uint32_t UVec2Proxy::GetX() const
+{
+    META_NS::Property<BASE_NS::Math::UVec2> prop(prop_);
+    BASE_NS::Math::UVec2 value = META_NS::GetValue(prop);
+    return value.x;
+}
+
+void UVec2Proxy::SetX(const uint32_t x)
+{
+    META_NS::Property<BASE_NS::Math::UVec2> prop(prop_);
+    BASE_NS::Math::UVec2 value = META_NS::GetValue(prop);
+    if (value.x == x) {
+        return;
+    }
+    value.x = x;
+    META_NS::SetValue(prop, value);
+}
+
+uint32_t UVec2Proxy::GetY() const
+{
+    META_NS::Property<BASE_NS::Math::UVec2> prop(prop_);
+    BASE_NS::Math::UVec2 value = META_NS::GetValue(prop);
+    return value.y;
+}
+
+void UVec2Proxy::SetY(const uint32_t y)
+{
+    META_NS::Property<BASE_NS::Math::UVec2> prop(prop_);
+    BASE_NS::Math::UVec2 value = META_NS::GetValue(prop);
+    if (value.y == y) {
+        return;
+    }
+    value.y = y;
+    META_NS::SetValue(prop, value);
+}
 }  // namespace OHOS::Render3D

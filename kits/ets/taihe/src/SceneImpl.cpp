@@ -15,10 +15,12 @@
 
 #include "SceneImpl.h"
 
+#include "Vec2Impl.h"
 #include "interop_js/arkts_interop_js_api.h"
 #include "interop_js/arkts_esvalue.h"
 #include "SceneJS.h"
 #include "CheckNapiEnv.h"
+#include "RenderConfigurationImpl.h"
 #include "RenderContextImpl.h"
 #include "scene_adapter/scene_adapter.h"
 
@@ -363,6 +365,21 @@ void SceneImpl::destroy()
     } else {
         WIDGET_LOGE("getComponent error: %s", component.error.c_str());
         return ::SceneTH::SceneComponentOrNull::make_nValue();
+    }
+}
+
+::SceneTH::RenderConfiguration SceneImpl::getRenderConfiguration()
+{
+    if (!sceneETS_) {
+        WIDGET_LOGE("getRenderConfiguration error: Empty SceneETS");
+        return taihe::make_holder<RenderConfigurationImpl, ::SceneTH::RenderConfiguration>(nullptr);
+    }
+    InvokeReturn<std::shared_ptr<RenderConfigurationETS>> rcETS = sceneETS_->GetRenderConfiguration();
+    if (rcETS) {
+        return taihe::make_holder<RenderConfigurationImpl, ::SceneTH::RenderConfiguration>(rcETS.value);
+    } else {
+        WIDGET_LOGE("getRenderConfiguration error: %s", rcETS.error.c_str());
+        return taihe::make_holder<RenderConfigurationImpl, ::SceneTH::RenderConfiguration>(nullptr);
     }
 }
 } // namespace OHOS::Render3D::KITETS
