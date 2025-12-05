@@ -71,5 +71,58 @@ private:
     // non meta property data
     BASE_NS::Math::Vec2 stageData_ = BASE_NS::Math::ZERO_VEC2;
 };
+
+class UVec2Impl {
+public:
+    UVec2Impl(const std::shared_ptr<UVec2Proxy> proxy) : proxy_(proxy)
+    {}
+
+    UVec2Impl(const BASE_NS::Math::UVec2 &data) : stageData_(data)
+    {}
+
+    ~UVec2Impl()
+    {
+        proxy_.reset();
+    }
+
+    double getX()
+    {
+        if (proxy_) {
+            return proxy_->GetX();
+        }
+        return stageData_.x;
+    }
+
+    void setX(double x)
+    {
+        if (proxy_) {
+            proxy_->SetX(x);
+        } else {
+            stageData_.x = x;
+        }
+    }
+
+    double getY()
+    {
+        if (proxy_) {
+            return proxy_->GetY();
+        }
+        return stageData_.y;
+    }
+
+    void setY(double y)
+    {
+        if (proxy_) {
+            proxy_->SetY(y);
+        } else {
+            stageData_.y = y;
+        }
+    }
+
+private:
+    std::shared_ptr<UVec2Proxy> proxy_{nullptr};
+    // non meta property data
+    BASE_NS::Math::UVec2 stageData_ = BASE_NS::Math::ZERO_UVEC2;
+};
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_VEC2_IMPL_H

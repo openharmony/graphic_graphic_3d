@@ -22,6 +22,8 @@
 #include <scene/ext/scene_property.h>
 #include <scene/interface/intf_render_configuration.h>
 
+#include <3d/render/intf_render_data_store_default_light.h>
+
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 #include <meta/interface/intf_named.h>
@@ -29,7 +31,9 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-class RenderConfiguration : public META_NS::IntroduceInterfaces<Component, IRenderConfiguration, ICreateEntity> {
+class RenderConfiguration
+    : public META_NS::IntroduceInterfaces<Component, IRenderConfiguration, ICreateEntity,
+        META_NS::IPropertyOwner, META_NS::IMetadataOwner> {
     META_OBJECT(RenderConfiguration, ClassId::RenderConfiguration, IntroduceInterfaces)
 public:
     META_BEGIN_STATIC_DATA()
@@ -45,6 +49,7 @@ public:
         IRenderConfiguration, SceneShadowQuality, ShadowQuality, "RenderConfigurationComponent.shadowQuality")
     SCENE_STATIC_PROPERTY_DATA(
         IRenderConfiguration, SceneShadowSmoothness, ShadowSmoothness, "RenderConfigurationComponent.shadowSmoothness")
+    META_STATIC_PROPERTY_DATA(IRenderConfiguration, BASE_NS::Math::UVec2, ShadowResolution)
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(IEnvironment::Ptr, Environment)
@@ -53,10 +58,22 @@ public:
     META_IMPLEMENT_PROPERTY(SceneShadowType, ShadowType)
     META_IMPLEMENT_PROPERTY(SceneShadowQuality, ShadowQuality)
     META_IMPLEMENT_PROPERTY(SceneShadowSmoothness, ShadowSmoothness)
+    META_IMPLEMENT_PROPERTY(BASE_NS::Math::UVec2, ShadowResolution)
 
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
     BASE_NS::string GetName() const override;
+
+protected:
+    void OnMetadataConstructed(const META_NS::StaticMetadata& m, CORE_NS::IInterface& i) override;
+
+protected: // IPropertyOwner
+    void OnPropertyChanged(const META_NS::IProperty& property) override;
+
+private:
+    BASE_NS::Math::UVec2 GetDefaultShadowResolution() const;
+    void UpdateShadowResolution(IInternalScene& scene, bool isset, BASE_NS::Math::UVec2 value);
+    BASE_NS::refcnt_ptr<CORE3D_NS::IRenderDataStoreDefaultLight> GetDefaultLightRenderDataStore(IInternalScene& scene);
 };
 SCENE_END_NAMESPACE()
 

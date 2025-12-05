@@ -144,6 +144,8 @@ SceneETS::SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::
         WIDGET_LOGE("no environment in scene");
     }
     resources_ = RenderContextETS::GetInstance().GetResources();
+
+    LoadRenderConfiguration(scene_);
 }
 
 SceneETS::~SceneETS()
@@ -219,6 +221,8 @@ bool SceneETS::Load(std::string uri)
         auto &obr = META_NS::GetObjectRegistry();
         AddScene(&obr, scene);
         scene_ = scene;
+
+        LoadRenderConfiguration(scene);
 
         auto curenv = GetEnvironment();
         if (!curenv) {
@@ -563,6 +567,44 @@ InvokeReturn<std::shared_ptr<SceneComponentETS>> SceneETS::CreateComponent(std::
         return InvokeReturn(std::make_shared<SceneComponentETS>(comp, name));
     }
     return InvokeReturn<std::shared_ptr<SceneComponentETS>>(nullptr, "CreateComponent failed");
+}
+
+void SceneETS::LoadRenderConfiguration(SCENE_NS::IScene::Ptr scene)
+{
+    Scene::IRenderConfiguration::Ptr rsScenePtr = scene->RenderConfiguration()->GetValue();
+    if (rsScenePtr) {
+        auto rcETS = CreateRenderConfiguration(rsScenePtr);
+        renderConfigurationETS_ = rcETS.value;
+    } else {
+        WIDGET_LOGE("RenderConfigurationETS load failed");
+    }
+}
+
+InvokeReturn<std::shared_ptr<RenderConfigurationETS>> SceneETS::CreateRenderConfiguration(
+    SCENE_NS::IRenderConfiguration::Ptr &rc)
+{
+    if (!scene_) {
+        return InvokeReturn<std::shared_ptr<RenderConfigurationETS>>(nullptr, "Invalid scene");
+    }
+    return InvokeReturn(std::make_shared<RenderConfigurationETS>(rc, scene_));
+}
+
+InvokeReturn<std::shared_ptr<RenderConfigurationETS>> SceneETS::GetRenderConfiguration()
+{
+    if (!scene_) {
+        return InvokeReturn<std::shared_ptr<RenderConfigurationETS>>(nullptr, "Invalid scene");
+    }
+    SCENE_NS::IRenderConfiguration::Ptr rc = scene_->RenderConfiguration()->GetValue();
+    if (rc) {
+        if (renderConfigurationETS_ &&
+            renderConfigurationETS_->GetNativeObj() == interface_pointer_cast<META_NS::IObject>(rc)) {
+            return InvokeReturn(renderConfigurationETS_);
+        }
+        CORE_LOG_E("no renderConfigurationETS_, do not expect go here");
+        renderConfigurationETS_ = std::make_shared<RenderConfigurationETS>(rc, scene_);
+        return InvokeReturn(renderConfigurationETS_);
+    }
+    return InvokeReturn<std::shared_ptr<RenderConfigurationETS>>(nullptr, "no rc in render context");
 }
 
 InvokeReturn<std::shared_ptr<SceneComponentETS>> SceneETS::GetComponent(std::shared_ptr<NodeETS> node,

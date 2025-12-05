@@ -32,13 +32,13 @@ enum class SceneShadowType : uint8_t {
 };
 
 enum class SceneShadowQuality : uint8_t {
-    /* Low shadow quality. (Low resulution shadow map) */
+    /* Low shadow quality. (512x512 shadow map) */
     LOW = 0,
-    /* Normal shadow quality. (Normal resolution shadow map) */
+    /* Normal shadow quality. (1024x1024 shadow map) */
     NORMAL = 1,
-    /* High shadow quality. (High resolution shadow map) */
+    /* High shadow quality. (2048x2048 shadow map) */
     HIGH = 2,
-    /* Ultra shadow quality. (Ultra resolution shadow map) */
+    /* Ultra shadow quality. (4096x4096 shadow map) */
     ULTRA = 3,
 };
 
@@ -54,12 +54,35 @@ enum class SceneShadowSmoothness : uint8_t {
 class IRenderConfiguration : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IRenderConfiguration, "cdedd61a-0e33-4eb7-8148-687ddbc2c2da")
 public:
+    /**
+     * @brief The environment to use.
+     */
     META_PROPERTY(IEnvironment::Ptr, Environment)
+    /**
+     * @brief Render node graph uri. Can be set to override the default RNG.
+     */
     META_PROPERTY(BASE_NS::string, RenderNodeGraphUri)
+    /**
+     * @brief Post render node graph uri. Can be set to override the default.
+     */
     META_PROPERTY(BASE_NS::string, PostRenderNodeGraphUri)
+    /**
+     * @brief Global configuration for the shadow type.
+     */
     META_PROPERTY(SceneShadowType, ShadowType)
+    /**
+     * @brief Global configuration for the shadow quality.
+     */
     META_PROPERTY(SceneShadowQuality, ShadowQuality)
+    /**
+     * @brief Global configuration for the shadow smoothness.
+     */
     META_PROPERTY(SceneShadowSmoothness, ShadowSmoothness)
+    /**
+     * @brief Override shadow resolution. When set, ShadowQuality property is ignored and the given shadow map size is
+     * used instead.
+     */
+    META_PROPERTY(BASE_NS::Math::UVec2, ShadowResolution)
 };
 
 META_REGISTER_CLASS(

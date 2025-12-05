@@ -37,6 +37,7 @@
 #include "MaterialETS.h"
 #include "MeshResourceETS.h"
 #include "NodeETS.h"
+#include "RenderConfigurationETS.h"
 #include "SceneComponentETS.h"
 #include "RenderContextETS.h"
 #include "Vec4Proxy.h"
@@ -70,6 +71,8 @@ public:
         const std::string &name, const std::string &path, LightETS::LightType lightType);
     InvokeReturn<std::shared_ptr<MaterialETS>> CreateMaterial(
         const std::string &name, const std::string &uri, const MaterialETS::MaterialType &materialType);
+    InvokeReturn<std::shared_ptr<RenderConfigurationETS>> CreateRenderConfiguration(
+        SCENE_NS::IRenderConfiguration::Ptr &rc);
 
     InvokeReturn<std::shared_ptr<EnvironmentETS>> GetEnvironment();
     void SetEnvironment(const std::shared_ptr<EnvironmentETS> environmentETS);
@@ -85,6 +88,10 @@ public:
     std::shared_ptr<NodeETS> GetNodeByPath(const std::string &path);
     InvokeReturn<std::shared_ptr<SceneComponentETS>> CreateComponent(std::shared_ptr<NodeETS> node,
         const std::string &name);
+
+    void LoadRenderConfiguration(SCENE_NS::IScene::Ptr scene);
+    InvokeReturn<std::shared_ptr<RenderConfigurationETS>> GetRenderConfiguration();
+
     InvokeReturn<std::shared_ptr<SceneComponentETS>> GetComponent(std::shared_ptr<NodeETS> node,
         const std::string &name);
 
@@ -108,6 +115,7 @@ private:
     SCENE_NS::IScene::Ptr scene_{nullptr};
 
     std::shared_ptr<EnvironmentETS> environmentETS_{nullptr};
+    std::shared_ptr<RenderConfigurationETS> renderConfigurationETS_{nullptr};
     std::shared_ptr<RenderResourcesETS> resources_;
     // Retain animation here, then keep a weak poninter of animation elsewhere.
     BASE_NS::vector<META_NS::IAnimation::Ptr> nativeAnimations_;

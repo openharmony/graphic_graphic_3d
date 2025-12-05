@@ -78,6 +78,8 @@ public:
 
     ::SceneTH::SceneComponentOrNull getComponent(::SceneNodes::weak::Node node, ::taihe::string_view name);
 
+    ::SceneTH::RenderConfiguration getRenderConfiguration();
+
     int64_t getSceneNative();
 
     ::taihe::optional<int64_t> getImpl()

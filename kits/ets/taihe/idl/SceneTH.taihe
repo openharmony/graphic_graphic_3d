@@ -192,6 +192,11 @@ interface RenderContext {
     registerResourcePath(protocol: String, uri: String): bool;
 }
 
+interface RenderConfiguration {
+    @get getShadowResolution(): Optional<Vec2>;
+    @set setShadowResolution(resolution: Optional<Vec2>): void;
+}
+
 struct RenderParameters {
     alwaysRender: Optional<bool>;
 }
@@ -224,6 +229,8 @@ interface Scene {
 
     @gen_promise("createComponent")
     createComponentSync(node: Node, name: String): SceneComponent;
+
+    @get getRenderConfiguration(): RenderConfiguration;
 
     getComponent(node: Node, name: String): SceneComponentOrNull;
 
