@@ -468,11 +468,18 @@ union ShaderInputType {
 interface Shader : SceneResource {
     @!sts_inject_into_interface("""
     get inputs(): Record<string, ShaderInputType>;
+    setShaderInputs(inputs: Record<string, ShaderInputType>): void;
     """)
 
     @!sts_inject_into_class("""
     get inputs(): ShaderRecord {
         return new ShaderRecord(this);
+    }
+
+    setShaderInputs(inputs: Record<string, ShaderInputType>): void {
+        inputs.forEach((v: ShaderInputType, k: string) => {
+            this.setInput(k, v);
+        })
     }
     """)
 
