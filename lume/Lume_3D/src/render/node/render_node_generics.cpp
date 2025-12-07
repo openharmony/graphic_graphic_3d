@@ -33,21 +33,20 @@ using namespace CORE_NS;
 void RenderNodeMixin::Load(const BASE_NS::string_view shader, BASE_NS::vector<DescriptorCounts>& counts,
     ComputeShaderData& debugShaderData, size_t reserved)
 {
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
-    if (!renderNodeContextMgr_) {
-        CORE_LOG_E("null RenderNodeContextManager");
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr = *this;
+    if (!renderNodeContextMgr) {
         return;
     }
-    auto& utils = renderNodeContextMgr_->GetRenderNodeUtil();
+    auto& utils = renderNodeContextMgr->GetRenderNodeUtil();
 
-    auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+    auto& shaderMgr = renderNodeContextMgr->GetShaderManager();
     const IShaderManager::ShaderData sd = shaderMgr.GetShaderDataByShaderName(shader);
     debugShaderData.shader = sd.shader;
     debugShaderData.pipelineLayout = sd.pipelineLayout;
     debugShaderData.pipelineLayoutData = sd.pipelineLayoutData;
     debugShaderData.threadGroupSize = shaderMgr.GetReflectionThreadGroupSize(debugShaderData.shader);
 
-    debugShaderData.pso = renderNodeContextMgr_->GetPsoManager().GetComputePsoHandle(
+    debugShaderData.pso = renderNodeContextMgr->GetPsoManager().GetComputePsoHandle(
         debugShaderData.shader, debugShaderData.pipelineLayout, {});
 
     for (size_t i = 0; i < reserved; ++i)
@@ -57,14 +56,13 @@ void RenderNodeMixin::Load(const BASE_NS::string_view shader, BASE_NS::vector<De
 void RenderNodeMixin::Load(const BASE_NS::string_view shader, BASE_NS::vector<DescriptorCounts>& counts,
     GraphicsShaderData& debugShaderData, Base::array_view<const DynamicStateEnum> dynstates, size_t reserved)
 {
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
-    if (!renderNodeContextMgr_) {
-        CORE_LOG_E("null RenderNodeContextManager");
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr = *this;
+    if (!renderNodeContextMgr) {
         return;
     }
-    auto& utils = renderNodeContextMgr_->GetRenderNodeUtil();
+    auto& utils = renderNodeContextMgr->GetRenderNodeUtil();
 
-    auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+    auto& shaderMgr = renderNodeContextMgr->GetShaderManager();
 
     const IShaderManager::GraphicsShaderData sd =
         shaderMgr.GetGraphicsShaderDataByShaderHandle(shaderMgr.GetShaderHandle(shader));
@@ -74,7 +72,7 @@ void RenderNodeMixin::Load(const BASE_NS::string_view shader, BASE_NS::vector<De
     debugShaderData.graphicsState = sd.graphicsState;
     debugShaderData.pipelineLayoutData = sd.pipelineLayoutData;
 
-    debugShaderData.pso = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
+    debugShaderData.pso = renderNodeContextMgr->GetPsoManager().GetGraphicsPsoHandle(
         debugShaderData.shader, debugShaderData.graphicsState, debugShaderData.pipelineLayout, {}, {}, dynstates);
 
     for (size_t i = 0; i < reserved; ++i) {
@@ -84,13 +82,12 @@ void RenderNodeMixin::Load(const BASE_NS::string_view shader, BASE_NS::vector<De
 
 RenderPass RenderNodeMixin::CreateRenderPass(const RenderHandle input)
 {
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
-    if (!renderNodeContextMgr_) {
-        CORE_LOG_E("null RenderNodeContextManager");
-        return {};
-    }
-    const GpuImageDesc desc = renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(input);
     RenderPass rp;
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr = *this;
+    if (!renderNodeContextMgr) {
+        return rp;
+    }
+    const GpuImageDesc desc = renderNodeContextMgr->GetGpuResourceManager().GetImageDescriptor(input);
     rp.renderPassDesc.attachmentCount = 1u;
     rp.renderPassDesc.attachmentHandles[0u] = input;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
@@ -112,12 +109,11 @@ void RenderNodeMixin::RecreateImages(RenderSize size, RENDER_NS::RenderHandleRef
         return;
     }
 
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
-    if (!renderNodeContextMgr_) {
-        CORE_LOG_E("null RenderNodeContextManager");
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr = *this;
+    if (!renderNodeContextMgr) {
         return;
     }
-    auto& gpuResourceManager = renderNodeContextMgr_->GetGpuResourceManager();
+    auto& gpuResourceManager = renderNodeContextMgr->GetGpuResourceManager();
     auto desc = gpuResourceManager.GetImageDescriptor(handle.GetHandle());
     desc.width = uint32_t(size.w);
     desc.height = uint32_t(size.h);
@@ -132,12 +128,11 @@ void RenderNodeMixin::RecreateImages(
         return;
     }
 
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ = *this;
-    if (!renderNodeContextMgr_) {
-        CORE_LOG_E("null RenderNodeContextManager");
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr = *this;
+    if (!renderNodeContextMgr) {
         return;
     }
-    auto& gpuResourceManager = renderNodeContextMgr_->GetGpuResourceManager();
+    auto& gpuResourceManager = renderNodeContextMgr->GetGpuResourceManager();
     auto descCurr = gpuResourceManager.GetImageDescriptor(handle.GetHandle());
 
     if (int(descCurr.width) != size.w || int(descCurr.height) != size.h) {

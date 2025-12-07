@@ -224,6 +224,7 @@ bool ObjectHierarchyObserver::Build(const IMetadata::Ptr& p)
 void ObjectHierarchyObserver::Destroy()
 {
     ClearSubscriptions();
+    Super::Destroy();
 }
 
 void ObjectHierarchyObserver::SetTarget(const IObject::Ptr& root, HierarchyChangeModeValue mode)

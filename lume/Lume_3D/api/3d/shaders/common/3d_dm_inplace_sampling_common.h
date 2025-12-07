@@ -16,6 +16,8 @@
 #ifndef SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_COMMON_H
 #define SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_COMMON_H
 
+#include "3d/shaders/common/3d_dm_indirect_lighting_common.h"
+
 /*
  * Needs to be included after the descriptor sets are bound.
  */
@@ -38,6 +40,39 @@ uint GetUnpackTexCoordInfo()
 uint GetUnpackTexCoordInfo(uint instanceIdx)
 {
     return floatBitsToUint(uMaterialData.material[instanceIdx].factors[CORE_MATERIAL_FACTOR_ADDITIONAL_IDX].y);
+}
+
+float CoreGetLodForRadianceSample(const float roughness)
+{
+    return uEnvironmentData.values.x * roughness;
+}
+
+vec3 CoreGetRadianceSample(const vec3 worldReflect, const float roughness)
+{
+    const CORE_RELAXEDP float cubeLod = CoreGetLodForRadianceSample(roughness);
+    const vec3 worldReflectEnv = mat3(uEnvironmentData.envRotation) * worldReflect;
+    return unpackIblRadiance(textureLod(uSampRadiance, worldReflectEnv, cubeLod)) *
+           uEnvironmentData.indirectSpecularColorFactor.rgb;
+}
+
+vec3 CoreGetIrradianceSample(const vec3 worldNormal)
+{
+    vec3 worldNormalEnv = mat3(uEnvironmentData.envRotation) * worldNormal;
+    vec3 irradiance;
+    if (uEnvironmentData.packedSun.w == 1.0f) { // then BG_TYPE_SKY is used
+        irradiance = CoreGetRadianceSample(worldNormalEnv, 1.0f);
+    } else {
+        irradiance = unpackIblIrradianceSH(worldNormalEnv, uEnvironmentData.shIndirectCoefficients) *
+                     uEnvironmentData.indirectDiffuseColorFactor.rgb;
+    }
+
+    return irradiance;
+}
+
+vec3 GetIrradianceIndirectLambertSample()
+{
+    // get only the environment sample
+    return uEnvironmentData.indirectDiffuseColorFactor.rgb;
 }
 
 vec2 GetFinalSamplingUV(vec4 inputUv, uint texCoordInfoBit, uint texCoordIdx)
@@ -67,6 +102,187 @@ vec2 GetFinalSamplingUV(vec4 inputUv, uint texCoordInfoBit, uint texCoordIdx, ui
         uv = GetTransformedUV(texTransform, uv);
     }
     return uv;
+}
+
+#if (CORE3D_DM_BINDLESS_FRAG_LAYOUT == 1)
+
+struct BindlessImageAndSamplerIndex {
+    uint imageIdx;
+    uint samplerIdx;
+};
+
+BindlessImageAndSamplerIndex GetImageAndSamplerIndex(const uint instanceIdx, const uint matTexIdx)
+{
+    // unpack / get the texture indices for material from un-used factors
+    // NOTE: the data has been packed into float vec4 as uint data
+    BindlessImageAndSamplerIndex bi;
+    uint val = 0;
+    if (matTexIdx < 4U) {
+        const uint facIndex = CORE_MATERIAL_FACTOR_MAT_TEX_START_IDX;
+        const uint facMatIdx = matTexIdx;
+        uvec4 factor = floatBitsToUint(uMaterialData.material[instanceIdx].factors[facIndex]);
+        val = factor[facMatIdx];
+    } else if (matTexIdx < 8U) {
+        const uint facIndex = CORE_MATERIAL_FACTOR_MAT_TEX_START_IDX + 1;
+        const uint facMatIdx = matTexIdx - 4U;
+        uvec4 factor = floatBitsToUint(uMaterialData.material[instanceIdx].factors[facIndex]);
+        val = factor[facMatIdx];
+    } else if (matTexIdx < 12U) {
+        const uint facIndex = CORE_MATERIAL_FACTOR_MAT_TEX_START_IDX + 2;
+        const uint facMatIdx = matTexIdx - 8U;
+        uvec4 factor = floatBitsToUint(uMaterialData.material[instanceIdx].factors[facIndex]);
+        val = factor[facMatIdx];
+    }
+    bi.imageIdx = val & 0xffff;
+    bi.samplerIdx = val >> CORE_MATERIAL_FACTOR_MAT_TEX_BINDLESS_SAMPLER_SHIFT;
+    return bi;
+}
+
+ivec2 GetTextureSize(const uint instanceIdx, const uint matTexIdx, const int lod)
+{
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return textureSize(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), lod);
+}
+
+vec4 GetTextureSample(const vec2 uv, const uint instanceIdx, const uint matTexIdx)
+{
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv);
+}
+
+vec4 GetBaseColorSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_BASE_BIT, CORE_MATERIAL_PACK_TEX_BASE_COLOR_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = 0;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv);
+}
+
+vec3 GetNormalSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_NORMAL_BIT, CORE_MATERIAL_PACK_TEX_NORMAL_UV_IDX, instanceIdx);
+
+    // plus 1 because baseColor is basically a separate texture index
+    const uint matTexIdx = CORE_MATERIAL_TEX_NORMAL_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv).xyz;
+}
+
+vec4 GetMaterialSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_MATERIAL_BIT, CORE_MATERIAL_PACK_TEX_MATERIAL_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_MATERIAL_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv);
+}
+
+vec3 GetEmissiveSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_EMISSIVE_BIT, CORE_MATERIAL_PACK_TEX_EMISSIVE_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_EMISSIVE_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv).xyz;
+}
+
+float GetAOSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv =
+        GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_AO_BIT, CORE_MATERIAL_PACK_TEX_AO_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_AO_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv).x;
+}
+
+float GetClearcoatSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_BIT, CORE_MATERIAL_PACK_TEX_CLEARCOAT_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_CLEARCOAT_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv).x;
+}
+
+float GetClearcoatRoughnessSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_ROUGHNESS_BIT,
+        CORE_MATERIAL_PACK_TEX_CLEARCOAT_ROUGHNESS_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_CLEARCOAT_ROUGHNESS_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv).y;
+}
+
+vec3 GetClearcoatNormalSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_NORMAL_BIT,
+        CORE_MATERIAL_PACK_TEX_CLEARCOAT_NORMAL_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_CLEARCOAT_NORMAL_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv).xyz;
+}
+
+vec3 GetSheenSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_SHEEN_BIT, CORE_MATERIAL_PACK_TEX_SHEEN_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_SHEEN_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv).xyz;
+}
+
+// NOTE: from sheen alpha
+float GetSheenRoughnessSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_SHEEN_BIT, CORE_MATERIAL_PACK_TEX_SHEEN_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_SHEEN_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv)
+        .a; // alpha
+}
+
+float GetTransmissionSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_TRANSMISSION_BIT, CORE_MATERIAL_PACK_TEX_TRANSMISSION_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_TRANSMISSION_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv).x;
+}
+
+vec4 GetSpecularSample(const vec4 uvInput, const uint instanceIdx)
+{
+    const vec2 uv = GetFinalSamplingUV(
+        uvInput, CORE_MATERIAL_TEXCOORD_INFO_SPECULAR_BIT, CORE_MATERIAL_PACK_TEX_SPECULAR_UV_IDX, instanceIdx);
+
+    const uint matTexIdx = CORE_MATERIAL_TEX_SPECULAR_IDX + 1;
+    BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
+    return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv);
+}
+
+#else
+
+ivec2 GetTextureSize(const uint instanceIdx, const uint matTexIdx, const int lod)
+{
+    return textureSize(uSampTextures[matTexIdx], lod);
+}
+
+vec4 GetTextureSample(const vec2 uv, const uint instanceIdx, const uint matTexIdx)
+{
+    return texture(uSampTextures[matTexIdx], uv);
 }
 
 vec4 GetBaseColorSample(const vec4 uvInput)
@@ -225,6 +441,8 @@ vec4 GetSpecularSample(const vec4 uvInput, const uint instanceIdx)
     return texture(uSampTextures[CORE_MATERIAL_TEX_SPECULAR_IDX], uv);
 }
 
+#endif // CORE3D_DM_BINDLESS_FRAG_LAYOUT
+
 /*
  * Inplace sampling of material data, similar functions with ubo input in 3d_dm_structures_common.h
  */
@@ -334,6 +552,15 @@ CORE_RELAXEDP vec4 GetUnpackBaseColorFinalValue(in CORE_RELAXEDP vec4 color, in 
         baseColor = Unpremultiply(baseColor);
     }
     return baseColor;
+}
+
+uint GetInstanceIndex(in uint indices)
+{
+    uint instanceIdx = 0U;
+    if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_GPU_INSTANCING_BIT) == CORE_MATERIAL_GPU_INSTANCING_BIT) {
+        instanceIdx = GetUnpackFlatIndicesInstanceIdx(indices);
+    }
+    return instanceIdx;
 }
 
 uint GetMaterialInstanceIndex(in uint indices)

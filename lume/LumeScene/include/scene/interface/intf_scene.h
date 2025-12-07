@@ -21,11 +21,13 @@
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_render_configuration.h>
+#include <scene/interface/resource/resource_group_bundle.h>
 
 #include <render/intf_render_context.h>
 
 #include <meta/base/interface_macros.h>
 #include <meta/interface/animation/intf_animation.h>
+#include <meta/interface/intf_iterable.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -50,6 +52,8 @@ public:
      * @return Newly created node
      */
     virtual Future<INode::Ptr> CreateNode(BASE_NS::string_view path, META_NS::ObjectId id = {}) = 0;
+    virtual Future<INode::Ptr> CreateNode(
+        const INode::ConstPtr& parent, BASE_NS::string_view name, META_NS::ObjectId id = {}) = 0;
 
     /**
      * @brief Find node in scene. This will find node with given type in scene and constructs node object for it
@@ -62,20 +66,90 @@ public:
     virtual Future<INode::Ptr> FindNode(BASE_NS::string_view path, META_NS::ObjectId id = {}) const = 0;
 
     /**
+     * @brief The FindNamedNodeParams class defines the input parameters for FindNamedNode and FindNamedNodes.
+     * @note FindNamedNode ignores maxCount.
+     */
+    struct FindNamedNodeParams {
+        /// Name of the node to find.
+        BASE_NS::string_view name;
+        /// Maximum number of nodes to return. If 0, return all matching nodes.
+        size_t maxCount {};
+        /// Root node to start the search from. If {}, start from the scene's root node.
+        INode::Ptr root;
+        /// Type of the node, if not given, the system tries to deduce the node type and falls back to generic.
+        META_NS::ObjectId id {};
+        /// Defines how the the hierarchy should be iterated.
+        META_NS::TraversalType traversalType { META_NS::TraversalType::FULL_HIERARCHY };
+    };
+
+    /**
+     * @brief Find node in scene with a given name.
+     * @param criteria Search criteria.
+     * @return List of nodes in the scene that match the search criteria.
+     */
+    virtual Future<BASE_NS::vector<INode::Ptr>> FindNamedNodes(const FindNamedNodeParams& criteria) const = 0;
+
+    /**
+     * @brief Find first instance of a node with given name from the scene.
+     * @return The first node in the scene that matches the search criteria.
+     */
+    Future<INode::Ptr> FindNamedNode(const FindNamedNodeParams& criteria) const
+    {
+        auto c = criteria;
+        c.maxCount = 1;
+        return FindNamedNodes(c).Then([](const BASE_NS::vector<INode::Ptr>& nodes) -> INode::Ptr {
+            return nodes.empty() ? INode::Ptr {} : nodes.front();
+        });
+    }
+
+    /**
      * @brief Remove the node (and possibly its children) from caches if it is the only instance and stop listening
      * notifications related to it. This does not affect ECS side.
      * @notice You have to move the last user instance of node to this function for it to have any effect.
      * @param node Node to release
      * @param recursive Should we check all child nodes recursive and try to release them
-     * @return True is the given node was released, otherwise false
+     * @return Number of node objects released
      */
-    virtual Future<bool> ReleaseNode(INode::Ptr&& node, bool recursive) = 0;
+    virtual Future<uint32_t> ReleaseNode(INode::Ptr&& node, bool recursive) = 0;
 
     /**
      * @brief Remove the node (and its children) from the scene (the underlying ecs)
      * @notice Do not use the node after this!
      */
-    virtual Future<bool> RemoveNode(const INode::Ptr& node) = 0;
+    virtual Future<bool> RemoveNode(INode::Ptr&& node) = 0;
+
+    /// Options for RemoveObject
+    struct RemoveObjectOptions {
+        /// If true, remove the object also from resource index. In this case the resource cannot be instantiated again
+        /// after removal of the target object.
+        bool removeFromResourceIndex { true };
+    };
+    /**
+     * @brief Remove the object and its associated resources from the scene (the underlying ecs)
+     * @note By default the associated resources will also be removed from the resource manager and cannot be
+     *       re-instantiated afterwards. If the associated resources need to be instantiated later,
+     *       set options.removeFromResourceIndex = false.
+     * @note Do not use the object after this!
+     */
+    virtual Future<bool> RemoveObject(META_NS::IObject::Ptr&& object, const RemoveObjectOptions& options) = 0;
+
+    /**
+     * @brief Remove object from scene using default removal options.
+     * @see RemoveObject
+     */
+    Future<bool> RemoveObject(META_NS::IObject::Ptr&& object)
+    {
+        return RemoveObject(BASE_NS::move(object), {});
+    }
+
+    /**
+     * @brief Remove the animation from Scene.
+     * @param animation The animation to remove.
+     */
+    inline Future<bool> RemoveAnimation(const META_NS::IAnimation::Ptr& animation)
+    {
+        return RemoveObject(interface_pointer_cast<META_NS::IObject>(animation));
+    }
 
     template<class T>
     Future<typename T::Ptr> CreateNode(BASE_NS::string_view path, META_NS::ObjectId id = {})
@@ -122,6 +196,11 @@ public:
      *         If the name is invalid, returns nullptr.
      */
     virtual Future<IComponent::Ptr> CreateComponent(const INode::Ptr& node, BASE_NS::string_view componentName) = 0;
+
+    /**
+     * @brief Get resource groups owned by this scene; the first one is the primary group
+     */
+    virtual ResourceGroupBundle GetResourceGroups() const = 0;
 };
 
 META_REGISTER_CLASS(Scene, "ef6321d7-071c-414a-bb3d-55ea6f94688e", META_NS::ObjectCategoryBits::NO_CATEGORY)

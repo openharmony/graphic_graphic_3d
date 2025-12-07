@@ -26,12 +26,23 @@
 #include <core/property_tools/property_api_impl.h>
 
 CORE_BEGIN_NAMESPACE()
+namespace {
+template<typename BlockType>
+inline void ReleaseOwned(BlockType* data)
+{
+    delete data;
+}
+
+template<typename BlockType>
+inline void ReleaseExternal(BlockType* data)
+{}
+} // namespace
 template<typename BlockType>
 PropertyApiImpl<BlockType>::PropertyApiImpl() = default;
 
 template<typename BlockType>
 PropertyApiImpl<BlockType>::PropertyApiImpl(BlockType* data, BASE_NS::array_view<const Property> aProps)
-    : data_(data), componentMetadata_(aProps)
+    : data_(data, ReleaseExternal), componentMetadata_(aProps)
 {
     // Create a typeid by hashing the metadata information.
     typeHash_ = 0;
@@ -80,7 +91,8 @@ IPropertyHandle* PropertyApiImpl<BlockType>::Create() const
     auto ret = new PropertyApiImpl<BlockType>();
     ret->owner_ = Owner();
     ret->typeHash_ = Type();
-    ret->data_ = new BlockType();
+    ret->data_ =
+        BASE_NS::unique_ptr<BlockType, void (*)(BlockType*)>(BASE_NS::make_unique<BlockType>().release(), ReleaseOwned);
     return ret;
 }
 
@@ -92,7 +104,8 @@ IPropertyHandle* PropertyApiImpl<BlockType>::Clone(const IPropertyHandle* src) c
         auto* ret = new PropertyApiImpl<BlockType>();
         ret->owner_ = Owner();
         ret->typeHash_ = Type();
-        ret->data_ = new BlockType();
+        ret->data_ = BASE_NS::unique_ptr<BlockType, void (*)(BlockType*)>(
+            BASE_NS::make_unique<BlockType>().release(), ReleaseOwned);
         *ret->data_ = *h->data_;
         return ret;
     }
@@ -154,7 +167,7 @@ const void* PropertyApiImpl<BlockType>::RLock() const
     CORE_ASSERT(!wLocked_);
     rLocked_++;
 #endif
-    return data_;
+    return data_.get();
 }
 
 template<typename BlockType>
@@ -173,7 +186,7 @@ void* PropertyApiImpl<BlockType>::WLock()
     CORE_ASSERT(rLocked_ <= 1 && !wLocked_);
     wLocked_ = true;
 #endif
-    return data_;
+    return data_.get();
 }
 
 template<typename BlockType>

@@ -28,7 +28,11 @@ using CORE3D_NS::WeatherComponent;
 DECLARE_PROPERTY_TYPE(WeatherComponent::CloudRenderingType);
 
 ENUM_TYPE_METADATA(WeatherComponent::CloudRenderingType, ENUM_VALUE(FULL, "Full Resolution"),
-    ENUM_VALUE(DOWNSCALED, "Downscaled Resolution"), ENUM_VALUE(REPROJECTED, "Reprojected"))
+    ENUM_VALUE(DOWNSCALED, "Half Resolution"), ENUM_VALUE(REPROJECTED, "Quarter Resolution"))
+
+ENUM_TYPE_METADATA(WeatherComponent::CloudOptimizationFlagBits, ENUM_VALUE(ADAPTIVE_STEP_SIZE, "Adaptive step size"),
+    ENUM_VALUE(DYNAMIC_LOD_LIGHTING, "Dynamic LOD lighting"))
+
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -79,6 +83,7 @@ IComponentManager* IWeatherComponentManagerInstance(CORE_NS::IEcs& ecs)
 
 void IWeatherComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<WeatherComponentManager*>(instance);
+    static_cast<WeatherComponentManager*>(instance)->~WeatherComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

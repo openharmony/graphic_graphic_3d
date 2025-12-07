@@ -41,8 +41,6 @@ CORE_BEGIN_NAMESPACE()
 using CORE3D_NS::PostProcessConfigurationComponent;
 
 DECLARE_PROPERTY_TYPE(CORE_NS::IPropertyHandle*);
-DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandle);
-DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandleReference);
 DECLARE_PROPERTY_TYPE(PostProcessConfigurationComponent::PostProcessEffect);
 DECLARE_PROPERTY_TYPE(BASE_NS::vector<PostProcessConfigurationComponent::PostProcessEffect>);
 

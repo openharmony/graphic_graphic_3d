@@ -36,9 +36,9 @@ layout(location = 0) out vec4 outColor;
 
 // if the magnitude of the velocity vector is greater than
 // the threshold, the pixel is considered to be in motion.
-#define STATIONARY_VELOCITY_THRESHOLD 0.001
+#define STATIONARY_VELOCITY_THRESHOLD 0.001f
 // used to detect if the current pixel is an edge
-#define DEPTH_DIFF 0.0005
+#define DEPTH_DIFF 0.0005f
 
 float GetUnpackDepthBuffer(const vec2 uv) {
 #if (ENABLE_INPUT_ATTACHMENTS == 1)
@@ -57,26 +57,27 @@ vec2 GetUnpackVelocity(const vec2 uv, const vec2 invSize) {
 }
 
 vec3 RGBToYCoCg(const vec3 rgb) {
-    const float co = rgb.r - rgb.b;
-    const float tmp = rgb.b + co / 2.0;
-    const float cg = rgb.g - tmp;
-    const float y = tmp + cg / 2.0;
+    const float y = 0.25f * rgb.r + 0.5f * rgb.g + 0.25f * rgb.b;
+    const float co = 0.5f * rgb.r - 0.5f * rgb.b;
+    const float cg = -0.25f * rgb.r + 0.5f * rgb.g - 0.25f * rgb.b;
+
     return vec3(y, co, cg);
 }
 
 vec3 YCoCgToRGB(const vec3 ycocg) {
-    const float tmp = ycocg.r - ycocg.b / 2.0;
-    const float g = ycocg.b + tmp;
-    const float b = tmp - ycocg.g / 2.0;
-    const float r = ycocg.g + b;
+    const float r = ycocg.x + ycocg.y - ycocg.z;
+    const float g = ycocg.x + ycocg.z;
+    const float b = ycocg.x - ycocg.y - ycocg.z;
+
     return vec3(r, g, b);
 }
 
 vec2 GetVelocity(out bool isEdge) {
-    const uint quality = uint(uPc.factor.y + 0.5);
+    const uint quality = uint(uPc.factor.y + 0.5f);
     vec2 velUv = inUv;
 
-    if (quality == QUALITY_MED) {
+    if (quality == QUALITY_MED)
+    {
         //  sample 5 values in a cross pattern
 
         const uint offsetCount = 5;
@@ -102,7 +103,7 @@ vec2 GetVelocity(out bool isEdge) {
         depths[1] = depth0123.y;
         depths[2] = depth0123.z;
         depths[3] = depth0123.w;
-        depths[4] = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[4]).x;
+        depths[4] = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0f, offsets[4]).x;
 
         const float currentDepth = depths[2];
 
@@ -124,7 +125,8 @@ vec2 GetVelocity(out bool isEdge) {
         avgDepth /= float(offsetCount);
         isEdge = abs(currentDepth - avgDepth) > DEPTH_DIFF ? true : false;
     }
-    else if (quality >= QUALITY_HIGH) {
+    else if (quality >= QUALITY_HIGH)
+    {
         // sample a full 3x3 grid
 
         const uint offsetCount = 9;
@@ -161,8 +163,8 @@ vec2 GetVelocity(out bool isEdge) {
         depths[5] = depth3456.z;
         depths[6] = depth3456.w;
         
-        depths[7] = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[7]).x;
-        depths[8] = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0, offsets[8]).x;
+        depths[7] = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0f, offsets[7]).x;
+        depths[8] = textureLodOffset(sampler2D(uDepth, uSampler), inUv.xy, 0.0f, offsets[8]).x;
 
         const float currentDepth = depths[2];
 
@@ -184,54 +186,30 @@ vec2 GetVelocity(out bool isEdge) {
         avgDepth /= float(offsetCount);
         isEdge = abs(currentDepth - avgDepth) > DEPTH_DIFF ? true : false;
     }
+
     // multiply velocity to correct uv offsets
     return textureLod(sampler2D(uVelocity, uSampler), velUv, 0).xy * uPc.viewportSizeInvSize.zw;
 }
 
-// clip towards aabb center
-// e.g. "temporal reprojection anti-aliasing in inside"
-vec4 ClipAabb(const vec3 aabbMin, const vec3 aabbMax, const vec4 color, const vec4 history) {
-    const vec3 pClip = 0.5 * (aabbMax + aabbMin);
-    const vec3 eClip = 0.5 * (aabbMax - aabbMin);
-
-    const vec4 vClip = history - vec4(pClip, color.w);
-    const vec3 vUnit = vClip.xyz - eClip;
-    const vec3 aUnit = abs(vUnit);
-    const float maUnit = max(aUnit.x, max(aUnit.y, aUnit.z));
-    // if maUnit <= 1.0 the point is inside the aabb
-    const vec4 res = (maUnit > 1.0) ? (vec4(pClip, color.w) + vClip / maUnit) : color;
-    return res;
-}
-
 // clip the color to be inside a box defined by the center (mean) and size (variance or stdev)
 vec3 VarianceClipAABB(const vec3 history, const vec3 currColor, const vec3 center, const vec3 size) {
-    if (all(lessThanEqual(abs(history - center), size))) {
-        return history;
+    const vec3 offset = history - center;
+    const vec3 absOffset = abs(offset);
+
+    const vec3 extent = max(vec3(0.0f), absOffset - size);
+    const float maxExtent = max(extent.x, max(extent.y, extent.z));
+
+    if (maxExtent > 0.0f) {
+        const float scale = 1.0f - maxExtent / (max(absOffset.x, max(absOffset.y, absOffset.z)) + 1e-8f);
+        return center + offset * scale;
     }
 
-    const vec3 dir = currColor - history;
-    const vec3 near = center - sign(dir) * size;
-    const vec3 tAll = (near - history) / dir;
-
-    // just some sufficiently large value
-    float t = 1e20;
-    
-    for (int ii = 0; ii < 3; ii++) {
-        if (tAll[ii] >= 0.0 && tAll[ii] < t) {
-            t = tAll[ii];
-        }
-    }
-
-    if (t >= 1e20) {
-        return history;
-    }
-
-    return history + dir * t;
+    return history;
 }
 
 // mean-variance clip history color to acceptable values within the current frame color
 vec4 CalcVarianceClippedHistoryColor(const vec3 history, const vec3 currColor, const bool useyCoCG) {
-    const uint quality = uint(uPc.factor.y + 0.5);
+    const uint quality = uint(uPc.factor.y + 0.5f);
 
     vec3 colors[9];
     uint numSamples = 0;
@@ -240,24 +218,24 @@ vec4 CalcVarianceClippedHistoryColor(const vec3 history, const vec3 currColor, c
         // sample only in a cross pattern
         numSamples = 5;
         
-        colors[0] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, -1)).rgb;
-        colors[1] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 0)).rgb;
+        colors[0] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(0, -1)).rgb;
+        colors[1] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(-1, 0)).rgb;
         colors[2] = currColor;
-        colors[3] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 0)).rgb;
-        colors[4] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, 1)).rgb;
+        colors[3] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(1, 0)).rgb;
+        colors[4] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(0, 1)).rgb;
     } else {
         // sample all 9 values within the 3x3 grid
         numSamples = 9;
         
-        colors[0] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, -1)).rgb;
-        colors[1] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, -1)).rgb;
-        colors[2] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, -1)).rgb;
-        colors[3] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 0)).rgb;
+        colors[0] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(-1, -1)).rgb;
+        colors[1] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(0, -1)).rgb;
+        colors[2] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(1, -1)).rgb;
+        colors[3] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(-1, 0)).rgb;
         colors[4] = currColor;
-        colors[5] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 0)).rgb;
-        colors[6] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 1)).rgb;
-        colors[7] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, 1)).rgb;
-        colors[8] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 1)).rgb;
+        colors[5] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(1, 0)).rgb;
+        colors[6] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(-1, 1)).rgb;
+        colors[7] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(0, 1)).rgb;
+        colors[8] = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(1, 1)).rgb;
     }
 
     vec3 sum = vec3(0);
@@ -273,71 +251,92 @@ vec4 CalcVarianceClippedHistoryColor(const vec3 history, const vec3 currColor, c
     }
 
     const vec3 mean = sum / float(numSamples);
-    const vec3 variance = sqrt((sumSq / float(numSamples)) - mean * mean);
-    
-    const vec3 minColor = mean - variance;
-    const vec3 maxColor = mean + variance;
+    const vec3 variance = sqrt(max(vec3(0.0f), (sumSq / float(numSamples)) - mean * mean));
+
+    // reduce ghosting by tightening the AABB slightly
+    const vec3 scaledVariance = variance * 1.25f;
 
     vec3 clampedHistoryColor;
     if (useyCoCG) {
-        clampedHistoryColor = YCoCgToRGB(VarianceClipAABB(RGBToYCoCg(history), RGBToYCoCg(currColor), mean, variance));
+        clampedHistoryColor = YCoCgToRGB(VarianceClipAABB(RGBToYCoCg(history), RGBToYCoCg(currColor), mean, scaledVariance));
     } else {
-        clampedHistoryColor = VarianceClipAABB(history, currColor, mean, variance);
+        clampedHistoryColor = VarianceClipAABB(history, currColor, mean, scaledVariance);
     }
 
     return vec4(clampedHistoryColor, 1.0);
 }
 
-vec4 CalcMinMaxClippedHistoryColor(const vec3 history, const vec3 currColor) {
+vec4 CalcMinMaxClippedHistoryColor(const vec3 history, const vec3 currColor, const bool useyCoCG) {
     // sample 3x3 grid
     // 0 1 2
     // 3 4 5
     // 6 7 8
 
+    vec3 bc0 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(-1, -1)).rgb;
+    vec3 bc1 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(0, -1)).rgb;
+    vec3 bc2 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(1, -1)).rgb;
+    vec3 bc3 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(-1, 0)).rgb;
+    vec3 bc4 = currColor;
+    vec3 bc5 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(1, 0)).rgb;
+    vec3 bc6 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(-1, 1)).rgb;
+    vec3 bc7 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(0, 1)).rgb;
+    vec3 bc8 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0f, ivec2(1, 1)).rgb;
+
+    if (useyCoCG) {
+        bc0 = RGBToYCoCg(bc0);
+        bc1 = RGBToYCoCg(bc1);
+        bc2 = RGBToYCoCg(bc2);
+        bc3 = RGBToYCoCg(bc3);
+        bc4 = RGBToYCoCg(bc4);
+        bc5 = RGBToYCoCg(bc5);
+        bc6 = RGBToYCoCg(bc6);
+        bc7 = RGBToYCoCg(bc7);
+        bc8 = RGBToYCoCg(bc8);
+    }
+
     // Box filter for history
     // diamond shape
-    vec3 bc1 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, -1)).rgb;
-    vec3 bc3 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 0)).rgb;
-    // center sample
-    vec3 bc4 = currColor;
-    vec3 min13 = min(min(bc1, bc3), bc4);
-    vec3 max13 = max(max(bc1, bc3), bc4);
+    const vec3 min13 = min(min(bc1, bc3), bc4);
+    const vec3 max13 = max(max(bc1, bc3), bc4);
 
-    vec3 bc5 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 0)).rgb;
-    vec3 bc7 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(0, 1)).rgb;
-    vec3 min57 = min(bc5, bc7);
-    vec3 max57 = max(bc5, bc7);
+    const vec3 min57 = min(bc5, bc7);
+    const vec3 max57 = max(bc5, bc7);
     vec3 boxMin = min(min13, min57);
     vec3 boxMax = max(max13, max57);
 
-    //
-    vec3 bc0 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, -1)).rgb;
-    vec3 bc2 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, -1)).rgb;
-    vec3 min02 = min(boxMin, min(bc0, bc2));
-    vec3 max02 = max(boxMax, max(bc0, bc2));
-
-    vec3 bc6 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(-1, 1)).rgb;
-    vec3 bc8 = textureLodOffset(sampler2D(uColor, uSampler), inUv.xy, 0.0, ivec2(1, 1)).rgb;
-    vec3 min68 = min(bc6, bc8);
-    vec3 max68 = max(bc6, bc8);
-
     // corners
+    const vec3 min02 = min(boxMin, min(bc0, bc2));
+    const vec3 max02 = max(boxMax, max(bc0, bc2));
+
+    const vec3 min68 = min(bc6, bc8);
+    const vec3 max68 = max(bc6, bc8);
+
     const vec3 boxMinCorner = min(min02, min68);
     const vec3 boxMaxCorner = max(max02, max68);
 
-    boxMin = (boxMin + boxMinCorner) * 0.5;
-    boxMax = (boxMax + boxMaxCorner) * 0.5;
-    return vec4(clamp(history, boxMin, boxMax), 1.0);
+    boxMin = (boxMin + boxMinCorner) * 0.5f;
+    boxMax = (boxMax + boxMaxCorner) * 0.5f;
+
+    vec3 clippedHistory;
+    if (useyCoCG) {
+        vec3 historyYCoCg = RGBToYCoCg(history);
+        clippedHistory = YCoCgToRGB(clamp(historyYCoCg, boxMin, boxMax));
+    } else {
+        clippedHistory = clamp(history, boxMin, boxMax);
+    }
+
+    return vec4(clippedHistory, 1.0f);
 }
 
 vec4 cubic(const float value) {
-    const vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - value;
+    const vec4 n = vec4(1.0f, 2.0f, 3.0f, 4.0f) - value;
     const vec4 s = n * n * n;
     const float x = s.x;
-    const float y = s.y - 4.0 * s.x;
-    const float z = s.z - 4.0 * s.y + 6.0 * s.x;
-    const float w = 6.0 - x - y - z;
-    return vec4(x, y, z, w) * (1.0 / 6.0);
+    const float y = s.y - 4.0f * s.x;
+    const float z = s.z - 4.0f * s.y + 6.0f * s.x;
+    const float w = 6.0f - x - y - z;
+
+    return vec4(x, y, z, w) * (1.0f / 6.0f);
 }
 
 vec4 GetHistory(const vec2 historyUv, const vec4 currColor, const bool bicubic,
@@ -345,7 +344,7 @@ vec4 GetHistory(const vec2 historyUv, const vec4 currColor, const bool bicubic,
     vec4 history;
 
     if (bicubic) {
-        vec2 texCoords = historyUv * uPc.viewportSizeInvSize.xy - 0.5;
+        vec2 texCoords = historyUv * uPc.viewportSizeInvSize.xy - 0.5f;
 
         const vec2 fxy = fract(texCoords);
         texCoords -= fxy;
@@ -353,7 +352,7 @@ vec4 GetHistory(const vec2 historyUv, const vec4 currColor, const bool bicubic,
         const vec4 xcubic = cubic(fxy.x);
         const vec4 ycubic = cubic(fxy.y);
 
-        const vec4 c = texCoords.xxyy + vec2(-0.5, 1.5).xyxy;
+        const vec4 c = texCoords.xxyy + vec2(-0.5f, 1.5f).xyxy;
         const vec4 s = vec4(xcubic.xz + xcubic.yw, ycubic.xz + ycubic.yw);
         const vec4 offset = (c + vec4(xcubic.yw, ycubic.yw) / s) * uPc.viewportSizeInvSize.zw.xxyy;
 
@@ -367,13 +366,13 @@ vec4 GetHistory(const vec2 historyUv, const vec4 currColor, const bool bicubic,
 
         history = mix(mix(dd, cc, sx), mix(bb, aa, sx), sy);
     } else {
-        history = textureLod(sampler2D(uHistory, uSampler), historyUv, 0.0);
+        history = textureLod(sampler2D(uHistory, uSampler), historyUv, 0.0f);
     }
 
     if (useVarianceClipping) {
         history = CalcVarianceClippedHistoryColor(history.rgb, currColor.rgb, useyCoCG);
     } else {
-        history = CalcMinMaxClippedHistoryColor(history.rgb, currColor.rgb);
+        history = CalcMinMaxClippedHistoryColor(history.rgb, currColor.rgb, useyCoCG);
     }
 
     return history;
@@ -394,10 +393,10 @@ void main(void) {
     const vec2 velocity = GetVelocity(isEdge);
     const vec2 historyUv = inUv.xy - velocity;
 
-    bool useBicubic;
-    bool useVarianceClipping;
-    bool useyCoCG;
-    bool ignoreEdges;
+    bool useBicubic = false;
+    bool useVarianceClipping = false;
+    bool useyCoCG = false;
+    bool ignoreEdges = false;
     UnpackFeatureToggles(useBicubic, useVarianceClipping, useyCoCG, ignoreEdges);
 
     /**
@@ -416,7 +415,7 @@ void main(void) {
         useBicubic = false;
     }
 
-    vec4 currColor = textureLod(sampler2D(uColor, uSampler), inUv.xy, 0.0);
+    vec4 currColor = textureLod(sampler2D(uColor, uSampler), inUv.xy, 0.0f);
     vec4 history = GetHistory(historyUv, currColor, useBicubic, useVarianceClipping, useyCoCG);
 
     // NOTE: add filtered option for less blurred history
@@ -427,14 +426,16 @@ void main(void) {
     const float historyLuma = CalcLuma(history.rgb);
     const float colorLuma = CalcLuma(currColor.rgb);
 
-    history.rgb *= 1.0 / (1.0 + historyLuma);
-    currColor.rgb *= 1.0 / (1.0 + colorLuma);
+    history.rgb *= 1.0f / (1.0f + historyLuma);
+    currColor.rgb *= 1.0f / (1.0f + colorLuma);
 
     vec4 color = mix(history, currColor, blendWeight);
     
     // inverse tonemap
-    color.rgb *= 1.0 / (1.0 - CalcLuma(color.rgb));
+    const float tonedLuma = CalcLuma(color.rgb);
+    const float inverseFactor = 1.0f / max(0.001f, 1.0f - tonedLuma);
+    color.rgb *= min(inverseFactor, 100.0f);
 
     // safety for removing negative values
-    outColor = max(color, vec4(0.0));
+    outColor = max(color, vec4(0.0f));
 }

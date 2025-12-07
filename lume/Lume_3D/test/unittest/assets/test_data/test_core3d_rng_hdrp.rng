@@ -1,0 +1,297 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "",
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateDefaultCameraGpuImages",
+            "nodeName": "RenderNodeCreateSceneCameraTargets",
+            "gpuImageDescs": [
+                {
+                    "name": "RGBA16Target",
+                    "configurationObjectIndex": 0,
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r16g16b16a16_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "color_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers | reset_state_on_frame_borders",
+                    "width": 2,
+                    "height": 2,
+                    "depth": 1,
+                    "sampleCountFlags": "4bit"
+                },
+                {
+                    "name": "DepthBuffer",
+                    "configurationObjectIndex": 0,
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "d32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "depth_stencil_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers | reset_state_on_frame_borders",
+                    "width": 2,
+                    "height": 2,
+                    "depth": 1,
+                    "sampleCountFlags": "4bit"
+                },
+                {
+                    "name": "RGBA16TargetResolve",
+                    "configurationObjectIndex": 0,
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r16g16b16a16_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "color_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 2,
+                    "height": 2,
+                    "depth": 1
+                },
+                {
+                    "name": "BloomTarget",
+                    "configurationObjectIndex": 0,
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r16g16b16a16_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | sampled | color_attachment",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 2,
+                    "height": 2,
+                    "depth": 1
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeDefaultLights",
+            "nodeName": "RenderNodeLights"
+        },
+        {
+            "typeName": "RenderNodeDefaultCameras",
+            "nodeName": "RenderNodeCameras"
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialObjects",
+            "nodeName": "RenderNodeDefaultMaterialObjects"
+        },
+        {
+            "typeName": "RenderNodeDefaultEnvironmentBlender",
+            "nodeName": "RenderNodeEnvironmentBlender",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        },
+        {
+            "typeName": "RenderNodeMorph",
+            "nodeName": "MorphNode",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultShadowRenderSlot",
+            "nodeName": "RenderNodeDirectionalShadow",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_DEPTH",
+            "renderSlotSortType": "by_material",
+            "renderSlotCullType": "view_frustum_cull"
+        },
+        {
+            "typeName": "RenderNodeDefaultShadowsBlur",
+            "nodeName": "RenderNodeDirectionalShadowBlur",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultCameraController",
+            "nodeName": "RenderNodeDefaultCameraController"
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialRenderSlot",
+            "nodeName": "RenderNodePbrRenderSlotOpaque",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+            "renderSlotSortType": "by_material",
+            "renderSlotCullType": "view_frustum_cull",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "clearDepth": [ 1.0, 0 ],
+                        "name": "DepthBuffer"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "name": "RGBA16Target"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "name": "RGBA16TargetResolve"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 3,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "inputAttachmentIndices": [],
+                    "colorAttachmentIndices": [ 1 ],
+                    "resolveAttachmentIndices": []
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultEnv",
+            "nodeName": "RenderNodeFullscreenEnv",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "name": "DepthBuffer"
+                    },
+                    {
+                        "name": "RGBA16Target"
+                    },
+                    {
+                        "name": "RGBA16TargetResolve"
+                    }
+                ],
+                "subpassIndex": 1,
+                "subpassCount": 3,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ],
+                    "resolveAttachmentIndices": []
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialRenderSlot",
+            "nodeName": "RenderNodePbrRenderSlotTranslucent",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT",
+            "renderSlotSortType": "back_to_front",
+            "renderSlotCullType": "view_frustum_cull",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "storeOp": "dont_care",
+                        "name": "DepthBuffer"
+                    },
+                    {
+                        "storeOp": "dont_care",
+                        "name": "RGBA16Target"
+                    },
+                    {
+                        "storeOp": "store",
+                        "name": "RGBA16TargetResolve"
+                    }
+                ],
+                "subpassIndex": 2,
+                "subpassCount": 3,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ],
+                    "resolveAttachmentIndices": [ 2 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeBloom",
+            "nodeName": "BloomNode",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "PostProcessCore"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "resources": {
+                "customInputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "RGBA16TargetResolve"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "BloomTarget"
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeBackBuffer",
+            "nodeName": "RenderBackBuffer",
+            "enableCommandBufferRecording": false,
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "PostProcessCore"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "shader": "rendershaders://shader/fullscreen_post_process_tonemap.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "CORE_DEFAULT_BACKBUFFER"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": 0
+                }
+            },
+            "resources": {
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "BloomTarget"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ]
+            }
+        }
+    ]
+}

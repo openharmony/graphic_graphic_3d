@@ -19,7 +19,7 @@
 #include <base/util/uid.h>
 
 namespace PNGPlugin {
-static constexpr BASE_NS::Uid UID_PNG_PLUGIN{ "59439c17-ef0e-4534-8340-50169f5fcff4" };
+static constexpr BASE_NS::Uid UID_PNG_PLUGIN { "59439c17-ef0e-4534-8340-50169f5fcff4" };
 }
 
 #endif // PLUGIN_API_PNG_IMPLEMENTATION_UIDS_H

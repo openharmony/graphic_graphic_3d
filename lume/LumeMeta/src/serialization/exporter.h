@@ -22,12 +22,13 @@
 #include <meta/interface/intf_container.h>
 #include <meta/interface/intf_metadata.h>
 #include <meta/interface/intf_object_registry.h>
-#include <meta/interface/resource/intf_resource_consumer.h>
 #include <meta/interface/serialization/intf_export_context.h>
 #include <meta/interface/serialization/intf_exporter.h>
+#include <meta/interface/serialization/intf_exporter_state.h>
 #include <meta/interface/serialization/intf_global_serialization_data.h>
 
-#include "base_object.h"
+#include "../base_object.h"
+#include "refuri_builder.h"
 #include "ser_nodes.h"
 
 META_BEGIN_NAMESPACE()
@@ -36,13 +37,13 @@ namespace Serialization {
 constexpr Version VERSION { 2, 0 };
 constexpr Version EXPORTER_VERSION { 1, 0 };
 
-class Exporter : public IntroduceInterfaces<BaseObject, IExporter, IExportFunctions, IResourceConsumer> {
+class Exporter : public IntroduceInterfaces<BaseObject, IExporter, IExportFunctions, IExporterState> {
     META_OBJECT(Exporter, ClassId::Exporter, IntroduceInterfaces)
 public:
     Exporter() : registry_(GetObjectRegistry()), globalData_(registry_.GetGlobalSerializationData()) {}
     explicit Exporter(IObjectRegistry& reg, IGlobalSerializationData& data) : registry_(reg), globalData_(data) {}
 
-    ISerNode::Ptr Export(const IObject::ConstPtr& object) override;
+    ISerNode::Ptr Export(const IObject::ConstPtr& object, ExportOptions options) override;
     void SetInstanceIdMapping(BASE_NS::unordered_map<InstanceId, InstanceId>) override;
     void SetResourceManager(CORE_NS::IResourceManager::Ptr p) override;
     void SetUserContext(IObject::Ptr) override;
@@ -55,13 +56,18 @@ public:
     ReturnError ExportToNode(const IAny& entity, ISerNode::Ptr&) override;
     ReturnError AutoExportObjectMembers(const IObject::ConstPtr& object, BASE_NS::vector<NamedNode>& members);
 
-    InstanceId ConvertInstanceId(const InstanceId& id) const;
+    InstanceId ConvertInstanceId(const InstanceId& id) const override;
+    bool IsGlobalObject(const InstanceId& id) const override;
 
+    ExportOptions GetOptions() const override
+    {
+        return options_;
+    }
     CORE_NS::IResourceManager::Ptr GetResourceManager() const override
     {
         return resources_;
     }
-    META_NS::IObject::Ptr GetUserContext() const
+    META_NS::IObject::Ptr GetUserContext() const override
     {
         return userContext_;
     }
@@ -79,7 +85,7 @@ private:
     bool ShouldSerialize(const IObject::ConstPtr& object) const;
     bool ShouldSerialize(const IAny& any) const;
     bool MarkExported(const IObject::ConstPtr& object);
-    bool HasBeenExported(const InstanceId& id) const;
+    bool HasBeenExported(const InstanceId& id) const override;
 
     ReturnError ExportObject(const IObject::ConstPtr& object, ISerNode::Ptr&);
     ReturnError ExportPointer(const IAny& entity, ISerNode::Ptr&);
@@ -90,7 +96,7 @@ private:
     ISerNode::Ptr CreateObjectRefNode(const RefUri& ref);
     ISerNode::Ptr CreateObjectRefNode(const IObject::ConstPtr& object);
     ISerNode::Ptr AutoExportObject(const IObject::ConstPtr& object);
-    IObject::Ptr ResolveUriSegment(const IObject::ConstPtr& ptr, RefUri& uri) const;
+    IObject::Ptr ResolveUriSegment(const IObject::ConstPtr& ptr, RefUri& uri, const IObject::ConstPtr& previous) const;
     ISerNode::Ptr ExportIContainer(const IContainer& cont);
     ReturnError ResolveDeferredWeakPtr(const DeferredWeakPtrResolve& d);
 
@@ -103,6 +109,10 @@ private:
     CORE_NS::IResourceManager::Ptr resources_;
     IObject::Ptr userContext_;
     SerMetadata metadata_;
+    ExportOptions options_;
+
+    RefUriBuilder defaultRefUriBuilder_;
+    IRefUriBuilder* refUriBuilder_ { &defaultRefUriBuilder_ };
 };
 
 class ExportContext : public IntroduceInterfaces<IExportContext> {
@@ -118,8 +128,7 @@ public:
 
     ReturnError ExportToNode(const IAny& entity, ISerNode::Ptr&) override;
 
-    CORE_NS::IInterface* Context() const override;
-    META_NS::IObject::Ptr UserContext() const override;
+    IExporterState& Context() const override;
     ReturnError SubstituteThis(ISerNode::Ptr) override;
     SerMetadata GetMetadata() const override;
 

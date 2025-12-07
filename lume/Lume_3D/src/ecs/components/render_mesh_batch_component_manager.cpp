@@ -80,6 +80,7 @@ IComponentManager* IRenderMeshBatchComponentManagerInstance(IEcs& ecs)
 
 void IRenderMeshBatchComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<RenderMeshBatchComponentManager*>(instance);
+    static_cast<RenderMeshBatchComponentManager*>(instance)->~RenderMeshBatchComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

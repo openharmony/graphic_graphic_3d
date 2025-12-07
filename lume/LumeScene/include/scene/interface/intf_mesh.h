@@ -81,6 +81,24 @@ public:
 };
 
 /**
+ * @brief The IMaterialOverride interface can be implemented by objects that support overriding a material.
+ */
+class IMaterialOverride : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IMaterialOverride, "001e53c3-9a43-439c-af51-06e12e6496c5")
+public:
+    /**
+     * @brief Sets an override material for all submeshes.
+     * @param material The override material to use. If null, revert back to the material set for each submesh.
+     * @return True if operation was successful, false otherwise.
+     */
+    virtual void SetMaterialOverride(const IMaterial::Ptr& material) = 0;
+    /**
+     * @brief Returns the override material set for the mesh.
+     */
+    virtual IMaterial::Ptr GetMaterialOverride() const = 0;
+};
+
+/**
  * @brief Set material for all submeshes
  */
 inline bool SetMaterialForAllSubMeshes(const IMesh::Ptr& mesh, const IMaterial::Ptr& material)

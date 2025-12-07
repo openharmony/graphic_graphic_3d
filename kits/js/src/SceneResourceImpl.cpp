@@ -17,8 +17,13 @@
 
 #include "BaseObjectJS.h"
 #include "SceneJS.h"
+#include "ParamParsing.h"
 
 #include <meta/api/util.h>
+
+#include "BaseObjectJS.h"
+#include "ParamParsing.h"
+#include "SceneJS.h"
 
 SceneResourceImpl::SceneResourceImpl(SceneResourceType type) : type_(type)
 {
@@ -48,6 +53,7 @@ void SceneResourceImpl::RegisterEnums(NapiApi::Object exports)
     DECL_ENUM(SceneResourceType, SHADER);
     DECL_ENUM(SceneResourceType, IMAGE);
     DECL_ENUM(SceneResourceType, MESH_RESOURCE);
+    DECL_ENUM(SceneResourceType, EFFECT);
 #undef DECL_ENUM
 
     exports.Set("SceneResourceType", SceneResourceType);
@@ -67,19 +73,22 @@ void SceneResourceImpl::GetPropertyDescs(BASE_NS::vector<napi_property_descripto
 
 void* SceneResourceImpl::GetInstanceImpl(uint32_t id)
 {
-    if (id == SceneResourceImpl::ID)
-        return this;
+    if (id == SceneResourceImpl::ID) {
+        return static_cast<SceneResourceImpl*>(this);
+    }
     return nullptr;
 }
 
-NapiApi::WeakRef SceneResourceImpl::GetSceneWeakRef()
+NapiApi::WeakObjectRef SceneResourceImpl::GetSceneWeakRef()
 {
     return scene_;
 }
 
 bool SceneResourceImpl::validateSceneRef()
 {
-    if (scene_.GetObject()) {
+    // Scene may currently hold other types than SCENE_NS::IScene
+    // Any strong reference obtained suffices for now
+    if (scene_.GetObject<META_NS::IObject>() || scene_.GetJsWrapper<RenderContextJS>()) {
         // scene reference still valid.
         // so resource should still be valid.
         return true;
@@ -95,17 +104,19 @@ napi_value SceneResourceImpl::Dispose(NapiApi::FunctionContext<>& ctx)
     if (TrueRootObject* instance = ctx.This().GetRoot()) {
         // see if we have "scenejs" as ext (prefer one given as argument)
         napi_status stat;
-        SceneJS* ptr { nullptr };
+        void* ptr { nullptr };
+        userDisposed_ = true;
         NapiApi::FunctionContext<NapiApi::Object> args(ctx);
         if (args) {
             if (NapiApi::Object obj = args.Arg<0>()) {
                 if (napi_value ext = obj.Get("SceneJS")) {
                     stat = napi_get_value_external(ctx.GetEnv(), ext, (void**)&ptr);
+                    userDisposed_ = false;
                 }
             }
         }
         if (!ptr) {
-            ptr = scene_.GetObject().GetJsWrapper<SceneJS>();
+            ptr = scene_.GetJsWrapper<SceneJS>();
         }
         instance->DisposeNative(ptr);
     }
@@ -175,4 +186,42 @@ napi_value SceneResourceImpl::GetUri(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
     return uri_.GetValue();
+}
+
+void SceneResourceImpl::SetUri(NapiApi::Object& args)
+{
+    if (!validateSceneRef() || !args.Get("uri")) {
+        CORE_LOG_W("### cannot get uri");
+        return;
+    }
+    NapiApi::Object resType = args.Get<NapiApi::Object>("uri");
+    BASE_NS::string uriType = args.Get<BASE_NS::string>("uri");
+    BASE_NS::string uri;
+    if (!uriType.empty()) {
+        uri = ExtractUri(uriType);
+    }
+    if (uri.empty()) {
+        uri = ExtractUri(resType);
+        if (uri.empty()) {
+            return;
+        }
+    }
+    LOG_V("#### uri: '%s' uriRes: '%s'", uri.c_str(), uriType.c_str() );
+
+    if (!resType) {
+        // raw string then.. make it  "resource" / "rawfile" if possible.
+        if (uri.find("OhosRawFile://") == 0) {
+            // we can only convert "OhosRawFile://" type uris back to "resource" objects.
+            NapiApi::Env env(args.GetEnv());
+            napi_value global;
+            napi_get_global(env, &global);
+            NapiApi::Object g(env, global);
+            BASE_NS::string noschema(uri.substr(14)); // 14: length
+            napi_value arg = env.GetString(noschema);
+            napi_value res = g.Invoke("$rawfile", { arg });
+            SetUri(NapiApi::StrongRef(env, res));
+        }
+    } else {
+        SetUri(NapiApi::StrongRef(resType));
+    }
 }

@@ -37,8 +37,6 @@
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 
-#include "property/property_handle.h"
-
 CORE_BEGIN_NAMESPACE()
 DECLARE_PROPERTY_TYPE(RENDER_NS::IRenderDataStoreManager*);
 CORE_END_NAMESPACE()

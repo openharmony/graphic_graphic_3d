@@ -21,8 +21,8 @@
 #include <3d/ecs/components/render_handle_component.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
-#include "entity_converting_value.h"
-#include "resource/image.h"
+#include "../entity_converting_value.h"
+#include "../resource/image.h"
 #include "sampler.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -39,23 +39,21 @@ struct SamplerConverter {
     {
         auto p = META_NS::GetPointer<ISampler>(any);
         if (auto scene = scene_.lock()) {
-            scene
-                ->AddTask([&] {
-                    if (!p) {
-                        p = META_NS::GetObjectRegistry().Create<ISampler>(ClassId::Sampler);
-                        if (auto i = interface_cast<ISamplerInternal>(p)) {
-                            i->SetScene(scene);
-                        }
+            scene->RunDirectlyOrInTask([&] {
+                if (!p) {
+                    p = META_NS::GetObjectRegistry().Create<ISampler>(ClassId::Sampler);
+                    if (auto i = interface_cast<ISamplerInternal>(p)) {
+                        i->SetScene(scene);
                     }
-                    auto& ctx = scene->GetRenderContext();
-                    if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
-                            scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
-                        if (auto internal = interface_cast<ISamplerInternal>(p)) {
-                            internal->UpdateSamplerFromHandle(ctx, rhman->GetRenderHandleReference(v));
-                        }
+                }
+                auto& ctx = scene->GetRenderContext();
+                if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
+                        scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
+                    if (auto internal = interface_cast<ISamplerInternal>(p)) {
+                        internal->UpdateSamplerFromHandle(ctx, rhman->GetRenderHandleReference(v));
                     }
-                })
-                .Wait();
+                }
+            });
         }
         return p;
     }
@@ -63,15 +61,13 @@ struct SamplerConverter {
     {
         TargetType res;
         if (auto scene = scene_.lock(); scene && v) {
-            scene
-                ->AddTask([&] {
-                    if (auto i = interface_cast<ISamplerInternal>(v)) {
-                        if (auto handle = i->GetHandleFromSampler(scene->GetRenderContext())) {
-                            res = scene->GetEcsContext().GetRenderHandleEntity(handle);
-                        }
+            scene->RunDirectlyOrInTask([&] {
+                if (auto i = interface_cast<ISamplerInternal>(v)) {
+                    if (auto handle = i->GetHandleFromSampler(scene->GetRenderContext())) {
+                        res = scene->GetEcsContext().GetRenderHandleEntity(handle);
                     }
-                })
-                .Wait();
+                }
+            });
         }
         return res;
     }
@@ -95,13 +91,13 @@ bool Texture::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::str
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
                i->PushValue(
-                   META_NS::IValue::Ptr(new RenderResourceValue<IImage>(ep, { object_->GetScene(), ClassId::Image })));
+                   META_NS::IValue::Ptr(new RenderResourceValue<IImage>(ep, { GetInternalScene(), ClassId::Image })));
     }
     if (p->GetName() == "Sampler") {
         auto ep = object_->CreateProperty(cpath).GetResult();
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<SamplerConverter>(ep, { object_->GetScene() })));
+               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<SamplerConverter>(ep, { GetInternalScene() })));
     }
     return AttachEngineProperty(p, cpath);
 }

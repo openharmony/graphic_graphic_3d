@@ -25,6 +25,8 @@
 
 SCENE_BEGIN_NAMESPACE()
 
+constexpr uint64_t IMPORTED_FROM_TEMPLATE_BIT = 128;
+
 inline CORE_NS::IEcs* GetNativeEcs(const IEcsObject::Ptr& object)
 {
     if (auto s = object->GetScene()) {
@@ -58,11 +60,19 @@ typename Interface::Ptr ObjectWithRenderHandle(
 {
     if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
             scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
-        if (!p && id.IsValid()) {
-            p = interface_pointer_cast<Interface>(scene->CreateObject(id));
-        }
+        auto handle = rhman->GetRenderHandleReference(entRef);
         if (auto i = interface_cast<IRenderResource>(p)) {
-            i->SetRenderHandle(rhman->GetRenderHandleReference(entRef));
+            if (handle.GetHandle() != i->GetRenderHandle().GetHandle()) {
+                p = nullptr;
+            }
+        }
+        if (!p && id.IsValid()) {
+            p = interface_pointer_cast<Interface>(scene->CreateObject(id, entRef));
+            if (auto i = interface_cast<IRenderResource>(p)) {
+                if (!i->GetRenderHandle()) {
+                    i->SetRenderHandle(handle);
+                }
+            }
         }
     }
     return p;

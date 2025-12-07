@@ -1,0 +1,459 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Declarations
+import("//build/test.gni")
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+# Test case compilation output path
+module_output_path = "graphic_3d/lume/LumeEngine"
+
+# Rofs
+CORE_TEST_ROFS = "testrofs"
+
+#
+# LumeEngine API test config
+#
+
+#
+# Unit tests engine api config 
+#
+config("lume_engine_test_config") {
+
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+  
+  # Required for json test cases
+  cflags = [
+    "-Wno-unknown-escape-sequence"
+  ]
+
+  # Unit test defines
+  defines = [
+    "OHOS_PLATFORM_ASSETS_PATH=\"/data/test/resource/graphic_3d/LumeEngine/test_data/\"",
+  ]
+}
+
+config("lume_engine_test_dynamic_lib_config") {
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+  
+  defines = [
+    "CORE_DYNAMIC=1"
+  ]
+}
+
+# ohos_unittest
+ohos_unittest("lume_engine_api_test") {
+
+  module_out_path = module_output_path
+
+  # Configs
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_ECS_HELPER_PATH}:lume_engine_ecshelper_config",
+    
+    ":test_plugin_shared_config",
+    "${LUME_BASE_PATH}:lume_unit_test_config",
+    ":lume_engine_test_config",
+    ":lume_engine_test_dynamic_lib_config"
+  ]
+  
+  # Includes
+  include_dirs = [
+    "common",
+    "api_unit_test/src",
+  ]
+
+  # Src
+  sources = [
+    "common/load_lib.cpp",
+    "common/test_runner_ohos_system.cpp",
+
+    # ECS
+    "api_unit_test/src/ecs/ecs_test.cpp",
+    
+    # Plugin
+    "api_unit_test/src/plugin/plugin_test.cpp",
+    
+    # Property
+    "api_unit_test/src/property/property_test.cpp",
+    
+    # Util
+    "api_unit_test/src/util/parallel_sort_test.cpp",
+    "api_unit_test/src/util/property_tools_test.cpp",
+  ]
+
+  # External deps
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "googletest:gmock",
+    "googletest:gtest"
+  ]
+
+  # Deps
+  deps = [
+    "${LUME_ECS_HELPER_PATH}:libAGPEcshelper", # no shared lib!
+    ":libCoreTestSharedPlugin",
+    ":libCoreTestSharedPlugin2",
+    ":libCoreTestSharedPlugin3",
+    ":PushTestResource"
+  ]
+
+  # Test data
+  resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeEngine/test/unittest/assets/ohos_test.xml"
+
+  # graphic/graphic_3d
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+#
+# LumeEngine SRC test config
+#
+
+lume_rofs("lume_engine_test_rofs")
+{
+  output_obj= ""
+  if (target_cpu == "arm") {
+    output_obj = "${CORE_TEST_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${CORE_TEST_ROFS}_64.o"
+  }
+
+  if (target_cpu == "x86") {
+    output_obj = "${CORE_TEST_ROFS}_x32.o"
+  }
+
+  if (target_cpu == "x86_64") {
+    output_obj = "${CORE_TEST_ROFS}_x64.o"
+  }
+
+  outputs = "${target_gen_dir}/assets/${output_obj}"
+
+  tool_path = "${target_gen_dir}/../../../LumeBinaryCompile/lumeassetcompiler"
+  root = "/"
+  bin_name = "BINARYDATAFORTEST"
+  size_name = "SIZEOFDATAFORTEST"
+  base_name = CORE_TEST_ROFS
+  script = "./../../tools/CompilerAsset.sh"
+  assets_path = "./assets"
+  copy_path = "${target_gen_dir}/assets"
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
+  compileShader_deps=["${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile"]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile/"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+    ]
+  }
+}
+
+source_set("lume_engine_test_rofs_obj") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${CORE_TEST_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${CORE_TEST_ROFS}_64.o"
+  }
+
+  if (target_cpu == "x86") {
+    output_obj = "${CORE_TEST_ROFS}_x32.o"
+  }
+
+  if (target_cpu == "x86_64") {
+    output_obj = "${CORE_TEST_ROFS}_x64.o"
+  }
+
+  sources = [
+    "${target_gen_dir}/assets/${output_obj}"
+  ]
+  deps = [
+    ":lume_engine_test_rofs"
+  ]
+}
+
+ohos_static_library("libStaticAGPEngine") {
+
+  visibility = [":*"]
+
+  deps = [
+    "${LUME_CORE_PATH}:lume_engine_src",
+    "${LUME_CORE_PATH}:lume_engine_rofs_obj"
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_static_library("libStaticComponentHelper") {
+
+  visibility = [":*"]
+
+  deps = [
+    "${LUME_CORE_PATH}:lume_component_help_src",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+# ohos_unittest
+ohos_unittest("lume_engine_src_test") {
+
+  module_out_path = module_output_path
+
+  # Configs
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_engine_config",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+
+    ":test_plugin_static_config",
+    "${LUME_BASE_PATH}:lume_unit_test_config",
+    ":lume_engine_test_config"
+  ]
+
+  # Includes
+  include_dirs = [
+    "common",
+    "src_unit_test/src"
+  ]
+
+  # Src
+  sources = [
+    "common/test_runner_ohos_system.cpp",
+
+    # Image
+    "src_unit_test/src/image/image_manager_test.cpp",
+    
+    # IO
+    "src_unit_test/src/io/io_test.cpp",
+    "src_unit_test/src/io/io_common_test.cpp",
+    
+    # Log
+    "src_unit_test/src/log/logger_test.cpp",
+    
+    # Plugin
+    "src_unit_test/src/plugin/plugin_test.cpp",
+    
+    # Threading
+    "src_unit_test/src/threading/task_queue_test.cpp",
+    
+    # Util
+    "src_unit_test/src/util/json_test.cpp",
+    "src_unit_test/src/util/linear_allocator_test.cpp",
+  ]
+
+  # External deps
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "hilog:libhilog",
+    "googletest:gtest",
+    "googletest:gmock"
+  ]
+
+  # Deps
+  deps = [
+    # Using static lib to test LumeEngine src
+    ":libStaticAGPEngine",
+    ":libStaticComponentHelper",
+    ":lume_engine_test_rofs_obj",
+    ":libCoreTestStaticPlugin",
+    ":libCoreTestSharedPlugin",
+    ":libCoreTestSharedPlugin2",
+    ":libCoreTestSharedPlugin3",
+    ":PushTestResource"
+  ]
+
+  # Test data
+  resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeEngine/test/unittest/assets/ohos_test.xml"
+
+  # graphic/graphic_3d
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+# group ("unittest")
+group("unittest") {
+    testonly = true
+    deps = [ 
+        ":lume_engine_api_test",
+        ":lume_engine_src_test"
+    ]
+}
+
+#
+# Test plugin lib (STATIC) config
+#
+config("test_plugin_static_config") {
+
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+
+  # Includes
+  include_dirs = [
+    "test_plugin/src"
+  ]
+
+  defines = [
+    "CORE_STATIC_PLUGIN_HEADER=\"../../../../src/static_plugin_decl.h\"",
+  ]
+}
+
+#
+# Test plugin lib (STATIC) sources
+#
+ohos_source_set("test_plugin_static_src") {
+  public_configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    ":test_plugin_static_config"
+  ]
+
+  sources = [
+    "test_plugin/src/static_plugin.cpp"
+  ]
+}
+
+#
+# Test plugin lib (STATIC) 
+#
+ohos_static_library("libCoreTestStaticPlugin") {
+  deps = [
+    ":test_plugin_static_src",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+#
+# Test plugin lib (SHARED) config
+#
+config("test_plugin_shared_config") {
+
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+
+  # Includes
+  include_dirs = [
+    "test_plugin/src"
+  ]
+
+  defines = [
+    "CORE_PLUGIN=1"
+  ]
+}
+
+#
+# Test plugin lib (SHARED) sources
+#
+ohos_source_set("test_plugin_shared_src") {
+  public_configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    ":test_plugin_shared_config"
+  ]
+
+  sources = [
+    "test_plugin/src/dynamic_plugin.cpp"
+  ]
+}
+
+#
+# Test plugin lib (SHARED) 
+#
+ohos_shared_library("libCoreTestSharedPlugin") {
+  deps = [
+    ":test_plugin_shared_src"
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+#
+# Test plugin2 lib (SHARED) sources
+#
+ohos_source_set("test_plugin2_shared_src") {
+  public_configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    ":test_plugin_shared_config"
+  ]
+
+  sources = [
+    "test_plugin/src/dynamic_with_dependency_plugin.cpp"
+  ]
+}
+
+#
+# Test plugin2 lib (SHARED) 
+#
+ohos_shared_library("libCoreTestSharedPlugin2") {
+  deps = [
+    ":test_plugin2_shared_src"
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+#
+# Test plugin3 lib (SHARED) sources
+#
+ohos_source_set("test_plugin3_shared_src") {
+  public_configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    ":test_plugin_shared_config"
+  ]
+
+  sources = [
+    "test_plugin/src/dynamic_with_dependency3_plugin.cpp"
+  ]
+}
+
+#
+# Test plugin3 lib (SHARED) 
+#
+ohos_shared_library("libCoreTestSharedPlugin3") {
+  deps = [
+    ":test_plugin3_shared_src"
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+action("PushTestResource") {
+  outputs = [ "$target_out_dir/out.txt" ]
+  script = "${LUME_CORE_PATH}/test/unittest/assets/copy.sh"
+  deps = [
+    ":libCoreTestSharedPlugin",
+    ":libCoreTestSharedPlugin2",
+    ":libCoreTestSharedPlugin3"
+  ]
+  args = [
+    "$target_out_dir",
+  ]
+}
+

@@ -45,6 +45,11 @@ struct RenderDataDefaultMaterial {
     static constexpr uint32_t MATERIAL_FACTOR_UNIFORM_VEC4_COUNT { 15u };
     static constexpr uint32_t MATERIAL_PACKED_UNIFORM_UVEC4_COUNT { 15u };
 
+    /** For experimental bindless to pack texture and sampler indices to factor data
+     */
+    static constexpr uint32_t MATERIAL_FACTOR_UNIFORM_VEC4_IN_USE_COUNT { 12u };
+    static constexpr uint32_t MATERIAL_FACTOR_MAT_TEX_BINDLESS_SAMPLER_SHIFT { 16u };
+
     /** Count of uvec4 variables for material uniforms (must match 3d_dm_structure_common.h) */
     static constexpr uint32_t MATERIAL_TEXTURE_COUNT { 11u };
 
@@ -102,6 +107,10 @@ struct RenderDataDefaultMaterial {
         // 9: transmission
         // 10: specular
         // 11: alpha cutoff
+
+        // NOTE: first 12 are in use
+        // 0 - 11 is in use MATERIAL_FACTOR_UNIFORM_VEC4_IN_USE_COUNT
+        // initial bindless textures can use this empty data for texture indices
 
         BASE_NS::Math::Vec4 factors[MATERIAL_FACTOR_UNIFORM_VEC4_COUNT];
 
@@ -185,11 +194,6 @@ struct RenderDataDefaultMaterial {
         /** Custom render slot id */
         uint32_t customRenderSlotId { ~0u };
 
-        /** Optional camera id (significant bits) for camera based material
-         * Will render only with a given camera id if set.
-         */
-        uint32_t customCameraId { RenderSceneDataConstants::INVALID_INDEX };
-
         /** Render material type */
         RenderMaterialType materialType { RenderMaterialType::METALLIC_ROUGHNESS };
 
@@ -225,8 +229,6 @@ struct RenderDataDefaultMaterial {
         RENDER_NS::RenderHandle gfxState;
         /** Render material flags */
         RenderMaterialFlags renderMaterialFlags { 0u };
-        /** Render camera id for camera effect (uses only 32 significant id bits) */
-        uint32_t cameraId { 0u };
         /** Combined of render materials flags hash, material idx, shader id */
         uint32_t renderSortHash { 0u };
         /** Combined sort layer from render submesh */
@@ -296,6 +298,12 @@ public:
 
     ~IRenderDataStoreDefaultMaterial() override = default;
 
+    /** Submit frame mesh data. Process all batch data and submit for rendering.
+     * Automatically called by PreRender(), can be called e.g. in render system to force the update.
+     * Can be called multiple times in processing if needed.
+     */
+    virtual void SubmitFrameMeshData() = 0;
+
     /** [[DEPRECATED]] Add mesh data.
      * @param meshData All mesh data.
      * @return Mesh index for submesh to use.
@@ -303,21 +311,22 @@ public:
     virtual uint32_t AddMeshData(const RenderMeshData& meshData) = 0;
 
     /** Add frame render mesh data.
-     * @param id Mesh id. In typical ECS usage mesh entity id.
-     * @param meshAabbData render mesh aabb data.
+     * @param meshData render mesh data.
+     */
+    virtual void AddFrameRenderMeshData(const RenderMeshData& meshData) = 0;
+
+    /** Add frame render mesh data.
+     * @param meshData render mesh data.
      * @param meshSkinData render mesh skin data.
      */
-    virtual void AddFrameRenderMeshData(const RenderMeshData& meshData, const RenderMeshAabbData& meshAabbData,
-        const RenderMeshSkinData& meshSkinData) = 0;
+    virtual void AddFrameRenderMeshData(const RenderMeshData& meshData, const RenderMeshSkinData& meshSkinData) = 0;
 
     /** Add frame render mesh data with batching.
-     * @param id Mesh id. In typical ECS usage mesh entity id.
-     * @param meshAabbData array view render mesh aabb data.
+     * @param meshData the base mesh data.
      * @param meshSkinData render mesh skin data.
-     * @param meshBatchData render mesh batch data.
+     * @param meshData render mesh data.
      */
-    virtual void AddFrameRenderMeshData(BASE_NS::array_view<const RenderMeshData> meshData,
-        const RenderMeshAabbData& meshAabbData, const RenderMeshSkinData& meshSkinData,
+    virtual void AddFrameRenderMeshData(const RenderMeshData& meshData, const RenderMeshSkinData& meshSkinData,
         const RenderMeshBatchData& meshBatchData) = 0;
 
     /** Update (or create) rendering mesh data.
@@ -397,27 +406,6 @@ public:
      */
     virtual void DestroyMaterialData(const BASE_NS::array_view<uint64_t> ids) = 0;
 
-    /** Add material and get material index and frame offset
-     * @param id Material component id. In typical ECS usage material entity id.
-     * @return RenderFrameMaterialIndices material index and frame offset
-     */
-    virtual RenderFrameMaterialIndices AddFrameMaterialData(uint64_t id) = 0;
-
-    /** Add material and get material index and frame offset
-     * @param id Material component id. In typical ECS usage material entity id.
-     * @param instanceCount Instance count of the same material.
-     * @return RenderFrameMaterialIndices material index and frame offset
-     */
-    virtual RenderFrameMaterialIndices AddFrameMaterialData(uint64_t id, uint32_t instanceCount) = 0;
-
-    /** Add material and get material index and frame offset
-     * Automatic hashing with id. (E.g. material entity id)
-     * Final rendering material flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
-     * @param id Material component id. In typical ECS usage material entity id.
-     * @return RenderFrameMaterialIndices material index and frame offset
-     */
-    virtual RenderFrameMaterialIndices AddFrameMaterialData(BASE_NS::array_view<const uint64_t> ids) = 0;
-
     /** Add material without an id to be rendered this frame.
      * Prefer using id based material updates.
      * The data is automatically cleared after the rendering has been processed.
@@ -433,16 +421,6 @@ public:
         const RenderDataDefaultMaterial::MaterialData& materialData,
         const BASE_NS::array_view<const uint8_t> customPropertyData,
         const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> customBindings) = 0;
-
-    /** Add material instance data and get material index and frame offset
-     * Final rendering material flags are per submesh (RenderDataDefaultMaterial::SubmeshMaterialFlags)
-     * @param materialIndex Material index (from get material index or update).
-     * @param frameOffset Frame offset for the base instance material.
-     * @param instanceIndex Offset to base frame offset for this instance.
-     * @return Material frame offset index for submesh to use.
-     */
-    virtual RenderFrameMaterialIndices AddFrameMaterialInstanceData(
-        uint32_t materialIndex, uint32_t frameOffset, uint32_t instanceIndex) = 0;
 
     /** Get material index.
      * Default material can be fetched with material id

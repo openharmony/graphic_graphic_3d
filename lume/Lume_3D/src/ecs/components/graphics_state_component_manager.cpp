@@ -202,6 +202,7 @@ CORE_NS::IComponentManager* IGraphicsStateComponentManagerInstance(CORE_NS::IEcs
 
 void IGraphicsStateComponentManagerDestroy(CORE_NS::IComponentManager* instance)
 {
-    delete static_cast<GraphicsStateComponentManager*>(instance);
+    static_cast<GraphicsStateComponentManager*>(instance)->~GraphicsStateComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

@@ -499,7 +499,8 @@ Entity Ecs::CloneEntity(const Entity entity)
             const auto id = cm->GetComponentId(entity);
             if (id != IComponentManager::INVALID_COMPONENT_ID) {
                 cm->Create(clonedEntity);
-                if (auto dataHandle = cm->GetData(id); dataHandle != nullptr) {
+                // checking although id is a valid index and GetData can't really return null.
+                if (auto dataHandle = cm->GetData(id)) {
                     cm->SetData(clonedEntity, *dataHandle);
                 }
             }
@@ -756,8 +757,8 @@ template<typename Container>
 inline auto RemoveUid(Container& container, const Uid& uid)
 {
     container.erase(std::remove_if(container.begin(), container.end(),
-                                   [&uid](const auto &thing) { return thing->GetUid() == uid; }),
-                    container.cend());
+                        [&uid](const auto& thing) { return thing->GetUid() == uid; }),
+        container.cend());
 }
 
 void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typeInfos)

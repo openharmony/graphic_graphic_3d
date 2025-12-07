@@ -16,31 +16,25 @@
 #ifndef RENDER_RENDER_POST_PROCESS_RENDER_POST_PROCESS_BLUR_NODE_H
 #define RENDER_RENDER_POST_PROCESS_RENDER_POST_PROCESS_BLUR_NODE_H
 
-#include <base/containers/unique_ptr.h>
-#include <base/util/uid.h>
-#include <core/plugin/intf_interface.h>
+#include <base/containers/array_view.h>
 #include <core/plugin/intf_interface_helper.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
-#include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.h>
-#include <core/property_tools/property_macros.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/intf_shader_manager.h>
+#include <render/implementation_uids.h>
 #include <render/namespace.h>
-#include <render/nodecontext/intf_render_node.h>
+#include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_post_process.h>
 #include <render/nodecontext/intf_render_post_process_node.h>
-#include <render/property/property_types.h>
-#include <render/render_data_structures.h>
-#include <render/shaders/common/render_blur_common.h>
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
 
-class RenderPostProcessBlurNode final : public CORE_NS::IInterfaceHelper<IRenderPostProcessNode> {
+class RenderPostProcessBlurNode final : public CORE_NS::IInterfaceHelper<IRenderPostProcessNode, IRenderPostProcess> {
 public:
-    static constexpr auto UID = BASE_NS::Uid("65ec929c-c38c-4d4e-b0a0-62fffb55d338");
+    static constexpr auto UID = UID_RENDER_POST_PROCESS_BLUR;
 
     using Ptr = BASE_NS::refcnt_ptr<RenderPostProcessBlurNode>;
 
@@ -66,15 +60,39 @@ public:
     RenderPostProcessBlurNode();
     ~RenderPostProcessBlurNode() = default;
 
+    // from IRenderPostProcess
+    CORE_NS::IPropertyHandle* GetProperties() override
+    {
+        return properties_.GetData();
+    }
+
+    BASE_NS::Uid GetRenderPostProcessNodeUid() override
+    {
+        return UID;
+    }
+
+    void SetData(BASE_NS::array_view<const uint8_t> data) override
+    {
+        constexpr size_t propertyByteSize = sizeof(EffectProperties);
+        if (data.size_bytes() == propertyByteSize) {
+            BASE_NS::CloneData(&propertiesData, propertyByteSize, data.data(), data.size_bytes());
+        }
+    }
+    BASE_NS::array_view<const uint8_t> GetData() const override
+    {
+        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+    }
+
+    // from IRenderPostProcessNode
     CORE_NS::IPropertyHandle* GetRenderInputProperties() override;
     CORE_NS::IPropertyHandle* GetRenderOutputProperties() override;
     DescriptorCounts GetRenderDescriptorCounts() const override;
     void SetRenderAreaRequest(const RenderAreaRequest& renderAreaRequest) override;
 
     IRenderNode::ExecuteFlags GetExecuteFlags() const override;
-    void Init(const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr) override;
-    void PreExecute() override;
-    void Execute(IRenderCommandList& cmdList) override;
+    void InitNode(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr) override;
+    void PreExecuteFrame() override;
+    void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
 
     struct NodeInputs {
         BindableImage input;
@@ -83,12 +101,14 @@ public:
         BindableImage output;
     };
 
+    EffectProperties propertiesData;
     NodeInputs nodeInputsData;
     NodeOutputs nodeOutputsData;
 
 private:
+    CORE_NS::PropertyApiImpl<EffectProperties> properties_;
+
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
-    IRenderPostProcess::Ptr postProcess_;
 
     struct ImageData {
         BASE_NS::Math::UVec2 size { 0U, 0U };

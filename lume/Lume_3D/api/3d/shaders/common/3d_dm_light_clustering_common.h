@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-#include "3d/shaders/common/3d_dm_structures_common.h"
+#ifndef SHADERS_COMMON_3D_DM_LIGHT_CLUSTERING_COMMON_H
+#define SHADERS_COMMON_3D_DM_LIGHT_CLUSTERING_COMMON_H
 
-#ifndef SHADERS_COMMON_3D_LIGHT_CLUSTERING_COMMON_H
-#define SHADERS_COMMON_3D_LIGHT_CLUSTERING_COMMON_H
+#include "3d/shaders/common/3d_dm_structures_common.h"
 
 vec2 GetNearFar(const mat4 projectionMatrix)
 {
@@ -198,4 +198,4 @@ bool ConeClusterIntersect(const vec3 coneOrigin, const vec3 coneDirection, const
     return !(cullAngle || cullFront || cullBack);
 }
 
-#endif // SHADERS_COMMON_LIGHT_CLUSTERING_COMMON_H
+#endif // SHADERS_COMMON_3D_DM_LIGHT_CLUSTERING_COMMON_H

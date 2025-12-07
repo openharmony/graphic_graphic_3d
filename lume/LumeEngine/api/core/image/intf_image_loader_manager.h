@@ -106,6 +106,18 @@ public:
          */
         virtual LoadResult Load(IFile& file, uint32_t loadFlags) const = 0;
 
+        /** Load Image file from provided file with passed flags
+         * @param file File where to load from
+         * @param loadFlags Load flags. Combination of #ImageLoaderFlags
+         * @param rowCount Row count of tiled image
+         * @param columnCount Colomn count of tiled image
+         * @return Result of the loading operation.
+         */
+        virtual LoadResult Load(IFile& file, uint32_t loadFlags, uint32_t rowCount, uint32_t columnCount) const
+        {
+            return LoadResult {};
+        }
+
         /** Load image file from given data bytes
          * @param imageFileBytes Image data.
          * @param loadFlags Load flags. Combination of #ImageLoaderFlags
@@ -179,6 +191,18 @@ public:
      * @param loadFlags Load flags. Combination of #ImageLoaderFlags
      */
     virtual LoadResult LoadImage(const BASE_NS::string_view uri, uint32_t loadFlags) = 0;
+
+    /** Load image with given parameters
+     * @param uri Uri to image
+     * @param loadFlags Load flags. Combination of #ImageLoaderFlags
+     * @param rowCount Row count of tiled image
+     * @param columnCount Colomn count of tiled image
+     */
+    virtual LoadResult LoadImage(
+        const BASE_NS::string_view uri, uint32_t loadFlags, uint32_t rowCount, uint32_t columnCount)
+    {
+        return LoadResult {};
+    }
 
     /** Load image with given parameters
      * @param file File to load image from

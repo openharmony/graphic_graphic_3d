@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 
 #ifndef UTIL__FONT_MANAGER_H
 #define UTIL__FONT_MANAGER_H
@@ -73,7 +74,7 @@ public:
 
     bool IsFont(BASE_NS::string_view uri);
 
-    FT_Face OpenFtFace(BASE_NS::array_view<const uint8_t> buf, FT_Long index);
+    FT_Face OpenFtFace(BASE_NS::array_view<const uint8_t> buf, FT_Long index) const;
 
     // Called by FontData to request atlas slots
     /*
@@ -148,8 +149,8 @@ public:
         RENDER_NS::RenderHandleReference handle;
         BASE_NS::vector<ColumnHeader> columns;
         BASE_NS::vector<PendingGlyph> pending;
-        uint32_t widthLeft;
-        bool inColor;
+        uint32_t widthLeft {};
+        bool inColor {};
 #if defined(FONT_VALIDATION_ENABLED) && (FONT_VALIDATION_ENABLED)
         BASE_NS::string name;
 #endif

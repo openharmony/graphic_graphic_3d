@@ -55,7 +55,8 @@ public:
     uint32_t MinorVersion() const;
 
     bool HasExtension(BASE_NS::string_view) const;
-    uintptr_t CreateSurface(uintptr_t window, uintptr_t instance, bool isSrgb) const noexcept;
+    void EnsureConfigSelected(uint32_t flags) const noexcept;
+    uintptr_t CreateSurface(uintptr_t window, uintptr_t instance, uint32_t flags) const noexcept;
     void DestroySurface(uintptr_t surface) const noexcept;
     bool GetSurfaceInformation(
         const DevicePlatformDataGLES& plat, EGLSurface surface, GlesImplementation::SurfaceInfo& res) const;
@@ -69,6 +70,7 @@ protected:
     void HandleExtensions();
     void FillSurfaceInfo(EGLDisplay display, EGLSurface surface, EGLint configId, EGLConfig config,
         GlesImplementation::SurfaceInfo& res) const;
+    void PlatformInitialize();
     BASE_NS::string cextensions_;                          // list of client extensions (null terminated strings)
     BASE_NS::vector<BASE_NS::string_view> cextensionList_; // pointers to cextensions_
     BASE_NS::string dextensions_;                          // list of display extensions (null terminated strings)
@@ -90,6 +92,7 @@ protected:
 
     void GetContext(ContextState& oldState);
     void SetContext(const ContextState& newState, bool force = false);
+    BASE_NS::vector<EGLint> BuildConfigAttributes(const BackendExtraGLES* backendConfig);
     void ChooseConfiguration(const BackendExtraGLES*);
     void CreateContext(const BackendExtraGLES*);
     bool IsVersionGreaterOrEqual(uint32_t major, uint32_t minor) const;

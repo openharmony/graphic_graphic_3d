@@ -59,6 +59,7 @@ public:
     EngineResourceHandle GetFramebufferHandle(const RenderCommandBeginRenderPass& beginRenderPass);
     const LowlevelFramebufferGL* GetFramebuffer(EngineResourceHandle handle) const;
 
+    static uint64_t HashRenderPass(const RenderCommandBeginRenderPass& beginRenderPass);
     void FilterRenderPass(RenderCommandBeginRenderPass& beginRenderPass);
 #if ((RENDER_VALIDATION_ENABLED == 1) || (RENDER_VULKAN_VALIDATION_ENABLED == 1))
     // not used ATM

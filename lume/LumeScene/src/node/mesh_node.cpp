@@ -21,8 +21,8 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/property/array_property.h>
 
-#include "ecs_component/entity_owner_component.h"
-#include "mesh/submesh.h"
+#include "../ecs_component/entity_owner_component.h"
+#include "../mesh/submesh.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -39,7 +39,8 @@ bool MeshNode::SetEcsObject(const IEcsObject::Ptr& o)
 
 CORE_NS::Entity MeshNode::CreateEntity(const IInternalScene::Ptr& scene)
 {
-    const auto& ecs = scene->GetEcsContext().GetNativeEcs();
+    const auto& context = scene->GetEcsContext();
+    const auto& ecs = context.GetNativeEcs();
     const auto renderMeshManager = CORE_NS::GetManager<CORE3D_NS::IRenderMeshComponentManager>(*ecs);
     const auto ownerManager = CORE_NS::GetManager<IEntityOwnerComponentManager>(*ecs);
     const auto meshManager = CORE_NS::GetManager<CORE3D_NS::IMeshComponentManager>(*ecs);
@@ -63,6 +64,7 @@ CORE_NS::Entity MeshNode::CreateEntity(const IInternalScene::Ptr& scene)
         ecs->GetEntityManager().Destroy(handle->mesh);
         return {};
     }
+    context.AddDefaultComponents(entity);
     ownerHandle->entity = ecs->GetEntityManager().GetReferenceCounted(handle->mesh);
     return entity;
 }
@@ -73,8 +75,11 @@ bool MeshNode::Init(const IInternalRenderMesh::Ptr& rmesh)
     if (!CORE_NS::EntityUtil::IsValid(ent)) {
         return false;
     }
-    auto ecsobj = object_->GetScene()->GetEcsContext().GetEcsObject(ent);
+    auto ecsobj = GetInternalScene()->GetEcsContext().GetEcsObject(ent);
     auto res = Init(ecsobj);
+    if (res) {
+        SetOwnedEntity(ent);
+    }
     return res;
 }
 
@@ -101,10 +106,16 @@ bool MeshNode::Init(const IEcsObject::Ptr& ecsobj)
 void MeshNode::SetOwnedEntity(CORE_NS::Entity ent)
 {
     if (auto obj = GetEcsObject()) {
-        auto ecs = obj->GetScene()->GetEcsContext().GetNativeEcs();
+        auto scene = obj->GetScene();
+        if (!scene) {
+            return;
+        }
+        auto ecs = scene->GetEcsContext().GetNativeEcs();
         auto ownerManager = CORE_NS::GetManager<IEntityOwnerComponentManager>(*ecs);
         if (ownerManager) {
-            if (auto ownerHandle = ownerManager->Write(obj->GetEntity())) {
+            auto nodeEntity = obj->GetEntity();
+            ownerManager->Create(nodeEntity);
+            if (auto ownerHandle = ownerManager->Write(nodeEntity)) {
                 ownerHandle->entity = ecs->GetEntityManager().GetReferenceCounted(ent);
             }
         }
@@ -115,7 +126,10 @@ Future<bool> MeshNode::SetMesh(const IMesh::Ptr& m)
 {
     if (auto obj = GetEcsObject()) {
         auto scene = obj->GetScene();
-        return scene->AddTask([=] {
+        if (!scene) {
+            return {};
+        }
+        return scene->AddTaskOrRunDirectly([=] {
             IMesh::Ptr mesh = m;
             // in case it is mesh node, use the embedded mesh
             if (auto acc = interface_cast<IMeshAccess>(mesh)) {
@@ -143,7 +157,10 @@ Future<IMesh::Ptr> MeshNode::GetMesh() const
 {
     if (auto obj = GetEcsObject()) {
         auto scene = obj->GetScene();
-        return scene->AddTask([=] { return mesh_; });
+        if (!scene) {
+            return {};
+        }
+        return scene->AddTaskOrRunDirectly([=] { return mesh_; });
     }
     return {};
 }

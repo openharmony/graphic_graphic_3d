@@ -15,11 +15,19 @@
 
 #include "transform_component.h"
 
+#include <base/math/matrix_util.h>
+
 SCENE_BEGIN_NAMESPACE()
 
 BASE_NS::string TransformComponent::GetName() const
 {
     return "TransformComponent";
+}
+
+BASE_NS::Math::Mat4X4 TransformComponent::GetTransformMatrix() const
+{
+    return BASE_NS::Math::Trs(
+        META_ACCESS_PROPERTY_VALUE(Position), META_ACCESS_PROPERTY_VALUE(Rotation), META_ACCESS_PROPERTY_VALUE(Scale));
 }
 
 SCENE_END_NAMESPACE()

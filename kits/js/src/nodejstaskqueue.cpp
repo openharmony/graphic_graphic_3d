@@ -228,13 +228,12 @@ void NodeJSTaskQueue::SetTimeout(napi_env env, uint32_t trigger)
     napi_value global;
     napi_get_global(env, &global);
     NapiApi::Object g(e, global);
-    NapiApi::Function func = g.Get<NapiApi::Function>("setTimeout");
 
     napi_value args[2];
     args[0] = RunFunc_.GetValue();
     args[1] = e.GetNumber(trigger);
     napi_value res { nullptr };
-    res = func.Invoke(g, 2, args); // 2: arg num
+    res = g.Invoke("setTimeout", args);
     curTimeout_ = { e, res };
 }
 void NodeJSTaskQueue::CancelTimeout(napi_env env)
@@ -247,11 +246,8 @@ void NodeJSTaskQueue::CancelTimeout(napi_env env)
     napi_value global;
     napi_get_global(env, &global);
     NapiApi::Object g(e, global);
-    NapiApi::Function func = g.Get<NapiApi::Function>("clearTimeout");
 
-    napi_value args[1];
-    args[0] = curTimeout_.GetValue();
-    func.Invoke(g, 1, args);
+    g.Invoke("clearTimeout", curTimeout_.GetValue());
     curTimeout_.Reset();
 }
 void NodeJSTaskQueue::Schedule(napi_env env, std::unique_lock<std::recursive_mutex>& lock)
@@ -501,7 +497,7 @@ Token NodeJSTaskQueue::AddTask(ITaskQueueTask::Ptr p, const TimeSpan& delay, con
         // can not schedule tasks anymore.
         // remove the task we TRIED to add..
         for (auto it = tasks_.begin(); it != tasks_.end(); it++) {
-            if ((it->token = result) && (it->executeTime == excTime) && (it->delay == delay)) {
+            if ((it->token == result) && (it->executeTime == excTime) && (it->delay == delay)) {
                 tasks_.erase(it);
                 break;
             }

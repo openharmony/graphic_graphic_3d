@@ -40,6 +40,10 @@ public:
      * @brief Unregister engine access for core type
      */
     virtual void UnregisterInternalValueAccess(const CORE_NS::PropertyTypeDecl& type) = 0;
+    /**
+     * @brief Returns a list of all registered value accessors.
+     */
+    virtual BASE_NS::vector<CORE_NS::PropertyTypeDecl> GetAllRegisteredValueAccess() const = 0;
 };
 
 META_END_NAMESPACE()

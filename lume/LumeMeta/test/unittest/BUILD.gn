@@ -1,0 +1,182 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Declarations
+import("//build/test.gni")
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+# Test case compilation output path
+module_output_path = "graphic_3d/lume/LumeMeta"
+
+#
+# LumeMeta API test config
+#
+
+#
+# Unit tests meta api config 
+#
+config("lume_meta_test_config") {
+
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+  
+  # Required for json test cases
+  cflags = [
+    "-Wno-unknown-escape-sequence",
+    "-Wno-overloaded-virtual",
+  ]
+
+  # Unit test defines
+  defines = [
+    "OHOS_PLATFORM_ASSETS_PATH=\"/data/test/resource/graphic_3d/LumeMeta/test_data/\"",
+  ]
+
+  # Dynamic lib
+  defines += [
+    "CORE_DYNAMIC=1",
+  ]
+}
+
+# ohos_unittest
+ohos_unittest("lume_meta_api_test") {
+
+  module_out_path = module_output_path
+
+  # Configs
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_META_PATH}:lume_meta_api_config",
+
+    "${LUME_BASE_PATH}:lume_unit_test_config",
+    ":lume_meta_test_config",
+  ]
+
+  # Includes
+  include_dirs = [
+    "common",
+    "api_unit_test/src",
+  ]
+
+  # Src
+  sources = [
+    "common/test_runner_ohos_system.cpp",
+    "common/load_lib.cpp",
+
+    # API
+    "api_unit_test/src/api/property/array_property_event_handler_test.cpp",
+    "api_unit_test/src/api/property/custom_value_test.cpp",
+    "api_unit_test/src/api/property/property_info_test.cpp",
+    "api_unit_test/src/api/bitfield_property_test.cpp",
+    "api_unit_test/src/api/compatible_value_util_test.cpp",
+    "api_unit_test/src/api/deferred_callback_test.cpp",
+    "api_unit_test/src/api/function_test.cpp",
+    "api_unit_test/src/api/mutex_test.cpp",
+    "api_unit_test/src/api/number_test.cpp",
+    "api_unit_test/src/api/object_test.cpp",
+    "api_unit_test/src/api/timer_test.cpp",
+
+    # Base
+    "api_unit_test/src/base/base_objects_test.cpp",
+    "api_unit_test/src/base/capture_test.cpp",
+    "api_unit_test/src/base/ids_test.cpp",
+    "api_unit_test/src/base/ref_uri_test.cpp",
+    "api_unit_test/src/base/spin_lock_test.cpp",
+    "api_unit_test/src/base/time_span_test.cpp",
+    "api_unit_test/src/base/version_test.cpp",
+
+    # Ext
+    "api_unit_test/src/ext/interface_helpers_test.cpp",
+
+    # Helpers
+    "api_unit_test/src/helpers/animation_test_base.cpp",
+    "api_unit_test/src/helpers/serialisation_utils.cpp",
+    "api_unit_test/src/helpers/test_utils.cpp",
+    "api_unit_test/src/helpers/testing_objects.cpp",
+
+    # Interface - Animation
+    "api_unit_test/src/interface/animation/animation_controller_test.cpp",
+    "api_unit_test/src/interface/animation/animation_seeking_test.cpp",
+    "api_unit_test/src/interface/animation/bezier_curve_test.cpp",
+    "api_unit_test/src/interface/animation/easing_curve_test.cpp",
+    "api_unit_test/src/interface/animation/interpolator_test.cpp",
+    "api_unit_test/src/interface/animation/intf_animation_modifier_test.cpp",
+    "api_unit_test/src/interface/animation/intf_animation_test.cpp",
+    "api_unit_test/src/interface/animation/intf_staggered_animation_test.cpp",
+    "api_unit_test/src/interface/animation/intf_track_animation_test.cpp",
+    "api_unit_test/src/interface/animation/sequential_animation_test.cpp",
+    # Interface - Engine
+    "api_unit_test/src/interface/engine/engine_value_test.cpp",
+    "api_unit_test/src/interface/engine/intf_engine_input_property_manager_test.cpp",
+    "api_unit_test/src/interface/engine/intf_engine_value_manager_test.cpp",
+    # Interface - Loaders
+    "api_unit_test/src/interface/loaders/csv_string_resource_loader_test.cpp",
+    # Interface - Model
+    "api_unit_test/src/interface/model/intf_data_model_test.cpp",
+    "api_unit_test/src/interface/model/intf_object_provider_test.cpp",
+    # Interface - Property
+    "api_unit_test/src/interface/property/array_property_test.cpp",
+    "api_unit_test/src/interface/property/intf_modifier_test.cpp",
+    "api_unit_test/src/interface/property/property_test.cpp",
+    # Interface - Resource
+    "api_unit_test/src/interface/resource/intf_resource_manager_test.cpp",
+    # Interface - Serialization
+    "api_unit_test/src/interface/serialization/intf_serializable_test.cpp",
+    "api_unit_test/src/interface/serialization/property_serialization_test.cpp",
+    "api_unit_test/src/interface/serialization/resource_serialization_test.cpp",
+    "api_unit_test/src/interface/serialization/ser_compatibility_test.cpp",
+    "api_unit_test/src/interface/serialization/serialization_test.cpp",
+    # Interface
+    "api_unit_test/src/interface/intf_any_test.cpp",
+    "api_unit_test/src/interface/intf_attach_test.cpp",
+    "api_unit_test/src/interface/intf_call_context_test.cpp",
+    "api_unit_test/src/interface/intf_class_registry_test.cpp",
+    "api_unit_test/src/interface/intf_container_observer_test.cpp",
+    "api_unit_test/src/interface/intf_container_query_test.cpp",
+    "api_unit_test/src/interface/intf_container_test.cpp",
+    "api_unit_test/src/interface/intf_content_test.cpp",
+    "api_unit_test/src/interface/intf_enum_test.cpp",
+    "api_unit_test/src/interface/intf_metadata_test.cpp",
+    "api_unit_test/src/interface/intf_object_hierarchy_observer_test.cpp",
+    "api_unit_test/src/interface/intf_object_registry_test.cpp",
+    "api_unit_test/src/interface/intf_proxy_object_test.cpp",
+    "api_unit_test/src/interface/intf_startable_controller_test.cpp",
+    "api_unit_test/src/interface/intf_task_queue_registry_test.cpp",
+    "api_unit_test/src/interface/intf_task_queue_test.cpp",
+    "api_unit_test/src/interface/simple_event_test.cpp",
+    "${LUME_CORE_PATH}/api/core/property_tools/property_data.cpp",
+  ]
+
+  # External deps
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "googletest:gmock",
+    "googletest:gtest"
+  ]
+
+  # Test data
+  resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeMeta/test/unittest/assets/ohos_test.xml"
+
+  # graphic/graphic_3d
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+# group ("unittest")
+group("unittest") {
+    testonly = true
+    deps = [ 
+        ":lume_meta_api_test",
+    ]
+}

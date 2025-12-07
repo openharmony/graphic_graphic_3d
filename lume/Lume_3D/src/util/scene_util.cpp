@@ -57,7 +57,9 @@
 #include <core/namespace.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
+#include <core/property/property_handle_util.h>
 #include <core/property/property_types.h>
+#include <core/property_tools/core_metadata.inl>
 #include <core/util/intf_frustum_util.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
@@ -296,7 +298,8 @@ Entity SceneUtil::CreateLight(
     tcm->Set(light, tc);
 
     LightComponent lc = lightComponent;
-    lc.shadowEnabled = (lc.type != LightComponent::Type::POINT) && lc.shadowEnabled;
+    lc.shadowEnabled =
+        ((lc.type != LightComponent::Type::POINT) && (lc.type != LightComponent::Type::RECT)) && lc.shadowEnabled;
     // NOTE: range is calculated automatically by the render system if the value is default 0.0
     lcm->Set(light, lc);
 
@@ -372,7 +375,7 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
         }
         return meshCM->Read(rmcHandle->mesh);
     }();
-    if (!meshHandle && meshHandle->submeshes.empty()) {
+    if (!meshHandle || meshHandle->submeshes.empty()) {
         return plane;
     }
     if (auto matHandle = matCM->Write(meshHandle->submeshes[0].material); matHandle) {
@@ -408,6 +411,22 @@ void SceneUtil::CreateReflectionPlaneComponent(IEcs& ecs, const Entity& nodeEnti
         prc.depthRenderTarget = plane.depthTarget;
         prc.renderTargetResolution[0] = DEFAULT_PLANE_TARGET_SIZE.x;
         prc.renderTargetResolution[1] = DEFAULT_PLANE_TARGET_SIZE.y;
+        prcm->Set(plane.entity, prc);
+    }
+}
+
+void SceneUtil::CreateReflectionPlaneComponent(
+    CORE_NS::IEcs& ecs, const CORE_NS::Entity& nodeEntity, PlanarReflectionComponent::Flags flags)
+{
+    SceneUtil::ReflectionPlane plane = CreateReflectionPlaneObjectFromEntity(ecs, graphicsContext_, nodeEntity);
+    if (EntityUtil::IsValid(plane.entity)) {
+        auto prcm = GetManager<IPlanarReflectionComponentManager>(ecs);
+        PlanarReflectionComponent prc;
+        prc.colorRenderTarget = plane.colorTarget;
+        prc.depthRenderTarget = plane.depthTarget;
+        prc.renderTargetResolution[0] = DEFAULT_PLANE_TARGET_SIZE.x;
+        prc.renderTargetResolution[1] = DEFAULT_PLANE_TARGET_SIZE.y;
+        prc.additionalFlags |= flags;
         prcm->Set(plane.entity, prc);
     }
 }
@@ -649,7 +668,7 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
             RENDER_NS::GraphicsState gs = shaderMgr.GetGraphicsState(rsd.graphicsState);
             gs.rasterizationState.cullModeFlags = info.cullModeFlags;
             gs.rasterizationState.frontFace = info.frontFace;
-            const uint64_t gsHash = shaderMgr.HashGraphicsState(gs);
+            const uint64_t gsHash = shaderMgr.HashGraphicsState(gs, renderSlotId);
             const RenderHandleReference gsHandle = shaderMgr.GetGraphicsStateHandleByHash(gsHash);
             if (gsHandle) {
                 materialShader.graphicsState = GetOrCreateEntityReference(entityMgr, *renderHandleMgr, gsHandle);
@@ -662,7 +681,7 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
             RENDER_NS::GraphicsState gs = shaderMgr.GetGraphicsState(rsd.graphicsState);
             gs.rasterizationState.cullModeFlags = info.cullModeFlags;
             gs.rasterizationState.frontFace = info.frontFace;
-            const uint64_t gsHash = shaderMgr.HashGraphicsState(gs);
+            const uint64_t gsHash = shaderMgr.HashGraphicsState(gs, renderSlotId);
             const RenderHandleReference gsHandle = shaderMgr.GetGraphicsStateHandleByHash(gsHash);
             if (gsHandle) {
                 depthShader.graphicsState = GetOrCreateEntityReference(entityMgr, *renderHandleMgr, gsHandle);
@@ -690,7 +709,7 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
                 RENDER_NS::GraphicsState gs = shaderMgr.GetGraphicsState(rsd.graphicsState);
                 gs.rasterizationState.cullModeFlags = info.cullModeFlags;
                 gs.rasterizationState.frontFace = info.frontFace;
-                const uint64_t gsHash = shaderMgr.HashGraphicsState(gs);
+                const uint64_t gsHash = shaderMgr.HashGraphicsState(gs, renderSlotId);
                 const RenderHandleReference gsHandle = shaderMgr.GetGraphicsStateHandleByHash(gsHash);
                 shader.graphicsState = GetOrCreateEntityReference(entityMgr, *renderHandleMgr, gsHandle);
             } else {
@@ -1020,8 +1039,8 @@ vector<Entity> GatherEntities(const IEcs& source)
     return entities;
 }
 
-void UpdateEntities(
-    IComponentManager* manager, Entity entity, const BASE_NS::unordered_map<CORE_NS::Entity, CORE_NS::Entity>& oldToNew)
+void UpdateEntities(IComponentManager* manager, Entity entity,
+    const BASE_NS::unordered_map<CORE_NS::Entity, ISceneUtil::MappedEntity>& oldToNew)
 {
     auto* data = manager->GetData(entity);
     if (!data) {
@@ -1035,6 +1054,19 @@ void UpdateEntities(
     // as multiple properties can point to the same value, use set to track which have been updates.
     std::unordered_set<uintptr_t> updatedProperties;
     auto& em = manager->GetEcs().GetEntityManager();
+
+    // components with dynamic properties require special attention as properties can get invalidated. as a quick fix do
+    // this for MaterialComponent, but a generic solution is preferred.
+    if (manager->GetUid() == IMaterialComponentManager::UID) {
+        if (auto offset = PropertyData::FindProperty(data->Owner()->MetaData(), "materialShader.shader")) {
+            updatedProperties.insert(base + offset.offset);
+            if (const auto it = oldToNew.find(*(reinterpret_cast<const EntityReference*>(base + offset.offset)));
+                it != oldToNew.end()) {
+                *MakeScopedHandle<EntityReference>(data, offset.offset) = em.GetReferenceCounted(it->second.entity);
+            }
+        }
+    }
+
     for (const auto& property : data->Owner()->MetaData()) {
         FindEntities(
             property, base + property.offset,
@@ -1045,7 +1077,7 @@ void UpdateEntities(
                 updatedProperties.insert(reinterpret_cast<uintptr_t>(entity));
                 if (const auto it = oldToNew.find(*entity); it != oldToNew.end()) {
                     data->WLock();
-                    *entity = it->second;
+                    *entity = it->second.entity;
                     data->WUnlock();
                 } else {
                     CORE_LOG_D("couldn't find %s", to_hex(entity->id).data());
@@ -1058,7 +1090,7 @@ void UpdateEntities(
                 updatedProperties.insert(reinterpret_cast<uintptr_t>(entity));
                 if (const auto it = oldToNew.find(*entity); it != oldToNew.end()) {
                     data->WLock();
-                    *entity = em.GetReferenceCounted(it->second);
+                    *entity = em.GetReferenceCounted(it->second.entity);
                     data->WUnlock();
                 } else {
                     CORE_LOG_D("couldn't find %s", to_hex(static_cast<const Entity>(*entity).id).data());
@@ -1070,36 +1102,49 @@ void UpdateEntities(
 
 struct CloneResults {
     vector<Entity> newEntities;
-    unordered_map<Entity, Entity> oldToNew;
+    unordered_map<Entity, ISceneUtil::MappedEntity> oldToNew;
+    vector<Entity> extMapEntities;
 };
 
-CloneResults CloneEntities(IEcs& destination, const IEcs& source, vector<Entity> srcEntities)
+CloneResults CloneEntities(IEcs& destination, const IEcs& source, vector<Entity> srcEntities,
+    unordered_map<Entity, ISceneUtil::MappedEntity> srcToDst)
 {
-    unordered_map<Entity, Entity> srcToDst;
     vector<Entity> newEntities;
+    vector<Entity> extMapEntities;
     newEntities.reserve(srcEntities.size());
     vector<IComponentManager*> managers;
     while (!srcEntities.empty()) {
         const Entity srcEntity = srcEntities.back();
         srcEntities.pop_back();
 
-        const Entity dstEntity = destination.GetEntityManager().Create();
-        newEntities.push_back(dstEntity);
-        srcToDst[srcEntity] = dstEntity;
+        auto& mappedEntity = srcToDst[srcEntity];
+        Entity dstEntity;
+        bool copy = !EntityUtil::IsValid(mappedEntity.entity);
+        if (copy) {
+            dstEntity = destination.GetEntityManager().Create();
+            mappedEntity.entity = dstEntity;
+        } else {
+            extMapEntities.push_back(mappedEntity.entity);
+            dstEntity = mappedEntity.entity;
+            copy = mappedEntity.overwrite;
+        }
+        if (copy) {
+            newEntities.push_back(dstEntity);
 
-        source.GetComponents(srcEntity, managers);
-        for (const auto& srcManager : managers) {
-            const auto* srcData = srcManager->GetData(srcEntity);
-            if (!srcData) {
-                continue;
+            source.GetComponents(srcEntity, managers);
+            for (const auto& srcManager : managers) {
+                auto* dstManager = destination.GetComponentManager(srcManager->GetUid());
+                if (!dstManager) {
+                    CORE_LOG_W("ComponentManager %s missing from destination.", to_string(srcManager->GetUid()).data());
+                    continue;
+                }
+                dstManager->Create(dstEntity);
+                const auto* srcData = srcManager->GetData(srcEntity);
+                if (!srcData) {
+                    continue;
+                }
+                dstManager->SetData(dstEntity, *srcData);
             }
-            auto* dstManager = destination.GetComponentManager(srcManager->GetUid());
-            if (!dstManager) {
-                CORE_LOG_W("ComponentManager %s missing from destination.", to_string(srcManager->GetUid()).data());
-                continue;
-            }
-            dstManager->Create(dstEntity);
-            dstManager->SetData(dstEntity, *srcData);
         }
     }
 
@@ -1109,11 +1154,11 @@ CloneResults CloneEntities(IEcs& destination, const IEcs& source, vector<Entity>
             UpdateEntities(dstManager, newEntity, srcToDst);
         }
     }
-    return CloneResults { BASE_NS::move(newEntities), BASE_NS::move(srcToDst) };
+    return CloneResults { BASE_NS::move(newEntities), BASE_NS::move(srcToDst), BASE_NS::move(extMapEntities) };
 }
 } // namespace
 
-Entity SceneUtil::Clone(
+ISceneUtil::ClonedEntities SceneUtil::Clone(
     IEcs& destination, const Entity parentEntity, const IEcs& source, const Entity sourceEntity) const
 {
     if (&destination == &source) {
@@ -1125,8 +1170,8 @@ Entity SceneUtil::Clone(
     if (!CORE_NS::EntityUtil::IsValid(sourceEntity) || !source.GetEntityManager().IsAlive(sourceEntity)) {
         return {};
     }
-    auto result = CloneEntities(destination, source, GatherEntities(source, sourceEntity));
-    Entity destinationEntity = result.oldToNew[sourceEntity];
+    auto result = CloneEntities(destination, source, GatherEntities(source, sourceEntity), {});
+    Entity destinationEntity = result.oldToNew[sourceEntity].entity;
     auto* nodeManager = GetManager<INodeComponentManager>(destination);
     if (nodeManager) {
         auto handle = nodeManager->Write(destinationEntity);
@@ -1136,7 +1181,29 @@ Entity SceneUtil::Clone(
     } else {
         CORE_LOG_W("Failed to reparent: missing INodeComponentManager");
     }
-    return destinationEntity;
+    return ISceneUtil::ClonedEntities { destinationEntity, BASE_NS::move(result.newEntities) };
+}
+
+ISceneUtil::ClonedEntities SceneUtil::Clone(IEcs& source, Entity sourceEntity, Entity parentEntity) const
+{
+    if (CORE_NS::EntityUtil::IsValid(parentEntity) && !source.GetEntityManager().IsAlive(parentEntity)) {
+        return {};
+    }
+    if (!CORE_NS::EntityUtil::IsValid(sourceEntity) || !source.GetEntityManager().IsAlive(sourceEntity)) {
+        return {};
+    }
+    auto result = CloneEntities(source, source, GatherEntities(source), {});
+    Entity destinationEntity = result.oldToNew[sourceEntity].entity;
+    auto* nodeManager = GetManager<INodeComponentManager>(source);
+    if (nodeManager) {
+        auto handle = nodeManager->Write(destinationEntity);
+        if (handle) {
+            handle->parent = parentEntity;
+        }
+    } else {
+        CORE_LOG_W("Failed to reparent: missing INodeComponentManager");
+    }
+    return ISceneUtil::ClonedEntities { destinationEntity, BASE_NS::move(result.newEntities) };
 }
 
 vector<Entity> SceneUtil::Clone(IEcs& destination, const IEcs& source) const
@@ -1145,8 +1212,17 @@ vector<Entity> SceneUtil::Clone(IEcs& destination, const IEcs& source) const
         return {};
     }
 
-    auto result = CloneEntities(destination, source, GatherEntities(source));
+    auto result = CloneEntities(destination, source, GatherEntities(source), {});
     return result.newEntities;
+}
+ISceneUtil::PartialClonedEntities SceneUtil::Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source,
+    BASE_NS::unordered_map<CORE_NS::Entity, MappedEntity> srcToDst) const
+{
+    if (&destination == &source) {
+        return {};
+    }
+    auto result = CloneEntities(destination, source, GatherEntities(source), BASE_NS::move(srcToDst));
+    return { result.newEntities, result.extMapEntities };
 }
 
 bool SceneUtil::IsSphereInsideCameraFrustum(

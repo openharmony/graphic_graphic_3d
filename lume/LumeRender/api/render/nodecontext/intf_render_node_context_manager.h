@@ -57,6 +57,9 @@ public:
     /** Get render node context descriptor set manager. Per render node descriptor set manager.
      */
     virtual INodeContextDescriptorSetManager& GetDescriptorSetManager() = 0;
+    /** Get render node context descriptor set manager. Per render node descriptor set manager.
+     */
+    virtual const INodeContextDescriptorSetManager& GetDescriptorSetManager() const = 0;
 
     /** Get render node context pso manager. Per render node PSO cache.
      */

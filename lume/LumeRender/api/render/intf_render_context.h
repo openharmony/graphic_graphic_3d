@@ -115,7 +115,7 @@ public:
 
     /** Get active device. */
     virtual IDevice& GetDevice() const = 0;
-    /** Get rendererer */
+    /** Get renderer */
     virtual IRenderer& GetRenderer() const = 0;
     /** Get render node graph manager */
     virtual IRenderNodeGraphManager& GetRenderNodeGraphManager() const = 0;

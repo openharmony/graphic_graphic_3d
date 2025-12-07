@@ -16,11 +16,8 @@
 #include "spirv_opt_strip_extensions.h"
 
 #include "source/opt/ir_context.h"
-#include "source/util/string_utils.h"
 
-namespace spvtools {
-
-namespace opt {
+namespace spvtools::opt {
 
 Pass::Status StripPreprocessorDebugInfoPass::Process()
 {
@@ -44,5 +41,4 @@ Pass::Status StripPreprocessorDebugInfoPass::Process()
     return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
-} // namespace opt
-} // namespace spvtools
+} // namespace spvtools::opt

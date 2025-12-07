@@ -83,6 +83,7 @@ IComponentManager* IAnimationStateComponentManagerInstance(IEcs& ecs)
 
 void IAnimationStateComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<AnimationStateComponentManager*>(instance);
+    static_cast<AnimationStateComponentManager*>(instance)->~AnimationStateComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

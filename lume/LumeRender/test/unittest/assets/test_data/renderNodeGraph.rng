@@ -1,0 +1,258 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateCameraGpuImage",
+            "nodeName": "RenderNodeCreateSceneCameraTargets",
+            "renderCommandListReserveType": "empty",
+            "resourcesForCreation": {
+                "gpuImageDescs": [
+                    {
+                        "name": "RGBA16Target",
+                        "configurationName": "RenderConfiguration",
+                        "imageType": "2d",
+                        "imageViewType": "2d",
+                        "format": "r16g16b16a16_sfloat",
+                        "imageTiling": "optimal",
+                        "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                        "engineCreationFlags": "dynamic_barriers",
+                        "width": 1024,
+                        "height": 1024,
+                        "depth": 1
+                    },
+                    {
+                        "name": "DepthBuffer",
+                        "configurationName": "RenderConfiguration",
+                        "imageType": "2d",
+                        "imageViewType": "2d",
+                        "format": "d24_unorm_s8_uint",
+                        "imageTiling": "optimal",
+                        "usageFlags": "depth_stencil_attachment",
+                        "engineCreationFlags": "dynamic_barriers",
+                        "width": 1024,
+                        "height": 1024,
+                        "depth": 1
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeCreateGpuImage",
+            "nodeName": "RenderNodeCreateBaseTargets",
+            "renderCommandListReserveType": "empty",
+            "resourcesForCreation": {
+                "gpuImageDescs": [
+                    {
+                        "name": "RGB11Target",
+                        "configurationName": "RenderConfiguration",
+                        "imageType": "2d",
+                        "imageViewType": "2d",
+                        "format": "b10g11r11_ufloat_pack32",
+                        "imageTiling": "optimal",
+                        "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                        "engineCreationFlags": "dynamic_barriers",
+                        "width": 1024,
+                        "height": 1024,
+                        "depth": 1
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeLights",
+            "nodeName": "RenderNodeLights",
+            "renderCommandListReserveType": "empty",
+            "resourcesForCreation": {
+                "gpuBufferDescs": [
+                    {
+                        "name": "LightDataBuffer",
+                        "usageFlags": "uniform",
+                        "memoryPropertyFlags": "host_visible | host_coherent"
+                    },
+                    {
+                        "name": "LightCountBuffer",
+                        "usageFlags": "uniform",
+                        "memoryPropertyFlags": "host_visible | host_coherent"
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeCameras",
+            "nodeName": "RenderNodeCameras",
+            "renderCommandListReserveType": "empty"
+        },
+        {
+            "typeName": "RenderNodePbrRenderSlot",
+            "nodeName": "RenderNodePbrRenderSlotOpaque",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "RenderSlotPbrForwardOpaque",
+            "maxObjectCount": 256,
+            "renderSlotSortType": "front_to_back",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "clearDepth": [ 1.0, 0 ],
+                        "name": "DepthBuffer"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "name": "RGBA16Target"
+                    }
+                ],
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "inputAttachmentIndices": [],
+                    "colorAttachmentIndices": [ 1 ],
+                    "resolveAttachmentIndices": []
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeEnvCubemap",
+            "nodeName": "RenderNodeFullscreenEnvCube",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "shader": "FullscreenEnvCube",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "load",
+                        "storeOp": "store",
+                        "name": "DepthBuffer"
+                    },
+                    {
+                        "loadOp": "load",
+                        "storeOp": "store",
+                        "name": "RGBA16Target"
+                    }
+                ],
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodePbrRenderSlot",
+            "nodeName": "RenderNodePbrRenderSlotTranslucent",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "RenderSlotPbrForwardTranslucent",
+            "maxObjectCount": 256,
+            "renderSlotSortType": "back_to_front",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "load",
+                        "storeOp": "dont_care",
+                        "name": "DepthBuffer"
+                    },
+                    {
+                        "loadOp": "load",
+                        "storeOp": "store",
+                        "name": "RGBA16Target"
+                    }
+                ],
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeBloom",
+            "nodeName": "BloomNode",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "descriptorReserveType": "reserve_in_node_graph",
+            "customDescriptorCounts": [
+                {
+                    "type": "sampled_image",
+                    "count": 32
+                },
+                {
+                    "type": "storage_image",
+                    "count": 32
+                },
+                {
+                    "type": "sampler",
+                    "count": 24
+                }
+            ],
+            "resources": {
+                "customInputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "RGBA16Target"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "RGB11Target"
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeBackBuffer",
+            "nodeName": "RenderBackBuffer",
+            "enableCommandBufferRecording": false,
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "shader": "FullscreenPostProcessTonemap",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "CORE_DEFAULT_BACKBUFFER"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": 0
+                }
+            },
+            "resources": {
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "RGB11Target"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ]
+            }
+        }
+    ]
+}

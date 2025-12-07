@@ -21,7 +21,7 @@
 #include <meta/ext/serialization/serializer.h>
 #include <meta/interface/interface_helpers.h>
 #include <meta/interface/resource/intf_resource.h>
-#include <meta/interface/resource/intf_resource_consumer.h>
+#include <meta/interface/serialization/intf_exporter_state.h>
 #include <meta/interface/serialization/intf_serializable.h>
 
 META_BEGIN_NAMESPACE()
@@ -30,8 +30,7 @@ class Resource : public IntroduceInterfaces<CORE_NS::IResource, ISerializable, C
 public:
     bool SerialiseAsResourceId(IExportContext& c) const
     {
-        auto ri = interface_cast<IResourceConsumer>(c.Context());
-        return ri && ri->GetResourceManager();
+        return c.Context().GetResourceManager() != nullptr;
     }
     ReturnError ExportResourceId(IExportContext& c) const
     {
@@ -46,7 +45,7 @@ public:
                 }
             }
         } else {
-            CORE_LOG_E("Empty resource id when serialising resource");
+            CORE_LOG_W("Empty resource id when trying to serialising resource");
         }
         return res;
     }

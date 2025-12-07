@@ -136,7 +136,7 @@ lume_rofs("lume_dotfield_rofs") {
     output_obj = "${DOTFIELD_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x86_64") {
     output_obj = "${DOTFIELD_ROFS}_x64.o"
   }
 
@@ -176,7 +176,7 @@ source_set("lume_dotfield_rofs_obj") {
     output_obj = "${DOTFIELD_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x86_64") {
     output_obj = "${DOTFIELD_ROFS}_x64.o"
   }
 

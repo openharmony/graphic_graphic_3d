@@ -32,6 +32,7 @@
 #include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
 #include <base/containers/vector.h>
+#include <base/math/float_packer.h>
 #include <base/math/mathf.h>
 #include <base/math/matrix_util.h>
 #include <base/math/vector.h>
@@ -69,8 +70,6 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr bool ENABLE_RT { true };
-
 constexpr bool USE_IMMUTABLE_SAMPLERS { false };
 constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
 constexpr string_view POD_DATA_STORE_NAME { "RenderDataStorePod" };
@@ -279,6 +278,7 @@ struct CreatedTargetHandles {
     RenderHandle color;
     RenderHandle depth;
     RenderHandle colorResolve;
+    RenderHandle colorResolveUpscaled;
     RenderHandle colorMsaa;
     RenderHandle depthMsaa;
     RenderHandle baseColor;
@@ -292,6 +292,7 @@ CreatedTargetHandles FillCreatedTargets(const RenderNodeDefaultCameraController:
         targets.outputColor.GetHandle(),
         targets.depth.GetHandle(),
         targets.colorResolve.GetHandle(),
+        targets.colorResolveUpscaled.GetHandle(),
         targets.colorMsaa.GetHandle(),
         targets.depthMsaa.GetHandle(),
         targets.baseColor.GetHandle(),
@@ -418,7 +419,7 @@ void CreateHistoryTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const R
 void CreateColorTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderCamera& camera,
     const GpuImageDesc& targetDesc, const string_view us, const string_view customCamRngId,
     const RenderNodeDefaultCameraController::CameraResourceSetup& cameraResourceSetup,
-    RenderNodeDefaultCameraController::CreatedTargets& createdTargets)
+    RenderNodeDefaultCameraController::CreatedTargets& createdTargets, float upscaleRatio)
 {
 #if (CORE3D_VALIDATION_ENABLED == 1)
     CORE_LOG_D("CORE3D_VALIDATION: creating camera color targets %s", customCamRngId.data());
@@ -458,6 +459,17 @@ void CreateColorTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const Ren
 #else
         createdTargets.colorResolve = gpuResourceMgr.Create(createdTargets.colorResolve, desc);
 #endif
+        if (upscaleRatio > 1.0f) {
+            desc.width = static_cast<uint32_t>(static_cast<float>(desc.width) * upscaleRatio);
+            desc.height = static_cast<uint32_t>(static_cast<float>(desc.height) * upscaleRatio);
+#if (CORE3D_VALIDATION_ENABLED == 1)
+            createdTargets.colorResolveUpscaled = gpuResourceMgr.Create(
+                us + DefaultMaterialCameraConstants::CAMERA_COLOR_UPSCALED_PREFIX_NAME + "RESL_" + customCamRngId,
+                desc);
+#else
+            createdTargets.colorResolveUpscaled = gpuResourceMgr.Create(createdTargets.colorResolveUpscaled, desc);
+#endif
+        }
     }
 
     CreateVelocityTarget(gpuResourceMgr, camera, targetDesc, us, customCamRngId, cameraResourceSetup, createdTargets);
@@ -569,20 +581,17 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
     renderNodeContextMgr_ = &renderNodeContextMgr;
 
     // get flags for rt
-    if constexpr (ENABLE_RT) {
+    {
         rtEnabled_ = false;
-        IRenderContext &renderContext = renderNodeContextMgr_->GetRenderContext();
-        CORE_NS::IClassRegister *cr = renderContext.GetInterface<CORE_NS::IClassRegister>();
-        if (cr != nullptr) {
-            IGraphicsContext *graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(*cr, UID_GRAPHICS_CONTEXT);
-            if (graphicsContext) {
+        IRenderContext& renderContext = renderNodeContextMgr_->GetRenderContext();
+        if (auto* renderContextClassRegister = renderContext.GetInterface<CORE_NS::IClassRegister>()) {
+            if (auto* graphicsContext =
+                    CORE_NS::GetInstance<IGraphicsContext>(*renderContextClassRegister, UID_GRAPHICS_CONTEXT)) {
                 const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
                 if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
                     rtEnabled_ = true;
                 }
             }
-        } else {
-            CORE_LOG_E("get null ClassRegister");
         }
     }
 
@@ -615,7 +624,7 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
     dsWeatherName_ = RenderNodeSceneUtil::GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
 
     currentScene_ = {};
-    currentScene_.customCamRngName = jsonInputs_.customCameraName;
+    currentScene_.customCamRngName = jsonInputs_.customCameraName + '_' + to_hex(jsonInputs_.customCameraId);
 
     // id checked first for custom camera
     if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
@@ -646,8 +655,8 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
 
     if (dataStoreScene && dataStoreCamera && dataStoreLight) {
         UpdateCurrentScene(*dataStoreScene, *dataStoreCamera, *dataStoreLight);
+        prevCameraResolution_ = { currentScene_.camera.renderResolution };
         CreateResources();
-        RegisterOutputs();
         CreateBuffers();
 
         // get the camera buffers
@@ -657,6 +666,7 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
             uboHandles_.tlas = renderNodeContextMgr_->GetGpuResourceManager().GetBufferHandle(
                 dataStoreScene->GetName() + DefaultMaterialMaterialConstants::MATERIAL_TLAS_PREFIX_NAME);
         }
+        RegisterOutputs();
     }
     shadowBuffers_ = GetShadowBufferNodeData(gpuResourceMgr, stores_.dataStoreNameScene);
 }
@@ -807,6 +817,7 @@ void RenderNodeDefaultCameraController::UpdateCurrentScene(const IRenderDataStor
     currentScene_.cameraIdx = cameraIdx;
     currentScene_.sceneTimingData = { scene.sceneDeltaTime, scene.deltaTime, scene.totalTime,
         *reinterpret_cast<const float*>(&scene.frameIndex) };
+    screenPercentage_ = Math::clamp(currentScene_.camera.screenPercentage, 0.25f, 1.0f);
 
     ValidateRenderCamera(currentScene_.camera);
 
@@ -827,10 +838,26 @@ void RenderNodeDefaultCameraController::RegisterOutputs()
     shrMgr.RegisterRenderNodeOutput(DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_OUTPUT, colorTarget);
     shrMgr.RegisterGlobalRenderNodeOutput(DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_OUTPUT, colorTarget);
 
+    shrMgr.RegisterRenderNodeOutput(DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_BUFFER, uboHandles_.cameraData);
+    shrMgr.RegisterGlobalRenderNodeOutput(
+        DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_BUFFER, uboHandles_.cameraData);
+
     // color is output always, depth usually (not with MSAA if not forced)
     // colorResolve is used with msaa and hdr, the output is the 32 bit srgb color usually
     const RenderHandle regDepth = RenderHandleUtil::IsValid(cth.depth) ? cth.depth : depthTarget;
     const RenderHandle regColor = RenderHandleUtil::IsValid(cth.colorResolve) ? cth.colorResolve : colorTarget;
+
+    const RenderHandle regColorUpscaled =
+        (RenderHandleUtil::IsValid(cth.colorResolveUpscaled) &&
+            currentScene_.camera.renderPipelineType != RenderCamera::RenderPipelineType::LIGHT_FORWARD)
+            ? cth.colorResolveUpscaled
+            : colorTarget;
+
+    shrMgr.RegisterRenderNodeOutput(
+        DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_COLOR_UPSCALED, regColorUpscaled);
+    shrMgr.RegisterGlobalRenderNodeOutput(
+        DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_COLOR_UPSCALED, regColorUpscaled);
+
     if (RenderHandleUtil::IsValid(regDepth)) {
         shrMgr.RegisterRenderNodeOutput(DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_DEPTH, regDepth);
         shrMgr.RegisterGlobalRenderNodeOutput(DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_DEPTH, regDepth);
@@ -908,7 +935,15 @@ void RenderNodeDefaultCameraController::CreateResources()
         if (isMultiview) {
             colorDesc.layerCount = mvLayerCount;
         }
-        const bool colorTargetChanged = ColorTargetsRecreationNeeded(camera, camRes_, colorDesc);
+
+        const bool upscaleChanged = camera.renderResolution != prevCameraResolution_;
+        const float upscaleRatio = 1.0f / screenPercentage_;
+        prevCameraResolution_ = camera.renderResolution;
+        const bool colorFormatChanged = prevColorFormat_ != camRes_.inputImageDescs.output.format;
+        prevColorFormat_ = camRes_.inputImageDescs.output.format;
+
+        const bool colorTargetChanged =
+            ColorTargetsRecreationNeeded(camera, camRes_, colorDesc) || upscaleChanged || colorFormatChanged;
 
         GpuImageDesc depthDesc;
         if (!validDepthHandle) {
@@ -917,7 +952,12 @@ void RenderNodeDefaultCameraController::CreateResources()
         } else {
             depthDesc = gpuResMgr.GetImageDescriptor(camRes_.depthTarget);
         }
-        bool depthTargetChanged = DepthTargetsRecreationNeeded(camera, camRes_, depthDesc);
+
+        const bool depthFormatChanged = prevDepthFormat_ != camRes_.inputImageDescs.depth.format;
+        prevDepthFormat_ = camRes_.inputImageDescs.depth.format;
+
+        bool depthTargetChanged =
+            DepthTargetsRecreationNeeded(camera, camRes_, depthDesc) || upscaleChanged || depthFormatChanged;
         // depth size needs to match color
         if ((colorDesc.width != depthDesc.width) || (colorDesc.height != depthDesc.height)) {
             depthTargetChanged = true;
@@ -932,6 +972,7 @@ void RenderNodeDefaultCameraController::CreateResources()
         camRes_.pipelineType = camera.renderPipelineType;
         camRes_.isMultiview = (camera.multiViewCameraCount > 0U);
         camRes_.sampleCountFlags = camera.msaaSampleCountFlags;
+
         if (isMultiview) {
             colorDesc.layerCount = mvLayerCount;
         }
@@ -958,8 +999,8 @@ void RenderNodeDefaultCameraController::CreateResources()
         // all decisions are done based on color and depth targets
         const string_view us = stores_.dataStoreNameScene;
         if (colorTargetChanged) {
-            CreateColorTargets(
-                gpuResMgr, camera, colorDesc, us, currentScene_.customCamRngName, camRes_, createdTargets_);
+            CreateColorTargets(gpuResMgr, camera, colorDesc, us, currentScene_.customCamRngName, camRes_,
+                createdTargets_, upscaleRatio);
         }
         if (depthTargetChanged) {
             CreateDepthTargets(
@@ -1114,7 +1155,7 @@ Math::UVec4 GetMultiEnvironmentIndices(const RenderCamera& cam)
         Math::UVec4 multiEnvIndices = { 0U, 0U, 0U, 0U };
         // the first value in multiEnvIndices is the count
         // first index is the main environment, next indices are the blend environments
-        for (uint32_t idx = 1U; idx < cam.environment.multiEnvCount; ++idx) {
+        for (uint32_t idx = 1U; idx < cam.environment.multiEnvCount + 1U; ++idx) {
             multiEnvIndices[0U]++;
             multiEnvIndices[idx] = idx;
         }
@@ -1186,6 +1227,8 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                     multiEnvIndices,
                     {},
                     {},
+                    {},
+                    {},
                 };
                 constexpr size_t countOfSh = countof(envStruct.shIndirectCoefficients);
                 if (currEnv.radianceCubemap || (currEnv.multiEnvCount > 0U)) {
@@ -1197,9 +1240,17 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                         envStruct.shIndirectCoefficients[jdx] = defaultSHIndirectCoefficients[jdx];
                     }
                 }
-                // sky atmosphere
-                envStruct.packedSun = Math::Vec4(ws.sunPos, 0.0f);
-                envStruct.packedRain = { ws.coverage, ws.precipitation, ws.cloudType, 0.0f };
+
+                envStruct.packedSun = Math::Vec4(ws.sunDirElevation, 0.0f);
+                envStruct.groundColor = ws.groundColor;
+                if (currEnv.backgroundType == RenderCamera::Environment::BG_TYPE_SKY) {
+                    envStruct.packedSun.w = 1.0f;
+                } else {
+                    envStruct.packedSun.w = 0.0f;
+                }
+
+                envStruct.packedPhases =
+                    Math::Vec4(ws.timeOfDay, ws.moonBrightness, ws.nightGlow, ws.skyViewBrightness);
 
                 if (!CloneData(data, size_t(dataEnd - data), &envStruct, sizeof(DefaultMaterialEnvironmentStruct))) {
                     CORE_LOG_E("environment ubo copying failed.");
@@ -1265,30 +1316,31 @@ void RenderNodeDefaultCameraController::UpdateLightBuffer()
             for (size_t idx = 0; idx < sortedFlags.size(); ++idx) {
                 const auto& sortData = sortedFlags[idx];
                 const auto& light = lights[sortData.index];
+                // drop lights with no matching camera layers
                 if (light.layerMask & currentScene_.camera.layerMask) {
-                    // drop lights with no matching camera layers
-                    using UsageFlagBits = RenderLight::LightUsageFlagBits;
-                    if (sortData.lightUsageFlags & UsageFlagBits::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT) {
-                        lightCounts.directionalLightCount++;
-                    } else if (sortData.lightUsageFlags & UsageFlagBits::LIGHT_USAGE_POINT_LIGHT_BIT) {
-                        lightCounts.pointLightCount++;
-                    } else if (sortData.lightUsageFlags & UsageFlagBits::LIGHT_USAGE_SPOT_LIGHT_BIT) {
-                        lightCounts.spotLightCount++;
-                    }
-
+                    RenderLightHelper::EvaluateLightCounts(sortData.lightUsageFlags, lightCounts);
                     RenderLightHelper::CopySingleLight(lights[sortData.index], shadowCount, singleLightStruct++);
                 }
             }
 
             DefaultMaterialLightStruct* lightStruct = reinterpret_cast<DefaultMaterialLightStruct*>(data);
-            lightStruct->directionalLightBeginIndex = 0;
+            uint32_t currLightCount = 0U;
+
+            lightStruct->directionalLightBeginIndex = 0U;
             lightStruct->directionalLightCount = lightCounts.directionalLightCount;
-            lightStruct->pointLightBeginIndex = lightCounts.directionalLightCount;
+            currLightCount += lightCounts.directionalLightCount;
+
+            lightStruct->pointLightBeginIndex = currLightCount;
             lightStruct->pointLightCount = lightCounts.pointLightCount;
-            lightStruct->spotLightBeginIndex = lightCounts.directionalLightCount + lightCounts.pointLightCount;
+            currLightCount += lightCounts.pointLightCount;
+
+            lightStruct->spotLightBeginIndex = currLightCount;
             lightStruct->spotLightCount = lightCounts.spotLightCount;
-            lightStruct->pad0 = 0;
-            lightStruct->pad1 = 0;
+            currLightCount += lightCounts.spotLightCount;
+
+            lightStruct->rectLightBeginIndex = currLightCount;
+            lightStruct->rectLightCount = lightCounts.rectLightCount;
+
             lightStruct->clusterSizes = Math::UVec4(0, 0, 0, 0);
             lightStruct->clusterFactors = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
             lightStruct->atlasSizeInvSize = shadowAtlasSizeInvSize;
@@ -1380,6 +1432,8 @@ void RenderNodeDefaultCameraController::ParseRenderNodeInputs()
             camRes_.inputImageDescs.depth = ref.desc;
         } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_COLOR) {
             camRes_.inputImageDescs.color = ref.desc;
+        } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_COLOR_UPSCALED) {
+            camRes_.inputImageDescs.colorUpscaled = ref.desc;
         } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_HISTORY) {
             camRes_.inputImageDescs.history = ref.desc;
         } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_VELOCITY_NORMAL) {

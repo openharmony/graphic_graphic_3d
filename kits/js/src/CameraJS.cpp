@@ -14,13 +14,22 @@
  */
 #include "CameraJS.h"
 
+#include <base/math/matrix.h>
+#include <base/math/matrix_util.h>
+
 #include <meta/api/make_callback.h>
+#include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_raycast.h>
 #include <scene/interface/intf_scene.h>
 
+#ifdef __SCENE_ADAPTER__
+#include "scene_adapter/scene_adapter.h"
+#endif
+
+#include "JsObjectCache.h"
 #include "ParamParsing.h"
 #include "Promise.h"
 #include "Raycast.h"
@@ -30,19 +39,50 @@
 #include "nodejstaskqueue.h"
 
 static constexpr uint32_t ACTIVE_RENDER_BIT = 1; //  CameraComponent::ACTIVE_RENDER_BIT  comes from lume3d...
+const float CAM_INDEX_RENDER = 15.7f;
+
+namespace {
+
+napi_value ConvertMatrixToJs(napi_env env, const BASE_NS::Math::Mat4X4& m)
+{
+    NapiApi::Object result(env);
+
+    const char* vecNames[] = { "x", "y", "z", "w" };
+
+    for (int j = 0; j < 4; ++j) {
+        NapiApi::Object columnVector(env);
+        for (int i = 0; i < 4; ++i) {
+            NapiApi::Value<float> number(env, m[j][i]);
+            columnVector.Set(vecNames[i], number.ToNapiValue());
+        }
+
+        result.Set(vecNames[j], columnVector.ToNapiValue());
+    }
+
+    return result.ToNapiValue();
+}
+
+} // anonymous namespace
 
 void* CameraJS::GetInstanceImpl(uint32_t id)
 {
     if (id == CameraJS::ID) {
-        return this;
+        return static_cast<CameraJS*>(this);
     }
-    return NodeImpl::GetInstanceImpl(id);
+    if (auto ret = NodeImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 void CameraJS::DisposeNative(void* sc)
 {
     if (!disposed_) {
         LOG_V("CameraJS::DisposeNative");
         disposed_ = true;
+        DisposeBridge(this);
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
         auto cam = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject());
 
         if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
@@ -51,17 +91,12 @@ void CameraJS::DisposeNative(void* sc)
 
         // make sure we release postProc settings
         if (auto ps = postProc_.GetObject()) {
-            NapiApi::Function func = ps.Get<NapiApi::Function>("destroy");
-            if (func) {
-                func.Invoke(ps);
-            }
+            ps.Invoke("destroy", {});
         }
         postProc_.Reset();
 
         clearColor_.reset();
         if (cam) {
-            UnsetNativeObject();
-
             auto ptr = cam->PostProcess()->GetValue();
             ReleaseObject(interface_pointer_cast<META_NS::IObject>(ptr));
             ptr.reset();
@@ -69,14 +104,11 @@ void CameraJS::DisposeNative(void* sc)
             // dispose all extra objects.
             resources_.clear();
 
-            if (!IsAttached()) {
+            bool attached = IsAttached();
+            if (!attached) {
                 cam->SetActive(false);
-                if (auto node = interface_pointer_cast<SCENE_NS::INode>(cam)) {
-                    if (auto scene = node->GetScene()) {
-                        scene->RemoveNode(BASE_NS::move(node)).Wait();
-                    }
-                }
             }
+            CleanupNode(this, attached);
         }
         scene_.Reset();
     }
@@ -100,14 +132,21 @@ void CameraJS::Init(napi_env env, napi_value exports)
     node_props.push_back(
         GetSetProperty<Object, CameraJS, &CameraJS::GetPostProcess, &CameraJS::SetPostProcess>("postProcess"));
     node_props.push_back(GetSetProperty<Object, CameraJS, &CameraJS::GetColor, &CameraJS::SetColor>("clearColor"));
+    node_props.push_back(GetProperty<Object, CameraJS, &CameraJS::GetEffects>("effects"));
 
     node_props.push_back(Method<FunctionContext<Object>, CameraJS, &CameraJS::WorldToScreen>("worldToScreen"));
     node_props.push_back(Method<FunctionContext<Object>, CameraJS, &CameraJS::ScreenToWorld>("screenToWorld"));
     node_props.push_back(Method<FunctionContext<Object, Object>, CameraJS, &CameraJS::Raycast>("raycast"));
 
+    node_props.push_back(Method<FunctionContext<>, CameraJS, &CameraJS::GetProjectionMatrix>("getProjectionMatrix"));
+    node_props.push_back(Method<FunctionContext<>, CameraJS, &CameraJS::GetViewMatrix>("getViewMatrix"));
+
     napi_value func;
     auto status = napi_define_class(env, "Camera", NAPI_AUTO_LENGTH, BaseObject::ctor<CameraJS>(), nullptr,
         node_props.size(), node_props.data(), &func);
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
@@ -163,6 +202,7 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImp
     }
 
     NapiApi::Object meJs(fromJs.This());
+    AddBridge("CameraJS",meJs);
     if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
         sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
@@ -178,6 +218,8 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImp
     if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
         meJs.Set("name", name);
     }
+
+    meJs.Set("postProcess", fromJs.GetNull());
 }
 void CameraJS::Finalize(napi_env env)
 {
@@ -187,12 +229,14 @@ void CameraJS::Finalize(napi_env env)
             camera->SetActive(false);
         }
     }
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 CameraJS::~CameraJS()
 {
     LOG_V("CameraJS -- ");
+    DestroyBridge(this);
 }
 napi_value CameraJS::GetFov(NapiApi::FunctionContext<>& ctx)
 {
@@ -342,10 +386,7 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
             // setting the exactly the same postprocess setting. do nothing.
             return;
         }
-        NapiApi::Function func = currentlySet.Get<NapiApi::Function>("destroy");
-        if (func) {
-            func.Invoke(currentlySet);
-        }
+        currentlySet.Invoke("destroy", {});
         postProc_.Reset();
     }
 
@@ -353,20 +394,18 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
     // see if we have a native backing for the input object..
     TrueRootObject* native = nullptr;
-
     if (psp) {
         native = psp.GetRoot();
     }
 
     if (!native) {
-        // nope.. so create a new bridged object.
         napi_value args[] = {
             ctx.This().ToNapiValue(),  // Camera..
             psp ? ctx.Arg<0>().ToNapiValue()
-                : NapiApi::Object(ctx.Env()).ToNapiValue() // "javascript object for values"
+                : NapiApi::Object(ctx.Env()).ToNapiValue()  // "javascript object for values"
         };
 
-        if (auto cameraJs = static_cast<CameraJS *>(ctx.This().GetRoot())) {
+        if (auto cameraJs = static_cast<CameraJS*>(ctx.This().GetRoot())) {
             auto postproc = cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess);
 
             if (!psp) {
@@ -374,6 +413,7 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
                     pp->Vignette()->GetValue()->Enabled()->SetValue(true);
                     pp->ColorFringe()->GetValue()->Enabled()->SetValue(true);
                     pp->Bloom()->GetValue()->Enabled()->SetValue(true);
+                    pp->Tonemap()->GetValue()->Enabled()->SetValue(true);
                 }
             }
             // PostProcessSettings will store a weak ref of its native. We, the camera, own it.
@@ -494,6 +534,18 @@ void CameraJS::SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     camera->PipelineFlags()->SetValue(curBits);
 }
 
+napi_value CameraJS::GetEffects(NapiApi::FunctionContext<>& ctx)
+{
+    if (effects_.IsEmpty()) {
+        NapiApi::Env env(ctx.Env());
+        napi_value args[] = { ctx.This().ToNapiValue(),
+            scene_.GetObject<SCENE_NS::IScene>() ? scene_.GetValue() : ctx.GetUndefined() };
+
+        effects_ = NapiApi::StrongRef { NapiApi::Object { env, "EffectsContainer", args } };
+    }
+    return effects_.GetValue();
+}
+
 napi_value CameraJS::WorldToScreen(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
     return ProjectCoords<ProjectionDirection::WORLD_TO_SCREEN>(ctx);
@@ -553,11 +605,25 @@ napi_value CameraJS::Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::
     return promise;
 }
 
+napi_value CameraJS::GetProjectionMatrix(NapiApi::FunctionContext<>& ctx)
+{
+    auto cameraMatrixAccessor = GetNativeObject<SCENE_NS::ICameraMatrixAccessor>();
+
+    return ConvertMatrixToJs(ctx.Env(), cameraMatrixAccessor->GetProjectionMatrix());
+}
+
+napi_value CameraJS::GetViewMatrix(NapiApi::FunctionContext<>& ctx)
+{
+    auto cameraMatrixAccessor = GetNativeObject<SCENE_NS::ICameraMatrixAccessor>();
+
+    return ConvertMatrixToJs(ctx.Env(), cameraMatrixAccessor->GetViewMatrix());
+}
+
 template<typename CoordType>
 CameraJS::RaycastResources<CoordType> CameraJS::GetRaycastResources(const NapiApi::Object& jsCoord)
 {
     auto res = RaycastResources<CoordType> {};
-    res.scene = NapiApi::StrongRef { scene_.GetObject() };
+    res.scene = NapiApi::StrongRef { scene_.GetNapiObject() };
     if (!res.scene.GetValue()) {
         res.errorMsg = "Scene is gone. ";
     }
@@ -582,7 +648,7 @@ CameraJS::RaycastResources<CoordType> CameraJS::GetRaycastResources(const NapiAp
 
 META_NS::IObject::Ptr CameraJS::CreateObject(const META_NS::ClassInfo& type)
 {
-    if (auto scn = scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
+    if (auto scn = scene_.GetObject<SCENE_NS::IScene>()) {
         META_NS::IObject::Ptr obj = scn->CreateObject(type).GetResult();
         if (obj) {
             resources_[(uintptr_t)obj.get()] = obj;

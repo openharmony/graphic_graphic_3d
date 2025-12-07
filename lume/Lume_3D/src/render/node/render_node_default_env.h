@@ -64,6 +64,7 @@ private:
     struct ShaderData {
         RENDER_NS::RenderHandle pso;
         RENDER_NS::RenderHandle shader;
+        RENDER_NS::RenderHandle state;
         // typically set 3 (with old compatibility might be the set 1)
         bool customSet { false };
         uint32_t customSetIndex { ~0U };
@@ -78,8 +79,8 @@ private:
     bool UpdateAndBindCustomSet(RENDER_NS::IRenderCommandList& cmdList, const RenderCamera::Environment& renderEnv);
     void UpdateCurrentScene(
         const IRenderDataStoreDefaultScene& dataStoreScene, const IRenderDataStoreDefaultCamera& dataStoreCamera);
-    ShaderData GetPso(const RENDER_NS::RenderHandle shaderHandle,
-        const RenderCamera::Environment::BackgroundType bgType,
+    ShaderData GetPso(RENDER_NS::RenderHandle shaderHandle, RENDER_NS::RenderHandle stateHandle,
+        RenderCamera::Environment::BackgroundType bgType,
         const RENDER_NS::RenderPostProcessConfiguration& renderPostProcessConfiguration);
     void CreateDescriptorSets();
     void UpdatePostProcessConfiguration();
@@ -116,7 +117,7 @@ private:
     bool enableMultiView_ { false };
 
     struct CurrentScene {
-        RenderCamera camera;
+        SceneRenderCameraData camData;
         RENDER_NS::ViewportDesc viewportDesc;
         RENDER_NS::ScissorDesc scissorDesc;
 

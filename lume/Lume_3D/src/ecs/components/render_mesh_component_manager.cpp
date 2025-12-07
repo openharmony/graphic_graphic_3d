@@ -68,6 +68,7 @@ IComponentManager* IRenderMeshComponentManagerInstance(IEcs& ecs)
 
 void IRenderMeshComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<RenderMeshComponentManager*>(instance);
+    static_cast<RenderMeshComponentManager*>(instance)->~RenderMeshComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

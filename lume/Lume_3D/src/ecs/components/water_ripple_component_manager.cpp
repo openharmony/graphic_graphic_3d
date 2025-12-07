@@ -74,6 +74,7 @@ IComponentManager* IWaterRippleComponentManagerInstance(CORE_NS::IEcs& ecs)
 
 void IWaterRippleComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<RippleComponentManager*>(instance);
+    static_cast<RippleComponentManager*>(instance)->~RippleComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

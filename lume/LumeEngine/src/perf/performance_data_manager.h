@@ -66,6 +66,9 @@ public:
 
     void RemoveData(const BASE_NS::string_view subCategory) override;
 
+    void GetSelectedCounters(CounterPairView data) const override;
+    ComparisonData CompareCounters(ConstCounterPairView lhs, ConstCounterPairView rhs) const override;
+
     // IInterface
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
     IInterface* GetInterface(const BASE_NS::Uid& uid) override;

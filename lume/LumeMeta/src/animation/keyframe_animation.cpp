@@ -43,7 +43,7 @@ void KeyframeAnimation::OnAnimationStateChanged(const AnimationStateChangedInfo&
     if (auto p = GetTargetProperty()) {
         switch (info.state) {
             case AnimationTargetState::FINISHED:
-                [[fallthrough]];
+                [[fallthrough]]; // follow the same procedure as STOPPED
             case AnimationTargetState::STOPPED:
                 if (currentValue_) {
                     // Evaluate current value
@@ -114,7 +114,7 @@ void KeyframeAnimation::OnPropertyChanged(const TargetProperty& property, const 
     auto me = GetSelf<IModifier>();
     if (previous) {
         previous->RemoveModifier(me);
-        if (auto p = interface_cast<IProperty>(previous)) {
+        if (auto p = interface_cast<IProperty>(previous); p && currentValue_) {
             p->SetValue(*currentValue_);
         }
         Stop();
@@ -134,6 +134,13 @@ EvaluationResult KeyframeAnimation::ProcessOnGet(IAny& value)
         }
     }
     return EvaluationResult::EVAL_CONTINUE;
+}
+
+ReturnError KeyframeAnimation::Finalize(IImportFunctions& f)
+{
+    GetState().UpdateTotalDuration();
+    PropertyChanged();
+    return GenericError::SUCCESS;
 }
 
 } // namespace Internal

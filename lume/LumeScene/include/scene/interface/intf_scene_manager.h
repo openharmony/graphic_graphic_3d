@@ -32,6 +32,8 @@ public:
     virtual Future<IScene::Ptr> CreateScene(BASE_NS::string_view uri, SceneOptions) = 0;
 
     virtual IRenderContext::Ptr GetContext() const = 0;
+
+    virtual SceneOptions GetDefaultOptions() const = 0;
 };
 
 META_REGISTER_CLASS(SceneManager, "e294e3d0-014f-4c93-a12b-e25c691277b4", META_NS::ObjectCategoryBits::NO_CATEGORY)

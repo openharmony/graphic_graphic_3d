@@ -97,8 +97,8 @@ public:
     int32_t GetRefCount() override;
 
     // for plugin / factory interface
-    static constexpr char const *TYPE_NAME = "RenderDataStoreDefaultDotfield";
-    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, char const *name);
+    static constexpr char const* TYPE_NAME = "RenderDataStoreDefaultDotfield";
+    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, char const* name);
 
 private:
     RENDER_NS::IRenderContext& context_;

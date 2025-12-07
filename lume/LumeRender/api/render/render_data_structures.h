@@ -201,7 +201,7 @@ struct RenderNodeAttachment {
 };
 
 /** RenderNodeHandles.
-    Helper struct for inputs that can be defined in pipeline initilization phase.
+    Helper struct for inputs that can be defined in pipeline initialization phase.
 */
 struct RenderNodeHandles {
     /** Input render pass */
@@ -441,6 +441,10 @@ struct RenderNodeGraphInputs {
         Size2D shadingRateTexelSize { 1u, 1u };
         /** Image descriptor (GpuImageDesc) */
         GpuImageDesc desc;
+        /** Clear image on creation. */
+        bool clearWhenCreated { false };
+        /** Clear to value on creation when clearWhenCreated is true. */
+        ClearValue clearValue {};
     };
 
     /** Resource creation description */
@@ -453,17 +457,17 @@ struct RenderNodeGraphInputs {
 
     /** CPU dependencies */
     struct CpuDependencies {
-        /** Render node type based dependancy. Finds previous render node of type */
+        /** Render node type based dependency. Finds previous render node of type */
         BASE_NS::vector<RenderDataConstants::RenderDataFixedString> typeNames;
-        /** Render node name based dependancy. Finds previous render node of name */
+        /** Render node name based dependency. Finds previous render node of name */
         BASE_NS::vector<RenderDataConstants::RenderDataFixedString> nodeNames;
     };
 
     /** GPU queue wait signal dependencies */
     struct GpuQueueWaitForSignals {
-        /** Render node type based dependancy. Finds previous render node of type */
+        /** Render node type based dependency. Finds previous render node of type */
         BASE_NS::vector<RenderDataConstants::RenderDataFixedString> typeNames;
-        /** Render node name based dependancy. Finds previous render node of name */
+        /** Render node name based dependency. Finds previous render node of name */
         BASE_NS::vector<RenderDataConstants::RenderDataFixedString> nodeNames;
     };
 
@@ -503,7 +507,7 @@ struct RenderingConfiguration {
     /** NDC origin */
     NdcOrigin ndcOrigin { NdcOrigin::TOP_LEFT };
     /** Render timings
-     *(.x = delta time (ms), .y = tick delta time (ms), .z = tick total time (s), .w = frame index (asuint)) */
+     *(.x = delta time (ms), .y = tick delta time (ms), .z = tick total time (s), .w = frame index (as uint)) */
     BASE_NS::Math::Vec4 renderTimings { 0.0f, 0.0f, 0.0f, 0.0f };
 };
 

@@ -17,13 +17,14 @@
 
 #include <scene/interface/intf_material.h>
 
-#include "core/ecs.h"
+#include "../core/ecs.h"
 
 SCENE_BEGIN_NAMESPACE()
 
 CORE_NS::Entity TextNode::CreateEntity(const IInternalScene::Ptr& scene)
 {
-    auto ecs = scene->GetEcsContext().GetNativeEcs();
+    const auto& context = scene->GetEcsContext();
+    auto ecs = context.GetNativeEcs();
     auto textManager = CORE_NS::GetManager<TEXT3D_NS::ITextComponentManager>(*ecs);
     auto materialManager = CORE_NS::GetManager<CORE3D_NS::IMaterialComponentManager>(*ecs);
     if (!textManager || !materialManager) {
@@ -33,6 +34,7 @@ CORE_NS::Entity TextNode::CreateEntity(const IInternalScene::Ptr& scene)
     scene->GetEcsContext().AddDefaultComponents(entity);
     textManager->Create(entity);
     materialManager->Create(entity);
+    context.AddDefaultComponents(entity);
     return entity;
 }
 

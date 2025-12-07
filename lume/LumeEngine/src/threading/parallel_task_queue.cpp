@@ -106,7 +106,7 @@ void ParallelTaskQueue::Execute()
         auto& deps = dependencies.emplace_back();
         for (const auto& dependency : task.dependencies) {
             if (auto pos = std::find_if(tasks_.cbegin(), tasks_.cend(),
-                                        [dependency](const Entry &entry) { return entry.identifier == dependency; });
+                    [dependency](const Entry& entry) { return entry.identifier == dependency; });
                 pos != tasks_.cend()) {
                 deps.push_back(pos->task.get());
             }

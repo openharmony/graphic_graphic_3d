@@ -47,9 +47,9 @@
 #define STV_HIDDEN 2
 #define ELF_ST_BIND(info) ((info) >> 4)
 #define ELF_ST_TYPE(info) ((info)&0xf)
-#define ELF_ST_INFO(bind, type) (((bind) << 4) + ((type) & 0xf))
+#define ELF_ST_INFO(bind, type) (((bind) << 4) + ((type)&0xf))
 
-typedef struct ElfIdent {
+struct ElfIdent {
     char EI_MAG0;
     char EI_MAG1;
     char EI_MAG2;
@@ -59,6 +59,6 @@ typedef struct ElfIdent {
     uint8_t EI_VERSION;
     uint8_t EI_OSABI;
     uint8_t EI_PAD[EI_NIDENT - 8];
-} ElfIdent;
+};
 
 #endif // LUME_ELF_COMMON_H

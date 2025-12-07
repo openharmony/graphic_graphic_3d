@@ -53,7 +53,7 @@ public:
     /** Property binding data info */
     struct PropertyBindingDataInfo {
         /** Aligned byte size needed for binding data which is not in local GPU buffers
-         * Alignment is based on minimun UBO dynamic binding offsets.
+         * Alignment is based on minimum UBO dynamic binding offsets.
          */
         uint32_t alignedByteSize { 0U };
     };

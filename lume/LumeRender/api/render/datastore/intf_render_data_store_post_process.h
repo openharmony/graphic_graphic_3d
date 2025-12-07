@@ -37,7 +37,7 @@ RENDER_BEGIN_NAMESPACE()
  *
  * Usage:
  * Create() with a unique name.
- * Get() get (preferrably only a single post process data).
+ * Get() get (preferably only a single post process data).
  * Destroy() destroy from render data store.
  */
 class IRenderDataStorePostProcess : public IRenderDataStore {

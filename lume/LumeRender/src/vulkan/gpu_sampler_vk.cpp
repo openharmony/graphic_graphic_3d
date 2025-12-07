@@ -45,26 +45,34 @@ VkSamplerYcbcrConversion CreateYcbcrConversion(const DeviceVk& deviceVk)
 
 GpuSamplerVk::GpuSamplerVk(Device& device, const GpuSamplerDesc& desc) : device_(device), desc_(desc)
 {
+    const bool portabilitySubset = static_cast<const DeviceVk&>(device).GetCommonDeviceExtensions().portabilitySubset;
     VkSamplerCreateInfo samplerCreateInfo = {
-        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,   // sType
-        nullptr,                                 // pNext
-        0,                                       // flags
-        (VkFilter)desc.magFilter,                // magFilter
-        (VkFilter)desc.minFilter,                // minFilter
-        (VkSamplerMipmapMode)desc.mipMapMode,    // mipmapMode
-        (VkSamplerAddressMode)desc.addressModeU, // addressModeU
-        (VkSamplerAddressMode)desc.addressModeV, // addressModeV
-        (VkSamplerAddressMode)desc.addressModeW, // addressModeW
-        desc.mipLodBias,                         // mipLodBias
-        desc.enableAnisotropy,                   // anisotropyEnable
-        desc.maxAnisotropy,                      // maxAnisotropy
-        desc.enableCompareOp,                    // compareEnabled
-        (VkCompareOp)desc.compareOp,             // compareOp
-        desc.minLod,                             // minLod
-        desc.maxLod,                             // maxLod
-        (VkBorderColor)desc.borderColor,         // borderColor
-        desc.enableUnnormalizedCoordinates,      // unnormalizedCoordinates
+        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,               // sType
+        nullptr,                                             // pNext
+        0,                                                   // flags
+        (VkFilter)desc.magFilter,                            // magFilter
+        (VkFilter)desc.minFilter,                            // minFilter
+        (VkSamplerMipmapMode)desc.mipMapMode,                // mipmapMode
+        (VkSamplerAddressMode)desc.addressModeU,             // addressModeU
+        (VkSamplerAddressMode)desc.addressModeV,             // addressModeV
+        (VkSamplerAddressMode)desc.addressModeW,             // addressModeW
+        desc.mipLodBias,                                     // mipLodBias
+        desc.enableAnisotropy,                               // anisotropyEnable
+        desc.maxAnisotropy,                                  // maxAnisotropy
+        portabilitySubset ? VK_FALSE : desc.enableCompareOp, // compareEnabled
+        (VkCompareOp)desc.compareOp,                         // compareOp
+        desc.minLod,                                         // minLod
+        desc.maxLod,                                         // maxLod
+        (VkBorderColor)desc.borderColor,                     // borderColor
+        desc.enableUnnormalizedCoordinates,                  // unnormalizedCoordinates
     };
+
+#if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
+    if (portabilitySubset && desc.enableCompareOp) {
+        PLUGIN_LOG_ONCE_W("GpuSamplerVk_portability",
+            "RENDER_VALIDATION: sampler compare operator not supported with portability subset. ");
+    }
+#endif
 
     const auto& deviceVk = (const DeviceVk&)device_;
     const auto& devicePlat = (const DevicePlatformDataVk&)device_.GetPlatformData();
@@ -96,9 +104,9 @@ GpuSamplerVk::~GpuSamplerVk()
     if (samplerConversion_ != VK_NULL_HANDLE) {
         ((const DeviceVk&)device_)
             .GetExtFunctions()
-            .vkDestroySamplerYcbcrConversion(device,              // device
-                                             samplerConversion_,  // ycbcrConversion
-                                             nullptr);            // pAllocator
+            .vkDestroySamplerYcbcrConversion(device, // device
+                samplerConversion_,                  // ycbcrConversion
+                nullptr);                            // pAllocator
     }
     vkDestroySampler(device, // device
         plat_.sampler,       // sampler

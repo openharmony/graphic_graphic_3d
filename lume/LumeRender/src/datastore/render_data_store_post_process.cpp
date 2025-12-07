@@ -434,8 +434,9 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
         FillBuiltInData(PostProcessConstants::RENDER_COLOR_FRINGE_BIT, PostProcessConstants::RENDER_COLOR_FRINGE_BIT,
             defUserIdx, PostProcessConversionHelper::GetFactorFringe(ppConfig), {}));
 
-    ppStack.postProcesses.push_back(FillBuiltInData(
-        PostProcessConstants::RENDER_EMPTY_5, PostProcessConstants::RENDER_EMPTY_5, defUserIdx, {}, {}));
+    ppStack.postProcesses.push_back(
+        FillBuiltInData(PostProcessConstants::RENDER_UPSCALER_BIT, PostProcessConstants::RENDER_UPSCALER_BIT,
+            defUserIdx, PostProcessConversionHelper::GetFactorUpscaler(ppConfig), {}));
     ppStack.postProcesses.push_back(FillBuiltInData(
         PostProcessConstants::RENDER_EMPTY_6, PostProcessConstants::RENDER_EMPTY_6, defUserIdx, {}, {}));
     ppStack.postProcesses.push_back(FillBuiltInData(

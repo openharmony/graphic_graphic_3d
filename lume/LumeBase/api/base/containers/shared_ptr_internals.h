@@ -108,6 +108,12 @@ public:
         return control_ ? control_->GetStrongCount() : 0;
     }
 
+    // This is dangerous, only use if you know it is safe
+    Type* GetRawPointer() const noexcept
+    {
+        return pointer_;
+    }
+
 protected:
     PtrCountedBase() = default;
     PtrCountedBase(ControlBlock* c) : control_(c) {}

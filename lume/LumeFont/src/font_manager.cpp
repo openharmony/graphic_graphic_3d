@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -81,11 +81,11 @@ TypeFace InitTypeFace(FT_Face face, string_view path, string_view filename)
         typeFace.style.Weight = static_cast<Weight>(tblOS2->usWeightClass);
         typeFace.style.Width = widths_os2_match[tblOS2->usWidthClass];
     } else {
-        if (face->style_flags & FT_STYLE_FLAG_BOLD) {
+        if (FT_ULong(face->style_flags) & FT_STYLE_FLAG_BOLD) {
             typeFace.style.Weight = Weight::Bold;
         }
     }
-    if (face->style_flags & FT_STYLE_FLAG_ITALIC) {
+    if (FT_ULong(face->style_flags) & FT_STYLE_FLAG_ITALIC) {
         typeFace.style.SlantType = SlantType::Italic;
     }
     return typeFace;
@@ -179,7 +179,7 @@ std::shared_ptr<FontBuffer> FontManager::CreateFontBuffer(const TypeFace& typeFa
     auto fb = std::make_shared<FontBuffer>(this, typeFace.uid, bytes);
 
     fontBuffers_.insert({ typeFace.uid, fb });
-    CORE_LOG_N("create FontBuffer");
+    CORE_LOG_N("create FontBuffer %p", this);
 
     return fb;
 }
@@ -277,14 +277,14 @@ void FontManager::GetTypeFacesByFile(vector<TypeFace>& typeFaces, string_view pa
     constexpr uint8_t INSTANCE_SHIFT = 16u;
 
     do {
-        FT_Long faceId = (instanceIndex << INSTANCE_SHIFT) + faceIndex;
+        FT_Long faceId = FT_Long(FT_ULong(instanceIndex) << INSTANCE_SHIFT) + faceIndex;
         auto face = OpenFtFace(buf, faceId);
         // lume api is utf8, unicode is the default charmap with freetype.
         if (face && face->charmap) {
             typeFaces.push_back(InitTypeFace(face, path, entry.name));
 
             numFaces = face->num_faces;
-            numInstances = face->style_flags >> INSTANCE_SHIFT;
+            numInstances = FT_Long(FT_ULong(face->style_flags) >> INSTANCE_SHIFT);
 
             CORE_LOG_N("%s", path.data());
             CORE_LOG_N("  number of faces:     %ld", numFaces);
@@ -300,6 +300,7 @@ void FontManager::GetTypeFacesByFile(vector<TypeFace>& typeFaces, string_view pa
         } else {
             CORE_LOG_W("failed to create face: %s", path.data());
         }
+
     } while (faceIndex < numFaces);
 }
 
@@ -418,7 +419,7 @@ bool FontManager::OpenFtFace(BASE_NS::string_view uri, FT_Long index, FT_Face* f
     return FT_Open_Face(fontLib_, &args, index, face) == 0;
 }
 
-FT_Face FontManager::OpenFtFace(array_view<const uint8_t> buf, FT_Long index)
+FT_Face FontManager::OpenFtFace(array_view<const uint8_t> buf, FT_Long index) const
 {
     CORE_ASSERT_MSG(fontLib_, "font library is not initialized");
 
@@ -562,7 +563,7 @@ void FontManager::UploadPending()
 {
     std::lock_guard writerLock(atlasMutex_);
     if (std::all_of(atlasTextures_.cbegin(), atlasTextures_.cend(),
-        [](const AtlasTexture& atlas) { return atlas.pending.empty(); })) {
+            [](const AtlasTexture& atlas) { return atlas.pending.empty(); })) {
         return;
     }
 
@@ -776,7 +777,7 @@ void FontManager::Unref()
 {
     if (refcnt_.fetch_sub(1, std::memory_order_release) == 1) {
         std::atomic_thread_fence(std::memory_order_acquire);
-        CORE_LOG_N("delete FontManager");
+        CORE_LOG_N("delete FontManager %p", this);
         delete this;
     }
 }

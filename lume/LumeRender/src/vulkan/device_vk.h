@@ -193,6 +193,9 @@ public:
         bool fragmentShadingRate { false };
         bool multiView { false };
         bool descriptorIndexing { false };
+
+        // portability_subset
+        bool portabilitySubset { false };
     };
     const CommonDeviceExtensions& GetCommonDeviceExtensions() const;
     const PlatformDeviceExtensions& GetPlatformDeviceExtensions() const;

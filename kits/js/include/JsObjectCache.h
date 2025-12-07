@@ -43,4 +43,11 @@ NapiApi::Object FetchJsObj(const t& obj, BASE_NS::string_view name = "_JSW")
 NapiApi::Object StoreJsObj(
     const META_NS::IObject::Ptr& obj, const NapiApi::Object& jsObj, BASE_NS::string_view name = "_JSW");
 
+/**
+ * @brief Detaches the link between native object and JS object.
+ * @param obj The native object wrapped by jsObj.
+ * @param name An identifier to separate multiple JS objects wrapping the same native.
+ */
+void DetachJsObj(META_NS::IObject::Ptr& obj, BASE_NS::string_view name /*= "_JSW"*/);
+
 #endif

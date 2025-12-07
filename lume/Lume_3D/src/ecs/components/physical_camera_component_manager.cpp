@@ -70,6 +70,7 @@ IComponentManager* IPhysicalCameraComponentManagerInstance(IEcs& ecs)
 
 void IPhysicalCameraComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<PhysicalCameraComponentManager*>(instance);
+    static_cast<PhysicalCameraComponentManager*>(instance)->~PhysicalCameraComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

@@ -25,9 +25,10 @@
 #include <meta/api/make_callback.h>
 #include <meta/interface/engine/intf_engine_value_manager.h>
 
-#include "entity_converting_value.h"
-#include "mesh/texture.h"
-#include "util_interfaces.h"
+#include "../containable_object.h"
+#include "../entity_converting_value.h"
+#include "../mesh/texture.h"
+#include "../util_interfaces.h"
 
 SCENE_BEGIN_NAMESPACE()
 namespace {
@@ -41,30 +42,28 @@ struct ShaderConverter {
     {
         auto p = META_NS::GetPointer<IShader>(any);
         if (auto scene = scene_.lock()) {
-            scene
-                ->AddTask([&] {
-                    if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
-                            scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
-                        bool changed = false;
-                        if (!p) {
-                            p = interface_pointer_cast<IShader>(scene->CreateObject(ClassId::Shader));
-                            changed = true;
-                        }
-                        auto sha = rhman->GetRenderHandleReference(v.shader);
-                        auto gs = rhman->GetRenderHandleReference(v.graphicsState);
-
-                        if (auto i = interface_cast<IRenderResource>(p)) {
-                            changed |= i->GetRenderHandle().GetHandle() != sha.GetHandle();
-                        }
-                        if (auto i = interface_cast<IGraphicsState>(p)) {
-                            changed |= i->GetGraphicsState().GetHandle() != gs.GetHandle();
-                        }
-                        if (auto i = interface_cast<IShaderState>(p); changed && i) {
-                            i->SetShaderState(sha, gs);
-                        }
+            scene->RunDirectlyOrInTask([&] {
+                if (auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
+                        scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>())) {
+                    bool changed = false;
+                    if (!p) {
+                        p = interface_pointer_cast<IShader>(scene->CreateObject(ClassId::Shader));
+                        changed = true;
                     }
-                })
-                .Wait();
+                    auto sha = rhman->GetRenderHandleReference(v.shader);
+                    auto gs = rhman->GetRenderHandleReference(v.graphicsState);
+
+                    if (auto i = interface_cast<IRenderResource>(p)) {
+                        changed |= i->GetRenderHandle().GetHandle() != sha.GetHandle();
+                    }
+                    if (auto i = interface_cast<IGraphicsState>(p)) {
+                        changed |= i->GetGraphicsState().GetHandle() != gs.GetHandle();
+                    }
+                    if (auto i = interface_cast<IShaderState>(p); changed && i) {
+                        i->SetShaderState(sha, gs);
+                    }
+                }
+            });
         }
         return p;
     }
@@ -76,12 +75,14 @@ struct ShaderConverter {
                 res.shader = {};
                 res.graphicsState = {};
             } else {
-                if (auto i = interface_cast<IRenderResource>(v)) {
-                    res.shader = HandleFromRenderResource(scene, i->GetRenderHandle());
-                }
-                if (auto i = interface_cast<IGraphicsState>(v)) {
-                    res.graphicsState = HandleFromRenderResource(scene, i->GetGraphicsState());
-                }
+                scene->RunDirectlyOrInTask([&] {
+                    if (auto i = interface_cast<IRenderResource>(v)) {
+                        res.shader = HandleFromRenderResource(scene, i->GetRenderHandle());
+                    }
+                    if (auto i = interface_cast<IGraphicsState>(v)) {
+                        res.graphicsState = HandleFromRenderResource(scene, i->GetGraphicsState());
+                    }
+                });
             }
         }
         return res;
@@ -102,6 +103,52 @@ struct RenderSortConverter {
     {
         return TargetType { v.renderSortLayer, v.renderSortLayerOrder };
     }
+};
+struct RenderSortLayerConverter {
+    using SourceType = uint8_t;
+    using TargetType = CORE3D_NS::MaterialComponent::RenderSort;
+
+    RenderSortLayerConverter(IInternalMaterial::Ptr mat) : mat_(mat) {}
+
+    SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
+    {
+        return v.renderSortLayer;
+    }
+
+    TargetType ConvertToTarget(const SourceType& v) const
+    {
+        uint8_t renderSortLayerOrder = 0;
+        if (auto renderSort = mat_.lock()) {
+            auto r = renderSort->RenderSort()->GetValue();
+            renderSortLayerOrder = r.renderSortLayerOrder;
+        }
+        return TargetType { v, renderSortLayerOrder };
+    }
+
+    IInternalMaterial::WeakPtr mat_;
+};
+struct RenderSortLayerOrderConverter {
+    using SourceType = uint8_t;
+    using TargetType = CORE3D_NS::MaterialComponent::RenderSort;
+
+    RenderSortLayerOrderConverter(IInternalMaterial::Ptr mat) : mat_(mat) {}
+
+    SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
+    {
+        return v.renderSortLayerOrder;
+    }
+
+    TargetType ConvertToTarget(const SourceType& v) const
+    {
+        uint8_t renderSortLayer = 0;
+        if (auto renderSort = mat_.lock()) {
+            auto r = renderSort->RenderSort()->GetValue();
+            renderSortLayer = r.renderSortLayer;
+        }
+        return TargetType { renderSortLayer, v };
+    }
+
+    IInternalMaterial::WeakPtr mat_;
 };
 struct LightingFlagsConverter {
     using SourceType = SCENE_NS::LightingFlags;
@@ -164,33 +211,46 @@ bool Material::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::st
     BASE_NS::string name = p->GetName();
     if (name == "MaterialShader") {
         auto ep = material_->MaterialShader();
-        shaderChanged_.Subscribe(ep, [this]() {
-            UpdateTextures(nullptr);
-            UpdateCustoms(nullptr);
-        });
+        shaderChanged_.Subscribe(ep, [this]() { UpdateMetadata(); });
+
+        UpdateMetadata();
 
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, { object_->GetScene() })));
+               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, { GetInternalScene() })));
     }
     if (name == "DepthShader") {
         auto ep = material_->DepthShader();
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, { object_->GetScene() })));
+               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, { GetInternalScene() })));
     }
     if (name == "Textures") {
-        UpdateTextures(p).Wait();
+        InitTextures(p);
         return true;
     }
     if (name == "CustomProperties") {
-        UpdateCustoms(p).Wait();
+        InitCustoms(p);
         return true;
     }
     if (name == "RenderSort") {
         auto ep = material_->RenderSort();
+        META_NS::SetObjectFlags(p, META_NS::ObjectFlagBits::INTERNAL, true);
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i && i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<RenderSortConverter>(ep)));
+    }
+    if (name == "RenderSortLayer") {
+        auto ep = material_->RenderSort();
+        auto i = interface_cast<META_NS::IStackProperty>(p);
+        return ep && i &&
+               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<RenderSortLayerConverter>(ep, { material_ })));
+    }
+    if (name == "RenderSortLayerOrder") {
+        auto ep = material_->RenderSort();
+        auto i = interface_cast<META_NS::IStackProperty>(p);
+        return ep && i &&
+               i->PushValue(
+                   META_NS::IValue::Ptr(new ConvertingValue<RenderSortLayerOrderConverter>(ep, { material_ })));
     }
     if (name == "LightingFlags") {
         auto ep = material_->LightingFlags();
@@ -200,46 +260,42 @@ bool Material::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::st
     return false;
 }
 
-Future<bool> Material::UpdateTextures(const META_NS::IProperty::Ptr& p)
+void Material::InitTextures(const META_NS::IProperty::Ptr& property)
 {
-    auto property = p;
-    if (!property) {
-        property = GetProperty("Textures", META_NS::MetadataQuery::EXISTING);
-    }
     if (const auto obj = GetEcsObject(); obj && property) {
-        if (!textureSyncScheduled_.exchange(true)) {
-            return obj->GetScene()->AddTask([this, property]() {
-                if (textureSyncScheduled_.load()) {
-                    bool success =
-                        ConstructTextures(property); // Avoid callback due to ConstructTextures changing target
-                    textureSyncScheduled_ = false;
-                }
-                return false;
-            });
-        }
+        obj->GetScene()->RunDirectlyOrInTask([this, property]() { ConstructTextures(property); });
     }
-    return {};
 }
 
-Future<bool> Material::UpdateCustoms(const META_NS::IProperty::Ptr& p)
+void Material::InitCustoms(const META_NS::IProperty::Ptr& property)
 {
-    auto property = p;
-    if (!property) {
-        property = GetProperty("CustomProperties", META_NS::MetadataQuery::EXISTING);
-    }
     if (const auto obj = GetEcsObject(); obj && property) {
-        if (!customsSyncScheduled_.exchange(true)) {
-            return obj->GetScene()->AddTask([this, property]() {
-                if (customsSyncScheduled_.load()) {
-                    bool success =
-                        UpdateCustomProperties(property); // Avoid callback due to ConstructTextures changing target
-                    customsSyncScheduled_ = false;
+        obj->GetScene()->RunDirectlyOrInTask([this, property]() { UpdateCustomProperties(property); });
+    }
+}
+
+void Material::UpdateMetadata()
+{
+    auto textures = GetProperty("Textures", META_NS::MetadataQuery::EXISTING);
+    auto customs = GetProperty("CustomProperties", META_NS::MetadataQuery::EXISTING);
+
+    if (const auto obj = GetEcsObject(); obj && (textures || customs)) {
+        if (!metadataUpdateScheduled_.exchange(true)) {
+            obj->GetScene()->RunDirectlyOrInTask([this, textures, customs]() {
+                if (metadataUpdateScheduled_.load()) {
+                    if (material_->UpdateMetadata()) {
+                        if (textures) {
+                            ConstructTextures(textures);
+                        }
+                        if (customs) {
+                            UpdateCustomProperties(customs);
+                        }
+                    }
+                    metadataUpdateScheduled_ = false;
                 }
-                return false;
             });
         }
     }
-    return {};
 }
 
 // clang-format off
@@ -315,6 +371,9 @@ bool Material::ConstructTextures(const META_NS::IProperty::Ptr& p)
         auto& t = texs[i];
         if (!t) {
             t = r.Create<ITexture>(ClassId::Texture);
+            if (auto i = interface_cast<META_NS::IMutableContainable>(t)) {
+                i->SetParent(interface_pointer_cast<META_NS::IObject>(p));
+            }
             if (auto si = interface_cast<IArrayElementIndex>(t)) {
                 si->SetIndex(i);
             }
@@ -346,7 +405,10 @@ bool Material::UpdateCustomProperties(const META_NS::IProperty::Ptr& p)
     }
     auto meta = ccs->GetValue();
     if (!meta) {
-        meta = META_NS::GetObjectRegistry().Create<META_NS::IMetadata>(META_NS::ClassId::Object);
+        meta = META_NS::GetObjectRegistry().Create<META_NS::IMetadata>(ClassId::ContainableObject);
+        if (auto i = interface_cast<META_NS::IMutableContainable>(meta)) {
+            i->SetParent(interface_pointer_cast<META_NS::IObject>(p));
+        }
     }
     std::set<BASE_NS::string> props;
     BASE_NS::vector<META_NS::IEngineValue::Ptr> values;
@@ -400,23 +462,10 @@ META_NS::IMetadata::Ptr Material::GetCustomProperties() const
 
 META_NS::IProperty::Ptr Material::GetCustomProperty(BASE_NS::string_view name) const
 {
-    const auto obj = GetEcsObject();
-    if (!obj) {
-        return nullptr;
+    if (auto props = GetCustomProperties()) {
+        return props->GetProperty(name, META_NS::MetadataQuery::EXISTING);
     }
-    const auto manager = obj->GetEngineValueManager();
-    if (!manager) {
-        return nullptr;
-    }
-
-    if (!SyncCustomProperties({})) {
-        CORE_LOG_W("Syncing properties to engine values failed. Using old values if available.");
-    }
-    BASE_NS::string fullName { name };
-    if (!name.starts_with("MaterialComponent.customProperties.")) {
-        fullName = "MaterialComponent.customProperties." + fullName;
-    }
-    return META_NS::PropertyFromEngineValue(fullName, manager->GetEngineValue(fullName));
+    return {};
 }
 
 bool Material::SyncCustomProperties(BASE_NS::vector<META_NS::IEngineValue::Ptr>* synced_values) const
@@ -425,27 +474,29 @@ bool Material::SyncCustomProperties(BASE_NS::vector<META_NS::IEngineValue::Ptr>*
     if (!material_ || !obj) {
         return false;
     }
+    auto scene = obj->GetScene();
+    if (!scene) {
+        return false;
+    }
+
     const auto manager = obj->GetEngineValueManager();
     const auto allCustomProps = META_NS::GetEngineValueFromProperty(material_->CustomProperties());
     if (!manager || !allCustomProps) {
         return false;
     }
-
-    auto doSync = [&]() -> bool {
-        // syncing material shader updates the custom properties
-        obj->GetScene()->SyncProperty(material_->MaterialShader(), META_NS::EngineSyncDirection::AUTO);
-        obj->GetScene()->SyncProperty(material_->CustomProperties(), META_NS::EngineSyncDirection::FROM_ENGINE);
-        return manager->ConstructValues(allCustomProps, { "", synced_values });
-    };
-    return obj->GetScene()->AddTask(doSync).Wait();
+    // syncing material shader updates the custom properties
+    scene->SyncProperty(material_->MaterialShader(), META_NS::EngineSyncDirection::AUTO);
+    scene->SyncProperty(material_->CustomProperties(), META_NS::EngineSyncDirection::FROM_ENGINE);
+    return manager->ConstructValues(allCustomProps, { "", synced_values });
 }
 
-void Material::CopyTextureData(const META_NS::IProperty::ConstPtr& p)
+static void CopyTextureData(
+    const META_NS::IProperty::ConstPtr& p, const META_NS::ArrayProperty<const ITexture::Ptr>& tex)
 {
     if (META_NS::ArrayProperty<const ITexture::Ptr> arr { p }) {
         for (size_t i = 0; i != arr->GetSize(); ++i) {
             if (auto in = interface_cast<META_NS::IMetadata>(arr->GetValueAt(i))) {
-                if (auto out = interface_cast<META_NS::IMetadata>(Textures()->GetValueAt(i))) {
+                if (auto out = interface_cast<META_NS::IMetadata>(tex->GetValueAt(i))) {
                     META_NS::CopyToDefaultAndReset(*in, *out);
                 }
             }
@@ -453,39 +504,53 @@ void Material::CopyTextureData(const META_NS::IProperty::ConstPtr& p)
     }
 }
 
-bool Material::SetResource(const CORE_NS::IResource::Ptr& p)
+CORE_NS::IResource::Ptr MaterialTemplateAccess::CreateEmptyTemplate() const
 {
-    auto ores = interface_cast<META_NS::IObjectResource>(p);
-    if (!ores || p->GetResourceType() != resourceType_.ToUid()) {
-        CORE_LOG_W("Invalid resource type");
-        return false;
-    }
-    if (auto resm = interface_cast<META_NS::IMetadata>(p)) {
-        if (auto m = static_cast<META_NS::IMetadata*>(this)) {
-            for (auto&& p : resm->GetProperties()) {
-                if (p->GetName() == "Textures") {
-                    CopyTextureData(p);
-                } else if (p->GetName() == "CustomProperties") {
-                    // skip for now
-                } else {
-                    META_NS::CopyToDefaultAndReset(p, *m);
-                }
-            }
-        }
-    }
-    std::unique_lock lock { mutex_ };
-    resource_ = p->GetResourceId();
-    return true;
-}
-CORE_NS::IResource::Ptr Material::CreateResource() const
-{
-    auto r = Super::CreateResource();
+    auto r = Super::CreateEmptyTemplate();
     if (auto i = interface_cast<META_NS::IMetadata>(r)) {
         if (auto p = i->GetProperty("CustomProperties")) {
             i->RemoveProperty(p);
         }
     }
     return r;
+}
+CORE_NS::IResource::Ptr MaterialTemplateAccess::CreateTemplateFromResource(
+    const CORE_NS::IResource::ConstPtr& resource) const
+{
+    auto r = Super::CreateTemplateFromResource(resource);
+    if (auto i = interface_cast<META_NS::IMetadata>(r)) {
+        if (auto p = i->GetProperty("CustomProperties")) {
+            i->RemoveProperty(p);
+        }
+    }
+    return r;
+}
+bool MaterialTemplateAccess::SetValuesFromTemplate(
+    const CORE_NS::IResource::ConstPtr& templ, const CORE_NS::IResource::Ptr& resource) const
+{
+    auto ores = interface_cast<META_NS::IObjectResource>(templ);
+    auto mat = interface_cast<IMaterial>(resource);
+    if (!ores || !mat || templ->GetResourceType() != templateType_.ToUid()) {
+        CORE_LOG_W("Invalid resource type");
+        return false;
+    }
+    if (auto resm = interface_cast<META_NS::IMetadata>(templ)) {
+        if (auto m = interface_cast<META_NS::IMetadata>(resource)) {
+            for (auto&& prop : resm->GetProperties()) {
+                if (prop->GetName() == "Textures") {
+                    CopyTextureData(prop, mat->Textures());
+                } else if (prop->GetName() == "CustomProperties") {
+                    // skip for now
+                } else {
+                    META_NS::CopyToDefaultAndReset(prop, *m);
+                }
+            }
+        }
+    }
+    if (auto id = interface_cast<META_NS::IDerivedFromTemplate>(resource)) {
+        id->SetTemplateId(templ->GetResourceId());
+    }
+    return true;
 }
 
 SCENE_END_NAMESPACE()

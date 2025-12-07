@@ -80,10 +80,8 @@ BASE_NS::vector<IObject::Ptr> ContainerBase::FindAllImpl(const IContainer::FindO
     Internal::ConstIterate(
         this,
         [&](const IObject::Ptr& obj) {
-            if (options.name.empty() || obj->GetName() == options.name) {
-                if (CheckInterfaces(obj, options.uids, options.strict)) {
-                    res.push_back(obj);
-                }
+            if (MatchCriteria(options, obj)) {
+                res.push_back(obj);
             }
             return true;
         },
@@ -125,7 +123,7 @@ IObject::Ptr ContainerBase::FindByName(BASE_NS::string_view name) const
 
 bool ContainerBase::MatchCriteria(const IContainer::FindOptions& options, const IObject::Ptr& object) const
 {
-    return object && (options.name.empty() || object->GetName() == options.name) &&
+    return object && ((!options.strictName && options.name.empty()) || object->GetName() == options.name) &&
            CheckInterfaces(object, options.uids, options.strict);
 }
 

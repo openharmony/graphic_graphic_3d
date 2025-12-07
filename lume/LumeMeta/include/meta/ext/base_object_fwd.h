@@ -91,20 +91,12 @@ public: // IObject
     {
         return object_->Resolve(uri);
     }
-    template<typename Interface>
-    typename Interface::Ptr Resolve(const RefUri& uri) const
-    {
-        return interface_pointer_cast<Interface>(object_->Resolve(uri));
-    }
+    using IObjectInstance::Resolve;
     IObject::Ptr GetSelf() const override
     {
         return object_ ? object_->GetSelf() : nullptr;
     }
-    template<typename Interface>
-    typename Interface::Ptr GetSelf() const
-    {
-        return interface_pointer_cast<Interface>(GetSelf());
-    }
+    using IObjectInstance::GetSelf;
     BASE_NS::vector<BASE_NS::Uid> GetInterfaces() const override
     {
         return GetStaticInterfaces();

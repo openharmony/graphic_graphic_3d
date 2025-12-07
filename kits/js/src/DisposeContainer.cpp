@@ -14,6 +14,33 @@
  */
 
 #include "DisposeContainer.h"
+#include "core/log.h"
+
+namespace {
+void DestroyNapiObject(NapiApi::Object obj, napi_value& scene)
+{
+    if (obj) {
+        NapiApi::Function func = obj.Get<NapiApi::Function>("destroy");
+        if (func) {
+            func.Invoke(obj, { scene });
+        }
+    }
+}
+
+template<typename T>
+void DisposeFromList(BASE_NS::unordered_map<uintptr_t, T>& disposables, uintptr_t token, napi_value* scene)
+{
+    auto it = disposables.find(token);
+    if (it != disposables.end()) {
+        auto object = it->second.GetObject();
+        it->second.Reset();
+        if (scene) {
+            DestroyNapiObject(object, *scene);
+        }
+        disposables.erase(it->first);
+    }
+}
+} // end anon ns
 
 void DisposeContainer::DisposeHook(uintptr_t token, NapiApi::Object obj)
 {
@@ -22,11 +49,7 @@ void DisposeContainer::DisposeHook(uintptr_t token, NapiApi::Object obj)
 
 void DisposeContainer::ReleaseDispose(uintptr_t token)
 {
-    auto it = disposables_.find(token);
-    if (it != disposables_.end()) {
-        it->second.Reset();
-        disposables_.erase(it->first);
-    }
+    ::DisposeFromList<NapiApi::WeakRef>(disposables_, token, nullptr);
 }
 
 void DisposeContainer::StrongDisposeHook(uintptr_t token, NapiApi::Object obj)
@@ -36,63 +59,53 @@ void DisposeContainer::StrongDisposeHook(uintptr_t token, NapiApi::Object obj)
 
 void DisposeContainer::ReleaseStrongDispose(uintptr_t token)
 {
-    auto it = strongDisposables_.find(token);
-    if (it != strongDisposables_.end()) {
-        it->second.Reset();
-        strongDisposables_.erase(it->first);
-    }
+    ::DisposeFromList<NapiApi::StrongRef>(strongDisposables_, token, nullptr);
 }
 
-void DisposeContainer::DisposeAll(napi_env e)
+void DisposeContainer::Dispose(napi_env e, BASE_NS::array_view<const uintptr_t> strongs,
+    BASE_NS::array_view<const uintptr_t> weaks, SceneJS* sc)
 {
+    LOG_V("Mass Dispose %zu %zu", strongs.size(), weaks.size());
     NapiApi::Object scen(e);
     napi_value tmp;
     napi_create_external(
-        e, static_cast<void*>(this),
+        e, static_cast<void*>(sc),
         [](napi_env env, void* data, void* finalize_hint) {
             // do nothing.
         },
         nullptr, &tmp);
-    scen.Set("DisposeContainer", tmp);
+    scen.Set("SceneJS", tmp);
     napi_value scene = scen.ToNapiValue();
-
-    // dispose all cameras/env/etcs.
-    while (!strongDisposables_.empty()) {
-        auto it = strongDisposables_.begin();
-        auto token = it->first;
-        auto env = it->second.GetObject();
-        if (env) {
-            auto size = strongDisposables_.size();
-            NapiApi::Function func = env.Get<NapiApi::Function>("destroy");
-            if (func) {
-                func.Invoke(env, 1, &scene);
+    bool disposedSelected = false;
+    for (auto s : strongs) {
+        disposedSelected = true;
+        ::DisposeFromList<NapiApi::StrongRef>(strongDisposables_, s, &scene);
+    }
+    for (auto w : weaks) {
+        disposedSelected = true;
+        ::DisposeFromList<NapiApi::WeakRef>(disposables_, w, &scene);
+    }
+    // if no targets were defined, clear all
+    while (!disposedSelected && !strongDisposables_.empty()) {
+        auto size = strongDisposables_.size();
+        auto obj = strongDisposables_.begin()->second.GetObject();
+        ::DestroyNapiObject(obj, scene);
+        if (size == strongDisposables_.size()) {
+            if (obj) {
+                CORE_LOG_W("S Dispose function didn't dispose.");
             }
-
-            if (size == strongDisposables_.size()) {
-                LOG_E("Dispose function didn't dispose.");
-                strongDisposables_.erase(strongDisposables_.begin());
-            }
-        } else {
             strongDisposables_.erase(strongDisposables_.begin());
         }
     }
-
-    // dispose
-    while (!disposables_.empty()) {
-        auto env = disposables_.begin()->second.GetObject();
-        if (env) {
-            auto size = disposables_.size();
-            NapiApi::Function func = env.Get<NapiApi::Function>("destroy");
-            if (func) {
-                func.Invoke(env, 1, &scene);
+    while (!disposedSelected && !disposables_.empty()) {
+        auto obj = disposables_.begin()->second.GetObject();
+        auto size = disposables_.size();
+        ::DestroyNapiObject(obj, scene);
+        if (size == disposables_.size()) {
+            if (obj) {
+                CORE_LOG_W("W Dispose function didn't dispose.");
             }
-            if (size == disposables_.size()) {
-                LOG_E("Weak ref dispose function didn't dispose.");
-                disposables_.erase(disposables_.begin());
-            }
-        } else {
             disposables_.erase(disposables_.begin());
         }
     }
 }
-

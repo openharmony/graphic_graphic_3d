@@ -69,6 +69,7 @@ IComponentManager* INodeComponentManagerInstance(IEcs& ecs)
 
 void INodeComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<NodeComponentManager*>(instance);
+    static_cast<NodeComponentManager*>(instance)->~NodeComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

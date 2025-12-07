@@ -335,7 +335,7 @@ template<typename T>
 inline constexpr bool is_unsigned_v = is_unsigned<T>::value;
 
 template<typename T, bool = is_arithmetic_v<T>>
-struct is_signed : integral_constant<bool, T(-1) < T(0)> {};
+struct is_signed : integral_constant<bool, !is_unsigned_v<T>> {};
 
 template<typename T>
 struct is_signed<T, false> : false_type {};

@@ -730,7 +730,7 @@ public:
             allocator_.free(data_);
             data_ = tmp;
         }
-        init_copy(tmp + size_, first, cnt); // Copy the new objects
+        init_copy(tmp + size_, first, static_cast<size_type>(cnt)); // Copy the new objects
         size_ = newSize;
     }
 

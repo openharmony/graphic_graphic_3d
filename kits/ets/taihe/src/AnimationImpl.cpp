@@ -159,7 +159,7 @@ std::shared_ptr<AnimationETS> AnimationImpl::getAnimationETS() const
         TH_THROW(std::runtime_error, "animationTransferStaticImpl failed during GetNativeObject.");
     }
 
-    NapiApi::Object sceneJs = tro->GetSceneWeakRef().GetObject();
+    NapiApi::Object sceneJs = tro->GetSceneWeakRef().GetNapiObject();
     if (!sceneJs) {
         TH_THROW(std::runtime_error, "animationTransferStaticImpl failed during GetSceneWeakRef.");
     }

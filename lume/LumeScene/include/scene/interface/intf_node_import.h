@@ -19,6 +19,8 @@
 #include <scene/base/types.h>
 #include <scene/interface/intf_scene.h>
 
+#include <meta/interface/resource/intf_object_template.h>
+
 SCENE_BEGIN_NAMESPACE()
 
 /**
@@ -44,9 +46,16 @@ public:
      * @param scene Scene to import
      * @param nodeName Name for the scene's root that is copied (the name is usually empty so you can give better name
      * here)
+     * @param resourceGroup Associated resource group for the resources imported from the scene (empty will generate one
+     * if needed)
      * @return The child node added (which was the root in given scene) or null if failed
      */
-    virtual Future<INode::Ptr> ImportChildScene(const IScene::ConstPtr& scene, BASE_NS::string_view nodeName) = 0;
+    virtual Future<INode::Ptr> ImportChildScene(
+        const IScene::ConstPtr& scene, BASE_NS::string_view nodeName, BASE_NS::string_view resourceGroup) = 0;
+    Future<INode::Ptr> ImportChildScene(const IScene::ConstPtr& scene, BASE_NS::string_view nodeName)
+    {
+        return ImportChildScene(scene, nodeName, "");
+    }
     /**
      * @brief Adds whole scene node hierarchy as child of this node.
      * @param uri Uri of the scene resource to load.
@@ -56,7 +65,11 @@ public:
      */
     virtual Future<INode::Ptr> ImportChildScene(BASE_NS::string_view uri, BASE_NS::string_view nodeName) = 0;
 
-    virtual void TrackImportedEntities(BASE_NS::array_view<const CORE_NS::Entity> entities) = 0;
+    /**
+     * @brief Instantiate object template as part of this scene using this node as parent
+     * @param templ Object template containing node hierarchy
+     */
+    virtual Future<INode::Ptr> ImportTemplate(const META_NS::IObjectTemplate::ConstPtr& templ) = 0;
 };
 
 SCENE_END_NAMESPACE()

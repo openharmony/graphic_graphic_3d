@@ -20,13 +20,13 @@
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 
-class MeshJS : public BaseObject, SceneResourceImpl {
+class MeshJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 120;
     static void Init(napi_env env, napi_value exports);
     MeshJS(napi_env, napi_callback_info);
     ~MeshJS() override;
-    virtual void* GetInstanceImpl(uint32_t) override;
+    void* GetInstanceImpl(uint32_t) override;
 
 private:
     void DisposeNative(void*) override;
@@ -36,7 +36,5 @@ private:
 
     napi_value GetMaterialOverride(NapiApi::FunctionContext<>& ctx);
     void SetMaterialOverride(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-
-    BASE_NS::vector<SCENE_NS::ISubMesh::Ptr> subs_;
 };
 #endif

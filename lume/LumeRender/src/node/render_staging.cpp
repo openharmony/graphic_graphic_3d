@@ -96,13 +96,30 @@ uint32_t GetMipLevelSize(uint32_t originalSize, uint32_t mipLevel)
 void GenerateMipmaps(IRenderCommandList& cmdList, const GpuImageDesc& imageDesc, const RenderHandle mipImageHandle,
     const uint32_t currentMipLevel)
 {
+    cmdList.BeginDisableAutomaticBarrierPoints();
+
     constexpr Filter filter = Filter::CORE_FILTER_LINEAR;
     const uint32_t mipCount = imageDesc.mipCount;
     const uint32_t layerCount = imageDesc.layerCount;
 
     const uint32_t iw = imageDesc.width;
     const uint32_t ih = imageDesc.height;
-    for (uint32_t mipIdx = currentMipLevel + 1; mipIdx < mipCount; ++mipIdx) {
+    const uint32_t id = imageDesc.depth;
+
+    const uint32_t firstLevel = currentMipLevel + 1U;
+    if (firstLevel < mipCount) {
+        // all target layers from undefined to transfer dst as we're overwriting them.
+        const ImageResourceBarrier src { 0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+        const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+            PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
+        const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            firstLevel, mipCount - firstLevel, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        cmdList.CustomImageBarrier(mipImageHandle, src, dst, imageSubresourceRange);
+        cmdList.AddCustomBarrierPoint();
+    }
+    for (uint32_t mipIdx = firstLevel; mipIdx < mipCount; ++mipIdx) {
         const uint32_t dstMipLevel = mipIdx;
         const uint32_t srcMipLevel = dstMipLevel - 1;
         // explicit transition for src mip
@@ -128,7 +145,8 @@ void GenerateMipmaps(IRenderCommandList& cmdList, const GpuImageDesc& imageDesc,
                 },
                 {
                     { 0, 0, 0 },
-                    { GetMipLevelSize(iw, srcMipLevel), GetMipLevelSize(ih, srcMipLevel), 1 },
+                    { GetMipLevelSize(iw, srcMipLevel), GetMipLevelSize(ih, srcMipLevel),
+                        GetMipLevelSize(id, srcMipLevel) },
                 },
                 {
                     ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
@@ -138,7 +156,8 @@ void GenerateMipmaps(IRenderCommandList& cmdList, const GpuImageDesc& imageDesc,
                 },
                 {
                     { 0, 0, 0 },
-                    { GetMipLevelSize(iw, dstMipLevel), GetMipLevelSize(ih, dstMipLevel), 1 },
+                    { GetMipLevelSize(iw, dstMipLevel), GetMipLevelSize(ih, dstMipLevel),
+                        GetMipLevelSize(id, dstMipLevel) },
                 },
             };
             cmdList.BlitImage(mipImageHandle, mipImageHandle, imageBlit, filter);
@@ -158,6 +177,7 @@ void GenerateMipmaps(IRenderCommandList& cmdList, const GpuImageDesc& imageDesc,
             }
         }
     }
+    cmdList.EndDisableAutomaticBarrierPoints();
 }
 
 void CopyBuffersToImages(const IRenderNodeGpuResourceManager& gpuResourceMgr, IRenderCommandList& cmdList,
@@ -317,8 +337,6 @@ void RenderStaging::CopyHostToStaging(
         gpuResourceMgr.UnmapBuffer(ref.srcHandle.GetHandle());
     };
 
-    PLUGIN_ASSERT(!RenderHandleUtil::IsValid(stagingData.stagingBuffer));
-
     for (const auto& ref : stagingData.bufferToImage) {
         if ((!ref.invalidOperation) && (ref.dataType != StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY)) {
             copyUserDataToStagingBuffer(gpuResourceMgr, ref);
@@ -331,7 +349,7 @@ void RenderStaging::CopyHostToStaging(
     }
 }
 
-void RenderStaging::CopyHostToStaging(const StagingConsumeStruct& stagingData, const StagingMappedBuffer& smb)
+void RenderStaging::CopyHostToStaging(const StagingConsumeStruct& stagingData, const vector<StagingMappedBuffer>& smb)
 {
     auto const copyUserDataToStagingBuffer = [](const auto& ref, const auto& smb) {
         uint8_t* dataPtr = smb.mappedData;
@@ -367,12 +385,12 @@ void RenderStaging::CopyHostToStaging(const StagingConsumeStruct& stagingData, c
 
     for (const auto& ref : stagingData.bufferToImage) {
         if ((!ref.invalidOperation) && (ref.dataType != StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY)) {
-            copyUserDataToStagingBuffer(ref, smb);
+            copyUserDataToStagingBuffer(ref, smb[ref.stagingBufferIndex]);
         }
     }
     for (const auto& ref : stagingData.bufferToBuffer) {
         if ((!ref.invalidOperation) && (ref.dataType != StagingCopyStruct::DataType::DATA_TYPE_DIRECT_SRC_COPY)) {
-            copyUserDataToStagingBuffer(ref, smb);
+            copyUserDataToStagingBuffer(ref, smb[ref.stagingBufferIndex]);
         }
     }
 }
@@ -593,21 +611,18 @@ void RenderStaging::CopyBuffersToBuffers(IRenderCommandList& cmdList, const Stag
     // explict output barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
-        const BufferResourceBarrier src { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT };
-        const BufferResourceBarrier dst { 0, // access flags are not currently known
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT };
-
         for (const auto& ref : stagingData.bufferToBuffer) {
             if (!ref.invalidOperation) {
+                const auto [postSrc, postDst] = GetBufferPostTransferBarrier(ref.dstHandle.GetHandle());
                 cmdList.CustomBufferBarrier(
-                    ref.dstHandle.GetHandle(), src, dst, 0, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE);
+                    ref.dstHandle.GetHandle(), postSrc, postDst, 0, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE);
             }
         }
         for (const auto& ref : renderDataStoreStagingData.bufferToBuffer) {
             if (!ref.invalidOperation) {
+                const auto [postSrc, postDst] = GetBufferPostTransferBarrier(ref.dstHandle.GetHandle());
                 cmdList.CustomBufferBarrier(
-                    ref.dstHandle.GetHandle(), src, dst, 0, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE);
+                    ref.dstHandle.GetHandle(), postSrc, postDst, 0, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE);
             }
         }
     }
@@ -699,4 +714,47 @@ void RenderStaging::ClearImages(IRenderCommandList& cmdList, const IRenderNodeGp
         // NOTE: there's no way to guess the desired layout for non dynamic trackable clear resources
     }
 }
+
+pair<BufferResourceBarrier, BufferResourceBarrier> RenderStaging::GetBufferPostTransferBarrier(
+    const RenderHandle handle)
+{
+    const auto& gpuResManager = renderNodeContextMgr_->GetGpuResourceManager();
+
+    const auto& desc = gpuResManager.GetBufferDescriptor(handle);
+
+    BufferResourceBarrier dstBarrier = { 0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT };
+
+    if (desc.usageFlags & BufferUsageFlagBits::CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
+        dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        dstBarrier.accessFlags |= AccessFlagBits::CORE_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+    }
+    if (desc.usageFlags & BufferUsageFlagBits::CORE_BUFFER_USAGE_INDEX_BUFFER_BIT) {
+        dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        dstBarrier.accessFlags |= AccessFlagBits::CORE_ACCESS_INDEX_READ_BIT;
+    }
+    if (desc.usageFlags & (BufferUsageFlagBits::CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                              BufferUsageFlagBits::CORE_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT)) {
+        dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                                         PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                         PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        dstBarrier.accessFlags |= AccessFlagBits::CORE_ACCESS_UNIFORM_READ_BIT;
+    }
+    if (desc.usageFlags & (BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                              BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT)) {
+        dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                                         PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                         PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        dstBarrier.accessFlags |=
+            AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT | AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT;
+    }
+    if (desc.usageFlags & BufferUsageFlagBits::CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT) {
+        dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+        dstBarrier.accessFlags |= AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT;
+    }
+
+    return { { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+                 PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT },
+        dstBarrier };
+}
+
 RENDER_END_NAMESPACE()

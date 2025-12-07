@@ -33,6 +33,8 @@ META_TYPE(RENDER_NS::FxaaConfiguration)
 META_TYPE(RENDER_NS::TaaConfiguration)
 META_TYPE(RENDER_NS::DofConfiguration)
 META_TYPE(RENDER_NS::MotionBlurConfiguration)
+META_TYPE(RENDER_NS::LensFlareConfiguration)
+META_TYPE(RENDER_NS::UpscaleConfiguration)
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -51,6 +53,8 @@ public:
     META_PROPERTY(RENDER_NS::TaaConfiguration, Taa)
     META_PROPERTY(RENDER_NS::DofConfiguration, Dof)
     META_PROPERTY(RENDER_NS::MotionBlurConfiguration, MotionBlur)
+    META_PROPERTY(RENDER_NS::LensFlareConfiguration, LensFlare)
+    META_PROPERTY(RENDER_NS::UpscaleConfiguration, Upscale)
 };
 
 META_REGISTER_CLASS(
@@ -84,6 +88,10 @@ public:
         IInternalPostProcess, RENDER_NS::DofConfiguration, Dof, "PostProcessComponent.dofConfiguration")
     SCENE_STATIC_PROPERTY_DATA(IInternalPostProcess, RENDER_NS::MotionBlurConfiguration, MotionBlur,
         "PostProcessComponent.motionBlurConfiguration")
+    SCENE_STATIC_PROPERTY_DATA(IInternalPostProcess, RENDER_NS::LensFlareConfiguration, LensFlare,
+        "PostProcessComponent.lensFlareConfiguration")
+    SCENE_STATIC_PROPERTY_DATA(
+        IInternalPostProcess, RENDER_NS::UpscaleConfiguration, Upscale, "PostProcessComponent.upscaleConfiguration")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(uint32_t, EnableFlags)
@@ -98,6 +106,8 @@ public:
     META_IMPLEMENT_PROPERTY(RENDER_NS::TaaConfiguration, Taa)
     META_IMPLEMENT_PROPERTY(RENDER_NS::DofConfiguration, Dof)
     META_IMPLEMENT_PROPERTY(RENDER_NS::MotionBlurConfiguration, MotionBlur)
+    META_IMPLEMENT_PROPERTY(RENDER_NS::LensFlareConfiguration, LensFlare)
+    META_IMPLEMENT_PROPERTY(RENDER_NS::UpscaleConfiguration, Upscale)
 public:
     BASE_NS::string GetName() const override;
 };

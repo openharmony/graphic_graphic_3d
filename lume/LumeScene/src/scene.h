@@ -41,6 +41,7 @@ public:
     ~SceneObject();
 
     META_BEGIN_STATIC_DATA()
+    // No serialization for RenderConfiguration, attached to root node (and serialized along with that)
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IScene, SCENE_NS::IRenderConfiguration::Ptr, RenderConfiguration, "")
     META_STATIC_PROPERTY_DATA(META_NS::INamed, BASE_NS::string, Name)
     META_END_STATIC_DATA()
@@ -54,6 +55,22 @@ public:
     {
         return META_NS::GetValue(Name());
     }
+
+    IObject::Ptr Resolve(const META_NS::RefUri& uri) const override
+    {
+        if (uri.HasSegment()) {
+            auto ref = uri;
+            auto node = ref.TakeFirstNode();
+            if (node.type == META_NS::RefUri::Node::OBJECT ||
+                (node.type == META_NS::RefUri::Node::SPECIAL && node.name == "@")) {
+                BASE_NS::string name = node.type == META_NS::RefUri::Node::SPECIAL ? "" : node.name;
+                auto root = interface_pointer_cast<META_NS::IObjectInstance>(FindNode("/" + name, {}).GetResult());
+                return root ? root->Resolve(ref) : nullptr;
+            }
+        }
+        return Super::Resolve(uri);
+    }
+
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
     bool AttachEngineProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
 
@@ -62,9 +79,13 @@ public:
 
     Future<INode::Ptr> GetRootNode() const override;
     Future<INode::Ptr> CreateNode(const BASE_NS::string_view path, META_NS::ObjectId id) override;
+    Future<INode::Ptr> CreateNode(
+        const INode::ConstPtr& parent, BASE_NS::string_view name, META_NS::ObjectId id) override;
     Future<INode::Ptr> FindNode(BASE_NS::string_view path, META_NS::ObjectId id) const override;
-    Future<bool> ReleaseNode(INode::Ptr&& node, bool recursive) override;
-    Future<bool> RemoveNode(const INode::Ptr& node) override;
+    Future<BASE_NS::vector<INode::Ptr>> FindNamedNodes(const FindNamedNodeParams& params) const override;
+    Future<uint32_t> ReleaseNode(INode::Ptr&& node, bool recursive) override;
+    Future<bool> RemoveNode(INode::Ptr&& node) override;
+    Future<bool> RemoveObject(META_NS::IObject::Ptr&& object, const RemoveObjectOptions& options) override;
 
     IComponent::Ptr GetComponent(const INode::Ptr& node, BASE_NS::string_view componentName) const override;
     Future<IComponent::Ptr> CreateComponent(const INode::Ptr& node, BASE_NS::string_view componentName) override;
@@ -79,6 +100,8 @@ public:
 
     Future<NodeHits> CastRay(
         const BASE_NS::Math::Vec3& pos, const BASE_NS::Math::Vec3& dir, const RayCastOptions& options) const override;
+
+    ResourceGroupBundle GetResourceGroups() const override;
 
 public:
     IInternalScene::Ptr GetInternalScene() const override;

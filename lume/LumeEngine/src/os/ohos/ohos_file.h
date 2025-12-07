@@ -31,7 +31,7 @@
 #include <core/io/intf_file.h>
 #include <core/namespace.h>
 
-#include "resource_manager.h"
+#include "base/global/resource_management/interfaces/inner_api/include/resource_manager.h"
 
 CORE_BEGIN_NAMESPACE()
 struct OhosDirImpl {

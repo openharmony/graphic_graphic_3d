@@ -1,0 +1,48 @@
+{
+    "$meta": {
+        "meta-version": "2.0",
+        "version": "0.1",
+        "type": "Scene"
+    },
+    "$root": {
+        "$classId": "ae6addfc-5e8e-4c2d-8653-2bd1dca4be6c",
+        "$className": "SceneSer",
+        "$instanceId": "000014f0-3091-7adc-6244-b64067f2c2b8",
+        "__attachments": [],
+        "__children": [{
+                "$classId": "f339e04b-317d-4527-8d3c-460467ff43da",
+                "$className": "SceneNodeSer",
+                "$instanceId": "000014f0-30a3-95a0-f407-907febb7ec66",
+                "__attachments": [],
+                "__children": [{
+                        "$classId": "08c7759d-72f4-40a2-a437-04b00e0dead5",
+                        "$className": "SceneExternalNodeSer",
+                        "$name": "ext",
+                        "$instanceId": "000014f0-30b0-c054-fe8b-ac6c076a0e73",
+                        "__attachments": [{
+                                "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                                "$className": "Property",
+                                "$name": ".Name",
+                                "defaultValue": {
+                                    "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                    "$className": "Any",
+                                    "value": "ext"
+                                },
+                                "values": [],
+                                "modifiers": []
+                            }
+                        ],
+                        "resourceId.name": "scene2",
+                        "resourceId.group": "",
+                        "attachments": []                        
+                    }
+                ],
+                "id": "4e5561d1-0313-4922-b91a-816f388efbbf",
+                "attachments": []
+            }
+        ],
+        "id": "ef6321d7-071c-414a-bb3d-55ea6f94688e",
+        "attachments": [],
+        "resourceGroups": ["Scene", "Scene - scene2"]
+    }
+}

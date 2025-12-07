@@ -17,7 +17,7 @@
 
 #include <base/containers/string.h>
 
-#include "TrueRootObject.h"
+#include "../TrueRootObject.h"
 #include "function.h"
 #include "utils.h"
 
@@ -109,6 +109,16 @@ napi_value Object::Get(const BASE_NS::string_view name)
         return nullptr;
     }
     return tmp.res;
+}
+
+napi_value Object::Invoke(const BASE_NS::string_view name, const JsFuncArgs& args)
+{
+    auto memberFunc = Get<Function>(name);
+    if (!memberFunc.IsValid()) {
+        LOG_E("Object has no member function '%s'", name.data());
+        assert(false);
+    }
+    return memberFunc.valueOrDefault().Invoke(*this, args);
 }
 
 void Object::Set(const BASE_NS::string_view name, napi_value value)
@@ -217,7 +227,7 @@ void Object::AddProperty(const napi_property_descriptor desc)
     if (!env_ || !object_) {
         return;
     }
-    napi_status status = napi_define_properties(env_, object_, 1, &desc);
+    napi_define_properties(env_, object_, 1, &desc);
 }
 
 bool Object::DeleteProperty(const BASE_NS::string_view name)

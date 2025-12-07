@@ -58,7 +58,7 @@ void RenderDataStoreRenderPostProcesses::AddData(
             index = static_cast<size_t>(iter->second);
         } else {
             index = pipelines_.size();
-            nameToPipeline_.insert_or_assign(name, index);
+            nameToPipeline_.insert_or_assign(name, uint32_t(index));
             pipelines_.push_back({});
         }
         // clear and add
@@ -73,6 +73,8 @@ void RenderDataStoreRenderPostProcesses::AddData(
 IRenderDataStoreRenderPostProcesses::PostProcessPipeline RenderDataStoreRenderPostProcesses::GetData(
     const string_view name) const
 {
+    const auto lock = std::lock_guard(mutex_);
+
     if (const auto iter = nameToPipeline_.find(name); iter != nameToPipeline_.cend()) {
         if (iter->second < pipelines_.size()) {
             return pipelines_[iter->second];

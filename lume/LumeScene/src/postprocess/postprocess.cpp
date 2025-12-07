@@ -16,9 +16,19 @@
 
 #include <3d/ecs/components/name_component.h>
 
+#include <meta/api/util.h>
+
 #include "bloom.h"
+#include "blur.h"
+#include "color_conversion.h"
 #include "color_fringe.h"
+#include "dof.h"
+#include "fxaa.h"
+#include "lens_flare.h"
+#include "motion_blur.h"
+#include "taa.h"
 #include "tonemap.h"
+#include "upscale.h"
 #include "util.h"
 #include "vignette.h"
 
@@ -56,8 +66,12 @@ IEcsObject::Ptr PostProcess::GetEcsObject() const
     return acc ? acc->GetEcsObject() : nullptr;
 }
 
-META_NS::IObject::Ptr PostProcess::CreateEffect(const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id)
+META_NS::IObject::Ptr PostProcess::CreateEffect(
+    const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id, BASE_NS::Uid pid)
 {
+    if (!(pp_ && p->IsCompatible(pid))) {
+        return {};
+    }
     auto object = META_NS::GetObjectRegistry().Create(id);
     if (auto i = interface_cast<META_NS::IMutableContainable>(object)) {
         i->SetParent(interface_pointer_cast<META_NS::IObject>(p));
@@ -74,13 +88,9 @@ META_NS::IObject::Ptr PostProcess::CreateEffect(const META_NS::IProperty::Ptr& p
 template<typename T>
 bool PostProcess::InitEffect(const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id)
 {
-    if (auto obj = interface_pointer_cast<T>(CreateEffect(p, id))) {
-        if (META_NS::Property<typename T::Ptr> prop { p }) {
-            prop->SetValue(obj);
-            return true;
-        }
-    }
-    return false;
+    using PropertyType = typename T::Ptr;
+    static constexpr auto compatibleTypeId = META_NS::UidFromType<PropertyType>();
+    return META_NS::SetValue<PropertyType>(p, interface_pointer_cast<T>(CreateEffect(p, id, compatibleTypeId)));
 }
 
 bool PostProcess::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
@@ -95,11 +105,35 @@ bool PostProcess::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS:
     if (name == "Bloom") {
         return InitEffect<IBloom>(p, ClassId::Bloom);
     }
+    if (name == "Blur") {
+        return InitEffect<IBlur>(p, ClassId::Blur);
+    }
+    if (name == "MotionBlur") {
+        return InitEffect<IMotionBlur>(p, ClassId::MotionBlur);
+    }
+    if (name == "ColorConversion") {
+        return InitEffect<IColorConversion>(p, ClassId::ColorConversion);
+    }
     if (name == "ColorFringe") {
         return InitEffect<IColorFringe>(p, ClassId::ColorFringe);
     }
+    if (name == "DepthOfField") {
+        return InitEffect<IDepthOfField>(p, ClassId::DepthOfField);
+    }
+    if (name == "Fxaa") {
+        return InitEffect<IFxaa>(p, ClassId::Fxaa);
+    }
+    if (name == "Taa") {
+        return InitEffect<ITaa>(p, ClassId::Taa);
+    }
     if (name == "Vignette") {
         return InitEffect<IVignette>(p, ClassId::Vignette);
+    }
+    if (name == "LensFlare") {
+        return InitEffect<ILensFlare>(p, ClassId::LensFlare);
+    }
+    if (name == "Upscale") {
+        return InitEffect<IUpscale>(p, ClassId::Upscale);
     }
 
     return false;

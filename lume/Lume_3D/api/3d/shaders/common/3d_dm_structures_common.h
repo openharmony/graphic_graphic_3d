@@ -70,6 +70,10 @@
 #define CORE_MATERIAL_FACTOR_SPECULAR_IDX 10
 #define CORE_MATERIAL_FACTOR_ADDITIONAL_IDX 11
 
+#define CORE_MATERIAL_FACTOR_MAT_TEX_START_IDX 12
+// with experimental bindless the material texture idx and sampler idx are packed
+#define CORE_MATERIAL_FACTOR_MAT_TEX_BINDLESS_SAMPLER_SHIFT 16
+
 // packed texture transforms
 #define CORE_MATERIAL_PACK_TEX_BASE_COLOR_UV_IDX 0
 #define CORE_MATERIAL_PACK_TEX_NORMAL_UV_IDX 1
@@ -105,16 +109,22 @@
 #define CORE_MATERIAL_SPECULAR_BIT (1 << 9)
 #define CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT (1 << 10)
 #define CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT (1 << 11)
+#define CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_IRRADIANCE_BIT (1 << 19)
 // basic (1 << 12)
 // complex (1 << 13)
 #define CORE_MATERIAL_GPU_INSTANCING_BIT (1 << 14)
 // use instancing for materials in fragment shader
 #define CORE_MATERIAL_GPU_INSTANCING_MATERIAL_BIT (1 << 15)
 
+// glTF specular extension specific
+#define CORE_MATERIAL_SPECULAR_FACTOR_TEXTURE_BIT (1 << 17)
+#define CORE_MATERIAL_SPECULAR_COLOR_TEXTURE_BIT (1 << 18)
+
 // needs to match api/core/render/intf_render_data_store_default_light LightingFlagBits
 #define CORE_LIGHTING_SHADOW_TYPE_VSM_BIT (1 << 0)
 #define CORE_LIGHTING_POINT_ENABLED_BIT (1 << 1)
 #define CORE_LIGHTING_SPOT_ENABLED_BIT (1 << 2)
+#define CORE_LIGHTING_RECT_ENABLED_BIT (1 << 3)
 
 // needs to match LumeEngine/3D/api/3d/render/render_data_defines_3d.h RenderSubmeshFlagBits
 #define CORE_SUBMESH_TANGENTS_BIT (1 << 0)
@@ -129,9 +139,12 @@
 #define CORE_LIGHT_USAGE_POINT_LIGHT_BIT (1 << 1)
 #define CORE_LIGHT_USAGE_SPOT_LIGHT_BIT (1 << 2)
 #define CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT (1 << 3)
+#define CORE_LIGHT_USAGE_RECT_LIGHT_BIT (1 << 4)
+#define CORE_LIGHT_USAGE_TWO_SIDED_LIGHT_BIT (1 << 5)
 
 // CORE_CAMERA_FLAGS related to render_data_defines_3d.h CameraShaderFlags
 #define CORE_CAMERA_FOG_BIT (1 << 0)
+#define CORE_CAMERA_VELOCITY_OUT_BIT (1 << 1)
 
 // needs to match api/core/render/render_data_defines.h BackgroundType
 #define CORE_BACKGROUND_TYPE_IMAGE 1
@@ -167,6 +180,8 @@
 #define CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_NEAR 4
 #define CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_FAR 5
 #define CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT 6
+
+#define CORE_DEFAULT_CAMERA_ENVIRONMENT_PROJECTION 1
 
 #define LIGHT_CLUSTERS_X 16
 #define LIGHT_CLUSTERS_Y 9
@@ -205,6 +220,8 @@ constexpr uint32_t CORE_MATERIAL_FACTOR_CLEARCOAT_NORMAL_IDX { 7 };
 constexpr uint32_t CORE_MATERIAL_FACTOR_SHEEN_IDX { 8 };
 constexpr uint32_t CORE_MATERIAL_FACTOR_TRANSMISSION_IDX { 9 };
 constexpr uint32_t CORE_MATERIAL_FACTOR_SPECULAR_IDX { 10 };
+
+constexpr uint32_t CORE_MATERIAL_FACTOR_MAT_TEX_START_IDX { 12 };
 
 // packed texture transforms
 constexpr uint32_t CORE_MATERIAL_PACK_TEX_BASE_COLOR_UV_IDX { 0u };
@@ -251,6 +268,8 @@ constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_TOP { 3 };
 constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_NEAR { 4 };
 constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_FAR { 5 };
 constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT { 6 };
+
+constexpr uint32_t CORE_DEFAULT_CAMERA_ENVIRONMENT_PROJECTION { 1u };
 
 constexpr uint32_t LIGHT_CLUSTERS_X { 16u };
 constexpr uint32_t LIGHT_CLUSTERS_Y { 9u };
@@ -319,11 +338,12 @@ struct DefaultMaterialUserMaterialStruct {
 
 struct DefaultMaterialSingleLightStruct {
     vec4 pos;
-    // .w is range
+    // .w is range (for rect this is x-dir with baked size)
     vec4 dir;
     // intensity baked into rgb, .w is intensity (if needs to be inverse multiplied)
     vec4 color;
-    // .x is inner cone angle, .y is outer cone angle, .z is light angle scale, .w is light angle offset
+    // for spot = .x is inner cone angle, .y is outer cone angle, .z is light angle scale, .w is light angle offset
+    // for rect .xyz is y-dir with baked size
     vec4 spotLightParams;
     // .x = shadow strength, .y = depth bias, .z = normal bias, .w = shadow uv step size
     vec4 shadowFactors;
@@ -346,8 +366,8 @@ struct DefaultMaterialLightStruct {
     uint spotLightBeginIndex;
     uint spotLightCount;
 
-    uint pad0;
-    uint pad1;
+    uint rectLightBeginIndex;
+    uint rectLightCount;
 
     uvec4 clusterSizes;
     vec4 clusterFactors;
@@ -406,10 +426,21 @@ struct DefaultMaterialEnvironmentStruct {
     uvec4 multiEnvIndices;
 
     // sky atmosphere
-    // sun position
+
+    // .xyz = sun position, .w = is BG_TYPE_SKY flag used
     vec4 packedSun;
-    // rain data
-    vec4 packedRain;
+
+    // .x = time of day, .y = moon brightness, .z = glow intensity, .w = skyViewBrightness
+    vec4 packedPhases;
+
+    // .xyz = groundColor
+    vec4 groundColor;
+
+    // .x = world scale, .y = max aerial perspective
+    vec4 aerialPerspectiveParams;
+
+    // padding to keep DefaultMaterialEnvironmentStruct at 512 bytes
+    vec4 padding[8];
 };
 
 struct DefaultMaterialFogStruct {
@@ -461,11 +492,11 @@ struct DefaultCameraMatrixStruct {
 
     vec4 frustumPlanes[CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT];
 
-    // .x environment count
+    // .x environment count, .y flags
     uvec4 counts;
     // padding to 256
     uvec4 pad0;
-    mat4 matPad0;
+    mat4 envProjInv;
     mat4 matPad1;
 };
 

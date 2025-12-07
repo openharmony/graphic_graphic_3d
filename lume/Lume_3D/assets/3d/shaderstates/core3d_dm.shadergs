@@ -409,6 +409,81 @@
                     ]
                 }
             }
+        },        
+        {
+            "baseShaderState": "3dshaderstates://core3d_dm.shadergs",
+            "baseVariantName": "OPAQUE_FW",
+            "variantName": "OPAQUE_FW_BL",
+            "renderSlot": "CORE3D_RS_DM_FW_OPAQUE_BL",
+            "renderSlotDefaultShaderState": true,
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                },
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit"
+                        },
+                        {
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "baseShaderState": "3dshaderstates://core3d_dm.shadergs",
+            "baseVariantName": "OPAQUE_FW_BL",
+            "variantName": "TRANSLUCENT_FW_BL",
+            "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT_BL",
+            "renderSlotDefaultShaderState": true,
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": false,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                },
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "enableBlend": true,
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit",
+                            "srcColorBlendFactor": "one",
+                            "dstColorBlendFactor": "one_minus_src_alpha",
+                            "colorBlendOp": "add",
+                            "srcAlphaBlendFactor": "one",
+                            "dstAlphaBlendFactor": "one_minus_src_alpha",
+                            "alphaBlendOp": "add"
+                        },
+                        {
+                            "colorWriteMask": ""
+                        }
+                    ]
+                }
+            }
         }
     ]
 }

@@ -18,6 +18,8 @@
 
 #include <scene/base/types.h>
 
+#include <core/resources/intf_resource.h>
+
 SCENE_BEGIN_NAMESPACE()
 
 struct SceneOptions {
@@ -25,6 +27,10 @@ struct SceneOptions {
     BASE_NS::string systemGraphUri;
     /// If true, scene will control any startables attached to nodes in the scene
     bool enableStartables { true };
+    /// Create and add all resources when loading scene
+    bool createResources { true };
+    /// Resource id if this is loaded via resource manager
+    CORE_NS::ResourceId resourceId;
 };
 
 SCENE_END_NAMESPACE()

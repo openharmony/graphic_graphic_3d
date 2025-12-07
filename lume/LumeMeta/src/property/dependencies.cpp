@@ -77,11 +77,51 @@ bool Dependencies::HasDependency(const IProperty* p) const
     return false;
 }
 
+#ifdef WIN32
 Dependencies& GetDeps()
 {
-    thread_local Dependencies deps;
+    static thread_local Dependencies deps;
     return deps;
 }
+#else
+#include <mutex>
 
+namespace {
+static thread_local Dependencies* deps = nullptr;
+std::mutex gInstanceLock;
+struct link {
+    Dependencies* data {};
+    link* next {};
+};
+link* gInstances = nullptr;
+} // namespace
+
+void __attribute__((destructor)) DependenciesCalledAtExit()
+{
+    // we HOPE that no one is still trying to use anything, as full shutdown is in progress.
+    link* cur {};
+    link* next = gInstances;
+    gInstances = nullptr;
+    while (next) {
+        cur = next;
+        delete cur->data;
+        cur->data = nullptr;
+
+        next = cur->next;
+        cur->next = nullptr;
+        delete cur;
+    }
+}
+
+Dependencies& GetDeps()
+{
+    if (!deps) {
+        deps = new Dependencies;
+        std::unique_lock lock { gInstanceLock };
+        gInstances = new link { deps, gInstances };
+    }
+    return *deps;
+}
+#endif
 } // namespace Internal
 META_END_NAMESPACE()

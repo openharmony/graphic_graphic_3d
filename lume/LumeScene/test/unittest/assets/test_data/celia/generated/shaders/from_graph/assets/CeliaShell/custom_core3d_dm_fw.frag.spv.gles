@@ -1,0 +1,622 @@
+#version 320 es
+#define SPIRV_CROSS_CONSTANT_ID_256 1u
+precision highp float;
+precision highp int;
+
+struct DefaultMaterialGeneralDataStruct
+{
+    uvec4 indices;
+    vec4 viewportSizeInvViewportSize;
+    vec4 sceneTimingData;
+};
+
+struct DefaultCameraMatrixStruct
+{
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+    mat4 viewInv;
+    mat4 projInv;
+    mat4 viewProjInv;
+    mat4 viewPrevFrame;
+    mat4 projPrevFrame;
+    mat4 viewProjPrevFrame;
+    mat4 shadowViewProj;
+    mat4 shadowViewProjInv;
+    vec4 jitter;
+    vec4 jitterPrevFrame;
+    uvec4 indices;
+    uvec4 multiViewIndices;
+    vec4 frustumPlanes[6];
+    uvec4 counts;
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
+};
+
+struct CustomPropsStruct
+{
+    vec4 MetalRoughness;
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_256
+#define SPIRV_CROSS_CONSTANT_ID_256 0u
+#endif
+const uint CORE_BACKEND_TYPE = SPIRV_CROSS_CONSTANT_ID_256;
+uniform float CORE_FLIP_NDC ;
+
+struct DefaultMaterialEnvironmentStruct
+{
+    vec4 indirectSpecularColorFactor;
+    vec4 indirectDiffuseColorFactor;
+    vec4 envMapColorFactor;
+    vec4 values;
+    vec4 blendFactor;
+    mat4 envRotation;
+    uvec4 indices;
+    vec4 shIndirectCoefficients[9];
+    vec4 pad0;
+};
+
+struct DefaultMaterialFogStruct
+{
+    uvec4 indices;
+    vec4 firstLayer;
+    vec4 secondLayer;
+    vec4 baseFactors;
+    vec4 inscatteringColor;
+    vec4 envMapFactor;
+    vec4 additionalFactor;
+};
+
+struct DefaultMaterialSingleLightStruct
+{
+    vec4 pos;
+    vec4 dir;
+    vec4 color;
+    vec4 spotLightParams;
+    vec4 shadowFactors;
+    vec4 additionalFactor;
+    uvec4 flags;
+    uvec4 indices;
+};
+
+struct DefaultMaterialLightStruct
+{
+    uint directionalLightBeginIndex;
+    uint directionalLightCount;
+    uint pointLightBeginIndex;
+    uint pointLightCount;
+    uint spotLightBeginIndex;
+    uint spotLightCount;
+    uint pad0;
+    uint pad1;
+    uvec4 clusterSizes;
+    vec4 clusterFactors;
+    vec4 atlasSizeInvSize;
+    vec4 additionalFactors;
+    DefaultMaterialSingleLightStruct lights[64];
+};
+
+struct GlobalPostProcessStruct
+{
+    uvec4 flags;
+    vec4 renderTimings;
+    vec4 factors[14];
+    vec4 userFactors[16];
+};
+
+struct DefaultMaterialLightClusterData
+{
+    uint count;
+    uint lightIndices[15];
+};
+
+struct DefaultMaterialSingleMeshStruct
+{
+    mat4 world;
+    mat4 normalWorld;
+    mat4 prevWorld;
+    uvec4 indices;
+    uvec4 layers;
+    uvec4 customData[2];
+};
+
+struct DefaultMaterialMeshStruct
+{
+    DefaultMaterialSingleMeshStruct mesh[64];
+};
+
+struct DefaultMaterialSkinStruct
+{
+    mat4 jointMatrices[256];
+};
+
+struct DefaultMaterialSingleMaterialStruct
+{
+    vec4 factors[15];
+    uvec4 indices;
+};
+
+struct DefaultMaterialMaterialStruct
+{
+    DefaultMaterialSingleMaterialStruct material[64];
+};
+
+struct DefaultMaterialTransformSingleMaterialStruct
+{
+    uvec4 _packed[15];
+    uvec4 indices;
+};
+
+struct DefaultMaterialTransformMaterialStruct
+{
+    DefaultMaterialTransformSingleMaterialStruct material[64];
+};
+
+struct DefaultMaterialSingleUserMaterialStruct
+{
+    uvec4 userData[16];
+};
+
+struct DefaultMaterialUserMaterialStruct
+{
+    DefaultMaterialSingleUserMaterialStruct material[64];
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 0u
+#endif
+const uint CORE_MATERIAL_TYPE = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 0u
+#endif
+const uint CORE_MATERIAL_FLAGS = SPIRV_CROSS_CONSTANT_ID_1;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 0u
+#endif
+const uint CORE_LIGHTING_FLAGS = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 0u
+#endif
+const uint CORE_POST_PROCESS_FLAGS = SPIRV_CROSS_CONSTANT_ID_3;
+#ifndef SPIRV_CROSS_CONSTANT_ID_4
+#define SPIRV_CROSS_CONSTANT_ID_4 0u
+#endif
+const uint CORE_CAMERA_FLAGS = SPIRV_CROSS_CONSTANT_ID_4;
+
+layout(std140) uniform s0_b1
+{
+    DefaultMaterialGeneralDataStruct uGeneralData;
+} _s0_b1;
+
+layout(std140) uniform s0_b0
+{
+    DefaultCameraMatrixStruct uCameras[16];
+} _s0_b0;
+
+layout(std140) uniform s1_b4
+{
+    CustomPropsStruct props;
+} _s1_b4;
+
+uniform mediump sampler2D s2_b0;
+uniform mediump sampler2D s2_b1[10];
+
+layout(location = 0) out vec4 outColor;
+layout(location = 0) in vec3 inPos;
+layout(location = 1) in vec3 inNormal;
+
+void ColorVec3Block(float x, float y, float z, out vec3 outVec)
+{
+    outVec = vec3(x, y, z);
+}
+
+void WorldPositionBlock(out vec3 outPos)
+{
+    outPos = inPos;
+}
+
+uint GetUnpackCameraIndex()
+{
+    return _s0_b1.uGeneralData.indices.x;
+}
+
+void CameraViewDirBlock(out vec3 outCamDir)
+{
+    uint cameraIdx = GetUnpackCameraIndex();
+    vec3 camPos = _s0_b0.uCameras[cameraIdx].viewInv[3].xyz;
+    outCamDir = normalize(inPos - camPos);
+}
+
+void ElapsedTimeBlock(out float totalTimeInSeconds)
+{
+    totalTimeInSeconds = _s0_b1.uGeneralData.sceneTimingData.z;
+}
+
+void InputNormalBlock(out vec3 outVec)
+{
+    outVec = inNormal;
+}
+
+void Vec3SwizzleBlock(float x, float y, float z, out vec3 result)
+{
+    result = vec3(x, y, z);
+}
+
+void MultiplyBlock(vec4 x, vec4 m, out vec4 result)
+{
+    result = x * m;
+}
+
+void MultiplyBlock(vec3 x, vec3 m, out vec3 result)
+{
+    result = x * m;
+}
+
+void VecNormalizeBlock(vec3 v, out vec3 result)
+{
+    result = normalize(v);
+}
+
+void NegateBlock(float x, out float result)
+{
+    result = -x;
+}
+
+void SubtractBlock(vec3 x, vec3 m, out vec3 result)
+{
+    result = x - m;
+}
+
+void rotateXBlock(float rotation, vec3 vectorToRotate, out vec3 outVec)
+{
+    float c = cos(rotation);
+    float s = sin(rotation);
+    outVec = mat3(vec3(vec3(c, -s, 0.0)), vec3(vec3(s, c, 0.0)), vec3(0.0, 0.0, 1.0)) * vectorToRotate;
+}
+
+void VecDotBlock(vec3 A, vec3 B, out float result)
+{
+    result = dot(A, B);
+}
+
+void MaterialTextureInfoSlotSampleBlock(uint materialIndexSlot, vec2 uv, out vec4 outCol)
+{
+    uint maxCount = min(materialIndexSlot, 10u);
+    if (maxCount == 0u)
+    {
+        outCol = texture(s2_b0, uv);
+    }
+    else
+    {
+        outCol = texture(s2_b1[maxCount - 1u], uv);
+    }
+}
+
+void TriplanarMappingBlock(vec4 xSample, vec4 ySample, vec4 zSample, vec3 n, float k, out vec4 outColor_1)
+{
+    vec4 x = xSample;
+    vec4 y = ySample;
+    vec4 z = zSample;
+    vec3 m = pow(abs(n), vec3(k));
+    outColor_1 = (((x * m.x) + (y * m.y)) + (z * m.z)) / vec4((m.x + m.y) + m.z);
+}
+
+void OneMinusBlock(float x, out float result)
+{
+    result = 1.0 - x;
+}
+
+void PowerBlock(float a, float b, out float result)
+{
+    result = pow(a, b);
+}
+
+void DivideBlock(float x, float d, out float result)
+{
+    result = x / d;
+    if (d == 0.0)
+    {
+        result = 0.0;
+    }
+}
+
+void AddBlock(float x, float m, out float result)
+{
+    result = x + m;
+}
+
+void ClampBlock(float x, float minVal, float maxVal, out float out_)
+{
+    out_ = clamp(x, minVal, maxVal);
+}
+
+void MultiplyBlock(float x, float m, out float result)
+{
+    result = x * m;
+}
+
+void SmoothStepBlock(float x, float edge0, float edge1, out float out_)
+{
+    out_ = smoothstep(edge0, edge1, x);
+}
+
+void LerpBlock(vec3 a, vec3 b, vec3 t, out vec3 c)
+{
+    c = mix(a, b, t);
+}
+
+void PowerBlock(vec3 a, vec3 b, out vec3 result)
+{
+    result = pow(a, b);
+}
+
+void AddBlock(vec4 x, vec4 m, out vec4 result)
+{
+    result = x + m;
+}
+
+void AddBlock(vec3 x, vec3 m, out vec3 result)
+{
+    result = x + m;
+}
+
+void OutputColorBlock(vec4 color)
+{
+    outColor = color;
+    vec4 _180 = outColor;
+    float _185 = outColor.w;
+    vec3 _191 = clamp(_180.xyz * _185, vec3(0.0), vec3(64512.0));
+    outColor.x = _191.x;
+    outColor.y = _191.y;
+    outColor.z = _191.z;
+}
+
+void main()
+{
+    vec4 MetalRoughness = _s1_b4.props.MetalRoughness;
+    float param = 1.0;
+    float param_1 = 0.60000002384185791015625;
+    float param_2 = 0.4000000059604644775390625;
+    vec3 param_3;
+    ColorVec3Block(param, param_1, param_2, param_3);
+    vec3 v1 = param_3;
+    vec3 param_4;
+    WorldPositionBlock(param_4);
+    vec3 v2 = param_4;
+    float param_5 = 0.75;
+    float param_6 = 0.550000011920928955078125;
+    float param_7 = 0.949999988079071044921875;
+    vec3 param_8;
+    ColorVec3Block(param_5, param_6, param_7, param_8);
+    vec3 v3 = param_8;
+    float param_9 = 0.0;
+    float param_10 = 0.5;
+    float param_11 = 1.0;
+    vec3 param_12;
+    ColorVec3Block(param_9, param_10, param_11, param_12);
+    vec3 v4 = param_12;
+    vec3 param_13;
+    WorldPositionBlock(param_13);
+    vec3 v5 = param_13;
+    vec3 param_14;
+    CameraViewDirBlock(param_14);
+    vec3 v6 = param_14;
+    float param_15;
+    ElapsedTimeBlock(param_15);
+    float v7 = param_15;
+    vec3 param_16;
+    InputNormalBlock(param_16);
+    vec3 v8 = param_16;
+    float param_17 = 0.25;
+    float param_18 = 0.5;
+    float param_19 = 0.0;
+    vec3 param_20;
+    Vec3SwizzleBlock(param_17, param_18, param_19, param_20);
+    vec3 v9 = param_20;
+    float param_21 = 1.0;
+    float param_22 = 0.64999997615814208984375;
+    float param_23 = 0.0;
+    vec3 param_24;
+    ColorVec3Block(param_21, param_22, param_23, param_24);
+    vec3 v10 = param_24;
+    vec4 param_25 = vec4(1.0);
+    vec4 param_26 = vec4(0.800000011920928955078125, 0.800000011920928955078125, 1.0, 0.60000002384185791015625);
+    vec4 param_27;
+    MultiplyBlock(param_25, param_26, param_27);
+    vec4 v11 = param_27;
+    float param_28 = -0.25;
+    float param_29 = -0.5;
+    float param_30 = 0.0;
+    vec3 param_31;
+    Vec3SwizzleBlock(param_28, param_29, param_30, param_31);
+    vec3 v12 = param_31;
+    vec3 param_32;
+    InputNormalBlock(param_32);
+    vec3 v13 = param_32;
+    vec3 param_33 = v5;
+    vec3 param_34 = vec3(0.300000011920928955078125);
+    vec3 param_35;
+    MultiplyBlock(param_33, param_34, param_35);
+    vec3 v14 = param_35;
+    vec3 param_36 = v6;
+    vec3 param_37;
+    VecNormalizeBlock(param_36, param_37);
+    vec3 v15 = param_37;
+    float param_38 = v7;
+    float param_39;
+    NegateBlock(param_38, param_39);
+    float v16 = param_39;
+    vec3 param_40 = v8;
+    vec3 param_41;
+    VecNormalizeBlock(param_40, param_41);
+    vec3 v17 = param_41;
+    vec3 param_42 = v9;
+    vec3 param_43 = v12;
+    vec3 param_44;
+    SubtractBlock(param_42, param_43, param_44);
+    vec3 v18 = param_44;
+    float param_45 = v7;
+    vec3 param_46 = v14;
+    vec3 param_47;
+    rotateXBlock(param_45, param_46, param_47);
+    vec3 v19 = param_47;
+    vec3 param_48 = v15;
+    vec3 param_49 = vec3(-1.0);
+    vec3 param_50;
+    MultiplyBlock(param_48, param_49, param_50);
+    vec3 v20 = param_50;
+    float param_51 = v16;
+    vec3 param_52 = v2;
+    vec3 param_53;
+    rotateXBlock(param_51, param_52, param_53);
+    vec3 v21 = param_53;
+    vec3 param_54 = v18;
+    vec3 param_55 = v18;
+    float param_56;
+    VecDotBlock(param_54, param_55, param_56);
+    float v22 = param_56;
+    uint param_57 = 0u;
+    vec2 param_58 = vec2(v19.y, v19.z);
+    vec4 param_59;
+    MaterialTextureInfoSlotSampleBlock(param_57, param_58, param_59);
+    vec4 v23 = param_59;
+    uint param_60 = 0u;
+    vec2 param_61 = vec2(v19.z, v19.x);
+    vec4 param_62;
+    MaterialTextureInfoSlotSampleBlock(param_60, param_61, param_62);
+    vec4 v24 = param_62;
+    uint param_63 = 0u;
+    vec2 param_64 = vec2(v19.x, v19.y);
+    vec4 param_65;
+    MaterialTextureInfoSlotSampleBlock(param_63, param_64, param_65);
+    vec4 v25 = param_65;
+    vec3 param_66 = v17;
+    vec3 param_67 = v20;
+    float param_68;
+    VecDotBlock(param_66, param_67, param_68);
+    float v26 = param_68;
+    vec3 param_69 = v21;
+    vec3 param_70 = v12;
+    vec3 param_71;
+    SubtractBlock(param_69, param_70, param_71);
+    vec3 v27 = param_71;
+    vec4 param_72 = v23;
+    vec4 param_73 = v24;
+    vec4 param_74 = v25;
+    vec3 param_75 = v13;
+    float param_76 = 8.0;
+    vec4 param_77;
+    TriplanarMappingBlock(param_72, param_73, param_74, param_75, param_76, param_77);
+    vec4 v28 = param_77;
+    float param_78 = v26;
+    float param_79;
+    OneMinusBlock(param_78, param_79);
+    float v29 = param_79;
+    vec3 param_80 = v18;
+    vec3 param_81 = v27;
+    float param_82;
+    VecDotBlock(param_80, param_81, param_82);
+    float v30 = param_82;
+    vec4 param_83 = v11;
+    vec4 param_84 = v28;
+    vec4 param_85;
+    MultiplyBlock(param_83, param_84, param_85);
+    vec4 v31 = param_85;
+    float param_86 = v29;
+    float param_87 = 2.5;
+    float param_88;
+    PowerBlock(param_86, param_87, param_88);
+    float v32 = param_88;
+    float param_89 = v30;
+    float param_90 = v22;
+    float param_91;
+    DivideBlock(param_89, param_90, param_91);
+    float v33 = param_91;
+    float param_92 = v32;
+    float param_93 = 0.1500000059604644775390625;
+    float param_94;
+    AddBlock(param_92, param_93, param_94);
+    float v34 = param_94;
+    float param_95 = v33;
+    float param_96 = 0.0;
+    float param_97 = 1.0;
+    float param_98;
+    ClampBlock(param_95, param_96, param_97, param_98);
+    float v35 = param_98;
+    float param_99 = v34;
+    float param_100 = 1.0;
+    float param_101;
+    MultiplyBlock(param_99, param_100, param_101);
+    float v36 = param_101;
+    float param_102 = v35;
+    float param_103 = 0.699999988079071044921875;
+    float param_104 = 1.0;
+    float param_105;
+    SmoothStepBlock(param_102, param_103, param_104, param_105);
+    float v37 = param_105;
+    float param_106 = v35;
+    float param_107 = 0.0;
+    float param_108 = 0.3499999940395355224609375;
+    float param_109;
+    SmoothStepBlock(param_106, param_107, param_108, param_109);
+    float v38 = param_109;
+    float param_110 = v35;
+    float param_111 = 0.3499999940395355224609375;
+    float param_112 = 0.699999988079071044921875;
+    float param_113;
+    SmoothStepBlock(param_110, param_111, param_112, param_113);
+    float v39 = param_113;
+    vec3 param_114 = v4;
+    vec3 param_115 = v3;
+    vec3 param_116 = vec3(v38, v38, v38);
+    vec3 param_117;
+    LerpBlock(param_114, param_115, param_116, param_117);
+    vec3 v40 = param_117;
+    vec3 param_118 = v40;
+    vec3 param_119 = v1;
+    vec3 param_120 = vec3(v39, v39, v39);
+    vec3 param_121;
+    LerpBlock(param_118, param_119, param_120, param_121);
+    vec3 v41 = param_121;
+    vec3 param_122 = v41;
+    vec3 param_123 = v10;
+    vec3 param_124 = vec3(v37, v37, v37);
+    vec3 param_125;
+    LerpBlock(param_122, param_123, param_124, param_125);
+    vec3 v42 = param_125;
+    vec3 param_126 = v42;
+    vec3 param_127 = vec3(2.2000000476837158203125);
+    vec3 param_128;
+    PowerBlock(param_126, param_127, param_128);
+    vec3 v43 = param_128;
+    vec3 param_129 = v43;
+    vec3 param_130 = vec3(0.25);
+    vec3 param_131;
+    MultiplyBlock(param_129, param_130, param_131);
+    vec3 v44 = param_131;
+    vec3 param_132 = v44;
+    vec3 param_133 = vec3(v36, v36, v36);
+    vec3 param_134;
+    MultiplyBlock(param_132, param_133, param_134);
+    vec3 v45 = param_134;
+    vec4 param_135 = vec4(v45.x, v45.y, v45.z, 1.0);
+    vec4 param_136 = vec4(v31.x, v31.y, v31.z, 1.0);
+    vec4 param_137;
+    AddBlock(param_135, param_136, param_137);
+    vec4 v46 = param_137;
+    vec3 param_138 = vec3(v46.x, v46.y, v46.z);
+    vec3 param_139 = vec3(2.5);
+    vec3 param_140;
+    MultiplyBlock(param_138, param_139, param_140);
+    vec3 v47 = param_140;
+    vec3 param_141 = v47;
+    vec3 param_142 = v47;
+    vec3 param_143;
+    AddBlock(param_141, param_142, param_143);
+    vec3 v48 = param_143;
+    vec4 param_144 = vec4(v48.x, v48.y, v48.z, v36);
+    OutputColorBlock(param_144);
+}
+

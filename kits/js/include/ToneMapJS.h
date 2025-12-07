@@ -17,7 +17,7 @@
 #define TONEMAPJS_H
 #include "BaseObjectJS.h"
 
-class ToneMapJS : public BaseObject {
+class ToneMapJS final : public BaseObject {
 public:
     enum ToneMappingType {
         NOT_SET = -1,
@@ -39,9 +39,8 @@ public:
     void UnbindFromNative();
     // Start using the native as the backing object and sync our members to it.
     void BindToNative(SCENE_NS::ITonemap::Ptr native);
-
-private:
     void* GetInstanceImpl(uint32_t) override;
+private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
     void DisposeNative(void*) override;
     void Finalize(napi_env env) override;

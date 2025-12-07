@@ -69,7 +69,7 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
                         Collect(set.set, binding, plat_.ciSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                        [[fallthrough]];
+                        [[fallthrough]]; // follow the same procedure as STORAGE
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -79,14 +79,14 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
                         Collect(set.set, binding, plat_.sbSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                        [[fallthrough]];
+                        [[fallthrough]]; // follow the same procedure as STORAGE
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
                         Collect(set.set, binding, plat_.siSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
-                        [[fallthrough]];
+                        [[fallthrough]]; // follow the same procedure as MAX
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM:
                         break;
                 }

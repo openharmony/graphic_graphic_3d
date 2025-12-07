@@ -1,0 +1,14 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "vertexinputdeclaration"
+    },
+    "vertexInputState": {
+        "vertexInputBindingDescriptions" : [
+            { "binding" : 0, "stride" : 8, "vertexInputRate" : "vertex" }
+        ],
+        "vertexInputAttributeDescriptions" : [
+            { "location" : 0, "binding" : 0, "format" : "r32g32_sfloat", "offset" : 0 }
+        ]
+    }
+}

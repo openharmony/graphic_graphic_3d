@@ -53,8 +53,14 @@ layout(set = 1, binding = 3, std140) uniform uMaterialTransformStructData
     DefaultMaterialTransformMaterialStruct uMaterialTransformData;
 };
 
+#if (CORE3D_DM_DEPTH_BINDLESS_FRAG_LAYOUT == 1)
+// experimental bindless support
+layout(set = 2, binding = 0) uniform texture2D uImages[];
+layout(set = 2, binding = 1) uniform sampler uSamplers[];
+#else
 layout(set = 2, binding = 0) uniform CORE_RELAXEDP sampler2D uSampTextureBase;
-#endif
+#endif // CORE3D_DM_DEPTH_BINDLESS_FRAG_LAYOUT
+#endif // CORE3D_DM_DEPTH_FRAG_LAYOUT
 
 layout(constant_id = 0) const uint CORE_SUBMESH_FLAGS = 0;
 layout(constant_id = 1) const uint CORE_MATERIAL_FLAGS = 0;

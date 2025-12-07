@@ -61,17 +61,22 @@ public:
          * The resource is a MeshResource.
          */
         MESH_RESOURCE = 8,
+        /**
+         * The resource is an Effect.
+         */
+        EFFECT = 9,
     };
     SceneResourceImpl(SceneResourceType type);
     virtual ~SceneResourceImpl();
     static void RegisterEnums(NapiApi::Object exports);
 
-    void* GetInstanceImpl(uint32_t id);
-    NapiApi::WeakRef GetSceneWeakRef();
+    virtual void* GetInstanceImpl(uint32_t id);
+    NapiApi::WeakObjectRef GetSceneWeakRef();
 
 protected:
     static void GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props);
 
+    void SetUri(NapiApi::Object& args);
     void SetUri(NapiApi::StrongRef uri);
     napi_value GetObjectType(NapiApi::FunctionContext<>& ctx);
     napi_value GetName(NapiApi::FunctionContext<>& ctx);
@@ -80,11 +85,14 @@ protected:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
 
     // May contain Scene or RenderContext
-    NapiApi::WeakRef scene_;
+    NapiApi::WeakObjectRef scene_;
     NapiApi::StrongRef uri_;
 
     // returns false if owning scene has been destroyed.
     bool validateSceneRef();
+    // flagged to true, IF user directly called "destroy" to the resource.
+    // used to identify if we want FULL cleanup or just release the "handle".
+    bool userDisposed_ { false };
 
 private:
     SceneResourceType type_;

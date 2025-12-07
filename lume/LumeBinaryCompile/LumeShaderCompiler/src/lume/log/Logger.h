@@ -46,10 +46,11 @@ public:
     void AddOutput(std::unique_ptr<IOutput> output) override;
 
 private:
-    LogLevel mLogLevel = LogLevel::VERBOSE;
-    std::mutex mLoggerMutex;
+    LogLevel logLevel_ = LogLevel::VERBOSE;
+    std::mutex loggerMutex_;
 
-    std::vector<std::unique_ptr<IOutput>> mOutputs;
+    std::vector<char> buffer_;
+    std::vector<std::unique_ptr<IOutput>> outputs_;
 };
 } // namespace lume
 

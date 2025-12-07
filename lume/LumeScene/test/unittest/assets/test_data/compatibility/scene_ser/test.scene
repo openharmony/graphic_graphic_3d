@@ -1,0 +1,88 @@
+{
+    "$meta": {
+        "meta-version": "2.0",
+        "version": "0.1",
+        "type": "Scene"
+    },
+    "$root": {
+        "$classId": "f339e04b-317d-4527-8d3c-460467ff43da",
+        "$className": "SceneNodeSer",
+        "$instanceId": "0003b4fc-a2b2-b2c0-38e4-d8cf7623c2b1",
+        "__attachments": [],
+        "__children": [{
+                "$classId": "f339e04b-317d-4527-8d3c-460467ff43da",
+                "$className": "SceneNodeSer",
+                "$instanceId": "0003b4fc-a2be-72f4-b672-22ce28592f6b",
+                "__attachments": [],
+                "__children": [{
+                        "$classId": "f339e04b-317d-4527-8d3c-460467ff43da",
+                        "$className": "SceneNodeSer",
+                        "$name": "test",
+                        "$instanceId": "0003b4fc-a2c7-10d0-5774-04fdad3cb9ad",
+                        "__attachments": [{
+                                "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                                "$className": "Property",
+                                "$name": ".Scale",
+                                "defaultValue": {
+                                    "$classId": "24fb1c29-d383-5a6f-4275-696c74416e79",
+                                    "$className": "Any",
+                                    "value": [2, 2, 2]
+                                },
+                                "values": [],
+                                "modifiers": []
+                            }
+                        ],
+                        "__children": [{
+                                "$classId": "f339e04b-317d-4527-8d3c-460467ff43da",
+                                "$className": "SceneNodeSer",
+                                "$name": "hips",
+                                "$instanceId": "0003b4fc-a2cd-baac-274b-fa2468f1c024",
+                                "__attachments": [],
+                                "__children": [],
+                                "id": "4e5561d1-0313-4922-b91a-816f388efbbf",
+                                "attachments": []
+                            }, {
+                                "$classId": "f339e04b-317d-4527-8d3c-460467ff43da",
+                                "$className": "SceneNodeSer",
+                                "$name": "some",
+                                "$instanceId": "0003b4fc-a2d5-da5c-53e3-2fc4568c7bb1",
+                                "__attachments": [],
+                                "__children": [{
+                                        "$classId": "f339e04b-317d-4527-8d3c-460467ff43da",
+                                        "$className": "SceneNodeSer",
+                                        "$name": "disabled",
+                                        "$instanceId": "0003b4fc-a2dd-6600-4474-11ed4a1053de",
+                                        "__attachments": [{
+                                                "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                                                "$className": "Property",
+                                                "$name": ".Enabled",
+                                                "defaultValue": {
+                                                    "$classId": "cd2fd49b-c6b0-14bd-4275-696c74416e79",
+                                                    "$className": "Any",
+                                                    "value": false
+                                                },
+                                                "values": [],
+                                                "modifiers": []
+                                            }
+                                        ],
+                                        "__children": [],
+                                        "id": "4e5561d1-0313-4922-b91a-816f388efbbf",
+                                        "attachments": []
+                                    }
+                                ],
+                                "id": "4e5561d1-0313-4922-b91a-816f388efbbf",
+                                "attachments": []
+                            }
+                        ],
+                        "id": "4e5561d1-0313-4922-b91a-816f388efbbf",
+                        "attachments": []
+                    }
+                ],
+                "id": "4e5561d1-0313-4922-b91a-816f388efbbf",
+                "attachments": []
+            }
+        ],
+        "id": "ef6321d7-071c-414a-bb3d-55ea6f94688e",
+        "attachments": []
+    }
+}

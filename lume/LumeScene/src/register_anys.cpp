@@ -18,11 +18,10 @@
 #include <scene/interface/intf_light.h>
 #include <scene/interface/intf_material.h>
 #include <scene/interface/intf_mesh.h>
+#include <scene/interface/intf_postprocess.h>
+#include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_text.h>
 #include <scene/interface/intf_texture.h>
-#include <scene/interface/intf_render_configuration.h>
-#include <scene/interface/postprocess/intf_bloom.h>
-#include <scene/interface/postprocess/intf_tonemap.h>
 #include <scene/interface/resource/image_info.h>
 
 #include <meta/base/meta_types.h>
@@ -47,6 +46,7 @@ using BasicTypes = META_NS::TypeList<
     CameraSceneFlag,
     ColorFormat,
     EffectQualityType,
+    EffectSharpnessType,
     FontMethod,
     LightType,
     BloomType,
@@ -56,7 +56,9 @@ using BasicTypes = META_NS::TypeList<
     ImageLoadInfo,
     SceneShadowType,
     SceneShadowQuality,
-    SceneShadowSmoothness
+    SceneShadowSmoothness,
+    ColorConversionFunctionType,
+    BlurType
     >;
 using ObjectTypes = META_NS::TypeList<
     ISampler::Ptr,
@@ -69,7 +71,21 @@ using ObjectTypes = META_NS::TypeList<
     IMorpher::Ptr,
     IPostProcess::Ptr,
     IBloom::Ptr,
-    ITonemap::Ptr
+    ITonemap::Ptr,
+    IColorConversion::Ptr,
+    IColorFringe::Ptr,
+    IDepthOfField::Ptr,
+    IFxaa::Ptr,
+    ILensFlare::Ptr,
+    IUpscale::Ptr,
+    IMotionBlur::Ptr,
+    ITaa::Ptr,
+    IVignette::Ptr,
+    INode::WeakPtr,
+    ICamera::WeakPtr,
+    IMesh::WeakPtr,
+    ILight::WeakPtr,
+    IText::WeakPtr
     >;
 // clang-format on
 

@@ -224,7 +224,7 @@ void EnvironmentImpl::setIrradianceCoefficients(::taihe::optional_view<::taihe::
         return SceneResources::Environment({nullptr, nullptr});
     }
 
-    NapiApi::Object sceneJs = tro->GetSceneWeakRef().GetObject();
+    NapiApi::Object sceneJs = tro->GetSceneWeakRef().GetNapiObject(); 
     if (!sceneJs) {
         WIDGET_LOGE("environmentTransferStaticImpl failed during GetSceneWeakRef.");
         return SceneResources::Environment({nullptr, nullptr});

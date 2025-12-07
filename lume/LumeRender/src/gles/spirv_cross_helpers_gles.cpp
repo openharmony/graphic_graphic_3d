@@ -69,13 +69,13 @@ bool DefineForSpec(const array_view<const ShaderSpecialization::Constant> reflec
             // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_gl_spirv.txt
             switch (c.type) {
                 default:
-                    [[fallthrough]];
+                    [[fallthrough]]; // INVALID
                 case ShaderSpecialization::Constant::Type::INVALID:
                     PLUGIN_ASSERT_MSG(false, "Unhandled specialization constant type");
                     break;
 
                 case ShaderSpecialization::Constant::Type::BOOL:
-                    [[fallthrough]];
+                    [[fallthrough]]; // follow the same procedure as UINT32
                 case ShaderSpecialization::Constant::Type::UINT32: {
                     const uint32_t value = *reinterpret_cast<uint32_t*>(offset);
                     const int len = sprintf_s(buf, sizeof(buf), "%u %uu\n", c.id, value);

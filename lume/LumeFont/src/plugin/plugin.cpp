@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -67,6 +67,7 @@ void DestroyPlugin(CORE_NS::PluginToken token)
     if (token == nullptr) {
         return;
     }
+
     RenderPluginState* state = static_cast<RenderPluginState*>(token);
     auto& registry = *state->context_.GetInterface<CORE_NS::IClassRegister>();
     registry.UnregisterInterfaceType(state->interfaceInfo_);

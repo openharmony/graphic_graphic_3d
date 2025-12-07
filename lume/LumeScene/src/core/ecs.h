@@ -16,6 +16,7 @@
 #define SCENE_SRC_CORE_ECS_H
 
 #include <ComponentTools/component_query.h>
+#include <optional>
 #include <scene/base/types.h>
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/interface/scene_options.h>
@@ -47,8 +48,11 @@
 #include <core/intf_engine.h>
 #include <render/intf_render_context.h>
 
-#include "ecs_component/entity_owner_component_info.h"
+#include "../ecs_component/entity_owner_component_info.h"
+#include "../ecs_component/resource_component_info.h"
 #include "ecs_listener.h"
+
+#include <thread>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -69,7 +73,7 @@ public:
     bool SetNodeParentAndName(CORE_NS::Entity ent, BASE_NS::string_view name, CORE3D_NS::ISceneNode* parent);
 
     BASE_NS::string GetPath(const CORE3D_NS::ISceneNode* node) const;
-    bool IsNodeEntity(CORE_NS::Entity ent) const override;
+    bool IsNodeEntity(CORE_NS::Entity ent) const;
     bool RemoveEntity(CORE_NS::Entity ent) override;
 
     void ListenNodeChanges(bool enabled);
@@ -120,6 +124,7 @@ public:
     CORE3D_NS::IMorphComponentManager* morphComponentManager {};
 
     SCENE_NS::IEntityOwnerComponentManager* entityOwnerComponentManager {};
+    SCENE_NS::IResourceComponentManager* resourceComponentManager {};
 
     // optional
     TEXT3D_NS::ITextComponentManager* textComponentManager {};
@@ -130,6 +135,8 @@ public:
 
     CORE3D_NS::INodeSystem* nodeSystem {};
     CORE3D_NS::IPicking* picking {};
+
+    BASE_NS::vector<CORE3D_NS::IPicking*> GetPicking();
 
 private:
     template<typename Manager>
@@ -147,15 +154,22 @@ private:
     void GetNodeDescendants(CORE_NS::Entity, BASE_NS::vector<CORE_NS::Entity>&) const;
 
 private:
+    std::optional<CORE3D_NS::IPicking::Ptr> externalPicking_;
+    std::thread::id thread_;
     BASE_NS::weak_ptr<IInternalScene> scene_;
     CORE_NS::Entity rootEntity_ {};
     BASE_NS::unordered_map<BASE_NS::string, CORE_NS::IComponentManager*> components_;
-    BASE_NS::vector<CORE_NS::Entity> imported_;
 };
 
-CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild);
-CORE_NS::Entity CopyExternalAsChild(
-    const IEcsObject& parent, const IScene& extScene, BASE_NS::vector<CORE_NS::Entity>& imported);
+struct EcsCopyResult {
+    CORE_NS::Entity entity;
+    BASE_NS::vector<CORE_NS::Entity> newEntities;
+    BASE_NS::string resourceGroup;
+};
+
+EcsCopyResult CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild);
+EcsCopyResult CopyExternalAsChild(const IEcsObject& parent, const IScene& extScene, BASE_NS::string_view rgroup);
+EcsCopyResult CloneAsChild(const IEcsObject& node, const IEcsObject::Ptr& parentNode = nullptr);
 
 SCENE_END_NAMESPACE()
 

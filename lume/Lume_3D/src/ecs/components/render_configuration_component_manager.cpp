@@ -93,6 +93,7 @@ IComponentManager* IRenderConfigurationComponentManagerInstance(IEcs& ecs)
 
 void IRenderConfigurationComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<RenderConfigurationComponentManager*>(instance);
+    static_cast<RenderConfigurationComponentManager*>(instance)->~RenderConfigurationComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

@@ -22,6 +22,7 @@
 #include <map>
 #include <mutex>
 
+#include <base/containers/array_view.h>
 #include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
@@ -38,8 +39,10 @@
 #include <core/perf/intf_performance_trace.h>
 
 CORE_BEGIN_NAMESPACE()
+using BASE_NS::array_view;
 using BASE_NS::make_unique;
 using BASE_NS::pair;
+using BASE_NS::string;
 using BASE_NS::string_view;
 using BASE_NS::Uid;
 using BASE_NS::vector;
@@ -198,6 +201,48 @@ void PerformanceDataManager::RemoveData([[maybe_unused]] const string_view subCa
 #endif
 }
 
+void PerformanceDataManager::GetSelectedCounters(CounterPairView data) const
+{
+#if (CORE_PERF_ENABLED == 1)
+    std::lock_guard<std::mutex> lock(dataMutex_);
+    const auto dataRef = GetTimingData(data_);
+    for (const auto& dRef : dataRef) {
+        for (const auto& tRef : dRef.timings) {
+            for (auto& inputDataRef : data) {
+                if (tRef.first == inputDataRef.first) {
+                    // sum all
+                    inputDataRef.second += tRef.second.currentTime;
+                }
+            }
+        }
+    }
+#else
+#endif
+}
+
+IPerformanceDataManager::ComparisonData PerformanceDataManager::CompareCounters(
+    const ConstCounterPairView lhs, const ConstCounterPairView rhs) const
+{
+    ComparisonData cd;
+#if (CORE_PERF_ENABLED == 1)
+    if (lhs.size() != rhs.size()) {
+        cd.flags |= 1U;
+    } else {
+        for (size_t idx = 0; idx < lhs.size(); ++idx) {
+            const auto& currLhs = lhs[idx];
+            const auto& currRhs = rhs[idx];
+            if (currLhs.first != currRhs.first) {
+                cd.flags |= 1U;
+            } else if (currLhs.second != currRhs.second) {
+                cd.flags |= 1U;
+                cd.errorCounters.push_back(pair { currLhs.first, currLhs.second - currRhs.second });
+            }
+        }
+    }
+#endif
+    return cd;
+}
+
 void PerformanceDataManager::DumpToLog() const
 {
 #if (CORE_PERF_ENABLED == 1)
@@ -254,8 +299,8 @@ void PerformanceDataManagerFactory::RemovePerformanceTrace([[maybe_unused]] cons
 {
 #if (CORE_PERF_ENABLED == 1)
     perfTraces_.erase(std::remove_if(perfTraces_.begin(), perfTraces_.end(),
-                                     [uid](const RegisteredPerformanceTrace &info) { return info.uid == uid; }),
-                      perfTraces_.cend());
+                          [uid](const RegisteredPerformanceTrace& info) { return info.uid == uid; }),
+        perfTraces_.cend());
 #endif
 }
 

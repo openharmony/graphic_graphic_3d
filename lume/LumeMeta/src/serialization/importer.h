@@ -27,7 +27,7 @@
 #include <meta/interface/serialization/intf_importer.h>
 #include <meta/interface/serialization/intf_serializable.h>
 
-#include "base_object.h"
+#include "../base_object.h"
 #include "ser_nodes.h"
 
 META_BEGIN_NAMESPACE()
@@ -39,7 +39,7 @@ public:
     Importer() : registry_(GetObjectRegistry()), globalData_(registry_.GetGlobalSerializationData()) {}
     explicit Importer(IObjectRegistry& reg, IGlobalSerializationData& data) : registry_(reg), globalData_(data) {}
 
-    IObject::Ptr Import(const ISerNode::ConstPtr& tree) override;
+    IObject::Ptr Import(const ISerNode::ConstPtr& tree, ImportOptions opts) override;
     BASE_NS::unordered_map<InstanceId, InstanceId> GetInstanceIdMapping() const override;
     void SetResourceManager(CORE_NS::IResourceManager::Ptr p) override;
     void SetUserContext(IObject::Ptr) override;
@@ -65,6 +65,8 @@ public:
     {
         return metadata_;
     }
+
+    void ResolveDeferred() override;
 
 private:
     InstanceId ConvertInstanceId(const InstanceId& id) const;

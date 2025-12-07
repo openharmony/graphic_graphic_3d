@@ -68,7 +68,7 @@ public:
      */
     virtual DescriptorCounts GetDescriptorCounts(const PipelineLayout& pipelineLayout) const = 0;
 
-    /** Get descriptor counts from desriptor set layout bindings.
+    /** Get descriptor counts from descriptor set layout bindings.
      * @param bindings Bindings.
      * @return Descriptor counts struct used to pass for reserving render node specific descriptor sets.
      */

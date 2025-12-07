@@ -17,6 +17,7 @@
 #define API_LUME_LOG_H
 
 #include <cassert>
+#include <cstdarg>
 #include <memory>
 
 // NOTE: LUME_ONCE is meant e.g. to prevent excessive flooding in the logs with repeating errors.

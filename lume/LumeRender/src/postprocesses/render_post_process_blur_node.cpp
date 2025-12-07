@@ -19,6 +19,7 @@
 #include <core/property/property_handle_util.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
@@ -31,16 +32,37 @@
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
 #include "render/shaders/common/render_post_process_structs_common.h"
-#include "render_post_process_blur.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;
-using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
-DATA_TYPE_METADATA(RenderPostProcessBlurNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0))
-DATA_TYPE_METADATA(RenderPostProcessBlurNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
+ENUM_TYPE_METADATA(RENDER_NS::BlurConfiguration::BlurType, ENUM_VALUE(TYPE_NORMAL, "Normal"),
+    ENUM_VALUE(TYPE_HORIZONTAL, "Horizontal"), ENUM_VALUE(TYPE_VERTICAL, "Vertical"))
+
+ENUM_TYPE_METADATA(RENDER_NS::BlurConfiguration::BlurQualityType, ENUM_VALUE(QUALITY_TYPE_LOW, "Low Quality"),
+    ENUM_VALUE(QUALITY_TYPE_NORMAL, "Normal Quality"), ENUM_VALUE(QUALITY_TYPE_HIGH, "High Quality"))
+
+DATA_TYPE_METADATA(RENDER_NS::BlurConfiguration, MEMBER_PROPERTY(blurType, "Type", 0),
+    MEMBER_PROPERTY(blurQualityType, "Quality Type", 0), MEMBER_PROPERTY(filterSize, "Filter Size", 0),
+    MEMBER_PROPERTY(maxMipLevel, "Max Mip Levels", 0))
+
+ENUM_TYPE_METADATA(RENDER_NS::RenderPostProcessBlurNode::BlurShaderType, ENUM_VALUE(BLUR_SHADER_TYPE_RGBA, "RGBA"),
+    ENUM_VALUE(BLUR_SHADER_TYPE_R, "Red"), ENUM_VALUE(BLUR_SHADER_TYPE_RG, "RG"),
+    ENUM_VALUE(BLUR_SHADER_TYPE_RGB, "RGB"), ENUM_VALUE(BLUR_SHADER_TYPE_A, "Alpha"),
+    ENUM_VALUE(BLUR_SHADER_TYPE_SOFT_DOWNSCALE_RGB, "Downscale RGB"),
+    ENUM_VALUE(BLUR_SHADER_TYPE_DOWNSCALE_RGBA, "Downscale RGBA"),
+    ENUM_VALUE(BLUR_SHADER_TYPE_DOWNSCALE_RGBA_ALPHA_WEIGHT, "Downscale RGBA Alpha Weight"),
+    ENUM_VALUE(BLUR_SHADER_TYPE_RGBA_ALPHA_WEIGHT, "RGBA Alpha Weight"))
+
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessBlurNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+    MEMBER_PROPERTY(blurConfiguration, "Blur Configuration", 0), MEMBER_PROPERTY(blurShaderType, "Blur Shader Type", 0),
+    MEMBER_PROPERTY(blurShaderScaleType, "Blur Shader Type", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessBlurNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessBlurNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
 CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
@@ -61,11 +83,9 @@ RenderPassDesc::RenderArea GetImageRenderArea(
 } // namespace
 
 RenderPostProcessBlurNode::RenderPostProcessBlurNode()
-    : inputProperties_(
-          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessBlurNode::NodeInputs>::properties)),
-      outputProperties_(
-          &nodeOutputsData, array_view(PropertyType::DataType<RenderPostProcessBlurNode::NodeOutputs>::properties))
-
+    : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
+      inputProperties_(&nodeInputsData, PropertyType::DataType<NodeInputs>::MetaDataFromType()),
+      outputProperties_(&nodeOutputsData, PropertyType::DataType<NodeOutputs>::MetaDataFromType())
 {}
 
 IPropertyHandle* RenderPostProcessBlurNode::GetRenderInputProperties()
@@ -89,15 +109,13 @@ void RenderPostProcessBlurNode::SetRenderAreaRequest(const RenderAreaRequest& re
     renderAreaRequest_ = renderAreaRequest;
 }
 
-void RenderPostProcessBlurNode::Init(
-    const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr)
+void RenderPostProcessBlurNode::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     // clear
     pipelineData_ = {};
     binders_.clear();
 
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    postProcess_ = postProcess;
 
     // default inputs
     IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
@@ -119,10 +137,10 @@ void RenderPostProcessBlurNode::Init(
     valid_ = true;
 }
 
-void RenderPostProcessBlurNode::PreExecute()
+void RenderPostProcessBlurNode::PreExecuteFrame()
 {
-    if (valid_ && postProcess_) {
-        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+    if (valid_) {
+        const array_view<const uint8_t> propertyView = GetData();
         // this node is directly dependant
         PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessBlurNode::EffectProperties));
         if (propertyView.size_bytes() == sizeof(RenderPostProcessBlurNode::EffectProperties)) {
@@ -137,9 +155,10 @@ void RenderPostProcessBlurNode::PreExecute()
         const bool valid = EvaluateInOut();
         if (valid) {
             EvaluateTemporaryTargets();
-            mipsBlur = (nodeInputsData.input.handle == nodeOutputsData.output.handle) ||
-                       ((effectProperties_.blurConfiguration.maxMipLevel != 0U) &&
-                           (effectProperties_.blurConfiguration.filterSize == 1.0f));
+            mipsBlur =
+                (inputImgData_.mipCount > 1U) && ((nodeInputsData.input.handle == nodeOutputsData.output.handle) ||
+                                                     ((effectProperties_.blurConfiguration.maxMipLevel != 0U) &&
+                                                         (effectProperties_.blurConfiguration.filterSize == 1.0f)));
         }
         valid_ = valid && effectProperties_.enabled;
     }
@@ -154,9 +173,8 @@ IRenderNode::ExecuteFlags RenderPostProcessBlurNode::GetExecuteFlags() const
     }
 }
 
-void RenderPostProcessBlurNode::Execute(IRenderCommandList& cmdList)
+void RenderPostProcessBlurNode::ExecuteFrame(IRenderCommandList& cmdList)
 {
-    PLUGIN_ASSERT(effectProperties_.enabled);
     if (!valid_) {
         return;
     }
@@ -291,6 +309,7 @@ struct ConstDrawInput {
     const LocalPostProcessPushConstantStruct& pc;
     RenderHandle sampler;
 };
+
 void BlurPass(const ConstDrawInput& di, IDescriptorSetBinder& binder, const RenderHandle psoHandle,
     const RenderHandle image, const uint32_t inputMipLevel)
 {
@@ -576,7 +595,8 @@ void RenderPostProcessBlurNode::EvaluateTemporaryTargets()
     texSize.y = Math::max(1u, texSize.y);
     if (texSize.x != tmpImgTargets_.size.x || texSize.y != tmpImgTargets_.size.y) {
         const bool needsTwoTargets =
-            ((inDesc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) == 0);
+            ((inDesc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) == 0) ||
+            (inputImgData_.mipCount <= 1U);
         tmpImgTargets_.size = texSize;
         constexpr ImageUsageFlags usageFlags = ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                                                ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT |
@@ -599,8 +619,7 @@ void RenderPostProcessBlurNode::EvaluateTemporaryTargets()
             {},
         };
 #if (RENDER_VALIDATION_ENABLED == 1)
-        const auto additionalName =
-            BASE_NS::to_string(reinterpret_cast<uintptr_t>(reinterpret_cast<void*>(postProcess_.get())));
+        const auto additionalName = BASE_NS::to_string(reinterpret_cast<uintptr_t>(reinterpret_cast<void*>(this)));
         tmpImgTargets_.handle =
             gpuResourceMgr.Create(renderNodeContextMgr_->GetName() + "_BLUR0_" + additionalName, desc);
         if (needsTwoTargets) {

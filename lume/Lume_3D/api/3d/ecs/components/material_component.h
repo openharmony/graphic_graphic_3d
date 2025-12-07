@@ -35,15 +35,38 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
 #if !defined(IMPLEMENT_MANAGER)
+    // base color opaque white
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_BASE_COLOR { 1.f, 1.f, 1.f, 1.f };
+    // normal scale 1
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_NORMAL_SCALE { 1.f, 0.f, 0.f, 0.f };
+    // material (0, roughness, metallic, reflectance)
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_MATERIAL { 0.f, 1.f, 1.f, 0.04f };
+    // emissive 0
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_EMISSIVE { 0.f, 0.f, 0.f, 1.f };
+    // ambient occlusion 1
+    static constexpr BASE_NS::Math::Vec4 DEFAILT_AO { 1.f, 0.f, 0.f, 0.f };
+    // clearcoat intensity 0
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT { 0.f, 0.f, 0.f, 0.f };
+    // clearcoat roughness 0
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT_ROUGHNESS { 0.f, 0.f, 0.f, 0.f };
+    // clearcoat normal scale 1
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT_NORMAL { 1.f, 0.f, 0.f, 0.f };
+    // sheen color black, roughness 0
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_SHEEN { 0.f, 0.f, 0.f, 0.f };
+    // transmission 0
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_TRANSMISSION { 0.f, 0.f, 0.f, 0.f };
+    // specular white
+    static constexpr BASE_NS::Math::Vec4 DEFAULT_SPECULAR { 1.f, 1.f, 1.f, 1.f };
+
     /** Material type enumeration */
     enum class Type : uint8_t {
         /** Enumeration for Metallic roughness workflow */
         METALLIC_ROUGHNESS = 0,
-        /** Enumumeration for Specular glossiness workflow */
+        /** Enumeration for Specular glossiness workflow */
         SPECULAR_GLOSSINESS = 1,
-        /** Enumumeration for KHR materials unlit workflow */
+        /** Enumeration for KHR materials unlit workflow */
         UNLIT = 2,
-        /** Enumumeration for special unlit shadow receiver */
+        /** Enumeration for special unlit shadow receiver */
         UNLIT_SHADOW_ALPHA = 3,
         /** Custom material. Could be used with custom material model e.g. with shader graph.
          * Disables automatic factor based modifications for flags.
@@ -56,6 +79,9 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
          * Note: that base color is always automatically pre-multiplied in all cases
          */
         CUSTOM_COMPLEX = 5,
+        /** Occlusion material. Occlusion material is invisible, but also blocks objects that are
+           behind it from being visible. */
+        OCCLUSION = 6,
     };
 
     /** Material specialization flags */
@@ -68,6 +94,8 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
         PUNCTUAL_LIGHT_RECEIVER_BIT = (1 << 2),
         /** Defines whether this material will receive indirect light from SH and cubemaps */
         INDIRECT_LIGHT_RECEIVER_BIT = (1 << 3),
+        /** Defines whether this material will receive irradiance indirect light */
+        INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT = (1 << 4),
     };
     /** Container for material flag bits */
     using LightingFlags = uint32_t;
@@ -76,11 +104,22 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
     enum ExtraRenderingFlagBits : uint32_t {
         /** Is an additional flag which can be used to discard some materials from rendering from render node graph */
         DISCARD_BIT = (1 << 0),
-        /** Is an additional flag which disables default render system push to render data stores and rendering */
+        /** (DEPRECATED) Is an additional flag which disables default render system push to render data stores and
+           rendering */
         DISABLE_BIT = (1 << 1),
         /** Allow rendering mutiple instances of the same mesh using GPU instancing. materialShader must support
            instancing. */
         ALLOW_GPU_INSTANCING_BIT = (1 << 2),
+        /** Camera "fullscreen" effect.
+         * Not view frustum culled in default material pipeline
+         * Designed to be used with "billboard/fullscreen" camera effects
+         */
+        CAMERA_EFFECT = (1 << 3),
+
+        /** Use alpha channel of the specular texture for specular factor */
+        SPECULAR_FACTOR_TEXTURE = (1 << 4),
+        /** Use rgb channels of the specular texture for specular color */
+        SPECULAR_COLOR_TEXTURE = (1 << 5),
     };
     /** Container for extra material rendering flag bits */
     using ExtraRenderingFlags = uint32_t;
@@ -223,7 +262,8 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
         VALUE(MaterialComponent::LightingFlagBits::SHADOW_RECEIVER_BIT |
               MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT |
               MaterialComponent::LightingFlagBits::PUNCTUAL_LIGHT_RECEIVER_BIT |
-              MaterialComponent::LightingFlagBits::INDIRECT_LIGHT_RECEIVER_BIT),
+              MaterialComponent::LightingFlagBits::INDIRECT_LIGHT_RECEIVER_BIT |
+              MaterialComponent::LightingFlagBits::INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT),
         MaterialComponent::LightingFlagBits)
 
     /** Material shader. Prefer using automatic selection (or editor selection) if no custom shaders.
@@ -287,20 +327,14 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      * SPECULAR: RGB color of the specular reflection, A strength of the specular reflection, if an image is specified,
      * this value is multiplied with the texel values.
      */
+
     DEFINE_ARRAY_PROPERTY(TextureInfo, TextureIndex::TEXTURE_COUNT, textures, "", PropertyFlags::IS_HIDDEN,
-        ARRAY_VALUE(                                              //
-            TextureInfo { {}, {}, { 1.f, 1.f, 1.f, 1.f }, {} },   // base color opaque white
-            TextureInfo { {}, {}, { 1.f, 0.f, 0.f, 0.f }, {} },   // normal scale 1
-            TextureInfo { {}, {}, { 0.f, 1.f, 1.f, 0.04f }, {} }, // material (empty, roughness, metallic, reflectance)
-            TextureInfo { {}, {}, { 0.f, 0.f, 0.f, 1.f }, {} },   // emissive 0
-            TextureInfo { {}, {}, { 1.f, 0.f, 0.f, 0.f }, {} },   // ambient occlusion 1
-            TextureInfo { {}, {}, { 0.f, 0.f, 0.f, 0.f }, {} },   // clearcoat intensity 0
-            TextureInfo { {}, {}, { 0.f, 0.f, 0.f, 0.f }, {} },   // clearcoat roughness 0
-            TextureInfo { {}, {}, { 1.f, 0.f, 0.f, 0.f }, {} },   // clearcoat normal scale 1
-            TextureInfo { {}, {}, { 0.f, 0.f, 0.f, 0.f }, {} },   // sheen color black, roughness 0
-            TextureInfo { {}, {}, { 0.f, 0.f, 0.f, 0.f }, {} },   // transmission 0
-            TextureInfo { {}, {}, { 1.f, 1.f, 1.f, 1.f }, {} }    // specular white
-            ))
+        ARRAY_VALUE(TextureInfo { {}, {}, DEFAULT_BASE_COLOR, {} }, TextureInfo { {}, {}, DEFAULT_NORMAL_SCALE, {} },
+            TextureInfo { {}, {}, DEFAULT_MATERIAL, {} }, TextureInfo { {}, {}, DEFAULT_EMISSIVE, {} },
+            TextureInfo { {}, {}, DEFAILT_AO, {} }, TextureInfo { {}, {}, DEFAULT_CLEARCOAT, {} },
+            TextureInfo { {}, {}, DEFAULT_CLEARCOAT_ROUGHNESS, {} },
+            TextureInfo { {}, {}, DEFAULT_CLEARCOAT_NORMAL, {} }, TextureInfo { {}, {}, DEFAULT_SHEEN, {} },
+            TextureInfo { {}, {}, DEFAULT_TRANSMISSION, {} }, TextureInfo { {}, {}, DEFAULT_SPECULAR, {} }))
 
     /** Texture coordinates from set 0 or 1. */
     DEFINE_PROPERTY(uint32_t, useTexcoordSetBit, "Active Texture Coordinate", 0,
@@ -327,14 +361,6 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
     /** Render sorting for layers (sorting priority)
      */
     DEFINE_PROPERTY(RenderSort, renderSort, "Render Sort Layers", 0, )
-
-    /** Camera based effect, which will go through all the viewport culling
-     * Designed to be used e.g. when one wants to have a camera (fullscreen) effect with typical material
-     * Can be used only with a single camera, if needed with more cameras the material needs to be duplicated
-     * for all the cameras.
-     * The render sort is still respected.
-     */
-    DEFINE_PROPERTY(CORE_NS::Entity, cameraEntity, "Camera entity for camera effect", 0, )
 
 END_COMPONENT(IMaterialComponentManager, MaterialComponent, "56430c14-cb12-4320-80d3-2bef4f86a041")
 #if !defined(IMPLEMENT_MANAGER)

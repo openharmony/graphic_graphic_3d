@@ -35,7 +35,9 @@ public:
      */
     Mutex() : api_(GetSyncApi().mutex)
     {
-        api_.create(MutexType::NORMAL, handle_);
+        if (api_.create) {
+            api_.create(MutexType::NORMAL, handle_);
+        }
     }
 
     /**
@@ -43,7 +45,9 @@ public:
      */
     ~Mutex()
     {
-        api_.destroy(handle_);
+        if (api_.destroy) {
+            api_.destroy(handle_);
+        }
     }
 
     /**
@@ -51,7 +55,9 @@ public:
      */
     void Lock()
     {
-        api_.lock(handle_);
+        if (api_.lock) {
+            api_.lock(handle_);
+        }
     }
 
     /**
@@ -59,7 +65,9 @@ public:
      */
     void Unlock()
     {
-        api_.unlock(handle_);
+        if (api_.unlock) {
+            api_.unlock(handle_);
+        }
     }
 
 private:

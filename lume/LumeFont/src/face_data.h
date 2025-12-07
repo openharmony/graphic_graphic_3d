@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,9 @@
 
 #include <ft2build.h>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
+
 #include FT_FREETYPE_H
 #include <freetype/ftglyph.h>
 
@@ -41,7 +43,7 @@ public:
 
     int UpdateGlyph(bool sdf, FT_Size ftSize, uint32_t glyphIndex, FontDefs::Glyph& glyph);
 
-    uint32_t GetGlyphIndex(uint32_t utfCode);
+    uint32_t GetGlyphIndex(uint32_t code);
 
 private:
     friend class FontBuffer;

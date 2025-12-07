@@ -1,0 +1,30 @@
+{
+    "$meta": {
+        "version": "1.0"
+    },
+    "$root": {
+        "$classId": "b2377edc-27ec-4aa1-b071-636d78db63e2",
+        "$name": "Object",
+        "$instanceId": "0000ed3e-2c95-1ad4-5f85-1b29dd72813d",
+        "p2": {
+            "$classId": "b6a8d81c-22be-419c-5072-6f7065727479",
+            "value": 3,
+            "defaultValue": 0,
+            "flags": 115,
+            "bind": {
+                "$classId": "959d7b49-b313-43d8-914a-76837e0668c4",
+                "$name": "DirectBind",
+                "$instanceId": "0000ed3e-2c93-7df0-f104-b306b96cc857",
+                "Property": {
+                    "$ref": "ref:0000ed3e-2c95-1ad4-5f85-1b29dd72813d/$p1"
+                }
+            }
+        },
+        "p1": {
+            "$classId": "b6a8d81c-22be-419c-5072-6f7065727479",
+            "value": 3,
+            "defaultValue": 0,
+            "flags": 115
+        }
+    }
+}

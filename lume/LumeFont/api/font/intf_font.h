@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,11 +20,11 @@
 
 #include <base/containers/array_view.h>
 #include <base/containers/refcnt_ptr.h>
+#include <base/containers/vector.h>
 #include <base/math/vector.h>
 #include <core/plugin/intf_interface.h>
 #include <font/namespace.h>
 #include <render/resource_handle.h>
-#include <base/containers/vector.h>
 
 FONT_BEGIN_NAMESPACE()
 using FontSize = float;

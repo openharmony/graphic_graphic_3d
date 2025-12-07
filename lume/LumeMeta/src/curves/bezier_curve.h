@@ -21,7 +21,7 @@
 #include <meta/interface/curves/intf_bezier.h>
 #include <meta/interface/curves/intf_easing_curve.h>
 
-#include "object.h"
+#include "../object.h"
 
 META_BEGIN_NAMESPACE()
 

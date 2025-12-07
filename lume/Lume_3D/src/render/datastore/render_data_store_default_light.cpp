@@ -101,7 +101,7 @@ void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
     renderLight.color.x = Math::max(0.0f, renderLight.color.x);
     renderLight.color.y = Math::max(0.0f, renderLight.color.y);
     renderLight.color.z = Math::max(0.0f, renderLight.color.z);
-    const uint32_t lightCount = lightCounts_.directional + lightCounts_.spot + lightCounts_.point;
+    const uint32_t lightCount = lightCounts_.directional + lightCounts_.spot + lightCounts_.point + lightCounts_.rect;
     if (lightCount >= DefaultMaterialLightingConstants::MAX_LIGHT_COUNT) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
         CORE_LOG_ONCE_W("drop_light_count_", "CORE3D_VALIDATION: light dropped (max count: %u)",
@@ -115,6 +115,8 @@ void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
         lightCounts_.spot++;
     } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_POINT_LIGHT_BIT) {
         lightCounts_.point++;
+    } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_RECT_LIGHT_BIT) {
+        lightCounts_.rect++;
     }
     if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT) {
         const uint32_t shadowCount = lightCounts_.dirShadow + lightCounts_.spotShadow;
@@ -152,6 +154,9 @@ IRenderDataStoreDefaultLight::LightingFlags RenderDataStoreDefaultLight::GetLigh
     }
     if (lightCounts_.spot > 0u) {
         lightingSpecializationFlags |= LightingFlagBits::LIGHTING_SPOT_ENABLED_BIT;
+    }
+    if (lightCounts_.rect > 0u) {
+        lightingSpecializationFlags |= LightingFlagBits::LIGHTING_RECT_ENABLED_BIT;
     }
     return lightingSpecializationFlags;
 }

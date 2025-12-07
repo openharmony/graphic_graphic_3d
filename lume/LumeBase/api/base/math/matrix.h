@@ -82,7 +82,35 @@ public:
     inline constexpr Mat3X3(const float d[9]) noexcept : data { d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8] }
     {}
 
-    inline ~Mat3X3() = default;
+    /** Add two matrices */
+    inline constexpr Mat3X3 operator+(const Mat3X3& rhs) const
+    {
+        return Mat3X3(x + rhs.x, y + rhs.y, z + rhs.z);
+    }
+
+    /** Add two matrices */
+    inline constexpr Mat3X3& operator+=(const Mat3X3& rhs)
+    {
+        x += rhs.x;
+        y += rhs.y;
+        z += rhs.z;
+        return *this;
+    }
+
+    /** Subtract two matrices */
+    inline constexpr Mat3X3 operator-(const Mat3X3& rhs) const
+    {
+        return Mat3X3(x - rhs.x, y - rhs.y, z - rhs.z);
+    }
+
+    /** Subtract two matrices */
+    inline constexpr Mat3X3& operator-=(const Mat3X3& rhs)
+    {
+        x -= rhs.x;
+        y -= rhs.y;
+        z -= rhs.z;
+        return *this;
+    }
 
     /** Multiply two matrices */
     inline constexpr Mat3X3 operator*(const Mat3X3& rhs) const
@@ -186,8 +214,6 @@ public:
         : data { mat3X3.data[0], mat3X3.data[1], mat3X3.data[2], 0.0f, mat3X3.data[3], mat3X3.data[4], mat3X3.data[5],
               0.0f, mat3X3.data[6], mat3X3.data[7], mat3X3.data[8], 0.0f, 0.0f, 0.0f, 0.0f, 1.0f }
     {}
-
-    inline ~Mat4X4() = default;
 
     /** Multiply two matrices */
     inline Mat4X4 operator*(const Mat4X4& rhs) const
@@ -349,6 +375,38 @@ public:
         return res;
     }
 
+    /** Add two matrices */
+    inline constexpr Mat4X4 operator+(const Mat4X4& rhs) const
+    {
+        return Mat4X4(x + rhs.x, y + rhs.y, z + rhs.z, w + rhs.w);
+    }
+
+    /** Add two matrices */
+    inline constexpr Mat4X4& operator+=(const Mat4X4& rhs)
+    {
+        x += rhs.x;
+        y += rhs.y;
+        z += rhs.z;
+        w += rhs.w;
+        return *this;
+    }
+
+    /** Subtract two matrices */
+    inline constexpr Mat4X4 operator-(const Mat4X4& rhs) const
+    {
+        return Mat4X4(x - rhs.x, y - rhs.y, z - rhs.z, w - rhs.w);
+    }
+
+    /** Subtract two matrices */
+    inline constexpr Mat4X4& operator-=(const Mat4X4& rhs)
+    {
+        x -= rhs.x;
+        y -= rhs.y;
+        z -= rhs.z;
+        w -= rhs.w;
+        return *this;
+    }
+
     /** Multiply columns by float scalar value */
     inline constexpr Mat4X4 operator*(const float& scalar) const
     {
@@ -434,8 +492,6 @@ public:
     inline explicit constexpr Mat4X3(float id)
         : data { id, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f }
     {}
-
-    inline ~Mat4X3() = default;
 
     /** Multiply columns by float scalar value */
     inline constexpr Mat4X3 operator*(const float& scalar) const

@@ -79,10 +79,10 @@ GpuImageDesc GetImageDescFromHwBufferDesc(uintptr_t platformHwBuffer)
     OH_NativeBuffer_Config config;
     OH_NativeBuffer_GetConfig(aHwBuffer, &config);
     OH_NativeBuffer_ColorSpace colorSpace = OH_COLORSPACE_NONE;
-    if (OH_NativeBuffer_GetColorSpace(aHwBuffer, &colorSpace) != 0) {
-        PLUGIN_LOG_W("Could not get NativeBuffer colors space.");
+    if (const auto ret = OH_NativeBuffer_GetColorSpace(aHwBuffer, &colorSpace); ret != 0) {
+        PLUGIN_LOG_I("Could not get NativeBuffer color space. (%d)", ret);
     } else {
-        PLUGIN_LOG_I("NativeBuffer colors space %d.", colorSpace);
+        PLUGIN_LOG_I("NativeBuffer color space %d.", colorSpace);
     }
     ImageViewType imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_2D;
     ImageCreateFlags createFlags = 0;
@@ -131,7 +131,7 @@ GpuBufferDesc GetBufferDescFromHwBufferDesc(uintptr_t platformHwBuffer)
     GpuBufferDesc ret;
     ret.usageFlags |= BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                       BufferUsageFlagBits::CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    ret.byteSize = config.width;
+    ret.byteSize = static_cast<uint32_t>(config.width);
     ret.format = GetCoreFormatFromNativeBufferFormat(config.format);
     return ret;
 }

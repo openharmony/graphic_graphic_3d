@@ -50,6 +50,54 @@ private:
     napi_ref ref_ { nullptr };
 };
 
+class WeakObjectRef {
+public:
+    WeakObjectRef() = default;
+    explicit WeakObjectRef(NapiApi::Object obj)
+    {
+        if (auto native = obj.GetNative()) {
+            object_ = native;
+        } else {
+            napiObject_ = NapiApi::WeakRef(obj);
+        }
+    }
+    WeakObjectRef& operator=(const NapiApi::Object& obj)
+    {
+        if (auto native = obj.GetNative()) {
+            object_ = native;
+        } else {
+            napiObject_ = NapiApi::WeakRef(obj);
+        }
+        return *this;
+    }
+    ~WeakObjectRef() {
+        Reset();
+    }
+    NapiApi::Object GetNapiObject(BASE_NS::string_view name = "_JSW") const;
+    template<typename T>
+    typename T::Ptr GetObject() const
+    {
+        return interface_pointer_cast<T>(object_);
+    }
+    template<typename T>
+    T* GetJsWrapper() const
+    {
+        return GetNapiObject().GetJsWrapper<T>();
+    }
+    napi_value GetValue() const
+    {
+        return GetNapiObject().ToNapiValue();
+    }
+    void Reset()
+    {
+        object_.reset();
+        napiObject_.Reset();
+    }
+ private:
+    META_NS::IObject::WeakPtr object_;
+    NapiApi::WeakRef napiObject_;
+};
+
 } // namespace NapiApi
 
 #endif

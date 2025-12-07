@@ -232,6 +232,21 @@ bool SetValue(IProperty::WeakPtr p, const NonDeduced_t<Type>& value) noexcept
 {
     return SetValue<Type>(p.lock(), value);
 }
+/// Reset value of property
+inline void ResetValue(const IProperty::Ptr& property) noexcept
+{
+    if (property) {
+        PropertyLock lock(property);
+        property->ResetValue();
+    }
+}
+/// Reset value of property
+template<typename Type>
+void ResetValue(Property<Type> property) noexcept
+{
+    ResetValue(property.GetProperty());
+}
+
 /// Copy value from src to dst property
 inline bool Copy(const IProperty::ConstPtr& src, const IProperty::Ptr& dst)
 {

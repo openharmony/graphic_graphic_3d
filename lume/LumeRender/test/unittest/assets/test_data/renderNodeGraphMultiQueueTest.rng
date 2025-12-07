@@ -1,0 +1,68 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeComputeGeneric",
+            "nodeName": "RenderNodeComputeRed",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+          "renderDataStore": {
+            "typeName": "RenderDataStorePod",
+            "dataStoreName": "dataStore",
+            "configurationName": "color0"
+          },
+            "shader": "rendershaders://computeshader/GfxMultiQueueTest.shader",
+            "resources": {
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "name": "TestImage0"
+                    }
+                ]
+            },
+            "dispatchResources": {
+                "customInputImages": [
+                    {
+                        "name": "TestImage0"
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeComputeGeneric",
+            "nodeName": "RenderNodeComputeGreen",
+            "queue": {
+                "type": "compute",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "color1"
+            },
+            "shader": "rendershaders://computeshader/GfxMultiQueueTest.shader",
+            "resources": {
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "name": "TestImage0"
+                    }
+                ]
+            },
+            "dispatchResources": {
+                "customInputImages": [
+                    {
+                        "name": "TestImage0"
+                    }
+                ]
+            }
+        }
+    ]
+}

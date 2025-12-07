@@ -1,0 +1,18 @@
+{
+    "name": "environment-dusk",
+    "version": "1.0",
+    "icon": {
+        "uri": "Lume_Icon.svg",
+        "rounded": false
+    },
+    "author": "Ark",
+    "description": "Dusk environment map",
+    "depends": [],
+    "assets": [
+        "Environment.gltf",
+        "images/Dusk_Env_radiance(spec).ktx",
+        "images/Dusk_Env_skybox.ktx"
+    ],
+    "uid": "f82c59b0-5c35-11ed-9b6a-0242ac120002",
+    "api": {}
+}

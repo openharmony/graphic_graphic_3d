@@ -81,6 +81,7 @@ IComponentManager* IDynamicEnvironmentBlenderComponentManagerInstance(IEcs& ecs)
 
 void IDynamicEnvironmentBlenderComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<DynamicEnvironmentBlenderComponentManager*>(instance);
+    static_cast<DynamicEnvironmentBlenderComponentManager*>(instance)->~DynamicEnvironmentBlenderComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

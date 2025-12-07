@@ -25,7 +25,7 @@
 #include <meta/interface/intf_lockable.h>
 #include <meta/interface/intf_required_interfaces.h>
 
-#include "object.h"
+#include "../object.h"
 
 META_BEGIN_NAMESPACE()
 

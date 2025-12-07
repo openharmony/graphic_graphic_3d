@@ -23,6 +23,7 @@
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
 #include <render/namespace.h>
+#include <render/nodecontext/intf_render_node_graph_manager.h>
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
 
 #include "util/log.h"

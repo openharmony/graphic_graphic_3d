@@ -79,7 +79,8 @@ IComponentManager* IEnvironmentComponentManagerInstance(IEcs& ecs)
 
 void IEnvironmentComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<EnvironmentComponentManager*>(instance);
+    static_cast<EnvironmentComponentManager*>(instance)->~EnvironmentComponentManager();
+    ::operator delete(instance);
 }
 
 CORE3D_END_NAMESPACE()

@@ -34,7 +34,7 @@ SCENE_BEGIN_NAMESPACE()
 META_REGISTER_CLASS(EcsObject, "6f1d5812-ce80-4f1d-9a74-6815f3e111b0", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
 class EcsObject : public META_NS::IntroduceInterfaces<META_NS::MetaObject, IEcsObject, IEcsEventListener,
-                      IEnginePropertyInit, META_NS::INamed> {
+                      IEnginePropertyInit, META_NS::INamed, META_NS::IEnginePropertySync> {
     META_OBJECT(EcsObject, SCENE_NS::ClassId::EcsObject, IntroduceInterfaces)
 
     META_BEGIN_STATIC_DATA()
@@ -74,6 +74,7 @@ protected:
     void AddAllComponentProperties(META_NS::IMetadata& object);
     void AddAllProperties(META_NS::IMetadata& object, CORE_NS::IComponentManager*);
     bool AddAllNamedComponentProperties(META_NS::IMetadata& object, BASE_NS::string_view cv);
+    CORE_NS::IComponentManager* FindUnregisteredComponentByName(BASE_NS::string_view name) const;
 
     bool AttachEnginePropertyImpl(
         META_NS::EnginePropertyHandle, const BASE_NS::string&, const META_NS::IProperty::Ptr&, BASE_NS::string_view);
@@ -87,6 +88,7 @@ private:
     IInternalScene::WeakPtr scene_;
     CORE_NS::Entity entity_;
     META_NS::IEngineValueManager::Ptr valueManager_;
+    META_NS::IOnChanged::InterfaceTypePtr syncPropertiesCallable_;
 };
 
 SCENE_END_NAMESPACE()

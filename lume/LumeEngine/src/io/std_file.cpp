@@ -17,7 +17,7 @@
 
 #include <cstdint>
 
-#if defined(__OHOS_PLATFORM__)
+#if defined(__OHOS__)
 #undef HAS_FILESYSTEM
 #else
 #ifdef __has_include

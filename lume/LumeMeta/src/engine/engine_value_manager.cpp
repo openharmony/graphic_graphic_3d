@@ -124,6 +124,16 @@ bool EngineValueManager::ConstructValues(EnginePropertyHandle handle, EngineValu
     return false;
 }
 
+bool EngineValueManager::ConstructValues(CORE_NS::IPropertyHandle* handle, EngineValueOptions options)
+{
+    if (handle) {
+        EnginePropertyHandle h;
+        h.handle = handle;
+        return ConstructValues(h, options);
+    }
+    return false;
+}
+
 bool EngineValueManager::ConstructValues(IValue::Ptr value, EngineValueOptions options)
 {
     auto prefix = options.namePrefix;

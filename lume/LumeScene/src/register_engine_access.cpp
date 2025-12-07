@@ -63,6 +63,7 @@ DECLARE_PROPERTY_TYPE(MaterialComponent::TextureTransform);
 DECLARE_PROPERTY_TYPE(vector<MeshComponent::Submesh>);
 DECLARE_PROPERTY_TYPE(AnimationComponent::PlaybackState);
 DECLARE_PROPERTY_TYPE(BASE_NS::vector<AnimationStateComponent::TrackState>);
+DECLARE_PROPERTY_TYPE(CameraComponent::SampleCount);
 DECLARE_PROPERTY_TYPE(CameraComponent::RenderingPipeline);
 DECLARE_PROPERTY_TYPE(CameraComponent::Culling);
 DECLARE_PROPERTY_TYPE(CameraComponent::Projection);
@@ -90,6 +91,7 @@ META_TYPE(RENDER_NS::RenderHandle)
 META_TYPE(CORE3D_NS::MeshComponent::Submesh)
 META_TYPE(CORE3D_NS::AnimationComponent::PlaybackState);
 META_TYPE(CORE3D_NS::AnimationStateComponent::TrackState);
+META_TYPE(CORE3D_NS::CameraComponent::SampleCount);
 META_TYPE(CORE3D_NS::CameraComponent::RenderingPipeline);
 META_TYPE(CORE3D_NS::CameraComponent::Culling);
 META_TYPE(CORE3D_NS::CameraComponent::Projection);
@@ -165,6 +167,7 @@ void RegisterEngineAccess()
     RegisterMapEngineAccessImpl<CameraComponent::Projection, CameraProjection>();
     RegisterMapEngineAccessImpl<CameraComponent::Culling, CameraCulling>();
     RegisterMapEngineAccessImpl<CameraComponent::RenderingPipeline, CameraPipeline>();
+    RegisterMapEngineAccessImpl<CameraComponent::SampleCount, CameraSampleCount>();
 
     RegisterMapEngineAccessImpl<RenderConfigurationComponent::SceneShadowType, SceneShadowType>();
     RegisterMapEngineAccessImpl<RenderConfigurationComponent::SceneShadowQuality, SceneShadowQuality>();
@@ -212,6 +215,7 @@ void UnregisterEngineAccess()
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<LightComponent::Type>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<EnvironmentComponent::Background>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<AnimationComponent::PlaybackState>::coreType);
+    r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<CameraComponent::SampleCount>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<CameraComponent::RenderingPipeline>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<CameraComponent::Culling>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<CameraComponent::Projection>::coreType);

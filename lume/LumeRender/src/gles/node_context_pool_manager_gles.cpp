@@ -789,7 +789,7 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
     }
     uint32_t arrayIndex = 0;
     if (auto const pos = std::find_if(framebufferCache_.framebuffers.begin(), framebufferCache_.framebuffers.end(),
-                                      [](auto const &framebuffer) { return framebuffer.fbos.empty(); });
+            [](auto const& framebuffer) { return framebuffer.fbos.empty(); });
         pos != framebufferCache_.framebuffers.end()) {
         arrayIndex = (uint32_t)std::distance(framebufferCache_.framebuffers.begin(), pos);
         *pos = move(fb);
@@ -812,6 +812,26 @@ const LowlevelFramebufferGL* NodeContextPoolManagerGLES::GetFramebuffer(const En
         }
     }
     return nullptr;
+}
+
+uint64_t NodeContextPoolManagerGLES::HashRenderPass(const RenderCommandBeginRenderPass& beginRenderPass)
+{
+    const auto& renderPassDesc = beginRenderPass.renderPassDesc;
+    const auto& renderArea = renderPassDesc.renderArea;
+    uint64_t rpHash = 0;
+    for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
+        HashCombine(rpHash, renderPassDesc.attachments[idx].layer);
+        HashCombine(rpHash, renderPassDesc.attachments[idx].mipLevel);
+        HashCombine(rpHash, renderPassDesc.attachmentHandles[idx]);
+    }
+    HashCombine(rpHash, renderArea.extentWidth);
+    HashCombine(rpHash, renderArea.extentHeight);
+    HashCombine(rpHash, renderArea.offsetX);
+    HashCombine(rpHash, renderArea.offsetY);
+
+    HashCombine(rpHash, renderPassDesc.subpassCount);
+    HashCombine(rpHash, static_cast<uint32_t>(renderPassDesc.subpassContents));
+    return rpHash;
 }
 
 void NodeContextPoolManagerGLES::FilterRenderPass(RenderCommandBeginRenderPass& beginRenderPass)

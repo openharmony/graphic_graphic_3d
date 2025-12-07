@@ -18,8 +18,16 @@
 
 #include <scene/base/types.h>
 #include <scene/interface/postprocess/intf_bloom.h>
+#include <scene/interface/postprocess/intf_blur.h>
+#include <scene/interface/postprocess/intf_color_conversion.h>
 #include <scene/interface/postprocess/intf_color_fringe.h>
+#include <scene/interface/postprocess/intf_dof.h>
+#include <scene/interface/postprocess/intf_fxaa.h>
+#include <scene/interface/postprocess/intf_lens_flare.h>
+#include <scene/interface/postprocess/intf_motion_blur.h>
+#include <scene/interface/postprocess/intf_taa.h>
 #include <scene/interface/postprocess/intf_tonemap.h>
+#include <scene/interface/postprocess/intf_upscale.h>
 #include <scene/interface/postprocess/intf_vignette.h>
 
 SCENE_BEGIN_NAMESPACE()
@@ -29,22 +37,52 @@ class IPostProcess : public CORE_NS::IInterface {
 public:
     /**
      * @brief Camera postprocessing settings, tonemap
-     * @return
      */
     META_READONLY_PROPERTY(ITonemap::Ptr, Tonemap)
     /**
      * @brief Camera postprocessing settings, bloom
-     * @return
      */
     META_READONLY_PROPERTY(IBloom::Ptr, Bloom)
+    /**
+     * @brief Camera postprocessing settings, blur
+     */
+    META_READONLY_PROPERTY(IBlur::Ptr, Blur)
+    /**
+     * @brief Camera postprocessing settings, motion blur
+     */
+    META_READONLY_PROPERTY(IMotionBlur::Ptr, MotionBlur)
+    /**
+     * @brief Camera postprocessing settings, color conversion
+     */
+    META_READONLY_PROPERTY(IColorConversion::Ptr, ColorConversion)
     /**
      * @brief Camera postprocessing settings, color fringe
      */
     META_READONLY_PROPERTY(IColorFringe::Ptr, ColorFringe)
     /**
+     * @brief Camera postprocessing settings, depth of field
+     */
+    META_READONLY_PROPERTY(IDepthOfField::Ptr, DepthOfField)
+    /**
+     * @brief Camera postprocessing settings, fxaa
+     */
+    META_READONLY_PROPERTY(IFxaa::Ptr, Fxaa)
+    /**
+     * @brief Camera postprocessing settings, taa
+     */
+    META_READONLY_PROPERTY(ITaa::Ptr, Taa)
+    /**
      * @brief Camera postprocessing settings, vignette
      */
     META_READONLY_PROPERTY(IVignette::Ptr, Vignette)
+    /**
+     * @brief Camera postprocessing settings, lens flare
+     */
+    META_READONLY_PROPERTY(ILensFlare::Ptr, LensFlare)
+    /**
+     * @brief Camera postprocessing settings, upscale
+     */
+    META_READONLY_PROPERTY(IUpscale::Ptr, Upscale)
 };
 
 META_REGISTER_CLASS(PostProcess, "2df6c964-5a32-4270-86e6-755e3f5697ff", META_NS::ObjectCategoryBits::NO_CATEGORY)

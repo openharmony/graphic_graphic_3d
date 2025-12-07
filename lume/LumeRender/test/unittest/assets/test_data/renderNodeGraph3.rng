@@ -1,0 +1,22 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING",
+            "nodeName": "AccStructStaging",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        }
+    ],
+    "renderNodeGraphOutputResources": [
+        {
+            "typeName": "TypeName",
+            "nodeName": "NodeName"
+        }
+    ]
+}

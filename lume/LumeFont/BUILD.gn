@@ -26,9 +26,7 @@ config("lume_font_config") {
   defines = [ "CORE_PLUGIN=1" ]
 
   ldflags = [
-    # "-Wl,--build-id",
     "-Wl,--exclude-libs,ALL",
-    # "-Wl,--exclude-libs,libPluginDotfield",
   ]
 
   cflags = [
@@ -59,13 +57,9 @@ ohos_source_set("lume_font_src") {
     ":lume_font_api",
     ":lume_font_config",
 
-    # "${LUME_CORE3D_PATH}:lume_3d_api",
     "${LUME_RENDER_PATH}:lume_render_api",
     "${LUME_CORE_PATH}:lume_base_api",
     "${LUME_CORE_PATH}:lume_engine_api",
-
-    # "${LUME_CORE_PATH}:lume_component_help_config",
-    # "${LUME_CORE_PATH}:lume_default",
   ]
 
   sources = [

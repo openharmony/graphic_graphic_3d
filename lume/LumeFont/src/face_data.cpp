@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -51,13 +51,13 @@ FontManager& FaceData::GetFontManager() const
 
 FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi, bool sdf)
 {
-    const FT_Pos pixelSize26Dot6 = FloatToFTPos(sizeInPt * yDpi / 72.f); // 72.0 : param
-    const int64_t pixelSize = (pixelSize26Dot6 >> 6) | (sdf ? (1ll << 32) : 0); // 6 32 : param
+    const FT_Pos pixelSize26Dot6 = FloatToFTPos(sizeInPt * yDpi / 72.f);
+    const int64_t pixelSize = Fp26ToInt(pixelSize26Dot6) | (sdf ? (1ll << 32) : 0);
 
     {
         std::shared_lock readerLock(mutex_);
         if (auto it = std::find_if(
-            datas_.cbegin(), datas_.cend(), [pixelSize](const Data& data) { return data.pixelSize == pixelSize; });
+                datas_.cbegin(), datas_.cend(), [pixelSize](const Data& data) { return data.pixelSize == pixelSize; });
             it != datas_.cend()) {
             return it->fontData.get();
         }
@@ -65,7 +65,7 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
 
     std::lock_guard writerLock(mutex_);
     if (auto it = std::find_if(
-        datas_.cbegin(), datas_.cend(), [pixelSize](const Data& data) { return data.pixelSize == pixelSize; });
+            datas_.cbegin(), datas_.cend(), [pixelSize](const Data& data) { return data.pixelSize == pixelSize; });
         it != datas_.cend()) {
         return it->fontData.get();
     }
@@ -94,8 +94,8 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
                 }
             }
             if (smallestDiff) {
-                CORE_LOG_N("use of closest match for bitmap font, request: %dpx , selected: %dpx",
-                    pixelSize26Dot6 >> 6, sizes[closestIdx].y_ppem >> 6); // 6 : param
+                CORE_LOG_N("use of closest match for bitmap font, request: %dpx , selected: %dpx", pixelSize26Dot6 >> 6,
+                    sizes[closestIdx].y_ppem >> 6);
             }
         }
         err = FT_Select_Size(face_, closestIdx);
@@ -111,8 +111,9 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
     auto fontDataPtr = fontData.get();
     datas_.push_back(Data { pixelSize, std::move(fontData) });
 
-    CORE_LOG_N("create FontData PT: %f dpi: %d (pix: %d, yppem: %d, h: %d)", sizeInPt, yDpi, pixelSize,
-        fontDataPtr->sizeData_->metrics.y_ppem, fontDataPtr->sizeData_->metrics.height >> 6); // 6 : param
+    CORE_LOG_N("create FontData PT: %f dpi: %d (pix: %d, yppem: %d, h: %d) %p", sizeInPt, yDpi, pixelSize,
+        fontDataPtr->sizeData_->metrics.y_ppem, fontDataPtr->sizeData_->metrics.height >> 6, this);
+
     return fontDataPtr;
 }
 
@@ -203,21 +204,21 @@ int FaceData::UpdateGlyph(bool sdf, FT_Size ftSize, uint32_t glyphIndex, FontDef
         FT_Bitmap_Init(&converted);
         FT_Bitmap_Convert(bmp->library, &((FT_BitmapGlyph)bmp)->bitmap, &converted, 1);
 
-        if (converted.num_grays == 2U) { // 2 : param
+        if (converted.num_grays == 2U) {
             // convert created a binary bitmap, expand to 0..255 range.
             std::transform(converted.buffer, converted.buffer + converted.pitch * converted.rows, converted.buffer,
                 [](const uint8_t& c) { return (c) ? uint8_t(0xffU) : uint8_t(0x00U); });
-        } else if (converted.num_grays == 4U) { // 4 ；param
+        } else if (converted.num_grays == 4U) {
             // convert created a 2 bit bitmap, expand to 0..255 range.
             std::transform(converted.buffer, converted.buffer + converted.pitch * converted.rows, converted.buffer,
                 [](const uint8_t& c) {
-                    auto half = (c << 2U) | c; // 2 : param
-                    return uint8_t((half << 4U) | half); // 4 : param
+                    auto half = (c << 2U) | c;
+                    return uint8_t((half << 4U) | half);
                 });
-        } else if (converted.num_grays == 16U) { // 16 : channel
+        } else if (converted.num_grays == 16U) {
             // convert created a 4 bit bitmap, expand to 0..255 range.
             std::transform(converted.buffer, converted.buffer + converted.pitch * converted.rows, converted.buffer,
-                [](const uint8_t& c) { return uint8_t((c << 4U) | c); }); // 4 : param
+                [](const uint8_t& c) { return uint8_t((c << 4U) | c); });
         }
     }
 

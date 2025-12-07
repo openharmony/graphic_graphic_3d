@@ -27,7 +27,7 @@ RENDER_BEGIN_NAMESPACE()
 
 /** @ingroup group_render_irendernodeparserutil */
 /**
- * Provides parsering utilities for render node graph node jsons.
+ * Provides parsing utilities for render node graph node jsons.
  */
 class IRenderNodeParserUtil : public CORE_NS::IInterface {
 public:

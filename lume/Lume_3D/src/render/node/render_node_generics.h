@@ -17,27 +17,23 @@
 #define CORE3D_RENDER_NODE_RENDER_NODE_GENERICS_H
 
 #include <array>
-#include <tuple>
 
-#include <3d/render/intf_render_node_scene_util.h>
 #include <base/containers/allocator.h>
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
-#include <base/math/float_packer.h>
+#include <base/math/vector.h>
 #include <render/device/intf_gpu_resource_manager.h>
-#include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
-#include <render/nodecontext/intf_render_command_list.h>
-#include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/render_data_structures.h>
+
+RENDER_BEGIN_NAMESPACE()
+class IDescriptorSetBinder;
+class IRenderNodeContextManager;
+RENDER_END_NAMESPACE()
 
 struct RenderSize {
     int32_t w { 0 };
     int32_t h { 0 };
-    constexpr explicit RenderSize(int32_t width, int32_t height) : w(width), h(height) {};
-    constexpr RenderSize Downscale(int factor)
-    {
-        return RenderSize(w >> factor, h >> factor);
-    }
+    constexpr explicit RenderSize(int32_t width, int32_t height) : w(width), h(height) {}
 };
 
 template<typename T>
@@ -120,29 +116,9 @@ struct PushContant {
 template<typename T, class U = Pass>
 struct BlurParams {
     const CommonShaderData& shader;
-    RENDER_NS::IPipelineDescriptorSetBinder& binder;
+    RENDER_NS::IDescriptorSetBinder& binder;
     PushContant<T> pc;
     U data;
-};
-
-struct Guassian {
-    BASE_NS::Math::Vec4 texSizeInvTexSize { 0.0f, 0.0f, 0.0f, 0.0f };
-    BASE_NS::Math::Vec4 dir { 0.0f, 0.0f, 0.0f, 0.0f };
-    std::array<uint32_t, 16U> packed {};
-
-    static Guassian StandardWeights() noexcept
-    {
-        using namespace BASE_NS;
-        static constexpr int BLUR_SEPARATE_COUNT = 3;
-        static constexpr float offset[BLUR_SEPARATE_COUNT] = { 0.0f, 1.3846153846f, 3.2307692308f };
-        static constexpr float weight[BLUR_SEPARATE_COUNT] = { 0.2270270270f, 0.3162162162f, 0.0702702703f };
-        std::array<uint32_t, 16> packed = {};
-        for (uint32_t i = 0; i < BLUR_SEPARATE_COUNT; ++i) {
-            packed[i] = Math::PackHalf2X16(Math::Vec2(offset[i], weight[i]));
-        }
-
-        return Guassian { { 3.0f + 0.5f, 0.0f, 0.0f, 0.0f }, {}, packed };
-    }
 };
 
 struct RenderNodeMixin {

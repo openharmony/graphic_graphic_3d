@@ -14,6 +14,7 @@
  */
 #include "GeometryJS.h"
 
+#include "JsObjectCache.h"
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
@@ -30,9 +31,13 @@
 
 void* GeometryJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == GeometryJS::ID)
-        return this;
-    return NodeImpl::GetInstanceImpl(id);
+    if (id == GeometryJS::ID) {
+        return static_cast<GeometryJS*>(this);
+    }
+    if (auto ret = NodeImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 
 void GeometryJS::DisposeNative(void* scn)
@@ -42,23 +47,25 @@ void GeometryJS::DisposeNative(void* scn)
     }
     LOG_V("GeometryJS::DisposeNative");
     disposed_ = true;
+    DisposeBridge(this);
+    if (auto geom = GetNativeObject<META_NS::IObject>()) {
+        DetachJsObj(geom,"_JSW");
+    }
 
     SceneJS* sceneJS = static_cast<SceneJS*>(scn);
     if (sceneJS) {
         sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
+    bool attached = IsAttached();
     if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
-        if (!IsAttached()) {
+        if (!attached) {
             if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(node)) {
                 access->SetMesh(nullptr).Wait();
             }
-            if (auto scene = node->GetScene()) {
-                scene->RemoveNode(BASE_NS::move(node)).Wait();
-            }
         }
-        UnsetNativeObject();
     }
+    CleanupNode(this, attached);
     scene_.Reset();
 }
 void GeometryJS::Init(napi_env env, napi_value exports)
@@ -73,6 +80,9 @@ void GeometryJS::Init(napi_env env, napi_value exports)
     napi_value func;
     auto status = napi_define_class(env, "Geometry", NAPI_AUTO_LENGTH, BaseObject::ctor<GeometryJS>(), nullptr,
         node_props.size(), node_props.data(), &func);
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
@@ -86,6 +96,7 @@ GeometryJS::GeometryJS(napi_env e, napi_callback_info i) : BaseObject(e, i), Nod
     LOG_V("GeometryJS ++ ");
 
     if (auto ctx = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> { e, i }) {
+        AddBridge("GeometryJS", ctx.This());
         Construct(e, ctx.This(), ctx.Arg<0>(), ctx.Arg<1>());
     } else {
         LOG_E("Bad args given for GeometryJS constructor");
@@ -95,12 +106,14 @@ GeometryJS::GeometryJS(napi_env e, napi_callback_info i) : BaseObject(e, i), Nod
 GeometryJS::~GeometryJS()
 {
     LOG_V("GeometryJS -- ");
+    DestroyBridge(this);
 }
 
 void GeometryJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 
 void GeometryJS::Construct(
@@ -110,7 +123,7 @@ void GeometryJS::Construct(
         LOG_W("Can't construct GeometryJS: Scene has gone missing");
         return;
     }
-    scene_ = NapiApi::WeakRef { env, scene.ToNapiValue() };
+    scene_ = scene;
 
     // Add the dispose hook to scene so that the Geometry node is disposed when scene is disposed.
     if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
@@ -157,7 +170,7 @@ napi_value GeometryJS::GetMorpher(NapiApi::FunctionContext<>& ctx)
         // no morpher.
         return ctx.GetNull();
     }
-    
+
     SCENE_NS::IMorpher::Ptr morpher = META_NS::GetValue(access->Morpher());
     NapiApi::Env env(ctx.Env());
     NapiApi::Object argJS(env);

@@ -57,6 +57,13 @@ void TrueRootObject::UnsetNativeObject()
     objW_ = nullptr;
 }
 
+void* TrueRootObject::GetInstanceImpl(uint32_t id) {
+    if (id == TrueRootObject::ID) {
+        return static_cast<TrueRootObject*>(this);
+    }
+    return nullptr;
+}
+
 void TrueRootObject::Finalize(napi_env env)
 {
     // Synchronously destroy the lume object in engine thread.. (only for strong refs.)
@@ -84,8 +91,8 @@ void TrueRootObject::ExtractNativeObject(NapiApi::Object& resourceParam)
 
     napi_value undefined;
     napi_get_undefined(env, &undefined);
-    resourceParam.Set("NativeObject", undefined);
-    resourceParam.Set("NativeObjectPtrType", undefined);
+    resourceParam.DeleteProperty("NativeObject");
+    resourceParam.DeleteProperty("NativeObjectPtrType");
 
     META_NS::IObject::Ptr metaPtr;
     InjectedNativeObject* ptr { nullptr };

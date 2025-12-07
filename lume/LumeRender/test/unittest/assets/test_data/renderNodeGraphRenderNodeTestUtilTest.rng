@@ -1,0 +1,63 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeTestUtil",
+            "nodeName": "RenderNodeTestUtil",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "OutputImage",
+                        "resourceIndex": 1000,
+                        "resourceLocation": "from_render_graph_output"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "OutputImage",
+                        "resourceIndex": 1000,
+                        "resourceLocation": "from_previous_render_node_output"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "OutputImage",
+                        "resourceLocation": "from_named_render_node_output"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "resourceIndex": 1000,
+                        "resourceLocation": "from_named_render_node_output"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "OutputImage",
+                        "resourceLocation": "from_previous_render_node_graph_output"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "resourceIndex": 1000,
+                        "resourceLocation": "from_previous_render_node_graph_output"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": [0],
+                    "inputAttachmentIndices": [1, 2],
+                    "resolveAttachmentIndices": [3, 4]
+                }
+            }
+        }
+    ]
+}

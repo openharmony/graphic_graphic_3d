@@ -28,20 +28,19 @@ enum class TonemapType {
     ACES_2020 = 1,
     /** Filmic */
     FILMIC = 2,
+    /** PBRNeutral */
+    TONEMAP_PBR_NEUTRAL = 3,
 };
 
 class ITonemap : public IPostProcessEffect {
     META_INTERFACE(IPostProcessEffect, ITonemap, "aec077b9-42bf-49e3-87f4-d3b7e821768f")
 public:
     /**
-     * @brief Camera postprocessing settings, tonemap type
-     * @return
+     * @brief Tonemap type.
      */
     META_PROPERTY(TonemapType, Type)
-
     /**
-     * @brief Camera postprocessing settings, tonemap exposure
-     * @return
+     * @brief Tonemap exposure.
      */
     META_PROPERTY(float, Exposure)
 };

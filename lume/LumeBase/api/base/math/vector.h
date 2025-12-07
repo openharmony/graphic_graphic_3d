@@ -60,11 +60,13 @@ public:
     // Constructors
     /** Default constructor */
     inline constexpr Vec2() noexcept : data {} {}
+    /** Constructor for using single float as input for all components, marked explicit to avoid implicit conversion
+     * from float to vector. For example Normalize(1.0f) would be illegal. */
+    inline constexpr explicit Vec2(float value) noexcept : x(value), y(value) {}
     /** Constructor for using floats as input */
     inline constexpr Vec2(float xParameter, float yParameter) noexcept : x(xParameter), y(yParameter) {}
     /** Constructor for using array of floats as input */
     inline constexpr Vec2(const float parameter[2]) noexcept : x(parameter[0]), y(parameter[1]) {}
-    ~Vec2() = default;
 
     /** Add operator */
     inline constexpr Vec2 operator+(const Vec2& v2) const
@@ -130,6 +132,11 @@ public:
         return Vec2(x * d, y * d);
     }
     /** Multiplies vector by float value */
+    friend inline constexpr Vec2 operator*(float d, const Vec2& v2)
+    {
+        return v2 * d;
+    }
+    /** Multiplies vector by float value */
     inline constexpr Vec2& operator*=(float d)
     {
         x *= d;
@@ -154,6 +161,14 @@ public:
     inline constexpr Vec2 operator+(float d) const
     {
         return Vec2(x + d, y + d);
+    }
+
+    /** Add float from vector */
+    inline constexpr Vec2& operator+=(float d)
+    {
+        x += d;
+        y += d;
+        return *this;
     }
 
     /** Subtract float from vector */
@@ -213,13 +228,17 @@ public:
     // Constructors
     /** Default constructor */
     inline constexpr Vec3() noexcept;
+    /** Constructor for using single float as input for all components, marked explicit to avoid implicit conversion
+     * from float to vector. For example Normalize(1.0f) would be illegal. */
+    inline constexpr explicit Vec3(float value) noexcept;
     /** Constructor for using floats as input */
     inline constexpr Vec3(float xParameter, float yParameter, float zParameter) noexcept;
     /** Constructor for using array of floats as input */
     inline constexpr Vec3(const float d[]) noexcept;
+    /** Constructor for using vector2 and float as input */
+    inline constexpr Vec3(const Vec2& vec, float zParameter) noexcept;
     /** Constructor for using vector4 as input, discards w component */
     inline constexpr Vec3(const Vec4& vec) noexcept;
-    ~Vec3() = default;
 
     // Vec3 to Vec3 operations
     /** Add operator */
@@ -253,8 +272,21 @@ public:
     constexpr bool operator!=(const Vec3& rhs) const;
 
     // Vec3 to float operations
+
+    /** Add operator */
+    inline constexpr Vec3 operator+(float d) const;
+    /** Add operator */
+    inline constexpr Vec3& operator+=(float d);
+
+    /** Subtract operator */
+    inline constexpr Vec3 operator-(float d) const;
+    /** Subtract operator */
+    inline constexpr Vec3& operator-=(float d);
+
     /** Multiplies vector by float value */
     inline constexpr Vec3 operator*(float d) const;
+    /** Multiplies vector by float value */
+    friend inline constexpr Vec3 operator*(float d, const Vec3& v2);
     /** Multiplies vector by float value */
     inline constexpr Vec3& operator*=(float d);
 
@@ -293,13 +325,17 @@ public:
     // Constructors
     /** Default constructor */
     inline constexpr Vec4() noexcept;
+    /** Constructor for using single float as input for all components, marked explicit to avoid implicit conversion
+     * from float to vector. For example Normalize(1.0f) would be illegal. */
+    inline constexpr explicit Vec4(float value) noexcept;
     /** Constructor for using floats as input */
     inline constexpr Vec4(float xParameter, float yParameter, float zParameter, float wParameter) noexcept;
     /** Constructor for using array of floats as input */
     inline constexpr Vec4(const float d[4]) noexcept;
+    /** Constructor for using vector2 and 2 float as input */
+    inline constexpr Vec4(const Vec2& vec, float zParameter, float wParameter) noexcept;
     /** Constructor for using vector3 and float as input (float as w component) */
     inline constexpr Vec4(const Vec3& vec, float w) noexcept;
-    ~Vec4() = default;
 
     /** Add operator */
     inline constexpr Vec4 operator+(const Vec4& v2) const;
@@ -324,8 +360,20 @@ public:
     /** Divide operator */
     inline constexpr Vec4& operator/=(const Vec4& rhs);
 
+    /** Add operator */
+    inline constexpr Vec4 operator+(float d) const;
+    /** Add operator */
+    inline constexpr Vec4& operator+=(float d);
+
+    /** Subtract operator */
+    inline constexpr Vec4 operator-(float d) const;
+    /** Subtract operator */
+    inline constexpr Vec4& operator-=(float d);
+
     /** Multiplies a vector by a float value */
     inline constexpr Vec4 operator*(float d) const;
+    /** Multiplies vector by float value */
+    friend inline constexpr Vec4 operator*(float d, const Vec4& v2);
     /** Multiplies a vector by a float value */
     inline constexpr Vec4& operator*=(float d);
 
@@ -373,7 +421,6 @@ public:
     inline constexpr UVec2() : data {} {}
     /** Constructor for using two uint32_t's as input */
     inline constexpr UVec2(uint32_t xParameter, uint32_t yParameter) : x(xParameter), y(yParameter) {}
-    ~UVec2() = default;
 
     /** Add operator */
     inline constexpr UVec2 operator+(const UVec2& v2) const
@@ -427,12 +474,17 @@ public:
         return *this;
     }
 
-    /** Multiplies vector by float value */
+    /** Multiplies vector by uint32_t value */
     inline constexpr UVec2 operator*(uint32_t d) const
     {
         return UVec2(x * d, y * d);
     }
-    /** Multiplies vector by float value */
+    /** Multiplies vector by uint32_t value */
+    friend inline constexpr UVec2 operator*(uint32_t d, const UVec2& v2)
+    {
+        return v2 * d;
+    }
+    /** Multiplies vector by uint32_t value */
     inline constexpr UVec2& operator*=(uint32_t d)
     {
         x *= d;
@@ -440,12 +492,12 @@ public:
         return *this;
     }
 
-    /** Divides vector by float value */
+    /** Divides vector by uint32_t value */
     inline constexpr UVec2 operator/(uint32_t d) const
     {
         return UVec2(x / d, y / d);
     }
-    /** Divides vector by float value */
+    /** Divides vector by uint32_t value */
     inline constexpr UVec2& operator/=(uint32_t d)
     {
         if (d == 0) {
@@ -455,6 +507,19 @@ public:
 
         x /= d;
         y /= d;
+        return *this;
+    }
+
+    /** Add uint to uvector2 */
+    inline constexpr UVec2 operator+(uint32_t d) const
+    {
+        return UVec2(x + d, y + d);
+    }
+    /** Add uint to uvector2 */
+    inline constexpr UVec2& operator+=(uint32_t d)
+    {
+        x += d;
+        y += d;
         return *this;
     }
 
@@ -514,7 +579,6 @@ public:
     inline constexpr UVec3() : data {} {}
     /** Constructor for using three uint32_t's as input */
     inline constexpr UVec3(uint32_t x, uint32_t y, uint32_t z) : x(x), y(y), z(z) {}
-    ~UVec3() = default;
 
     /** Subscript operator */
     constexpr uint32_t& operator[](size_t index)
@@ -572,7 +636,6 @@ public:
     inline constexpr UVec4() : data {} {}
     /** Constructor for using four uint32_t's as input */
     inline constexpr UVec4(uint32_t x, uint32_t y, uint32_t z, uint32_t w) : x(x), y(y), z(z), w(w) {}
-    ~UVec4() = default;
 
     /** Subscript operator */
     constexpr uint32_t& operator[](size_t index)
@@ -697,10 +760,15 @@ public:
         return *this;
     }
 
-    /** Multiplies vector by float value */
+    /** Multiplies vector by int value */
     inline constexpr IVec2 operator*(int32_t d) const
     {
         return IVec2(x * d, y * d);
+    }
+    /** Multiplies vector by int value */
+    friend inline constexpr IVec2 operator*(int32_t d, const IVec2& v2)
+    {
+        return v2 * d;
     }
     /** Multiplies vector by float value */
     inline constexpr IVec2& operator*=(int32_t d)
@@ -725,6 +793,19 @@ public:
 
         x /= d;
         y /= d;
+        return *this;
+    }
+
+    /** Add int32_t to IVector2 */
+    inline constexpr IVec2 operator+(int32_t d) const
+    {
+        return IVec2(x + d, y + d);
+    }
+    /** Add int32_t to IVector2 */
+    inline constexpr IVec2& operator+=(int32_t d)
+    {
+        x += d;
+        y += d;
         return *this;
     }
 
@@ -894,10 +975,12 @@ constexpr const float& Vec3::operator[](size_t index) const
 
 // Constructors
 inline constexpr Vec3::Vec3() noexcept : data {} {}
+inline constexpr Vec3::Vec3(float value) noexcept : x(value), y(value), z(value) {}
 inline constexpr Vec3::Vec3(float xParameter, float yParameter, float zParameter) noexcept
     : x(xParameter), y(yParameter), z(zParameter)
 {}
 inline constexpr Vec3::Vec3(const float d[]) noexcept : x(d[0]), y(d[1]), z(d[2]) {}
+inline constexpr Vec3::Vec3(const Vec2& vec, float zParameter) noexcept : x(vec.x), y(vec.y), z(zParameter) {}
 inline constexpr Vec3::Vec3(const Vec4& vec) noexcept : x(vec.x), y(vec.y), z(vec.z) {}
 
 // Vec3 to Vec3 operations
@@ -982,10 +1065,42 @@ constexpr bool Vec3::operator!=(const Vec3& rhs) const
 }
 
 // Vec3 to float operations
+
+// Add
+inline constexpr Vec3 Vec3::operator+(float d) const
+{
+    return Vec3(x + d, y + d, z + d);
+}
+// Add
+inline constexpr Vec3& Vec3::operator+=(float d)
+{
+    x += d;
+    y += d;
+    z += d;
+    return *this;
+}
+// Subtract
+inline constexpr Vec3 Vec3::operator-(float d) const
+{
+    return Vec3(x - d, y - d, z - d);
+}
+// Subtract
+inline constexpr Vec3& Vec3::operator-=(float d)
+{
+    x -= d;
+    y -= d;
+    z -= d;
+    return *this;
+}
+
 // Multiplies vector by float value
 inline constexpr Vec3 Vec3::operator*(float d) const
 {
     return Vec3(x * d, y * d, z * d);
+}
+constexpr Vec3 operator*(float d, const Vec3& v2)
+{
+    return v2 * d;
 }
 inline constexpr Vec3& Vec3::operator*=(float d)
 {
@@ -1021,16 +1136,25 @@ static constexpr Vec3 ZERO_VEC3(0.0f, 0.0f, 0.0f);
 
 // Constructors
 inline constexpr Vec4::Vec4() noexcept : data {} {}
+inline constexpr Vec4::Vec4(float value) noexcept : x(value), y(value), z(value), w(value) {}
 inline constexpr Vec4::Vec4(float xParameter, float yParameter, float zParameter, float wParameter) noexcept
     : x(xParameter), y(yParameter), z(zParameter), w(wParameter)
 {}
 inline constexpr Vec4::Vec4(const float d[4]) noexcept : x(d[0]), y(d[1]), z(d[2]), w(d[3]) {}
 inline constexpr Vec4::Vec4(const Vec3& vec, float w) noexcept : x(vec.x), y(vec.y), z(vec.z), w(w) {}
+inline constexpr Vec4::Vec4(const Vec2& vec, float zParameter, float wParameter) noexcept
+    : x(vec.x), y(vec.y), z(zParameter), w(wParameter)
+{}
 
 // Add
 inline constexpr Vec4 Vec4::operator+(const Vec4& v2) const
 {
     return Vec4(x + v2.x, y + v2.y, z + v2.z, w + v2.w);
+}
+
+inline constexpr Vec4 Vec4::operator+(float d) const
+{
+    return Vec4(x + d, y + d, z + d, w + d);
 }
 
 inline constexpr Vec4& Vec4::operator+=(const Vec4& rhs)
@@ -1039,6 +1163,15 @@ inline constexpr Vec4& Vec4::operator+=(const Vec4& rhs)
     y += rhs.y;
     z += rhs.z;
     w += rhs.w;
+    return *this;
+}
+
+inline constexpr Vec4& Vec4::operator+=(float d)
+{
+    x += d;
+    y += d;
+    z += d;
+    w += d;
     return *this;
 }
 
@@ -1054,12 +1187,26 @@ inline constexpr Vec4 Vec4::operator-(const Vec4& v2) const
     return Vec4(x - v2.x, y - v2.y, z - v2.z, w - v2.w);
 }
 
+inline constexpr Vec4 Vec4::operator-(float d) const
+{
+    return Vec4(x - d, y - d, z - d, w - d);
+}
+
 inline constexpr Vec4& Vec4::operator-=(const Vec4& rhs)
 {
     x -= rhs.x;
     y -= rhs.y;
     z -= rhs.z;
     w -= rhs.w;
+    return *this;
+}
+
+inline constexpr Vec4& Vec4::operator-=(float d)
+{
+    x -= d;
+    y -= d;
+    z -= d;
+    w -= d;
     return *this;
 }
 
@@ -1098,6 +1245,12 @@ inline constexpr Vec4 Vec4::operator*(float d) const
 {
     return Vec4(x * d, y * d, z * d, w * d);
 }
+
+constexpr Vec4 operator*(float d, const Vec4& v2)
+{
+    return v2 * d;
+}
+
 inline constexpr Vec4& Vec4::operator*=(float d)
 {
     x *= d;

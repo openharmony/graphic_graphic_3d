@@ -18,6 +18,7 @@
 #include <meta/interface/intf_task_queue_registry.h>
 #include <scene/interface/intf_material.h>
 
+#include "JsObjectCache.h"
 #include "MaterialJS.h"
 #include "MaterialPropertyJS.h"
 #include "SamplerJS.h"
@@ -48,6 +49,9 @@ void MaterialPropertyJS::Init(napi_env env, napi_value exports)
     napi_value func;
     auto status = napi_define_class(env, "MaterialProperty", NAPI_AUTO_LENGTH, BaseObject::ctor<MaterialPropertyJS>(),
         nullptr, node_props.size(), node_props.data(), &func);
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
 
     MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
@@ -55,19 +59,24 @@ void MaterialPropertyJS::Init(napi_env env, napi_value exports)
         mis->StoreCtor("MaterialProperty", func);
     }
 }
-MaterialPropertyJS::MaterialPropertyJS(napi_env e, napi_callback_info i) : BaseObject(e, i) {}
+MaterialPropertyJS::MaterialPropertyJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
+{
+    AddBridge("MaterialPropertyJS",NapiApi::FunctionContext(e, i).This());
+}
 MaterialPropertyJS::~MaterialPropertyJS()
 {
     DisposeNative(nullptr);
+    DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
     }
 }
 void* MaterialPropertyJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == MaterialPropertyJS::ID)
-        return this;
-    return nullptr;
+    if (id == MaterialPropertyJS::ID) {
+        return static_cast<MaterialPropertyJS*>(this);
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 napi_value MaterialPropertyJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
@@ -78,11 +87,16 @@ void MaterialPropertyJS::Finalize(napi_env env)
 {
     DisposeNative(nullptr);
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 void MaterialPropertyJS::DisposeNative(void*)
 {
     if (!disposed_) {
         disposed_ = true;
+        DisposeBridge(this);
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
         sampler_.Reset();
         factorProxy_.reset();
         UnsetNativeObject();
@@ -94,8 +108,7 @@ napi_value MaterialPropertyJS::GetImage(NapiApi::FunctionContext<>& ctx)
     if (!texture) {
         return ctx.GetUndefined();
     }
-
-    SCENE_NS::IBitmap::Ptr image = META_NS::GetValue(texture->Image());
+    auto image = META_NS::GetValue(texture->Image());
     napi_value args[] = { ctx.This().ToNapiValue() };
     return CreateFromNativeInstance(ctx.GetEnv(), image, PtrType::STRONG, args).ToNapiValue();
 }
@@ -120,7 +133,7 @@ void MaterialPropertyJS::SetImage(NapiApi::FunctionContext<NapiApi::Object>& ctx
     NapiApi::Object imageJS = ctx.Arg<0>();
     SetImage(texture, imageJS);
 }
-napi_value MaterialPropertyJS::GetFactor(NapiApi::FunctionContext<> &ctx)
+napi_value MaterialPropertyJS::GetFactor(NapiApi::FunctionContext<>& ctx)
 {
     if (auto texture = ctx.This().GetNative<SCENE_NS::ITexture>()) {
         if (!factorProxy_) {
@@ -157,7 +170,7 @@ napi_value MaterialPropertyJS::GetSampler(NapiApi::FunctionContext<>& ctx)
     if (auto existing = sampler_.GetObject()) {
         return existing.ToNapiValue();
     }
-    
+
     if (auto texture = GetNativeObject<ITexture>()) {
         if (auto sampler = META_NS::GetValue(texture->Sampler())) {
             napi_value args[] = { ctx.This().ToNapiValue() };

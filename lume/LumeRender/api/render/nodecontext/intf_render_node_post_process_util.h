@@ -47,6 +47,8 @@ public:
     struct ImageData {
         /** Global input */
         BindableImage input;
+        /** Global upscaled input */
+        BindableImage inputUpscaled;
         /** Global output */
         BindableImage output;
 

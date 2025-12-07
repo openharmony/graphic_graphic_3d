@@ -31,7 +31,7 @@
 #include "DisposeContainer.h"
 #include "RenderContextJS.h"
 
-class SceneJS : public BaseObject {
+class SceneJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 4;
     static void Init(napi_env env, napi_value exports);
@@ -52,7 +52,6 @@ public:
 
 private:
     // Helpers
-    static void AddScene(META_NS::IObjectRegistry* obr, SCENE_NS::IScene::Ptr scene);
     static void FlushScenes();
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
     void DisposeNative(void*) override;
@@ -87,35 +86,38 @@ private:
     napi_value CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx);
     napi_value CreateScene(NapiApi::FunctionContext<>& ctx);
+    napi_value CreateEffect(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
     napi_value CreateGeometry(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
 
     napi_value ImportNode(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx);
     napi_value ImportScene(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx);
+    napi_value CloneNode(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object, BASE_NS::string>& ctx);
 
     napi_value RenderFrame(NapiApi::FunctionContext<>& ctx);
 
     napi_value CreateComponent(NapiApi::FunctionContext<NapiApi::Object, BASE_NS::string>& ctx);
     napi_value GetComponent(NapiApi::FunctionContext<NapiApi::Object, BASE_NS::string>& ctx);
     napi_value GetRenderContext(NapiApi::FunctionContext<>& ctx);
+    napi_value GetRenderConfiguration(NapiApi::FunctionContext<>& ctx);
 
     // static js method
     static napi_value Load(NapiApi::FunctionContext<>& ctx);
-    // Based on the file extension, supply the scene manager a file resource manager to handle loading.
-    static SCENE_NS::ISceneManager::Ptr CreateSceneManager(BASE_NS::string_view uri);
-    static BASE_NS::string_view ExtractPathToProject(BASE_NS::string_view uri);
 
     // make a storage of all bitmaps..
     CORE_NS::Mutex mutex_;
     NapiApi::StrongRef renderContextJS_;
     BASE_NS::shared_ptr<RenderResources> resources_;
     NapiApi::StrongRef environmentJS_;
-    BASE_NS::unordered_map<uintptr_t, NapiApi::StrongRef> strongDisposables_;
-    BASE_NS::unordered_map<uintptr_t, NapiApi::WeakRef> disposables_;
+    BASE_NS::vector<uintptr_t> strongDisposables_;
+    BASE_NS::vector<uintptr_t> disposables_;
     napi_env env_;
-    SCENE_NS::IRenderResourceManager::Ptr renderMan_;
     bool currentAlwaysRender_ = true;
+    NapiApi::WeakObjectRef root_;
+    BASE_NS::string rootPath_;
+    BASE_NS::string rootName_;
+    NapiApi::StrongRef renderConfiguration_;
 
 public:
     NapiApi::Object CreateEnvironment(NapiApi::Object, NapiApi::Object);

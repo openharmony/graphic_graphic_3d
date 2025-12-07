@@ -130,10 +130,8 @@ bool TrackAnimationState::SetKeyframes(const IArrayAny::Ptr& keyframes)
     if (keyframes) {
         if (keyframes != keyframeArray_) {
             keyframeArray_ = keyframes;
-            valid = ValidateValues();
-        } else {
-            valid = true;
         }
+        valid = ValidateValues();
     }
     if (auto& timestamps = GetTimeStamps()) {
         if (const auto size = timestamps->GetSize()) {

@@ -25,12 +25,25 @@
 
 META_BEGIN_NAMESPACE()
 
-class IDerivedFromResource : public CORE_NS::IInterface {
-    META_INTERFACE(CORE_NS::IInterface, IDerivedFromResource, "ea586292-8c95-482e-af6c-a0611818bbcb")
+class IDerivedFromTemplate : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IDerivedFromTemplate, "ea586292-8c95-482e-af6c-a0611818bbcb")
 public:
-    virtual bool SetResource(const CORE_NS::IResource::Ptr&) = 0;
-    virtual CORE_NS::ResourceId GetResource() const = 0;
-    virtual CORE_NS::IResource::Ptr CreateResource() const = 0;
+    virtual bool SetTemplateId(CORE_NS::ResourceId) = 0;
+    virtual CORE_NS::ResourceId GetTemplateId() const = 0;
+
+    virtual META_NS::ObjectId GetDefaultAccess() const = 0;
+    virtual CORE_NS::IResource::Ptr CreateEmptyTemplate() const = 0;
+    virtual CORE_NS::IResource::Ptr CreateTemplate() const = 0;
+    virtual bool SetTemplate(const CORE_NS::IResource::ConstPtr& templ) const = 0;
+};
+
+class IResourceTemplateAccess : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IResourceTemplateAccess, "d0a253fb-c844-433b-9e55-d8d7256e6c06")
+public:
+    virtual CORE_NS::IResource::Ptr CreateEmptyTemplate() const = 0;
+    virtual CORE_NS::IResource::Ptr CreateTemplateFromResource(const CORE_NS::IResource::ConstPtr&) const = 0;
+    virtual bool SetValuesFromTemplate(
+        const CORE_NS::IResource::ConstPtr& templ, const CORE_NS::IResource::Ptr& res) const = 0;
 };
 
 class IObjectResourceOptions : public CORE_NS::IResourceOptions {
@@ -61,7 +74,8 @@ META_TYPE(CORE_NS::ResourceId)
 META_INTERFACE_TYPE(CORE_NS::IResource)
 META_INTERFACE_TYPE(CORE_NS::ISetResourceId)
 META_INTERFACE_TYPE(CORE_NS::IResourceOptions)
-META_INTERFACE_TYPE(META_NS::IDerivedFromResource)
+META_INTERFACE_TYPE(META_NS::IDerivedFromTemplate)
+META_INTERFACE_TYPE(META_NS::IResourceTemplateAccess)
 META_INTERFACE_TYPE(META_NS::IObjectResourceOptions)
 
 META_END_NAMESPACE()

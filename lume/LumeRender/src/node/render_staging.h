@@ -16,6 +16,8 @@
 #ifndef RENDER_NODE_RENDER_STAGING_H
 #define RENDER_NODE_RENDER_STAGING_H
 
+#include <base/containers/pair.h>
+#include <base/containers/vector.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_render_node.h>
@@ -47,22 +49,24 @@ public:
         uint32_t byteSize { 0U };
     };
 
-    static void CopyHostToStaging(
+    void CopyHostToStaging(
         const IRenderNodeGpuResourceManager& gpuResourceMgr, const StagingConsumeStruct& stagingData);
-    static void CopyHostToStaging(const StagingConsumeStruct& stagingData, const StagingMappedBuffer& smb);
-    static void CopyStagingToImages(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
+    void CopyHostToStaging(const StagingConsumeStruct& stagingData, const BASE_NS::vector<StagingMappedBuffer>& smb);
+    void CopyStagingToImages(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
         const StagingConsumeStruct& stagingData, const StagingConsumeStruct& renderDataStoreStagingData);
-    static void CopyBuffersToBuffers(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
+    void CopyBuffersToBuffers(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
         const StagingConsumeStruct& renderDataStoreStagingData);
-    static void CopyImagesToBuffers(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
+    void CopyImagesToBuffers(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
         const StagingConsumeStruct& renderDataStoreStagingData);
-    static void CopyImagesToImages(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
+    void CopyImagesToImages(IRenderCommandList& cmdList, const StagingConsumeStruct& stagingData,
         const StagingConsumeStruct& renderDataStoreStagingData);
 
     void ClearImages(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
         const StagingImageClearConsumeStruct& imageClearData);
 
 private:
+    BASE_NS::pair<BufferResourceBarrier, BufferResourceBarrier> GetBufferPostTransferBarrier(const RenderHandle handle);
+
     IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
     // GLES cannot directly use graphics API clear commands

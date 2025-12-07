@@ -72,7 +72,7 @@ bool RenderConfiguration::InitDynamicProperty(const META_NS::IProperty::Ptr& p, 
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
                i->PushValue(META_NS::IValue::Ptr(
-                   new InterfacePtrEntityValue<IEnvironment>(ep, { object_->GetScene(), ClassId::Environment })));
+                   new InterfacePtrEntityValue<IEnvironment>(ep, { GetInternalScene(), ClassId::Environment })));
     }
     return AttachEngineProperty(p, path);
 }
@@ -130,7 +130,7 @@ void RenderConfiguration::OnPropertyChanged(const META_NS::IProperty& property)
         isset &= value.x > 0 && value.y > 0; // Require size to be larger than 0x0 even if set
         auto scene = GetInternalScene();
         if (scene) {
-            scene->AddTask(
+            scene->RunDirectlyOrInTask( // need notice
                 [this, scene, isset, value = BASE_NS::move(value)]() { UpdateShadowResolution(*scene, isset, value); });
         }
     } else if (name == SHADOW_QUALITY_PROP_NAME) {

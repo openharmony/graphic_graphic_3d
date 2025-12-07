@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,9 +15,6 @@
 #ifndef CORE__ECS_HELPER__COMPONENT_TOOLS__BASE_MANAGER_H
 #define CORE__ECS_HELPER__COMPONENT_TOOLS__BASE_MANAGER_H
 
-#ifndef NDEBUG
-#include <atomic>
-#endif
 #include <cstddef>
 #include <cstdint>
 
@@ -126,7 +123,7 @@ protected:
         void* WLock() override;
         void WUnlock() override;
 #ifndef NDEBUG
-        mutable std::atomic_uint32_t rLocked_ { 0 };
+        mutable int32_t rLocked_ { 0 };
         mutable bool wLocked_ { false };
 #endif
         bool dirty_ { false };

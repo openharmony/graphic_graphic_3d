@@ -212,6 +212,13 @@ public:
         return env_.GetString(value);
     }
 
+    auto SwitchJSTarget(napi_value target)
+    {
+        FunctionContext<RequestedArgs...> ctx(*this);
+        ctx.jsThis_ = target;
+        return ctx;
+    }
+
 private:
     template<typename First, typename... Rest>
     inline bool validate(size_t index)
@@ -219,6 +226,9 @@ private:
         napi_valuetype jstype;
         napi_status status = napi_invalid_arg;
         status = napi_typeof(env_, args_[index], &jstype);
+        if (status != napi_ok) {
+            return false;
+        }
         bool isArray = false;
         napi_is_array(env_, args_[index], &isArray);
 

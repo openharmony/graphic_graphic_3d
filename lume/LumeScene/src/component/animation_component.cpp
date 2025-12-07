@@ -32,8 +32,10 @@ bool AnimationComponent::SetEcsObject(const IEcsObject::Ptr& obj)
     if (ret) {
         auto& ecsc = obj->GetScene()->GetEcsContext();
         if (auto m = ecsc.FindComponent<CORE3D_NS::AnimationStateComponent>()) {
-            if (!m->HasComponent(GetEcsObject()->GetEntity())) {
-                m->Create(GetEcsObject()->GetEntity());
+            auto& manager = *m;
+            const auto entity = GetEntity();
+            if (!manager.HasComponent(entity)) {
+                manager.Create(entity);
             }
         }
     }

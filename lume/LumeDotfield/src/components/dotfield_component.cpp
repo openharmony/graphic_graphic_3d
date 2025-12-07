@@ -23,11 +23,9 @@
 
 namespace Dotfield {
 class DotfieldComponentManager final : public CORE_NS::BaseManager<DotfieldComponent, IDotfieldComponentManager> {
-    BEGIN_PROPERTY(DotfieldComponent, ComponentMetadata)
+    BEGIN_PROPERTY(DotfieldComponent, componentMetaData_)
 #include "dotfield/ecs/components/dotfield_component.h"
     END_PROPERTY();
-    const BASE_NS::array_view<const CORE_NS::Property> componentMetaData_ { ComponentMetadata,
-        BASE_NS::countof(ComponentMetadata) };
 
 public:
     explicit DotfieldComponentManager(CORE_NS::IEcs& ecs)
@@ -38,12 +36,12 @@ public:
 
     size_t PropertyCount() const override
     {
-        return componentMetaData_.size();
+        return BASE_NS::countof(componentMetaData_);
     }
 
     const CORE_NS::Property* MetaData(size_t index) const override
     {
-        if (index < componentMetaData_.size()) {
+        if (index < BASE_NS::countof(componentMetaData_)) {
             return &componentMetaData_[index];
         }
         return nullptr;

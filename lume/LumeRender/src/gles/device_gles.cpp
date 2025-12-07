@@ -1386,9 +1386,9 @@ void DeviceGLES::InitializePipelineCache(array_view<const uint8_t> initialData)
     }
     auto* header = reinterpret_cast<const CacheHeader*>(initialData.data());
     if ((header->version != CACHE_VERSION) ||
-        (header->revisionHash != Hash(string_view(reinterpret_cast<const char *>(glGetString(GL_VENDOR))),
-                                      string_view(reinterpret_cast<const char *>(glGetString(GL_RENDERER))),
-                                      string_view(reinterpret_cast<const char *>(glGetString(GL_VERSION)))))) {
+        (header->revisionHash != Hash(string_view(reinterpret_cast<const char*>(glGetString(GL_VENDOR))),
+                                     string_view(reinterpret_cast<const char*>(glGetString(GL_RENDERER))),
+                                     string_view(reinterpret_cast<const char*>(glGetString(GL_VERSION)))))) {
         return;
     }
     if ((sizeof(CacheHeader) + header->programs * sizeof(CacheHeader::Program)) > initialData.size()) {
@@ -1702,6 +1702,12 @@ void DeviceGLES::UseProgram(uint32_t program)
 void DeviceGLES::BindBuffer(uint32_t target, uint32_t buffer)
 {
     const uint32_t targetId = GenericTargetToTargetId(target);
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (targetId >= BASE_NS::countof(bufferBound_)) {
+        PLUGIN_LOG_E("gles bind buffer target id exceed");
+        return;
+    }
+#endif
     auto& state = bufferBound_[targetId];
     if ((!state.bound) || (state.buffer != buffer)) {
         state.bound = true;
@@ -1713,6 +1719,12 @@ void DeviceGLES::BindBuffer(uint32_t target, uint32_t buffer)
 void DeviceGLES::BindBufferRange(uint32_t target, uint32_t binding, uint32_t buffer, uint64_t offset, uint64_t size)
 {
     const uint32_t targetId = IndexedTargetToTargetId(target);
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if ((targetId >= BASE_NS::countof(boundBuffers_)) || binding >= BASE_NS::countof(boundBuffers_[targetId])) {
+        PLUGIN_LOG_E("gles bind buffer target id exceed");
+        return;
+    }
+#endif
     auto& slot = boundBuffers_[targetId][binding];
 
     if ((slot.cached == false) || (slot.buffer != buffer) || (slot.offset != offset) || (slot.size != size)) {
@@ -1723,6 +1735,12 @@ void DeviceGLES::BindBufferRange(uint32_t target, uint32_t binding, uint32_t buf
         glBindBufferRange(target, binding, buffer, static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(size));
         // BindBufferRange sets the "generic" binding too. so make sure cache state is correct.
         const uint32_t targetId2 = GenericTargetToTargetId(target);
+#if (RENDER_VALIDATION_ENABLED == 1)
+        if (targetId2 >= BASE_NS::countof(bufferBound_)) {
+            PLUGIN_LOG_E("gles bind buffer range target id exceed");
+            return;
+        }
+#endif
         auto& state = bufferBound_[targetId2];
         state.bound = true;
         state.buffer = buffer;
@@ -1827,9 +1845,24 @@ void DeviceGLES::SetActiveTextureUnit(uint32_t textureUnit)
     }
 }
 
+void DeviceGLES::SetMipLevels(
+    const unsigned int textureUnit, const uint32_t baseLevel, const uint32_t maxLevel, const uint32_t type)
+{
+    SetActiveTextureUnit(textureUnit);
+
+    glTexParameteri(type, GL_TEXTURE_BASE_LEVEL, static_cast<GLint>(baseLevel));
+    glTexParameteri(type, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(maxLevel));
+}
+
 void DeviceGLES::BindTexture(uint32_t textureUnit, uint32_t target, uint32_t texture)
 {
     const uint32_t targetId = TextureTargetToTargetId(target);
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if ((textureUnit >= BASE_NS::countof(boundTexture_)) || targetId >= BASE_NS::countof(boundTexture_[textureUnit])) {
+        PLUGIN_LOG_E("gles bind texture target unit or id exceed");
+        return;
+    }
+#endif
 #if RENDER_HAS_GLES_BACKEND
     if (target == GL_TEXTURE_EXTERNAL_OES) {
         // Work around for oes textures needing a bind to zero to update.
@@ -1949,15 +1982,13 @@ void DeviceGLES::CompressedTexSubImage3D(uint32_t image, uint32_t target, uint32
 
 const DeviceGLES::ImageFormat& DeviceGLES::GetGlImageFormat(const Format format) const
 {
-    if (const auto pos =
-            std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), format,
-                             [](const ImageFormat &element, const Format value) { return element.coreFormat < value; });
+    if (const auto pos = std::lower_bound(supportedFormats_.begin(), supportedFormats_.end(), format,
+            [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
         (pos != supportedFormats_.end()) && (pos->coreFormat == format)) {
         return *pos;
     }
-    if (const auto pos =
-            std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
-                             [](const ImageFormat &element, const Format value) { return element.coreFormat < value; });
+    if (const auto pos = std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
+            [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
         (pos != std::end(IMAGE_FORMATS_FALLBACK)) && (pos->coreFormat == format)) {
         PLUGIN_LOG_I("using fallback for format %u", format);
         return *pos;
@@ -2418,8 +2449,9 @@ void LowLevelDeviceGLES::SwapBuffers()
 {
     if (deviceGLES_.IsActive() && deviceGLES_.HasSwapchain()) {
         RenderHandle defaultSwapChain {};
-        auto sc = static_cast<const SwapchainGLES*>(deviceGLES_.GetSwapchain(defaultSwapChain));
-        deviceGLES_.SwapBuffers(*sc);
+        if (auto sc = static_cast<const SwapchainGLES*>(deviceGLES_.GetSwapchain(defaultSwapChain))) {
+            deviceGLES_.SwapBuffers(*sc);
+        }
     }
 }
 #endif

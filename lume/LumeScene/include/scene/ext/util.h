@@ -16,8 +16,11 @@
 #ifndef SCENE_EXT_UTIL_H
 #define SCENE_EXT_UTIL_H
 
+#include <scene/base/namespace.h>
+
 #include <meta/api/future.h>
 #include <meta/api/task_queue.h>
+#include <meta/interface/intf_metadata.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -105,6 +108,40 @@ inline BASE_NS::string_view FirstSegment(BASE_NS::string_view path)
         path.remove_prefix(1);
     }
     return path.substr(0, path.find_first_of('/'));
+}
+
+/**
+ * @brief Pushes a value to the value stack of a property.
+ * @param p The property whose stack to push the value to.
+ * @param value The value to push.
+ * @return True if successful, false otherwise.
+ */
+inline bool PushPropertyValue(const META_NS::IProperty::Ptr& p, const META_NS::IValue::Ptr& value)
+{
+    auto i = interface_cast<META_NS::IStackProperty>(p);
+    META_NS::PropertyLock lock(p);
+    return i && value && i->PushValue(value);
+}
+
+/**
+ * @brief See PushPropertyValue.
+ */
+template<typename Type>
+bool PushPropertyValue(const META_NS::Property<Type>& p, const META_NS::IValue::Ptr& value)
+{
+    return p && value && p->PushValue(value);
+}
+
+/**
+ * @brief Pushes a property to the value stack of another property.
+ * @param p The property whose stack to push the value to.
+ * @param value The value to push.
+ * @return True if successful, false otherwise.
+ */
+template<typename Type>
+bool PushPropertyAsValue(const META_NS::Property<Type>& p, const META_NS::Property<Type>& value)
+{
+    return p && value && p->PushValue(value.GetProperty());
 }
 
 SCENE_END_NAMESPACE()

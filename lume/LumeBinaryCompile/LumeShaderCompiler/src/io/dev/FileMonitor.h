@@ -26,7 +26,7 @@ class FileMonitor {
 public:
     /** Adds path to watch list, the monitor will recursively monitor all files in this directory and it's subtree.
         @param path Path to directory that is being monitored, such as 'x:/images/' or './images'.
-        @return True if path is succesfully added to watch list, otherwise false.
+        @return True if path is successfully added to watch list, otherwise false.
     */
     bool AddPath(std::string_view path);
 
@@ -37,14 +37,14 @@ public:
     bool RemovePath(std::string_view path);
 
     /** Scans for file modifications since last call to this function.
-        @param aAdded List of files that were added.
-        @param aRemoved List of files that were removed.
-        @param aModified List of files that were modified.
+        @param added List of files that were added.
+        @param removed List of files that were removed.
+        @param modified List of files that were modified.
     */
     void ScanModifications(
         std::vector<std::string>& added, std::vector<std::string>& removed, std::vector<std::string>& modified);
 
-    std::vector<std::string> GetMonitoredFiles() const;
+    [[nodiscard]] std::vector<std::string> GetMonitoredFiles() const;
 
 private:
     struct FileInfo {
@@ -54,7 +54,7 @@ private:
     bool AddFile(std::string_view path);
     bool RemoveFile(const std::string& path);
 
-    bool IsWatchingDirectory(std::string_view path);
+    bool IsWatchingDirectory(std::string_view path) const;
     bool IsWatchingSubDirectory(std::string_view path);
 
     std::vector<std::string> mDirectories;

@@ -24,46 +24,44 @@
 #include <meta/interface/resource/intf_resource.h>
 #include <meta/interface/serialization/intf_exporter.h>
 
+#include "../resource/node_instantiator.h"
 #include "scene_ser.h"
 #include "util.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-static void AddObjectProperties(const META_NS::IObject& node, const BASE_NS::string& head, META_NS::IMetadata& out);
-
-static void HandleReadOnlyProperty(
+static bool HandleReadOnlyProperty(
     const META_NS::IProperty::ConstPtr& p, const BASE_NS::string& head, META_NS::IMetadata& out)
 {
+    bool res = false;
     if (META_NS::ArrayPropertyLock arr { p }) {
         for (size_t i = 0; i != arr->GetSize(); ++i) {
             if (auto obj = interface_cast<META_NS::IObject>(META_NS::GetConstPointer(arr->GetAnyAt(i)))) {
-                AddObjectProperties(
+                res |= AddObjectProperties(
                     *obj, head + "." + EscapeSerName(p->GetName()) + "[" + BASE_NS::to_string(i) + "]", out);
             }
         }
     } else {
         if (auto obj = META_NS::GetConstPointer<META_NS::IObject>(p)) {
-            AddObjectProperties(*obj, head + "." + EscapeSerName(p->GetName()), out);
+            res |= AddObjectProperties(*obj, head + "." + EscapeSerName(p->GetName()), out);
         }
     }
+    return res;
 }
 
-static void AddObjectProperties(const META_NS::IObject& obj, const BASE_NS::string& head, META_NS::IMetadata& out)
+bool AddObjectProperties(const META_NS::IObject& obj, const BASE_NS::string& head, META_NS::IMetadata& out)
 {
+    bool res = false;
     if (auto i = interface_cast<META_NS::IMetadata>(&obj)) {
         for (auto&& p : GetAllProperties(*i)) {
             if (i->GetMetadata(META_NS::MetadataType::PROPERTY, p->GetName()).readOnly) {
-                HandleReadOnlyProperty(p, head, out);
+                res |= HandleReadOnlyProperty(p, head, out);
             } else {
-                META_NS::CloneToDefaultIfSet(p, out, head + "." + EscapeSerName(p->GetName()));
+                res |= META_NS::CloneToDefaultIfSet(p, out, head + "." + EscapeSerName(p->GetName()));
             }
         }
     }
-}
-
-void AddObjectProperties(const META_NS::IObject& obj, META_NS::IMetadata& out)
-{
-    AddObjectProperties(obj, "", out);
+    return res;
 }
 
 static void AddObjectAttachments(const META_NS::IObject& node, ISceneNodeSer& out)
@@ -71,9 +69,7 @@ static void AddObjectAttachments(const META_NS::IObject& node, ISceneNodeSer& ou
     if (auto i = interface_cast<META_NS::IAttach>(&node)) {
         BASE_NS::vector<META_NS::IObject::Ptr> vec;
         for (auto&& att : i->GetAttachments()) {
-            if (!interface_cast<META_NS::IEvent>(att) && !interface_cast<META_NS::IFunction>(att) &&
-                !interface_cast<META_NS::IProperty>(att) && !interface_cast<IComponent>(att) &&
-                !interface_cast<IExternalNode>(att)) {
+            if (SerialiseAttachment(att)) {
                 vec.push_back(att);
             }
         }
@@ -87,9 +83,7 @@ static void AddExternalAttachments(
     if (auto i = interface_cast<META_NS::IAttach>(&node)) {
         BASE_NS::vector<META_NS::IObject::Ptr> vec;
         for (auto&& att : i->GetAttachments()) {
-            if (!interface_cast<META_NS::IEvent>(att) && !interface_cast<META_NS::IFunction>(att) &&
-                !interface_cast<META_NS::IProperty>(att) && !interface_cast<IComponent>(att) &&
-                !interface_cast<IExternalNode>(att)) {
+            if (SerialiseAttachment(att)) {
                 out.AddAttachment(path, att);
             }
         }
@@ -138,6 +132,7 @@ static META_NS::IObject::Ptr BuildExternalNode(const META_NS::IObject& node, con
     if (obj) {
         obj->SetName(node.GetName());
         obj->SetResourceId(ext.GetResourceId());
+        obj->AddSubresourceGroup(ext.GetSubresourceGroup());
         if (auto mout = interface_cast<META_NS::IMetadata>(obj)) {
             AddObjectDataRecursive(node, *mout);
         }
@@ -147,38 +142,55 @@ static META_NS::IObject::Ptr BuildExternalNode(const META_NS::IObject& node, con
 
 static META_NS::IObject::Ptr BuildObjectNode(const META_NS::IObject& node)
 {
-    auto cont = META_NS::GetObjectRegistry().Create<META_NS::IContainer>(ClassId::SceneNodeSer);
-    if (auto i = interface_cast<ISceneNodeSer>(cont)) {
-        SetObjectData(node, *i);
+    META_NS::IObject::Ptr obj;
+    if (auto att = interface_cast<META_NS::IAttach>(&node)) {
+        auto ext = att->GetAttachments<IExternalNode>();
+        if (!ext.empty()) {
+            obj = BuildExternalNode(node, *ext.front());
+        }
     }
-    META_NS::Internal::ConstIterate(
-        interface_cast<META_NS::IIterable>(&node),
-        [&](META_NS::IObject::Ptr nodeObj) {
-            META_NS::IObject::Ptr obj;
-            if (auto att = interface_cast<META_NS::IAttach>(nodeObj)) {
-                auto ext = att->GetAttachments<IExternalNode>();
-                if (!ext.empty()) {
-                    obj = BuildExternalNode(*nodeObj, *ext.front());
-                }
+    if (!obj) {
+        obj = META_NS::GetObjectRegistry().Create(ClassId::SceneNodeSer);
+        if (auto cont = interface_pointer_cast<META_NS::IContainer>(obj)) {
+            if (auto i = interface_cast<ISceneNodeSer>(cont)) {
+                SetObjectData(node, *i);
             }
-            if (!obj) {
-                obj = BuildObjectNode(*nodeObj);
-            }
-            cont->Add(obj);
-            return true;
-        },
-        META_NS::IterateStrategy { META_NS::TraversalType::NO_HIERARCHY });
+            META_NS::Internal::ConstIterate(
+                interface_cast<META_NS::IIterable>(&node),
+                [&](META_NS::IObject::Ptr nodeObj) {
+                    if (auto obj = BuildObjectNode(*nodeObj)) {
+                        cont->Add(obj);
+                    }
+                    return true;
+                },
+                META_NS::IterateStrategy { META_NS::TraversalType::NO_HIERARCHY });
+        }
+    }
+    return obj;
+}
 
-    return interface_pointer_cast<META_NS::IObject>(cont);
+static void SetResourceGroups(const IScene& scene, ISceneSer& out)
+{
+    if (auto iScene = scene.GetInternalScene()) {
+        BASE_NS::vector<BASE_NS::string> groups;
+        auto bundle = iScene->GetResourceGroups();
+        for (auto&& g : bundle.GetAllHandles()) {
+            groups.push_back(g->GetGroup());
+        }
+        out.SetResourceGroups(BASE_NS::move(groups));
+    }
 }
 
 static META_NS::IObject::Ptr BuildObjectHierarchy(const IScene& scene)
 {
-    META_NS::IObject::Ptr res = META_NS::GetObjectRegistry().Create(ClassId::SceneNodeSer);
+    META_NS::IObject::Ptr res = META_NS::GetObjectRegistry().Create(ClassId::SceneSer);
     if (res) {
         if (auto obj = interface_cast<META_NS::IObject>(&scene)) {
             if (auto ser = interface_cast<ISceneNodeSer>(res)) {
                 SetObjectData(*obj, *ser);
+                if (auto ser = interface_cast<ISceneSer>(res)) {
+                    SetResourceGroups(scene, *ser);
+                }
                 if (auto i = interface_cast<META_NS::IContainer>(res)) {
                     if (auto root = interface_pointer_cast<META_NS::IObject>(scene.GetRootNode().GetResult())) {
                         i->Add(BuildObjectNode(*root));
@@ -190,24 +202,27 @@ static META_NS::IObject::Ptr BuildObjectHierarchy(const IScene& scene)
     return res;
 }
 
-static META_NS::IFileExporter::Ptr CreateExporter(const IRenderContext::Ptr& r)
+static META_NS::IFileExporter::Ptr CreateExporter(const IScene::ConstPtr& scene)
 {
     META_NS::IFileExporter::Ptr exporter;
+    auto r = scene->GetInternalScene()->GetContext();
     if (r) {
         exporter = META_NS::GetObjectRegistry().Create<META_NS::IFileExporter>(META_NS::ClassId::JsonExporter);
         exporter->SetResourceManager(r->GetResources());
         exporter->SetMetadata(
             META_NS::SerMetadataValues().SetVersion(SCENE_EXPORTER_VERSION).SetType(SCENE_EXPORTER_TYPE));
+        exporter->SetUserContext(
+            interface_pointer_cast<META_NS::IObject>(IScene::Ptr(scene, const_cast<IScene*>(scene.get()))));
     }
     return exporter;
 }
 
-META_NS::ReturnError SceneExporter::ExportScene(CORE_NS::IFile& out, const IScene::ConstPtr& p)
+META_NS::ReturnError SceneExporter::ExportScene(CORE_NS::IFile& out, const IScene::ConstPtr& scene)
 {
     META_NS::ReturnError res = META_NS::GenericError::FAIL;
-    if (auto scene = interface_cast<IScene>(p)) {
+    if (scene) {
         if (auto obj = BuildObjectHierarchy(*scene)) {
-            auto exporter = CreateExporter(scene->GetInternalScene()->GetContext());
+            auto exporter = CreateExporter(scene);
             res = exporter->Export(out, obj);
         }
     }
@@ -216,9 +231,29 @@ META_NS::ReturnError SceneExporter::ExportScene(CORE_NS::IFile& out, const IScen
 META_NS::ReturnError SceneExporter::ExportNode(CORE_NS::IFile& out, const INode::ConstPtr& p)
 {
     META_NS::ReturnError res = META_NS::GenericError::FAIL;
-    if (auto obj = BuildObjectNode(*interface_cast<META_NS::IObject>(p))) {
-        auto exporter = CreateExporter(p->GetScene()->GetInternalScene()->GetContext());
-        res = exporter->Export(out, obj);
+    if (auto n = interface_cast<META_NS::IObject>(p)) {
+        if (auto obj = BuildObjectNode(*n)) {
+            auto exporter = CreateExporter(p->GetScene());
+            res = exporter->Export(out, obj);
+        }
+    }
+    return res;
+}
+
+META_NS::IObject::Ptr SceneExporter::ExportNode(const INode::ConstPtr& p)
+{
+    META_NS::IObject::Ptr res;
+    if (auto n = interface_cast<META_NS::IObject>(p)) {
+        if (auto obj = BuildObjectNode(*n)) {
+            auto exporter = CreateExporter(p->GetScene());
+            if (auto ser = interface_pointer_cast<META_NS::IRootNode>(exporter->Export(obj))) {
+                auto nt = META_NS::GetObjectRegistry().Create<INodeTemplateInternal>(ClassId::NodeTemplate);
+                if (nt) {
+                    nt->SetNodeHierarchy(ser->GetObject());
+                    res = interface_pointer_cast<META_NS::IObject>(nt);
+                }
+            }
+        }
     }
     return res;
 }

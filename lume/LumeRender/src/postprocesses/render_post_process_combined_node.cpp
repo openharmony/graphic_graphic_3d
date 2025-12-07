@@ -13,11 +13,14 @@
  * limitations under the License.
  */
 
+#include "render_post_process_combined_node.h"
+
 #include <base/containers/fixed_string.h>
 #include <base/containers/unordered_map.h>
 #include <base/math/vector.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/render_data_store_render_pods.h>
@@ -36,8 +39,6 @@
 #include "datastore/render_data_store_post_process.h"
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
-#include "render_post_process_combined.h"
-#include "render_post_process_fxaa_node.h"
 #include "util/log.h"
 
 // shaders
@@ -45,12 +46,56 @@
 
 using namespace BASE_NS;
 using namespace CORE_NS;
-using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
-DATA_TYPE_METADATA(RenderPostProcessCombinedNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0),
+ENUM_TYPE_METADATA(RENDER_NS::PostProcessConfiguration::PostProcessEnableFlagBits,
+    ENUM_VALUE(ENABLE_TONEMAP_BIT, "Tonemap"), ENUM_VALUE(ENABLE_VIGNETTE_BIT, "Vignette"),
+    ENUM_VALUE(ENABLE_DITHER_BIT, "Dither"), ENUM_VALUE(ENABLE_COLOR_CONVERSION_BIT, "Color Conversion"),
+    ENUM_VALUE(ENABLE_COLOR_FRINGE_BIT, "Color Fringe"))
+
+ENUM_TYPE_METADATA(RENDER_NS::TonemapConfiguration::TonemapType, ENUM_VALUE(TONEMAP_ACES, "Aces"),
+    ENUM_VALUE(TONEMAP_ACES_2020, "Aces 2020"), ENUM_VALUE(TONEMAP_FILMIC, "Filmic"),
+    ENUM_VALUE(TONEMAP_PBR_NEUTRAL, "Neutral"))
+
+ENUM_TYPE_METADATA(RENDER_NS::DitherConfiguration::DitherType, ENUM_VALUE(INTERLEAVED_NOISE, "Interleaved Noise"),
+    ENUM_VALUE(TRIANGLE_NOISE, "Triangle Noise"), ENUM_VALUE(TRIANGLE_NOISE_RGB, "Triangle Noise RGB"))
+
+ENUM_TYPE_METADATA(RENDER_NS::ColorConversionConfiguration::ConversionFunctionType,
+    ENUM_VALUE(CONVERSION_LINEAR, "Linear"), ENUM_VALUE(CONVERSION_LINEAR_TO_SRGB, "Linear to sRGB"),
+    ENUM_VALUE(CONVERSION_MULTIPLY_WITH_ALPHA, "Multiply With Alpha"), )
+
+DATA_TYPE_METADATA(RENDER_NS::TonemapConfiguration, MEMBER_PROPERTY(tonemapType, "Tonemap Type", 0),
+    MEMBER_PROPERTY(exposure, "Exposure", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::VignetteConfiguration, MEMBER_PROPERTY(coefficient, "Coefficient", 0),
+    MEMBER_PROPERTY(power, "Power", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::ColorFringeConfiguration, MEMBER_PROPERTY(distanceCoefficient, "Distance Coefficient", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::DitherConfiguration, MEMBER_PROPERTY(ditherType, "Type", 0),
+    MEMBER_PROPERTY(amountCoefficient, "Amount", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::ColorConversionConfiguration,
+    BITFIELD_MEMBER_PROPERTY(conversionFunctionType, "Conversion Function", PropertyFlags::IS_BITFIELD,
+        RENDER_NS::ColorConversionConfiguration::ConversionFunctionType))
+
+DATA_TYPE_METADATA(RENDER_NS::PostProcessConfiguration,
+    BITFIELD_MEMBER_PROPERTY(enableFlags, "Enable Flags", PropertyFlags::IS_BITFIELD,
+        RENDER_NS::PostProcessConfiguration::PostProcessEnableFlagBits),
+    MEMBER_PROPERTY(tonemapConfiguration, "Tonemap Configuration", 0),
+    MEMBER_PROPERTY(vignetteConfiguration, "Vignette Configuration", 0),
+    MEMBER_PROPERTY(ditherConfiguration, "Dither Configuration", 0),
+    MEMBER_PROPERTY(colorConversionConfiguration, "Color Conversion Configuration", 0),
+    MEMBER_PROPERTY(colorFringeConfiguration, "Color Fringe Configuration", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessCombinedNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+    MEMBER_PROPERTY(glOptimizedLayerCopyEnabled, "GL Optimized Layer Copy Enabled", 0),
+    MEMBER_PROPERTY(postProcessConfiguration, "Postprocess Configuration", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessCombinedNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0),
     MEMBER_PROPERTY(bloomFinalTarget, "bloomFinalTarget", 0), MEMBER_PROPERTY(dirtMask, "dirtMask", 0))
-DATA_TYPE_METADATA(RenderPostProcessCombinedNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessCombinedNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
 CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
@@ -62,11 +107,9 @@ constexpr string_view COMBINED_LAYER_SHADER_NAME =
 } // namespace
 
 RenderPostProcessCombinedNode::RenderPostProcessCombinedNode()
-    : inputProperties_(
-          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessCombinedNode::NodeInputs>::properties)),
-      outputProperties_(
-          &nodeOutputsData, array_view(PropertyType::DataType<RenderPostProcessCombinedNode::NodeOutputs>::properties))
-
+    : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
+      inputProperties_(&nodeInputsData, PropertyType::DataType<NodeInputs>::MetaDataFromType()),
+      outputProperties_(&nodeOutputsData, PropertyType::DataType<NodeOutputs>::MetaDataFromType())
 {}
 
 IPropertyHandle* RenderPostProcessCombinedNode::GetRenderInputProperties()
@@ -94,11 +137,9 @@ IRenderNode::ExecuteFlags RenderPostProcessCombinedNode::GetExecuteFlags() const
     }
 }
 
-void RenderPostProcessCombinedNode::Init(
-    const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr)
+void RenderPostProcessCombinedNode::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    postProcess_ = postProcess;
 
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     samplers_.nearest =
@@ -108,22 +149,29 @@ void RenderPostProcessCombinedNode::Init(
 
     const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
     combineData_.sd = shaderMgr.GetShaderDataByShaderName(COMBINED_SHADER_NAME);
+    combineData_.pso = {};
     combineDataLayer_.sd = shaderMgr.GetShaderDataByShaderName(COMBINED_LAYER_SHADER_NAME);
+    combineDataLayer_.pso = {};
 
     const IRenderNodeUtil& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
+    auto combineDataDescriptors = renderNodeUtil.GetDescriptorCounts(combineData_.sd.pipelineLayoutData);
     auto combineLayerDescriptors = renderNodeUtil.GetDescriptorCounts(combineDataLayer_.sd.pipelineLayoutData);
-    descriptorCounts_ = renderNodeUtil.GetDescriptorCounts(combineData_.sd.pipelineLayoutData);
+    descriptorCounts_.counts.clear();
+    descriptorCounts_.counts.reserve(combineDataDescriptors.counts.size() + combineLayerDescriptors.counts.size());
+    descriptorCounts_.counts.append(combineDataDescriptors.counts.cbegin(), combineDataDescriptors.counts.cend());
+    descriptorCounts_.counts.append(combineLayerDescriptors.counts.cbegin(), combineLayerDescriptors.counts.cend());
 
-    descriptorCounts_.counts.insert(
-        descriptorCounts_.counts.end(), combineLayerDescriptors.counts.begin(), combineLayerDescriptors.counts.end());
+    binders_.set0.reset();
+    binders_.combineBinder.reset();
+    binders_.combineLayerBinder.reset();
 
     valid_ = true;
 }
 
-void RenderPostProcessCombinedNode::PreExecute()
+void RenderPostProcessCombinedNode::PreExecuteFrame()
 {
-    if (valid_ && postProcess_) {
-        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+    if (valid_) {
+        const array_view<const uint8_t> propertyView = GetData();
         // this node is directly dependant
         PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessCombinedNode::EffectProperties));
         if (propertyView.size_bytes() == sizeof(RenderPostProcessCombinedNode::EffectProperties)) {
@@ -155,7 +203,7 @@ RenderPass RenderPostProcessCombinedNode::CreateRenderPass(const RenderHandle in
     return rp;
 }
 
-void RenderPostProcessCombinedNode::Execute(IRenderCommandList& cmdList)
+void RenderPostProcessCombinedNode::ExecuteFrame(IRenderCommandList& cmdList)
 {
     CheckDescriptorSetNeed();
 
@@ -194,6 +242,16 @@ void RenderPostProcessCombinedNode::Execute(IRenderCommandList& cmdList)
             BindableImage mainInput = nodeInputsData.input;
             mainInput.samplerHandle = samplers_.linear;
             binder.BindImage(binding++, mainInput);
+            if (!RenderHandleUtil::IsValid(nodeInputsData.bloomFinalTarget.handle)) {
+                auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+                nodeInputsData.bloomFinalTarget.handle =
+                    gpuResourceMgr.GetImageHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE);
+            }
+            if (!RenderHandleUtil::IsValid(nodeInputsData.dirtMask.handle)) {
+                auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+                nodeInputsData.dirtMask.handle =
+                    gpuResourceMgr.GetImageHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE);
+            }
             binder.BindImage(binding++, nodeInputsData.bloomFinalTarget.handle, samplers_.linear);
             binder.BindImage(binding++, nodeInputsData.dirtMask.handle, samplers_.linear);
             sets[1U] = binder.GetDescriptorSetHandle();

@@ -51,7 +51,7 @@ compile()
     $CMAKE_ROOT/cmake -H$WORKING_DIR -B$PROJECT_DIR -DCMAKE_CXX_FLAGS_RELEASE=-O2 \
     -DCMAKE_SYSTEM_NAME=Linux \
     -DOHOS_NDK=${LLVM_DIR} -DCMAKE_TOOLCHAIN_FILE=$WORKING_DIR/shader.compile.toolchain.cmake \
-    -G Ninja
+    -D__OHOS_PLATFORM__=1 -G Ninja
 #-DCMAKE_SYSROOT=$LLVM_DIR/lib/x86_64-unknow-linux-gnu
     ninja -C $PROJECT_DIR  -f build.ninja
 

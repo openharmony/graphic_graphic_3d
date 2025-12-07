@@ -28,8 +28,9 @@ SCENE_BEGIN_NAMESPACE()
 class ISceneImporter : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ISceneImporter, "600c1a5f-ea6c-4078-abd0-c7b908fcb3f9")
 public:
-    virtual IScene::Ptr ImportScene(CORE_NS::IFile&) = 0;
+    virtual IScene::Ptr ImportScene(CORE_NS::IFile&, const CORE_NS::ResourceId& requestedId) = 0;
     virtual INode::Ptr ImportNode(CORE_NS::IFile&, const INode::Ptr& parent) = 0;
+    virtual INode::Ptr ImportNode(const META_NS::IObject&, const INode::Ptr& parent) = 0;
 };
 
 META_REGISTER_CLASS(SceneImporter, "8e8a519c-dacd-41a1-81ef-06b8a3b828de", META_NS::ObjectCategoryBits::NO_CATEGORY)

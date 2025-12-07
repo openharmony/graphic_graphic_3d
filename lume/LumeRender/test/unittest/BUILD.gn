@@ -1,0 +1,494 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Declarations
+import("//build/test.gni")
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+# Test case compilation output path
+module_output_path = "graphic_3d/lume/LumeRender"
+
+# Rofs
+RENDER_TEST_ROFS = "testrofs"
+
+# Options
+RENDER_BUILD_GLES = true
+RENDER_BUILD_VULKAN = true
+
+#
+# LumeRender API test config
+#
+
+#
+# Unit tests render api config 
+#
+config("lume_render_test_config") {
+
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+  
+  # Unit test defines
+  defines = [
+    "OHOS_PLATFORM_ASSETS_PATH=\"/data/test/resource/graphic_3d/LumeRender/test_data/\"",
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    defines += [
+      "RENDER_HAS_GLES_BACKEND=1"
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    defines += [
+      "RENDER_HAS_VULKAN_BACKEND=1"
+    ]
+  }
+}
+
+config("lume_render_test_dynamic_lib_config") {
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+  
+  defines = [
+    "CORE_DYNAMIC=1"
+  ]
+}
+
+# Compile shaders
+lume_compile_shader("lume_render_compile_test_shaders")
+{
+  script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
+  outputs = [ "${target_gen_dir}/assets/test_data/shaders" ]
+
+  dest_gen_path = "${target_gen_dir}/assets/test_data/shaders" # source shader data
+  asset_path = rebase_path("assets/test_data/shaders", root_build_dir) # place where shaders will be compiled to and later are copied to dest_gen_path
+  tool_path = "${target_gen_dir}/../../../LumeBinaryCompile/LumeShaderCompiler"
+  shader_path = "${dest_gen_path}"
+  include_path = "" # does nothing
+  compileShader_deps=["${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile"]
+}
+
+lume_compile_shader("lume_render_compile_vulkan_test_shaders")
+{
+  script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
+  outputs = [ "${target_gen_dir}/assets/test_data/vulkanspecific/shaders" ]
+
+  dest_gen_path = "${target_gen_dir}/assets/test_data/vulkanspecific/shaders"
+  asset_path = rebase_path("assets/test_data/vulkanspecific/shaders", root_build_dir)
+  tool_path = "${target_gen_dir}/../../../LumeBinaryCompile/LumeShaderCompiler"
+  shader_path = "${dest_gen_path}"
+  include_path = "" # does nothing
+  compileShader_deps=["${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile"]
+}
+
+lume_compile_shader("lume_render_compile_separate_test_shaders")
+{
+  script = "${LUME_CORE_PATH}/tools/CompilerShader.sh"
+  outputs = [ "${target_gen_dir}/assets/test_data/separateshaders/shaders" ]
+
+  dest_gen_path = "${target_gen_dir}/assets/test_data/separateshaders/shaders"
+  asset_path = rebase_path("assets/test_data/separateshaders/shaders", root_build_dir)
+  tool_path = "${target_gen_dir}/../../../LumeBinaryCompile/LumeShaderCompiler"
+  shader_path = "${dest_gen_path}"
+  include_path = ""
+  compileShader_deps=["${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile"]
+}
+
+# rofs
+lume_rofs("lume_render_test_rofs")
+{
+  output_obj= ""
+  if (target_cpu == "arm") {
+    output_obj = "${RENDER_TEST_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${RENDER_TEST_ROFS}_64.o"
+  }
+
+  if (target_cpu == "x86") {
+    output_obj = "${RENDER_TEST_ROFS}_x32.o"
+  }
+
+  if (target_cpu == "x86_64") {
+    output_obj = "${RENDER_TEST_ROFS}_x64.o"
+  }
+
+  outputs = "${target_gen_dir}/assets/${output_obj}"
+
+  tool_path = "${target_gen_dir}/../../../LumeBinaryCompile/lumeassetcompiler"
+  root = "/"
+  bin_name = "BINARYDATAFORTEST"
+  size_name = "SIZEOFDATAFORTEST"
+  base_name = RENDER_TEST_ROFS
+  script = "${LUME_CORE_PATH}/tools/CompilerAsset.sh"
+  copy_path = "${target_gen_dir}/assets"
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles;.frag;.vert;.comp;\""
+  compileShader_deps = [
+    ":lume_render_compile_test_shaders",
+    ":lume_render_compile_vulkan_test_shaders",
+    ":lume_render_compile_separate_test_shaders",
+    "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile"
+  ]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile/"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+    ]
+  }
+}
+
+source_set("lume_render_test_rofs_obj") {
+  output_obj = ""
+  if (target_cpu == "arm") {
+    output_obj = "${RENDER_TEST_ROFS}_32.o"
+  }
+
+  if (target_cpu == "arm64") {
+    output_obj = "${RENDER_TEST_ROFS}_64.o"
+  }
+
+  if (target_cpu == "x86") {
+    output_obj = "${RENDER_TEST_ROFS}_x32.o"
+  }
+
+  if (target_cpu == "x86_64") {
+    output_obj = "${RENDER_TEST_ROFS}_x64.o"
+  }
+
+  sources = [
+    "${target_gen_dir}/assets/${output_obj}"
+  ]
+  deps = [
+    ":lume_render_test_rofs"
+  ]
+}
+
+# ohos_unittest
+ohos_unittest("lume_render_api_test") {
+
+  module_out_path = module_output_path
+
+  # Configs
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_PNG_PATH}:lume_png_api",
+    "${LUME_JPG_PATH}:lume_jpg_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    
+    "${LUME_BASE_PATH}:lume_unit_test_config",
+    ":lume_render_test_config",
+    ":lume_render_test_dynamic_lib_config"
+  ]
+  
+  # Includes
+  include_dirs = [
+    "common",
+    "api_unit_test/src",
+  ]
+
+  # Src
+  sources = [
+    "common/load_lib.cpp",
+    "common/test_runner_ohos_system.cpp",
+
+    # Datastore
+    "api_unit_test/src/datastore/render_data_store_fullscreen_shader_test.cpp",
+    "api_unit_test/src/datastore/render_data_store_pod_test.cpp",
+    "api_unit_test/src/datastore/render_data_store_render_post_processes_test.cpp",
+    
+    # Render
+    "api_unit_test/src/render/render_frame_util_test.cpp",
+
+    # Src-gfx
+    "api_unit_test/src/src-gfx/gfx_back_buffer_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_bloom_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_combined_post_process_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_compute_generic_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_create_gpu_buffers_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_create_gpu_images_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_fullscreen_generic_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_gpu_buffer_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_gpu_resource_copy_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_gpu_resource_copy_test2.cpp",
+    "api_unit_test/src/src-gfx/gfx_gpu_resource_manager_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_gpu_resource_manager_test2.cpp",
+    "api_unit_test/src/src-gfx/gfx_gpu_signal_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_multi_post_process_render_node_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_multi_queue_test.cpp",
+    "api_unit_test/src/src-gfx/gfx_single_post_process_render_node_test.cpp",
+
+    # LumeEngine --> FindProperty() dep. which is necessary in render_data_store_fullscreen_shader_test.cpp 
+    "${LUME_CORE_PATH}/api/core/property_tools/property_data.cpp",
+  ]
+
+  # External deps
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "googletest:gmock",
+    "googletest:gtest",
+    "c_utils:utils",
+    "graphic_surface:surface",
+    "graphic_2d:libnative_image", # Handle HOS window
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3"
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+    ]
+  }
+  
+  # Deps
+  deps = [
+    ":lume_render_test_rofs_obj",
+    ":PushTestResource"
+  ]
+
+  # Test data
+  resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeRender/test/unittest/assets/ohos_test.xml"
+
+  # graphic/graphic_3d
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+#
+# LumeRender SRC test config
+#
+
+config("lume_render_static_lib_config") {
+
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+  
+  # Using static lib
+  defines = [
+    "RENDER_STATIC_LIB",
+  ]
+}
+
+# ohos_unittest
+ohos_unittest("lume_render_src_test") {
+
+  module_out_path = module_output_path
+
+  # Configs
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_PNG_PATH}:lume_png_api",
+    "${LUME_JPG_PATH}:lume_jpg_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_RENDER_PATH}:lume_render_config",
+    
+    "${LUME_BASE_PATH}:lume_unit_test_config",
+    ":lume_render_test_config",
+    ":lume_render_static_lib_config"
+  ]
+  
+  # Includes
+  include_dirs = [
+    "common",
+    "src_unit_test/src",
+  ]
+
+  # Src
+  sources = [
+    "common/test_runner_ohos_system.cpp",
+
+    # Loader
+    "src_unit_test/src/loader/render_node_graph_loader_test.cpp",
+    "src_unit_test/src/loader/render_data_configuration_loader_test.cpp",
+    "src_unit_test/src/loader/shader_state_loader_util_test.cpp",
+    "src_unit_test/src/loader/pipeline_layout_loader_test.cpp",
+    "src_unit_test/src/loader/shader_data_loader_test.cpp",
+    "src_unit_test/src/loader/shader_state_loader_test.cpp",
+    "src_unit_test/src/loader/vertex_input_declaration_loader_test.cpp",
+    "src_unit_test/src/loader/shader_loader_test.cpp",
+    "src_unit_test/src/loader/render_data_loader_test.cpp",
+
+    # Datastore
+    "src_unit_test/src/datastore/render_data_store_manager_test.cpp",
+    "src_unit_test/src/datastore/render_data_store_post_process_test.cpp",
+    "src_unit_test/src/datastore/render_data_store_default_acceleration_structure_staging_test.cpp",
+
+    # Device
+    "src_unit_test/src/device/shader_manager_test.cpp",
+    "src_unit_test/src/device/swapchain_test.cpp",
+    "src_unit_test/src/device/device_test.cpp",
+    "src_unit_test/src/device/shader_pipeline_binder_test.cpp",
+    "src_unit_test/src/device/gpu_resource_cache_test.cpp",
+    "src_unit_test/src/device/render_node_shader_manager_test.cpp",
+    "src_unit_test/src/device/render_node_gpu_resource_manager_test.cpp",
+
+    # GLES
+    "src_unit_test/src/gles/spirv_cross_helpers_gles_test.cpp",
+    "src_unit_test/src/gles/shader_module_gles_test.cpp",
+    "src_unit_test/src/gles/gpu_program_gles_test.cpp",
+    "src_unit_test/src/gles/gpu_buffer_gles_test.cpp",
+    "src_unit_test/src/gles/gpu_image_gles_test.cpp",
+    "src_unit_test/src/gles/gpu_sampler_gles_test.cpp",
+    "src_unit_test/src/gles/pipeline_state_object_gles_test.cpp",
+
+    # Vulkan
+    "src_unit_test/src/vulkan/shader_module_vk_test.cpp",
+    "src_unit_test/src/vulkan/gpu_buffer_vk_test.cpp",
+    "src_unit_test/src/vulkan/gpu_image_vk_test.cpp",
+    "src_unit_test/src/vulkan/gpu_sampler_vk_test.cpp",
+    "src_unit_test/src/vulkan/gpu_acceleration_structure_vk_test.cpp",
+    "src_unit_test/src/vulkan/gpu_memory_allocator_vk_test.cpp",
+    "src_unit_test/src/vulkan/platform_hardware_buffer_util_vk_test.cpp",
+
+    # Node - Nodes
+    "src_unit_test/src/node/nodes/render_node_draw_indexed.cpp",
+    "src_unit_test/src/node/nodes/render_node_draw.cpp",
+    "src_unit_test/src/node/nodes/render_node_mip_and_layer.cpp",
+    "src_unit_test/src/node/nodes/render_node_test_util.cpp",
+    "src_unit_test/src/node/nodes/render_node_depth_stencil.cpp",
+
+    # Node
+    "src_unit_test/src/node/custom_render_node_draw_test.cpp",
+    "src_unit_test/src/node/custom_render_node_mip_and_layer_test.cpp",
+    "src_unit_test/src/node/custom_render_node_util_test.cpp",
+    "src_unit_test/src/node/custom_render_node_multi_render_pass_test.cpp",
+    "src_unit_test/src/node/custom_render_node_depth_stencil_test.cpp",
+    "src_unit_test/src/node/render_node_post_process_interface_util_test.cpp",
+
+    # Node context
+    "src_unit_test/src/nodecontext/render_node_graph_manager_test.cpp",
+    "src_unit_test/src/nodecontext/render_command_list_test.cpp",
+    "src_unit_test/src/nodecontext/render_node_parser_util_test.cpp",
+    "src_unit_test/src/nodecontext/render_node_graph_share_manager_test.cpp",
+    "src_unit_test/src/nodecontext/node_context_descriptor_set_manager_test.cpp",
+    "src_unit_test/src/nodecontext/pipeline_descriptor_set_binder_test.cpp",
+    "src_unit_test/src/nodecontext/render_node_manager_test.cpp",
+    "src_unit_test/src/nodecontext/node_context_pso_manager_test.cpp",
+    "src_unit_test/src/nodecontext/render_node_context_manager_test.cpp",
+
+    # Render
+    "src_unit_test/src/render/render_context_test.cpp",
+    "src_unit_test/src/render/render_util_test.cpp",
+
+    # Src-gpu
+    "src_unit_test/src/src-gpu/gpu_test_gpu_resource_manager_test.cpp",
+    "src_unit_test/src/src-gpu/gpu_test_gpu_resource_cache_test.cpp",
+    "src_unit_test/src/src-gpu/gpu_test_render_handle_reference_test.cpp",
+    "src_unit_test/src/src-gpu/gpu_test_shader_manager_test.cpp",
+
+    # Postprocesses
+    "src_unit_test/src/postprocesses/postprocess_interfaces_test.cpp",
+
+    # Util
+    "src_unit_test/src/util/property_util_test.cpp",
+  ]
+
+  # External deps
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "googletest:gmock",
+    "googletest:gtest",
+    "c_utils:utils",
+    "graphic_surface:surface",
+    "graphic_2d:libnative_image", # Handle HOS window
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3",
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+      "skia:skia_canvaskit", # vk mem allocator
+    ]
+  }
+  
+  # Deps
+  deps = [
+    # Using static lib to test Render src
+    "${LUME_CORE_PATH}/DLL:libAGPDLL",
+    "${LUME_PNG_PATH}:libPluginAGPPng",
+    "${LUME_JPG_PATH}:libPluginAGPJpg",
+    ":libStaticAGPRender",
+    ":lume_render_test_rofs_obj",
+    ":PushTestResource"
+  ]
+
+  # Test data
+  resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeRender/test/unittest/assets/ohos_test.xml"
+
+  # graphic/graphic_3d
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+# group ("unittest")
+group("unittest") {
+    testonly = true
+    deps = [ 
+        ":lume_render_api_test",
+        ":lume_render_src_test"
+    ]
+}
+
+#
+# LumeRender Static lib
+# 
+ohos_source_set("lume_render_src_static") {
+  visibility = [ ":*" ]
+  
+  sources = [
+    #"../../src/plugin/static_plugin.cpp", # already in lume_render_src
+    "../../src/plugin/static_registry.cpp",
+  ]
+
+  configs = [
+    "${LUME_RENDER_PATH}:lume_render_config"
+  ]
+}
+
+ohos_static_library("libStaticAGPRender") {
+  visibility = [ ":*" ]
+
+  deps = [
+    "${LUME_RENDER_PATH}:lume_render_src",
+    "${LUME_RENDER_PATH}:lume_render_rofs_obj",
+    ":lume_render_src_static"
+  ]
+  
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+action("PushTestResource") {
+  outputs = [ "$target_out_dir/out.txt" ]
+  script = "${LUME_RENDER_PATH}/test/unittest/assets/copy.sh"
+  deps = [ ":lume_render_test_rofs_obj" ]
+  args = [
+    "$target_out_dir",
+  ]
+}

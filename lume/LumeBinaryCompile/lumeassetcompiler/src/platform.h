@@ -13,13 +13,10 @@
  * limitations under the License.
  */
 
-
 #ifndef __PLATFORM_H__
 #define __PLATFORM_H__
 
 #include <cstdint>
-// extern inline std::uint32_t platform_htonl(std::uint32_t a);
-// extern inline std::uint32_t platform_ntohl(std::uint32_t a);
 std::uint32_t platform_ntohl(std::uint32_t a);
 std::uint32_t platform_htonl(std::uint32_t a);
 #endif // __PLATFORM_H__

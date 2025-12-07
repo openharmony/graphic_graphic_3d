@@ -60,6 +60,11 @@ public:
         return context_;
     }
 
+    SceneOptions GetDefaultOptions() const override
+    {
+        return opts_;
+    }
+
 private:
     META_NS::IMetadata::Ptr CreateContext(SceneOptions opts) const;
 

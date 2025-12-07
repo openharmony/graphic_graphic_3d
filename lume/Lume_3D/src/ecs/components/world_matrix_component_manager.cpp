@@ -68,6 +68,7 @@ IComponentManager* IWorldMatrixComponentManagerInstance(IEcs& ecs)
 
 void IWorldMatrixComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<WorldMatrixComponentManager*>(instance);
+    static_cast<WorldMatrixComponentManager*>(instance)->~WorldMatrixComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

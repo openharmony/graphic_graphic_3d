@@ -27,7 +27,7 @@ DefaultCallContext::DefaultCallContext(const DefaultCallContext& other) noexcept
         result_ = interface_pointer_cast<IAny>(p->GetClone());
     }
     params_.resize(other.params_.size());
-    for (int i = 0; i != params_.size(); ++i) {
+    for (size_t i = 0; i != params_.size(); ++i) {
         params_[i].name = other.params_[i].name;
         if (auto p = interface_cast<ICloneable>(other.params_[i].value)) {
             params_[i].value = interface_pointer_cast<IAny>(p->GetClone());
@@ -51,7 +51,7 @@ DefaultCallContext& DefaultCallContext::operator=(const DefaultCallContext& othe
     }
     params_.clear();
     params_.resize(other.params_.size());
-    for (int i = 0; i != params_.size(); ++i) {
+    for (size_t i = 0; i != params_.size(); ++i) {
         params_[i].name = other.params_[i].name;
         if (auto p = interface_cast<ICloneable>(other.params_[i].value)) {
             params_[i].value = interface_pointer_cast<IAny>(p->GetClone());

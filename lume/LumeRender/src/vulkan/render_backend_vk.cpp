@@ -61,6 +61,10 @@
 #include "vulkan/swapchain_vk.h"
 #include "vulkan/validate_vk.h"
 
+#if (RENDER_PERF_ENABLED == 1)
+#include <render/util/performance_data_structures.h>
+#endif
+
 using namespace BASE_NS;
 
 using CORE_NS::GetInstance;
@@ -292,18 +296,18 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
 
     if (!backBufferConfig.swapchainData.empty()) {
         if (device_.HasSwapchain() && presentationData_.present) {
-            PLUGIN_STATIC_ASSERT(DeviceConstants::MAX_SWAPCHAIN_COUNT == 8u);
-            uint32_t swapchainCount = 0U;
-            VkSwapchainKHR vkSwapchains[DeviceConstants::MAX_SWAPCHAIN_COUNT] = { VK_NULL_HANDLE, VK_NULL_HANDLE,
-                VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE };
-            uint32_t vkSwapImageIndices[DeviceConstants::MAX_SWAPCHAIN_COUNT] = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U };
+            vector<VkSwapchainKHR> vkSwapchains;
+            vector<uint32_t> vkSwapImageIndices;
+            vkSwapchains.reserve(presentationData_.infos.size());
+            vkSwapImageIndices.reserve(presentationData_.infos.size());
+
             for (const auto& presRef : presentationData_.infos) {
                 // NOTE: default backbuffer might be present multiple times
                 // the flag useSwapchain should be false in these cases
                 if (presRef.useSwapchain && presRef.swapchain && presRef.validAcquire) {
                     PLUGIN_ASSERT(presRef.imageLayout == ImageLayout::CORE_IMAGE_LAYOUT_PRESENT_SRC);
-                    vkSwapImageIndices[swapchainCount] = presRef.swapchainImageIndex;
-                    vkSwapchains[swapchainCount++] = presRef.swapchain;
+                    vkSwapImageIndices.push_back(presRef.swapchainImageIndex);
+                    vkSwapchains.push_back(presRef.swapchain);
                 }
             }
 #if (RENDER_PERF_ENABLED == 1)
@@ -312,7 +316,7 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
 
             // NOTE: currently waits for the last valid submission semaphore (backtraces here for valid
             // semaphore)
-            if (swapchainCount > 0U) {
+            if (!vkSwapchains.empty()) {
                 VkSemaphore waitSemaphore = VK_NULL_HANDLE;
                 uint32_t waitSemaphoreCount = 0;
                 if (commandBufferSubmitter_.presentationWaitSemaphore != VK_NULL_HANDLE) {
@@ -321,14 +325,14 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
                 }
 
                 const VkPresentInfoKHR presentInfo {
-                    VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, // sType
-                    nullptr,                            // pNext
-                    waitSemaphoreCount,                 // waitSemaphoreCount
-                    &waitSemaphore,                     // pWaitSemaphores
-                    swapchainCount,                     // swapchainCount
-                    vkSwapchains,                       // pSwapchains
-                    vkSwapImageIndices,                 // pImageIndices
-                    nullptr                             // pResults
+                    VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,         // sType
+                    nullptr,                                    // pNext
+                    waitSemaphoreCount,                         // waitSemaphoreCount
+                    &waitSemaphore,                             // pWaitSemaphores
+                    static_cast<uint32_t>(vkSwapchains.size()), // swapchainCount
+                    vkSwapchains.data(),                        // pSwapchains
+                    vkSwapImageIndices.data(),                  // pImageIndices
+                    nullptr                                     // pResults
                 };
 
                 const LowLevelGpuQueueVk lowLevelQueue = deviceVk_.GetPresentationGpuQueue();
@@ -486,20 +490,16 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
 
         const auto& renderContextRef = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
 
-        uint32_t waitSemaphoreCount = 0u;
-        constexpr const uint32_t maxWaitSemaphoreCount =
-            PipelineStateConstants::MAX_RENDER_NODE_GPU_WAIT_SIGNALS + DeviceConstants::MAX_SWAPCHAIN_COUNT;
-        VkSemaphore waitSemaphores[maxWaitSemaphoreCount];
-        VkPipelineStageFlags waitSemaphorePipelineStageFlags[maxWaitSemaphoreCount];
+        vector<VkSemaphore> waitSemaphores = {};
+        vector<VkPipelineStageFlags> waitSemaphorePipelineStageFlags = {};
         for (uint32_t waitIdx = 0; waitIdx < renderContextRef.submitDepencies.waitSemaphoreCount; ++waitIdx) {
             const uint32_t waitCmdBufferIdx = renderContextRef.submitDepencies.waitSemaphoreNodeIndices[waitIdx];
             PLUGIN_ASSERT(waitIdx < (uint32_t)commandBufferSubmitter_.commandBuffers.size());
 
             VkSemaphore waitSemaphore = commandBufferSubmitter_.commandBuffers[waitCmdBufferIdx].semaphore;
             if (waitSemaphore != VK_NULL_HANDLE) {
-                waitSemaphores[waitSemaphoreCount] = waitSemaphore;
-                waitSemaphorePipelineStageFlags[waitSemaphoreCount] = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                waitSemaphoreCount++;
+                waitSemaphores.push_back(waitSemaphore);
+                waitSemaphorePipelineStageFlags.push_back(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
             }
         }
 
@@ -509,18 +509,13 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
             // go through all swapchain semaphores
             for (const auto& presRef : presentationData_.infos) {
                 if (presRef.swapchainSemaphore) {
-                    waitSemaphores[waitSemaphoreCount] = presRef.swapchainSemaphore;
-                    waitSemaphorePipelineStageFlags[waitSemaphoreCount] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-                    waitSemaphoreCount++;
+                    waitSemaphores.push_back(presRef.swapchainSemaphore);
+                    waitSemaphorePipelineStageFlags.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
                 }
             }
         }
 
-        uint32_t signalSemaphoreCount = 0u;
-        PLUGIN_STATIC_ASSERT(DeviceConstants::MAX_SWAPCHAIN_COUNT == 8U);
-        constexpr uint32_t maxSignalSemaphoreCount { 1U + DeviceConstants::MAX_SWAPCHAIN_COUNT };
-        VkSemaphore semaphores[maxSignalSemaphoreCount] = { VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE,
-            VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE };
+        vector<VkSemaphore> semaphores = {};
         VkFence fence = VK_NULL_HANDLE;
         if (finalCommandBufferSubmissionIndex == cmdBufferIdx) { // final presentation
             // add fence signaling to last submission for frame sync
@@ -538,7 +533,7 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
                         // needs to be false
                         if (!externalSignals[sigIdx].signaled && (externalSemaphores[sigIdx])) {
                             if (const auto* gs = (const GpuSemaphoreVk*)externalSemaphores[sigIdx].get(); gs) {
-                                semaphores[signalSemaphoreCount++] = gs->GetPlatformData().semaphore;
+                                semaphores.push_back(gs->GetPlatformData().semaphore);
                                 externalSignals[sigIdx].signaled = true;
                             }
                         }
@@ -549,31 +544,29 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
             if (presentationData_.present) {
                 commandBufferSubmitter_.presentationWaitSemaphore =
                     commandBufferSubmitter_.commandBuffers[cmdBufferIdx].semaphore;
-                semaphores[signalSemaphoreCount++] = commandBufferSubmitter_.presentationWaitSemaphore;
+                semaphores.push_back(commandBufferSubmitter_.presentationWaitSemaphore);
             }
             // add additional semaphores
             for (const auto& swapRef : backBufferConfig.swapchainData) {
                 // should have been checked in render graph already
-                if ((signalSemaphoreCount < maxSignalSemaphoreCount) && swapRef.config.gpuSemaphoreHandle) {
-                    semaphores[signalSemaphoreCount++] =
-                        VulkanHandleCast<VkSemaphore>(swapRef.config.gpuSemaphoreHandle);
+                if (swapRef.config.gpuSemaphoreHandle) {
+                    semaphores.push_back(VulkanHandleCast<VkSemaphore>(swapRef.config.gpuSemaphoreHandle));
                 }
             }
         } else if (renderContextRef.submitDepencies.signalSemaphore) {
-            semaphores[signalSemaphoreCount++] = cmdSubmitterRef.semaphore;
+            semaphores.push_back(cmdSubmitterRef.semaphore);
         }
-        PLUGIN_ASSERT(signalSemaphoreCount <= maxSignalSemaphoreCount);
 
         const VkSubmitInfo submitInfo {
-            VK_STRUCTURE_TYPE_SUBMIT_INFO,                        // sType
-            nullptr,                                              // pNext
-            waitSemaphoreCount,                                   // waitSemaphoreCount
-            (waitSemaphoreCount == 0) ? nullptr : waitSemaphores, // pWaitSemaphores
-            waitSemaphorePipelineStageFlags,                      // pWaitDstStageMask
-            1,                                                    // commandBufferCount
-            &cmdSubmitterRef.commandBuffer,                       // pCommandBuffers
-            signalSemaphoreCount,                                 // signalSemaphoreCount
-            (signalSemaphoreCount == 0) ? nullptr : semaphores,   // pSignalSemaphores
+            VK_STRUCTURE_TYPE_SUBMIT_INFO,                              // sType
+            nullptr,                                                    // pNext
+            static_cast<uint32_t>(waitSemaphores.size()),               // waitSemaphoreCount
+            (waitSemaphores.empty()) ? nullptr : waitSemaphores.data(), // pWaitSemaphores
+            waitSemaphorePipelineStageFlags.data(),                     // pWaitDstStageMask
+            1,                                                          // commandBufferCount
+            &cmdSubmitterRef.commandBuffer,                             // pCommandBuffers
+            static_cast<uint32_t>(semaphores.size()),                   // signalSemaphoreCount
+            (semaphores.empty()) ? nullptr : semaphores.data(),         // pSignalSemaphores
         };
 
         const VkQueue queue = deviceVk_.GetGpuQueue(renderContextRef.renderCommandList->GetGpuQueue()).queue;
@@ -585,6 +578,118 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
                 fence));                            // fence
         }
     }
+}
+
+namespace {
+pair<vector<RenderPassSubpassDesc>, vector<RenderPassAttachmentResourceStates>> ExtractRenderPasses(
+    RenderCommandFrameData& renderCommandFrameData, const uint32_t cmdBufferIdx)
+{
+    const RenderCommandContext& ref = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
+    const MultiRenderPassCommandListData& mrpData = ref.renderCommandList->GetMultiRenderCommandListData();
+
+    uint64_t rpHash = 0;
+    const uint32_t rcCount = mrpData.subpassCount;
+    vector<RenderPassSubpassDesc> subpassDescs(rcCount);
+    vector<RenderPassAttachmentResourceStates> resourceStates(rcCount);
+
+    // Extract subpasses from different commandlists
+    for (uint32_t secondIdx = 0; secondIdx < rcCount; ++secondIdx) {
+        const uint32_t currCmdBufferIdx = cmdBufferIdx + secondIdx;
+        RenderCommandContext& rcCtx = renderCommandFrameData.renderCommandContexts[currCmdBufferIdx];
+        auto rcRef = rcCtx.renderCommandList->GetRenderCommands();
+
+        if (mrpData.rpBeginCmdIndex >= rcRef.size()) {
+            continue;
+        }
+        const RenderCommandBeginRenderPass& rpBeginInfo =
+            *static_cast<const RenderCommandBeginRenderPass*>(rcRef[mrpData.rpBeginCmdIndex].rc);
+
+        const uint32_t subpass = rpBeginInfo.subpassStartIndex;
+        subpassDescs[subpass] = rpBeginInfo.subpasses[subpass];
+        resourceStates[subpass] = rpBeginInfo.subpassResourceStates[subpass];
+
+#if (RENDER_VALIDATION_ENABLED == 1)
+        // First one is "baseline"
+        if (secondIdx == 0) {
+            rpHash = NodeContextPoolManagerVk::HashRenderPass(rpBeginInfo);
+        } else {
+            uint64_t currHash = NodeContextPoolManagerVk::HashRenderPass(rpBeginInfo);
+            if (rpHash != currHash) {
+                PLUGIN_LOG_E("Attempting to use secondary command buffers, but renderpasses aren't "
+                             "compatible across command lists. Make sure they have identical properties.");
+            }
+        }
+#endif
+    }
+    return pair { BASE_NS::move(subpassDescs), BASE_NS::move(resourceStates) };
+}
+
+void PatchRenderPasses(RenderCommandFrameData& renderCommandFrameData, const uint32_t cmdBufferIdx,
+    const array_view<const RenderPassSubpassDesc> subpassDescs,
+    const array_view<const RenderPassAttachmentResourceStates> resourceStates)
+{
+    const RenderCommandContext& ref = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
+    const MultiRenderPassCommandListData& mrpData = ref.renderCommandList->GetMultiRenderCommandListData();
+
+    const uint32_t rcCount = mrpData.subpassCount;
+    // Now patch the subpasses for each render pass
+    for (uint32_t secondIdx = 0; secondIdx < rcCount; ++secondIdx) {
+        const uint32_t currCmdBufferIdx = cmdBufferIdx + secondIdx;
+        RenderCommandContext& rcCtx = renderCommandFrameData.renderCommandContexts[currCmdBufferIdx];
+        auto rcRef = rcCtx.renderCommandList->GetRenderCommands();
+        if (mrpData.rpBeginCmdIndex < rcRef.size()) {
+            RenderCommandBeginRenderPass& rpBeginInfo =
+                *static_cast<RenderCommandBeginRenderPass*>(rcRef[mrpData.rpBeginCmdIndex].rc);
+            CloneData(rpBeginInfo.subpasses.data(), rpBeginInfo.subpasses.size_bytes(), subpassDescs.data(),
+                subpassDescs.size_bytes());
+            CloneData(rpBeginInfo.subpassResourceStates.data(), rpBeginInfo.subpassResourceStates.size_bytes(),
+                resourceStates.data(), resourceStates.size_bytes());
+        }
+    }
+}
+} // namespace
+
+uint64_t RenderBackendVk::ProcessSecondaryCommandList(RenderCommandFrameData& renderCommandFrameData,
+    uint32_t cmdBufferIdx, vector<uint64_t>& afterIdentifiers, uint64_t secondaryIdx)
+{
+    // Patch renderpasses because they are separated across multiple command lists and have different subpass start
+    // index. So each command list processes one subpass. The command list frontend renderpasses  are begun with null
+    // subpasses so they're incompatible when trying to execute secondary command buffers.  Note that we aren't patching
+    // all command lists that have been submitted, only processing the "secondary" command lists.
+    {
+        auto [subpassDescs, resourceStates] = ExtractRenderPasses(renderCommandFrameData, cmdBufferIdx);
+
+        PatchRenderPasses(renderCommandFrameData, cmdBufferIdx, subpassDescs, resourceStates);
+    }
+
+    const RenderCommandContext& ref = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
+    const MultiRenderPassCommandListData& mrpData = ref.renderCommandList->GetMultiRenderCommandListData();
+
+    const uint32_t rcCount = mrpData.subpassCount;
+    afterIdentifiers.reserve(afterIdentifiers.size() + rcCount);
+    for (uint32_t secondIdx = 0; secondIdx < rcCount; ++secondIdx) {
+        const uint32_t currCmdBufferIdx = cmdBufferIdx + secondIdx;
+        const uint64_t submitId = secondaryIdx++;
+        afterIdentifiers.push_back(submitId);
+        queue_->SubmitAfter(
+            afterIdentifiers, submitId, FunctionTask::Create([this, currCmdBufferIdx, &renderCommandFrameData]() {
+                MultiRenderCommandListDesc mrcDesc { nullptr, 0U, 1U, true, false };
+                RenderCommandContext& ref2 = renderCommandFrameData.renderCommandContexts[currCmdBufferIdx];
+                const DebugNames debugNames { ref2.debugName,
+                    renderCommandFrameData.renderCommandContexts[currCmdBufferIdx].debugName };
+                RenderSingleCommandList(ref2, currCmdBufferIdx, mrcDesc, debugNames);
+            }));
+    }
+    queue_->SubmitAfter(array_view<const uint64_t>(afterIdentifiers.data(), afterIdentifiers.size()), cmdBufferIdx,
+        FunctionTask::Create([this, cmdBufferIdx, rcCount, &renderCommandFrameData]() {
+            MultiRenderCommandListDesc mrcDesc;
+            mrcDesc.multiRenderCommandListCount = rcCount;
+            RenderCommandContext& ref2 = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
+            const DebugNames debugNames { ref2.debugName, ref2.debugName };
+            RenderPrimaryRenderPass(renderCommandFrameData, ref2, cmdBufferIdx, mrcDesc, debugNames);
+        }));
+
+    return secondaryIdx;
 }
 
 void RenderBackendVk::RenderProcessCommandLists(
@@ -649,32 +754,10 @@ void RenderBackendVk::RenderProcessCommandLists(
         if (globalDescSetSubmitted && (mrpData.secondaryCmdLists || hasGlobalDescriptorSetBindings)) {
             afterIdentifiers.push_back(globalDescSetTaskId);
         }
+        // Process cmdBufferIdx to cmdBufferIdx + subpassCount secondary command lists
         if (mrpData.secondaryCmdLists) {
-            afterIdentifiers.reserve(afterIdentifiers.size() + rcCount);
-            for (uint32_t secondIdx = 0; secondIdx < rcCount; ++secondIdx) {
-                const uint64_t submitId = secondaryIdx++;
-                afterIdentifiers.push_back(submitId);
-                queue_->SubmitAfter(afterIdentifiers, submitId,
-                    FunctionTask::Create([this, cmdBufferIdx, secondIdx, &renderCommandFrameData]() {
-                        const uint32_t currCmdBufferIdx = cmdBufferIdx + secondIdx;
-                        MultiRenderCommandListDesc mrcDesc;
-                        mrcDesc.multiRenderCommandListCount = 1u;
-                        mrcDesc.baseContext = nullptr;
-                        mrcDesc.secondaryCommandBuffer = true;
-                        RenderCommandContext& ref2 = renderCommandFrameData.renderCommandContexts[currCmdBufferIdx];
-                        const DebugNames debugNames { ref2.debugName,
-                            renderCommandFrameData.renderCommandContexts[currCmdBufferIdx].debugName };
-                        RenderSingleCommandList(ref2, currCmdBufferIdx, mrcDesc, debugNames);
-                    }));
-            }
-            queue_->SubmitAfter(array_view<const uint64_t>(afterIdentifiers.data(), afterIdentifiers.size()),
-                cmdBufferIdx, FunctionTask::Create([this, cmdBufferIdx, rcCount, &renderCommandFrameData]() {
-                    MultiRenderCommandListDesc mrcDesc;
-                    mrcDesc.multiRenderCommandListCount = rcCount;
-                    RenderCommandContext& ref2 = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
-                    const DebugNames debugNames { ref2.debugName, ref2.debugName };
-                    RenderPrimaryRenderPass(renderCommandFrameData, ref2, cmdBufferIdx, mrcDesc, debugNames);
-                }));
+            secondaryIdx =
+                ProcessSecondaryCommandList(renderCommandFrameData, cmdBufferIdx, afterIdentifiers, secondaryIdx);
         } else {
             queue_->SubmitAfter(array_view<const uint64_t>(afterIdentifiers.data(), afterIdentifiers.size()),
                 cmdBufferIdx, FunctionTask::Create([this, cmdBufferIdx, rcCount, &renderCommandFrameData]() {
@@ -789,6 +872,7 @@ void RenderBackendVk::RenderPrimaryRenderPass(const RenderCommandFrameData& rend
                 renderPass.renderPassDesc.subpassContents =
                     SubpassContents::CORE_SUBPASS_CONTENTS_SECONDARY_COMMAND_LISTS;
                 stateCache.renderCommandBeginRenderPass = nullptr; // reset
+                renderPass.beginType = RenderPassBeginType::RENDER_PASS_SUBPASS_BEGIN;
                 RenderCommand(
                     renderPass, cmdBuffer, *currContext.nodeContextPsoMgr, *currContext.nodeContextPoolMgr, stateCache);
             }
@@ -807,7 +891,8 @@ void RenderBackendVk::RenderPrimaryRenderPass(const RenderCommandFrameData& rend
         VALIDATE_VK_RESULT(vkEndCommandBuffer(cmdBuffer.commandBuffer)); // commandBuffer
     }
 
-    commandBufferSubmitter_.commandBuffers[cmdBufIdx] = { cmdBuffer.commandBuffer, cmdBuffer.semaphore };
+    commandBufferSubmitter_.commandBuffers[cmdBufIdx] = { cmdBuffer.commandBuffer,
+        cmdBuffer.semaphores[cmdBuffer.semaphoreIdx] };
 }
 
 void RenderBackendVk::RenderExecuteSecondaryCommandLists(
@@ -1192,7 +1277,8 @@ void RenderBackendVk::RenderSingleCommandList(RenderCommandContext& renderComman
         if (mrclDesc.secondaryCommandBuffer) {
             commandBufferSubmitter_.commandBuffers[cmdBufIdx] = {};
         } else {
-            commandBufferSubmitter_.commandBuffers[cmdBufIdx] = { cmdBuffer.commandBuffer, cmdBuffer.semaphore };
+            commandBufferSubmitter_.commandBuffers[cmdBufIdx] = { cmdBuffer.commandBuffer,
+                cmdBuffer.semaphores[cmdBuffer.semaphoreIdx] };
         }
     }
 }
@@ -2193,93 +2279,108 @@ void RenderBackendVk::RenderCommand(const RenderCommandBindDescriptorSets& rende
     const LowLevelCommandBufferVk& cmdBuf, NodeContextPsoManager& psoMgr, const NodeContextPoolManager& poolMgr,
     StateCache& stateCache, NodeContextDescriptorSetManager& aNcdsm)
 {
-    const NodeContextDescriptorSetManagerVk& aNcdsmVk = (NodeContextDescriptorSetManagerVk&)aNcdsm;
-
     PLUGIN_ASSERT(stateCache.psoHandle == renderCmd.psoHandle);
-    const RenderHandleType handleType = RenderHandleUtil::GetHandleType(stateCache.psoHandle);
-    const VkPipelineBindPoint pipelineBindPoint = (handleType == RenderHandleType::COMPUTE_PSO)
-                                                      ? VK_PIPELINE_BIND_POINT_COMPUTE
-                                                      : VK_PIPELINE_BIND_POINT_GRAPHICS;
     const VkPipelineLayout pipelineLayout = stateCache.pipelineLayout;
 
     bool valid = (pipelineLayout != VK_NULL_HANDLE);
     const uint32_t firstSet = renderCmd.firstSet;
     const uint32_t setCount = renderCmd.setCount;
-    if (valid && (firstSet + setCount <= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) && (setCount > 0)) {
-        uint32_t dynamicOffsetDescriptorSetIndices = 0;
-        uint64_t priorStatePipelineDescSetHash = stateCache.pipelineDescSetHash;
+    if (!valid || (setCount == 0) || (firstSet + setCount > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT)) {
+        return;
+    }
 
-        VkDescriptorSet descriptorSets[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
-        const uint32_t firstPlusCount = firstSet + setCount;
-        for (uint32_t idx = firstSet; idx < firstPlusCount; ++idx) {
-            const RenderHandle descriptorSetHandle = renderCmd.descriptorSetHandles[idx];
-            if (RenderHandleUtil::GetHandleType(descriptorSetHandle) == RenderHandleType::DESCRIPTOR_SET) {
-                const uint32_t dynamicDescriptorCount = aNcdsm.GetDynamicOffsetDescriptorCount(descriptorSetHandle);
-                dynamicOffsetDescriptorSetIndices |= (dynamicDescriptorCount > 0) ? (1 << idx) : 0;
+    const RenderHandleType handleType = RenderHandleUtil::GetHandleType(stateCache.psoHandle);
+    const VkPipelineBindPoint pipelineBindPoint = (handleType == RenderHandleType::COMPUTE_PSO)
+                                                      ? VK_PIPELINE_BIND_POINT_COMPUTE
+                                                      : VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-                const LowLevelDescriptorSetVk* descriptorSet = aNcdsmVk.GetDescriptorSet(descriptorSetHandle);
-                if (descriptorSet && descriptorSet->descriptorSet) {
-                    descriptorSets[idx] = descriptorSet->descriptorSet;
-                    // update, copy to state cache
-                    PLUGIN_ASSERT(descriptorSet->descriptorSetLayout);
-                    stateCache.lowLevelPipelineLayoutData.descriptorSetLayouts[idx] = *descriptorSet;
-                    const uint32_t currShift = (idx * 16u);
-                    const uint64_t oldOutMask = (~(static_cast<uint64_t>(0xffff) << currShift));
-                    uint64_t currHash = stateCache.pipelineDescSetHash & oldOutMask;
-                    stateCache.pipelineDescSetHash = currHash | (descriptorSet->immutableSamplerBitmask);
-                } else {
-                    valid = false;
-                }
+    uint32_t dynamicOffsetDescriptorSetIndices = 0;
+    const uint64_t priorStatePipelineDescSetHash = stateCache.pipelineDescSetHash;
+    const NodeContextDescriptorSetManagerVk& aNcdsmVk = (NodeContextDescriptorSetManagerVk&)aNcdsm;
+
+    VkDescriptorSet descriptorSets[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
+    const uint32_t firstPlusCount = firstSet + setCount;
+    for (uint32_t idx = firstSet; idx < firstPlusCount; ++idx) {
+        const RenderHandle descriptorSetHandle = renderCmd.descriptorSetHandles[idx];
+        if (RenderHandleUtil::GetHandleType(descriptorSetHandle) == RenderHandleType::DESCRIPTOR_SET) {
+            const uint32_t dynamicDescriptorCount = aNcdsm.GetDynamicOffsetDescriptorCount(descriptorSetHandle);
+            dynamicOffsetDescriptorSetIndices |= (dynamicDescriptorCount > 0U) ? (1U << idx) : 0U;
+
+            const LowLevelDescriptorSetVk* descriptorSet = aNcdsmVk.GetDescriptorSet(descriptorSetHandle);
+            if (descriptorSet && descriptorSet->descriptorSet) {
+                descriptorSets[idx] = descriptorSet->descriptorSet;
+                // update, copy to state cache
+                PLUGIN_ASSERT(descriptorSet->descriptorSetLayout);
+                stateCache.lowLevelPipelineLayoutData.descriptorSetLayouts[idx] = *descriptorSet;
+                const uint32_t currShift = (idx * 16u);
+                const uint64_t oldOutMask = (~(static_cast<uint64_t>(0xffff) << currShift));
+                uint64_t currHash = stateCache.pipelineDescSetHash & oldOutMask;
+                stateCache.pipelineDescSetHash = currHash | (descriptorSet->immutableSamplerBitmask);
+            } else {
+                valid = false;
             }
         }
+    }
 
-        uint32_t dynamicOffsets[PipelineLayoutConstants::MAX_DYNAMIC_DESCRIPTOR_OFFSET_COUNT *
-                                PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
-        uint32_t dynamicOffsetIdx = 0;
-        // NOTE: optimize
-        // this code has some safety checks that the offset is not updated for non-dynamic sets
-        // it could be left on only for validation
-        for (uint32_t idx = firstSet; idx < firstPlusCount; ++idx) {
-            if ((1 << idx) & dynamicOffsetDescriptorSetIndices) {
-                const RenderHandle descriptorSetHandle = renderCmd.descriptorSetHandles[idx];
-                const DynamicOffsetDescriptors dod = aNcdsm.GetDynamicOffsetDescriptors(descriptorSetHandle);
-                const auto dodResCount = static_cast<uint32_t>(dod.resources.size());
-                const auto& descriptorSetDynamicOffsets = renderCmd.descriptorSetDynamicOffsets[idx];
-                for (uint32_t dodIdx = 0U; dodIdx < dodResCount; ++dodIdx) {
-                    uint32_t byteOffset = 0U;
-                    if (descriptorSetDynamicOffsets.dynamicOffsets &&
-                        (dodIdx < descriptorSetDynamicOffsets.dynamicOffsetCount)) {
-                        byteOffset = descriptorSetDynamicOffsets.dynamicOffsets[dodIdx];
-                    }
+    uint32_t dynamicOffsets[PipelineLayoutConstants::MAX_DYNAMIC_DESCRIPTOR_OFFSET_COUNT *
+                            PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
+    uint32_t dynamicOffsetIdx = 0;
+    // NOTE: optimize
+    // this code has some safety checks that the offset is not updated for non-dynamic sets
+    // it could be left on only for validation
+    bool validDynamicOffsets = true;
+    for (uint32_t idx = firstSet; idx < firstPlusCount; ++idx) {
+        if ((1 << idx) & dynamicOffsetDescriptorSetIndices) {
+            const RenderHandle descriptorSetHandle = renderCmd.descriptorSetHandles[idx];
+            const DynamicOffsetDescriptors dod = aNcdsm.GetDynamicOffsetDescriptors(descriptorSetHandle);
+            const auto dodResCount = static_cast<uint32_t>(dod.resources.size());
+            const auto& descriptorSetDynamicOffsets = renderCmd.descriptorSetDynamicOffsets[idx];
+            for (uint32_t dodIdx = 0U; dodIdx < dodResCount; ++dodIdx) {
+                uint32_t byteOffset = 0U;
+                if (descriptorSetDynamicOffsets.dynamicOffsets &&
+                    (dodIdx < descriptorSetDynamicOffsets.dynamicOffsetCount)) {
+                    byteOffset = descriptorSetDynamicOffsets.dynamicOffsets[dodIdx];
+                }
+                const GpuBufferVk* dynBuf = gpuResourceMgr_.GetBuffer<const GpuBufferVk>(dod.resources[dodIdx]);
+                if (!dynBuf) {
+                    continue;
+                }
+                const GpuBufferPlatformDataVk& bufData = dynBuf->GetPlatformData();
+                if (bufData.fullByteSize < byteOffset + bufData.currentByteOffset) {
+                    dynamicOffsets[dynamicOffsetIdx++] = 0;
+                    validDynamicOffsets = false;
+                } else {
                     dynamicOffsets[dynamicOffsetIdx++] = byteOffset;
                 }
             }
         }
-
-        stateCache.validBindings = valid;
-        if (stateCache.validBindings) {
-            if (priorStatePipelineDescSetHash == stateCache.pipelineDescSetHash) {
-                vkCmdBindDescriptorSets(cmdBuf.commandBuffer, // commandBuffer
-                    pipelineBindPoint,                        // pipelineBindPoint
-                    pipelineLayout,                           // layout
-                    firstSet,                                 // firstSet
-                    setCount,                                 // descriptorSetCount
-                    &descriptorSets[firstSet],                // pDescriptorSets
-                    dynamicOffsetIdx,                         // dynamicOffsetCount
-                    dynamicOffsets);                          // pDynamicOffsets
-#if (RENDER_PERF_ENABLED == 1)
-                stateCache.perfCounters.bindDescriptorSetCount++;
+    }
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if (!validDynamicOffsets) {
+        PLUGIN_LOG_ONCE_W("RenderBackendVk::RenderCommandBindDescriptorSets",
+            "RENDER_VALIDATION: Invalid dynamic uniform buffer offsets. Invalid offsets set to 0.");
+    }
 #endif
-            } else {
-                // possible pso re-creation and bind of these sets to the new pso
-                PLUGIN_LOG_E("vkCmdBindDescriptorSets hit des cache");
-                const RenderCommandBindPipeline renderCmdBindPipeline { stateCache.psoHandle,
-                    (PipelineBindPoint)pipelineBindPoint };
-                RenderCommand(renderCmdBindPipeline, cmdBuf, psoMgr, poolMgr, stateCache);
-                RenderCommand(renderCmd, cmdBuf, psoMgr, poolMgr, stateCache, aNcdsm);
-            }
+    stateCache.validBindings = valid;
+    if (stateCache.validBindings) {
+        if (priorStatePipelineDescSetHash == stateCache.pipelineDescSetHash) {
+            vkCmdBindDescriptorSets(cmdBuf.commandBuffer, // commandBuffer
+                pipelineBindPoint,                        // pipelineBindPoint
+                pipelineLayout,                           // layout
+                firstSet,                                 // firstSet
+                setCount,                                 // descriptorSetCount
+                &descriptorSets[firstSet],                // pDescriptorSets
+                dynamicOffsetIdx,                         // dynamicOffsetCount
+                dynamicOffsets);                          // pDynamicOffsets
+#if (RENDER_PERF_ENABLED == 1)
+            stateCache.perfCounters.bindDescriptorSetCount++;
+#endif
         } else {
-            PLUGIN_LOG_E("stateCache.validBindings invalid");
+            // possible pso re-creation and bind of these sets to the new pso
+            const RenderCommandBindPipeline renderCmdBindPipeline { stateCache.psoHandle,
+                (PipelineBindPoint)pipelineBindPoint };
+            RenderCommand(renderCmdBindPipeline, cmdBuf, psoMgr, poolMgr, stateCache);
+            RenderCommand(renderCmd, cmdBuf, psoMgr, poolMgr, stateCache, aNcdsm);
         }
     }
 }
@@ -2982,26 +3083,27 @@ void RenderBackendVk::WritePerfTimeStamp(const LowLevelCommandBufferVk& cmdBuf, 
 namespace {
 void UpdatePerfCounters(IPerformanceDataManager& perfData, const string_view name, const PerfCounters& perfCounters)
 {
-    perfData.UpdateData(name, "Backend_Count_Triangle", perfCounters.triangleCount,
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, perfCounters.triangleCount,
         CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_InstanceCount", perfCounters.instanceCount,
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, perfCounters.instanceCount,
         CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_Draw", perfCounters.drawCount,
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, perfCounters.drawCount,
         CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_DrawIndirect", perfCounters.drawIndirectCount,
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT,
+        perfCounters.drawIndirectCount, CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, perfCounters.dispatchCount,
         CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_Dispatch", perfCounters.dispatchCount,
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT,
+        perfCounters.dispatchIndirectCount, CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE,
+        perfCounters.bindPipelineCount, CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, perfCounters.renderPassCount,
         CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_DispatchIndirect", perfCounters.dispatchIndirectCount,
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET,
+        perfCounters.updateDescriptorSetCount,
         CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_BindPipeline", perfCounters.bindPipelineCount,
-        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_RenderPass", perfCounters.renderPassCount,
-        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_UpdateDescriptorSet", perfCounters.updateDescriptorSetCount,
-        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
-    perfData.UpdateData(name, "Backend_Count_BindDescriptorSet", perfCounters.bindDescriptorSetCount,
-        CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
+    perfData.UpdateData(name, RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET,
+        perfCounters.bindDescriptorSetCount, CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::COUNT);
 }
 } // namespace
 
@@ -3041,40 +3143,40 @@ void RenderBackendVk::CopyPerfTimeStamp(
     if (IPerformanceDataManagerFactory* globalPerfData =
             GetInstance<IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         globalPerfData) {
-        IPerformanceDataManager* perfData = globalPerfData->Get("RenderNode");
-
-        perfData->UpdateData(name, "Backend_Cpu", cpuMicroSeconds);
+        if (IPerformanceDataManager* perfData = globalPerfData->Get("RenderNode"); perfData) {
+            perfData->UpdateData(name, "Backend_Cpu", cpuMicroSeconds);
 #if (RENDER_GPU_TIMESTAMP_QUERIES_ENABLED == 1)
-        perfData->UpdateData(name, "Backend_Gpu", gpuMicroSeconds);
+            perfData->UpdateData(name, "Backend_Gpu", gpuMicroSeconds);
 
-        // cannot be called inside render pass (e.g. with secondary command buffers)
-        if (!stateCache.secondaryCommandBuffer) {
-            if (const GpuQuery* gpuQuery = gpuQueryMgr_->Get(perfDataSet->gpuHandle); gpuQuery) {
-                const auto& platData = static_cast<const GpuQueryPlatformDataVk&>(gpuQuery->GetPlatformData());
+            // cannot be called inside render pass (e.g. with secondary command buffers)
+            if (!stateCache.secondaryCommandBuffer) {
+                if (const GpuQuery* gpuQuery = gpuQueryMgr_->Get(perfDataSet->gpuHandle); gpuQuery) {
+                    const auto& platData = static_cast<const GpuQueryPlatformDataVk&>(gpuQuery->GetPlatformData());
 
-                const GpuBufferVk* gpuBuffer = static_cast<GpuBufferVk*>(perfGpuTimerData_.gpuBuffer.get());
-                PLUGIN_ASSERT(gpuBuffer);
-                const GpuBufferPlatformDataVk& platBuffer = gpuBuffer->GetPlatformData();
+                    const GpuBufferVk* gpuBuffer = static_cast<GpuBufferVk*>(perfGpuTimerData_.gpuBuffer.get());
+                    PLUGIN_ASSERT(gpuBuffer);
+                    const GpuBufferPlatformDataVk& platBuffer = gpuBuffer->GetPlatformData();
 
-                constexpr uint32_t queryCount = 2;
-                constexpr VkDeviceSize queryStride = sizeof(uint64_t);
-                constexpr VkQueryResultFlags queryResultFlags =
-                    VkQueryResultFlagBits::VK_QUERY_RESULT_64_BIT | VkQueryResultFlagBits::VK_QUERY_RESULT_WAIT_BIT;
+                    constexpr uint32_t queryCount = 2;
+                    constexpr VkDeviceSize queryStride = sizeof(uint64_t);
+                    constexpr VkQueryResultFlags queryResultFlags =
+                        VkQueryResultFlagBits::VK_QUERY_RESULT_64_BIT | VkQueryResultFlagBits::VK_QUERY_RESULT_WAIT_BIT;
 
-                if (platData.queryPool) {
-                    vkCmdCopyQueryPoolResults(cmdBuf.commandBuffer, // commandBuffer
-                        platData.queryPool,                         // queryPool
-                        0,                                          // firstQuery
-                        queryCount,                                 // queryCount
-                        platBuffer.buffer,                          // dstBuffer
-                        currentFrameByteOffset,                     // dstOffset
-                        queryStride,                                // stride
-                        queryResultFlags);                          // flags
+                    if (platData.queryPool) {
+                        vkCmdCopyQueryPoolResults(cmdBuf.commandBuffer, // commandBuffer
+                            platData.queryPool,                         // queryPool
+                            0,                                          // firstQuery
+                            queryCount,                                 // queryCount
+                            platBuffer.buffer,                          // dstBuffer
+                            currentFrameByteOffset,                     // dstOffset
+                            queryStride,                                // stride
+                            queryResultFlags);                          // flags
+                    }
                 }
             }
-        }
 #endif
-        UpdatePerfCounters(*perfData, name, perfDataSet->perfCounters);
+            UpdatePerfCounters(*perfData, name, perfDataSet->perfCounters);
+        }
     }
 }
 

@@ -139,6 +139,7 @@ AnyReturnValue Number::CopyFrom(const IAny& any)
 {
     if (auto c = FindCompatible(any)) {
         c->loadAny(any, value_);
+        return AnyReturn::SUCCESS;
     }
     return AnyReturn::INCOMPATIBLE_TYPE;
 }

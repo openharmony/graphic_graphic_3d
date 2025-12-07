@@ -1,0 +1,31 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "shaderstate"
+    },
+    "shaderStates": [
+        {
+            "variantName": "variant",
+            "renderSlot": "ShaderManagerTest_TestShaderState",
+            "renderSlotDefaultShaderState": true,
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                }
+            },
+            "stateFlags": "input_assembly_bit|depth_stencil_state_bit"
+        }
+    ]
+}

@@ -29,7 +29,8 @@ META_REGISTER_INTERFACE(ITaskScheduleInfo, "d9fe0fb1-84dd-4210-bf33-6fdbe650615b
 META_REGISTER_INTERFACE(ITaskQueue, "138b0a6d-4a97-4ad6-bba3-1bee7cc36d58")
 META_REGISTER_INTERFACE(IPollingTaskQueue, "16e007c1-f8f8-4e9d-b5d7-d7016f9c54d3")
 META_REGISTER_INTERFACE(IThreadedTaskQueue, "42be1ec0-5711-4377-aa40-5270be31ad7d")
-
+META_REGISTER_INTERFACE(ITaskQueueThreadInfo, "6c24c06e-bb6d-46c7-ac50-b08f2b136276")
+META_REGISTER_INTERFACE(ITerminateableQueue, "97e0f9fe-674a-402e-921f-b6167e9e99a6")
 /**
  * @brief The ITaskQueueTask interface defines the interface which a class
  *        must implement to be schedulable in a task queue.
@@ -60,6 +61,32 @@ public:
      * @return Result of the task.
      */
     virtual IAny::Ptr Invoke() = 0;
+};
+
+/**
+ * @brief The ITaskQueueThreadInfo interface defines an interface to be implemented
+ *        by task queues to provide information on which thread they execute in.
+ */
+class ITaskQueueThreadInfo : public CORE_NS::IInterface  {
+    META_INTERFACE(CORE_NS::IInterface , ITaskQueueThreadInfo)
+
+public:
+    // Returns true if current thread matches the execution thread for queue.
+    virtual bool CurrentThreadIsExecutionThread() const = 0;
+};
+
+/**
+ * @brief  The ITaskQueueThreadInfo interface defines an interface to be implemented
+ *        by task queues that support on request termination.
+ */
+class ITerminateableQueue : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, ITerminateableQueue)
+public:
+    /**
+     * @brief Request termination of the queue.
+     * @return If Invoke returns true, if queue has been succesfully terminated.
+     */
+    virtual bool Terminate() = 0;
 };
 
 /**

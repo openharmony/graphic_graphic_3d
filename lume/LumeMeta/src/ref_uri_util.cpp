@@ -15,9 +15,11 @@
 
 #include "ref_uri_util.h"
 
+#include <meta/api/array_util.h>
 #include <meta/api/util.h>
 #include <meta/base/ref_uri.h>
 #include <meta/ext/resolve_helper.h>
+#include <meta/interface/intf_attach.h>
 #include <meta/interface/intf_containable.h>
 #include <meta/interface/intf_container.h>
 #include <meta/interface/intf_metadata.h>
@@ -25,29 +27,29 @@
 
 META_BEGIN_NAMESPACE()
 
-static IObjectInstance::ConstPtr FindParentObject(const IObjectInstance::ConstPtr& obj)
+static IObject::Ptr FindParentObject(const IObjectInstance::Ptr& obj)
 {
     auto containee = interface_cast<IContainable>(obj);
-    return containee ? interface_pointer_cast<IObjectInstance>(containee->GetParent()) : nullptr;
+    return containee ? containee->GetParent() : nullptr;
 }
 
-static IObjectInstance::ConstPtr FindRootObject(IObjectInstance::ConstPtr obj)
+static IObjectInstance::Ptr FindRootObject(IObjectInstance::Ptr obj)
 {
     auto prev = obj;
-    while ((obj = FindParentObject(obj))) {
+    while ((obj = interface_pointer_cast<IObjectInstance>(FindParentObject(obj)))) {
         prev = obj;
     }
     return prev;
 }
 
-static IObjectInstance::ConstPtr FindChildObject(const IObjectInstance::ConstPtr& obj, BASE_NS::string_view name)
+static IObject::Ptr FindChildObject(const IObjectInstance::ConstPtr& obj, BASE_NS::string_view name)
 {
     auto cont = interface_cast<IContainer>(obj);
-    return cont ? interface_pointer_cast<IObjectInstance>(cont->FindByName(name)) : nullptr;
+    return cont ? cont->FindByName(name) : nullptr;
 }
 
 static IObject::Ptr ResolvePropertySegment(
-    BASE_NS::string_view propName, const IObjectInstance::Ptr& base, const RefUri& ref)
+    BASE_NS::string_view propName, uint32_t index, const IObjectInstance::Ptr& base, const RefUri& ref)
 {
     // get the property and see if it contains object to continue the resolve
     IMetadata* meta = interface_cast<IMetadata>(base);
@@ -57,6 +59,16 @@ static IObject::Ptr ResolvePropertySegment(
 
     auto prop = meta->GetProperty(propName);
     if (prop) {
+        if (index != -1) {
+            if (!IsArrayProperty(prop)) {
+                CORE_LOG_E("Expected array property [%s]", BASE_NS::string(propName).c_str());
+                return nullptr;
+            }
+            if (auto obj = GetPointerAt<IObjectInstance>(index, prop)) {
+                return obj->Resolve(ref);
+            }
+            return nullptr;
+        }
         if (ref.GetAbsoluteInterpretation() && ref.IsEmpty()) {
             return interface_pointer_cast<IObject>(prop);
         }
@@ -67,24 +79,52 @@ static IObject::Ptr ResolvePropertySegment(
     return nullptr;
 }
 
+static IObjectInstance::ConstPtr FindAtachmentObject(const IObjectInstance::ConstPtr& obj, BASE_NS::string_view name)
+{
+    auto att = interface_cast<IAttach>(obj);
+    auto cont = att ? att->GetAttachmentContainer(false) : nullptr;
+    return cont ? interface_pointer_cast<IObjectInstance>(cont->FindByName(name)) : nullptr;
+}
+
 static IObject::Ptr ResolveSegment(const IObjectInstance::Ptr& base, RefUri ref)
 {
     auto node = ref.TakeFirstNode();
     if (node.type == RefUri::Node::OBJECT) {
-        IObjectInstance::ConstPtr obj = (node.name == "..") ? FindParentObject(base) : FindChildObject(base, node.name);
+        IObject::Ptr obj;
+        if (node.name == "..") {
+            obj = FindParentObject(base);
+            if (auto p = interface_pointer_cast<IProperty>(obj)) {
+                if (ref.IsEmpty()) {
+                    return obj;
+                }
+            }
+        } else {
+            obj = FindChildObject(base, node.name);
+        }
         return obj ? obj->Resolve(ref) : nullptr;
     }
 
     if (node.type == RefUri::Node::SPECIAL) {
-        if (node.name != "@Context") {
+        IObjectInstance::ConstPtr obj;
+        if (node.name != "@Context" && node.name != "@") {
             return nullptr;
         }
-        // ask the object to resolve the special segment
-        auto obj = base->Resolve<IObjectInstance>(RefUri::ContextUri());
+        if (node.name == "@") {
+            // try to resolve child with empty name
+            obj = interface_pointer_cast<IObjectInstance>(FindChildObject(base, ""));
+        } else {
+            // ask the object to resolve the special segment
+            obj = base->Resolve<IObjectInstance>(RefUri::ContextUri());
+        }
         return obj ? obj->Resolve(ref) : nullptr;
     }
 
-    return ResolvePropertySegment(node.name, base, ref);
+    if (node.type == RefUri::Node::ATTACHMENT) {
+        auto obj = FindAtachmentObject(base, node.name);
+        return obj ? obj->Resolve(ref) : nullptr;
+    }
+
+    return ResolvePropertySegment(node.name, node.index, base, ref);
 }
 
 IObject::Ptr DefaultResolveObject(const IObjectInstance::Ptr& base, const RefUri& uri)

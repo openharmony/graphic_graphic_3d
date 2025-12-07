@@ -36,11 +36,6 @@ uint GetInstanceIndex()
     return instanceIdx;
 }
 
-float GetLodForRadianceSample(const float roughness)
-{
-    return uEnvironmentData.values.x * roughness;
-}
-
 ClearcoatShadingVariables GetUnpackedAndSampledClearcoat(const uint instanceIdx, const vec3 ccNormal)
 {
     const float cc = GetUnpackClearcoat(instanceIdx);
@@ -66,30 +61,15 @@ SheenShadingVariables GetUnpackedAndSampledSheen(const uint instanceIdx)
     return ssv;
 }
 
-vec3 GetIrradianceSample(const vec3 worldNormal)
-{
-    const vec3 worldNormalEnv = mat3(uEnvironmentData.envRotation) * worldNormal;
-    return unpackIblIrradianceSH(worldNormalEnv, uEnvironmentData.shIndirectCoefficients) *
-           uEnvironmentData.indirectDiffuseColorFactor.rgb;
-}
-
-vec3 GetRadianceSample(const vec3 worldReflect, const float roughness)
-{
-    const CORE_RELAXEDP float cubeLod = GetLodForRadianceSample(roughness);
-    const vec3 worldReflectEnv = mat3(uEnvironmentData.envRotation) * worldReflect;
-    return unpackIblRadiance(textureLod(uSampRadiance, worldReflectEnv, cubeLod)) *
-           uEnvironmentData.indirectSpecularColorFactor.rgb;
-}
-
 vec3 GetTransmissionRadianceSample(const vec2 fragUv, const vec3 worldReflect, const float roughness)
 {
     // NOTE: this makes a pre color selection based on alpha
     // we would generally need an extra flag, the default texture is black with alpha zero
-    const CORE_RELAXEDP float lod = GetLodForRadianceSample(roughness);
+    const CORE_RELAXEDP float lod = CoreGetLodForRadianceSample(roughness);
     vec4 color = textureLod(uSampColorPrePass, fragUv, lod).rgba;
     if (color.a < 0.5f) {
         // sample environment if the default pre pass color was 0.0 alpha
-        color.rgb = GetRadianceSample(worldReflect, roughness);
+        color.rgb = CoreGetRadianceSample(worldReflect, roughness);
     }
     return color.rgb;
 }
@@ -317,12 +297,12 @@ vec4 pbrBasic()
         CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) {
         const CORE_RELAXEDP float ao = clamp(GetAOSample(inUv, instanceIdx) * GetUnpackAO(instanceIdx), 0.0, 1.0);
         // lambert baked into irradianceSample (SH)
-        CORE_RELAXEDP vec3 irradiance = GetIrradianceSample(shadingData.N) * shadingData.diffuseColor * ao;
+        CORE_RELAXEDP vec3 irradiance = CoreGetIrradianceSample(shadingData.N) * shadingData.diffuseColor * ao;
 
         const vec3 worldReflect = reflect(-shadingData.V, shadingData.N);
         const CORE_RELAXEDP vec3 fIndirect = EnvBRDFApprox(shadingData.f0.xyz, roughness, NoV);
         // ao applied after clear coat
-        CORE_RELAXEDP vec3 radianceSample = GetRadianceSample(worldReflect, roughness);
+        CORE_RELAXEDP vec3 radianceSample = CoreGetRadianceSample(worldReflect, roughness);
         CORE_RELAXEDP vec3 radiance = radianceSample * fIndirect;
 
         if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_SHEEN_BIT) == CORE_MATERIAL_SHEEN_BIT) {
@@ -330,7 +310,7 @@ vec4 pbrBasic()
         }
         if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_CLEARCOAT_BIT) == CORE_MATERIAL_CLEARCOAT_BIT) {
             const vec3 ccWorldReflect = reflect(-shadingData.V, clearcoatSV.ccNormal);
-            const vec3 ccRadianceSample = GetRadianceSample(ccWorldReflect, clearcoatSV.ccRoughness);
+            const vec3 ccRadianceSample = CoreGetRadianceSample(ccWorldReflect, clearcoatSV.ccRoughness);
             AppendIndirectClearcoat(clearcoatSV, ccRadianceSample, baseColor.a, V, irradiance, radiance);
         }
         if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_TRANSMISSION_BIT) == CORE_MATERIAL_TRANSMISSION_BIT) {

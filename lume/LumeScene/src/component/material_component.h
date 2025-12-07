@@ -73,6 +73,7 @@ public:
     };
 
     virtual ActiveTextureSlotInfo GetActiveTextureSlotInfo() = 0;
+    virtual bool UpdateMetadata() = 0;
 };
 
 META_REGISTER_CLASS(MaterialComponent, "bc819033-2a5b-4182-bc7a-365ff8e33822", META_NS::ObjectCategoryBits::NO_CATEGORY)
@@ -124,6 +125,14 @@ public:
 public:
     BASE_NS::string GetName() const override;
     ActiveTextureSlotInfo GetActiveTextureSlotInfo() override;
+    bool UpdateMetadata() override;
+
+private:
+    struct CachedShader {
+        RENDER_NS::RenderHandle shader {};
+        uint64_t frameIndex {};
+    };
+    CachedShader cachedShader_;
 };
 
 SCENE_END_NAMESPACE()

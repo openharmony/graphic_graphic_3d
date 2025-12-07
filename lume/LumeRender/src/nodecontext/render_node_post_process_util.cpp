@@ -40,15 +40,15 @@
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
 #include "nodecontext/pipeline_descriptor_set_binder.h"
-#include "postprocesses/render_post_process_bloom.h"
-#include "postprocesses/render_post_process_blur.h"
-#include "postprocesses/render_post_process_combined.h"
-#include "postprocesses/render_post_process_dof.h"
-#include "postprocesses/render_post_process_flare.h"
-#include "postprocesses/render_post_process_fxaa.h"
-#include "postprocesses/render_post_process_motion_blur.h"
-#include "postprocesses/render_post_process_taa.h"
-#include "postprocesses/render_post_process_upscale.h"
+#include "postprocesses/render_post_process_bloom_node.h"
+#include "postprocesses/render_post_process_blur_node.h"
+#include "postprocesses/render_post_process_combined_node.h"
+#include "postprocesses/render_post_process_dof_node.h"
+#include "postprocesses/render_post_process_flare_node.h"
+#include "postprocesses/render_post_process_fxaa_node.h"
+#include "postprocesses/render_post_process_motion_blur_node.h"
+#include "postprocesses/render_post_process_taa_node.h"
+#include "postprocesses/render_post_process_upscale_node.h"
 #include "util/log.h"
 
 // shaders
@@ -67,13 +67,11 @@ constexpr uint32_t GL_LAYER_CANNOT_OPT_FLAGS = PostProcessConfiguration::ENABLE_
 
 constexpr string_view INPUT_COLOR = "color";
 constexpr string_view INPUT_DEPTH = "depth";
-constexpr string_view INPUT_VELOCITY = "velocity";
+constexpr string_view INPUT_VELOCITY = "velocity_normal";
 constexpr string_view INPUT_HISTORY = "history";
 constexpr string_view INPUT_HISTORY_NEXT = "history_next";
 
 constexpr string_view COPY_SHADER_NAME = "rendershaders://shader/fullscreen_copy.shader";
-
-const bool ENABLE_UPSCALER = false;
 
 RenderPass CreateRenderPass(const IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandle input)
 {
@@ -151,36 +149,31 @@ void RenderNodePostProcessUtil::Init(
     // call post process interface inits before descriptor set allocation
     {
         if (ppLensFlareInterface_.postProcessNode) {
-            ppLensFlareInterface_.postProcessNode->Init(ppLensFlareInterface_.postProcess, *renderNodeContextMgr_);
+            ppLensFlareInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
-        if (ENABLE_UPSCALER) {
-            if (ppRenderUpscaleInterface_.postProcessNode) {
-                ppRenderUpscaleInterface_.postProcessNode->Init(
-                    ppRenderUpscaleInterface_.postProcess, *renderNodeContextMgr_);
-            }
+        if (ppRenderUpscaleInterface_.postProcessNode) {
+            ppRenderUpscaleInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
         if (ppRenderBlurInterface_.postProcessNode) {
-            ppRenderBlurInterface_.postProcessNode->Init(ppRenderBlurInterface_.postProcess, *renderNodeContextMgr_);
+            ppRenderBlurInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
         if (ppRenderTaaInterface_.postProcessNode) {
-            ppRenderTaaInterface_.postProcessNode->Init(ppRenderTaaInterface_.postProcess, *renderNodeContextMgr_);
+            ppRenderTaaInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
         if (ppRenderFxaaInterface_.postProcessNode) {
-            ppRenderFxaaInterface_.postProcessNode->Init(ppRenderFxaaInterface_.postProcess, *renderNodeContextMgr_);
+            ppRenderFxaaInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
         if (ppRenderDofInterface_.postProcessNode) {
-            ppRenderDofInterface_.postProcessNode->Init(ppRenderDofInterface_.postProcess, *renderNodeContextMgr_);
+            ppRenderDofInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
         if (ppRenderMotionBlurInterface_.postProcessNode) {
-            ppRenderMotionBlurInterface_.postProcessNode->Init(
-                ppRenderMotionBlurInterface_.postProcess, *renderNodeContextMgr_);
+            ppRenderMotionBlurInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
         if (ppRenderBloomInterface_.postProcessNode) {
-            ppRenderBloomInterface_.postProcessNode->Init(ppRenderBloomInterface_.postProcess, *renderNodeContextMgr_);
+            ppRenderBloomInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
         if (ppRenderCombinedInterface_.postProcessNode) {
-            ppRenderCombinedInterface_.postProcessNode->Init(
-                ppRenderCombinedInterface_.postProcess, *renderNodeContextMgr_);
+            ppRenderCombinedInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
         }
     }
     {
@@ -213,10 +206,10 @@ void RenderNodePostProcessUtil::Init(
         if (ppRenderBloomInterface_.postProcessNode) {
             descriptorCounts.push_back(ppRenderBloomInterface_.postProcessNode->GetRenderDescriptorCounts());
         }
-        if (ppRenderCombinedInterface_.postProcess) {
+        if (ppRenderCombinedInterface_.postProcessNode) {
             descriptorCounts.push_back(ppRenderCombinedInterface_.postProcessNode->GetRenderDescriptorCounts());
         }
-        if (ppRenderUpscaleInterface_.postProcess && ENABLE_UPSCALER) {
+        if (ppRenderUpscaleInterface_.postProcessNode) {
             descriptorCounts.push_back(ppRenderUpscaleInterface_.postProcessNode->GetRenderDescriptorCounts());
         }
         renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(descriptorCounts);
@@ -255,7 +248,6 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const GpuImageDesc inputDesc = gpuResourceMgr.GetImageDescriptor(images_.input.handle);
     const GpuImageDesc outputDesc = gpuResourceMgr.GetImageDescriptor(images_.output.handle);
-    outputSize_ = { outputDesc.width, outputDesc.height };
 #if (RENDER_VALIDATION_ENABLED == 1)
     if ((ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_TAA_BIT) &&
         (!validInputsForTaa_)) {
@@ -279,6 +271,9 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
     ProcessPostProcessConfiguration();
 
     // post process
+    const bool upscaleEnabled =
+        (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_UPSCALE_BIT) &&
+        ppConfig_.upscaleConfiguration.ratio != 1.0f;
     const bool fxaaEnabled =
         ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_FXAA_BIT;
     const bool motionBlurEnabled =
@@ -289,16 +284,12 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
         (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_DOF_BIT);
 
     ti_.idx = 0;
-    const bool basicImagesNeeded = fxaaEnabled || motionBlurEnabled || dofEnabled;
-    const bool mipImageNeeded = dofEnabled;
-    const auto nearMips = static_cast<uint32_t>(Math::ceilToInt(ppConfig_.dofConfiguration.nearBlur));
-    const auto farMips = static_cast<uint32_t>(Math::ceilToInt(ppConfig_.dofConfiguration.farBlur));
-    const bool mipCountChanged = (nearMips != ti_.mipCount[0U]) || (farMips != ti_.mipCount[1U]);
-    const bool sizeChanged = (ti_.targetSize.x != static_cast<float>(outputSize_.x)) ||
-                             (ti_.targetSize.y != static_cast<float>(outputSize_.y));
+    const bool basicImagesNeeded = upscaleEnabled || fxaaEnabled || motionBlurEnabled || dofEnabled;
+    const bool sizeChanged = (outputDesc.width != outputSize_.x) || (outputDesc.height != outputSize_.y);
     if (sizeChanged) {
-        ti_.targetSize.x = Math::max(1.0f, static_cast<float>(outputSize_.x));
-        ti_.targetSize.y = Math::max(1.0f, static_cast<float>(outputSize_.y));
+        outputSize_ = { Math::max(1U, outputDesc.width), Math::max(1U, outputDesc.height) };
+        ti_.targetSize.x = static_cast<float>(outputSize_.x);
+        ti_.targetSize.y = static_cast<float>(outputSize_.y);
         ti_.targetSize.z = 1.f / ti_.targetSize.x;
         ti_.targetSize.w = 1.f / ti_.targetSize.y;
     }
@@ -309,6 +300,12 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
                 outputSize_.y);
 #endif
             GpuImageDesc tmpDesc = outputDesc;
+            if (upscaleEnabled) {
+                // make sure the upscaler outputs the correct format for bloom and tonemapping
+                tmpDesc = inputDesc;
+                tmpDesc.width = outputDesc.width;
+                tmpDesc.height = outputDesc.height;
+            }
             FillTmpImageDesc(tmpDesc);
             ti_.images[0U] = gpuResourceMgr.Create(ti_.images[0U], tmpDesc);
             ti_.images[1U] = gpuResourceMgr.Create(ti_.images[1U], tmpDesc);
@@ -318,31 +315,9 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
         ti_.images[0U] = {};
         ti_.images[1U] = {};
     }
-    if (mipImageNeeded) {
-        if ((!ti_.mipImages[0U]) || sizeChanged || mipCountChanged) {
-#if (RENDER_VALIDATION_ENABLED == 1)
-            PLUGIN_LOG_I("RENDER_VALIDATION: post process temporary mip image re-created (size:%ux%u)", outputSize_.x,
-                outputSize_.y);
-#endif
-            GpuImageDesc tmpDesc = outputDesc;
-            FillTmpImageDesc(tmpDesc);
-            tmpDesc.mipCount = nearMips;
-            ti_.mipImages[0] = gpuResourceMgr.Create(ti_.mipImages[0U], tmpDesc);
-            tmpDesc.mipCount = farMips;
-            ti_.mipImages[1] = gpuResourceMgr.Create(ti_.mipImages[1U], tmpDesc);
-            ti_.mipImageCount = 2U;
-            ti_.mipCount[0U] = nearMips;
-            ti_.mipCount[1U] = farMips;
-        }
-    } else {
-        ti_.mipImages[0U] = {};
-        ti_.mipImages[1U] = {};
-    }
-    if ((!basicImagesNeeded) && (!mipImageNeeded)) {
-        ti_ = {};
-    }
 
-    BindableImage postTaaBloomInput = images_.input;
+    BindableImage postTaaInput = images_.input;
+
     // prepare for possible layer copy
     glOptimizedLayerCopyEnabled_ = false;
     if ((deviceBackendType_ != DeviceBackendType::VULKAN) &&
@@ -361,124 +336,129 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
             layerCopyOutput.handle = ti_.layerCopyImage.GetHandle();
             renderCopyLayer_.PreExecute();
 
-            // postTaa bloom input
-            postTaaBloomInput = layerCopyOutput;
+            postTaaInput = layerCopyOutput;
         }
     }
 
+    // post-processing chain is TAA -> upscale -> lens flare -> bloom -> combined -> fxaa -> motion blur -> dof -> blur
+
+    BindableImage postTaaOutput = postTaaInput;
     if (validInputsForTaa_ &&
         (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_TAA_BIT)) {
-        postTaaBloomInput = images_.historyNext;
-        if (ppRenderTaaInterface_.postProcessNode && ppRenderTaaInterface_.postProcess) {
+        postTaaOutput = images_.historyNext;
+        if (ppRenderTaaInterface_.postProcessNode) {
             // copy properties to new property post process
-            RenderPostProcessTaa& pp = static_cast<RenderPostProcessTaa&>(*ppRenderTaaInterface_.postProcess);
-            pp.propertiesData.enabled = true;
-            pp.propertiesData.taaConfiguration = ppConfig_.taaConfiguration;
+            auto& ppNode = static_cast<RenderPostProcessTaaNode&>(*ppRenderTaaInterface_.postProcessNode);
+            ppNode.propertiesData.enabled = true;
+            ppNode.propertiesData.taaConfiguration = ppConfig_.taaConfiguration;
 
-            RenderPostProcessTaaNode& ppNode =
-                static_cast<RenderPostProcessTaaNode&>(*ppRenderTaaInterface_.postProcessNode);
-            ppNode.nodeInputsData.input = images_.input;
-            ppNode.nodeOutputsData.output = images_.historyNext;
+            ppNode.nodeInputsData.input = postTaaInput;
+            ppNode.nodeOutputsData.output = postTaaOutput;
             ppNode.nodeInputsData.depth = images_.depth;
             ppNode.nodeInputsData.velocity = images_.velocity;
             ppNode.nodeInputsData.history = images_.history;
-            ppNode.PreExecute();
+            ppNode.PreExecuteFrame();
         }
     }
 
-    if (ENABLE_UPSCALER) {
-        if (ppRenderUpscaleInterface_.postProcessNode && ppRenderUpscaleInterface_.postProcess) {
-            RenderPostProcessUpscale& pp =
-                static_cast<RenderPostProcessUpscale&>(*ppRenderUpscaleInterface_.postProcess);
-
-            pp.propertiesData.enabled = true;
-            pp.propertiesData.ratio = 1.0f;
-
-            RenderPostProcessUpscaleNode& ppNode =
-                static_cast<RenderPostProcessUpscaleNode&>(*ppRenderUpscaleInterface_.postProcessNode);
-
-            ppNode.nodeInputsData.input = postTaaBloomInput;
-            ppNode.nodeInputsData.depth = images_.depth;
-            ppNode.nodeInputsData.velocity = images_.velocity;
-            ppNode.PreExecute();
-        }
-    }
-    // NOTE: separate flare with new post process interface
-    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_LENS_FLARE_BIT) {
-        if (ppLensFlareInterface_.postProcessNode && ppLensFlareInterface_.postProcess) {
-            // copy properties to new property post process
-            RenderPostProcessFlare& pp = static_cast<RenderPostProcessFlare&>(*ppLensFlareInterface_.postProcess);
-            pp.propertiesData.enabled = true;
-            pp.propertiesData.flarePos = ppConfig_.lensFlareConfiguration.flarePosition;
-            pp.propertiesData.intensity = ppConfig_.lensFlareConfiguration.intensity;
-
-            RenderPostProcessFlareNode& ppNode =
-                static_cast<RenderPostProcessFlareNode&>(*ppLensFlareInterface_.postProcessNode);
-            ppNode.nodeInputsData.input = postTaaBloomInput;
-            ppNode.PreExecute();
-        }
-    }
-
-    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT) {
-        if (ppRenderBloomInterface_.postProcessNode && ppRenderBloomInterface_.postProcess) {
-            // copy properties to new property post process
-            RenderPostProcessBloom& pp = static_cast<RenderPostProcessBloom&>(*ppRenderBloomInterface_.postProcess);
-            pp.propertiesData.enabled = true;
-            pp.propertiesData.bloomConfiguration = ppConfig_.bloomConfiguration;
-
-            RenderPostProcessBloomNode& ppNode =
-                static_cast<RenderPostProcessBloomNode&>(*ppRenderBloomInterface_.postProcessNode);
-            ppNode.nodeInputsData.input = postTaaBloomInput;
-            ppNode.PreExecute();
-        }
-    }
-
-    // needs to evaluate what is the final effect, where we will use the final target
-    // the final target (output) might be a swapchain which cannot be sampled
     framePostProcessInOut_.clear();
-    // after bloom or TAA
-    BindableImage input = postTaaBloomInput;
+    BindableImage currentInput = postTaaOutput;
     const bool postProcessNeeded = (ppConfig_.enableFlags != 0);
-    const bool sameInputOutput = (images_.input.handle == images_.output.handle);
-    // combine
+    const bool sameInputOutput = (currentInput.handle == images_.output.handle);
+
+    if (upscaleEnabled) {
+        framePostProcessInOut_.push_back({ currentInput, GetIntermediateImage(currentInput.handle) });
+        currentInput = framePostProcessInOut_.back().output;
+    }
+
+    const BindableImage postUpscaleInput = currentInput;
+
     if (postProcessNeeded && (!sameInputOutput)) {
-        const BindableImage output =
-            (basicImagesNeeded || mipImageNeeded) ? GetIntermediateImage(input.handle) : images_.output;
-        framePostProcessInOut_.push_back({ input, output });
-        input = framePostProcessInOut_.back().output;
+        const BindableImage output = (fxaaEnabled || motionBlurEnabled || dofEnabled)
+                                         ? GetIntermediateImage(currentInput.handle)
+                                         : images_.output;
+        framePostProcessInOut_.push_back({ currentInput, output });
+        currentInput = framePostProcessInOut_.back().output;
     }
+
     if (fxaaEnabled) {
-        framePostProcessInOut_.push_back({ input, GetIntermediateImage(input.handle) });
-        input = framePostProcessInOut_.back().output;
+        framePostProcessInOut_.push_back({ currentInput, GetIntermediateImage(currentInput.handle) });
+        currentInput = framePostProcessInOut_.back().output;
     }
+
     if (motionBlurEnabled) {
-        framePostProcessInOut_.push_back({ input, GetIntermediateImage(input.handle) });
-        input = framePostProcessInOut_.back().output;
+        framePostProcessInOut_.push_back({ currentInput, GetIntermediateImage(currentInput.handle) });
+        currentInput = framePostProcessInOut_.back().output;
     }
+
     if (dofEnabled) {
-        framePostProcessInOut_.push_back({ input, GetIntermediateImage(input.handle) });
-        input = framePostProcessInOut_.back().output;
+        framePostProcessInOut_.push_back({ currentInput, GetIntermediateImage(currentInput.handle) });
+        currentInput = framePostProcessInOut_.back().output;
     }
+
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLUR_BIT) {
-        framePostProcessInOut_.push_back({ input, input });
-        input = framePostProcessInOut_.back().output;
+        framePostProcessInOut_.push_back({ currentInput, currentInput });
+        currentInput = framePostProcessInOut_.back().output;
     }
+
     // finalize
     if (!framePostProcessInOut_.empty()) {
         framePostProcessInOut_.back().output = images_.output;
     }
 
     uint32_t ppIdx = 0U;
-    if (postProcessNeeded && (!sameInputOutput)) {
-        if (ppRenderCombinedInterface_.postProcessNode && ppRenderCombinedInterface_.postProcess) {
-            RenderPostProcessCombined& pp =
-                static_cast<RenderPostProcessCombined&>(*ppRenderCombinedInterface_.postProcess);
-            pp.propertiesData.enabled = true;
-            pp.propertiesData.postProcessConfiguration = ppConfig_;
-            pp.propertiesData.glOptimizedLayerCopyEnabled = glOptimizedLayerCopyEnabled_;
 
-            RenderPostProcessCombinedNode& ppNode =
-                static_cast<RenderPostProcessCombinedNode&>(*ppRenderCombinedInterface_.postProcessNode);
+    if (upscaleEnabled) {
+        if (ppRenderUpscaleInterface_.postProcessNode) {
+            auto& pp = static_cast<RenderPostProcessUpscaleNode&>(*ppRenderUpscaleInterface_.postProcessNode);
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.upscaleConfiguration.ratio = ppConfig_.upscaleConfiguration.ratio;
+            pp.propertiesData.upscaleConfiguration.smoothScale = ppConfig_.upscaleConfiguration.smoothScale;
+            pp.propertiesData.upscaleConfiguration.structureSensitivity =
+                ppConfig_.upscaleConfiguration.structureSensitivity;
+            pp.propertiesData.upscaleConfiguration.edgeSharpness = ppConfig_.upscaleConfiguration.edgeSharpness;
+
+            RenderPostProcessUpscaleNode& ppNode =
+                static_cast<RenderPostProcessUpscaleNode&>(*ppRenderUpscaleInterface_.postProcessNode);
+            ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
+            ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
+            ppNode.PreExecuteFrame();
+        }
+        ppIdx++;
+    }
+
+    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_LENS_FLARE_BIT) {
+        if (ppLensFlareInterface_.postProcessNode) {
+            // copy properties to new property post process
+            auto& ppNode = static_cast<RenderPostProcessFlareNode&>(*ppLensFlareInterface_.postProcessNode);
+            ppNode.propertiesData.enabled = true;
+            ppNode.propertiesData.flarePos = ppConfig_.lensFlareConfiguration.flarePosition;
+            ppNode.propertiesData.intensity = ppConfig_.lensFlareConfiguration.intensity;
+
+            ppNode.nodeInputsData.input = postUpscaleInput;
+            ppNode.PreExecuteFrame();
+        }
+    }
+
+    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT) {
+        if (ppRenderBloomInterface_.postProcessNode) {
+            // copy properties to new property post process
+            auto& ppNode = static_cast<RenderPostProcessBloomNode&>(*ppRenderBloomInterface_.postProcessNode);
+            ppNode.propertiesData.enabled = true;
+            ppNode.propertiesData.bloomConfiguration = ppConfig_.bloomConfiguration;
+
+            ppNode.nodeInputsData.input = postUpscaleInput;
+            ppNode.PreExecuteFrame();
+        }
+    }
+
+    if (postProcessNeeded && (!sameInputOutput)) {
+        if (ppRenderCombinedInterface_.postProcessNode) {
+            auto& ppNode = static_cast<RenderPostProcessCombinedNode&>(*ppRenderCombinedInterface_.postProcessNode);
+            ppNode.propertiesData.enabled = true;
+            ppNode.propertiesData.postProcessConfiguration = ppConfig_;
+            ppNode.propertiesData.glOptimizedLayerCopyEnabled = glOptimizedLayerCopyEnabled_;
+
             ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
             ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
             ppNode.nodeInputsData.dirtMask.handle = images_.dirtMask;
@@ -489,14 +469,15 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
                                  ->GetFinalTarget();
             }
             ppNode.nodeInputsData.bloomFinalTarget.handle = bloomImage;
-            ppNode.PreExecute();
+            ppNode.PreExecuteFrame();
         }
         ppIdx++;
     }
-    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_FXAA_BIT) {
-        if (ppRenderFxaaInterface_.postProcessNode && ppRenderFxaaInterface_.postProcess) {
+
+    if (fxaaEnabled) {
+        if (ppRenderFxaaInterface_.postProcessNode) {
             // copy properties to new property post process
-            RenderPostProcessFxaa& pp = static_cast<RenderPostProcessFxaa&>(*ppRenderFxaaInterface_.postProcess);
+            auto& pp = static_cast<RenderPostProcessFxaaNode&>(*ppRenderFxaaInterface_.postProcessNode);
             pp.propertiesData.enabled = true;
             pp.propertiesData.fxaaConfiguration = ppConfig_.fxaaConfiguration;
             pp.propertiesData.targetSize = ti_.targetSize;
@@ -505,71 +486,58 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
                 static_cast<RenderPostProcessFxaaNode&>(*ppRenderFxaaInterface_.postProcessNode);
             ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
             ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
-            ppNode.PreExecute();
+            ppNode.PreExecuteFrame();
         }
         ppIdx++;
     }
+
     if (motionBlurEnabled) {
-        if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_MOTION_BLUR_BIT) {
-            if (ppRenderMotionBlurInterface_.postProcessNode && ppRenderMotionBlurInterface_.postProcess) {
-                RenderPostProcessMotionBlur& pp =
-                    static_cast<RenderPostProcessMotionBlur&>(*ppRenderMotionBlurInterface_.postProcess);
-                pp.propertiesData.enabled = true;
-                pp.propertiesData.motionBlurConfiguration = ppConfig_.motionBlurConfiguration;
-                pp.propertiesData.size = outputSize_;
+        if (ppRenderMotionBlurInterface_.postProcessNode) {
+            auto& pp = static_cast<RenderPostProcessMotionBlurNode&>(*ppRenderMotionBlurInterface_.postProcessNode);
+            pp.propertiesData.enabled = true;
+            pp.propertiesData.motionBlurConfiguration = ppConfig_.motionBlurConfiguration;
+            pp.propertiesData.size = outputSize_;
 
-                RenderPostProcessMotionBlurNode& ppNode =
-                    static_cast<RenderPostProcessMotionBlurNode&>(*ppRenderMotionBlurInterface_.postProcessNode);
-                ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
-                ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
-                ppNode.nodeInputsData.velocity = images_.velocity;
-                ppNode.nodeInputsData.depth = images_.depth;
+            RenderPostProcessMotionBlurNode& ppNode =
+                static_cast<RenderPostProcessMotionBlurNode&>(*ppRenderMotionBlurInterface_.postProcessNode);
+            ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
+            ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
+            ppNode.nodeInputsData.velocity = images_.velocity;
+            ppNode.nodeInputsData.depth = images_.depth;
 
-                ppNode.PreExecute();
-            }
+            ppNode.PreExecuteFrame();
         }
         ppIdx++;
     }
 
     if (dofEnabled) {
-        auto nearMip = GetMipImage(input.handle);
-        auto farMip = GetMipImage(nearMip.handle);
-        if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_DOF_BIT) {
-            if (ppRenderDofInterface_.postProcessNode && ppRenderDofInterface_.postProcess) {
-                // copy properties to new property post process
-                RenderPostProcessDof& pp = static_cast<RenderPostProcessDof&>(*ppRenderDofInterface_.postProcess);
-                pp.propertiesData.enabled = true;
-                pp.propertiesData.dofConfiguration = ppConfig_.dofConfiguration;
-                pp.propertiesData.mipImages[0] = ti_.mipImages[0];
-                pp.propertiesData.mipImages[1] = ti_.mipImages[1];
-                pp.propertiesData.nearMip = nearMip;
-                pp.propertiesData.farMip = farMip;
+        if (ppRenderDofInterface_.postProcessNode) {
+            // copy properties to new property post process
+            auto& ppNode = static_cast<RenderPostProcessDofNode&>(*ppRenderDofInterface_.postProcessNode);
+            ppNode.propertiesData.enabled = true;
+            ppNode.propertiesData.dofConfiguration = ppConfig_.dofConfiguration;
 
-                RenderPostProcessDofNode& ppNode =
-                    static_cast<RenderPostProcessDofNode&>(*ppRenderDofInterface_.postProcessNode);
-                ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
-                ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
-                ppNode.nodeInputsData.depth = images_.depth;
+            ppNode.nodeInputsData.input = framePostProcessInOut_[ppIdx].input;
+            ppNode.nodeOutputsData.output = framePostProcessInOut_[ppIdx].output;
+            ppNode.nodeInputsData.depth = images_.depth;
 
-                ppNode.PreExecute();
-            }
+            ppNode.PreExecuteFrame();
         }
         ppIdx++;
     }
 
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLUR_BIT) {
-        const auto& inOut = framePostProcessInOut_[ppIdx++];
-        if (ppRenderBlurInterface_.postProcessNode && ppRenderBlurInterface_.postProcess) {
+        const auto& inOut = framePostProcessInOut_[ppIdx];
+        if (ppRenderBlurInterface_.postProcessNode) {
             // copy properties to new property post process
-            RenderPostProcessBlur& pp = static_cast<RenderPostProcessBlur&>(*ppRenderBlurInterface_.postProcess);
-            pp.propertiesData.enabled = true;
-            pp.propertiesData.blurConfiguration = ppConfig_.blurConfiguration;
+            auto& ppNode = static_cast<RenderPostProcessBlurNode&>(*ppRenderBlurInterface_.postProcessNode);
+            ppNode.propertiesData.enabled = true;
+            ppNode.propertiesData.blurConfiguration = ppConfig_.blurConfiguration;
 
-            RenderPostProcessBlurNode& ppNode =
-                static_cast<RenderPostProcessBlurNode&>(*ppRenderBlurInterface_.postProcessNode);
             ppNode.nodeInputsData.input = inOut.output;
-            ppNode.PreExecute();
+            ppNode.PreExecuteFrame();
         }
+        ppIdx++;
     }
 
     PLUGIN_ASSERT(ppIdx == framePostProcessInOut_.size());
@@ -591,6 +559,7 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
     RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderPostProcess", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
 
     // prepare for possible layer copy if not using optimized paths for layers
+    BindableImage currentInput = images_.input;
     if ((deviceBackendType_ != DeviceBackendType::VULKAN) &&
         (images_.input.layer != PipelineStateConstants::GPU_IMAGE_ALL_LAYERS) && (!glOptimizedLayerCopyEnabled_)) {
         BindableImage layerCopyOutput;
@@ -600,37 +569,21 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
         layerCopyInfo.output = layerCopyOutput;
         layerCopyInfo.copyType = IRenderNodeCopyUtil::CopyType::LAYER_COPY;
         renderCopyLayer_.Execute(cmdList, layerCopyInfo);
+        currentInput = layerCopyOutput;
     }
 
     if (validInputsForTaa_ &&
         (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_TAA_BIT)) {
-        if (ppRenderTaaInterface_.postProcessNode && ppRenderTaaInterface_.postProcess) {
+        if (ppRenderTaaInterface_.postProcessNode) {
             // inputs set in pre-execute
-            ppRenderTaaInterface_.postProcessNode->Execute(cmdList);
+            ppRenderTaaInterface_.postProcessNode->ExecuteFrame(cmdList);
+            currentInput = images_.historyNext;
         }
     }
 
-    if (validInputsForUpscale_ && ENABLE_UPSCALER) {
-        ppRenderUpscaleInterface_.postProcessNode->Execute(cmdList);
-    }
-
-    // NOTE: separate flare with new post process interface
-    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_LENS_FLARE_BIT) {
-        if (ppLensFlareInterface_.postProcessNode) {
-            // inputs set in pre-execute
-            ppLensFlareInterface_.postProcessNode->Execute(cmdList);
-        }
-    }
-
-    // ppConfig_ is already up-to-date from PreExecuteFrame
-    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT) {
-        if (ppRenderBloomInterface_.postProcessNode && ppRenderBloomInterface_.postProcess) {
-            // inputs set in pre-execute
-            ppRenderBloomInterface_.postProcessNode->Execute(cmdList);
-        }
-    }
-
-    // post process
+    const bool upscaleEnabled =
+        (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_UPSCALE_BIT) &&
+        ppConfig_.upscaleConfiguration.ratio != 1.0f;
     const bool fxaaEnabled =
         ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_FXAA_BIT;
     const bool motionBlurEnabled =
@@ -640,9 +593,9 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
         validInputsForDof_ &&
         (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_DOF_BIT);
 
-    // after bloom or TAA
     const bool postProcessNeeded = (ppConfig_.enableFlags != 0);
-    const bool sameInputOutput = (images_.input.handle == images_.output.handle);
+    const bool sameInputOutput = (currentInput.handle == images_.output.handle);
+    uint32_t ppIdx = 0U;
 
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (postProcessNeeded && sameInputOutput) {
@@ -651,40 +604,62 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
             renderNodeContextMgr_->GetName().data());
     }
 #endif
-    uint32_t ppIdx = 0U;
+
+    if (upscaleEnabled) {
+        if (ppRenderUpscaleInterface_.postProcessNode) {
+            ppRenderUpscaleInterface_.postProcessNode->ExecuteFrame(cmdList);
+        }
+        ppIdx++;
+    }
+
+    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_LENS_FLARE_BIT) {
+        if (ppLensFlareInterface_.postProcessNode) {
+            // inputs set in pre-execute
+            ppLensFlareInterface_.postProcessNode->ExecuteFrame(cmdList);
+        }
+    }
+
+    if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT) {
+        if (ppRenderBloomInterface_.postProcessNode) {
+            // inputs set in pre-execute
+            ppRenderBloomInterface_.postProcessNode->ExecuteFrame(cmdList);
+        }
+    }
+
     if (postProcessNeeded && (!sameInputOutput)) {
-        if (ppRenderCombinedInterface_.postProcessNode && ppRenderCombinedInterface_.postProcess) {
-            ppRenderCombinedInterface_.postProcessNode->Execute(cmdList);
+        if (ppRenderCombinedInterface_.postProcessNode) {
+            ppRenderCombinedInterface_.postProcessNode->ExecuteFrame(cmdList);
             ppIdx++;
         }
     }
 
     if (fxaaEnabled) {
-        if (ppRenderFxaaInterface_.postProcessNode && ppRenderFxaaInterface_.postProcess) {
-            ppRenderFxaaInterface_.postProcessNode->Execute(cmdList);
-            ppIdx++;
+        if (ppRenderFxaaInterface_.postProcessNode) {
+            ppRenderFxaaInterface_.postProcessNode->ExecuteFrame(cmdList);
         }
+        ppIdx++;
     }
 
     if (motionBlurEnabled) {
-        ppIdx++;
-        if (ppRenderMotionBlurInterface_.postProcessNode && ppRenderMotionBlurInterface_.postProcess) {
-            ppRenderMotionBlurInterface_.postProcessNode->Execute(cmdList);
+        if (ppRenderMotionBlurInterface_.postProcessNode) {
+            ppRenderMotionBlurInterface_.postProcessNode->ExecuteFrame(cmdList);
         }
+        ppIdx++;
     }
+
     if (dofEnabled) {
-        ppIdx++;
-        if (ppRenderDofInterface_.postProcessNode && ppRenderDofInterface_.postProcess) {
-            ppRenderDofInterface_.postProcessNode->Execute(cmdList);
+        if (ppRenderDofInterface_.postProcessNode) {
+            ppRenderDofInterface_.postProcessNode->ExecuteFrame(cmdList);
         }
+        ppIdx++;
     }
 
     // post blur
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLUR_BIT) {
-        ppIdx++;
-        if (ppRenderBlurInterface_.postProcessNode && ppRenderBlurInterface_.postProcess) {
-            ppRenderBlurInterface_.postProcessNode->Execute(cmdList);
+        if (ppRenderBlurInterface_.postProcessNode) {
+            ppRenderBlurInterface_.postProcessNode->ExecuteFrame(cmdList);
         }
+        ppIdx++;
     }
 
     PLUGIN_ASSERT(ppIdx == framePostProcessInOut_.size());
@@ -839,6 +814,7 @@ void RenderNodePostProcessUtil::UpdateImageData()
         }
     } else {
         images_.input = postProcessInfo_.imageData.input;
+        images_.inputUpscaled = postProcessInfo_.imageData.inputUpscaled;
         images_.output = postProcessInfo_.imageData.output;
         images_.depth = postProcessInfo_.imageData.depth;
         images_.velocity = postProcessInfo_.imageData.velocity;
@@ -852,6 +828,7 @@ void RenderNodePostProcessUtil::UpdateImageData()
     bool validDepth = false;
     bool validHistory = false;
     bool validVelocity = false;
+
     if (IsValidHandle(images_.depth) && (images_.depth.handle != aimg_.white)) {
         const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
         const GpuImageDesc& desc = gpuResourceMgr.GetImageDescriptor(images_.depth.handle);
@@ -884,45 +861,33 @@ void RenderNodePostProcessUtil::UpdateImageData()
     validInputsForTaa_ = validDepth && validHistory; // TAA can be used without velocities
     validInputsForDof_ = validDepth;
     validInputsForMb_ = validVelocity;
-    validInputsForUpscale_ = validDepth && validVelocity;
 }
 
 void RenderNodePostProcessUtil::CreatePostProcessInterfaces()
 {
     auto* renderClassFactory = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassFactory>();
     if (renderClassFactory) {
-        auto CreatePostProcessInterface = [&](const auto uid, auto& pp, auto& ppNode) {
-            if (pp = CreateInstance<IRenderPostProcess>(*renderClassFactory, uid); pp) {
-                ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, pp->GetRenderPostProcessNodeUid());
-            }
+        auto CreatePostProcessInterface = [&](const auto uid, auto& ppNode) {
+            ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
         };
 
-        CreatePostProcessInterface(
-            RenderPostProcessFlare::UID, ppLensFlareInterface_.postProcess, ppLensFlareInterface_.postProcessNode);
-        if (ENABLE_UPSCALER) {
-            CreatePostProcessInterface(RenderPostProcessUpscale::UID, ppRenderUpscaleInterface_.postProcess,
-                ppRenderUpscaleInterface_.postProcessNode);
-        }
-        CreatePostProcessInterface(
-            RenderPostProcessBlur::UID, ppRenderBlurInterface_.postProcess, ppRenderBlurInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessFlareNode::UID, ppLensFlareInterface_.postProcessNode);
 
-        CreatePostProcessInterface(
-            RenderPostProcessBloom::UID, ppRenderBloomInterface_.postProcess, ppRenderBloomInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessUpscaleNode::UID, ppRenderUpscaleInterface_.postProcessNode);
 
-        CreatePostProcessInterface(
-            RenderPostProcessTaa::UID, ppRenderTaaInterface_.postProcess, ppRenderTaaInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessBlurNode::UID, ppRenderBlurInterface_.postProcessNode);
 
-        CreatePostProcessInterface(
-            RenderPostProcessFxaa::UID, ppRenderFxaaInterface_.postProcess, ppRenderFxaaInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessBloomNode::UID, ppRenderBloomInterface_.postProcessNode);
 
-        CreatePostProcessInterface(
-            RenderPostProcessDof::UID, ppRenderDofInterface_.postProcess, ppRenderDofInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessTaaNode::UID, ppRenderTaaInterface_.postProcessNode);
 
-        CreatePostProcessInterface(RenderPostProcessMotionBlur::UID, ppRenderMotionBlurInterface_.postProcess,
-            ppRenderMotionBlurInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessFxaaNode::UID, ppRenderFxaaInterface_.postProcessNode);
 
-        CreatePostProcessInterface(RenderPostProcessCombined::UID, ppRenderCombinedInterface_.postProcess,
-            ppRenderCombinedInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessDofNode::UID, ppRenderDofInterface_.postProcessNode);
+
+        CreatePostProcessInterface(RenderPostProcessMotionBlurNode::UID, ppRenderMotionBlurInterface_.postProcessNode);
+
+        CreatePostProcessInterface(RenderPostProcessCombinedNode::UID, ppRenderCombinedInterface_.postProcessNode);
     }
 }
 

@@ -21,7 +21,7 @@
 
 #include <base/containers/unordered_map.h>
 
-class SceneComponentJS : public BaseObject {
+class SceneComponentJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 200;
     static void Init(napi_env env, napi_value exports);
@@ -37,7 +37,7 @@ private:
 
     void AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& obj);
     NapiApi::StrongRef jsProps_;
-    NapiApi::WeakRef scene_;
+    NapiApi::WeakObjectRef scene_;
     BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<PropertyProxy>> proxies_;
 };
 #endif

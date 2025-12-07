@@ -16,7 +16,7 @@
 
 #include <meta/ext/serialization/serializer.h>
 
-#include "any.h"
+#include "../any.h"
 #include "dependencies.h"
 
 META_BEGIN_NAMESPACE()

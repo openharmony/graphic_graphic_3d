@@ -83,6 +83,7 @@ private:
         RENDER_NS::IDescriptorSetBinder::Ptr dmSet1Binder;
 
         // default material set 2 descriptor set
+        // NOTE: with bindless contains global descriptor set if enabled
         RENDER_NS::RenderHandleReference dmSet2;
         RENDER_NS::IDescriptorSetBinder::Ptr dmSet2Binder;
         bool dmSet2Ready { false };
@@ -119,7 +120,12 @@ private:
     MaterialHandleStruct defaultMaterialStruct_;
 
     bool rtEnabled_ { false };
+    bool bindlessEnabled_ { false };
     TlasData tlas_;
+
+    // helpers
+    BASE_NS::vector<RENDER_NS::RenderHandle> blImageHandles_;
+    BASE_NS::vector<RENDER_NS::RenderHandle> blSamplerHandles_;
 };
 CORE3D_END_NAMESPACE()
 

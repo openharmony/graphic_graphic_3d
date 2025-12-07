@@ -90,7 +90,10 @@ public:
         SourceType value {};
         auto res = any.GetValue<SourceType>(value);
         if (res) {
-            res = this->p_->SetValue(convert_.ConvertToTarget(value));
+            auto converted = convert_.ConvertToTarget(value);
+            if (auto locked = this->p_.GetLockedAccess()) {
+                res = locked->SetValue(converted);
+            }
             if (res) {
                 InternalSetValue(value);
             }
@@ -115,11 +118,13 @@ private:
         SourceType value {};
         auto res = this->any_->template GetValue<SourceType>(value);
         if (res) {
-            auto locked = this->p_.GetLockedAccess();
-            res = locked->SetValue(convert_.ConvertToTarget(value));
-            // force notification
-            if (forceNotification && res == META_NS::AnyReturn::NOTHING_TO_DO) {
-                locked->NotifyChange();
+            auto converted = convert_.ConvertToTarget(value);
+            if (auto locked = this->p_.GetLockedAccess()) {
+                res = locked->SetValue(converted);
+                // force notification
+                if (forceNotification && res == META_NS::AnyReturn::NOTHING_TO_DO) {
+                    locked->NotifyChange();
+                }
             }
         }
     }

@@ -16,6 +16,8 @@
 #ifndef SCENE_SRC_SERIALIZATION_UTIL_H
 #define SCENE_SRC_SERIALIZATION_UTIL_H
 
+#include <scene/interface/intf_external_node.h>
+
 #include <meta/api/metadata_util.h>
 
 SCENE_BEGIN_NAMESPACE()
@@ -32,14 +34,18 @@ inline BASE_NS::vector<META_NS::IProperty::ConstPtr> GetAllProperties(const META
     return res;
 }
 
-void AddObjectProperties(const META_NS::IObject& obj, META_NS::IMetadata& out);
+bool AddObjectProperties(const META_NS::IObject& obj, const BASE_NS::string& head, META_NS::IMetadata& out);
+inline bool AddObjectProperties(const META_NS::IObject& obj, META_NS::IMetadata& out)
+{
+    return AddObjectProperties(obj, "", out);
+}
+
 void AddFlatProperties(const META_NS::IMetadata& in, META_NS::IObject& parent);
 
-inline void SerCloneAllToDefaultIfSet(const META_NS::IMetadata& in, META_NS::IMetadata& out)
+inline bool SerCloneAllToDefaultIfSet(const META_NS::IMetadata& in, META_NS::IMetadata& out)
 {
-    if (auto m = interface_cast<META_NS::IObject>(&in)) {
-        AddObjectProperties(*m, out);
-    }
+    auto m = interface_cast<META_NS::IObject>(&in);
+    return m ? AddObjectProperties(*m, out) : false;
 }
 
 inline void SerCopy(const META_NS::IMetadata& in, META_NS::IMetadata& out)
@@ -73,6 +79,14 @@ inline BASE_NS::string UnescapeSerName(BASE_NS::string_view str)
         }
     }
     return res;
+}
+
+template<typename Obj>
+bool SerialiseAttachment(const Obj& obj)
+{
+    return !interface_cast<META_NS::IEvent>(obj) && !interface_cast<META_NS::IFunction>(obj) &&
+           !interface_cast<META_NS::IProperty>(obj) && !interface_cast<IComponent>(obj) &&
+           !interface_cast<IExternalNode>(obj);
 }
 
 SCENE_END_NAMESPACE()

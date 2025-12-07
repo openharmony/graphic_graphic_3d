@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SPIRV_OPT_EXTENSIONS_H_
-#define SPIRV_OPT_EXTENSIONS_H_
+#ifndef SPIRV_OPT_EXTENSIONS_H
+#define SPIRV_OPT_EXTENSIONS_H
 
 #include <optional>
 #include <spirv-tools/optimizer.hpp>

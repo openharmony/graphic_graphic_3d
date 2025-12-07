@@ -31,7 +31,7 @@
 
 #include "core/plugin/intf_class_factory.h"
 #include "datastore/render_data_store_pod.h"
-#include "postprocesses/render_post_process_bloom.h"
+#include "postprocesses/render_post_process_bloom_node.h"
 #include "util/log.h"
 
 // shaders
@@ -66,11 +66,10 @@ void RenderNodeBloom::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
     }
 
     if (ppRenderBloomInterface_.postProcessNode) {
-        ppRenderBloomInterface_.postProcessNode->Init(ppRenderBloomInterface_.postProcess, *renderNodeContextMgr_);
+        ppRenderBloomInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
+        renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(
+            ppRenderBloomInterface_.postProcessNode->GetRenderDescriptorCounts());
     }
-
-    renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(
-        ppRenderBloomInterface_.postProcessNode->GetRenderDescriptorCounts());
 }
 
 void RenderNodeBloom::PreExecuteFrame()
@@ -85,16 +84,14 @@ void RenderNodeBloom::PreExecuteFrame()
     }
     ProcessPostProcessConfiguration(renderNodeContextMgr_->GetRenderDataStoreManager());
 
-    RenderPostProcessBloom& pp = static_cast<RenderPostProcessBloom&>(*ppRenderBloomInterface_.postProcess);
+    auto& pp = static_cast<RenderPostProcessBloomNode&>(*ppRenderBloomInterface_.postProcessNode);
     pp.propertiesData.bloomConfiguration = ppConfig_.bloomConfiguration;
     pp.propertiesData.enabled = ((ppConfig_.enableFlags & PostProcessConfiguration::ENABLE_BLOOM_BIT) > 0);
 
-    RenderPostProcessBloomNode& ppNode =
-        static_cast<RenderPostProcessBloomNode&>(*ppRenderBloomInterface_.postProcessNode);
-    ppNode.nodeInputsData.input = GetBindableImage(inputResources_.customInputImages[0]);
-    ppNode.nodeOutputsData.output = GetBindableImage(inputResources_.customOutputImages[0]);
+    pp.nodeInputsData.input = GetBindableImage(inputResources_.customInputImages[0]);
+    pp.nodeOutputsData.output = GetBindableImage(inputResources_.customOutputImages[0]);
 
-    ppRenderBloomInterface_.postProcessNode->PreExecute();
+    ppRenderBloomInterface_.postProcessNode->PreExecuteFrame();
 }
 
 void RenderNodeBloom::ExecuteFrame(IRenderCommandList& cmdList)
@@ -103,23 +100,20 @@ void RenderNodeBloom::ExecuteFrame(IRenderCommandList& cmdList)
         return;
     }
 
-    ppRenderBloomInterface_.postProcessNode->Execute(cmdList);
+    ppRenderBloomInterface_.postProcessNode->ExecuteFrame(cmdList);
 }
 
 void RenderNodeBloom::CreatePostProcessInterface()
 {
     auto* renderClassFactory = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassFactory>();
     if (renderClassFactory) {
-        auto CreatePostProcessInterface = [&](const auto uid, auto& pp, auto& ppNode) {
-            if (pp = CreateInstance<IRenderPostProcess>(*renderClassFactory, uid); pp) {
-                ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, pp->GetRenderPostProcessNodeUid());
-            }
+        auto CreatePostProcessInterface = [&](const auto uid, auto& ppNode) {
+            ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
         };
 
-        CreatePostProcessInterface(
-            RenderPostProcessBloom::UID, ppRenderBloomInterface_.postProcess, ppRenderBloomInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessBloomNode::UID, ppRenderBloomInterface_.postProcessNode);
     }
-    if (!(ppRenderBloomInterface_.postProcess && ppRenderBloomInterface_.postProcess)) {
+    if (!(ppRenderBloomInterface_.postProcessNode)) {
         valid_ = false;
     }
 }

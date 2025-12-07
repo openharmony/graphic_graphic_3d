@@ -99,6 +99,7 @@ private:
 
     RenderHandleReference defaultStagingRng_;
     RenderHandleReference defaultEndFrameStagingRng_;
+    RenderHandleReference defaultQueueTransfer_;
     // deferred creation (only if using NodeGraphBackBufferConfiguration BackBufferType::GPU_IMAGE_BUFFER_COPY)
     // NOTE: should be deprecated
     RenderHandleReference defaultBackBufferGpuBufferRng_;

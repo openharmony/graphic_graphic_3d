@@ -16,12 +16,12 @@
 #ifndef SCENE_SRC_RESOURCE_SHADER_H
 #define SCENE_SRC_RESOURCE_SHADER_H
 
+#include <optional>
 #include <scene/ext/intf_ecs_object.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/intf_render_resource.h>
 #include <scene/interface/intf_shader.h>
 #include <scene/interface/resource/types.h>
-#include <shared_mutex>
 
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
@@ -39,15 +39,16 @@ public:
 
     RENDER_NS::GraphicsState CreateGraphicsState(const IRenderContext::Ptr& context,
         RENDER_NS::RenderHandleReference state, BASE_NS::string_view defaultRenderSlot);
-    bool UpdateGraphicsState(
-        const IRenderContext::Ptr &context, const RENDER_NS::GraphicsState &gs, BASE_NS::string_view renderSlot);
+    bool UpdateGraphicsState( const IRenderContext::Ptr &context, const RENDER_NS::GraphicsState &gs,
+         bool blend, BASE_NS::string_view renderSlot);
     RENDER_NS::GraphicsState CreateNewGraphicsState(const IRenderContext::Ptr& context, bool blend);
     RENDER_NS::GraphicsState GetGraphicsState(const IRenderContext::Ptr& context) const;
 
 protected:
     BASE_NS::string path_;
-    BASE_NS::string variant_;
     RENDER_NS::RenderHandleReference graphicsState_;
+    std::optional<IShaderState::ColorBlendOptions> colorOptions_;
+    std::optional<IShaderState::DepthStencilOptions> depthOptions_;
 };
 
 class Shader : public META_NS::IntroduceInterfaces<GraphicsState, IShader, IShaderState, META_NS::INamed,
@@ -66,6 +67,9 @@ public:
     META_IMPLEMENT_PROPERTY(SCENE_NS::PolygonMode, PolygonMode)
     META_IMPLEMENT_PROPERTY(bool, Blend)
 
+    void SetShaderStateOverride(const ColorBlendOptions* colorOptions, const DepthStencilOptions* depthOptions,
+        const RasterizationOptions* rasterizationOptions) override;
+
     void OnPropertyChanged(const META_NS::IProperty&) override;
 
     BASE_NS::string GetName() const override;
@@ -76,7 +80,7 @@ public:
 
     bool SetRenderHandle(RENDER_NS::RenderHandleReference handle) override;
     bool SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::RenderHandleReference graphics) override;
-    bool setShaderStateInProgress_ = false;
+    bool GetBlend() const;
 };
 
 SCENE_END_NAMESPACE()

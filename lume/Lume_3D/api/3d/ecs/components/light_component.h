@@ -28,7 +28,17 @@ CORE3D_BEGIN_NAMESPACE()
 
 BEGIN_COMPONENT(ILightComponentManager, LightComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    enum class Type : uint8_t { DIRECTIONAL = 0, POINT = 1, SPOT = 2 };
+    enum class Type : uint8_t { DIRECTIONAL = 0, POINT = 1, SPOT = 2, RECT = 3 };
+
+    /** Rect area light */
+    struct RectLight {
+        /** Width of the light */
+        float width { 1.0f };
+        /** Height of the light */
+        float height { 1.0f };
+        /** Is the light two-sided */
+        bool twoSided { false };
+    };
 #endif
 
     /** Type of the light.
@@ -90,6 +100,10 @@ BEGIN_COMPONENT(ILightComponentManager, LightComponent)
      * shadow camera renders objects from all layers. */
     DEFINE_BITFIELD_PROPERTY(uint64_t, shadowLayerMask, "Shadow Layer Mask", PropertyFlags::IS_BITFIELD,
         VALUE(LayerConstants::ALL_LAYER_MASK), LayerFlagBits)
+
+    /** Rect area light parameters
+     */
+    DEFINE_PROPERTY(RectLight, rectLight, "Area light parameters", 0, )
 
 END_COMPONENT(ILightComponentManager, LightComponent, "8047c9cd-4e83-45b3-91d9-dd32d643f0c8")
 #if !defined(IMPLEMENT_MANAGER)

@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <base/math/vector.h>
+#include <core/property/property_types.h>
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
@@ -53,11 +54,11 @@ struct NodeGraphBackBufferConfiguration {
     BackBufferType backBufferType = { BackBufferType::UNDEFINED };
 
     /** Handle to the final target.
-     * If backbufferType is SWAPCHAIN this handle is not used.
-     * If backbufferType is GPU_IMAGE this must point to a valid GpuImage.
-     * If backbufferType is GPU_IMAGE_BUFFER_COPY this must point to a valid (linear) GpuImage. */
+     * If backBufferType is SWAPCHAIN this handle is not used.
+     * If backBufferType is GPU_IMAGE this must point to a valid GpuImage.
+     * If backBufferType is GPU_IMAGE_BUFFER_COPY this must point to a valid (linear) GpuImage. */
     RenderHandle backBufferHandle;
-    /* If backbufferType is GPU_IMAGE_BUFFER_COPY this must point to a valid GpuBuffer where image data is copied. */
+    /* If backBufferType is GPU_IMAGE_BUFFER_COPY this must point to a valid GpuBuffer where image data is copied. */
     RenderHandle gpuBufferHandle;
 
     /** Present */
@@ -83,7 +84,7 @@ struct PostProcessConstants {
         RENDER_COLOR_FRINGE_BIT = 4,
 
         /** Render empty */
-        RENDER_EMPTY_5 = 5,
+        RENDER_UPSCALER_BIT = 5,
         /** Render empty */
         RENDER_EMPTY_6 = 6,
         /** Render empty */
@@ -101,7 +102,7 @@ struct PostProcessConstants {
         RENDER_DOF = 12,
         /** Render motion blur */
         RENDER_MOTION_BLUR = 13,
-        /** Built-in meaningfull post process count */
+        /** Built-in meaningful post process count */
         POST_PROCESS_COUNT = 14,
     };
 
@@ -112,7 +113,7 @@ struct PostProcessConstants {
         "render_dither",
         "render_color_conversion",
         "render_color_fringe",
-        "",
+        "render_upscaler_bit",
         "",
         "",
         "render_blur",
@@ -198,7 +199,7 @@ struct VignetteConfiguration {
 
 /** Color fringe post process configuration. */
 struct ColorFringeConfiguration {
-    /** Coefficient */
+    /** Deprecated: use distanceCoefficient */
     float coefficient { 1.0f };
     /** Distance coefficient */
     float distanceCoefficient { 2.0f };
@@ -249,7 +250,9 @@ struct BlurConfiguration {
     BlurQualityType blurQualityType { BlurQualityType::QUALITY_TYPE_NORMAL };
     /** Blur desired filter size in pixels. Might not be exact. */
     float filterSize { 1.0f };
-    /** Blur quality max mip. If mips available. With this one could only blur to first (few) mips */
+    /** Limit the number of mip levels to blur, if mips are available. With this one could only blur to first (few)
+     * mips. Value - 1 mip levels will be blurred i.e. 2 = mip 0 is the original, mip 1 is blurred.
+     */
     uint32_t maxMipLevel { ~0u };
 };
 
@@ -311,7 +314,7 @@ struct TaaConfiguration {
     /** Overall edge quality. */
     Quality quality { Quality::MEDIUM };
     /** Whether to use bicubic sampling. */
-    bool useBicubic { true };
+    bool useBicubic { false };
     /** Whether to use mean-variance clipping of the history color. */
     bool useVarianceClipping { true };
     /** Whether to use yCoCG filtering. */
@@ -378,6 +381,19 @@ struct LensFlareConfiguration {
     BASE_NS::Math::Vec3 flarePosition { 0.0f, 0.0f, 0.0f };
 };
 
+/** Upscale configuration.
+ */
+struct UpscaleConfiguration {
+    /** Upscaling ratio. */
+    float ratio { 1.0f };
+    /** Gradient smoothing scale. */
+    float smoothScale { 1.0f };
+    /** Upscaling sensitivity to structure changes. */
+    float structureSensitivity { 1.0f };
+    /** Upscaled edge sharpness. */
+    float edgeSharpness { 2.0f };
+};
+
 /** Post process configuration POD. */
 struct PostProcessConfiguration {
     /** Post process enable flags. Used in shader as well, must match render_post_process_structs_common.h */
@@ -392,6 +408,8 @@ struct PostProcessConfiguration {
         ENABLE_COLOR_CONVERSION_BIT = (1 << 3),
         /** Enable fringe */
         ENABLE_COLOR_FRINGE_BIT = (1 << 4),
+        /** Enable upscale */
+        ENABLE_UPSCALE_BIT = (1 << 5),
 
         /** Enable blur */
         ENABLE_BLUR_BIT = (1 << 8),
@@ -417,6 +435,7 @@ struct PostProcessConfiguration {
         INDEX_DITHER = 2,
         INDEX_COLOR_CONVERSION = 3,
         INDEX_COLOR_FRINGE = 4,
+        INDEX_UPSCALE = 5,
 
         INDEX_BLUR = 8,
         INDEX_BLOOM = 9,
@@ -462,6 +481,9 @@ struct PostProcessConfiguration {
     /** Lens flare configuration */
     LensFlareConfiguration lensFlareConfiguration;
 
+    /** Upscale configuration */
+    UpscaleConfiguration upscaleConfiguration;
+
     /** User post process factors which are automatically mapped and can be used easily anywhere in the pipeline */
     BASE_NS::Math::Vec4 userFactors[PostProcessConstants::USER_GLOBAL_FACTOR_COUNT];
 };
@@ -470,7 +492,7 @@ struct PostProcessConfiguration {
 struct RenderPostProcessConfiguration {
     /* Single uvec4 for flags .x has post process specialization flags */
     BASE_NS::Math::UVec4 flags { 0, 0, 0, 0 };
-    // .x = delta time (ms), .y = tick delta time (ms), .z = tick total time (s), .w = frame index (asuint)
+    // .x = delta time (ms), .y = tick delta time (ms), .z = tick total time (s), .w = frame index (as uint)
     BASE_NS::Math::Vec4 renderTimings { 0.0f, 0.0f, 0.0f, 0.0f };
     /* All built-in post process factors */
     BASE_NS::Math::Vec4 factors[PostProcessConstants::GLOBAL_FACTOR_COUNT];
@@ -499,4 +521,36 @@ struct ShaderSpecializationRenderPod {
 /** @} */
 RENDER_END_NAMESPACE()
 
+CORE_BEGIN_NAMESPACE()
+DECLARE_PROPERTY_TYPE(RENDER_NS::PostProcessConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::TonemapConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::VignetteConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::DitherConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::ColorConversionConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::ColorFringeConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::BloomConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::BlurConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::FxaaConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::TaaConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::DofConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::MotionBlurConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::LensFlareConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::UpscaleConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::PostProcessConfiguration::PostProcessEnableFlagBits);
+
+DECLARE_PROPERTY_TYPE(RENDER_NS::TonemapConfiguration::TonemapType);
+DECLARE_PROPERTY_TYPE(RENDER_NS::BloomConfiguration::BloomQualityType);
+DECLARE_PROPERTY_TYPE(RENDER_NS::BloomConfiguration::BloomType);
+DECLARE_PROPERTY_TYPE(RENDER_NS::DitherConfiguration::DitherType);
+DECLARE_PROPERTY_TYPE(RENDER_NS::BlurConfiguration::BlurQualityType);
+DECLARE_PROPERTY_TYPE(RENDER_NS::BlurConfiguration::BlurType);
+DECLARE_PROPERTY_TYPE(RENDER_NS::ColorConversionConfiguration::ConversionFunctionType);
+DECLARE_PROPERTY_TYPE(RENDER_NS::FxaaConfiguration::Sharpness);
+DECLARE_PROPERTY_TYPE(RENDER_NS::FxaaConfiguration::Quality);
+DECLARE_PROPERTY_TYPE(RENDER_NS::TaaConfiguration::Sharpness);
+DECLARE_PROPERTY_TYPE(RENDER_NS::TaaConfiguration::Quality);
+DECLARE_PROPERTY_TYPE(RENDER_NS::MotionBlurConfiguration::Sharpness);
+DECLARE_PROPERTY_TYPE(RENDER_NS::MotionBlurConfiguration::Quality);
+DECLARE_PROPERTY_TYPE(RENDER_NS::LensFlareConfiguration::Quality);
+CORE_END_NAMESPACE()
 #endif // API_RENDER_RENDER_DATA_STORE_RENDER_PODS_H

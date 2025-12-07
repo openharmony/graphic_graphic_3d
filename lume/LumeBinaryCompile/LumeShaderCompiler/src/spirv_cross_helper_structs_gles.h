@@ -58,7 +58,7 @@ constexpr ShaderStageFlagBits operator~(ShaderStageFlagBits bits) noexcept
 
 /** Shader stage flags */
 struct ShaderStageFlags {
-    ShaderStageFlagBits flags {};
+    ShaderStageFlagBits flags{};
 
     ShaderStageFlags() noexcept = default;
     explicit ShaderStageFlags(ShaderStageFlagBits bits) noexcept : flags(bits) {}
@@ -69,42 +69,42 @@ struct ShaderStageFlags {
 
     ShaderStageFlags operator&(ShaderStageFlagBits rhs) const noexcept
     {
-        return ShaderStageFlags { static_cast<ShaderStageFlagBits>(
+        return ShaderStageFlags{ static_cast<ShaderStageFlagBits>(
             static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) &
             static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs)) };
     }
 
     ShaderStageFlags operator~() const noexcept
     {
-        return ShaderStageFlags { static_cast<ShaderStageFlagBits>(
+        return ShaderStageFlags{ static_cast<ShaderStageFlagBits>(
             ~static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags)) };
     }
 
     ShaderStageFlags& operator&=(ShaderStageFlagBits rhs) noexcept
     {
         flags = static_cast<ShaderStageFlagBits>(static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) &
-                                                 static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs));
+            static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs));
         return *this;
     }
 
     ShaderStageFlags& operator|=(ShaderStageFlagBits rhs) noexcept
     {
         flags = static_cast<ShaderStageFlagBits>(static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) |
-                                                 static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs));
+            static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs));
         return *this;
     }
 
     ShaderStageFlags& operator|=(ShaderStageFlags rhs) noexcept
     {
         flags = static_cast<ShaderStageFlagBits>(static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) |
-                                                 static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs.flags));
+            static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs.flags));
         return *this;
     }
 
     bool operator==(ShaderStageFlagBits rhs) const noexcept
     {
         return static_cast<std::underlying_type_t<ShaderStageFlagBits>>(flags) ==
-               static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs);
+            static_cast<std::underlying_type_t<ShaderStageFlagBits>>(rhs);
     }
 
     operator bool() const noexcept
@@ -158,19 +158,19 @@ namespace Gles {
 // subpass inputs) NOTE: The macro allows for 16 sets, with 16 binds per type (uniform buffer, storage buffer)
 struct ResourceLimits {
     // 4 slots and 16 binds = 64 possible binds.
-    static constexpr uint32_t MAX_SETS { 4 };
-    static constexpr uint32_t MAX_BIND_IN_SET { 16 };
-    static constexpr uint32_t MAX_BINDS { MAX_SETS * MAX_BIND_IN_SET };
+    static constexpr uint32_t MAX_SETS{ 4 };
+    static constexpr uint32_t MAX_BIND_IN_SET{ 16 };
+    static constexpr uint32_t MAX_BINDS{ MAX_SETS * MAX_BIND_IN_SET };
 
-    static constexpr uint32_t MAX_VERTEXINPUT_ATTRIBUTES { 16 };
-    static constexpr uint32_t MAX_UNIFORM_BUFFERS_IN_STAGE { 12 };
-    static constexpr uint32_t MAX_STORAGE_BUFFERS_IN_STAGE { 4 };
-    static constexpr uint32_t MAX_SAMPLERS_IN_STAGE { 16 };
-    static constexpr uint32_t MAX_IMAGES_IN_STAGE { 16 };
-    static constexpr uint32_t MAX_STORAGE_IMAGES_IN_STAGE { 4 };
-    static constexpr uint32_t MAX_INPUT_ATTACHMENTS_IN_STAGE { 4 };
-    static constexpr uint32_t MAX_SAMPLERS_IN_PROGRAM { MAX_SAMPLERS_IN_STAGE + MAX_SAMPLERS_IN_STAGE };
-    static constexpr uint32_t MAX_IMAGES_IN_PROGRAM { MAX_IMAGES_IN_STAGE + MAX_IMAGES_IN_STAGE };
+    static constexpr uint32_t MAX_VERTEXINPUT_ATTRIBUTES{ 16 };
+    static constexpr uint32_t MAX_UNIFORM_BUFFERS_IN_STAGE{ 12 };
+    static constexpr uint32_t MAX_STORAGE_BUFFERS_IN_STAGE{ 4 };
+    static constexpr uint32_t MAX_SAMPLERS_IN_STAGE{ 16 };
+    static constexpr uint32_t MAX_IMAGES_IN_STAGE{ 16 };
+    static constexpr uint32_t MAX_STORAGE_IMAGES_IN_STAGE{ 4 };
+    static constexpr uint32_t MAX_INPUT_ATTACHMENTS_IN_STAGE{ 4 };
+    static constexpr uint32_t MAX_SAMPLERS_IN_PROGRAM{ MAX_SAMPLERS_IN_STAGE + MAX_SAMPLERS_IN_STAGE };
+    static constexpr uint32_t MAX_IMAGES_IN_PROGRAM{ MAX_IMAGES_IN_STAGE + MAX_IMAGES_IN_STAGE };
 };
 constexpr const int32_t INVALID_LOCATION = -1;
 struct SpecConstantInfo {
@@ -184,7 +184,7 @@ struct SpecConstantInfo {
 };
 struct PushConstantReflection {
     ShaderStageFlags stage;
-    int32_t location { INVALID_LOCATION };
+    int32_t location{ INVALID_LOCATION };
     uint32_t type;
     std::string name;
     size_t offset;

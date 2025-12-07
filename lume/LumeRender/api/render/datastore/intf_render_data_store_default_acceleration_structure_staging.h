@@ -41,22 +41,22 @@ public:
     static constexpr BASE_NS::Uid UID { "6c2fe0b6-3bba-4048-8177-2853f2431b60" };
 
     /** Build acceleration structure.
-     * @param buildInfo Build info for acceleration structure. (Optional scratchBuffer)
-     * @param geoms Geometry data for building.
+     * @param buildData Build info for acceleration structure. (Optional scratchBuffer)
+     * @param geometries Geometry data for building.
      */
     virtual void BuildAccelerationStructure(const AsBuildGeometryDataWithHandleReference& buildData,
         const BASE_NS::array_view<const AsGeometryTrianglesDataWithHandleReference> geometries) = 0;
 
     /** Build acceleration structure.
-     * @param buildInfo Build info for acceleration structure. (Optional scratchBuffer)
-     * @param geoms Geometry data for building.
+     * @param buildData Build info for acceleration structure. (Optional scratchBuffer)
+     * @param geometries Geometry data for building.
      */
     virtual void BuildAccelerationStructure(const AsBuildGeometryDataWithHandleReference& buildData,
         const BASE_NS::array_view<const AsGeometryInstancesDataWithHandleReference> geometries) = 0;
 
     /** Build acceleration structure.
-     * @param buildInfo Build info for acceleration structure. (Optional scratchBuffer)
-     * @param geoms Geometry data for building.
+     * @param buildData Build info for acceleration structure. (Optional scratchBuffer)
+     * @param geometries Geometry data for building.
      */
     virtual void BuildAccelerationStructure(const AsBuildGeometryDataWithHandleReference& buildData,
         const BASE_NS::array_view<const AsGeometryAabbsDataWithHandleReference> geometries) = 0;
@@ -64,7 +64,7 @@ public:
     /** Copy acceleration structure instance data.
      * @param dstBuffer Instance buffer with offset. (MemoryPropertyFlags: CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
      * CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-     * @param data Array view of data to be copied.
+     * @param instances Array view of data to be copied.
      */
     virtual void CopyAccelerationStructureInstanceData(const BufferOffsetWithHandleReference& dstBuffer,
         const BASE_NS::array_view<const AsInstanceWithHandleReference> instances) = 0;

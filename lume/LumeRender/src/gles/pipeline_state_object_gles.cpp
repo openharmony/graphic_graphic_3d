@@ -88,6 +88,21 @@ void FormatToVertexType(const VertexInputDeclaration::VertexInputAttributeDescri
         type = GL_UNSIGNED_INT;
         normalized = false;
         isFloat = false;
+    } else if (attributeRef.format == BASE_FORMAT_R8G8B8_UINT) {
+        count = 3;
+        type = GL_UNSIGNED_BYTE;
+        normalized = false;
+        isFloat = false;
+    } else if (attributeRef.format == BASE_FORMAT_R8G8B8_UNORM) {
+        count = 3;
+        type = GL_UNSIGNED_BYTE;
+        normalized = true;
+        isFloat = true;
+    } else if (attributeRef.format == BASE_FORMAT_R32G32B32_UINT) {
+        count = 3;
+        type = GL_UNSIGNED_INT;
+        normalized = false;
+        isFloat = false;
     } else if (attributeRef.format == BASE_FORMAT_R8_UINT) {
         count = 1;
         type = GL_UNSIGNED_BYTE;

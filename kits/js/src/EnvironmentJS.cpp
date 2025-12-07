@@ -23,17 +23,16 @@
 
 #include <render/intf_render_context.h>
 
+#include "JsObjectCache.h"
 #include "SceneJS.h"
 using namespace SCENE_NS;
 
 void EnvironmentJS::Init(napi_env env, napi_value exports)
 {
     using namespace NapiApi;
-
     BASE_NS::vector<napi_property_descriptor> node_props;
     SceneResourceImpl::GetPropertyDescs(node_props);
     // clang-format off
-
     node_props.emplace_back(GetSetProperty<uint32_t, EnvironmentJS, &EnvironmentJS::GetBackgroundType,
         &EnvironmentJS::SetBackgroundType>("backgroundType"));
     node_props.emplace_back(GetSetProperty<Object, EnvironmentJS, &EnvironmentJS::GetEnvironmentImage,
@@ -50,21 +49,19 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
         &EnvironmentJS::SetEnvironmentMapFactor>("environmentMapFactor"));
     node_props.emplace_back(GetSetProperty<Object, EnvironmentJS, &EnvironmentJS::GetEnvironmentRotation,
         &EnvironmentJS::SetEnvironmentRotation>("environmentRotation"));
-
     // clang-format on
-
     napi_value func;
     auto status = napi_define_class(env, "Environment", NAPI_AUTO_LENGTH, BaseObject::ctor<EnvironmentJS>(), nullptr,
         node_props.size(), node_props.data(), &func);
-
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     if (mis) {
         mis->StoreCtor("Environment", func);
     }
-
     NapiApi::Object exp(env, exports);
-
     napi_value eType = nullptr;
     napi_value v = nullptr;
     napi_create_object(env, &eType);
@@ -91,7 +88,10 @@ void EnvironmentJS::DisposeNative(void* scene)
     if (!disposed_) {
         LOG_V("EnvironmentJS::DisposeNative");
         disposed_ = true;
-
+        DisposeBridge(this);
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
         SceneJS* sceneJS { static_cast<SceneJS*>(scene) };
         if (sceneJS) {
             sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
@@ -104,14 +104,14 @@ void EnvironmentJS::DisposeNative(void* scene)
 
             // if we still have javascript scene reference, detach from it.
             // (if not, then scene has died and we are detaching already)
-            NapiApi::Object sceneJs = scene_.GetObject();
+            NapiApi::Object sceneJs = scene_.GetNapiObject();
             if (sceneJs) {
                 napi_value null = nullptr;
                 napi_get_null(sceneJs.GetEnv(), &null);
                 sceneJs.Set("environment", null);
             }
             if (sceneJS) {
-                if (auto s = interface_pointer_cast<IScene>(sceneJS->GetNativeObject())) {
+                if (auto s = scene_.GetObject<SCENE_NS::IScene>()) {
                     env->EnvironmentImage()->SetValue(nullptr);
                     env->RadianceImage()->SetValue(nullptr);
                     env.reset();
@@ -124,15 +124,20 @@ void EnvironmentJS::DisposeNative(void* scene)
 }
 void* EnvironmentJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == EnvironmentJS::ID)
-        return this;
-    return SceneResourceImpl::GetInstanceImpl(id);
+    if (id == EnvironmentJS::ID) {
+        return static_cast<EnvironmentJS*>(this);
+    }
+    if (auto ret = SceneResourceImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 void EnvironmentJS::Finalize(napi_env env)
 {
     // hmm.. do i need to do something BEFORE the object gets deleted..
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 
 EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
@@ -147,12 +152,13 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
     }
 
     scene_ = fromJs.Arg<0>().valueOrDefault();
-    if (!scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
+    if (!scene_.GetObject<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
 
     NapiApi::Object meJs(fromJs.This());
-    if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
+    AddBridge("EnvironmentJS",meJs);
+    if (const auto sceneJS = scene_.GetJsWrapper<SceneJS>()) {
         sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
 
@@ -177,6 +183,7 @@ EnvironmentJS::~EnvironmentJS()
 {
     LOG_V("EnvironmentJS --");
     DisposeNative(nullptr);
+    DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
     }
@@ -315,7 +322,7 @@ void EnvironmentJS::SetIrradianceCoefficients(NapiApi::FunctionContext<NapiApi::
         return;
     }
     BASE_NS::vector<BASE_NS::Math::Vec3> coeffs;
-    for (auto i = 0; i < coeffJS.Count(); i++) {
+    for (size_t i = 0; i < coeffJS.Count(); i++) {
         NapiApi::Object obj = coeffJS.Get<NapiApi::Object>(i);
         if (!obj) {
             // not an object in array

@@ -86,6 +86,14 @@ constexpr uint32_t IMAGE_VIEW_USAGE_FLAGS {
     CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT
 };
 
+bool IsStencilFormat(const BASE_NS::Format format)
+{
+    return ((format == BASE_NS::Format::BASE_FORMAT_S8_UINT) ||
+            (format == BASE_NS::Format::BASE_FORMAT_D16_UNORM_S8_UINT) ||
+            (format == BASE_NS::Format::BASE_FORMAT_D24_UNORM_S8_UINT) ||
+            (format == BASE_NS::Format::BASE_FORMAT_D32_SFLOAT_S8_UINT));
+}
+
 BASE_NS::Format CheckDepthFormat(const DeviceVk& deviceVk, const BASE_NS::Format format)
 {
     const auto& devPlat = deviceVk.GetPlatformInternalDataVk();
@@ -94,15 +102,24 @@ BASE_NS::Format CheckDepthFormat(const DeviceVk& deviceVk, const BASE_NS::Format
             return format;
         }
     }
+
+    BASE_NS::Format fallbackFormat = BASE_NS::Format::BASE_FORMAT_UNDEFINED;
     if (!devPlat.supportedDepthFormats.empty()) {
+        // If stencil depth format requested, then prioritize stencil formats
+        if (IsStencilFormat(format)) {
+            for (const BASE_NS::Format supportedFormat : devPlat.supportedDepthFormats) {
+                if (IsStencilFormat(supportedFormat)) {
+                    fallbackFormat = supportedFormat;
+                }
+            }
+        } else {
+            fallbackFormat = devPlat.supportedDepthFormats[0];
+        }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        PLUGIN_LOG_W("RENDER_VALIDATION: unsupported depth format (%u), using format (%u)", format,
-            devPlat.supportedDepthFormats[0]);
+        PLUGIN_LOG_W("RENDER_VALIDATION: unsupported depth format (%u), using format (%u)", format, fallbackFormat);
 #endif
-        return devPlat.supportedDepthFormats[0];
-    } else {
-        return BASE_NS::Format::BASE_FORMAT_UNDEFINED;
     }
+    return fallbackFormat;
 }
 
 inline VkImageViewType GetBaseImageViewType(const VkImageViewType imageViewType)

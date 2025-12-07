@@ -66,6 +66,8 @@ public:
 
     /// Add engine values from the handle
     virtual bool ConstructValues(EnginePropertyHandle handle, EngineValueOptions) = 0;
+    // Add engine values from handle
+    virtual bool ConstructValues(CORE_NS::IPropertyHandle* handle, EngineValueOptions) = 0;
     // Add engine values from value (e.g. member properties or follow EnginePropertyHandle)
     virtual bool ConstructValues(IValue::Ptr value, EngineValueOptions) = 0;
     // Add single engine value from EnginePropertyParams
@@ -103,6 +105,15 @@ public:
     {
         return ConstructValues(handle, {});
     }
+};
+
+/**
+ * @brief An interface which can be implemented by classes that want to schedule their properties for synchronization.
+ */
+class IEnginePropertySync : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IEnginePropertySync, "6463f550-81ce-4c01-92cb-e15944a25549")
+public:
+    virtual void SyncProperties() = 0;
 };
 
 META_INTERFACE_TYPE(META_NS::IEngineValueManager)

@@ -1,0 +1,133 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Declarations
+import("//build/test.gni")
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+# Test case compilation output path
+module_output_path = "graphic_3d/lume/LumeDotfield"
+
+# Options
+RENDER_BUILD_GLES = true
+RENDER_BUILD_VULKAN = true
+
+#
+# LumeDotfield API test config
+#
+
+#
+# Unit tests LumeDotfield api config 
+#
+config("lume_dotfield_test_config") {
+
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+  
+  # Unit test defines
+  defines = [
+    "OHOS_PLATFORM_ASSETS_PATH=\"/data/test/resource/graphic_3d/LumeDotfield/test_data/\""
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    defines += [
+      "RENDER_HAS_GLES_BACKEND=1"
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    defines += [
+      "RENDER_HAS_VULKAN_BACKEND=1"
+    ]
+  }
+
+  defines += [
+    "CORE_DYNAMIC=1"
+  ]
+}
+
+# ohos_unittest
+ohos_unittest("lume_dotfield_api_test") {
+
+  module_out_path = module_output_path
+
+  # Configs
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_DOTFIELD_PATH}:lume_dotfield_api",
+
+    "${LUME_BASE_PATH}:lume_unit_test_config",
+    ":lume_dotfield_test_config"
+  ]
+  
+  # Includes
+  include_dirs = [
+    "common",
+    "api_unit_test/src",
+  ]
+
+  # Src
+  sources = [
+    "common/load_lib.cpp",
+    "common/test_runner_ohos_system.cpp",
+
+    # Dotfield test
+    "api_unit_test/src/dotfield_test.cpp",      
+  ]
+
+  # External deps
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "googletest:gmock",
+    "googletest:gtest"
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3"
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+    ]
+  }
+
+  # Deps
+  deps = [
+    "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper" # Static lib!
+  ]
+
+  # Test data
+  #resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeDotfield/test/unittest/assets/ohos_test.xml"
+
+  # graphic/graphic_3d
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+# group ("unittest")
+group("unittest") {
+    testonly = true
+    deps = [ 
+        ":lume_dotfield_api_test"
+    ]
+}

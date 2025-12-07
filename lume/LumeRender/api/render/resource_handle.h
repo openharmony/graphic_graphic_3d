@@ -99,6 +99,10 @@ constexpr const uint64_t RENDER_HANDLE_GENERATION_MASK { 0xFF000000 };
  * This might be related to backend updating the underlaying resource etc.
  */
 constexpr const uint64_t RENDER_HANDLE_NEEDS_UPDATE_MASK { 0x0000034000000000 };
+/** Render handle id mask */
+constexpr const uint64_t RENDER_HANDLE_ID_MASK { 0x00FFfff0 };
+/** Render handle id shift */
+constexpr const uint64_t RENDER_HANDLE_ID_SHIFT { 4ULL };
 
 /** Checks validity of a handle */
 inline constexpr bool IsValid(const RenderHandle handle)
@@ -116,6 +120,11 @@ inline constexpr bool IsTheSameWithoutGeneration(const RenderHandle lhs, const R
 inline constexpr RenderHandleType GetHandleType(const RenderHandle handle)
 {
     return (RenderHandleType)(handle.id & RENDER_HANDLE_TYPE_MASK);
+}
+
+inline constexpr uint32_t GetIndex(const RenderHandle handle)
+{
+    return (handle.id & RENDER_HANDLE_ID_MASK) >> RENDER_HANDLE_ID_SHIFT;
 }
 }; // namespace RenderHandleUtil
 
@@ -154,7 +163,7 @@ public:
     /** Copy a reference. Reference count will be increased. */
     inline RenderHandleReference(const RenderHandleReference& other) noexcept;
 
-    /** Copy a reference. Previous reference will be released and the new one aquired. */
+    /** Copy a reference. Previous reference will be released and the new one acquired. */
     inline RenderHandleReference& operator=(const RenderHandleReference& other) noexcept;
 
     /** Construct a reference for tracking the given handle.

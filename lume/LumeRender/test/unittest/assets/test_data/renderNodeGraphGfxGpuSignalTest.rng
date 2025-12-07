@@ -1,0 +1,47 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeFullscreenGeneric",
+            "nodeName": "RenderNodeFullscreenGeneric",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "shader": "rendershaders://shader/fullscreen_copy.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "OutputImage0"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            },
+            "resources": {
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "InputImage0"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "name": "CORE_DEFAULT_SAMPLER_NEAREST_CLAMP"
+                    }
+                ]
+            }
+        }
+    ]
+}

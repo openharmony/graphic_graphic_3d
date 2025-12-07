@@ -96,13 +96,14 @@ bool EngineInputPropertyManager::PopulateProperties(IMetadata& data)
     std::unique_lock lock { mutex_ };
     props_.clear();
     for (auto&& v : manager_->GetAllEngineValues()) {
-        if (auto p = data.GetProperty(v->GetName())) {
+        const auto name = v->GetName();
+        if (auto p = data.GetProperty(name)) {
             if (v->IsCompatible(p->GetTypeId())) {
-                props_[v->GetName()] = PropInfo { p, v };
+                props_[name] = PropInfo { p, v };
             }
         }
         if (auto p = ConstructFromValue(v)) {
-            props_[v->GetName()] = PropInfo { p, v };
+            props_[name] = PropInfo { p, v };
             data.AddProperty(p);
         }
     }

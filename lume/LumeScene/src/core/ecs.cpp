@@ -16,7 +16,7 @@
 #include "ecs.h"
 
 #include <algorithm>
-#include <random>
+#include <scene/ext/scene_utils.h>
 #include <scene/ext/util.h>
 
 #include <3d/ecs/components/environment_component.h>
@@ -25,10 +25,14 @@
 #include <3d/implementation_uids.h>
 #include <3d/util/intf_scene_util.h>
 #include <core/ecs/intf_system_graph_loader.h>
+#include <core/resources/intf_resource.h>
 #include <render/datastore/intf_render_data_store.h>
 
+#include "../resource/util.h"
 #include "ecs_object.h"
 #include "internal_scene.h"
+
+#define SCENE_ASSERT_THREAD(thread) CORE_ASSERT(thread == std::this_thread::get_id())
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -45,6 +49,7 @@ Manager* Ecs::GetCoreManager()
 bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene, const SceneOptions& opts)
 {
     using namespace CORE_NS;
+    thread_ = std::this_thread::get_id();
     scene_ = scene;
     auto& context = scene->GetRenderContext();
     auto& engine = context.GetEngine();
@@ -54,9 +59,11 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene, const Sce
 
     if (!opts.systemGraphUri.empty()) {
         auto* factory = GetInstance<ISystemGraphLoaderFactory>(UID_SYSTEM_GRAPH_LOADER);
-        auto systemGraphLoader = factory->Create(engine.GetFileManager());
-        if (systemGraphLoader->Load(opts.systemGraphUri, *ecs).success) {
-            CORE_LOG_D("Using custom system graph: %s", opts.systemGraphUri.c_str());
+        if (factory) {
+            auto systemGraphLoader = factory->Create(engine.GetFileManager());
+            if (systemGraphLoader->Load(opts.systemGraphUri, *ecs).success) {
+                CORE_LOG_D("Using custom system graph: %s", opts.systemGraphUri.c_str());
+            }
         }
     }
 
@@ -108,7 +115,9 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene, const Sce
         materialQuery->SetupQuery(*materialComponentManager, operations);
     }
     nodeSystem = GetSystem<CORE3D_NS::INodeSystem>(*ecs);
-    picking = GetInstance<CORE3D_NS::IPicking>(*context.GetInterface<IClassRegister>(), CORE3D_NS::UID_PICKING);
+    if (auto* classRegister = context.GetInterface<IClassRegister>()) {
+        picking = GetInstance<CORE3D_NS::IPicking>(*classRegister, CORE3D_NS::UID_PICKING);
+    }
 
     entityOwnerComponentManager =
         static_cast<IEntityOwnerComponentManager*>(ecs->CreateComponentManager(ENTITY_OWNER_COMPONENT_TYPE_INFO));
@@ -118,6 +127,13 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene, const Sce
     }
 
     components_[entityOwnerComponentManager->GetName()] = entityOwnerComponentManager;
+
+    resourceComponentManager =
+        static_cast<IResourceComponentManager*>(ecs->CreateComponentManager(RESOURCE_COMPONENT_TYPE_INFO));
+    if (!resourceComponentManager) {
+        return false;
+    }
+    components_[resourceComponentManager->GetName()] = resourceComponentManager;
 
     if (!EcsListener::Initialize(*this)) {
         CORE_LOG_E("failed to initialize ecs listener");
@@ -129,6 +145,7 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene, const Sce
 
 void Ecs::Uninitialize()
 {
+    thread_ = {};
     EcsListener::Uninitialize();
     nodeSystem->RemoveListener(*this);
     animationComponentManager = {};
@@ -152,6 +169,7 @@ void Ecs::Uninitialize()
     rootEntity_ = {};
     nodeSystem = {};
     picking = {};
+    externalPicking_.reset();
     components_.clear();
     if (ecs) {
         ecs->Uninitialize();
@@ -161,12 +179,14 @@ void Ecs::Uninitialize()
 
 CORE_NS::IComponentManager* Ecs::FindComponent(BASE_NS::string_view name) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     auto it = components_.find(name);
     return it != components_.end() ? it->second : nullptr;
 }
 
 CORE3D_NS::ISceneNode* Ecs::FindNode(BASE_NS::string_view path)
 {
+    SCENE_ASSERT_THREAD(thread_);
     if (path.empty() || path == "/") {
         return GetNode(rootEntity_);
     }
@@ -182,11 +202,13 @@ CORE3D_NS::ISceneNode* Ecs::FindNode(BASE_NS::string_view path)
 
 CORE3D_NS::ISceneNode* Ecs::FindNodeParent(BASE_NS::string_view path)
 {
+    SCENE_ASSERT_THREAD(thread_);
     return FindNode(NormalisePath(ParentPath(path)));
 }
 
 BASE_NS::string Ecs::GetPath(const CORE3D_NS::ISceneNode* node) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     BASE_NS::string path;
     while (node && node->GetParent()) {
         path = "/" + node->GetName() + path;
@@ -197,29 +219,58 @@ BASE_NS::string Ecs::GetPath(const CORE3D_NS::ISceneNode* node) const
 
 BASE_NS::string Ecs::GetPath(CORE_NS::Entity ent) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     return GetPath(nodeSystem->GetNode(ent));
 }
 
 bool Ecs::IsNodeEntity(CORE_NS::Entity ent) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     return nodeSystem->GetNode(ent) != nullptr;
 }
 
 CORE_NS::Entity Ecs::GetRootEntity() const
 {
+    SCENE_ASSERT_THREAD(thread_);
     return rootEntity_;
 }
 
 CORE_NS::Entity Ecs::GetParent(CORE_NS::Entity ent) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     if (auto n = nodeComponentManager->Read(ent)) {
         return n->parent;
     }
     return {};
 }
 
+BASE_NS::vector<CORE3D_NS::IPicking*> Ecs::GetPicking()
+{
+    static constexpr BASE_NS::Uid UID_EXTERNAL_PICKING { "567c693e-9f0d-4801-8255-359e141c9c86" };
+
+    BASE_NS::vector<CORE3D_NS::IPicking*> result;
+    result.push_back(picking);
+    if (!externalPicking_.has_value()) {
+        // Only try instantiating external picking once. If we get null then it will remain null
+        if (auto scene = scene_.lock()) {
+            if (auto fac = scene->GetRenderContext().GetInterface<CORE_NS::IClassRegister>()) {
+                if (auto picking = static_cast<CORE3D_NS::IPicking*>(fac->GetInstance(UID_EXTERNAL_PICKING))) {
+                    externalPicking_ = CORE3D_NS::IPicking::Ptr(picking);
+                } else {
+                    externalPicking_ = nullptr;
+                }
+            }
+        }
+    }
+    if (auto ep = externalPicking_.value_or(nullptr)) {
+        result.push_back(ep.get());
+    }
+    return result;
+}
+
 IEcsObject::Ptr Ecs::GetEcsObject(CORE_NS::Entity ent)
 {
+    SCENE_ASSERT_THREAD(thread_);
     if (auto obj = FindEcsObject(ent)) {
         return obj;
     }
@@ -238,11 +289,13 @@ IEcsObject::Ptr Ecs::GetEcsObject(CORE_NS::Entity ent)
 
 void Ecs::RemoveEcsObject(const IEcsObject::ConstPtr& obj)
 {
+    SCENE_ASSERT_THREAD(thread_);
     DeregisterEcsObject(obj);
 }
 
 bool Ecs::RemoveEntity(CORE_NS::Entity ent)
 {
+    SCENE_ASSERT_THREAD(thread_);
     bool res = CORE_NS::EntityUtil::IsValid(ent);
     if (res) {
         DeregisterEcsObject(ent);
@@ -253,6 +306,7 @@ bool Ecs::RemoveEntity(CORE_NS::Entity ent)
 
 bool Ecs::CreateUnnamedRootNode()
 {
+    SCENE_ASSERT_THREAD(thread_);
     if (CORE_NS::EntityUtil::IsValid(rootEntity_)) {
         return false;
     }
@@ -280,6 +334,7 @@ bool Ecs::CreateUnnamedRootNode()
 
 bool Ecs::SetNodeName(CORE_NS::Entity ent, BASE_NS::string_view name)
 {
+    SCENE_ASSERT_THREAD(thread_);
     auto n = nodeSystem->GetNode(ent);
     if (n) {
         n->SetName(name);
@@ -289,6 +344,7 @@ bool Ecs::SetNodeName(CORE_NS::Entity ent, BASE_NS::string_view name)
 
 bool Ecs::SetNodeParentAndName(CORE_NS::Entity ent, BASE_NS::string_view name, CORE3D_NS::ISceneNode* parent)
 {
+    SCENE_ASSERT_THREAD(thread_);
     auto n = nodeSystem->GetNode(ent);
     if (n) {
         n->SetName(name);
@@ -301,15 +357,18 @@ bool Ecs::SetNodeParentAndName(CORE_NS::Entity ent, BASE_NS::string_view name, C
 
 CORE3D_NS::ISceneNode* Ecs::GetNode(CORE_NS::Entity ent)
 {
+    SCENE_ASSERT_THREAD(thread_);
     return nodeSystem->GetNode(ent);
 }
 const CORE3D_NS::ISceneNode* Ecs::GetNode(CORE_NS::Entity ent) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     return nodeSystem->GetNode(ent);
 }
 
 CORE_NS::EntityReference Ecs::GetRenderHandleEntity(const RENDER_NS::RenderHandleReference& handle)
 {
+    SCENE_ASSERT_THREAD(thread_);
     CORE_NS::EntityReference ent;
     if (handle && rhComponentManager) {
         ent = CORE3D_NS::GetOrCreateEntityReference(ecs->GetEntityManager(), *rhComponentManager, handle);
@@ -319,6 +378,7 @@ CORE_NS::EntityReference Ecs::GetRenderHandleEntity(const RENDER_NS::RenderHandl
 
 void Ecs::AddDefaultComponents(CORE_NS::Entity ent) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     auto create = [&](auto* component) {
         if (component) {
             if (!component->HasComponent(ent)) {
@@ -331,10 +391,12 @@ void Ecs::AddDefaultComponents(CORE_NS::Entity ent) const
     create(transformComponentManager);
     create(localMatrixComponentManager);
     create(worldMatrixComponentManager);
+    create(layerComponentManager);
 }
 
 void Ecs::ListenNodeChanges(bool enabled)
 {
+    SCENE_ASSERT_THREAD(thread_);
     if (enabled) {
         nodeSystem->AddListener(*this);
     } else {
@@ -345,6 +407,7 @@ void Ecs::ListenNodeChanges(bool enabled)
 void Ecs::OnChildChanged(const CORE3D_NS::ISceneNode& parent, CORE3D_NS::INodeSystem::SceneNodeListener::EventType type,
     const CORE3D_NS::ISceneNode& child, size_t index)
 {
+    SCENE_ASSERT_THREAD(thread_);
     if (auto i = interface_pointer_cast<IOnNodeChanged>(scene_)) {
         META_NS::ContainerChangeType cchange {};
         if (type == CORE3D_NS::INodeSystem::SceneNodeListener::EventType::ADDED) {
@@ -362,6 +425,7 @@ void Ecs::OnChildChanged(const CORE3D_NS::ISceneNode& parent, CORE3D_NS::INodeSy
 bool Ecs::CheckDeactivatedAncestry(
     CORE_NS::Entity start, CORE_NS::Entity node, std::set<CORE_NS::Entity>& entities) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     if (start == node) {
         return true;
     }
@@ -379,6 +443,7 @@ bool Ecs::CheckDeactivatedAncestry(
 
 std::set<CORE_NS::Entity> Ecs::GetDeactivatedChildren(CORE_NS::Entity ent) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     std::set<CORE_NS::Entity> entities;
 
     if (nodeComponentManager->HasComponent(ent)) {
@@ -402,6 +467,7 @@ std::set<CORE_NS::Entity> Ecs::GetDeactivatedChildren(CORE_NS::Entity ent) const
 
 void Ecs::ReactivateNodes(CORE_NS::Entity ent)
 {
+    SCENE_ASSERT_THREAD(thread_);
     auto& entMan = ecs->GetEntityManager();
 
     std::set<CORE_NS::Entity> reactivate = GetDeactivatedChildren(ent);
@@ -414,6 +480,7 @@ void Ecs::ReactivateNodes(CORE_NS::Entity ent)
 
 void Ecs::SetNodesActive(CORE_NS::Entity ent, bool enabled)
 {
+    SCENE_ASSERT_THREAD(thread_);
     if (!enabled) {
         auto decents = GetNodeDescendants(ent);
         for (auto&& ent : decents) {
@@ -426,6 +493,7 @@ void Ecs::SetNodesActive(CORE_NS::Entity ent, bool enabled)
 
 void Ecs::GetNodeDescendants(CORE_NS::Entity ent, BASE_NS::vector<CORE_NS::Entity>& entities) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     auto& entMan = ecs->GetEntityManager();
     if (entMan.IsAlive(ent)) {
         if (auto n = GetNode(ent)) {
@@ -443,33 +511,22 @@ void Ecs::GetNodeDescendants(CORE_NS::Entity ent, BASE_NS::vector<CORE_NS::Entit
 
 BASE_NS::vector<CORE_NS::Entity> Ecs::GetNodeDescendants(CORE_NS::Entity ent) const
 {
+    SCENE_ASSERT_THREAD(thread_);
     BASE_NS::vector<CORE_NS::Entity> entities;
     GetNodeDescendants(ent, entities);
     return entities;
 }
 
-CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild)
+static void NotifyChildAdded(IInternalScene& scene, CORE_NS::Entity parent, CORE_NS::Entity entity)
 {
-    IInternalScene::Ptr localScene = parent.GetScene();
-    IInternalScene::Ptr extScene = extChild.GetScene();
-    if (!localScene || !extScene) {
-        return {};
-    }
-
-    auto& util = localScene->GetGraphicsContext().GetSceneUtil();
-
-    auto ent = util.Clone(*localScene->GetEcsContext().GetNativeEcs(), parent.GetEntity(),
-        *extScene->GetEcsContext().GetNativeEcs(), extChild.GetEntity());
-
-    if (CORE_NS::EntityUtil::IsValid(ent)) {
-        if (auto i = interface_pointer_cast<IOnNodeChanged>(localScene)) {
+    if (CORE_NS::EntityUtil::IsValid(entity)) {
+        if (auto i = interface_cast<IOnNodeChanged>(&scene)) {
             size_t index(-1);
-            if (auto nodeSystem =
-                    CORE_NS::GetSystem<CORE3D_NS::INodeSystem>(*localScene->GetEcsContext().GetNativeEcs())) {
-                if (auto parentNode = nodeSystem->GetNode(parent.GetEntity())) {
+            if (auto nodeSystem = CORE_NS::GetSystem<CORE3D_NS::INodeSystem>(*scene.GetEcsContext().GetNativeEcs())) {
+                if (auto parentNode = nodeSystem->GetNode(parent)) {
                     auto children = parentNode->GetChildren();
                     for (auto childIndex = 0; childIndex < children.size(); ++childIndex) {
-                        if (children[childIndex]->GetEntity() == ent) {
+                        if (children[childIndex]->GetEntity() == entity) {
                             index = childIndex;
                             break;
                         }
@@ -479,11 +536,32 @@ CORE_NS::Entity CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& 
                 CORE_LOG_W("Failed to resolve imported child index, NodeSystem not found");
             }
 
-            i->OnChildChanged(META_NS::ContainerChangeType::ADDED, parent.GetEntity(), ent, index);
+            i->OnChildChanged(META_NS::ContainerChangeType::ADDED, parent, entity, index);
         }
     }
+}
 
-    return ent;
+EcsCopyResult CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild)
+{
+    EcsCopyResult res;
+
+    // todo: set the res.importedEntities when Clone supports it
+
+    IInternalScene::Ptr localScene = parent.GetScene();
+    IInternalScene::Ptr extScene = extChild.GetScene();
+    if (!localScene || !extScene) {
+        return {};
+    }
+
+    auto& util = localScene->GetGraphicsContext().GetSceneUtil();
+
+    auto cloneRes = util.Clone(*localScene->GetEcsContext().GetNativeEcs(), parent.GetEntity(),
+        *extScene->GetEcsContext().GetNativeEcs(), extChild.GetEntity());
+
+    res.entity = cloneRes.node;
+    NotifyChildAdded(*localScene, parent.GetEntity(), res.entity);
+
+    return res;
 }
 
 static CORE_NS::Entity ReparentOldRoot(
@@ -513,9 +591,114 @@ static CORE_NS::Entity ReparentOldRoot(
     return node ? node->GetEntity() : CORE_NS::Entity {};
 }
 
-CORE_NS::Entity CopyExternalAsChild(
-    const IEcsObject& parent, const IScene& scene, BASE_NS::vector<CORE_NS::Entity>& imported)
+struct OptionPassThrough : META_NS::IntroduceInterfaces<CORE_NS::IResourceOptions> {
+    OptionPassThrough(BASE_NS::vector<uint8_t> data) : data(BASE_NS::move(data)) {}
+    bool Load(CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr&, const CORE_NS::ResourceContextPtr&) override
+    {
+        return false;
+    }
+    bool Save(
+        CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr&, const CORE_NS::ResourceContextPtr&) const override
+    {
+        return options.Write(data.data(), data.size()) == data.size();
+    }
+    BASE_NS::vector<uint8_t> data;
+};
+
+static CORE_NS::ResourceId CopyResourceEntry(const CORE_NS::IResourceManager::Ptr& resources,
+    const CORE_NS::ResourceInfo& oldInfo, const CORE_NS::ResourceId& id,
+    BASE_NS::vector<CORE_NS::ResourceId>& instantiate)
 {
+    auto info = resources->GetResourceInfo(id);
+    if (!info.id.IsValid()) {
+        CORE_NS::IResourceOptions::Ptr opts;
+        if (!oldInfo.optionData.empty()) {
+            opts = BASE_NS::make_shared<OptionPassThrough>(oldInfo.optionData);
+            instantiate.push_back(id);
+        }
+        resources->AddResource(id, oldInfo.type, oldInfo.path, opts);
+    } else {
+        // if options data is not empty, we need instantiate the resource to apply the changes
+        if (!info.optionData.empty()) {
+            instantiate.push_back(id);
+        }
+    }
+
+    return id;
+}
+
+static BASE_NS::string MakeGroup(const IInternalScene::Ptr& scene, BASE_NS::string_view sceneGroup,
+    BASE_NS::string_view rgroup, BASE_NS::string_view extGroup)
+{
+    BASE_NS::string group;
+    if (!rgroup.empty()) {
+        group = rgroup;
+    } else {
+        group = sceneGroup;
+        if (!extGroup.empty()) {
+            if (group.empty()) {
+                group = extGroup;
+            } else {
+                group += " - " + extGroup;
+            }
+        }
+        group = UniqueGroupName(scene, group);
+    }
+    return group;
+}
+
+static BASE_NS::string ChangeResourceGroup(const IInternalScene::Ptr& scene,
+    const BASE_NS::vector<CORE_NS::Entity>& entities, BASE_NS::string_view rgroup, BASE_NS::string_view extGroup)
+{
+    auto context = scene->GetContext();
+    if (!context) {
+        CORE_LOG_F("No context when trying to change resource group");
+        return "";
+    }
+    auto resources = context->GetResources();
+    if (!resources) {
+        return "";
+    }
+    BASE_NS::string group = MakeGroup(scene, scene->GetResourceGroups().PrimaryGroup(), rgroup, extGroup);
+    CORE_LOG_D("change resource group to '%s' while importing scene", group.c_str());
+    auto resuMan = static_cast<IResourceComponentManager*>(scene->GetEcsContext().FindComponent<ResourceComponent>());
+    if (!resuMan) {
+        return "";
+    }
+    BASE_NS::unordered_map<CORE_NS::ResourceId, CORE_NS::ResourceId> entries;
+    BASE_NS::vector<CORE_NS::ResourceId> instantiate;
+    for (auto&& v : entities) {
+        if (auto h = resuMan->Write(v)) {
+            auto& entry = entries[h->resourceId];
+            if (!entry.IsValid()) {
+                entry = CORE_NS::ResourceId { h->resourceId.name, group };
+                if (resources) {
+                    auto info = resources->GetResourceInfo(h->resourceId);
+                    if (info.id.IsValid()) {
+                        entry = CopyResourceEntry(resources, info, entry, instantiate);
+                    }
+                }
+            }
+            // make sure we have unique resource id
+            if (auto ent = resuMan->GetEntityWithResource(entry); CORE_NS::EntityUtil::IsValid(ent)) {
+                if (auto v = resuMan->Write(ent)) {
+                    v->resourceId = {};
+                }
+            }
+
+            h->resourceId = entry;
+        }
+    }
+    for (auto&& v : instantiate) {
+        resources->GetResource(v, scene->GetScene());
+    }
+    return group;
+}
+
+EcsCopyResult CopyExternalAsChild(const IEcsObject& parent, const IScene& scene, BASE_NS::string_view rgroup)
+{
+    EcsCopyResult res;
+
     IInternalScene::Ptr localScene = parent.GetScene();
     IInternalScene::Ptr extScene = scene.GetInternalScene();
     if (!localScene || !extScene) {
@@ -523,8 +706,70 @@ CORE_NS::Entity CopyExternalAsChild(
     }
 
     auto& util = localScene->GetGraphicsContext().GetSceneUtil();
-    imported = util.Clone(*localScene->GetEcsContext().GetNativeEcs(), *extScene->GetEcsContext().GetNativeEcs());
-    return ReparentOldRoot(localScene, parent, imported);
+    res.newEntities =
+        util.Clone(*localScene->GetEcsContext().GetNativeEcs(), *extScene->GetEcsContext().GetNativeEcs());
+    res.resourceGroup =
+        ChangeResourceGroup(localScene, res.newEntities, rgroup, extScene->GetResourceGroups().PrimaryGroup());
+    // re-parenting can cause notifications, so it has to be after changing the resource groups
+    res.entity = ReparentOldRoot(localScene, parent, res.newEntities);
+    return res;
+}
+
+static void ChangeResourceNames(const IInternalScene::Ptr& scene, const BASE_NS::vector<CORE_NS::Entity>& entities)
+{
+    auto resources = GetResourceManager(scene);
+    if (!resources) {
+        return;
+    }
+    auto resuMan = static_cast<IResourceComponentManager*>(scene->GetEcsContext().FindComponent<ResourceComponent>());
+    if (!resuMan) {
+        return;
+    }
+    BASE_NS::unordered_map<CORE_NS::ResourceId, CORE_NS::ResourceId> entries;
+    BASE_NS::vector<CORE_NS::ResourceId> instantiate;
+
+    for (auto&& v : entities) {
+        if (auto h = resuMan->Write(v)) {
+            auto& entry = entries[h->resourceId];
+            if (!entry.IsValid()) {
+                entry = UniqueResourceName(resources, h->resourceId);
+                auto info = resources->GetResourceInfo(h->resourceId);
+                if (info.id.IsValid()) {
+                    entry = CopyResourceEntry(resources, info, entry, instantiate);
+                }
+            }
+            h->resourceId = entry;
+        }
+    }
+}
+
+EcsCopyResult CloneAsChild(const IEcsObject& node, const IEcsObject::Ptr& parentNode)
+{
+    EcsCopyResult res;
+
+    IInternalScene::Ptr scene = node.GetScene();
+    if (!scene) {
+        return {};
+    }
+    IEcsContext& ec = scene->GetEcsContext();
+
+    CORE_NS::Entity parent;
+    if (parentNode) {
+        parent = parentNode->GetEntity();
+    } else {
+        parent = ec.GetParent(node.GetEntity());
+    }
+
+    auto& util = scene->GetGraphicsContext().GetSceneUtil();
+    auto cloneRes = util.Clone(*ec.GetNativeEcs(), node.GetEntity(), parent);
+
+    res.entity = cloneRes.node;
+    res.newEntities = cloneRes.entities;
+    ChangeResourceNames(scene, res.newEntities);
+
+    NotifyChildAdded(*scene, parent, res.entity);
+
+    return res;
 }
 
 SCENE_END_NAMESPACE()

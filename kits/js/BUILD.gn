@@ -94,7 +94,6 @@ config("napi_config") {
   }
 
   include_dirs = [
-    "src",
     "include",
     "include/napi",
   ]
@@ -115,14 +114,15 @@ ohos_source_set("napi_source") {
       "src/CameraJS.cpp",
       "src/ColorProxy.cpp",
       "src/DisposeContainer.cpp",
+      "src/EffectJS.cpp",
       "src/EnvironmentJS.cpp",
       "src/GeometryJS.cpp",
       "src/geometry_definition/CubeJS.cpp",
       "src/geometry_definition/CustomJS.cpp",
+      "src/geometry_definition/CylinderJS.cpp",
       "src/geometry_definition/GeometryDefinition.cpp",
       "src/geometry_definition/PlaneJS.cpp",
       "src/geometry_definition/SphereJS.cpp",
-      "src/geometry_definition/CylinderJS.cpp",
       "src/ImageJS.cpp",
       "src/JsObjectCache.cpp",
       "src/LightJS.cpp",
@@ -143,6 +143,7 @@ ohos_source_set("napi_source") {
       "src/NodeJS.cpp",
       "src/nodejstaskqueue.cpp",
       "src/ObjectProxy.cpp",
+      "src/OcclusionMaterialJS.cpp",
       "src/ParamParsing.cpp",
       "src/PostProcJS.cpp",
       "src/Promise.cpp",
@@ -150,6 +151,7 @@ ohos_source_set("napi_source") {
       "src/QuatProxy.cpp",
       "src/Raycast.cpp",
       "src/register_module.cpp",
+      "src/RenderConfigurationJS.cpp",
       "src/RenderContextJS.cpp",
       "src/SamplerJS.cpp",
       "src/SceneComponentJS.cpp",
@@ -199,11 +201,7 @@ group("napiInterface") {
 
 ohos_shared_library("libKitHelper") {
   deps = [ ":napi_source" ]
-  public_configs = [
-    ":napi_config",
-    "../../3d_scene_adapter:scene_adapter_config",
-    "../../3d_widget_adapter:widget_adapter_config"
-  ]
+  public_configs = [ ":napi_config", "../../3d_scene_adapter:scene_adapter_config", "../../3d_widget_adapter:widget_adapter_config" ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

@@ -25,6 +25,7 @@
 #include "container_observer.h"
 #include "engine/engine_input_property_manager.h"
 #include "functions.h"
+#include "keep_alive.h"
 #include "loaders/class_content_loader.h"
 #include "loaders/csv_string_resource_loader.h"
 #include "loaders/json_content_loader.h"
@@ -39,8 +40,10 @@
 #include "object_name.h"
 #include "property/bind.h"
 #include "proxy_object.h"
+#include "resource/animation_resource.h"
 #include "resource/file_resource_manager.h"
 #include "resource/object_resource.h"
+#include "resource/object_template.h"
 #include "resource/resource_placeholder.h"
 #include "serialization/backend/debug_output.h"
 #include "serialization/backend/json_input.h"
@@ -50,6 +53,7 @@
 #include "serialization/json_exporter.h"
 #include "serialization/json_importer.h"
 #include "serialization/metav1_compat.h"
+#include "serialization/refuri_builder.h"
 #include "serialization/ser_nodes.h"
 #include "startable_object_controller.h"
 
@@ -93,7 +97,17 @@ static constexpr ObjectTypeInfo OBJECTS[] = {
     ObjectResource::OBJECT_INFO,
     ObjectResourceType::OBJECT_INFO,
     ObjectResourceOptions::OBJECT_INFO,
-    ResourcePlaceholder::OBJECT_INFO
+    ResourcePlaceholder::OBJECT_INFO,
+    ObjectTemplate::OBJECT_INFO,
+    ObjectTemplateType::OBJECT_INFO,
+    AnimationResourceType::OBJECT_INFO,
+    PropertyAnimationTemplateAccess::OBJECT_INFO,
+    SequentialAnimationTemplateAccess::OBJECT_INFO,
+    ParallelAnimationTemplateAccess::OBJECT_INFO,
+    KeyframeAnimationTemplateAccess::OBJECT_INFO,
+    TrackAnimationTemplateAccess::OBJECT_INFO,
+    Serialization::RefUriBuilder::OBJECT_INFO,
+    KeepAlive::OBJECT_INFO
 };
 // clang-format on
 

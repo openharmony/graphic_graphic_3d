@@ -67,7 +67,7 @@ static IImage::Ptr ConstructImage(const IRenderContext::Ptr& context, RENDER_NS:
 
 Future<IImage::Ptr> RenderResourceManager::CreateImage(const ImageCreateInfo& info, BASE_NS::vector<uint8_t> d)
 {
-    return context_->AddTask([=, desc = ConvertToImageDesc(info), data = BASE_NS::move(d)] {
+    return context_->AddTaskOrRunDirectly([=, desc = ConvertToImageDesc(info), data = BASE_NS::move(d)] {
         auto& gpuResMan = context_->GetRenderer()->GetDevice().GetGpuResourceManager();
         RENDER_NS::RenderHandleReference handle;
         if (data.empty()) {
@@ -80,7 +80,7 @@ Future<IImage::Ptr> RenderResourceManager::CreateImage(const ImageCreateInfo& in
 }
 Future<IImage::Ptr> RenderResourceManager::LoadImage(BASE_NS::string_view uri, const ImageLoadInfo& info)
 {
-    return context_->AddTask([=, path = BASE_NS::string(uri)] {
+    return context_->AddTaskOrRunDirectly([=, path = BASE_NS::string(uri)] {
         auto& gpuResMan = context_->GetRenderer()->GetDevice().GetGpuResourceManager();
         auto& loader = context_->GetRenderer()->GetEngine().GetImageLoaderManager();
         auto loadResult = loader.LoadImage(path, static_cast<uint32_t>(info.loadFlags));
@@ -111,7 +111,7 @@ Future<IShader::Ptr> RenderResourceManager::LoadShader(BASE_NS::string_view uri)
         CORE_LOG_E("Cannot load shader from empty URI");
         return {};
     }
-    return context_->AddTask([=, path = BASE_NS::string(uri)] {
+    return context_->AddTaskOrRunDirectly([=, path = BASE_NS::string(uri)] {
         auto& man = context_->GetRenderer()->GetDevice().GetShaderManager();
         man.LoadShaderFile(path);
         IShader::Ptr res;

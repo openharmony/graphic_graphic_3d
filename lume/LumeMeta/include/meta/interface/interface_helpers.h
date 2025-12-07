@@ -301,9 +301,9 @@ public:
     {
         if (BASE_NS::AtomicDecrement(&refcnt_) == 0) {
             if constexpr (HAS_ILIFECYCLE<Interfaces...>) {
-                if (auto i = this->GetInterface(ILifecycle::UID)) {
-                    static_cast<ILifecycle*>(i)->Destroy();
-                }
+                auto i = static_cast<ILifecycle*>(this->GetInterface(ILifecycle::UID));
+                assert(i);
+                i->Destroy();
             }
             delete this;
         }

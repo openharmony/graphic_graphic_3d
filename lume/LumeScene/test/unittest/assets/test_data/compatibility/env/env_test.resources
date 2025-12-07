@@ -1,0 +1,18 @@
+# Copyright (C) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Lume Resource Index Version 1
+"image" "" "test://images/logo.png" 586f9a9d-4041-407e-bbdc-92a2a87f76b0 
+"app://env_test.scene" "" "test://compatibility/env/env_test.scene" d5665843-e011-4d77-a036-e973d309071c 
+"app://env_res.resource" "" "test://compatibility/env/env_res.resource" 17694ec9-f452-48d9-9660-ceb924b8e45a 
+"env" "app://env_test.scene" "" 35d42f80-82e3-4eba-a5de-b9c888821ab2 eyIkbWV0YSI6eyJtZXRhLXZlcnNpb24iOiIyLjAiLCJ2ZXJzaW9uIjoiMS4wIiwidHlwZSI6Ik9iamVjdFJlc291cmNlT3B0aW9ucyJ9LCIkcm9vdCI6eyIkY2xhc3NJZCI6IjE5NjIxM2I2LWViNjMtNGEyOS04OWJlLTFlYzEwZWQ2ODU5NiIsIiRjbGFzc05hbWUiOiJPYmplY3RSZXNvdXJjZU9wdGlvbnMiLCIkaW5zdGFuY2VJZCI6IjAwMDAyNzA2LWY5MzItMDY4Yy0wMTgyLWU4MzM5OTJhNGFmMSIsIl9fYXR0YWNobWVudHMiOlt7IiRjbGFzc0lkIjoiMTQzNjY3NjItMGM0Ni00MjI1LThiZmMtMTI0MGFiYTQ1N2M2IiwiJGNsYXNzTmFtZSI6IlByb3BlcnR5IiwiJG5hbWUiOiIuUmFkaWFuY2VDdWJlbWFwTWlwQ291bnQiLCJkZWZhdWx0VmFsdWUiOnsiJGNsYXNzSWQiOiIzMjg4MmQzYi0yMmY2LWIzNDctNDI3NS02OTZjNzQ0MTZlNzkiLCIkY2xhc3NOYW1lIjoiQW55IiwidmFsdWUiOjR9LCJ2YWx1ZXMiOltdLCJtb2RpZmllcnMiOltdfSx7IiRjbGFzc0lkIjoiMTQzNjY3NjItMGM0Ni00MjI1LThiZmMtMTI0MGFiYTQ1N2M2IiwiJGNsYXNzTmFtZSI6IlByb3BlcnR5IiwiJG5hbWUiOiIuSXJyYWRpYW5jZUNvZWZmaWNpZW50cyIsImRlZmF1bHRWYWx1ZSI6eyIkY2xhc3NJZCI6IjI0ZmIxYzI5LWQzODMtNWE2Zi00MTcyLTcyNjE3OTQxNmU3OSIsIiRjbGFzc05hbWUiOiJBbnkiLCJ2YWx1ZSI6W1sxLDEsMV0sWzEsMiwzXV19LCJ2YWx1ZXMiOltdLCJtb2RpZmllcnMiOltdfV0sImJhc2VSZXNvdXJjZS5uYW1lIjoiYXBwOi8vZW52X3Jlcy5yZXNvdXJjZSIsImJhc2VSZXNvdXJjZS5ncm91cCI6IiJ9fQ==

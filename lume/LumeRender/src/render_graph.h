@@ -76,7 +76,7 @@ public:
     };
     struct MultiRenderPassStore {
         BASE_NS::vector<RenderCommandBeginRenderPass*> renderPasses;
-
+        uint32_t fistRenderPassCommandListIndex { ~0u };
         // batch barriers to the first render pass
         RenderBarrierList* firstRenderPassBarrierList { nullptr };
         bool supportOpen { false };
@@ -86,6 +86,7 @@ public:
         RenderHandle handle;
         uint32_t releaseNodeIdx { 0 };
         uint32_t acquireNodeIdx { 0 };
+        GpuQueue releaseQueue {};
 
         ImageLayout optionalReleaseImageLayout { CORE_IMAGE_LAYOUT_UNDEFINED };
         ImageLayout optionalAcquireImageLayout { CORE_IMAGE_LAYOUT_UNDEFINED };
@@ -112,7 +113,6 @@ private:
         MultiRenderPassStore multiRenderPassStore;
 
         uint32_t nodeCounter { 0u };
-
         bool checkForBackbufferDependency { false };
         bool usesSwapchainImage { false };
     };
@@ -125,15 +125,18 @@ private:
     };
     void ProcessRenderNodeGraphNodeStores(
         const BASE_NS::array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores, StateCache& stateCache);
+    void PatchGpuResourceQueueTransfers(RenderNodeGraphNodeStore* rngQueueTransferStore, uint32_t rngQueueTransferIdx,
+        BASE_NS::array_view<RenderNodeContextData> frameRenderNodeContextData);
     void ProcessRenderNodeCommands(BASE_NS::array_view<const RenderCommandWithType>& cmdListRef,
         const uint32_t& nodeIdx, RenderNodeContextData& ref, StateCache& stateCache);
+
     void StoreFinalBufferState();
     // handles backbuffer layouts as well
     void StoreFinalImageState();
 
     void RenderCommand(uint32_t renderNodeIndex, uint32_t commandListCommandIndex, RenderNodeContextData& nodeData,
         RenderCommandBeginRenderPass& rc, StateCache& stateCache);
-    static void BeginRenderPassHandleDependency(
+    void BeginRenderPassHandleDependency(
         BeginRenderPassParameters& params, uint32_t commandListCommandIndex, RenderNodeContextData& nodeData);
     void BeginRenderPassUpdateImageStates(BeginRenderPassParameters& params, const GpuQueue& gpuQueue,
         BASE_NS::array_view<ImageLayout>& finalImageLayouts, uint32_t renderNodeIndex);
@@ -166,15 +169,14 @@ private:
     static void UpdateImageResourceState(
         RenderGraphImageState& stateRef, const ParameterCache& params, const CommandBarrier& cb);
 
+    void InsertRenderPassBarrier(const MultiRenderPassStore& store);
+
     void HandleCustomBarriers(ParameterCache& params, uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const CommandBarrier>& customBarrierListRef);
     void HandleVertexInputBufferBarriers(ParameterCache& params, uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const VertexBuffer>& vertexInputBufferBarrierListRef);
     void HandleRenderpassIndirectBufferBarriers(ParameterCache& params, uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const VertexBuffer>& indirectBufferBarrierListRef);
-
-    void HandleRenderPassImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
-        const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
     void HandleClearImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
         const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef);
     void HandleBlitImage(ParameterCache& params, const uint32_t& commandListCommandIndex,

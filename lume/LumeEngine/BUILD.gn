@@ -22,7 +22,9 @@ config("lume_base_api") {
   include_dirs = [
     "${LUME_BASE_PATH}/api",
   ]
-
+  configs = [
+    "//third_party/bounds_checking_function:libsec_public_config",
+  ]
   defines = [
     "BASE_TESTS_ENABLED=0",
     "BASE_WARNINGS_AS_ERRORS=0"
@@ -44,12 +46,12 @@ config("lume_base_api") {
 
 config("lume_engine_api") {
   include_dirs = [
-    "api",
+    "${LUME_CORE_PATH}/api",
   ]
 
   if (LUME_OHOS_BUILD) {
     include_dirs += [
-      "api/platform/ohos/",
+      "${LUME_CORE_PATH}/api/platform/ohos/",
     ]
   }
 
@@ -162,7 +164,6 @@ config("lume_engine_config") {
 
 ohos_source_set("lume_engine_src") {
   sources = [
-      # "api/core/property_tools/property_data.cpp",
       "src/ecs/ecs.cpp",
       "src/ecs/entity_manager.cpp",
       "src/ecs/entity_manager.h",
@@ -173,6 +174,8 @@ ohos_source_set("lume_engine_src") {
       "src/image/image_loader_manager.cpp",
       "src/image/image_loader_manager.h",
       "src/image/loaders/gl_util.h",
+      "src/image/loaders/image_loader_astc.cpp",
+      "src/image/loaders/image_loader_astc.h",
       "src/image/loaders/image_loader_ktx.cpp",
       "src/image/loaders/image_loader_ktx.h",
       "src/io/dev/file_monitor.cpp",
@@ -265,9 +268,10 @@ ohos_source_set("lume_engine_src") {
   ]
 
   external_deps = [
-    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "resource_management:global_resmgr",
+    "qos_manager:qos",
+    "resource_schedule_service:ressched_client",
   ]
 
   if (LUME_OHOS_BUILD) {
@@ -292,7 +296,7 @@ lume_rofs("lume_engine_rofs")
     output_obj = "${CORE_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x86_64") {
     output_obj = "${CORE_ROFS}_x64.o"
   }
 
@@ -329,7 +333,7 @@ source_set("lume_engine_rofs_obj") {
     output_obj = "${CORE_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x86_64") {
     output_obj = "${CORE_ROFS}_x64.o"
   }
 
@@ -372,7 +376,7 @@ ohos_shared_library("AGPBaseApi") {
 }
 
 ohos_shared_library("AGPEngineApi") {
-  public_configs = [
+    public_configs = [
     ":lume_engine_api"
   ]
 
@@ -381,7 +385,7 @@ ohos_shared_library("AGPEngineApi") {
 }
 
 ohos_shared_library("AGPEcshelperApi") {
-  public_configs = [
+    public_configs = [
     ":lume_component_help_config"
   ]
 
@@ -401,19 +405,22 @@ ohos_source_set("lume_component_help_src") {
     "ecshelper/ComponentTools/base_manager.h",
     "ecshelper/ComponentTools/component_query.h",
     "ecshelper/ComponentTools/component_query.cpp",
+    "${LUME_CORE_PATH}/api/core/property_tools/property_data.cpp",
+    "${LUME_CORE_PATH}/api/core/property_tools/core_metadata.inl",
+    "${LUME_CORE_PATH}/api/core/property_tools/property_api_impl.h",
+    "${LUME_CORE_PATH}/api/core/property_tools/property_api_impl.inl",
+    "${LUME_CORE_PATH}/api/core/property_tools/property_data.h",
+    "${LUME_CORE_PATH}/api/core/property_tools/property_macros.h",
+    "${LUME_CORE_PATH}/api/core/property_tools/property_value.h",
   ]
-
-  external_deps = [ "bounds_checking_function:libsec_shared" ]
-  part_name = "graphic_3d"
-  subsystem_name = "graphic"
 }
 
 ohos_static_library("libComponentHelper") {
   public_configs = [
+    ":lume_default",
     ":lume_component_help_config",
     ":lume_base_api",
     ":lume_engine_api",
-    ":lume_default",
   ]
 
   deps = [

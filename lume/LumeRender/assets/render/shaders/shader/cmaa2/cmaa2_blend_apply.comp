@@ -1,0 +1,76 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+#include "common/cmaa2_common.h"
+
+layout(set = 0, binding = 0, r11f_g11f_b10f) uniform writeonly image2D uOutputImage;
+
+layout(set = 0, binding = 1, std430) readonly buffer bControlBuffer {
+    ControlBufferStruct controlBuffer;
+};
+
+// to-blend 2x2 quad positions, packed as 16bit
+layout(set = 0, binding = 2, std430) readonly buffer bDeferredBlendLocationList {
+    uint blendLocationList[];
+};
+
+// linked list of blend items
+layout(set = 0, binding = 3, std430) readonly buffer bDeferredBlendItemList {
+    uvec2 blendItemList[];  // .x = next index with header, .y = packed color
+};
+
+// head pointers for the linked list, one per 2x2 quad
+layout(set = 0, binding = 4, r32ui) uniform readonly uimage2D uDeferredBlendItemListHeads;
+
+layout(local_size_x = CMAA2_DEFERRED_APPLY_NUM_THREADS, local_size_y = 4, local_size_z = 1) in;
+void main() {
+    const uint numCandidates = controlBuffer.blendLocationCount;
+    const uint currentCandidate = gl_GlobalInvocationID.x;
+    const uint currentQuadOffsetXY = gl_LocalInvocationID.y;
+    
+    if (currentCandidate >= numCandidates) {
+        return;
+    }
+    
+    // 2x2 quad position for this candidate
+    const uint pixelId = blendLocationList[currentCandidate];
+    const ivec2 quadPos = ivec2(pixelId >> 16, pixelId & 0xFFFFu);
+    
+    const ivec2 quadOffsets[4u] = ivec2[4u](ivec2(0, 0), ivec2(1, 0), ivec2(0, 1), ivec2(1, 1));
+    const ivec2 pixelPosActual = quadPos * 2 + quadOffsets[currentQuadOffsetXY];
+    
+    uint counterIdx = imageLoad(uDeferredBlendItemListHeads, quadPos).r;
+    
+    vec4 outColors = vec4(0.0);
+    
+    // iterate through the linked list
+    for (uint ii = 0u; (counterIdx != 0xFFFFFFFFu) && (ii < CMAA2_BLEND_MAX_ITER); ii++) {
+        // decode item-specific info
+        // 2 bits for 2x2 quad location, 3 bits for unused, 1 bit for isComplexShape flag, 26 bits for address
+        const uint offsetXY = (counterIdx >> 30u) & 0x03u;
+        const bool isComplexShape = ((counterIdx >> 26u) & 0x01u) != 0u;
+        
+        const uvec2 blendData = blendItemList[counterIdx & ((1u << 26u) - 1u)];
+        
+        // next items
+        counterIdx = blendData.x;
+        
+        // process only if this item affects current pixel
+        if (offsetXY == currentQuadOffsetXY) {
+            const vec3 color = UnpackColor(blendData.y);
+            
+            // complex shapes get stronger weight
+            const float weight = 0.8f + 1.0f * float(isComplexShape);
+            
+            outColors += vec4(color * weight, weight);
+        }
+    }
+    
+    if (outColors.a == 0.0f) {
+        // no blend
+        return;
+    }
+    
+    imageStore(uOutputImage, pixelPosActual, vec4(outColors.rgb / outColors.a, 1.0f));
+}

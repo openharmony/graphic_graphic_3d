@@ -59,6 +59,7 @@ public:
         RENDER_NS::GpuImageDesc output;
 
         RENDER_NS::GpuImageDesc color;
+        RENDER_NS::GpuImageDesc colorUpscaled;
         RENDER_NS::GpuImageDesc velocityNormal;
         RENDER_NS::GpuImageDesc history;
         RENDER_NS::GpuImageDesc baseColor;
@@ -72,6 +73,7 @@ public:
         // NOTE: depending on the post processes and the output target one could re-use colorTarget as resolve
         // With hdrp and no msaa acts as a 3d scene camera rendering output
         RENDER_NS::RenderHandleReference colorResolve;
+        RENDER_NS::RenderHandleReference colorResolveUpscaled;
 
         RENDER_NS::RenderHandleReference colorMsaa;
         RENDER_NS::RenderHandleReference depthMsaa;
@@ -204,6 +206,11 @@ private:
     BASE_NS::string dsWeatherName_;
 
     CameraResourceSetup camRes_;
+    BASE_NS::Math::UVec2 prevCameraResolution_;
+    BASE_NS::Format prevColorFormat_ { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+    BASE_NS::Format prevDepthFormat_ { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+
+    float screenPercentage_;
     UboHandles uboHandles_;
     CurrentScene currentScene_;
     CreatedTargets createdTargets_;

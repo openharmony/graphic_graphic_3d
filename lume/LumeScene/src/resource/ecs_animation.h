@@ -18,31 +18,31 @@
 
 #include <scene/interface/resource/types.h>
 
+#include <meta/api/property/property_event_handler.h>
 #include <meta/ext/attachment/attachment.h>
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/resource/resource.h>
 #include <meta/interface/animation/intf_animation.h>
 
-#include "component/animation_component.h"
+#include "../component/animation_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 
 META_REGISTER_CLASS(EcsAnimation, "5513d745-958f-4aa6-bab7-7561cebdc3dd", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
 class EcsAnimation : public META_NS::IntroduceInterfaces<META_NS::AttachmentFwd, META_NS::IStartableAnimation,
-                         META_NS::IAnimation, META_NS::Resource, IEcsObjectAccess> {
+                         META_NS::ITimedAnimation, META_NS::Resource, IEcsObjectAccess> {
     META_OBJECT(EcsAnimation, SCENE_NS::ClassId::EcsAnimation, IntroduceInterfaces)
 
 public:
-    EcsAnimation() = default;
-    ~EcsAnimation();
+    void Destroy() override;
 
     bool SetEcsObject(const IEcsObject::Ptr&) override;
     IEcsObject::Ptr GetEcsObject() const override;
 
     BASE_NS::string GetName() const override;
 
-public: // IAnimation
+public: // ITimedAnimation
     META_BEGIN_STATIC_DATA()
     META_STATIC_PROPERTY_DATA(META_NS::IAnimation, bool, Enabled, true)
     META_STATIC_PROPERTY_DATA(META_NS::IAnimation, bool, Valid, false)
@@ -52,6 +52,8 @@ public: // IAnimation
 
     META_STATIC_EVENT_DATA(META_NS::IAnimation, META_NS::IOnChanged, OnFinished)
     META_STATIC_EVENT_DATA(META_NS::IAnimation, META_NS::IOnChanged, OnStarted)
+
+    META_STATIC_PROPERTY_DATA(META_NS::ITimedAnimation, META_NS::TimeSpan, Duration)
 
     META_STATIC_FORWARDED_PROPERTY_DATA(META_NS::INamed, BASE_NS::string, Name)
 
@@ -69,6 +71,9 @@ public: // IAnimation
 
     META_IMPLEMENT_EVENT(META_NS::IOnChanged, OnFinished)
     META_IMPLEMENT_EVENT(META_NS::IOnChanged, OnStarted)
+
+    // EcsAnimation implements read/write Duration, but setting Duration from the application has no effect
+    META_IMPLEMENT_PROPERTY(META_NS::TimeSpan, Duration)
 
     META_FORWARD_PROPERTY(BASE_NS::string, Name, GetNameProperty())
 
@@ -114,7 +119,33 @@ private:
     void SetProgress(float);
 
 private:
-    IInternalAnimation::Ptr anim_;
+    IInternalAnimation::Ptr animation_;
+    struct TargetProperties {
+        TargetProperties() = default;
+        TargetProperties(const IInternalAnimation::Ptr& animation)
+        {
+            duration = animation->Duration();
+            repeatCount = animation->RepeatCount();
+            currentLoop = animation->CurrentLoop();
+            speed = animation->Speed();
+            state = animation->State();
+            time = animation->Time();
+            completed = animation->Completed();
+        }
+        META_NS::Property<CORE3D_NS::AnimationComponent::PlaybackState> state;
+        META_NS::Property<uint32_t> repeatCount;
+        META_NS::Property<uint32_t> currentLoop;
+        META_NS::Property<float> duration;
+        META_NS::Property<float> speed;
+        META_NS::Property<float> time;
+        META_NS::ConstProperty<bool> completed;
+    };
+    TargetProperties props_;
+    META_NS::PropertyChangedEventHandler timeChanged_;
+    META_NS::PropertyChangedEventHandler speedChanged_;
+    META_NS::PropertyChangedEventHandler repeatCountChanged_;
+    META_NS::PropertyChangedEventHandler durationChanged_;
+    META_NS::PropertyChangedEventHandler completedChanged_;
 };
 
 SCENE_END_NAMESPACE()

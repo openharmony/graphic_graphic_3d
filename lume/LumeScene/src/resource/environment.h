@@ -22,21 +22,20 @@
 #include <shared_mutex>
 
 #include <meta/api/make_callback.h>
-#include <meta/api/resource/derived_from_resource.h>
+#include <meta/api/resource/derived_from_template.h>
+#include <meta/api/resource/resource_template_access.h>
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/resource/resource.h>
 #include <meta/interface/resource/intf_resource.h>
 
-#include "component/environment_component.h"
+#include "../component/environment_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-class Environment : public META_NS::IntroduceInterfaces<META_NS::DerivedFromResource, EnvironmentComponent,
+class Environment : public META_NS::IntroduceInterfaces<META_NS::DerivedFromTemplate, EnvironmentComponent,
                         META_NS::INamed, ICreateEntity, META_NS::Resource> {
     META_OBJECT(Environment, SCENE_NS::ClassId::Environment, IntroduceInterfaces)
 public:
-    Environment() : Super(ClassId::EnvironmentResourceTemplate) {}
-
     META_BEGIN_STATIC_DATA()
     META_STATIC_PROPERTY_DATA(META_NS::INamed, BASE_NS::string, Name)
     META_END_STATIC_DATA()
@@ -52,6 +51,17 @@ public:
     {
         return ClassId::EnvironmentResource.Id().ToUid();
     }
+    META_NS::ObjectId GetDefaultAccess() const override
+    {
+        return ClassId::EnvironmentTemplateAccess;
+    }
+};
+
+class EnvironmentTemplateAccess
+    : public META_NS::IntroduceInterfaces<META_NS::ResourceTemplateAccess, META_NS::BaseObject> {
+    META_OBJECT(EnvironmentTemplateAccess, ClassId::EnvironmentTemplateAccess, IntroduceInterfaces)
+public:
+    EnvironmentTemplateAccess() : Super(ClassId::Environment, ClassId::EnvironmentResourceTemplate) {}
 };
 
 SCENE_END_NAMESPACE()

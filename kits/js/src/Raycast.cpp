@@ -21,6 +21,7 @@
 #include <scene/interface/intf_raycast.h>
 
 #include "BaseObjectJS.h"
+#include "NodeImpl.h"
 #include "Vec3Proxy.h"
 
 NapiApi::Object CreateRaycastResult(NapiApi::StrongRef scene, napi_env env, SCENE_NS::NodeHit hitResult)
@@ -29,6 +30,9 @@ NapiApi::Object CreateRaycastResult(NapiApi::StrongRef scene, napi_env env, SCEN
 
     napi_value args[] = { scene.GetValue(), NapiApi::Object { env }.ToNapiValue() };
     const auto jsNode = CreateFromNativeInstance(env, hitResult.node, PtrType::WEAK, args);
+    if (auto nodeImpl = jsNode.GetJsWrapper<NodeImpl>()) {
+        nodeImpl->Attached(true);
+    }
 
     auto centerDistance = napi_value {};
     auto distance = napi_value {};

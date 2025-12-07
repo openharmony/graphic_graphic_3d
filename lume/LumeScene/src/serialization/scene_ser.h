@@ -40,6 +40,13 @@ public:
     virtual BASE_NS::vector<META_NS::IObject::Ptr> GetAttachments() const = 0;
 };
 
+class ISceneSer : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, ISceneSer, "a3c99c1d-483c-4642-a90b-c7d2f8475e68")
+public:
+    virtual void SetResourceGroups(BASE_NS::vector<BASE_NS::string>) = 0;
+    virtual BASE_NS::vector<BASE_NS::string> GetResourceGroups() const = 0;
+};
+
 class IExternalAttachment : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IExternalAttachment, "a0fe2a52-eff5-4ad7-b846-ac438032699f")
 public:
@@ -58,8 +65,11 @@ public:
     virtual void SetResourceId(CORE_NS::ResourceId id) = 0;
     virtual BASE_NS::vector<IExternalAttachment::Ptr> GetAttachments() const = 0;
     virtual void AddAttachment(BASE_NS::string_view path, META_NS::IObject::Ptr) = 0;
+    virtual void AddSubresourceGroup(BASE_NS::string_view group) = 0;
+    virtual BASE_NS::vector<BASE_NS::string> GetSubresourceGroups() const = 0;
 };
 
+META_REGISTER_CLASS(SceneSer, "ae6addfc-5e8e-4c2d-8653-2bd1dca4be6c", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(SceneNodeSer, "f339e04b-317d-4527-8d3c-460467ff43da", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(
     ExternalAttachment, "781963d3-85d7-4a79-8a1b-90377d61ef8a", META_NS::ObjectCategoryBits::NO_CATEGORY)
@@ -117,6 +127,39 @@ private:
     BASE_NS::vector<META_NS::IObject::Ptr> attas_;
 };
 
+class SceneSer : public META_NS::IntroduceInterfaces<SceneNodeSer, ISceneSer> {
+    META_OBJECT(SceneSer, ClassId::SceneSer, IntroduceInterfaces)
+public:
+    void SetResourceGroups(BASE_NS::vector<BASE_NS::string> g) override
+    {
+        groups_ = BASE_NS::move(g);
+    }
+    BASE_NS::vector<BASE_NS::string> GetResourceGroups() const override
+    {
+        return groups_;
+    }
+
+    META_NS::ReturnError Export(META_NS::IExportContext& c) const override
+    {
+        auto res = Super::Export(c);
+        if (res) {
+            res = META_NS::Serializer(c) & META_NS::NamedValue("resourceGroups", groups_);
+        }
+        return res;
+    }
+    META_NS::ReturnError Import(META_NS::IImportContext& c) override
+    {
+        auto res = Super::Import(c);
+        if (res) {
+            res = META_NS::Serializer(c) & META_NS::NamedValue("resourceGroups", groups_);
+        }
+        return res;
+    }
+
+private:
+    BASE_NS::vector<BASE_NS::string> groups_;
+};
+
 class SceneExternalNodeSer
     : public META_NS::IntroduceInterfaces<META_NS::MetaObject, ISceneExternalNodeSer, META_NS::ISerializable> {
     META_OBJECT(SceneExternalNodeSer, ClassId::SceneExternalNodeSer, IntroduceInterfaces)
@@ -152,11 +195,21 @@ public:
         }
     }
 
+    void AddSubresourceGroup(BASE_NS::string_view group) override
+    {
+        subresourceGroups_.push_back(BASE_NS::string(group));
+    }
+    BASE_NS::vector<BASE_NS::string> GetSubresourceGroups() const override
+    {
+        return subresourceGroups_;
+    }
+
     META_NS::ReturnError Export(META_NS::IExportContext& c) const override
     {
         // the name is automatically serialised for objects using the GetName in IObject
         return META_NS::Serializer(c) & META_NS::AutoSerialize() & META_NS::NamedValue("resourceId.name", id_.name) &
-               META_NS::NamedValue("resourceId.group", id_.group) & META_NS::NamedValue("attachments", attachments_);
+               META_NS::NamedValue("resourceId.group", id_.group) & META_NS::NamedValue("attachments", attachments_) &
+               META_NS::NamedValue("subresourceGroups", subresourceGroups_);
     }
     META_NS::ReturnError Import(META_NS::IImportContext& c) override
     {
@@ -164,6 +217,9 @@ public:
         if (res & META_NS::AutoSerialize() & META_NS::NamedValue("resourceId.name", id_.name) &
             META_NS::NamedValue("resourceId.group", id_.group) & META_NS::NamedValue("attachments", attachments_)) {
             name_ = c.GetName();
+            if (c.HasMember("subresourceGroups")) {
+                res& META_NS::NamedValue("subresourceGroups", subresourceGroups_);
+            }
         }
         return res;
     }
@@ -172,6 +228,7 @@ private:
     BASE_NS::string name_;
     CORE_NS::ResourceId id_;
     BASE_NS::vector<IExternalAttachment::Ptr> attachments_;
+    BASE_NS::vector<BASE_NS::string> subresourceGroups_;
 };
 
 class ExternalAttachment

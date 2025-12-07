@@ -1,0 +1,148 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "OutputImage0",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 4,
+                    "height": 4,
+                    "depth": 1
+                },
+                {
+                    "name": "OutputImage1",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration1",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 4,
+                    "height": 4,
+                    "depth": 1
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeFullscreenGeneric",
+            "nodeName": "RenderNodeFullscreenGeneric",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "pushConstants"
+            },
+            "renderDataStoreShaderSpecialization": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "fullscreenConfig"
+            },
+            "shader": "rendershaders://shader/GfxFullscreenGenericRenderNodeTest.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "load",
+                        "storeOp": "store",
+                        "name": "OutputImage0"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpassContents": "inline",
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            },
+            "resources": {
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "InputImage0",
+                        "resourceLocation": "from_render_graph_input",
+                        "resourceIndex": 0
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeFullscreenGeneric",
+            "nodeName": "RenderNodeFullscreenGeneric2",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "pushConstants"
+            },
+            "renderDataStoreShaderSpecialization": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "fullscreenConfig2"
+            },
+            "shader": "rendershaders://shader/GfxFullscreenGenericRenderNodeTest.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "load",
+                        "storeOp": "store",
+                        "name": "OutputImage1"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpassContents": "inline",
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            },
+            "resources": {
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "InputImage0"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -24,8 +24,6 @@
 #include <core/namespace.h>
 #include <core/property_tools/property_api_impl.inl>
 
-#include "property/property_handle.h"
-
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace CORE_NS;

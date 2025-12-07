@@ -373,35 +373,35 @@ size_t CustomPropertyPodHelper::GetPropertyTypeAlignment(const PropertyTypeDecl&
     static_assert(sizeof(float) == sizeof(uint32_t) && sizeof(float) == sizeof(int32_t));
     switch (propertyType) {
         case PropertyType::FLOAT_T:
-            [[fallthrough]];
+            [[fallthrough]]; // float
         case PropertyType::UINT32_T:
-            [[fallthrough]];
+            [[fallthrough]]; // float
         case PropertyType::INT32_T:
-            [[fallthrough]];
+            [[fallthrough]]; // float
         case PropertyType::BOOL_T:
             align = sizeof(float);
             break;
         case PropertyType::VEC2_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 2 float
         case PropertyType::UVEC2_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 2 float
         case PropertyType::IVEC2_T:
             align = sizeof(float) * 2U;
             break;
         case PropertyType::VEC3_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 4 float
         case PropertyType::UVEC3_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 4 float
         case PropertyType::IVEC3_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 4 float
         case PropertyType::VEC4_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 4 float
         case PropertyType::UVEC4_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 4 float
         case PropertyType::IVEC4_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 4 float
         case PropertyType::MAT3X3_T:
-            [[fallthrough]];
+            [[fallthrough]]; // 4 float
         case PropertyType::MAT4X4_T:
             align = sizeof(float) * 4U;
             break;
@@ -498,10 +498,12 @@ CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
                     if (EntityReference* resource = (EntityReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
-                } break;
+                    break;
+                }
                 default: {
                     CORE_LOG_E("custom property binding destruction error");
-                } break;
+                    break;
+                }
             }
         }
     }
@@ -605,7 +607,10 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
         switch (meta.type) {
             case PropertyType::ENTITY_REFERENCE_T: {
                 new (data_.data() + meta.offset) EntityReference;
-            } break;
+                break;
+            }
+            default:
+                break;
         }
     } else {
         CORE_LOG_W("unsupported property addition for custom property binding container");
@@ -657,6 +662,8 @@ size_t GetPropertyTypeAlignment(const PropertyTypeDecl& propertyType)
     switch (propertyType) {
         case PropertyType::ENTITY_REFERENCE_T:
             align = ENTITY_REFERENCE_BYTE_SIZE;
+            break;
+        default:
             break;
     }
     return align;

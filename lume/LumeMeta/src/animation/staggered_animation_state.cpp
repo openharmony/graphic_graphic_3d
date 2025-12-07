@@ -98,7 +98,7 @@ void StaggeredAnimationState::ChildAdded(const ChildChangedInfo& info)
     }
 
     AnimationSegment segment { animation, controller };
-    if (inContainerCount == 1) {
+    if (inContainerCount == 0) {
         segment.durationChanged_.Subscribe(animation->TotalDuration(), childrenChanged_);
         segment.validChanged_.Subscribe(animation->Valid(), childrenChanged_);
     }
@@ -343,15 +343,10 @@ AnyReturnValue SequentialAnimationState::Evaluate()
         return children.empty() ? AnyReturn::SUCCESS : AnyReturn::NOTHING_TO_DO;
     }
 
-    // Iterate first->last or last->first depending on direction
-    int mod = 1;
-    size_t index = 0;
     size_t target = children.size();
-    if (step.reverse) {
-        mod = -1;
-        std::swap(index, target);
-    }
-    for (; index != target; index += mod) {
+    for (size_t i = 0; i != target; ++i) {
+        // Iterate first->last or last->first depending on direction
+        size_t index = step.reverse ? (target - i - 1) : i;
         const auto& segment = children[index];
         const auto params = TransformChild(children[index], containerProgress, GetAnimationTargetState(), step.reverse);
         if (params.state == IAnimationInternal::AnimationTargetState::RUNNING ||

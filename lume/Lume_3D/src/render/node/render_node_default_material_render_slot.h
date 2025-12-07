@@ -86,13 +86,6 @@ public:
         uint64_t boundShaderHash { 0U };
         bool boundCustomSetNeed { false };
     };
-    struct FrameGlobalDescriptorSets {
-        RENDER_NS::RenderHandle set0;
-        RENDER_NS::RenderHandle set1;
-        RENDER_NS::RenderHandle set2Default;
-        BASE_NS::array_view<const RENDER_NS::RenderHandle> set2;
-        bool valid = false;
-    };
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "80758e28-f064-45e6-878d-624652598405" };
@@ -139,7 +132,7 @@ private:
         uint64_t hash { 0 };
     };
     struct CurrentScene {
-        RenderCamera camera;
+        SceneRenderCameraData camData;
         RENDER_NS::RenderHandle cameraEnvRadianceHandle;
         RENDER_NS::ViewportDesc viewportDesc;
         RENDER_NS::ScissorDesc scissorDesc;
@@ -147,7 +140,6 @@ private:
         RENDER_NS::RenderHandle prePassColorTarget;
 
         bool hasShadow { false };
-        uint32_t cameraIdx { 0u };
         IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
         IRenderDataStoreDefaultLight::LightingFlags lightingFlags { 0u };
         RenderCamera::ShaderFlags cameraShaderFlags { 0u }; // evaluated based on camera and scene flags
@@ -171,8 +163,8 @@ private:
         const RenderDataDefaultMaterial::SubmeshMaterialFlags& materialFlags, RenderSubmeshFlags submeshFlags,
         const RENDER_NS::GraphicsState::InputAssembly& inputAssembly, PipelineInfo& info);
     uint32_t BindSet1And2(RENDER_NS::IRenderCommandList& cmdList, const RenderSubmesh& currSubmesh,
-        RenderSubmeshFlags submeshFlags, bool initialBindDone, const FrameGlobalDescriptorSets& fgds,
-        uint32_t currMaterialIndex);
+        RenderSubmeshFlags submeshFlags, bool initialBindDone,
+        const RenderNodeSceneUtil::FrameGlobalDescriptorSets& fgds, uint32_t currMaterialIndex);
     bool UpdateAndBindSet3(RENDER_NS::IRenderCommandList& cmdList,
         const RenderDataDefaultMaterial::CustomResourceData& customResourceData);
     void CreateDefaultShaderData();
@@ -221,6 +213,7 @@ private:
     // the base default render node graph from RNG setup
     RENDER_NS::RenderPass rngRenderPass_;
     bool fsrEnabled_ { false };
+    bool bindlessEnabled_ { false };
 
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
     BASE_NS::vector<SlotSubmeshIndex> sortedSlotSubmeshes_;

@@ -624,12 +624,6 @@ RenderHandleReference Device::CreateSwapchainImpl(
         }
     }
 
-    if ((!replace) && (swapchains_.size() == DeviceConstants::MAX_SWAPCHAIN_COUNT)) {
-        PLUGIN_LOG_W("Only (%u) swapchains supported.", DeviceConstants::MAX_SWAPCHAIN_COUNT);
-        Deactivate();
-        return {};
-    }
-
     if (!replace) {
         swapchains_.push_back({});
     }

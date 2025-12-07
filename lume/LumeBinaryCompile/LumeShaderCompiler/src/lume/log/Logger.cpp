@@ -68,35 +68,48 @@ Logger::Logger(bool defaultOutputs)
 
 Logger::~Logger() = default;
 
-void Logger::Vlog(LogLevel logLevel, const char* filename, int linenumber, const char* format, va_list args)
+void Logger::Vlog(LogLevel logLevel, const char* filename, int lineNumber, const char* format, va_list args)
 {
-    LUME_ASSERT_MSG(logLevel != LogLevel::NONE, "'NONE' is not a valid log level for writing to the log.");
+    LUME_ASSERT_MSG(logLevel != LogLevel::NONE, "'None' is not a valid log level for writing to the log.");
 
-    if (mLogLevel > logLevel) {
+    if (logLevel_ > logLevel) {
         return;
     }
 
-    char buffer[LOG_BUFFER_SIZE];
+    // we need to make a copy of the args, since the va_list can be in an undefined state after use.
+    std::va_list tmp;
+    va_copy(tmp, args);
+
+    // use vsnprintf to calculate the required size (not supported by the _s variant)
+    const int sizeNeeded = vsnprintf(nullptr, 0, format, args) + 1;
+
+    std::lock_guard guard(loggerMutex_);
+
+    if (sizeNeeded > 0 && static_cast<size_t>(sizeNeeded) > buffer_.size()) {
+        buffer_.resize(static_cast<size_t>(sizeNeeded));
+    }
+
 #if defined(__STDC_LIB_EXT1__) || defined(__STDC_WANT_SECURE_LIB__)
-    auto ret = vsnprintf_s(buffer, sizeof(buffer), format, args);
-    if (ret < 0) {
-        return;
-    }
+    const int ret = vsnprintf_s(buffer_.data(), buffer_.size(), buffer_.size() - 1, format, tmp);
 #else
-    auto ret = vsnprintf(buffer, sizeof(buffer), format, args);
-    if (ret < 0) {
-        return;
-    }
+    const int ret = vsnprintf(buffer_.data(), buffer_.size(), format, tmp);
 #endif
 
-    for (auto& output : mOutputs) {
-        output->Write(logLevel, filename, linenumber, buffer);
+    va_end(tmp);
+    if (ret < 0) {
+        return;
+    }
+
+    for (auto& output : outputs_) {
+        output->Write(logLevel, filename, lineNumber, buffer_.data());
     }
 }
 
 void Logger::Write(LogLevel logLevel, const char* filename, int linenumber, const char* buffer)
 {
-    for (auto& output : mOutputs) {
+    std::lock_guard guard(loggerMutex_);
+
+    for (auto& output : outputs_) {
         output->Write(logLevel, filename, linenumber, buffer);
     }
 }
@@ -136,19 +149,19 @@ bool Logger::LogAssert(const char* filename, int linenumber, bool expression, co
 
 ILogger::LogLevel Logger::GetLogLevel() const
 {
-    return mLogLevel;
+    return logLevel_;
 }
 
 void Logger::SetLogLevel(LogLevel logLevel)
 {
-    mLogLevel = logLevel;
+    logLevel_ = logLevel;
 }
 
 void Logger::AddOutput(std::unique_ptr<IOutput> output)
 {
     if (output) {
-        std::lock_guard<std::mutex> guard(mLoggerMutex);
-        mOutputs.push_back(std::move(output));
+        std::lock_guard<std::mutex> guard(loggerMutex_);
+        outputs_.push_back(std::move(output));
     }
 }
 

@@ -16,6 +16,7 @@
 #define SCENE_INTERFACE_ICAMERA_H
 
 #include <scene/base/types.h>
+#include <scene/interface/intf_effect.h>
 #include <scene/interface/intf_input_receiver.h>
 #include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_render_target.h>
@@ -129,6 +130,12 @@ struct ColorFormat {
     uint32_t usageFlags {};
 };
 
+enum class CameraSampleCount : uint8_t {
+    COUNT_2 = 2U,
+    COUNT_4 = 4U,
+    COUNT_8 = 8U,
+};
+
 class ICamera : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ICamera, "76af2b00-f3eb-414e-b547-8758adf4d31a")
 public:
@@ -225,7 +232,11 @@ public:
     /**
      * @brief Defines a layer mask which affects camera's rendering.
      */
-    META_PROPERTY(uint64_t, LayerMask)
+    META_PROPERTY(uint64_t, CameraLayerMask)
+    /**
+     * @brief MSAA sample count if MSAA is enabled
+     */
+    META_PROPERTY(CameraSampleCount, MSAASampleCount)
     /**
      * @brief Color target creation customization.
      */
@@ -238,19 +249,61 @@ public:
 
     /**
      * @brief Camera post process configuration.
-     * @return
      */
     META_PROPERTY(IPostProcess::Ptr, PostProcess)
-
+    /**
+     * @brief Downsample percentage (relative to render resolution)
+     */
+    META_PROPERTY(float, DownsamplePercentage)
+    /**
+     * @brief Set camera's active state.
+     * @param active The state to set the camera to.
+     * @return True if successful, false otherwise.
+     */
     virtual Future<bool> SetActive(bool active = true) = 0;
+    /**
+     * @brief Return true if the camera is active or false otherwise.
+     */
     virtual bool IsActive() const = 0;
+    /**
+     * @brief Sets the camera's render target.
+     * @return True if render target was successfully set, false otherwise.
+     */
     virtual Future<bool> SetRenderTarget(const IRenderTarget::Ptr&) = 0;
-
     /**
      * @brief Send an input event to all attachments of the camera which implement IInputReceiver.
      * @param event The event to send.
      */
     virtual void SendInputEvent(PointerEvent& event) = 0;
+};
+
+/**
+ * @brief The ICameraEffect defines an interface to use for applying an ordered set of post process effects on camera.
+ */
+class ICameraEffect : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, ICameraEffect, "f2891e82-d11a-40a0-a8f3-3032e6560228")
+public:
+    /**
+     * @brief Effects to apply on the output. Effects are similar to ICamera::PostProcess and usually either Effects or
+     * PostProcess should be set.
+     */
+    META_ARRAY_PROPERTY(IEffect::Ptr, Effects)
+};
+
+/**
+ * @brief Provides access to camera matrices.
+ */
+class ICameraMatrixAccessor : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, ICameraMatrixAccessor, "aca7ef99-df4f-4184-8de9-713a3c67c3e6")
+public:
+    /**
+     * @brief Returns the implementor's projection matrix.
+     */
+    virtual BASE_NS::Math::Mat4X4 GetProjectionMatrix() const = 0;
+    /**
+     * @brief Returns the implementor's view matrix.
+     */
+    virtual BASE_NS::Math::Mat4X4 GetViewMatrix() const = 0;
 };
 
 META_REGISTER_CLASS(CameraNode, "3782e343-7e5e-4bee-af14-7f7deaa806f2", META_NS::ObjectCategoryBits::NO_CATEGORY)
@@ -263,5 +316,7 @@ META_TYPE(SCENE_NS::CameraCulling)
 META_TYPE(SCENE_NS::CameraPipeline)
 META_TYPE(SCENE_NS::CameraPipelineFlag)
 META_TYPE(SCENE_NS::CameraSceneFlag)
+META_TYPE(SCENE_NS::CameraSampleCount)
 META_TYPE(SCENE_NS::ColorFormat)
+
 #endif

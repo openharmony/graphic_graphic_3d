@@ -53,7 +53,7 @@ static BASE_NS::Uid GenerateInstanceId(uint64_t random)
     auto high = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed.time_since_epoch()).count();
 
     BASE_NS::Uid uid;
-    uid.data[0] = high;
+    uid.data[0] = static_cast<uint64_t>(high);
     uid.data[1] = random;
     return uid;
 }
@@ -398,10 +398,15 @@ void ObjectRegistry::DoDisposal(const BASE_NS::vector<InstanceId>& uids) const
     for (auto&& v : uids) {
         auto it = instancesByUid_.find(v);
         if (it != instancesByUid_.end()) {
-            instancesByUid_.erase(it);
+            // check if the instance id was already reused and don't touch if so
+            if (it->second.ptr.expired()) {
+                instancesByUid_.erase(it);
+            }
             auto it = singletons_.find(v);
             if (it != singletons_.end()) {
-                singletons_.erase(it);
+                if (it->second.expired()) {
+                    singletons_.erase(it);
+                }
             }
         }
     }
@@ -425,7 +430,7 @@ BASE_NS::vector<IObject::Ptr> ObjectRegistry::GetAllObjectInstances() const
     BASE_NS::vector<IObject::Ptr> result;
     std::shared_lock lock { mutex_ };
     result.reserve(instancesByUid_.size());
-    for (const auto& v : instancesByUid_) {
+    for (auto& v : instancesByUid_) {
         if (auto strong = v.second.ptr.lock()) {
             result.emplace_back(strong);
         }
@@ -440,7 +445,7 @@ BASE_NS::vector<IObject::Ptr> ObjectRegistry::GetAllSingletonObjectInstances() c
     std::shared_lock lock { mutex_ };
     if (!singletons_.empty()) {
         result.reserve(singletons_.size());
-        for (const auto& s : singletons_) {
+        for (auto& s : singletons_) {
             if (auto strong = s.second.lock()) {
                 result.push_back(strong);
             }
@@ -455,7 +460,7 @@ BASE_NS::vector<IObject::Ptr> ObjectRegistry::GetObjectInstancesByCategory(
     CheckGC();
     BASE_NS::vector<IObject::Ptr> result;
     std::shared_lock lock { mutex_ };
-    for (const auto& i : instancesByUid_) {
+    for (auto& i : instancesByUid_) {
         if (CheckCategoryBits(static_cast<ObjectCategoryBits>(i.second.category), category, strict)) {
             if (auto strong = i.second.ptr.lock()) {
                 result.emplace_back(strong);
@@ -548,6 +553,11 @@ bool ObjectRegistry::RegisterTaskQueue(const ITaskQueue::Ptr& queue, const BASE_
         // Null queue but no existing queue found
         return false;
     }
+    // warn if the thread info interface is not implemented
+    if (!interface_cast<ITaskQueueThreadInfo>(queue)) {
+        CORE_LOG_W("The registered task queue does not implement the ITaskQueueThreadInfo."\
+                   " This may cause issues when matching threads.");
+    }
     queues_[queueId] = queue;
     return true;
 }
@@ -575,10 +585,11 @@ bool ObjectRegistry::UnregisterAllTaskQueues()
     return true;
 }
 
+#ifdef WIN32
 static ITaskQueue::WeakPtr& GetCurrentTaskQueueImpl()
 {
-    static thread_local ITaskQueue::WeakPtr q;
-    return q;
+    static thread_local ITaskQueue::WeakPtr CurrentTaskQueueStorage;
+    return CurrentTaskQueueStorage;
 }
 
 ITaskQueue::Ptr ObjectRegistry::GetCurrentTaskQueue() const
@@ -592,6 +603,95 @@ ITaskQueue::WeakPtr ObjectRegistry::SetCurrentTaskQueue(ITaskQueue::WeakPtr q)
     impl = q;
     return res;
 }
+#else
+namespace {
+static thread_local ITaskQueue::WeakPtr* CurrentTaskQueueStorage = nullptr;
+std::mutex gInstanceLock;
+struct link {
+    ITaskQueue::WeakPtr* data {};
+    link* next {};
+};
+link* gInstances = nullptr;
+} // namespace
+
+void __attribute__((destructor)) ObjectRegistryCalledAtExit()
+{
+    // we HOPE that no one is still trying to use anything, as full shutdown is in progress.
+    link* cur {};
+    link* next = gInstances;
+    gInstances = nullptr;
+    while (next) {
+        cur = next;
+        delete cur->data;
+        cur->data = nullptr;
+
+        next = cur->next;
+        cur->next = nullptr;
+        delete cur;
+    }
+}
+static void RemoveNode(link* prev, link* cur, link* next)
+{
+    delete cur->data;
+    if (prev == nullptr) {
+        gInstances = cur->next;
+    } else {
+        prev->next = next;
+    }
+    delete cur;
+}
+static void RemoveTaskQueueTLS(META_NS::ITaskQueue::WeakPtr* remove)
+{
+    std::unique_lock lock { gInstanceLock };
+    link* prev {};
+    link* cur {};
+    link* next = gInstances;
+    while (next) {
+        cur = next;
+        next = cur->next;
+        if (cur->data == remove) {
+            RemoveNode(prev, cur, next);
+            return;
+        }
+        prev = cur;
+    }
+}
+
+static ITaskQueue::WeakPtr& GetCurrentTaskQueueImpl()
+{
+    if (!CurrentTaskQueueStorage) {
+        CurrentTaskQueueStorage = new ITaskQueue::WeakPtr();
+        std::unique_lock lock { gInstanceLock };
+        gInstances = new link { CurrentTaskQueueStorage, gInstances };
+    }
+    return *CurrentTaskQueueStorage;
+}
+
+ITaskQueue::Ptr ObjectRegistry::GetCurrentTaskQueue() const
+{
+    return CurrentTaskQueueStorage ? CurrentTaskQueueStorage->lock() : nullptr;
+}
+ITaskQueue::WeakPtr ObjectRegistry::SetCurrentTaskQueue(ITaskQueue::WeakPtr q)
+{
+    ITaskQueue::WeakPtr ret = CurrentTaskQueueStorage ? *CurrentTaskQueueStorage : nullptr;
+    if (q.expired()) {
+        if (CurrentTaskQueueStorage) {
+            CurrentTaskQueueStorage->reset();
+            RemoveTaskQueueTLS(CurrentTaskQueueStorage);
+            CurrentTaskQueueStorage = nullptr;
+        }
+    } else {
+        if (!CurrentTaskQueueStorage) {
+            CurrentTaskQueueStorage = new ITaskQueue::WeakPtr();
+            std::unique_lock lock { gInstanceLock };
+            gInstances = new link { CurrentTaskQueueStorage, gInstances };
+        }
+        *CurrentTaskQueueStorage = q;
+    }
+    return ret;
+}
+#endif
+
 IPromise::Ptr ObjectRegistry::ConstructPromise()
 {
     return IPromise::Ptr(new Promise);
@@ -728,6 +828,17 @@ void ObjectRegistry::UnregisterAny(const ObjectId& id)
     std::unique_lock lock { mutex_ };
     anyBuilders_.erase(id);
 }
+BASE_NS::vector<ObjectId> ObjectRegistry::GetAllRegisteredAnyTypes() const
+{
+    BASE_NS::vector<ObjectId> all;
+    std::unique_lock lock { mutex_ };
+    all.reserve(anyBuilders_.size());
+    for (auto&& b : anyBuilders_) {
+        all.push_back(b.first);
+    }
+    return all;
+}
+
 IGlobalSerializationData& ObjectRegistry::GetGlobalSerializationData()
 {
     return *this;
@@ -800,6 +911,18 @@ IEngineData& ObjectRegistry::GetEngineData()
 {
     return *this;
 }
+BASE_NS::vector<CORE_NS::PropertyTypeDecl> ObjectRegistry::GetAllRegisteredValueAccess() const
+{
+    BASE_NS::vector<CORE_NS::PropertyTypeDecl> all;
+    {
+        std::unique_lock lock { mutex_ };
+        all.reserve(engineInternalAccess_.size());
+        for (auto&& v : engineInternalAccess_) {
+            all.push_back(v.first);
+        }
+    }
+    return all;
+}
 IObject::Ptr ObjectRegistry::DefaultResolveObject(const IObjectInstance::Ptr& base, const RefUri& uri) const
 {
     return META_NS::DefaultResolveObject(base, uri);
@@ -808,4 +931,58 @@ IMetadata::Ptr ObjectRegistry::ConstructObjectDataContainer()
 {
     return IMetadata::Ptr(new Internal::ObjectDataContainer);
 }
+
+namespace Internal {
+constexpr bool IsUniqueName(const BASE_NS::array_view<BASE_NS::string_view>& names, BASE_NS::string_view name)
+{
+    for (auto&& n : names) {
+        if (n == name) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void MakeNameUnique(const BASE_NS::array_view<BASE_NS::string_view>& names, BASE_NS::string& name, uint32_t index)
+{
+    if (IsUniqueName(names, name)) {
+        // Name is already unique
+        return;
+    }
+    constexpr uint32_t POSTFIX_MIN_LENGTH = 3; // 3 chars: "(x)"
+    const auto length = name.length();
+    bool remove = length >= POSTFIX_MIN_LENGTH && name.ends_with(')');
+
+    // Remove existing postfix, e.g. (1)
+    for (int64_t pos = static_cast<int64_t>(length) - 1; remove && pos >= 0; pos--) {
+        if (name[pos] == '(') {
+            if (!pos || name[pos - 1] == ' ') {
+                // Require that '(x)' must be preceded by ' ' unless only the postfix exists
+                name = name.substr(0, pos);
+            }
+            break;
+        }
+    }
+    // Try with and incremented postfix, e.g. " (2)"
+    BASE_NS::string postfix = name.empty() || name.ends_with(" ") ? "" : " ";
+    postfix.append("(").append(BASE_NS::to_string(++index)).append(")");
+    name = name + postfix;
+    MakeNameUnique(names, name, index);
+}
+
+} // namespace Internal
+
+BASE_NS::string ObjectRegistry::GetUniqueName(
+    BASE_NS::string_view name, BASE_NS::array_view<BASE_NS::string_view> names) const
+{
+    BASE_NS::string unique(name);
+    Internal::MakeNameUnique(names, unique, 0);
+    return unique;
+}
+
+IObjectUtil& ObjectRegistry::GetObjectUtil()
+{
+    return *this;
+}
+
 META_END_NAMESPACE()

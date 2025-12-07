@@ -95,7 +95,10 @@ public:
     {
         if constexpr (BASE_NS::is_integral_v<RealType>) {
             if (index < prop_.metaData.enumMetaData.size()) {
-                return RealType(value_) & RealType(prop_.metaData.enumMetaData[index].value);
+                if (type_ == META_NS::EnumType::BIT_FIELD) {
+                    return RealType(value_) & RealType(prop_.metaData.enumMetaData[index].value);
+                }
+                return RealType(value_) == RealType(prop_.metaData.enumMetaData[index].value);
             }
         }
         return false;

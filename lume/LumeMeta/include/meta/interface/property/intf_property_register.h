@@ -55,6 +55,8 @@ public:
     virtual void RegisterAny(BASE_NS::shared_ptr<AnyBuilder> builder) = 0;
     /// Unregister any type
     virtual void UnregisterAny(const ObjectId& id) = 0;
+    /// Returns all registered any types
+    virtual BASE_NS::vector<ObjectId> GetAllRegisteredAnyTypes() const = 0;
 };
 
 META_END_NAMESPACE()

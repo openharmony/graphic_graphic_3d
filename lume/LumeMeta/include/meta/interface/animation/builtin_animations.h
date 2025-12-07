@@ -33,6 +33,23 @@ META_REGISTER_CLASS(PropertyAnimation, "f28ac10f-9410-46e6-bf1c-613557d2d391", O
 META_REGISTER_CLASS(KeyframeAnimation, "78d13777-10b4-43de-925d-c9ad7c28874a", ObjectCategoryBits::ANIMATION)
 META_REGISTER_CLASS(TrackAnimation, "acdcc754-8d97-4a4d-8885-67fb8e35ca12", ObjectCategoryBits::ANIMATION)
 
+/** Resource info */
+META_REGISTER_CLASS(
+    PropertyAnimationTemplateAccess, "e0bae482-e2f0-441e-8fac-70fea6327d48", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(
+    SequentialAnimationTemplateAccess, "d0281c01-b87d-4789-9cb1-4b23a09e4f64", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(
+    ParallelAnimationTemplateAccess, "b794eec8-3981-4ade-8295-ec14fc8c1a21", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(
+    KeyframeAnimationTemplateAccess, "9bf5c709-9cf8-4be8-80fc-c72861442997", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(
+    TrackAnimationTemplateAccess, "fceba78d-e4b2-4f8c-aa87-7eecc9fb94c4", ObjectCategoryBits::NO_CATEGORY)
+
+/* Resources and loaders */
+META_REGISTER_CLASS(AnimationResource, "41923083-b9b0-4c4a-88e1-11bb3122ba7c", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(AnimationResourceType, "dbfcbe6d-9113-4f65-bced-b8728499d3d6", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(AnimationResourceTemplate, "917e1754-5e4d-4d4d-ab90-b1399edade59", ObjectCategoryBits::NO_CATEGORY)
+
 /** Animation modifiers */
 META_REGISTER_CLASS(
     LoopAnimationModifier, "b16ff5f2-8b37-476b-ab4e-84db1fc8e5f2", ObjectCategoryBits::ANIMATION_MODIFIER)

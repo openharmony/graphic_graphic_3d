@@ -82,24 +82,28 @@ constexpr uint64_t RENDER_HANDLE_REMAPPABLE_MASK_ID { (
 inline bool IsTheSameBufferBinding(const BindableBuffer& src, const BindableBuffer& dst,
     const EngineResourceHandle& srcHandle, const EngineResourceHandle& dstHandle)
 {
+    // the final comparison is for invalid handle, i.e. it should always return false
     return (src.handle == dst.handle) && (srcHandle.id == dstHandle.id) && (src.byteOffset == dst.byteOffset) &&
-           (src.byteSize == dst.byteSize) && ((src.handle.id & RENDER_HANDLE_REMAPPABLE_MASK_ID) == 0);
+           (src.byteSize == dst.byteSize) && ((src.handle.id & RENDER_HANDLE_REMAPPABLE_MASK_ID) == 0) &&
+           (src.handle.id != INVALID_RESOURCE_HANDLE);
 }
 
 inline bool IsTheSameImageBinding(const BindableImage& src, const BindableImage& dst,
     const EngineResourceHandle& srcHandle, const EngineResourceHandle& dstHandle,
     const EngineResourceHandle& srcSamplerHandle, const EngineResourceHandle& dstSamplerHandle)
 {
+    // the final comparison is for invalid handle, i.e. it should always return false
     return (src.handle == dst.handle) && (srcHandle == dstHandle) && (src.mip == dst.mip) && (src.layer == dst.layer) &&
            (src.imageLayout == dst.imageLayout) && (srcSamplerHandle == dstSamplerHandle) &&
-           ((src.handle.id & RENDER_HANDLE_REMAPPABLE_MASK_ID) == 0);
+           ((src.handle.id & RENDER_HANDLE_REMAPPABLE_MASK_ID) == 0) && (src.handle.id != INVALID_RESOURCE_HANDLE);
 }
 
 inline bool IsTheSameSamplerBinding(const BindableSampler& src, const BindableSampler& dst,
     const EngineResourceHandle& srcHandle, const EngineResourceHandle& dstHandle)
 {
+    // the final comparison is for invalid handle, i.e. it should always return false
     return (src.handle == dst.handle) && (srcHandle.id == dstHandle.id) &&
-           ((src.handle.id & RENDER_HANDLE_REMAPPABLE_MASK_ID) == 0);
+           ((src.handle.id & RENDER_HANDLE_REMAPPABLE_MASK_ID) == 0) && (src.handle.id != INVALID_RESOURCE_HANDLE);
 }
 
 DescriptorSetUpdateInfoFlags CopyAndProcessBuffers(const GpuResourceManager& gpuResourceMgr,
@@ -114,7 +118,7 @@ DescriptorSetUpdateInfoFlags CopyAndProcessBuffers(const GpuResourceManager& gpu
         auto& dstRef = dst.buffers[idx].desc;
         auto& dstHandle = dst.buffers[idx].handle;
         // we need to get the correct (the latest) generation id from the gpu resource manager
-        const EngineResourceHandle srcHandle = gpuResourceMgr.GetGpuHandle(srcRef.resource.handle);
+        const EngineResourceHandle srcHandle = gpuResourceMgr.GetGpuHandleNoValidation(srcRef.resource.handle);
         if ((!IsTheSameBufferBinding(srcRef.resource, dstRef.resource, srcHandle, dstHandle))) {
             updateFlags |= DescriptorSetUpdateInfoFlagBits::DESCRIPTOR_SET_UPDATE_INFO_NEW_BIT;
         }
@@ -147,8 +151,9 @@ DescriptorSetUpdateInfoFlags CopyAndProcessImages(const GpuResourceManager& gpuR
         auto& dstHandle = dst.images[idx].handle;
         auto& dstSamplerHandle = dst.images[idx].samplerHandle;
         // we need to get the correct (the latest) generation id from the gpu resource manager
-        const EngineResourceHandle srcHandle = gpuResourceMgr.GetGpuHandle(srcRef.resource.handle);
-        const EngineResourceHandle srcSamplerHandle = gpuResourceMgr.GetGpuHandle(srcRef.resource.samplerHandle);
+        const EngineResourceHandle srcHandle = gpuResourceMgr.GetGpuHandleNoValidation(srcRef.resource.handle);
+        const EngineResourceHandle srcSamplerHandle =
+            gpuResourceMgr.GetGpuHandleNoValidation(srcRef.resource.samplerHandle);
         if ((!IsTheSameImageBinding(
                 srcRef.resource, dstRef.resource, srcHandle, dstHandle, srcSamplerHandle, dstSamplerHandle))) {
             updateFlags |= DescriptorSetUpdateInfoFlagBits::DESCRIPTOR_SET_UPDATE_INFO_NEW_BIT;
@@ -197,7 +202,7 @@ DescriptorSetUpdateInfoFlags CopyAndProcessSamplers(
         auto& dstRef = dst.samplers[idx].desc;
         auto& dstHandle = dst.samplers[idx].handle;
         // we need to get the correct (the latest) generation id from the gpu resource manager
-        const EngineResourceHandle srcHandle = gpuResourceMgr.GetGpuHandle(srcRef.resource.handle);
+        const EngineResourceHandle srcHandle = gpuResourceMgr.GetGpuHandleNoValidation(srcRef.resource.handle);
         // we need to get the correct (the latest) generation id from the gpu resource manager
         if ((!IsTheSameSamplerBinding(srcRef.resource, dstRef.resource, srcHandle, dstHandle))) {
             updateFlags |= DescriptorSetUpdateInfoFlagBits::DESCRIPTOR_SET_UPDATE_INFO_NEW_BIT;
@@ -239,10 +244,10 @@ DescriptorSetUpdateInfoFlags UpdateCpuDescriptorSetFunc(const GpuResourceManager
 
     // cpuSet.isDirty = ((updateFlags & DescriptorSetUpdateInfoFlagBits::DESCRIPTOR_SET_UPDATE_INFO_NEW_BIT) != 0);
 
-    for (size_t idx = 0; idx < bindingResources.bindings.size(); ++idx) {
+    const size_t maxBinding = Math::min(bindingResources.bindings.size(), cpuSet.bindings.size());
+    for (size_t idx = 0; idx < maxBinding; ++idx) {
         const DescriptorSetLayoutBindingResource& refBinding = bindingResources.bindings[idx];
         // the actual binding index is not important here (refBinding.binding.binding)
-        PLUGIN_ASSERT(idx < cpuSet.bindings.size());
         DescriptorSetLayoutBindingResource& refCpuBinding = cpuSet.bindings[idx];
         refCpuBinding.resourceIndex = refBinding.resourceIndex;
     }

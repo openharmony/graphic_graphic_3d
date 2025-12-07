@@ -38,7 +38,7 @@ public:
     enum CopyFlagBits {
         /** Wait for idle is called before copying the data */
         WAIT_FOR_IDLE = (1 << 0),
-        /** GPU copy to CPU accessable buffer */
+        /** GPU copy to CPU accessible buffer */
         GPU_BUFFER_ONLY = (1 << 1),
     };
     /** Copy flag bits container */
@@ -110,7 +110,7 @@ public:
     struct SignalData {
         /** Handle if it was attached to some handle */
         RenderHandleReference handle;
-        /** Quarantee that the semaphore object has been signaled */
+        /** Guarantee that the semaphore object has been signaled */
         bool signaled { false };
         /** Low level signal resource handle (In Vulkan GPU semaphore) */
         uint64_t gpuSignalResourceHandle { 0 };

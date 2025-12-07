@@ -1,0 +1,16 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeParticleSimulation",
+            "nodeName": "SAMPLE_PLUGIN_CORE3D_PARTICLE_RN_SCENE_SIM",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        }
+    ]
+}

@@ -579,60 +579,6 @@ CommandBarrier GetQueueOwnershipTransferBarrier(const RenderHandle handle, const
     };
 }
 
-void PatchGpuResourceQueueTransfers(array_view<const RenderNodeContextData> frameRenderNodeContextData,
-    array_view<const RenderGraph::GpuQueueTransferState> currNodeGpuResourceTransfers)
-{
-    for (const auto& transferRef : currNodeGpuResourceTransfers) {
-        PLUGIN_ASSERT(transferRef.acquireNodeIdx < (uint32_t)frameRenderNodeContextData.size());
-        if (transferRef.acquireNodeIdx >= frameRenderNodeContextData.size()) {
-            // skip
-            continue;
-        }
-
-        auto& acquireNodeRef = frameRenderNodeContextData[transferRef.acquireNodeIdx];
-        const GpuQueue acquireGpuQueue = acquireNodeRef.renderCommandList->GetGpuQueue();
-        GpuQueue releaseGpuQueue = acquireGpuQueue;
-
-        if (transferRef.releaseNodeIdx < (uint32_t)frameRenderNodeContextData.size()) {
-            auto& releaseNodeRef = frameRenderNodeContextData[transferRef.releaseNodeIdx];
-            releaseGpuQueue = releaseNodeRef.renderCommandList->GetGpuQueue();
-        }
-
-        const CommandBarrier transferBarrier = GetQueueOwnershipTransferBarrier(transferRef.handle, releaseGpuQueue,
-            acquireGpuQueue, transferRef.optionalReleaseImageLayout, transferRef.optionalAcquireImageLayout);
-
-        // release ownership (NOTE: not done for previous frame)
-        if (transferRef.releaseNodeIdx < (uint32_t)frameRenderNodeContextData.size()) {
-            auto& releaseNodeRef = frameRenderNodeContextData[transferRef.releaseNodeIdx];
-            const uint32_t rcIndex = releaseNodeRef.renderCommandList->GetRenderCommandCount() - 1;
-            const RenderCommandWithType& cmdRef = releaseNodeRef.renderCommandList->GetRenderCommands()[rcIndex];
-            PLUGIN_ASSERT(cmdRef.type == RenderCommandType::BARRIER_POINT);
-            const auto& rcbp = *static_cast<RenderCommandBarrierPoint*>(cmdRef.rc);
-            PLUGIN_ASSERT(rcbp.renderCommandType == RenderCommandType::GPU_QUEUE_TRANSFER_RELEASE);
-
-            const uint32_t barrierPointIndex = rcbp.barrierPointIndex;
-            releaseNodeRef.renderBarrierList->AddBarriersToBarrierPoint(barrierPointIndex, { transferBarrier });
-
-            // inform that we are patching valid barriers
-            releaseNodeRef.renderCommandList->SetValidGpuQueueReleaseAcquireBarriers();
-        }
-        // acquire ownership
-        {
-            const uint32_t rcIndex = 0;
-            const RenderCommandWithType& cmdRef = acquireNodeRef.renderCommandList->GetRenderCommands()[rcIndex];
-            PLUGIN_ASSERT(cmdRef.type == RenderCommandType::BARRIER_POINT);
-            const auto& rcbp = *static_cast<RenderCommandBarrierPoint*>(cmdRef.rc);
-            PLUGIN_ASSERT(rcbp.renderCommandType == RenderCommandType::GPU_QUEUE_TRANSFER_ACQUIRE);
-
-            const uint32_t barrierPointIndex = rcbp.barrierPointIndex;
-            acquireNodeRef.renderBarrierList->AddBarriersToBarrierPoint(barrierPointIndex, { transferBarrier });
-
-            // inform that we are patching valid barriers
-            acquireNodeRef.renderCommandList->SetValidGpuQueueReleaseAcquireBarriers();
-        }
-    }
-}
-
 bool CheckForBarrierNeed(const unordered_map<RenderHandle, uint32_t>& handledCustomBarriers,
     const uint32_t customBarrierCount, const RenderHandle handle)
 {
@@ -641,6 +587,38 @@ bool CheckForBarrierNeed(const unordered_map<RenderHandle, uint32_t>& handledCus
         needsBarrier = (handledCustomBarriers.count(handle) == 0);
     }
     return needsBarrier;
+}
+
+void ReleaseOwneship(RenderNodeContextData* releaseNodeRef, RenderNodeContextData* acquireNodeRef,
+    const CommandBarrier transferBarrier, const uint32_t releaseNodeIdx, const uint32_t rngQueueTransferIdx,
+    const uint32_t frameRenderNodeContextDataCount)
+{
+    // Release barriers at the end
+    const uint32_t rcIndex = releaseNodeRef->renderCommandList->GetRenderCommandCount() - 1;
+    const RenderCommandWithType& cmdRef = releaseNodeRef->renderCommandList->GetRenderCommands()[rcIndex];
+    PLUGIN_ASSERT(cmdRef.type == RenderCommandType::BARRIER_POINT);
+    const auto& rcbp = *static_cast<RenderCommandBarrierPoint*>(cmdRef.rc);
+    PLUGIN_ASSERT(rcbp.renderCommandType == RenderCommandType::GPU_QUEUE_TRANSFER_RELEASE);
+
+    const uint32_t barrierPointIndex = rcbp.barrierPointIndex;
+    releaseNodeRef->renderBarrierList->AddBarriersToBarrierPoint(barrierPointIndex, { transferBarrier });
+
+    // inform that we are patching valid barriers
+    releaseNodeRef->renderCommandList->SetValidGpuQueueReleaseAcquireBarriers();
+
+    // Set wait dependency, cross queue ownership transfer needs to be synced with semaphores
+    if (releaseNodeIdx < frameRenderNodeContextDataCount) {
+        const uint32_t waitIdx = acquireNodeRef->submitInfo.waitSemaphoreCount++;
+        if (waitIdx < PipelineStateConstants::MAX_RENDER_NODE_GPU_WAIT_SIGNALS) {
+            acquireNodeRef->submitInfo.waitSemaphoreNodeIndices[waitIdx] = releaseNodeIdx;
+            releaseNodeRef->submitInfo.signalSemaphore = true;
+        } else {
+            PLUGIN_LOG_E("multi-queue sync may work incorrectly, wait semaphore count exceeded (%u)",
+                PipelineStateConstants::MAX_RENDER_NODE_GPU_WAIT_SIGNALS);
+        }
+    } else {
+        acquireNodeRef->submitInfo.waitSemaphoreRenderNodeGraphIndex = rngQueueTransferIdx;
+    }
 }
 } // namespace
 
@@ -653,6 +631,7 @@ void RenderGraph::BeginFrame()
     stateCache_.multiRenderPassStore.renderPasses.clear();
     stateCache_.multiRenderPassStore.firstRenderPassBarrierList = nullptr;
     stateCache_.multiRenderPassStore.supportOpen = false;
+    stateCache_.multiRenderPassStore.fistRenderPassCommandListIndex = { ~0u };
     stateCache_.nodeCounter = 0u;
     stateCache_.checkForBackbufferDependency = false;
     stateCache_.usesSwapchainImage = false;
@@ -722,10 +701,25 @@ RenderGraph::SwapchainStates RenderGraph::GetSwapchainResourceStates() const
 void RenderGraph::ProcessRenderNodeGraphNodeStores(
     const array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores, StateCache& stateCache)
 {
-    for (RenderNodeGraphNodeStore* graphStore : renderNodeGraphNodeStores) {
+    RenderNodeGraphNodeStore* rngQueueTransferStore = nullptr;
+    uint32_t rngQueueTransferGraphIdx = ~0U;
+    for (uint32_t graphIdx = 0; graphIdx < renderNodeGraphNodeStores.size(); ++graphIdx) {
+        RenderNodeGraphNodeStore* graphStore = renderNodeGraphNodeStores[graphIdx];
+
         PLUGIN_ASSERT(graphStore);
         if (!graphStore) {
             continue;
+        }
+
+        // Identify the queue transfer
+        if (!rngQueueTransferStore && graphStore->renderNodeGraphName == "CORE_RNG_QUEUE_TRANSFER") {
+            rngQueueTransferStore = graphStore;
+        }
+
+        if (rngQueueTransferStore && rngQueueTransferGraphIdx == ~0U) {
+            auto& lastNodeRef = rngQueueTransferStore->renderNodeContextData.back();
+            lastNodeRef.submitInfo.signalSemaphore = true;
+            rngQueueTransferGraphIdx = graphIdx;
         }
 
         for (uint32_t nodeIdx = 0; nodeIdx < (uint32_t)graphStore->renderNodeContextData.size(); ++nodeIdx) {
@@ -755,14 +749,72 @@ void RenderGraph::ProcessRenderNodeGraphNodeStores(
 
             // patch gpu resource queue transfers
             if (!currNodeGpuResourceTransfers_.empty()) {
-                PatchGpuResourceQueueTransfers(graphStore->renderNodeContextData, currNodeGpuResourceTransfers_);
-                // clear for next use
-                currNodeGpuResourceTransfers_.clear();
+                PatchGpuResourceQueueTransfers(
+                    rngQueueTransferStore, rngQueueTransferGraphIdx, graphStore->renderNodeContextData);
             }
 
             stateCache_.nodeCounter++;
         }
     }
+}
+
+void RenderGraph::PatchGpuResourceQueueTransfers(RenderNodeGraphNodeStore* rngQueueTransferStore,
+    uint32_t rngQueueTransferIdx, array_view<RenderNodeContextData> frameRenderNodeContextData)
+{
+    for (const auto& transferRef : currNodeGpuResourceTransfers_) {
+        PLUGIN_ASSERT(transferRef.acquireNodeIdx < (uint32_t)frameRenderNodeContextData.size());
+        if (transferRef.acquireNodeIdx >= frameRenderNodeContextData.size()) {
+            // skip
+            continue;
+        }
+
+        RenderNodeContextData* acquireNodeRef = &frameRenderNodeContextData[transferRef.acquireNodeIdx];
+        const GpuQueue acquireGpuQueue = acquireNodeRef->renderCommandList->GetGpuQueue();
+        RenderNodeContextData* releaseNodeRef = nullptr;
+        GpuQueue releaseGpuQueue = transferRef.releaseQueue;
+        if (transferRef.releaseNodeIdx < (uint32_t)frameRenderNodeContextData.size()) {
+            GpuQueue nodeQueue =
+                frameRenderNodeContextData[transferRef.releaseNodeIdx].renderCommandList->GetGpuQueue();
+            releaseNodeRef = &frameRenderNodeContextData[transferRef.releaseNodeIdx];
+            PLUGIN_ASSERT(releaseGpuQueue.type == nodeQueue.type);
+        } else if (rngQueueTransferStore && rngQueueTransferStore->renderNodeContextData.size() >= 2) {
+            // Handles the case if there's no release node idx on the current node graph, so we release the
+            // resource in the previous rendernodegraph
+            if (releaseGpuQueue.type == GpuQueue::QueueType::GRAPHICS) {
+                releaseNodeRef = &(rngQueueTransferStore->renderNodeContextData[0]);
+            } else if (releaseGpuQueue.type == GpuQueue::QueueType::COMPUTE) {
+                releaseNodeRef = &(rngQueueTransferStore->renderNodeContextData[1]);
+            }
+        }
+
+        const CommandBarrier transferBarrier = GetQueueOwnershipTransferBarrier(transferRef.handle, releaseGpuQueue,
+            acquireGpuQueue, transferRef.optionalReleaseImageLayout, transferRef.optionalAcquireImageLayout);
+
+        // release ownership (NOTE: not done for previous frame)
+        if (releaseNodeRef) {
+            // Release barriers at the end
+            ReleaseOwneship(releaseNodeRef, acquireNodeRef, transferBarrier, transferRef.releaseNodeIdx,
+                rngQueueTransferIdx, (uint32_t)frameRenderNodeContextData.size());
+        }
+
+        // acquire ownership
+        {
+            // Acquire barriers at the end
+            const uint32_t rcIndex = 0;
+            const RenderCommandWithType& cmdRef = acquireNodeRef->renderCommandList->GetRenderCommands()[rcIndex];
+            PLUGIN_ASSERT(cmdRef.type == RenderCommandType::BARRIER_POINT);
+            const auto& rcbp = *static_cast<RenderCommandBarrierPoint*>(cmdRef.rc);
+            PLUGIN_ASSERT(rcbp.renderCommandType == RenderCommandType::GPU_QUEUE_TRANSFER_ACQUIRE);
+
+            const uint32_t barrierPointIndex = rcbp.barrierPointIndex;
+            acquireNodeRef->renderBarrierList->AddBarriersToBarrierPoint(barrierPointIndex, { transferBarrier });
+
+            // inform that we are patching valid barriers
+            acquireNodeRef->renderCommandList->SetValidGpuQueueReleaseAcquireBarriers();
+        }
+    }
+    // Clear for next use
+    currNodeGpuResourceTransfers_.clear();
 }
 
 void RenderGraph::ProcessRenderNodeCommands(array_view<const RenderCommandWithType>& cmdListRef,
@@ -967,10 +1019,16 @@ void RenderGraph::RenderCommand(const uint32_t renderNodeIndex, const uint32_t c
         if (rc.subpassStartIndex > 0) {
             // stitched to behave as a nextSubpass() and not beginRenderPass()
             rc.beginType = RenderPassBeginType::RENDER_PASS_SUBPASS_BEGIN;
+        } else { // first subpass
+            stateCache.multiRenderPassStore.fistRenderPassCommandListIndex = commandListCommandIndex;
         }
         const bool finalSubpass = (rc.subpassStartIndex == rc.renderPassDesc.subpassCount - 1);
         if (finalSubpass) {
             UpdateMultiRenderCommandListRenderPasses(device_, stateCache.multiRenderPassStore);
+            // Inserts barriers on color/depth attachments that are common between renderpasses,
+            // so we execute renderpasses sequentially that rely on the resource to avoid sync issues
+            InsertRenderPassBarrier(stateCache.multiRenderPassStore);
+            stateCache.multiRenderPassStore.fistRenderPassCommandListIndex = ~0u;
             // multiRenderPassStore cleared in EndRenderPass
         }
     }
@@ -1000,6 +1058,36 @@ void RenderGraph::BeginRenderPassHandleDependency(
         PLUGIN_ASSERT(static_cast<RenderCommandBarrierPoint*>(barrierPointCmdRef.rc));
 #endif
         params.stateCache.multiRenderPassStore.firstRenderPassBarrierList = nodeData.renderBarrierList.get();
+    }
+
+    const auto& beginCmd = params.rc;
+    const auto& beginDesc = beginCmd.renderPassDesc;
+    // Update attachment state tracking that is modified via InsertRenderPassBarrier
+    for (uint32_t subpassIdx = 0; subpassIdx < beginCmd.subpasses.size(); subpassIdx++) {
+        const auto& subpass = beginCmd.subpasses[subpassIdx];
+        // Color Attachements
+        for (uint32_t i = 0; i < subpass.colorAttachmentCount; i++) {
+            const uint32_t colIdx = subpass.colorAttachmentIndices[i];
+            const auto& attachmentDesc = beginDesc.attachments[colIdx];
+            const RenderHandle attachmentHandle = beginDesc.attachmentHandles[colIdx];
+
+            if (attachmentDesc.loadOp != CORE_ATTACHMENT_LOAD_OP_LOAD) {
+                auto& attachmentRef = GetImageResourceStateRef(attachmentHandle, {});
+                attachmentRef.resource.imageLayout = CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            }
+        }
+        // Depth Attachement
+        if (subpass.depthAttachmentIndex < beginDesc.attachmentCount) {
+            const uint32_t depthIdx = subpass.depthAttachmentIndex;
+            const auto& attachmentDesc = beginDesc.attachments[depthIdx];
+            const RenderHandle attachmentHandle = beginDesc.attachmentHandles[depthIdx];
+
+            if (attachmentDesc.loadOp != CORE_ATTACHMENT_LOAD_OP_LOAD &&
+                attachmentDesc.stencilLoadOp != CORE_ATTACHMENT_LOAD_OP_LOAD) {
+                auto& attachmentRef = GetImageResourceStateRef(attachmentHandle, {});
+                attachmentRef.resource.imageLayout = CORE_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
+            }
+        }
     }
 }
 
@@ -1163,9 +1251,6 @@ void RenderGraph::RenderCommand(const uint32_t renderNodeIndex, const uint32_t c
     } else {
         if (rc.renderCommandType == RenderCommandType::DISPATCH_INDIRECT) {
             HandleDispatchIndirect(parameters, commandListCommandIndex, cmdListRef);
-        } else if (rc.renderCommandType == RenderCommandType::BEGIN_RENDER_PASS) {
-            // additional render pass attachment barriers
-            HandleRenderPassImage(parameters, commandListCommandIndex, cmdListRef);
         }
         const uint32_t descriptorSetHandleBeginIndex = rc.descriptorSetHandleIndexBegin;
         const uint32_t descriptorSetHandleEndIndex = descriptorSetHandleBeginIndex + rc.descriptorSetHandleCount;
@@ -1227,9 +1312,9 @@ void RenderGraph::HandleCustomBarriers(ParameterCache& params, const uint32_t ba
     for (auto begin = (customBarrierListRef.begin() + barrierIndexBegin),
               end = Math::min(customBarrierListRef.end(), begin + params.customBarrierCount);
          begin != end; ++begin) {
-        // add a copy and modify if needed
         auto& cb = params.combinedBarriers.emplace_back(*begin);
 
+        // add a copy and modify if needed
         // NOTE: undefined type is for non-resource memory/pipeline barriers
         const RenderHandleType type = RenderHandleUtil::GetHandleType(cb.resourceHandle);
         const bool isDynamicTrack = RenderHandleUtil::IsDynamicResource(cb.resourceHandle);
@@ -1332,35 +1417,72 @@ void RenderGraph::HandleRenderpassIndirectBufferBarriers(ParameterCache& params,
     }
 }
 
-void RenderGraph::HandleRenderPassImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
-    const BASE_NS::array_view<const RenderCommandWithType>& cmdListRef)
+namespace {
+void AddBarrier(const RenderHandle handle, const AccessFlags accessFlags, const PipelineStageFlags srcPipelineFlags,
+    const PipelineStageFlags dstPipelineFlags, ImageLayout srcLayout, ImageLayout dstLayout,
+    vector<CommandBarrier> barriers)
 {
-    const uint32_t nextListIdx = commandListCommandIndex + 1;
-    PLUGIN_ASSERT(nextListIdx < cmdListRef.size());
-    const auto& nextCmdRef = cmdListRef[nextListIdx];
-    PLUGIN_ASSERT(nextCmdRef.type == RenderCommandType::BEGIN_RENDER_PASS);
+    barriers.push_back(CommandBarrier { handle,
+        ResourceBarrier { accessFlags, srcPipelineFlags, srcLayout, 0, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE,
+            { 0, 0, PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0u,
+                PipelineStateConstants::GPU_IMAGE_ALL_LAYERS } },
+        GpuQueue {},
+        ResourceBarrier { accessFlags, dstPipelineFlags, dstLayout, 0, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE,
+            { 0, 0, PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0u,
+                PipelineStateConstants::GPU_IMAGE_ALL_LAYERS } },
+        GpuQueue {} });
+}
+} // namespace
 
-    const RenderCommandBeginRenderPass& nextRc = *static_cast<RenderCommandBeginRenderPass*>(nextCmdRef.rc);
-    // check for all attachments
-    const RenderPassDesc& rpDesc = nextRc.renderPassDesc;
-    for (uint32_t attachIdx = 0U; attachIdx < rpDesc.attachmentCount; ++attachIdx) {
-        const RenderHandle handle = rpDesc.attachmentHandles[attachIdx];
-        const bool needsBarrier = CheckForBarrierNeed(params.handledCustomBarriers, params.customBarrierCount, handle);
-        if (needsBarrier) {
-            const bool depthImage = RenderHandleUtil::IsDepthImage(handle);
-            BindableImage bRes = {};
-            bRes.handle = handle;
-            bRes.imageLayout = depthImage ? CORE_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-                                          : CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            const AccessFlags accessFlags =
-                depthImage ? CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            const PipelineStageFlags pipelineStageFlags = CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+void RenderGraph::InsertRenderPassBarrier(const MultiRenderPassStore& store)
+{
+    if (store.renderPasses.size() < 1 && store.fistRenderPassCommandListIndex == ~0u) {
+        return;
+    }
 
-            AddCommandBarrierAndUpdateStateCacheImage(params.renderNodeIndex,
-                GpuResourceState { 0, accessFlags, pipelineStageFlags, params.gpuQueue }, bRes, params.rcWithType,
-                params.combinedBarriers, currNodeGpuResourceTransfers_);
+    const auto& beginCmd = *store.renderPasses.front();
+    const auto& beginDesc = beginCmd.renderPassDesc;
+    vector<CommandBarrier> barriers;
+    barriers.reserve(beginDesc.attachmentCount);
+
+    // Handle color attachment barriers
+    for (uint32_t subpassIdx = 0; subpassIdx < beginCmd.subpasses.size(); subpassIdx++) {
+        const auto& subpass = beginCmd.subpasses[subpassIdx];
+        const auto& subpassStates = beginCmd.subpassResourceStates[subpassIdx];
+        // Color Attachments
+        for (uint32_t i = 0; i < subpass.colorAttachmentCount; i++) {
+            const uint32_t colIdx = subpass.colorAttachmentIndices[i];
+            const auto& attachmentDesc = beginDesc.attachments[colIdx];
+            const RenderHandle attachmentHandle = beginDesc.attachmentHandles[colIdx];
+            const ImageLayout layout = subpassStates.layouts[colIdx];
+
+            if (attachmentDesc.loadOp != CORE_ATTACHMENT_LOAD_OP_LOAD) {
+                // Basically a graphics pipeline flush, ensure prior renderpass using the attachment has finished
+                AddBarrier(attachmentHandle, CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                    CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                    CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    CORE_IMAGE_LAYOUT_UNDEFINED, layout, barriers);
+            }
+        }
+        // Depth Attachment
+        if (subpass.depthAttachmentIndex < beginDesc.attachmentCount) {
+            const uint32_t depthIdx = subpass.depthAttachmentIndex;
+            const auto& attachmentDesc = beginDesc.attachments[depthIdx];
+            const RenderHandle attachmentHandle = beginDesc.attachmentHandles[depthIdx];
+            const ImageLayout layout = subpassStates.layouts[depthIdx];
+
+            if (attachmentDesc.loadOp != CORE_ATTACHMENT_LOAD_OP_LOAD &&
+                attachmentDesc.stencilLoadOp != CORE_ATTACHMENT_LOAD_OP_LOAD) {
+                // Basically a graphics pipeline flush, ensure prior renderpass using the attachment has finished
+                AddBarrier(attachmentHandle, CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                    CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    CORE_IMAGE_LAYOUT_UNDEFINED, layout, barriers);
+            }
         }
     }
+
+    store.firstRenderPassBarrierList->AddBarriersToBarrierPoint(store.fistRenderPassCommandListIndex - 1, barriers);
 }
 
 void RenderGraph::HandleClearImage(ParameterCache& params, const uint32_t& commandListCommandIndex,
@@ -1518,8 +1640,9 @@ void RenderGraph::HandleCopyBufferImage(ParameterCache& params, const uint32_t& 
         } else {
             BindableImage bRes;
             bRes.handle = dstHandle;
-            bRes.mip = dstImgLayers.mipLevel;
-            bRes.layer = dstImgLayers.baseArrayLayer;
+            // Transition all because later stages expect all mips on same layout
+            bRes.mip = PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS;
+            bRes.layer = PipelineStateConstants::GPU_IMAGE_ALL_LAYERS;
             bRes.imageLayout = CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             AddCommandBarrierAndUpdateStateCacheImage(params.renderNodeIndex,
                 GpuResourceState {
@@ -1676,8 +1799,8 @@ void RenderGraph::HandleDescriptorSets(ParameterCache& params,
             for (uint32_t idx = 0; idx < descriptorCount; ++idx) {
                 // first is the ref, starting from 1 we use array offsets
                 const auto& bRes = (idx == 0) ? ref : images[arrayOffset + idx - 1].desc;
-                if (CheckForBarrierNeed(params.handledCustomBarriers, params.customBarrierCount,
-                                        bRes.resource.handle)) {
+                if (CheckForBarrierNeed(
+                        params.handledCustomBarriers, params.customBarrierCount, bRes.resource.handle)) {
                     UpdateStateAndCreateBarriersGpuImage(bRes.state, bRes.resource, params);
                 }
             }
@@ -1715,8 +1838,9 @@ void RenderGraph::UpdateStateAndCreateBarriersGpuImage(
             PLUGIN_ASSERT(state.gpuQueue.type != GpuQueue::QueueType::UNDEFINED);
 
             PLUGIN_ASSERT(ref.prevRenderNodeIndex != params.renderNodeIndex);
-            currNodeGpuResourceTransfers_.push_back(RenderGraph::GpuQueueTransferState {
-                res.handle, ref.prevRenderNodeIndex, params.renderNodeIndex, prevImage.imageLayout, res.imageLayout });
+            currNodeGpuResourceTransfers_.push_back(
+                RenderGraph::GpuQueueTransferState { res.handle, ref.prevRenderNodeIndex, params.renderNodeIndex,
+                    ref.state.gpuQueue, prevImage.imageLayout, res.imageLayout });
         } else {
             const ResourceBarrier dstImageBarrier =
                 addMips ? GetDstImageBarrierMips(state, prevImage, res) : GetDstImageBarrier(state, res);
@@ -1770,9 +1894,9 @@ void RenderGraph::AddCommandBarrierAndUpdateStateCacheBuffer(const uint32_t rend
         PLUGIN_ASSERT(newGpuResourceState.gpuQueue.type != GpuQueue::QueueType::UNDEFINED);
         PLUGIN_ASSERT(RenderHandleUtil::GetHandleType(newBuffer.handle) == RenderHandleType::GPU_IMAGE);
         PLUGIN_ASSERT(stateRef.prevRenderNodeIndex != renderNodeIndex);
-        currNodeGpuResourceTransfer.push_back(
-            RenderGraph::GpuQueueTransferState { newBuffer.handle, stateRef.prevRenderNodeIndex, renderNodeIndex,
-                ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED });
+        currNodeGpuResourceTransfer.push_back(RenderGraph::GpuQueueTransferState { newBuffer.handle,
+            stateRef.prevRenderNodeIndex, renderNodeIndex, srcState.gpuQueue, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED,
+            ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED });
     } else {
         const ResourceBarrier srcBarrier = GetSrcBufferBarrier(srcState, srcBuffer);
         const ResourceBarrier dstBarrier = GetDstBufferBarrier(newGpuResourceState, newBuffer);
@@ -1802,8 +1926,9 @@ void RenderGraph::AddCommandBarrierAndUpdateStateCacheImage(const uint32_t rende
         PLUGIN_ASSERT(newGpuResourceState.gpuQueue.type != GpuQueue::QueueType::UNDEFINED);
         PLUGIN_ASSERT(RenderHandleUtil::GetHandleType(newImage.handle) == RenderHandleType::GPU_IMAGE);
         PLUGIN_ASSERT(stateRef.prevRenderNodeIndex != renderNodeIndex);
-        currNodeGpuResourceTransfer.push_back(RenderGraph::GpuQueueTransferState { newImage.handle,
-            stateRef.prevRenderNodeIndex, renderNodeIndex, srcImage.imageLayout, newImage.imageLayout });
+        currNodeGpuResourceTransfer.push_back(
+            RenderGraph::GpuQueueTransferState { newImage.handle, stateRef.prevRenderNodeIndex, renderNodeIndex,
+                stateRef.state.gpuQueue, srcImage.imageLayout, newImage.imageLayout });
     } else {
         const ResourceBarrier srcBarrier =
             addMips ? GetSrcImageBarrierMips(srcState, srcImage, newImage, stateRef.additionalState)

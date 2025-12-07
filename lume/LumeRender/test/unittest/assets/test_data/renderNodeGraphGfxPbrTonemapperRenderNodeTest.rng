@@ -1,0 +1,121 @@
+{
+  "compatibility_info": {
+    "version": "22.00",
+    "type": "rendernodegraph"
+  },
+  "nodes": [
+    {
+      "typeName": "RenderNodeCreateGpuImages",
+      "nodeName": "RenderNodeCreateGpuImages",
+      "gpuImageDescs": [
+        {
+          "name": "OutputImage0",
+          "dependencyImageName": "InputImage0",
+          "dependencyFlags": "size | format | mipCount | layerCount | samples",
+          "configurationName": "RenderConfiguration",
+          "imageType": "2d",
+          "imageViewType": "2d",
+          "format": "r16g16b16a16_sfloat",
+          "imageTiling": "optimal",
+          "usageFlags": "storage | color_attachment | transfer_src | sampled",
+          "memoryPropertyFlags": "device_local",
+          "engineCreationFlags": "dynamic_barriers",
+          "width": 512,
+          "height": 512,
+          "depth": 1
+        },
+        {
+          "name": "DepthImage",
+          "dependencyImageName": "InputImage0",
+          "dependencyFlags": "size | samples",
+          "configurationName": "RenderConfiguration",
+          "imageType": "2d",
+          "imageViewType": "2d",
+          "format": "d24_unorm_s8_uint",
+          "imageTiling": "optimal",
+          "usageFlags": "depth_stencil_attachment",
+          "engineCreationFlags": "dynamic_barriers",
+          "memoryPropertyFlags": "device_local",
+          "width": 512,
+          "height": 512,
+          "depth": 1
+        }
+      ]
+    },
+    {
+      "typeName": "CORE_RN_SINGLE_POST_PROCESS",
+      "nodeName": "RenderNodeSinglePostProcess",
+      "queue": {
+        "type": "graphics",
+        "index": 0
+      },
+      "renderDataStore": {
+        "typeName": "RenderDataStorePostProcess",
+        "dataStoreName": "RenderDataStorePostProcess",
+        "configurationName": "PostProcessConfiguration"
+      },
+      "shader": "rendershaders://shader/SinglePostProcessPbrTonemapperRenderNodeTest.shader",
+      "postProcess": "render_custom",
+      "resources": {
+        "customInputImages": [
+          {
+            "set": 1,
+            "binding": 1,
+            "optionalOffset": 0,
+            "name": "InputImage0",
+            "resourceLocation": "from_render_graph_input",
+            "resourceIndex": 0,
+            "usageName": "input"
+          }
+        ],
+        "customOutputImages": [
+          {
+            "set": 0,
+            "binding": 0,
+            "optionalOffset": 0,
+            "name": "OutputImage0",
+            "usageName": "output"
+          }
+        ],
+        "samplers": [
+          {
+            "set": 1,
+            "binding": 0,
+            "name": "CORE_DEFAULT_SAMPLER_NEAREST_CLAMP"
+          }
+        ],
+        "images": [
+          {
+            "set": 1,
+            "binding": 1,
+            "optionalOffset": 0,
+            "resourceLocation": "from_render_graph_input",
+            "resourceIndex": 0
+          }
+        ]
+      },
+      "renderPass": {
+        "subpassIndex": 0,
+        "subpassCount": 1,
+        "attachments": [
+          {
+            "loadOp": "clear",
+            "storeOp": "store",
+            "clearDepth": [ 1.0, 0.0 ],
+            "name": "DepthImage"
+          },
+          {
+            "loadOp": "clear",
+            "storeOp": "store",
+            "clearColor": [ 1.0, 1.0, 1.0, 1.0 ],
+            "name": "OutputImage0"
+          }
+        ],
+        "subpass": {
+          "depthAttachmentIndex": 0,
+          "colorAttachmentIndices": [ 1 ]
+        }
+      }
+    }
+  ]
+}

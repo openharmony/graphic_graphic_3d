@@ -16,6 +16,8 @@
 #define NAPI_API
 #define NAPI_VERSION 8
 
+#define ENABLE_DIAGNOSTICS 0
+
 #ifdef __OHOS_PLATFORM__
 #include "napi/native_api.h"
 #else

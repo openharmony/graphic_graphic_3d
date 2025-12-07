@@ -67,6 +67,10 @@ void FillPostProcessImages(const RenderCamera& cam, const uint32_t layer,
             auto& res = info.imageData.input;
             res.layer = layer;
             res.handle = ref.handle;
+        } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_COLOR_UPSCALED) {
+            auto& res = info.imageData.inputUpscaled;
+            res.layer = layer;
+            res.handle = ref.handle;
         } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_DEPTH) {
             auto& res = info.imageData.depth;
             res.layer = layer;
@@ -100,13 +104,6 @@ void RenderNodeDefaultCameraPostProcessController::InitNode(IRenderNodeContextMa
 
     currentScene_ = {};
 
-    // id checked first for custom camera
-    if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
-        currentScene_.customCameraId = jsonInputs_.customCameraId;
-    } else if (!jsonInputs_.customCameraName.empty()) {
-        currentScene_.customCameraName = jsonInputs_.customCameraName;
-    }
-
     {
         const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
         const auto* dataStoreScene = static_cast<IRenderDataStoreDefaultScene*>(
@@ -126,7 +123,7 @@ void RenderNodeDefaultCameraPostProcessController::InitNode(IRenderNodeContextMa
             shrMgr.GetRegisteredGlobalRenderNodeOutputs(currentScene_.cameraControllerRenderNodeName);
         IRenderNodePostProcessUtil::PostProcessInfo info;
         info.parseRenderNodeInputs = false;
-        FillPostProcessImages(currentScene_.camera, currentScene_.multiviewLayer, namedResources, info);
+        FillPostProcessImages(currentScene_.camData.camera, currentScene_.multiviewLayer, namedResources, info);
         if (info.parseRenderNodeInputs || RenderHandleUtil::IsValid(info.imageData.output.handle)) {
             validPostProcessInputs_ = true;
         }
@@ -159,7 +156,7 @@ void RenderNodeDefaultCameraPostProcessController::PreExecuteFrame()
             shrMgr.GetRegisteredGlobalRenderNodeOutputs(currentScene_.cameraControllerRenderNodeName);
         IRenderNodePostProcessUtil::PostProcessInfo info;
         info.parseRenderNodeInputs = false;
-        FillPostProcessImages(currentScene_.camera, currentScene_.multiviewLayer, namedResources, info);
+        FillPostProcessImages(currentScene_.camData.camera, currentScene_.multiviewLayer, namedResources, info);
 
         if (info.parseRenderNodeInputs || RenderHandleUtil::IsValid(info.imageData.output.handle)) {
             validPostProcessInputs_ = true;
@@ -182,7 +179,7 @@ void RenderNodeDefaultCameraPostProcessController::ExecuteFrame(IRenderCommandLi
 
 void RenderNodeDefaultCameraPostProcessController::RegisterOutputs()
 {
-    if ((currentScene_.customCameraId == INVALID_CAM_ID) && currentScene_.customCameraName.empty()) {
+    if ((jsonInputs_.customCameraId == INVALID_CAM_ID) && jsonInputs_.customCameraName.empty()) {
         return;
     }
 
@@ -198,44 +195,34 @@ void RenderNodeDefaultCameraPostProcessController::RegisterOutputs()
 void RenderNodeDefaultCameraPostProcessController::UpdateCurrentScene(
     const IRenderDataStoreDefaultScene& dataStoreScene, const IRenderDataStoreDefaultCamera& dataStoreCamera)
 {
-    const auto scene = dataStoreScene.GetScene();
-    uint32_t cameraIdx = scene.cameraIndex;
-    if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
-        cameraIdx = dataStoreCamera.GetCameraIndex(jsonInputs_.customCameraId);
-    } else if (!(jsonInputs_.customCameraName.empty())) {
-        cameraIdx = dataStoreCamera.GetCameraIndex(jsonInputs_.customCameraName);
-    }
-
     currentScene_.multiviewLayer = PipelineStateConstants::GPU_IMAGE_ALL_LAYERS;
-    const auto cameras = dataStoreCamera.GetCameras();
+    currentScene_.camData = RenderNodeSceneUtil::GetSceneCameraData(
+        dataStoreScene, dataStoreCamera, jsonInputs_.customCameraId, jsonInputs_.customCameraName);
+
+    currentScene_.scene = dataStoreScene.GetScene();
+    const auto& cam = currentScene_.camData.camera;
+    const auto& cameras = dataStoreCamera.GetCameras();
     const uint32_t cameraCount = static_cast<uint32_t>(cameras.size());
-    if (cameraIdx < cameraCount) {
-        // store current frame camera
-        currentScene_.camera = cameras[cameraIdx];
-        if (currentScene_.camera.multiViewParentCameraId != INVALID_CAM_ID) {
-            // find the base multiview camera
-            if (const uint32_t multiviewBaseCamIdx =
-                    dataStoreCamera.GetCameraIndex(currentScene_.camera.multiViewParentCameraId);
-                multiviewBaseCamIdx < cameraCount) {
-                const auto& multiviewBaseCam = cameras[multiviewBaseCamIdx];
-                for (uint32_t camIdx = 0; camIdx < multiviewBaseCam.multiViewCameraCount; ++camIdx) {
-                    if (multiviewBaseCam.multiViewCameraIds[camIdx] == currentScene_.camera.id) {
-                        // set our layer
-                        currentScene_.multiviewLayer = camIdx + 1U;
-                    }
+    if (cam.multiViewParentCameraId != INVALID_CAM_ID) {
+        // find the base multiview camera
+        if (const uint32_t multiviewBaseCamIdx = dataStoreCamera.GetCameraIndex(cam.multiViewParentCameraId);
+            multiviewBaseCamIdx < cameraCount) {
+            const auto& multiviewBaseCam = cameras[multiviewBaseCamIdx];
+            for (uint32_t camIdx = 0; camIdx < multiviewBaseCam.multiViewCameraCount; ++camIdx) {
+                if (multiviewBaseCam.multiViewCameraIds[camIdx] == cam.id) {
+                    // set our layer
+                    currentScene_.multiviewLayer = camIdx + 1U;
                 }
             }
         }
-        // if base multiview camera
-        if (currentScene_.camera.multiViewCameraCount > 0U) {
-            currentScene_.multiviewLayer = 0U;
-        }
+    }
+    // if base multiview camera
+    if (cam.multiViewCameraCount > 0U) {
+        currentScene_.multiviewLayer = 0U;
     }
     // full name for fetching data
-    const uint64_t fetchCamId = (currentScene_.camera.multiViewParentCameraId != INVALID_CAM_ID)
-                                    ? currentScene_.camera.multiViewParentCameraId
-                                    : currentScene_.camera.id;
-    currentScene_.cameraControllerRenderNodeName = string(scene.name) + to_hex(fetchCamId) + "CORE3D_RN_CAM_CTRL";
+    const uint64_t fetchCamId = (cam.multiViewParentCameraId != INVALID_CAM_ID) ? cam.multiViewParentCameraId : cam.id;
+    currentScene_.cameraControllerRenderNodeName = currentScene_.scene.name + to_hex(fetchCamId) + "CORE3D_RN_CAM_CTRL";
 }
 
 void RenderNodeDefaultCameraPostProcessController::ParseRenderNodeInputs()

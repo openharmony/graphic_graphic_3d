@@ -17,9 +17,11 @@
 #define API_3D_UTIL_SCENE_UTIL_H
 
 #include <3d/ecs/components/material_component.h>
+#include <3d/ecs/components/planar_reflection_component.h>
 #include <3d/loaders/intf_scene_loader.h>
 #include <3d/namespace.h>
 #include <base/containers/string_view.h>
+#include <base/containers/unordered_map.h>
 #include <base/math/quaternion.h>
 #include <base/math/vector.h>
 #include <core/ecs/entity.h>
@@ -105,6 +107,17 @@ public:
      */
     virtual void CreateReflectionPlaneComponent(CORE_NS::IEcs& ecs, const CORE_NS::Entity& nodeEntity) = 0;
 
+    /** Create reflection plane component. Component is added to the given entity. For reflections to work the entity is
+     * expected to have a RenderMeshComponent. The method updates the material of the mesh for planar reflections. This
+     * function variant, takes also in the reflection component flags to differeniate between regular surface and water
+     * surface
+     * @param ecs Entity component system instance.
+     * @param nodeEntity Scene node entity where to attach.
+     * @param flags additional flags
+     */
+    virtual void CreateReflectionPlaneComponent(
+        CORE_NS::IEcs& ecs, const CORE_NS::Entity& nodeEntity, PlanarReflectionComponent::Flags flags) = 0;
+
     /** Creates a new animation for targetEntity which animates the target's joints the same way as animationEntity
      * animatest the joints of sourceEntity.
      * @param ecs Entity component system instance.
@@ -179,17 +192,44 @@ public:
     virtual CORE_NS::EntityReference CreateReflectionProbe(
         CORE_NS::IEcs& ecs, const BASE_NS::Math::Vec3& position) const = 0;
 
+    /** ClonedEntities struct containing the cloned root entity and the list of cloned entities*/
+    struct ClonedEntities {
+        CORE_NS::Entity node;
+        BASE_NS::vector<CORE_NS::Entity> entities;
+    };
+    /** PartialClonedEntities struct containing cloned entities and the mapped entities*/
+    struct PartialClonedEntities {
+        /// New entities created by the cloning. Notice that this also includes entities that were not created but data
+        /// was still cloned (MappedEntity overwrite).
+        BASE_NS::vector<CORE_NS::Entity> newEntities;
+        /// Entities that were mapped from already existing entities.
+        BASE_NS::vector<CORE_NS::Entity> extMapEntities;
+    };
+
     /** Create a copy of the entity hierarchy in source ECS starting from sourceEntity in destination ECS and place the
      * hierarchy under parentEntity. If parentEntity is invalid clones will be placed under the root.
      * @param destination ECS where new entities are created.
      * @param parentEntity Entity which will be the parent of the new entities.
      * @param source ECS from which to copy.
-     * @param sourceEntity Entity which will be copied along with it's entire hieararchy.
-     * @return Entity which is a clone of sourceEntity, or an invalid entity if cloning failed. Cloning may fail if
-     * destination and source are same, parentEntity is valid but not in destination, sourceEntity is not in source.
+     * @param sourceEntity Entity which will be copied along with it's entire hierarchy.
+     * @return An struct of root node entity (which is a clone of sourceEntity), and vector of cloned entities, or an
+     * empty struct if cloning failed. Cloning may fail if destination and source are same, parentEntity is valid but
+     * not in destination, sourceEntity is not in source.
      */
-    virtual CORE_NS::Entity Clone(CORE_NS::IEcs& destination, CORE_NS::Entity parentEntity, const CORE_NS::IEcs& source,
+    virtual ClonedEntities Clone(CORE_NS::IEcs& destination, CORE_NS::Entity parentEntity, const CORE_NS::IEcs& source,
         CORE_NS::Entity sourceEntity) const = 0;
+
+    /** Create a copy of all the entities in source ECS starting from sourceEntity and place the
+     * hierarchy under parentEntity. If parentEntity is invalid clones will be placed under the root.
+     * @param source ECS from which to copy.
+     * @param sourceEntity Entity which will be copied along with it's entire hierarchy.
+     * @param parentEntity Entity which will be the parent of the new entities.
+     * @return An struct of root node entity (which is a clone of sourceEntity), and vector of cloned entities, or an
+     * empty struct if cloning failed. Cloning may fail if destination and source are same, parentEntity is valid but
+     * not in destination, sourceEntity is not in source.
+     */
+    virtual ClonedEntities Clone(
+        CORE_NS::IEcs& source, CORE_NS::Entity sourceEntity, CORE_NS::Entity parentEntity) const = 0;
 
     /** Create a copy of all the entities in source ECS into destination ECS.
      * @param destination ECS where new entities are created.
@@ -197,6 +237,22 @@ public:
      * @return Vector containing all the clones.
      */
     virtual BASE_NS::vector<CORE_NS::Entity> Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source) const = 0;
+
+    /** MappedEntity struct has the entity to map to and if all the data related to the entity should still be cloned
+     * over.*/
+    struct MappedEntity {
+        CORE_NS::Entity entity;
+        bool overwrite {};
+    };
+
+    /** Create a copy of all the entities in source ECS into destination ECS with mapping to existing entities.
+     * @param destination ECS where new entities are created.
+     * @param source ECS from which to copy.
+     * @param mapping Mapping from source entity to already existing entity in destination.
+     * @return PartialClonedEntities containing all the clones and mapped entities.
+     */
+    virtual PartialClonedEntities Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source,
+        BASE_NS::unordered_map<CORE_NS::Entity, MappedEntity> mapping) const = 0;
 
     /** Test is sphere inside the camera's view frustum.
      * @param ecs Entity component system containing the camera instance.

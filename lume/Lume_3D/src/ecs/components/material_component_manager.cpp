@@ -58,10 +58,12 @@ ENUM_TYPE_METADATA(MaterialComponent::Type, ENUM_VALUE(METALLIC_ROUGHNESS, "Meta
 
 ENUM_TYPE_METADATA(MaterialComponent::LightingFlagBits, ENUM_VALUE(SHADOW_RECEIVER_BIT, "Shadow Receiver"),
     ENUM_VALUE(SHADOW_CASTER_BIT, "Shadow Caster"), ENUM_VALUE(PUNCTUAL_LIGHT_RECEIVER_BIT, "Punctual Light Receiver"),
-    ENUM_VALUE(INDIRECT_LIGHT_RECEIVER_BIT, "Indirect Light Receiver"))
+    ENUM_VALUE(INDIRECT_LIGHT_RECEIVER_BIT, "Indirect Light Receiver"),
+    ENUM_VALUE(INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT, "Indirect Irradiance Light Receiver"))
 
 ENUM_TYPE_METADATA(MaterialComponent::ExtraRenderingFlagBits, ENUM_VALUE(DISCARD_BIT, "Discard Special Materials"),
-    ENUM_VALUE(DISABLE_BIT, "Disable Material Rendering"), ENUM_VALUE(ALLOW_GPU_INSTANCING_BIT, "Allow GPU Instancing"))
+    ENUM_VALUE(DISABLE_BIT, "Disable Material Rendering"), ENUM_VALUE(ALLOW_GPU_INSTANCING_BIT, "Allow GPU Instancing"),
+    ENUM_VALUE(CAMERA_EFFECT, "Camera Effect"))
 
 DATA_TYPE_METADATA(MaterialComponent::TextureTransform, MEMBER_PROPERTY(translation, "Translation", 0),
     MEMBER_PROPERTY(rotation, "Rotation", 0), MEMBER_PROPERTY(scale, "Scale", 0))
@@ -230,7 +232,19 @@ void AppendProperties(vector<Property>& newProperties, vector<string>& newString
 void MapTextureSlots(array_view<MaterialComponent::TextureInfo> textures, size_t baseOffset,
     array_view<const Property> newProperties, array_view<const Property> oldProperties)
 {
-    MaterialComponent::TextureInfo tmp[MaterialComponent::TextureIndex::TEXTURE_COUNT];
+    MaterialComponent::TextureInfo tmp[MaterialComponent::TextureIndex::TEXTURE_COUNT] = {
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_BASE_COLOR, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_NORMAL_SCALE, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_MATERIAL, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_EMISSIVE, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAILT_AO, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_CLEARCOAT, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_CLEARCOAT_ROUGHNESS, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_CLEARCOAT_NORMAL, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_SHEEN, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_TRANSMISSION, {} },
+        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_SPECULAR, {} },
+    };
     for (const auto& newProp : newProperties) {
         if (newProp.type == CORE_NS::TEXTURE_INFO_T) {
             if (auto it = std::find(oldProperties.cbegin(), oldProperties.cend(), newProp);
@@ -1351,6 +1365,14 @@ void MaterialComponentManager::ComponentHandle::FillMetadata(const RenderHandleR
     if (!manager_->shaderManager_) {
         return;
     }
+    if (!currentShader) {
+        // if there isn't a valid shader handle find the default metadata with an invalid handle and don't try to create
+        // metadata and replace the existing.
+        if (auto pos = manager_->properties_.find(RenderHandle {}); pos != manager_->properties_.cend()) {
+            metaData_ = pos->second;
+        }
+        return;
+    }
 
     // start with a blank property collection
     auto newMetaData = refcnt_ptr<ReferencedProperties>(new ReferencedProperties);
@@ -1417,9 +1439,11 @@ void MaterialComponentManager::ComponentHandle::BindBindingProperties()
                             data_.customResources[bindingIdx] = ent;
                         }
                     }
-                } break;
+                    break;
+                }
                 default: {
-                } break;
+                    break;
+                }
             }
             bindingIdx++;
         }

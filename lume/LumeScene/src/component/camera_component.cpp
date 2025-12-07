@@ -22,10 +22,10 @@
 #include <meta/interface/intf_event.h>
 #include <meta/interface/resource/intf_dynamic_resource.h>
 
-#include "core/camera.h"
-#include "core/intf_internal_raycast.h"
-#include "entity_converting_value.h"
-#include "postprocess/postprocess.h"
+#include "../core/camera.h"
+#include "../core/intf_internal_raycast.h"
+#include "../entity_converting_value.h"
+#include "../postprocess/postprocess.h"
 
 META_TYPE(CORE3D_NS::CameraComponent::TargetUsage)
 
@@ -53,39 +53,45 @@ bool CameraComponent::Build(const META_NS::IMetadata::Ptr& d)
 }
 bool CameraComponent::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
-    if (p->GetName() == "PostProcess") {
-        auto ep = object_->CreateProperty(path).GetResult();
+    if (!p) {
+        return false;
+    }
+    const auto name = p->GetName();
+    if (name == "PostProcess") {
+        auto ep = CreateProperty(path);
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i &&
                i->PushValue(META_NS::IValue::Ptr(
-                   new InterfacePtrEntityValue<IPostProcess>(ep, { object_->GetScene(), ClassId::PostProcess })));
+                   new InterfacePtrEntityValue<IPostProcess>(ep, { GetInternalScene(), ClassId::PostProcess })));
     }
-    if (p->GetName() == "ColorTargetCustomization") {
-        auto ep = object_->CreateProperty(path).GetResult();
+    if (name == "ColorTargetCustomization") {
+        auto ep = CreateProperty(path);
         auto i = interface_cast<META_NS::IStackProperty>(p);
         return ep && i && i->PushValue(META_NS::IValue::Ptr(new ConvertingArrayValue<FormatConverter>(ep)));
     }
     return false;
 }
+
 BASE_NS::string CameraComponent::GetName() const
 {
     return "CameraComponent";
 }
 Future<bool> CameraComponent::SetActive(bool active)
 {
-    auto flags = SceneFlags()->GetValue();
+    auto sf = SceneFlags();
+    auto flags = META_NS::GetValue(sf);
     if (active) {
         flags |= uint32_t(CameraSceneFlag::ACTIVE_RENDER_BIT);
     } else {
         flags &= ~uint32_t(CameraSceneFlag::ACTIVE_RENDER_BIT | CameraSceneFlag::MAIN_CAMERA_BIT);
     }
-    SceneFlags()->SetValue(flags);
-    return SyncProperty(object_->GetScene(), SceneFlags());
+    META_NS::SetValue(sf, flags);
+    return SyncPropertyDirect(GetInternalScene(), sf);
 }
 Future<bool> CameraComponent::SetRenderTarget(const IRenderTarget::Ptr& target)
 {
-    auto scene = object_->GetScene();
-    return scene->AddTask([=] {
+    auto scene = GetInternalScene();
+    return scene->AddTaskOrRunDirectly([=] {
         bool res = UpdateCameraRenderTarget(object_, target);
         if (res) {
             if (target) {
@@ -107,11 +113,16 @@ bool CameraComponent::IsActive() const
 void CameraComponent::NotifyRenderTargetChanged()
 {
     if (renderTarget_ && IsActive()) {
-        auto scene = object_->GetScene();
+        auto scene = GetInternalScene();
         if (auto dr = interface_pointer_cast<META_NS::IDynamicResource>(renderTarget_)) {
             // anyone listening?
             if (dr->EventOnResourceChanged(META_NS::MetadataQuery::EXISTING)) {
-                scene->AddTask([dr] { META_NS::Invoke<META_NS::IOnChanged>(dr->OnResourceChanged()); },
+                (void)scene->AddTaskOrRunDirectly(
+                    [weak = META_NS::IDynamicResource::WeakPtr(dr)] {
+                        if (auto d = weak.lock()) {
+                            META_NS::Invoke<META_NS::IOnChanged>(d->OnResourceChanged());
+                        }
+                    },
                     scene->GetContext()->GetApplicationQueue());
             }
         }
@@ -151,11 +162,11 @@ void CameraComponent::SendInputEvent(PointerEvent& event)
 
 Future<NodeHits> CameraComponent::CastRay(const BASE_NS::Math::Vec2& pos, const RayCastOptions& options) const
 {
-    auto scene = object_->GetScene();
-    return scene->AddTask([=] {
+    auto scene = GetInternalScene();
+    return scene->AddTaskOrRunDirectly([=] {
         RayCastOptions ops = options;
         if (ops.layerMask == NONE_LAYER_MASK) {
-            ops.layerMask = LayerMask()->GetValue();
+            ops.layerMask = CameraLayerMask()->GetValue();
         }
         NodeHits result;
         if (auto ir = interface_cast<IInternalRayCast>(scene)) {
@@ -166,8 +177,8 @@ Future<NodeHits> CameraComponent::CastRay(const BASE_NS::Math::Vec2& pos, const 
 }
 Future<BASE_NS::Math::Vec3> CameraComponent::ScreenPositionToWorld(const BASE_NS::Math::Vec3& pos) const
 {
-    auto scene = object_->GetScene();
-    return scene->AddTask([=] {
+    auto scene = GetInternalScene();
+    return scene->AddTaskOrRunDirectly([=] {
         BASE_NS::Math::Vec3 result;
         if (auto ir = interface_cast<IInternalRayCast>(scene)) {
             result = ir->ScreenPositionToWorld(object_, pos);
@@ -177,8 +188,8 @@ Future<BASE_NS::Math::Vec3> CameraComponent::ScreenPositionToWorld(const BASE_NS
 }
 Future<BASE_NS::Math::Vec3> CameraComponent::WorldPositionToScreen(const BASE_NS::Math::Vec3& pos) const
 {
-    auto scene = object_->GetScene();
-    return scene->AddTask([=] {
+    auto scene = GetInternalScene();
+    return scene->AddTaskOrRunDirectly([=] {
         BASE_NS::Math::Vec3 result;
         if (auto ir = interface_cast<IInternalRayCast>(scene)) {
             result = ir->WorldPositionToScreen(object_, pos);

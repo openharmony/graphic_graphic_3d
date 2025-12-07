@@ -227,6 +227,8 @@ ohos_source_set("lume_render_src") {
     "src/node/render_node_fullscreen_generic.h",
     "src/node/render_node_mip_chain_post_process.cpp",
     "src/node/render_node_mip_chain_post_process.h",
+    "src/node/render_node_queue_transfer.cpp",
+    "src/node/render_node_queue_transfer.h",
     "src/node/render_node_render_post_processes_generic.cpp",
     "src/node/render_node_render_post_processes_generic.h",
     "src/node/render_node_shader_passes_generic.cpp",
@@ -263,6 +265,8 @@ ohos_source_set("lume_render_src") {
     "src/nodecontext/render_node_parser_util.h",
     "src/nodecontext/render_node_post_process_util.cpp",
     "src/nodecontext/render_node_post_process_util.h",
+    "src/nodecontext/render_node_post_process_interface_util.cpp",
+    "src/nodecontext/render_node_post_process_interface_util.h",
     "src/nodecontext/render_node_util.cpp",
     "src/nodecontext/render_node_util.h",
     "src/perf/cpu_perf_scope.h",
@@ -271,40 +275,26 @@ ohos_source_set("lume_render_src") {
     "src/perf/gpu_query.h",
     "src/perf/gpu_query_manager.cpp",
     "src/perf/gpu_query_manager.h",
-    "src/postprocesses/render_post_process_bloom.cpp",
-    "src/postprocesses/render_post_process_bloom.h",
     "src/postprocesses/render_post_process_bloom_node.cpp",
     "src/postprocesses/render_post_process_bloom_node.h",
-    "src/postprocesses/render_post_process_blur.cpp",
-    "src/postprocesses/render_post_process_blur.h",
     "src/postprocesses/render_post_process_blur_node.cpp",
     "src/postprocesses/render_post_process_blur_node.h",
-    "src/postprocesses/render_post_process_combined.cpp",
-    "src/postprocesses/render_post_process_combined.h",
+    "src/postprocesses/render_post_process_cmaa2_node.cpp",
+    "src/postprocesses/render_post_process_cmaa2_node.h",
     "src/postprocesses/render_post_process_combined_node.cpp",
     "src/postprocesses/render_post_process_combined_node.h",
-    "src/postprocesses/render_post_process_dof.cpp",
-    "src/postprocesses/render_post_process_dof.h",
     "src/postprocesses/render_post_process_dof_node.cpp",
     "src/postprocesses/render_post_process_dof_node.h",
-    "src/postprocesses/render_post_process_flare.cpp",
-    "src/postprocesses/render_post_process_flare.h",
     "src/postprocesses/render_post_process_flare_node.cpp",
     "src/postprocesses/render_post_process_flare_node.h",
-    "src/postprocesses/render_post_process_fxaa.cpp",
-    "src/postprocesses/render_post_process_fxaa.h",
     "src/postprocesses/render_post_process_fxaa_node.cpp",
     "src/postprocesses/render_post_process_fxaa_node.h",
-    "src/postprocesses/render_post_process_motion_blur.cpp",
-    "src/postprocesses/render_post_process_motion_blur.h",
     "src/postprocesses/render_post_process_motion_blur_node.cpp",
     "src/postprocesses/render_post_process_motion_blur_node.h",
-    "src/postprocesses/render_post_process_taa.cpp",
-    "src/postprocesses/render_post_process_taa.h",
+    "src/postprocesses/render_post_process_ssao_node.cpp",
+    "src/postprocesses/render_post_process_ssao_node.h",
     "src/postprocesses/render_post_process_taa_node.cpp",
     "src/postprocesses/render_post_process_taa_node.h",
-    "src/postprocesses/render_post_process_upscale.cpp",
-    "src/postprocesses/render_post_process_upscale.h",
     "src/postprocesses/render_post_process_upscale_node.cpp",
     "src/postprocesses/render_post_process_upscale_node.h",
     "src/renderer.cpp",
@@ -339,6 +329,7 @@ ohos_source_set("lume_render_src") {
       "src/gles/egl_functions.h",
       "src/gles/egl_state.cpp",
       "src/gles/egl_state.h",
+      "src/gles/generic/platform_egl_state.cpp",
       "src/gles/gl_functions.h",
       "src/gles/gpu_buffer_gles.cpp",
       "src/gles/gpu_buffer_gles.h",
@@ -444,7 +435,7 @@ ohos_source_set("lume_render_src") {
         "src/vulkan/ohos/platform_device_vk.cpp",
         "src/vulkan/ohos/platform_gpu_buffer_vk.cpp",
         "src/vulkan/ohos/platform_gpu_image_vk.cpp",
-        "src/vulkan/ohos/platform_hardware_buffer_util.cpp",
+        "src/vulkan/ohos/platform_hardware_buffer_util_vk.cpp",
         "src/vulkan/ohos/platform_vk.cpp",
         "src/vulkan/ohos/platform_vk.h",
       ]
@@ -483,7 +474,7 @@ lume_rofs("lume_render_rofs")
   output_obj= ""
   if (target_cpu == "arm") {
     output_obj = "${RENDER_ROFS}_32.o"
-  }
+  } 
 
   if (target_cpu == "arm64") {
     output_obj = "${RENDER_ROFS}_64.o"
@@ -493,7 +484,7 @@ lume_rofs("lume_render_rofs")
     output_obj = "${RENDER_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x86_64") {
     output_obj = "${RENDER_ROFS}_x64.o"
   }
 
@@ -533,7 +524,7 @@ source_set("lume_render_rofs_obj") {
     output_obj = "${RENDER_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x86_64") {
     output_obj = "${RENDER_ROFS}_x64.o"
   }
 

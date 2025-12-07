@@ -234,6 +234,87 @@
                     ]
                 }
             }
+        },
+        {
+            "displayName": "Default Bindless",
+            "variantName": "OPAQUE_FW_BL",
+            "renderSlot": "CORE3D_RS_DM_FW_OPAQUE_BL",
+            "renderSlotDefaultShader": true,
+            "vert": "3dshaders://shader/core3d_dm_fw.vert.spv",
+            "frag": "3dshaders://shader/core3d_dm_fw_bl.frag.spv",
+            "vertexInputDeclaration": "3dvertexinputdeclarations://core3d_dm_fw.shadervid",
+            "pipelineLayout": "3dpipelinelayouts://core3d_dm_fw_bl.shaderpl",
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": true,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                },
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit"
+                        },
+                        {
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "displayName": "Default Bindless Translucent",
+            "variantName": "TRANSLUCENT_FW_BL",
+            "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT_BL",
+            "renderSlotDefaultShader": true,
+            "vert": "3dshaders://shader/core3d_dm_fw.vert.spv",
+            "frag": "3dshaders://shader/core3d_dm_fw_bl.frag.spv",
+            "vertexInputDeclaration": "3dvertexinputdeclarations://core3d_dm_fw.shadervid",
+            "pipelineLayout": "3dpipelinelayouts://core3d_dm_fw_bl.shaderpl",
+            "state": {
+                "rasterizationState": {
+                    "enableDepthClamp": false,
+                    "enableDepthBias": false,
+                    "enableRasterizerDiscard": false,
+                    "polygonMode": "fill",
+                    "cullModeFlags": "back",
+                    "frontFace": "counter_clockwise"
+                },
+                "depthStencilState": {
+                    "enableDepthTest": true,
+                    "enableDepthWrite": false,
+                    "enableDepthBoundsTest": false,
+                    "enableStencilTest": false,
+                    "depthCompareOp": "less_or_equal"
+                },
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "enableBlend": true,
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit",
+                            "srcColorBlendFactor": "one",
+                            "dstColorBlendFactor": "one_minus_src_alpha",
+                            "colorBlendOp": "add",
+                            "srcAlphaBlendFactor": "one",
+                            "dstAlphaBlendFactor": "one_minus_src_alpha",
+                            "alphaBlendOp": "add"
+                        },
+                        {
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit"
+                        }
+                    ]
+                }
+            }
         }
     ]
 }

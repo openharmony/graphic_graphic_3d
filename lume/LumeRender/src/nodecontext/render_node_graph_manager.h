@@ -39,6 +39,11 @@ class Device;
 class RenderNodeManager;
 class RenderNodeGraphLoader;
 
+struct InsertionKey {
+    BASE_NS::string typeName;
+    BASE_NS::string nodeName;
+};
+
 /**
 RenderDataManager class.
 Implementation for render data manager class.
@@ -81,6 +86,11 @@ public:
 
     RenderHandleReference LoadAndCreate(const RenderNodeGraphUsageType usage, const BASE_NS::string_view uri) override;
     IRenderNodeGraphLoader& GetRenderNodeGraphLoader() override;
+
+    void AddRenderNodeInsertion(
+        const RenderNodeDesc& renderNodeDesc, BASE_NS::array_view<const RenderNodeDependency> position) override;
+    void RemoveRenderNodeInsertion(const RenderNodeDesc& renderNodeDesc) override;
+    RenderNodeGraphDesc PatchRenderNodeGraph(const RenderNodeGraphDesc& desc) const override;
 
     RenderNodeManager& GetRenderNodeManager() const;
 
@@ -165,6 +175,12 @@ private:
     BASE_NS::vector<PendingRenderNodeDestruction> pendingRenderNodeDestructions_;
     BASE_NS::vector<PendingRenderNodeGraph> pendingRenderNodeGraphs_;
     BASE_NS::vector<PendingRenderNode> pendingRenderNodes_;
+
+    struct RenderNodeInsertion {
+        RenderNodeDesc renderNodeDesc;
+        BASE_NS::vector<RenderNodeDependency> position;
+    };
+    BASE_NS::unordered_map<InsertionKey, RenderNodeInsertion> insertionRequests_;
 
     // mutex for all owned data
     mutable std::mutex mutex_;

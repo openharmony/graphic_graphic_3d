@@ -1,0 +1,19 @@
+#version 320 es
+precision highp float;
+precision highp int;
+
+uniform mediump sampler2D s2_b0;
+
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+    outColor = texture(s2_b0, vec2(0.0));
+    vec4 _212 = outColor;
+    float _215 = outColor.w;
+    vec3 _219 = clamp(_212.xyz * _215, vec3(0.0), vec3(64512.0));
+    outColor.x = _219.x;
+    outColor.y = _219.y;
+    outColor.z = _219.z;
+}
+

@@ -23,6 +23,7 @@
 #include <napi_api.h>
 
 #include <scene/interface/intf_image.h>
+#include <scene/interface/intf_shader.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
@@ -33,6 +34,7 @@ public:
     virtual ~PropertyProxy();
 
     virtual void SetValue(NapiApi::FunctionContext<>& info) = 0;
+    virtual void ResetValue();
     virtual napi_value Value() = 0;
     virtual void Reset() = 0;
 
@@ -43,13 +45,13 @@ protected:
     template<typename Type>
     META_NS::Property<Type> GetProperty() const
     {
-        return META_NS::Property<Type>(prop_);
+        return META_NS::Property<Type>(prop_.lock());
     }
     /// Returns the underlying property ptr
     META_NS::IProperty::Ptr GetPropertyPtr() const noexcept;
 private:
     BASE_NS::weak_ptr<CORE_NS::IInterface> extra_;
-    META_NS::IProperty::Ptr prop_;
+    META_NS::IProperty::WeakPtr prop_;
 };
 
 class ObjectPropertyProxy : public PropertyProxy {
@@ -97,8 +99,10 @@ protected:
     napi_value Value() override;
     void SetValue(NapiApi::FunctionContext<>& info) override;
     void SetValue(const CORE_NS::Entity v);
-    NapiApi::WeakRef obj_;
-    NapiApi::WeakRef scene_;
+    NapiApi::StrongRef obj_;
+    NapiApi::WeakObjectRef scene_;
+    CORE_NS::EntityReference entityReference_;
+    NapiApi::StrongRef shader_;
 };
 
 class ImageProxy : public PropertyProxy {
@@ -111,8 +115,8 @@ protected:
     napi_value Value() override;
     void SetValue(NapiApi::FunctionContext<>& info) override;
     void SetValue(const SCENE_NS::IImage::Ptr& v);
-    NapiApi::WeakRef obj_;
-    NapiApi::WeakRef scene_;
+    NapiApi::StrongRef obj_;
+    NapiApi::WeakObjectRef scene_;
 };
 
 template<typename Type>
@@ -159,7 +163,7 @@ protected:
     }
 
 private:
-    NapiApi::WeakRef obj_;
+    NapiApi::StrongRef obj_;
 };
 
 

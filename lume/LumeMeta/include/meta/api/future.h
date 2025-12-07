@@ -117,18 +117,19 @@ public:
     }
     /// Helper function which enables specifying the continuation task as a lambda function
     template<typename Func, typename = EnableIfCanInvokeWithArguments<Func, IFutureContinuation::FunctionType>>
-    auto Then(Func func, const BASE_NS::shared_ptr<ITaskQueue>& queue)
+    auto Then(Func func, const BASE_NS::shared_ptr<ITaskQueue>& queue) -> Future<decltype(func(nullptr))>
     {
-        return Future<decltype(func(nullptr))>(fut_->Then(CreateContinuation(func), queue));
+        return fut_ ? fut_->Then(CreateContinuation(func), queue) : nullptr;
     }
     /// Helper function which enables specifying the continuation task as a lambda function
-    template<typename Func, typename = EnableIfCanInvokeWithArguments<Func, ContinuationTypedFuntionType<Type>>>
-    auto Then(Func func, const BASE_NS::shared_ptr<ITaskQueue>& queue, int = 0)
+    template<typename Func, typename ParamType = Type,
+        typename = EnableIfCanInvokeWithArguments<Func, ContinuationTypedFuntionType<ParamType>>>
+    auto Then(Func func, const BASE_NS::shared_ptr<ITaskQueue>& queue, int = 0) -> Future<decltype(func(ParamType {}))>
     {
-        using ReturnType = decltype(func(Type {}));
-        return Future<ReturnType>(fut_->Then(CreateContinuation([f = BASE_NS::move(func)](const IAny::Ptr& v) mutable {
+        using ReturnType = decltype(func(ParamType {}));
+        auto cont = CreateContinuation([f = BASE_NS::move(func)](const IAny::Ptr& v) mutable {
             if (v) {
-                Type value {};
+                ParamType value {};
                 if (v->GetValue(value)) {
                     return f(value);
                 }
@@ -136,8 +137,8 @@ public:
             }
             // vc2017 chokes on having the if constexpr here directly, so use helper
             return VoidResultHelper<ReturnType>();
-        }),
-            queue));
+        });
+        return fut_ ? fut_->Then(cont, queue) : nullptr;
     }
     /// Helper function which enables specifying the continuation task as a lambda function
     template<typename Func>

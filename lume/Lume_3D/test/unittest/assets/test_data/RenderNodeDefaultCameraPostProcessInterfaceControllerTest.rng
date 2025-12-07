@@ -1,0 +1,55 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "OutputImage0",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 512,
+                    "height": 512,
+                    "depth": 1
+                },
+                {
+                    "name": "DepthImage",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "size | samples",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "d24_unorm_s8_uint",
+                    "imageTiling": "optimal",
+                    "usageFlags": "depth_stencil_attachment",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "memoryPropertyFlags": "device_local",
+                    "width": 512,
+                    "height": 512,
+                    "depth": 1
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeDefaultCameraPostProcessInterfaceController",
+            "nodeName": "RenderNodeDefaultCameraPostProcessInterfaceController",
+            "renderDataStore": {
+                "dataStoreName": "dataStore",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "configuration"
+            }
+        }
+    ]
+}

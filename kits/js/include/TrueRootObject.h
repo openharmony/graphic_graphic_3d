@@ -38,10 +38,12 @@ enum class PtrType { WEAK, STRONG };
  */
 class TrueRootObject {
 public:
+    static constexpr uint32_t ID = 0xCAFED00D;
+
     TrueRootObject() = delete;
     TrueRootObject(napi_env env, napi_callback_info info);
 
-    virtual void* GetInstanceImpl(uint32_t id) = 0;
+    virtual void* GetInstanceImpl(uint32_t id);
     virtual void DisposeNative(void*) = 0;
 
     virtual bool IsStrong() const;

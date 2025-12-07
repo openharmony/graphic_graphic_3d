@@ -61,25 +61,38 @@ public:
 
     IRenderContext::Ptr GetContext() const override
     {
+        if (renderContext_) {
+            return renderContext_;
+        }
         auto ctx = context_.lock();
         return ctx ? ctx->GetRenderContext() : nullptr;
     }
 
     INode::Ptr CreateNode(BASE_NS::string_view path, META_NS::ObjectId id) override;
+    INode::Ptr CreateNode(const INode::ConstPtr& parent, BASE_NS::string_view name, META_NS::ObjectId id) override;
     INode::Ptr FindNode(BASE_NS::string_view path, META_NS::ObjectId id) const override;
     INode::Ptr FindNode(CORE_NS::Entity ent, META_NS::ObjectId id) const override;
+    BASE_NS::vector<INode::Ptr> FindNamedNodes(BASE_NS::string_view name, size_t maxCount, const INode::Ptr& root,
+        META_NS::ObjectId id, META_NS::TraversalType traversalType) const override;
     INode::Ptr GetRootNode() const override;
-    bool ReleaseNode(INode::Ptr&& node, bool recursive) override;
-    bool RemoveNode(const INode::Ptr& node) override;
-    META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id) override;
+    BASE_NS::string GetUniqueName(BASE_NS::string_view name, CORE_NS::Entity parent) const override;
+    uint32_t ReleaseNode(INode::Ptr&& node, bool recursive) override;
+    bool RemoveNode(INode::Ptr&&, bool) override;
+    bool RemoveObject(META_NS::IObject::Ptr&&, bool) override;
+
+    META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id, CORE_NS::Entity) const override;
+    META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id, const CORE_NS::ResourceId&) const override;
     BASE_NS::vector<INode::Ptr> GetChildren(const IEcsObject::Ptr&) const override;
-    bool RemoveChild(
-        const BASE_NS::shared_ptr<IEcsObject>& object, const BASE_NS::shared_ptr<IEcsObject>& child) override;
+    bool RemoveChild(const BASE_NS::shared_ptr<IEcsObject>& object, const INode::Ptr& child) override;
     bool AddChild(const BASE_NS::shared_ptr<IEcsObject>& object, const INode::Ptr& child, size_t index) override;
+
     IComponent::Ptr CreateEcsComponent(const INode::Ptr& node, BASE_NS::string_view componentName) override;
 
     BASE_NS::vector<ICamera::Ptr> GetCameras() const override;
     BASE_NS::vector<META_NS::IAnimation::Ptr> GetAnimations() const override;
+    META_NS::IAnimation::Ptr FindAnimation(CORE_NS::Entity ent) const override;
+    META_NS::IAnimation::Ptr FindAnimation(const CORE_NS::ResourceId&) const override;
+    META_NS::IAnimation::Ptr FindAnimation(CORE_NS::Entity ent, bool queryResource) const;
 
     IEcsContext& GetEcsContext() override
     {
@@ -88,7 +101,10 @@ public:
     RENDER_NS::IRenderContext& GetRenderContext() override
     {
         auto ctx = GetRenderContextPtr();
-        CORE_ASSERT(ctx);
+        if (!ctx) {
+            CORE_LOG_E("Render Init not called or result was not success");
+            std::abort();
+        }
         return *ctx;
     }
     CORE3D_NS::IGraphicsContext& GetGraphicsContext() override
@@ -97,7 +113,7 @@ public:
     }
 
     BASE_NS::shared_ptr<IScene> GetScene() const override;
-    void SchedulePropertyUpdate(const IEcsObject::Ptr& obj) override;
+    void SchedulePropertyUpdate(const META_NS::IEnginePropertySync::Ptr& obj) override;
     void SyncProperties() override;
     void Update(const UpdateInfo& info) override;
     void Update(bool syncProperties = true) override;
@@ -127,6 +143,11 @@ protected: // IApplicationContextProvider
         return context_.lock();
     }
 
+    ResourceGroupBundle GetResourceGroups() const override;
+    void SetResourceGroups(ResourceGroupBundle) override;
+
+    SceneDebugInfo GetDebugInfo() const override;
+
 public:
     NodeHits CastRay(
         const BASE_NS::Math::Vec3& pos, const BASE_NS::Math::Vec3& dir, const RayCastOptions& options) const override;
@@ -138,6 +159,7 @@ public:
         const IEcsObject::ConstPtr& entity, const BASE_NS::Math::Vec3& pos) const override;
 
 private:
+    INode::Ptr CreateNode(CORE3D_NS::ISceneNode* parent, BASE_NS::string_view name, META_NS::ObjectId id);
     INode::Ptr ConstructNode(CORE_NS::Entity, META_NS::ObjectId id) const;
     INode::Ptr ConstructNodeImpl(CORE_NS::Entity ent, INode::Ptr node) const;
     IComponent::Ptr CreateComponent(
@@ -148,7 +170,7 @@ private:
 
     NodeHits MapHitResults(const BASE_NS::vector<CORE3D_NS::RayCastResult>& res, const RayCastOptions& options) const;
     bool UpdateSyncProperties(bool resetPending);
-    void ReleaseChildNodes(const IEcsObject::Ptr& eobj);
+    uint32_t ReleaseChildNodes(const IEcsObject::Ptr& eobj);
 
     void OnChildChanged(
         META_NS::ContainerChangeType, CORE_NS::Entity parent, CORE_NS::Entity child, size_t index) override;
@@ -157,17 +179,33 @@ private:
     INode::Ptr ReleaseCached(NodesType::iterator);
 
     void SetEntityActive(const BASE_NS::shared_ptr<IEcsObject>&, bool active) override;
+    META_NS::IObject::Ptr FindResource(CORE_NS::Entity ent) const;
+    META_NS::IObject::Ptr CreatePlainObject(
+        META_NS::ObjectId id, CORE_NS::Entity ent, const CORE_NS::ResourceId& rid) const;
 
+    void SetNodeActive(const INode::Ptr& child, bool active);
+    bool IsSameScene(const INode::Ptr& node) const;
 private:
+    BASE_NS::vector<INode::Ptr> FindNodes(CORE_NS::Entity root, BASE_NS::string_view name, size_t maxCount,
+        META_NS::ObjectId id, META_NS::TraversalType traversalType) const;
+
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> GetRenderContextPtr() const
     {
+        if (renderContext_) {
+            return renderContext_->GetRenderer();
+        }
         auto ctx = GetContext();
         return ctx ? ctx->GetRenderer() : nullptr;
     }
     BASE_NS::vector<INode::Ptr> GetNodes() const;
     IScene::WeakPtr scene_;
     IInternalScene::WeakPtr self_;
+
+    // LumeTS may initialize us without the default application context. In that case, store the render
+    // context given at initialization time and use that
     IApplicationContext::ConstWeakPtr context_;
+    IRenderContext::Ptr renderContext_; // Optional
+
     CORE3D_NS::IGraphicsContext::Ptr graphicsContext3D_;
 
     SceneOptions options_;
@@ -186,12 +224,15 @@ private:
     RenderMode mode_ { RenderMode::ALWAYS };
     size_t nodeListening_ {};
 
+    size_t deferedRenderCount_ { 6u }; // resource clean is deferred 6 non-rendering frames
+
     BASE_NS::vector<INodeNotify::Ptr> GetNotifiableNodesFromHierarchy(CORE_NS::Entity root);
 
 private: // locked bits
     mutable std::shared_mutex mutex_;
     bool pendingRender_ {};
-    BASE_NS::unordered_map<void*, IEcsObject::WeakPtr> syncs_;
+    BASE_NS::unordered_map<void*, META_NS::IEnginePropertySync::WeakPtr> syncs_;
+    ResourceGroupBundle groups_;
 };
 
 SCENE_END_NAMESPACE()

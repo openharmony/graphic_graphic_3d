@@ -370,8 +370,8 @@ void GenerateTorusGeometry(
 void GenerateCylinderGeometry(float radius, float height, uint32_t segments, Geometry<uint32_t> geometry)
 {
     if (radius < Math::EPSILON || height < Math::EPSILON || segments < CYLINDER_MIN_SEGMENTS) {
-        CORE_LOG_E("Invalid parameters for cylinder creation: radius %f, height %f, segments %u",
-            radius, height, segments);
+        CORE_LOG_E(
+            "Invalid parameters for cylinder creation: radius %f, height %f, segments %u", radius, height, segments);
         return;
     }
     vector<Math::Vec3>& vertices = geometry.vertices;
@@ -379,8 +379,8 @@ void GenerateCylinderGeometry(float radius, float height, uint32_t segments, Geo
     vector<Math::Vec2>& uvs = geometry.uvs;
     vector<uint32_t>& indices = geometry.indices;
 
-    const size_t maxVertexCount = segments * 4u + 2u;
-    const size_t maxIndexCount = segments * 12u - 12u;
+    const size_t maxVertexCount = segments * 4U + 2U;
+    const size_t maxIndexCount = segments * 12U - 12U;
     vertices.reserve(maxVertexCount);
     normals.reserve(maxVertexCount);
     uvs.reserve(maxVertexCount);
@@ -388,36 +388,36 @@ void GenerateCylinderGeometry(float radius, float height, uint32_t segments, Geo
 
     // The upper and lower bases of the cylinder
     for (size_t i = 0; i < segments; i++) {
-        float angle = i * (360.0f / segments) * Math::DEG2RAD;
+        const float angle = float(i) * (360.0f / float(segments)) * Math::DEG2RAD;
         vertices.emplace_back(sin(angle) * radius, 0.5f * height, cos(angle) * radius);
         vertices.emplace_back(sin(angle) * radius, -0.5f * height, cos(angle) * radius);
         normals.emplace_back(0.f, 1.f, 0.f);
         normals.emplace_back(0.f, -1.f, 0.f);
-        Math::Vec2 uv = Math::Vec2(sin(angle), cos(angle));
+        const Math::Vec2 uv = Math::Vec2(sin(angle), cos(angle));
         uvs.emplace_back(uv * CYLINDER_CAP_UV_RADIUS + CYLINDER_CAP_UV_CENTER[0]);
         uvs.emplace_back(uv * CYLINDER_CAP_UV_RADIUS + CYLINDER_CAP_UV_CENTER[1]);
     }
-    for (size_t i = 1; i < segments - 1; i++) {
-        indices.push_back(0);
-        indices.push_back(2 * i);
-        indices.push_back(2 * i + 2);
-        indices.push_back(1);
-        indices.push_back(2 * i + 3);
-        indices.push_back(2 * i + 1);
+    for (uint32_t i = 1; i < segments - 1; i++) {
+        indices.push_back(0U);
+        indices.push_back(2U * i);
+        indices.push_back(2U * i + 2U);
+        indices.push_back(1U);
+        indices.push_back(2U * i + 3U);
+        indices.push_back(2U * i + 1U);
     }
     // The lateral surface of the cylinder
-    uint32_t indexOffset = vertices.size();
-    for (size_t i = 0; i <= segments; i++) {
-        const Math::Vec3 v0 = vertices[(2 * i) % (2 * segments)];
-        const Math::Vec3 v1 = vertices[(2 * i + 1) % (2 * segments)];
+    uint32_t indexOffset = uint32_t(vertices.size());
+    for (uint32_t i = 0; i <= segments; i++) {
+        const Math::Vec3 v0 = vertices[(2U * i) % (2U * segments)];
+        const Math::Vec3 v1 = vertices[(2U * i + 1) % (2U * segments)];
         vertices.emplace_back(v0);
         vertices.emplace_back(v1);
-        normals.append(2u, Math::Normalize(Math::Vec3(v0.x, 0.f, v0.z)));
-        uvs.emplace_back((float)i / segments, 1);
-        uvs.emplace_back((float)i / segments, 0.5);
+        normals.append(2U, Math::Normalize(Math::Vec3(v0.x, 0.f, v0.z)));
+        uvs.emplace_back(float(i) / float(segments), 1.0f);
+        uvs.emplace_back(float(i) / float(segments), 0.5f);
     }
-    for (size_t i = 0; i < segments; i++) {
-        for (size_t j = 0; j < 6u; j++) {
+    for (uint32_t i = 0; i < segments; i++) {
+        for (uint32_t j = 0; j < 6U; j++) {
             indices.push_back(indexOffset + 2 * i + CYLINDER_SIDE_INDICES[j]);
         }
     }
@@ -911,8 +911,8 @@ Entity MeshUtil::GenerateTorus(const IEcs& ecs, const string_view name, Entity m
     return GenerateEntity(ecs, name, meshHandle);
 }
 
-Entity MeshUtil::GenerateCylinder(const IEcs& ecs, const string_view name, Entity material,
-    float radius, float height, uint32_t segmentCount)
+Entity MeshUtil::GenerateCylinder(
+    const IEcs& ecs, const string_view name, Entity material, float radius, float height, uint32_t segmentCount)
 {
     const Entity meshHandle = GenerateCylinderMesh(ecs, name, material, radius, height, segmentCount);
     return GenerateEntity(ecs, name, meshHandle);
@@ -923,6 +923,9 @@ IMeshBuilder::Ptr MeshUtil::InitializeBuilder(const IMeshBuilder::Submesh& subme
     IMeshBuilder::Ptr builder;
     if (IClassRegister* classRegister = factory_.GetInterface<IClassRegister>(); classRegister) {
         auto renderContext = GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
+        if (!renderContext) {
+            return {};
+        }
         IShaderManager& shaderManager = renderContext->GetDevice().GetShaderManager();
         const VertexInputDeclarationView vertexInputDeclaration =
             shaderManager.GetVertexInputDeclarationView(shaderManager.GetVertexInputDeclarationHandle(

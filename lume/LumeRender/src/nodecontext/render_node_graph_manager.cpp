@@ -38,7 +38,18 @@
 
 using namespace BASE_NS;
 
+template<>
+inline uint64_t BASE_NS::hash(const RENDER_NS::InsertionKey& v)
+{
+    return BASE_NS::Hash(v.typeName, v.nodeName);
+}
+
 RENDER_BEGIN_NAMESPACE()
+static inline bool operator==(const RENDER_NS::InsertionKey& lhs, const RENDER_NS::InsertionKey& rhs) noexcept
+{
+    return lhs.typeName == rhs.typeName && lhs.nodeName == rhs.nodeName;
+}
+
 namespace {
 void ValidateBackendFlags(
     const string_view name, const DeviceBackendType backendType, const IRenderNode::BackendFlags backendFlags)
@@ -109,6 +120,78 @@ RenderHandleReference RenderNodeGraphManager::LoadAndCreate(const RenderNodeGrap
 IRenderNodeGraphLoader& RenderNodeGraphManager::GetRenderNodeGraphLoader()
 {
     return *renderNodeGraphLoader_;
+}
+
+void RenderNodeGraphManager::AddRenderNodeInsertion(
+    const RenderNodeDesc& renderNodeDesc, BASE_NS::array_view<const RenderNodeDependency> position)
+{
+    if (position.empty()) {
+        return;
+    }
+    const auto lock = std::lock_guard(mutex_);
+
+    auto key = InsertionKey { string { renderNodeDesc.typeName }, string { renderNodeDesc.nodeName } };
+    auto pos = insertionRequests_.find(key);
+    if (pos != insertionRequests_.cend()) {
+        pos->second.renderNodeDesc = renderNodeDesc;
+        pos->second.position.clear();
+        pos->second.position.append(position.cbegin().ptr(), position.cend().ptr());
+    } else {
+        insertionRequests_.insert(pair { BASE_NS::move(key),
+            RenderNodeInsertion {
+                renderNodeDesc, vector<RenderNodeDependency> { position.cbegin().ptr(), position.cend().ptr() } } });
+    }
+}
+
+void RenderNodeGraphManager::RemoveRenderNodeInsertion(const RenderNodeDesc& renderNodeDesc)
+{
+    const auto lock = std::lock_guard(mutex_);
+
+    auto key = InsertionKey { string { renderNodeDesc.typeName }, string { renderNodeDesc.nodeName } };
+    insertionRequests_.erase(key);
+}
+
+RenderNodeGraphDesc RenderNodeGraphManager::PatchRenderNodeGraph(const RenderNodeGraphDesc& desc) const
+{
+    RenderNodeGraphDesc patched = desc;
+    const auto lock = std::lock_guard(mutex_);
+
+    for (const auto& request : insertionRequests_) {
+        auto pos = patched.nodes.cend();
+        for (const auto& position : request.second.position) {
+            switch (position.position) {
+                case RenderNodeDependency::Position::AFTER_FIRST:
+                case RenderNodeDependency::Position::BEFORE_FIRST: {
+                    auto first = patched.nodes.cbegin();
+                    auto last = patched.nodes.cend();
+                    pos = std::find_if(first, last, [&typeName = position.typeName](const RenderNodeDesc& node) {
+                        return node.typeName == typeName;
+                    });
+                } break;
+
+                case RenderNodeDependency::Position::AFTER_LAST:
+                case RenderNodeDependency::Position::BEFORE_LAST: {
+                    auto first = patched.nodes.crbegin();
+                    auto last = patched.nodes.crend();
+                    auto rpos = std::find_if(first, last, [&typeName = position.typeName](const RenderNodeDesc& node) {
+                        return node.typeName == typeName;
+                    });
+                    if (rpos != last) {
+                        pos = rpos.base() - 1;
+                    }
+                } break;
+            }
+            if (pos != patched.nodes.cend()) {
+                if ((position.position == RenderNodeDependency::Position::AFTER_FIRST) ||
+                    (position.position == RenderNodeDependency::Position::AFTER_LAST)) {
+                    ++pos;
+                }
+                patched.nodes.insert(pos, request.second.renderNodeDesc);
+            }
+        }
+    }
+
+    return patched;
 }
 
 RenderHandleReference RenderNodeGraphManager::Create(const RenderNodeGraphUsageType usage,
@@ -700,6 +783,9 @@ void RenderNodeGraphManager::Destroy(const string_view typeName)
 {
     device_.Activate();
     for (const auto& store : nodeGraphData_) {
+        if (!store) {
+            continue;
+        }
         for (;;) {
             auto pos = std::find_if(store->renderNodeData.begin(), store->renderNodeData.end(),
                 [typeName](const RenderNodeGraphNodeStore::RenderNodeData& data) { return data.typeName == typeName; });

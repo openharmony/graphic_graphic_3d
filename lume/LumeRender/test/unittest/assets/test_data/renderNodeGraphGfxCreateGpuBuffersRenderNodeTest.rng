@@ -1,0 +1,37 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuBuffers",
+            "nodeName": "RenderNodeCreateGpuBuffers",
+            "gpuBufferDescs": [
+                {
+                    "name": "Buffer1",
+                    "dependencyBufferName": "Buffer0",
+                    "usageFlags": "transfer_src",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "format": "r8_uint",
+                    "byteSize": 5
+                },
+                {
+                    "name": "Buffer2",
+                    "dependencyBufferName": "NonExistingBuffer",
+                    "usageFlags": "transfer_src",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "format": "r8_uint",
+                    "byteSize": 5
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeCreateGpuBuffers",
+            "nodeName": "RenderNodeCreateGpuBuffers2",
+            "gpuBufferDescs": []
+        }
+    ]
+}

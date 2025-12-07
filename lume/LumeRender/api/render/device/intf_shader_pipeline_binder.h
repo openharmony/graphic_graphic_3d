@@ -177,7 +177,7 @@ public:
      */
     virtual void SetDrawCommand(const DrawCommand& drawCommand) = 0;
 
-    /** Set dispatch commnd
+    /** Set dispatch command
      * @param indexBuffer vertex buffers
      */
     virtual void SetDispatchCommand(const DispatchCommand& dispatchCommand) = 0;
@@ -202,7 +202,7 @@ public:
      */
     virtual IndexBufferWithHandleReference GetIndexBuffer() const = 0;
 
-    /** Get draw commdn
+    /** Get draw command
      * @return DrawCommand
      */
     virtual DrawCommand GetDrawCommand() const = 0;

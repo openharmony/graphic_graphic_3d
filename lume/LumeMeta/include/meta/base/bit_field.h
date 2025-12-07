@@ -251,7 +251,7 @@ private:
 template<class EnumType, class TopEnumBitField, size_t Offset, size_t Count>
 class SubEnumBitField : public EnumBitField<EnumType, typename TopEnumBitField::BaseValueType, Offset, Count> {
     using Super = EnumBitField<EnumType, typename TopEnumBitField::BaseValueType, Offset, Count>;
-    static_assert(Offset + Count < sizeof(typename TopEnumBitField::BaseValueType) * 8,  // 8: bits
+    static_assert(Offset + Count < sizeof(typename TopEnumBitField::BaseValueType) * 8, // 8: bits
         "invalid bit offset and/or count");
 
 public:

@@ -27,7 +27,33 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-// Interface pointer to entity converter
+template<typename Interface>
+CORE_NS::Entity ConvertPtrToTarget(const typename Interface::Ptr& v)
+{
+    return GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(v));
+}
+
+template<typename Interface>
+typename Interface::Ptr ConvertPtrToSource(
+    META_NS::IAny& any, const CORE_NS::Entity& v, const IInternalScene::Ptr& scene, META_NS::ObjectId id)
+{
+    auto p = META_NS::GetPointer<Interface>(any);
+    if (scene) {
+        if (CORE_NS::EntityUtil::IsValid(v)) {
+            if (p && (GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(p)) != v)) {
+                p = nullptr;
+            }
+            if (!p) {
+                scene->RunDirectlyOrInTask([&] { p = interface_pointer_cast<Interface>(scene->CreateObject(id, v)); });
+            }
+        } else {
+            p = nullptr;
+        }
+    }
+    return p;
+}
+
+/// Interface pointer to entity converter with fixed Entity<->ObjectId mapping
 template<typename Interface>
 struct InterfacePtrEntityConverter {
     using SourceType = typename Interface::Ptr;
@@ -37,45 +63,46 @@ struct InterfacePtrEntityConverter {
 
     SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
     {
-        auto p = META_NS::GetPointer<Interface>(any);
-        if (auto scene = scene_.lock()) {
-            if (CORE_NS::EntityUtil::IsValid(v)) {
-                auto f = scene->AddTask([&] { return scene->GetEcsContext().GetEcsObject(v); });
-                auto obj = f.GetResult();
-                if (p) {
-                    if (auto i = interface_cast<IEcsObjectAccess>(p)) {
-                        if (i->GetEcsObject() != obj) {
-                            p = nullptr;
-                        }
-                    }
-                }
-                if (!p) {
-                    p = META_NS::GetObjectRegistry().Create<Interface>(id_);
-                    if (auto i = interface_cast<IEcsObjectAccess>(p)) {
-                        i->SetEcsObject(obj);
-                    }
-                }
-            } else {
-                p = nullptr;
-            }
-        }
-        return p;
+        return ConvertPtrToSource<Interface>(any, v, scene_.lock(), id_);
     }
     TargetType ConvertToTarget(const SourceType& v) const
     {
-        CORE_NS::Entity ent;
-        if (auto scene = scene_.lock()) {
-            if (v) {
-                if (auto i = interface_cast<IEcsObjectAccess>(v)) {
-                    ent = i->GetEcsObject()->GetEntity();
-                }
-            }
-        }
-        return ent;
+        return ConvertPtrToTarget<Interface>(v);
     }
 
+protected:
     IInternalScene::WeakPtr scene_;
     META_NS::ObjectId id_;
+};
+
+/// Interface pointer to entity converter with dynamic Entity<->ObjectId mapping
+template<typename Interface>
+struct DynamicInterfacePtrEntityConverter {
+    using SourceType = typename Interface::Ptr;
+    using TargetType = CORE_NS::Entity;
+
+    DynamicInterfacePtrEntityConverter(IInternalScene::Ptr scene) : scene_(scene) {}
+
+    SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
+    {
+        const auto scene = scene_.lock();
+        META_NS::ObjectId id {};
+        if (scene) {
+            id = GetObjectId(*(scene->GetEcsContext().GetNativeEcs()), v);
+        }
+        return ConvertPtrToSource<Interface>(any, v, scene, id);
+    }
+    TargetType ConvertToTarget(const SourceType& v) const
+    {
+        return ConvertPtrToTarget<Interface>(v);
+    }
+
+protected:
+    /**
+     * @brief To be overridden by implementations to provide dynamic entity<->ObjectId mapping.
+     */
+    virtual META_NS::ObjectId GetObjectId(const CORE_NS::IEcs& ecs, const CORE_NS::Entity& e) const = 0;
+    IInternalScene::WeakPtr scene_;
 };
 
 template<typename Interface>
@@ -94,7 +121,7 @@ struct RenderResourceConverter {
         auto p = META_NS::GetPointer<Interface>(any);
         if (auto scene = scene_.lock()) {
             if (v) {
-                p = scene->AddTask([&] { return ObjectWithRenderHandle<Interface>(scene, v, p, id_); }).GetResult();
+                p = scene->RunDirectlyOrInTask([&] { return ObjectWithRenderHandle<Interface>(scene, v, p, id_); });
             } else {
                 p = nullptr;
             }
@@ -106,11 +133,12 @@ struct RenderResourceConverter {
     {
         CORE_NS::EntityReference ent;
         if (auto scene = scene_.lock()) {
-            ent = scene->AddTask([&] { return HandleFromRenderResource<Interface>(scene, v); }).GetResult();
+            ent = scene->RunDirectlyOrInTask([&] { return HandleFromRenderResource<Interface>(scene, v); });
         }
         return ent;
     }
 
+protected:
     IInternalScene::WeakPtr scene_;
     META_NS::ObjectId id_;
 };

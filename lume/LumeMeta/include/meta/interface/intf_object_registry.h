@@ -51,6 +51,7 @@ class IEngineData;
 
 META_REGISTER_INTERFACE(IObjectRegistry, "1b2081c8-031f-4962-bb97-de2209573e96")
 META_REGISTER_INTERFACE(IObjectRegistryExporter, "79e4e8ec-7da5-4757-a819-a1817e4bdd4f")
+META_REGISTER_INTERFACE(IObjectUtil, "ac142b98-d63e-440f-b97e-40555f05ee77")
 
 /**
  * @brief The IObjectRegistryExporter defines an interface for exporting an
@@ -65,6 +66,23 @@ public:
      * @param registry The object registry instance to export.
      */
     virtual BASE_NS::string ExportRegistry(const IObjectRegistry* registry) = 0;
+};
+
+/**
+ * @brief The IObjectUtil interface defines an object utility interface which can be queried from the object registry.
+ */
+class IObjectUtil : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IObjectUtil)
+public:
+    /**
+     * @brief Return a unique name based on a list of reserved names.
+     * @param name The base name to query.
+     * @param names List of reserved names which the unique name must not clash with.
+     * @return If the given name does not exist in the list, returns the name as is. If the name already exists,
+     *         name is appended the next available numerical increment.
+     */
+    virtual BASE_NS::string GetUniqueName(
+        BASE_NS::string_view name, BASE_NS::array_view<BASE_NS::string_view> names) const = 0;
 };
 
 /**
@@ -357,6 +375,7 @@ public:
     virtual IClassRegistry& GetClassRegistry() = 0;
     virtual IPropertyRegister& GetPropertyRegister() = 0;
     virtual IGlobalSerializationData& GetGlobalSerializationData() = 0;
+    virtual IObjectUtil& GetObjectUtil() = 0;
 
     virtual IEngineData& GetEngineData() = 0;
 
@@ -377,6 +396,14 @@ inline META_NS::IObjectRegistry& GetObjectRegistry()
 inline META_NS::IClassRegistry& GetClassRegistry()
 {
     return GetObjectRegistry().GetClassRegistry();
+}
+
+/**
+ * @brief Returns a global utility function interface.
+ */
+inline META_NS::IObjectUtil& GetObjectUtil()
+{
+    return GetObjectRegistry().GetObjectUtil();
 }
 
 /**

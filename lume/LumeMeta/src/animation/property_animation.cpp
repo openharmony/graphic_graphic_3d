@@ -37,7 +37,7 @@ void PropertyAnimation::OnAnimationStateChanged(const IAnimationInternal::Animat
     if (auto p = GetTargetProperty()) {
         switch (info.state) {
             case AnimationTargetState::FINISHED:
-                [[fallthrough]];
+                [[fallthrough]]; // follow the same procedure as STOPPED
             case AnimationTargetState::STOPPED:
                 // Evaluate current value
                 Evaluate();

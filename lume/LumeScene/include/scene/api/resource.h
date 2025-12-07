@@ -29,6 +29,9 @@
 
 SCENE_BEGIN_NAMESPACE()
 
+/**
+ * @brief The Image class is the base class for all resources (i.e. objects which implement CORE_NS::IResource).
+ */
 class Resource : public META_NS::Named {
 public:
     META_INTERFACE_OBJECT(Resource, META_NS::Named, CORE_NS::IResource)
@@ -44,6 +47,9 @@ public:
     }
 };
 
+/**
+ * @brief The Image class is a wrapper class for objects which implement SCENE_NS::IImage.
+ */
 class Image : public Resource {
 public:
     META_INTERFACE_OBJECT(Image, Resource, IImage)
@@ -51,6 +57,9 @@ public:
     META_INTERFACE_OBJECT_READONLY_PROPERTY(BASE_NS::Math::UVec2, Size)
 };
 
+/**
+ * @brief The Image class is a wrapper class for objects which implement SCENE_NS::IEnvironment.
+ */
 class Environment : public Resource {
 public:
     META_INTERFACE_OBJECT(Environment, Resource, IEnvironment)
@@ -76,17 +85,23 @@ public:
     META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Quat, EnvironmentRotation)
 };
 
+/**
+ * @brief The Image class is a wrapper class for objects which implement SCENE_NS::IShader.
+ */
 class Shader : public Resource {
 public:
     META_INTERFACE_OBJECT(Shader, Resource, IShader)
     /// @see IShader::CullMode
     META_INTERFACE_OBJECT_PROPERTY(CullModeFlags, CullMode)
     /// @see IShader::PolygonMode
-    META_INTERFACE_OBJECT_PROPERTY(PolygonMode, PolygonMode)
+    META_INTERFACE_OBJECT_PROPERTY(::SCENE_NS::PolygonMode, PolygonMode)
     /// @see IShader::Blend
     META_INTERFACE_OBJECT_PROPERTY(bool, Blend)
 };
 
+/**
+ * @brief The Image class is a wrapper class for objects which implement SCENE_NS::ISampler.
+ */
 class Sampler : public META_NS::ResetableObject {
 public:
     META_INTERFACE_OBJECT(Sampler, META_NS::ResetableObject, ISampler)
@@ -104,6 +119,9 @@ public:
     META_INTERFACE_OBJECT_PROPERTY(SamplerAddressMode, AddressModeW)
 };
 
+/**
+ * @brief The Image class is a wrapper class for MetallicRoughnessMaterial texture slots.
+ */
 class MaterialProperty : public META_NS::Object {
 public:
     META_INTERFACE_OBJECT(MaterialProperty, META_NS::Object, ITexture)
@@ -149,14 +167,14 @@ public:
     template<typename Type>
     auto GetCustomProperty(BASE_NS::string_view name) const
     {
-        return META_INTERFACE_OBJECT_CALL_PTR(GetCustomProperty(name));
+        return META_INTERFACE_OBJECT_CALL_PTR(template GetCustomProperty<Type>(name));
     }
     /// Returns a named custom array property with given type. Null if property does not exist or given type is not
     /// compatible with the property value.
     template<typename Type>
     META_NS::ArrayProperty<Type> GetCustomArrayProperty(BASE_NS::string_view name) const
     {
-        return META_INTERFACE_OBJECT_CALL_PTR(GetCustomArrayProperty(name));
+        return META_INTERFACE_OBJECT_CALL_PTR(template GetCustomArrayProperty<Type>(name));
     }
     /**
      * @brief Returns MaterialProperty with given name.
@@ -315,6 +333,9 @@ public:
     }
 };
 
+/**
+ * @brief The Image class is a wrapper class for objects which implement SCENE_NS::IMorpher.
+ */
 class Morpher : public META_NS::Object {
 public:
     META_INTERFACE_OBJECT(Morpher, META_NS::Object, IMorpher)
@@ -324,6 +345,9 @@ public:
     META_INTERFACE_OBJECT_ARRAY_PROPERTY(float, MorphWeights, MorphWeight)
 };
 
+/**
+ * @brief The Image class is a wrapper class for objects which implement SCENE_NS::ISubMesh.
+ */
 class SubMesh : public META_NS::Object {
 public:
     META_INTERFACE_OBJECT(SubMesh, META_NS::Object, ISubMesh)
@@ -335,6 +359,9 @@ public:
     META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Vec3, AABBMax)
 };
 
+/**
+ * @brief The Image class is a wrapper class for objects which implement SCENE_NS::IMesh.
+ */
 class Mesh : public Resource {
 public:
     META_INTERFACE_OBJECT(Mesh, Resource, IMesh)

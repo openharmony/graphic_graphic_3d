@@ -87,6 +87,40 @@ ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(const string_view u
     return LoadImage(*file, loadFlags);
 }
 
+ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(
+    const BASE_NS::string_view uri, uint32_t loadFlags, uint32_t rowCount, uint32_t columnCount)
+{
+    CORE_CPU_PERF_SCOPE("CORE", "LoadImage()", uri, CORE_PROFILER_DEFAULT_COLOR);
+
+    // Load 12 bytes (maximum header size of currently implemented file types)
+    IFile::Ptr file = fileManager_.OpenFile(uri);
+    if (!file) {
+        return ResultFailure("Can not open image.");
+    }
+
+    CORE_CPU_PERF_SCOPE("CORE", "LoadImage(file)", "", CORE_PROFILER_DEFAULT_COLOR);
+
+    const uint64_t byteLength = 12u;
+
+    // Read header of the file to a buffer.
+    unique_ptr<uint8_t[]> buffer = make_unique<uint8_t[]>(static_cast<size_t>(byteLength));
+    const uint64_t read = file->Read(buffer.get(), byteLength);
+    if (read != byteLength) {
+        CORE_LOG_E("Can not read file header!!!");
+        return ResultFailure("Can not read file header.");
+    }
+    file->Seek(0);
+    for (auto& loader : imageLoaders_) {
+        if (loader.instance) {
+            if (loader.instance->CanLoad(array_view<const uint8_t>(buffer.get(), static_cast<size_t>(byteLength)))) {
+                LoadResult res = loader.instance->Load(*file, loadFlags, rowCount, columnCount);
+                return res;
+            }
+        }
+    }
+    return ResultFailure("Image loader not found for this format.");
+}
+
 ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(IFile& file, uint32_t loadFlags)
 {
     CORE_CPU_PERF_SCOPE("CORE", "LoadImage(file)", "", CORE_PROFILER_DEFAULT_COLOR);
@@ -232,7 +266,7 @@ vector<IImageLoaderManager::ImageType> ImageLoaderManager::GetSupportedTypes() c
             const auto types = loader.instance->GetSupportedTypes();
             allTypes.append(types.cbegin(), types.cend());
         } else {
-            CORE_LOG_E(" loader.instance is nullptr and uid: %s", to_string(loader.uid).data());
+            CORE_LOG_E("Missing image loader instance (%s)", BASE_NS::to_string(loader.uid).data());
         }
     }
     return allTypes;
@@ -253,10 +287,9 @@ void ImageLoaderManager::OnTypeInfoEvent(EventType type, array_view<const ITypeI
                 }
             } else if (type == EventType::REMOVED) {
                 imageLoaders_.erase(std::remove_if(imageLoaders_.begin(), imageLoaders_.end(),
-                                                   [&uid = imageLoaderInfo->uid](const RegisteredImageLoader &loader) {
-                                                       return loader.uid == uid;
-                                                   }),
-                                    imageLoaders_.cend());
+                                        [&uid = imageLoaderInfo->uid](
+                                            const RegisteredImageLoader& loader) { return loader.uid == uid; }),
+                    imageLoaders_.cend());
             }
         }
     }

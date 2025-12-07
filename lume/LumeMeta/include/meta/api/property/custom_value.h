@@ -16,8 +16,11 @@
 #ifndef META_API_PROPERTY_CUSTOM_VALUE_H
 #define META_API_PROPERTY_CUSTOM_VALUE_H
 
+#include <meta/interface/detail/base_any.h>
 #include <meta/interface/interface_helpers.h>
+#include <meta/interface/intf_value.h>
 #include <meta/interface/property/intf_property.h>
+#include <meta/interface/property/property.h>
 
 META_BEGIN_NAMESPACE()
 

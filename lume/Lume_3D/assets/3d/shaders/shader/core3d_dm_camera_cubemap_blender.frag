@@ -30,45 +30,26 @@ layout(push_constant, std430) uniform uPostProcessPushConstant
 
 // in / out
 
-layout(location = 0) in vec2 inUv;
-layout(location = 1) in flat uint inIndices;
+layout(location = 0) in vec3 inCubeUv;
 
 layout(location = 0) out vec4 outColor;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-vec3 GetCubemapCoord()
-{
-    const vec2 uv = inUv.xy * 2.0 - 1.0;
-    const vec3 coords[] = {
-        vec3(1.0, -uv.y, -uv.x),  // +X
-        vec3(-1.0, -uv.y, uv.x),  // -X
-        vec3(uv.x, 1.0, uv.y),    // +Y
-        vec3(uv.x, -1.0, -uv.y),  // -Y
-        vec3(uv.x, -uv.y, 1.0),   // +Z
-        vec3(-uv.x, -uv.y, -1.0), // -Z
-    };
-    const uint index = min(inIndices, 5U);
-    const vec3 cubeUv = normalize(coords[index]);
-    return cubeUv;
-}
-
 vec4 GetCombinedCubemap()
 {
-    const vec3 uv = GetCubemapCoord();
-
     const DefaultMaterialEnvironmentStruct envData = uEnvironmentDataArray[uPc.indices.x];
+    const uvec2 envIdx = min(envData.multiEnvIndices.yz, uvec2(CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT - 1));
     const float lodLevel = float(uPc.indices.y);
-
-    const uvec4 multiEnvIndices = envData.multiEnvIndices;
-    const uint env1Idx = min(multiEnvIndices.y, CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT - 1);
-    const uint env2Idx = min(multiEnvIndices.z, CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT - 1);
-    const vec3 env0 =
-        textureLod(uCubemapSampler1, uv, lodLevel).xyz * uEnvironmentDataArray[env1Idx].indirectSpecularColorFactor.xyz;
-    const vec3 env1 =
-        textureLod(uCubemapSampler2, uv, lodLevel).xyz * uEnvironmentDataArray[env2Idx].indirectSpecularColorFactor.xyz;
+    vec3 env0 = textureLod(uCubemapSampler1, mat3(uEnvironmentDataArray[envIdx.x].envRotation) * inCubeUv, lodLevel).xyz;
+    vec3 env1 = textureLod(uCubemapSampler2, mat3(uEnvironmentDataArray[envIdx.y].envRotation) * inCubeUv, lodLevel).xyz;
 
     const float blendVal = envData.blendFactor.x;
+    const vec3 env0Factor = uEnvironmentDataArray[envIdx.x].indirectSpecularColorFactor.xyz;
+    const vec3 env1Factor = uEnvironmentDataArray[envIdx.y].indirectSpecularColorFactor.xyz;
+    env0 *= env0Factor;
+    env1 *= env1Factor;
+
     vec3 finalColor = mix(env0, env1, blendVal);
     return vec4(finalColor, 1.0);
 }

@@ -66,6 +66,7 @@ constexpr string_view DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN { VK_EXT_QUEUE_FAMIL
 constexpr string_view DEVICE_EXTENSION_MULTIVIEW { VK_KHR_MULTIVIEW_EXTENSION_NAME };
 constexpr string_view DEVICE_EXTENSION_MAINTENANCE4 = VK_KHR_MAINTENANCE_4_EXTENSION_NAME;
 constexpr string_view DEVICE_EXTENSION_DESCRIPTOR_INDEXING = VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
+constexpr string_view DEVICE_EXTENSION_PORTABILITY_SUBSET = "VK_KHR_portability_subset";
 
 struct ChainWrapper {
     void** ppNextFeatures { nullptr };
@@ -441,9 +442,9 @@ constexpr uint32_t MIN_ALLOCATION_BLOCK_SIZE { 4u * 1024u * 1024u };
 constexpr uint32_t MAX_ALLOCATION_BLOCK_SIZE { 1024u * 1024u * 1024u };
 constexpr const QueueProperties DEFAULT_QUEUE {
     VK_QUEUE_GRAPHICS_BIT, // requiredFlags
+    0,                     // negativeFlags
     1,                     // count
     1.0f,                  // priority
-    false,                 // explicitFlags
     true,                  // canPresent
 };
 
@@ -569,9 +570,9 @@ void EmplaceDeviceQueue(
 
 void CheckValidDepthFormats(const DevicePlatformDataVk& devicePlat, DevicePlatformInternalDataVk& dataInternal)
 {
-    constexpr uint32_t DEPTH_FORMAT_COUNT { 4 };
+    constexpr uint32_t DEPTH_FORMAT_COUNT { 5 };
     constexpr Format DEPTH_FORMATS[DEPTH_FORMAT_COUNT] = { BASE_FORMAT_D24_UNORM_S8_UINT, BASE_FORMAT_D32_SFLOAT,
-        BASE_FORMAT_D16_UNORM, BASE_FORMAT_X8_D24_UNORM_PACK32 };
+        BASE_FORMAT_D16_UNORM, BASE_FORMAT_X8_D24_UNORM_PACK32, BASE_FORMAT_D16_UNORM_S8_UINT };
     for (const Format& format : DEPTH_FORMATS) {
         VkFormatProperties formatProperties;
         vkGetPhysicalDeviceFormatProperties(devicePlat.physicalDevice, // physicalDevice
@@ -632,6 +633,7 @@ DeviceVk::CommonDeviceExtensions GetEnabledCommonDeviceExtensions(
     extensions.samplerYcbcrConversion = enabledDeviceExtensions.contains(DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION);
     extensions.multiView = enabledDeviceExtensions.contains(DEVICE_EXTENSION_MULTIVIEW);
     extensions.descriptorIndexing = enabledDeviceExtensions.contains(DEVICE_EXTENSION_DESCRIPTOR_INDEXING);
+    extensions.portabilitySubset = enabledDeviceExtensions.contains(DEVICE_EXTENSION_PORTABILITY_SUBSET);
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
     extensions.fragmentShadingRate = enabledDeviceExtensions.contains(DEVICE_EXTENSION_FRAGMENT_SHADING_RATE);
 #endif
@@ -867,8 +869,8 @@ void DeviceVk::CreateInstance()
 {
     RENDER_CPU_PERF_SCOPE("CreateInstance", "");
     const auto instanceWrapper = (plat_.instance == VK_NULL_HANDLE)
-                                     ? CreateFunctionsVk::CreateInstance(VersionInfo{"core_renderer", 0, 1, 0},
-                                                                         VersionInfo{"core_renderer_app", 0, 1, 0})
+                                     ? CreateFunctionsVk::CreateInstance(VersionInfo { "core_renderer", 0, 1, 0 },
+                                           VersionInfo { "core_renderer_app", 0, 1, 0 })
                                      : CreateFunctionsVk::GetWrapper(plat_.instance);
 
     plat_.instance = instanceWrapper.instance;
@@ -1010,12 +1012,13 @@ vector<QueueProperties> DeviceVk::CheckExternalConfig(const BackendExtraVk* back
 
     const auto& extra = *backendConfiguration;
     if (extra.enableMultiQueue) {
+        // Dedicated compute queue
         queueProperties.push_back(QueueProperties {
-            VK_QUEUE_COMPUTE_BIT, // requiredFlags
-            1,                    // count
-            1.0f,                 // priority
-            true,                 // explicitFlags
-            false,                // canPresent
+            VK_QUEUE_COMPUTE_BIT,  // requiredFlags
+            VK_QUEUE_GRAPHICS_BIT, // negativeFlags
+            1,                     // count
+            1.0f,                  // priority
+            false,                 // canPresent
         });
         PLUGIN_LOG_I("trying to enable gpu multi-queue, with queue count: %u", (uint32_t)queueProperties.size());
     }

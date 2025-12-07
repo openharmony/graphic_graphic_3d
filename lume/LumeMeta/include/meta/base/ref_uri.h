@@ -49,21 +49,26 @@ META_BEGIN_NAMESPACE()
  *          - "ref:1234-5678-9abc-deff/@Context/$Name": absolute path to object, object's context's "Name" property
  *          - "ref://": Current object's hierarchy's root object
  *          - "ref:/": Current object
+ *          - "ref:/@/": Child with empty name
+ *          - "ref:/!Some/$Name": Some attachments Name property
  */
 class RefUri {
 public:
     /** Character identifying properties */
     constexpr static char PROPERTY_CHAR = '$';
+    /** Character identifying attachment */
+    constexpr static char ATTACHMENT_CHAR = '!';
     /** Separator character between names */
     constexpr static char SEPARATOR_CHAR = '/';
     /** Escape character */
     constexpr static char ESCAPE_CHAR = '\\';
     /** Characters that are automatically escaped */
-    constexpr static BASE_NS::string_view ESCAPED_CHARS = "/@$\\";
+    constexpr static BASE_NS::string_view ESCAPED_CHARS = "/@$!\\[]";
 
     struct Node {
         BASE_NS::string name;
-        enum Type { OBJECT, PROPERTY, SPECIAL } type {};
+        enum Type { OBJECT, PROPERTY, ATTACHMENT, SPECIAL } type {};
+        uint32_t index = uint32_t(-1);
     };
 
     RefUri();
@@ -85,6 +90,10 @@ public:
      * @brief Check if this is empty RefUri (i.e. default constructed).
      */
     bool IsEmpty() const;
+    /**
+     * @brief Has at least one segment
+     */
+    bool HasSegment() const;
     /**
      * @brief Convert RefUri to string presentation of the associated uri.
      */
@@ -127,7 +136,7 @@ public:
     Node TakeLastNode();
     /**
      * @brief Name of the last segment in the uri.
-     * Returns empty string for "ref:/.." and "ref:/[/]".
+     * Returns empty string for "ref:/..", "ref:/[/]" and "ref:/@".
      */
     BASE_NS::string ReferencedName() const;
 
@@ -138,7 +147,11 @@ public:
     /**
      * @brief Add property name as first segment (the first pushed segment will be the last one in the end).
      */
-    void PushPropertySegment(BASE_NS::string name);
+    void PushPropertySegment(BASE_NS::string name, uint32_t index = -1);
+    /**
+     * @brief Add attachment name as first segment (the first pushed segment will be the last one in the end).
+     */
+    void PushAttachmentSegment(BASE_NS::string name);
     /**
      * @brief Add special object context as first segment (the first pushed segment will be the last one in the end).
      */
@@ -171,6 +184,7 @@ private:
     bool ParseSegment(BASE_NS::string_view& path);
     bool ParseUid(BASE_NS::string_view& path);
     bool AddSegment(BASE_NS::string seg);
+    bool AddPropertySegment(BASE_NS::string seg);
 
     static BASE_NS::string EscapeName(BASE_NS::string_view str);
     static BASE_NS::string UnEscapeName(BASE_NS::string_view str);
@@ -209,6 +223,11 @@ inline bool RefUri::IsEmpty() const
     return *this == empty;
 }
 
+inline bool RefUri::HasSegment() const
+{
+    return IsValid() && !segments_.empty();
+}
+
 inline bool RefUri::ReferencesProperty() const
 {
     return IsValid() && !segments_.empty() && segments_[0].type == Node::PROPERTY;
@@ -244,7 +263,13 @@ inline RefUri::Node RefUri::TakeLastNode()
 
 inline BASE_NS::string RefUri::ReferencedName() const
 {
-    return segments_.empty() ? "" : segments_.front().name;
+    if (segments_.empty()) {
+        return "";
+    }
+    if (segments_.front().type == Node::SPECIAL && segments_.front().name == "@") {
+        return "";
+    }
+    return segments_.front().name;
 }
 
 inline bool RefUri::StartsFromRoot() const
@@ -269,12 +294,21 @@ inline void RefUri::SetBaseObjectUid(const InstanceId& uid)
 
 inline void RefUri::PushObjectSegment(BASE_NS::string name)
 {
-    segments_.push_back(Node { BASE_NS::move(name), Node::OBJECT });
+    if (name.empty()) {
+        segments_.push_back(Node { "@", Node::SPECIAL });
+    } else {
+        segments_.push_back(Node { BASE_NS::move(name), Node::OBJECT });
+    }
 }
 
-inline void RefUri::PushPropertySegment(BASE_NS::string name)
+inline void RefUri::PushPropertySegment(BASE_NS::string name, uint32_t index)
 {
-    segments_.push_back(Node { BASE_NS::move(name), Node::PROPERTY });
+    segments_.push_back(Node { BASE_NS::move(name), Node::PROPERTY, index });
+}
+
+inline void RefUri::PushAttachmentSegment(BASE_NS::string name)
+{
+    segments_.push_back(Node { BASE_NS::move(name), Node::ATTACHMENT });
 }
 
 inline void RefUri::PushObjectContextSegment()
@@ -298,9 +332,14 @@ inline BASE_NS::string RefUri::ToString() const
         res += SEPARATOR_CHAR;
         if (it->type == Node::PROPERTY) {
             res += PROPERTY_CHAR;
+        } else if (it->type == Node::ATTACHMENT) {
+            res += ATTACHMENT_CHAR;
         }
         // don't escape special names
         res += it->type != Node::SPECIAL ? EscapeName(it->name) : it->name;
+        if (it->type == Node::PROPERTY && it->index != -1) {
+            res += "[" + BASE_NS::to_string(it->index) + "]";
+        }
     }
     return res;
 }
@@ -324,7 +363,7 @@ inline bool RefUri::operator==(const RefUri& uri) const
         return false;
     }
     for (auto it1 = segments_.begin(), it2 = uri.segments_.begin(); it1 != segments_.end(); ++it1, ++it2) {
-        if (it1->name != it2->name || it1->type != it2->type) {
+        if (it1->name != it2->name || it1->type != it2->type || it1->index != it2->index) {
             return false;
         }
     }
@@ -354,6 +393,25 @@ inline const RefUri& RefUri::ContextUri()
     return uri;
 }
 
+inline bool RefUri::AddPropertySegment(BASE_NS::string seg)
+{
+    uint32_t index = -1;
+    if (seg.size() > 3 && seg.back() == ']' && seg[seg.size() - 2] != ESCAPE_CHAR) {
+        auto pos = seg.find_last_of('[');
+        if (pos != BASE_NS::string_view::npos) {
+            char* end {};
+            auto res = strtoul(seg.data() + pos + 1, &end, 10);
+            if (end != seg.data() + seg.size() - 1) {
+                return false;
+            }
+            index = static_cast<uint32_t>(res);
+            seg = seg.substr(0, pos);
+        }
+    }
+    PushPropertySegment(UnEscapeName(seg), index);
+    return true;
+}
+
 inline bool RefUri::AddSegment(BASE_NS::string seg)
 {
     if (seg == ".") {
@@ -366,10 +424,18 @@ inline bool RefUri::AddSegment(BASE_NS::string seg)
         if (seg.empty()) {
             return false;
         }
-        PushPropertySegment(UnEscapeName(seg));
-    } else if (seg.substr(0, 8) == "@Context") { // 8: str length
+        return AddPropertySegment(seg);
+    } else if (seg[0] == ATTACHMENT_CHAR) {
+        seg.erase(0, 1);
+        if (seg.empty()) {
+            return false;
+        }
+        PushAttachmentSegment(UnEscapeName(seg));
+    } else if (seg == "@") {
+        PushObjectSegment("");
+    } else if (seg == "@Context") {
         PushObjectContextSegment();
-    } else if (seg.substr(0, 8) == "@Theme") { // 8: str length
+    } else if (seg == "@Theme") {
         PushObjectContextSegment();
         PushPropertySegment("Theme");
     } else {

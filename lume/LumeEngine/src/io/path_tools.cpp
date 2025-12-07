@@ -22,7 +22,7 @@
 #include <core/log.h>
 #include <core/namespace.h>
 
-#if defined(__OHOS_PLATFORM__) || defined(__linux__) || defined(__APPLE__)
+#if defined(__OHOS__) || defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #elif defined(_WIN32)
 #include <direct.h>
@@ -112,7 +112,7 @@ string NormalizePath(string_view path)
 string GetCurrentDirectory()
 {
     string basePath;
-#if defined(__OHOS_PLATFORM__) || defined(__linux__) || defined(__APPLE__)
+#if defined(__OHOS__) || defined(__linux__) || defined(__APPLE__)
     // OSX and linux both implement the "null buf" extension which allocates the required amount of space.
     auto tmp = getcwd(nullptr, 0);
     if (tmp) {

@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #if !defined(SCENE_SRC_ECS_COMPONENT_ENTITY_OWNER_COMPONENT_H) || defined(IMPLEMENT_MANAGER)
 #define SCENE_SRC_ECS_COMPONENT_ENTITY_OWNER_COMPONENT_H
 

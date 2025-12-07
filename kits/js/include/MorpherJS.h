@@ -21,7 +21,7 @@
 
 #include <base/containers/unordered_map.h>
 
-class MorpherJS : public BaseObject {
+class MorpherJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 666;
     static void Init(napi_env env, napi_value exports);
@@ -36,7 +36,7 @@ private:
     void Finalize(napi_env env) override;
 
     void AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& obj);
-    NapiApi::WeakRef scene_;
+    NapiApi::WeakObjectRef scene_;
     NapiApi::StrongRef targets_;
 
     BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<ArrayPropertyProxy>> proxies_;

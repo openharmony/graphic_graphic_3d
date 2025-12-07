@@ -24,6 +24,10 @@
 
 #include "Logger.h"
 
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
+
 #if defined(_WIN32)
 #include <windows.h>
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
@@ -75,7 +79,7 @@ std::string GetFilename(const std::string& path)
 
 } // namespace
 
-#if !defined(__PLATFORM_AD__)
+#if !defined(__ANDROID__)
 
 class StdOutput : public ILogger::IOutput {
 public:
@@ -163,7 +167,7 @@ public:
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-                  std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+            std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
         static constexpr std::streamsize digitSize = 3;
         outputStream << std::put_time(std::localtime(&time), "%H:%M:%S.") << std::setw(digitSize) << std::left
                      << ms.count() << " " << Logger::GetLogLevelName(logLevel, true);
@@ -195,7 +199,7 @@ private:
     const char* mCurrentColorString;
 };
 
-#endif // !defined(__PLATFORM_AD__)
+#endif // !defined(__ANDROID__)
 
 #if defined(_WIN32) && !defined(NDEBUG)
 class WindowsDebugOutput : public ILogger::IOutput {
@@ -213,7 +217,7 @@ public:
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-                  std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+            std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
         outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.") << ms.count() << " "
                      << Logger::GetLogLevelName(logLevel, true);
@@ -246,7 +250,7 @@ public:
             auto now = std::chrono::system_clock::now();
             auto time = std::chrono::system_clock::to_time_t(now);
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-                      std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+                std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
             outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.") << ms.count() << " "
                          << Logger::GetLogLevelName(logLevel, false);
@@ -265,9 +269,57 @@ private:
     std::ofstream mOutputStream;
 };
 
+#if defined(__ANDROID__)
+class LogcatOutput : public Logger::IOutput {
+public:
+    void Write(ILogger::LogLevel logLevel, const char* filename, int linenumber, const char* message) override
+    {
+        int logPriority;
+        switch (logLevel) {
+            case ILogger::LogLevel::Verbose:
+                logPriority = ANDROID_LOG_VERBOSE;
+                break;
+
+            case ILogger::LogLevel::Debug:
+                logPriority = ANDROID_LOG_DEBUG;
+                break;
+
+            case ILogger::LogLevel::Info:
+                logPriority = ANDROID_LOG_INFO;
+                break;
+
+            case ILogger::LogLevel::Warning:
+                logPriority = ANDROID_LOG_WARN;
+                break;
+
+            case ILogger::LogLevel::Error:
+                logPriority = ANDROID_LOG_ERROR;
+                break;
+
+            case ILogger::LogLevel::Fatal:
+                logPriority = ANDROID_LOG_FATAL;
+                break;
+
+            default:
+                logPriority = ANDROID_LOG_VERBOSE;
+                break;
+        }
+
+        if (filename) {
+            std::stringstream outputStream;
+            outputStream << "(" << getFilename(filename) << ":" << linenumber << "): ";
+            outputStream << message;
+            __android_log_write(logPriority, "lume", outputStream.str().c_str());
+        } else {
+            __android_log_write(logPriority, "lume", message);
+        }
+    }
+};
+#endif
+
 std::unique_ptr<ILogger::IOutput> CreateLoggerConsoleOutput()
 {
-#ifdef __PLATFORM_AD__
+#ifdef __ANDROID__
     return std::make_unique<LogcatOutput>();
 #else
     return std::make_unique<StdOutput>();

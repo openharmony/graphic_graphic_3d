@@ -55,7 +55,8 @@ using SingleAndArrayTypes = TypeList<
     CORE_NS::Entity,
     CORE_NS::EntityReference,
     BASE_NS::string,
-    CORE_NS::IPropertyHandle*
+    CORE_NS::IPropertyHandle*,
+    BASE_NS::Color
     >;
 using VectorTypes = TypeList<
     BASE_NS::vector<float>,

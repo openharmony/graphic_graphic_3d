@@ -1,0 +1,28 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeDrawIndexed",
+            "nodeName": "RenderNodeDrawIndexed",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OutputImage"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": 0
+                }
+            }
+        }
+    ]
+}

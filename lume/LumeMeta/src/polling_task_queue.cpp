@@ -28,7 +28,8 @@
 META_BEGIN_NAMESPACE()
 
 // notice, this is object only so we can construct it via object registery
-class PollingTaskQueue : public IntroduceInterfaces<MetaObject, IPollingTaskQueue, TaskQueueImpl> {
+class PollingTaskQueue :
+    public IntroduceInterfaces<MetaObject, IPollingTaskQueue, ITaskQueueThreadInfo, TaskQueueImpl> {
     META_OBJECT(PollingTaskQueue, ClassId::PollingTaskQueue, IntroduceInterfaces)
 public:
     using Token = ITaskQueue::Token;
@@ -40,6 +41,21 @@ public:
             self_ = GetSelf<ITaskQueue>();
         }
         return ret;
+    }
+    uint64_t CurrentThread() const {
+        return std::hash<std::thread::id> {}(std::this_thread::get_id());
+    }
+    bool SetExecutionThread() {
+        auto id = CurrentThread();
+        if (threadId_ != 0) {
+            return (threadId_==id);
+        }
+        threadId_=id;
+        return true;
+    }
+    bool CurrentThreadIsExecutionThread() const override
+    {
+        return CurrentThread() == threadId_;
     }
 
     bool InvokeTask(const ITaskQueueTask::Ptr& task) override
@@ -75,6 +91,10 @@ public:
 
     void ProcessTasks() override
     {
+        if (!SetExecutionThread()) {
+            CORE_LOG_F("ProcessTasks called from different thread!");
+            return;
+        }
         TimeSpan ctime = Time();
         std::unique_lock lock { mutex_ };
         if (ctime != lastTime_) {
@@ -89,6 +109,7 @@ public:
     }
 
 private:
+    uint64_t threadId_{0};
     TimeSpan lastTime_;
 };
 // Internal api for engine task queue

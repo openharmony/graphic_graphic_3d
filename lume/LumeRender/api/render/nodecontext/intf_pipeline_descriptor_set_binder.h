@@ -74,6 +74,12 @@ public:
      */
     virtual void BindBuffers(const uint32_t binding, const BASE_NS::array_view<const BindableBuffer> resources) = 0;
 
+    /** Bind buffers to descriptor array
+     * @param binding Binding index
+     * @param resources Binding resources
+     */
+    virtual void BindBuffers(const uint32_t binding, const BASE_NS::array_view<const RenderHandle> resources) = 0;
+
     /** Bind image.
      * @param binding Binding index
      * @param handle Binding resource handle
@@ -99,6 +105,12 @@ public:
      */
     virtual void BindImages(const uint32_t binding, const BASE_NS::array_view<const BindableImage> resources) = 0;
 
+    /** Bind images to descriptor array
+     * @param binding Binding index
+     * @param resources Binding resources
+     */
+    virtual void BindImages(const uint32_t binding, const BASE_NS::array_view<const RenderHandle> resources) = 0;
+
     /** Bind sampler
      * @param binding Binding index
      * @param handle Binding resource handle
@@ -117,11 +129,17 @@ public:
      */
     virtual void BindSamplers(const uint32_t binding, const BASE_NS::array_view<const BindableSampler> resources) = 0;
 
+    /** Bind sampler
+     * @param binding Binding index
+     * @param handles Binding resource handles
+     */
+    virtual void BindSamplers(const uint32_t binding, const BASE_NS::array_view<const RenderHandle> resources) = 0;
+
     /** Bind buffer with additional descriptor flags. Automatically checks needed flag from pipeline layout which was
      * used for descriptor set binder creation.
      * @param binding Binding index
      * @param resource Binding resource
-     * @param flags Additional decriptor flags
+     * @param flags Additional descriptor flags
      */
     virtual void BindBuffer(
         const uint32_t binding, const BindableBuffer& resource, const AdditionalDescriptorFlags flags) = 0;
@@ -129,7 +147,7 @@ public:
     /** Bind image with additional descriptor flags.
      * @param binding Binding index
      * @param resource Binding resources
-     * @param flags Additional decriptor flags
+     * @param flags Additional descriptor flags
      */
     virtual void BindImage(
         const uint32_t binding, const BindableImage& resource, const AdditionalDescriptorFlags flags) = 0;
@@ -137,7 +155,7 @@ public:
     /** Bind sampler with additional descriptor flags
      * @param binding Binding index
      * @param resource Binding resource
-     * @param flags Additional decriptor flags
+     * @param flags Additional descriptor flags
      */
     virtual void BindSampler(
         const uint32_t binding, const BindableSampler& resource, const AdditionalDescriptorFlags flags) = 0;

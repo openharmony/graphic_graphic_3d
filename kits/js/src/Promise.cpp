@@ -44,11 +44,52 @@ napi_value Promise::Settle(napi_value result, Action action)
     if (!result) {
         napi_get_undefined(env_, &result);
     }
+#if __OHOS__
+    // use the common workaround to make the promise resolve/reject async.
+    struct tmp {
+        Action action;
+        napi_ref ref;
+        napi_deferred def;
+        napi_async_work asyncWork;
+    };
+    tmp* ctx = new tmp;
+    napi_create_reference(env_, result, 1, &ctx->ref);
+    ctx->action = action;
+    ctx->def = deferred_;
+    deferred_ = nullptr;
+    napi_value resourceName = nullptr;
+    napi_create_string_latin1(env_, "PromiseAsync", NAPI_AUTO_LENGTH, &resourceName);
+    if (auto status = napi_create_async_work(
+        env_, nullptr, resourceName, [](napi_env env, void* data) {},
+        [](napi_env env, napi_status status, void* data) {
+            tmp* ctx = (tmp*)data;
+            napi_value result;
+            napi_get_reference_value(env, ctx->ref, &result);
+            if (ctx->action == Action::RESOLVE) {
+                napi_resolve_deferred(env, ctx->def, result);
+            } else {
+                napi_reject_deferred(env, ctx->def, result);
+            }
+            napi_delete_async_work(env, ctx->asyncWork);
+            napi_delete_reference(env, ctx->ref);
+            delete ctx;
+        },
+        (void*)ctx, &ctx->asyncWork); status != napi_ok) {
+        napi_delete_reference(env_, ctx->ref);
+        delete ctx;
+    } else if (auto status = napi_queue_async_work(env_, ctx->asyncWork); status != napi_ok) {
+        napi_delete_reference(env_, ctx->ref);
+        napi_delete_async_work(env_, ctx->asyncWork);
+        delete ctx;
+    }
+#else
+    // on node.js the promise resolve is always asynchronous.
     if (action == Action::RESOLVE) {
         napi_resolve_deferred(env_, deferred_, result);
     } else {
         napi_reject_deferred(env_, deferred_, result);
     }
+#endif
     return promise_;
 }
 

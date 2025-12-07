@@ -72,7 +72,8 @@ IComponentManager* IMorphComponentManagerInstance(IEcs& ecs)
 }
 void IMorphComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<MorphComponentManager*>(instance);
+    static_cast<MorphComponentManager*>(instance)->~MorphComponentManager();
+    ::operator delete(instance);
 }
 
 CORE3D_END_NAMESPACE()

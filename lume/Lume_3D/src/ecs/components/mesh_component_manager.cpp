@@ -128,6 +128,7 @@ IComponentManager* IMeshComponentManagerInstance(IEcs& ecs)
 
 void IMeshComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<MeshComponentManager*>(instance);
+    static_cast<MeshComponentManager*>(instance)->~MeshComponentManager();
+    ::operator delete(instance);
 }
 CORE_END_NAMESPACE()

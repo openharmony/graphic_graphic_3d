@@ -21,7 +21,7 @@
 #include "BaseObjectJS.h"
 
 
-class SamplerJS : public BaseObject {
+class SamplerJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 210;
     static void Init(napi_env env, napi_value exports);
@@ -38,8 +38,8 @@ public:
     SamplerJS(napi_env, napi_callback_info);
     ~SamplerJS() override;
 
-private:
     void* GetInstanceImpl(uint32_t) override;
+private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
     void DisposeNative(void*) override;
     void Finalize(napi_env env) override;

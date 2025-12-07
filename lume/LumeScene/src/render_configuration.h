@@ -26,14 +26,13 @@
 
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
-#include <meta/interface/intf_named.h>
-#include <scene/interface/intf_render_configuration.h>
 
 SCENE_BEGIN_NAMESPACE()
 
 class RenderConfiguration
     : public META_NS::IntroduceInterfaces<Component, IRenderConfiguration, ICreateEntity,
-        META_NS::IPropertyOwner, META_NS::IMetadataOwner> {
+                                          META_NS::IPropertyOwner, META_NS::IMetadataOwner>
+{
     META_OBJECT(RenderConfiguration, ClassId::RenderConfiguration, IntroduceInterfaces)
 public:
     META_BEGIN_STATIC_DATA()
@@ -64,7 +63,7 @@ public:
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
     BASE_NS::string GetName() const override;
 
-protected:
+protected: // IMetadataOwner
     void OnMetadataConstructed(const META_NS::StaticMetadata& m, CORE_NS::IInterface& i) override;
 
 protected: // IPropertyOwner

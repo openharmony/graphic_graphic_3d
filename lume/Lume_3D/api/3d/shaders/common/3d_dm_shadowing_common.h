@@ -45,11 +45,11 @@ float GetPcfSample(sampler2DShadow shadow, const vec2 baseUv, const vec2 offset,
     return texture(shadow, vec3(baseUv + uvOffset, compZ)).x;
 }
 
-bool ValidShadowRange(const vec3 shadowCoord, float stepSize, float shadowIdx)
+bool ValidShadowRange(const vec3 shadowCoord, float stepSize, float shadowIdx, const float texelSizeX)
 {
     const float xMin = stepSize * shadowIdx;
     const float xMax = xMin + stepSize;
-    return ((shadowCoord.z > 0.0) && (shadowCoord.x > xMin) && (shadowCoord.x < xMax));
+    return ((shadowCoord.z > 0.0) && (shadowCoord.x > xMin) && (shadowCoord.x < xMax - texelSizeX * 2.0f));
 }
 
 // http://www.ludicon.com/castano/blog/articles/shadow-mapping-summary-part-1/
@@ -61,7 +61,9 @@ float CalcPcfShadow(
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x))) {
+    // Check if shadow coord is in correct range
+    // We pass texelSize.x so that valid shadow range include 3x3 PCF kernel samples
+    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x), atlasSizeInvSize.z)) {
         const vec2 textureSize = atlasSizeInvSize.xy;
         const vec2 texelSize = atlasSizeInvSize.zw;
         const float normalBias = shadowFactor.z;
@@ -133,7 +135,7 @@ float CalcPcfShadowMed(
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x))) {
+    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x), atlasSizeInvSize.z)) {
         const vec2 textureSize = vec2(textureSize(shadow, 0).xy);
         const vec2 texelSize = 1.0 / textureSize;
         const float normalBias = shadowFactor.z;
@@ -196,7 +198,7 @@ float CalcPcfShadowSimpleSample(
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x))) {
+    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x), 0.0f)) {
         const float bias = 0.002;
         const vec2 baseUv = shadowCoord.xy;
         const float compareDepth = shadowCoord.z - bias;
@@ -227,7 +229,7 @@ float CalcVsmShadow(
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (ValidShadowRange(shadowCoord, shadowFactors.w, float(shadowFlags.x))) {
+    if (ValidShadowRange(shadowCoord, shadowFactors.w, float(shadowFlags.x), 0.0f)) {
         const vec2 moments = texture(shadow, shadowCoord.xy).xy;
         if (shadowCoord.z > moments.x) {
             float variance = moments.y - (moments.x * moments.x);
@@ -252,7 +254,7 @@ float CalcVsmShadowSimpleSample(
     const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
 
     CORE_RELAXEDP float light = 1.0;
-    if (ValidShadowRange(shadowCoord, shadowFactors.w, float(shadowFlags.x))) {
+    if (ValidShadowRange(shadowCoord, shadowFactors.w, float(shadowFlags.x), 0.0f)) {
         const vec2 moments = texture(shadow, shadowCoord.xy).xy;
         if (shadowCoord.z > moments.x) {
             float variance = moments.y - (moments.x * moments.x);

@@ -343,9 +343,9 @@ void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> 
             if (info && info->typeUid == IEnginePlugin::UID && static_cast<const IEnginePlugin*>(info)->createPlugin) {
                 auto enginePlugin = static_cast<const IEnginePlugin*>(info);
                 if (std::none_of(plugins_.begin(), plugins_.end(),
-                                 [enginePlugin](const pair<PluginToken, const IEnginePlugin *> &pluginData) {
-                                     return pluginData.second == enginePlugin;
-                                 })) {
+                        [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
+                            return pluginData.second == enginePlugin;
+                        })) {
                     auto token = enginePlugin->createPlugin(*this);
                     plugins_.push_back({ token, enginePlugin });
                 }
@@ -358,9 +358,9 @@ void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> 
             }
             auto enginePlugin = static_cast<const IEnginePlugin*>(info);
             if (auto pos = std::find_if(plugins_.cbegin(), plugins_.cend(),
-                                        [enginePlugin](const pair<PluginToken, const IEnginePlugin *> &pluginData) {
-                                            return pluginData.second == enginePlugin;
-                                        });
+                    [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
+                        return pluginData.second == enginePlugin;
+                    });
                 pos != plugins_.cend()) {
                 if (enginePlugin->destroyPlugin) {
                     enginePlugin->destroyPlugin(pos->first);

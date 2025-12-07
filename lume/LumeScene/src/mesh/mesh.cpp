@@ -20,20 +20,45 @@
 
 #include <meta/api/make_callback.h>
 
-#include "util_interfaces.h"
+#include "../util_interfaces.h"
+#include "submesh.h"
 
 SCENE_BEGIN_NAMESPACE()
 
 void Mesh::Destroy()
 {
-    if (META_NS::ArrayProperty<ISubMesh::Ptr> arr { GetProperty("SubMeshes", META_NS::MetadataQuery::EXISTING) }) {
+    if (auto arr = GetSubmeshesOrNull()) {
         for (auto&& v : arr->GetValue()) {
             if (auto i = interface_cast<META_NS::INotifyOnChange>(v)) {
                 i->OnChanged()->RemoveHandler(uintptr_t(this));
             }
+            if (auto p = interface_cast<ISubMeshInternal>(v)) {
+                p->SetMaterialOverride(nullptr);
+            }
         }
     }
     Super::Destroy();
+}
+
+void Mesh::SetMaterialOverride(const IMaterial::Ptr& material)
+{
+    overrideMaterial_ = material;
+    if (auto scene = GetInternalScene()) {
+        const auto submeshes = SubMeshes()->GetValue();
+        scene->RunDirectlyOrInTask([&] {
+            for (auto&& s : submeshes) {
+                if (auto internal = interface_cast<ISubMeshInternal>(s)) {
+                    // Inform submesh that we're setting an override
+                    internal->SetMaterialOverride(material);
+                }
+            }
+        });
+    }
+}
+
+IMaterial::Ptr Mesh::GetMaterialOverride() const
+{
+    return overrideMaterial_;
 }
 
 void Mesh::SetInternalMesh(IInternalMesh::Ptr m)
@@ -154,17 +179,25 @@ bool Mesh::UpdateSubmeshes(META_NS::ArrayProperty<ISubMesh::Ptr> prop)
 void Mesh::RefreshSubmeshes(const BASE_NS::vector<ISubMesh::Ptr>& subs)
 {
     if (auto scene = GetInternalScene()) {
-        scene
-            ->AddTask([&] {
-                for (auto&& s : subs) {
-                    if (auto m = interface_cast<META_NS::IMetadata>(s)) {
-                        for (auto&& p : m->GetProperties()) {
-                            scene->SyncProperty(p, META_NS::EngineSyncDirection::AUTO);
-                        }
+        scene->RunDirectlyOrInTask([&] {
+            for (auto&& s : subs) {
+                if (auto internal = interface_cast<ISubMeshInternal>(s)) {
+                    // Update SubMesh state
+                    internal->SetMaterialOverride(overrideMaterial_);
+                }
+                if (auto m = interface_cast<META_NS::IMetadata>(s)) {
+                    for (auto&& p : m->GetProperties()) {
+                        scene->SyncProperty(p, META_NS::EngineSyncDirection::AUTO);
                     }
                 }
-            })
-            .Wait();
+            }
+        });
     }
 }
+
+META_NS::ArrayProperty<ISubMesh::Ptr> Mesh::GetSubmeshesOrNull()
+{
+    return META_NS::ArrayProperty<ISubMesh::Ptr>(GetProperty("SubMeshes", META_NS::MetadataQuery::EXISTING));
+}
+
 SCENE_END_NAMESPACE()

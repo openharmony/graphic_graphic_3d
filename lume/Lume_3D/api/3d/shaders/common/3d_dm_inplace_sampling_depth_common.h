@@ -40,6 +40,8 @@ uint GetMaterialInstanceIndex(const uint indices)
     return instanceIdx;
 }
 
+// duplicated from: 3d/shaders/common/3d_dm_inplace_sampling_common.h
+
 vec2 GetTransformedUV(const DefaultMaterialUnpackedTexTransformStruct texTransform, const vec2 uvInput)
 {
     vec2 uv;

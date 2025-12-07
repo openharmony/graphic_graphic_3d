@@ -195,6 +195,7 @@ struct CallArg {
     using Type = PlainType_t<T>;
     explicit CallArg(IAny::Ptr any) : any_(any) {}
 
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     operator Type() const
     {
         Type t;
@@ -219,6 +220,7 @@ struct CallArg<T, true> {
     }
     META_DEFAULT_COPY_MOVE(CallArg)
 
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     operator Type&() const
     {
         return t_;

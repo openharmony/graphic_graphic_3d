@@ -201,8 +201,8 @@ void ProcessCombinedSamplers(GLuint program, const ShaderModulePlatformDataGLES&
         PLUGIN_ASSERT(t.sBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
         const GLuint index = glGetProgramResourceIndex(program, GL_UNIFORM, t.name.c_str());
         if (index != GL_INVALID_INDEX) {
-        glGetProgramResourceiv(program, GL_UNIFORM, index, propertyCount, props, propertyCount, &len, inUse);
-        if (inUse[0]) {
+            glGetProgramResourceiv(program, GL_UNIFORM, index, propertyCount, props, propertyCount, &len, inUse);
+            if (inUse[0]) {
                 uint8_t& ii = map.map[BIND_MAP_4_4(t.iSet, t.iBind)];
                 if (ii == 0) {
                     ii = ++map.maxTextureBinding;

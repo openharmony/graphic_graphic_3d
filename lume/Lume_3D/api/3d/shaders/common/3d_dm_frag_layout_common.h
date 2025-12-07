@@ -85,9 +85,15 @@ layout(set = 1, binding = 4, std140) uniform uMaterialUserStructData
     DefaultMaterialUserMaterialStruct uMaterialUserData;
 };
 
+#if (CORE3D_DM_BINDLESS_FRAG_LAYOUT == 1)
+// experimental bindless with thousands of material textures
+layout(set = 2, binding = 0) uniform texture2D uImages[];
+layout(set = 2, binding = 1) uniform sampler uSamplers[];
+#else
 // set 2 is for material data (base color separated for e.g. automatic hardware buffer static sampler support)
 layout(set = 2, binding = 0) uniform CORE_RELAXEDP sampler2D uSampTextureBase;
 layout(set = 2, binding = 1) uniform CORE_RELAXEDP sampler2D uSampTextures[CORE_MATERIAL_SAMPTEX_COUNT];
+#endif // CORE3D_BINDLESS_FRAG_LAYOUT
 
 #endif // CORE3D_ENVIRONMENT_FRAG_LAYOUT
 

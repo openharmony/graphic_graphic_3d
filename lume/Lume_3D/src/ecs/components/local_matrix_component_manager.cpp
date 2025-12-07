@@ -68,6 +68,7 @@ IComponentManager* ILocalMatrixComponentManagerInstance(IEcs& ecs)
 
 void ILocalMatrixComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<LocalMatrixComponentManager*>(instance);
+    static_cast<LocalMatrixComponentManager*>(instance)->~LocalMatrixComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

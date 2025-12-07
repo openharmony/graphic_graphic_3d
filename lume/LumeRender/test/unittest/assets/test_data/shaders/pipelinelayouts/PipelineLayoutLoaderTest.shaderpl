@@ -1,0 +1,27 @@
+{
+    "renderSlot": "My_Test_Slot",
+    "renderSlotDefault": false,
+    "pushConstant": {
+        "size": 8,
+        "shaderStageFlags": "fragment_bit | vertex_bit | compute_bit"
+    },
+    "descriptorSetLayouts": [
+        {
+            "set": 0,
+            "bindings": [
+                {
+                    "binding": 0,
+                    "descriptorType": "uniform_buffer",
+                    "descriptorCount": 1,
+                    "shaderStageFlags": "vertex_bit"
+                },
+                {
+                    "binding": 1,
+                    "descriptorType": "sampler",
+                    "descriptorCount": 1,
+                    "shaderStageFlags": "fragment_bit"
+                }
+            ]
+        }
+    ]
+}

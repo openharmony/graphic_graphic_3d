@@ -28,6 +28,7 @@
 
 #include "BloomJS.h"
 #include "CameraJS.h"
+#include "JsObjectCache.h"
 #include "ToneMapJS.h"
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
@@ -38,7 +39,6 @@ void PostProcJS::Init(napi_env env, napi_value exports)
     using namespace NapiApi;
 
     BASE_NS::vector<napi_property_descriptor> node_props;
-    // clang-format off
 
     node_props.push_back(GetSetProperty<Object, PostProcJS, &PostProcJS::GetBloom, &PostProcJS::SetBloom>("bloom"));
     node_props.emplace_back(
@@ -49,11 +49,12 @@ void PostProcJS::Init(napi_env env, napi_value exports)
         GetSetProperty<Object, PostProcJS, &PostProcJS::GetColorFringe, &PostProcJS::SetColorFringe>("colorFringe"));
     node_props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, PostProcJS, &PostProcJS::Dispose>("destroy"));
 
-    // clang-format on
-
     napi_value func;
     auto status = napi_define_class(env, "PostProcessSettings", NAPI_AUTO_LENGTH, BaseObject::ctor<PostProcJS>(),
         nullptr, node_props.size(), node_props.data(), &func);
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
@@ -77,7 +78,7 @@ napi_value PostProcJS::Dispose(NapiApi::FunctionContext<>& ctx)
         }
     }
     if (!ptr) {
-        ptr = camera_.GetObject().GetJsWrapper<CameraJS>();
+        ptr = camera_.GetJsWrapper<CameraJS>();
     }
 
     DisposeNative(ptr);
@@ -93,47 +94,48 @@ void PostProcJS::DisposeNative(void* cam)
     }
     if (!disposed_) {
         disposed_ = true;
+        DisposeBridge(this);
         LOG_V("PostProcJS::DisposeNative");
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
         // make sure we release toneMap settings
 
         // Detach this wrapper and its members tonemap and bloom from the native objects.
         if (auto tmjs = toneMap_.GetObject()) {
-            NapiApi::Function func = tmjs.Get<NapiApi::Function>("destroy");
-            if (func) {
-                func.Invoke(tmjs);
-            }
+            tmjs.Invoke("destroy", {});
         }
         toneMap_.Reset();
 
         if (auto bmjs = bloom_.GetObject()) {
-            NapiApi::Function func = bmjs.Get<NapiApi::Function>("destroy");
-            if (func) {
-                func.Invoke(bmjs);
-            }
+            bmjs.Invoke("destroy", {});
         }
         bloom_.Reset();
         if (auto post = interface_pointer_cast<IPostProcess>(GetNativeObject())) {
             UnsetNativeObject();
-            if (const auto cam = camera_.GetObject().GetJsWrapper<CameraJS>()) {
+            if (const auto cam = camera_.GetJsWrapper<CameraJS>()) {
                 ExecSyncTask([cam, post = BASE_NS::move(post)]() {
                     cam->ReleaseObject(interface_pointer_cast<META_NS::IObject>(post));
                     return META_NS::IAny::Ptr {};
                 });
             }
         }
+        camera_.Reset();
         vignetteProxy_.Reset();
     }
 }
 void* PostProcJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == PostProcJS::ID)
-        return this;
-    return nullptr;
+    if (id == PostProcJS::ID) {
+        return static_cast<PostProcJS*>(this);
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 void PostProcJS::Finalize(napi_env env)
 {
-    DisposeNative(camera_.GetObject().GetJsWrapper<CameraJS>());
+    DisposeNative(camera_.GetJsWrapper<CameraJS>());
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 
 PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
@@ -159,6 +161,7 @@ PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 
     // process constructor args..
     NapiApi::Object meJs(fromJs.This());
+    AddBridge("PostProcJS", meJs);
     // now, based on parameters, create correct objects.
     if (NapiApi::Object args = fromJs.Arg<1>()) {
         if (auto prm = args.Get("toneMapping")) {
@@ -179,6 +182,7 @@ PostProcJS::~PostProcJS()
 {
     LOG_V("PostProcJS --");
     DisposeNative(nullptr);
+    DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
     }
@@ -225,7 +229,11 @@ void PostProcJS::SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         tonemapJS.Set<uint32_t>("type", argObj.Get<uint32_t>("type"));
         tonemapJS.Set<float>("exposure", argObj.Get<float>("exposure"));
         // If using a cached wrapper, we have just unbound it above. Rebind to sync changes.
-        tonemapJS.GetJsWrapper<ToneMapJS>()->BindToNative(target);
+        auto jsWrapper = tonemapJS.GetJsWrapper<ToneMapJS>();
+        if (!jsWrapper) {
+            return;
+        }
+        jsWrapper->BindToNative(target);
         META_NS::SetValue(target->Enabled(), true);
         toneMap_ = NapiApi::StrongRef(tonemapJS);
     } else {
@@ -333,12 +341,14 @@ napi_value PostProcJS::GetVignette(NapiApi::FunctionContext<>& ctx)
     if (!vignette || !vignette->Enabled()->GetValue()) {
         return ctx.GetUndefined();
     }
+
     if (!vignetteProxy_.GetObject()) {
         const auto env = ctx.GetEnv();
         SetupVignetteProxy(env, vignette);
     }
     return vignetteProxy_.GetObject().ToNapiValue();
 }
+
 void PostProcJS::SetVignette(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
     auto vignette = SCENE_NS::IVignette::Ptr {};
@@ -350,6 +360,7 @@ void PostProcJS::SetVignette(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         assert(false);
         return;
     }
+
     if (auto newVignette = NapiApi::Object { ctx.Arg<0>() }) {
         if (!vignetteProxy_.GetObject()) {
             SetupVignetteProxy(ctx.GetEnv(), vignette);
@@ -364,6 +375,7 @@ void PostProcJS::SetVignette(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     // Due to backwards-compatibility requirements in the TS user-facing side, the default is to enable.
     vignette->Enabled()->SetValue(true);
 }
+
 void PostProcJS::SetupVignetteProxy(napi_env env, SCENE_NS::IVignette::Ptr vignette)
 {
 #define VIGNETTE_LOG_OFFSET (5.562684646268003e-309)
@@ -388,6 +400,7 @@ void PostProcJS::SetupVignetteProxy(napi_env env, SCENE_NS::IVignette::Ptr vigne
         }
         return jsVal;
     };
+
     const auto intensityToNative = [vignette](napi_env env, napi_value jsVal) {
         if (auto value = NapiApi::Value<double>(env, jsVal); value.IsUndefined()) {
             vignette->Power()->Reset();
@@ -400,6 +413,7 @@ void PostProcJS::SetupVignetteProxy(napi_env env, SCENE_NS::IVignette::Ptr vigne
                                  { "intensity", vignette->Power(), intensityToNative },
                              });
 }
+
 napi_value PostProcJS::GetColorFringe(NapiApi::FunctionContext<>& ctx)
 {
     auto colorFringe = SCENE_NS::IColorFringe::Ptr {};
@@ -409,12 +423,14 @@ napi_value PostProcJS::GetColorFringe(NapiApi::FunctionContext<>& ctx)
     if (!colorFringe || !colorFringe->Enabled()->GetValue()) {
         return ctx.GetUndefined();
     }
+
     if (!colorFringeProxy_.GetObject()) {
         const auto env = ctx.GetEnv();
         SetupColorFringeProxy(env, colorFringe);
     }
     return colorFringeProxy_.GetObject().ToNapiValue();
 }
+
 void PostProcJS::SetColorFringe(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
     auto colorFringe = SCENE_NS::IColorFringe::Ptr {};
@@ -426,6 +442,7 @@ void PostProcJS::SetColorFringe(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         assert(false);
         return;
     }
+
     if (auto newColorFringe = NapiApi::Object { ctx.Arg<0>() }) {
         if (!colorFringeProxy_.GetObject()) {
             SetupColorFringeProxy(ctx.GetEnv(), colorFringe);
@@ -438,6 +455,7 @@ void PostProcJS::SetColorFringe(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         colorFringe->Enabled()->Reset();
     }
 }
+
 void PostProcJS::SetupColorFringeProxy(napi_env env, SCENE_NS::IColorFringe::Ptr colorFringe)
 {
 #define COLOR_FRINGE_FACTOR (10)

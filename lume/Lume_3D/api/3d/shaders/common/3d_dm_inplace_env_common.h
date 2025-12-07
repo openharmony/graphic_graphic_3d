@@ -53,6 +53,20 @@ void GetBlendedMultiEnvMapSample(
     factor.rgb = mix(factor1.rgb, factor2, blendVal);
 }
 
+void GetBlendedMultiEnvMapSample(
+    in uvec2 multiEnvIndices, in vec3 viewDir, in float lodLevel, in float blendVal, out vec3 color, out vec3 factor)
+{
+    const vec3 worldView0 = mat3(uEnvironmentDataArray[multiEnvIndices.x].envRotation) * viewDir;
+    const vec3 worldView1 = mat3(uEnvironmentDataArray[multiEnvIndices.y].envRotation) * viewDir;
+
+    vec3 cube1 = GetEnvMapSample(uImgCubeSampler, worldView0, lodLevel);
+    vec3 cube2 = GetEnvMapSample(uImgCubeSamplerBlender, worldView1, lodLevel);
+    const vec3 factor1 = uEnvironmentDataArray[multiEnvIndices.x].envMapColorFactor.xyz;
+    const vec3 factor2 = uEnvironmentDataArray[multiEnvIndices.y].envMapColorFactor.xyz;
+    color.rgb = mix(cube1.rgb, cube2, blendVal);
+    factor.rgb = mix(factor1.rgb, factor2, blendVal);
+}
+
 /**
  * Environment sampling based on flags (CORE_DEFAULT_ENV_TYPE)
  * The value is return in out vec3 color
@@ -72,7 +86,12 @@ void InplaceEnvironmentBlock(in uint environmentType, in uint cameraIdx, in vec2
     // remove translation from view
     mat4 viewProjInv = uCameras[cameraIdx].viewInv;
     viewProjInv[3] = vec4(0.0, 0.0, 0.0, 1.0);
-    viewProjInv = viewProjInv * uCameras[cameraIdx].projInv;
+    if ((uCameras[cameraIdx].counts.y & CORE_DEFAULT_CAMERA_ENVIRONMENT_PROJECTION) ==
+        CORE_DEFAULT_CAMERA_ENVIRONMENT_PROJECTION) {
+        viewProjInv = viewProjInv * uCameras[cameraIdx].envProjInv;
+    } else {
+        viewProjInv = viewProjInv * uCameras[cameraIdx].projInv;
+    }
 
     vec4 farPlane = viewProjInv * vec4(uv.x, uv.y, 1.0, 1.0);
     farPlane.xyz = farPlane.xyz / farPlane.w;
@@ -83,20 +102,21 @@ void InplaceEnvironmentBlock(in uint environmentType, in uint cameraIdx, in vec2
         (environmentType == CORE_BACKGROUND_TYPE_EQUIRECTANGULAR)) {
         vec4 nearPlane = viewProjInv * vec4(uv.x, uv.y, 0.9999, 1.0);
         nearPlane.xyz = nearPlane.xyz / nearPlane.w;
-
-        const vec3 worldView = mat3(envData.envRotation) * normalize(farPlane.xyz - nearPlane.xyz);
+        const vec3 viewDir = normalize(farPlane.xyz - nearPlane.xyz);
 
         if (environmentType == CORE_BACKGROUND_TYPE_CUBEMAP) {
             const uvec4 multiEnvIndices = envData.multiEnvIndices;
             if (multiEnvIndices.x > 0) {
+                const uvec2 envIdx = min(multiEnvIndices.yz, CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT - 1);
                 vec3 col = vec3(0.0);
-                GetBlendedMultiEnvMapSample(
-                    multiEnvIndices, worldView, lodLevel, envData.blendFactor.x, col, colorFactor);
+                GetBlendedMultiEnvMapSample(envIdx, viewDir, lodLevel, envData.blendFactor.x, col, colorFactor);
                 color.rgb = col;
             } else {
+                const vec3 worldView = mat3(envData.envRotation) * viewDir;
                 color.rgb = GetEnvMapSample(uImgCubeSampler, worldView, lodLevel);
             }
         } else {
+            const vec3 worldView = mat3(envData.envRotation) * viewDir;
             const vec2 texCoord = vec2(atan(worldView.z, worldView.x) + CORE3D_DEFAULT_ENV_PI, acos(worldView.y)) /
                                   vec2(2.0 * CORE3D_DEFAULT_ENV_PI, CORE3D_DEFAULT_ENV_PI);
             color = textureLod(uImgSampler, texCoord, lodLevel);

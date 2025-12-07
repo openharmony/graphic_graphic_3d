@@ -30,12 +30,10 @@ class ColorFringe
 public:
     META_BEGIN_STATIC_DATA()
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcessEffect, bool, Enabled, "")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorFringe, float, Coefficient, "coefficient")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorFringe, float, DistanceCoefficient, "distanceCoefficient")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(bool, Enabled)
-    META_IMPLEMENT_PROPERTY(float, Coefficient)
     META_IMPLEMENT_PROPERTY(float, DistanceCoefficient)
 
 private:

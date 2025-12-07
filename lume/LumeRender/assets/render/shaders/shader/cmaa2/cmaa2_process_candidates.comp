@@ -1,0 +1,271 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+#include "common/cmaa2_common.h"
+
+layout(set = 0, binding = 0) uniform sampler2D uColorSampler;
+layout(set = 0, binding = 1, r8ui) uniform readonly uimage2D uEdgesImage;
+
+layout(set = 0, binding = 2, std430) readonly buffer ShapeCandidatesBuffer {
+    uint shapeCandidates[];
+};
+
+layout(set = 0, binding = 3, std430) buffer bControlBuffer {
+    ControlBufferStruct controlBuffer;
+};
+
+layout(set = 0, binding = 4, std430) buffer bDeferredBlendLocationList {
+    uint blendLocationList[];
+};
+
+layout(set = 0, binding = 5, std430) buffer bDeferredBlendItemList {
+    uvec2 blendItemList[];
+};
+
+layout(set = 0, binding = 6, r32ui) uniform uimage2D uDeferredBlendItemListHeads;
+
+uint LoadEdge(const ivec2 pixelPos, const ivec2 offset) {
+    const ivec2 pos = pixelPos + offset;
+    const uint edge = imageLoad(uEdgesImage, ivec2(pos.x >> 1u, pos.y)).r;
+    return (edge >> ((pos.x & 1) << 2u)) & 0xFu;
+}
+
+void StoreColorSample(const ivec2 pixelPos, const vec3 color, const bool isComplexShape) {
+    const uint counterIndex = atomicAdd(controlBuffer.deferredBlendItemCount, 1u);
+    
+    const ivec2 quadPos = pixelPos / ivec2(2u, 2u);
+    const uint offsetXY = uint(pixelPos.y % 2) * 2u + uint(pixelPos.x % 2);
+    const uint header = (offsetXY << 30u) | (isComplexShape ? (1u << 26u) : 0u);
+    
+    const uint counterIndexWithHeader = counterIndex | header;
+    
+    const uint originalIndex = imageAtomicExchange(uDeferredBlendItemListHeads, quadPos, counterIndexWithHeader);
+    blendItemList[counterIndex] = uvec2(originalIndex, PackColor(color));
+    
+    if (originalIndex == 0xFFFFFFFFu) {
+        const uint edgeListCounter = atomicAdd(controlBuffer.blendLocationCount, 1u);
+        blendLocationList[edgeListCounter] = (uint(quadPos.x) << 16u) | uint(quadPos.y);
+    }
+}
+
+vec4 ComputeSimpleShapeBlendValues(const vec4 edges, const vec4 edgesLeft, const vec4 edgesRight, const vec4 edgesTop, const vec4 edgesBottom) {
+    float right = edges.r;
+    float below = edges.g;
+    float left = edges.b;
+    float above = edges.a;
+    
+    float blurCoeff = CMAA2_SIMPLE_SHAPE_BLUR_AMOUNT;
+    const float numberOfEdges = dot(edges, vec4(1));
+    const float numEdgesAround = dot(edgesLeft.bga + edgesRight.rga + edgesTop.rba + edgesBottom.rgb, vec3(1));
+
+    const float edgeK = 0.9f;
+    
+    if (numberOfEdges == 2.0f) {
+        blurCoeff *= 0.75f;
+        blurCoeff *= ((1.0f - below * above) * (1.0f - right * left));
+        
+        right += edgeK * (edges.g * edgesTop.r * (1.0f - edgesLeft.g) + edges.a * edgesBottom.r * (1.0f - edgesLeft.a));
+        below += edgeK * (edges.b * edgesRight.g * (1.0f - edgesTop.b) + edges.r * edgesLeft.g * (1.0f - edgesTop.r));
+        left += edgeK * (edges.a * edgesBottom.b * (1.0f - edgesRight.a) + edges.g * edgesTop.b * (1.0f - edgesRight.g));
+        above += edgeK * (edges.r * edgesLeft.a * (1.0f - edgesBottom.r) + edges.b * edgesRight.a * (1.0f - edgesBottom.b));
+    }
+    
+#if CMAA2_EXTRA_SHARPNESS
+    blurCoeff *= clamp(1.15f - numEdgesAround / 8.0f, 0.0f, 1.0f);
+#else
+    blurCoeff *= clamp(1.30f - numEdgesAround / 10.0f, 0.0f, 1.0f);
+#endif
+    
+    return vec4(left, above, right, below) * blurCoeff;
+}
+
+void DetectHorizontalZ(const vec4 edges, const vec4 edgesM1P0, const vec4 edgesP1P0, const vec4 edgesP2P0,
+    out float invertedZScore, out float normalZScore)
+{
+    invertedZScore = edges.r * edges.g * edgesP1P0.a;
+    invertedZScore *= 2.0f + (edgesM1P0.g + edgesP2P0.a) - (edges.a + edgesP1P0.g) - 0.7f * (edgesP2P0.g + edgesM1P0.a + edges.b + edgesP1P0.r);
+    
+    normalZScore = edges.r * edges.a * edgesP1P0.g;
+    normalZScore *= 2.0f + (edgesM1P0.a + edgesP2P0.g) - (edges.g + edgesP1P0.a) - 0.7f * (edgesP2P0.a + edgesM1P0.g + edges.b + edgesP1P0.r);
+}
+
+void FindLineLengthsZ(const ivec2 screenPos, const bool horizontal, const bool zShapeInverted, const vec2 stepRight,
+    out float lineLengthLeft, out float lineLengthRight)
+{
+    uint maskLeft;
+    uint bitsContinueLeft;
+    uint maskRight;
+    uint bitsContinueRight;
+    
+    uint maskTraceLeft;
+    uint maskTraceRight;
+
+    if (horizontal) {
+        maskTraceLeft = 0x08u;
+        maskTraceRight = 0x02u;
+    } else {
+        maskTraceLeft = 0x04u;
+        maskTraceRight = 0x01u;
+    }
+    
+    if (zShapeInverted) {
+        const uint temp = maskTraceLeft;
+        maskTraceLeft = maskTraceRight;
+        maskTraceRight = temp;
+    }
+    
+    maskLeft = maskTraceLeft;
+    bitsContinueLeft = maskTraceLeft;
+    maskRight = maskTraceRight;
+    bitsContinueRight = maskTraceRight;
+    
+    bool continueLeft = true;
+    bool continueRight = true;
+    lineLengthLeft = 1.0f;
+    lineLengthRight = 1.0f;
+    
+    for (uint iter = 0u; iter < CMAA2_MAX_LINE_LENGTH; iter++) {
+        const uint edgeLeft = LoadEdge(screenPos - ivec2(stepRight * lineLengthLeft), ivec2(0));
+        const uint edgeRight = LoadEdge(screenPos + ivec2(stepRight * (lineLengthRight + 1.0f)), ivec2(0));
+        
+        continueLeft = continueLeft && ((edgeLeft & maskLeft) == bitsContinueLeft);
+        continueRight = continueRight && ((edgeRight & maskRight) == bitsContinueRight);
+        
+        lineLengthLeft += continueLeft ? 1.0f : 0.0f;
+        lineLengthRight += continueRight ? 1.0f : 0.0f;
+        
+        float maxLR = max(lineLengthRight, lineLengthLeft);
+        
+        if (!continueLeft && !continueRight) {
+            maxLR = float(CMAA2_MAX_LINE_LENGTH);
+        }
+        
+#if CMAA2_EXTRA_SHARPNESS
+        if (maxLR >= min(float(CMAA2_MAX_LINE_LENGTH), 1.20f * min(lineLengthRight, lineLengthLeft) - 0.20f)) {
+#else
+        if (maxLR >= min(float(CMAA2_MAX_LINE_LENGTH), 1.25f * min(lineLengthRight, lineLengthLeft) - 0.25f)) {
+#endif
+            break;
+        }
+    }
+}
+
+void BlendZs(const ivec2 screenPos, const bool horizontal, const bool zShapeInverted, const float shapeQualityScore,
+    const float lineLengthLeft, const float lineLengthRight, const vec2 stepRight)
+{
+    const vec2 blendDir = (horizontal ? vec2(0, -1) : vec2(-1, 0)) * (zShapeInverted ? -1.0f : 1.0f);
+    
+    const float leftOdd = SYMMETRY_CORRECTION_OFFSET * float(int(lineLengthLeft) % 2);
+    const float rightOdd = SYMMETRY_CORRECTION_OFFSET * float(int(lineLengthRight) % 2);
+    const float dampenEffect = clamp((lineLengthLeft + lineLengthRight - shapeQualityScore) * DAMPENING, 0.0f, 1.0f);
+    
+    const float loopFrom = -floor((lineLengthLeft + 1.0f) / 2.0f) + 1.0f;
+    const float loopTo = floor((lineLengthRight + 1.0f) / 2.0f);
+    const float totalLength = (loopTo - loopFrom) + 1.0f - leftOdd - rightOdd;
+    const float lerpStep = 1.0f / totalLength;
+    const float lerpFromK = (0.5f - leftOdd - loopFrom) * lerpStep;
+    
+    for (float ii = loopFrom; ii <= loopTo; ii += 1.0f) {
+        const float secondPart = ii > 0.0f ? 1.0f : 0.0f;
+        const float srcOffset = 1.0f - secondPart * 2.0f;
+        const float lerpK = ((lerpStep * ii + lerpFromK) * srcOffset + secondPart) * dampenEffect;
+        
+        const ivec2 pixelPos = screenPos + ivec2(stepRight * ii);
+        const vec3 colorCenter = texelFetch(uColorSampler, pixelPos, 0).rgb;
+        const vec3 colorFrom = texelFetch(uColorSampler, pixelPos + ivec2(blendDir * srcOffset), 0).rgb;
+        
+        StoreColorSample(pixelPos, mix(colorCenter, colorFrom, lerpK), true);
+    }
+}
+
+layout(local_size_x = CMAA2_PROCESS_CANDIDATES_NUM_THREADS, local_size_y = 1, local_size_z = 1) in;
+void main() {
+    const uint numCandidates = controlBuffer.shapeCandidateCount;
+
+    if (gl_GlobalInvocationID.x >= numCandidates) {
+        return;
+    }
+    
+    const uint pixelId = shapeCandidates[gl_GlobalInvocationID.x];
+    const ivec2 pixelPos = ivec2(pixelId >> 18u, pixelId & 0x3FFFu);
+    
+    const uint edgesCenterPacked = LoadEdge(pixelPos, ivec2(0));
+    const vec4 edges = UnpackEdgesFloat(edgesCenterPacked);
+    const vec4 edgesLeft = UnpackEdgesFloat(LoadEdge(pixelPos, ivec2(-1, 0)));
+    const vec4 edgesRight = UnpackEdgesFloat(LoadEdge(pixelPos, ivec2(1, 0)));
+    const vec4 edgesBottom = UnpackEdgesFloat(LoadEdge(pixelPos, ivec2(0, 1)));
+    const vec4 edgesTop = UnpackEdgesFloat(LoadEdge(pixelPos, ivec2(0, -1)));
+    
+    // simple shapes
+    {
+        const vec4 blendVal = ComputeSimpleShapeBlendValues(edges, edgesLeft, edgesRight, edgesTop, edgesBottom);
+        const float fourWeightSum = dot(blendVal, vec4(1));
+        const float centerWeight = 1.0f - fourWeightSum;
+        
+        const vec3 colorCenter = texelFetch(uColorSampler, pixelPos, 0).rgb;
+        const vec3 colorLeft = texelFetch(uColorSampler, pixelPos + ivec2(-1, 0), 0).rgb;
+        const vec3 colorTop = texelFetch(uColorSampler, pixelPos + ivec2(0, -1), 0).rgb;
+        const vec3 colorRight = texelFetch(uColorSampler, pixelPos + ivec2(1, 0), 0).rgb;
+        const vec3 colorBottom = texelFetch(uColorSampler, pixelPos + ivec2(0, 1), 0).rgb;
+
+        const vec3 outColor = colorCenter * centerWeight +
+                              colorLeft * blendVal.x +
+                              colorTop * blendVal.y +
+                              colorRight * blendVal.z +
+                              colorBottom * blendVal.w;
+        
+        StoreColorSample(pixelPos, outColor, false);
+    }
+    
+    // Z-shapes
+    {
+        float invertedZScore = 0.0f;
+        float normalZScore = 0.0f;
+        float maxScore = 0.0f;
+        bool horizontal = true;
+        bool invertedZ = false;
+        
+        // horizontal
+        {
+            DetectHorizontalZ(edges, edgesLeft, edgesRight, UnpackEdgesFloat(LoadEdge(pixelPos, ivec2(2, 0))), invertedZScore, normalZScore);
+            maxScore = max(invertedZScore, normalZScore);
+            
+            if (maxScore > 0.0f) {   
+                invertedZ = invertedZScore > normalZScore;
+            }
+        }
+        
+        // vertical
+        {            
+            DetectHorizontalZ(edges.argb, edgesBottom.argb, edgesTop.argb, UnpackEdgesFloat(LoadEdge(pixelPos, ivec2(0, -2))).argb, invertedZScore, normalZScore);
+            const float vertScore = max(invertedZScore, normalZScore);
+            
+            if (vertScore > maxScore) {
+                maxScore = vertScore;
+                horizontal = false;
+                invertedZ = invertedZScore > normalZScore;
+            }
+        }
+        
+        if (maxScore > 0.0f) {
+#if CMAA2_EXTRA_SHARPNESS
+            const float shapeQualityScore = round(clamp(4.0f - maxScore, 0.0f, 3.0f));
+#else
+            const float shapeQualityScore = floor(clamp(4.0f - maxScore, 0.0f, 3.0f));
+#endif
+            
+            const vec2 stepRight = horizontal ? vec2(1, 0) : vec2(0, -1);
+            float lineLengthLeft;
+            float lineLengthRight;
+            FindLineLengthsZ(pixelPos, horizontal, invertedZ, stepRight, lineLengthLeft, lineLengthRight);
+            
+            lineLengthLeft -= shapeQualityScore;
+            lineLengthRight -= shapeQualityScore;
+            
+            if ((lineLengthLeft + lineLengthRight) >= 5.0f) {
+                BlendZs(pixelPos, horizontal, invertedZ, shapeQualityScore, lineLengthLeft, lineLengthRight, stepRight);
+            }
+        }
+    }
+}

@@ -44,6 +44,8 @@ public:
     void RegisterImageLoader(IImageLoader::Ptr imageLoader) override;
 
     LoadResult LoadImage(BASE_NS::string_view uri, uint32_t loadFlags) override;
+    LoadResult LoadImage(
+        const BASE_NS::string_view uri, uint32_t loadFlags, uint32_t rowCount, uint32_t columnCount) override;
     LoadResult LoadImage(IFile& file, uint32_t loadFlags) override;
     LoadResult LoadImage(BASE_NS::array_view<const uint8_t> imageFileBytes, uint32_t loadFlags) override;
 

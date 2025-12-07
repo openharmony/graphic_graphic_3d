@@ -17,6 +17,8 @@
 #include <mutex>
 #include <thread>
 
+// need notice
+
 #include <base/containers/vector.h>
 
 #include <meta/base/interface_macros.h>
@@ -30,7 +32,10 @@
 
 META_BEGIN_NAMESPACE()
 
-class ThreadedTaskQueue : public IntroduceInterfaces<MetaObject, IThreadedTaskQueue, TaskQueueImpl> {
+constexpr uint32_t RES_TYPE_EXT_ENGINE_SET_QOS = 10028;
+
+class ThreadedTaskQueue :
+    public IntroduceInterfaces<MetaObject, IThreadedTaskQueue, ITaskQueueThreadInfo, TaskQueueImpl> {
     META_OBJECT(ThreadedTaskQueue, ClassId::ThreadedTaskQueue, IntroduceInterfaces)
 public:
     using Token = ITaskQueue::Token;
@@ -43,12 +48,34 @@ public:
         Shutdown();
     }
 
+    uint64_t CurrentThread() const
+    {
+        return std::hash<std::thread::id> {}(std::this_thread::get_id());
+    }
+    bool CurrentThreadIsExecutionThread() const override
+    {
+        return CurrentThread() == threadId_;
+    }
+
+    bool SetExecutionThread()
+    {
+        auto id = CurrentThread();
+        if (threadId_ != 0) {
+            return (threadId_ == id);
+        }
+        threadId_ = id;
+        return true;
+    }
+
     bool Build(const IMetadata::Ptr& data) override
     {
         bool ret = Super::Build(data);
         if (ret) {
             self_ = GetSelf<ITaskQueue>();
-            thread_ = std::thread([this]() { ProcessTasks(); });
+            thread_ = std::thread([this]() {
+                SetExecutionThread();
+                ProcessTasks();
+            });
         }
         return ret;
     }
@@ -105,6 +132,9 @@ public:
     {
         std::unique_lock lock { mutex_ };
         execThread_ = std::this_thread::get_id();
+
+    // need notice
+
         while (!terminate_) {
             if (!tasks_.empty()) {
                 TimeSpan delta = tasks_.back().executeTime - Time();
@@ -120,9 +150,12 @@ public:
             auto curTime = Time();
             TaskQueueImpl::ProcessTasks(lock, curTime);
         }
+
+    // need notice
     }
 
 private:
+    uint64_t threadId_ { 0 };
     std::condition_variable addCondition_;
     std::thread thread_;
 };

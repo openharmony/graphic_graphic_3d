@@ -587,7 +587,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     }
 
     auto first1 = begin() + static_cast<difference_type>(pos);
-    const auto end1 = end() - (str.length() - 1U);
+    const auto end1 = end() - static_cast<difference_type>((str.length() - 1U));
     const auto first2 = str.begin();
 
     while (first1 != end1) {
@@ -598,7 +598,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
         if (first1 == end1) {
             break;
         }
-        if (substr(first1 - begin(), str.size()).compare(str) == 0) {
+        if (substr(static_cast<size_type>(first1 - begin()), static_cast<size_type>(str.size())).compare(str) == 0) {
             return static_cast<size_type>(first1 - begin());
         }
         ++first1;

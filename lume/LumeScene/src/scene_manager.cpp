@@ -38,6 +38,7 @@
 
 #include "asset/asset_object.h"
 #include "resource/resource_types.h"
+#include "resource/util.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -84,9 +85,16 @@ Future<IScene::Ptr> SceneManager::CreateScene()
 
 Future<IScene::Ptr> SceneManager::CreateScene(SceneOptions opts)
 {
-    return context_->AddTask([context = CreateContext(BASE_NS::move(opts))] {
+    return context_->AddTaskOrRunDirectly([context = CreateContext(BASE_NS::move(opts))] {
         if (auto scene = META_NS::GetObjectRegistry().Create<IScene>(SCENE_NS::ClassId::Scene, context)) {
-            auto& ecs = scene->GetInternalScene()->GetEcsContext();
+            auto iScene = scene->GetInternalScene();
+            if (auto c = iScene->GetContext()) {
+                if (auto res = c->GetResources()) {
+                    auto group = UniqueGroupName(res, "Scene");
+                    SetPrimaryGroupOnly(scene, group);
+                }
+            }
+            auto& ecs = iScene->GetEcsContext();
             if (ecs.CreateUnnamedRootNode()) {
                 return scene;
             }
@@ -96,11 +104,12 @@ Future<IScene::Ptr> SceneManager::CreateScene(SceneOptions opts)
     });
 }
 
-static IScene::Ptr Load(const IScene::Ptr& scene, BASE_NS::string_view uri)
+static IScene::Ptr Load(
+    const IScene::Ptr& scene, BASE_NS::string_view uri, bool createResources, const CORE_NS::ResourceId& rid)
 {
     CORE_LOG_I("Loading scene: '%s'", BASE_NS::string(uri).c_str());
     if (auto assets = META_NS::GetObjectRegistry().Create<IAssetObject>(ClassId::AssetObject)) {
-        if (assets->Load(scene, uri)) {
+        if (assets->Load(scene, uri, createResources, rid)) {
             if (auto att = interface_cast<META_NS::IAttach>(scene)) {
                 att->Attach(assets);
             }
@@ -123,25 +132,31 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, SceneOpt
     if (!context_) {
         return {};
     }
-    return context_->AddTask(
-        [path = BASE_NS::string(uri), renderContext = context_, args = CreateContext(BASE_NS::move(opts))] {
-            IScene::Ptr result;
-            if (path.ends_with(".scene") || path.ends_with(".scene2")) {
-                // Try loading as an editor project
-                if (SetProjectPath(renderContext, path, ProjectPathAction::REGISTER)) {
-                    // Rely on an implementation detail: If the path is already registered, it can be re-registered.
-                    // Unregistering will remove only the re-registered path and leave the original.
-                    result = LoadSceneWithIndex(renderContext, path);
-                    SetProjectPath(renderContext, path, ProjectPathAction::UNREGISTER);
-                }
+    bool createRes = opts.createResources;
+    CORE_NS::ResourceId rid = opts.resourceId;
+    return context_->AddTaskOrRunDirectly([path = BASE_NS::string(uri), renderContext = context_,
+                                              args = CreateContext(BASE_NS::move(opts)), createRes, rid] {
+        IScene::Ptr result;
+        const auto pathLowerCase = path.toLower();
+        if (pathLowerCase.ends_with(".gltf") || pathLowerCase.ends_with(".glb")) {
+            // Try loading a scene from a glTF file
+            result = META_NS::GetObjectRegistry().Create<IScene>(SCENE_NS::ClassId::Scene, args);
+            Load(result, path, createRes, rid);
+        } else {
+            // Try loading as an editor scene with resources
+            if (SetProjectPath(renderContext, path, ProjectPathAction::REGISTER)) {
+                // Rely on an implementation detail: If the path is already registered, it can be re-registered.
+                // Unregistering will remove only the re-registered path and leave the original.
+                result = LoadSceneWithIndex(renderContext, path);
+                SetProjectPath(renderContext, path, ProjectPathAction::UNREGISTER);
             }
             if (!result) {
-                // Was not an editor project (so could be either a .gltf or old format .scene)
+                // Always returning at least an empty scene (Preserve how this function  worked previously)
                 result = META_NS::GetObjectRegistry().Create<IScene>(SCENE_NS::ClassId::Scene, args);
-                Load(result, path);
             }
-            return result;
-        });
+        }
+        return result;
+    });
 }
 
 void SceneManager::LoadDefaultResourcesIfNeeded(const CORE_NS::IResourceManager::Ptr& resources)
@@ -185,7 +200,23 @@ IScene::Ptr SceneManager::LoadSceneWithIndex(const IRenderContext::Ptr& context,
     if (!resources->GetResourceInfo(rid).id.IsValid()) {
         resources->AddResource(rid, ClassId::SceneResource.Id().ToUid(), uri);
     }
-    return interface_pointer_cast<IScene>(resources->GetResource(rid));
+    auto result = interface_pointer_cast<IScene>(resources->GetResource(rid));
+    if (result) {
+        auto root = result->GetRootNode().GetResult();
+        if (auto i = result->GetInternalScene()) {
+            // make sure all changes to ecs are applied before trimming the objects
+            i->SyncProperties();
+            i->ReleaseNode(BASE_NS::move(root), true);
+
+            auto groups = i->GetResourceGroups();
+            for (auto&& g : groups.GetAllHandles()) {
+                auto name = g->GetGroup();
+                CORE_LOG_D("Purging resource group '%s'", name.c_str());
+                resources->PurgeGroup(name);
+            }
+        }
+    }
+    return result;
 }
 
 bool SceneManager::SetProjectPath(

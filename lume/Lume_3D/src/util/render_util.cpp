@@ -51,10 +51,14 @@ constexpr const string_view CAM_SCENE_REFLECTION_MSAA_STR =
 constexpr const string_view CAM_SCENE_PRE_PASS_STR = "3drendernodegraphs://core3d_rng_cam_scene_pre_pass.rng";
 constexpr const string_view CAM_SCENE_DEFERRED_STR = "3drendernodegraphs://core3d_rng_cam_scene_deferred.rng";
 constexpr const string_view CAM_SCENE_POST_PROCESS_STR = "3drendernodegraphs://core3d_rng_cam_scene_post_process.rng";
+constexpr const string_view CAM_SCENE_POST_PROCESS_EFFECTS_STR =
+    "3drendernodegraphs://core3d_rng_cam_scene_post_process_effects.rng";
 
 constexpr const string_view RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_STR = "RenderNodeDefaultCameraController";
 constexpr const string_view RENDER_NODE_DEFAULT_MATERIAL_RENDER_SLOT_STR = "RenderNodeDefaultMaterialRenderSlot";
 constexpr const string_view RENDER_NODE_CAMERA_WEATHER_STR = "RenderNodeCameraWeather";
+constexpr const string_view RENDER_NODE_DEFAULT_MATERIAL_OBJECTS_STR = "RenderNodeDefaultMaterialObjects";
+constexpr const string_view RENDER_NODE_SCENE_WEATHER_SIMULATION_STR = "RenderNodeWeatherSimulation";
 
 constexpr bool ENABLE_WEATHER_INJECT { true };
 
@@ -85,6 +89,16 @@ inline RenderNodeDesc GetDefaultCameraCloudsNode()
     return rnd;
 }
 
+inline RenderNodeDesc GetDefaultSceneWeatherSimulationNode()
+{
+    RenderNodeDesc rnd;
+    rnd.typeName = RENDER_NODE_SCENE_WEATHER_SIMULATION_STR;
+    rnd.nodeName = "CORE3D_RN_SCENE_WEATHER_SIMULATION";
+    rnd.nodeJson =
+        "{\"typeName\" : \"RenderNodeWeatherSimulation\",\"nodeName\" : \"CORE3D_RN_SCENE_WEATHER_SIMULATION\"}";
+    return rnd;
+}
+
 inline json::standalone_value GetPodPostProcess(const string_view name)
 {
     auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
@@ -103,10 +117,30 @@ inline json::standalone_value GetPostProcess(const string_view name)
     return renderDataStore;
 }
 
+inline json::standalone_value GetRenderPostProcesses(const string_view name)
+{
+    auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
+    renderDataStore["dataStoreName"] = "RenderDataStoreRenderPostProcesses";
+    renderDataStore["typeName"] = "RenderDataStoreRenderPostProcesses"; // This is render data store TYPE_NAME
+    renderDataStore["configurationName"] = string(name);
+    return renderDataStore;
+}
+
 inline bool HasRenderDataStorePostProcess(const json::standalone_value& dataStore)
 {
     if (const auto typeName = dataStore.find("typeName"); typeName) {
         if (typeName->is_string() && (typeName->string_ == "RenderDataStorePostProcess")) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// new interface post processes
+inline bool HasRenderDataStoreRenderPostProcesses(const json::standalone_value& dataStore)
+{
+    if (const auto typeName = dataStore.find("typeName"); typeName) {
+        if (typeName->is_string() && (typeName->string_ == "RenderDataStoreRenderPostProcesses")) {
             return true;
         }
     }
@@ -139,11 +173,32 @@ vector<const RENDER_NS::RenderNodeTypeInfo*> GetRenderNodesWithDependencies()
     return renderNodesWithDependencies;
 }
 
-void InjectRenderNodes(RenderNodeGraphDesc& desc)
+void InjectWeatherSimulationNode(RenderNodeGraphDesc& desc, const RenderScene& renderScene)
+{
+    // inject camera weather simulation render node after material objects node
+    if constexpr (ENABLE_WEATHER_INJECT) {
+        if (renderScene.flags & RenderScene::RenderSceneFlagBits::SCENE_FLAG_WEATHER_BIT) {
+            for (size_t nodeIdx = 0; nodeIdx < desc.nodes.size(); ++nodeIdx) {
+                if (desc.nodes[nodeIdx].typeName == RENDER_NODE_DEFAULT_MATERIAL_OBJECTS_STR) {
+                    desc.nodes.insert(
+                        desc.nodes.begin() + int64_t(nodeIdx + 1), GetDefaultSceneWeatherSimulationNode());
+#if (CORE3D_DEV_ENABLED == 1)
+                    CORE_LOG_I("Injecting RenderNodeWeatherSimulation node");
+#endif
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void InjectRenderNodes(RenderNodeGraphDesc& desc, IRenderNodeGraphManager& manager)
 {
     const auto typeInfos = CORE_NS::GetPluginRegister().GetTypeInfos(RENDER_NS::RenderNodeTypeInfo::UID);
     const auto renderNodeTypeInfos =
         array_view(reinterpret_cast<const RenderNodeTypeInfo* const*>(typeInfos.data()), typeInfos.size());
+    BASE_NS::vector<RenderNodeDesc> requests;
+    BASE_NS::vector<RenderNodeDependency> dependencies;
     const auto renderNodesWithDependencies = GetRenderNodesWithDependencies();
     for (const auto* depending : renderNodesWithDependencies) {
         // Try adding only if node isn't already there.
@@ -151,55 +206,43 @@ void InjectRenderNodes(RenderNodeGraphDesc& desc)
                 [typeName = depending->typeName](const RenderNodeDesc& desc) { return desc.typeName == typeName; })) {
             continue;
         }
-
-        ptrdiff_t index = -1;
-
-        // Find the insertion index based on afterNode
+        dependencies.clear();
         if (depending->afterNode != Uid {}) {
             // Find the typeinfo of the dependency UID
             auto info = std::find_if(renderNodeTypeInfos.cbegin(), renderNodeTypeInfos.cend(),
                 [uid = depending->afterNode](const RenderNodeTypeInfo* info) { return info->uid == uid; });
             if (info != renderNodeTypeInfos.cend()) {
-                // Find the last instance matching dependency typeName
-                auto graphIt = std::find_if(desc.nodes.crbegin(), desc.nodes.crend(),
-                    [typeName = (*info)->typeName](const RenderNodeDesc& desc) { return desc.typeName == typeName; });
-                if (graphIt != desc.nodes.crend()) {
-                    index = graphIt.base() - desc.nodes.cbegin();
-                }
+                dependencies.push_back(
+                    RenderNodeDependency { (*info)->typeName, RenderNodeDependency ::Position::AFTER_LAST });
             }
         }
-
-        // Find the insertion index based on beforeNode
         if (depending->beforeNode != Uid {}) {
             // Find the typeinfo of the dependency UID
             auto info = std::find_if(renderNodeTypeInfos.cbegin(), renderNodeTypeInfos.cend(),
                 [uid = depending->beforeNode](const RenderNodeTypeInfo* info) { return info->uid == uid; });
             if (info != renderNodeTypeInfos.cend()) {
-                // Find the last instance matching dependency typeName
-                auto graphIt = std::find_if(desc.nodes.crbegin(), desc.nodes.crend(),
-                    [typeName = (*info)->typeName](const RenderNodeDesc& desc) { return desc.typeName == typeName; });
-                if (graphIt != desc.nodes.crend()) {
-                    index = graphIt.base() - desc.nodes.cbegin();
-                }
+                dependencies.push_back(
+                    RenderNodeDependency { (*info)->typeName, RenderNodeDependency ::Position::BEFORE_LAST });
             }
         }
-
-        // If no valid index found, continue to the next node
-        if (index < 0 || size_t(index) > desc.nodes.size()) {
-            continue;
-        }
-
+        const auto nodeName = RenderDataConstants::RenderDataFixedString("CORE3D_RN_SCENE_") + depending->typeName;
         // Create the new render node descriptor
         json::standalone_value jsonVal(json::standalone_value::object {});
         jsonVal["typeName"] = depending->typeName;
-        auto nodeName = RenderDataConstants::RenderDataFixedString("CORE3D_RN_SCENE_") + depending->typeName;
-        jsonVal["nodeName"] = nodeName.data();
-        desc.nodes.insert(
-            desc.nodes.cbegin() + index, RenderNodeDesc { depending->typeName, nodeName, {}, to_string(jsonVal) });
+        jsonVal["nodeName"] = string(nodeName);
+        requests.push_back(RenderNodeDesc { depending->typeName, nodeName, {}, to_string(jsonVal) });
+
+        manager.AddRenderNodeInsertion(requests.back(), dependencies);
+    }
+    desc = manager.PatchRenderNodeGraph(desc);
+
+    for (const auto& request : requests) {
+        manager.RemoveRenderNodeInsertion(request);
     }
 }
 
-void FillCameraDescsData(const RenderCamera& renderCamera, const string& customCameraName, RenderNodeGraphDesc& desc)
+void FillCameraDescsData(const RenderCamera& renderCamera, const string& customCameraName, RenderNodeGraphDesc& desc,
+    IRenderNodeGraphManager& manager)
 {
     // check for render compatibility for render node graph RenderNodeDefaultCameraController
     if (!renderCamera.customRenderNodeGraphFile.empty()) {
@@ -237,7 +280,7 @@ void FillCameraDescsData(const RenderCamera& renderCamera, const string& customC
             }
         }
     }
-    InjectRenderNodes(desc);
+    InjectRenderNodes(desc, manager);
 
     for (auto& rnRef : desc.nodes) {
         json::standalone_value jsonVal = CORE_NS::json::parse(rnRef.nodeJson.data());
@@ -247,11 +290,17 @@ void FillCameraDescsData(const RenderCamera& renderCamera, const string& customC
             jsonVal["nodeFlags"] = 7u; // NOTE: hard coded
         }
         if (auto dataStore = jsonVal.find("renderDataStore"); dataStore) {
-            if (auto config = dataStore->find("configurationName"); config) {
-                if (!config->string_.empty()) {
-                    const bool rpp = HasRenderDataStorePostProcess(*dataStore);
-                    auto renderDataStore = rpp ? GetPostProcess(renderCamera.postProcessName)
-                                               : GetPodPostProcess(renderCamera.postProcessName);
+            if (auto config = dataStore->find("configurationName");
+                config && config->is_string() && (!config->string_.empty())) {
+                json::standalone_value renderDataStore;
+                if (HasRenderDataStorePostProcess(*dataStore)) {
+                    renderDataStore = GetPostProcess(renderCamera.postProcessName);
+                } else if (HasRenderDataStoreRenderPostProcesses(*dataStore)) {
+                    renderDataStore = GetRenderPostProcesses(renderCamera.postProcessName);
+                } else {
+                    renderDataStore = GetPodPostProcess(renderCamera.postProcessName);
+                }
+                if (renderDataStore) {
                     jsonVal["renderDataStore"] = move(renderDataStore);
                 }
             }
@@ -261,9 +310,10 @@ void FillCameraDescsData(const RenderCamera& renderCamera, const string& customC
 }
 
 void FillCameraPostProcessDescsData(const RenderCamera& renderCamera, const uint64_t baseCameraId,
-    const string& customCameraName, const bool customPostProcess, RenderNodeGraphDesc& desc)
+    const string& customCameraName, const bool customPostProcess, RenderNodeGraphDesc& desc,
+    IRenderNodeGraphManager& manager)
 {
-    InjectRenderNodes(desc);
+    InjectRenderNodes(desc, manager);
 
     for (auto& rnRef : desc.nodes) {
         json::standalone_value jsonVal = CORE_NS::json::parse(rnRef.nodeJson.data());
@@ -272,11 +322,17 @@ void FillCameraPostProcessDescsData(const RenderCamera& renderCamera, const uint
         jsonVal["customCameraName"] = customCameraName;
         jsonVal["multiviewBaseCameraId"] = baseCameraId;
         if (auto dataStore = jsonVal.find("renderDataStore"); dataStore) {
-            if (auto config = dataStore->find("configurationName"); config) {
-                if (config->is_string() && (!config->string_.empty())) {
-                    const bool rpp = customPostProcess || HasRenderDataStorePostProcess(*dataStore);
-                    auto renderDataStore = rpp ? GetPostProcess(renderCamera.postProcessName)
-                                               : GetPodPostProcess(renderCamera.postProcessName);
+            if (auto config = dataStore->find("configurationName");
+                config && config->is_string() && (!config->string_.empty())) {
+                json::standalone_value renderDataStore;
+                if (customPostProcess || HasRenderDataStorePostProcess(*dataStore)) {
+                    renderDataStore = GetPostProcess(renderCamera.postProcessName);
+                } else if (HasRenderDataStoreRenderPostProcesses(*dataStore)) {
+                    renderDataStore = GetRenderPostProcesses(renderCamera.postProcessName);
+                } else {
+                    renderDataStore = GetPodPostProcess(renderCamera.postProcessName);
+                }
+                if (renderDataStore) {
                     jsonVal["renderDataStore"] = move(renderDataStore);
                 }
             }
@@ -312,6 +368,7 @@ void RenderUtil::InitRenderNodeGraphs()
     rngdDeferred_ = LoadRenderNodeGraph(rngl, CAM_SCENE_DEFERRED_STR);
 
     rngdPostProcess_ = LoadRenderNodeGraph(rngl, CAM_SCENE_POST_PROCESS_STR);
+    rngdPostProcessEffects_ = LoadRenderNodeGraph(rngl, CAM_SCENE_POST_PROCESS_EFFECTS_STR);
 }
 
 RenderNodeGraphDesc RenderUtil::SelectBaseDesc(const RenderCamera& renderCamera) const
@@ -372,10 +429,10 @@ RenderNodeGraphDesc RenderUtil::GetBasePostProcessDesc(const RenderCamera& rende
     // light forward and opaque / pre-pass camera does not have separate post processes
     if ((renderCamera.renderPipelineType != RenderCamera::RenderPipelineType::LIGHT_FORWARD) &&
         ((renderCamera.flags & RenderCamera::CAMERA_FLAG_OPAQUE_BIT) == 0)) {
-        return rngdPostProcess_;
-    } else {
-        return {};
+        return (renderCamera.flags & RenderCamera::CAMERA_FLAG_POST_PROCESS_EFFECTS_BIT) ? rngdPostProcessEffects_
+                                                                                         : rngdPostProcess_;
     }
+    return {};
 }
 
 RenderNodeGraphDesc RenderUtil::GetRenderNodeGraphDesc(
@@ -385,7 +442,7 @@ RenderNodeGraphDesc RenderUtil::GetRenderNodeGraphDesc(
     RenderNodeGraphDesc desc = SelectBaseDesc(renderCamera);
     // process
     desc.renderNodeGraphName = renderScene.name + to_hex(renderCamera.id);
-    FillCameraDescsData(renderCamera, customCameraName, desc);
+    FillCameraDescsData(renderCamera, customCameraName, desc, context_.GetRenderNodeGraphManager());
     return desc;
 }
 
@@ -406,12 +463,14 @@ IRenderUtil::CameraRenderNodeGraphDescs RenderUtil::GetRenderNodeGraphDescs(cons
 
     const string customCameraName = GetCameraName(renderCamera);
     IRenderUtil::CameraRenderNodeGraphDescs descs;
+    auto& rngManager = context_.GetRenderNodeGraphManager();
+
     // process camera
     {
         auto& desc = descs.camera;
         desc = SelectBaseDesc(renderCamera);
         desc.renderNodeGraphName = renderScene.name + to_hex(renderCamera.id);
-        FillCameraDescsData(renderCamera, customCameraName, desc);
+        FillCameraDescsData(renderCamera, customCameraName, desc, rngManager);
     }
     // process post process
     // NOTE: we do not add base post process render node graph to custom camera render node graphs
@@ -420,7 +479,7 @@ IRenderUtil::CameraRenderNodeGraphDescs RenderUtil::GetRenderNodeGraphDescs(cons
         auto& desc = descs.postProcess;
         const bool customPostProcess = !renderCamera.customPostProcessRenderNodeGraphFile.empty();
         if (customPostProcess) {
-            IRenderNodeGraphLoader& rngl = context_.GetRenderNodeGraphManager().GetRenderNodeGraphLoader();
+            IRenderNodeGraphLoader& rngl = rngManager.GetRenderNodeGraphLoader();
             desc = LoadRenderNodeGraph(rngl, renderCamera.customPostProcessRenderNodeGraphFile);
         } else if (renderCamera.customRenderNodeGraphFile.empty()) {
             // only fetched when using built-in camera RNGs
@@ -428,8 +487,8 @@ IRenderUtil::CameraRenderNodeGraphDescs RenderUtil::GetRenderNodeGraphDescs(cons
         }
         if (!desc.nodes.empty()) {
             desc.renderNodeGraphName = renderScene.name + to_hex(renderCamera.id);
-            FillCameraPostProcessDescsData(
-                renderCamera, RenderSceneDataConstants::INVALID_ID, customCameraName, customPostProcess, desc);
+            FillCameraPostProcessDescsData(renderCamera, RenderSceneDataConstants::INVALID_ID, customCameraName,
+                customPostProcess, desc, rngManager);
         }
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if (renderCamera.multiViewCameraCount != static_cast<uint32_t>(multiviewCameras.size())) {
@@ -452,7 +511,8 @@ IRenderUtil::CameraRenderNodeGraphDescs RenderUtil::GetRenderNodeGraphDescs(cons
                 if (!ppDesc.nodes.empty()) {
                     const string ppCustomCameraName = GetCameraName(mvCameraRef);
                     ppDesc.renderNodeGraphName = renderScene.name + to_hex(mvCameraRef.id);
-                    FillCameraPostProcessDescsData(mvCameraRef, renderCamera.id, ppCustomCameraName, false, ppDesc);
+                    FillCameraPostProcessDescsData(
+                        mvCameraRef, renderCamera.id, ppCustomCameraName, false, ppDesc, rngManager);
                 }
             }
         }
@@ -477,8 +537,9 @@ RenderNodeGraphDesc RenderUtil::GetRenderNodeGraphDesc(const RenderScene& render
     } else {
         desc = rngdScene_;
     }
+    InjectWeatherSimulationNode(desc, renderScene);
 
-    InjectRenderNodes(desc);
+    InjectRenderNodes(desc, context_.GetRenderNodeGraphManager());
 
     const string customSceneName = GetSceneName(renderScene);
     const auto sceneIdStr = to_hex(renderScene.id);
@@ -504,8 +565,9 @@ RenderNodeGraphDesc RenderUtil::GetRenderNodeGraphDesc(
     } else {
         desc = rngdScene_;
     }
+    InjectWeatherSimulationNode(desc, renderScene);
 
-    InjectRenderNodes(desc);
+    InjectRenderNodes(desc, context_.GetRenderNodeGraphManager());
 
     const string customSceneName = GetSceneName(renderScene);
     const auto sceneIdStr = to_hex(renderScene.id);

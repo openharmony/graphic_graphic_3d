@@ -25,6 +25,8 @@
 
 #include <render/intf_render_context.h>
 
+#include "JsObjectCache.h"
+
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 using namespace SCENE_NS;
@@ -89,6 +91,9 @@ void ToneMapJS::Init(napi_env env, napi_value exports)
     napi_value func;
     auto status = napi_define_class(env, "ToneMappingSettings", NAPI_AUTO_LENGTH, BaseObject::ctor<ToneMapJS>(),
         nullptr, node_props.size(), node_props.data(), &func);
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
@@ -121,6 +126,10 @@ void ToneMapJS::DisposeNative(void*)
 {
     if (!disposed_) {
         disposed_ = true;
+        DisposeBridge(this);
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
         LOG_V("ToneMapJS::DisposeNative");
         UnsetNativeObject();
     }
@@ -146,14 +155,16 @@ void ToneMapJS::BindToNative(SCENE_NS::ITonemap::Ptr native)
 
 void* ToneMapJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == ToneMapJS::ID)
-        return this;
-    return nullptr;
+    if (id == ToneMapJS::ID) {
+        return static_cast<ToneMapJS*>(this);
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 void ToneMapJS::Finalize(napi_env env)
 {
     DisposeNative(nullptr);
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 
 ToneMapJS::ToneMapJS(napi_env e, napi_callback_info i)
@@ -177,6 +188,7 @@ ToneMapJS::ToneMapJS(napi_env e, napi_callback_info i)
         return;
     }
 
+    AddBridge("ToneMapJS",ctx.This());
     NapiApi::Object toneMapArgs = ctx.Arg<0>();
     exposure_ = toneMapArgs.Get<float>("exposure").valueOrDefault(exposure_);
     type_ = static_cast<ToneMappingType>(toneMapArgs.Get<uint32_t>("type").valueOrDefault(type_));
@@ -189,6 +201,7 @@ ToneMapJS::~ToneMapJS()
 {
     LOG_V("ToneMapJS --");
     DisposeNative(nullptr);
+    DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
     }

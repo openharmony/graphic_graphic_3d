@@ -42,6 +42,9 @@ public:
     void StrongDisposeHook(uintptr_t token, NapiApi::Object);
     void ReleaseStrongDispose(uintptr_t token);
 
+    void Dispose(napi_env env, BASE_NS::array_view<const uintptr_t> strongs,
+        BASE_NS::array_view<const uintptr_t> weaks, SceneJS* sc);
+
     void StoreBitmap(BASE_NS::string_view uri, SCENE_NS::IBitmap::Ptr bitmap);
     SCENE_NS::IBitmap::Ptr FetchBitmap(BASE_NS::string_view uri);
 
@@ -52,7 +55,7 @@ private:
     DisposeContainer disposeContainer_;
 };
 
-class RenderContextJS : public BaseObject {
+class RenderContextJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 201;
     static void Init(napi_env env, napi_value exports);
@@ -70,19 +73,19 @@ private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
     void DisposeNative(void* id) override;
     void Finalize(napi_env env) override;
+    bool InitRenderManager();
 
 public:
     napi_value GetResourceFactory(NapiApi::FunctionContext<>& ctx);
     napi_value LoadPlugin(NapiApi::FunctionContext<BASE_NS::string>& ctx);
 
-    // create shader
     napi_value CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-    // create image
     napi_value CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-    // create mesh
     napi_value CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
     // create sampler
+    napi_value CreateSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     // create scene
+    napi_value CreateScene(NapiApi::FunctionContext<>& ctx);
     // Register shader Path
     napi_value RegisterResourcePath(NapiApi::FunctionContext<BASE_NS::string, BASE_NS::string>& ctx);
 
@@ -91,7 +94,7 @@ private:
     napi_env env_;
     SCENE_NS::IRenderResourceManager::Ptr renderManager_;
     BASE_NS::shared_ptr<GlobalResources> globalResources_;
-    mutable BASE_NS::weak_ptr<RenderResources> resources_;
+    mutable BASE_NS::shared_ptr<RenderResources> resources_;
 };
 
 #endif // RENDERCONTEXTJS_H

@@ -56,13 +56,13 @@ using RenderHandleInfoFlags = uint32_t;
 
 namespace RenderHandleUtil {
 static constexpr uint64_t RES_ID_MASK { GPU_RESOURCE_HANDLE_ID_MASK };
-static constexpr uint64_t RES_HANDLE_ID_MASK { 0x00FFfff0 };
+static constexpr uint64_t RES_HANDLE_ID_MASK { RENDER_HANDLE_ID_MASK };
 static constexpr uint64_t RES_HANDLE_GENERATION_MASK { 0xFF000000 };
 static constexpr uint64_t RES_HANDLE_HAS_NAME_MASK { 0x100000000000 };
 static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_MASK { 0xfff00000000 };
 static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_MASK { 0xFFFF000000000000 };
 
-static constexpr uint64_t RES_HANDLE_ID_SHIFT { 4 };
+static constexpr uint64_t RES_HANDLE_ID_SHIFT { RENDER_HANDLE_ID_SHIFT };
 static constexpr uint64_t RES_HANDLE_TYPE_SHIFT { 0 };
 static constexpr uint64_t RES_HANDLE_GENERATION_SHIFT { 24 };
 static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT { 32 };

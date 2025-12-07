@@ -15,9 +15,9 @@
 #include "scene_importer.h"
 
 #include <charconv>
-#include <scene/api/external_node.h>
 #include <scene/ext/intf_component.h>
 #include <scene/ext/intf_internal_scene.h>
+#include <scene/ext/scene_utils.h>
 #include <scene/ext/util.h>
 #include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_external_node.h>
@@ -29,7 +29,8 @@
 #include <meta/interface/resource/intf_resource.h>
 #include <meta/interface/serialization/intf_importer.h>
 
-#include "scene_ser.h"
+#include "../resource/util.h"
+#include "../util.h"
 #include "util.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -74,10 +75,10 @@ static META_NS::IObject::Ptr GetIObjectFromProperty(const META_NS::IProperty::Pt
             if (index < arr->GetSize()) {
                 res = interface_pointer_cast<META_NS::IObject>(META_NS::GetPointer(arr->GetAnyAt(index)));
             } else {
-                CORE_LOG_W("Index out of bounds: %s [%zu]", p ? p->GetName().c_str() : "unknown", index);
+                CORE_LOG_W("Index out of bounds: %s [%zu]", p->GetName().c_str(), index);
             }
         } else {
-            CORE_LOG_W("Trying to index non-array property: %s", p ? p->GetName().c_str() : "unknown");
+            CORE_LOG_W("Trying to index non-array property: %s", p->GetName().c_str());
         }
     } else {
         if (auto obj = META_NS::GetPointer(p)) {
@@ -87,7 +88,7 @@ static META_NS::IObject::Ptr GetIObjectFromProperty(const META_NS::IProperty::Pt
     return res;
 }
 
-static META_NS::IObject::Ptr FindObject(META_NS::IObject& obj, BASE_NS::string_view path)
+META_NS::IObject::Ptr FindObject(META_NS::IObject& obj, BASE_NS::string_view path)
 {
     if (path.empty()) {
         return obj.GetSelf();
@@ -107,7 +108,7 @@ static META_NS::IObject::Ptr FindObject(META_NS::IObject& obj, BASE_NS::string_v
         if (auto att = interface_cast<META_NS::IAttach>(&obj)) {
             auto attcont = att->GetAttachmentContainer(true);
             child = interface_pointer_cast<META_NS::IObject>(
-                attcont->FindAny<IComponent>(name, META_NS::TraversalType::NO_HIERARCHY));
+                attcont->FindAny({ name, META_NS::TraversalType::NO_HIERARCHY, {}, false }));
             if (!child) {
                 CORE_LOG_W("No such attachment for object [%s]", name.c_str());
             }
@@ -139,105 +140,172 @@ static META_NS::IObject::Ptr FindObject(META_NS::IObject& obj, BASE_NS::string_v
     return child;
 }
 
-static void AddFlatProperty(const META_NS::IProperty::ConstPtr& p, META_NS::IObject& parent)
+static void AddFlatProperty(const META_NS::IProperty::ConstPtr& p, META_NS::IObject& node, bool templateContext)
 {
-    if (auto target = interface_pointer_cast<META_NS::IProperty>(FindObject(parent, p->GetName()))) {
-        META_NS::CopyValue(p, *target);
+    if (auto target = interface_pointer_cast<META_NS::IProperty>(FindObject(node, p->GetName()))) {
+        if (templateContext) {
+            META_NS::CopyToDefaultAndReset(p, *target);
+        } else {
+            META_NS::CopyValue(p, *target);
+        }
+        META_NS::SetObjectFlags(target, IMPORTED_FROM_TEMPLATE_BIT, templateContext);
     } else {
         CORE_LOG_W("Failed to resolve property [%s]", p->GetName().c_str());
     }
 }
 
-void AddFlatProperties(const META_NS::IMetadata& in, META_NS::IObject& parent)
+void AddFlatProperties(const META_NS::IMetadata& in, META_NS::IObject& node, bool templateContext)
 {
     for (auto&& p : in.GetProperties()) {
-        AddFlatProperty(p, parent);
+        AddFlatProperty(p, node, templateContext);
+    }
+}
+void AddFlatProperties(const META_NS::IMetadata& in, META_NS::IObject& node)
+{
+    AddFlatProperties(in, node, false);
+}
+
+void SceneImportContext::AddFlatPropertiesForExternal(
+    const META_NS::IMetadata& in, META_NS::IObject& node, bool templateContext)
+{
+    for (auto&& p : in.GetProperties()) {
+        if (auto r = META_NS::GetPointer<CORE_NS::IResource>(p)) {
+            auto rid = r->GetResourceId();
+            if (rid.IsValid()) {
+                if (auto rmr = resources_->GetResource(rid, scene_)) {
+                    if (r != rmr) {
+                        CORE_LOG_D("Resetting resource '%s'", rid.ToString().c_str());
+                        auto np = META_NS::DuplicatePropertyType(META_NS::GetObjectRegistry(), p);
+                        META_NS::SetPointer(np, rmr);
+                        p = np;
+                    }
+                }
+            }
+        }
+        AddFlatProperty(p, node, templateContext);
     }
 }
 
-static void AddFlatAttachments(const ISceneExternalNodeSer& in, META_NS::IObject& parent)
+void SceneImportContext::AddFlatAttachments(const ISceneExternalNodeSer& in, const META_NS::IObject::Ptr& parent)
 {
     for (auto&& p : in.GetAttachments()) {
-        if (auto target = interface_pointer_cast<META_NS::IAttach>(FindObject(parent, p->GetPath()))) {
-            if (!target->Attach(p->GetAttachment())) {
-                CORE_LOG_W("Failed to attach");
-            }
-        } else {
-            CORE_LOG_W("Failed to find object to attach to [%s]", p->GetPath().c_str());
-        }
+        META_NS::SetObjectFlags(p, IMPORTED_FROM_TEMPLATE_BIT, isTemplateContext_);
+        attachments_.push_back(AttachInfo { interface_pointer_cast<META_NS::IObject>(p), parent });
     }
 }
 
-static void SetAttachments(const ISceneNodeSer& in, META_NS::IAttach& out)
+void SceneImportContext::SetAttachments(const ISceneNodeSer& in, const META_NS::IObject::Ptr& out)
 {
     for (auto&& v : in.GetAttachments()) {
-        out.Attach(v);
+        META_NS::SetObjectFlags(v, IMPORTED_FROM_TEMPLATE_BIT, isTemplateContext_);
+        attachments_.push_back(AttachInfo { v, out });
     }
 }
 
-static void CopyObjectValues(const ISceneNodeSer& in, META_NS::IObject& out)
+void SceneImportContext::CopyObjectValues(const ISceneNodeSer& in, const META_NS::IObject::Ptr& out)
 {
     if (auto meta = interface_cast<META_NS::IMetadata>(&in)) {
-        AddFlatProperties(*meta, out);
+        AddFlatProperties(*meta, *out, isTemplateContext_);
     }
-    if (auto att = interface_cast<META_NS::IAttach>(&out)) {
-        SetAttachments(in, *att);
-    }
+    SetAttachments(in, out);
 }
 
-static INode::Ptr ConstructNode(const ISceneNodeSer& ser, INode& parent)
+INode::Ptr SceneImportContext::ConstructNode(const ISceneNodeSer& ser, INode& parent)
 {
-    auto& scene = *parent.GetScene();
-    INode::Ptr res = scene.CreateNode(parent.GetPath().GetResult() + "/" + ser.GetName(), ser.GetId()).GetResult();
-    if (auto obj = interface_cast<META_NS::IObject>(res)) {
-        CopyObjectValues(ser, *obj);
+    INode::Ptr res;
+    if (auto obj = interface_cast<META_NS::IObject>(&parent)) {
+        res = scene_->CreateNode(interface_pointer_cast<INode>(obj->GetSelf()), ser.GetName(), ser.GetId()).GetResult();
+
+        if (auto obj = interface_pointer_cast<META_NS::IObject>(res)) {
+            CopyObjectValues(ser, obj);
+        }
     }
     return res;
 }
 
-static void LoadExternalNode(const ISceneExternalNodeSer& in, INode& parent)
+INode::Ptr SceneImportContext::LoadExternalNode(const ISceneExternalNodeSer& in, INode& parent)
 {
-    if (auto context = parent.GetScene()->GetInternalScene()->GetContext()) {
-        if (!context->GetResources()) {
-            CORE_LOG_W("Failed to import scene resource to scene, no resource manager set");
-            return;
-        }
-        if (auto res = interface_pointer_cast<IScene>(context->GetResources()->GetResource(in.GetResourceId()))) {
-            if (auto node = interface_pointer_cast<META_NS::IObject>(AddExternalNode(parent, res, in.GetName()))) {
-                if (auto m = interface_cast<META_NS::IMetadata>(&in)) {
-                    AddFlatProperties(*m, *node);
-                    AddFlatAttachments(in, *node);
-                }
-            } else {
-                CORE_LOG_W("Failed to import scene resource to scene");
+    INode::Ptr node;
+    // todo: unify handling of gltf and template external nodes
+    if (auto imp = interface_cast<INodeImport>(&parent)) {
+        auto resource = resources_->GetResource(in.GetResourceId());
+        if (auto res = interface_pointer_cast<IScene>(resource)) {
+            auto sgroups = in.GetSubresourceGroups();
+            if (!sgroups.empty()) {
+                CORE_LOG_D("purging resource group '%s'", sgroups.front().c_str());
+                resources_->PurgeGroup(sgroups.front());
             }
+            node = imp->ImportChildScene(res, in.GetName(), sgroups.empty() ? "" : sgroups.front()).GetResult();
+        } else if (auto res = interface_pointer_cast<META_NS::IObjectTemplate>(resource)) {
+            node = imp->ImportTemplate(res).GetResult();
         } else {
             CORE_LOG_W("No resource/invalid resource: %s", in.GetResourceId().ToString().c_str());
+        }
+        if (auto n = interface_pointer_cast<META_NS::IObject>(node)) {
+            if (auto m = interface_cast<META_NS::IMetadata>(&in)) {
+                AddFlatPropertiesForExternal(*m, *n, isTemplateContext_);
+                AddFlatAttachments(in, n);
+            }
+        }
+        // if we spawned this resource, clean it up
+        if (resource.use_count() == 2) {
+            resources_->PurgeResource(in.GetResourceId());
+        }
+    } else {
+        CORE_LOG_W("Failed to import scene resource to scene");
+    }
+    return node;
+}
+
+INode::Ptr SceneImportContext::BuildSceneNodeHierarchy(const META_NS::IObject& data, INode& parent)
+{
+    INode::Ptr node;
+    if (auto ext = interface_cast<ISceneExternalNodeSer>(&data)) {
+        node = LoadExternalNode(*ext, parent);
+    } else if (auto nodeser = interface_cast<ISceneNodeSer>(&data)) {
+        node = ConstructNode(*nodeser, parent);
+        if (node) {
+            META_NS::Internal::ConstIterate(
+                interface_cast<META_NS::IIterable>(&data),
+                [&](META_NS::IObject::Ptr obj) {
+                    if (obj) {
+                        BuildSceneNodeHierarchy(*obj, *node);
+                    }
+                    return true;
+                },
+                META_NS::IterateStrategy { META_NS::TraversalType::NO_HIERARCHY });
+        }
+    }
+    return node;
+}
+
+void SceneImportContext::SetResourceGroups(BASE_NS::vector<BASE_NS::string> groups)
+{
+    if (auto iScene = scene_->GetInternalScene()) {
+        if (requestedId_.IsValid()) {
+            auto gname = requestedId_.ToString();
+            auto it = groups.begin();
+            for (; it != groups.end() && *it != gname; ++it) {
+            }
+            if (it == groups.end()) {
+                groups.push_back(gname);
+            }
+        }
+        if (!groups.empty()) {
+            iScene->SetResourceGroups(StringToResourceGroupBundle(iScene->GetContext(), groups));
         }
     }
 }
 
-static void BuildSceneNodeHierarchy(const ISceneNodeSer& data, INode& node)
+IScene::Ptr SceneImportContext::BuildSceneHierarchy(const ISceneNodeSer& data)
 {
-    META_NS::Internal::ConstIterate(
-        interface_cast<META_NS::IIterable>(&data),
-        [&](META_NS::IObject::Ptr obj) {
-            if (auto ext = interface_cast<ISceneExternalNodeSer>(obj)) {
-                LoadExternalNode(*ext, node);
-            } else if (auto ser = interface_cast<ISceneNodeSer>(obj)) {
-                if (auto n = ConstructNode(*ser, node)) {
-                    BuildSceneNodeHierarchy(*ser, *n);
-                }
-            }
-            return true;
-        },
-        META_NS::IterateStrategy { META_NS::TraversalType::NO_HIERARCHY });
-}
-
-static IScene::Ptr BuildSceneHierarchy(const IScene::Ptr& scene, const ISceneNodeSer& data)
-{
-    if (auto obj = interface_cast<META_NS::IObject>(scene)) {
-        CopyObjectValues(data, *obj);
+    if (auto obj = interface_pointer_cast<META_NS::IObject>(scene_)) {
+        CopyObjectValues(data, obj);
+    }
+    if (auto sceneser = interface_cast<ISceneSer>(&data)) {
+        SetResourceGroups(sceneser->GetResourceGroups());
+    } else if (requestedId_.IsValid()) {
+        SetResourceGroups({});
     }
     if (auto i = interface_cast<META_NS::IContainer>(&data)) {
         auto nodes = i->GetAll();
@@ -253,79 +321,166 @@ static IScene::Ptr BuildSceneHierarchy(const IScene::Ptr& scene, const ISceneNod
             CORE_LOG_W("invalid root node");
             return nullptr;
         }
-        auto root = scene->GetRootNode().GetResult();
-        if (auto obj = interface_cast<META_NS::IObject>(root)) {
-            CopyObjectValues(*rootdata, *obj);
-            BuildSceneNodeHierarchy(*rootdata, *root);
+        auto root = scene_->GetRootNode().GetResult();
+        if (auto obj = interface_pointer_cast<META_NS::IObject>(root)) {
+            CopyObjectValues(*rootdata, obj);
+            META_NS::Internal::ConstIterate(
+                interface_cast<META_NS::IIterable>(rootdata),
+                [&](META_NS::IObject::Ptr obj) {
+                    if (obj) {
+                        BuildSceneNodeHierarchy(*obj, *root);
+                    }
+                    return true;
+                },
+                META_NS::IterateStrategy { META_NS::TraversalType::NO_HIERARCHY });
         }
-        return scene;
+        return scene_;
     }
     return nullptr;
 }
 
-static INode::Ptr BuildSceneHierarchy(const INode::Ptr& node, const ISceneNodeSer& data)
+INode::Ptr SceneImportContext::BuildSceneHierarchy(INode& node, const META_NS::IObject& data)
 {
-    auto n = ConstructNode(data, *node);
-    if (n) {
-        BuildSceneNodeHierarchy(data, *n);
+    return BuildSceneNodeHierarchy(data, node);
+}
+
+void SceneImportContext::DoDeferredAttach()
+{
+    for (auto&& v : attachments_) {
+        if (auto ext = interface_cast<IExternalAttachment>(v.data)) {
+            if (auto target = interface_pointer_cast<META_NS::IAttach>(FindObject(*v.parent, ext->GetPath()))) {
+                if (!target->Attach(ext->GetAttachment())) {
+                    CORE_LOG_W("Failed to attach");
+                }
+            } else {
+                CORE_LOG_W("Failed to find object to attach to [%s]", ext->GetPath().c_str());
+            }
+        } else if (auto target = interface_cast<META_NS::IAttach>(v.parent)) {
+            if (!target->Attach(v.data)) {
+                CORE_LOG_W("Failed to attach");
+            }
+        }
     }
-    return n;
+}
+
+SceneImportContext::SceneImportContext(
+    IScene::Ptr scene, CORE_NS::IResourceManager::Ptr resources, CORE_NS::ResourceId rid)
+    : scene_(BASE_NS::move(scene)), resources_(BASE_NS::move(resources)), requestedId_(BASE_NS::move(rid))
+{}
+
+IScene::Ptr SceneImportContext::ImportScene(CORE_NS::IFile& in)
+{
+    auto importer = META_NS::GetObjectRegistry().Create<META_NS::IFileImporter>(META_NS::ClassId::JsonImporter);
+    if (!importer) {
+        return nullptr;
+    }
+    importer->SetResourceManager(resources_);
+    importer->SetUserContext(interface_pointer_cast<META_NS::IObject>(scene_));
+    if (auto obj = importer->Import(in, META_NS::ImportOptions { true })) {
+        if (auto i = interface_cast<ISceneNodeSer>(obj)) {
+            if (auto scene = BuildSceneHierarchy(*i)) {
+                importer->ResolveDeferred();
+                DoDeferredAttach();
+                return scene;
+            }
+        }
+    }
+    return nullptr;
+}
+INode::Ptr SceneImportContext::ImportNode(CORE_NS::IFile& in, const INode::Ptr& parent)
+{
+    INode::Ptr res;
+    if (parent) {
+        auto importer = META_NS::GetObjectRegistry().Create<META_NS::IFileImporter>(META_NS::ClassId::JsonImporter);
+        importer->SetResourceManager(resources_);
+        importer->SetUserContext(interface_pointer_cast<META_NS::IObject>(scene_));
+        if (auto obj = importer->Import(in, META_NS::ImportOptions { true })) {
+            res = BuildSceneHierarchy(*parent, *obj);
+            if (res) {
+                importer->ResolveDeferred();
+                DoDeferredAttach();
+            }
+        }
+    }
+    return res;
+}
+INode::Ptr SceneImportContext::ImportNode(const INodeTemplateInternal& templ, const INode::Ptr& parent)
+{
+    isTemplateContext_ = true;
+
+    INode::Ptr res;
+    if (parent) {
+        auto importer = META_NS::GetObjectRegistry().Create<META_NS::IFileImporter>(META_NS::ClassId::JsonImporter);
+        importer->SetResourceManager(resources_);
+        importer->SetUserContext(interface_pointer_cast<META_NS::IObject>(scene_));
+        if (auto obj = importer->Import(templ.GetNodeHierarchy(), META_NS::ImportOptions { true })) {
+            res = BuildSceneHierarchy(*parent, *obj);
+            if (res) {
+                importer->ResolveDeferred();
+                DoDeferredAttach();
+            }
+        }
+    }
+    return res;
 }
 
 bool SceneImporter::Build(const META_NS::IMetadata::Ptr& d)
 {
     bool res = Super::Build(d);
     if (res) {
-        auto context = GetInterfaceBuildArg<IRenderContext>(d, "RenderContext");
-        if (!context) {
-            CORE_LOG_E("Invalid arguments to construct SceneImporter");
-            return false;
-        }
+        context_ = GetInterfaceBuildArg<IRenderContext>(d, "RenderContext");
         opts_ = GetBuildArg<SceneOptions>(d, "Options");
-        context_ = context;
     }
     return res;
 }
 
-IScene::Ptr SceneImporter::ImportScene(CORE_NS::IFile& in)
+IScene::Ptr SceneImporter::ImportScene(CORE_NS::IFile& in, const CORE_NS::ResourceId& requestedId)
 {
-    IScene::Ptr res;
-    auto importer = META_NS::GetObjectRegistry().Create<META_NS::IFileImporter>(META_NS::ClassId::JsonImporter);
     auto context = context_.lock();
-    if (context) {
-        importer->SetResourceManager(context->GetResources());
+    if (!context) {
+        CORE_LOG_W("No context set for scene importer");
+        return nullptr;
     }
     auto md = CreateRenderContextArg(context);
     if (md) {
         md->AddProperty(META_NS::ConstructProperty<SceneOptions>("Options", opts_));
     }
-    if (auto m = GetSceneManager(context)) {
-        if (auto scene = m->CreateScene().GetResult()) {
-            importer->SetUserContext(interface_pointer_cast<META_NS::IObject>(scene));
-            if (auto obj = importer->Import(in)) {
-                if (auto i = interface_cast<ISceneNodeSer>(obj)) {
-                    res = BuildSceneHierarchy(scene, *i);
-                }
+    auto m = GetSceneManager(context);
+    if (!m) {
+        // Could not get scene manager from context, create a new one
+        m = META_NS::GetObjectRegistry().Create<SCENE_NS::ISceneManager>(SCENE_NS::ClassId::SceneManager, md);
+    }
+    if (m) {
+        if (auto resources = context->GetResources()) {
+            if (auto scene = m->CreateScene().GetResult()) {
+                return SceneImportContext(scene, resources, requestedId).ImportScene(in);
             }
         }
     }
-    return res;
+    return nullptr;
 }
 INode::Ptr SceneImporter::ImportNode(CORE_NS::IFile& in, const INode::Ptr& parent)
 {
-    INode::Ptr res;
-    auto importer = META_NS::GetObjectRegistry().Create<META_NS::IFileImporter>(META_NS::ClassId::JsonImporter);
-    auto context = context_.lock();
-    if (context) {
-        importer->SetResourceManager(context->GetResources());
+    if (!parent) {
+        return nullptr;
     }
-    importer->SetUserContext(interface_pointer_cast<META_NS::IObject>(parent->GetScene()));
-    if (auto obj = importer->Import(in)) {
-        if (auto i = interface_cast<ISceneNodeSer>(obj)) {
-            res = BuildSceneHierarchy(parent, *i);
+    if (auto resources = GetResourceManager(parent->GetScene())) {
+        return SceneImportContext(parent->GetScene(), resources).ImportNode(in, parent);
+    }
+    return nullptr;
+}
+
+INode::Ptr SceneImporter::ImportNode(const META_NS::IObject& obj, const INode::Ptr& parent)
+{
+    if (!parent) {
+        return nullptr;
+    }
+    if (auto resources = GetResourceManager(parent->GetScene())) {
+        if (auto templ = interface_cast<INodeTemplateInternal>(&obj)) {
+            return SceneImportContext(parent->GetScene(), resources).ImportNode(*templ, parent);
         }
     }
-    return res;
+    return nullptr;
 }
 
 SCENE_END_NAMESPACE()

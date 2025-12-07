@@ -1,0 +1,16 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeMipAndLayer",
+            "nodeName": "RenderNodeMipAndLayer",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        }
+    ]
+}

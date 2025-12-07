@@ -34,7 +34,10 @@ BEGIN_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent)
     enum FlagBits : uint8_t {
         /** Disables the reflection, does not affect the plane rendering. */
         ACTIVE_RENDER_BIT = (1 << 0),
-        MSAA_BIT = (1 << 2)
+        /** Enable MSAA. */
+        MSAA_BIT = (1 << 2),
+        /** Enable water reflection plane. */
+        WATER_BIT = (1 << 3)
     };
     /** Container for planar reflection flag bits */
     using Flags = uint8_t;
@@ -69,6 +72,11 @@ BEGIN_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent)
      * reflection camera renders objects from all layers. */
     DEFINE_BITFIELD_PROPERTY(uint64_t, layerMask, "Layer Mask", PropertyFlags::IS_BITFIELD,
         VALUE(LayerConstants::ALL_LAYER_MASK), LayerFlagBits)
+
+    /** Entity containing a PostProcessComponent that is applied to the rendered reflection. If not defined the
+     * camera will use default CORE3D_POST_PROCESS_REFLECTION_CAM configuration.
+     */
+    DEFINE_PROPERTY(CORE_NS::Entity, postProcess, "Post process", 0, )
 
 END_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent, "5081ccf4-2013-43c1-b9bb-23041e73ac6d")
 #if !defined(IMPLEMENT_MANAGER)

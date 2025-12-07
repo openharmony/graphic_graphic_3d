@@ -14,6 +14,7 @@
  */
 #include "MeshJS.h"
 
+#include "JsObjectCache.h"
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
@@ -24,9 +25,13 @@
 #include "SceneJS.h"
 void* MeshJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == MeshJS::ID)
-        return this;
-    return SceneResourceImpl::GetInstanceImpl(id);
+    if (id == MeshJS::ID) {
+        return static_cast<MeshJS*>(this);
+    }
+    if (auto ret = SceneResourceImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 void MeshJS::DisposeNative(void* scn)
 {
@@ -34,12 +39,15 @@ void MeshJS::DisposeNative(void* scn)
         return;
     }
     disposed_ = true;
+    DisposeBridge(this);
+    if (auto mesh = GetNativeObject<META_NS::IObject>()) {
+        DetachJsObj(mesh,"_JSWMesh");
+    }
     LOG_V("MeshJS::DisposeNative");
     if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
-        sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+        sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
-    subs_.clear();
     scene_.Reset();
 }
 void MeshJS::Init(napi_env env, napi_value exports)
@@ -71,27 +79,28 @@ MeshJS::MeshJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneResour
         // okay internal create. we will receive the object after.
         return;
     }
-    scene_ = fromJs.Arg<0>().valueOrDefault();
-    if (!scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
+    NapiApi::Object scene = fromJs.Arg<0>().valueOrDefault();
+    scene_ = scene;
+    if (!scene_.GetObject<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
-    {
-        // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
-        NapiApi::Object meJs(fromJs.This());
-        NapiApi::Object scene = fromJs.Arg<0>();
-        if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
-            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-        }
+    // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
+    NapiApi::Object meJs(fromJs.This());
+    AddBridge("MeshJS",meJs);
+    if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
+        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
 }
 MeshJS::~MeshJS()
 {
     LOG_V("MeshJS -- ");
+    DestroyBridge(this);
 }
 void MeshJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 
 napi_value MeshJS::GetSubmesh(NapiApi::FunctionContext<>& ctx)
@@ -105,15 +114,18 @@ napi_value MeshJS::GetSubmesh(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    subs_ = node->SubMeshes()->GetValue();
+    auto subs = node->SubMeshes()->GetValue();
 
     NapiApi::Env env(ctx.Env());
     napi_value tmp;
-    auto status = napi_create_array_with_length(env, subs_.size(), &tmp);
+    auto status = napi_create_array_with_length(env, subs.size(), &tmp);
+    if (status != napi_ok) {
+        LOG_E("create array failed in %s", __func__);
+    }
     uint32_t i = 0;
-    for (const auto& subMesh : subs_) {
+    for (const auto& subMesh : subs) {
         napi_value args[] = { scene_.GetValue(), ctx.This().ToNapiValue(), env.GetNumber(i) };
-        auto val = CreateFromNativeInstance(ctx.Env(), subMesh, PtrType::STRONG, args);
+        auto val = CreateFromNativeInstance(ctx.Env(), subMesh, PtrType::WEAK, args);
         status = napi_set_element(ctx.Env(), tmp, i++, val.ToNapiValue());
     }
 
@@ -169,6 +181,32 @@ void MeshJS::SetMaterialOverride(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         return;
     }
     NapiApi::Object obj = ctx.Arg<0>();
-    auto new_material = obj.GetNative<SCENE_NS::IMaterial>();
-    SCENE_NS::SetMaterialForAllSubMeshes(sm, new_material);
+    auto newMaterial = obj.GetNative<SCENE_NS::IMaterial>();
+    for (auto&& sm : sm->SubMeshes()->GetValue()) {
+        if (auto *smmeta = interface_cast<META_NS::IMetadata>(sm)) {
+            if (newMaterial) {
+                if (!smmeta->GetProperty("OriginalMaterial", META_NS::MetadataQuery::EXISTING)) {
+                    // if we do not have "OriginalMaterial" (material set before first override)
+                    // and store the current material as "OriginalMaterial".
+                    auto curMat = META_NS::GetValue(sm->Material());
+                    auto prop = META_NS::ConstructProperty<SCENE_NS::IMaterial::Ptr>("OriginalMaterial",
+                        nullptr,
+                        META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE);
+                    smmeta->AddProperty(prop);
+                    META_NS::SetValue(prop, curMat);
+                }
+                // change the material.
+                META_NS::SetValue(sm->Material(), newMaterial);
+            } else {
+                // do we have the original material.
+                if (auto om = smmeta->GetProperty("OriginalMaterial", META_NS::MetadataQuery::EXISTING)) {
+                    // okay, set it back then.
+                    auto origMat = META_NS::GetValue<SCENE_NS::IMaterial::Ptr>(om);
+                    META_NS::SetValue<SCENE_NS::IMaterial::Ptr>(sm->Material(), origMat);
+                    // remove the temp storage property.
+                    smmeta->RemoveProperty(om);
+                }
+            }
+        }
+    }
 }

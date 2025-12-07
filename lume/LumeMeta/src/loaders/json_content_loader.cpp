@@ -14,8 +14,8 @@
  */
 #include "json_content_loader.h"
 
-#include "serialization/importer.h"
-#include "serialization/json_importer.h"
+#include "../serialization/importer.h"
+#include "../serialization/json_importer.h"
 
 META_BEGIN_NAMESPACE()
 
@@ -41,7 +41,7 @@ IObject::Ptr JsonContentLoader::Create(const IObject::Ptr&)
     if (file_) {
         file_->Seek(0);
         Serialization::JsonImporter importer;
-        if (auto result = importer.Import(*file_)) {
+        if (auto result = importer.Import(*file_, {})) {
             return result;
         }
         CORE_LOG_E("Importing object hierarchy failed.");
@@ -58,7 +58,7 @@ IObject::Ptr JsonContentLoader::LoadCached()
     }
 
     Serialization::Importer imp;
-    return imp.Import(tree_);
+    return imp.Import(tree_, {});
 }
 
 bool JsonContentLoader::UpdateTree()

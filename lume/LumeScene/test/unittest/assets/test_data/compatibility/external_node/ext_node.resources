@@ -1,0 +1,24 @@
+# Copyright (C) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Lume Resource Index Version 1
+"AnimatedCube.gltf/images/1" "Scene - scene2" "" 586f9a9d-4041-407e-bbdc-92a2a87f76b0 
+"AnimatedCube" "Scene - scene2" "" 5003b616-910c-4ea9-960b-1b193265de63 
+"animation_AnimatedCube" "Scene - scene2" "" 4cfb3f35-2044-4834-8238-297aaed08b4f 
+"AnimatedCube.gltf/images/0" "Scene - scene2" "" 586f9a9d-4041-407e-bbdc-92a2a87f76b0 
+"scene" "" "test://compatibility/external_node/ext_node.scene" d5665843-e011-4d77-a036-e973d309071c 
+"scene2" "" "test://AnimatedCube/AnimatedCube.gltf" e5c20c22-e646-4b78-9458-39f7c8d32f29 
+"AnimatedCube.gltf/images/1" "scene2" "" 586f9a9d-4041-407e-bbdc-92a2a87f76b0 
+"AnimatedCube" "scene2" "" 5003b616-910c-4ea9-960b-1b193265de63 
+"animation_AnimatedCube" "scene2" "" 4cfb3f35-2044-4834-8238-297aaed08b4f 
+"AnimatedCube.gltf/images/0" "scene2" "" 586f9a9d-4041-407e-bbdc-92a2a87f76b0 

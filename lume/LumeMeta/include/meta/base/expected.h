@@ -41,7 +41,9 @@ enum GenericError : int16_t {
 template<typename Type, typename Error>
 class Expected {
 public:
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     constexpr Expected(Type t) : hasValue_(true), value_(BASE_NS::move(t)) {}
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     constexpr Expected(Error e) : error_(BASE_NS::move(e)) {}
 
     ~Expected()
@@ -66,6 +68,7 @@ public:
     Expected& operator=(const Expected&) = delete;
     Expected& operator=(Expected&&) = delete;
 
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     constexpr operator bool() const
     {
         return hasValue_;
@@ -109,8 +112,10 @@ template<>
 class Expected<void, GenericError> {
 public:
     constexpr Expected() = default;
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     constexpr Expected(GenericError e) : error_(e) {}
 
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     constexpr operator bool() const
     {
         return error_ == 0;
@@ -131,8 +136,10 @@ using ReturnError = Expected<void, GenericError>;
 template<typename Enum>
 class ReturnValue {
 public:
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     constexpr ReturnValue(Enum code) : code_(code) {}
 
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
     constexpr operator bool() const
     {
         return BASE_NS::underlying_type_t<Enum>(code_) > 0;

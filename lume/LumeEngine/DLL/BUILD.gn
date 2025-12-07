@@ -37,3 +37,4 @@ ohos_shared_library(LIB_ENGINE_CORE) {
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
+
